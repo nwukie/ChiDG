@@ -23,8 +23,9 @@ contains
     !>  Establish element/face neighbor communication.
     !!
     !!  For a given mesh instance for a domain, attempt to find neighboring elements with which
-    !!  to communicate. This searches both in the same domain on the current processor(local), and also
-    !!  across processors, where part of a domain may have been split onto another processor(global)
+    !!  to communicate. This searches both in the same domain on the current processor(local), 
+    !!  and also across processors, where part of a domain may have been split onto another 
+    !!  processor(global)
     !!
     !!  This does NOT establish Chimera communication.
     !!
@@ -32,18 +33,21 @@ contains
     !!  @date   6/16/2016
     !!
     !!  @param[inout]   mesh        An array of mesh types on the local processor.
-    !!  @param[in]      ChiDG_COMM  An mpi communicator of the relevant processors. Particularly usefull for testing.
+    !!  @param[in]      ChiDG_COMM  An mpi communicator of the relevant processors. 
+    !!                              Particularly usefull for testing.
     !!
-    !--------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine establish_neighbor_communication(mesh,ChiDG_COMM)
         type(mesh_t),   intent(inout)   :: mesh(:)
         type(mpi_comm), intent(in)      :: ChiDG_COMM
 
         integer(ik) :: imesh, iproc, idomain_g, idomain_l, ielem_l, ierr
-        integer(ik) :: ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l
+        integer(ik) :: ineighbor_domain_g, ineighbor_domain_l, &
+                       ineighbor_element_g, ineighbor_element_l
         integer(ik) :: data(4), corner_indices(4)
         logical     :: has_domain, searching, neighbor_element, searching_mesh
-        logical     :: includes_corner_one, includes_corner_two, includes_corner_three, includes_corner_four
+        logical     :: includes_corner_one, includes_corner_two, &
+                       includes_corner_three, includes_corner_four
 
 
         !
@@ -52,7 +56,6 @@ contains
         do imesh = 1,size(mesh)
             call mesh(imesh)%init_comm_local()
         end do
-
 
 
 
@@ -158,7 +161,7 @@ contains
 
 
     end subroutine establish_neighbor_communication
-    !***********************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -185,10 +188,10 @@ contains
     !!
     !!
     !!  @param[inout]   mesh        An array of mesh types on the local processor.
-    !!  @param[in]      ChiDG_COMM  An mpi communicator of the relevant processors. Particularly useful for testing.
+    !!  @param[in]      ChiDG_COMM  An mpi communicator of the relevant processors. 
+    !!                              Particularly useful for testing.
     !!
-    !!
-    !-----------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine establish_chimera_communication(mesh, ChiDG_COMM)
         type(mesh_t),   intent(inout)   :: mesh(:)
         type(mpi_comm)                  :: ChiDG_COMM
@@ -197,9 +200,9 @@ contains
 
 
         !
-        ! In case establish_chimera_communication is being called as a reinitialization procedure. 
-        ! Calling clear on chimera%send, chimera%recv to wipe out previous data and redetect all 
-        ! chimera faces, donors and reinitialize donor data.
+        ! In case establish_chimera_communication is being called as a reinitialization 
+        ! procedure. Calling clear on chimera%send, chimera%recv to wipe out previous data 
+        ! and redetect all chimera faces, donors and reinitialize donor data.
         !
         do idom = 1,size(mesh)
             call mesh(idom)%chimera%send%clear()
@@ -217,7 +220,8 @@ contains
         call detect_chimera_donors(mesh)
 
 
-        ! Compute chimera interpolation matrices to evaluate donor solution at receiver quadrature nodes
+        ! Compute chimera interpolation matrices to evaluate donor 
+        ! solution at receiver quadrature nodes.
         call compute_chimera_interpolators(mesh)
 
 
@@ -225,7 +229,7 @@ contains
         call MPI_Barrier(ChiDG_COMM,ierr)
 
     end subroutine establish_chimera_communication
-    !***********************************************************************************************
+    !*****************************************************************************************
 
 
 

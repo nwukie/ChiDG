@@ -167,10 +167,10 @@ contains
                 worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,DIAG)
                 worker%function_info%idepend = idepend
 
-                value_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,'value')
-                ddx_gq   = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,'ddx'  )
-                ddy_gq   = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,'ddy'  )
-                ddz_gq   = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,'ddz'  )
+                value_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'value')
+                ddx_gq   = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'ddx'  )
+                ddy_gq   = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'ddy'  )
+                ddz_gq   = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'ddz'  )
 
                 field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
                 call worker%cache%set_data(field,'element',value_gq,'value',     0,worker%function_info%seed)
@@ -278,10 +278,10 @@ contains
 
             ! Interpolate modes to nodes
             ieqn = 1    !implicitly assuming only 1 equation in the auxiliary field chidgVector
-            value_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,'value')
-            ddx_gq   = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,'ddx'  )
-            ddy_gq   = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,'ddy'  )
-            ddz_gq   = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,'ddz'  )
+            value_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,worker%itime,'value')
+            ddx_gq   = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,worker%itime,'ddx'  )
+            ddy_gq   = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,worker%itime,'ddy'  )
+            ddz_gq   = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,worker%itime,'ddz'  )
 
             ! Store gq data in cache
             call worker%cache%set_data(field,'element',value_gq,'value',     0,worker%function_info%seed)
@@ -411,10 +411,10 @@ contains
             worker%function_info%idiff   = DIAG
 
             ! Interpolate modes to nodes
-            value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,'value',ME)
-            ddx_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,'ddx',  ME)
-            ddy_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,'ddy',  ME)
-            ddz_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,'ddz',  ME)
+            value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'value',ME)
+            ddx_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'ddx',  ME)
+            ddy_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'ddy',  ME)
+            ddz_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'ddz',  ME)
 
             ! Store gq data in cache
             field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
@@ -486,10 +486,10 @@ contains
                     worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,iface)
                     worker%function_info%idepend = idepend
 
-                    value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,'value',NEIGHBOR)
-                    ddx_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,'ddx',  NEIGHBOR)
-                    ddy_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,'ddy',  NEIGHBOR)
-                    ddz_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,'ddz',  NEIGHBOR)
+                    value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'value',NEIGHBOR)
+                    ddx_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'ddx',  NEIGHBOR)
+                    ddy_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'ddy',  NEIGHBOR)
+                    ddz_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'ddz',  NEIGHBOR)
 
                     call worker%cache%set_data(field,'face exterior',value_gq,'value',     0,worker%function_info%seed,iface)
                     call worker%cache%set_data(field,'face exterior',ddx_gq,  'derivative',1,worker%function_info%seed,iface)
@@ -629,10 +629,10 @@ contains
 
             ! Interpolate modes to nodes
             ieqn = 1    !implicitly assuming only 1 equation in the auxiliary field chidgVector
-            value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,'value',ME)
-            ddx_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,'ddx',  ME)
-            ddy_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,'ddy',  ME)
-            ddz_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,'ddz',  ME)
+            value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,worker%itime,'value',ME)
+            ddx_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,worker%itime,'ddx',  ME)
+            ddy_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,worker%itime,'ddy',  ME)
+            ddz_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,worker%itime,'ddz',  ME)
 
             ! Store gq data in cache
             call worker%cache%set_data(field,'face interior',value_gq,'value',     0,worker%function_info%seed,iface)
@@ -706,10 +706,10 @@ contains
 
                 ! Interpolate modes to nodes
                 ieqn = 1    !implicitly assuming only 1 equation in the auxiliary field chidgVector
-                value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,'value',NEIGHBOR)
-                ddx_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,'ddx',  NEIGHBOR)
-                ddy_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,'ddy',  NEIGHBOR)
-                ddz_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,'ddz',  NEIGHBOR)
+                value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,worker%itime,'value',NEIGHBOR)
+                ddx_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,worker%itime,'ddx',  NEIGHBOR)
+                ddy_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,worker%itime,'ddy',  NEIGHBOR)
+                ddz_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,worker%itime,'ddz',  NEIGHBOR)
 
                 ! Store gq data in cache
                 call worker%cache%set_data(field,'face exterior',value_gq,'value',     0,worker%function_info%seed,iface)
@@ -786,10 +786,10 @@ contains
                 !
                 ! Interpolate modes to nodes
                 ieqn = 1    !implicitly assuming only 1 equation in the auxiliary field chidgVector
-                value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,'value',ME)
-                ddx_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,'ddx',  ME)
-                ddy_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,'ddy',  ME)
-                ddz_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,'ddz',  ME)
+                value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,worker%itime,'value',ME)
+                ddx_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,worker%itime,'ddx',  ME)
+                ddy_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,worker%itime,'ddy',  ME)
+                ddz_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,worker%itime,'ddz',  ME)
 
                 ! Store gq data in cache
                 call worker%cache%set_data(field,'face exterior',value_gq,'value',     0,worker%function_info%seed,iface)

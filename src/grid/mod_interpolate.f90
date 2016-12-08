@@ -26,7 +26,7 @@
 !!      get_interpolation_nderiv
 !!
 !!
-!--------------------------------------------------------------------------------------------------------
+!---------------------------------------------------------------------------------------------
 module mod_interpolate
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
@@ -70,7 +70,7 @@ contains
     !!
     !!  @param[in]  itime - Index for the time step in solution
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function interpolate_element_autodiff(mesh,q,elem_info,fcn_info,ieqn,itime,interpolation_type) result(var_gq)
         type(mesh_t),           intent(in)      :: mesh(:)
         type(chidgVector_t),    intent(in)      :: q
@@ -158,7 +158,7 @@ contains
         end associate
 
     end function interpolate_element_autodiff
-    !********************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -169,13 +169,15 @@ contains
 
 
 
-    !>  Interpolate variable from polynomial expansion to explicit values at quadrature nodes. The automatic
-    !!  differentiation process really starts here, when the polynomial expansion is evaluated.
+    !>  Interpolate variable from polynomial expansion to explicit values at quadrature 
+    !!  nodes. The automatic differentiation process really starts here, when the polynomial 
+    !!  expansion is evaluated.
     !!
-    !!  The interpolation process occurs through a matrix-vector multiplication. That is an interpolation matrix
-    !!  multiplied by a vector of modes from the polynomial expansion. To start the automatic differentiation, 
-    !!  the derivative arrays of the values for the polynomial modes must be initialized before any computation. 
-    !!  So, before the matrix-vector multiplication.
+    !!  The interpolation process occurs through a matrix-vector multiplication. That is an 
+    !!  interpolation matrix multiplied by a vector of modes from the polynomial expansion. 
+    !!  To start the automatic differentiation, the derivative arrays of the values for the 
+    !!  polynomial modes must be initialized before any computation. So, before the 
+    !!  matrix-vector multiplication.
     !!
     !!  Some interpolation parameters to note that a user might select:
     !!      - interpolation_type:   'value', 'ddx', 'ddy', 'ddz'
@@ -185,19 +187,19 @@ contains
     !!  @date   2/1/2016
     !!
     !!  @param[in]      mesh                    Array of mesh instances.
-    !!  @param[in]      face                    Face info, such as indices for locating the face in the mesh.
+    !!  @param[in]      face                    Face indices for locating the face in mesh.
     !!  @param[in]      q                       Solution vector
-    !!  @param[in]      ieqn                    Index of the equation variable being interpolated
-    !!  @param[inout]   var_gq                  Array of auto-diff values of the equation evaluated at gq points that is passed back
+    !!  @param[in]      ieqn                    Index of field being interpolated
+    !!  @param[inout]   var_gq                  Autodiff values of field evaluated at gq points
     !!  @param[in]      interpolation_type      Interpolate 'value', 'ddx', 'ddy', 'ddz'
-    !!  @param[in]      interpolation_source    ME/NEIGHBOR indicating which element to interpolate from
+    !!  @param[in]      interpolation_source    ME/NEIGHBOR indicating element to interpolate from
     !!
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/5/2016
     !!
     !!  @param[in]      itime                   Index for time step in solution
     !!
-    !-----------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     function interpolate_face_autodiff(mesh,q,face_info,fcn_info, ieqn, itime, interpolation_type, interpolation_source) result(var_gq)
         type(mesh_t),           intent(in)              :: mesh(:)
         type(chidgVector_t),    intent(in)              :: q
@@ -247,12 +249,14 @@ contains
 
 
         !
-        ! For each donor element to the interpolation. (ndonors could be > 1 for Chimera interpolations)
+        ! For each donor element to the interpolation. 
+        ! (ndonors could be > 1 for Chimera interpolations)
         !
         do idonor = 1,ndonors
 
             !
-            ! Get face info for face being interpolated to(ME, NEIGHBOR), interpolation matrix, and recv data for parallel access
+            ! Get face info for face being interpolated to(ME, NEIGHBOR), 
+            ! interpolation matrix, and recv data for parallel access
             !
             iface_info   = get_face_interpolation_info(        mesh,face_info,interpolation_source,idonor)
             mask         = get_face_interpolation_mask(        mesh,face_info,interpolation_source,idonor)
@@ -344,7 +348,7 @@ contains
 
 
     end function interpolate_face_autodiff
-    !*************************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -366,7 +370,7 @@ contains
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/5/2016
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function interpolate_element_standard(mesh,q,idomain_l,ielement_l,ieqn,itime,interpolation_type) result(var_gq)
         type(mesh_t),           intent(in)      :: mesh(:)
         type(chidgVector_t),    intent(in)      :: q
@@ -377,7 +381,6 @@ contains
         character(len=*),       intent(in)      :: interpolation_type
 
         real(rk),   dimension(mesh(idomain_l)%elems(ielement_l)%gq%vol%nnodes) :: var_gq
-        !real(rk), allocatable, dimension(:) :: var_gq
 
 
         !
@@ -399,7 +402,7 @@ contains
         end select
 
     end function interpolate_element_standard
-    !*************************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -421,7 +424,7 @@ contains
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/5/2016
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function interpolate_face_standard(mesh,q,idomain_l,ielement_l,iface,ieqn,itime) result(var_gq)
         type(mesh_t),           intent(in)      :: mesh(:)
         type(chidgVector_t),    intent(in)      :: q
@@ -439,7 +442,7 @@ contains
 
 
     end function interpolate_face_standard
-    !*************************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -701,7 +704,7 @@ contains
     !!  @date   8/16/2016
     !!
     !!
-    !-----------------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function get_face_interpolation_info(mesh,face_info,interpolation_source,idonor) result(iface_info)
         type(mesh_t),       intent(in)                  :: mesh(:)
         type(face_info_t),  intent(in)                  :: face_info
@@ -761,7 +764,7 @@ contains
 
 
     end function get_face_interpolation_info
-    !**********************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -773,14 +776,17 @@ contains
 
 
 
-    !>  This returns an interpolation matrix that is used to actually perform the interpolation from a modal expansion to 
-    !!  a set of quadrature nodes.
+    !>  This returns an interpolation matrix that is used to actually perform the interpolation 
+    !!  from a modal expansion to a set of quadrature nodes.
     !!
-    !!  The interpolation from a modal expansion to a set of quadrature nodes takes the form of a matrix-vector multiplication,
-    !!  where the vector entries are modal coefficients of the polynomial expansion, and the matrix contains entries that 
-    !!  evaluate the modes of the polynomial expansion at the quadrature nodes. This routine returns the interpolation matrix.
-    !!  Additionally, an interpolation could be computing the actual value of the expansion at the nodes('value'), or it could be
-    !!  computing derivatives ('ddx', 'ddy', 'ddz'). The interpolation_type specifies what kind of interpolation to perform.
+    !!  The interpolation from a modal expansion to a set of quadrature nodes takes the form 
+    !!  of a matrix-vector multiplication, where the vector entries are modal coefficients of 
+    !!  the polynomial expansion, and the matrix contains entries that evaluate the modes of 
+    !!  the polynomial expansion at the quadrature nodes. This routine returns the 
+    !!  interpolation matrix. Additionally, an interpolation could be computing the actual 
+    !!  value of the expansion at the nodes('value'), or it could be computing derivatives 
+    !!  ('ddx', 'ddy', 'ddz'). The interpolation_type specifies what kind of interpolation 
+    !!  to perform.
     !!
     !!  Given a face, interpolation type, and interpolation source, this routine returns
     !!      - a face_info_t of the face to be interpolated to
@@ -791,7 +797,7 @@ contains
     !!  @date   8/16/2016
     !!
     !!
-    !---------------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_face_interpolation_interpolator(mesh,source_face,interpolation_source,idonor,interpolation_type,donor_face) result(interpolator)
         type(mesh_t),       intent(in)  :: mesh(:)
         type(face_info_t),  intent(in)  :: source_face
@@ -800,7 +806,7 @@ contains
         type(face_info_t),  intent(in)  :: donor_face
         character(len=*),   intent(in)  :: interpolation_type
 
-        real(rk),       allocatable :: interpolator(:,:)        !< This always gets set
+        real(rk),       allocatable :: interpolator(:,:)
         integer(ik),    allocatable :: gq_node_indices(:)
         integer(ik)                 :: inode, ChiID, donor_proc
         logical                     :: conforming_interpolation, chimera_interpolation, parallel_interpolation
@@ -900,7 +906,7 @@ contains
 
 
     end function get_face_interpolation_interpolator
-    !**********************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -912,14 +918,9 @@ contains
 
 
 
-
-
-
-
-
-    !>  This routine returns a logical mask that indicates which nodes in the full quadrature node set
-    !!  are to be filled by a chimera donor. This defines the scatter pattern for the nodes returned by 
-    !!  a chimera donor to the nodes in the full node set.
+    !>  This routine returns a logical mask that indicates which nodes in the full 
+    !!  quadrature node set are to be filled by a chimera donor. This defines the scatter 
+    !!  pattern for the nodes returned by a chimera donor to the nodes in the full node set.
     !!
     !!  If the interpolation is not a CHIMERA interpolation, then the mask is simply allocated
     !!  to length one and has no meaning.
@@ -928,7 +929,7 @@ contains
     !!  @date   8/16/2016
     !!
     !!
-    !------------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function get_face_interpolation_mask(mesh,face_info,interpolation_source,idonor) result(mask)
         type(mesh_t),       intent(in)                  :: mesh(:)
         type(face_info_t),  intent(in)                  :: face_info
@@ -981,7 +982,7 @@ contains
         end associate
 
     end function get_face_interpolation_mask
-    !**********************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -994,12 +995,13 @@ contains
 
 
 
-    !>  This routine returns a recv_t communication structure indicating whether the interpolation donor is LOCAL
-    !!  or REMOTE. 
+    !>  This routine returns a recv_t communication structure indicating whether the 
+    !!  interpolation donor is LOCAL or REMOTE. 
     !!
-    !!  The recv_t contains recv_comm, recv_domain, and recv_element components. If these are set, then the interpolation
-    !!  is remote and these indices specify where in the 'recv' container to find the solution modes for the interpolation.
-    !!  If these indices are not set, then the interpolation is LOCAL and the main interpolation routine can use the 
+    !!  The recv_t contains recv_comm, recv_domain, and recv_element components. If these are 
+    !!  set, then the interpolation is remote and these indices specify where in the 'recv' 
+    !!  container to find the solution modes for the interpolation. If these indices are not 
+    !!  set, then the interpolation is LOCAL and the main interpolation routine can use the 
     !!  local element indices to locate the solution modes.
     !!  
     !!
@@ -1007,7 +1009,7 @@ contains
     !!  @date   8/16/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function get_face_interpolation_comm(mesh,face_info,interpolation_source,idonor) result(recv_info)
         type(mesh_t),       intent(in)                  :: mesh(:)
         type(face_info_t),  intent(in)                  :: face_info
@@ -1023,7 +1025,8 @@ contains
         associate( idom => face_info%idomain_l, ielem => face_info%ielement_l, iface => face_info%iface )
 
         !
-        ! Initialize recv_info container to null, indicating LOCAL interpolation. Always the case, if interpolation_source=ME.
+        ! Initialize recv_info container to null, indicating LOCAL interpolation. 
+        ! Always the case, if interpolation_source=ME.
         !
         recv_info = recv_t(0,0,0)
 
@@ -1070,7 +1073,7 @@ contains
         end associate
 
     end function get_face_interpolation_comm
-    !**********************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -1087,13 +1090,14 @@ contains
 
     !>  Return the number of elements contributing to the interpolation. 
     !!
-    !!  For standard conforming interpolations this will be ==1. For Chimera interpolations, this could be >=1.
+    !!  For standard conforming interpolations this will be ==1. 
+    !!  For Chimera interpolations, this could be >=1.
     !!
     !!  @author Nathan A. Wukie(AFRL)
     !!  @date   8/17/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function get_face_interpolation_ndonors(mesh,face_info,interpolation_source) result(ndonors)
         type(mesh_t),       intent(in)  :: mesh(:)
         type(face_info_t),  intent(in)  :: face_info
@@ -1145,7 +1149,7 @@ contains
         end associate
 
     end function get_face_interpolation_ndonors
-    !**********************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -1162,7 +1166,7 @@ contains
     !!  @date   8/17/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_face_interpolation_style(mesh,face_info,interpolation_source) result(interpolation_style)
         type(mesh_t),       intent(in)  :: mesh(:)
         type(face_info_t),  intent(in)  :: face_info
@@ -1198,19 +1202,21 @@ contains
         end associate
 
     end function get_face_interpolation_style
-    !********************************************************************************************************
+    !******************************************************************************************
 
 
 
 
-    !>  Determine the number of derivatives being computed for the automatic differentiation process.
+    !>  Determine the number of derivatives being computed for the automatic differentiation 
+    !!  process.
     !!
-    !!  This is the number of degrees of freedom in the element being differentiated with respect to.
+    !!  This is the number of degrees of freedom in the element being differentiated with 
+    !!  respect to.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/17/2016
     !!
-    !--------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function get_interpolation_nderiv(mesh,function_info) result(nderiv)
         type(mesh_t),           intent(in)  :: mesh(:)
         type(function_info_t),  intent(in)  :: function_info
@@ -1219,8 +1225,9 @@ contains
         logical     :: parallel_seed
 
         !
-        ! If ielem_seed == 0 then we aren't interested in tracking derivatives. So set it to lowest number possible
-        ! while still having something allocated in the AD type so the operations are valid.
+        ! If ielem_seed == 0 then we aren't interested in tracking derivatives. So set it 
+        ! to lowest number possible while still having something allocated in the AD type 
+        ! so the operations are valid.
         !
         if (function_info%seed%ielement_l == 0) then
             nderiv = 1
@@ -1239,7 +1246,7 @@ contains
 
 
     end function get_interpolation_nderiv
-    !********************************************************************************************************
+    !*****************************************************************************************
 
 
 

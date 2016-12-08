@@ -1,7 +1,8 @@
 module test_comm_D1E4_mod
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: XI_MIN, XI_MAX, DIAG, BOUNDARY, IO_DESTINATION, &
-                                          ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN
+                                          ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, &
+                                          NINE, TEN
     use mod_test_utilities,         only: create_mesh_file
     use mod_file_utilities,         only: delete_file
     use type_chidg,                 only: chidg_t
@@ -21,7 +22,7 @@ module test_comm_D1E4_mod
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/23/2016
     !!
-    !------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     @TestCase
     type, extends(MpiTestCase) :: test_comm_D1E4
 
@@ -36,22 +37,23 @@ module test_comm_D1E4_mod
         procedure       :: setUp
         procedure       :: tearDown
     end type test_comm_D1E4
-    !******************************************************************
+    !*****************************************************************************************
 
 
 
 
 contains
 
-    !>  This test reads a 4x1x1 element grid using 1, 2, 3, and 4 processors and tests communication data.
+    !>  This test reads a 4x1x1 element grid using 1, 2, 3, and 4 processors and tests 
+    !!  communication data.
     !!
-    !!  Using 1 processor, all communication(face neighbors) should be local. Using 4 processors, all communication
-    !!  should occur globally, across processors.
+    !!  Using 1 processor, all communication(face neighbors) should be local. Using 4 
+    !!  processors, all communication should occur globally, across processors.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/21/2016
     !!
-    !-----------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_comm_D1E4), intent(inout) :: this
 

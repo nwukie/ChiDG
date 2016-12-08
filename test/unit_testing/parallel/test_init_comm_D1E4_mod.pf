@@ -15,11 +15,13 @@ module test_init_comm_D1E4_mod
 
 contains
 
-    !>  This test reads a 4x1x1 element grid using 1, 2, 3, and 4 processors and tests communication data.
+    !>  This test reads a 4x1x1 element grid using 1, 2, 3, and 4 processors and tests 
+    !!  communication data.
     !!
-    !!  Using 1 processor, all communication(face neighbors) should be local. Using 4 processors, all communication
-    !!  should occur globally, across processors. Here, we just check all the indices defining the communication
-    !!  for the different cases, npes=[1, 2, 3, 4].
+    !!  Using 1 processor, all communication(face neighbors) should be local. Using 4 
+    !!  processors, all communication should occur globally, across processors. Here, we 
+    !!  just check all the indices defining the communication for the different cases, 
+    !!  npes=[1, 2, 3, 4].
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/21/2016
@@ -59,7 +61,6 @@ contains
         !
         if (IRANK == GLOBAL_MASTER) then
             call create_mesh_file("D1 E4 M1",gridfile)
-
         end if
         call MPI_Barrier(ChiDG_COMM,ierr)
 
@@ -76,7 +77,6 @@ contains
         !
         call chidg%set('Solution Order', integer_input=3)
         call chidg%initialize_solution_domains()
-        !call chidg%init('communication',ChiDG_COMM)
         call chidg%init('communication')
 
 

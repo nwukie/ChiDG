@@ -30,7 +30,7 @@ contains
     !!  @param[in]      connectivities  Array of domain connectivity types, one for each domain
     !!  @param[inout]   partitions      Mesh partition data returned
     !!
-    !-----------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine partition_connectivity(connectivities, weights, partitions)
         use iso_c_binding,  only: c_ptr, c_int, c_null_ptr
         type(domain_connectivity_t),    intent(inout)   :: connectivities(:)
@@ -43,13 +43,15 @@ contains
         integer(ik),    allocatable :: npartition_elements_in_domain(:), element_nodes(:)
         integer(ik)                 :: ielem_part, ipart_conn, ndomains_in_partition, ipart_elem
 
-        integer                     :: idomain, ndomains, ielem_conn, nelem_conn, nelem_total, ierr, idomain_g, ielement_g
-        integer                     :: ielem, inode, ielem_node, node_offset, iconn, nconn, mapping, nnodes_element, nnodes_conn
-        integer                     :: ipartition, nindices_total, nindices_element, element_partition
+        integer                     :: idomain, ndomains, ielem_conn, nelem_conn, nelem_total, &
+                                       ierr, idomain_g, ielement_g, ielem, inode, ielem_node,  &
+                                       node_offset, iconn, nconn, mapping, nnodes_element,     &
+                                       nnodes_conn, ipartition, nindices_total,                &
+                                       nindices_element, element_partition
 
         integer(c_int)                      :: nelem, nnodes
         integer(c_int), allocatable         :: eptr(:), eind(:), epart(:), npart(:)
-        integer(c_long), allocatable, target :: vwgt(:), options(:)
+        integer(c_int), allocatable, target :: vwgt(:), options(:)
         type(c_ptr)                         :: vwgt_p, options_p, vsize, tpwgts
         integer(c_int)                      :: n, npartitions, ncommon
 
@@ -89,20 +91,18 @@ contains
             tpwgts  = c_null_ptr
 
             ! METIS Options
-            !allocate(options(0:39),stat=ierr)
             allocate(options(0:40),stat=ierr)
             if (ierr /= 0) call AllocationError
 
             call METIS_SetDefaultOptions(options)
-            options_p = c_loc(options(1))
+            options_p = c_loc(options(0))
 
             options(0)  = 0      ! PTYPE
             options(3)  = 0      ! IPTYPE
             options(10) = 2
-            !options(1)  = 0      ! PTYPE
-            !options(4)  = 0      ! IPTYPE
-            !options(11) = 2
-            !options(16) = 1
+
+
+
 
             !
             ! Get number of domains
@@ -372,18 +372,17 @@ contains
 
     !>  Master process sends partition information.
     !!
-    !!  NOTE: take care with non-blocking sends, as the call assumes that the data in the location will remain
-    !!        valid at a future time. For example, can't send local variables in the subroutine since their 
-    !!        memory is released once the subroutine ends. For this reason, all the sends are to variables
-    !!        within the paritions(:) containers. This persists.
+    !!  NOTE: take care with non-blocking sends, as the call assumes that the data in the 
+    !!        location will remain valid at a future time. For example, can't send local 
+    !!        variables in the subroutine since their memory is released once the subroutine 
+    !!        ends. For this reason, all the sends are to variables within the paritions(:) 
+    !!        containers. This persists.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/8/2016
     !!
     !!
-    !!
-    !!
-    !--------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine send_partitions(partitions,ChiDG_COMM)
         type(partition_t),  intent(in)  :: partitions(:)
         type(mpi_comm),     intent(in)  :: ChiDG_COMM
@@ -435,7 +434,7 @@ contains
 
 
     end subroutine send_partitions
-    !***************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -452,9 +451,7 @@ contains
     !!  @date   6/16/2016
     !!
     !!
-    !!
-    !!
-    !--------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine recv_partition(partition,ChiDG_COMM)
         type(partition_t),  intent(inout)   :: partition
         type(mpi_comm),     intent(in)      :: ChiDG_COMM
@@ -529,7 +526,7 @@ contains
 
 
     end subroutine recv_partition
-    !***************************************************************************************************
+    !*****************************************************************************************
 
 
 

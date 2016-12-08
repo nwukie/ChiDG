@@ -28,7 +28,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/2/2016
     !!
-    !!------------------------------------------------------------------------------------------------------------
+    !!-----------------------------------------------------------------------------------------
     subroutine log_init()
 
         logical :: file_opened = .false.
@@ -45,7 +45,7 @@ contains
         log_initialized = .true.
 
     end subroutine log_init
-    !*************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -57,7 +57,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/2/2016
     !!
-    !!------------------------------------------------------------------------------------------------------------
+    !!-----------------------------------------------------------------------------------------
     subroutine log_finalize()
 
         logical :: file_opened = .false.
@@ -72,7 +72,7 @@ contains
         end if
 
     end subroutine log_finalize
-    !*************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -101,7 +101,7 @@ contains
     !!  @param[in]  info_one    Optional auxiliary information to be reported.
     !!  @param[in]  info_two    Optional auxiliary information to be reported.
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine message(pathname, linenum, sig, user_msg, info_one, info_two, info_three, dev_msg)
         character(*), intent(in)                        :: pathname
         integer(ik),  intent(in)                        :: linenum
@@ -116,7 +116,8 @@ contains
         integer(ik)                     :: ierr, chidg_signal_length
         character(len=:), allocatable   :: subpath, temppath, genstr
         class(*), pointer               :: auxdata => null()
-        character(100)                  :: warnstr, errstr, killstr, starstr, linechar, dashstr, blankstr, oopsstr, msgstr
+        character(100)                  :: warnstr, errstr, killstr, starstr, linechar, &
+                                           dashstr, blankstr, oopsstr, msgstr
         logical                         :: print_info_one   = .false.
         logical                         :: print_info_two   = .false.
         logical                         :: print_info_three = .false.
@@ -145,7 +146,7 @@ contains
         temppath = pathname
         pathstart = index(temppath, 'src/')
         if (pathstart == 0) then
-            subpath = temppath      ! The intel compiler provides just the file name, without the path. So here, we just take the file name and don't chop anything
+            subpath = temppath
         else
             subpath = temppath(pathstart:len(pathname))
         end if
@@ -285,7 +286,7 @@ contains
 
 
     end subroutine message
-    !**********************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -294,10 +295,11 @@ contains
 
 
 
-    !> This subroutine writes a line to IO that is composed of 8 optional incoming variables.
-    !! This is accomplished by first passing each component to the 'add_to_line' subroutine, which
-    !! assembles the data into the 'line' module-global variable. Then, the 'send_line' subroutine is called
-    !! to handle the destination of the line to either the screen, a file, or both.
+    !>  This subroutine writes a line to IO that is composed of 8 optional incoming variables.
+    !!  This is accomplished by first passing each component to the 'add_to_line' subroutine, 
+    !!  which assembles the data into the 'line' module-global variable. Then, the 'send_line' 
+    !!  subroutine is called to handle the destination of the line to either the screen, a 
+    !!  file, or both.
     !!
     !!
     !!  Some Options:
@@ -318,7 +320,7 @@ contains
     !!  @param[in]  bold            Logical to output text in bold
     !!  @param[in]  io_proc         Integer specifying MPI Rank responsible for outputing a message
     !!
-    !----------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine write_line(a,b,c,d,e,f,g,h,delimiter,columns,column_width,width,color,ltrim,bold,io_proc)
         class(*),           intent(in), target, optional        :: a
         class(*),           intent(in), target, optional        :: b
@@ -432,7 +434,7 @@ contains
         if (present(width)) msg_length = max_msg_length
 
     end subroutine write_line
-    !************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -451,7 +453,7 @@ contains
     !!  @param[in]  columns         Logical optional to indicate if incoming arguments should be aligned in columns.
     !!  @param[in]  column_width    Optional integer indicating the column width if columns was indicated.
     !!
-    !--------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine add_to_line(linedata,delimiter,columns,column_width,color,ltrim,bold)
         class(*),       intent(in)              :: linedata
         character(*),   intent(in), optional    :: delimiter
@@ -624,7 +626,7 @@ contains
 
 
     end subroutine add_to_line
-    !********************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -634,15 +636,15 @@ contains
 
 
 
-    !>  Handles sending module-global 'line' string to a destination of either the screen, a file, or both.
-    !!  Is is determined by the IO_DESTINATION variable from mod_constants.
+    !>  Handles sending module-global 'line' string to a destination of either the screen, 
+    !!  a file, or both. Is is determined by the IO_DESTINATION variable from mod_constants.
     !!
     !!  Line wrapping is also handled, set by the module parameter 'msg_length'.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine send_line()
         integer :: delimiter_size
         integer :: line_size
@@ -680,12 +682,14 @@ contains
 
 
         !
-        ! Handle line IO. Writes the line in chunks for line-wrapping until the entire line has been processed.
+        ! Handle line IO. Writes the line in chunks for line-wrapping until the entire 
+        ! line has been processed.
         !
         writeline = line
         section = 1
         lend    = 0
-        do while ( lend /= len(line) ) 
+        !do while ( lend /= len(line) ) 
+        do while ( lend < len(line) ) 
 
             !
             ! Set position to start writing
@@ -702,10 +706,17 @@ contains
                 lend = len(line)
             else
                 ! Move backwards until a word break so we don't split words when we wrap
-                do while ( (line(lend:lend) /= " ") .and. (lend > 0))
+                do while ( (line(lend:lend) /= " ") .and. (lend > 1))
                     lend = lend-1
                 end do
             end if
+
+
+            ! Make sure lend is valid and that we didn't back up too far.
+            ! This might happen for a long file path that doens't have a blank.
+            ! then the line wrapper backs up to space 0. In that case, we just write 
+            ! the whole thing.
+            if (lend == 1) lend = len(line)
 
 
             !
@@ -781,7 +792,7 @@ contains
 
 
     end subroutine send_line
-    !**************************************************************************************************************
+    !******************************************************************************************
 
 
 

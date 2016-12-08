@@ -90,6 +90,7 @@ contains
         rhoE = worker%get_primary_field_general('Energy',     'value')
 
 
+
         P = (self%gam-ONE)*(rhoE - HALF*( (rhou*rhou) + (rhov*rhov) + (rhow*rhow) )/rho )
         T = P/(rho*self%R)
 

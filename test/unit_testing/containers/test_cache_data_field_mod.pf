@@ -60,6 +60,7 @@ contains
         ! Initialize
         call this%chidg%set('Solution Order', integer_input=this%solution_order)
         call this%chidg%initialize_solution_domains()
+        call this%chidg%init('communication')
 
     end subroutine setUp
     !************************************************************************************
@@ -137,7 +138,7 @@ contains
     subroutine test_resize_face_interior__size(self)
         class(test_cache_data_field),    intent(inout)   :: self
         
-        integer(ik)                 :: idomain, ielem, iface, nnodes_face, nnodes_vol
+        integer(ik)              :: idomain, ielem, iface, nnodes_face, nnodes_vol
         type(cache_data_field_t) :: cache_data_field
 
         idomain = 1
@@ -158,11 +159,13 @@ contains
         nnodes_face = self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%face%nnodes
         nnodes_vol  = self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%vol%nnodes
 
+        ! TEST 'value' ALLOCATION
         ! Number of ndoes
         @assertEqual(size(cache_data_field%value,1), nnodes_face)
         ! Number of dependent elements
         @assertEqual(size(cache_data_field%value,2), 1)
 
+        ! TEST 'derivative' ALLOCATION
         ! Number of nodes
         @assertEqual(size(cache_data_field%derivative,1), nnodes_face)
         ! Number of spatial dimentions
@@ -170,6 +173,7 @@ contains
         ! Number of dependent elements
         @assertEqual(size(cache_data_field%derivative,3), 2)
 
+        ! TEST 'lift' ALLOCATION
         ! Number of nodes
         @assertEqual(size(cache_data_field%lift_face,1), nnodes_face)
         @assertEqual(size(cache_data_field%lift_element,1), nnodes_vol)

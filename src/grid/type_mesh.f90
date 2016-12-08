@@ -94,6 +94,9 @@ module type_mesh
         procedure,  public  :: get_nelements_global
         procedure,  public  :: get_nelements_local
 
+!       TODO: Implement this so it can be used throughout.
+!        procedure,  public  :: get_face_exterior_ndepend    !< For a particular face, return the number of exterior dependent elements
+
         final               :: destructor
 
     end type mesh_t
@@ -1596,10 +1599,6 @@ contains
 
 
 
-
-
-
-
     !>  Return the number of elements in the original unpartitioned domain.
     !!
     !!  @author Nathan A. Wukie
@@ -1642,17 +1641,75 @@ contains
 
 
 
+
+
+
+
+!    !>  For a given element/face location, return the number of exterior elements that
+!    !!  the face depends on.
+!    !!
+!    !!  Interior conforming faces: 1
+!    !!  Chimerea faces: >= 1
+!    !!  BC faces: >= 1
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   12/7/2016
+!    !!
+!    !!
+!    !--------------------------------------------------------------------------------------
+!    function get_face_exterior_ndepend(self,ielement_l,iface) result(ndepend)
+!        class(mesh_t),  intent(in)  :: self
+!        integer(ik),    intent(in)  :: ielement_l
+!        integer(ik),    intent(in)  :: iface
+!        
+!
+!
+!
+!        ! 
+!        ! Compute the number of exterior element dependencies for face exterior state
+!        !
+!        if ( self%faces(ielement_l,iface)%ftype == INTERIOR ) then
+!            ndepend = 1
+!            
+!        else if ( self%faces(ielement_l,iface)%ftype == CHIMERA ) then
+!            ChiID   = self%faces(ielement_l,iface)%ChiID
+!            ndepend = self%chimera%recv%data(ChiID)%ndonors()
+!
+!        else if ( self%faces(ielement_l,iface)%ftype == BOUNDARY ) then
+!            BC_ID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_ID
+!            BC_face = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_face
+!            ndepend = bc_set(idomain_l)%bcs(BC_ID)%get_ncoupled_elems(BC_face)
+!
+!        end if
+!
+!
+!
+!
+!
+!
+!    end function get_face_exterior_ndepend
+!    !**************************************************************************************
+
+
+
+
+
+
+
+
+
+
     !>
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------
     subroutine destructor(self)
         type(mesh_t), intent(inout) :: self
 
     
     end subroutine destructor
-    !*********************************************************************************************************
+    !*************************************************************************************
 
 
 end module type_mesh

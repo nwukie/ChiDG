@@ -59,7 +59,8 @@ contains
         integer(ik),            intent(in), optional    :: iface
 
         integer(ik)                 :: nprimary_fields,nmodel_fields, ntotal_fields, ierr, &
-                                       ChiID, donor_idomain, ifield, iprimary_field, imodel_field
+                                       ChiID, donor_idomain, ifield, iprimary_field, imodel_field, &
+                                       nauxiliary_fields, iauxiliary_field
         logical                     :: interior_face, chimera_face, boundary_face, reallocate
         character(:),   allocatable :: field, user_msg
 
@@ -80,13 +81,13 @@ contains
 
         select case (trim(cache_component))
             case ('element')
-                !neqns = mesh(idomain_l)%elems(ielement_l)%neqns
-                nprimary_fields = prop(idomain_l)%nprimary_fields()
-                nmodel_fields   = prop(idomain_l)%nmodel_fields()
+                nprimary_fields   = prop(idomain_l)%nprimary_fields()
+                nauxiliary_fields = prop(idomain_l)%nauxiliary_fields()
+                nmodel_fields     = prop(idomain_l)%nmodel_fields()
             case ('face interior')
-                !neqns = mesh(idomain_l)%elems(ielement_l)%neqns
-                nprimary_fields = prop(idomain_l)%nprimary_fields()
-                nmodel_fields   = prop(idomain_l)%nmodel_fields()
+                nprimary_fields   = prop(idomain_l)%nprimary_fields()
+                nauxiliary_fields = prop(idomain_l)%nauxiliary_fields()
+                nmodel_fields     = prop(idomain_l)%nmodel_fields()
 
 
             case ('face exterior')
@@ -96,9 +97,9 @@ contains
                 boundary_face = (mesh(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY)
 
                 if (interior_face .or. boundary_face) then
-                    !neqns = mesh(idomain_l)%elems(ielement_l)%neqns
-                    nprimary_fields = prop(idomain_l)%nprimary_fields()
-                    nmodel_fields   = prop(idomain_l)%nmodel_fields()
+                    nprimary_fields   = prop(idomain_l)%nprimary_fields()
+                    nauxiliary_fields = prop(idomain_l)%nauxiliary_fields()
+                    nmodel_fields     = prop(idomain_l)%nmodel_fields()
                 else if (chimera_face) then
                     ChiID = mesh(idomain_l)%faces(ielement_l,iface)%ChiID
                     ! To handle different fields on either side of the chimera boundary,
@@ -106,8 +107,9 @@ contains
                     ! we can query them here. For now, just use the source domain
                     ! and assume they have the same fields.
                     !neqns = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_neqns%at(1)
-                    nprimary_fields = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_neqns%at(1)
-                    nmodel_fields   = prop(idomain_l)%nmodel_fields()
+                    nprimary_fields   = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_neqns%at(1)
+                    nauxiliary_fields = prop(idomain_l)%nauxiliary_fields()
+                    nmodel_fields     = prop(idomain_l)%nmodel_fields()
                 else
                     call chidg_signal(FATAL,"cache_data: Face type wasn't recognized")
                 end if
@@ -127,7 +129,7 @@ contains
         !
         ! Compute total number of fields to store
         !
-        ntotal_fields = nprimary_fields + nmodel_fields
+        ntotal_fields = nprimary_fields + nauxiliary_fields + nmodel_fields
 
 
         !
@@ -159,6 +161,15 @@ contains
             call self%fields(ifield)%resize(field,cache_component,mesh,prop,idomain_l,ielement_l,iface)
             ifield = ifield + 1
         end do
+
+
+        ! Resize auxiliary fields
+        do iauxiliary_field = 1,prop(idomain_l)%nauxiliary_fields()
+            field = prop(idomain_l)%get_auxiliary_field_name(iauxiliary_field)
+            call self%fields(ifield)%resize(field,cache_component,mesh,prop,idomain_l,ielement_l,iface)
+            ifield = ifield + 1
+        end do
+
 
     end subroutine resize
     !*******************************************************************************

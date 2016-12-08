@@ -95,7 +95,6 @@ module mod_constants
 
     integer(ik), parameter :: BC_BLK    = -1
 
-    !integer(ik), parameter, dimension(7) :: lin_indices = [XI_MIN XI_MAX ETA_MIN ETA_MAX ZETA_MIN ZETA_MAX DIAG]
 
 
     !

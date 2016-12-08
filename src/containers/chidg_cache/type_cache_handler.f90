@@ -5,6 +5,7 @@ module type_cache_handler
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use mod_DNAD_tools,     only: face_compute_seed, element_compute_seed
     use mod_interpolate,    only: interpolate_face_autodiff, interpolate_element_autodiff
+    use mod_chidg_mpi,      only: IRANK
     use DNAD_D
 
     use type_chidg_cache,   only: chidg_cache_t
@@ -12,8 +13,6 @@ module type_cache_handler
     use type_equation_set,  only: equation_set_t
     use type_bcset,         only: bcset_t
 
-    use mod_chidg_mpi,      only: IRANK
-    use mpi_f08,            only: MPI_WTime
     implicit none
 
 
@@ -46,13 +45,22 @@ module type_cache_handler
 
         procedure   :: update
 
-        procedure   :: update_value
-        procedure   :: update_derivative
-        procedure   :: update_lift
-        procedure   :: update_models
+        procedure   :: update_auxiliary_fields
+        procedure   :: update_primary_fields
+        procedure   :: update_model_fields
 
-        procedure   :: update_lift_faces_internal
-        procedure   :: update_lift_faces_external
+
+        procedure   :: update_auxiliary_interior
+        procedure   :: update_auxiliary_exterior
+        procedure   :: update_auxiliary_bc
+        procedure   :: update_primary_interior
+        procedure   :: update_primary_exterior
+        procedure   :: update_primary_bc
+        procedure   :: update_model_interior
+        procedure   :: update_model_exterior
+
+        procedure, private :: update_lift_faces_internal
+        procedure, private :: update_lift_faces_external
 
     end type cache_handler_t
     !****************************************************************************************
@@ -89,24 +97,9 @@ contains
         call worker%cache%resize(worker%mesh,worker%prop,idomain_l,ielement_l)
 
 
-
-        call self%update_value(worker,equation_set,bc_set)
-        call self%update_derivative(worker,equation_set,bc_set)
-        call self%update_models(worker,equation_set,bc_set)
-
-
-        !
-        ! Update lift terms if diffusive operators are present
-        !
-        idomain_l = worker%element_info%idomain_l
-        if (allocated(equation_set(idomain_l)%volume_diffusive_operator) .or. &
-            allocated(equation_set(idomain_l)%boundary_diffusive_operator)) then
-
-            call self%update_lift(worker,equation_set,bc_set)
-
-        end if
-
-
+        call self%update_auxiliary_fields(worker,equation_set,bc_set)
+        call self%update_primary_fields(  worker,equation_set,bc_set)
+        call self%update_model_fields(    worker,equation_set,bc_set)
 
 
     end subroutine update
@@ -115,8 +108,13 @@ contains
 
 
 
-
-    !>
+    !>  Update the cache entries for the primary fields.
+    !!
+    !!  Activities:
+    !!      #1: Loop through faces, update 'face interior', 'face exterior' caches for 
+    !!          'value' and 'derivatives'
+    !!      #2: Update the 'element' cache for 'value' and 'derivatives'
+    !!      #3: Update the lifting operators for all cache components(interior, exterior, element)
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/7/2016
@@ -124,18 +122,15 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine update_value(self,worker,equation_set,bc_set)
+    subroutine update_primary_fields(self,worker,equation_set,bc_set)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
         type(bcset_t),              intent(inout)   :: bc_set(:)
 
-        character(:),   allocatable :: field
-        integer(ik)                 :: iface, iside, ieqn, idomain_l, ielement_l, idepend, &
-                                       ndepend, ChiID, BC_ID, BC_face, ielement_c, istate
-
-        type(AD_D), allocatable, dimension(:) :: value_gq
-
+        integer(ik)                                 :: idomain_l, ielement_l, iface, idepend, ieqn
+        character(:),   allocatable                 :: field
+        type(AD_D),     allocatable, dimension(:)   :: value_gq, ddx_gq, ddy_gq, ddz_gq
 
 
         idomain_l  = worker%element_info%idomain_l 
@@ -147,89 +142,14 @@ contains
         !
         do iface = 1,NFACES
 
-
-
-            !
             ! Update worker face index
-            !
             call worker%set_face(iface)
 
 
-
-
-            !
-            ! Face interior state. 'values' only depends on interior element.
-            !
-            idepend = 1
-
-            do ieqn = 1,worker%mesh(idomain_l)%neqns
-
-                worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,DIAG)
-                worker%function_info%idepend = idepend
-                worker%function_info%idiff   = DIAG
-
-                ! Interpolate modes to nodes
-                value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'value',ME)
-
-                ! Store gq data in cache
-                field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
-                call worker%cache%set_data(field,'face interior',value_gq,'value',0,worker%function_info%seed,iface)
-
-            end do !ieqn
-
-
-
-
-            ! 
-            ! Compute the number of exterior element dependencies for face exterior state
-            !
-            if ( worker%face_type() == INTERIOR ) then
-                ndepend = 1
-                
-            else if ( worker%face_type() == CHIMERA ) then
-                ChiID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%ChiID
-                ndepend = worker%mesh(idomain_l)%chimera%recv%data(ChiID)%ndonors()
-
-            else if ( worker%face_type() == BOUNDARY ) then
-                BC_ID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_ID
-                BC_face = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_face
-                ndepend = bc_set(idomain_l)%bcs(BC_ID)%get_ncoupled_elems(BC_face)
-
-            end if
-
-
-
-
-            !
-            ! Face exterior state
-            !
-            if ( (worker%face_type() == INTERIOR) .or. (worker%face_type() == CHIMERA) ) then
-                
-                do ieqn = 1,worker%mesh(idomain_l)%neqns
-
-                    field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
-
-                    do idepend = 1,ndepend
-
-                        worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,iface)
-                        worker%function_info%idepend = idepend
-
-                        value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'value',NEIGHBOR)
-
-                        call worker%cache%set_data(field,'face exterior',value_gq,'value',0,worker%function_info%seed,iface)
-
-                    end do !idepend
-                end do !ieqn
-
-
-
-
-            else if ( (worker%face_type() == BOUNDARY) ) then
-                !
-                ! Do nothing here. Boundary condition states(value and derivative) are both updated in 'update_derivative' 
-                ! since they are both handled by the bc_state functions.
-                !
-            end if
+            ! Update face interior/exterior/bc states.
+            call self%update_primary_interior(worker,equation_set,bc_set)
+            call self%update_primary_exterior(worker,equation_set,bc_set)
+            call self%update_primary_bc(      worker,equation_set,bc_set)
 
 
         end do !iface
@@ -239,7 +159,7 @@ contains
 
 
         !
-        ! Element volume 'value' cache. Only depends on interior element
+        ! Element primary fields volume 'value' cache. Only depends on interior element
         !
         idepend = 1
         do ieqn = 1,worker%mesh(idomain_l)%neqns
@@ -247,246 +167,56 @@ contains
                 worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,DIAG)
                 worker%function_info%idepend = idepend
 
-                value_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'value')
+                value_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,'value')
+                ddx_gq   = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,'ddx'  )
+                ddy_gq   = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,'ddy'  )
+                ddz_gq   = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,'ddz'  )
 
                 field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
-                call worker%cache%set_data(field,'element',value_gq,'value',0,worker%function_info%seed)
+                call worker%cache%set_data(field,'element',value_gq,'value',     0,worker%function_info%seed)
+                call worker%cache%set_data(field,'element',ddx_gq,  'derivative',1,worker%function_info%seed)
+                call worker%cache%set_data(field,'element',ddy_gq,  'derivative',2,worker%function_info%seed)
+                call worker%cache%set_data(field,'element',ddz_gq,  'derivative',3,worker%function_info%seed)
 
         end do !ieqn
 
 
 
-    end subroutine update_value
-    !************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/15/2016
-    !!
-    !!
-    !!
-    !-----------------------------------------------------------------------------------------------
-    subroutine update_derivative(self,worker,equation_set,bc_set)
-        class(cache_handler_t),     intent(inout)   :: self
-        type(chidg_worker_t),       intent(inout)   :: worker
-        type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bcset_t),              intent(inout)   :: bc_set(:)
-
-
-        character(:),   allocatable :: field
-        integer(ik)                 :: iface, iside, ieqn, idomain_l, ielement_l, idepend, &
-                                       ndepend, ChiID, BC_ID, BC_face, ielement_c, istate
-
-        type(AD_D), allocatable, dimension(:) :: ddx_gq, ddy_gq, ddz_gq
-
-
-
-        idomain_l  = worker%element_info%idomain_l 
-        ielement_l = worker%element_info%ielement_l 
-
-
 
         !
-        ! Loop through faces and cache internal, external interpolated derivatives
+        ! Update lifting terms for derivatives if diffusive operators are present
         !
-        do iface = 1,NFACES
+        idomain_l = worker%element_info%idomain_l
+        if (allocated(equation_set(idomain_l)%volume_diffusive_operator) .or. &
+            allocated(equation_set(idomain_l)%boundary_diffusive_operator)) then
 
+            call self%update_lift_faces_internal(worker,equation_set,bc_set)
+            call self%update_lift_faces_external(worker,equation_set,bc_set)
 
+        end if
 
-            !
-            ! Update worker face index
-            !
-            call worker%set_face(iface)
 
 
 
 
-            !
-            ! Face interior state. 'values' only depends on interior element.
-            !
-            idepend = 1
+    end subroutine update_primary_fields
+    !****************************************************************************************
 
-            do ieqn = 1,worker%mesh(idomain_l)%neqns
 
-                worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,DIAG)
-                worker%function_info%idepend = idepend
-                worker%function_info%idiff   = DIAG
 
-                ! Interpolate modes to nodes
-                ddx_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'ddx',ME)
-                ddy_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'ddy',ME)
-                ddz_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'ddz',ME)
 
-                ! Store gq data in cache
-                field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
-                call worker%cache%set_data(field,'face interior',ddx_gq,'derivative',1,worker%function_info%seed,iface)
-                call worker%cache%set_data(field,'face interior',ddy_gq,'derivative',2,worker%function_info%seed,iface)
-                call worker%cache%set_data(field,'face interior',ddz_gq,'derivative',3,worker%function_info%seed,iface)
 
-            end do !ieqn
 
 
 
 
-            ! 
-            ! Compute the number of exterior element dependencies for face exterior state
-            !
-            if ( worker%face_type() == INTERIOR ) then
-                ndepend = 1
-                
-            else if ( worker%face_type() == CHIMERA ) then
-                ChiID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%ChiID
-                ndepend = worker%mesh(idomain_l)%chimera%recv%data(ChiID)%ndonors()
 
-            else if ( worker%face_type() == BOUNDARY ) then
-                BC_ID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_ID
-                BC_face = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_face
-                ndepend = bc_set(idomain_l)%bcs(BC_ID)%get_ncoupled_elems(BC_face)
-
-            end if
-
-
-
-
-            !
-            ! Face exterior state
-            !
-            if ( (worker%face_type() == INTERIOR) .or. (worker%face_type() == CHIMERA) ) then
-                
-                do ieqn = 1,worker%mesh(idomain_l)%neqns
-
-                    field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
-
-                    do idepend = 1,ndepend
-
-                        worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,iface)
-                        worker%function_info%idepend = idepend
-
-                        ddx_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'ddx',NEIGHBOR)
-                        ddy_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'ddy',NEIGHBOR)
-                        ddz_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'ddz',NEIGHBOR)
-
-                        call worker%cache%set_data(field,'face exterior',ddx_gq,'derivative',1,worker%function_info%seed,iface)
-                        call worker%cache%set_data(field,'face exterior',ddy_gq,'derivative',2,worker%function_info%seed,iface)
-                        call worker%cache%set_data(field,'face exterior',ddz_gq,'derivative',3,worker%function_info%seed,iface)
-
-                    end do !idepend
-                end do !ieqn
-
-
-
-
-            else if ( (worker%face_type() == BOUNDARY) ) then
-
-
-                do istate = 1,size(bc_set(idomain_l)%bcs(BC_ID)%bc_state)
-                    do idepend = 1,ndepend
-
-
-                        !
-                        ! Get coupled bc element to linearize against.
-                        !
-                        ielement_c = bc_set(idomain_l)%bcs(BC_ID)%bc_patch%coupled_elements(BC_face)%at(idepend)
-                        worker%function_info%seed%idomain_g  = worker%mesh(idomain_l)%elems(ielement_c)%idomain_g
-                        worker%function_info%seed%idomain_l  = worker%mesh(idomain_l)%elems(ielement_c)%idomain_l
-                        worker%function_info%seed%ielement_g = worker%mesh(idomain_l)%elems(ielement_c)%ielement_g
-                        worker%function_info%seed%ielement_l = worker%mesh(idomain_l)%elems(ielement_c)%ielement_l
-                        worker%function_info%seed%iproc      = IRANK
-
-                        call bc_set(idomain_l)%bcs(BC_ID)%bc_state(istate)%state%compute_bc_state(worker,equation_set(idomain_l)%prop)
-
-                    end do !idepend
-                end do
-
-
-
-
-            end if
-
-
-        end do !iface
-
-
-
-
-
-        !
-        ! Element volume 'value' cache. Only depends on interior element
-        !
-        idepend = 1
-        do ieqn = 1,worker%mesh(idomain_l)%neqns
-
-                worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,DIAG)
-                worker%function_info%idepend = idepend
-
-                ddx_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'ddx')
-                ddy_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'ddy')
-                ddz_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'ddz')
-
-                field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
-                call worker%cache%set_data(field,"element",ddx_gq,"derivative",1,worker%function_info%seed)
-                call worker%cache%set_data(field,"element",ddy_gq,"derivative",2,worker%function_info%seed)
-                call worker%cache%set_data(field,"element",ddz_gq,"derivative",3,worker%function_info%seed)
-
-        end do !ieqn
-
-
-
-    end subroutine update_derivative
-    !************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-    !>
+    !>  Update the cache entries for the auxiliary fields.
     !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/13/2016
-    !!
-    !!
-    !------------------------------------------------------------------------------------------------
-    subroutine update_lift(self,worker,equation_set,bc_set)
-        class(cache_handler_t),     intent(inout)   :: self
-        type(chidg_worker_t),       intent(inout)   :: worker
-        type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bcset_t),              intent(inout)   :: bc_set(:)
-
-
-        call self%update_lift_faces_internal(worker,equation_set,bc_set)
-
-        call self%update_lift_faces_external(worker,equation_set,bc_set)
-
-    end subroutine update_lift
-    !************************************************************************************************
-
-
-
-
-
-
-
-
-
-    !>
+    !!  Activities:
+    !!      #1: Loop through faces, update 'face interior', 'face exterior' caches for 
+    !!          'value' and 'derivatives'
+    !!      #2: Update the 'element' cache for 'value' and 'derivatives'
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/7/2016
@@ -494,14 +224,106 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine update_models(self,worker,equation_set,bc_set)
+    subroutine update_auxiliary_fields(self,worker,equation_set,bc_set)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
         type(bcset_t),              intent(inout)   :: bc_set(:)
 
-        integer(ik)                 :: iface, imodel, idomain_l, ielement_l, idepend, &
-                                       ndepend, ChiID, BC_ID, BC_face, ielement_c, istate
+        integer(ik)                                 :: idomain_l, ielement_l, iface, idepend, &
+                                                       ieqn, ifield, iaux_field
+        character(:),   allocatable                 :: field
+        type(AD_D),     allocatable, dimension(:)   :: value_gq, ddx_gq, ddy_gq, ddz_gq
+
+
+        idomain_l  = worker%element_info%idomain_l 
+        ielement_l = worker%element_info%ielement_l 
+
+
+        !
+        ! Loop through faces and cache internal, external interpolated states
+        !
+        do iface = 1,NFACES
+
+            ! Update worker face index
+            call worker%set_face(iface)
+
+
+            ! Update face interior/exterior states.
+            call self%update_auxiliary_interior(worker,equation_set,bc_set)
+            call self%update_auxiliary_exterior(worker,equation_set,bc_set)
+            call self%update_auxiliary_bc(      worker,equation_set,bc_set)
+
+
+        end do !iface
+
+
+
+        !
+        ! Element primary fields volume 'value' cache. Only depends on interior element
+        !
+        idepend = 0 ! no linearization
+        do ifield = 1,worker%prop(idomain_l)%nauxiliary_fields()
+
+            !
+            ! Try to find the auxiliary field in the solverdata_t container; where they are stored.
+            !
+            field      = worker%prop(idomain_l)%get_auxiliary_field_name(ifield)
+            iaux_field = worker%solverdata%get_auxiliary_field_index(field)
+
+            ! Set seed
+            worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,DIAG)
+            worker%function_info%idepend = idepend
+            worker%function_info%idiff   = DIAG
+
+            ! Interpolate modes to nodes
+            ieqn = 1    !implicitly assuming only 1 equation in the auxiliary field chidgVector
+            value_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,'value')
+            ddx_gq   = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,'ddx'  )
+            ddy_gq   = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,'ddy'  )
+            ddz_gq   = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,'ddz'  )
+
+            ! Store gq data in cache
+            call worker%cache%set_data(field,'element',value_gq,'value',     0,worker%function_info%seed)
+            call worker%cache%set_data(field,'element',ddx_gq,  'derivative',1,worker%function_info%seed)
+            call worker%cache%set_data(field,'element',ddy_gq,  'derivative',2,worker%function_info%seed)
+            call worker%cache%set_data(field,'element',ddz_gq,  'derivative',3,worker%function_info%seed)
+
+        end do !ieqn
+
+
+
+
+
+    end subroutine update_auxiliary_fields
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Update the cache entries for model fields.
+    !!
+    !!  Executes the model functions directly from the equation set. This allows
+    !!  the model to handle what it wants to cache.
+    !!
+    !!  NOTE: This only provides model 'value' cache entries. Model derivatives are not
+    !!  currently implemented.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/7/2016
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine update_model_fields(self,worker,equation_set,bc_set)
+        class(cache_handler_t),     intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(equation_set_t),       intent(inout)   :: equation_set(:)
+        type(bcset_t),              intent(inout)   :: bc_set(:)
+
+        integer(ik)                 :: iface, imodel, idomain_l, ielement_l, idepend
 
 
         idomain_l  = worker%element_info%idomain_l 
@@ -514,98 +336,14 @@ contains
         !
         do iface = 1,NFACES
 
-
             ! Update worker face index
             call worker%set_face(iface)
 
-
-            ! Update models for face interior. Only depends on interior element.
-            idepend = 1
-            worker%interpolation_source = 'face interior'
-            do imodel = 1,equation_set(idomain_l)%nmodels()
-
-                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,DIAG)
-                    worker%function_info%idepend = idepend
-                    worker%function_info%idiff   = DIAG
-
-                    call equation_set(idomain_l)%models(imodel)%model%compute(worker)
-            end do
-
-
-
-            ! 
-            ! Compute the number of exterior element dependencies for face exterior state
-            !
-            if ( worker%face_type() == INTERIOR ) then
-                ndepend = 1
-                
-            else if ( worker%face_type() == CHIMERA ) then
-                ChiID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%ChiID
-                ndepend = worker%mesh(idomain_l)%chimera%recv%data(ChiID)%ndonors()
-
-            else if ( worker%face_type() == BOUNDARY ) then
-                BC_ID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_ID
-                BC_face = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_face
-                ndepend = bc_set(idomain_l)%bcs(BC_ID)%get_ncoupled_elems(BC_face)
-
-            end if
-
-
-
-
-            !
-            ! Face exterior state: interior and chimera
-            !
-            worker%interpolation_source = 'face exterior'
-            if ( (worker%face_type() == INTERIOR) .or. (worker%face_type() == CHIMERA) ) then
-                
-                do imodel = 1,equation_set(idomain_l)%nmodels()
-                    do idepend = 1,ndepend
-
-                        worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,iface)
-                        worker%function_info%idepend = idepend
-
-                        call equation_set(idomain_l)%models(imodel)%model%compute(worker)
-
-                    end do !idepend
-                end do !imodel
-
-
-
-
-            !
-            ! Face exterior state: boundaries
-            !
-            worker%interpolation_source = 'face exterior'
-            else if ( (worker%face_type() == BOUNDARY) ) then
-
-                do imodel = 1,equation_set(idomain_l)%nmodels()
-                    do idepend = 1,ndepend
-
-                        ! Get coupled bc element to linearize against.
-                        ielement_c = bc_set(idomain_l)%bcs(BC_ID)%bc_patch%coupled_elements(BC_face)%at(idepend)
-                        worker%function_info%seed%idomain_g  = worker%mesh(idomain_l)%elems(ielement_c)%idomain_g
-                        worker%function_info%seed%idomain_l  = worker%mesh(idomain_l)%elems(ielement_c)%idomain_l
-                        worker%function_info%seed%ielement_g = worker%mesh(idomain_l)%elems(ielement_c)%ielement_g
-                        worker%function_info%seed%ielement_l = worker%mesh(idomain_l)%elems(ielement_c)%ielement_l
-                        worker%function_info%seed%iproc      = IRANK
-
-                        call equation_set(idomain_l)%models(imodel)%model%compute(worker)
-
-                    end do !idepend
-                end do !imodel
-
-
-
-
-
-            end if
-
+            ! Update model 'face interior' 'face exterior' cache entries for 'value'
+            call self%update_model_interior(  worker,equation_set,bc_set)
+            call self%update_model_exterior(  worker,equation_set,bc_set)
 
         end do !iface
-
-
-
 
 
 
@@ -624,11 +362,601 @@ contains
         end do !imodel
 
 
-    end subroutine update_models
+    end subroutine update_model_fields
     !************************************************************************************************
 
 
 
+
+
+
+
+
+
+
+
+    !>  Update the primary field 'face interior' cache entries.
+    !!
+    !!  Computes the 'value' and 'derivative' entries.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/7/2016
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------
+    subroutine update_primary_interior(self,worker,equation_set,bc_set)
+        class(cache_handler_t),     intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(equation_set_t),       intent(inout)   :: equation_set(:)
+        type(bcset_t),              intent(inout)   :: bc_set(:)
+
+        integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, iface
+        character(:),   allocatable                 :: field
+        type(AD_D),     allocatable, dimension(:)   :: value_gq, ddx_gq, ddy_gq, ddz_gq
+
+
+        idomain_l  = worker%element_info%idomain_l 
+        ielement_l = worker%element_info%ielement_l 
+        iface      = worker%iface
+
+        !
+        ! Face interior state. 'values' only depends on interior element.
+        !
+        idepend = 1
+
+        do ieqn = 1,worker%mesh(idomain_l)%neqns
+
+            worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,DIAG)
+            worker%function_info%idepend = idepend
+            worker%function_info%idiff   = DIAG
+
+            ! Interpolate modes to nodes
+            value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,'value',ME)
+            ddx_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,'ddx',  ME)
+            ddy_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,'ddy',  ME)
+            ddz_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,'ddz',  ME)
+
+            ! Store gq data in cache
+            field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
+            call worker%cache%set_data(field,'face interior',value_gq,'value',     0,worker%function_info%seed,iface)
+            call worker%cache%set_data(field,'face interior',ddx_gq,  'derivative',1,worker%function_info%seed,iface)
+            call worker%cache%set_data(field,'face interior',ddy_gq,  'derivative',2,worker%function_info%seed,iface)
+            call worker%cache%set_data(field,'face interior',ddz_gq,  'derivative',3,worker%function_info%seed,iface)
+
+        end do !ieqn
+
+
+
+    end subroutine update_primary_interior
+    !*************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Update the primary field 'face exterior' cache entries.
+    !!
+    !!  Computes the 'value' and 'derivative' entries.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/7/2016
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------
+    subroutine update_primary_exterior(self,worker,equation_set,bc_set)
+        class(cache_handler_t),     intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(equation_set_t),       intent(inout)   :: equation_set(:)
+        type(bcset_t),              intent(inout)   :: bc_set(:)
+
+        integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, iface, &
+                                                       ChiID, BC_ID, BC_face, ndepend
+        character(:),   allocatable                 :: field
+        type(AD_D),     allocatable, dimension(:)   :: value_gq, ddx_gq, ddy_gq, ddz_gq
+
+
+        idomain_l  = worker%element_info%idomain_l 
+        ielement_l = worker%element_info%ielement_l 
+        iface      = worker%iface
+
+
+
+
+        ! 
+        ! Compute the number of exterior element dependencies for face exterior state
+        !
+        ndepend = get_ndepend_exterior(worker,equation_set,bc_set)
+
+
+
+        !
+        ! Face exterior state
+        !
+        if ( (worker%face_type() == INTERIOR) .or. (worker%face_type() == CHIMERA) ) then
+            
+            do ieqn = 1,worker%mesh(idomain_l)%neqns
+                field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
+                do idepend = 1,ndepend
+
+                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,iface)
+                    worker%function_info%idepend = idepend
+
+                    value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,'value',NEIGHBOR)
+                    ddx_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,'ddx',  NEIGHBOR)
+                    ddy_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,'ddy',  NEIGHBOR)
+                    ddz_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,'ddz',  NEIGHBOR)
+
+                    call worker%cache%set_data(field,'face exterior',value_gq,'value',     0,worker%function_info%seed,iface)
+                    call worker%cache%set_data(field,'face exterior',ddx_gq,  'derivative',1,worker%function_info%seed,iface)
+                    call worker%cache%set_data(field,'face exterior',ddy_gq,  'derivative',2,worker%function_info%seed,iface)
+                    call worker%cache%set_data(field,'face exterior',ddz_gq,  'derivative',3,worker%function_info%seed,iface)
+
+
+
+                end do !idepend
+            end do !ieqn
+
+        end if
+
+
+
+    end subroutine update_primary_exterior
+    !*************************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Update the primary field BOUNDARY state functions. These are placed in the 
+    !!  'face exterior' cache entry.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/7/2016
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------
+    subroutine update_primary_bc(self,worker,equation_set,bc_set)
+        class(cache_handler_t),     intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(equation_set_t),       intent(inout)   :: equation_set(:)
+        type(bcset_t),              intent(inout)   :: bc_set(:)
+
+        integer(ik)                 :: idepend, ieqn, idomain_l, ielement_l, iface, ndepend, &
+                                       istate, ielement_c, BC_ID, BC_face
+        character(:),   allocatable :: field
+        type(AD_D),     allocatable :: ddx_gq(:), ddy_gq(:), ddz_gq(:)
+
+
+        idomain_l  = worker%element_info%idomain_l 
+        ielement_l = worker%element_info%ielement_l 
+        iface      = worker%iface
+
+
+        !
+        ! Face bc(exterior) state
+        !
+        if ( (worker%face_type() == BOUNDARY)  ) then
+            
+            BC_ID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_ID
+            BC_face = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_face
+
+            ndepend = get_ndepend_exterior(worker,equation_set,bc_set)
+            do istate = 1,size(bc_set(idomain_l)%bcs(BC_ID)%bc_state)
+                do idepend = 1,ndepend
+
+                    ! Get coupled bc element to linearize against.
+                    ielement_c = bc_set(idomain_l)%bcs(BC_ID)%bc_patch%coupled_elements(BC_face)%at(idepend)
+                    worker%function_info%seed%idomain_g  = worker%mesh(idomain_l)%elems(ielement_c)%idomain_g
+                    worker%function_info%seed%idomain_l  = worker%mesh(idomain_l)%elems(ielement_c)%idomain_l
+                    worker%function_info%seed%ielement_g = worker%mesh(idomain_l)%elems(ielement_c)%ielement_g
+                    worker%function_info%seed%ielement_l = worker%mesh(idomain_l)%elems(ielement_c)%ielement_l
+                    worker%function_info%seed%iproc      = IRANK
+
+                    call bc_set(idomain_l)%bcs(BC_ID)%bc_state(istate)%state%compute_bc_state(worker,equation_set(idomain_l)%prop)
+
+                end do !idepend
+            end do !istate
+
+
+        end if
+
+
+
+    end subroutine update_primary_bc
+    !*************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Update the auxiliary field 'face interior' cache entries.
+    !!
+    !!  Computes the 'value' and 'derivative' entries.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/7/2016
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------
+    subroutine update_auxiliary_interior(self,worker,equation_set,bc_set)
+        class(cache_handler_t),     intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(equation_set_t),       intent(inout)   :: equation_set(:)
+        type(bcset_t),              intent(inout)   :: bc_set(:)
+
+        integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, iface, &
+                                                       iaux_field, ifield
+        character(:),   allocatable                 :: field
+        type(AD_D),     allocatable, dimension(:)   :: value_gq, ddx_gq, ddy_gq, ddz_gq
+
+
+        idomain_l  = worker%element_info%idomain_l 
+        ielement_l = worker%element_info%ielement_l 
+        iface      = worker%iface
+
+        !
+        ! Face interior state. 
+        !
+        idepend = 0 ! no linearization
+        do ifield = 1,worker%prop(idomain_l)%nauxiliary_fields()
+
+            !
+            ! Try to find the auxiliary field in the solverdata_t container; where they are stored.
+            !
+            field      = worker%prop(idomain_l)%get_auxiliary_field_name(ifield)
+            iaux_field = worker%solverdata%get_auxiliary_field_index(field)
+
+            ! Set seed
+            worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,DIAG)
+            worker%function_info%idepend = idepend
+            worker%function_info%idiff   = DIAG
+
+            ! Interpolate modes to nodes
+            ieqn = 1    !implicitly assuming only 1 equation in the auxiliary field chidgVector
+            value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,'value',ME)
+            ddx_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,'ddx',  ME)
+            ddy_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,'ddy',  ME)
+            ddz_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,'ddz',  ME)
+
+            ! Store gq data in cache
+            call worker%cache%set_data(field,'face interior',value_gq,'value',     0,worker%function_info%seed,iface)
+            call worker%cache%set_data(field,'face interior',ddx_gq,  'derivative',1,worker%function_info%seed,iface)
+            call worker%cache%set_data(field,'face interior',ddy_gq,  'derivative',2,worker%function_info%seed,iface)
+            call worker%cache%set_data(field,'face interior',ddz_gq,  'derivative',3,worker%function_info%seed,iface)
+
+        end do !ieqn
+
+
+
+    end subroutine update_auxiliary_interior
+    !*************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Update the auxiliary field 'face exterior' cache entries.
+    !!
+    !!  Computes the 'value' and 'derivative' entries.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/7/2016
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------
+    subroutine update_auxiliary_exterior(self,worker,equation_set,bc_set)
+        class(cache_handler_t),     intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(equation_set_t),       intent(inout)   :: equation_set(:)
+        type(bcset_t),              intent(inout)   :: bc_set(:)
+
+        integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, iface, &
+                                                       iaux_field, ifield
+        character(:),   allocatable                 :: field
+        type(AD_D),     allocatable, dimension(:)   :: value_gq, ddx_gq, ddy_gq, ddz_gq
+
+
+        idomain_l  = worker%element_info%idomain_l 
+        ielement_l = worker%element_info%ielement_l 
+        iface      = worker%iface
+
+        !
+        ! Face exterior state. 
+        !
+        if ( (worker%face_type() == INTERIOR) .or. (worker%face_type() == CHIMERA) ) then
+
+            idepend = 0 ! no linearization
+            do ifield = 1,worker%prop(idomain_l)%nauxiliary_fields()
+
+                !
+                ! Try to find the auxiliary field in the solverdata_t container; where they are stored.
+                !
+                field      = worker%prop(idomain_l)%get_auxiliary_field_name(ifield)
+                iaux_field = worker%solverdata%get_auxiliary_field_index(field)
+
+                ! Set seed
+                worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,DIAG)
+                worker%function_info%idepend = idepend
+                worker%function_info%idiff   = DIAG
+
+                ! Interpolate modes to nodes
+                ieqn = 1    !implicitly assuming only 1 equation in the auxiliary field chidgVector
+                value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,'value',NEIGHBOR)
+                ddx_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,'ddx',  NEIGHBOR)
+                ddy_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,'ddy',  NEIGHBOR)
+                ddz_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,'ddz',  NEIGHBOR)
+
+                ! Store gq data in cache
+                call worker%cache%set_data(field,'face exterior',value_gq,'value',     0,worker%function_info%seed,iface)
+                call worker%cache%set_data(field,'face exterior',ddx_gq,  'derivative',1,worker%function_info%seed,iface)
+                call worker%cache%set_data(field,'face exterior',ddy_gq,  'derivative',2,worker%function_info%seed,iface)
+                call worker%cache%set_data(field,'face exterior',ddz_gq,  'derivative',3,worker%function_info%seed,iface)
+
+            end do !ieqn
+
+        end if
+
+
+
+    end subroutine update_auxiliary_exterior
+    !*************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Update the auxiliary field bc(face exterior) cache entries.
+    !!
+    !!  Computes the 'value' and 'derivative' entries.
+    !!
+    !!  NOTE: This extrapolates information from the 'face interior' and stores in in the
+    !!        'face exterior' cache. These are auxiliary fields so they don't exactly have
+    !!        a definition outside the domain. An extrapolation is a reasonable assumption.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/7/2016
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------
+    subroutine update_auxiliary_bc(self,worker,equation_set,bc_set)
+        class(cache_handler_t),     intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(equation_set_t),       intent(inout)   :: equation_set(:)
+        type(bcset_t),              intent(inout)   :: bc_set(:)
+
+        integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, iface, &
+                                                       iaux_field, ifield
+        character(:),   allocatable                 :: field
+        type(AD_D),     allocatable, dimension(:)   :: value_gq, ddx_gq, ddy_gq, ddz_gq
+
+
+        idomain_l  = worker%element_info%idomain_l 
+        ielement_l = worker%element_info%ielement_l 
+        iface      = worker%iface
+
+        !
+        ! Face interior state. 
+        !
+        if ( (worker%face_type() == BOUNDARY) ) then
+
+            idepend = 0 ! no linearization
+            do ifield = 1,worker%prop(idomain_l)%nauxiliary_fields()
+
+                !
+                ! Try to find the auxiliary field in the solverdata_t container; where they are stored.
+                !
+                field      = worker%prop(idomain_l)%get_auxiliary_field_name(ifield)
+                iaux_field = worker%solverdata%get_auxiliary_field_index(field)
+
+                ! Set seed
+                worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,DIAG)
+                worker%function_info%idepend = idepend
+                worker%function_info%idiff   = DIAG
+
+                !
+                ! Interpolate modes to nodes
+                ieqn = 1    !implicitly assuming only 1 equation in the auxiliary field chidgVector
+                value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,'value',ME)
+                ddx_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,'ddx',  ME)
+                ddy_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,'ddy',  ME)
+                ddz_gq   = interpolate_face_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%face_info(),worker%function_info,ieqn,'ddz',  ME)
+
+                ! Store gq data in cache
+                call worker%cache%set_data(field,'face exterior',value_gq,'value',     0,worker%function_info%seed,iface)
+                call worker%cache%set_data(field,'face exterior',ddx_gq,  'derivative',1,worker%function_info%seed,iface)
+                call worker%cache%set_data(field,'face exterior',ddy_gq,  'derivative',2,worker%function_info%seed,iface)
+                call worker%cache%set_data(field,'face exterior',ddz_gq,  'derivative',3,worker%function_info%seed,iface)
+
+            end do !ieqn
+
+        end if
+
+
+
+    end subroutine update_auxiliary_bc
+    !*************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Update the model field 'value', 'face interior' cache entries.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/7/2016
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------
+    subroutine update_model_interior(self,worker,equation_set,bc_set)
+        class(cache_handler_t),     intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(equation_set_t),       intent(inout)   :: equation_set(:)
+        type(bcset_t),              intent(inout)   :: bc_set(:)
+
+        integer(ik)                 :: idepend, imodel, idomain_l, ielement_l, iface
+        character(:),   allocatable :: field
+        type(AD_D),     allocatable :: value_gq(:)
+
+
+        idomain_l  = worker%element_info%idomain_l 
+        ielement_l = worker%element_info%ielement_l 
+        iface      = worker%iface
+
+
+        !
+        ! Update models for 'face interior'. Only depends on interior element.
+        !
+        idepend = 1
+        worker%interpolation_source = 'face interior'
+        do imodel = 1,equation_set(idomain_l)%nmodels()
+
+                worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,DIAG)
+                worker%function_info%idepend = idepend
+                worker%function_info%idiff   = DIAG
+
+                call equation_set(idomain_l)%models(imodel)%model%compute(worker)
+        end do
+
+
+    end subroutine update_model_interior
+    !*************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Update the model field 'value', 'face exterior' cache entries.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/7/2016
+    !!
+    !!
+    !------------------------------------------------------------------------------------------------
+    subroutine update_model_exterior(self,worker,equation_set,bc_set)
+        class(cache_handler_t),     intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(equation_set_t),       intent(inout)   :: equation_set(:)
+        type(bcset_t),              intent(inout)   :: bc_set(:)
+
+        integer(ik)                 :: idepend, imodel, idomain_l, ielement_l, iface, ChiID, &
+                                       BC_ID, BC_face, ndepend, ielement_c
+        character(:),   allocatable :: field
+        type(AD_D),     allocatable :: value_gq(:)
+
+
+        idomain_l  = worker%element_info%idomain_l 
+        ielement_l = worker%element_info%ielement_l 
+        iface      = worker%iface
+
+
+
+
+        ! 
+        ! Compute the number of exterior element dependencies for face exterior state
+        !
+        ndepend = get_ndepend_exterior(worker,equation_set,bc_set)
+
+
+
+
+        !
+        ! Face exterior state: interior and chimera
+        !
+        worker%interpolation_source = 'face exterior'
+        if ( (worker%face_type() == INTERIOR) .or. (worker%face_type() == CHIMERA) ) then
+            
+            do imodel = 1,equation_set(idomain_l)%nmodels()
+                do idepend = 1,ndepend
+
+                    worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,iface)
+                    worker%function_info%idepend = idepend
+
+                    call equation_set(idomain_l)%models(imodel)%model%compute(worker)
+
+                end do !idepend
+            end do !imodel
+
+
+
+
+        !
+        ! Face exterior state: boundaries
+        !
+        worker%interpolation_source = 'face exterior'
+        else if ( (worker%face_type() == BOUNDARY) ) then
+
+            BC_ID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_ID
+            BC_face = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_face
+
+            do imodel = 1,equation_set(idomain_l)%nmodels()
+                do idepend = 1,ndepend
+
+                    ! Get coupled bc element to linearize against.
+                    ielement_c = bc_set(idomain_l)%bcs(BC_ID)%bc_patch%coupled_elements(BC_face)%at(idepend)
+                    worker%function_info%seed%idomain_g  = worker%mesh(idomain_l)%elems(ielement_c)%idomain_g
+                    worker%function_info%seed%idomain_l  = worker%mesh(idomain_l)%elems(ielement_c)%idomain_l
+                    worker%function_info%seed%ielement_g = worker%mesh(idomain_l)%elems(ielement_c)%ielement_g
+                    worker%function_info%seed%ielement_l = worker%mesh(idomain_l)%elems(ielement_c)%ielement_l
+                    worker%function_info%seed%iproc      = IRANK
+
+                    call equation_set(idomain_l)%models(imodel)%model%compute(worker)
+
+                end do !idepend
+            end do !imodel
+
+
+        end if ! worker%face_type()
+
+
+
+
+
+    end subroutine update_model_exterior
+    !*************************************************************************************************
 
 
 
@@ -796,30 +1124,12 @@ contains
 
 
 
-                ! 
-                ! Compute the number of dependencies from external state. Sets 'ndepend'
-                !
-                if ( worker%face_type() == INTERIOR ) then
-                    ndepend = 1
-                    
-                else if ( worker%face_type() == CHIMERA ) then
-                    ChiID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%ChiID
-                    ndepend = worker%mesh(idomain_l)%chimera%recv%data(ChiID)%ndonors()
-
-                else if ( worker%face_type() == BOUNDARY ) then
-                    BC_ID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_ID
-                    BC_face = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_face
-                    ndepend = bc_set(idomain_l)%bcs(BC_ID)%get_ncoupled_elems(BC_face)
-
-                end if
-
-
-
 
 
                 !
                 ! Compute Interior lift, differentiated wrt Exterior
                 !
+                ndepend = get_ndepend_exterior(worker,equation_set,bc_set)
                 do idepend = 1,ndepend
 
                     ! Get Seed
@@ -981,31 +1291,10 @@ contains
 
 
 
-
-                ! 
-                ! Compute the number of dependencies from external state. Sets 'ndepend'
-                !
-                if ( worker%face_type() == INTERIOR ) then
-                    ndepend = 1
-                    
-                else if ( worker%face_type() == CHIMERA ) then
-                    ChiID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%ChiID
-                    ndepend = worker%mesh(idomain_l)%chimera%recv%data(ChiID)%ndonors()
-
-                else if ( worker%face_type() == BOUNDARY ) then
-                    BC_ID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_ID
-                    BC_face = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_face
-                    ndepend = bc_set(idomain_l)%bcs(BC_ID)%get_ncoupled_elems(BC_face)
-
-                end if
-
-
-
-
-
                 !
                 ! Compute External lift, differentiated wrt Exterior
                 !
+                ndepend = get_ndepend_exterior(worker,equation_set,bc_set)
                 do idepend = 1,ndepend
 
                     ! Get Seed
@@ -1034,10 +1323,6 @@ contains
 
     end subroutine update_lift_faces_external
     !*************************************************************************************************
-
-
-
-
 
 
 
@@ -1483,12 +1768,44 @@ contains
 
 
 
+    !>  For a given state of the chidg_worker(idomain,ielement,iface), return the number
+    !!  of exterior dependent elements.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/7/2016
+    !!
+    !---------------------------------------------------------------------------------------------
+    function get_ndepend_exterior(worker,equation_set,bc_set) result(ndepend)
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(equation_set_t),       intent(inout)   :: equation_set(:)
+        type(bcset_t),              intent(inout)   :: bc_set(:)
+
+        integer(ik) :: ndepend, idomain_l, ielement_l, iface, ChiID, BC_ID, BC_face
+
+        idomain_l  = worker%element_info%idomain_l 
+        ielement_l = worker%element_info%ielement_l 
+        iface      = worker%iface
+
+        ! 
+        ! Compute the number of exterior element dependencies for face exterior state
+        !
+        if ( worker%face_type() == INTERIOR ) then
+            ndepend = 1
+            
+        else if ( worker%face_type() == CHIMERA ) then
+            ChiID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%ChiID
+            ndepend = worker%mesh(idomain_l)%chimera%recv%data(ChiID)%ndonors()
+
+        else if ( worker%face_type() == BOUNDARY ) then
+            BC_ID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_ID
+            BC_face = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_face
+            ndepend = bc_set(idomain_l)%bcs(BC_ID)%get_ncoupled_elems(BC_face)
+
+        end if
 
 
-
-
-
-
+    end function get_ndepend_exterior
+    !***********************************************************************************************
 
 
 

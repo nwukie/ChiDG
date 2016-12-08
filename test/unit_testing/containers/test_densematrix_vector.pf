@@ -68,9 +68,9 @@ subroutine test_densematrix_vector__store()
 
     integer(ik)                     :: neqns
     integer(ik)                     :: nderiv
-    type(densematrix_t)             :: inmat
+    type(densematrix_t)             :: inmat1, inmat2
     integer(ik)                     :: matval(6,6), mat(6,6)
-    integer(ik)                     :: idim, jdim, dparent_g, dparent_l, eparent_g, eparent_l, parent_proc
+    integer(ik)                     :: idim, jdim, dparent_g_1, dparent_g_2, dparent_l, eparent_g_1, eparent_g_2, eparent_l, parent_proc
     integer(ik)                     :: i
     
     
@@ -79,11 +79,13 @@ subroutine test_densematrix_vector__store()
     matval   = 0
     idim     = 6
     jdim     = 6
-    dparent_g   = 1
-    dparent_l   = 1
-    eparent_g   = 1
-    eparent_l   = 1
-    parent_proc = 1
+    dparent_g_1     = 1
+    dparent_g_2     = 1
+    dparent_l       = 1
+    eparent_g_1     = 1
+    eparent_g_2     = 2
+    eparent_l       = 1
+    parent_proc     = 1
 
 
 
@@ -115,18 +117,20 @@ subroutine test_densematrix_vector__store()
     !
     ! Initialize the densematrix to push twice
     !
-    call inmat%init(idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+    call inmat1%init(idim,jdim,dparent_g_1,dparent_l,eparent_g_1,eparent_l,parent_proc)
+    call inmat2%init(idim,jdim,dparent_g_2,dparent_l,eparent_g_2,eparent_l,parent_proc)
 
     !
     ! Assign a matrix of zeros to inmat
     !
-    inmat%mat = matval
+    inmat1%mat = matval
+    inmat2%mat = matval
 
     !
-    ! Push the densematrix twice
+    ! Push the two densematrixes
     !
-    call vec%push_back(inmat)
-    call vec%push_back(inmat)
+    call vec%push_back(inmat1)
+    call vec%push_back(inmat2)
 
     !
     ! Store the integral vector in the second densematrix THIS IS BEING TESTED
@@ -174,7 +178,7 @@ subroutine test_densematrix_vector__push_back__onedensematrix()
     use type_densematrix,           only: densematrix_t
     implicit none
 
-    type(densematrix_t)         :: inmat, res
+    type(densematrix_t)         :: inmat
     type(densematrix_vector_t)  :: vec
     integer(ik)                    :: idim, jdim, dparent_g, dparent_l, eparent_g, eparent_l, parent_proc
 
@@ -240,9 +244,9 @@ subroutine test_densematrix_vector__push_back__twodensematixes()
     use type_densematrix,           only: densematrix_t
     implicit none
 
-    type(densematrix_t)         :: inmat1, inmat2, res
+    type(densematrix_t)         :: inmat1, inmat2
     type(densematrix_vector_t)  :: vec
-    integer(ik)                 :: idim, jdim, dparent_g, dparent_l, eparent_g, eparent_l, parent_proc
+    integer(ik)                 :: idim, jdim, dparent_g_1, dparent_g_2, dparent_l, eparent_g_1, eparent_g_2, eparent_l, parent_proc
 
     integer(ik),dimension(3,3)              :: matval1, matval2
     integer(ik),dimension(3,3),parameter    :: id_mat = 1
@@ -252,9 +256,11 @@ subroutine test_densematrix_vector__push_back__twodensematixes()
 
     idim = 3
     jdim = 3
-    dparent_g   = 23
+    dparent_g_1 = 23
+    dparent_g_2 = 24
     dparent_l   = 31
-    eparent_g   = 19
+    eparent_g_1 = 19
+    eparent_g_2 = 20
     eparent_l   = 33
     parent_proc = 2
     matval1 = transpose(reshape((/1, 2, 3, 4, 5, 6, 7, 8, 9/),shape(matval1)))
@@ -262,11 +268,11 @@ subroutine test_densematrix_vector__push_back__twodensematixes()
 
     ! Test initialization of densematrix to push
      
-    call inmat1%init(idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
-    call inmat2%init(idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+    call inmat1%init(idim,jdim,dparent_g_1,dparent_l,eparent_g_1,eparent_l,parent_proc)
+    call inmat2%init(idim,jdim,dparent_g_2,dparent_l,eparent_g_2,eparent_l,parent_proc)
     
     inmat1%mat = matval1
-    inmat2%mat = matval1+id_mat
+    inmat2%mat = matval2
 
     
 
@@ -308,10 +314,10 @@ subroutine test_densematrix_vector__push_back__thirtydensematixes()
     use type_densematrix,           only: densematrix_t
     implicit none
 
-    type(densematrix_t)         :: inmat, res
+    type(densematrix_t)         :: inmat(30)
     type(densematrix_vector_t)  :: vec
-    integer(ik)                 :: idim, jdim, dparent_g, dparent_l, eparent_g, eparent_l, parent_proc
-
+    integer(ik)                 :: idim, jdim, dparent_g, dparent_l, eparent_l, parent_proc
+    integer(ik)                 :: eparent_g(30)
     integer(ik),dimension(3,3)              :: matval
     integer(ik),dimension(3,3),parameter    :: id_mat = 1
     integer(ik)                             :: i
@@ -322,24 +328,35 @@ subroutine test_densematrix_vector__push_back__thirtydensematixes()
     jdim = 3
     dparent_g   = 23
     dparent_l   = 31
-    eparent_g   = 19
     eparent_l   = 33
     parent_proc = 2
+
+    !
+    ! Set eparent_g for each densematrix pushed
+    !
+
+    do i = 1,30
+        eparent_g(i) = i
+    end do
+
+
+
     matval = transpose(reshape((/1, 2, 3, 4, 5, 6, 7, 8, 9/),shape(matval)))
 
-    ! Test initialization of densematrix to push
+    ! Test initialization of densematrixes to push
     
-    call inmat%init(idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
-    inmat%mat = matval
+    do i = 1,30
+        call inmat(i)%init(idim,jdim,dparent_g,dparent_l,eparent_g(i),eparent_l,parent_proc)
+        inmat(i)%mat = matval
+        matval = matval + id_mat
+    end do
 
     !
     ! Store densematrix. THIS IS BEING TESTED
     !
 
     do i = 1,30
-        call vec%push_back(inmat)
-        matval = matval + id_mat
-        inmat%mat = matval
+        call vec%push_back(inmat(i))
     end do
 
 
@@ -374,7 +391,7 @@ end subroutine
 !---------------------------------------------------------------------------------
 
 @Test
-subroutine test_densematrix_vector__dat()
+subroutine test_densematrix_vector__data()
     use pfunit_mod
     use mod_kinds,                  only: rk, ik
     use type_densematrix_vector,    only: densematrix_vector_t
@@ -383,7 +400,7 @@ subroutine test_densematrix_vector__dat()
 
     type(densematrix_t)         :: inmat1, inmat2, inmat3
     type(densematrix_vector_t)  :: vec
-    integer(ik)                 :: idim, jdim, dparent_g, dparent_l, eparent_g, eparent_l, parent_proc
+    integer(ik)                 :: idim, jdim, dparent_g, dparent_l, eparent_g_1, eparent_g_2, eparent_g_3, eparent_l, parent_proc
 
     integer(ik),dimension(3,3)              :: matval1, matval2,matval3
     integer(ik),dimension(3,3),parameter    :: id_mat = 1
@@ -397,7 +414,9 @@ subroutine test_densematrix_vector__dat()
     jdim = 3
     dparent_g   = 23
     dparent_l   = 31
-    eparent_g   = 19
+    eparent_g_1 = 19
+    eparent_g_2 = 20
+    eparent_g_3 = 21
     eparent_l   = 33
     parent_proc = 2
     matval1 = transpose(reshape((/1, 2, 3, 4, 5, 6, 7, 8, 9/),shape(matval1)))
@@ -406,23 +425,25 @@ subroutine test_densematrix_vector__dat()
 
     ! Test initialization of densematrix to push
      
-    call inmat1%init(idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
-    call inmat2%init(idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
-    call inmat3%init(idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+    call inmat1%init(idim,jdim,dparent_g,dparent_l,eparent_g_1,eparent_l,parent_proc)
+    call inmat2%init(idim,jdim,dparent_g,dparent_l,eparent_g_2,eparent_l,parent_proc)
+    call inmat3%init(idim,jdim,dparent_g,dparent_l,eparent_g_3,eparent_l,parent_proc)
     
     inmat1%mat = matval1
-    inmat2%mat = matval1+id_mat
-    inmat3%mat = matval2+id_mat
-
-    
+    inmat2%mat = matval2
+    inmat3%mat = matval3
 
     !
-    ! Store densematrix. THIS IS BEING TESTED
-    !
+    ! Push back the three densematrixes
+    ! 
+
     call vec%push_back(inmat1)
     call vec%push_back(inmat2)
     call vec%push_back(inmat3)
 
+    !
+    ! Return the vector containing the three densematrixes. THIS IS BEING TESTED
+    !
     res_vec = vec%data()
 
     ! Test value
@@ -584,9 +605,10 @@ subroutine test_densematrix_vector__clear()
     use type_densematrix,           only: densematrix_t
     implicit none
 
-    type(densematrix_t)         :: inmat, res
+    type(densematrix_t)         :: inmat(30)
     type(densematrix_vector_t)  :: vec
-    integer(ik)                 :: idim, jdim, dparent_g, dparent_l, eparent_g, eparent_l, parent_proc
+    integer(ik)                 :: idim, jdim, dparent_g, dparent_l, eparent_l, parent_proc
+    integer(ik)                 :: eparent_g(30)
 
     integer(ik),dimension(3,3)              :: matval
     integer(ik),dimension(3,3),parameter    :: id_mat = 1
@@ -599,29 +621,34 @@ subroutine test_densematrix_vector__clear()
     jdim = 3
     dparent_g   = 23
     dparent_l   = 31
-    eparent_g   = 19
     eparent_l   = 33
     parent_proc = 2
+    
+    do i = 1,30
+        eparent_g(i) = i
+    end do
+    
     matval = transpose(reshape((/1, 2, 3, 4, 5, 6, 7, 8, 9/),shape(matval)))
 
-    ! Test initialization of densematrix to push
+    ! Test initialization of densematrixes to push
     
-    call inmat%init(idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
-    inmat%mat = matval
+    do i = 1,30
+        call inmat(i)%init(idim,jdim,dparent_g,dparent_l,eparent_g(i),eparent_l,parent_proc)
+        inmat(i)%mat = matval
+        matval = matval + id_mat
+    end do
 
     !
-    ! Store densematrix. THIS IS BEING TESTED
+    ! Store densematrix.
     !
 
     do i = 1,30
-        call vec%push_back(inmat)
-        matval = matval + id_mat
-        inmat%mat = matval
+        call vec%push_back(inmat(i))
     end do
 
 
 
-    ! Test value
+    ! Pretest value
 
     matval = transpose(reshape((/1, 2, 3, 4, 5, 6, 7, 8, 9/),shape(matval)))
 
@@ -635,8 +662,10 @@ subroutine test_densematrix_vector__clear()
 
     ! Pretest capacity
     @assertEqual(35,vec%capacity())
-
-    ! Test clear
+    
+    !
+    ! Test clear     THIS IS BEING TESTED
+    !
     call vec%clear
     
     ! Test size
@@ -672,11 +701,13 @@ subroutine test_densematrix_vector__setzero()
     use type_densematrix,           only: densematrix_t
     implicit none
 
-    type(densematrix_t)         :: inmat
+    type(densematrix_t)         :: inmat(3)
     type(densematrix_vector_t)  :: vec
-    integer(ik)                 :: idim, jdim, dparent_g, dparent_l, eparent_g, eparent_l, parent_proc
+    integer(ik)                 :: idim, jdim, dparent_g, dparent_l, eparent_l, parent_proc
+    integer(ik)                 :: eparent_g(3)
 
-    integer(ik),dimension(3,3)              :: matval, res, matzero = 0
+    integer(ik),dimension(3,3)  :: matval, matzero = 0
+    integer(ik)                 :: i
     
     
     ! Test initialization procedure
@@ -685,25 +716,28 @@ subroutine test_densematrix_vector__setzero()
     jdim = 3
     dparent_g   = 23
     dparent_l   = 31
-    eparent_g   = 19
     eparent_l   = 33
     parent_proc = 2
-    matval = transpose(reshape((/1, 2, 3, 4, 5, 6, 7, 8, 9/),shape(matval)))
-
-    ! Test initialization of densematrix to push
-     
-    call inmat%init(idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
     
-    inmat%mat = matval
+    do i = 1,3
+        eparent_g(i) = i
+    end do
 
+    matval = transpose(reshape((/1, 2, 3, 4, 5, 6, 7, 8, 9/),shape(matval)))
+    
+    ! Test initialization of densematrix to push
+    do i = 1,3
+        call inmat(i)%init(idim,jdim,dparent_g,dparent_l,eparent_g(i),eparent_l,parent_proc)
+        inmat(i)%mat = matval
+    end do
     
 
     !
     ! Store densematrix.
     !
-    call vec%push_back(inmat)
-    call vec%push_back(inmat)
-    call vec%push_back(inmat)
+    do i = 1,3
+        call vec%push_back(inmat(i))
+    end do
 
     !
     ! Set densematrixes to zero.  THIS IS BEING TESTED
@@ -742,11 +776,11 @@ subroutine test_densematrix_vector__set_itranspose()
     use type_densematrix,           only: densematrix_t
     implicit none
 
-    type(densematrix_t)         :: inmat
+    type(densematrix_t)         :: inmat(3)
     type(densematrix_vector_t)  :: vec
-    integer(ik)                 :: idim, jdim, dparent_g, dparent_l, eparent_g, eparent_l, parent_proc
-
-    
+    integer(ik)                 :: idim, jdim, dparent_g, dparent_l, eparent_l, parent_proc
+    integer(ik)                 :: eparent_g(3)
+    integer(ik)                 :: i    
     
     ! Test initialization procedure
 
@@ -754,23 +788,28 @@ subroutine test_densematrix_vector__set_itranspose()
     jdim = 3
     dparent_g   = 23
     dparent_l   = 31
-    eparent_g   = 19
     eparent_l   = 33
     parent_proc = 2
 
-    ! Test initialization of densematrix to push
-     
-    call inmat%init(idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+    do i = 1,3
+        eparent_g(i) = i
+    end do
     
+    
+    ! Test initialization of densematrix to push
+    do i = 1,3
+        call inmat(i)%init(idim,jdim,dparent_g,dparent_l,eparent_g(i),eparent_l,parent_proc)
+    end do
 
     
 
     !
     ! Store densematrix.
     !
-    call vec%push_back(inmat)
-    call vec%push_back(inmat)
-    call vec%push_back(inmat)
+    do i = 1,3
+        call vec%push_back(inmat(i))
+    end do
+
 
     !
     ! Set the itranspose attribute for each densematrix. THIS IS BEING TESTED
@@ -810,10 +849,11 @@ subroutine test_densematrix_vector__set_recv_comm()
     use type_densematrix,           only: densematrix_t
     implicit none
 
-    type(densematrix_t)         :: inmat
+    type(densematrix_t)         :: inmat(3)
     type(densematrix_vector_t)  :: vec
-    integer(ik)                 :: idim, jdim, dparent_g, dparent_l, eparent_g, eparent_l, parent_proc
-
+    integer(ik)                 :: idim, jdim, dparent_g, dparent_l, eparent_l, parent_proc
+    integer(ik)                 :: eparent_g(3)
+    integer(iK)                 :: i
     
     
     ! Test initialization procedure
@@ -822,23 +862,26 @@ subroutine test_densematrix_vector__set_recv_comm()
     jdim = 3
     dparent_g   = 23
     dparent_l   = 31
-    eparent_g   = 19
     eparent_l   = 33
     parent_proc = 2
 
+    do i = 1,3
+        eparent_g(i) = i
+    end do
+
     ! Test initialization of densematrix to push
-     
-    call inmat%init(idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
-    
+    do i = 1,3
+        call inmat(i)%init(idim,jdim,dparent_g,dparent_l,eparent_g(i),eparent_l,parent_proc)
+    end do
 
     
 
     !
     ! Store densematrix.
     !
-    call vec%push_back(inmat)
-    call vec%push_back(inmat)
-    call vec%push_back(inmat)
+    do i = 1,3
+        call vec%push_back(inmat(i))
+    end do
 
     !
     ! Set receiver comm attribute for each densematrix. THIS IS BEING TESTED
@@ -879,11 +922,11 @@ subroutine test_densematrix_vector__set_recv_domain()
     use type_densematrix,           only: densematrix_t
     implicit none
 
-    type(densematrix_t)         :: inmat
+    type(densematrix_t)         :: inmat(3)
     type(densematrix_vector_t)  :: vec
-    integer(ik)                 :: idim, jdim, dparent_g, dparent_l, eparent_g, eparent_l, parent_proc
-
-    
+    integer(ik)                 :: idim, jdim, dparent_g, dparent_l, eparent_l, parent_proc
+    integer(ik)                 :: eparent_g(3)
+    integer(ik)                 :: i
     
     ! Test initialization procedure
 
@@ -891,23 +934,29 @@ subroutine test_densematrix_vector__set_recv_domain()
     jdim = 3
     dparent_g   = 23
     dparent_l   = 31
-    eparent_g   = 19
     eparent_l   = 33
     parent_proc = 2
 
+    do i = 1,3
+        eparent_g(i) = i
+    end do
+
+
     ! Test initialization of densematrix to push
-     
-    call inmat%init(idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
     
+    do i = 1,3
+        call inmat(i)%init(idim,jdim,dparent_g,dparent_l,eparent_g(i),eparent_l,parent_proc)
+    end do
 
     
 
     !
     ! Store densematrix.
     !
-    call vec%push_back(inmat)
-    call vec%push_back(inmat)
-    call vec%push_back(inmat)
+    do i = 1,3
+        call vec%push_back(inmat(i))
+    end do
+
 
     !
     ! Set receiver domain attribute for each densematrix. THIS IS BEING TESTED
@@ -947,10 +996,11 @@ subroutine test_densematrix_vector__set_recv_element()
     use type_densematrix,           only: densematrix_t
     implicit none
 
-    type(densematrix_t)         :: inmat
+    type(densematrix_t)         :: inmat(3)
     type(densematrix_vector_t)  :: vec
-    integer(ik)                 :: idim, jdim, dparent_g, dparent_l, eparent_g, eparent_l, parent_proc
-
+    integer(ik)                 :: idim, jdim, dparent_g, dparent_l, eparent_l, parent_proc
+    integer(ik)                 :: eparent_g(3)
+    integer(ik)                 :: i
     
     
     ! Test initialization procedure
@@ -959,23 +1009,25 @@ subroutine test_densematrix_vector__set_recv_element()
     jdim = 3
     dparent_g   = 23
     dparent_l   = 31
-    eparent_g   = 19
     eparent_l   = 33
     parent_proc = 2
 
-    ! Test initialization of densematrix to push
-     
-    call inmat%init(idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
-    
+    do i = 1,3
+        eparent_g(i) = i
+    end do
 
-    
+    ! Test initialization of densematrix to push
+    do i = 1,3 
+        call inmat(i)%init(idim,jdim,dparent_g,dparent_l,eparent_g(i),eparent_l,parent_proc)
+    end do
 
     !
     ! Store densematrix.
     !
-    call vec%push_back(inmat)
-    call vec%push_back(inmat)
-    call vec%push_back(inmat)
+    do i = 1,3
+        call vec%push_back(inmat(i))
+    end do
+
 
     !
     ! Set receiver element attribute for each densematrix. THIS IS BEING TESTED

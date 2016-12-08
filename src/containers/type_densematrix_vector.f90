@@ -317,28 +317,42 @@ contains
 
         logical     :: capacity_reached
         integer(ik) :: size
-
+        integer(ik) :: duplicate
 
         !
-        ! Test if container has storage available. If not, then increase capacity
+        ! Test whether the densematrix we are pushing is already there
         !
-        capacity_reached = (self%size() == self%capacity())
-        if (capacity_reached) then
-            call self%increase_capacity()
+        
+        duplicate = self%loc(element%dparent_g(),element%eparent_g())
+
+        if ( duplicate == 0 ) then
+              
+            !
+            ! Test if container has storage available. If not, then increase capacity
+            !
+            capacity_reached = (self%size() == self%capacity())
+            if (capacity_reached) then
+                call self%increase_capacity()
+            end if
+
+
+            !
+            ! Add element to end of vector
+            !
+            size = self%size()
+            self%data_(size + 1) = element
+
+
+            !
+            ! Increment number of stored elements
+            !
+            self%size_ = self%size_ + 1
+
+        else 
+
+           call chidg_signal(FATAL,"densematrix_vector_t%push_back: attempt to push the same densematrix twice,operation not allowed") 
+
         end if
-
-
-        !
-        ! Add element to end of vector
-        !
-        size = self%size()
-        self%data_(size + 1) = element
-
-
-        !
-        ! Increment number of stored elements
-        !
-        self%size_ = self%size_ + 1
 
 
     end subroutine push_back

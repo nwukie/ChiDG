@@ -148,6 +148,7 @@ contains
 
 
 
+
         !
         ! Re/Allocate 'value' component
         !
@@ -438,14 +439,15 @@ contains
     !!
     !------------------------------------------------------------------------------------
     function get_ndepend_face_exterior(self,mesh,idomain_l,ielement_l,iface) result(ndepend)
-        class(cache_data_field_t),   intent(in)  :: self
-        type(mesh_t),                   intent(in)  :: mesh(:)
-        integer(ik),                    intent(in)  :: idomain_l
-        integer(ik),                    intent(in)  :: ielement_l
-        integer(ik),                    intent(in)  :: iface
+        class(cache_data_field_t),  intent(in)  :: self
+        type(mesh_t),               intent(in)  :: mesh(:)
+        integer(ik),                intent(in)  :: idomain_l
+        integer(ik),                intent(in)  :: ielement_l
+        integer(ik),                intent(in)  :: iface
 
-        integer(ik) :: ndepend, ChiID
-        logical     :: conforming_face, chimera_face, boundary_face
+        character(:),   allocatable :: user_msg
+        integer(ik)                 :: ndepend, ChiID
+        logical                     :: conforming_face, chimera_face, boundary_face
 
 
         conforming_face = (mesh(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR)
@@ -463,6 +465,10 @@ contains
 
         else if (boundary_face) then
             ndepend = mesh(idomain_l)%faces(ielement_l,iface)%BC_ndepend
+
+        else
+            user_msg = "cache_data_field%get_ndepend_face_exterior: Invalid face type detected."
+            call chidg_signal(FATAL,user_msg)
 
         end if
 

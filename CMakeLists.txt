@@ -41,7 +41,6 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build. Options are: Debug Release" FORCE)
 endif()
 
-set(TESTING  FALSE CACHE BOOL "Enable building unit/regression testing")
 
 
 
@@ -319,41 +318,43 @@ install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/ DESTINATION /usr/local/chid
 
 
 #----------------------------------------------------------------------------------------------
-#                               Testing:   enable with -DTESTING=True
+#                               Testing:
+#   To build tests:     make check
+#   To run tests:       make test
+#
 #----------------------------------------------------------------------------------------------
 # To build tests, the unit-testing framework pFUnit must be compiled with MPI support.
 # The environment variable PFUNIT must be set such that PFUNIT/gnu or PFUNIT/intel
 # are valid.
 
-if (TESTING)
 
-    file(REMOVE ${CMAKE_BINARY_DIR}/bin/unittest.sh)
-    file(REMOVE ${CMAKE_BINARY_DIR}/bin/regtest.sh)
-
-
-    enable_testing()
+file(REMOVE ${CMAKE_BINARY_DIR}/bin/unittest.sh)
+file(REMOVE ${CMAKE_BINARY_DIR}/bin/regtest.sh)
 
 
-    #
-    # Get paths for pFUnit and MPIRUN
-    #
-    set(PF_ROOT $ENV{PFUNIT})
-    set(MPIRUN_EXECUTABLE $ENV{MPIRUN_EXECUTABLE})
+enable_testing()
+
+add_custom_target(check)
+
+#
+# Get paths for pFUnit and MPIRUN
+#
+set(PF_ROOT $ENV{PFUNIT})
+set(MPIRUN_EXECUTABLE $ENV{MPIRUN_EXECUTABLE})
 
 
-    #
-    # Set location of pFUnit libs
-    #
-    set(PFU_LIB ${PF_ROOT}/lib)
+#
+# Set location of pFUnit libs
+#
+set(PFU_LIB ${PF_ROOT}/lib)
 
 
-    #
-    # Add unit tests
-    #
-    add_subdirectory(test)
+#
+# Add unit tests
+#
+add_subdirectory(test)
 
 
-endif()
 
 
 

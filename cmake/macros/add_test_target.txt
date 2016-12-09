@@ -7,32 +7,44 @@ macro (add_test_target target_subdirectory test_type)
     #
     if (${ARGV1} STREQUAL "unit")
 	    set(target_name unittest_${ARGV0})
+        set(add_to_test TRUE)
         set(jenkins_file unittest.sh)
         set(testing_dir unit_testing)
         set(max_time 10)
-        set(runstring "./${target_name} -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time}\n")
+        set(test_driver)
+        set(run_options -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time})
+        set(runstring ${target_name} -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time})
 
 
     elseif (${ARGV1} STREQUAL "unit_parallel")
 	    set(target_name unittest_${ARGV0})
+        set(add_to_test TRUE)
         set(jenkins_file unittest.sh)
         set(testing_dir unit_testing)
         set(max_time 10)
-        set(runstring "${MPIRUN_EXECUTABLE} -np 10 ./${target_name} -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time}\n")
+        set(test_driver mpirun -np 10)
+        set(run_options -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time})
+        #set(runstring "${MPIRUN_EXECUTABLE} -np 10 ${target_name} -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time}")
+        set(runstring mpirun -np 10 ${target_name} -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time})
 
     elseif (${ARGV1} STREQUAL "reg")
         set(target_name regtest_${ARGV0})
         set(jenkins_file regtest.sh)
         set(testing_dir reg_testing)
         set(max_time 1000)
-        set(runstring "./${target_name} -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time}\n")
+        set(test_driver)
+        set(run_options -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time})
+        set(runstring ${target_name} -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time})
 
     elseif (${ARGV1} STREQUAL "reg_parallel")
         set(target_name regtest_${ARGV0})
         set(jenkins_file regtest.sh)
         set(testing_dir reg_testing)
         set(max_time 1000)
-        set(runstring "${MPIRUN_EXECUTABLE} -np 10 ./${target_name} -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time}\n")
+        set(test_driver mpirun -np 10)
+        set(run_options -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time})
+        #set(runstring "${MPIRUN_EXECUTABLE} -np 10 ${target_name} -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time}")
+        set(runstring mpirun -np 10 ${target_name} -name ${target_name} -xml ${target_name}.xml -max-timeout-duration ${max_time})
 
     else()
         message(SEND_ERROR "Invalid test type. Valid types are 'unit' and 'reg'")
@@ -117,30 +129,40 @@ macro (add_test_target target_subdirectory test_type)
 
 
 
-	#-------------------------------------------------------------------------------------------------------
+    #-------------------------------------------------------------------------------------------------------
     #
 	#   Define test target and link with pfunit and coredg libraries
     #
 	#-------------------------------------------------------------------------------------------------------
-	add_executable(${target_name} ${PF_ROOT}/include/driver.F90 ${_test_sources})
+	add_executable(${target_name} EXCLUDE_FROM_ALL ${PF_ROOT}/include/driver.F90 ${_test_sources} )
 	target_link_libraries(${target_name} ${PF_ROOT}/lib/libpfunit.a coredg -lstdc++ -lpthread ${MPI_Fortran_LIBRARIES} ${METIS_LIBRARIES})
-	
+    	
 	set_target_properties(${target_name} PROPERTIES 
                              COMPILE_FLAGS "-DUSE_MPI=True -DBUILD_ROBUST=True ${MPI_Fortran_COMPILE_FLAGS}"
                              LINK_FLAGS    "${MPI_Fortran_LINK_FLAGS}")
 	
 	
-
+    #
+    # Add test executable to the 'check' target. This allows the test to be build with 'make check'
+    #
+    add_dependencies(check ${target_name})
 
 
 	#-------------------------------------------------------------------------------------------------------
     #
 	#	Add test that can be run with 'make test' or 'ctest'
+    #
+    #   Only 'unit' tests are added to the 'make test' target using add_test. They should be much lighter
+    #   weight and so should be runable on most machines. 'reg' tests are much more computationally
+    #   intensive, and so must be run manually.
 	#
     #-------------------------------------------------------------------------------------------------------
-	add_test(NAME ${target_name}
-			 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-			 COMMAND $<TARGET_FILE:${target_name}>)
+    if (${add_to_test})
+        #add_test(NAME ${target_name}
+        add_test(NAME ${target_subdirectory}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+                 COMMAND ${test_driver} $<TARGET_FILE:${target_name}> ${run_options})
+    endif()
 			 
 			 
 
@@ -153,11 +175,11 @@ macro (add_test_target target_subdirectory test_type)
     #
 	#-------------------------------------------------------------------------------------------------------
 	if (EXISTS "${CMAKE_BINARY_DIR}/bin/${jenkins_file}")
-		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} ${runstring})
+		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} ${runstring}"\n")
 	else()
 		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} "#!/bin/bash\n")
 		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} "cd $WORKSPACE/build/bin\n")
-		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} ${runstring})
+		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} ${runstring}"\n")
 	endif()
 	
 

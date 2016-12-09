@@ -41,7 +41,6 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build. Options are: Debug Release" FORCE)
 endif()
 
-set(TESTING  FALSE CACHE BOOL "Enable building unit/regression testing")
 
 
 

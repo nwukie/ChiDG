@@ -185,7 +185,7 @@ contains
         do idom = 1,size(mesh)
 
             ! Check that variable index 'ivar' is valid
-            user_msg = 'initialize_variable: variable index ivar exceeds the number of equations.'
+            user_msg = 'project: variable index ivar exceeds the number of equations.'
             if (ivar > mesh(idom)%neqns ) call chidg_signal(FATAL,user_msg)
 
             do ielem = 1,mesh(idom)%nelem

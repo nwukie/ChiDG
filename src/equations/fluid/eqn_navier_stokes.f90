@@ -84,12 +84,16 @@ contains
                 call navier_stokes_eqns%add_model('Sutherlands Law')
                 call navier_stokes_eqns%add_model('Stokes Hypothesis')
                 call navier_stokes_eqns%add_model('Reynolds Analogy')
-                call navier_stokes_eqns%add_model('Zero Turbulent Model Fields')
+!                call navier_stokes_eqns%add_model('Zero Turbulent Model Fields')
 
 
 
 
-!                call navier_stokes_eqns%add_operator('Fluid Spalart-Allmaras Source Operator')
+                call navier_stokes_eqns%add_operator('Spalart-Allmaras Source Operator')
+                call navier_stokes_eqns%add_operator('Spalart-Allmaras LaxFriedrichs Operator')
+                call navier_stokes_eqns%add_operator('Spalart-Allmaras Volume Advection Operator')
+                call navier_stokes_eqns%add_operator('Spalart-Allmaras Boundary Diffusion Operator')
+                call navier_stokes_eqns%add_operator('Spalart-Allmaras Volume Diffusion Operator')
 
 
 

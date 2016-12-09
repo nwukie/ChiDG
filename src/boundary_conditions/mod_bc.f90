@@ -38,6 +38,12 @@ module mod_bc
     use bc_state_symmetry,                      only: symmetry_t
     use bc_state_farfield,                      only: farfield_t
 
+    ! Turbulence boundary conditions
+    use bc_state_spalart_allmaras_inlet,        only: spalart_allmaras_inlet_t
+    use bc_state_spalart_allmaras_outlet,       only: spalart_allmaras_outlet_t
+    use bc_state_spalart_allmaras_symmetry,     only: spalart_allmaras_symmetry_t
+    use bc_state_spalart_allmaras_wall,         only: spalart_allmaras_wall_t
+
 
 
 !    use bc_kirchoff,                        only: kirchoff_t
@@ -88,6 +94,11 @@ contains
         type(symmetry_t)                        :: SYMMETRY
         type(farfield_t)                        :: FARFIELD
 
+        type(spalart_allmaras_inlet_t)          :: SPALART_ALLMARAS_INLET
+        type(spalart_allmaras_outlet_t)         :: SPALART_ALLMARAS_OUTLET
+        type(spalart_allmaras_symmetry_t)       :: SPALART_ALLMARAS_SYMMETRY
+        type(spalart_allmaras_wall_t)           :: SPALART_ALLMARAS_WALL
+
 
 
         if ( .not. initialized ) then
@@ -111,6 +122,10 @@ contains
             call registered_bcs%push_back(SYMMETRY)
             call registered_bcs%push_back(FARFIELD)
 
+            call registered_bcs%push_back(SPALART_ALLMARAS_INLET)
+            call registered_bcs%push_back(SPALART_ALLMARAS_OUTLET)
+            call registered_bcs%push_back(SPALART_ALLMARAS_SYMMETRY)
+            call registered_bcs%push_back(SPALART_ALLMARAS_WALL)
 
             !
             ! Initialize each boundary condition in set. Doesn't need modified.

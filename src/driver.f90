@@ -145,6 +145,9 @@ program driver
             call constant%set_option('val',250000.0_rk)
             call chidg%data%sdata%q%project(chidg%data%mesh,constant,5)
 
+            ! rho_nutilde
+            call constant%set_option('val',0.1_rk)
+            call chidg%data%sdata%q%project(chidg%data%mesh,constant,6)
 
 
         else

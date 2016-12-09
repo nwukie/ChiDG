@@ -11,6 +11,8 @@ module mod_models
     use type_reynolds_analogy,                          only: reynolds_analogy_t
     use type_zero_turbulent_model_fields,               only: zero_turbulent_model_fields_t
     use type_spalart_allmaras_turbulent_model_fields,   only: spalart_allmaras_turbulent_model_fields_t
+
+    use model_wall_distance,                            only: wall_distance_m
     implicit none
 
 
@@ -242,6 +244,7 @@ contains
         type(reynolds_analogy_t)                        :: REYNOLDS_ANALOGY
         type(zero_turbulent_model_fields_t)             :: ZERO_TURBULENT_MODEL_FIELDS
         type(spalart_allmaras_turbulent_model_fields_t) :: SPALART_ALLMARAS_TURBULENT_MODEL_FIELDS
+        type(wall_distance_m)                           :: WALL_DISTANCE_NORMALIZATION
 
 
         if (.not. models_initialized) then
@@ -252,6 +255,7 @@ contains
             call model_factory%register(REYNOLDS_ANALOGY)
             call model_factory%register(ZERO_TURBULENT_MODEL_FIELDS)
             call model_factory%register(SPALART_ALLMARAS_TURBULENT_MODEL_FIELDS)
+            call model_factory%register(WALL_DISTANCE_NORMALIZATION)
 
             models_initialized = .true.
 

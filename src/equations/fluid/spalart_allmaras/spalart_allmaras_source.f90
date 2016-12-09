@@ -55,7 +55,7 @@ contains
         class(spalart_allmaras_source_operator_t),   intent(inout)      :: self
 
         ! Set operator name.
-        call self%set_name("Fluid Spalart-Allmaras Source Operator")
+        call self%set_name("Spalart-Allmaras Source Operator")
 
         ! Set operator type.
         call self%set_operator_type("Volume Diffusive Operator")
@@ -68,6 +68,7 @@ contains
 
         ! Add Turbulent Eddy Viscosity model
         call self%add_model('Spalart Allmaras Turbulent Model Fields')
+        call self%add_model('Wall Distance : p-Poisson Normalization')
 
     end subroutine init
     !********************************************************************************

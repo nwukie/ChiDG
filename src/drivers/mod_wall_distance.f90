@@ -10,6 +10,7 @@ module mod_wall_distance
     use type_dict,          only: dict_t
     use mod_chidg_post,     only: chidg_post,chidg_post_vtk
     use mod_bc,             only: create_bc
+    use mod_io,             only: gridfile
     implicit none
 
 
@@ -37,7 +38,7 @@ contains
         type(chidg_t),  intent(inout)           :: chidg
         character(*),   intent(in), optional    :: fileout
 
-        character(:), allocatable   :: gridfile, solutionfile, user_msg
+        character(:), allocatable   :: user_msg
         integer(ik)                 :: order
 
         type(chidg_t)                   :: wall_distance
@@ -55,6 +56,35 @@ contains
         ! Make sure this ChiDG environment is initialized.
         !
         call wall_distance%start_up('core')
+
+
+
+
+        !
+        ! Initialize options dictionaries
+        !
+        call noptions%set('tol',1.e-8_rk)   ! Set nonlinear solver options
+        call noptions%set('cfl0',10.0_rk)
+        call noptions%set('nsteps',50)
+        call loptions%set('tol',1.e-10_rk)  ! Set linear solver options
+
+
+
+        !
+        ! Set ChiDG components
+        !
+        call wall_distance%set('Time Integrator' , algorithm='Steady'                        )
+        call wall_distance%set('Nonlinear Solver', algorithm='Quasi-Newton', options=noptions)
+        call wall_distance%set('Linear Solver'   , algorithm='FGMRES',       options=loptions)
+        call wall_distance%set('Preconditioner'  , algorithm='ILU0'                          )
+
+
+
+
+
+
+
+
 
 
 
@@ -91,23 +121,6 @@ contains
                                                              bc_farfield = neumann_zero)
 
 
-        !
-        ! Initialize options dictionaries
-        !
-        call noptions%set('tol',1.e-8_rk)   ! Set nonlinear solver options
-        call noptions%set('cfl0',10.0_rk)
-        call noptions%set('nsteps',50)
-        call loptions%set('tol',1.e-10_rk)  ! Set linear solver options
-
-
-
-        !
-        ! Set ChiDG components
-        !
-        call wall_distance%set('Time Integrator' , algorithm='Steady'                        )
-        call wall_distance%set('Nonlinear Solver', algorithm='Quasi-Newton', options=noptions)
-        call wall_distance%set('Linear Solver'   , algorithm='FGMRES',       options=loptions)
-        call wall_distance%set('Preconditioner'  , algorithm='RAS+ILU0'                      )
 
 
 
@@ -124,6 +137,7 @@ contains
         !
         iorder = 2
         do p = 2,6,2
+            call write_line('Wall Distance Driver : Loop 1 : p = ', p)
             
             !
             ! Update p-Poisson fidelity
@@ -143,11 +157,11 @@ contains
             !
             if (p == 2) then
                 call create_function(constant,'constant')
-                call constant%set_option('val',0._rk)
-                call wall_distance%data%sdata%q%project(chidg%data%mesh,constant,1)
+                call constant%set_option('val',0.1_rk)
+                call wall_distance%data%sdata%q%project(wall_distance%data%mesh,constant,1)
 
             else
-                call wall_distance%read_solution(solutionfile)
+                call wall_distance%read_solution(fileout)
             end if
 
 
@@ -162,7 +176,7 @@ contains
             !
             ! Write wall distance to auxiliary field
             !
-            call wall_distance%write_solution(solutionfile)
+            call wall_distance%write_solution(fileout)
 
 
         end do
@@ -191,6 +205,7 @@ contains
 
         order = chidg%nterms_s_1d
         do iorder = 2,order
+            call write_line('Wall Distance Driver : Loop 2 : order = ', iorder)
 
 
             !
@@ -203,7 +218,7 @@ contains
             !
             ! Read solution if it exists.
             !
-            call wall_distance%read_solution(solutionfile)
+            call wall_distance%read_solution(fileout)
 
 
             !
@@ -217,7 +232,7 @@ contains
             !
             ! Write wall distance to auxiliary field
             !
-            call wall_distance%write_solution(solutionfile)
+            call wall_distance%write_solution(fileout)
 
 
         end do

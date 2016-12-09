@@ -1,12 +1,10 @@
 module spalart_allmaras_boundary_diffusion
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, HALF
-
     use type_operator,          only: operator_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use DNAD_D
-
     use mod_spalart_allmaras,   only: SA_c_n1, SA_sigma
     implicit none
 
@@ -34,14 +32,6 @@ module spalart_allmaras_boundary_diffusion
     !********************************************************************************
 
 
-
-
-
-
-
-
-
-
 contains
 
 
@@ -55,19 +45,13 @@ contains
     subroutine init(self)
         class(spalart_allmaras_boundary_diffusion_operator_t),   intent(inout) :: self
         
-        !
         ! Set operator name
-        !
-        call self%set_name("Spalart Allmaras Boundary Diffusion Operator")
+        call self%set_name("Spalart-Allmaras Boundary Diffusion Operator")
 
-        !
         ! Set operator type
-        !
         call self%set_operator_type("Boundary Diffusive Flux")
 
-        !
         ! Set operator equations
-        !
         call self%add_primary_field("Density * NuTilde")
 
     end subroutine init

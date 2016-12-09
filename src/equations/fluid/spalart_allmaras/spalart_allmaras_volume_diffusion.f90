@@ -56,7 +56,7 @@ contains
         !
         ! Set operator name
         !
-        call self%set_name("Spalart Allmaras Volume Diffusion Operator")
+        call self%set_name("Spalart-Allmaras Volume Diffusion Operator")
 
         !
         ! Set operator type
@@ -103,8 +103,8 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho_m         = worker%get_primary_field_element('Density',          'value')
-        rho_nutilde_m = worker%get_primary_field_element('Density * NuTilde','value')
+        rho         = worker%get_primary_field_element('Density',          'value')
+        rho_nutilde = worker%get_primary_field_element('Density * NuTilde','value')
 
 
         !
@@ -144,12 +144,10 @@ contains
 
 
         !
-        ! Compute nutilde
+        ! Compute nutilde, chi
         !
         nutilde = rho_nutilde*invrho
-
-
-        chi = nutilde/nu_l
+        chi     = nutilde/nu_l
 
 
 
@@ -207,7 +205,7 @@ contains
         flux_z = diffusion*dnutilde_dz
 
 
-        call worker%integrate_boundary('Density * NuTilde',flux_x,flux_y,flux_z)
+        call worker%integrate_volume('Density * NuTilde',flux_x,flux_y,flux_z)
 
 
     end subroutine compute

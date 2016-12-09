@@ -42,7 +42,7 @@ contains
         class(spalart_allmaras_laxfriedrichs_operator_t),   intent(inout)  :: self
 
         ! Set operator name
-        call self%set_name("Spalart Allmaras LaxFriedrichs Operator")
+        call self%set_name("Spalart-Allmaras LaxFriedrichs Operator")
 
         ! Set operator type
         call self%set_operator_type("Boundary Advective Operator")

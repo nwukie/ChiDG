@@ -83,8 +83,8 @@ contains
         class(spalart_allmaras_turbulent_model_fields_t),     intent(in)      :: self
         type(chidg_worker_t),   intent(inout)   :: worker
 
-        type(AD_D), dimension(:),   allocatable :: &
-            rho, rhou, rhov, rhow, rhoE, mu, nu, rho_nutilde, mu_t, nutilde, lamda_t, &
+        type(AD_D), dimension(:),   allocatable ::              &
+            rho, mu, nu, rho_nutilde, mu_t, nutilde, lamda_t,   &
             chi, f_v1, k_t
 
 
@@ -92,31 +92,28 @@ contains
         ! Interpolate solution to quadrature nodes
         !
         rho         = worker%get_primary_field_general('Density',           'value')
-        rhou        = worker%get_primary_field_general('X-Momentum',        'value')
-        rhov        = worker%get_primary_field_general('Y-Momentum',        'value')
-        rhow        = worker%get_primary_field_general('Z-Momentum',        'value')
-        rhoE        = worker%get_primary_field_general('Energy',            'value')
         rho_nutilde = worker%get_primary_field_general('Density * NuTilde', 'value')
 
 
-        ! Get viscosity and second coefficient of viscosity
+        !
+        ! Get viscosity: compute nu, nutilde
+        !
         mu = worker%get_model_field_general('Laminar Viscosity', 'value')
-
-
-        ! Compute kinematic viscosity
         nu      = mu/rho
         nutilde = rho_nutilde/rho
 
 
-        ! Compute chi
+
+        !
+        ! Compute chi, f_v1
+        !
         chi = nutilde/nu
-
-
-        ! Compute f_v1
         f_v1 = chi*chi*chi/(chi*chi*chi + SA_c_v1*SA_c_v1*SA_c_v1)
 
 
+        !
         ! Initialize derivatives, compute mu_t
+        !
         mu_t = rho
         where (nutilde >= 0)
             mu_t = rho * nutilde * f_v1
@@ -125,10 +122,12 @@ contains
         end where
 
 
-        ! Compute Second Coefficient of Turbulent Viscosity, Stokes' Hypothesis.
+        !
+        ! Compute: 
+        !   - Second Coefficient of Turbulent Viscosity, Stokes' Hypothesis.
+        !   - Turbulent Thermal Conductivity, Reynolds' analogy.
+        !
         lamda_t = (-TWO/THREE)*mu_t
-
-        ! Compute Turbulent Thermal Conductivity, Reynolds' analogy.
         k_t = self%Cp*mu_t/SA_Pr_t
 
 

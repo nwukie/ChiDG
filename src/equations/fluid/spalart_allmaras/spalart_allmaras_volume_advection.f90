@@ -1,4 +1,4 @@
-module spalart_allmaras_source
+module spalart_allmaras_volume_advection
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO,ONE,TWO,SIX,HALF,PI
     use mod_spalart_allmaras,   only: SA_c_b1, SA_c_b2, SA_kappa, SA_sigma,         &
@@ -22,7 +22,7 @@ module spalart_allmaras_source
     !!
     !!
     !------------------------------------------------------------------------------
-    type, extends(operator_t), public :: spalart_allmaras_source_operator_t
+    type, extends(operator_t), public :: spalart_allmaras_volume_advection_operator_t
 
 
     contains
@@ -30,7 +30,7 @@ module spalart_allmaras_source
         procedure   :: init
         procedure   :: compute
 
-    end type spalart_allmaras_source_operator_t
+    end type spalart_allmaras_volume_advection_operator_t
     !******************************************************************************
 
 
@@ -52,19 +52,16 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(spalart_allmaras_source_operator_t),   intent(inout)      :: self
+        class(spalart_allmaras_volume_advection_operator_t),   intent(inout)      :: self
 
         ! Set operator name.
-        call self%set_name("Fluid Spalart-Allmaras Source Operator")
+        call self%set_name("Fluid Spalart-Allmaras Volume Advection Operator")
 
         ! Set operator type.
-        call self%set_operator_type("Volume Diffusive Operator")
+        call self%set_operator_type("Volume Advective Operator")
 
         ! Set operator equations being integrated.
         call self%add_primary_field("Density * NuTilde")
-
-        ! Set auxiliary variables being used.
-        call self%add_auxiliary_field("Wall Distance")
 
         ! Add Turbulent Eddy Viscosity model
         call self%add_model('Spalart Allmaras Turbulent Model Fields')
@@ -82,13 +79,9 @@ contains
     !!
     !!------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(spalart_allmaras_source_operator_t),  intent(inout)   :: self
-        type(chidg_worker_t),                       intent(inout)   :: worker
-        class(properties_t),                        intent(inout)   :: prop
-
-        ! Equation indices
-        integer(ik)    :: irho, irhou, irhov, irhow, irhoE, irho_nutilde
-
+        class(spalart_allmaras_volume_advection_operator_t),  intent(inout)   :: self
+        type(chidg_worker_t),                                 intent(inout)   :: worker
+        class(properties_t),                                  intent(inout)   :: prop
 
         type(AD_D), allocatable, dimension(:) ::                                &
             rho, rhou, rhov, rhow, rhoE, rho_nutilde, p, T, u, v, w, invrho,    &
@@ -111,16 +104,6 @@ contains
 
         real(rk)    :: const, epsilon_vorticity
 
-        !
-        ! Get equation indices
-        !
-        irho         = prop%get_primary_field_index('Density'          )
-        irhou        = prop%get_primary_field_index('X-Momentum'       )
-        irhov        = prop%get_primary_field_index('Y-Momentum'       )
-        irhow        = prop%get_primary_field_index('Z-Momentum'       )
-        irhoE        = prop%get_primary_field_index('Energy'           )
-        irho_nutilde = prop%get_primary_field_index('Density * NuTilde')
-
 
         !
         ! Interpolate solution to quadrature nodes
@@ -131,8 +114,6 @@ contains
         rhow        = worker%get_primary_field_element('Z-Momentum'       ,'value')
         rhoE        = worker%get_primary_field_element('Energy'           ,'value')
         rho_nutilde = worker%get_primary_field_element('Density * NuTilde','value')
-
-
 
 
         !
@@ -161,13 +142,6 @@ contains
         drho_nutilde_dx = worker%get_primary_field_element('Density * NuTilde','ddx+lift')
         drho_nutilde_dy = worker%get_primary_field_element('Density * NuTilde','ddy+lift')
         drho_nutilde_dz = worker%get_primary_field_element('Density * NuTilde','ddz+lift')
-
-
-
-        !
-        ! Interpolate auxiliary field, Wall Distance
-        !
-        dwall = worker%get_model_field_element('Wall Distance', 'value')
 
 
 
@@ -344,4 +318,4 @@ contains
 
 
 
-end module spalart_allmaras_source
+end module spalart_allmaras_volume_advection

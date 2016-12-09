@@ -1,4 +1,4 @@
-module type_stokes_hypothesis
+module type_reynolds_analogy
 #include <messenger.h>
     use mod_kinds,          only: rk
     use mod_constants,      only: THREE, TWO
@@ -11,23 +11,26 @@ module type_stokes_hypothesis
     
 
 
-    !>  Stokes' Hypothesis for computing the second coefficient of viscosity.
+    !>  Reynolds' Analogy used to compute thermal conductivity.
     !!
     !!  Model Fields:
-    !!      - Second Coefficient of Viscosity
+    !!      - Thermal Conductivity
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   12/3/2016
+    !!  @date   12/9/2016
     !!
     !---------------------------------------------------------------------------------------
-    type, extends(model_t)  :: stokes_hypothesis_t
+    type, extends(model_t)  :: reynolds_analogy_t
+
+        real(rk)    :: Cp = 1003.0_rk
+        real(rk)    :: Pr = 0.8_rk
 
     contains
 
         procedure   :: init
         procedure   :: compute
 
-    end type stokes_hypothesis_t
+    end type reynolds_analogy_t
     !***************************************************************************************
 
 
@@ -46,11 +49,11 @@ contains
     !!
     !---------------------------------------------------------------------------------------
     subroutine init(self)   
-        class(stokes_hypothesis_t), intent(inout)   :: self
+        class(reynolds_analogy_t), intent(inout)   :: self
 
-        call self%set_name('Stokes Hypothesis')
+        call self%set_name('Reynolds Analogy')
 
-        call self%add_model_field('Second Coefficient of Laminar Viscosity')
+        call self%add_model_field('Laminar Thermal Conductivity')
 
 
     end subroutine init
@@ -68,10 +71,10 @@ contains
     !!
     !--------------------------------------------------------------------------------------
     subroutine compute(self,worker)
-        class(stokes_hypothesis_t), intent(in)      :: self
+        class(reynolds_analogy_t),  intent(in)      :: self
         type(chidg_worker_t),       intent(inout)   :: worker
 
-        type(AD_D), dimension(:),   allocatable :: viscosity, second_viscosity
+        type(AD_D), dimension(:),   allocatable :: viscosity, thermal_conductivity
 
 
         !
@@ -83,13 +86,13 @@ contains
         !
         ! Stokes' Hypothesis for the second coefficient of viscosity
         !
-        second_viscosity = -(TWO/THREE)*viscosity
+        thermal_conductivity = self%Cp * viscosity / self%Pr
 
 
         !
         ! Contribute second coefficient of viscosity
         !
-        call worker%store_model_field('Second Coefficient of Laminar Viscosity', 'value', second_viscosity)
+        call worker%store_model_field('Laminar Thermal Conductivity', 'value', thermal_conductivity)
 
 
     end subroutine compute
@@ -98,4 +101,4 @@ contains
 
 
 
-end module type_stokes_hypothesis
+end module type_reynolds_analogy

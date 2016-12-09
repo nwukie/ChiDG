@@ -56,7 +56,6 @@ contains
         character(*),           intent(in)  :: blueprint
 
         type(equation_set_t)            :: navier_stokes_eqns
-        type(perfect_gas_t)             :: perfect_gas
         type(fluid_pseudo_timestep_t)   :: fluid_pseudo_time
 
         !
@@ -81,17 +80,27 @@ contains
                 call navier_stokes_eqns%add_operator('Fluid Viscous Boundary Average Operator')
                 call navier_stokes_eqns%add_operator('Fluid Viscous BC Operator')
 
-                call navier_stokes_eqns%prop%add_fluid(perfect_gas)
-
                 call navier_stokes_eqns%add_model('Ideal Gas')
                 call navier_stokes_eqns%add_model('Sutherlands Law')
                 call navier_stokes_eqns%add_model('Stokes Hypothesis')
+                call navier_stokes_eqns%add_model('Reynolds Analogy')
+                call navier_stokes_eqns%add_model('Zero Turbulent Model Fields')
+
+
+
+
+!                call navier_stokes_eqns%add_operator('Fluid Spalart-Allmaras Source Operator')
+
+
+
 
                 call navier_stokes_eqns%add_pseudo_timestep(fluid_pseudo_time)
 
+
             case default
-                call chidg_signal_one(FATAL, "build_navier_stokes: I didn't recognize the construction parameter &
-                                              that was passed to build the equation set.", blueprint)
+                call chidg_signal_one(FATAL, "build_navier_stokes: I didn't recognize the &
+                                              construction parameter that was passed to build &
+                                              the equation set.", blueprint)
 
         end select
 

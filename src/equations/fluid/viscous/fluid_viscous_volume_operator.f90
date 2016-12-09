@@ -80,12 +80,9 @@ contains
         type(chidg_worker_t),                   intent(inout)   :: worker
         class(properties_t),                    intent(inout)   :: prop
 
-        ! Equation indices
-        integer(ik)    :: irho, irhou, irhov, irhow, irhoE
-
-
         type(AD_D), allocatable, dimension(:) ::                                &
-            rho, rhou, rhov, rhow, rhoE, p, T, u, v, w, invrho, mu, lamda,      &
+            rho, rhou, rhov, rhow, rhoE, p, T, u, v, w, invrho, mu, lamda, k,   &
+            mu_l, mu_t, lamda_l, lamda_t, k_l, k_t,                             &
             drho_dx, drhou_dx, drhov_dx, drhow_dx, drhoE_dx,                    &
             drho_dy, drhou_dy, drhov_dy, drhow_dy, drhoE_dy,                    &
             drho_dz, drhou_dz, drhov_dz, drhow_dz, drhoE_dz,                    &
@@ -101,16 +98,6 @@ contains
 
         real(rk)    :: const, gam
 
-        !
-        ! Get equation indices
-        !
-        irho  = prop%get_primary_field_index("Density"   )
-        irhou = prop%get_primary_field_index("X-Momentum")
-        irhov = prop%get_primary_field_index("Y-Momentum")
-        irhow = prop%get_primary_field_index("Z-Momentum")
-        irhoE = prop%get_primary_field_index("Energy"    )
-
-
 
         !
         ! Interpolate solution to quadrature nodes
@@ -121,14 +108,6 @@ contains
         rhow = worker%get_primary_field_element("Z-Momentum",'value')
         rhoE = worker%get_primary_field_element("Energy"    ,'value')
 
-
-        !
-        ! Compute model values
-        !
-        !p   = prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE)
-        !gam = prop%fluid%compute_gamma(rho,rhou,rhov,rhow,rhoE)
-        p   = worker%get_model_field_element('Pressure', 'value')
-        gam = 1.4_rk
 
 
         !
@@ -156,16 +135,41 @@ contains
 
 
 
+        !
+        ! Get Model fields:
+        !   Pressure
+        !   Temperature
+        !   Viscosity
+        !   Second Coefficient of Viscosity
+        !   Thermal Conductivity
+        !
+        p       = worker%get_model_field_element('Pressure',                                  'value')
+        T       = worker%get_model_field_element('Temperature',                               'value')
+        mu_l    = worker%get_model_field_element('Laminar Viscosity',                         'value')
+        mu_t    = worker%get_model_field_element('Turbulent Viscosity',                       'value')
+        lamda_l = worker%get_model_field_element('Second Coefficient of Laminar Viscosity',   'value')
+        lamda_t = worker%get_model_field_element('Second Coefficient of Turbulent Viscosity', 'value')
+        k_l     = worker%get_model_field_element('Laminar Thermal Conductivity',              'value')
+        k_t     = worker%get_model_field_element('Turbulent Thermal Conductivity',            'value')
+        gam = 1.4_rk
 
-        invrho = ONE/rho
+
+        !
+        ! Compute effective viscosities, conductivity. Laminar + Turbulent.
+        !
+        mu    = mu_l    + mu_t
+        lamda = lamda_l + lamda_t
+        k     = k_l     + k_t
+
 
 
         !
         ! Compute velocities
         !
-        u = rhou/rho
-        v = rhov/rho
-        w = rhow/rho
+        invrho = ONE/rho
+        u = rhou*invrho
+        v = rhov*invrho
+        w = rhow*invrho
 
 
         !
@@ -230,21 +234,6 @@ contains
         dw_dz = dw_drho*drho_dz  +  dw_drhow*drhow_dz
 
 
-        !
-        ! Compute temperature
-        !
-        !T = prop%fluid%compute_temperature(rho,rhou,rhov,rhow,rhoE)
-        T = worker%get_model_field_element('Temperature', 'value')
-
-
-        !
-        ! Compute dynamic viscosity, second coefficient of viscosity
-        !
-        !mu    = prop%fluid%compute_viscosity_dynamic(T)
-        !lamda = prop%fluid%compute_viscosity_second(mu,T)
-        mu    = worker%get_model_field_element('Viscosity',                       'value')
-        lamda = worker%get_model_field_element('Second Coefficient of Viscosity', 'value')
-
 
         !
         ! Compute temperature gradient
@@ -302,9 +291,12 @@ contains
         !============================
         !       ENERGY FLUX
         !============================
-        flux_x = -(1003._rk*mu/0.8_rk)*dT_dx  -  (u*tau_xx + v*tau_xy + w*tau_xz)
-        flux_y = -(1003._rk*mu/0.8_rk)*dT_dy  -  (u*tau_xy + v*tau_yy + w*tau_yz)
-        flux_z = -(1003._rk*mu/0.8_rk)*dT_dz  -  (u*tau_xz + v*tau_yz + w*tau_zz)
+        !flux_x = -(1003._rk*mu/0.8_rk)*dT_dx  -  (u*tau_xx + v*tau_xy + w*tau_xz)
+        !flux_y = -(1003._rk*mu/0.8_rk)*dT_dy  -  (u*tau_xy + v*tau_yy + w*tau_yz)
+        !flux_z = -(1003._rk*mu/0.8_rk)*dT_dz  -  (u*tau_xz + v*tau_yz + w*tau_zz)
+        flux_x = -k*dT_dx  -  (u*tau_xx + v*tau_xy + w*tau_xz)
+        flux_y = -k*dT_dy  -  (u*tau_xy + v*tau_yy + w*tau_yz)
+        flux_z = -k*dT_dz  -  (u*tau_xz + v*tau_yz + w*tau_zz)
 
         call worker%integrate_volume('Energy',flux_x,flux_y,flux_z)
 

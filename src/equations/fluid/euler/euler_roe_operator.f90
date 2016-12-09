@@ -79,8 +79,6 @@ contains
         type(chidg_worker_t),           intent(inout)   :: worker
         class(properties_t),            intent(inout)   :: prop
 
-        ! Equation indices
-        integer(ik)     :: irho, irhou, irhov, irhow, irhoE
 
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   ::                      &
@@ -108,13 +106,6 @@ contains
             normx, normy, normz, unormx, unormy, unormz
 
         real(rk) :: eps, gam_m, gam_p
-
-
-        irho  = prop%get_primary_field_index("Density"   )
-        irhou = prop%get_primary_field_index("X-Momentum")
-        irhov = prop%get_primary_field_index("Y-Momentum")
-        irhow = prop%get_primary_field_index("Z-Momentum")
-        irhoE = prop%get_primary_field_index("Energy"    )
 
 
 
@@ -153,10 +144,6 @@ contains
         !
         ! Compute pressure and gamma
         !
-        !p_m = prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
-        !p_p = prop%fluid%compute_pressure(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
-        !gam_m = prop%fluid%compute_gamma(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
-        !gam_p = prop%fluid%compute_gamma(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
         p_m = worker%get_model_field_face('Pressure', 'value', 'face interior')
         p_p = worker%get_model_field_face('Pressure', 'value', 'face exterior')
         gam_m = 1.4_rk
@@ -248,14 +235,6 @@ contains
 
 
 
-
-
-
-
-!        C1   = abs(vmagtil - ctil)*( delp - rtil*ctil*delvmag)/(TWO*(ctil2))
-!        C2_a = abs(vmagtil)*(delr - delp/(ctil2))
-!        C2_b = abs(vmagtil)*rtil
-!        C3   = abs(vmagtil + ctil)*( delp + rtil*ctil*delvmag)/(TWO*(ctil2))
 
         C1   = abs(lamda1)*( delp - rtil*ctil*delvmag)/(TWO*(ctil2))
         C2_a = abs(lamda2)*(delr - delp/(ctil2))

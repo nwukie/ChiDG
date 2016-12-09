@@ -1,7 +1,7 @@
-module type_stokes_hypothesis
+module type_zero_turbulent_model_fields
 #include <messenger.h>
     use mod_kinds,          only: rk
-    use mod_constants,      only: THREE, TWO
+    use mod_constants,      only: ZERO
     use type_model,         only: model_t
     use type_chidg_worker,  only: chidg_worker_t
     use DNAD_D
@@ -11,23 +11,25 @@ module type_stokes_hypothesis
     
 
 
-    !>  Stokes' Hypothesis for computing the second coefficient of viscosity.
+    !>  Provide zero-values for turbulent model fields, implying laminar flow.
     !!
     !!  Model Fields:
-    !!      - Second Coefficient of Viscosity
+    !!      - Turbulent Viscosity
+    !!      - Second Coefficient of Turbulent Viscosity
+    !!      - Turbulent Thermal Conductivity
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   12/3/2016
+    !!  @date   12/9/2016
     !!
     !---------------------------------------------------------------------------------------
-    type, extends(model_t)  :: stokes_hypothesis_t
+    type, extends(model_t)  :: zero_turbulent_model_fields_t
 
     contains
 
         procedure   :: init
         procedure   :: compute
 
-    end type stokes_hypothesis_t
+    end type zero_turbulent_model_fields_t
     !***************************************************************************************
 
 
@@ -46,11 +48,13 @@ contains
     !!
     !---------------------------------------------------------------------------------------
     subroutine init(self)   
-        class(stokes_hypothesis_t), intent(inout)   :: self
+        class(zero_turbulent_model_fields_t), intent(inout)   :: self
 
-        call self%set_name('Stokes Hypothesis')
+        call self%set_name('Zero Turbulent Model Fields')
 
-        call self%add_model_field('Second Coefficient of Laminar Viscosity')
+        call self%add_model_field('Turbulent Viscosity')
+        call self%add_model_field('Second Coefficient of Turbulent Viscosity')
+        call self%add_model_field('Turbulent Thermal Conductivity')
 
 
     end subroutine init
@@ -68,28 +72,24 @@ contains
     !!
     !--------------------------------------------------------------------------------------
     subroutine compute(self,worker)
-        class(stokes_hypothesis_t), intent(in)      :: self
-        type(chidg_worker_t),       intent(inout)   :: worker
+        class(zero_turbulent_model_fields_t), intent(in)      :: self
+        type(chidg_worker_t),                   intent(inout)   :: worker
 
-        type(AD_D), dimension(:),   allocatable :: viscosity, second_viscosity
-
-
-        !
-        ! Interpolate solution to quadrature nodes
-        !
-        viscosity = worker%get_model_field_general('Laminar Viscosity','value')
+        type(AD_D), dimension(:),   allocatable :: vals
 
 
         !
-        ! Stokes' Hypothesis for the second coefficient of viscosity
+        ! Get field to set derivative arrays. Set mut to zero.
         !
-        second_viscosity = -(TWO/THREE)*viscosity
-
+        vals = worker%get_primary_field_general('Density','value')
+        vals = ZERO
 
         !
         ! Contribute second coefficient of viscosity
         !
-        call worker%store_model_field('Second Coefficient of Laminar Viscosity', 'value', second_viscosity)
+        call worker%store_model_field('Turbulent Viscosity',                       'value', vals)
+        call worker%store_model_field('Second Coefficient of Turbulent Viscosity', 'value', vals)
+        call worker%store_model_field('Turbulent Thermal Conductivity',            'value', vals)
 
 
     end subroutine compute
@@ -98,4 +98,4 @@ contains
 
 
 
-end module type_stokes_hypothesis
+end module type_zero_turbulent_model_fields

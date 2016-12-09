@@ -131,7 +131,10 @@ macro (add_test_target target_subdirectory test_type)
 
     #-------------------------------------------------------------------------------------------------------
     #
-	#   Define test target and link with pfunit and coredg libraries
+	#   Define test target and link with pfunit and coredg libraries. These targets are
+    #   excluded from the 'all' target and are instead added as dependencies to the 'check' target.
+    #
+    #   Build test targets using 'make check'
     #
 	#-------------------------------------------------------------------------------------------------------
 	add_executable(${target_name} EXCLUDE_FROM_ALL ${PF_ROOT}/include/driver.F90 ${_test_sources} )

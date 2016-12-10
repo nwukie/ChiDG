@@ -77,6 +77,7 @@ contains
 
         real(rk) :: p
 
+
         ! Get primary field to initialize derivatives
         rho  = worker%get_primary_field_general('Density', 'value')
         d    = rho

@@ -204,7 +204,7 @@ contains
         call set_p_poisson_parameter(real(p,rk))
 
         order = chidg%nterms_s_1d
-        do iorder = 2,order
+        do iorder = 3,order
             call write_line('Wall Distance Driver : Loop 2 : order = ', iorder)
 
 
@@ -239,6 +239,7 @@ contains
 
 
 
+        call write_line('Storing Wall Distance field to Auxiliary field ChiDG Vector:')
 
 
         !

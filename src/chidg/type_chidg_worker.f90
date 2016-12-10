@@ -322,7 +322,8 @@ contains
         character(*),           intent(in)  :: field
         character(*),           intent(in)  :: interp_type
 
-        type(AD_D), allocatable :: var_gq(:)
+        !type(AD_D), allocatable :: var_gq(:)
+        real(rk), allocatable :: var_gq(:)
 
 
         if (self%interpolation_source == 'element') then
@@ -723,7 +724,7 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------
-    function get_auxiliary_field_face(self,field,interp_type,interp_source) result(var_gq)
+    function get_auxiliary_field_face(self,field,interp_type,interp_source) result(var_gq_real)
         class(chidg_worker_t),  intent(in)  :: self
         character(*),           intent(in)  :: field
         character(*),           intent(in)  :: interp_type

@@ -64,7 +64,7 @@ contains
         call self%add_primary_field("Density * NuTilde")
 
         ! Set auxiliary variables being used.
-        call self%add_auxiliary_field("Wall Distance")
+        call self%add_auxiliary_field("Wall Distance : p-Poisson")
 
         ! Add Turbulent Eddy Viscosity model
         call self%add_model('Spalart Allmaras Turbulent Model Fields')
@@ -87,9 +87,6 @@ contains
         type(chidg_worker_t),                       intent(inout)   :: worker
         class(properties_t),                        intent(inout)   :: prop
 
-        ! Equation indices
-        integer(ik)    :: irho, irhou, irhov, irhow, irhoE, irho_nutilde
-
 
         type(AD_D), allocatable, dimension(:) ::                                &
             rho, rhou, rhov, rhow, rhoE, rho_nutilde, p, T, u, v, w, invrho,    &
@@ -108,19 +105,8 @@ contains
             nutilde, dnutilde_dx, dnutilde_dy, dnutilde_dz,                     &
             source, dwall
 
-        real(rk), allocatable, dimension(:) :: gam
+        real(rk)    :: const, epsilon_vorticity, gam
 
-        real(rk)    :: const, epsilon_vorticity
-
-        !
-        ! Get equation indices
-        !
-        irho         = prop%get_primary_field_index('Density'          )
-        irhou        = prop%get_primary_field_index('X-Momentum'       )
-        irhov        = prop%get_primary_field_index('Y-Momentum'       )
-        irhow        = prop%get_primary_field_index('Z-Momentum'       )
-        irhoE        = prop%get_primary_field_index('Energy'           )
-        irho_nutilde = prop%get_primary_field_index('Density * NuTilde')
 
 
         !
@@ -186,9 +172,9 @@ contains
         !
         ! Compute model values
         !
-        p   = worker%get_model_field_element('Pressure',    'value')
-        T   = worker%get_model_field_element('Temperature', 'value')
-        mu  = worker%get_model_field_element('Viscosity',   'value')
+        p   = worker%get_model_field_element('Pressure',            'value')
+        T   = worker%get_model_field_element('Temperature',         'value')
+        mu  = worker%get_model_field_element('Laminar Viscosity',   'value')
         gam = 1.4_rk
 
         nu  = mu*invrho
@@ -259,6 +245,7 @@ contains
         vorticity2 =  (dw_dy - dv_dz)**TWO  +  (du_dz - dw_dx)**TWO  +  (dv_dx - du_dy)**TWO 
         
         epsilon_vorticity = 1.e-6_rk
+        vorticity = vorticity2
         where(vorticity2 < epsilon_vorticity)
             vorticity = HALF*(epsilon_vorticity + vorticity2/epsilon_vorticity)
         else where
@@ -270,6 +257,7 @@ contains
         vorticity_bar = (nutilde/(SA_kappa*SA_kappa*dwall*dwall))*f_v2
 
 
+        vorticity_mod = vorticity
         where (vorticity_bar >= -SA_c_v2*vorticity)
             vorticity_mod = vorticity + vorticity_bar
         else where
@@ -298,6 +286,7 @@ contains
         !
         ! Compute Production, Destruction
         !
+        production = vorticity_mod
         where ( nutilde >= ZERO )
             production = SA_c_b1*(ONE - f_t2)*vorticity_mod*nutilde
         else where
@@ -305,6 +294,7 @@ contains
         end where
 
 
+        destruction = vorticity_mod
         where ( nutilde >= ZERO )
             destruction = (SA_c_w1*f_w - (SA_c_b1/(SA_kappa*SA_kappa))*f_t2) * (nutilde/dwall)**TWO
         else where
@@ -336,6 +326,7 @@ contains
                   (ONE/SA_sigma)*(nu + f_n1*nutilde)*(drho_dx*dnutilde_dx + drho_dy*dnutilde_dy + drho_dz*dnutilde_dz)
 
         call worker%integrate_volume("Density * NuTilde",source)
+
 
     end subroutine compute
     !*********************************************************************************************************

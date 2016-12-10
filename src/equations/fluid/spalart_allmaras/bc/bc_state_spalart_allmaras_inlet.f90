@@ -85,18 +85,18 @@ contains
             rhoNutilde_m, rhoNutilde_bc,                            &
             drhoNutilde_dx_m, drhoNutilde_dy_m, drhoNutilde_dz_m
 
-        real(rk),       allocatable, dimension(:)   :: nutilde_nu, time
+        real(rk)                                    :: time
         type(point_t),  allocatable, dimension(:)   :: coords
+        real(rk),       allocatable, dimension(:)   :: nutilde_nu
 
 
         !
         ! Interpolate interior solution to quadrature nodes
         !
-        rhoNutilde_m     = worker%get_primary_field_face("Density * NuTilde", 'value', 'face interior')
-
-        drhoNutilde_dx_m = worker%get_primary_field_face("Density * NuTilde", 'ddx',   'face interior')
-        drhoNutilde_dy_m = worker%get_primary_field_face("Density * NuTilde", 'ddy',   'face interior')
-        drhoNutilde_dz_m = worker%get_primary_field_face("Density * NuTilde", 'ddz',   'face interior')
+        rhoNutilde_m     = worker%get_primary_field_face('Density * NuTilde', 'value', 'face interior')
+        drhoNutilde_dx_m = worker%get_primary_field_face('Density * NuTilde', 'ddx',   'face interior')
+        drhoNutilde_dy_m = worker%get_primary_field_face('Density * NuTilde', 'ddy',   'face interior')
+        drhoNutilde_dz_m = worker%get_primary_field_face('Density * NuTilde', 'ddz',   'face interior')
 
 
 
@@ -118,15 +118,15 @@ contains
         !
         ! Store boundary condition state
         !
-        call worker%store_bc_state("Density * NuTilde", rhoNutilde_bc,'value')
+        call worker%store_bc_state('Density * NuTilde', rhoNutilde_bc,'value')
 
 
         !
         ! Store boundary condition gradient - Extrapolate
         !
-        call worker%store_bc_state("Density * NuTilde", drhoNutilde_dx_m, 'ddx')
-        call worker%store_bc_state("Density * NuTilde", drhoNutilde_dy_m, 'ddy')
-        call worker%store_bc_state("Density * NuTilde", drhoNutilde_dz_m, 'ddz')
+        call worker%store_bc_state('Density * NuTilde', drhoNutilde_dx_m, 'ddx')
+        call worker%store_bc_state('Density * NuTilde', drhoNutilde_dy_m, 'ddy')
+        call worker%store_bc_state('Density * NuTilde', drhoNutilde_dz_m, 'ddz')
                                                 
     end subroutine compute_bc_state
     !*****************************************************************************************

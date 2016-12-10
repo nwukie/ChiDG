@@ -254,7 +254,7 @@ contains
         !
         ! mu = (dudx**2 + dudy**2 + dudz**2)**((p-2)/2)
         !
-        if (abs(p-2._rk) > 1.e-14_rk) then
+        if (abs(p-2._rk) > 1.e-8_rk) then
             mu = mag2**((p-TWO)/TWO)
         else
             mu = mag2

@@ -111,7 +111,6 @@ contains
         !
         ! Write solution in TecIO format
         !
-        !call write_tecio_variables(chidg%data,'0.plt',1)
         call write_tecio_variables_unstructured(chidg%data,'0.plt',1)
 
 

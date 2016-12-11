@@ -193,7 +193,7 @@ contains
         type(face_info_t),      intent(in)              :: face_info
         type(function_info_t),  intent(in)              :: fcn_info
         integer(ik),            intent(in)              :: ieqn
-        character(len=*),       intent(in)              :: interpolation_type
+        character(*),           intent(in)              :: interpolation_type
         integer(ik),            intent(in)              :: interpolation_source
 
         type(face_info_t)   :: iface_info
@@ -202,7 +202,7 @@ contains
         type(AD_D)                      :: var_gq(mesh(face_info%idomain_l)%elems(face_info%ielement_l)%gq%face%nnodes)
         type(AD_D),         allocatable :: qdiff(:)
         real(rk),           allocatable :: interpolator(:,:)
-        character(len=:),   allocatable :: interpolation_style
+        character(:),       allocatable :: interpolation_style
 
         integer(ik) :: nderiv, set_deriv, iterm, igq, nterms_s, ierr
         logical     :: differentiate_me, conforming_interpolation, chimera_interpolation, parallel_interpolation
@@ -1215,6 +1215,7 @@ contains
             !
             neqns_seed    = function_info%seed%neqns
             nterms_s_seed = function_info%seed%nterms_s
+
             nderiv = neqns_seed  *  nterms_s_seed
 
         end if

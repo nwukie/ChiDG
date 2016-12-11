@@ -6,8 +6,10 @@ add_lib_sources(
                 spalart_allmaras_source.f90
                 spalart_allmaras_laxfriedrichs.f90
                 spalart_allmaras_volume_advection.f90
+                spalart_allmaras_bc_advection.f90
                 spalart_allmaras_boundary_diffusion.f90
                 spalart_allmaras_volume_diffusion.f90
+                spalart_allmaras_bc_diffusion.f90
                 type_spalart_allmaras_turbulent_model_fields.f90
                 )
 

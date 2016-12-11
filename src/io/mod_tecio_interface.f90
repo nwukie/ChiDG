@@ -96,22 +96,7 @@ contains
 
             solutiontime = real(timeindex,rk)
             strandid = timeindex
-            ! Compute the imax, jmax, kmax for the ordered zone. This comes from
-            ! multiplying the number of elements in each direction by the output
-            ! resolution, output_res, that the continuous modal polynomials are
-            ! sampled at
-!            if (writetype == 0) then        !Write mesh
-!                imax = (OUTPUT_RES)*mesh%nelem_xi   + 1
-!                jmax = (OUTPUT_RES)*mesh%nelem_eta  + 1
-!                kmax = (OUTPUT_RES)*mesh%nelem_zeta + 1
-!            elseif (writetype == 1) then    ! Write solution
-!                imax = (OUTPUT_RES+1)*mesh%nelem_xi
-!                jmax = (OUTPUT_RES+1)*mesh%nelem_eta
-!                kmax = (OUTPUT_RES+1)*mesh%nelem_zeta
-!            else
-!                stop "Error: invalid writetype for init_tecio_zone"
-!            end if
-!
+
 
             tecstat = TECZNE142(trim(zonetitle)//char(0),   &
                                 zonetype,                   &
@@ -196,7 +181,6 @@ contains
 
             numpts      = (OUTPUT_RES+1)*(OUTPUT_RES+1)*(OUTPUT_RES+1) * mesh%nelem
             numelements = (OUTPUT_RES*OUTPUT_RES*OUTPUT_RES) * mesh%nelem
-
 
 
 

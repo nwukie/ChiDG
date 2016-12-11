@@ -179,6 +179,7 @@ contains
             call h5dopen_f(gid, "CoordinateZ", did_z, ierr, H5P_DEFAULT_F)
 
 
+
             !
             !  Get the dataspace id and dimensions
             !
@@ -206,6 +207,7 @@ contains
             cp_pts = c_loc(zpts(1))
             call h5dread_f(did_z, H5T_NATIVE_DOUBLE, cp_pts, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"read_grid_hdf5 -- h5dread_f")
+
 
 
             !
@@ -350,10 +352,10 @@ contains
                 call read_field_domain_hdf(data,domain_id,field_name,itime,'Primary')
             end do ! ieqn
 
-            do ieqn = 1,data%eqnset(idom)%prop%nauxiliary_fields()
-                field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
-                call read_field_domain_hdf(data,domain_id,field_name,itime,'Auxiliary')
-            end do ! ieqn
+!            do ieqn = 1,data%eqnset(idom)%prop%nauxiliary_fields()
+!                field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
+!                call read_field_domain_hdf(data,domain_id,field_name,itime,'Auxiliary')
+!            end do ! ieqn
 
             call close_domain_hdf(domain_id)
 

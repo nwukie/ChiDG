@@ -37,8 +37,10 @@ module mod_operators
     use spalart_allmaras_source,                    only: spalart_allmaras_source_operator_t
     use spalart_allmaras_laxfriedrichs,             only: spalart_allmaras_laxfriedrichs_operator_t
     use spalart_allmaras_volume_advection,          only: spalart_allmaras_volume_advection_operator_t
+    use spalart_allmaras_bc_advection,              only: spalart_allmaras_bc_advection_operator_t
     use spalart_allmaras_boundary_diffusion,        only: spalart_allmaras_boundary_diffusion_operator_t
     use spalart_allmaras_volume_diffusion,          only: spalart_allmaras_volume_diffusion_operator_t
+    use spalart_allmaras_bc_diffusion,              only: spalart_allmaras_bc_diffusion_operator_t
     implicit none
 
 
@@ -193,8 +195,10 @@ contains
         type(spalart_allmaras_source_operator_t)                :: spalart_allmaras_source_operator
         type(spalart_allmaras_laxfriedrichs_operator_t)         :: spalart_allmaras_laxfriedrichs_operator
         type(spalart_allmaras_volume_advection_operator_t)      :: spalart_allmaras_volume_advection_operator
+        type(spalart_allmaras_bc_advection_operator_t)          :: spalart_allmaras_bc_advection_operator
         type(spalart_allmaras_boundary_diffusion_operator_t)    :: spalart_allmaras_boundary_diffusion_operator
         type(spalart_allmaras_volume_diffusion_operator_t)      :: spalart_allmaras_volume_diffusion_operator
+        type(spalart_allmaras_bc_diffusion_operator_t)          :: spalart_allmaras_bc_diffusion_operator
 
 
 
@@ -235,8 +239,10 @@ contains
             call operator_factory%register(spalart_allmaras_source_operator)
             call operator_factory%register(spalart_allmaras_laxfriedrichs_operator)
             call operator_factory%register(spalart_allmaras_volume_advection_operator)
+            call operator_factory%register(spalart_allmaras_bc_advection_operator)
             call operator_factory%register(spalart_allmaras_boundary_diffusion_operator)
             call operator_factory%register(spalart_allmaras_volume_diffusion_operator)
+            call operator_factory%register(spalart_allmaras_bc_diffusion_operator)
 
 
             operators_initialized = .true.

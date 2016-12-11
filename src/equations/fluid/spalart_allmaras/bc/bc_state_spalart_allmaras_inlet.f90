@@ -83,7 +83,7 @@ contains
         ! Storage at quadrature nodes
         type(AD_D),     allocatable, dimension(:)   ::              &
             rhoNutilde_m, rhoNutilde_bc,                            &
-            drhoNutilde_dx_m, drhoNutilde_dy_m, drhoNutilde_dz_m
+            drhoNutilde_dx_m, drhoNutilde_dy_m, drhoNutilde_dz_m, rho_m, mu_m, nu_m
 
         real(rk)                                    :: time
         type(point_t),  allocatable, dimension(:)   :: coords
@@ -93,11 +93,16 @@ contains
         !
         ! Interpolate interior solution to quadrature nodes
         !
+        rho_m            = worker%get_primary_field_face('Density',           'value', 'face interior')
         rhoNutilde_m     = worker%get_primary_field_face('Density * NuTilde', 'value', 'face interior')
         drhoNutilde_dx_m = worker%get_primary_field_face('Density * NuTilde', 'ddx',   'face interior')
         drhoNutilde_dy_m = worker%get_primary_field_face('Density * NuTilde', 'ddy',   'face interior')
         drhoNutilde_dz_m = worker%get_primary_field_face('Density * NuTilde', 'ddz',   'face interior')
 
+
+        
+        !mu_m = worker%get_model_field_face('Laminar Viscosity', 'value', 'face interior')
+        !nu_m = mu_m/rho_m
 
 
         !
@@ -111,7 +116,9 @@ contains
         !
         ! Compute boundary condition state
         !
-        rhoNutilde_bc = nutilde_nu * rhoNutilde_m
+        !rhoNutilde_bc = nutilde_nu * rhoNutilde_m
+        !rhoNutilde_bc = rho_m * (nutilde_nu * nu_m)
+        rhoNutilde_bc = rho_m * (nutilde_nu * 1.e-5_rk)
 
 
 

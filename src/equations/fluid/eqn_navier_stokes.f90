@@ -92,8 +92,10 @@ contains
                 call navier_stokes_eqns%add_operator('Spalart-Allmaras Source Operator')
                 call navier_stokes_eqns%add_operator('Spalart-Allmaras LaxFriedrichs Operator')
                 call navier_stokes_eqns%add_operator('Spalart-Allmaras Volume Advection Operator')
+                call navier_stokes_eqns%add_operator('Spalart-Allmaras BC Advection Operator')
                 call navier_stokes_eqns%add_operator('Spalart-Allmaras Boundary Diffusion Operator')
                 call navier_stokes_eqns%add_operator('Spalart-Allmaras Volume Diffusion Operator')
+                call navier_stokes_eqns%add_operator('Spalart-Allmaras BC Diffusion Operator')
 
 
 

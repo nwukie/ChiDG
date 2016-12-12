@@ -5,8 +5,8 @@ module mod_hdfio
     use mod_bc,                     only: create_bc
     use mod_chidg_mpi,              only: IRANK, NRANK, ChiDG_COMM
     use mod_hdf_utilities,          only: get_ndomains_hdf, get_domain_names_hdf,                   &
-                                          get_domain_equation_set_hdf, set_solution_order_hdf,      &
-                                          get_solution_order_hdf, set_coordinate_order_hdf,         &
+                                          get_domain_equation_set_hdf, set_coordinate_order_hdf,    &
+                                          set_solution_order_hdf, get_solution_order_hdf,           &
                                           get_domain_mapping_hdf, get_domain_dimensionality_hdf,    &
                                           set_contains_solution_hdf, set_domain_equation_set_hdf,   &
                                           check_file_storage_version_hdf, check_file_exists_hdf,    &
@@ -48,17 +48,23 @@ contains
     !!  read_grid_hdf
     !!
     !!  read_solution_hdf
-    !!      read_field_domain_hdf
+    !!      read_domain_field_hdf
     !!
     !!  write_solution_hdf
     !!      write_variable_hdf
-    !!      write_field_domain_hdf
+    !!      write_domain_field_hdf
     !!
     !!  read_boundaryconditions_hdf
     !!      read_bc_patches_hdf
     !!      read_bc_state_groups_hdf
     !!
     !!  read_connectivity_hdf
+    !!
+    !!  TODO:
+    !!  -----------
+    !!      - Relocate solution_order to a particular variable, instead of the domain.
+    !!        This is in case a variable is writted from another analysis like a wall
+    !!        distance calculation, but then a Navier Stokes solution is started.
     !!      
     !!
     !****************************************************************************************
@@ -349,7 +355,7 @@ contains
 
             do ieqn = 1,data%eqnset(idom)%prop%nprimary_fields()
                 field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
-                call read_field_domain_hdf(data,domain_id,field_name,itime,'Primary')
+                call read_domain_field_hdf(data,domain_id,field_name,itime,'Primary')
             end do ! ieqn
 
 !            do ieqn = 1,data%eqnset(idom)%prop%nauxiliary_fields()
@@ -491,7 +497,7 @@ contains
                         field_index = data%eqnset(idom)%prop%get_primary_field_index(trim(field))
 
                         if (field_index /= 0) then
-                            call write_field_domain_hdf(domain_id,data,field,time)
+                            call write_domain_field_hdf(domain_id,data,field,time)
                         end if
 
 
@@ -506,7 +512,7 @@ contains
                         neqns = data%eqnset(idom)%prop%nprimary_fields()
                         do ieqn = 1,neqns
                             field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
-                            call write_field_domain_hdf(domain_id,data,field_name,time)
+                            call write_domain_field_hdf(domain_id,data,field_name,time)
                         end do ! ieqn
 
                     end if
@@ -555,7 +561,7 @@ contains
     !!                              to be read.
     !!
     !---------------------------------------------------------------------------------------
-    subroutine read_field_domain_hdf(data,domain_id,field_name,itime,field_type)
+    subroutine read_domain_field_hdf(data,domain_id,field_name,itime,field_type)
         type(chidg_data_t), intent(inout)   :: data
         integer(HID_T),     intent(in)      :: domain_id
         character(*),       intent(in)      :: field_name
@@ -718,7 +724,7 @@ contains
         call h5gclose_f(gid,ierr)       ! Close the Domain/Variable group
 
 
-    end subroutine read_field_domain_hdf
+    end subroutine read_domain_field_hdf
     !*************************************************************************************
    
    
@@ -750,11 +756,13 @@ contains
     !!                          to be read.
     !!
     !----------------------------------------------------------------------------------------
-    subroutine write_field_domain_hdf(domain_id,data,field_name,itime)
-        integer(HID_T),     intent(in)  :: domain_id
-        type(chidg_data_t), intent(in)  :: data
-        character(*),       intent(in)  :: field_name
-        integer(ik),        intent(in)  :: itime
+    subroutine write_domain_field_hdf(domain_id,data,field_name,itime,attribute_name,attribute_value)
+        integer(HID_T),     intent(in)              :: domain_id
+        type(chidg_data_t), intent(in)              :: data
+        character(*),       intent(in)              :: field_name
+        integer(ik),        intent(in)              :: itime
+        character(*),       intent(in), optional    :: attribute_name
+        real(rk),           intent(in), optional    :: attribute_value
 
 
         type(H5O_INFO_T) :: info
@@ -898,6 +906,11 @@ contains
         end do
 
 
+        !
+        ! Write order of the domain variable
+        !
+        !call h5set_attribute
+
 
 
         call h5pclose_f(crp_list, ierr) ! Close dataset creation property
@@ -906,7 +919,7 @@ contains
         call h5gclose_f(gid,ierr)       ! Close Domain/Variable group
 
 
-    end subroutine write_field_domain_hdf
+    end subroutine write_domain_field_hdf
     !****************************************************************************************
 
 

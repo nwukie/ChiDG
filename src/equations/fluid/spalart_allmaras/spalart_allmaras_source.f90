@@ -89,15 +89,15 @@ contains
 
 
         type(AD_D), allocatable, dimension(:) ::                                &
-            rho, rhou, rhov, rhow, rhoE, rho_nutilde, p, T, u, v, w, invrho,    &
+            rho, rhou, rhov, rhow, rhoE, rho_nutilde, u, v, w, invrho,    &
             mu, nu, lamda,                                                      &
             drho_dx, drhou_dx, drhov_dx, drhow_dx, drhoE_dx,                    &
             drho_dy, drhou_dy, drhov_dy, drhow_dy, drhoE_dy,                    &
             drho_dz, drhou_dz, drhov_dz, drhow_dz, drhoE_dz,                    &
             drho_nutilde_dx, drho_nutilde_dy, drho_nutilde_dz,                  &
-            du_dx,   dv_dx,    dw_dx,    dT_dx,                                 &
-            du_dy,   dv_dy,    dw_dy,    dT_dy,                                 &
-            du_dz,   dv_dz,    dw_dz,    dT_dz,                                 &
+            du_dx,   dv_dx,    dw_dx,                                           &
+            du_dy,   dv_dy,    dw_dy,                                           &
+            du_dz,   dv_dz,    dw_dz,                                           &
             du_drho, du_drhou, dv_drho,  dv_drhov, dw_drho, dw_drhow,           &
             vorticity2, vorticity, vorticity_bar, vorticity_mod,                &
             f_v1, f_v2, f_t2, f_w, f_n1, production, destruction,               &
@@ -133,9 +133,9 @@ contains
         drhou_dy = worker%get_primary_field_element('X-Momentum','ddy+lift')
         drhou_dz = worker%get_primary_field_element('X-Momentum','ddz+lift')
 
-        drhov_dx = worker%get_primary_field_element('Z-Momentum','ddx+lift')
-        drhov_dy = worker%get_primary_field_element('Z-Momentum','ddy+lift')
-        drhov_dz = worker%get_primary_field_element('Z-Momentum','ddz+lift')
+        drhov_dx = worker%get_primary_field_element('Y-Momentum','ddx+lift')
+        drhov_dy = worker%get_primary_field_element('Y-Momentum','ddy+lift')
+        drhov_dz = worker%get_primary_field_element('Y-Momentum','ddz+lift')
 
         drhow_dx = worker%get_primary_field_element('Z-Momentum','ddx+lift')
         drhow_dy = worker%get_primary_field_element('Z-Momentum','ddy+lift')
@@ -172,11 +172,8 @@ contains
         !
         ! Compute model values
         !
-        p   = worker%get_model_field_element('Pressure',            'value')
-        T   = worker%get_model_field_element('Temperature',         'value')
-        mu  = worker%get_model_field_element('Laminar Viscosity',   'value')
         gam = 1.4_rk
-
+        mu  = worker%get_model_field_element('Laminar Viscosity',   'value')
         nu  = mu*invrho
 
 
@@ -321,9 +318,11 @@ contains
         !========================================================================
         !                       Spalart-Allmaras Source Term
         !========================================================================
-        source = -rho*(production-destruction)  -  &
-                  (SA_c_b2/SA_sigma)*rho*(dnutilde_dx*dnutilde_dx + dnutilde_dy*dnutilde_dy + dnutilde_dz*dnutilde_dz)  +  &
-                  (ONE/SA_sigma)*(nu + f_n1*nutilde)*(drho_dx*dnutilde_dx + drho_dy*dnutilde_dy + drho_dz*dnutilde_dz)
+        source = -(                                 &
+                    -rho*(production-destruction)   &
+                    -(SA_c_b2/SA_sigma)*rho*(dnutilde_dx*dnutilde_dx + dnutilde_dy*dnutilde_dy + dnutilde_dz*dnutilde_dz)   &
+                    +(ONE/SA_sigma)*(nu + f_n1*nutilde)*(drho_dx*dnutilde_dx + drho_dy*dnutilde_dy + drho_dz*dnutilde_dz)   &
+                  )
 
         call worker%integrate_volume("Density * NuTilde",source)
 

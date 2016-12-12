@@ -101,10 +101,6 @@ contains
 
 
         
-        !mu_m = worker%get_model_field_face('Laminar Viscosity', 'value', 'face interior')
-        !nu_m = mu_m/rho_m
-
-
         !
         ! Get User boundary condition viscosity ratio
         !

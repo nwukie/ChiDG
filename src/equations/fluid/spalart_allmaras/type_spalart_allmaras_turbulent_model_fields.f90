@@ -98,7 +98,7 @@ contains
         !
         ! Get viscosity: compute nu, nutilde
         !
-        mu = worker%get_model_field_general('Laminar Viscosity', 'value')
+        mu      = worker%get_model_field_general('Laminar Viscosity', 'value')
         nu      = mu/rho
         nutilde = rho_nutilde/rho
 

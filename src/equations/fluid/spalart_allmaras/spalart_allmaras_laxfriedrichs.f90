@@ -70,8 +70,8 @@ contains
 
 
         type(AD_D), dimension(:), allocatable   ::  &
-            rho_m, rhou_m, rhov_m, rhow_m, rho_nutilde_m, invrho_m, u_m, v_m, w_m, &
-            rho_p, rhou_p, rhov_p, rhow_p, rho_nutilde_p, invrho_p, u_p, v_p, w_p, &
+            rho_m, rhou_m, rhov_m, rhow_m, rho_nutilde_m, invrho_m, u_m, v_m, w_m, T_m, un_m, c_m, diss_m, &
+            rho_p, rhou_p, rhov_p, rhow_p, rho_nutilde_p, invrho_p, u_p, v_p, w_p, T_p, un_p, c_p, diss_p, &
             flux_avg_x, flux_avg_y, flux_avg_z, diff, &
             flux_x, flux_y, flux_z, integrand
 
@@ -96,6 +96,12 @@ contains
         rho_nutilde_p = worker%get_primary_field_face('Density * NuTilde', 'value', 'face exterior')
 
 
+        T_m = worker%get_model_field_face('Temperature','value','face interior')
+        T_p = worker%get_model_field_face('Temperature','value','face exterior')
+
+
+
+
         !
         ! Compute velocities
         !
@@ -116,7 +122,6 @@ contains
         normx  = worker%normal(1)
         normy  = worker%normal(2)
         normz  = worker%normal(3)
-
         unormx = worker%unit_normal(1)
         unormy = worker%unit_normal(2)
         unormz = worker%unit_normal(3)
@@ -131,14 +136,25 @@ contains
         diff       = (rho_nutilde_m - rho_nutilde_p)
 
 
+
+        un_m = u_m*unormx + v_m*unormy + w_m*unormz
+        un_p = u_p*unormx + v_p*unormy + w_p*unormz
+
+        c_m = sqrt(1.4_rk * 287.15_rk * T_m)
+        c_p = sqrt(1.4_rk * 287.15_rk * T_p)
+
+        diss_m = un_m + c_m
+        diss_p = un_p + c_p
+
         !
         ! Compute Lax-Friedrichs upwind flux
         !
-        flux_x = flux_avg_x + max(abs(u_m),abs(u_p))*HALF*diff
-        flux_y = flux_avg_y + max(abs(v_m),abs(v_p))*HALF*diff
-        flux_z = flux_avg_z + max(abs(w_m),abs(w_p))*HALF*diff
+        flux_x = flux_avg_x + max(abs(diss_m),abs(diss_p))*HALF*diff
+        flux_y = flux_avg_y + max(abs(diss_m),abs(diss_p))*HALF*diff
+        flux_z = flux_avg_z + max(abs(diss_m),abs(diss_p))*HALF*diff
 
-        integrand = flux_x*normx*unormx + flux_y*normy*unormy + flux_z*normz*unormz
+        integrand = flux_x*normx + flux_y*normy + flux_z*normz
+!        integrand = flux_x*normx*unormx + flux_y*normy*unormy + flux_z*normz*unormz
 
 
         !

@@ -219,12 +219,12 @@ contains
                 ! Write solution if the count is right
                 !
                 !if (wcount == self%nwrite) then
-                !    call write_solution_hdf(data,'chidg_restart.h5')
-                !    if (data%eqnset(1)%get_name() == 'Navier Stokes') then
+                    if (data%eqnset(1)%get_name() == 'Navier Stokes') then
+                        call write_solution_hdf(data,'flat_plate.h5')
                 !        write(filename,'(I2)') niter
                 !        call write_tecio_variables_unstructured(data,trim(filename)//'.dat',niter)
                 !        wcount = 0
-                !    end if
+                    end if
                 !end if
                 wcount = wcount + 1
 

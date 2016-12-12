@@ -198,7 +198,7 @@ contains
         !================================
         !       TURBULENCE FLUX
         !================================
-        diffusion = (ONE/SA_sigma)*(mu_l + f_n1*rho_nutilde)
+        diffusion = -(ONE/SA_sigma)*(mu_l + f_n1*rho_nutilde)
 
         flux_x = diffusion*dnutilde_dx
         flux_y = diffusion*dnutilde_dy

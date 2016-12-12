@@ -20,7 +20,7 @@ module spalart_allmaras_bc_diffusion
     !!  @author Nathan A. Wukie
     !!  @date   12/9/2016
     !!
-    !--------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     type, extends(operator_t), public :: spalart_allmaras_bc_diffusion_operator_t
 
     contains
@@ -29,7 +29,7 @@ module spalart_allmaras_bc_diffusion
         procedure   :: compute
 
     end type spalart_allmaras_bc_diffusion_operator_t
-    !********************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -49,7 +49,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/29/2016
     !!
-    !--------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine init(self)
         class(spalart_allmaras_bc_diffusion_operator_t),   intent(inout) :: self
         
@@ -69,7 +69,7 @@ contains
         call self%add_primary_field("Density * NuTilde")
 
     end subroutine init
-    !********************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -78,7 +78,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   1/28/2016
     !!
-    !!-------------------------------------------------------------------------------------
+    !!----------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
         class(spalart_allmaras_bc_diffusion_operator_t),    intent(inout)   :: self
         type(chidg_worker_t),                               intent(inout)   :: worker
@@ -198,7 +198,7 @@ contains
         !================================
         !       TURBULENCE FLUX
         !================================
-        diffusion = (ONE/SA_sigma)*(mu_l + f_n1*rho_nutilde)
+        diffusion = -(ONE/SA_sigma)*(mu_l + f_n1*rho_nutilde)
 
         flux_x = diffusion*dnutilde_dx
         flux_y = diffusion*dnutilde_dy
@@ -210,7 +210,7 @@ contains
 
 
     end subroutine compute
-    !*********************************************************************************************************
+    !******************************************************************************************
 
 
 

@@ -64,9 +64,7 @@ contains
 
 
         !
-        ! Get nterms_s and eqnset. TODO: Read directly from file
-        !
-        ! TODO: Also, I feel like this isn't used any more. Check into removing it.
+        ! Get nterms_s and eqnset.
         !
         file_props = get_properties_hdf(filename)
 

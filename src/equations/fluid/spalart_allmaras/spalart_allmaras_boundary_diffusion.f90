@@ -149,14 +149,14 @@ contains
         mu_l_p = worker%get_model_field_face('Laminar Viscosity','value', 'face exterior')
 
         nu_l_m = mu_l_m*invrho_m
-        nu_l_p = mu_l_m*invrho_p
+        nu_l_p = mu_l_p*invrho_p
 
 
         !
         ! Compute nutilde
         !
         nutilde_m = rho_nutilde_m*invrho_m
-        nutilde_p = rho_nutilde_m*invrho_p
+        nutilde_p = rho_nutilde_p*invrho_p
 
 
         chi_m = nutilde_m/nu_l_m
@@ -225,8 +225,8 @@ contains
         !================================
         !       TURBULENCE FLUX
         !================================
-        diffusion_m = (ONE/SA_sigma)*(mu_l_m + f_n1_m*rho_nutilde_m)
-        diffusion_p = (ONE/SA_sigma)*(mu_l_p + f_n1_p*rho_nutilde_p)
+        diffusion_m = -(ONE/SA_sigma)*(mu_l_m + f_n1_m*rho_nutilde_m)
+        diffusion_p = -(ONE/SA_sigma)*(mu_l_p + f_n1_p*rho_nutilde_p)
 
         flux_x_m = diffusion_m*dnutilde_dx_m
         flux_y_m = diffusion_m*dnutilde_dy_m

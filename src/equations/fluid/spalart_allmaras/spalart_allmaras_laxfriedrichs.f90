@@ -16,7 +16,7 @@ module spalart_allmaras_laxfriedrichs
     !!
     !!
     !!
-    !--------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     type, extends(operator_t), public :: spalart_allmaras_laxfriedrichs_operator_t
 
 
@@ -26,7 +26,7 @@ module spalart_allmaras_laxfriedrichs
         procedure   :: compute
 
     end type spalart_allmaras_laxfriedrichs_operator_t
-    !**************************************************************************
+    !*****************************************************************************************
 
 contains
 
@@ -37,7 +37,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/29/2016
     !!
-    !--------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine init(self)
         class(spalart_allmaras_laxfriedrichs_operator_t),   intent(inout)  :: self
 
@@ -51,7 +51,7 @@ contains
         call self%add_primary_field("Density * NuTilde")
 
     end subroutine init
-    !********************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -62,7 +62,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
         class(spalart_allmaras_laxfriedrichs_operator_t), intent(inout)   :: self
         type(chidg_worker_t),                             intent(inout)   :: worker
@@ -133,7 +133,6 @@ contains
         flux_avg_x = HALF*(u_m*rho_nutilde_m  +  u_p*rho_nutilde_p)
         flux_avg_y = HALF*(v_m*rho_nutilde_m  +  v_p*rho_nutilde_p)
         flux_avg_z = HALF*(w_m*rho_nutilde_m  +  w_p*rho_nutilde_p)
-        diff       = (rho_nutilde_m - rho_nutilde_p)
 
 
 
@@ -143,12 +142,13 @@ contains
         c_m = sqrt(1.4_rk * 287.15_rk * T_m)
         c_p = sqrt(1.4_rk * 287.15_rk * T_p)
 
-        diss_m = un_m + c_m
-        diss_p = un_p + c_p
+        diss_m = abs(un_m) + c_m
+        diss_p = abs(un_p) + c_p
 
         !
         ! Compute Lax-Friedrichs upwind flux
         !
+        diff = (rho_nutilde_m - rho_nutilde_p)
         flux_x = flux_avg_x + max(abs(diss_m),abs(diss_p))*HALF*diff
         flux_y = flux_avg_y + max(abs(diss_m),abs(diss_p))*HALF*diff
         flux_z = flux_avg_z + max(abs(diss_m),abs(diss_p))*HALF*diff
@@ -164,7 +164,7 @@ contains
 
 
     end subroutine compute
-    !*******************************************************************************************************
+    !******************************************************************************************
 
 
 

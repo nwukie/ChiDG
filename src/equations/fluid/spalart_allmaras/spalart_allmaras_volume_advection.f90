@@ -16,7 +16,7 @@ module spalart_allmaras_volume_advection
     !!
     !!
     !!
-    !--------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------
     type, extends(operator_t), public :: spalart_allmaras_volume_advection_operator_t
 
 
@@ -26,7 +26,7 @@ module spalart_allmaras_volume_advection
         procedure   :: compute
 
     end type spalart_allmaras_volume_advection_operator_t
-    !**************************************************************************
+    !***********************************************************************************************
 
 contains
 
@@ -34,10 +34,10 @@ contains
 
     !>
     !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   8/29/2016
+    !!  @author Nathan A. Wukie
+    !!  @date   12/9/2016
     !!
-    !--------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------
     subroutine init(self)
         class(spalart_allmaras_volume_advection_operator_t),   intent(inout)  :: self
 
@@ -51,7 +51,7 @@ contains
         call self%add_primary_field("Density * NuTilde")
 
     end subroutine init
-    !********************************************************************************
+    !***********************************************************************************************
 
 
 
@@ -62,11 +62,11 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
         class(spalart_allmaras_volume_advection_operator_t), intent(inout)   :: self
-        type(chidg_worker_t),                             intent(inout)   :: worker
-        class(properties_t),                              intent(inout)   :: prop
+        type(chidg_worker_t),                                intent(inout)   :: worker
+        class(properties_t),                                 intent(inout)   :: prop
 
 
         type(AD_D), dimension(:), allocatable   ::  &
@@ -124,7 +124,7 @@ contains
 
 
     end subroutine compute
-    !*******************************************************************************************************
+    !************************************************************************************************
 
 
 

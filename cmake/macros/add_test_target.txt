@@ -148,7 +148,7 @@ macro (add_test_target target_subdirectory test_type)
     #
     # Add test executable to the 'check' target. This allows the test to be build with 'make check'
     #
-    add_dependencies(check ${target_name})
+    add_dependencies(check ${target_name} coredg)
 
 
 	#-------------------------------------------------------------------------------------------------------

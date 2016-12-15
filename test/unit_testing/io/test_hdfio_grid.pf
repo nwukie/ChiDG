@@ -30,7 +30,8 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     !
     ! Create mesh file
     !
-    call create_mesh_file("D1 E1 M1", filename)
+    !call create_mesh_file("D1 E1 M1", filename)
+    call create_mesh_file("D1 NxNxN", filename,nelem_xi=1,nelem_eta=1,nelem_zeta=1)
 
     !
     ! Read grid and add domain to chidg
@@ -52,9 +53,9 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     
     ! Test points
     ! This is for element with center at zero
-    x = [ZERO,  ONE, ZERO,  ONE, ZERO,  ONE, ZERO, ONE]
-    y = [ZERO, ZERO,  ONE,  ONE, ZERO, ZERO,  ONE, ONE]
-    z = [ZERO, ZERO, ZERO, ZERO,  ONE,  ONE,  ONE, ONE]
+    x = [ZERO, ONE,  ZERO, ONE,  ZERO, ONE,  ZERO, ONE]
+    y = [ZERO, ZERO, ONE,  ONE,  ZERO, ZERO, ONE,  ONE]
+    z = [ZERO, ZERO, ZERO, ZERO, ONE,  ONE,  ONE,  ONE]
 
     @assertEqual(x,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c1_,tol)
     @assertEqual(y,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c2_,tol)
@@ -117,7 +118,8 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
     !
     ! Create mesh file
     !
-    call create_mesh_file("D1 E27 M1", filename)
+    !call create_mesh_file("D1 E27 M1", filename)
+    call create_mesh_file("D1 NxNxN", filename, nelem_xi=3,nelem_eta=3,nelem_zeta=3)
 
     !
     ! Read grid
@@ -137,9 +139,9 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
     @assertEqual(nterms_c,chidg%data%mesh(1)%nterms_c)
     
     ! Test points
-    x = [ZERO, THIRD, ZERO, THIRD, ZERO, THIRD, ZERO, THIRD]
-    y = [ZERO, ZERO, THIRD, THIRD, ZERO, ZERO, THIRD, THIRD]
-    z = [ZERO, ZERO, ZERO, ZERO, THIRD, THIRD, THIRD, THIRD]
+    x = [ZERO, THIRD, ZERO,  THIRD, ZERO,  THIRD, ZERO,  THIRD]
+    y = [ZERO, ZERO,  THIRD, THIRD, ZERO,  ZERO,  THIRD, THIRD]
+    z = [ZERO, ZERO,  ZERO,  ZERO,  THIRD, THIRD, THIRD, THIRD]
     @assertEqual(x,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c1_,tol)
     @assertEqual(y,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c2_,tol)
     @assertEqual(z,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c3_,tol)
@@ -183,7 +185,7 @@ subroutine testIO__read_grid_hdf__D2_E1_M1()
     use pfunit_mod
     use type_chidg,             only: chidg_t
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE, IO_DESTINATION
+    use mod_constants,          only: ZERO, HALF, ONE, IO_DESTINATION
     use mod_test_utilities,     only: create_mesh_file
     use mod_file_utilities,     only: delete_file
     use mod_grid,               only: compute_element_mappings
@@ -208,7 +210,9 @@ subroutine testIO__read_grid_hdf__D2_E1_M1()
     !
     ! Create mesh file
     !
-    call create_mesh_file("D2 E1 M1", filename)
+    !call create_mesh_file("D2 NxNxN M1", filename, nelem_xi =1,nelem_eta =1,nelem_zeta =1, &
+    !                                               nelem_xi2=1,nelem_eta2=1,nelem_zeta2=1)
+    call create_mesh_file("D2 NxNxN M1", filename, nelem_xi =2,nelem_eta =1,nelem_zeta =1)
 
     !
     ! Read grid
@@ -235,17 +239,17 @@ subroutine testIO__read_grid_hdf__D2_E1_M1()
 
 
     ! Test points
-    x = [ZERO, ONE, ZERO, ONE, ZERO, ONE, ZERO, ONE]
-    y = [ZERO, ZERO, ONE, ONE, ZERO, ZERO, ONE, ONE]
-    z = [ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE]
+    x = [ZERO, HALF, ZERO, HALF, ZERO, HALF, ZERO, HALF]
+    y = [ZERO, ZERO, ONE,  ONE,  ZERO, ZERO, ONE,  ONE ]
+    z = [ZERO, ZERO, ZERO, ZERO, ONE,  ONE,  ONE,  ONE ]
     @assertEqual(x,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c1_,tol)
     @assertEqual(y,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c2_,tol)
     @assertEqual(z,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c3_,tol)
     
     
-    x = x + 1._8
-    y = [ZERO, ZERO, ONE, ONE, ZERO, ZERO, ONE, ONE]
-    z = [ZERO, ZERO, ZERO, ZERO, ONE, ONE, ONE, ONE]
+    x = x + HALF
+    y = [ZERO, ZERO, ONE,  ONE,  ZERO, ZERO, ONE, ONE]
+    z = [ZERO, ZERO, ZERO, ZERO, ONE,  ONE,  ONE, ONE]
     @assertEqual(x,chidg%data%mesh(2)%elems(1)%elem_pts(:)%c1_,tol)
     @assertEqual(y,chidg%data%mesh(2)%elems(1)%elem_pts(:)%c2_,tol)
     @assertEqual(z,chidg%data%mesh(2)%elems(1)%elem_pts(:)%c3_,tol)
@@ -257,6 +261,7 @@ subroutine testIO__read_grid_hdf__D2_E1_M1()
     call chidg%shut_down('core')
 
     call delete_file(filename)
+
 end subroutine testIO__read_grid_hdf__D2_E1_M1
 
 
@@ -280,7 +285,7 @@ subroutine testIO__read_grid_hdf__D2_E27_M1()
     use pfunit_mod
     use type_chidg,             only: chidg_t
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE, THIRD, IO_DESTINATION
+    use mod_constants,          only: ZERO, HALF, THIRD, ONE, SIXTH, IO_DESTINATION
     use mod_test_utilities,     only: create_mesh_file
     use mod_file_utilities,     only: delete_file
     use mod_grid,               only: compute_element_mappings
@@ -306,7 +311,9 @@ subroutine testIO__read_grid_hdf__D2_E27_M1()
     !
     ! Create mesh file
     !
-    call create_mesh_file("D2 E27 M1", filename)
+    !call create_mesh_file("D2 NxNxN M1", filename, nelem_xi =3, nelem_eta =3, nelem_zeta =3, &
+    !                                               nelem_xi2=3, nelem_eta2=3, nelem_zeta2=3)
+    call create_mesh_file("D2 NxNxN M1", filename, nelem_xi=6, nelem_eta=3, nelem_zeta=3)
 
     !
     ! Read grid
@@ -333,15 +340,15 @@ subroutine testIO__read_grid_hdf__D2_E27_M1()
 
 
     ! Test points
-    x = [ZERO, THIRD, ZERO, THIRD, ZERO, THIRD, ZERO, THIRD]
-    y = [ZERO, ZERO, THIRD, THIRD, ZERO, ZERO, THIRD, THIRD]
-    z = [ZERO, ZERO, ZERO, ZERO, THIRD, THIRD, THIRD, THIRD]
+    x = [ZERO, SIXTH, ZERO, SIXTH, ZERO,  SIXTH, ZERO,  SIXTH]
+    y = [ZERO, ZERO, THIRD, THIRD, ZERO,  ZERO,  THIRD, THIRD]
+    z = [ZERO, ZERO, ZERO,  ZERO,  THIRD, THIRD, THIRD, THIRD]
     @assertEqual(x,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c1_,tol)
     @assertEqual(y,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c2_,tol)
     @assertEqual(z,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c3_,tol)
     
     
-    x = x + 1._8
+    x = x + HALF
     y = [ZERO, ZERO, THIRD, THIRD, ZERO, ZERO, THIRD, THIRD]
     z = [ZERO, ZERO, ZERO, ZERO, THIRD, THIRD, THIRD, THIRD]
     @assertEqual(x,chidg%data%mesh(2)%elems(1)%elem_pts(:)%c1_,tol)

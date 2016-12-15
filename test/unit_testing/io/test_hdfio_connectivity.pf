@@ -29,7 +29,8 @@ subroutine read_connectivity_hdf__D1_E1_M1()
     !
     ! Create mesh file
     !
-    call create_mesh_file("D1 E1 M1",filename)
+    !call create_mesh_file("D1 E1 M1",filename)
+    call create_mesh_file("D1 NxNxN",filename,nelem_xi=1,nelem_eta=1,nelem_zeta=1)
 
     !
     ! Read and partition connectivity. THIS IS BEING TESTED.
@@ -100,7 +101,8 @@ subroutine read_connectivity_hdf__D1_E27_M1()
     !
     call chidg%start_up('core')
     
-    call create_mesh_file("D1 E27 M1",filename)
+    !call create_mesh_file("D1 E27 M1",filename)
+    call create_mesh_file("D1 NxNxN",filename,nelem_xi=3,nelem_eta=3,nelem_zeta=3)
 
     !
     ! Read and partition connectivity. THIS IS BEING TESTED.
@@ -171,7 +173,10 @@ subroutine read_connectivity_hdf__D2_E1_M1()
     call chidg%start_up('core')
     
 
-    call create_mesh_file("D2 E1 M1",filename)
+    !call create_mesh_file("D2 E1 M1",filename)
+    !call create_mesh_file("D2 NxNxN M1",filename,nelem_xi =1,nelem_eta =1,nelem_zeta =1, &
+    !                                             nelem_xi2=1,nelem_eta2=1,nelem_zeta2=1)
+    call create_mesh_file("D2 NxNxN M1",filename,nelem_xi=2,nelem_eta=1,nelem_zeta=1)
 
     !
     ! Read and partition connectivity. THIS IS BEING TESTED.
@@ -246,7 +251,10 @@ subroutine read_connectivity_hdf__D2_E27_M1()
     call chidg%start_up('core')
     
 
-    call create_mesh_file("D2 E27 M1",filename)
+    !call create_mesh_file("D2 E27 M1",filename)
+    !call create_mesh_file("D2 NxNxN M1",filename, nelem_xi =3,nelem_eta =3,nelem_zeta =3, &
+    !                                              nelem_xi2=3,nelem_eta2=3,nelem_zeta2=3)
+    call create_mesh_file("D2 NxNxN M1",filename, nelem_xi=6,nelem_eta=3,nelem_zeta=3)
 
 
     !

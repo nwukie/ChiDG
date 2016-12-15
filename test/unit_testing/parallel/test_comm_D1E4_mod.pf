@@ -75,7 +75,7 @@ contains
         ! Create mesh
         !
         if (IRANK == GLOBAL_MASTER) then
-            call create_mesh_file("D1 E4 M1",this%gridfile)
+            call create_mesh_file("D1 NxNxN",this%gridfile,nelem_xi=4,nelem_eta=1,nelem_zeta=1)
         end if
         call MPI_Barrier(this%ChiDG_COMM,ierr)
 
@@ -91,7 +91,6 @@ contains
         !
         call this%chidg%set('Solution Order', integer_input=this%solution_order)
         call this%chidg%initialize_solution_domains()
-        !call this%chidg%init('communication',this%ChiDG_COMM)
         call this%chidg%init('communication')
         call this%chidg%initialize_solution_solver()
 

@@ -49,7 +49,8 @@ contains
         ! Create file
         !
         this%filename = "D1E27M1.h5"
-        call create_mesh_file("D1 E27 M1",this%filename)
+        !call create_mesh_file("D1 E27 M1",this%filename)
+        call create_mesh_file("D1 NxNxN",this%filename,nelem_xi=3,nelem_eta=3,nelem_zeta=3)
 
         !
         ! Read grid + bcs

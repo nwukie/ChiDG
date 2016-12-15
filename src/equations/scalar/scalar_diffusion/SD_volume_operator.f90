@@ -73,17 +73,8 @@ contains
         class(properties_t),            intent(inout)   :: prop
 
 
-        integer(ik)             :: iu
-
         type(AD_D), allocatable, dimension(:)   ::  &
             flux_x, flux_y, flux_z, dudx, dudy, dudz, mu
-
-
-        !
-        ! Get variable index from equation set
-        !
-        iu = prop%get_primary_field_index("u")
-
 
 
         !
@@ -98,6 +89,7 @@ contains
         ! Compute scalar coefficient
         ! 
         mu = worker%get_model_field_element('Scalar Diffusion Coefficient', 'value')
+
 
         !
         ! Compute volume flux at quadrature nodes

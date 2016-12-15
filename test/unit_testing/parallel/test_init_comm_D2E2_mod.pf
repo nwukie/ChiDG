@@ -61,7 +61,9 @@ contains
 
         gridfile = "D2E2M1.h5"
         if (IRANK == GLOBAL_MASTER) then
-            call create_mesh_file("D2 E2 M1",gridfile)
+            !call create_mesh_file("D2 NxNxN M1",gridfile,nelem_xi =2,nelem_eta =1,nelem_zeta =1, &
+            !                                             nelem_xi2=2,nelem_eta2=1,nelem_zeta2=1)
+            call create_mesh_file("D2 NxNxN M1",gridfile,nelem_xi=4,nelem_eta=1,nelem_zeta=1)
         end if
         call MPI_Barrier(ChiDG_COMM,ierr)
 
@@ -82,7 +84,6 @@ contains
         !
         call chidg%set('Solution Order', integer_input=3)
         call chidg%initialize_solution_domains()
-        !call chidg%init('communication',ChiDG_COMM)
         call chidg%init('communication')
 
 

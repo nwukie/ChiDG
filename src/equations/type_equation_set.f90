@@ -658,6 +658,8 @@ contains
         compute_face  = (interior_face    .or. chimera_face           ) .and. &
                         (differentiate_me .or. differentiate_neighbor )
 
+
+
         if (compute_face) then
 
             !

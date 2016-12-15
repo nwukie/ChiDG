@@ -68,7 +68,8 @@ contains
         !
         ! Create file
         !
-        call create_mesh_file("D1 E27 M1",this%fileorig)
+        !call create_mesh_file("D1 E27 M1",this%fileorig)
+        call create_mesh_file("D1 NxNxN",this%fileorig,nelem_xi=3,nelem_eta=3,nelem_zeta=3)
 
         !
         ! Initialize chidg domain

@@ -358,18 +358,30 @@ contains
         integer(ik),        allocatable :: orders(:)
         integer(ik) :: icase
 
+        !nelem_xi = [120, 120, 120, &
+        !            240, 240, 240, &
+        !            120, 120, 120, &
+        !            240, 240, 240 ]
         nelem_xi = [120, 120, 120, &
-                    240, 240, 240, &
-                    120, 120, 120, &
+        !            240, 240, 240, &
+        !            120, 120, 120, &
                     240, 240, 240 ]
 
 
-        gridtype = [string_t('singleblock'), &
-                    string_t('singleblock'), &
-                    string_t('singleblock'), &
-                    string_t('singleblock'), &
-                    string_t('singleblock'), &
-                    string_t('singleblock'), &
+        !gridtype = [string_t('singleblock'), &
+        !            string_t('singleblock'), &
+        !            string_t('singleblock'), &
+        !            string_t('singleblock'), &
+        !            string_t('singleblock'), &
+        !            string_t('singleblock'), &
+        !            string_t('chimera'),     &
+        !            string_t('chimera'),     &
+        !            string_t('chimera'),     &
+        !            string_t('chimera'),     &
+        !            string_t('chimera'),     &
+        !            string_t('chimera')      &
+        !            ]
+        gridtype = [                         &
                     string_t('chimera'),     &
                     string_t('chimera'),     &
                     string_t('chimera'),     &
@@ -379,12 +391,21 @@ contains
                     ]
 
 
-        files = [ string_t('1D_nonlinear_diffusion_120x1x1.h5'),         &
-                  string_t('1D_nonlinear_diffusion_120x1x1.h5'),         &
-                  string_t('1D_nonlinear_diffusion_120x1x1.h5'),         &
-                  string_t('1D_nonlinear_diffusion_240x1x1.h5'),         &
-                  string_t('1D_nonlinear_diffusion_240x1x1.h5'),         &
-                  string_t('1D_nonlinear_diffusion_240x1x1.h5'),         &
+        !files = [ string_t('1D_nonlinear_diffusion_120x1x1.h5'),         &
+        !          string_t('1D_nonlinear_diffusion_120x1x1.h5'),         &
+        !          string_t('1D_nonlinear_diffusion_120x1x1.h5'),         &
+        !          string_t('1D_nonlinear_diffusion_240x1x1.h5'),         &
+        !          string_t('1D_nonlinear_diffusion_240x1x1.h5'),         &
+        !          string_t('1D_nonlinear_diffusion_240x1x1.h5'),         &
+        !          string_t('1D_nonlinear_diffusion_120x1x1_chimera.h5'), &
+        !          string_t('1D_nonlinear_diffusion_120x1x1_chimera.h5'), &
+        !          string_t('1D_nonlinear_diffusion_120x1x1_chimera.h5'), &
+        !          string_t('1D_nonlinear_diffusion_240x1x1_chimera.h5'), &
+        !          string_t('1D_nonlinear_diffusion_240x1x1_chimera.h5'), &
+        !          string_t('1D_nonlinear_diffusion_240x1x1_chimera.h5')  &
+        !          ]
+
+        files = [                                                        &
                   string_t('1D_nonlinear_diffusion_120x1x1_chimera.h5'), &
                   string_t('1D_nonlinear_diffusion_120x1x1_chimera.h5'), &
                   string_t('1D_nonlinear_diffusion_120x1x1_chimera.h5'), &
@@ -393,10 +414,13 @@ contains
                   string_t('1D_nonlinear_diffusion_240x1x1_chimera.h5')  &
                   ]
 
-
+        !orders = [ 2, 3, 4, &
+        !           2, 3, 4, &
+        !           2, 3, 4, &
+        !           2, 3, 4 ]
         orders = [ 2, 3, 4, &
-                   2, 3, 4, &
-                   2, 3, 4, &
+        !           2, 3, 4, &
+        !           2, 3, 4, &
                    2, 3, 4 ]
 
 
@@ -493,6 +517,7 @@ contains
         nonlinear_solver = 'newton'
         linear_solver    = 'fgmres'
         preconditioner   = 'RASILU0'
+        !preconditioner   = 'ILU0'
         IO_DESTINATION   = 'file'
         !------------------------------------------------------------------------------
 
@@ -511,10 +536,10 @@ contains
         call toptions%set('nwrite',0)
 
         ! Set linear solver options to pass during initialization
-        call loptions%set('tol',1.e-14_rk)
+        call loptions%set('tol',1.e-15_rk)
 
         ! Set nonlinear solver options
-        call noptions%set('tol',5.e-8_rk)
+        call noptions%set('tol',1.e-8_rk)
         call noptions%set('cfl0',0.01_rk)
         call noptions%set('nsteps',1000)
 

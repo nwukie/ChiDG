@@ -58,6 +58,7 @@ contains
     !   Edit list:  Nathan A. Wukie - 2/11/2015
         integer(ik),    intent(in) :: nterm
         real(rk),       intent(in) :: pos
+
         real(rk)                   :: polyval, polyval_nm1, polyval_nm2
 
         select case (nterm)
@@ -73,6 +74,7 @@ contains
                 polyval = ((TWO*real(nterm-1,rk)-ONE)*pos*polyval_nm1 - &
                           ((real(nterm-1,rk)-ONE))*polyval_nm2)/real(nterm-1,rk)
         end select
+
 
     end function LegendreVal1D
     !***************************************************************************************************

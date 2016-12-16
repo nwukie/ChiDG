@@ -247,14 +247,8 @@ contains
         type(chidg_worker_t),               intent(inout)   :: worker
         class(properties_t),                intent(inout)   :: prop
 
-        integer(ik)                             :: iu
         type(AD_D), allocatable, dimension(:)   :: source
         real(rk),   allocatable, dimension(:)   :: x
-
-        !
-        ! Get variable index from equation set
-        !
-        iu = prop%get_primary_field_index("u")
 
 
         !
@@ -444,8 +438,8 @@ contains
 
         nelem_xi = [ 20, 20, 20, 20, &
                      30, 30, 30, 30, &
-                     20, 20, 20, 20, &
-                     30, 30, 30, 30  &
+                     20, 20, 20,     &
+                     30, 30, 30      &
                      ]
 
         gridtype = [ string_t("singleblock"), &
@@ -456,8 +450,6 @@ contains
                      string_t("singleblock"), &
                      string_t("singleblock"), &
                      string_t("singleblock"), &
-                     string_t("chimera"),     &
-                     string_t("chimera"),     &
                      string_t("chimera"),     &
                      string_t("chimera"),     &
                      string_t("chimera"),     &
@@ -481,16 +473,14 @@ contains
                   string_t("1D_linear_diffusion_20x1x1_chimera.h5"), &
                   string_t("1D_linear_diffusion_20x1x1_chimera.h5"), &
                   string_t("1D_linear_diffusion_30x1x1_chimera.h5"), &
-                  string_t("1D_linear_diffusion_30x1x1_chimera.h5"), &
-                  string_t("1D_linear_diffusion_30x1x1_chimera.h5"), &
                   string_t("1D_linear_diffusion_30x1x1_chimera.h5")  &
                   ]
 
 
         orders = [ 2, 3, 4, 5, &
                    2, 3, 4, 5, &
-                   2, 3, 4, 5, &
-                   2, 3, 4, 5  &
+                   2, 3, 4,    &
+                   2, 3, 4     &
                    ]
 
 
@@ -620,7 +610,8 @@ contains
         call toptions%set("nwrite",0)
 
         ! Set linear solver options to pass during initialization
-        call loptions%set("tol",1.e-14_rk)
+        !call loptions%set("tol",1.e-14_rk)
+        call loptions%set("tol",1.e-15_rk)
 
         ! Set nonlinear solver options
         call noptions%set("tol",5.e-11_rk)
@@ -905,7 +896,7 @@ contains
 
         do inpes = 1,3
             do igrid = 1,2
-                do iorder = 1,4
+                do iorder = 1,3
 
                     ! Test that the current convergence for the processor count matches the serial convergence
                     nsteps = nsteps_convergence_chimera(inpes,igrid,iorder)%size()
@@ -995,42 +986,9 @@ contains
         tol = 0.1_rk
 
 
-
         do inpes = 1,3
             do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
-                do iorder = 1,4
-
-                    error_previous = error_chimera(inpes,igrid-1,iorder)
-                    error_current  = error_chimera(inpes,igrid  ,iorder)
-
-                    mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
-                    mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
-
-                    
-                    !
-                    ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
-                    !
-                    convergence_rate = (log10(error_previous)-log10(error_current)) / &
-                                       (log10(mesh_parameter_previous)-log10(mesh_parameter_current))
-
-                    print*, 'chimera:', inpes, error_previous, error_current, mesh_parameter_previous, mesh_parameter_current, convergence_rate
-
-                
-                    @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
-
-                end do
-            end do
-        end do
-
-
-
-
-
-
-
-        do inpes = 1,3
-            do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
-                do iorder = 1,4
+                do iorder = 1,3
 
                     error_previous = error_chimera(inpes,igrid-1,iorder)
                     error_current  = error_chimera(inpes,igrid  ,iorder)

@@ -1,6 +1,6 @@
 node {
     stage('Checkout'){
-        git url: 'https://github.com/nwukie/ChiDG.git', branch: 'dev'
+        checkout scm
     }
 
     sh 'mkdir -p build'

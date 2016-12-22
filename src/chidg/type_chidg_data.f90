@@ -50,12 +50,14 @@ module type_chidg_data
         integer(ik),        private                 :: spacedim_ = 3    !< Default 3D 
 
         
-        type(domain_info_t),            allocatable :: info(:)     !< General container for domain information
-        type(mesh_t),                   allocatable :: mesh(:)     !< Array of mesh instances. One for each domain.
-        type(bcset_t),                  allocatable :: bcset(:)    !< Array of boundary condition sets. One for each domain.
-        type(equation_set_t),           allocatable :: eqnset(:)   !< Array of equation set instances. One for each domain.
+        ! For each domain: info, a mesh, a boundary condition set, and an equation set
+        type(domain_info_t),            allocatable :: info(:)     
+        type(mesh_t),                   allocatable :: mesh(:)     
+        type(bcset_t),                  allocatable :: bcset(:)    
+        type(equation_set_t),           allocatable :: eqnset(:)   
 
-        type(solverdata_t)                          :: sdata       !< Solver data container for solution vectors and matrices
+        ! An object containing matrix and vector storage
+        type(solverdata_t)                          :: sdata
 
 
     contains
@@ -72,7 +74,7 @@ module type_chidg_data
         procedure   :: get_domain_index             !< Given a domain name, return domain index
         procedure   :: ndomains                     !< Return number of domains in chidg instance
         procedure   :: get_dimensionality
-        procedure   :: get_auxiliary_field_names    !< Return the auxiliary fields that are required
+        procedure   :: get_auxiliary_field_names    !< Return required auxiliary fields
 
         procedure   :: report
 
@@ -465,6 +467,14 @@ contains
 
     end function get_dimensionality
     !*******************************************************************************************
+
+
+
+
+
+
+
+
 
 
 

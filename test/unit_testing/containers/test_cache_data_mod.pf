@@ -1,3 +1,13 @@
+!>  In this test, we want to make sure the the appropriate fields are getting allocated during
+!!  the resizing of the cache_data container.
+!!
+!!  For example, if the equation set for the element getting cached has 1 primary field, and 3
+!!  model fields, then we want to check that 4 cache_data_field instances were allocated.
+!!
+!!  @author Nathan A. Wukie
+!!  @date   12/21/2016
+!!
+!----------------------------------------------------------------------------------------------
 module test_cache_data_mod
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
@@ -11,12 +21,12 @@ module test_cache_data_mod
     public  :: test_cache_data
 
 
-    !>
+    !>  The test case object that carries the initialized chidg state to the actual tests.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/7/2016
     !!
-    !--------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     @TestCase
     type, extends(TestCase) ::  test_cache_data
 
@@ -28,18 +38,18 @@ module test_cache_data_mod
         procedure   ::  setUp
         procedure   ::  tearDown
     end type test_cache_data
-    !***************************************************************************
+    !******************************************************************************************
 
 
 contains
 
-    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
-    !! procedure. The argument names have to match
+    !>  NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived 
+    !!  type procedure. The argument names have to match
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/7/2016
     !!
-    !--------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_cache_data),    intent(inout)   :: this
         
@@ -64,7 +74,7 @@ contains
         call this%chidg%init('communication')
 
     end subroutine setUp
-    !************************************************************************************
+    !******************************************************************************************
     
 
     !>
@@ -72,7 +82,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/7/2016
     !!
-    !-------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_cache_data),    intent(inout)   :: this
 
@@ -84,43 +94,8 @@ contains
         call delete_file(this%filename)
 
     end subroutine tearDown
-    !**************************************************************************************
+    !******************************************************************************************
 
-
-
-
-
-    !> Test element metric entries at quadrature points
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/7/2016
-    !!
-    !!-------------------------------------------------------------------------------------
-    @Test
-    subroutine test_resize_face_interior__allocated(self)
-        class(test_cache_data),    intent(inout)   :: self
-        
-        integer(ik)                 :: idomain, ielem, iface
-        type(cache_data_t)          :: cache_data
-
-        idomain = 1
-        ielem   = 14
-        iface   = 1
-
-
-        !
-        ! Call resize routine. THIS IS BEING TESTED.
-        !
-        call cache_data%resize('face interior',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem,iface)
-
-
-        !
-        ! Test that the cache allocated the correct component
-        !
-        @assertTrue(allocated(cache_data%fields))
-        
-    end subroutine test_resize_face_interior__allocated
-    !***************************************************************************************
 
 
 
@@ -131,7 +106,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/7/2016
     !!
-    !!-------------------------------------------------------------------------------------
+    !!-----------------------------------------------------------------------------------------
     @Test
     subroutine test_resize_face_interior__size(self)
         class(test_cache_data),    intent(inout)   :: self
@@ -147,18 +122,21 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data%resize('face interior',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem,iface)
+        call cache_data%resize('face interior',self%chidg%data%mesh,            &
+                                               self%chidg%data%eqnset(:)%prop,  &
+                                               idomain,ielem,iface)
 
 
 
         ! Number of Fields
         !   1 Primary Field + 3 Model Fields(cx,cy,cz) = 4
         !
+        @assertTrue(allocated(cache_data%fields))
         @assertEqual(size(cache_data%fields), 4)
 
         
     end subroutine test_resize_face_interior__size
-    !***************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -172,43 +150,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/7/2016
     !!
-    !!-------------------------------------------------------------------------------------
-    @Test
-    subroutine test_resize_face_exterior__allocated(self)
-        class(test_cache_data),    intent(inout)   :: self
-        
-        integer(ik)                 :: idomain, ielem, iface
-        type(cache_data_t)          :: cache_data
-
-        idomain = 1
-        ielem   = 14
-        iface   = 1
-
-
-        !
-        ! Call resize routine. THIS IS BEING TESTED.
-        !
-        call cache_data%resize('face exterior',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem,iface)
-
-
-        !
-        ! Test that the cache allocated the correct component
-        !
-        @assertTrue(allocated(cache_data%fields))
-        
-    end subroutine test_resize_face_exterior__allocated
-    !***************************************************************************************
-
-
-
-
-
-    !> Test element metric entries at quadrature points
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/7/2016
-    !!
-    !!-------------------------------------------------------------------------------------
+    !!-----------------------------------------------------------------------------------------
     @Test
     subroutine test_resize_face_exterior__size(self)
         class(test_cache_data),    intent(inout)   :: self
@@ -224,23 +166,20 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data%resize('face exterior',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem,iface)
+        call cache_data%resize('face exterior',self%chidg%data%mesh,            &
+                                               self%chidg%data%eqnset(:)%prop,  &
+                                               idomain,ielem,iface)
 
 
 
         ! Number of Fields
         !   1 Primary Field + 3 Model Fields(cx,cy,cz) = 4
         !
+        @assertTrue(allocated(cache_data%fields))
         @assertEqual(size(cache_data%fields), 4)
         
     end subroutine test_resize_face_exterior__size
-    !***************************************************************************************
-
-
-
-
-
-
+    !*****************************************************************************************
 
 
 
@@ -255,42 +194,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/7/2016
     !!
-    !!-------------------------------------------------------------------------------------
-    @Test
-    subroutine test_resize_element__allocated(self)
-        class(test_cache_data),    intent(inout)   :: self
-        
-        integer(ik)                 :: idomain, ielem
-        type(cache_data_t)          :: cache_data
-
-        idomain = 1
-        ielem   = 14
-
-
-        !
-        ! Call resize routine. THIS IS BEING TESTED.
-        !
-        call cache_data%resize('element',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem)
-
-
-        !
-        ! Test that the cache allocated the correct component
-        !
-        @assertTrue(allocated(cache_data%fields))
-        
-    end subroutine test_resize_element__allocated
-    !***************************************************************************************
-
-
-
-
-
-    !> Test element metric entries at quadrature points
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/7/2016
-    !!
-    !!-------------------------------------------------------------------------------------
+    !!----------------------------------------------------------------------------------------
     @Test
     subroutine test_resize_element__size(self)
         class(test_cache_data),    intent(inout)   :: self
@@ -305,32 +209,20 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data%resize('element',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem)
-
+        call cache_data%resize('element',self%chidg%data%mesh,              &
+                                         self%chidg%data%eqnset(:)%prop,    &
+                                         idomain,ielem)
 
 
         ! Number of Fields
         !   1 Primary Field + 3 Model Fields(cx,cy,cz) = 4
         !
+        @assertTrue(allocated(cache_data%fields))
         @assertEqual(size(cache_data%fields), 4)
 
         
     end subroutine test_resize_element__size
-    !***************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    !*****************************************************************************************
 
 
 

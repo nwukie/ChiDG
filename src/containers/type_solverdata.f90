@@ -28,10 +28,10 @@ module type_solverdata
         !
         ! Base solver data
         !
-        type(chidg_vector_t)             :: q                        !< Solution vector
-        type(chidg_vector_t)             :: dq                       !< Change in solution vector
-        type(chidg_vector_t)             :: rhs                      !< Residual of the spatial scheme
-        type(chidg_matrix_t)             :: lhs                      !< Linearization of the spatial scheme
+        type(chidg_vector_t)             :: q              !< Solution vector
+        type(chidg_vector_t)             :: dq             !< Change in solution vector
+        type(chidg_vector_t)             :: rhs            !< Residual of the spatial scheme
+        type(chidg_matrix_t)             :: lhs            !< Linearization of the spatial scheme
 
 
         !
@@ -43,13 +43,13 @@ module type_solverdata
         !
         ! Time information
         !
-        real(rk)                        :: t                        !< Global time
-        real(rk),   allocatable         :: dt(:,:)                  !< Element-local time-step, (ndomains,maxelems)
+        real(rk)                        :: t               !< Global time
+        real(rk),   allocatable         :: dt(:,:)         !< Element-local time-step, (ndomains,maxelems)
 
         !
         ! Function registration
         !
-        type(function_status_t)         :: function_status          !< Class for the status of a function residual and linearization
+        type(function_status_t)         :: function_status !< Status of function residuals and linearizations
 
 
         logical                         :: solverInitialized = .false.
@@ -67,7 +67,10 @@ module type_solverdata
         procedure, private  :: init_base
 
         procedure           :: add_auxiliary_field
+
+        procedure           :: nauxiliary_fields
         procedure           :: get_auxiliary_field_index
+        procedure           :: get_auxiliary_field_name
 
     end type solverdata_t
     !*******************************************************************************************
@@ -174,18 +177,18 @@ contains
 
 
 
-    !>  Add chidgVector for storing an auxiliary field for the problem.
+    !>  Add chidg_vector for storing an auxiliary field for the problem.
     !!
     !!  One could call this as:
     !!      call solverdata%add_auxiliary_field('my field')
     !!
-    !!  which would just add an empty chidgVector for storing the auxiliary field
+    !!  which would just add an empty chidg_vector for storing the auxiliary field
     !!
     !!  One could also call this as:
     !!      call solverdata%add_auxiliary_field('my field', my_vector)
     !!
     !!  which would create space for a new auxiliary vector and assign the incoming 
-    !!  chidgVector, my_vector, to the field.
+    !!  chidg_vector, my_vector, to the field.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   11/1/2016
@@ -196,12 +199,12 @@ contains
     subroutine add_auxiliary_field(self,fieldname,auxiliary_vector)
         class(solverdata_t),    intent(inout)           :: self
         character(*),           intent(in)              :: fieldname
-        type(chidg_vector_t),    intent(in), optional    :: auxiliary_vector
+        type(chidg_vector_t),   intent(in), optional    :: auxiliary_vector
 
         integer(ik) :: naux_vectors, ierr
 
         type(string_t),         allocatable :: temp_names(:)
-        type(chidg_vector_t),    allocatable :: temp_vectors(:)
+        type(chidg_vector_t),   allocatable :: temp_vectors(:)
 
 
         !
@@ -265,7 +268,7 @@ contains
     !>  Given the name of an auxiliary field, return the index of the vector containing 
     !!  the field in self%auxiliary_field. 
     !!
-    !!  The field represented as a chidgVector would then be accessed as:
+    !!  The field represented as a chidg_vector would then be accessed as:
     !!      solverdata%auxiliary_field(index)
     !!
     !!  If not found, returns 0.
@@ -284,11 +287,7 @@ contains
         !
         ! Loop through names to try and find field
         !
-        if (.not. allocated(self%auxiliary_field_name)) then
-
-            field_index = 0
-
-        else
+        if (allocated(self%auxiliary_field_name)) then
 
             field_index = 0
             do ifield = 1,size(self%auxiliary_field_name)
@@ -298,6 +297,10 @@ contains
                 end if
             end do
 
+        else
+
+            field_index = 0
+
         end if
 
 
@@ -306,6 +309,68 @@ contains
 
 
 
+
+
+
+
+
+    !>  Given the index of an auxiliary field, return the name of the field the auxiliary
+    !!  vector is representing.
+    !!
+    !!  The field represented as a chidg_vector would then be accessed as:
+    !!      solverdata%auxiliary_field(index)
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/21/2016
+    !!
+    !-----------------------------------------------------------------------------------------
+    function get_auxiliary_field_name(self,field_index) result(field_name)
+        class(solverdata_t),    intent(in)  :: self
+        integer(ik),            intent(in)  :: field_index
+
+        character(:),   allocatable :: field_name, user_msg
+        
+        ! Check bounds
+        user_msg = "solverdata%get_auxiliary_field_name: Index is out of bounds."
+        if (field_index > self%nauxiliary_fields()) call chidg_signal(FATAL,user_msg)
+
+
+        ! Return the appropriate field name
+        field_name = trim(self%auxiliary_field_name(field_index)%get())
+
+
+    end function get_auxiliary_field_name
+    !******************************************************************************************
+
+
+
+
+
+
+
+    !>  Return the number of auxiliary fields that have been added to the solverdata_t
+    !!  container.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/21/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    function nauxiliary_fields(self) result(nfields)
+        class(solverdata_t),    intent(in)  :: self
+
+        integer(ik) :: nfields
+
+
+        if (allocated(self%auxiliary_field)) then
+            nfields = size(self%auxiliary_field)
+        else
+            nfields = 0
+        end if
+
+
+    end function nauxiliary_fields
+    !*****************************************************************************************
 
 
 

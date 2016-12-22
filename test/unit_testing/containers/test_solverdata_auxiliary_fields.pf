@@ -1,0 +1,76 @@
+!>  Test adding auxiliary fields to the solverdata container.
+!!
+!!  Routines tested:
+!!      add_auxiliary_field
+!!      nauxiliary_fields
+!!      get_auxiliary_field_index
+!!      get_auxiliary_field_name
+!!
+!!
+!!  :test_solverdata__auxiliary_fields_one
+!!      - add one auxiliary vector
+!!      - test container state
+!!  
+!!  :test_solverdata__auxiliary_fileds_two
+!!      - add two auxiliary vectors
+!!      - test container state
+!!
+!---------------------------------------------------------------
+@Test
+subroutine test_solverdata__auxiliary_fields_one()
+    use pfunit_mod
+
+    use type_solverdata,    only: solverdata_t
+    use type_chidg_vector,  only: chidg_vector_t
+
+
+    type(solverdata_t)      :: sdata
+    type(chidg_vector_t)    :: aux_vector_one
+
+
+    ! Test number of fields BEFORE
+    @assertEqual(0,sdata%nauxiliary_fields())
+
+
+    ! THIS IS BEING TESTED
+    call sdata%add_auxiliary_field('aux one', aux_vector_one)
+
+
+    ! Test fields AFTER
+    @assertEqual(1,sdata%nauxiliary_fields())
+    @assertEqual(1,sdata%get_auxiliary_field_index('aux one'))
+    @assertEqual('aux one',sdata%get_auxiliary_field_name(1))
+
+end subroutine test_solverdata__auxiliary_fields_one
+
+
+
+@Test
+subroutine test_solverdata__auxiliary_fields_two()
+    use pfunit_mod
+
+    use type_solverdata,    only: solverdata_t
+    use type_chidg_vector,  only: chidg_vector_t
+
+
+    type(solverdata_t)      :: sdata
+    type(chidg_vector_t)    :: aux_vector_one, aux_vector_two
+
+
+    ! Test number of fields BEFORE
+    @assertEqual(0,sdata%nauxiliary_fields())
+
+
+    ! THIS IS BEING TESTED
+    call sdata%add_auxiliary_field('aux one', aux_vector_one)
+    call sdata%add_auxiliary_field('aux two', aux_vector_two)
+
+
+    ! Test fields AFTER
+    @assertEqual(2,sdata%nauxiliary_fields())
+    @assertEqual(1,sdata%get_auxiliary_field_index('aux one'))
+    @assertEqual(2,sdata%get_auxiliary_field_index('aux two'))
+    @assertEqual('aux one',sdata%get_auxiliary_field_name(1))
+    @assertEqual('aux two',sdata%get_auxiliary_field_name(2))
+
+end subroutine test_solverdata__auxiliary_fields_two

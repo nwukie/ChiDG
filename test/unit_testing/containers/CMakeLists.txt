@@ -17,6 +17,7 @@ add_test_sources(containers
                 test_chidg_matrix_operator_mv.pf
                 test_chidg_matrix_operator_chimera_mv.pf
                 test_function_status_mod.pf
+                test_solverdata_auxiliary_fields.pf
                 test_cache_data_field_mod.pf
                 test_cache_data_mod.pf
 #                test_chidg_cache_mod.pf
@@ -24,8 +25,3 @@ add_test_sources(containers
                
 add_test_target(containers unit ${containers_sources})
 
-
-
-## Copy files needed to test containers
-#file(GLOB TEST_FILES "*.h5")
-#file(COPY ${TEST_FILES} DESTINATION ${CMAKE_BINARY_DIR}/bin)

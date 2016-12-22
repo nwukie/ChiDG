@@ -63,8 +63,8 @@ module precon_RASILU0
     use type_RASILU0_recv,      only: RASILU0_recv_t
     use type_preconditioner,    only: preconditioner_t
     use type_chidg_data,        only: chidg_data_t
-    use type_chidgMatrix,       only: chidgMatrix_t
-    use type_chidgVector,       only: chidgVector_t
+    use type_chidg_matrix,       only: chidg_matrix_t
+    use type_chidg_vector,       only: chidg_vector_t
 
     use mpi_f08,                only: MPI_ISend, MPI_Recv, MPI_REAL8, MPI_REQUEST, MPI_STATUS_IGNORE, MPI_Barrier
     implicit none
@@ -81,7 +81,7 @@ module precon_RASILU0
     !-----------------------------------------------------------------------------------------------------------
     type, extends(preconditioner_t) :: precon_RASILU0_t
 
-        type(chidgMatrix_t)     :: LD       !< Lower-Diagonal matrix for local problems
+        type(chidg_matrix_t)     :: LD       !< Lower-Diagonal matrix for local problems
 
         type(RASILU0_send_t)    :: send     !< Information on overlapping data to send to other processors
         type(RASILU0_recv_t)    :: recv     !< Container to receive overlapping data from other processors
@@ -158,8 +158,8 @@ contains
     !--------------------------------------------------------------------------------------------------------------
     subroutine update(self,A,b)
         class(precon_RASILU0_t),    intent(inout)   :: self
-        type(chidgMatrix_t),        intent(in)      :: A
-        type(chidgVector_t),        intent(in)      :: b
+        type(chidg_matrix_t),        intent(in)      :: A
+        type(chidg_vector_t),        intent(in)      :: b
 
 
         integer(ik) :: ielem, irow, icol, eparent_l, idom, ndom, ilower, trans_elem, trans_blk, nrowsA, ncolsA, ncolsB
@@ -364,10 +364,10 @@ contains
     !--------------------------------------------------------------------------------------------
     function apply(self,A,v) result(z)
         class(precon_RASILU0_t),   intent(inout)   :: self
-        type(chidgMatrix_t),    intent(in)      :: A
-        type(chidgVector_t),    intent(in)      :: v
+        type(chidg_matrix_t),    intent(in)      :: A
+        type(chidg_vector_t),    intent(in)      :: v
 
-        type(chidgVector_t) :: z
+        type(chidg_vector_t) :: z
 
         integer(ik)         :: ielem, eparent_l, irow, icol, idom, ndom, ilower, iupper, iblk, iblk_diag, icomm, parent_proc
         integer(ik)         :: recv_comm, recv_domain, recv_element, recv_comm_diag, recv_domain_diag, recv_element_diag
@@ -619,7 +619,7 @@ contains
     !--------------------------------------------------------------------------------------------------------------
     subroutine comm_send(self,A)
         class(precon_RASILU0_t),    intent(inout)   :: self
-        type(chidgMatrix_t),        intent(in)      :: A
+        type(chidg_matrix_t),        intent(in)      :: A
 
         integer(ik)                 :: icomm, idom_send, ielem_send, iblk_send, idom, ielem, iblk, proc, nrows, ncols, idomain_g, ierr
         integer(ik), allocatable    :: send_blocks(:)

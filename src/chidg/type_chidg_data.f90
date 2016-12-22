@@ -35,7 +35,7 @@ module type_chidg_data
     !!
     !!  The format here is to have arrays of mesh_t, bcset_t, and eqnset_t components. The 
     !!  index of those arrays corresponds to a domain in the local ChiDG environment. A 
-    !!  solverdata_t component holds chidgVector_t and chidgMatrix_t components that are
+    !!  solverdata_t component holds chidg_vector_t and chidg_matrix_t components that are
     !!  initialized from the domain components and are informed of the number of domains
     !!  in addition to their dependencies on each other.
     !!

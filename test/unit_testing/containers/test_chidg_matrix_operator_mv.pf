@@ -30,7 +30,7 @@
 !!
 !*****************************************************************************************
 @Test
-subroutine test_chidgMatrix_operator_mv()
+subroutine test_chidg_matrix_operator_mv()
     use pfunit_mod
 
     use mod_kinds,          only: rk, ik
@@ -39,8 +39,8 @@ subroutine test_chidgMatrix_operator_mv()
                                   ETA_MAX, ZETA_MIN, ZETA_MAX, IO_DESTINATION
 
     use type_chidg,         only: chidg_t
-    use type_chidgMatrix,   only: chidgMatrix_t
-    use type_chidgVector,   only: chidgVector_t
+    use type_chidg_matrix,   only: chidg_matrix_t
+    use type_chidg_vector,   only: chidg_vector_t
     use type_meshdata,      only: meshdata_t
     use type_bc,            only: bc_t
     use mod_bc,             only: create_bc
@@ -59,8 +59,8 @@ subroutine test_chidgMatrix_operator_mv()
     real(rk)                        :: tol
     character(:),       allocatable :: filename
 
-    type(chidgMatrix_t)             :: A
-    type(chidgVector_t)             :: x, b
+    type(chidg_matrix_t)             :: A
+    type(chidg_vector_t)             :: x, b
 
     tol             = 1.e-13_rk
     spacedim        = 3
@@ -169,4 +169,4 @@ subroutine test_chidgMatrix_operator_mv()
     !
     call delete_file(filename)
 
-end subroutine test_chidgMatrix_operator_mv
+end subroutine test_chidg_matrix_operator_mv

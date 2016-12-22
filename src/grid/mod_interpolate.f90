@@ -43,7 +43,7 @@ module mod_interpolate
     use type_face_info,     only: face_info_t
     use type_function_info, only: function_info_t
     use type_recv,          only: recv_t
-    use type_chidgVector,   only: chidgVector_t
+    use type_chidg_vector,   only: chidg_vector_t
     implicit none
 
 
@@ -68,7 +68,7 @@ contains
     !-------------------------------------------------------------------------------------------------------
     function interpolate_element_autodiff(mesh,q,elem_info,fcn_info,ieqn,interpolation_type) result(var_gq)
         type(mesh_t),           intent(in)      :: mesh(:)
-        type(chidgVector_t),    intent(in)      :: q
+        type(chidg_vector_t),    intent(in)      :: q
         type(element_info_t),   intent(in)      :: elem_info
         type(function_info_t),  intent(in)      :: fcn_info
         integer(ik),            intent(in)      :: ieqn
@@ -189,7 +189,7 @@ contains
     !-----------------------------------------------------------------------------------------------------------
     function interpolate_face_autodiff(mesh,q,face_info,fcn_info, ieqn, interpolation_type, interpolation_source) result(var_gq)
         type(mesh_t),           intent(in)              :: mesh(:)
-        type(chidgVector_t),    intent(in)              :: q
+        type(chidg_vector_t),    intent(in)              :: q
         type(face_info_t),      intent(in)              :: face_info
         type(function_info_t),  intent(in)              :: fcn_info
         integer(ik),            intent(in)              :: ieqn
@@ -356,7 +356,7 @@ contains
     !-------------------------------------------------------------------------------------------------------------
     function interpolate_element_standard(mesh,q,idomain_l,ielement_l,ieqn,interpolation_type) result(var_gq)
         type(mesh_t),           intent(in)      :: mesh(:)
-        type(chidgVector_t),    intent(in)      :: q
+        type(chidg_vector_t),    intent(in)      :: q
         integer(ik),            intent(in)      :: idomain_l
         integer(ik),            intent(in)      :: ielement_l
         integer(ik),            intent(in)      :: ieqn
@@ -407,7 +407,7 @@ contains
     !-------------------------------------------------------------------------------------------------------------
     function interpolate_face_standard(mesh,q,idomain_l,ielement_l,iface,ieqn) result(var_gq)
         type(mesh_t),           intent(in)      :: mesh(:)
-        type(chidgVector_t),    intent(in)      :: q
+        type(chidg_vector_t),    intent(in)      :: q
         integer(ik),            intent(in)      :: idomain_l, ielement_l, iface, ieqn
 
         real(rk),   dimension(mesh(idomain_l)%elems(ielement_l)%gq%face%nnodes) :: var_gq
@@ -457,7 +457,7 @@ contains
 !    subroutine interpolate_boundary_autodiff(mesh,face,q,ieqn,points,var)
 !        type(mesh_t),           intent(in)              :: mesh(:)
 !        type(face_info_t),      intent(in)              :: face
-!        type(chidgVector_t),    intent(in)              :: q
+!        type(chidg_vector_t),    intent(in)              :: q
 !        integer(ik),            intent(in)              :: ieqn
 !        type(point_t),          intent(in)              :: points(:)
 !        type(AD_D),             intent(inout)           :: var(:)

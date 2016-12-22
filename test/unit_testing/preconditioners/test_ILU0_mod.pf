@@ -4,7 +4,7 @@ module test_ILU0_mod
     use mod_constants,              only: DIAG, XI_MIN, XI_MAX, ONE, TWO, THREE, FIVE, TEN, IO_DESTINATION
     use type_chidg,                 only: chidg_t
     use type_point,                 only: point_t
-    use type_chidgVector,           only: chidgVector_t
+    use type_chidg_vector,           only: chidg_vector_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use precon_ILU0,                only: precon_ILU0_t
 
@@ -256,7 +256,7 @@ end subroutine
 subroutine test_ILU0_apply(self)
     class(test_preconditioner_ILU0),    intent(inout)   :: self
 
-    type(chidgVector_t) :: z
+    type(chidg_vector_t) :: z
     real(rk)            :: tol
 
     tol = 1.e-5_rk

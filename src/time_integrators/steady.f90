@@ -6,7 +6,7 @@ module steady
     use type_nonlinear_solver,  only: nonlinear_solver_t
     use type_linear_solver,     only: linear_solver_t
     use type_preconditioner,    only: preconditioner_t
-    use type_chidgVector
+    use type_chidg_vector
 
     use mod_spatial,    only: update_space
 

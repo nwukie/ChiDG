@@ -3,8 +3,8 @@ module type_RASILU0_recv
     use mod_kinds,              only: ik, rk
 
     use type_mesh,              only: mesh_t
-    use type_chidgMatrix,       only: chidgMatrix_t
-    use type_chidgVector,       only: chidgVector_t
+    use type_chidg_matrix,       only: chidg_matrix_t
+    use type_chidg_vector,       only: chidg_vector_t
     use type_RASILU0_recv_dom,  only: RASILU0_recv_dom_t
     implicit none
 
@@ -52,8 +52,8 @@ contains
     subroutine init(self,mesh,A,b)
         class(RASILU0_recv_t),  intent(inout)   :: self
         type(mesh_t),           intent(in)      :: mesh(:)
-        type(chidgMatrix_t),    intent(in)      :: A
-        type(chidgVector_t),    intent(in)      :: b
+        type(chidg_matrix_t),    intent(in)      :: A
+        type(chidg_vector_t),    intent(in)      :: b
 
         integer(ik) :: idom, ndom, ierr, icomm_vec, idom_vec, ielem_vec, proc, iblk, icomm, idomain_g, ielem
         integer(ik) :: dparent_g, eparent_g, dparent_g_vec, eparent_g_vec, parent_proc, trans_elem, trans_block

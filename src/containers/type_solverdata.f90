@@ -3,8 +3,8 @@ module type_solverdata
     use mod_kinds,                      only: rk,ik
     use mod_constants,                  only: NFACES
     use mod_string,                     only: string_t
-    use type_chidgVector,               only: chidgVector_t
-    use type_chidgMatrix,               only: chidgMatrix_t
+    use type_chidg_vector,               only: chidg_vector_t
+    use type_chidg_matrix,               only: chidg_matrix_t
     use type_mesh,                      only: mesh_t
     use type_function_status,           only: function_status_t
     use type_equationset_function_data, only: equationset_function_data_t
@@ -28,17 +28,17 @@ module type_solverdata
         !
         ! Base solver data
         !
-        type(chidgVector_t)             :: q                        !< Solution vector
-        type(chidgVector_t)             :: dq                       !< Change in solution vector
-        type(chidgVector_t)             :: rhs                      !< Residual of the spatial scheme
-        type(chidgMatrix_t)             :: lhs                      !< Linearization of the spatial scheme
+        type(chidg_vector_t)             :: q                        !< Solution vector
+        type(chidg_vector_t)             :: dq                       !< Change in solution vector
+        type(chidg_vector_t)             :: rhs                      !< Residual of the spatial scheme
+        type(chidg_matrix_t)             :: lhs                      !< Linearization of the spatial scheme
 
 
         !
         ! Auxiliary fields
         !
         type(string_t),         allocatable :: auxiliary_field_name(:)
-        type(chidgVector_t),    allocatable :: auxiliary_field(:)
+        type(chidg_vector_t),   allocatable :: auxiliary_field(:)
 
         !
         ! Time information
@@ -196,12 +196,12 @@ contains
     subroutine add_auxiliary_field(self,fieldname,auxiliary_vector)
         class(solverdata_t),    intent(inout)           :: self
         character(*),           intent(in)              :: fieldname
-        type(chidgVector_t),    intent(in), optional    :: auxiliary_vector
+        type(chidg_vector_t),    intent(in), optional    :: auxiliary_vector
 
         integer(ik) :: naux_vectors, ierr
 
         type(string_t),         allocatable :: temp_names(:)
-        type(chidgVector_t),    allocatable :: temp_vectors(:)
+        type(chidg_vector_t),    allocatable :: temp_vectors(:)
 
 
         !

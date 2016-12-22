@@ -1,4 +1,4 @@
-module test_chidgVector_operators_mod
+module test_chidg_vector_operators_mod
     use pfunit_mod
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: ZERO, HALF, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, &
@@ -7,45 +7,46 @@ module test_chidgVector_operators_mod
     use type_point,                 only: point_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use mod_test_utilities,         only: create_mesh
-    use type_chidgVector,           only: chidgVector_t, mult_real_chidgVector, mult_chidgVector_real, div_real_chidgVector, div_chidgVector_real, &
-                                          sub_chidgVector_chidgVector, add_chidgVector_chidgVector
+    use type_chidg_vector,          only: chidg_vector_t, mult_real_chidg_vector, mult_chidg_vector_real, &
+                                          div_real_chidg_vector, div_chidg_vector_real, &
+                                          sub_chidg_vector_chidg_vector, add_chidg_vector_chidg_vector
     implicit none
 
 
 
     !
-    ! Copying operator interfaces from type_chidgVector since importing all of chidgVector also 
+    ! Copying operator interfaces from type_chidg_vector since importing all of chidg_vector also 
     ! imports an mpi type that is also used in pfunit which uses a different interface.
     !
     public operator (*)
     interface operator(*)
-        module procedure mult_real_chidgVector          ! real * chidgVector
-        module procedure mult_chidgVector_real          ! chidgVector * real
+        module procedure mult_real_chidg_vector          ! real * chidgVector
+        module procedure mult_chidg_vector_real          ! chidgVector * real
     end interface
 
 
     public operator (/)
     interface operator (/)
-        module procedure div_real_chidgVector           ! real / chidgVector
-        module procedure div_chidgVector_real           ! chidgVector / real
+        module procedure div_real_chidg_vector           ! real / chidgVector
+        module procedure div_chidg_vector_real           ! chidgVector / real
     end interface
 
 
     public operator (-)
     interface operator (-)
-        module procedure sub_chidgVector_chidgVector    ! chidgVector - chidgVector
+        module procedure sub_chidg_vector_chidg_vector    ! chidgVector - chidgVector
     end interface
 
     public operator (+)
     interface operator (+)
-        module procedure add_chidgVector_chidgVector    ! chidgVector + chidgVector
+        module procedure add_chidg_vector_chidg_vector    ! chidgVector + chidgVector
     end interface
     !
     !
     !
 
 
-    public :: test_chidgVector
+    public :: test_chidg_vector
 
 
     !>
@@ -55,18 +56,18 @@ module test_chidgVector_operators_mod
     !!
     !-------------------------------------------------------------------
     @TestCase
-    type, extends(TestCase) :: test_chidgVector
+    type, extends(TestCase) :: test_chidg_vector
         type(chidg_t)       :: chidg
 
         integer(ik)         :: solution_order = 2
         integer(ik)         :: nterms_s = 8
-        type(chidgVector_t) :: vec_a
-        type(chidgVector_t) :: vec_b
+        type(chidg_vector_t) :: vec_a
+        type(chidg_vector_t) :: vec_b
 
     contains
         procedure   :: setUp
         procedure   :: tearDown
-    end type test_chidgVector
+    end type test_chidg_vector
     !*******************************************************************
 
 
@@ -81,7 +82,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine setUp(this)
-        class(test_chidgVector),    intent(inout)   :: this
+        class(test_chidg_vector),    intent(inout)   :: this
 
         type(point_t),  allocatable :: nodes(:)
         type(domain_connectivity_t) :: connectivity
@@ -149,7 +150,7 @@ contains
 
 
     subroutine tearDown(this)
-        class(test_chidgVector),    intent(inout)   :: this
+        class(test_chidg_vector),    intent(inout)   :: this
 
         ! Close ChiDG interface
         call this%chidg%shut_down('core')
@@ -167,10 +168,10 @@ contains
     !!
     !-----------------------------------------------------------------------
     @Test
-    subroutine test_chidgVector__add(self)
-        class(test_chidgVector),    intent(inout)   :: self
+    subroutine test_chidg_vector__add(self)
+        class(test_chidg_vector),    intent(inout)   :: self
 
-        type(chidgVector_t) :: res
+        type(chidg_vector_t) :: res
         
 
         res = self%vec_a + self%vec_b
@@ -184,7 +185,7 @@ contains
         @assertEqual(14._rk, res%dom(1)%vecs(7)%vec)
         @assertEqual(16._rk, res%dom(1)%vecs(8)%vec)
 
-    end subroutine test_chidgVector__add
+    end subroutine test_chidg_vector__add
     !***********************************************************************
     
 
@@ -198,10 +199,10 @@ contains
     !!
     !-----------------------------------------------------------------------
     @Test
-    subroutine test_chidgVector__sub(self)
-        class(test_chidgVector),    intent(inout)   :: self
+    subroutine test_chidg_vector__sub(self)
+        class(test_chidg_vector),    intent(inout)   :: self
 
-        type(chidgVector_t) :: res
+        type(chidg_vector_t) :: res
         
 
         res = self%vec_a - self%vec_b
@@ -215,7 +216,7 @@ contains
         @assertEqual(ZERO, res%dom(1)%vecs(7)%vec)
         @assertEqual(ZERO, res%dom(1)%vecs(8)%vec)
 
-    end subroutine test_chidgVector__sub
+    end subroutine test_chidg_vector__sub
     !***********************************************************************
     
 
@@ -230,10 +231,10 @@ contains
     !!
     !-----------------------------------------------------------------------
     @Test
-    subroutine test_chidgVector__mult_rv(self)
-        class(test_chidgVector),    intent(inout)   :: self
+    subroutine test_chidg_vector__mult_rv(self)
+        class(test_chidg_vector),    intent(inout)   :: self
 
-        type(chidgVector_t) :: res
+        type(chidg_vector_t) :: res
         
 
         res = 2._rk * self%vec_b
@@ -247,7 +248,7 @@ contains
         @assertEqual(14._rk, res%dom(1)%vecs(7)%vec)
         @assertEqual(16._rk, res%dom(1)%vecs(8)%vec)
 
-    end subroutine test_chidgVector__mult_rv
+    end subroutine test_chidg_vector__mult_rv
     !***********************************************************************
     
 
@@ -263,10 +264,10 @@ contains
     !!
     !----------------------------------------------------------------------
     @Test
-    subroutine test_chidgVector__mult_vr(self)
-        class(test_chidgVector),    intent(inout)   :: self
+    subroutine test_chidg_vector__mult_vr(self)
+        class(test_chidg_vector),    intent(inout)   :: self
 
-        type(chidgVector_t) :: res
+        type(chidg_vector_t) :: res
         
 
         res = self%vec_b * 2._rk
@@ -280,7 +281,7 @@ contains
         @assertEqual(14._rk, res%dom(1)%vecs(7)%vec)
         @assertEqual(16._rk, res%dom(1)%vecs(8)%vec)
 
-    end subroutine test_chidgVector__mult_vr
+    end subroutine test_chidg_vector__mult_vr
     !**********************************************************************
 
 
@@ -295,10 +296,10 @@ contains
     !!
     !----------------------------------------------------------------------
     @Test
-    subroutine test_chidgVector__div_rv(self)
-        class(test_chidgVector),    intent(inout)   :: self
+    subroutine test_chidg_vector__div_rv(self)
+        class(test_chidg_vector),    intent(inout)   :: self
 
-        type(chidgVector_t) :: res
+        type(chidg_vector_t) :: res
         
 
         res = 2._rk / self%vec_b
@@ -312,7 +313,7 @@ contains
         @assertEqual(2._rk/7._rk, res%dom(1)%vecs(7)%vec)
         @assertEqual(2._rk/8._rk, res%dom(1)%vecs(8)%vec)
 
-    end subroutine test_chidgVector__div_rv
+    end subroutine test_chidg_vector__div_rv
     !**********************************************************************
 
 
@@ -326,10 +327,10 @@ contains
     !!
     !----------------------------------------------------------------------
     @Test
-    subroutine test_chidgVector__div_vr(self)
-        class(test_chidgVector),    intent(inout)   :: self
+    subroutine test_chidg_vector__div_vr(self)
+        class(test_chidg_vector),    intent(inout)   :: self
 
-        type(chidgVector_t) :: res
+        type(chidg_vector_t) :: res
         
 
         res = self%vec_b / 2._rk
@@ -343,7 +344,7 @@ contains
         @assertEqual(3.5_rk, res%dom(1)%vecs(7)%vec)
         @assertEqual(FOUR, res%dom(1)%vecs(8)%vec)
 
-    end subroutine test_chidgVector__div_vr
+    end subroutine test_chidg_vector__div_vr
     !**********************************************************************
 
 
@@ -358,8 +359,8 @@ contains
     !!
     !----------------------------------------------------------------------
     @Test
-    subroutine test_chidgVector__norm(self)
-        class(test_chidgVector),    intent(inout)   :: self
+    subroutine test_chidg_vector__norm(self)
+        class(test_chidg_vector),    intent(inout)   :: self
 
         real(rk)    :: computed_norm, expected_norm
 
@@ -377,7 +378,7 @@ contains
 
         @assertEqual(expected_norm,computed_norm)
 
-    end subroutine test_chidgVector__norm
+    end subroutine test_chidg_vector__norm
     !**********************************************************************
 
 
@@ -390,8 +391,8 @@ contains
     !!
     !----------------------------------------------------------------------
     @Test
-    subroutine test_chidgVector__sumsqr(self)
-        class(test_chidgVector),    intent(inout)   :: self
+    subroutine test_chidg_vector__sumsqr(self)
+        class(test_chidg_vector),    intent(inout)   :: self
 
         real(rk)    :: computed_sumsqr, expected_sumsqr
 
@@ -408,7 +409,7 @@ contains
 
         @assertEqual(expected_sumsqr,computed_sumsqr)
 
-    end subroutine test_chidgVector__sumsqr
+    end subroutine test_chidg_vector__sumsqr
     !**********************************************************************
 
 
@@ -431,4 +432,4 @@ contains
 
 
 
-end module test_chidgVector_operators_mod
+end module test_chidg_vector_operators_mod

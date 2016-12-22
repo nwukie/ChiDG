@@ -1,14 +1,14 @@
-module type_chidgVector_recv
+module type_chidg_vector_recv
 #include <messenger.h>
-    use mod_kinds,                  only: ik
-    use type_ivector,               only: ivector_t
-    use type_mesh,                  only: mesh_t
-    use type_chidgVector_recv_comm, only: chidgVector_recv_comm_t
+    use mod_kinds,                   only: ik
+    use type_ivector,                only: ivector_t
+    use type_mesh,                   only: mesh_t
+    use type_chidg_vector_recv_comm, only: chidg_vector_recv_comm_t
     implicit none
 
 
 
-    !>  Container for receiving vector data from other chidgVectors. Holds a container for
+    !>  Container for receiving vector data from other chidg_vectors. Holds a container for
     !!  each process that is sending data here.
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -16,9 +16,9 @@ module type_chidgVector_recv
     !!
     !!
     !----------------------------------------------------------------------------------------
-    type, public :: chidgVector_recv_t
+    type, public :: chidg_vector_recv_t
 
-        type(chidgVector_recv_comm_t),   allocatable :: comm(:)
+        type(chidg_vector_recv_comm_t),   allocatable :: comm(:)
 
 
     contains
@@ -26,7 +26,7 @@ module type_chidgVector_recv
         procedure, public :: init
         procedure, public :: clear
 
-    end type chidgVector_recv_t
+    end type chidg_vector_recv_t
     !*****************************************************************************************
 
 
@@ -45,7 +45,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine init(self,mesh)
-        class(chidgVector_recv_t),  intent(inout)   :: self
+        class(chidg_vector_recv_t), intent(inout)   :: self
         type(mesh_t),               intent(inout)   :: mesh(:)
 
         integer(ik)                 :: idom, iproc, icomm, ncomm, ndom_recv, ierr, loc
@@ -116,7 +116,7 @@ contains
     !!
     !--------------------------------------------------------------------------------------------
     subroutine clear(self)
-        class(chidgVector_recv_t),  intent(inout)   :: self
+        class(chidg_vector_recv_t),  intent(inout)   :: self
         
         integer(ik) :: icomm
 
@@ -131,4 +131,4 @@ contains
 
 
 
-end module type_chidgVector_recv
+end module type_chidg_vector_recv

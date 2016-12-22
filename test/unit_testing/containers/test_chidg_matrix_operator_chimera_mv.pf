@@ -1,5 +1,5 @@
 @Test
-subroutine test_chidgMatrix_operator_chimera_mv()
+subroutine test_chidg_matrix_operator_chimera_mv()
     use pfunit_mod
 
     use mod_kinds,          only: rk, ik
@@ -278,4 +278,4 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     call delete_file(filename)
 
 
-end subroutine test_chidgMatrix_operator_chimera_mv
+end subroutine test_chidg_matrix_operator_chimera_mv

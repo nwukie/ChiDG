@@ -42,7 +42,7 @@ module type_chidg_data
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !----------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     type, public  :: chidg_data_t
 
         logical                                     :: solverInitialized = .false.
@@ -77,7 +77,7 @@ module type_chidg_data
         procedure   :: report
 
     end type chidg_data_t
-    !**********************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -96,7 +96,7 @@ contains
     !!
     !!
     !!
-    !----------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine initialize_solution_solver(self)
         class(chidg_data_t),     intent(inout)   :: self
 
@@ -107,8 +107,8 @@ contains
 
 
         !
-        ! Assemble array of function_data from the eqnset array to pass to the solver data structure for 
-        ! initialization
+        ! Assemble array of function_data from the eqnset array to pass to the solver data 
+        ! structure for initialization
         !
         ndom = self%ndomains()
         allocate(function_data(ndom), stat=ierr)
@@ -120,7 +120,8 @@ contains
 
 
         !
-        ! Assemble boundary condition coupling information to pass to sdata initialization for LHS storage
+        ! Assemble boundary condition coupling information to pass to sdata initialization 
+        ! for LHS storage
         !
         ndom = self%ndomains()
         allocate(bcset_coupling(ndom), stat=ierr)
@@ -137,7 +138,7 @@ contains
         call self%sdata%init(self%mesh, bcset_coupling, function_data)
 
     end subroutine initialize_solution_solver
-    !************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -154,11 +155,12 @@ contains
     !!  @date   2/1/2016
     !!
     !!  @param[in]  points      point_t matrix defining the mesh
-    !!  @param[in]  nterms_c    Integer defining the number of terms in the element coordinate expansion
+    !!  @param[in]  nterms_c    Integer defining the number of terms in the element coordinate 
+    !!                          expansion
     !!  @param[in]  eqnset      Character string defining the equationset_t for the domain
     !!  @param[in]  nterms_s    Integer defining the number of terms in the solution expansion
     !!
-    !------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine add_domain(self,name,nodes,connectivity,spacedim,nterms_c,eqnset)
         class(chidg_data_t),            intent(inout)   :: self
         character(*),                   intent(in)      :: name
@@ -197,8 +199,9 @@ contains
         if (ierr /= 0) call AllocationError
 
 
-        ! Copy previously initialized instances to new array. Be careful about pointers components here!
-        ! For example, a pointer from a face to an element would no longer be valid in the new array.
+        ! Copy previously initialized instances to new array. Be careful about pointers 
+        ! components here. For example, a pointer from a face to an element would no 
+        ! longer be valid in the new array.
         if (self%ndomains_ > 1) then
             temp_info(   1:size(self%info))    = self%info(1:size(self%mesh))
             temp_mesh(   1:size(self%mesh))    = self%mesh(1:size(self%mesh))
@@ -220,12 +223,12 @@ contains
 
 
         !
-        ! Check that a domain with the same global index wasn't already added. For example, if a block got 
-        ! split and put on the same processor. Some of the MPI communication assumes one unique global 
-        ! domain index for each domain on the processor.
+        ! Check that a domain with the same global index wasn't already added. For example, if 
+        ! a block got split and put on the same processor. Some of the MPI communication assumes 
+        ! one unique global domain index for each domain on the processor.
         !
-        user_msg = "chidg_data%add_domain: Two domains have the same global index. MPI communication assumes &
-                    this does not happen."
+        user_msg = "chidg_data%add_domain: Two domains have the same global index. MPI &
+                    communication assumes this does not happen."
         if (self%ndomains_ > 1) then
             do idom = 1,size(self%mesh)
                 if (self%mesh(idom)%idomain_g == temp_mesh(idomain_l)%idomain_g) call chidg_signal(FATAL,user_msg)
@@ -251,7 +254,7 @@ contains
 
 
     end subroutine add_domain
-    !************************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -265,25 +268,29 @@ contains
 
 
 
-    !>  For a ChiDG domain, add a boundary condition patche and associate it with a boundary condition group.
+    !>  For a ChiDG domain, add a boundary condition patche and associate it with a boundary 
+    !!  condition group.
     !!
     !!
-    !!  Boundary condition groups hold sets of state functions that are used to compute an exterior state
-    !!  on the boundary. The boundary condition groups are defined for the global problem. Here,
-    !!  the individual patches of a given domain are being set to a specific group.
+    !!  Boundary condition groups hold sets of state functions that are used to compute an 
+    !!  exterior state on the boundary. The boundary condition groups are defined for the 
+    !!  global problem. Here, the individual patches of a given domain are being set to a 
+    !!  specific group.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
     !!  @param[in]  domain          Character string of the selected domain.
     !!  @param[in]  bc_connectivity Face connectivities defining the boundary condition patch.
-    !!  @param[in]  bc_group        Name of the boundary condition group to associate with the patch.
-    !!  @param[in]  bc_groups       bc_group_t's for the global problem that can be searched through and used to initialize.
+    !!  @param[in]  bc_group        Name of the boundary condition group to associate with the 
+    !!                              patch.
+    !!  @param[in]  bc_groups       bc_group_t's for the global problem that can be searched 
+    !!                              through and used to initialize.
     !!
-    !!  To force a particular bc_state on a boundary condition, one can pass a bc_state_t in as an option
-    !!  for bc_wall, bc_inlet, bc_outlet, bc_symmetry
+    !!  To force a particular bc_state on a boundary condition, one can pass a bc_state_t in 
+    !!  as an option for bc_wall, bc_inlet, bc_outlet, bc_symmetry
     !!
-    !-----------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine add_bc(self,domain,bc_connectivity,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
         class(chidg_data_t),            intent(inout)           :: self
         character(*),                   intent(in)              :: domain
@@ -333,7 +340,7 @@ contains
 
 
     end subroutine add_bc
-    !**********************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -350,7 +357,7 @@ contains
     !!
     !!
     !!
-    !----------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     subroutine initialize_solution_domains(self,nterms_s)
         class(chidg_data_t),    intent(inout)   :: self
         integer(ik),            intent(in)      :: nterms_s
@@ -366,7 +373,7 @@ contains
 
 
     end subroutine initialize_solution_domains
-    !**********************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -386,7 +393,7 @@ contains
     !!  @param[in]  domain_name     String associated with a given domain
     !!  @return     domain_index    Integer index of the associated domain
     !!
-    !----------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     function get_domain_index(self,domain_name) result(domain_index)
         class(chidg_data_t),    intent(in)      :: self
         character(*),           intent(in)      :: domain_name
@@ -410,7 +417,8 @@ contains
         if (domain_index == 0) call chidg_signal_one(FATAL,user_msg,domain_name)
 
     end function get_domain_index
-    !*********************************************************************************************
+    !*******************************************************************************************
+
 
 
 
@@ -423,7 +431,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !---------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     function ndomains(self) result(ndom)
         class(chidg_data_t),    intent(in)      :: self
 
@@ -432,7 +440,7 @@ contains
         ndom = self%ndomains_
 
     end function ndomains
-    !*********************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -447,7 +455,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   11/30/2016
     !!
-    !---------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     function get_dimensionality(self) result(dimensionality)
         class(chidg_data_t),    intent(in)      :: self
 
@@ -456,7 +464,7 @@ contains
         dimensionality = self%spacedim_
 
     end function get_dimensionality
-    !*********************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -470,7 +478,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   11/23/2016
     !!
-    !---------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     function get_auxiliary_field_names(self) result(field_names)
         class(chidg_data_t),    intent(in)  :: self
 
@@ -492,7 +500,7 @@ contains
 
 
     end function get_auxiliary_field_names
-    !*********************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -508,7 +516,7 @@ contains
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     subroutine report(self,selection)
         class(chidg_data_t),    intent(in)  :: self
         character(*),           intent(in)  :: selection
@@ -531,7 +539,7 @@ contains
 
 
     end subroutine report
-    !*************************************************************************************************
+    !*******************************************************************************************
 
 
 

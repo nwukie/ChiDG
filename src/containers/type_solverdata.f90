@@ -22,7 +22,7 @@ module type_solverdata
     !!  @date   3/15/2016
     !!
     !!
-    !---------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     type, public  :: solverdata_t
 
         !
@@ -57,9 +57,9 @@ module type_solverdata
 
 
 
-        ! NOTE: if one wanted to add specialized data, instead of deriving from chidgData, maybe you could add a
-        !       chidgExtension class that could be specialized further which could contain non-standard data 
-        !  class(chidgExtension_t)
+        ! NOTE: if one wanted to add specialized data, instead of deriving from chidgData, 
+        ! maybe you could add a chidgExtension class that could be specialized further which 
+        ! could contain non-standard data class(chidgExtension_t)
 
     contains
 
@@ -70,7 +70,7 @@ module type_solverdata
         procedure           :: get_auxiliary_field_index
 
     end type solverdata_t
-    !**********************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -93,11 +93,13 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!  @param[in]  mesh                Array of mesh_t instances which define storage requirements.
-    !!  @param[in]  bcset_coupling      Array of bcset_coupling instances which describe the coupling of elements in bcs.
-    !!  @param[in]  function_data       Array of containers that hold information on number of each function in eqnset.
+    !!  @param[in]  mesh            Array of mesh_t instances which define storage requirements.
+    !!  @param[in]  bcset_coupling  Array of bcset_coupling instances which describe the 
+    !!                              coupling of elements in bcs.
+    !!  @param[in]  function_data   Array of containers that hold information on number of 
+    !!                              each function in eqnset.
     !!
-    !----------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     subroutine init_base(self,mesh,bcset_coupling,function_data)
         class(solverdata_t),                intent(inout)           :: self
         type(mesh_t),                       intent(inout)           :: mesh(:)
@@ -162,13 +164,7 @@ contains
         self%solverInitialized = .true.
 
     end subroutine init_base
-    !*************************************************************************************************
-
-
-
-
-
-
+    !******************************************************************************************
 
 
 
@@ -196,7 +192,7 @@ contains
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine add_auxiliary_field(self,fieldname,auxiliary_vector)
         class(solverdata_t),    intent(inout)           :: self
         character(*),           intent(in)              :: fieldname
@@ -256,7 +252,7 @@ contains
         end if
 
     end subroutine add_auxiliary_field
-    !********************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -277,7 +273,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   11/1/2016
     !!
-    !------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function get_auxiliary_field_index(self,fieldname) result(field_index)
         class(solverdata_t),    intent(in)  :: self
         character(*),           intent(in)  :: fieldname

@@ -202,33 +202,33 @@ Step 4: Configure the build
 
 
 
-+----------------------------------------------------+----------------------------------------------------------+
-| **Configure steps**                                                                                           |
-+----------------------------------------------------+----------------------------------------------------------+
-|                                                    |                                                          |
-| **#1** Change to the ChiDG root directory          | ``cd ChiDG``                                             |
-|                                                    |                                                          |
-+----------------------------------------------------+----------------------------------------------------------+
-|                                                    |                                                          |
-| **#2** Create a new build directory                | ``mkdir build``                                          |
-|                                                    |                                                          |
-+----------------------------------------------------+----------------------------------------------------------+
-|                                                    |                                                          |
-| **#3** Change to the build directory               | ``cd build``                                             |
-|                                                    |                                                          |
-+----------------------------------------------------+----------------------------------------------------------+
-|                                                    |                                                          |
-| **#4** Configure with CMake + user options         | ``cmake ..``  or ``cmake -DCMAKE_BUILD_TYPE=Release ..`` |
-|                                                    |                                                          |
-+----------------------------------------------------+----------------------------------------------------------+
++----------------------------------------------------+------------------------------------------------------------------+
+| **Configure steps**                                                                                                   |
++----------------------------------------------------+------------------------------------------------------------------+
+|                                                    |                                                                  |
+| **#1** Change to the ChiDG root directory          | ``cd ChiDG``                                                     |
+|                                                    |                                                                  |
++----------------------------------------------------+------------------------------------------------------------------+
+|                                                    |                                                                  |
+| **#2** Create a new build directory                | ``mkdir build``                                                  |
+|                                                    |                                                                  |
++----------------------------------------------------+------------------------------------------------------------------+
+|                                                    |                                                                  |
+| **#3** Change to the build directory               | ``cd build``                                                     |
+|                                                    |                                                                  |
++----------------------------------------------------+------------------------------------------------------------------+
+|                                                    |                                                                  |
+| **#4** Configure with CMake + user options         | ``cmake ..``  or ``cmake -DCMAKE_Fortran_COMPILER=gfortran ..``  |
+|                                                    |                                                                  |
++----------------------------------------------------+------------------------------------------------------------------+
 
 
 
 
-The following parameters can be passed when invoking ``cmake`` in order to configure the build with 
-different options. They are passed with the ``-D`` flag as:
-
-::
+Regarding configure stage **#4**, configuration options can be passed when invoking ``cmake`` in order to influence the build
+process. They are passed with the ``-D`` flag as:
+ 
+:: 
 
     cmake -DParameter=Option ..
 
@@ -239,11 +239,12 @@ A typical build configure looks like:
 
     cmake -DCMAKE_Fortran_COMPILER=gfortran ..
 
-A developer might configure the build using the following option:
 
+A developer might configure the build using the following option:
+ 
 ::
 
-    cmake -DCMAKE_Fortran_COMPILER=gfortran -DCMAKE_BUILD_TYPE=Debug -DTESTING=True .. 
+    cmake -DCMAKE_Fortran_COMPILER=gfortran -DCMAKE_BUILD_TYPE=Debug ..
 
 
 =============================== ======================================================= ================
@@ -254,10 +255,10 @@ CMAKE_Fortran_COMPILER          Specify a Fortran Compiler       			``gfortran``
                                                                                         
 CMAKE_BUILD_TYPE                Specify what type of compiler settings to build with    ``Release``
                                                                                         ``Debug``
-TESTING                         Build the test binaries. **Requires pFUnit Library.**   ``True``
-                                                                                        ``False``
 =============================== ======================================================= ================
 
+.. TESTING                         Build the test binaries. **Requires pFUnit Library.**   ``True``
+..                                                                                         ``False``
 .. USER_MPI                        Use User environment variables for finding MPI:         ``True``
 ..                                    - MPI_Fortran_COMPILER                               ``False``
 ..                                    - MPI_Fortran_INCLUDE_PATH                

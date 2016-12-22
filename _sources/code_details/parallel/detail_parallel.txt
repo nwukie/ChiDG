@@ -83,61 +83,61 @@ problem. They also know how to communicate globally between processors to
 compute operations that are apart of many algorithms for solving linear
 systems of equations.
 
-chidgMatrix
------------
+chidg_matrix
+------------
 
-The global ``chidgMatrix`` uses a 1D Row-wise parallel distribution[1]. In this way, each
-processor owns an entire Row of the global matrix. The ``chidgVector`` 
-located on a given processor corresponds to the row in the ``chidgMatrix``, as shown here
+The global ``chidg_matrix`` uses a 1D Row-wise parallel distribution[1]. In this way, each
+processor owns an entire Row of the global matrix. The ``chidg_vector`` 
+located on a given processor corresponds to the row in the ``chidg_matrix``, as shown here
 
-.. image:: chidgMatrix_partition.png
+.. image:: chidg_matrix_partition.png
     :width: 30 %
     :align: center
 
-.. function:: mv(chidgMatrix,chidgVector)
+.. function:: mv(chidg_matrix,chidg_vector)
 
-    This computes the global matrix-vector product between a ``chidgMatrix`` and ``chidgVector``.
-    First, the ``chidgVector%comm_send()`` routine is called to initiate non-blocking sends
+    This computes the global matrix-vector product between a ``chidg_matrix`` and ``chidg_vector``.
+    First, the ``chidg_vector%comm_send()`` routine is called to initiate non-blocking sends
     of vector data to communicating processors. Then the processor-local part of the 
-    matrix-vector product is performed. ``chidgVector%comm_recv()`` is then called to 
+    matrix-vector product is performed. ``chidg_vector%comm_recv()`` is then called to 
     receive incoming vector data from communicating processors. The non-local part
     of the matrix-vector product is then performed with the newly-arrived vector data from
     other processors.
 
 
-chidgVector
------------
+chidg_vector
+------------
 
 
 
-.. function:: chidgVector%norm()
+.. function:: chidg_vector%norm()
 
-    This computes the L2-norm of the global chidgVector.
+    This computes the L2-norm of the global chidg_vector.
     This performs a sum of the components squared on each processor and then executes
     an ``MPI_AllReduce`` call that distributes the global sum to each processor. The square
     root of this value is then computed locally on each processor to give the global 
-    L2-norm of the chidgVector across all processors.
+    L2-norm of the chidg_vector across all processors.
 
 
-.. function:: dot(chidgVector,chidgVector)
+.. function:: dot(chidg_vector,chidg_vector)
 
-    This computes the vector-vector dot-product of two chidgVector's. The processor-local 
+    This computes the vector-vector dot-product of two chidg_vector's. The processor-local 
     dot-product is computed first. ``MPI_AllReduce`` is then called to reduce the results 
     across processors and distribute the result.
 
 
-.. function:: chidgVector%comm_send()
+.. function:: chidg_vector%comm_send()
 
-    This performs a non-blocking send of the data in the ``chidgVector`` to communicating
+    This performs a non-blocking send of the data in the ``chidg_vector`` to communicating
     processors.
 
 
-.. function:: chidgVector%comm_recv()
+.. function:: chidg_vector%comm_recv()
 
     This performs a blocking receive of the data coming in from communicating processors.
 
 
-.. function:: chidgVector%comm_wait()
+.. function:: chidg_vector%comm_wait()
 
     This waits until all entries from ``comm_send()`` have been received by their targets
     and indicates that the contents are safe to modify.

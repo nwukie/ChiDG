@@ -211,8 +211,8 @@
 <li class="toctree-l3"><a class="reference internal" href="../code_details/parallel/detail_parallel.html#chidg-mpi">ChiDG MPI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../code_details/parallel/detail_parallel.html#domain-decomposition">Domain decomposition</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../code_details/parallel/detail_parallel.html#parallel-matrix-vector-operations">Parallel matrix:vector operations</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../code_details/parallel/detail_parallel.html#chidgmatrix">chidgMatrix</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../code_details/parallel/detail_parallel.html#chidgvector">chidgVector</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../code_details/parallel/detail_parallel.html#chidg-matrix">chidg_matrix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../code_details/parallel/detail_parallel.html#chidg-vector">chidg_vector</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../code_details/parallel/detail_parallel.html#parallel-efficiency">Parallel efficiency</a></li>
@@ -429,8 +429,8 @@ You may consider opening a new shell or running <code class="docutils literal"><
 </div>
 <table border="1" class="docutils">
 <colgroup>
-<col width="47%" />
-<col width="53%" />
+<col width="44%" />
+<col width="56%" />
 </colgroup>
 <tbody valign="top">
 <tr class="row-odd"><td colspan="2"><strong>Configure steps</strong></td>
@@ -445,12 +445,12 @@ You may consider opening a new shell or running <code class="docutils literal"><
 <td><code class="docutils literal"><span class="pre">cd</span> <span class="pre">build</span></code></td>
 </tr>
 <tr class="row-odd"><td><strong>#4</strong> Configure with CMake + user options</td>
-<td><code class="docutils literal"><span class="pre">cmake</span> <span class="pre">..</span></code>  or <code class="docutils literal"><span class="pre">cmake</span> <span class="pre">-DCMAKE_BUILD_TYPE=Release</span> <span class="pre">..</span></code></td>
+<td><code class="docutils literal"><span class="pre">cmake</span> <span class="pre">..</span></code>  or <code class="docutils literal"><span class="pre">cmake</span> <span class="pre">-DCMAKE_Fortran_COMPILER=gfortran</span> <span class="pre">..</span></code></td>
 </tr>
 </tbody>
 </table>
-<p>The following parameters can be passed when invoking <code class="docutils literal"><span class="pre">cmake</span></code> in order to configure the build with
-different options. They are passed with the <code class="docutils literal"><span class="pre">-D</span></code> flag as:</p>
+<p>Regarding configure stage <strong>#4</strong>, configuration options can be passed when invoking <code class="docutils literal"><span class="pre">cmake</span></code> in order to influence the build
+process. They are passed with the <code class="docutils literal"><span class="pre">-D</span></code> flag as:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">cmake</span> <span class="o">-</span><span class="n">DParameter</span><span class="o">=</span><span class="n">Option</span> <span class="o">..</span>
 </pre></div>
 </div>
@@ -459,7 +459,7 @@ different options. They are passed with the <code class="docutils literal"><span
 </pre></div>
 </div>
 <p>A developer might configure the build using the following option:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">cmake</span> <span class="o">-</span><span class="n">DCMAKE_Fortran_COMPILER</span><span class="o">=</span><span class="n">gfortran</span> <span class="o">-</span><span class="n">DCMAKE_BUILD_TYPE</span><span class="o">=</span><span class="n">Debug</span> <span class="o">-</span><span class="n">DTESTING</span><span class="o">=</span><span class="kc">True</span> <span class="o">..</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">cmake</span> <span class="o">-</span><span class="n">DCMAKE_Fortran_COMPILER</span><span class="o">=</span><span class="n">gfortran</span> <span class="o">-</span><span class="n">DCMAKE_BUILD_TYPE</span><span class="o">=</span><span class="n">Debug</span> <span class="o">..</span>
 </pre></div>
 </div>
 <table border="1" class="docutils">
@@ -483,11 +483,6 @@ different options. They are passed with the <code class="docutils literal"><span
 <td>Specify what type of compiler settings to build with</td>
 <td><code class="docutils literal"><span class="pre">Release</span></code>
 <code class="docutils literal"><span class="pre">Debug</span></code></td>
-</tr>
-<tr class="row-even"><td>TESTING</td>
-<td>Build the test binaries. <strong>Requires pFUnit Library.</strong></td>
-<td><code class="docutils literal"><span class="pre">True</span></code>
-<code class="docutils literal"><span class="pre">False</span></code></td>
 </tr>
 </tbody>
 </table>

@@ -20,7 +20,7 @@ module mod_chimera
     use mod_constants,          only: NFACES, ORPHAN, CHIMERA, &
                                       X_DIR,  Y_DIR,   Z_DIR, &
                                       XI_DIR, ETA_DIR, ZETA_DIR, &
-                                      ONE, ZERO, TWO, TWO_DIM, THREE_DIM, RKTOL, &
+                                      ONE, ZERO, TWO, TWO_DIM, THREE_DIM, &
                                       INVALID_POINT, VALID_POINT, NO_PROC
 
     use type_mesh,              only: mesh_t

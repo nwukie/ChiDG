@@ -707,19 +707,19 @@ contains
 
 
         call this%chidg%set('Solution Order', integer_input=this%order)
-        call this%chidg%initialize_solution_domains()
-        call this%chidg%init("communication")
-        call this%chidg%init("chimera")
-        call this%chidg%initialize_solution_solver()
+        call this%chidg%init('domains')
+        call this%chidg%init('communication')
+        call this%chidg%init('chimera')
+        call this%chidg%init('solvers')
 
 
         !
         ! Set ChiDG components
         !
-        call this%chidg%set("Time Integrator",  algorithm=time_integrator,  options=toptions)
-        call this%chidg%set("Nonlinear Solver", algorithm=nonlinear_solver, options=noptions)
-        call this%chidg%set("Linear Solver",    algorithm=linear_solver,    options=loptions)
-        call this%chidg%set("Preconditioner",   algorithm=preconditioner)
+        call this%chidg%set('Time Integrator',  algorithm=time_integrator,  options=toptions)
+        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
 
 
         !
@@ -737,7 +737,7 @@ contains
         call this%chidg%init("finalize")
 
     end subroutine SetUp
-    !******************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -745,7 +745,7 @@ contains
     !!
     !!
     !!
-    !------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(linear_diffusion_1D),  intent(inout)   :: this
 
@@ -757,7 +757,7 @@ contains
         end if
 
     end subroutine tearDown
-    !******************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -778,7 +778,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     @Test(npes=[1,2,3])
     subroutine run_calculations(self)
         class(linear_diffusion_1D),  intent(inout)   :: self
@@ -799,8 +799,9 @@ contains
 
 
         !
-        ! Store the number of nonlinear iterations that the solution converged in. Problem is linear
-        ! so it should converge in 1 Newton Step. Really, just the solution of 1 linear system of equations.
+        ! Store the number of nonlinear iterations that the solution converged in. Problem 
+        ! is linear so it should converge in 1 Newton Step. Really, just the solution 
+        ! of 1 linear system of equations.
         !
         if (self%gridtype == 'singleblock') then
             nsteps_convergence(npes_index,grid_index,order_index)         = self%chidg%nonlinear_solver%newton_iterations
@@ -828,7 +829,7 @@ contains
 
 
     end subroutine run_calculations
-    !*******************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -848,7 +849,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @author Nathan A. Wukie (AFRL)
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     @Test(npes=[1])
     subroutine test_conv_conforming(self)
         class(linear_diffusion_1D),  intent(inout)   :: self
@@ -870,7 +871,7 @@ contains
 
 
     end subroutine test_conv_conforming
-    !*******************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -887,7 +888,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @author Nathan A. Wukie (AFRL)
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     @Test(npes=[1])
     subroutine test_conv_chimera(self)
         class(linear_diffusion_1D),  intent(inout)   :: self
@@ -908,7 +909,7 @@ contains
         end do
 
     end subroutine test_conv_chimera
-    !*******************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -926,7 +927,7 @@ contains
     !!  @date   9/16/2016
     !!
     !!
-    !--------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     @Test(npes=[1])
     subroutine test_err_conforming(self)
         class(linear_diffusion_1D),  intent(inout)   :: self
@@ -962,7 +963,7 @@ contains
 
 
     end subroutine test_err_conforming
-    !*******************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -975,13 +976,14 @@ contains
     !!  @date   9/16/2016
     !!
     !!
-    !--------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     @Test(npes=[1])
     subroutine test_err_chimera(self)
         class(linear_diffusion_1D),  intent(inout)   :: self
 
         integer(ik) :: inpes, igrid, iorder
-        real(rk)    :: error_previous, error_current, mesh_parameter_previous, mesh_parameter_current, convergence_rate, tol
+        real(rk)    :: error_previous, error_current, mesh_parameter_previous, &
+                       mesh_parameter_current, convergence_rate, tol
 
         tol = 0.1_rk
 
@@ -1013,7 +1015,7 @@ contains
 
 
     end subroutine test_err_chimera
-    !*******************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -1113,7 +1115,7 @@ contains
         error = sqrt(error_squared_sum_reduced)
 
     end function compute_1D_linear_diffusion_error
-    !**********************************************************************************************
+    !*****************************************************************************************
 
 
 

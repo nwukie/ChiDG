@@ -41,10 +41,11 @@ module test_comm_D2E2_mod
 
 contains
 
-    !>  This test reads two 2x1x1 element grids using 1, 2, and 4 processors and tests communication data.
+    !>  This test reads two 2x1x1 element grids using 1, 2, and 4 processors and 
+    !!  tests communication data.
     !!
-    !!  Using 1 processor, all communication(face neighbors) should be local. Using 4 processors, all communication
-    !!  should occur globally, across processors.
+    !!  Using 1 processor, all communication(face neighbors) should be local. 
+    !!  Using 4 processors, all communication should occur globally, across processors.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/22/2016
@@ -73,8 +74,6 @@ contains
         ! Create grid file
         !
         if (IRANK == GLOBAL_MASTER) then
-            !call create_mesh_file("D2 NxNxN M1",this%gridfile, nelem_xi =2, nelem_eta =1, nelem_zeta =1, &
-            !                                                   nelem_xi2=2, nelem_eta2=1, nelem_zeta2=1 )
             call create_mesh_file("D2 NxNxN M1",this%gridfile, nelem_xi=4, nelem_eta=1, nelem_zeta=1)
         end if
         call MPI_Barrier(this%ChiDG_COMM,ierr)
@@ -91,9 +90,9 @@ contains
         ! Initialization
         !
         call this%chidg%set('Solution Order', integer_input=this%solution_order)
-        call this%chidg%initialize_solution_domains()
+        call this%chidg%init('domains')
         call this%chidg%init('communication')
-        call this%chidg%initialize_solution_solver()
+        call this%chidg%init('solvers')
 
 
         !

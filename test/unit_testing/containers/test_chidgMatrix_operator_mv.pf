@@ -89,14 +89,9 @@ subroutine test_chidgMatrix_operator_mv()
 
 
     call chidg%set('Solution Order', integer_input=2)
-    call chidg%initialize_solution_domains()
+    call chidg%init('domains')
     call chidg%init('communication')
-
-    !
-    ! Initialize ChiDG Chimera Interfaces
-    !
     call chidg%init('chimera')
-
 
 
     !

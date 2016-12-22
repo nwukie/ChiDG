@@ -3,8 +3,8 @@ subroutine test_operator_block_dot()
     use pfunit_mod
 
     use mod_kinds,                  only: rk, ik
-    use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, &
-                                          IO_DESTINATION
+    use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, &
+                                          SEVEN, EIGHT, NINE, TEN, IO_DESTINATION
     use type_blockvector,           only: blockvector_t
     use type_chidg,                 only: chidg_t
     use type_point,                 only: point_t
@@ -47,7 +47,7 @@ subroutine test_operator_block_dot()
     call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
 
     call chidg%set('Solution Order', integer_input=2)
-    call chidg%initialize_solution_domains()
+    call chidg%init('domains')
     call chidg%init('communication')
 
 

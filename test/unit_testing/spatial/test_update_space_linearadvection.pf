@@ -86,21 +86,21 @@ subroutine test_update_space_linearadvection()
     call chidgA%set('Solution Order', integer_input=2)
     call chidgB%set('Solution Order', integer_input=2)
 
-    call chidgA%initialize_solution_domains()
-    call chidgB%initialize_solution_domains()
 
 
 
     !
     ! Initialize solution data storage
     !
+    call chidgA%init('domains')
     call chidgA%init('communication')
     call chidgA%init('chimera')
-    call chidgA%initialize_solution_solver()
+    call chidgA%init('solvers')
 
+    call chidgB%init('domains')
     call chidgB%init('communication')
     call chidgB%init('chimera')
-    call chidgB%initialize_solution_solver()
+    call chidgB%init('solvers')
 
 
 

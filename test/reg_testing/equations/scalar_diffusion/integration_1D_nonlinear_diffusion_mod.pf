@@ -639,10 +639,10 @@ contains
 
 
         call this%chidg%set('Solution Order', integer_input=this%order)
-        call this%chidg%initialize_solution_domains()
+        call this%chidg%init('domains')
         call this%chidg%init('communication')
         call this%chidg%init('chimera')
-        call this%chidg%initialize_solution_solver()
+        call this%chidg%init('solvers')
 
 
         !

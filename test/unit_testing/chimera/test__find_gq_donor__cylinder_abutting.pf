@@ -26,7 +26,8 @@ subroutine test_find_gq_donor_cylinder_abutting()
     type(meshdata_t),   allocatable :: meshdataA(:)
     class(function_t),  allocatable :: constant, gaussian
     real(rk),           allocatable :: density_residual_D4_E31(:), density_residual_D4_E36(:)
-    integer(ik)                     :: idom, ielem, ChiID, idom_d, ielem_d, iface, ndonors, gq_index, igq, ngq, spacedim
+    integer(ik)                     :: idom, ielem, ChiID, idom_d, ielem_d, iface, ndonors, &
+                                       gq_index, igq, ngq, spacedim
     real(rk)                        :: chi_xi, chi_eta, chi_zeta, ref_xi, ref_eta, ref_zeta
     type(point_t)                   :: chimera_node
     real(rk)                        :: tol
@@ -61,7 +62,7 @@ subroutine test_find_gq_donor_cylinder_abutting()
     ! Initialize solution data storage
     !
     call chidgA%set('Solution Order', integer_input=2)
-    call chidgA%initialize_solution_domains()
+    call chidgA%init('domains')
     call chidgA%init('communication')
     call chidgA%init('chimera')
 

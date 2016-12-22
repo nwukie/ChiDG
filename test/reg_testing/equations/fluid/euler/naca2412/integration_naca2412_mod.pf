@@ -241,10 +241,11 @@ contains
 
 
 
-        call this%chidg%initialize_solution_domains(nterms_s)
-        call this%chidg%init('communication')
-        call this%chidg%init('chimera')
-        call this%chidg%initialize_solution_solver()
+!        call this%chidg%initialize_solution_domains(nterms_s)
+!        call this%chidg%init('communication')
+!        call this%chidg%init('chimera')
+!        call this%chidg%initialize_solution_solver()
+        call this%chidg%init('all')
 
 
         !
@@ -286,16 +287,16 @@ contains
         !
         ! Wrap-up initialization activities
         !
-        call this%chidg%init('finalize')
+        !call this%chidg%init('finalize')
 
     end subroutine SetUp
-    !******************************************************************************************************
+    !******************************************************************************************
 
 
     !>
     !!
     !!
-    !------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(naca2412),  intent(inout)   :: this
 
@@ -303,7 +304,7 @@ contains
         call this%chidg%shut_down('core')
 
     end subroutine tearDown
-    !******************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -323,7 +324,7 @@ contains
     !!  @date   8/18/2016
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     @Test(npes=[1,2,4,7,10])
     subroutine test_calculation(self)
         class(naca2412),  intent(inout)   :: self
@@ -357,7 +358,7 @@ contains
 
 
     end subroutine test_calculation
-    !*******************************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -365,18 +366,19 @@ contains
 
 
 
-    !>  Access the stored nonlinear convergence data(module global variable) and compare the parallel 
-    !!  convergence to the serial convergence for each (order) combination.
+    !>  Access the stored nonlinear convergence data(module global variable) and compare the 
+    !!  parallel convergence to the serial convergence for each (order) combination.
     !!
     !!  This assumes that the 'test_calculation' has already been executed for all cases
-    !!  and numbers of processors to that the 'nonlinear_convergence' variable has been populated.
+    !!  and numbers of processors to that the 'nonlinear_convergence' variable has been 
+    !!  populated.
     !!  So, we are relying on pFUnit to do things in order here. Works now, but I don't think
     !!  there is a guaruntee that this can't change.
     !!
     !!  @author Nathan A. Wukie
     !!  @author Nathan A. Wukie (AFRL)
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     @Test(npes=[1])
     subroutine test_nonlinear_convergence(self)
         class(naca2412),  intent(inout)   :: self
@@ -390,7 +392,8 @@ contains
                     ! Get the serial convergence for this (igrid,iorder)
                     reference_convergence = nonlinear_convergence(1,iorder)%data()
 
-                    ! Test that the current convergence for the processor count matches the serial convergence
+                    ! Test that the current convergence for the processor count matches 
+                    ! the serial convergence.
                     test_convergence = nonlinear_convergence(inpes,iorder)%data()
 
                     @assertEqual(reference_convergence, test_convergence, 1.e-5_rk)
@@ -400,7 +403,7 @@ contains
 
 
     end subroutine test_nonlinear_convergence
-    !*******************************************************************************************************
+    !******************************************************************************************
 
 
 

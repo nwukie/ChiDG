@@ -1,14 +1,16 @@
 module test_chidgVector_operators_mod
     use pfunit_mod
     use mod_kinds,                  only: rk, ik
-    use mod_constants,              only: ZERO, HALF, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, &
-                                          IO_DESTINATION
+    use mod_constants,              only: ZERO, HALF, ONE, TWO, THREE, FOUR, FIVE, SIX, &
+                                          SEVEN, EIGHT, IO_DESTINATION
     use type_chidg,                 only: chidg_t
     use type_point,                 only: point_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use mod_test_utilities,         only: create_mesh
-    use type_chidgVector,           only: chidgVector_t, mult_real_chidgVector, mult_chidgVector_real, div_real_chidgVector, div_chidgVector_real, &
-                                          sub_chidgVector_chidgVector, add_chidgVector_chidgVector
+    use type_chidgVector,           only: chidgVector_t, mult_real_chidgVector, &
+                                          mult_chidgVector_real, div_real_chidgVector, &
+                                          div_chidgVector_real, sub_chidgVector_chidgVector, &
+                                          add_chidgVector_chidgVector
     implicit none
 
 
@@ -109,7 +111,7 @@ contains
         call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
 
         call this%chidg%set('Solution Order', integer_input=this%solution_order)
-        call this%chidg%initialize_solution_domains()
+        call this%chidg%init('domains')
         call this%chidg%init('communication')
 
 
@@ -144,10 +146,16 @@ contains
         this%vec_b%dom(1)%vecs(8)%vec = EIGHT
 
 
-    end subroutine
+    end subroutine setUp
+    !*****************************************************************************************
 
 
 
+    !>
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_chidgVector),    intent(inout)   :: this
 

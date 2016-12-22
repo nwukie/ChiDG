@@ -134,7 +134,7 @@ contains
         call this%chidg%data%add_domain('D_01',meshdata%points,meshdata%connectivity,spacedim,nterms_c,'Scalar Advection')
 
         call this%chidg%set('Solution Order', integer_input=2)
-        call this%chidg%initialize_solution_domains()
+        call this%chidg%init('domains')
         call this%chidg%init('communication')
 
     end subroutine setUp

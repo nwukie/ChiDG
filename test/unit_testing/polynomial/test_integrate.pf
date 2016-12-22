@@ -99,10 +99,12 @@ subroutine test_integrate_boundary_unit_constant()
     ! Initialize solver data
     !
     call chidg%set('Solution Order', integer_input=1)
-    call chidg%initialize_solution_domains()
+    !call chidg%initialize_solution_domains()
+    call chidg%init('domains')
     call chidg%init('communication')
     call chidg%init('chimera')
-    call chidg%initialize_solution_solver()
+    call chidg%init('solvers')
+    !call chidg%initialize_solution_solver()
 
 
 
@@ -299,10 +301,12 @@ subroutine test_integrate_boundary_nonunit_constant()
     !call chidg%data%initialize_solution_solver()
 
     call chidg%set('Solution Order', integer_input=1)
-    call chidg%initialize_solution_domains()
+!    call chidg%initialize_solution_domains()
+    call chidg%init('domains')
     call chidg%init('communication')
     call chidg%init('chimera')
-    call chidg%initialize_solution_solver()
+    call chidg%init('solvers')
+!    call chidg%initialize_solution_solver()
 
 
     !

@@ -61,9 +61,9 @@ subroutine test_fgmres_solve()
     call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
 
     call chidg%set('Solution Order', integer_input=1)
-    call chidg%initialize_solution_domains()
+    call chidg%init('domains')
     call chidg%init('communication')
-    call chidg%initialize_solution_solver()
+    call chidg%init('solvers')
 
 
 

@@ -1,7 +1,8 @@
 module test_comm_D1E4_mod
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: XI_MIN, XI_MAX, DIAG, BOUNDARY, IO_DESTINATION, &
-                                          ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN
+                                          ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, &
+                                          NINE, TEN
     use mod_test_utilities,         only: create_mesh_file
     use mod_file_utilities,         only: delete_file
     use type_chidg,                 only: chidg_t
@@ -43,10 +44,11 @@ module test_comm_D1E4_mod
 
 contains
 
-    !>  This test reads a 4x1x1 element grid using 1, 2, 3, and 4 processors and tests communication data.
+    !>  This test reads a 4x1x1 element grid using 1, 2, 3, and 4 processors and tests 
+    !!  communication data.
     !!
-    !!  Using 1 processor, all communication(face neighbors) should be local. Using 4 processors, all communication
-    !!  should occur globally, across processors.
+    !!  Using 1 processor, all communication(face neighbors) should be local. 
+    !!  Using 4 processors, all communication should occur globally, across processors.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/21/2016
@@ -90,9 +92,9 @@ contains
         ! Initialization
         !
         call this%chidg%set('Solution Order', integer_input=this%solution_order)
-        call this%chidg%initialize_solution_domains()
+        call this%chidg%init('domains')
         call this%chidg%init('communication')
-        call this%chidg%initialize_solution_solver()
+        call this%chidg%init('solvers')
 
 
         !

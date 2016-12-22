@@ -1,7 +1,8 @@
 module test_ILU0_mod
     use pfunit_mod
     use mod_kinds,                  only: rk, ik
-    use mod_constants,              only: DIAG, XI_MIN, XI_MAX, ONE, TWO, THREE, FIVE, TEN, IO_DESTINATION
+    use mod_constants,              only: DIAG, XI_MIN, XI_MAX, ONE, TWO, THREE, &
+                                          FIVE, TEN, IO_DESTINATION
     use type_chidg,                 only: chidg_t
     use type_point,                 only: point_t
     use type_chidgVector,           only: chidgVector_t
@@ -85,9 +86,9 @@ contains
         ! Call sdata initialization
         !
         call this%chidg%set('Solution Order', integer_input=1)
-        call this%chidg%initialize_solution_domains()
+        call this%chidg%init('domains')
         call this%chidg%init('communication')
-        call this%chidg%initialize_solution_solver()
+        call this%chidg%init('solvers')
 
 
 
@@ -113,20 +114,24 @@ contains
         this%chidg%data%sdata%rhs%dom(1)%vecs(3)%vec = THREE
 
 
-    end subroutine
+    end subroutine setUp
+    !******************************************************************************************
 
 
 
-    !
-    ! Tear Down
-    !
+    !>
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_preconditioner_ILU0),    intent(inout)   :: this
 
 
         call this%chidg%shut_down('core')
 
-    end subroutine
+    end subroutine tearDown
+    !******************************************************************************************
 
 
 
@@ -135,163 +140,162 @@ contains
 
 
 
+    !>
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    @Test
+    subroutine test_ILU0_init(self)
+        class(test_preconditioner_ILU0),    intent(inout)   :: self
 
 
+        !
+        ! Initialize preconditioner. THIS IS BEING TESTED
+        !
+        call self%ILU0%init(self%chidg%data)
 
 
 
+        !
+        ! Test that only lower-triangular and diagonal components are allocated
+        !
+        @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(1,DIAG)%mat))
 
+        @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(2,XI_MIN)%mat))
+        @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(2,DIAG)%mat))
 
+        @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(3,XI_MIN)%mat))
+        @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(3,DIAG)%mat))
 
 
+    end subroutine test_ILU0_init
+    !******************************************************************************************
 
 
-@Test
-subroutine test_ILU0_init(self)
-    class(test_preconditioner_ILU0),    intent(inout)   :: self
 
 
-    !
-    ! Initialize preconditioner. THIS IS BEING TESTED
-    !
-    call self%ILU0%init(self%chidg%data)
 
 
 
-    !
-    ! Test that only lower-triangular and diagonal components are allocated
-    !
-    @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(1,DIAG)%mat))
 
-    @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(2,XI_MIN)%mat))
-    @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(2,DIAG)%mat))
 
-    @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(3,XI_MIN)%mat))
-    @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(3,DIAG)%mat))
 
+    !> Test the matrix factorization values
+    !!
+    !!
+    !!
+    !!          [ 1   -2   0 ]
+    !!      A = [ 2   -5  12 ] = LU
+    !!          [ 0    2 -10 ]
+    !!
+    !!  Expecting
+    !!
+    !!          [ 1          ]                                      [ 1/1              ]
+    !!      L = [ 2   -1     ]    inverted diagonal =>          L = [ 2    1/-1        ]
+    !!          [ 0   -2  14 ]                                      [ 0     -2    1/14 ]
+    !!
+    !!  The diagonal values in L should actually be apart of the diagonal of U, but we 
+    !!  just store them in L for convenience. We also store them inverted.
+    !!
+    !!  The U factorization is identical to the upper-triangular components of matrix A, so they 
+    !!  are not computed or stored
+    !!
+    !-------------------------------------------------------------------------------------------
+    @Test
+    subroutine test_ILU0_update(self)
+        class(test_preconditioner_ILU0),    intent(inout)   :: self
 
-end subroutine
+        !
+        ! Initialize preconditioner
+        !
+        call self%ILU0%init(self%chidg%data)
 
 
+        !
+        ! Call ILU0 update procedure. THIS IS BEING TESTED
+        !
+        associate ( A => self%chidg%data%sdata%lhs, b => self%chidg%data%sdata%rhs )
+        
+            call self%ILU0%update(A,b)
 
+        end associate
 
 
 
 
 
 
+        !
+        ! Test ILU0 preconditioner matrix factorization values
+        !
+        @assertEqual(ONE,self%ILU0%LD%dom(1)%lblks(1,DIAG)%mat(1,1))
 
-!> Test the matrix factorization values
-!!
-!!
-!!
-!!          [ 1   -2   0 ]
-!!      A = [ 2   -5  12 ] = LU
-!!          [ 0    2 -10 ]
-!!
-!!  Expecting
-!!
-!!          [ 1          ]                                      [ 1/1              ]
-!!      L = [ 2   -1     ]    inverted diagonal =>          L = [ 2    1/-1        ]
-!!          [ 0   -2  14 ]                                      [ 0     -2    1/14 ]
-!!
-!!  The diagonal values in L should actually be apart of the diagonal of U, but we just store 
-!!  them in L for convenience. We also store them inverted.
-!!
-!!  The U factorization is identical to the upper-triangular components of matrix A, so they 
-!!  are not computed or stored
-!!
-!-------------------------------------------------------------------------------------------
-@Test
-subroutine test_ILU0_update(self)
-    class(test_preconditioner_ILU0),    intent(inout)   :: self
 
-    !
-    ! Initialize preconditioner
-    !
-    call self%ILU0%init(self%chidg%data)
+        @assertEqual(TWO,self%ILU0%LD%dom(1)%lblks(2,XI_MIN)%mat(1,1))
+        @assertEqual(-ONE,self%ILU0%LD%dom(1)%lblks(2,DIAG)%mat(1,1))
 
 
-    !
-    ! Call ILU0 update procedure. THIS IS BEING TESTED
-    !
-    associate ( A => self%chidg%data%sdata%lhs, b => self%chidg%data%sdata%rhs )
-    
-        call self%ILU0%update(A,b)
+        @assertEqual(-TWO,self%ILU0%LD%dom(1)%lblks(3,XI_MIN)%mat(1,1))
+        @assertEqual((ONE/14._rk),self%ILU0%LD%dom(1)%lblks(3,DIAG)%mat(1,1))
 
-    end associate
 
+    end subroutine test_ILU0_update
+    !******************************************************************************************
 
 
 
 
 
-    !
-    ! Test ILU0 preconditioner matrix factorization values
-    !
-    @assertEqual(ONE,self%ILU0%LD%dom(1)%lblks(1,DIAG)%mat(1,1))
 
 
-    @assertEqual(TWO,self%ILU0%LD%dom(1)%lblks(2,XI_MIN)%mat(1,1))
-    @assertEqual(-ONE,self%ILU0%LD%dom(1)%lblks(2,DIAG)%mat(1,1))
 
+    !>
+    !!
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    @Test
+    subroutine test_ILU0_apply(self)
+        class(test_preconditioner_ILU0),    intent(inout)   :: self
 
-    @assertEqual(-TWO,self%ILU0%LD%dom(1)%lblks(3,XI_MIN)%mat(1,1))
-    @assertEqual((ONE/14._rk),self%ILU0%LD%dom(1)%lblks(3,DIAG)%mat(1,1))
+        type(chidgVector_t) :: z
+        real(rk)            :: tol
 
+        tol = 1.e-5_rk
 
-end subroutine
+        !
+        ! Initialize preconditioner
+        !
+        call self%ILU0%init(self%chidg%data)
 
 
+        !
+        ! Call ILU0 update procedure
+        !
+        associate ( A => self%chidg%data%sdata%lhs, b => self%chidg%data%sdata%rhs )
+            call self%ILU0%update(A,b)
+        end associate
 
 
+        !
+        ! Apply preconditioner. THIS IS BEING TESTED
+        !  
+        associate ( A => self%chidg%data%sdata%lhs, b => self%chidg%data%sdata%rhs )
+            z = self%ILU0%apply(A,b)
+        end associate
 
 
 
 
 
+        @assertEqual(6.142857143_rk ,z%dom(1)%vecs(1)%vec(1),tol)
+        @assertEqual(2.57142857_rk  ,z%dom(1)%vecs(2)%vec(1),tol)
+        @assertEqual(0.2142857143_rk,z%dom(1)%vecs(3)%vec(1),tol)
 
 
-@Test
-subroutine test_ILU0_apply(self)
-    class(test_preconditioner_ILU0),    intent(inout)   :: self
-
-    type(chidgVector_t) :: z
-    real(rk)            :: tol
-
-    tol = 1.e-5_rk
-
-    !
-    ! Initialize preconditioner
-    !
-    call self%ILU0%init(self%chidg%data)
-
-
-    !
-    ! Call ILU0 update procedure
-    !
-    associate ( A => self%chidg%data%sdata%lhs, b => self%chidg%data%sdata%rhs )
-        call self%ILU0%update(A,b)
-    end associate
-
-
-    !
-    ! Apply preconditioner. THIS IS BEING TESTED
-    !  
-    associate ( A => self%chidg%data%sdata%lhs, b => self%chidg%data%sdata%rhs )
-        z = self%ILU0%apply(A,b)
-    end associate
-
-
-
-
-
-    @assertEqual(6.142857143_rk ,z%dom(1)%vecs(1)%vec(1),tol)
-    @assertEqual(2.57142857_rk  ,z%dom(1)%vecs(2)%vec(1),tol)
-    @assertEqual(0.2142857143_rk,z%dom(1)%vecs(3)%vec(1),tol)
-
-
-end subroutine
+    end subroutine test_ILU0_apply
+    !*****************************************************************************************
 
 
 

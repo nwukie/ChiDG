@@ -91,9 +91,11 @@ contains
         ! Initialize solution data storage
         !
         call chidg%set('Solution Order', integer_input=solution_order)
-        call chidg%initialize_solution_domains()
+!        call chidg%initialize_solution_domains()
+        call chidg%init('domains')
         call chidg%init('communication')
-        call chidg%initialize_solution_solver()
+        call chidg%init('solvers')
+!        call chidg%initialize_solution_solver()
 
 
 

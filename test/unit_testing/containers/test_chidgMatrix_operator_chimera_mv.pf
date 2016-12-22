@@ -29,8 +29,9 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     class(bc_t),        allocatable :: wall, inlet, outlet
     class(function_t),  allocatable :: constant, gaussian
     real(rk),           allocatable :: density_residual_D4_E31(:), density_residual_D4_E36(:)
-    integer(ik)                     :: ChiID, iface, ndonors, gq_index, igq, ngq, neqns, spacedim, nterms_s
-    integer(ik)                     :: idom, ielem, idom_d, ielem_d, idonor, idom_p, ielem_p, iblk
+    integer(ik)                     :: ChiID, iface, ndonors, gq_index, igq, ngq, neqns, &
+                                       spacedim, nterms_s, idom, ielem, idom_d, ielem_d, &
+                                       idonor, idom_p, ielem_p, iblk
     real(rk)                        :: chi_xi, chi_eta, chi_zeta, ref_xi, ref_eta, ref_zeta
     type(point_t)                   :: chimera_node
     real(rk)                        :: tol
@@ -69,10 +70,10 @@ subroutine test_chidgMatrix_operator_chimera_mv()
     ! Initialize data
     !
     call chidg%set('Solution Order', integer_input=2)
-    call chidg%initialize_solution_domains()
+    call chidg%init('domains')
     call chidg%init('communication')
     call chidg%init('chimera')
-    call chidg%initialize_solution_solver()
+    call chidg%init('solvers')
 
 
 

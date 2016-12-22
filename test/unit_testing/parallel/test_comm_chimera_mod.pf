@@ -99,9 +99,7 @@ contains
         ! Initialization
         !
         call this%chidg%set('Solution Order', integer_input=this%solution_order)
-        call this%chidg%initialize_solution_domains()
-        !call this%chidg%init('communication',this%ChiDG_COMM)
-        !call this%chidg%init('chimera',this%ChiDG_COMM)
+        call this%chidg%init('domains')
         call this%chidg%init('communication')
         call this%chidg%init('chimera')
 

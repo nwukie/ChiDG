@@ -68,7 +68,7 @@ subroutine test__compute_chimera_interpolators()
 
 
     call chidg%set('Solution Order', integer_input=2)
-    call chidg%initialize_solution_domains()
+    call chidg%init('domains')
     call chidg%init('communication')
 
 
@@ -96,23 +96,5 @@ subroutine test__compute_chimera_interpolators()
     call delete_file(filename)
 
 
-end subroutine
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+end subroutine test__compute_chimera_interpolators
 

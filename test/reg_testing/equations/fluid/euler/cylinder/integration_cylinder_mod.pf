@@ -357,10 +357,13 @@ contains
         ! Initialize solution data storage
         !
         call this%chidg%set('Solution Order', integer_input=this%order)
-        call this%chidg%initialize_solution_domains()
-        call this%chidg%init('communication')
-        call this%chidg%init('chimera')
-        call this%chidg%initialize_solution_solver()
+        call this%chidg%init('all')
+        !call this%chidg%initialize_solution_domains()
+        !call this%chidg%init('domains')
+        !call this%chidg%init('communication')
+        !call this%chidg%init('chimera')
+        !call this%chidg%init('solvers')
+        !call this%chidg%initialize_solution_solver()
 
 
 
@@ -386,16 +389,16 @@ contains
         !
         ! Wrap-up initialization activities
         !
-        call this%chidg%init('finalize')
+        !call this%chidg%init('finalize')
 
     end subroutine SetUp
-    !******************************************************************************************************
+    !*******************************************************************************************
 
 
     !>
     !!
     !!
-    !------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(cylinder),  intent(inout)   :: this
 
@@ -403,7 +406,7 @@ contains
         call this%chidg%shut_down('core')
 
     end subroutine tearDown
-    !******************************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -418,14 +421,14 @@ contains
     !!
     !!      - store the nonlinear convergence to the module variable so it can 
     !!        be used by a test for nonlinear convergence.
-    !!      - test solution symmetry between some elements located symmetrically about the horizontal
-    !!        axis.
+    !!      - test solution symmetry between some elements located symmetrically about the
+    !!        horizontal axis.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/18/2016
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     @Test(npes=[1,2,4,7,10])
     subroutine test_symmetry(self)
         class(cylinder),  intent(inout)   :: self
@@ -456,7 +459,8 @@ contains
 
 
         !
-        ! Test symmetry. Do some comparisons of the solution between symmetrically located elements
+        ! Test symmetry. Do some comparisons of the solution between symmetrically 
+        ! located elements.
         !
         ! Block 1 is directly below the cylinder
         ! Block 3 is directly above the cylinder
@@ -477,7 +481,8 @@ contains
         do ielem_search = 1,size(elems_top)
             
             !
-            ! Find the top and bottom solutions and if found, send to the master process so they can be compared
+            ! Find the top and bottom solutions and if found, send to the master process so 
+            ! they can be compared.
             !
             dom_search = doms_top(ielem_search)
             elem_search = elems_top(ielem_search)
@@ -536,7 +541,7 @@ contains
 
 
     end subroutine test_symmetry
-    !*******************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -545,18 +550,19 @@ contains
 
 
 
-    !>  Access the stored nonlinear convergence data(module global variable) and compare the parallel 
-    !!  convergence to the serial convergence for each (order) combination.
+    !>  Access the stored nonlinear convergence data(module global variable) and compare the 
+    !!  parallel convergence to the serial convergence for each (order) combination.
     !!
     !!  This assumes that the 'test_symmetry' has already been executed for all cases
-    !!  and numbers of processors to that the 'nonlinear_convergence' variable has been populated.
+    !!  and numbers of processors to that the 'nonlinear_convergence' variable has 
+    !!  been populated.
     !!  So, we are relying on pFUnit to do things in order here. Works now, but I don't think
     !!  there is a guaruntee that this can't change.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/15/2016
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     @Test(npes=[1])
     subroutine test_nonlinear_convergence(self)
         class(cylinder),  intent(inout)   :: self
@@ -570,7 +576,8 @@ contains
                 ! Get the serial convergence for this (igrid,iorder)
                 reference_convergence = nonlinear_convergence(1,iorder)%data()
 
-                ! Test that the current convergence for the processor count matches the serial convergence
+                ! Test that the current convergence for the processor count matches 
+                ! the serial convergence.
                 test_convergence = nonlinear_convergence(inpes,iorder)%data()
 
 
@@ -581,7 +588,7 @@ contains
 
 
     end subroutine test_nonlinear_convergence
-    !*******************************************************************************************************
+    !*******************************************************************************************
 
 
 

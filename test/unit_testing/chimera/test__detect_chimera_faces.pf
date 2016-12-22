@@ -61,7 +61,7 @@ subroutine test__detect_chimera_faces()
 
 
     call chidg%set('Solution Order', integer_input=2)
-    call chidg%initialize_solution_domains()
+    call chidg%init('domains')
     call chidg%init('communication')
 
 

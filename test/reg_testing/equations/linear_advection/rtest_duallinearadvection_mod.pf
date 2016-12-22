@@ -23,8 +23,8 @@ module rtest_duallinearadvection_mod
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
-                                          XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG, NFACES, &
-                                          IO_DESTINATION
+                                          XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
+                                          DIAG, NFACES, IO_DESTINATION
     use type_chidg,                 only: chidg_t
     use type_function,              only: function_t
     use mod_function,               only: create_function
@@ -81,11 +81,12 @@ module rtest_duallinearadvection_mod
 
 contains
 
-    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
-    !! procedure. The argument names have to match
+    !>  NOTE: make sure to use 'this' instead of 'self' since these are over-writting a 
+    !!  derived type 
+    !!  procedure. The argument names have to match
     !!
     !!
-    !----------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_eq_duallinearadvection),    intent(inout)   :: this
         
@@ -112,13 +113,13 @@ contains
 
         ! Initialize solution storage
         call this%chidg%set('Solution Order', integer_input=2)
-        call this%chidg%initialize_solution_domains()
+        call this%chidg%init('domains')
         call this%chidg%init('communication')
-        call this%chidg%initialize_solution_solver()
+        call this%chidg%init('solvers')
 
 
     end subroutine setUp
-    !*******************************************************************************************
+    !******************************************************************************************
     
 
 

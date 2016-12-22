@@ -2,8 +2,8 @@ module test_euler_mod
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
-                                          XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NFACES, &
-                                          IO_DESTINATION
+                                          XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
+                                          NFACES, IO_DESTINATION
 
     use type_chidg,                 only: chidg_t
     use type_function,              only: function_t
@@ -107,9 +107,9 @@ contains
         call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'euler')
 
         call this%chidg%set('Solution Order', integer_input=2)
-        call this%chidg%initialize_solution_domains()
+        call this%chidg%init('domains')
         call this%chidg%init('communication')
-        call this%chidg%initialize_solution_solver()
+        call this%chidg%init('solvers')
 
 
         !

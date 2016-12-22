@@ -80,7 +80,7 @@ contains
         call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'duallinearadvection')
 
         call this%chidg%set('Solution Order', integer_input=2)
-        call this%chidg%initialize_solution_domains()
+        call this%chidg%init('domains')
 
 
 

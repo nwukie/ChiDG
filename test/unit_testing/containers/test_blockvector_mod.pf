@@ -36,11 +36,10 @@ module test_blockvector_mod
 
 contains
 
-    !>
-    !! NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
-    !! procedure. The argument names have to match
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a 
+    !! derived type procedure. The argument names have to match
     !!
-    !--------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_blockvector),    intent(inout)   :: this
 
@@ -70,7 +69,8 @@ contains
         call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
 
         call this%chidg%set('Solution Order', integer_input=2)
-        call this%chidg%initialize_solution_domains()
+        call this%chidg%init('domains')
+!        call this%chidg%initialize_solution_domains()
 
 
         !
@@ -89,7 +89,7 @@ contains
         !
         call this%chidg%shut_down('core')
     end subroutine
-    !******************************************************************************************************
+    !*******************************************************************************************
 
 
 

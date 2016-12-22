@@ -358,15 +358,6 @@ contains
         call this%chidg%read_grid(this%gridfile,spacedim)
         call this%chidg%read_boundaryconditions(this%gridfile)
 
-
-
-        call this%chidg%set('Solution Order', integer_input=this%order)
-        call this%chidg%initialize_solution_domains()
-        call this%chidg%init('communication')
-        call this%chidg%init('chimera')
-        call this%chidg%initialize_solution_solver()
-
-
         !
         ! Set ChiDG components
         !
@@ -374,6 +365,19 @@ contains
         call this%chidg%set('nonlinear_solver', algorithm=nonlinear_solver, options=noptions)
         call this%chidg%set('linear_solver',    algorithm=linear_solver,    options=loptions)
         call this%chidg%set('preconditioner',   algorithm=preconditioner)
+
+
+
+
+
+        call this%chidg%set('Solution Order', integer_input=this%order)
+        call this%chidg%init('all')
+!        call this%chidg%initialize_solution_domains()
+!        call this%chidg%init('communication')
+!        call this%chidg%init('chimera')
+!        call this%chidg%initialize_solution_solver()
+
+
 
 
         !
@@ -396,12 +400,17 @@ contains
         !
         ! Wrap-up initialization activities
         !
-        call this%chidg%init('finalize')
+        !call this%chidg%init('finalize')
 
     end subroutine SetUp
-    !******************************************************************************************************
+    !*******************************************************************************************
 
 
+    !>
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(smoothbump),  intent(inout)   :: this
 
@@ -413,7 +422,7 @@ contains
         end if
 
     end subroutine tearDown
-    !******************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -434,7 +443,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     @Test(npes=[1,2,4,7,10])
     subroutine test_entropy_error_rate(self)
         class(smoothbump),  intent(inout)   :: self
@@ -471,7 +480,7 @@ contains
 
 
     end subroutine test_entropy_error_rate
-    !*******************************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -480,18 +489,19 @@ contains
 
 
 
-    !>  Access the stored nonlinear convergence data(module global variable) and compare the parallel 
-    !!  convergence to the serial convergence for each (grid,order) combination.
+    !>  Access the stored nonlinear convergence data(module global variable) and compare 
+    !!  the parallel convergence to the serial convergence for each (grid,order) combination.
     !!
     !!  This assumes that the 'test_entropy_error_rate' has already been executed for all cases
-    !!  and numbers of processors to that the 'nonlinear_convergence' variable has been populated.
+    !!  and numbers of processors to that the 'nonlinear_convergence' variable has been 
+    !!  populated.
     !!  So, we are relying on pFUnit to do things in order here. Works now, but I don't think
     !!  there is a guaruntee that this can't change.
     !!
     !!  @author Nathan A. Wukie
     !!  @author Nathan A. Wukie (AFRL)
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     @Test(npes=[1])
     subroutine test_nonlinear_convergence(self)
         class(smoothbump),  intent(inout)   :: self
@@ -518,7 +528,7 @@ contains
 
 
     end subroutine test_nonlinear_convergence
-    !*******************************************************************************************************
+    !*******************************************************************************************
 
 
 

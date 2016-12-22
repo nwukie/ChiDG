@@ -2,8 +2,8 @@ module test_scalar_advection_mod
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
-                                          XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NFACES, &
-                                          IO_DESTINATION
+                                          XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
+                                          NFACES, IO_DESTINATION
 
     use type_chidg,                 only: chidg_t
     use type_point,                 only: point_t
@@ -26,7 +26,7 @@ module test_scalar_advection_mod
     !!  @author Nathan A. Wukie
     !!
     !!
-    !--------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     @TestParameter(constructor=newBlock)
     type, extends (AbstractTestParameter) :: blockParam
 
@@ -37,7 +37,7 @@ module test_scalar_advection_mod
         procedure :: toString
         
     end type blockParam
-    !*********************************************************************************************
+    !*******************************************************************************************
     
     
 
@@ -50,7 +50,7 @@ module test_scalar_advection_mod
     !!  @author Nathan A. Wukie
     !!
     !!
-    !---------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     @TestCase(constructor=newTest)
     type, extends(ParameterizedTestCase) ::  test_eq_SA
 
@@ -63,7 +63,7 @@ module test_scalar_advection_mod
         procedure   ::  tearDown
 
     end type test_eq_SA
-    !*********************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -75,12 +75,12 @@ module test_scalar_advection_mod
 contains
 
 
-    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
-    !! procedure. The argument names have to match
+    !>  NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived 
+    !!  type procedure. The argument names have to match
     !!
     !!  This tests up the test case. Initializes chidg, reads grid, initialize data. 
     !!
-    !---------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_eq_SA),    intent(inout)   :: this
         
@@ -117,9 +117,9 @@ contains
         call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
 
         call this%chidg%set('Solution Order', integer_input=2)
-        call this%chidg%initialize_solution_domains()
+        call this%chidg%init('domains')
         call this%chidg%init('communication')
-        call this%chidg%initialize_solution_solver()
+        call this%chidg%init('solvers')
 
 
         !

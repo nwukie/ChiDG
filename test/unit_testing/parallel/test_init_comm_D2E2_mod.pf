@@ -15,7 +15,8 @@ module test_init_comm_D2E2_mod
 
 contains
 
-    !>  This test reads two 2x1x1 element grids using 1, 2, and 4 processors and tests communication data.
+    !>  This test reads two 2x1x1 element grids using 1, 2, and 4 processors and 
+    !!  tests communication data.
     !!
     !!
     !!  .---.---. .---.---.
@@ -24,9 +25,10 @@ contains
     !!  Domain 1  Domain 2
     !!
     !!
-    !!  Using 1 processor, all communication(face neighbors) should be local. Using 4 processors, all communication
-    !!  should occur globally, across processors. Here, we just check all the indices defining the communication
-    !!  for the different cases, npes=[1, 2, 4].
+    !!  Using 1 processor, all communication(face neighbors) should be local. 
+    !!  Using 4 processors, all communication should occur globally, across processors. 
+    !!  Here, we just check all the indices defining the communication for the different 
+    !!  cases, npes=[1, 2, 4].
     !!
     !!
     !!  NOTE: The MPI Asserts seem to be hanging if they fail, instead of failing and 
@@ -61,8 +63,6 @@ contains
 
         gridfile = "D2E2M1.h5"
         if (IRANK == GLOBAL_MASTER) then
-            !call create_mesh_file("D2 NxNxN M1",gridfile,nelem_xi =2,nelem_eta =1,nelem_zeta =1, &
-            !                                             nelem_xi2=2,nelem_eta2=1,nelem_zeta2=1)
             call create_mesh_file("D2 NxNxN M1",gridfile,nelem_xi=4,nelem_eta=1,nelem_zeta=1)
         end if
         call MPI_Barrier(ChiDG_COMM,ierr)
@@ -83,7 +83,7 @@ contains
         ! Initialization
         !
         call chidg%set('Solution Order', integer_input=3)
-        call chidg%initialize_solution_domains()
+        call chidg%init('domains')
         call chidg%init('communication')
 
 

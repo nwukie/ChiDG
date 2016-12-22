@@ -3,8 +3,8 @@ module precon_jacobi
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: DIAG
     use type_preconditioner,    only: preconditioner_t
-    use type_chidgMatrix,       only: chidgMatrix_t
-    use type_chidgVector,       only: chidgVector_t
+    use type_chidg_matrix,       only: chidg_matrix_t
+    use type_chidg_vector,       only: chidg_vector_t
     use type_chidg_data,        only: chidg_data_t
     use type_densematrix,       only: densematrix_t
 
@@ -106,8 +106,8 @@ contains
     !----------------------------------------------------------------------------------------
     subroutine update(self,A,b)
         class(precon_jacobi_t), intent(inout)   :: self
-        type(chidgMatrix_t),    intent(in)      :: A
-        type(chidgVector_t),    intent(in)      :: b
+        type(chidg_matrix_t),    intent(in)      :: A
+        type(chidg_vector_t),    intent(in)      :: b
 
 
         integer(ik) :: ielem, ndom
@@ -157,10 +157,10 @@ contains
     !----------------------------------------------------------------------------------------
     function apply(self,A,v) result(z)
         class(precon_jacobi_t), intent(inout)   :: self
-        type(chidgMatrix_t),    intent(in)      :: A
-        type(chidgVector_t),    intent(in)      :: v
+        type(chidg_matrix_t),    intent(in)      :: A
+        type(chidg_vector_t),    intent(in)      :: v
 
-        type(chidgVector_t) :: z
+        type(chidg_vector_t) :: z
         integer(ik)         :: ielem, idom, ndom
 
         call self%timer%start()

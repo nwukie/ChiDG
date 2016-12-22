@@ -9,4 +9,5 @@ testrun
 *.swp
 *~
 *.out
+*.bak
 tags

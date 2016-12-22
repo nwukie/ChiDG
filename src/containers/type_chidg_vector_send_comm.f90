@@ -1,4 +1,4 @@
-module type_chidgVector_send_comm
+module type_chidg_vector_send_comm
 #include <messenger.h>
     use mod_kinds,          only: ik
     use mod_constants,      only: INTERIOR, CHIMERA
@@ -21,7 +21,7 @@ module type_chidgVector_send_comm
     !!
     !!
     !------------------------------------------------------------------------------------
-    type, public :: chidgVector_send_comm_t
+    type, public :: chidg_vector_send_comm_t
 
         integer(ik)                     :: proc
         type(ivector_t)                 :: dom_send         !< Vector of domain indices in the mesh that have elems to be sent.
@@ -32,7 +32,7 @@ module type_chidgVector_send_comm
         procedure,  public  :: init     !< Initialize the send info going to a particular process
         procedure,  public  :: nsends   !< Return the number of sends going to the process
 
-    end type chidgVector_send_comm_t
+    end type chidg_vector_send_comm_t
     !************************************************************************************
 
 
@@ -61,7 +61,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------
     subroutine init(self,mesh,proc)
-        class(chidgVector_send_comm_t), intent(inout)   :: self
+        class(chidg_vector_send_comm_t), intent(inout)   :: self
         type(mesh_t),                   intent(in)      :: mesh(:)
         integer(ik),                    intent(in)      :: proc
 
@@ -193,7 +193,7 @@ contains
         ! Initialize element send indices for each domain to be sent
         !
 
-        ! Communicate number of domains being sent to proc. This is recv'd by chidgVector_recv_comm
+        ! Communicate number of domains being sent to proc. This is recv'd by chidg_vector_recv_comm
         call MPI_ISend(self%dom_send%size_, 1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, null_request, ierr)
 
 
@@ -246,7 +246,7 @@ contains
     !!
     !---------------------------------------------------------------------------------------
     function nsends(self) result(nsend)
-        class(chidgVector_send_comm_t), intent(in)  :: self
+        class(chidg_vector_send_comm_t), intent(in)  :: self
 
         integer(ik) :: nsend, idom_send, ielem_send
 
@@ -268,4 +268,4 @@ contains
 
 
 
-end module type_chidgVector_send_comm
+end module type_chidg_vector_send_comm

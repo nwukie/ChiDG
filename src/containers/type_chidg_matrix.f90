@@ -1,4 +1,4 @@
-module type_chidgMatrix
+module type_chidg_matrix
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
     use mod_chidg_mpi,          only: IRANK
@@ -7,7 +7,7 @@ module type_chidgMatrix
     use type_face_info,         only: face_info_t
     use type_seed,              only: seed_t
     use type_bcset_coupling,    only: bcset_coupling_t
-    use type_chidgVector,       only: chidgVector_t
+    use type_chidg_vector,       only: chidg_vector_t
     use DNAD_D
     implicit none
 
@@ -22,7 +22,7 @@ module type_chidgMatrix
     !!
     !!
     !-----------------------------------------------------------------------------------------------------------
-    type, public :: chidgMatrix_t
+    type, public :: chidg_matrix_t
 
         type(blockmatrix_t), allocatable    :: dom(:)                       !< Array of block-matrices. One for each domain
 
@@ -45,7 +45,7 @@ module type_chidgMatrix
 
         final       :: destructor
 
-    end type chidgMatrix_t
+    end type chidg_matrix_t
     !***********************************************************************************************************
 
 
@@ -56,7 +56,7 @@ contains
 
 
 
-    !>  Subroutine for initializing chidgMatrix_t
+    !>  Subroutine for initializing chidg_matrix_t
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -66,7 +66,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------------------------
     subroutine initialize(self,mesh,bcset_coupling,mtype)
-        class(chidgMatrix_t),   intent(inout)           :: self
+        class(chidg_matrix_t),   intent(inout)           :: self
         type(mesh_t),           intent(in)              :: mesh(:)
         type(bcset_coupling_t), intent(in), optional    :: bcset_coupling(:)
         character(*),           intent(in)              :: mtype
@@ -133,8 +133,8 @@ contains
     !!
     !-----------------------------------------------------------------------------------------------------------
     subroutine init_recv(self,x)
-        class(chidgMatrix_t),   intent(inout)   :: self
-        type(chidgVector_t),    intent(in)      :: x
+        class(chidg_matrix_t),   intent(inout)   :: self
+        type(chidg_vector_t),    intent(in)      :: x
 
         integer(ik) :: idom, ielem, iblk, matrix_proc, vector_proc, comm_proc
         integer(ik) :: dparent_g, eparent_g, parent_proc, icomm, idom_recv, ielem_recv, drecv_g, erecv_g, recv_domain, recv_elem
@@ -198,7 +198,7 @@ contains
 
                             end do ! icomm
 
-                            if (.not. match_found) call chidg_signal(FATAL,"chidgMatrix%init_recv: no matching recv element found in vector")
+                            if (.not. match_found) call chidg_signal(FATAL,"chidg_matrix%init_recv: no matching recv element found in vector")
 
 
 
@@ -277,8 +277,6 @@ contains
                                                     self%dom(idom)%chi_blks(ielem,iblk)%recv_element = ielem_recv
                                                     match_found = .true.
                                                     exit
-                                                !else if ( (drecv_g == dparent_g) .and. (erecv_g == eparent_g) .and. (match_found .eqv. .true.) ) then
-                                                !    call chidg_signal(FATAL,"chidgMatrix: recv entry already found")
                                                 end if
 
                                             end do !ielem_recv
@@ -293,7 +291,7 @@ contains
 
                                 end do ! icomm
 
-                                if (.not. match_found) call chidg_signal(FATAL,"chidgMatrix%init_recv: no matching recv element found in vector")
+                                if (.not. match_found) call chidg_signal(FATAL,"chidg_matrix%init_recv: no matching recv element found in vector")
 
 
 
@@ -353,7 +351,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------------------------
     subroutine store(self, integral, idom, ielem, iblk, ivar)
-        class(chidgMatrix_t),   intent(inout)   :: self
+        class(chidg_matrix_t),   intent(inout)   :: self
         type(AD_D),             intent(in)      :: integral(:)
         integer(ik),            intent(in)      :: idom, ielem, iblk, ivar
 
@@ -386,7 +384,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------------------------
     subroutine store_chimera(self,integral,face_info,seed,ivar)
-        class(chidgMatrix_t),       intent(inout)   :: self
+        class(chidg_matrix_t),       intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
         type(face_info_t),          intent(in)      :: face_info
         type(seed_t),               intent(in)      :: seed
@@ -425,7 +423,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------------------------
     subroutine store_bc(self,integral,face_info,seed,ivar)
-        class(chidgMatrix_t),       intent(inout)   :: self
+        class(chidg_matrix_t),       intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
         type(face_info_t),          intent(in)      :: face_info
         type(seed_t),               intent(in)      :: seed
@@ -468,7 +466,7 @@ contains
     !! 
     !----------------------------------------------------------------------------------------------------------
     subroutine clear(self)
-        class(chidgMatrix_t),   intent(inout)   :: self
+        class(chidg_matrix_t),   intent(inout)   :: self
 
         integer(ik) :: idom
     
@@ -502,11 +500,11 @@ contains
     !!
     !-----------------------------------------------------------------------------------------------------------
     subroutine destructor(self)
-        type(chidgMatrix_t),    intent(inout)   :: self
+        type(chidg_matrix_t),    intent(inout)   :: self
 
     end subroutine
     !***********************************************************************************************************
 
 
 
-end module type_chidgMatrix
+end module type_chidg_matrix

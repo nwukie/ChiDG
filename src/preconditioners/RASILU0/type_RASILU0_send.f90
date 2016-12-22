@@ -5,7 +5,7 @@ module type_RASILU0_send
 
     use type_RASILU0_send_comm, only: RASILU0_send_comm_t
     use type_mesh,              only: mesh_t
-    use type_chidgMatrix,       only: chidgMatrix_t
+    use type_chidg_matrix,       only: chidg_matrix_t
     use type_ivector,           only: ivector_t
     implicit none
 
@@ -51,7 +51,7 @@ contains
     subroutine init(self,mesh,A)
         class(RASILU0_send_t),  intent(inout)   :: self
         type(mesh_t),           intent(in)      :: mesh(:)
-        type(chidgMatrix_t),    intent(in)      :: A
+        type(chidg_matrix_t),    intent(in)      :: A
 
         type(ivector_t)             :: send_procs
         integer(ik),    allocatable :: send_procs_dom(:)

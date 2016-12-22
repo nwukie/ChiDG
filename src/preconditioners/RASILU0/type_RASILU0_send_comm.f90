@@ -5,7 +5,7 @@ module type_RASILU0_send_comm
     use mod_chidg_mpi,              only: ChiDG_COMM, IRANK
     use type_ivector,               only: ivector_t
     use type_mesh,                  only: mesh_t
-    use type_chidgMatrix,           only: chidgMatrix_t
+    use type_chidg_matrix,           only: chidg_matrix_t
     use type_RASILU0_send_comm_dom, only: RASILU0_send_comm_dom_t
 
     use mpi_f08,                    only: MPI_ISend, MPI_INTEGER4, MPI_REQUEST
@@ -58,7 +58,7 @@ contains
     subroutine init(self,mesh,A,proc)
         class(RASILU0_send_comm_t), intent(inout)   :: self
         type(mesh_t),               intent(in)      :: mesh(:)
-        type(chidgMatrix_t),        intent(in)      :: A
+        type(chidg_matrix_t),        intent(in)      :: A
         integer(ik),                intent(in)      :: proc
 
         type(ivector_t)             :: dom_send

@@ -4,7 +4,7 @@ module test_comm_D2E2_mod
     use mod_test_utilities,         only: create_mesh_file
     use mod_file_utilities,         only: delete_file
     use type_chidg,                 only: chidg_t
-    use type_chidgVector,           only: chidgVector_t
+    use type_chidg_vector,           only: chidg_vector_t
     use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
     use operator_chidg_dot,         only: dot
     use mpi_f08,                    only: MPI_COMM
@@ -186,7 +186,7 @@ contains
     subroutine chidgvector__dot_comm(self)
         class(test_comm_D2E2), intent(inout) :: self
 
-        type(chidgVector_t) :: a, b
+        type(chidg_vector_t) :: a, b
         integer(ik)         :: nelem
         real(rk)            :: computed_dot, expected_dot
 

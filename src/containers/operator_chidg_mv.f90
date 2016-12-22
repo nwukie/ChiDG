@@ -3,8 +3,8 @@ module operator_chidg_mv
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: ONE
     use mod_chidg_mpi,      only: IRANK, ChiDG_COMM
-    use type_chidgMatrix,   only: chidgMatrix_t
-    use type_chidgVector
+    use type_chidg_matrix,   only: chidg_matrix_t
+    use type_chidg_vector
 
     use type_timer,         only: timer_t
 
@@ -37,10 +37,10 @@ contains
     !------------------------------------------------------------------------------------
     !function MULT_chidgMatrix_chidgVector(A,x) result(res)
     function chidg_mv(A,x) result(res)
-        type(chidgMatrix_t),    intent(inout)   :: A
-        type(chidgVector_t),    intent(inout)   :: x
+        type(chidg_matrix_t),    intent(inout)   :: A
+        type(chidg_vector_t),    intent(inout)   :: x
 
-        type(chidgVector_t)     :: res
+        type(chidg_vector_t)     :: res
         integer(ik)             :: idom, ielem, iblk, recv_comm, recv_domain, recv_element
         integer(ik)             :: dparent_g, dparent_l, eparent_g, eparent_l
         integer(ik)             :: matrix_proc, vector_proc, nrows, ncols, ierr

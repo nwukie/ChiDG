@@ -9,8 +9,8 @@ module type_fgmres
 
     use type_linear_solver,     only: linear_solver_t 
     use type_preconditioner,    only: preconditioner_t
-    use type_chidgVector
-    use type_chidgMatrix
+    use type_chidg_vector
+    use type_chidg_matrix
 
     use operator_chidg_dot,     only: dot
     use operator_chidg_mv,      only: chidg_mv
@@ -59,15 +59,15 @@ contains
     !---------------------------------------------------------------------------------------------
     subroutine solve(self,A,x,b,M)
         class(fgmres_t),            intent(inout)               :: self
-        type(chidgMatrix_t),        intent(inout)               :: A
-        type(chidgVector_t),        intent(inout)               :: x
-        type(chidgVector_t),        intent(inout)               :: b
+        type(chidg_matrix_t),        intent(inout)               :: A
+        type(chidg_vector_t),        intent(inout)               :: x
+        type(chidg_vector_t),        intent(inout)               :: b
         class(preconditioner_t),    intent(inout), optional     :: M
 
 
 
-        type(chidgVector_t)                     :: r, r0, diff, xold, w, x0
-        type(chidgVector_t), allocatable        :: v(:), z(:)
+        type(chidg_vector_t)                     :: r, r0, diff, xold, w, x0
+        type(chidg_vector_t), allocatable        :: v(:), z(:)
         real(rk),            allocatable        :: h(:,:), h_square(:,:)
         real(rk),            allocatable        :: p(:), y(:), c(:), s(:), p_dim(:), y_dim(:)
         real(rk)                                :: pj, pjp, h_ij, h_ipj, htmp

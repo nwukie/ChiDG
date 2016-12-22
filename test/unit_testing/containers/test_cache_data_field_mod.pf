@@ -1,3 +1,22 @@
+!>  This suite tests the cache_data_field container.
+!!
+!!  This test creates an initialized chidg instance, complete with grid and solution storage. 
+!!  A particular element is chosen and a cache_data_field instance is 'resized'. We want to 
+!!  test that the cache_data_field was resized correctly for all the potential component 
+!!  uses: 'face interior', 'face exterior', 'element'.
+!!
+!!  Routines tested:
+!!      resize
+!!
+!!  Cases tested:
+!!      'face interior'
+!!      'face exterior'
+!!      ' element'
+!!
+!!  @author Nathan A. Wukie
+!!  @date   9/7/2016
+!!
+!----------------------------------------------------------------------------------------------
 module test_cache_data_field_mod
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
@@ -89,7 +108,7 @@ contains
 
 
 
-    !> Test element metric entries at quadrature points
+    !>  Test 'face interior' for allocated arrays.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/7/2016
@@ -128,7 +147,7 @@ contains
 
 
 
-    !> Test element metric entries at quadrature points
+    !>  Test 'face interior' for expected sizes.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/7/2016
@@ -185,7 +204,7 @@ contains
         @assertEqual(size(cache_data_field%lift_element,3), 2)
         
     end subroutine test_resize_face_interior__size
-    !***************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -194,12 +213,12 @@ contains
 
 
 
-    !> Test element metric entries at quadrature points
+    !>  Test 'face exterior' for allocated arrays.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/7/2016
     !!
-    !!-------------------------------------------------------------------------------------
+    !!-----------------------------------------------------------------------------------------
     @Test
     subroutine test_resize_face_exterior__allocated(self)
         class(test_cache_data_field),    intent(inout)   :: self
@@ -228,18 +247,18 @@ contains
         @assertTrue(allocated(cache_data_field%lift_element))
         
     end subroutine test_resize_face_exterior__allocated
-    !***************************************************************************************
+    !******************************************************************************************
 
 
 
 
 
-    !> Test element metric entries at quadrature points
+    !>  Test 'face exterior' case for expected sizes.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/7/2016
     !!
-    !!-------------------------------------------------------------------------------------
+    !!-----------------------------------------------------------------------------------------
     @Test
     subroutine test_resize_face_exterior__size(self)
         class(test_cache_data_field),    intent(inout)   :: self
@@ -288,7 +307,7 @@ contains
         @assertEqual(size(cache_data_field%lift_element,3), 2)
         
     end subroutine test_resize_face_exterior__size
-    !***************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -300,16 +319,12 @@ contains
 
 
 
-
-
-
-
-    !> Test element metric entries at quadrature points
+    !>  Test 'element' case for allocated arrays.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/7/2016
     !!
-    !!-------------------------------------------------------------------------------------
+    !!-----------------------------------------------------------------------------------------
     @Test
     subroutine test_resize_element__allocated(self)
         class(test_cache_data_field),    intent(inout)   :: self
@@ -337,18 +352,18 @@ contains
         @assertTrue(allocated(cache_data_field%lift_element))
         
     end subroutine test_resize_element__allocated
-    !***************************************************************************************
+    !******************************************************************************************
 
 
 
 
 
-    !> Test element metric entries at quadrature points
+    !>  Test 'element' case for expected array sizes.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/7/2016
     !!
-    !!-------------------------------------------------------------------------------------
+    !!-----------------------------------------------------------------------------------------
     @Test
     subroutine test_resize_element__size(self)
         class(test_cache_data_field),    intent(inout)   :: self
@@ -395,7 +410,7 @@ contains
         @assertEqual(size(cache_data_field%lift_element,3), 7)
         
     end subroutine test_resize_element__size
-    !***************************************************************************************
+    !******************************************************************************************
 
 
 

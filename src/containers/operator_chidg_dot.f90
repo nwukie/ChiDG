@@ -2,7 +2,7 @@ module operator_chidg_dot
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: ZERO
     
-    use type_chidgVector,   only: chidgVector_t
+    use type_chidg_vector,   only: chidg_vector_t
     use operator_block_dot, only: block_dot
     use mod_chidg_mpi,      only: GROUP_MASTER
     use mpi_f08,            only: mpi_comm, MPI_AllReduce, MPI_Reduce, MPI_REAL8, MPI_SUM
@@ -16,7 +16,7 @@ contains
 
 
 
-    !>  Compute vector-vector dot product from two chidgVector_t types.
+    !>  Compute vector-vector dot product from two chidg_vector_t types.
     !!  Computed from only the processor-local instances.
     !!
     !!  @author Nathan A. Wukie
@@ -24,8 +24,8 @@ contains
     !!
     !-----------------------------------------------------------------------------
     function dot_local(a,b) result(res)
-        type(chidgVector_t),    intent(in)  :: a
-        type(chidgVector_t),    intent(in)  :: b
+        type(chidg_vector_t),    intent(in)  :: a
+        type(chidg_vector_t),    intent(in)  :: b
 
         real(rk)    :: res
         integer(ik) :: idom, ielem
@@ -46,7 +46,7 @@ contains
 
 
 
-    !>  Compute vector-vector dot product from two chidgVector_t types. This
+    !>  Compute vector-vector dot product from two chidg_vector_t types. This
     !!  is computed across the processors within the communicator comm.
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -54,8 +54,8 @@ contains
     !!
     !-----------------------------------------------------------------------------
     function dot_comm(a,b,comm) result(comm_dot)
-        type(chidgVector_t),    intent(in)  :: a
-        type(chidgVector_t),    intent(in)  :: b
+        type(chidg_vector_t),    intent(in)  :: a
+        type(chidg_vector_t),    intent(in)  :: b
         type(mpi_comm),         intent(in)  :: comm
 
         real(rk)    :: local_dot, comm_dot

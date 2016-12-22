@@ -1,8 +1,8 @@
 module type_linear_solver
     use mod_kinds,          only: rk,ik
     use type_dict,          only: dict_t
-    use type_chidgMatrix,   only: chidgMatrix_t
-    use type_chidgVector,   only: chidgVector_t
+    use type_chidg_matrix,   only: chidg_matrix_t
+    use type_chidg_vector,   only: chidg_vector_t
     use type_timer,         only: timer_t
     use operator_chidg_mv
 
@@ -56,15 +56,15 @@ module type_linear_solver
 
     abstract interface
         subroutine solve_interface(self,A,x,b,M)
-            use type_chidgMatrix,       only: chidgMatrix_t
-            use type_chidgVector,       only: chidgVector_t
+            use type_chidg_matrix,       only: chidg_matrix_t
+            use type_chidg_vector,       only: chidg_vector_t
             use type_preconditioner,    only: preconditioner_t
             import linear_solver_t
 
             class(linear_solver_t),     intent(inout)           :: self
-            type(chidgMatrix_t),        intent(inout)           :: A
-            type(chidgVector_t),        intent(inout)           :: x
-            type(chidgVector_t),        intent(inout)           :: b
+            type(chidg_matrix_t),        intent(inout)           :: A
+            type(chidg_vector_t),        intent(inout)           :: x
+            type(chidg_vector_t),        intent(inout)           :: b
             class(preconditioner_t),    intent(inout), optional :: M
         end subroutine
     end interface
@@ -189,12 +189,12 @@ contains
     !--------------------------------------------------------------------------------------------------------
     function residual(self,A,x,b) result(r)
         class(linear_solver_t),  intent(inout)   :: self
-        type(chidgMatrix_t),    intent(inout)   :: A
-        type(chidgVector_t),    intent(inout)   :: x
-        type(chidgVector_t),    intent(inout)   :: b
+        type(chidg_matrix_t),    intent(inout)   :: A
+        type(chidg_vector_t),    intent(inout)   :: x
+        type(chidg_vector_t),    intent(inout)   :: b
 
 
-        type(chidgVector_t) :: r
+        type(chidg_vector_t) :: r
         real(rk)            :: err
         integer(ik)         :: iparent, ielem, iblk
 
@@ -246,12 +246,12 @@ contains
     !-------------------------------------------------------------------------------------------------
     function error(self,A,x,b) result(err)
         class(linear_solver_t),  intent(inout)   :: self
-        type(chidgMatrix_t),    intent(inout)   :: A
-        type(chidgVector_t),    intent(inout)   :: x
-        type(chidgVector_t),    intent(inout)   :: b
+        type(chidg_matrix_t),    intent(inout)   :: A
+        type(chidg_vector_t),    intent(inout)   :: x
+        type(chidg_vector_t),    intent(inout)   :: b
 
 
-        type(chidgVector_t) :: r
+        type(chidg_vector_t) :: r
         real(rk)            :: err
 
 

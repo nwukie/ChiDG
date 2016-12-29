@@ -1101,6 +1101,10 @@ contains
     
     !>  Compute a computational location(xi,eta,zeta), based on the location in cartesian space (x,y,z)
     !!
+    !!  NOTE: Will return a location, even if the newton solve did not converge. So make
+    !!        sure to check the 'status' component of the returned point_t to check if 
+    !!        the point is valid.
+    !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   5/23/2016
     !!
@@ -1127,8 +1131,8 @@ contains
         real(rk)    :: res, tol
 
 
-        !tol = 10._rk*RKTOL
-        tol = RKTOL
+        tol = 10._rk*RKTOL
+        !tol = RKTOL
 
 
         !
@@ -1218,7 +1222,6 @@ contains
 
             if ( inewton == 20 ) then
                 loc%status = INVALID_POINT  ! point not found
-                !call chidg_signal(WARN,"element%computational_point: Newton iteration did not converge")
             end if
 
         end do ! inewton

@@ -406,11 +406,11 @@ contains
             nconn = partitions(ipartition)%nconn
             do iconn = 1,nconn
 
-                string_length = len(partitions(ipartition)%connectivities(iconn)%name)
-                call MPI_ISend(string_length,                                         1,             MPI_INTEGER4,  ipartition-1, 0, ChiDG_COMM, handle, ierr)
-                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%name,     string_length, MPI_CHARACTER, ipartition-1, 0, ChiDG_COMM, handle, ierr)
-                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%nelements,1,             MPI_INTEGER4,  ipartition-1, 0, ChiDG_COMM, handle, ierr)
-                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%nnodes,   1,             MPI_INTEGER4,  ipartition-1, 0, ChiDG_COMM, handle, ierr)
+                string_length = partitions(ipartition)%connectivities(iconn)%name_length
+                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%name_length, 1,             MPI_INTEGER4,  ipartition-1, 0, ChiDG_COMM, handle, ierr)
+                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%name,        string_length, MPI_CHARACTER, ipartition-1, 0, ChiDG_COMM, handle, ierr)
+                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%nelements,   1,             MPI_INTEGER4,  ipartition-1, 0, ChiDG_COMM, handle, ierr)
+                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%nnodes,      1,             MPI_INTEGER4,  ipartition-1, 0, ChiDG_COMM, handle, ierr)
 
 
                 ! Send a connectivity for each element. Would be more efficient to assemble a consolodated array, but must

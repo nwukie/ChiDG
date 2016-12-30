@@ -8,8 +8,8 @@
 !!  cpl   = Coupling between the elements of neighboring processors
 !!
 !!
-!!  In a domain decomposition block-Jacobi preconditioner, the processor-local problem is solved without
-!!  taking the inter-processor coupling of the problem into account.
+!!  In a domain decomposition block-Jacobi preconditioner, the processor-local problem is solved 
+!!  without taking the inter-processor coupling of the problem into account.
 !!
 !!  |--------|---------|--------|
 !!  |        |         |        |
@@ -27,64 +27,69 @@
 !!
 !!
 !!
-!!  The RAS preconditioner considers the local problem and also includes a 1-element overlap with the
-!!  neighboring processors and their coupling. The implementation here rearranges the problem so that
-!!  all overlap data is put at the end of the preconditioning matrix. The restricted part of the
-!!  preconditioner means that the solution of the preconditioning matrix is only applied to the 
-!!  processor-local portion of the global vector. This is why only a portion of the x-vector is shown
-!!  here in the diagram.
+!!  The RAS preconditioner considers the local problem and also includes a 1-element overlap 
+!!  with the neighboring processors and their coupling. The implementation here rearranges the 
+!!  problem so that all overlap data is put at the end of the preconditioning matrix. The 
+!!  restricted part of the preconditioner means that the solution of the preconditioning matrix 
+!!  is only applied to the processor-local portion of the global vector. This is why only a 
+!!  portion of the x-vector is shown here in the diagram.
 !!
 !!  |--------|---------|--------|
 !!  |        |         |        |
 !!  | proc 0 |   cpl   |  cpl   |
 !!  |        |         |        |
-!!  |--------|---------|--------|                                   |---------|--------| |-|    |-|
-!!  |        |         |        |   Restricted Additive Schwarz     |         |        | | |    | |
-!!  |  cpl   |  local  |  cpl   |           ----------->            |  local  |  cpl   | |x|    | |
-!!  |        |         |        |                                   |         |        | | |    | |
-!!  |--------|---------|--------|                                   |---------|--------| |-|  = |b|
-!!  |        |         |        |                                   |         | proc#  |        | |
-!!  |  cpl   |   cpl   | proc 2 |                                   |  cpl    | overlap|        | |
-!!  |        |         |        |                                   |---------|--------|        |-|
+!!  |--------|---------|--------|                               |---------|--------| |-|    |-|
+!!  |        |         |        |  Restricted Additive Schwarz  |         |        | | |    | |
+!!  |  cpl   |  local  |  cpl   |          ----------->         |  local  |  cpl   | |x|    | |
+!!  |        |         |        |                               |         |        | | |    | |
+!!  |--------|---------|--------|                               |---------|--------| |-|  = |b|
+!!  |        |         |        |                               |         | proc#  |        | |
+!!  |  cpl   |   cpl   | proc 2 |                               |  cpl    | overlap|        | |
+!!  |        |         |        |                               |---------|--------|        |-|
 !!  |--------|---------|--------|
 !!
 !!
 !!
 !!
-!---------------------------------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------
 module precon_RASILU0
 #include <messenger.h>
-    use mod_kinds,              only: rk, ik
-    use mod_constants,          only: DIAG, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, ETA_MAX, ZETA_MAX, ONE
-    use mod_inv,                only: inv
-    use mod_chidg_mpi,          only: IRANK, ChiDG_COMM
+    use mod_kinds,                  only: rk, ik
+    use mod_constants,              only: DIAG, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, &
+                                          ETA_MAX, ZETA_MAX, ONE
+    use mod_inv,                    only: inv
+    use mod_chidg_mpi,              only: IRANK, ChiDG_COMM
 
-    use type_RASILU0_send,      only: RASILU0_send_t
-    use type_RASILU0_recv,      only: RASILU0_recv_t
-    use type_preconditioner,    only: preconditioner_t
-    use type_chidg_data,        only: chidg_data_t
-    use type_chidg_matrix,       only: chidg_matrix_t
-    use type_chidg_vector,       only: chidg_vector_t
+    use type_RASILU0_send,          only: RASILU0_send_t
+    use type_RASILU0_recv,          only: RASILU0_recv_t
+    use type_preconditioner,        only: preconditioner_t
+    use type_chidg_data,            only: chidg_data_t
+    use type_chidg_matrix,          only: chidg_matrix_t
+    use type_chidg_vector,          only: chidg_vector_t
 
-    use mpi_f08,                only: MPI_ISend, MPI_Recv, MPI_REAL8, MPI_REQUEST, MPI_STATUS_IGNORE, MPI_Barrier
+    use type_mpi_request_vector,    only: mpi_request_vector_t
+    use mpi_f08,                    only: MPI_ISend, MPI_Recv, MPI_REAL8, MPI_REQUEST, &
+                                          MPI_STATUS_IGNORE, MPI_STATUSES_IGNORE, MPI_Barrier
     implicit none
 
     external DGEMV
 
-    !>  Restricted Additive Schwarz(RAS) preconditioner using ILU0 to solve the local problems includeing the 
-    !!  RAS overlap data.
+    !>  Restricted Additive Schwarz(RAS) preconditioner using ILU0 to solve the local problems 
+    !!  includeing the RAS overlap data.
     !!
     !!  @author Nathan A. Wukie(AFRL)
     !!  @date   8/10/2016
     !!
     !!
-    !-----------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     type, extends(preconditioner_t) :: precon_RASILU0_t
 
         type(chidg_matrix_t)     :: LD       !< Lower-Diagonal matrix for local problems
 
-        type(RASILU0_send_t)    :: send     !< Information on overlapping data to send to other processors
-        type(RASILU0_recv_t)    :: recv     !< Container to receive overlapping data from other processors
+        type(RASILU0_send_t)    :: send     !< Overlapping data to send to other processors
+        type(RASILU0_recv_t)    :: recv     !< Overlapping data to receive from other processors
+
+        type(mpi_request_vector_t)  :: mpi_requests
 
     contains
     
@@ -97,7 +102,7 @@ module precon_RASILU0
         procedure   :: comm_wait
 
     end type precon_RASILU0_t
-    !***********************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -106,15 +111,15 @@ contains
 
 
 
-    !> Initialize the ILU0 preconditioner. This is for allocating storage. In this case, we allocate
-    !! a Lower-Diagonal block matrix for storing the LU decomposition.
+    !>  Initialize the ILU0 preconditioner. This is for allocating storage. In this case, we 
+    !!  allocate a Lower-Diagonal block matrix for storing the LU decomposition.
     !!  
     !!  @author Nathan A. Wukie(AFRL)
     !!  @date   8/10/2016
     !!
     !!  @param[inout]   data      chidg data container, with mesh, solution, etc.
     !!
-    !-----------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine init(self,data)
         class(precon_RASILU0_t),    intent(inout)   :: self
         type(chidg_data_t),         intent(in)      :: data
@@ -135,7 +140,7 @@ contains
         call self%recv%init(data%mesh, data%sdata%lhs, data%sdata%rhs)
 
     end subroutine init
-    !*************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -146,24 +151,27 @@ contains
 
     !>  Update the preconditioner.
     !!
-    !!  For the Restricted Additive Schwarz algorithm, this exchanges the processor overlap data and 
-    !!  computes information that is reused every iteration. Here, it is premultiplying some
-    !!  of the blocks and computing some matrix inversions that do not depend on the incoming vector.
+    !!  For the Restricted Additive Schwarz algorithm, this exchanges the processor overlap data 
+    !!  and computes information that is reused every iteration. Here, it is premultiplying some
+    !!  of the blocks and computing some matrix inversions that do not depend on the incoming 
+    !!  vector.
     !!
     !!
     !!  @author Nathan A. Wukie(AFRL)
     !!  @date   8/10/2016
     !!
     !!
-    !--------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine update(self,A,b)
         class(precon_RASILU0_t),    intent(inout)   :: self
         type(chidg_matrix_t),        intent(in)      :: A
         type(chidg_vector_t),        intent(in)      :: b
 
 
-        integer(ik) :: ielem, irow, icol, eparent_l, idom, ndom, ilower, trans_elem, trans_blk, nrowsA, ncolsA, ncolsB
-        integer(ik) :: iblk_diag_parent, iblk_diag, iblk, icomm, parent_proc
+        character(:),   allocatable :: user_msg
+        integer(ik)                 :: ielem, irow, icol, eparent_l, idom, ndom, ilower, &
+                                       trans_elem, trans_blk, nrowsA, ncolsA, ncolsB,    &
+                                       iblk_diag_parent, iblk_diag, iblk, icomm, parent_proc
 
 
         call write_line(' Computing RAS-ILU0 factorization', io_proc=GLOBAL_MASTER)
@@ -175,13 +183,14 @@ contains
         !
         call self%comm_send(A)
         call self%comm_recv()
-
+        call self%comm_wait()
 
 
         !
         ! Test preconditioner initialization
         !
-        if ( .not. self%initialized ) call chidg_signal(FATAL,'RASILU0%update - preconditioner has not yet been initialized')
+        user_msg = 'RASILU0%update: preconditioner has not yet been initialized.'
+        if ( .not. self%initialized ) call chidg_signal(FATAL,user_msg)
 
 
         !
@@ -324,7 +333,7 @@ contains
 
 
     end subroutine update
-    !**********************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -335,9 +344,9 @@ contains
 
     !>  Apply the preconditioner to the krylov vector 'v' and return preconditioned vector 'z'.
     !!
-    !!  We are using ILU0 for the local solve, so we perform the exchange of boundary vector data,
-    !!  compute the forward solve of the incomplete factorization and then compute the backward
-    !!  solve of the incomplete factorization.
+    !!  We are using ILU0 for the local solve, so we perform the exchange of boundary vector 
+    !!  data, compute the forward solve of the incomplete factorization and then compute the 
+    !!  backward solve of the incomplete factorization.
     !!  
     !!  Assumption: All overlap data is placed at the end of the local system of equations.
     !!          
@@ -361,7 +370,7 @@ contains
     !!
     !!
     !!
-    !--------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     function apply(self,A,v) result(z)
         class(precon_RASILU0_t),   intent(inout)   :: self
         type(chidg_matrix_t),    intent(in)      :: A
@@ -369,9 +378,10 @@ contains
 
         type(chidg_vector_t) :: z
 
-        integer(ik)         :: ielem, eparent_l, irow, icol, idom, ndom, ilower, iupper, iblk, iblk_diag, icomm, parent_proc
-        integer(ik)         :: recv_comm, recv_domain, recv_element, recv_comm_diag, recv_domain_diag, recv_element_diag
-        integer(ik)         :: ncols, nrows
+        integer(ik)         :: ielem, eparent_l, irow, icol, idom, ndom, ilower, iupper, &
+                               iblk, iblk_diag, icomm, parent_proc, recv_comm, recv_domain, &
+                               recv_element, recv_comm_diag, recv_domain_diag, &
+                               recv_element_diag, ncols, nrows
         logical             :: interior_block
 
 
@@ -593,7 +603,7 @@ contains
         call self%timer%stop()
 
     end function apply
-    !-------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
 
 
 
@@ -606,24 +616,22 @@ contains
 
 
 
-
-
-
-    !>  Send the matrix blocks from the current processor that couple with neighboring processors to those
-    !!  processors so they can be included in the ILU0 solve of the neighbor processor.
+    !>  Send the matrix blocks from the current processor that couple with neighboring 
+    !!  processors to those processors so they can be included in the ILU0 solve of the neighbor 
+    !!  processor.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/10/2016
     !!
     !!
-    !--------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine comm_send(self,A)
         class(precon_RASILU0_t),    intent(inout)   :: self
         type(chidg_matrix_t),        intent(in)      :: A
 
         integer(ik)                 :: icomm, idom_send, ielem_send, iblk_send, idom, ielem, iblk, proc, nrows, ncols, idomain_g, ierr
         integer(ik), allocatable    :: send_blocks(:)
-        type(mpi_request)           :: null_request
+        type(mpi_request)           :: request
 
         do icomm = 1,size(self%send%comm)
             proc = self%send%comm(icomm)%proc
@@ -648,7 +656,11 @@ contains
 
                         nrows = size(A%dom(idom)%lblks(ielem,iblk)%mat,1)
                         ncols = size(A%dom(idom)%lblks(ielem,iblk)%mat,2)
-                        call MPI_ISend(A%dom(idom)%lblks(ielem,iblk)%mat, nrows*ncols, MPI_REAL8, proc, idomain_g, ChiDG_COMM, null_request, ierr)
+                        call MPI_ISend(A%dom(idom)%lblks(ielem,iblk)%mat, nrows*ncols, MPI_REAL8, proc, idomain_g, ChiDG_COMM, request, ierr)
+
+                        ! Store requests to be checked by MPI_Wait
+                        call self%mpi_requests%push_back(request)
+
                     end do !iblk
 
                 end do !ielem
@@ -662,7 +674,7 @@ contains
 
 
     end subroutine comm_send
-    !***************************************************************************************************************
+    !******************************************************************************************
        
 
 
@@ -677,13 +689,13 @@ contains
     !!  @date   8/10/2016
     !!
     !!
-    !--------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine comm_recv(self)
         class(precon_RASILU0_t),   intent(inout)   :: self
 
-        integer(ik)                 :: icomm, idom, ielem, iblk, proc, nrows, ncols, idomain_g, ierr
-        integer(ik)                 :: idom_recv, ielem_recv, iblk_recv
         integer(ik), allocatable    :: send_blocks(:)
+        integer(ik)                 :: icomm, idom, ielem, iblk, proc, nrows, ncols, idomain_g, &
+                                       idom_recv, ielem_recv, iblk_recv, ierr
         type(mpi_request)           :: null_request
 
         do idom_recv = 1,size(self%recv%dom)
@@ -710,7 +722,7 @@ contains
 
 
     end subroutine comm_recv
-    !***************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -727,17 +739,18 @@ contains
     !!
     !!
     !!
-    !--------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine comm_wait(self)
         class(precon_RASILU0_t),    intent(inout)   :: self
 
+        integer(ik) :: nwait, ierr
 
 
-
-
+        nwait = self%mpi_requests%size()
+        call MPI_Waitall(nwait, self%mpi_requests%data, MPI_STATUSES_IGNORE, ierr)
 
     end subroutine comm_wait
-    !***************************************************************************************************************
+    !******************************************************************************************
 
 
 

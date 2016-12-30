@@ -174,9 +174,9 @@ program driver
         !
         call chidg%report('before')
 
-        call write_line("Running ChiDG simulation...",proc_io=GLOBAL_MASTER)
+        call write_line("Running ChiDG simulation...",io_proc=GLOBAL_MASTER)
         call chidg%run()
-        call write_line("Done running ChiDG simulation...",proc_io=GLOBAL_MASTER)
+        call write_line("Done running ChiDG simulation...",io_proc=GLOBAL_MASTER)
 
         call chidg%report('after')
 

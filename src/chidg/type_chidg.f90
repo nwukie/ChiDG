@@ -286,7 +286,7 @@ contains
             ! Initialize domain data that depend on the solution expansion
             !
             case ('domains')
-                call write_line("Initializing domains...", proc_io=GLOBAL_MASTER)
+                call write_line("Initializing domains...", io_proc=GLOBAL_MASTER)
 
                 user_msg = "chidg%init('domains'): It appears the 'Solution Order' was &
                             not set for the current ChiDG instance. Try calling &
@@ -300,7 +300,7 @@ contains
             ! Initialize communication. Local face communication. Global parallel communication.
             !
             case ('communication')
-                call write_line("Initializing neighbor communication...", proc_io=GLOBAL_MASTER)
+                call write_line("Initializing neighbor communication...", io_proc=GLOBAL_MASTER)
                 call establish_neighbor_communication(self%data%mesh,ChiDG_COMM)
 
 
@@ -308,7 +308,7 @@ contains
             ! Initialize chimera
             !
             case ('chimera')
-                call write_line("Initializing chimera communication...", proc_io=GLOBAL_MASTER)
+                call write_line("Initializing chimera communication...", io_proc=GLOBAL_MASTER)
                 call establish_chimera_communication(self%data%mesh,ChiDG_COMM)
 
 
@@ -316,7 +316,7 @@ contains
             ! Initialize solver storage initialization: vectors, matrices, etc.
             !
             case ('solvers')
-                call write_line("Initializing solver storage...", proc_io=GLOBAL_MASTER)
+                call write_line("Initializing solver storage...", io_proc=GLOBAL_MASTER)
                 call self%data%initialize_solution_solver()
 
 
@@ -334,9 +334,9 @@ contains
                 if (.not. allocated(self%preconditioner))   call chidg_signal(FATAL,"chidg%preconditioner component was not allocated")
 
 
-                call write_line("Initializing time integrator...", proc_io=GLOBAL_MASTER)
+                call write_line("Initializing time integrator...", io_proc=GLOBAL_MASTER)
                 call self%time_integrator%init(self%data)
-                call write_line("Initializing preconditioner...", proc_io=GLOBAL_MASTER)
+                call write_line("Initializing preconditioner...", io_proc=GLOBAL_MASTER)
                 call self%preconditioner%init(self%data)
 
 
@@ -746,7 +746,7 @@ contains
         type(meshdata_t),   allocatable     :: solutiondata(:)
         integer                             :: iext, extloc, idom, ndomains, iread, ierr
 
-        call write_line("Reading solution...", proc_io=GLOBAL_MASTER)
+        call write_line("Reading solution...", io_proc=GLOBAL_MASTER)
 
         !
         ! Get filename extension
@@ -772,7 +772,7 @@ contains
         end do ! iread
 
 
-        call write_line("Done reading solution...", proc_io=GLOBAL_MASTER)
+        call write_line("Done reading solution...", io_proc=GLOBAL_MASTER)
 
     end subroutine read_solution
     !*****************************************************************************************

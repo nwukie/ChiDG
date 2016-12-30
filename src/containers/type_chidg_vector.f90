@@ -408,8 +408,6 @@ contains
 
                     ! Post non-blocking send message for the vector data
                     data_size = size(self%dom(idom)%vecs(ielem)%vec)
-                    call MPI_ISend(self%dom(idom)%vecs(ielem)%dparent_g_, 1, MPI_INTEGER4, iproc_send, 0, ChiDG_COMM, isend_handle, ierr)
-                    call MPI_ISend(self%dom(idom)%vecs(ielem)%eparent_g_, 1, MPI_INTEGER4, iproc_send, 0, ChiDG_COMM, isend_handle, ierr)
                     call MPI_ISend(self%dom(idom)%vecs(ielem)%vec, data_size, MPI_REAL8, iproc_send, 0, ChiDG_COMM, isend_handle, ierr)
 
                     ! Add non-blocking send handle to list of things to wait on
@@ -466,14 +464,8 @@ contains
             ! Recv each element chunk
             do idom_recv = 1,size(self%recv%comm(icomm)%dom)
                 do ielem_recv = 1,size(self%recv%comm(icomm)%dom(idom_recv)%vecs)
+
                     data_size = size(self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec)
-                    call MPI_Recv(dparent_g, 1, MPI_INTEGER4, proc_recv, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-                    call MPI_Recv(eparent_g, 1, MPI_INTEGER4, proc_recv, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-
-
-                    if ( (dparent_g /= self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%dparent_g()) .or. (eparent_g /= self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%eparent_g()) ) then
-                        call chidg_signal(FATAL,"Error in comm_send/comm_recv alignment")
-                    end if
                     call MPI_Recv(self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec, data_size, MPI_REAL8, proc_recv, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
                 end do ! ielem_recv

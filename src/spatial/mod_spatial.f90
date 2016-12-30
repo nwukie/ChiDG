@@ -39,7 +39,7 @@ contains
         real(rk),           optional        :: timing
         integer(ik),        optional        :: info
 
-        type(timer_t)               :: timer, comm_timer
+        type(timer_t)               :: timer, comm_timer, loop_timer
         integer(ik)                 :: idom, ielem, iface, idiff, ifcn, ibc, ierr, nelem
         logical                     :: interior_face
         logical                     :: chimera_face 
@@ -102,6 +102,7 @@ contains
 
 
         ! Loop through domains
+        call loop_timer%start()
         do idom = 1,data%ndomains()
             associate ( mesh => data%mesh, eqnset => data%eqnset(idom) )
             nelem = mesh(idom)%nelem
@@ -152,6 +153,7 @@ contains
             end do  ! ielem
             end associate
         end do  ! idom
+        call loop_timer%stop()
 
 
 
@@ -169,6 +171,8 @@ contains
         call timer%stop()
         call timer%report('Spatial Discretization Time')
         call comm_timer%report('    - Spatial comm time:')
+        call loop_timer%report('    - Spatial loop time:')
+
         if (present(timing)) then
             timing = timer%elapsed()
         end if

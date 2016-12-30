@@ -181,9 +181,14 @@ contains
         !
         ! Communicate matrix overlapping components
         !
+        call self%mpi_requests%clear()
+        call write_line('       RAS-ILU0 sending...', io_proc=GLOBAL_MASTER)
         call self%comm_send(A)
+        call write_line('       RAS-ILU0 receiving...', io_proc=GLOBAL_MASTER)
         call self%comm_recv()
+        call write_line('       RAS-ILU0 wait...', io_proc=GLOBAL_MASTER)
         call self%comm_wait()
+        call write_line('       RAS-ILU0 done...', io_proc=GLOBAL_MASTER)
 
 
         !
@@ -749,7 +754,9 @@ contains
 
 
         nwait = self%mpi_requests%size()
-        call MPI_Waitall(nwait, self%mpi_requests%data(1:nwait), MPI_STATUSES_IGNORE, ierr)
+        if (nwait > 0) then
+            call MPI_Waitall(nwait, self%mpi_requests%data(1:nwait), MPI_STATUSES_IGNORE, ierr)
+        end if
 
     end subroutine comm_wait
     !******************************************************************************************

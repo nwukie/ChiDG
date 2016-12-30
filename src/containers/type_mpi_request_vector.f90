@@ -150,7 +150,7 @@ contains
         self%size_      = 0
         self%capacity_  = 0
 
-        deallocate(self%data)
+        if (allocated(self%data)) deallocate(self%data)
 
     end subroutine clear
     !****************************************************************************************

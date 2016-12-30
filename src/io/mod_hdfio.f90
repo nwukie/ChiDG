@@ -569,9 +569,10 @@ contains
         character(*),       intent(in)      :: field_type
 
 
-        integer(HID_T)          :: gid, sid, vid
-        integer(HSIZE_T)        :: maxdims(3), dims(3)
+        integer(HID_T)          :: gid, sid, vid, memspace
+        integer(HSIZE_T)        :: start(3), count(3), dimsm(3)
         integer, dimension(1)   :: ibuf
+
 
         character(:),   allocatable         :: user_msg, domain_name
         character(100)                      :: cbuf, var_gqp
@@ -581,9 +582,8 @@ contains
         type(c_ptr)                         :: cp_var
 
         integer(ik)                         :: spacedim, ielem_g, aux_vector_index
-        integer                             :: type,    ierr,                     &
-                                               nterms_1d,  nterms_s,   order,  &
-                                               ivar,    ielem,      nterms_ielem,   idom
+        integer                             :: type, ierr, nterms_1d, nterms_s, order,  &
+                                               ivar, ielem, nterms_ielem, idom, ndims
         logical                             :: ElementsEqual, variables_exists
 
 
@@ -643,18 +643,7 @@ contains
         ! Get the dataspace id and dimensions
         !
         call h5dget_space_f(vid, sid, ierr)
-        call h5sget_simple_extent_dims_f(sid, dims, maxdims, ierr)
 
-
-        !
-        ! Read 'variable' dataset
-        !
-        allocate(var(dims(1),dims(2),dims(3)), stat=ierr)               ! Allocate variable buffer
-        if ( ierr /= 0 ) call AllocationError
-        cp_var = c_loc(var(1,1,1))                                      ! Get C-address for buffer
-
-        call h5dread_f(vid, H5T_NATIVE_DOUBLE, cp_var, ierr)            ! Fortran 2003 interface
-        if (ierr /= 0) call chidg_signal(FATAL,"read_field_domain_hdf: h5dread_f")
 
 
 
@@ -665,10 +654,28 @@ contains
 
 
 
+
+        !
+        ! Allocate storage for incoming element modes, create a memory dataspace (memspace)
+        !
+        allocate(var(nterms_s,1,1))
+        cp_var = c_loc(var(1,1,1))
+
+        ndims    = 3
+        dimsm(1) = size(var,1)
+        dimsm(2) = size(var,2)
+        dimsm(3) = size(var,3)
+        call h5screate_simple_f(ndims,dimsm,memspace,ierr)
+
+
+
+
         !
         !  Loop through elements and set 'variable' values
         !
         do ielem = 1,data%mesh(idom)%nelem
+
+
             !
             ! Get number of terms initialized for the current element
             !
@@ -677,7 +684,15 @@ contains
             else if (field_type == 'Auxiliary') then
                 nterms_ielem = data%sdata%auxiliary_field(aux_vector_index)%dom(idom)%vecs(ielem)%nterms() 
             end if
-            ielem_g      = data%mesh(idom)%elems(ielem)%ielement_g
+
+
+            !
+            ! get domain-global element index
+            !
+            ielem_g = data%mesh(idom)%elems(ielem)%ielement_g
+            start = [1-1,ielem_g-1,itime-1]   ! 0-based
+            count = [nterms_s, 1, 1]
+
 
 
             !
@@ -688,20 +703,31 @@ contains
             if (ierr /= 0) call AllocationError
 
 
+
+
+            !
+            ! Select subset of dataspace - sid, read selected modes into cp_var 
+            !
+            call h5sselect_hyperslab_f(sid, H5S_SELECT_SET_F, start, count, ierr)
+            call h5dread_f(vid, H5T_NATIVE_DOUBLE, cp_var, ierr, memspace, sid)
+
+
+
             !
             ! Check for reading lower, higher, or same-order solution
             !
             bufferterms = ZERO
             if ( nterms_s < nterms_ielem ) then
                 ! Reading a lower-order solution
-                bufferterms(1:nterms_s) = var(1:nterms_s, ielem_g, itime)
+                bufferterms(1:nterms_s) = var(1:nterms_s, 1, 1)
             else if ( nterms_s > nterms_ielem ) then
                 ! Reading a higher-order solution
-                bufferterms(1:nterms_ielem) = var(1:nterms_ielem, ielem_g, itime)
+                bufferterms(1:nterms_ielem) = var(1:nterms_ielem, 1, 1)
             else
                 ! Reading a solution of same order
-                bufferterms(1:nterms_ielem) = var(1:nterms_ielem, ielem_g, itime)
+                bufferterms(1:nterms_ielem) = var(1:nterms_ielem, 1, 1)
             end if
+
 
             ! Store modes in ChiDG Vector
             if (field_type == 'Primary') then
@@ -713,15 +739,23 @@ contains
                 call data%sdata%auxiliary_field(aux_vector_index)%dom(idom)%vecs(ielem)%setvar(ivar,real(bufferterms,rk))
             end if
 
+
+
         end do
+
+
+
+
 
 
 
         !
         ! Close variable dataset, domain/variable group.
         !
-        call h5dclose_f(vid,ierr)       ! Close the variable dataset
-        call h5gclose_f(gid,ierr)       ! Close the Domain/Variable group
+        call h5sclose_f(memspace,ierr)  ! Close memory space
+        call h5dclose_f(vid,ierr)       ! Close variable dataset
+        call h5sclose_f(sid,ierr)       ! Close Variable dataspaces
+        call h5gclose_f(gid,ierr)       ! Close Domain/Variable group
 
 
     end subroutine read_domain_field_hdf

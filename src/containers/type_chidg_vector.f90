@@ -8,9 +8,9 @@ module type_chidg_vector
     use type_chidg_vector_send,     only: chidg_vector_send_t
     use type_chidg_vector_recv,     only: chidg_vector_recv_t
     use type_blockvector
-    use mpi_f08,                    only: MPI_AllReduce, MPI_Reduce, MPI_COMM, MPI_REAL8, MPI_SUM, &
-                                          MPI_STATUS_IGNORE, MPI_Recv, MPI_Request, MPI_STATUSES_IGNORE, &
-                                          MPI_INTEGER4
+    use mpi_f08,                    only: MPI_AllReduce, MPI_Reduce, MPI_COMM, MPI_REAL8,    &
+                                          MPI_SUM, MPI_STATUS_IGNORE, MPI_Recv, MPI_Request, &
+                                          MPI_STATUSES_IGNORE, MPI_INTEGER4
     implicit none
 
 
@@ -27,35 +27,35 @@ module type_chidg_vector
     !!
     !!
     !!
-    !----------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     type, public :: chidg_vector_t
 
         type(blockvector_t),    allocatable :: dom(:)       !< Local block vector storage
 
-        type(chidg_vector_send_t)           :: send         !< Information on what to send to other processors
-        type(chidg_vector_recv_t)           :: recv         !< Storage to receive data from other processors
+        type(chidg_vector_send_t)           :: send         !< What to send to other processors
+        type(chidg_vector_recv_t)           :: recv         !< Receive data from other processors
 
     contains
 
         generic,    public  :: init => initialize
         procedure,  private :: initialize
 
-        procedure,  public  :: project                          !< Project a function to the global solution basis
-        procedure,  public  :: clear                            !< Zero the densevector data nested in the container
+        procedure,  public  :: project                          !< Project function to basis
+        procedure,  public  :: clear                            !< Zero the densevector data
         generic,    public  :: norm => norm_local, norm_comm    !< Compute the L2 vector norm
-        procedure,  public  :: norm_local                       !< Return the processor-local L2 vector norm of the chidg_vector 
-        procedure,  public  :: norm_comm                        !< Return the MPI group L2 vector norm of the chidg_vector 
-        procedure,  public  :: sumsqr                           !< Return the sum of the squared processor-local chidg_vector entries 
+        procedure,  public  :: norm_local                       !< proc-local L2 vector norm
+        procedure,  public  :: norm_comm                        !< MPI group L2 vector norm
+        procedure,  public  :: sumsqr                           !< Sum squared proc-local entries 
         procedure,  public  :: dump
 
-        procedure,  public  :: comm_send                        !< Execute non-blocking send of data to communicating processors
-        procedure,  public  :: comm_recv                        !< Execute blocking receives of incomming data
-        procedure,  public  :: comm_wait                        !< Execute a wait on outstanding non-blocking send data
+        procedure,  public  :: comm_send                        !< Nonblocking send to comm procs
+        procedure,  public  :: comm_recv                        !< Blocking recv incomming data
+        procedure,  public  :: comm_wait                        !< Wait to finish send data
 
 !        generic :: assignment(=) => 
 
     end type chidg_vector_t
-    !****************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -118,9 +118,10 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!  @param[in]  mesh    Array of mesh_t instances used to initialize each blockvector_t subcomponent.
+    !!  @param[in]  mesh    Array of mesh_t instances used to initialize each 
+    !!                      blockvector_t subcomponent.
     !!
-    !----------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine initialize(self,mesh)
         class(chidg_vector_t),   intent(inout)   :: self
         type(mesh_t),           intent(inout)   :: mesh(:)
@@ -154,7 +155,7 @@ contains
 
 
     end subroutine initialize
-    !****************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -169,7 +170,7 @@ contains
     !!
     !!
     !!
-    !--------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine project(self,mesh,fcn,ivar)
         class(chidg_vector_t),   intent(inout)   :: self
         type(mesh_t),           intent(in)      :: mesh(:)
@@ -209,7 +210,7 @@ contains
 
 
     end subroutine project
-    !*********************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -222,7 +223,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine clear(self)
         class(chidg_vector_t),   intent(inout)   :: self
 
@@ -238,7 +239,7 @@ contains
         call self%recv%clear()
 
     end subroutine clear
-    !*****************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -256,7 +257,7 @@ contains
     !!
     !!  @return res     L2-norm of the vector
     !!
-    !-----------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     function norm_local(self) result(res)
         class(chidg_vector_t),   intent(in)   :: self
 
@@ -276,7 +277,7 @@ contains
         res = sqrt(res)
 
     end function norm_local
-    !*****************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -288,14 +289,15 @@ contains
 
 
 
-    !>  Compute the L2-Norm of the vector within the space of processors given by the MPI communicator
+    !>  Compute the L2-Norm of the vector within the space of processors given by the MPI 
+    !!  communicator.
     !!  
     !!  @author Nathan A. Wukie
     !!  @date   6/23/2016
     !!
     !!  @return res     L2-norm of the vector
     !!
-    !-----------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     function norm_comm(self,comm) result(norm)
         class(chidg_vector_t),   intent(in)  :: self
         type(mpi_comm),         intent(in)  :: comm
@@ -317,7 +319,7 @@ contains
         norm = sqrt(norm)
 
     end function norm_comm
-    !*****************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -339,7 +341,7 @@ contains
     !!
     !!  @return res     sum of the squared chidg_vector entries
     !!
-    !-----------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     function sumsqr(self) result(res)
         class(chidg_vector_t),   intent(in)   :: self
 
@@ -356,7 +358,7 @@ contains
 
 
     end function sumsqr
-    !*****************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -379,11 +381,12 @@ contains
     !!
     !!
     !!
-    !-----------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine comm_send(self)
         class(chidg_vector_t),   intent(inout)   :: self
 
-        integer(ik)         :: icomm, iproc_send, idom_send, idom, ielem_send, ielem, ierr, data_size, isend
+        integer(ik)         :: icomm, iproc_send, idom_send, idom, ielem_send, &
+                               ielem, ierr, data_size, isend
         type(mpi_request)   :: isend_handle
 
 
@@ -423,7 +426,7 @@ contains
 
 
     end subroutine comm_send
-    !*****************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -443,11 +446,12 @@ contains
     !!
     !!
     !!
-    !-----------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine comm_recv(self)
         class(chidg_vector_t),   intent(inout)   :: self
 
-        integer(ik) :: icomm, idom_recv, ielem_recv, proc_recv, data_size, ierr, dparent_g, eparent_g
+        integer(ik) :: icomm, idom_recv, ielem_recv, proc_recv, data_size, &
+                       ierr, dparent_g, eparent_g
 
         real(rk), allocatable   :: test(:)
 
@@ -481,7 +485,7 @@ contains
 
 
     end subroutine comm_recv
-    !*****************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -505,7 +509,7 @@ contains
     !!
     !!
     !!
-    !----------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine comm_wait(self)
         class(chidg_vector_t),   intent(in)  :: self
 
@@ -516,7 +520,7 @@ contains
         call MPI_Waitall(nwait, self%send%isend_handles, MPI_STATUSES_IGNORE, ierr)
 
     end subroutine comm_wait
-    !****************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -537,7 +541,7 @@ contains
     !!
     !!
     !!
-    !-----------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine dump(self)
         class(chidg_vector_t),   intent(in)   :: self
 
@@ -549,7 +553,7 @@ contains
         end do ! idom
 
     end subroutine dump
-    !*****************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -563,12 +567,12 @@ contains
 
 
 
-    !---------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     !
     !
     !                              Operator Implementations
     !
-    !---------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
 
 
 
@@ -576,7 +580,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function mult_real_chidg_vector(left,right) result(res)
         real(rk),               intent(in)  :: left
         type(chidg_vector_t),    intent(in)  :: right
@@ -596,7 +600,7 @@ contains
         res%recv = right%recv
 
     end function mult_real_chidg_vector
-    !************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -606,7 +610,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function mult_chidg_vector_real(left,right) result(res)
         type(chidg_vector_t),    intent(in)  :: left
         real(rk),               intent(in)  :: right
@@ -626,7 +630,7 @@ contains
         res%recv = left%recv
 
     end function mult_chidg_vector_real
-    !************************************************************************
+    !****************************************************************************************
 
 
 
@@ -637,7 +641,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function div_real_chidg_vector(left,right) result(res)
         real(rk),               intent(in)  :: left
         type(chidg_vector_t),    intent(in)  :: right
@@ -658,7 +662,7 @@ contains
         res%recv = right%recv
 
     end function div_real_chidg_vector
-    !************************************************************************
+    !****************************************************************************************
 
 
 
@@ -668,7 +672,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function div_chidg_vector_real(left,right) result(res)
         type(chidg_vector_t),    intent(in)  :: left
         real(rk),               intent(in)  :: right
@@ -688,7 +692,7 @@ contains
         res%recv = left%recv
 
     end function div_chidg_vector_real
-    !*************************************************************************
+    !****************************************************************************************
 
 
 
@@ -699,7 +703,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function add_chidg_vector_chidg_vector(left,right) result(res)
         type(chidg_vector_t),    intent(in)  :: left
         type(chidg_vector_t),    intent(in)  :: right
@@ -720,7 +724,7 @@ contains
         res%recv = right%recv
 
     end function add_chidg_vector_chidg_vector
-    !*************************************************************************
+    !****************************************************************************************
 
 
 
@@ -731,7 +735,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function sub_chidg_vector_chidg_vector(left,right) result(res)
         type(chidg_vector_t),    intent(in)  :: left
         type(chidg_vector_t),    intent(in)  :: right
@@ -752,19 +756,7 @@ contains
         res%recv = right%recv
 
     end function sub_chidg_vector_chidg_vector
-    !*************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
+    !****************************************************************************************
 
 
 

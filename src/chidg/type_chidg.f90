@@ -275,8 +275,6 @@ contains
             ! Call all initialization routines.
             !
             case ('all')
-                !call self%initialize_solution_domains()
-                !call self%initialize_solution_solver()
                 call self%init('domains')
                 call self%init('communication')
                 call self%init('chimera')

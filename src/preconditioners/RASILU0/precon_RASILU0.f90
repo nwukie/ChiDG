@@ -629,7 +629,8 @@ contains
         class(precon_RASILU0_t),    intent(inout)   :: self
         type(chidg_matrix_t),        intent(in)      :: A
 
-        integer(ik)                 :: icomm, idom_send, ielem_send, iblk_send, idom, ielem, iblk, proc, nrows, ncols, idomain_g, ierr
+        integer(ik)                 :: icomm, idom_send, ielem_send, iblk_send, idom, ielem, &
+                                       iblk, proc, nrows, ncols, idomain_g, ierr
         integer(ik), allocatable    :: send_blocks(:)
         type(mpi_request)           :: request
 
@@ -641,7 +642,8 @@ contains
                 idomain_g = self%send%comm(icomm)%dom(idom_send)%idomain_g
 
                 !
-                ! Loop through element faces and find neighbors that are off-processor on 'proc' and send overlap element data from chidgMatrix
+                ! Loop through element faces and find neighbors that are off-processor on 'proc' 
+                ! and send overlap element data from chidgMatrix.
                 !
                 do ielem_send = 1,self%send%comm(icomm)%dom(idom_send)%elem_send%size()
                     ielem = self%send%comm(icomm)%dom(idom_send)%elem_send%at(ielem_send) 
@@ -747,7 +749,7 @@ contains
 
 
         nwait = self%mpi_requests%size()
-        call MPI_Waitall(nwait, self%mpi_requests%data, MPI_STATUSES_IGNORE, ierr)
+        call MPI_Waitall(nwait, self%mpi_requests%data(1:nwait), MPI_STATUSES_IGNORE, ierr)
 
     end subroutine comm_wait
     !******************************************************************************************

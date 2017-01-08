@@ -125,7 +125,7 @@ contains
 
                 else
 
-                    diff_inv_E(irow,icol) = omega(icol - (nfreq + 1))*&
+                    diff_inv_E(irow,icol) = -omega(icol - (nfreq + 1))*&
                                             sin(omega(icol - (nfreq + 1))*t(irow))
 
                 end if
@@ -156,7 +156,7 @@ contains
         real(rk),dimension(ntime,ntime),intent(inout)       :: D 
 
         real(rk),dimension(ntime,ntime)                     :: inv_E,diff_inv_E,E
-
+        integer(ik)                                         :: i
 
 
         !
@@ -170,7 +170,7 @@ contains
 
         D = matmul(diff_inv_E,E)
 
-
+    
     end subroutine calc_pseudo_spectral_operator
     !************************************************************************************
 

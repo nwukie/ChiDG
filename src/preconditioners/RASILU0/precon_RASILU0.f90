@@ -655,7 +655,7 @@ contains
 
                 !
                 ! Loop through element faces and find neighbors that are off-processor on 'proc' 
-                ! and send overlap element data from chidgMatrix.
+                ! and send overlap element data from chidg_matrix.
                 !
                 do ielem_send = 1,self%send%comm(icomm)%dom(idom_send)%elem_send%size()
                     ielem = self%send%comm(icomm)%dom(idom_send)%elem_send%at(ielem_send) 
@@ -710,7 +710,7 @@ contains
         integer(ik), allocatable    :: send_blocks(:)
         integer(ik)                 :: icomm, idom, ielem, iblk, proc, nrows, ncols, idomain_g, &
                                        idom_recv, ielem_recv, iblk_recv, ierr
-        type(mpi_request)           :: null_request
+
 
         do idom_recv = 1,size(self%recv%dom)
 
@@ -757,12 +757,18 @@ contains
     subroutine comm_wait(self)
         class(precon_RASILU0_t),    intent(inout)   :: self
 
-        integer(ik) :: nwait, ierr
+        integer(ik) :: nwait, iwait, ierr
 
 
         nwait = self%mpi_requests%size()
         if (nwait > 0) then
-            call MPI_Waitall(nwait, self%mpi_requests%data(1:nwait), MPI_STATUSES_IGNORE, ierr)
+!            call MPI_Waitall(nwait, self%mpi_requests%data(1:nwait), MPI_STATUSES_IGNORE, ierr)
+
+            do iwait = 1,nwait
+
+                call MPI_Wait(self%mpi_requests%data(iwait), MPI_STATUS_IGNORE, ierr)
+
+            end do
 
             call self%mpi_requests%clear()
         end if

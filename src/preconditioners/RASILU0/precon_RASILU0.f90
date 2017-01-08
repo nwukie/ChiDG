@@ -84,10 +84,10 @@ module precon_RASILU0
     !------------------------------------------------------------------------------------------
     type, extends(preconditioner_t) :: precon_RASILU0_t
 
-        type(chidg_matrix_t)     :: LD       !< Lower-Diagonal matrix for local problems
+        type(chidg_matrix_t)        :: LD       !< Lower-Diagonal matrix for local problems
 
-        type(RASILU0_send_t)    :: send     !< Overlapping data to send to other processors
-        type(RASILU0_recv_t)    :: recv     !< Overlapping data to receive from other processors
+        type(RASILU0_send_t)        :: send     !< Overlapping data to send to other processors
+        type(RASILU0_recv_t)        :: recv     !< Overlapping data to receive from other processors
 
         type(mpi_request_vector_t)  :: mpi_requests
 
@@ -132,12 +132,18 @@ contains
         call self%LD%init(mesh=data%mesh, mtype='LowerDiagonal')
         self%initialized = .true.
 
-        
+ 
         !
         ! Initialize the overlap data
         !
         call self%send%init(data%mesh, data%sdata%lhs)
         call self%recv%init(data%mesh, data%sdata%lhs, data%sdata%rhs)
+
+
+        !
+        ! Release nonblocking send buffers
+        !
+        call self%send%init_wait()
 
     end subroutine init
     !******************************************************************************************
@@ -164,8 +170,8 @@ contains
     !------------------------------------------------------------------------------------------
     subroutine update(self,A,b)
         class(precon_RASILU0_t),    intent(inout)   :: self
-        type(chidg_matrix_t),        intent(in)      :: A
-        type(chidg_vector_t),        intent(in)      :: b
+        type(chidg_matrix_t),       intent(in)      :: A
+        type(chidg_vector_t),       intent(in)      :: b
 
 
         character(:),   allocatable :: user_msg
@@ -182,19 +188,20 @@ contains
         ! Communicate matrix overlapping components
         !
         call self%mpi_requests%clear()
-        call write_line('       RAS-ILU0 sending...', io_proc=GLOBAL_MASTER)
+
+        call write_line('       RAS-ILU0 sending...',   io_proc=GLOBAL_MASTER)
         call self%comm_send(A)
         call write_line('       RAS-ILU0 receiving...', io_proc=GLOBAL_MASTER)
         call self%comm_recv()
-        call write_line('       RAS-ILU0 wait...', io_proc=GLOBAL_MASTER)
+        call write_line('       RAS-ILU0 wait...',      io_proc=GLOBAL_MASTER)
         call self%comm_wait()
-        call write_line('       RAS-ILU0 done...', io_proc=GLOBAL_MASTER)
+        call write_line('       RAS-ILU0 done...',      io_proc=GLOBAL_MASTER)
 
 
         !
         ! Test preconditioner initialization
         !
-        user_msg = 'RASILU0%update: preconditioner has not yet been initialized.'
+        user_msg = 'RAS-ILU0%update: preconditioner has not yet been initialized.'
         if ( .not. self%initialized ) call chidg_signal(FATAL,user_msg)
 
 
@@ -713,8 +720,8 @@ contains
                 do ielem_recv = 1,size(self%recv%dom(idom_recv)%comm(icomm)%elem)
                 
                     do iblk_recv = 1,size(self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks)
-                        nrows = self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%nrows_
-                        ncols = self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%ncols_
+                        nrows     = self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%nrows_
+                        ncols     = self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%ncols_
                         idomain_g = self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%dparent_g_
 
                         call MPI_Recv(self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%mat, nrows*ncols, MPI_REAL8, proc, idomain_g, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
@@ -756,6 +763,8 @@ contains
         nwait = self%mpi_requests%size()
         if (nwait > 0) then
             call MPI_Waitall(nwait, self%mpi_requests%data(1:nwait), MPI_STATUSES_IGNORE, ierr)
+
+            call self%mpi_requests%clear()
         end if
 
     end subroutine comm_wait

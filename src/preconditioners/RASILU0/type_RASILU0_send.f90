@@ -19,17 +19,20 @@ module type_RASILU0_send
     !!  @date   7/21/2016
     !!
     !!
-    !------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     type, public :: RASILU0_send_t
 
-        type(RASILU0_send_comm_t),  allocatable :: comm(:)  ! One description for each neighboring processor
+        type(RASILU0_send_comm_t),  allocatable :: comm(:)  ! One description for each 
+                                                            ! neighboring processor
 
     contains
 
         procedure   :: init
 
+        procedure   :: init_wait
+
     end type RASILU0_send_t
-    !************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -47,7 +50,7 @@ contains
     !!
     !!
     !!
-    !-----------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine init(self,mesh,A)
         class(RASILU0_send_t),  intent(inout)   :: self
         type(mesh_t),           intent(in)      :: mesh(:)
@@ -60,7 +63,8 @@ contains
 
 
         !
-        ! Loop through each mesh and accumulate the total number of processors we are sending to
+        ! Loop through each mesh and accumulate the total number of 
+        ! processors we are sending to.
         !
         do idom = 1,size(mesh)
             send_procs_dom = mesh(idom)%get_send_procs_local()
@@ -92,7 +96,7 @@ contains
 
 
     end subroutine init
-    !************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -100,12 +104,31 @@ contains
 
 
 
+    !>  Wall MPI_WAITALL on all outstanding nonblocking sends that were initiated during the
+    !!  initialization procedure.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   01/08/2016
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine init_wait(self)
+        class(RASILU0_send_t),  intent(inout)   :: self
+        
+        integer(ik) :: icomm
+
+        !
+        ! Call wait on requests for each send_comm instance.
+        !
+        do icomm = 1,size(self%comm)
+
+            call self%comm(icomm)%init_wait()
+
+        end do !icomm
 
 
-
-
-
-
+    end subroutine init_wait
+    !******************************************************************************************
 
 
 

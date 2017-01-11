@@ -3,8 +3,8 @@ module type_element
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES,XI_MIN,XI_MAX,ETA_MIN, &
                                       ETA_MAX,ZETA_MIN,ZETA_MAX,ONE,ZERO, &
-                                      X_DIR, Y_DIR, Z_DIR, XI_DIR, ETA_DIR, ZETA_DIR, TWO_DIM, THREE_DIM, RKTOL, &
-                                      VALID_POINT, INVALID_POINT
+                                      X_DIR, Y_DIR, Z_DIR, XI_DIR, ETA_DIR, ZETA_DIR, &
+                                      TWO_DIM, THREE_DIM, RKTOL, VALID_POINT, INVALID_POINT
     use mod_quadrature,         only: GQ, get_quadrature
     use mod_grid,               only: get_element_mapping, face_corners
     use mod_polynomial,         only: polynomialVal, dpolynomialVal
@@ -24,21 +24,23 @@ module type_element
 
     !>  Element data type
     !!
+    !!  ************************************************************************************
     !!  NOTE: could be dangerous to declare static arrays of elements using gfortran because
-    !!        the compiler doens't have complete finalization rules implemented. Using allocatables
-    !!        seems to work fine.
+    !!        the compiler doens't have complete finalization rules implemented. Using 
+    !!        allocatables seems to work fine.
+    !!  ************************************************************************************
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     type, public :: element_t
 
         ! Element info
-        integer(ik)     :: idomain_g                        !< Global index of the parent domain
-        integer(ik)     :: idomain_l                        !< Processor-local index of the parent domain
-        integer(ik)     :: ielement_g                       !< Domain-global index of the element
-        integer(ik)     :: ielement_l                       !< Processor-local index of the element
+        integer(ik)     :: idomain_g                        !< Global index of parent domain
+        integer(ik)     :: idomain_l                        !< Proc-local index of parent domain
+        integer(ik)     :: ielement_g                       !< Domain-global index of element
+        integer(ik)     :: ielement_l                       !< Proc-local index of the element
 
         integer(ik)     :: spacedim                         !< Number of spatial dimensions for the element
         integer(ik)     :: neqns                            !< Number of equations being solved
@@ -65,15 +67,15 @@ module type_element
         real(rk), allocatable           :: ddz_trans(:,:)       !< Derivative of basis functions in z-direction at quadrature nodes - transposed
 
         ! Quadrature matrices
-        type(quadrature_t), pointer     :: gq     => null()     !< Pointer to quadrature instance for solution expansion
-        type(quadrature_t), pointer     :: gqmesh => null()     !< Pointer to quadrature instance for coordinate expansion
+        type(quadrature_t), pointer     :: gq     => null()     !< Pointer to instance for solution expansion
+        type(quadrature_t), pointer     :: gqmesh => null()     !< Pointer to instance for coordinate expansion
 
-        ! Element-local mass matrices
-        real(rk), allocatable           :: mass(:,:)            !< Mass matrix
-        real(rk), allocatable           :: invmass(:,:)         !< Inverse mass matrix
+        ! Element-local mass, inverse mass matrices
+        real(rk), allocatable           :: mass(:,:)        
+        real(rk), allocatable           :: invmass(:,:)
 
         ! Element volume
-        real(rk)                        :: vol                  !< Element volume
+        real(rk)                        :: vol
 
         ! Logical tests
         logical :: geomInitialized = .false.
@@ -87,10 +89,10 @@ module type_element
         procedure, public   :: init_sol
 
 
-        ! Public utility procedures
-        procedure, public   :: x                      !< Compute a discrete value for the x-coordinate at a given xi,eta,zeta.
-        procedure, public   :: y                      !< Compute a discrete value for the y-coordinate at a given xi,eta,zeta.
-        procedure, public   :: z                      !< Compute a discrete value for the z-coordinate at a given xi,eta,zeta.
+        ! Compute discrete value for x/y/z-coordinate at a given xi,eta,zeta.
+        procedure, public   :: x                      
+        procedure, public   :: y                      
+        procedure, public   :: z                      
 
         procedure, public   :: grid_point             !< Compute a discrete value for a physical coordinate at a given xi, eta, zeta.
         procedure, public   :: computational_point    !< Compute a discrete value for a computational coordinate at a given x, y, z.
@@ -116,7 +118,7 @@ module type_element
         final               :: destructor
 
     end type element_t
-    !****************************************************************************************************************
+    !******************************************************************************************
 
     private
 
@@ -138,7 +140,8 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!  @param[in] nterms_c     Number of terms in the modal representation of the cartesian coordinates
+    !!  @param[in] nterms_c     Number of terms in the modal representation of the 
+    !!                          cartesian coordinates.
     !!  @param[in] points       Array of cartesian points defining the element
     !!
     !---------------------------------------------------------------------------------------
@@ -150,13 +153,16 @@ contains
         integer(ik),                    intent(in)      :: idomain_l
         integer(ik),                    intent(in)      :: ielem_l
 
+        character(:),   allocatable :: user_msg
         type(point_t),  allocatable :: points(:)
         real(rk),       allocatable :: element_mapping(:,:)
         real(rk),       allocatable :: xmodes(:), ymodes(:), zmodes(:)
-        integer(ik)                 :: ierr, nterms_c, ipt, npts_1d, npts, mapping, inode, idomain_g, ielem_g
+        integer(ik)                 :: ierr, nterms_c, ipt, npts_1d, npts, &
+                                       mapping, inode, idomain_g, ielem_g
 
 
-        if (self%geomInitialized) call chidg_signal(FATAL,"element%init_geom -- element already initialized")
+        user_msg = "element%init_geom: element already initialized."
+        if (self%geomInitialized) call chidg_signal(FATAL,user_msg)
 
 
         !
@@ -198,7 +204,9 @@ contains
         element_mapping = get_element_mapping(spacedim,mapping)
         nterms_c = size(element_mapping,1)
         self%nterms_c = nterms_c
-        if (nterms_c /= size(points)) call chidg_signal(FATAL,"element%init_geom -- mapping and points do not match")
+
+        user_msg = "element%init_geom: mapping and points do not match."
+        if (nterms_c /= size(points)) call chidg_signal(FATAL,user_msg)
 
 
         !
@@ -234,7 +242,7 @@ contains
 
 
     end subroutine init_geom
-    !***********************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -254,7 +262,7 @@ contains
     !!  @param[in]  nterms_s    Number of terms in the modal representation of the solution
     !!  @param[in]  neqns       Number of equations contained in the element solution
     !!
-    !-----------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine init_sol(self,neqns,nterms_s)
         class(element_t),   intent(inout) :: self
         integer(ik),        intent(in)    :: neqns
@@ -263,7 +271,6 @@ contains
         integer(ik) :: ierr
         integer(ik) :: nnodes
 
-        !if (self%numInitialized) call chidg_signal(FATAL,"element%init_sol -- element already initialized")
 
         self%nterms_s    = nterms_s     ! Set number of terms in modal expansion of solution
         self%neqns       = neqns        ! Set number of equations being solved
@@ -280,16 +287,16 @@ contains
                                               self%ddx, self%ddy, self%ddz,                     &
                                               self%ddx_trans, self%ddy_trans, self%ddz_trans,   &
                                               self%mass, self%invmass)
-        allocate(self%jinv(nnodes),                         &
-                 self%metric(3,3,nnodes),                   &
-                 self%quad_pts(nnodes),                     &
+        allocate(self%jinv(nnodes),                        &
+                 self%metric(3,3,nnodes),                  &
+                 self%quad_pts(nnodes),                    &
                  self%ddx(nnodes,nterms_s),                &
                  self%ddy(nnodes,nterms_s),                &
                  self%ddz(nnodes,nterms_s),                &
                  self%ddx_trans(nterms_s,nnodes),          &
                  self%ddy_trans(nterms_s,nnodes),          &
                  self%ddz_trans(nterms_s,nnodes),          &
-                 self%mass(nterms_s,nterms_s),              &
+                 self%mass(nterms_s,nterms_s),             &
                  self%invmass(nterms_s,nterms_s), stat = ierr)
         if (ierr /= 0) call AllocationError
 
@@ -297,8 +304,8 @@ contains
         !
         ! Call element metric and matrix calculation routines
         !
-        call self%compute_quadrature_metrics()                  ! Compute element metrics
-        call self%compute_element_matrices()                    ! Compute mass matrices and derivative matrices
+        call self%compute_quadrature_metrics()          ! Compute element metrics
+        call self%compute_element_matrices()            ! Compute mass matrices and derivative matrices
 
 
 
@@ -308,7 +315,7 @@ contains
         self%numInitialized = .true.    
 
     end subroutine init_sol
-    !*************************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -320,26 +327,28 @@ contains
     !!      self%gq
     !!      self%gqmesh
     !!
-    !!  TODO: would be good to eliminate pointers in the element data type and just use integer indices to
-    !!        a global array of quadrature instances.
+    !!  TODO: would be good to eliminate pointers in the element data type and just 
+    !!        use integer indices to a global array of quadrature instances.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine assign_quadrature(self)
         use mod_quadrature,     only: compute_nnodes_gq
         class(element_t),   intent(inout)   :: self
 
-        integer(ik) :: nterms_s,nterms_c,spacedim
-        integer(ik) :: nnodes_face, nnodes_vol, igq_s, igq_f
+        character(:), allocatable   :: user_msg
+        integer(ik)                 :: nterms_s,nterms_c,spacedim
+        integer(ik)                 :: nnodes_face, nnodes_vol, igq_s, igq_f
 
         spacedim = self%spacedim
         nterms_s = self%nterms_s
         nterms_c = self%nterms_c
 
-        if (nterms_c == 0) call chidg_signal(FATAL,"element%assign_quadrature -- coordinate expansion not defined")
+        user_msg = "element%assign_quadrature: coordinate expansion not defined."
+        if (nterms_c == 0) call chidg_signal(FATAL,user_msg)
 
 
 
@@ -364,7 +373,7 @@ contains
 
 
     end subroutine assign_quadrature
-    !**************************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -383,7 +392,7 @@ contains
     !!
     !! TODO: Generalized 2D physical coordinates. Currently assumes x-y
     !!
-    !--------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine compute_quadrature_metrics(self)
         class(element_t),    intent(inout)   :: self
 
@@ -464,7 +473,7 @@ contains
         self%vol = abs(sum(self%jinv * self%gq%vol%weights))
 
     end subroutine compute_quadrature_metrics
-    !********************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -484,7 +493,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !--------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine compute_element_matrices(self)
         class(element_t),   intent(inout)   :: self
 
@@ -504,7 +513,7 @@ contains
         call self%compute_quadrature_coords()
 
     end subroutine compute_element_matrices
-    !********************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -523,7 +532,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !--------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine compute_gradients_cartesian(self)
         class(element_t),   intent(inout)   :: self
         integer(ik)                         :: iterm,inode
@@ -550,7 +559,7 @@ contains
         self%ddz_trans = transpose(self%ddz)
 
     end subroutine compute_gradients_cartesian
-    !*********************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -570,7 +579,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine compute_quadrature_coords(self)
         class(element_t),   intent(inout)   :: self
         integer(ik)                         :: nnodes
@@ -595,7 +604,7 @@ contains
         end do
 
     end subroutine compute_quadrature_coords
-    !**************************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -615,7 +624,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine compute_mass_matrix(self)
         class(element_t), intent(inout) :: self
         integer(ik)  :: iterm
@@ -651,7 +660,7 @@ contains
 
 
     end subroutine compute_mass_matrix
-    !**************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -675,7 +684,7 @@ contains
     !!
     !!
     !!
-    !--------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     function x(self,xi,eta,zeta) result(xval)
         class(element_t),   intent(in)  :: self
         real(rk),      intent(in)  :: xi,eta,zeta
@@ -705,7 +714,7 @@ contains
         xval = dot_product(self%coords%getvar(1),polyvals)
 
     end function x
-    !***************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -720,7 +729,7 @@ contains
     !!
     !!
     !!
-    !--------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function y(self,xi,eta,zeta) result(yval)
         class(element_t),   intent(in)  :: self
         real(rk),           intent(in)  :: xi,eta,zeta
@@ -750,7 +759,7 @@ contains
         yval = dot_product(self%coords%getvar(2),polyvals)
 
     end function y
-    !***************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -764,7 +773,7 @@ contains
     !!
     !!
     !!
-    !--------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function z(self,xi,eta,zeta) result(zval)
         class(element_t),   intent(in)  :: self
         real(rk),           intent(in)  :: xi,eta,zeta
@@ -794,7 +803,7 @@ contains
         zval = dot_product(self%coords%getvar(3),polyvals)
 
     end function z
-    !***************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -818,7 +827,7 @@ contains
     !!  @param[in]  eta     Real value for eta-coordinate
     !!  @param[in]  zeta    Real value for zeta-coordinate
     !!
-    !--------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function grid_point(self,icoord,xi,eta,zeta) result(val)
         class(element_t),   intent(in)  :: self
         integer(ik),        intent(in)  :: icoord
@@ -852,7 +861,7 @@ contains
         val = dot_product(self%coords%getvar(icoord), polyvals)
 
     end function grid_point
-    !****************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -875,7 +884,7 @@ contains
     !!  @param[in]  eta         Computational coordinate - eta
     !!  @param[in]  zeta        Computational coordinate - zeta
     !!
-    !----------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function metric_point(self,cart_dir,comp_dir,xi,eta,zeta) result(val)
         class(element_t),   intent(in)  :: self
         integer(ik),        intent(in)  :: cart_dir
@@ -926,7 +935,7 @@ contains
 
 
     end function metric_point
-    !****************************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -948,7 +957,7 @@ contains
     !!  @param[in]  eta     Real value for eta-coordinate.
     !!  @param[in]  zeta    Real value for zeta-coordinate.
     !!
-    !----------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function solution_point(self,q,ivar,xi,eta,zeta) result(val)
         class(element_t),       intent(in)      :: self
         class(densevector_t),   intent(in)      :: q
@@ -980,7 +989,7 @@ contains
         val = dot_product(q%getvar(ivar),polyvals)
 
     end function solution_point
-    !****************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -997,7 +1006,7 @@ contains
     !!  @param[in]  eta     Real value for eta-coordinate.
     !!  @param[in]  zeta    Real value for zeta-coordinate.
     !!
-    !----------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     function derivative_point(self,q,ivar,xi,eta,zeta,dir) result(val)
         class(element_t),       intent(in)      :: self
         class(densevector_t),   intent(in)      :: q
@@ -1090,7 +1099,7 @@ contains
         val = dot_product(q%getvar(ivar),deriv)
 
     end function derivative_point
-    !****************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -1113,7 +1122,7 @@ contains
     !!  @param[in]  y       Real value for y-coordinate.
     !!  @param[in]  z       Real value for z-coordinate.
     !!
-    !----------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function computational_point(self,x,y,z) result(loc)
         class(element_t),   intent(in)  :: self
         real(rk),           intent(in)  :: x
@@ -1354,7 +1363,7 @@ contains
 
 
     end function get_face_from_corners
-    !********************************************************************************************
+    !******************************************************************************************
 
 
 

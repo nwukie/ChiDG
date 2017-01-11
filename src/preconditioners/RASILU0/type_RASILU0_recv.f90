@@ -55,8 +55,10 @@ contains
         type(chidg_matrix_t),    intent(in)      :: A
         type(chidg_vector_t),    intent(in)      :: b
 
-        integer(ik) :: idom, ndom, ierr, icomm_vec, idom_vec, ielem_vec, proc, iblk, icomm, idomain_g, ielem
-        integer(ik) :: dparent_g, eparent_g, dparent_g_vec, eparent_g_vec, parent_proc, trans_elem, trans_block
+        integer(ik) :: idom, ndom, ierr, icomm_vec, idom_vec, ielem_vec, proc, &
+                       iblk, icomm, idomain_g, ielem, &
+                       dparent_g, eparent_g, dparent_g_vec, eparent_g_vec, parent_proc, &
+                       trans_elem, trans_block
         logical     :: check_ok
 
         ndom = size(mesh)

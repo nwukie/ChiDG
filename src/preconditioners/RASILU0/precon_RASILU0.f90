@@ -58,7 +58,7 @@ module precon_RASILU0
     use mod_constants,              only: DIAG, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, &
                                           ETA_MAX, ZETA_MAX, ONE
     use mod_inv,                    only: inv
-    use mod_chidg_mpi,              only: IRANK, ChiDG_COMM
+    use mod_chidg_mpi,              only: IRANK, NRANK, ChiDG_COMM
 
     use type_RASILU0_send,          only: RASILU0_send_t
     use type_RASILU0_recv,          only: RASILU0_recv_t
@@ -126,6 +126,8 @@ contains
 
         integer :: ierr
 
+        call write_line('       Initializing Restricted Additive Schwarz(RAS) preconditioner...',   io_proc=GLOBAL_MASTER)
+
         !
         ! Initialize Lower-Diagonal matrix for processor-local data
         !
@@ -136,14 +138,18 @@ contains
         !
         ! Initialize the overlap data
         !
+        call write_line('           initializing send pattern...',      io_proc=GLOBAL_MASTER)
         call self%send%init(data%mesh, data%sdata%lhs)
+        call write_line('           initializing receive pattern...',   io_proc=GLOBAL_MASTER)
         call self%recv%init(data%mesh, data%sdata%lhs, data%sdata%rhs)
 
 
         !
         ! Release nonblocking send buffers
         !
+        call write_line('           waiting on remaining communication buffers ...',   io_proc=GLOBAL_MASTER)
         call self%send%init_wait()
+        call write_line('           initialization complete!...',   io_proc=GLOBAL_MASTER)
 
     end subroutine init
     !******************************************************************************************
@@ -177,7 +183,7 @@ contains
         character(:),   allocatable :: user_msg
         integer(ik)                 :: ielem, irow, icol, eparent_l, idom, ndom, ilower, &
                                        trans_elem, trans_blk, nrowsA, ncolsA, ncolsB,    &
-                                       iblk_diag_parent, iblk_diag, iblk, icomm, parent_proc
+                                       iblk_diag_parent, iblk_diag, iblk, icomm, parent_proc, ierr, iproc
 
 
         call write_line(' Computing RAS-ILU0 factorization', io_proc=GLOBAL_MASTER)
@@ -191,11 +197,38 @@ contains
 
         call write_line('       RAS-ILU0 sending...',   io_proc=GLOBAL_MASTER)
         call self%comm_send(A)
-        call write_line('       RAS-ILU0 receiving...', io_proc=GLOBAL_MASTER)
-        call self%comm_recv()
-        call write_line('       RAS-ILU0 wait...',      io_proc=GLOBAL_MASTER)
-        call self%comm_wait()
-        call write_line('       RAS-ILU0 done...',      io_proc=GLOBAL_MASTER)
+
+
+        do iproc = 0,NRANK-1
+            if (iproc == IRANK) then
+                !call write_line('       RAS-ILU0 receiving...', io_proc=GLOBAL_MASTER)
+                call write_line(IRANK,'       RAS-ILU0 receiving...', io_proc=IRANK)
+                call self%comm_recv()
+            end if
+
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do
+
+
+
+        do iproc = 0,NRANK-1
+            if (iproc == IRANK) then
+                !call write_line('       RAS-ILU0 wait...',      io_proc=GLOBAL_MASTER)
+                call write_line(IRANK,'       RAS-ILU0 wait...',      io_proc=IRANK)
+                call self%comm_wait()
+            end if
+
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do
+
+
+
+        do iproc = 0,NRANK-1
+            if (iproc == IRANK) then
+                call write_line('       RAS-ILU0 done...',      io_proc=GLOBAL_MASTER)
+            end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do
 
 
         !
@@ -639,7 +672,7 @@ contains
     !------------------------------------------------------------------------------------------
     subroutine comm_send(self,A)
         class(precon_RASILU0_t),    intent(inout)   :: self
-        type(chidg_matrix_t),        intent(in)      :: A
+        type(chidg_matrix_t),       intent(in)      :: A
 
         integer(ik)                 :: icomm, idom_send, ielem_send, iblk_send, idom, ielem, &
                                        iblk, proc, nrows, ncols, idomain_g, ierr
@@ -765,14 +798,14 @@ contains
 !            call MPI_Waitall(nwait, self%mpi_requests%data(1:nwait), MPI_STATUSES_IGNORE, ierr)
 
             do iwait = 1,nwait
-
+                call write_line(IRANK, ' waiting on ', iwait, ' of ', nwait)
                 call MPI_Wait(self%mpi_requests%data(iwait), MPI_STATUS_IGNORE, ierr)
-
             end do
 
             call self%mpi_requests%clear()
         end if
 
+        call write_line(IRANK, ' done waiting.', io_proc=IRANK)
     end subroutine comm_wait
     !******************************************************************************************
 

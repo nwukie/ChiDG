@@ -66,7 +66,7 @@ contains
     subroutine init(self,mesh,A,proc)
         class(RASILU0_send_comm_t), intent(inout)   :: self
         type(mesh_t),               intent(in)      :: mesh(:)
-        type(chidg_matrix_t),        intent(in)      :: A
+        type(chidg_matrix_t),       intent(in)      :: A
         integer(ik),                intent(in)      :: proc
 
         type(ivector_t)             :: dom_send
@@ -162,7 +162,8 @@ contains
                 !
                 do iface = 1,NFACES
 
-                    if ( (mesh(idom)%faces(ielem,iface)%ftype == INTERIOR)  .and. (mesh(idom)%faces(ielem,iface)%ineighbor_proc == proc) ) then
+                    if ( (mesh(idom)%faces(ielem,iface)%ftype          == INTERIOR)  .and. &
+                         (mesh(idom)%faces(ielem,iface)%ineighbor_proc == proc    ) ) then
                         call self%dom(idom_send)%blk_send(ielem_send)%push_back(iface)
                     end if
 
@@ -180,14 +181,15 @@ contains
                 do iface = 1,NFACES
 
                     ! Get neighbor for iface
-                    if ( (mesh(idom)%faces(ielem,iface)%ftype == INTERIOR) .and. (mesh(idom)%faces(ielem,iface)%ineighbor_proc == IRANK) ) then
+                    if ( (mesh(idom)%faces(ielem,iface)%ftype          == INTERIOR) .and. &
+                         (mesh(idom)%faces(ielem,iface)%ineighbor_proc == IRANK   ) ) then
                         ielem_n = mesh(idom)%faces(ielem,iface)%ineighbor_element_l
 
 
                         ! Loop through the faces of the neighbor element to see if it is also in the RAS overlap. 
                         ! If so, add its index to the list of linearization blocks to send for ielem.
                         do iface_n = 1,NFACES
-                            if ( (mesh(idom)%faces(ielem_n,iface_n)%ineighbor_proc == proc) .and. &
+                            if ( (mesh(idom)%faces(ielem_n,iface_n)%ineighbor_proc     == proc) .and. &
                                  (mesh(idom)%faces(ielem_n,iface_n)%ineighbor_domain_g == self%dom(idom_send)%idomain_g) ) then
                                 call self%dom(idom_send)%blk_send(ielem_send)%push_back(iface)
                                 exit

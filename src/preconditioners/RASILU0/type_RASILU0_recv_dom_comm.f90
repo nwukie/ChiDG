@@ -62,11 +62,14 @@ contains
         type(blockmatrix_t),            intent(in)      :: a
         integer(ik),                    intent(in)      :: proc
 
-        integer(ik)                 :: ielem_recv, nelem_recv, nblk_recv, idomain_g, iblk, ierr
-        integer(ik)                 :: nrows, ncols, dparent_g, dparent_l, eparent_g, eparent_l, parent_proc
-        integer(ik)                 :: iblk_diag, iblk_recv, parent_proc_diag, parent_proc_offdiag_loop
-        integer(ik)                 :: ielem_loop, iblk_loop, eparent_l_diag, eparent_l_diag_loop, eparent_l_offdiag_loop, iblk_diag_loop
-        integer(ik)                 :: eparent_g_diag, eparent_g_diag_loop, eparent_g_offdiag_loop, test_elem, test_blk
+        integer(ik)                 :: ielem_recv, nelem_recv, nblk_recv, idomain_g, iblk,  &
+                                       ierr, nrows, ncols, dparent_g, dparent_l, eparent_g, &
+                                       eparent_l, parent_proc, iblk_diag, iblk_recv,        &
+                                       parent_proc_diag, parent_proc_offdiag_loop,          &
+                                       ielem_loop, iblk_loop, eparent_l_diag,               &
+                                       eparent_l_diag_loop, eparent_l_offdiag_loop,         &
+                                       iblk_diag_loop, eparent_g_diag, eparent_g_diag_loop, &
+                                       eparent_g_offdiag_loop, test_elem, test_blk
         integer(ik)                 :: block_data(7)
         integer(ik), allocatable    :: blk_indices(:)
         logical                     :: lower_block, upper_block, overlap_element, transpose_found
@@ -260,7 +263,8 @@ contains
                                 parent_proc_offdiag_loop = a%lblks(eparent_l,iblk_loop)%parent_proc()
 
 
-                                transpose_found = ( (eparent_g_offdiag_loop == eparent_g_diag) .and. (parent_proc_offdiag_loop == parent_proc_diag) )
+                                transpose_found = ( (eparent_g_offdiag_loop == eparent_g_diag  ) .and. &
+                                                    (parent_proc_offdiag_loop == parent_proc_diag) )
                                 if (transpose_found) then
                                     self%elem(ielem_recv)%trans_elem(iblk_recv) = eparent_l
                                     self%elem(ielem_recv)%trans_blk(iblk_recv)  = iblk_loop
@@ -293,7 +297,8 @@ contains
                                     eparent_l_offdiag_loop   = self%elem(ielem_loop)%blks(iblk_loop)%eparent_l()
                                     parent_proc_offdiag_loop = self%elem(ielem_loop)%blks(iblk_loop)%parent_proc()
 
-                                    transpose_found = ( (eparent_g_offdiag_loop == eparent_g_diag) .and. (parent_proc_offdiag_loop == parent_proc_diag) )
+                                    transpose_found = ( (eparent_g_offdiag_loop == eparent_g_diag) .and. &
+                                                        (parent_proc_offdiag_loop == parent_proc_diag) )
                                     if (transpose_found) then
                                         self%elem(ielem_recv)%trans_elem(iblk_recv) = ielem_loop
                                         self%elem(ielem_recv)%trans_blk(iblk_recv)  = iblk_loop

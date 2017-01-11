@@ -16,11 +16,13 @@ module type_face
 
 
 
-    !> Face data type
+    !>  Face data type
     !!
+    !!  ************************************************************************************
     !!  NOTE: could be dangerous to declare static arrays of elements using gfortran because
-    !!        the compiler doens't have complete finalization rules implemented. Useing allocatables
-    !!        seems to work fine.
+    !!        the compiler doens't have complete finalization rules implemented. Using 
+    !!        allocatables seems to work fine.
+    !!  ************************************************************************************
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -28,7 +30,7 @@ module type_face
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   5/23/2016
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     type, public :: face_t
         integer(ik)                 :: spacedim             !< Number of spatial dimensions
 
@@ -131,7 +133,7 @@ module type_face
         final               :: destructor
 
     end type face_t
-    !********************************************************************************************************
+    !******************************************************************************************
 
     private
 
@@ -147,7 +149,8 @@ contains
 
     !> Face geometry initialization procedure
     !!
-    !!  Set integer values for face index, face type, parent element index, neighbor element index and coordinates
+    !!  Set integer values for face index, face type, parent element index, neighbor element
+    !!  index and coordinates.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -155,7 +158,7 @@ contains
     !!  @param[in] iface        Element face integer (XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX)
     !!  @param[in] elem         Parent element which many face members point to
     !!
-    !----------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine init_geom(self,iface,elem)
         class(face_t),      intent(inout)       :: self
         integer(ik),        intent(in)          :: iface
@@ -199,7 +202,7 @@ contains
         self%geomInitialized = .true.
 
     end subroutine init_geom
-    !**********************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -217,7 +220,7 @@ contains
     !!
     !!
     !!
-    !----------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine init_neighbor(self,ftype,ineighbor_domain_g,ineighbor_domain_l,              &
                                         ineighbor_element_g,ineighbor_element_l,            &
                                         ineighbor_face,ineighbor_neqns, ineighbor_nterms_s, &
@@ -248,7 +251,7 @@ contains
         self%neighborInitialized = .true.
 
     end subroutine init_neighbor
-    !***********************************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -271,7 +274,7 @@ contains
     !!
     !!  @param[in] elem     Parent element which many face members point to
     !!
-    !----------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine init_sol(self,elem)
         class(face_t),      intent(inout)       :: self
         type(element_t),    intent(in), target  :: elem
@@ -330,7 +333,7 @@ contains
         self%numInitialized  = .true.
 
     end subroutine init_sol
-    !**********************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -349,7 +352,7 @@ contains
     !!
     !!  TODO: Generalize 2D physical coordinates. Currently assumes x-y.
     !!
-    !---------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine compute_quadrature_metrics(self)
         class(face_t),  intent(inout)   :: self
 
@@ -424,7 +427,7 @@ contains
         self%jinv = invjac
 
     end subroutine compute_quadrature_metrics
-    !*****************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -446,7 +449,7 @@ contains
     !!
     !!  TODO: Generalize 2D physical coordinates. Currently assumes x-y.
     !!
-    !------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine compute_quadrature_normals(self)
         class(face_t),  intent(inout)   :: self
         integer(ik)                     :: inode, iface, nnodes
@@ -547,7 +550,7 @@ contains
 
 
     end subroutine compute_quadrature_normals
-    !************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -566,7 +569,7 @@ contains
     !!  @date   4/1/2016
     !!
     !!
-    !--------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine compute_gradients_cartesian(self)
         class(face_t),      intent(inout)   :: self
 
@@ -594,7 +597,7 @@ contains
         end do
 
     end subroutine compute_gradients_cartesian
-    !*********************************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -615,11 +618,13 @@ contains
     !!
     !!
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine compute_quadrature_coords(self)
         class(face_t),  intent(inout)   :: self
         integer(ik)                     :: iface, inode
-        real(rk)                        :: x(self%gq%face%nnodes),y(self%gq%face%nnodes),z(self%gq%face%nnodes)
+        real(rk)                        :: x(self%gq%face%nnodes), &
+                                           y(self%gq%face%nnodes), &
+                                           z(self%gq%face%nnodes)
 
         iface = self%iface
 
@@ -641,7 +646,7 @@ contains
         end do
 
     end subroutine compute_quadrature_coords
-    !***********************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -656,7 +661,7 @@ contains
     !!
     !!
     !!
-    !-----------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     function get_neighbor_element_l(self) result(neighbor_e)
         class(face_t),  intent(in)   ::  self
 
@@ -667,7 +672,7 @@ contains
 
 
     end function get_neighbor_element_l
-    !***********************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -681,7 +686,7 @@ contains
     !!
     !!
     !!
-    !-----------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     function get_neighbor_element_g(self) result(neighbor_e)
         class(face_t),  intent(in)   ::  self
 
@@ -692,11 +697,7 @@ contains
 
 
     end function get_neighbor_element_g
-    !***********************************************************************************************************
-
-
-
-
+    !******************************************************************************************
 
 
 
@@ -714,7 +715,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !-----------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     function get_neighbor_face(self) result(neighbor_f)
         class(face_t),  intent(in)   ::  self
 
@@ -752,7 +753,7 @@ contains
 
 
     end function get_neighbor_face
-    !***********************************************************************************************************
+    !******************************************************************************************
 
 
 

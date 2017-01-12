@@ -263,7 +263,7 @@ contains
     !!  @param[in]  activity   Initialization activity specification.
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine init(self,activity)
+    recursive subroutine init(self,activity)
         class(chidg_t), intent(inout)           :: self
         character(*),   intent(in)              :: activity
 

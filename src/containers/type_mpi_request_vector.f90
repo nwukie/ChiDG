@@ -58,6 +58,7 @@ contains
         integer(ik) :: res
 
         res = self%size_
+
     end function size
     !**************************************************************************************
 
@@ -80,6 +81,7 @@ contains
         integer(ik) :: res
 
         res = self%capacity_
+
     end function capacity
     !**************************************************************************************
 

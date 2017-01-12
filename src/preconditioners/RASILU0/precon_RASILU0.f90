@@ -744,6 +744,8 @@ contains
         integer(ik)                 :: icomm, idom, ielem, iblk, proc, nrows, ncols, idomain_g, &
                                        idom_recv, ielem_recv, iblk_recv, ierr
 
+        type(mpi_request)           :: request
+
 
         do idom_recv = 1,size(self%recv%dom)
 
@@ -757,7 +759,11 @@ contains
                         ncols     = self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%ncols_
                         idomain_g = self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%dparent_g_
 
-                        call MPI_Recv(self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%mat, nrows*ncols, MPI_REAL8, proc, idomain_g, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                        !call MPI_Recv(self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%mat, nrows*ncols, MPI_REAL8, proc, idomain_g, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                        call MPI_IRecv(self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%mat, nrows*ncols, MPI_REAL8, proc, idomain_g, ChiDG_COMM, request, ierr)
+
+                        call self%mpi_requests%push_back(request)
+
                     end do !iblk_recv
 
                 end do !ielem_recv
@@ -795,17 +801,18 @@ contains
 
         nwait = self%mpi_requests%size()
         if (nwait > 0) then
-!            call MPI_Waitall(nwait, self%mpi_requests%data(1:nwait), MPI_STATUSES_IGNORE, ierr)
+            call MPI_Waitall(nwait, self%mpi_requests%data(1:nwait), MPI_STATUSES_IGNORE, ierr)
 
-            do iwait = 1,nwait
-                call write_line(IRANK, ' waiting on ', iwait, ' of ', nwait)
-                call MPI_Wait(self%mpi_requests%data(iwait), MPI_STATUS_IGNORE, ierr)
-            end do
+!            do iwait = 1,nwait
+!                call write_line(IRANK, ' waiting on ', iwait, ' of ', nwait)
+!                call MPI_Wait(self%mpi_requests%data(iwait), MPI_STATUS_IGNORE, ierr)
+!            end do
 
             call self%mpi_requests%clear()
         end if
 
         call write_line(IRANK, ' done waiting.', io_proc=IRANK)
+
     end subroutine comm_wait
     !******************************************************************************************
 

@@ -335,12 +335,17 @@ the <a class="reference external" href="https://cmake.org">CMake Website</a>. Yo
 </div>
 <div class="section" id="hdf5">
 <h4>HDF5<a class="headerlink" href="#hdf5" title="Permalink to this headline">¶</a></h4>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Version &gt;= 1.10</p>
+</div>
 <p>HDF5 is used as a container for the ChiDG-formatted grid/solution files. The HDF5 library
 gives the option to build various portions of the library itself, depending on what the
 user needs available. ChiDG uses the HDF5 Fortran module interfaces and the high-level API.
 HDF5 documentation and installation guide can be found on
 <a class="reference external" href="https://support.hdfgroup.org/ftp/HDF5/current/src/unpacked/release_docs/INSTALL">HDF5 Website</a>.
-Be sure to configure with the appropriate flags when building HDF5. You likely need to add the following flags to the configuration:</p>
+Be sure to configure with the appropriate flags when building HDF5. You likely need to add the
+following flags to the configuration:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">./</span><span class="n">configure</span> <span class="o">--</span><span class="n">enable</span><span class="o">-</span><span class="n">fortran</span>  <span class="o">--</span><span class="n">enable</span><span class="o">-</span><span class="n">fortran2003</span>
 </pre></div>
 </div>

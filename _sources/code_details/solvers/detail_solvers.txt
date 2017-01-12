@@ -142,10 +142,23 @@ time derivative:
 
 .. math::
 
-    \hat{Q}^{n+1} = \hat{Q}^n - \boldsymbol{M}^{-1}R(\hat{Q})
+    \boldsymbol{M} \frac{\hat{Q}^{n+1} - \hat{Q}^{n}}{\Delta t} = R(\hat{Q}^{n})
 
 
 
+
+Algebraic problem:
+
+.. math:: 
+
+    \frac{\Delta \hat{Q}}{\Delta t}\boldsymbol{M} + R(\hat{Q}^{n}) = 0
+
+
+Solution iterated in time as:
+
+.. math::
+
+    \hat{Q}^{n+1} = \hat{Q}^n - {\Delta t} \boldsymbol{M}^{-1}R(\hat{Q}^{n})
 
 |
 |

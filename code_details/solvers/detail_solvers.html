@@ -375,7 +375,13 @@ time derivative:</p>
 <p>Solution advancement via a first-order forward difference of the
 time derivative:</p>
 <div class="math">
-\[\hat{Q}^{n+1} = \hat{Q}^n - \boldsymbol{M}^{-1}R(\hat{Q})\]</div>
+\[\boldsymbol{M} \frac{\hat{Q}^{n+1} - \hat{Q}^{n}}{\Delta t} = R(\hat{Q}^{n})\]</div>
+<p>Algebraic problem:</p>
+<div class="math">
+\[\frac{\Delta \hat{Q}}{\Delta t}\boldsymbol{M} + R(\hat{Q}^{n}) = 0\]</div>
+<p>Solution iterated in time as:</p>
+<div class="math">
+\[\hat{Q}^{n+1} = \hat{Q}^n - {\Delta t} \boldsymbol{M}^{-1}R(\hat{Q}^{n})\]</div>
 <div class="line-block">
 <div class="line"><br /></div>
 <div class="line"><br /></div>

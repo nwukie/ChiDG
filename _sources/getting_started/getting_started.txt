@@ -97,12 +97,18 @@ the `CMake Website <https://cmake.org>`_. You will run the ``cmake`` executable 
 
 HDF5
 ~~~~
+
+.. note:: 
+
+    Version >= 1.10
+
 HDF5 is used as a container for the ChiDG-formatted grid/solution files. The HDF5 library 
 gives the option to build various portions of the library itself, depending on what the 
 user needs available. ChiDG uses the HDF5 Fortran module interfaces and the high-level API. 
 HDF5 documentation and installation guide can be found on
 `HDF5 Website <https://support.hdfgroup.org/ftp/HDF5/current/src/unpacked/release_docs/INSTALL>`_.
-Be sure to configure with the appropriate flags when building HDF5. You likely need to add the following flags to the configuration:
+Be sure to configure with the appropriate flags when building HDF5. You likely need to add the 
+following flags to the configuration:
 
 ::
 
@@ -256,15 +262,6 @@ CMAKE_Fortran_COMPILER          Specify a Fortran Compiler       			``gfortran``
 CMAKE_BUILD_TYPE                Specify what type of compiler settings to build with    ``Release``
                                                                                         ``Debug``
 =============================== ======================================================= ================
-
-.. TESTING                         Build the test binaries. **Requires pFUnit Library.**   ``True``
-..                                                                                         ``False``
-.. USER_MPI                        Use User environment variables for finding MPI:         ``True``
-..                                    - MPI_Fortran_COMPILER                               ``False``
-..                                    - MPI_Fortran_INCLUDE_PATH                
-.. 
-.. **Up-to-date Fortran(F2008) compiler required. Tested with gfortran 5.3**
-
 
 
 

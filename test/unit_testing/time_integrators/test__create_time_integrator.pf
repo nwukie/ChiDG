@@ -31,7 +31,7 @@ subroutine test__create_time_integrator__type()
     use mod_kinds,              only: rk,ik
     use mod_time_integrators,   only: create_time_integrator
     use type_time_integrator,   only: time_integrator_t
-    use steady,                 only: steady_t
+    use type_steady,            only: steady_t
     
     implicit none
     class(time_integrator_t),     allocatable :: time

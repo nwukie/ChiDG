@@ -1,4 +1,4 @@
-module steady
+module type_steady
     use messenger,              only: write_line
     use mod_kinds,              only: rk,ik
     use type_time_integrator,   only: time_integrator_t
@@ -60,7 +60,7 @@ contains
     !!  @date   4/29/2016
     !!
     !!
-    !-------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine iterate(self,data,nonlinear_solver,linear_solver,preconditioner)
         class(steady_t),                        intent(inout)   :: self
         type(chidg_data_t),                     intent(inout)   :: data
@@ -77,7 +77,7 @@ contains
 
 
     end subroutine iterate
-    !****************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -94,10 +94,4 @@ contains
 
 
 
-end module steady
-
-
-
-
-
-
+end module type_steady

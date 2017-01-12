@@ -1,1 +1,1 @@
-add_lib_sources(forward_euler.f90)
+add_lib_sources(type_forward_euler.f90)

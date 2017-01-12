@@ -1,4 +1,4 @@
-module forward_euler
+module type_forward_euler
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO
     use type_time_integrator,   only: time_integrator_t
@@ -46,7 +46,7 @@ module forward_euler
     !!  @author Nathan A. Wukie
     !!
     !!
-    !------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     type, extends(time_integrator_t), public :: forward_euler_t
 
 
@@ -55,7 +55,7 @@ module forward_euler
 
         final :: destructor
     end type forward_euler_t
-    !-----------------------------------------------------------
+    !----------------------------------------------------------------------------------------
 
 contains
 
@@ -67,7 +67,7 @@ contains
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine iterate(self,data,nonlinear_solver,linear_solver,preconditioner)
         class(forward_euler_t),                 intent(inout)   :: self
         type(chidg_data_t),                     intent(inout)   :: data
@@ -137,7 +137,7 @@ contains
         end associate
 
     end subroutine iterate
-    !********************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -160,14 +160,4 @@ contains
 
 
 
-end module forward_euler
-
-
-
-
-
-
-
-
-
-
+end module type_forward_euler

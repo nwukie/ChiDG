@@ -91,6 +91,7 @@
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#step-4-configure-the-build">Step 4: Configure the build</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#step-5-build-chidg">Step 5: Build ChiDG</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#step-6-test-chidg">Step 6: Test ChiDG</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#usage">Usage</a><ul>
@@ -504,6 +505,45 @@ process. They are passed with the <code class="docutils literal"><span class="pr
 </tr>
 <tr class="row-even"><td>Run <code class="docutils literal"><span class="pre">make</span></code> to build the ChiDG library</td>
 <td><code class="docutils literal"><span class="pre">make</span></code> or <code class="docutils literal"><span class="pre">make</span> <span class="pre">-j</span> <span class="pre">4</span></code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="step-6-test-chidg">
+<h3>Step 6: Test ChiDG<a class="headerlink" href="#step-6-test-chidg" title="Permalink to this headline">¶</a></h3>
+<p>ChiDG uses <a class="reference external" href="http://pfunit.sourceforge.net">pFUnit</a> to support unit and integration testing of the compiled ChiDG library.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Requires web access to retrieve pFUnit source.</p>
+</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="51%" />
+<col width="49%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td colspan="2"><strong>Testing steps</strong></td>
+</tr>
+<tr class="row-even"><td><dl class="first last docutils">
+<dt>Run <code class="docutils literal"><span class="pre">make</span> <span class="pre">check</span></code> to:</dt>
+<dd><ul class="first last simple">
+<li>download/build pFUnit</li>
+<li>build ChiDG tests</li>
+</ul>
+</dd>
+</dl>
+</td>
+<td><code class="docutils literal"><span class="pre">make</span> <span class="pre">check</span></code> or <code class="docutils literal"><span class="pre">make</span> <span class="pre">check</span> <span class="pre">-j</span> <span class="pre">4</span></code></td>
+</tr>
+<tr class="row-odd"><td><dl class="first last docutils">
+<dt>Run <code class="docutils literal"><span class="pre">make</span> <span class="pre">test</span></code> to:</dt>
+<dd><ul class="first last simple">
+<li>run tests on ChiDG</li>
+</ul>
+</dd>
+</dl>
+</td>
+<td><code class="docutils literal"><span class="pre">make</span> <span class="pre">test</span></code></td>
 </tr>
 </tbody>
 </table>

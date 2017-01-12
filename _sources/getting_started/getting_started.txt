@@ -289,6 +289,35 @@ Step 5: Build ChiDG
 
 
 
+
+Step 6: Test ChiDG
+-------------------
+ChiDG uses `pFUnit <http://pfunit.sourceforge.net>`_ to support unit and integration testing of the compiled ChiDG library.
+
+.. note::
+
+    Requires web access to retrieve pFUnit source.
+
++--------------------------------------------+------------------------------------------+
+| **Testing steps**                                                                     |
++--------------------------------------------+------------------------------------------+
+|                                            |                                          |
+| Run ``make check`` to:                     |   ``make check`` or ``make check -j 4``  |
+|   - download/build pFUnit                  |                                          |
+|   - build ChiDG tests                      |                                          |
++--------------------------------------------+------------------------------------------+
+|                                            |                                          |
+| Run ``make test`` to:                      |                                          |
+|   - run tests on ChiDG                     |   ``make test``                          |
++--------------------------------------------+------------------------------------------+
+
+
+
+
+
+
+
+
 |
 |
 |

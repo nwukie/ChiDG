@@ -46,39 +46,23 @@ endif()
 
 
 #-----------------------------------------------------------------------------------
-#                           Get fortran compiler vendor
-#-----------------------------------------------------------------------------------
-get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
-if (Fortran_COMPILER_NAME MATCHES "ifort.*")
-    set (Fortran_VENDOR "INTEL")
-elseif (Fortran_COMPILER_NAME MATCHES "gfortran.*")
-    set (Fortran_VENDOR "GNU")
-else ()
-    message(SEND_ERROR "Fortran compiler not recognized")
-endif()
-
-
-
-
-#-----------------------------------------------------------------------------------
 #                               Set compiler flags
 #----------------------------------------------------------------------------------- 
-if (${Fortran_VENDOR} MATCHES "INTEL")
-    set (USER_COMPILE_FLAGS_DEBUG   "-O0 -fpp -assume realloc_lhs -debug -p -g \
-                                     -traceback -check all -check bounds \
-                                     -fp-stack-check -standard-semantics \
-                                     -assume nostd_mod_proc_name \
-                                     -heap-arrays 1600")
-    set (USER_COMPILE_FLAGS_RELEASE "-O3 -fpp -assume realloc_lhs")
+if (CMAKE_Fortran_COMPILER_ID MATCHES Intel)
+    set (USER_COMPILE_FLAGS_DEBUG   "-O0 -fpp -assume realloc_lhs -debug -g \
+                                     -traceback -check all -mcmodel=medium \
+                                     -fp-stack-check -heap-arrays 1600")
+    set (USER_COMPILE_FLAGS_RELEASE "-O3 -fpp -assume realloc_lhs -mcmodel=medium \
+                                     -align array32byte -traceback")
     set (CMAKE_Fortran_LINK_FLAGS_DEBUG "")
     set (CMAKE_Fortran_LINK_FLAGS_RELEASE "")
 
-    set (PROFILE_FLAGS "")
+    set (PROFILE_FLAGS "-p")
     
     #set (CMAKE_AR xiar)        # for -ipo
     #set (CMAKE_LINKER xild)    # for -ipo
     
-elseif (${Fortran_VENDOR} MATCHES "GNU")
+elseif (CMAKE_Fortran_COMPILER_ID MATCHES GNU)
     set (USER_COMPILE_FLAGS_DEBUG   "-O0 -cpp --coverage -ffree-form \
                                      -ffree-line-length-none -fbacktrace \
                                      -fstack-protector -fcheck=bounds \
@@ -309,12 +293,60 @@ install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/ DESTINATION /usr/local/chid
 
 
 
+#----------------------------------------------------------------------------------------------
+#
+#                              Target to update git submodules
+#
+#----------------------------------------------------------------------------------------------
+add_custom_target(
+    git_update
+    COMMAND git submodule init
+    COMMAND git submodule update
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    )
 
 
 
 
 
 
+#----------------------------------------------------------------------------------------------
+#
+#   pFUnit external project for testing.
+#
+#   The following code is based on modifications of code by Randovan Bast. See file LICENSE, 
+#   section BAST for license.
+#   
+#
+#----------------------------------------------------------------------------------------------
+include(ExternalProject)
+
+set(ExternalProjectCMakeArgs
+    -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    -DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/external/pfunit
+    -DCMAKE_Fortran_COMPILER=${CMAKE_Fortran_COMPILER}
+    -DMPI=YES
+    -DINSTALL_PATH=${PROJECT_BINARY_DIR}/external/pfunit   # keeps pfunit from complaining
+    )
+
+ExternalProject_Add(
+    pfunit
+    DOWNLOAD_COMMAND git submodule update
+    DOWNLOAD_DIR ${PROJECT_SOURCE_DIR}
+    SOURCE_DIR ${PROJECT_SOURCE_DIR}/external/pfunit
+    BINARY_DIR ${PROJECT_BINARY_DIR}/external/pfunit-build
+    STAMP_DIR ${PROJECT_BINARY_DIR}/external/pfunit-stamp
+    TMP_DIR ${PROJECT_BINARY_DIR}/external/pfunit-tmp
+    INSTALL_DIR ${PROJECT_BINARY_DIR}/external
+    CMAKE_ARGS ${ExternalProjectCMakeArgs}
+    EXCLUDE_FROM_ALL 1
+    )
+
+
+add_dependencies(pfunit git_update)
+set(PF_ROOT ${PROJECT_BINARY_DIR}/external/pfunit)
+set(PFU_LIB ${PF_ROOT}/lib)
+set(MPIRUN_EXECUTABLE "mpirun")
 
 
 #----------------------------------------------------------------------------------------------
@@ -322,43 +354,19 @@ install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/ DESTINATION /usr/local/chid
 #   To build tests:     make check
 #   To run tests:       make test
 #
+#   To build tests, the unit-testing framework pFUnit must be compiled with MPI support.
+#   The environment variable PFUNIT must be set such that PFUNIT/bin PFUNIT/lib
+#   are valid.
+#
 #----------------------------------------------------------------------------------------------
-# To build tests, the unit-testing framework pFUnit must be compiled with MPI support.
-# The environment variable PFUNIT must be set such that PFUNIT/gnu or PFUNIT/intel
-# are valid.
 
 
-file(REMOVE ${CMAKE_BINARY_DIR}/bin/unittest.sh)
-file(REMOVE ${CMAKE_BINARY_DIR}/bin/regtest.sh)
-
-
+#
+# Add unit tests. Build with 'make check'. Run with 'make test'.
+#
 enable_testing()
-
 add_custom_target(check)
-
-#
-# Get paths for pFUnit and MPIRUN
-#
-set(PF_ROOT $ENV{PFUNIT})
-set(MPIRUN_EXECUTABLE $ENV{MPIRUN_EXECUTABLE})
-
-
-#
-# Set location of pFUnit libs
-#
-set(PFU_LIB ${PF_ROOT}/lib)
-
-
-#
-# Add unit tests
-#
 add_subdirectory(test)
-
-
-
-
-
-
 
 
 

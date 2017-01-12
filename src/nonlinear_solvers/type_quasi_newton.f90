@@ -1,4 +1,4 @@
-module quasi_newton
+module type_quasi_newton
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, DIAG
     use mod_spatial,            only: update_space
@@ -22,7 +22,7 @@ module quasi_newton
     !!  @author Nathan A. Wukie
     !!  @date   2/8/2016
     !!
-    !---------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     type, extends(nonlinear_solver_t), public :: quasi_newton_t
 
 
@@ -32,7 +32,7 @@ module quasi_newton
         final       :: destructor
 
     end type quasi_newton_t
-    !**********************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -55,7 +55,7 @@ contains
     !!  @date   2/8/2016
     !!
     !!
-    !-------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine solve(self,data,linear_solver,preconditioner)
         class(quasi_newton_t),                  intent(inout)   :: self
         type(chidg_data_t),                     intent(inout)   :: data
@@ -251,7 +251,7 @@ contains
 
 
     end subroutine solve
-    !************************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -268,7 +268,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   11/17/2016
     !!
-    !----------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine compute_pseudo_timestep(data,cfln)
         type(chidg_data_t),     intent(inout)   :: data
         real(rk),               intent(in)      :: cfln
@@ -285,7 +285,7 @@ contains
         end do !idom
 
     end subroutine compute_pseudo_timestep
-    !****************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -305,7 +305,7 @@ contains
 
 
 
-end module quasi_newton
+end module type_quasi_newton
 
 
 

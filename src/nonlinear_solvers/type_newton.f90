@@ -1,4 +1,4 @@
-module newton
+module type_newton
     use messenger,              only: write_line
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, DIAG
@@ -29,7 +29,6 @@ module newton
     !!
     !----------------------------------------------------------------------------------------
     type, extends(nonlinear_solver_t), public :: newton_t
-
 
 
     contains
@@ -230,10 +229,4 @@ contains
 
 
 
-end module newton
-
-
-
-
-
-
+end module type_newton

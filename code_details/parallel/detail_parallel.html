@@ -107,7 +107,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../examples/example_main.html">Examples</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html">Euler smooth bump</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html">Smooth bump</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#background">Background</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup">Setup</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup-from-scratch">Setup from scratch:</a></li>
@@ -351,13 +351,13 @@ located on a given processor corresponds to the row in the <code class="docutils
 <dl class="function">
 <dt id="mv">
 <code class="descname">mv</code><span class="sig-paren">(</span><em>chidg_matrix</em>, <em>chidg_vector</em><span class="sig-paren">)</span><a class="headerlink" href="#mv" title="Permalink to this definition">¶</a></dt>
-<dd><p>This computes the global matrix-vector product between a <code class="docutils literal"><span class="pre">chidg_matrix</span></code> and <code class="docutils literal"><span class="pre">chidg_vector</span></code>.
-First, the <code class="docutils literal"><span class="pre">chidg_vector%comm_send()</span></code> routine is called to initiate non-blocking sends
-of vector data to communicating processors. Then the processor-local part of the
-matrix-vector product is performed. <code class="docutils literal"><span class="pre">chidg_vector%comm_recv()</span></code> is then called to
-receive incoming vector data from communicating processors. The non-local part
-of the matrix-vector product is then performed with the newly-arrived vector data from
-other processors.</p>
+<dd><p>This computes the global matrix-vector product between a <code class="docutils literal"><span class="pre">chidg_matrix</span></code> and
+<code class="docutils literal"><span class="pre">chidg_vector</span></code>. First, the <code class="docutils literal"><span class="pre">chidg_vector%comm_send()</span></code> routine is called to
+initiate non-blocking sends of vector data to communicating processors.
+Then the processor-local part of the matrix-vector product is performed.
+<code class="docutils literal"><span class="pre">chidg_vector%comm_recv()</span></code> is then called to receive incoming vector data from
+communicating processors. The non-local part of the matrix-vector product is then
+performed with the newly-arrived vector data from other processors.</p>
 </dd></dl>
 
 </div>
@@ -448,7 +448,7 @@ block-Jacobi, which performs poorly.</p>
 parallel elements coupled with the local elements. One of these approaches is the
 Restricted Additive Schwarz(RAS) preconditioner. The portions of the neighboring elements
 are included in the local preconditioner and that system is solved. The result is only
-applied to the local vector, hense the term Restricted. The standard Additive Schwarz(AS)
+applied to the local vector, hence the term Restricted. The standard Additive Schwarz(AS)
 algorithm distributes the result back to the neighboring processors.</p>
 <p>ChiDG has both block-Jacobi and RAS-type preconditioners. The performance of these are
 demonstrated here for moderate scaling. The RAS-type preconditioner, using an

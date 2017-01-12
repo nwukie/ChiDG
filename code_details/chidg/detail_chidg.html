@@ -107,7 +107,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../examples/example_main.html">Examples</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html">Euler smooth bump</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html">Smooth bump</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#background">Background</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup">Setup</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup-from-scratch">Setup from scratch:</a></li>
@@ -279,8 +279,9 @@
             
   <div class="section" id="chidg-instance">
 <span id="chidg-t"></span><h1>ChiDG Instance<a class="headerlink" href="#chidg-instance" title="Permalink to this headline">¶</a></h1>
-<p>ChiDG exists primarily as a Fortran Class(<code class="docutils literal"><span class="pre">chidg_t</span></code>) that provides an interface to the simulation environment.
-A <code class="docutils literal"><span class="pre">chidg_t</span></code> instance contains five primary components. These are:</p>
+<p>ChiDG exists primarily as a Fortran Class(<code class="docutils literal"><span class="pre">chidg_t</span></code>) that provides an interface to
+the simulation environment. A <code class="docutils literal"><span class="pre">chidg_t</span></code> instance contains five primary components.
+These are:</p>
 <div class="highlight-fortran"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="kd">::</span> <span class="n">chidg_t</span>
     <span class="k">type</span><span class="p">(</span><span class="n">chidg_data_t</span><span class="p">)</span>          <span class="k">data</span>
 <span class="k">    type</span><span class="p">(</span><span class="n">time_integrator_t</span><span class="p">)</span>     <span class="n">time_integrator</span>
@@ -291,6 +292,110 @@ A <code class="docutils literal"><span class="pre">chidg_t</span></code> instanc
 <span class="k">end type </span><span class="n">chidg_t</span>
 </pre></div>
 </div>
+<dl class="function">
+<dt>
+<code class="descname">chidg%start_up('option')</code></dt>
+<dd><p>Performs start-up routines on a ChiDG instance. Options are:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="16%" />
+<col width="84%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">mpi</span></code></td>
+<td><div class="first last line-block">
+<div class="line">Calls <code class="docutils literal"><span class="pre">MPI_Init</span></code>, initializes <code class="docutils literal"><span class="pre">IRANK</span></code>, <code class="docutils literal"><span class="pre">NRANK</span></code></div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">core</span></code></td>
+<td><div class="first last line-block">
+<div class="line">Register functions, equations, models, operators, bcs, compute reference</div>
+<div class="line">matrices. Initialize <code class="docutils literal"><span class="pre">ChiDG_COMM</span></code> MPI communicator. Default communicator</div>
+<div class="line">is <code class="docutils literal"><span class="pre">MPI_COMM_WORLD</span></code>.</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">namelist</span></code></td>
+<td><div class="first last line-block">
+<div class="line">Read namelist input file, chidg.nml</div>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt>
+<code class="descname">chidg%shut_down('option')</code></dt>
+<dd><p>Performs shut-down routines on a ChiDG instance. Options are:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="15%" />
+<col width="85%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">mpi</span></code></td>
+<td><div class="first last line-block">
+<div class="line">Calls <code class="docutils literal"><span class="pre">MPI_Finalize</span></code>.</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">core</span></code></td>
+<td><div class="first last line-block">
+<div class="line">Close log files, close HDF interface.</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">log</span></code></td>
+<td><div class="first last line-block">
+<div class="line">Close log files.</div>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt>
+<code class="descname">chidg%init('option')</code></dt>
+<dd><p>Performs shut-down routines on a ChiDG instance. Options are:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="19%" />
+<col width="81%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">all</span></code></td>
+<td><div class="first last line-block">
+<div class="line">Calls <code class="docutils literal"><span class="pre">MPI_Finalize</span></code>.</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">communication</span></code></td>
+<td><div class="first last line-block">
+<div class="line">Close log files, close HDF interface.</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">chimera</span></code></td>
+<td><div class="first last line-block">
+<div class="line">Close log files.</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">finalize</span></code></td>
+<td><div class="first last line-block">
+<div class="line">Close log files.</div>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
 <div class="line-block">
 <div class="line"><br /></div>
 <div class="line"><br /></div>

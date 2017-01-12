@@ -96,13 +96,13 @@ located on a given processor corresponds to the row in the ``chidg_matrix``, as 
 
 .. function:: mv(chidg_matrix,chidg_vector)
 
-    This computes the global matrix-vector product between a ``chidg_matrix`` and ``chidg_vector``.
-    First, the ``chidg_vector%comm_send()`` routine is called to initiate non-blocking sends
-    of vector data to communicating processors. Then the processor-local part of the 
-    matrix-vector product is performed. ``chidg_vector%comm_recv()`` is then called to 
-    receive incoming vector data from communicating processors. The non-local part
-    of the matrix-vector product is then performed with the newly-arrived vector data from
-    other processors.
+    This computes the global matrix-vector product between a ``chidg_matrix`` and 
+    ``chidg_vector``. First, the ``chidg_vector%comm_send()`` routine is called to 
+    initiate non-blocking sends of vector data to communicating processors. 
+    Then the processor-local part of the matrix-vector product is performed. 
+    ``chidg_vector%comm_recv()`` is then called to receive incoming vector data from 
+    communicating processors. The non-local part of the matrix-vector product is then 
+    performed with the newly-arrived vector data from other processors.
 
 
 chidg_vector
@@ -210,7 +210,7 @@ Another approach to parallel preconditioning is to include some overlap data fro
 parallel elements coupled with the local elements. One of these approaches is the
 Restricted Additive Schwarz(RAS) preconditioner. The portions of the neighboring elements
 are included in the local preconditioner and that system is solved. The result is only
-applied to the local vector, hense the term Restricted. The standard Additive Schwarz(AS)
+applied to the local vector, hence the term Restricted. The standard Additive Schwarz(AS)
 algorithm distributes the result back to the neighboring processors.
 
 ChiDG has both block-Jacobi and RAS-type preconditioners. The performance of these are

@@ -1,7 +1,7 @@
 .. _example_smoothbump:
 
 =================
-Euler smooth bump
+Smooth bump
 =================
 
 
@@ -37,7 +37,7 @@ over the volume of the domain and computed as:
 Setup
 ------
 
-| :download:`smoothbump.tar <smoothbump.tar>`
+| :download:`smoothbump.tar.gz <smoothbump.tar.gz>`
 |
 
 Setup from scratch:

@@ -32,9 +32,11 @@ ChiDG Modules
 Almost *everything* in ChiDG exists in Fortran Modules. Modules are nice because they allow 
 a program to be broken up into logical units and used as necessary. They can also store 
 data as module variables that could then be ``use``'d throughout the program as global data.
-If you need to make use of a ``mesh_t`` somewhere in the program, then use
-``use type_mesh, only: mesh_t`` to import the ``mesh_t`` data type and make it available to the 
-current file.
+Additionally, they eliminate the need to write and maintain interface files like ``.h`` files
+as is common in C and C++. In Fortran, the interfaces for routines that are located in a module
+are automatically generated. If you need to make use of a ``mesh_t`` somewhere in the program, 
+then ``use type_mesh, only: mesh_t`` will import the ``mesh_t`` data type from the ``type_mesh`` 
+module and make it available to use in the current file.
 
 
 Convention on ChiDG Modules:

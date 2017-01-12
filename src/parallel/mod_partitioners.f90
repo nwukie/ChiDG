@@ -400,6 +400,8 @@ contains
 
             ! Send number of connectivities in current partition
             call MPI_ISend(partitions(ipartition)%nconn,1,MPI_INTEGER4, ipartition-1, 0, ChiDG_COMM, handle, ierr)
+            call MPI_Request_free(handle,ierr)
+            
 
 
             ! Send connectivities
@@ -408,9 +410,13 @@ contains
 
                 string_length = partitions(ipartition)%connectivities(iconn)%name_length
                 call MPI_ISend(partitions(ipartition)%connectivities(iconn)%name_length, 1,             MPI_INTEGER4,  ipartition-1, 0, ChiDG_COMM, handle, ierr)
+                call MPI_Request_free(handle,ierr)
                 call MPI_ISend(partitions(ipartition)%connectivities(iconn)%name,        string_length, MPI_CHARACTER, ipartition-1, 0, ChiDG_COMM, handle, ierr)
+                call MPI_Request_free(handle,ierr)
                 call MPI_ISend(partitions(ipartition)%connectivities(iconn)%nelements,   1,             MPI_INTEGER4,  ipartition-1, 0, ChiDG_COMM, handle, ierr)
+                call MPI_Request_free(handle,ierr)
                 call MPI_ISend(partitions(ipartition)%connectivities(iconn)%nnodes,      1,             MPI_INTEGER4,  ipartition-1, 0, ChiDG_COMM, handle, ierr)
+                call MPI_Request_free(handle,ierr)
 
 
                 ! Send a connectivity for each element. Would be more efficient to assemble a consolodated array, but must
@@ -418,8 +424,10 @@ contains
                 nelements = partitions(ipartition)%connectivities(iconn)%get_nelements()
                 do ielem = 1,nelements
                     call MPI_ISend(partitions(ipartition)%connectivities(iconn)%data(ielem)%connectivity_size, 1, MPI_INTEGER4, ipartition-1, 0, ChiDG_COMM, handle, ierr)
+                    call MPI_Request_free(handle,ierr)
                     data_size = partitions(ipartition)%connectivities(iconn)%data(ielem)%connectivity_size
                     call MPI_ISend(partitions(ipartition)%connectivities(iconn)%data(ielem)%data, data_size, MPI_INTEGER4, ipartition-1, 0, ChiDG_COMM, handle, ierr)
+                    call MPI_Request_free(handle,ierr)
                 end do
 
             end do ! iconn

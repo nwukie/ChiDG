@@ -5,7 +5,7 @@ module type_chidg_vector_send_comm
     use type_mesh,          only: mesh_t
     use type_ivector,       only: ivector_t
     use mod_chidg_mpi,      only: ChiDG_COMM
-    use mpi_f08,            only: MPI_Request, MPI_INTEGER4, MPI_ISend
+    use mpi_f08,            only: MPI_Request, MPI_INTEGER4, MPI_ISend, MPI_Request_free
     implicit none
 
 
@@ -65,9 +65,11 @@ contains
         type(mesh_t),                   intent(in)      :: mesh(:)
         integer(ik),                    intent(in)      :: proc
 
-        integer(ik)                 :: idom, ielem, iface, idom_send, ndom_send, ierr, loc, neighbor_proc, ielem_send, ChiID, idonor, receiver_proc
+        integer(ik)                 :: idom, ielem, iface, idom_send, ndom_send, ierr, &
+                                       loc, neighbor_proc, ielem_send, ChiID, idonor, receiver_proc
         integer(ik),    allocatable :: comm_procs_dom(:)
-        logical                     :: already_added, proc_has_domain, send_element, has_neighbor, is_chimera
+        logical                     :: already_added, proc_has_domain, send_element, &
+                                       has_neighbor, is_chimera
         type(mpi_request)           :: null_request
 
 
@@ -102,7 +104,6 @@ contains
         !
         ndom_send = self%dom_send%size()
         if (allocated(self%elems_send)) then
-            !call self%dom_send%clear()
             deallocate(self%elems_send)
         end if
         allocate(self%elems_send(ndom_send), stat=ierr)
@@ -195,6 +196,7 @@ contains
 
         ! Communicate number of domains being sent to proc. This is recv'd by chidg_vector_recv_comm
         call MPI_ISend(self%dom_send%size_, 1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, null_request, ierr)
+        call MPI_Request_free(null_request,ierr)
 
 
         ! These send's are recv'd by blockvector%init_recv
@@ -204,19 +206,26 @@ contains
 
             ! Communicate domain indices
             call MPI_ISend(mesh(idom)%idomain_g, 1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, null_request, ierr)
+            call MPI_Request_free(null_request,ierr)
             call MPI_ISend(mesh(idom)%idomain_l, 1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, null_request, ierr)
+            call MPI_Request_free(null_request,ierr)
 
             ! Communicate number of elements from the domain being sent
             call MPI_ISend(self%elems_send(idom_send)%size_, 1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, null_request, ierr)
+            call MPI_Request_free(null_request,ierr)
 
             ! Send each element
             do ielem_send = 1,self%elems_send(idom_send)%size()
                 ielem = self%elems_send(idom_send)%at(ielem_send)
 
                 call MPI_ISend(mesh(idom)%elems(ielem)%ielement_g, 1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, null_request, ierr)
+                call MPI_Request_free(null_request,ierr)
                 call MPI_ISend(mesh(idom)%elems(ielem)%ielement_l, 1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, null_request, ierr)
+                call MPI_Request_free(null_request,ierr)
                 call MPI_ISend(mesh(idom)%elems(ielem)%nterms_s,   1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, null_request, ierr)
+                call MPI_Request_free(null_request,ierr)
                 call MPI_ISend(mesh(idom)%elems(ielem)%neqns,      1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, null_request, ierr)
+                call MPI_Request_free(null_request,ierr)
             end do ! ielem_send
 
         end do ! idom_send

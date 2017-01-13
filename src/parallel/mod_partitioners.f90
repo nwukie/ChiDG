@@ -96,7 +96,7 @@ contains
 
             options(0)  = 0      ! PTYPE
             options(3)  = 0      ! IPTYPE
-            options(10) = 2
+            !options(10) = 2
             !options(16) = 1
 
             !

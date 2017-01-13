@@ -1,10 +1,10 @@
 module type_chidg_vector_send
 #include <messenger.h>
-    use mod_kinds,                  only: ik
-    use type_ivector,               only: ivector_t
-    use type_mesh,                  only: mesh_t
-    use type_chidg_vector_send_comm, only: chidg_vector_send_comm_t
-    use mpi_f08,                    only: MPI_Request
+    use mod_kinds,                      only: ik
+    use type_ivector,                   only: ivector_t
+    use type_mesh,                      only: mesh_t
+    use type_chidg_vector_send_comm,    only: chidg_vector_send_comm_t
+    use mpi_f08,                        only: MPI_Request, MPI_STATUSES_IGNORE, MPI_Waitall
     implicit none
 
 
@@ -28,11 +28,12 @@ module type_chidg_vector_send
     type, public :: chidg_vector_send_t
 
         type(chidg_vector_send_comm_t),  allocatable :: comm(:)
-        type(MPI_Request),              allocatable :: isend_handles(:)
+        type(MPI_Request),               allocatable :: isend_handles(:)
 
     contains
 
         procedure, public   :: init
+        procedure, public   :: init_wait
 
     end type chidg_vector_send_t
     !*****************************************************************************************
@@ -132,6 +133,33 @@ contains
 
 
 
+
+
+    !>  Wait on any outstanding mpi_requests that were sent during 
+    !!  initiailization, self%init.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/13/2017
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine init_wait(self)
+        class(chidg_vector_send_t),  intent(inout)   :: self
+        
+        integer(ik) :: icomm, nrequests, ierr
+
+        
+        do icomm = 1,size(self%comm)
+
+            nrequests = self%comm(icomm)%initialization_requests%size()
+            if (nrequests > 0) then
+                call MPI_Waitall(nrequests, self%comm(icomm)%initialization_requests%data, MPI_STATUSES_IGNORE, ierr)
+            end if
+
+        end do
+
+    end subroutine init_wait
+    !***************************************************************************************
 
 
 

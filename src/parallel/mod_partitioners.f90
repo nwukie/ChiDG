@@ -1,8 +1,9 @@
 module mod_partitioners
 #include <messenger.h>
-    use type_meshdata,  only: meshdata_t
-    use mod_chidg_mpi,  only: NRANK, IRANK, GLOBAL_MASTER
-    use mod_metis,      only: METIS_PartMeshNodal, METIS_PartMeshDual
+    use type_meshdata,              only: meshdata_t
+    use mod_chidg_mpi,              only: NRANK, IRANK, GLOBAL_MASTER
+    use mod_metis,                  only: METIS_PartMeshNodal, METIS_PartMeshDual
+    use type_mpi_request_vector,    only: mpi_request_vector_t
     use mpi_f08
 
     use type_domain_connectivity,   only: domain_connectivity_t
@@ -11,7 +12,7 @@ module mod_partitioners
 
 
 
-
+    type(mpi_request_vector_t)  :: send_partition_requests
 
 
 
@@ -386,7 +387,7 @@ contains
         integer                     :: ielem, data_size
         integer(ik)                 :: iconn , nelements, string_length
         integer(ik)                 :: nconn
-        type(MPI_Request)           :: handle
+        type(MPI_Request)           :: handle, handle1, handle2, handle3, handle4
 
 
         npartitions = size(partitions)
@@ -400,7 +401,7 @@ contains
 
             ! Send number of connectivities in current partition
             call MPI_ISend(partitions(ipartition)%nconn,1,MPI_INTEGER4, ipartition-1, 0, ChiDG_COMM, handle, ierr)
-            call MPI_Request_free(handle,ierr)
+            call send_partition_requests%push_back(handle)
             
 
 
@@ -409,25 +410,26 @@ contains
             do iconn = 1,nconn
 
                 string_length = partitions(ipartition)%connectivities(iconn)%name_length
-                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%name_length, 1,             MPI_INTEGER4,  ipartition-1, 0, ChiDG_COMM, handle, ierr)
-                call MPI_Request_free(handle,ierr)
-                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%name,        string_length, MPI_CHARACTER, ipartition-1, 0, ChiDG_COMM, handle, ierr)
-                call MPI_Request_free(handle,ierr)
-                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%nelements,   1,             MPI_INTEGER4,  ipartition-1, 0, ChiDG_COMM, handle, ierr)
-                call MPI_Request_free(handle,ierr)
-                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%nnodes,      1,             MPI_INTEGER4,  ipartition-1, 0, ChiDG_COMM, handle, ierr)
-                call MPI_Request_free(handle,ierr)
+                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%name_length, 1,             MPI_INTEGER4,  ipartition-1, 0, ChiDG_COMM, handle1, ierr)
+                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%name,        string_length, MPI_CHARACTER, ipartition-1, 0, ChiDG_COMM, handle2, ierr)
+                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%nelements,   1,             MPI_INTEGER4,  ipartition-1, 0, ChiDG_COMM, handle3, ierr)
+                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%nnodes,      1,             MPI_INTEGER4,  ipartition-1, 0, ChiDG_COMM, handle4, ierr)
 
+                call send_partition_requests%push_back(handle1)
+                call send_partition_requests%push_back(handle2)
+                call send_partition_requests%push_back(handle3)
+                call send_partition_requests%push_back(handle4)
 
                 ! Send a connectivity for each element. Would be more efficient to assemble a consolodated array, but must
                 ! be careful, because it can't be reused until it has been received since we are posting non-blocking sends.
                 nelements = partitions(ipartition)%connectivities(iconn)%get_nelements()
                 do ielem = 1,nelements
-                    call MPI_ISend(partitions(ipartition)%connectivities(iconn)%data(ielem)%connectivity_size, 1, MPI_INTEGER4, ipartition-1, 0, ChiDG_COMM, handle, ierr)
-                    call MPI_Request_free(handle,ierr)
+                    call MPI_ISend(partitions(ipartition)%connectivities(iconn)%data(ielem)%connectivity_size, 1, MPI_INTEGER4, ipartition-1, 0, ChiDG_COMM, handle1, ierr)
                     data_size = partitions(ipartition)%connectivities(iconn)%data(ielem)%connectivity_size
-                    call MPI_ISend(partitions(ipartition)%connectivities(iconn)%data(ielem)%data, data_size, MPI_INTEGER4, ipartition-1, 0, ChiDG_COMM, handle, ierr)
-                    call MPI_Request_free(handle,ierr)
+                    call MPI_ISend(partitions(ipartition)%connectivities(iconn)%data(ielem)%data, data_size, MPI_INTEGER4, ipartition-1, 0, ChiDG_COMM, handle2, ierr)
+
+                    call send_partition_requests%push_back(handle1)
+                    call send_partition_requests%push_back(handle2)
                 end do
 
             end do ! iconn
@@ -464,7 +466,7 @@ contains
         integer                     :: ipartition, npartitions, ierr
         integer                     :: dims(3), iconn, idomain, ielem
         integer                     :: idomain_g, ielement_g, mapping, nnodes_element
-        integer(ik)                 :: conn_size, nnodes, nelements, nconn, string_length
+        integer(ik)                 :: conn_size, nnodes, nelements, nconn, string_length, nrequests
         integer,        allocatable :: nodes(:)
         integer(ik),    allocatable :: conn(:)
         character(:),   allocatable :: domain_name
@@ -528,6 +530,18 @@ contains
 
 
         end do !iconn
+
+
+
+
+        !
+        ! Wait on all requests initiated in send_partition
+        !
+        nrequests = send_partition_requests%size()
+        if (nrequests > 0) then
+            call MPI_Waitall(nrequests, send_partition_requests%data, MPI_STATUSES_IGNORE, ierr)
+        end if
+
 
 
     end subroutine recv_partition

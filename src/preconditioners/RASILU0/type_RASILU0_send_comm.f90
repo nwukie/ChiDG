@@ -288,10 +288,8 @@ contains
         nwait = self%mpi_requests%size()
         if (nwait > 0) then
 
-
             ! Wall on all requests and free buffers
             call MPI_Waitall(nwait, self%mpi_requests%data(1:nwait), MPI_STATUSES_IGNORE, ierr)
-
 
             ! Clear storage vector
             call self%mpi_requests%clear()

@@ -104,7 +104,7 @@ contains
         type(mpi_request),              intent(in)      :: element
 
         logical     :: capacity_reached
-        integer(ik) :: size, ierr
+        integer(ik) :: size_, ierr
 
 
         !
@@ -119,8 +119,8 @@ contains
         !
         ! Add element to end of vector
         !
-        size = self%size()
-        self%data(size + 1) = element
+        size_ = self%size()
+        self%data(size_ + 1) = element
 
 
         !

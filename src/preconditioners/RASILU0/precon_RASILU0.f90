@@ -195,40 +195,12 @@ contains
         !
         call self%mpi_requests%clear()
 
-        call write_line('       RAS-ILU0 sending...',   io_proc=GLOBAL_MASTER)
         call self%comm_send(A)
+        call self%comm_recv()
+        call self%comm_wait()
 
 
-        do iproc = 0,NRANK-1
-            if (iproc == IRANK) then
-                !call write_line('       RAS-ILU0 receiving...', io_proc=GLOBAL_MASTER)
-                call write_line(IRANK,'       RAS-ILU0 receiving...', io_proc=IRANK)
-                call self%comm_recv()
-            end if
-
-            call MPI_Barrier(ChiDG_COMM,ierr)
-        end do
-
-
-
-        do iproc = 0,NRANK-1
-            if (iproc == IRANK) then
-                !call write_line('       RAS-ILU0 wait...',      io_proc=GLOBAL_MASTER)
-                call write_line(IRANK,'       RAS-ILU0 wait...',      io_proc=IRANK)
-                call self%comm_wait()
-            end if
-
-            call MPI_Barrier(ChiDG_COMM,ierr)
-        end do
-
-
-
-        do iproc = 0,NRANK-1
-            if (iproc == IRANK) then
-                call write_line('       RAS-ILU0 done...',      io_proc=GLOBAL_MASTER)
-            end if
-            call MPI_Barrier(ChiDG_COMM,ierr)
-        end do
+        call write_line(IRANK, '       RAS-ILU0 done...',      io_proc=IRANK)
 
 
         !
@@ -679,6 +651,10 @@ contains
         integer(ik), allocatable    :: send_blocks(:)
         type(mpi_request)           :: request
 
+
+        call write_line(IRANK, '       RAS-ILU0 sending...',   io_proc=IRANK)
+
+
         do icomm = 1,size(self%send%comm)
             proc = self%send%comm(icomm)%proc
 
@@ -703,6 +679,7 @@ contains
 
                         nrows = size(A%dom(idom)%lblks(ielem,iblk)%mat,1)
                         ncols = size(A%dom(idom)%lblks(ielem,iblk)%mat,2)
+                        if (idomain_g /= 1) call chidg_signal(FATAL,"RAS%comm_recv: invalid tag.")
                         call MPI_ISend(A%dom(idom)%lblks(ielem,iblk)%mat, nrows*ncols, MPI_REAL8, proc, idomain_g, ChiDG_COMM, request, ierr)
 
                         ! Store requests to be checked by MPI_Wait
@@ -746,6 +723,7 @@ contains
 
         type(mpi_request)           :: request
 
+        call write_line(IRANK, '       RAS-ILU0 receiving...', io_proc=IRANK)
 
         do idom_recv = 1,size(self%recv%dom)
 
@@ -759,10 +737,10 @@ contains
                         ncols     = self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%ncols_
                         idomain_g = self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%dparent_g_
 
-                        !call MPI_Recv(self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%mat, nrows*ncols, MPI_REAL8, proc, idomain_g, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-                        call MPI_IRecv(self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%mat, nrows*ncols, MPI_REAL8, proc, idomain_g, ChiDG_COMM, request, ierr)
-
-                        call self%mpi_requests%push_back(request)
+                        if (idomain_g /= 1) call chidg_signal(FATAL,"RAS%comm_recv: invalid tag.")
+                        call MPI_Recv(self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%mat, nrows*ncols, MPI_REAL8, proc, idomain_g, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                        !call MPI_IRecv(self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%mat, nrows*ncols, MPI_REAL8, proc, idomain_g, ChiDG_COMM, request, ierr)
+                        !call self%mpi_requests%push_back(request)
 
                     end do !iblk_recv
 
@@ -798,17 +776,14 @@ contains
 
         integer(ik) :: nwait, iwait, ierr
 
+        call write_line(IRANK, '       RAS-ILU0 waiting...',   io_proc=IRANK)
 
         nwait = self%mpi_requests%size()
         if (nwait > 0) then
+
             call MPI_Waitall(nwait, self%mpi_requests%data(1:nwait), MPI_STATUSES_IGNORE, ierr)
-
-!            do iwait = 1,nwait
-!                call write_line(IRANK, ' waiting on ', iwait, ' of ', nwait)
-!                call MPI_Wait(self%mpi_requests%data(iwait), MPI_STATUS_IGNORE, ierr)
-!            end do
-
             call self%mpi_requests%clear()
+
         end if
 
         call write_line(IRANK, ' done waiting.', io_proc=IRANK)

@@ -643,8 +643,8 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine comm_send(self,A)
-        class(precon_RASILU0_t),    intent(inout)   :: self
-        type(chidg_matrix_t),       intent(in)      :: A
+        class(precon_RASILU0_t),    intent(inout)               :: self
+        type(chidg_matrix_t),       intent(in), asynchronous    :: A
 
         integer(ik)                 :: icomm, idom_send, ielem_send, iblk_send, idom, ielem, &
                                        iblk, proc, nrows, ncols, idomain_g, ierr

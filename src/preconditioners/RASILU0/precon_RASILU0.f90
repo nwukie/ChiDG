@@ -200,7 +200,6 @@ contains
         call self%comm_wait()
 
 
-        call write_line(IRANK, '       RAS-ILU0 done...',      io_proc=IRANK)
 
 
         !
@@ -652,7 +651,8 @@ contains
         type(mpi_request)           :: request
 
 
-        call write_line(IRANK, '       RAS-ILU0 sending...',   io_proc=IRANK)
+        call write_line('       RAS-ILU0 sending...', io_proc=GLOBAL_MASTER)
+        !call write_line(IRANK, '       RAS-ILU0 sending...',   io_proc=IRANK)
 
 
         do icomm = 1,size(self%send%comm)
@@ -723,7 +723,8 @@ contains
 
         type(mpi_request)           :: request
 
-        call write_line(IRANK, '       RAS-ILU0 receiving...', io_proc=IRANK)
+        call write_line('       RAS-ILU0 receiving...', io_proc=GLOBAL_MASTER)
+        !call write_line(IRANK, '       RAS-ILU0 receiving...', io_proc=IRANK)
 
         do idom_recv = 1,size(self%recv%dom)
 
@@ -776,7 +777,8 @@ contains
 
         integer(ik) :: nwait, iwait, ierr
 
-        call write_line(IRANK, '       RAS-ILU0 waiting...',   io_proc=IRANK)
+        call write_line('       RAS-ILU0 waiting...',   io_proc=GLOBAL_MASTER)
+!        call write_line(IRANK, '       RAS-ILU0 waiting...',   io_proc=IRANK)
 
         nwait = self%mpi_requests%size()
         if (nwait > 0) then
@@ -786,7 +788,7 @@ contains
 
         end if
 
-        call write_line(IRANK, ' done waiting.', io_proc=IRANK)
+!        call write_line(IRANK, ' done waiting.', io_proc=IRANK)
 
     end subroutine comm_wait
     !******************************************************************************************

@@ -18,7 +18,7 @@ module type_blockvector
     !!  @date   2/1/2016
     !!
     !!
-    !------------------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------
     type, public :: blockvector_t
 
         type(densevector_t), allocatable :: vecs(:)     !< Local element vectors
@@ -32,15 +32,16 @@ module type_blockvector
         procedure,  public  :: distribute               !< Given a full-vector representation, distribute it to the denseblock format
         procedure,  public  :: clear                    !< Zero all vector storage elements
         
-        procedure,  public  :: norm                     !< Return the L2 vector norm of the block-vector
-        procedure,  public  :: sumsqr                   !< Return the sum of the squared block-vector entries
+        procedure,  public  :: norm             !< Return the L2 vector norm of the block-vector
+        procedure,  public  :: sumsqr           !< Return the sum of the squared block-vector entries
+        procedure,  public  :: sumsqr_fields    !< Return the sum of squared entries for fields independently
         procedure,  public  :: nentries
         procedure,  public  :: dump
 
         final :: destructor
 
     end type blockvector_t
-    !*************************************************************************************************************************
+    !*********************************************************************************************
 
 
 
@@ -104,7 +105,7 @@ contains
     !!
     !!  @param[in]  mesh    mesh_t instance containing initialized elements and faces
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------------
     subroutine init_local(self,mesh)
         class(blockvector_t),   intent(inout) :: self
         type(mesh_t),           intent(in)    :: mesh
@@ -163,7 +164,7 @@ contains
 
 
     end subroutine init_local
-    !*******************************************************************************************************************
+    !*************************************************************************************************
 
 
 
@@ -184,7 +185,7 @@ contains
     !!
     !!  @param[in]  mesh    mesh_t instance containing initialized elements and faces
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------------
     subroutine init_recv(self,iproc)
         class(blockvector_t),   intent(inout)   :: self
         integer(ik),            intent(in)      :: iproc
@@ -261,21 +262,7 @@ contains
 
 
     end subroutine init_recv
-    !*******************************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    !***************************************************************************************
 
 
 
@@ -305,7 +292,7 @@ contains
     !!
     !!  @param[in]  fullvec     Full-vector
     !!
-    !--------------------------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     subroutine distribute(self,fullvec)
         class(blockvector_t),    intent(inout)   :: self
         real(rk),                intent(in)      :: fullvec(:) 
@@ -354,7 +341,7 @@ contains
 
 
     end subroutine distribute
-    !***************************************************************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -375,7 +362,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine clear(self)
         class(blockvector_t),   intent(inout)   :: self
 
@@ -387,7 +374,7 @@ contains
         end do
 
     end subroutine clear
-    !****************************************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -408,27 +395,28 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function norm(self) result(res)
         class(blockvector_t),   intent(in)  :: self
 
         real(rk)    :: res
         integer(ik) :: ielem
 
-        res = ZERO
-
-        ! Loop through block vectors and compute contribution to vector L2-Norm
-        do ielem = 1,size(self%vecs)
-            ! Square vector values and sum
-            res = res + sum( self%vecs(ielem)%vec ** TWO )
-        end do
+!        res = ZERO
+!
+!        ! Loop through block vectors and compute contribution to vector L2-Norm
+!        do ielem = 1,size(self%vecs)
+!            ! Square vector values and sum
+!            res = res + sum( self%vecs(ielem)%vec ** TWO )
+!        end do
+        res = self%sumsqr()
 
 
         ! Take the square root of the result
         res = sqrt(res)
 
     end function norm
-    !*****************************************************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -444,7 +432,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function sumsqr(self) result(res)
         class(blockvector_t),   intent(in)  :: self
 
@@ -461,7 +449,7 @@ contains
 
 
     end function sumsqr
-    !*****************************************************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -472,6 +460,33 @@ contains
 
 
 
+    !>  Sum of the squared block-vector entries, separated by field.
+    !!
+    !!  Returns an array of values. The sum of the squared values from each field independently.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/17/2017
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    function sumsqr_fields(self) result(res)
+        class(blockvector_t),   intent(in)  :: self
+
+        real(rk),   allocatable :: res(:)
+        integer(ik)             :: ielem
+
+        ! Size number of field residuals being computed
+        res = self%vecs(1)%sumsqr_fields()
+        res = ZERO
+
+        ! Loop through densevectors and compute contribution to sum of squared entries
+        do ielem = 1,size(self%vecs)
+            res = res + self%vecs(ielem)%sumsqr_fields()
+        end do
+
+
+    end function sumsqr_fields
+    !*****************************************************************************************
 
 
 
@@ -488,7 +503,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function nentries(self) result(res)
         class(blockvector_t),   intent(in)  :: self
 
@@ -505,7 +520,7 @@ contains
         end do
 
     end function nentries
-    !**********************************************************************************************************************************
+    !*****************************************************************************************
 
 
 

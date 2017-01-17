@@ -33,10 +33,10 @@ module type_pseudo_timestep
             import solverdata_t
             class(pseudo_timestep_t),   intent(in)      :: self
             integer(ik),                intent(in)      :: idomain
-            type(mesh_t),               intent(in)      :: mesh(:)
+            type(mesh_t),               intent(inout)   :: mesh(:)
             type(properties_t),         intent(in)      :: prop
             type(solverdata_t),         intent(inout)   :: sdata
-            real(rk),                   intent(in)      :: cfl
+            real(rk),                   intent(in)      :: cfl(:)
         end subroutine
     end interface
 
@@ -87,12 +87,12 @@ contains
     subroutine compute(self,idomain,mesh,prop,sdata,cfl)
         class(default_pseudo_timestep_t),   intent(in)      :: self
         integer(ik),                        intent(in)      :: idomain
-        type(mesh_t),                       intent(in)      :: mesh(:)
+        type(mesh_t),                       intent(inout)   :: mesh(:)
         type(properties_t),                 intent(in)      :: prop
         type(solverdata_t),                 intent(inout)   :: sdata
-        real(rk),                           intent(in)      :: cfl
+        real(rk),                           intent(in)      :: cfl(:)
 
-        integer(ik) :: ielem
+        integer(ik) :: ielem, ieqn
         real(rk)    ::  h
 
         
@@ -110,7 +110,10 @@ contains
             !
             ! Compute elemen-local timestep
             !
-            sdata%dt(idomain,ielem) = cfl*h
+            !sdata%dt(idomain,ielem) = cfl*h
+            do ieqn = 1,size(cfl)
+                mesh(idomain)%elems(ielem)%dtau(ieqn) = cfl(ieqn)*h
+            end do
 
 
         end do  ! ielem

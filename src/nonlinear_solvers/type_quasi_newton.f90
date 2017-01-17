@@ -66,9 +66,9 @@ contains
         integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex,  &
                                    niter, ieqn, idom, ierr,                     &
                                    rstart, rend, cstart, cend, nterms, iwrite
-        real(rk)                :: dtau, amp, cfl, cfln, timing,                &
-                                   rnorm0, rnorm, resid, resid_new
-        real(rk), allocatable   :: vals(:)
+        real(rk)                :: dtau, amp, cfl, timing,                &
+                                   resid, resid_new
+        real(rk), allocatable   :: vals(:), cfln(:), rnorm0(:), rnorm(:)
         type(chidg_vector_t)     :: b, qn, qold, qnew, dqdtau
       
 
@@ -92,10 +92,11 @@ contains
             !
             ! NONLINEAR CONVERGENCE INNER LOOP
             !
-            rnorm = ONE    ! Force inner loop entry
+            resid = ONE    ! Force inner loop entry
             niter = 0      ! Initialize inner loop counter
 
-            do while ( rnorm > self%tol )
+            !do while ( rnorm > self%tol )
+            do while ( resid > self%tol )
                 niter = niter + 1
                 call write_line("   niter: ", niter, delimiter='', columns=.True., column_width=20, io_proc=GLOBAL_MASTER)
 
@@ -123,16 +124,25 @@ contains
 
 
                 !
-                ! Compute and store residual norm
+                ! Compute and store residual norm for each field
                 !
                 if (niter == 1) then
-                    rnorm0 = rhs%norm(ChiDG_COMM)
+                    rnorm0 = rhs%norm_fields(ChiDG_COMM)
                 end if
-                rnorm = rhs%norm(ChiDG_COMM)
+
+
+                rnorm = rhs%norm_fields(ChiDG_COMM)
+
+
+                ! Update initial residual norm if it has increased
+                where (rnorm > rnorm0)
+                    rnorm0 = rnorm0 + 0.3_rk*(rnorm - rnorm0)
+                end where
+
 
 
                 !
-                ! Compute new cfl for pseudo-timestep
+                ! Compute new cfl for each field
                 !
                 cfln = self%cfl0*(rnorm0/rnorm)
 
@@ -148,30 +158,35 @@ contains
                 !
                 do idom = 1,data%ndomains()
                     do ielem = 1,data%mesh(idom)%nelem
-                        nterms = data%mesh(idom)%nterms_s
-
-
-                        ! Get element-local timestep
-                        dtau   = data%sdata%dt(idom,ielem)
-
-                        ! Loop through equations and add mass matrix
                         do ieqn = 1,data%eqnset(idom)%prop%nprimary_fields()
-                            iblk = DIAG
+
+
+                            ! Get element-local, field-specific pseudo-timestep
+                            dtau = data%mesh(idom)%elems(ielem)%dtau(ieqn)
+
+
                             ! Need to compute row and column extends in diagonal so we can
                             ! selectively apply the mass matrix to the sub-block diagonal
+                            nterms = data%mesh(idom)%elems(ielem)%nterms_s
                             rstart = 1 + (ieqn-1) * nterms
                             rend   = (rstart-1) + nterms
                             cstart = rstart
                             cend   = rend
                        
+
+                            iblk = DIAG
                             if (allocated(lhs%dom(idom)%lblks(ielem,iblk)%mat)) then
                                 ! Add mass matrix divided by dt to the block diagonal
-                                lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  =  lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  +  data%mesh(idom)%elems(ielem)%mass*(ONE/dtau)
+                                lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  =             &
+                                            lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)    &
+                                            + data%mesh(idom)%elems(ielem)%mass*(ONE/dtau)
                             end if
+
 
                         end do
                     end do
                 end do
+
 
 
                 !
@@ -271,7 +286,7 @@ contains
     !-----------------------------------------------------------------------------------------
     subroutine compute_pseudo_timestep(data,cfln)
         type(chidg_data_t),     intent(inout)   :: data
-        real(rk),               intent(in)      :: cfln
+        real(rk),               intent(in)      :: cfln(:)
 
         integer(ik) :: idom
 

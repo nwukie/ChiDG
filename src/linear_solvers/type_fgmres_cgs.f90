@@ -67,20 +67,18 @@ contains
         type(timer_t)   :: timer_mv, timer_dot, timer_norm, timer_precon
 
 
-        type(chidg_vector_t)                     :: r, r0, diff, xold, w, x0
-        type(chidg_vector_t), allocatable        :: v(:), z(:)
-        real(rk),            allocatable        :: h(:,:), h_square(:,:), dot_tmp(:)
+        type(chidg_vector_t)                    :: r, r0, diff, xold, w, x0
+        type(chidg_vector_t), allocatable       :: v(:), z(:)
+        real(rk),            allocatable        :: h(:,:), h_square(:,:), dot_tmp(:), htmp(:,:)
         real(rk),            allocatable        :: p(:), y(:), c(:), s(:), p_dim(:), y_dim(:)
-        real(rk)                                :: pj, pjp, h_ij, h_ipj, htmp
+        real(rk)                                :: pj, pjp, h_ij, h_ipj, norm_before, norm_after, L_crit, crit
 
         integer(ik) :: iparent, ierr, ivec, isol, nvecs, ielem
         integer(ik) :: i, j, k, l, ii                 ! Loop counters
         real(rk)    :: res, err, r0norm, gam, delta 
 
-        logical     :: converged = .false.
-        logical     :: max_iter  = .false.
-
-        logical :: equal = .false.
+        logical :: converged = .false.
+        logical :: max_iter  = .false.
         logical :: reorthogonalize = .false.
 
 
@@ -120,9 +118,10 @@ contains
         !
         ! Allocate hessenberg matrix to store orthogonalization
         !
-        allocate(h(self%m + 1, self%m), dot_tmp(self%m+1), stat=ierr)
+        allocate(h(self%m + 1, self%m), dot_tmp(self%m+1), htmp(self%m+1, self%m), stat=ierr)
         if (ierr /= 0) call AllocationError
-        h = ZERO
+        h       = ZERO
+        htmp    = ZERO
         dot_tmp = ZERO
 
 
@@ -165,11 +164,12 @@ contains
             end do
 
 
-            p = ZERO
-            y = ZERO
-            c = ZERO
-            s = ZERO
-            h = ZERO
+            p    = ZERO
+            y    = ZERO
+            c    = ZERO
+            s    = ZERO
+            h    = ZERO
+            htmp = ZERO
 
 
 
@@ -206,9 +206,13 @@ contains
                 call timer_mv%stop()
 
 
+                norm_before = w%norm(ChiDG_COMM)
+
+
+
                 call timer_dot%start()
                 !
-                ! Orthogonalization loop. Classical Gram-Schmidt
+                ! Orthogonalize once. Classical Gram-Schmidt
                 !
                 do i = 1,j
                     ! Compute the local dot product
@@ -229,7 +233,56 @@ contains
 
                 call timer_norm%start()
                 h(j+1,j) = w%norm(ChiDG_COMM)
+                norm_after = h(j+1,j)
                 call timer_norm%stop()
+                !
+                ! End Orthogonalize once.
+                !
+
+
+
+                !
+                ! Selective reorthogonalization
+                !
+                ! Giraud and Langou
+                ! "A robust criterion for the modified Gram-Schmidt algorithm with selective reorthogonalization."
+                ! SIAM J. of Sci. Comp.     Vol. 25, No. 2, pp. 417-441.
+                !
+                ! They recommend L<1 for robustness, but it seems for these problems L can be increased.
+                !
+                L_crit = 1.0_rk
+                crit = sum(abs(h(1:j,j)))/norm_before
+
+                !
+                ! Orthogonalize twice. Classical Gram-Schmidt
+                !
+                reorthogonalize = (crit >= L_crit) 
+                if (reorthogonalize) then
+                    do i = 1,j
+                        ! Compute the local dot product
+                        dot_tmp(i) = dot(w,v(i))
+                    end do
+
+
+                    ! Reduce local dot-product values across processors, distribute result back to all
+                    call MPI_AllReduce(dot_tmp,htmp(:,j),j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+                    h = h + htmp
+
+
+                    do i = 1,j
+                        w = w - htmp(i,j)*v(i)
+                    end do
+
+
+
+                    call timer_norm%start()
+                    h(j+1,j) = w%norm(ChiDG_COMM)
+                    call timer_norm%stop()
+                end if
+                !
+                ! End Orthogonalize twice.
+                !
+                
 
 
 

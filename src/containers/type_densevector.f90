@@ -1,7 +1,7 @@
 module type_densevector
 #include <messenger.h>
     use mod_kinds,      only: rk,ik
-    use mod_constants,  only: ZERO
+    use mod_constants,  only: ZERO, TWO
     implicit none
 
 
@@ -49,6 +49,9 @@ module type_densevector
         procedure, public :: getvar
         procedure, public :: setterm
         procedure, public :: getterm
+
+        procedure, public :: sumsqr
+        procedure, public :: sumsqr_fields
 
         procedure, public :: clear
 
@@ -525,6 +528,57 @@ contains
 
 
 
+
+
+    !>  Return the sum of squared terms in the dense vector.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/17/2017
+    !!
+    !!
+    !------------------------------------------------------------------------------------
+    function sumsqr(self) result(res)
+        class(densevector_t),   intent(in)  :: self
+
+        real(rk)    :: res
+
+        ! Square vector values and sum
+        res = sum( self%vec**TWO )
+
+    end function sumsqr
+    !************************************************************************************
+
+
+
+
+
+
+    !>  Return the sum of squared terms in the dense vector for each field independently.
+    !!
+    !!  Returns
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/17/2017
+    !!
+    !!
+    !------------------------------------------------------------------------------------
+    function sumsqr_fields(self) result(res)
+        class(densevector_t),   intent(in)  :: self
+
+        real(rk)    :: res(self%nvars_)
+        real(rk)    :: modes(self%nterms_)
+        integer(ik) :: ifield
+
+
+        do ifield = 1,self%nvars_
+
+            modes = self%getvar(ifield)
+            res(ifield) = sum( modes**TWO )
+
+        end do
+
+    end function sumsqr_fields
+    !************************************************************************************
 
 
 

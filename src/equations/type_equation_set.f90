@@ -1111,9 +1111,9 @@ contains
     subroutine compute_pseudo_timestep(self,idomain,mesh,sdata,cfln)
         class(equation_set_t),  intent(in)      :: self
         integer(ik),            intent(in)      :: idomain
-        type(mesh_t),           intent(in)      :: mesh(:)
+        type(mesh_t),           intent(inout)   :: mesh(:)
         type(solverdata_t),     intent(inout)   :: sdata
-        real(rk),               intent(in)      :: cfln
+        real(rk),               intent(in)      :: cfln(:)
 
         type(default_pseudo_timestep_t) :: default_timestep
 

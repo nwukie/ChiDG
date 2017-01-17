@@ -42,10 +42,13 @@ module type_chidg_vector
 
         procedure,  public  :: project                          !< Project function to basis
         procedure,  public  :: clear                            !< Zero the densevector data
-        generic,    public  :: norm => norm_local, norm_comm    !< Compute the L2 vector norm
+        generic,    public  :: norm => norm_local, norm_comm    !< Compute L2 vector norm
         procedure,  public  :: norm_local                       !< proc-local L2 vector norm
         procedure,  public  :: norm_comm                        !< MPI group L2 vector norm
+        generic,    public  :: norm_fields => norm_fields_comm  !< L2 norm of independent fields
+        procedure,  public  :: norm_fields_comm                 !< MPI group L2 field norms
         procedure,  public  :: sumsqr                           !< Sum squared proc-local entries 
+        procedure,  public  :: sumsqr_fields
         procedure,  public  :: dump
 
         procedure,  public  :: comm_send                        !< Nonblocking send to comm procs
@@ -153,6 +156,7 @@ contains
         ! Call initialization for determining what data to receive and allocate storage for it
         call self%recv%init(mesh)
 
+
         ! Wait on outstanding mpi_reqests initiated during the send%init(mesh) call
         call self%send%init_wait()
 
@@ -251,8 +255,6 @@ contains
 
 
 
-
-
     !>  Compute the process-local L2-Norm of the vector
     !!
     !!  @author Nathan A. Wukie
@@ -268,13 +270,8 @@ contains
         integer(ik) :: idom, ielem
 
 
-        res = ZERO
-
         ! Loop through domain vectors and compute contribution to vector sum of the squared elements
-        do idom = 1,size(self%dom)
-            res = res + self%dom(idom)%sumsqr()
-        end do ! idom
-
+        res = self%sumsqr()
 
         ! Take the square root of the result
         res = sqrt(res)
@@ -336,6 +333,55 @@ contains
 
 
 
+    !>  Compute the L2-Norm of the vector within the space of processors given by the MPI 
+    !!  communicator.
+    !!  
+    !!  @author Nathan A. Wukie
+    !!  @date   6/23/2016
+    !!
+    !!  @return res     L2-norm of the vector
+    !!
+    !------------------------------------------------------------------------------------------
+    function norm_fields_comm(self,comm) result(norm)
+        class(chidg_vector_t),   intent(in)  :: self
+        type(mpi_comm),         intent(in)  :: comm
+
+        real(rk), allocatable   :: sumsqr(:), norm(:)
+        integer     :: ierr
+
+
+        ! Compute sum of the squared elements of the processor-local vector
+        sumsqr = self%sumsqr_fields()
+
+
+        ! Alloate norm
+        norm = sumsqr
+        norm = ZERO
+
+
+        ! Reduce sumsqr across all procs, distribute result back to all
+        call MPI_AllReduce(sumsqr,norm,size(sumsqr),MPI_REAL8,MPI_SUM,comm,ierr)
+
+
+        norm = sqrt(norm)
+
+    end function norm_fields_comm
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     !< Return the sum of the squared chidg_vector entries 
     !!
@@ -362,6 +408,48 @@ contains
 
     end function sumsqr
     !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !< Return the sum of the squared chidg_vector entries for each field independently.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/17/2017
+    !!
+    !!  @return res     sum of the squared chidg_vector entries
+    !!
+    !------------------------------------------------------------------------------------------
+    function sumsqr_fields(self) result(res)
+        class(chidg_vector_t),   intent(in)   :: self
+
+        real(rk),   allocatable :: res(:)
+        integer(ik) :: idom, ielem
+
+
+        ! Allocate size of res based on assumption of same equation set across domains.
+        res = self%dom(1)%sumsqr_fields()
+        res = ZERO
+
+
+        ! Loop through domain vectors and compute contribution to vector sum of the squared elements
+        do idom = 1,size(self%dom)
+            res = res + self%dom(idom)%sumsqr_fields()
+        end do ! idom
+
+
+    end function sumsqr_fields
+    !******************************************************************************************
+
+
+
 
 
 

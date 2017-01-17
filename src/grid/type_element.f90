@@ -77,6 +77,11 @@ module type_element
         ! Element volume
         real(rk)                        :: vol
 
+
+        ! A psudo-timestep for each equation in the element. Used in the nonlinear solver. 
+        ! Quasi-Newton, for example.
+        real(rk),   allocatable         :: dtau(:)
+
         ! Logical tests
         logical :: geomInitialized = .false.
         logical :: numInitialized  = .false.
@@ -287,17 +292,18 @@ contains
                                               self%ddx, self%ddy, self%ddz,                     &
                                               self%ddx_trans, self%ddy_trans, self%ddz_trans,   &
                                               self%mass, self%invmass)
-        allocate(self%jinv(nnodes),                        &
-                 self%metric(3,3,nnodes),                  &
-                 self%quad_pts(nnodes),                    &
-                 self%ddx(nnodes,nterms_s),                &
-                 self%ddy(nnodes,nterms_s),                &
-                 self%ddz(nnodes,nterms_s),                &
-                 self%ddx_trans(nterms_s,nnodes),          &
-                 self%ddy_trans(nterms_s,nnodes),          &
-                 self%ddz_trans(nterms_s,nnodes),          &
-                 self%mass(nterms_s,nterms_s),             &
-                 self%invmass(nterms_s,nterms_s), stat = ierr)
+        allocate(self%jinv(nnodes),                 &
+                 self%metric(3,3,nnodes),           &
+                 self%quad_pts(nnodes),             &
+                 self%ddx(nnodes,nterms_s),         &
+                 self%ddy(nnodes,nterms_s),         &
+                 self%ddz(nnodes,nterms_s),         &
+                 self%ddx_trans(nterms_s,nnodes),   &
+                 self%ddy_trans(nterms_s,nnodes),   &
+                 self%ddz_trans(nterms_s,nnodes),   &
+                 self%mass(nterms_s,nterms_s),      &
+                 self%invmass(nterms_s,nterms_s),   &
+                 self%dtau(neqns), stat = ierr)
         if (ierr /= 0) call AllocationError
 
 

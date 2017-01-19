@@ -46,7 +46,7 @@ module mod_constants
     real(rk), parameter     :: THIRD    = 1._rk/3._rk
     real(rk), parameter     :: FOURTH   = 0.25_rk
     real(rk), parameter     :: FIFTH    = 1._rk/5._rk
-    real(rk), parameter     :: SIXTH    = 0.2_rk
+    real(rk), parameter     :: SIXTH    = 1._rk/6._rk
     real(rk), parameter     :: SEVENTH  = 1._rk/7._rk
     real(rk), parameter     :: EIGHTH   = 1._rk/8._rk
     real(rk), parameter     :: NINTH    = 1._rk/9._rk

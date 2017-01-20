@@ -2,7 +2,7 @@ module type_time_manager
 #include <messenger.h>
     
     use mod_kinds,      only: rk,ik
-    use mod_constants, only: PI,ZERO
+    use mod_constants, only: PI,ZERO,ONE,TWO
     use type_rvector,   only: rvector_t
     use mod_io
 
@@ -121,7 +121,7 @@ contains
 
                 do i = 1, size(frequencies)
                     
-                    if ( frequencies(i) /= 0 ) then
+                    if ( frequencies(i) /= ZERO ) then
                         call self%push_freq(frequencies(i))
                     end if
 
@@ -133,11 +133,11 @@ contains
                 !
                 
                 ! n = 2*(number of frequencies) + 1
-                n_times = 2*self%freq_data%size() + 1
+                n_times = TWO*self%freq_data%size() + ONE
 
                 do i = 1, n_times
 
-                   call  self%time_lev%push_back( (2*PI)/minval(self%freq_data%data()) * (i/n_times) )
+                   call  self%time_lev%push_back( (TWO*PI)/minval(self%freq_data%data()) * (i/n_times) )
 
                 end do
 

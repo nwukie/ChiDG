@@ -288,9 +288,11 @@ contains
 
 
         ! Set timescheme options to pass during initialization
-        call toptions%set('dt', 0.1_rk) ! means nothing here
-        call toptions%set('nsteps',100)
-        call toptions%set('nwrite',0)
+        !call toptions%set('dt', 0.1_rk) ! means nothing here
+        !call toptions%set('nsteps',100)
+        !call toptions%set('nwrite',0)
+
+        call this%chidg%time_integrator%time_manager%init()
 
         ! Set linear solver options to pass during initialization
         call loptions%set('tol',1.e-9_rk)
@@ -370,7 +372,7 @@ contains
         !
         ! Set ChiDG components
         !
-        call this%chidg%set('time_integrator',  algorithm=time_integrator,  options=toptions)
+        call this%chidg%set('time_integrator',  algorithm=time_integrator)
         call this%chidg%set('nonlinear_solver', algorithm=nonlinear_solver, options=noptions)
         call this%chidg%set('linear_solver',    algorithm=linear_solver,    options=loptions)
         call this%chidg%set('preconditioner',   algorithm=preconditioner)

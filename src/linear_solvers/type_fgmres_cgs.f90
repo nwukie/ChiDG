@@ -67,14 +67,14 @@ contains
         type(timer_t)   :: timer_mv, timer_dot, timer_norm, timer_precon
 
 
-        type(chidg_vector_t)                    :: r, r0, diff, xold, w, x0
-        type(chidg_vector_t), allocatable       :: v(:), z(:)
-        real(rk),            allocatable        :: h(:,:), h_square(:,:), dot_tmp(:), htmp(:,:)
-        real(rk),            allocatable        :: p(:), y(:), c(:), s(:), p_dim(:), y_dim(:)
-        real(rk)                                :: pj, pjp, h_ij, h_ipj, norm_before, norm_after, L_crit, crit
+        type(chidg_vector_t)                :: r, r0, diff, xold, w, x0
+        type(chidg_vector_t),   allocatable :: v(:), z(:)
+        real(rk),               allocatable :: h(:,:), h_square(:,:), dot_tmp(:), htmp(:,:)
+        real(rk),               allocatable :: p(:), y(:), c(:), s(:), p_dim(:), y_dim(:)
+        real(rk)                            :: pj, pjp, h_ij, h_ipj, norm_before, norm_after, L_crit, crit
 
         integer(ik) :: iparent, ierr, ivec, isol, nvecs, ielem
-        integer(ik) :: i, j, k, l, ii                 ! Loop counters
+        integer(ik) :: i, j, k, l, ii, ih                 ! Loop counters
         real(rk)    :: res, err, r0norm, gam, delta 
 
         logical :: converged = .false.
@@ -118,7 +118,7 @@ contains
         !
         ! Allocate hessenberg matrix to store orthogonalization
         !
-        allocate(h(self%m + 1, self%m), dot_tmp(self%m+1), htmp(self%m+1, self%m), stat=ierr)
+        allocate(h(self%m + 1, self%m), dot_tmp(self%m+1), htmp(self%m + 1, self%m), stat=ierr)
         if (ierr /= 0) call AllocationError
         h       = ZERO
         htmp    = ZERO
@@ -188,6 +188,8 @@ contains
             !
             nvecs = 0
             do j = 1,self%m
+
+
                 nvecs = nvecs + 1
            
                 !
@@ -220,7 +222,8 @@ contains
                 end do
 
                 ! Reduce local dot-product values across processors, distribute result back to all
-                call MPI_AllReduce(dot_tmp,h(:,j),j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+                !call MPI_AllReduce(dot_tmp,h(:,j),j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+                call MPI_AllReduce(dot_tmp,h(1:j,j),j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
                 
 
                 do i = 1,j
@@ -265,8 +268,17 @@ contains
 
 
                     ! Reduce local dot-product values across processors, distribute result back to all
-                    call MPI_AllReduce(dot_tmp,htmp(:,j),j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
-                    h = h + htmp
+                    !call MPI_AllReduce(dot_tmp,htmp(:,j),j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+                    call MPI_AllReduce(dot_tmp,htmp(1:j,j),j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+                    !h(:,j) = h(:,j) + htmp(:,j)
+
+
+                    !htmp(1,1) = 5.0
+
+                    h = htmp + h
+                    !do ih = 1,size(h,2)
+                    !    h(:,ih) = h(:,ih) + htmp(:,ih)
+                    !end do
 
 
                     do i = 1,j
@@ -353,6 +365,7 @@ contains
                 if ( converged ) then
                     exit
                 end if
+
 
             end do  ! Outer GMRES Loop - restarts after m iterations
 

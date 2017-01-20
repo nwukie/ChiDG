@@ -64,6 +64,7 @@ module type_chidg_worker
     
         type(mesh_t),           pointer :: mesh(:)
         type(properties_t), allocatable :: prop(:)
+        !type(properties_t),     pointer :: prop(:)
         type(solverdata_t),     pointer :: solverdata
         type(chidg_cache_t),    pointer :: cache
 
@@ -150,10 +151,11 @@ contains
         self%mesh       => mesh
         ! having issue with using a pointer here for prop. Theory is that the compiler
         ! creates a temporary array of prop(:) from eqnset(:)%prop when it is passing it in. 
-        ! Then after this routine exists, that array ceases to exists and so
+        ! Then after this routine exists, that array ceases to exist and so
         ! points to nothing. For now we will just assign, but probably want this
         ! linked back up in the future.
         self%prop       =  prop
+        !self%prop       => prop
         self%solverdata => solverdata
         self%cache      => cache
 

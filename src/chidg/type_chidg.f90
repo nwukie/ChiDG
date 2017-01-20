@@ -526,7 +526,7 @@ contains
 
         type(domain_connectivity_t),    allocatable :: connectivities(:)
         real(rk),                       allocatable :: weights(:)
-        type(partition_t),              allocatable :: partitions(:)
+        type(partition_t),              allocatable, asynchronous :: partitions(:)
 
         character(len=5),   dimension(1)    :: extensions
         character(len=:),   allocatable     :: extension, domain_equation_set

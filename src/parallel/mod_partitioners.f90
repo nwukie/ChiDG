@@ -380,12 +380,12 @@ contains
     !!
     !--------------------------------------------------------------------------------------------------
     subroutine send_partitions(partitions,ChiDG_COMM)
-        type(partition_t),  intent(in)  :: partitions(:)
+        type(partition_t),  intent(inout), asynchronous  :: partitions(:)
         type(mpi_comm),     intent(in)  :: ChiDG_COMM
 
         integer                     :: ipartition, npartitions, ierr
         integer                     :: ielem, data_size
-        integer(ik)                 :: iconn , nelements, string_length
+        integer(ik)                 :: iconn , nelements
         integer(ik)                 :: nconn
         type(MPI_Request)           :: handle, handle1, handle2, handle3, handle4
 
@@ -409,13 +409,15 @@ contains
             nconn = partitions(ipartition)%nconn
             do iconn = 1,nconn
 
-                string_length = partitions(ipartition)%connectivities(iconn)%name_length
-                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%name_length, 1,             MPI_INTEGER4,  ipartition-1, 0, ChiDG_COMM, handle1, ierr)
-                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%name,        string_length, MPI_CHARACTER, ipartition-1, 0, ChiDG_COMM, handle2, ierr)
-                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%nelements,   1,             MPI_INTEGER4,  ipartition-1, 0, ChiDG_COMM, handle3, ierr)
-                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%nnodes,      1,             MPI_INTEGER4,  ipartition-1, 0, ChiDG_COMM, handle4, ierr)
+                !string_length = partitions(ipartition)%connectivities(iconn)%name_length
+                !call MPI_ISend(partitions(ipartition)%connectivities(iconn)%name_length,  1,                    MPI_INTEGER4,  ipartition-1, 0, ChiDG_COMM, handle1, ierr)
+                !call MPI_ISend(partitions(ipartition)%connectivities(iconn)%name,         int(string_length,4), MPI_CHARACTER, ipartition-1, 0, ChiDG_COMM, handle2, ierr)
+                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%name,         1000,                 MPI_CHARACTER, ipartition-1, 0, ChiDG_COMM, handle2, ierr)
+                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%nelements,    1,                    MPI_INTEGER4,  ipartition-1, 0, ChiDG_COMM, handle3, ierr)
+                call MPI_ISend(partitions(ipartition)%connectivities(iconn)%nnodes,       1,                    MPI_INTEGER4,  ipartition-1, 0, ChiDG_COMM, handle4, ierr)
 
-                call send_partition_requests%push_back(handle1)
+
+                !call send_partition_requests%push_back(handle1)
                 call send_partition_requests%push_back(handle2)
                 call send_partition_requests%push_back(handle3)
                 call send_partition_requests%push_back(handle4)
@@ -466,35 +468,39 @@ contains
         integer                     :: ipartition, npartitions, ierr
         integer                     :: dims(3), iconn, idomain, ielem
         integer                     :: idomain_g, ielement_g, mapping, nnodes_element
-        integer(ik)                 :: conn_size, nnodes, nelements, nconn, string_length, nrequests
+        integer(ik), volatile                 :: conn_size, nnodes, nelements, nconn, nrequests
         integer,        allocatable :: nodes(:)
         integer(ik),    allocatable :: conn(:)
-        character(:),   allocatable :: domain_name
+        character(1000)             :: domain_name
+        character(:),   allocatable :: domain_name_trim
 
 
 
         ! Receive number of connectivities and inititalize partition
-        call MPI_Recv(nconn,1,MPI_INTEGER4, GLOBAL_MASTER, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+        call MPI_Recv(nconn,1,MPI_INTEGER4, GLOBAL_MASTER, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
         call partition%init(nconn)
 
 
         ! Receive connectivities
         do iconn = 1,nconn
 
-            call MPI_Recv(string_length,1,MPI_INTEGER4, GLOBAL_MASTER, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+!            call MPI_Recv(string_length,1,MPI_INTEGER4, GLOBAL_MASTER, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+!
+!            if (allocated(domain_name)) deallocate(domain_name)
+!            allocate(character(len=string_length) :: domain_name, stat=ierr)
+!            if (ierr /= 0) call AllocationError
 
-            if (allocated(domain_name)) deallocate(domain_name)
-            allocate(character(len=string_length) :: domain_name, stat=ierr)
-            if (ierr /= 0) call AllocationError
+            !call MPI_Recv(domain_name,int(string_length,4),MPI_CHARACTER, GLOBAL_MASTER, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(domain_name,1000,MPI_CHARACTER, GLOBAL_MASTER, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            domain_name_trim = trim(domain_name)
 
-            call MPI_Recv(domain_name,string_length,MPI_CHARACTER, GLOBAL_MASTER, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
 
             ! Recv connectivity information
-            call MPI_Recv(nelements,1,MPI_INTEGER4, GLOBAL_MASTER, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-            call MPI_Recv(nnodes,   1,MPI_INTEGER4, GLOBAL_MASTER, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(nelements,1,MPI_INTEGER4, GLOBAL_MASTER, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(nnodes,   1,MPI_INTEGER4, GLOBAL_MASTER, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
-            call partition%connectivities(iconn)%init(domain_name,nelements,nnodes)
+            call partition%connectivities(iconn)%init(domain_name_trim,nelements,nnodes)
 
 
 
@@ -502,14 +508,14 @@ contains
             do ielem = 1,nelements
 
                 ! Get size to recv
-                call MPI_Recv(conn_size, 1, MPI_INTEGER4, GLOBAL_MASTER, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                call MPI_Recv(conn_size, 1, MPI_INTEGER4, GLOBAL_MASTER, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
                 if (allocated(conn)) deallocate(conn)
                 allocate(conn(conn_size), stat=ierr)
                 if (ierr /= 0) call AllocationError
 
                 ! Recv connectivity
-                call MPI_Recv(conn,conn_size, MPI_INTEGER4, GLOBAL_MASTER, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                call MPI_Recv(conn,conn_size, MPI_INTEGER4, GLOBAL_MASTER, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
 
                 ! Set element connectivity

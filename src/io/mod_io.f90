@@ -8,7 +8,7 @@
 module mod_io
 #include <messenger.h>
     use mod_kinds,      only: rk,ik
-    use mod_constants,  only: MAXBLOCKS, TWO_DIM, THREE_DIM
+    use mod_constants,  only: MAXBLOCKS, TWO_DIM, THREE_DIM, ZERO
     use type_dict,      only: dict_t
     implicit none
 
@@ -31,9 +31,10 @@ module mod_io
     character(len=100),     save    :: time_integrator  = 'steady'
     real(rk),               save    :: dt               = 0.001_rk
     integer(ik),            save    :: time_steps       = 100
-    real(rk),               save    :: ttol             = 1.e-8
-    integer(ik),            save    :: ntime_instances  = 1
-    type(dict_t),           save    :: toptions
+    real(rk),               save    :: ttol             = 1.e-8     !Apparently not used
+    integer(ik),            save    :: ntime_instances  = 1         !TODO: probably we should ask for the entire time of the analysis rather than dt and how many steps
+    real(rk),               save    :: frequencies(100) = ZERO
+!    type(dict_t),           save    :: toptions
    
     ! Nonlinear solver
     character(len=100),     save    :: nonlinear_solver = 'newton'
@@ -92,8 +93,9 @@ contains
         namelist /time/                     time_integrator,       &
                                             dt,                    &
                                             time_steps,            &
+                                            ttol,                  &
                                             ntime_instances,       &
-                                            ttol
+                                            frequencies
 
 
         namelist /nonlinear_solve/          nonlinear_solver,      &
@@ -137,10 +139,12 @@ contains
         !
         ! Initialize options dictionaries
         !
+
+
         ! Set time-integrator options
-        call toptions%set('dt',dt)
-        call toptions%set('nsteps',time_steps)
-        call toptions%set('nwrite',nwrite)
+!        call toptions%set('dt',dt)                 !
+!        call toptions%set('nsteps',time_steps)     ! TO BE REMOVED
+!        call toptions%set('nwrite',nwrite)         !
 
         ! Set nonlinear solver options
         call noptions%set('tol',ntol)

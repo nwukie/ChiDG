@@ -81,10 +81,10 @@ contains
 
 
         wcount = 1
-        associate ( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs, dt => self%dt)
+        associate ( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs, dt => self%time_manager%dt)
 
             print*, 'entering time'
-            do itime = 1,self%nsteps
+            do itime = 1,self%time_manager%time_steps
                 print*, "Step: ", itime
 
 
@@ -120,7 +120,7 @@ contains
                 call write_line("   R(Q) - Norm: ", rhs%norm(ChiDG_COMM), delimiter='', io_proc=GLOBAL_MASTER)
 
 
-                if (wcount == self%nwrite) then
+                if (wcount == self%time_manager%nwrite) then
                     write(filename, "(I7,A4)") 1000000+itime, '.plt'
                     call write_tecio_variables_unstructured(data,trim(filename),itime+1)
                     wcount = 0

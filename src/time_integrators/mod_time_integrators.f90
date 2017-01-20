@@ -11,6 +11,8 @@ module mod_time_integrators
     use steady,                     only: steady_t
 !    use forward_euler,              only: forward_euler_t
 !    use backward_euler,             only: backward_euler_t
+!    use hamonic_balance,            only: harmonic_balance_t !not in yet
+!    use runge_kutta,                only: runge_kutta_t !already in but might be splitted in multiple time_integrators
     implicit none
 
 
@@ -19,8 +21,8 @@ module mod_time_integrators
     type(steady_t)                      :: STEADY
 !    type(forward_euler_t)               :: FORWARD_EULER
 !    type(backward_euler_t)              :: BACKWARD_EULER
-
-
+!    type(harmonic_balance_t)            :: HB !not in yet
+!    type(runge_kutta_t)                 :: RK
 
     logical :: initialized = .false.
 
@@ -39,10 +41,9 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------------------------------------------
-    subroutine create_time_integrator(time_string,instance,options)
+    subroutine create_time_integrator(time_string,instance)
         character(*),                               intent(in)      :: time_string
         class(time_integrator_t),   allocatable,    intent(inout)   :: instance
-        type(dict_t),               optional,       intent(inout)   :: options
 
         character(len=:), allocatable   :: user_msg, dev_msg
 
@@ -58,6 +59,15 @@ contains
 !
 !            case ('backward_euler', 'Backward_Euler', 'BACKWARD_EULER', 'backward euler', 'Backward Euler', 'BACKWARD EULER')
 !                allocate(instance, source=BACKWARD_EULER)
+            
+!            case ('Harmonic Balance', 'Harmonic_Balance', 'harmonic balance', 'harmonic_balance', 'HB')
+!                allocate(instance, source=HB)
+            
+!            case ('Second Order Runge_Kutta', 'Explict Midpoint', 'Second Order RK', 'Modified Euler', 'Second Order Ralston Method', 'Third Order Runge-Kutta', 'Third Order Kutta', 'Third Order RK', &
+!                   'Runge-Kutta Method', 'Fourth Runge-Kutta Method', 'Fourth Order RK Method', 'RK4', 'Three-Eighth Rule', 'Fourth Order Kutta') ! this probably needs to be split up in several RK schemes
+!                allocate(instance, source=RK)
+
+
 
             case default
                 user_msg = "We can't seem to find a time integrator that matches the input string. &
@@ -72,11 +82,13 @@ contains
 
 
         !
-        ! Call options initialization if present
+        ! Call time_manager initialization
         !
-        if (present(options)) then
-            call instance%set(options)
-        end if
+         call instance%time_manager%init()
+
+!        if (present(options)) then
+!            call instance%set(options)
+!        end if
 
 
 

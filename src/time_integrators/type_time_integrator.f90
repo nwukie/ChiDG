@@ -8,6 +8,7 @@ module type_time_integrator
     use type_rvector,           only: rvector_t
     use type_ivector,           only: ivector_t
     use type_chidg_data,        only: chidg_data_t
+    use type_time_manager,      only: time_manager_t
     implicit none
 
 
@@ -27,9 +28,12 @@ module type_time_integrator
         ! OPTIONS
 !        real(rk)        :: cfl0     = 1.0_rk        !< Initial CFL number
 !        real(rk)        :: tol      = 1.e-13_rk     !< Convergence tolerance
-        real(rk)        :: dt       = 0.001_rk      !< Time-step increment
-        integer(ik)     :: nsteps   = 100           !< Number of time steps to compute
-        integer(ik)     :: nwrite   = 10            !< Write data every 'nwrite' steps
+!        real(rk)        :: dt       = 0.001_rk      !< Time-step increment                 !
+!        integer(ik)     :: nsteps   = 100           !< Number of time steps to compute     ! included in time_manager_t
+!        integer(ik)     :: nwrite   = 10            !< Write data every 'nwrite' steps     !
+
+        type(time_manager_t)    :: time_manager
+
 
 
         type(timer_t)   :: timer                    !< Timer data-type
@@ -162,15 +166,17 @@ contains
     !!
     !!  @param[in]  options     Dictionary containing base solver options
     !!
+    !! NOTE: time options (toptions) are not used anymore and time info are stored by time_manager
+    !!
     !------------------------------------------------------------------------------------------------------------
     subroutine set(self,options)
         class(time_integrator_t),   intent(inout)   :: self
         type(dict_t),           intent(inout)   :: options
 
 
-        call options%get('dt',self%dt)
-        call options%get('nsteps',self%nsteps)
-        call options%get('nwrite',self%nwrite)
+        !call options%get('dt',self%dt)
+        !call options%get('nsteps',self%nsteps)
+        !call options%get('nwrite',self%nwrite)
         !call options%get('tol',self%tol)
         !call options%get('cfl0',self%cfl0)
 

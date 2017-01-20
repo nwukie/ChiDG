@@ -359,9 +359,11 @@ contains
             case ('Time','time','time_integrator','Time_Integrator','timeintegrator','TimeIntegrator', 'time integrator', 'Time Integrator')
                 if (allocated(self%time_integrator)) then
                     deallocate(self%time_integrator)
-                    call create_time_integrator(algorithm,self%time_integrator,options)
+                    !call create_time_integrator(algorithm,self%time_integrator,options)
+                    call create_time_integrator(algorithm,self%time_integrator)
                 else
-                    call create_time_integrator(algorithm,self%time_integrator,options)
+                    !call create_time_integrator(algorithm,self%time_integrator,options)
+                    call create_time_integrator(algorithm,self%time_integrator)
                 end if
 
 

@@ -64,7 +64,7 @@ contains
         character(len=:),   allocatable  :: user_msg, dev_msg
         integer(ik)                      :: i
         integer(ik)                      :: n_times
-        
+        real(rk)                         :: tmp
         !
         ! Check if the time scheme typed in belongs to the options available
         ! if so, initialize the time-Manager with appropriate attributes
@@ -113,7 +113,8 @@ contains
                 user_msg = "time_integrator%init: The time scheme set needs frequencies passed in along with it. &
                             Please define at least one frequency different than 0 in chidg.nml"
                 if ( (maxval(frequencies) == ZERO) .and. (minval(frequencies) == ZERO) ) call chidg_signal_one(FATAL,user_msg,trim(time_integrator))
-
+                
+                
                 
                 !
                 ! add number of frequencies and frequencies to time_manager
@@ -127,17 +128,17 @@ contains
 
                 end do
 
-
                 !
                 ! Calculate and store time levels
                 !
                 
                 ! n = 2*(number of frequencies) + 1
                 n_times = TWO*self%freq_data%size() + ONE
-
+                
                 do i = 1, n_times
-
-                   call  self%time_lev%push_back( (TWO*PI)/minval(self%freq_data%data()) * (i/n_times) )
+                    
+                   tmp = i
+                   call  self%time_lev%push_back( (TWO*PI)/minval(self%freq_data%data()) * (tmp/n_times) )
 
                 end do
 
@@ -183,15 +184,16 @@ contains
         !
         if (test) then 
 
-            user_msg = "time_manager%push_freq: A HB frequency has been typed in twice, only one will be considered"
+           ! user_msg = "time_manager%push_freq: A HB frequency has been typed in twice, only one will be considered"
         
-            call chidg_signal(WARN, user_msg)
+            !call chidg_signal(WARN, user_msg)
 
         else
 
             call self%freq_data%push_back(frequency)
 
         end if
+
 
     end subroutine push_freq
     !------------------------------------------------------------------------------------------------------

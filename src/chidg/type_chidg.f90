@@ -65,7 +65,7 @@ module type_chidg
     type, public :: chidg_t
 
         ! Auxiliary ChiDG environment that can be used to solve sub-problems
-        class(chidg_t), pointer  :: auxiliary_environment
+        type(chidg_t), pointer :: auxiliary_environment
 
         ! Number of terms in 3D/1D solution basis expansion
         integer(ik)     :: nterms_s     = 0
@@ -142,6 +142,7 @@ contains
         character(*),   intent(in)              :: activity
         type(mpi_comm), intent(in), optional    :: comm
 
+        integer(ik) :: ierr
 
         select case (trim(activity))
 
@@ -180,6 +181,10 @@ contains
 
                 end if
 
+                if (associated(self%auxiliary_environment)) deallocate(self%auxiliary_environment)
+                allocate(self%auxiliary_environment, stat=ierr)
+                if (ierr /= 0) call AllocationError
+
 
             !
             ! Start up Namelist
@@ -216,8 +221,7 @@ contains
     subroutine shut_down(self,selection)
         class(chidg_t), intent(inout)               :: self
         character(*),   intent(in),     optional    :: selection
-
-
+        
 
         if ( present(selection) ) then 
             select case (selection)
@@ -228,6 +232,7 @@ contains
                 case ('core')   ! All except mpi
                     call log_finalize()
                     call close_hdf()
+
 
                 case default
                     call chidg_signal(FATAL,"chidg%shut_down: invalid shut_down string")
@@ -528,8 +533,8 @@ contains
         real(rk),                       allocatable :: weights(:)
         type(partition_t),              allocatable, asynchronous :: partitions(:)
 
-        character(len=5),   dimension(1)    :: extensions
-        character(len=:),   allocatable     :: extension, domain_equation_set
+        character(5),       dimension(1)    :: extensions
+        character(:),       allocatable     :: extension, domain_equation_set
         type(meshdata_t),   allocatable     :: meshdata(:)
         integer                             :: iext, extloc, idom, ndomains, iread, ierr, &
                                                domain_dimensionality
@@ -658,7 +663,7 @@ contains
         class(bc_state_t),  intent(in),     optional    :: bc_farfield
         class(bc_state_t),  intent(in),     optional    :: bc_periodic
 
-        character(len=5),       dimension(1)    :: extensions
+        character(5),           dimension(1)    :: extensions
         character(:),           allocatable     :: extension
         type(bc_patch_data_t),  allocatable     :: bc_patches(:)
         type(bc_group_t),       allocatable     :: bc_groups(:)
@@ -991,6 +996,8 @@ contains
     subroutine run(self)
         class(chidg_t),     intent(inout)   :: self
 
+
+!        call self%auxiliary_environment%start_up('core')
 
         call self%time_integrator%iterate(self%data,self%nonlinear_solver,self%linear_solver,self%preconditioner)
 

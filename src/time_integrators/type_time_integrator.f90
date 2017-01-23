@@ -25,10 +25,10 @@ module type_time_integrator
 
 
         ! OPTIONS
-!        real(rk)        :: cfl0     = 1.0_rk        !< Initial CFL number
-!        real(rk)        :: tol      = 1.e-13_rk     !< Convergence tolerance
+!        real(rk)        :: cfl0     = 1.0_rk       !< Initial CFL number
+!        real(rk)        :: tol      = 1.e-13_rk    !< Convergence tolerance
         real(rk)        :: dt       = 0.001_rk      !< Time-step increment
-        integer(ik)     :: nsteps   = 100           !< Number of time steps to compute
+        integer(ik)     :: nsteps   = 1             !< Number of time steps to compute
         integer(ik)     :: nwrite   = 10            !< Write data every 'nwrite' steps
 
 

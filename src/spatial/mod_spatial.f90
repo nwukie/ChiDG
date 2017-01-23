@@ -23,7 +23,8 @@ contains
 
 
 
-    !>  Spatial loop through domains, elements, and faces. Functions get called for each element/face.
+    !>  Spatial loop through domains, elements, and faces. Functions get called for each 
+    !!  element/face.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   3/15/2016
@@ -33,7 +34,7 @@ contains
     !!  @note   Improved layout, added computation of diffusion terms.
     !!
     !!
-    !------------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine update_space(data,timing,info)
         type(chidg_data_t), intent(inout), target :: data
         real(rk),           optional        :: timing
@@ -68,15 +69,16 @@ contains
 
     
 
-        !------------------------------------------------------------------------------------------
-        !                                      Interior Scheme
-        !------------------------------------------------------------------------------------------
+        !--------------------------------------------------------------------------------------
+        !                                    Interior Scheme
+        !--------------------------------------------------------------------------------------
 
         !
-        ! Clear function_status data. This tracks if a function has already been called. So, in this way
-        ! we can compute a function on a face and apply it to both elements. The function is just registered
-        ! as computed for both. So we need to reset all of that data here. This is only tracked for the interior scheme.
-        ! Boundary condition evaluations and Chimera faces are not tracked.
+        ! Clear function_status data. This tracks if a function has already been called. So, 
+        ! in this way we can compute a function on a face and apply it to both elements. 
+        ! The function is just registered as computed for both. So we need to reset all of 
+        ! that data here. This is only tracked for the interior scheme. Boundary condition 
+        ! evaluations and Chimera faces are not tracked.
         !
         call data%sdata%function_status%clear()
 
@@ -96,7 +98,8 @@ contains
 
 
         !
-        ! Loop through given element compute the residual functions and also the linearization of those functions
+        ! Loop through given element compute the residual functions and also the 
+        ! linearization of those functions.
         !
         call write_line('Updating spatial scheme', io_proc=GLOBAL_MASTER)
 
@@ -127,7 +130,8 @@ contains
                 do idiff = 1,7
 
 
-                    ! Faces loop. For the current element, compute the contributions from boundary integrals
+                    ! Faces loop. For the current element, compute the 
+                    ! contributions from boundary integrals.
                     do iface = 1,NFACES
 
                         call worker%set_face(iface)
@@ -179,7 +183,7 @@ contains
 
 
     end subroutine update_space
-    !******************************************************************************************************************
+    !****************************************************************************************
 
 
 

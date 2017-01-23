@@ -1,18 +1,18 @@
-module runga_kutta
-    use mod_kinds,                  only: rk,ik
-    use mod_constants,              only: ZERO,HALF,ONE,TWO,SIX
-    use type_time_integrator,       only: time_integrator_t
-    use type_chidg_data,            only: chidg_data_t
-    use type_nonlinear_solver,      only: nonlinear_solver_t
-    use type_linear_solver,         only: linear_solver_t
-    use type_preconditioner,        only: preconditioner_t
+module explicit_runga_kutta
+    use mod_kinds,                      only: rk,ik
+    use mod_constants,                  only: ZERO,HALF,ONE,TWO,SIX
+    use type_time_integrator,           only: time_integrator_t
+    use type_chidg_data,                only: chidg_data_t
+    use type_nonlinear_solver,          only: nonlinear_solver_t
+    use type_linear_solver,             only: linear_solver_t
+    use type_preconditioner,            only: preconditioner_t
     use type_chidgVector,           
 
-    use mod_spatial,                only: update_space
+    use mod_spatial,                    only: update_space
     
-    use mod_tecio,                  only: write_tecio_variables_unstructured
+    use mod_tecio,                      only: write_tecio_variables_unstructured
 
-    use mod_explicit_RK_methods,    
+    use mod_define_explicit_RK_methods, only: method_selector
     
     implicit none
     private
@@ -53,14 +53,14 @@ module runga_kutta
     !!
     !!
     !---------------------------------------------------------------------------------------------------------------------
-    type. extends(time_integrator_t), public :: runge_kutta_t
+    type. extends(time_integrator_t), public :: explicit_runge_kutta_t
 
 
     contains
         procedure   :: iterate
 
         final       :: destructor
-    end type runge_kutta_t
+    end type explicit_runge_kutta_t
     !*********************************************************************************************************************
 
 
@@ -75,41 +75,58 @@ module runga_kutta
     !!
     !---------------------------------------------------------------------------------------------------------------------
     subroutine iterate(self,data,nonlinear_solver,linear_solver,preconditioner)
-        class(runge_kutta_t),                   intent(inout)   :: self
-        type(chidg_data_t),                     intent(inout)   :: data
-        class(nonlinear_solver_t),  optional,   intent(inout)   :: nonlinear_solver
-        class(linear_solver_t),     optional,   intent(inout)   :: linear_solver
-        class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
+        class(explicit_runge_kutta_t),              intent(inout)   :: self
+        type(chidg_data_t),                         intent(inout)   :: data
+        class(nonlinear_solver_t),      optional,   intent(inout)   :: nonlinear_solver
+        class(linear_solver_t),         optional,   intent(inout)   :: linear_solver
+        class(preconditioner_t),        optional,   intent(inout)   :: preconditioner
 
-        integer(ik),                        :: nstage   ! Number of stages in the RK method
-        real(rk),           allocatable     :: a(:,:)   ! a & b are coefficient arrays
-        real(rk),           allocatable     :: b(:)
-        type(chidgVector_t),allocatable     :: delq(:)
-        type(chidgVector_t)                 :: q_n, dq_new_rhs ! dq_new_rhs is used to compute q for 
-                                                               ! update_space (to compute residual for next stage)                                                                        
-        character(100)                      :: filename
-        integer(ik)                         :: itime = 1, nsteps, ielem, wcount, iblk, ieqn, idom, istage, j
-        real(rk),           allocatable     :: vals(:)
+        !
+        ! Variables read from subroutines defining the explicit RK methods
+        !
+        integer(ik),                         :: nstage   
+        real(rk),            allocatable     :: a(:,:)   
+        real(rk),            allocatable     :: b(:)
+        !
+        ! Variables defined for use in this module
+        !
+        type(chidgVector_t), allocatable     :: delq(:)
+        type(chidgVector_t)                  :: q_n, q_adv
+        character(100)                       :: filename
+        character(len = :),  allocatable     :: time_scheme
+        integer(ik)                          :: itime = 1, nsteps, ielem, wcount, iblk, ieqn, idom, istage, j
+        real(rk),            allocatable     :: vals(:)
 
 
         wcount = 1
-        associate( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs, dt => data%sdata%dt )
+        associate( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs, dt => self%time_manager%dt )
         
         !
-        ! Get nstage, a and b for a particular scheme
-        ! All methods defined in mod_explicit_RK_methods 
-        ! TODO: Method for selecting a particular method
+        ! Get name of the RK method being used
         !
-        call runge_kutta_4th_order(nstage,a,b)
+        time_scheme = self%time_manager%get_name()
+
+        !
+        ! Get nstage, a and b for a particular scheme
+        ! All methods defined in mod_explicit_RK_methods.f90 
+        !
+        call method_selector(time_scheme,nstage,a,b)
 
             print *, 'entering time'
-            do itime = 1,self%nsteps
+            do itime = 1,self%time_manager%nsteps
                 print *, 'Step: ', itime
 
                 !
                 ! Copy the solution vector at the present time level to a temporary vector
                 !
                 q_n = q
+
+                !
+                ! q_adv is a temporary vector used to advance the solution after each stage
+                ! Computed using an accumulated sum
+                ! Initialize q_adv
+                !
+                q_adv = q_n
 
                 if (allocated(delq)) deallocate(delq)
                 allocate(delq(nstage))
@@ -140,12 +157,6 @@ module runga_kutta
                     !
                     dq = (-dt)*rhs
                     delq(istage) = b(istage)*dq
-                    
-                    !
-                    ! Initialize dq_new_rhs for the present stage
-                    ! Computed using an accumulated sum
-                    !
-                    dq_new_rhs = ZERO
 
                     !
                     ! Compute the solution vector to pass to update_space for the next stage
@@ -153,11 +164,8 @@ module runga_kutta
                     !
                     if (istage < nstage) then
                         do j = 1,istage
-                            dq_new_rhs = dq_new_rhs + (a(istage + 1,j)*delq(j)/b(j))
+                            q = q + (a(istage + 1,j)*delq(j)/b(j))
                         end do
-
-                        q = q_n + dq_new_rhs
-
                     end if
 
                     !
@@ -166,14 +174,18 @@ module runga_kutta
                     call lhs%clear()
                     call rhs%clear()
 
+                    !
+                    ! Update q_adv after each stage
+                    !
+                    q_adv = add_chidgVector_chidgVector(q_adv, delq(istage))
+
                 end do  ! istage
 
 
                 !
-                ! Compute update vector for the next time level and advance solution with update vector
+                ! Advance solution
                 ! 
-                dq = sum(delq)
-                q = q_n + dq
+                q = q_adv
 
 
 
@@ -183,7 +195,7 @@ module runga_kutta
                 call write_line('   R(Q) - Norm:    ', rhs%norm(ChiDG_COMM),delimiter = '')
 
 
-                if (wcount == self%nwrite) then
+                if (wcount == self%time_manager%nwrite) then
                     write(filename,'(I7,A4)') 1000000 + itime, '.plt'
                     call write_tecio_variables_unstructured(data,time(filename),itime + 1)
                     wcount = 0
@@ -210,7 +222,7 @@ module runga_kutta
     !!
     !---------------------------------------------------------------------------------------------------------------------
     subroutine destructor(self)
-        type(runge_kutta_t),    intent(in)  :: self
+        type(explicit_runge_kutta_t),    intent(in)  :: self
 
     end subroutine destructor
     !*********************************************************************************************************************
@@ -234,4 +246,4 @@ module runga_kutta
 
 
 
-end module runge_kutta
+end module explicit_runge_kutta

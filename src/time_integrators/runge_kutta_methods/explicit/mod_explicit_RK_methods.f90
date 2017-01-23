@@ -1,7 +1,5 @@
-module mod_define_RK_methods
+module mod_define_explicit_RK_methods
 ! Module containing subroutines and functions defining various explicit Runge-Kutta methods
-! TODO: Need generic 2nd order method?
-! TODO: Add embedded methods with adaptive step sizes
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO,ONE,TWO,THREE,EIGHTH,SIXTH,FOURTH,THIRD,HALF,TWO_THR
     implicit none
@@ -56,7 +54,7 @@ contains
         allocate(a(nstage,nstage),b(nstage))
 
         !
-        ! a is an upper triangular matrix
+        ! a is a lower triangular matrix
         !
         a      = ZERO
         a(2,1) = HALF
@@ -95,7 +93,7 @@ contains
         allocate(a(nstage,nstage),b(nstage))
 
         !
-        ! a is an upper triangular matrix
+        ! a is a lower triangular matrix
         !
         a      = ZERO
         a(2,1) = ONE 
@@ -134,7 +132,7 @@ contains
         allocate(a(nstage,nstage),b(nstage))
 
         !
-        ! a is an upper triangular matrix
+        ! a is a lower triangular matrix
         !
         a      = ZERO
         a(2,1) = TWO_THR
@@ -173,7 +171,7 @@ contains
         allocate(a(nstage,nstage),b(nstage))
 
         !
-        ! a is an upper triangular matrix
+        ! a is a lower triangular matrix
         !
         a      = ZERO
         a(2,1) = HALF; a(3,1) = -ONE, a(3,2) = TWO 
@@ -212,7 +210,7 @@ contains
         allocate(a(nstage,nstage),b(nstage))
 
         !
-        ! a is an upper triangular matrix
+        ! a is a lower triangular matrix
         !
         a      = ZERO
         a(2,1) = HALF; a(3,2) = HALF; a(4,3) = ONE
@@ -251,7 +249,7 @@ contains
         allocate(a(nstage,nstage),b(nstage))
 
         !
-        ! a is an upper triangular matrix
+        ! a is a lower triangular matrix
         !
         a      = ZERO
         a(2,1) = THIRD
@@ -267,8 +265,51 @@ contains
 
 
 
-    ! TODO: Add a method selector subroutine to call the correct RK method
-    
+    !> Select explicit Runge-Kutta method based on input 
+    !!
+    !! @author Mayank Sharma
+    !! @date   1/23/2017
+    !!
+    !! @param[in]   time_scheme - String denoting the method to be used from user input
+    !! @param[out]  nstage      - Number of stages in the selected method
+    !! @param[out]  a           - Array of coefficients for calculating stagewise updates
+    !! @param[out]  b           - Array of coefficients for summing stagewise updates to get final update
+    !!
+    !---------------------------------------------------------------------------------------------------
+    subroutine method_selector(time_scheme,nstage,a,b)
+        character(len = :), allocatable, intent(in)     :: time_scheme
+        integer(ik),                     intent(inout)  :: nstage
+        real(rk),           allocatable, intent(inout)  :: a
+        real(rk),           allocatable, intent(inout)  :: b
+
+
+        select case(time_scheme)
+            
+            case('Second Order Runge-Kutta', 'Explicit Midpoint', 'Second Order RK')
+                call runge_2nd_order(nstage,a,b)
+
+            case('Modified Euler', 'Second Order Heun Method')
+                call heun_2nd_order(nstage,a,b)
+
+            case('Ralston Method', 'Second Order Ralston Method')
+                call ralston_2nd_order(nstage,a,b)
+
+            case('Third Order Runge-Kutta', 'Third Order Kutta', 'Third Order RK')
+                call kutta_3rd_order(nstage,a,b)
+
+            case('Runge-Kutta Method', 'Fourth Runge-Kutta Method', 'Fourth Order RK Method', 'RK4')
+                call runge_kutta_4th_order
+
+            case('Three-Eighth Rule', 'Fourth Order Kutta')
+                call three_eighth_4th_order(nstage,a,b)
+
+        end select
+
+
+    end subroutine method_selector
+    !***************************************************************************************************   
+
+        
 
 
 
@@ -288,4 +329,4 @@ contains
 
 
  
-end module mod_define_RK_methods
+end module mod_define_explicit_RK_methods

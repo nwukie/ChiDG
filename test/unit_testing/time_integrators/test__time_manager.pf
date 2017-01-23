@@ -1,0 +1,609 @@
+!>  Test init procedure assuming the user chose 'steady'
+!!
+!!
+!!  @author Matteo Ugolotti
+!!
+!---------------------------------------------------------------------------------------------------
+
+@Test
+subroutine test_time_manager__init_steady()
+    use pfunit_mod
+    use mod_io
+    use mod_kinds,          only: rk, ik
+    use mod_constants,      only: ZERO
+    use type_time_manager,  only: time_manager_t
+
+    implicit none
+    
+    type(time_manager_t)    :: t_manager
+    
+    !-----------------------------------------------------------------------------------------------
+    !
+    ! Define input data here that is normally read through the namelist, these are mod_io variables
+    !
+    ! These are the default values in the namelist
+    !
+    !-----------------------------------------------------------------------------------------------
+
+    time_integrator = 'steady'
+    dt              = 0.001_rk
+    time_steps      = 100
+    ttol            = 1.e-8
+    ntime_instances = 1
+    frequencies     = ZERO
+    nwrite          = 100
+
+
+    !
+    ! Initialize the time_manager based on the default time parameters, THIS BEING TESTED
+    !
+
+    call t_manager%init()
+    
+    !
+    ! Test this subroutine
+    !
+
+    @assertEqual(time_integrator,t_manager%time_scheme)
+     
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+!>  Test init procedure assuming the user chose 'forward euler'
+!!
+!!
+!!  @author Matteo Ugolotti
+!!
+!---------------------------------------------------------------------------------------------------
+
+@Test
+subroutine test_time_manager__init_unsteady()
+    use pfunit_mod
+    use mod_io
+    use mod_kinds,          only: rk, ik
+    use mod_constants,      only: ZERO
+    use type_time_manager,  only: time_manager_t
+
+    implicit none
+    
+    type(time_manager_t)    :: t_manager
+    
+    !-----------------------------------------------------------------------------------------------
+    !
+    ! Define input data here that is normally read through the namelist, these are mod_io variables
+    !
+    !-----------------------------------------------------------------------------------------------
+
+    time_integrator = 'forward euler'
+    dt              = 0.0005_rk
+    time_steps      = 11
+    ttol            = 1.e-8
+    ntime_instances = 1
+    frequencies     = ZERO
+    nwrite          = 105
+
+
+    !
+    ! Initialize the time_manager based on the default time parameters, THIS BEING TESTED
+    !
+
+    call t_manager%init()
+    
+    !
+    ! Test this subroutine
+    !
+
+    @assertEqual(time_integrator,t_manager%time_scheme)
+    @assertEqual(dt,t_manager%dt)
+    @assertEqual(time_steps,t_manager%time_steps)
+    @assertEqual(nwrite,t_manager%nwrite)
+     
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+
+!>  Test init procedure assuming the user chose 'HB'
+!!
+!!
+!!  @author Matteo Ugolotti
+!!
+!---------------------------------------------------------------------------------------------------
+
+@Test
+subroutine test_time_manager__init_HB1()
+    use pfunit_mod
+    use mod_io
+    use mod_kinds,          only: rk, ik
+    use mod_constants,      only: ZERO, PI, ONE, TWO, THREE
+    use type_time_manager,  only: time_manager_t
+
+    implicit none
+    
+    type(time_manager_t)    :: t_manager
+    
+    real(rk)                :: t_lev_1, t_lev_2, t_lev_3
+
+    !-----------------------------------------------------------------------------------------------
+    !
+    ! Define input data here that is normally read through the namelist, these are mod_io variables
+    !
+    !-----------------------------------------------------------------------------------------------
+
+    time_integrator = 'HB'
+    dt              = 0.001_rk
+    time_steps      = 10
+    ttol            = 1.e-8
+    ntime_instances = 1
+    frequencies(1)  = 10
+    nwrite          = 100
+
+    !
+    ! Initialize the time_manager based on the default time parameters, THIS BEING TESTED
+    !
+
+    call t_manager%init()
+    
+
+    !
+    ! Calculate expected HB time levels
+    !
+     
+    t_lev_1 = (TWO*PI)/10*ONE/THREE
+    t_lev_2 = (TWO*PI)/10*TWO/THREE
+    t_lev_3 = (TWO*PI)/10*THREE/THREE
+    
+
+    !
+    ! Test this subroutine
+    !
+    
+    @assertEqual(time_integrator,t_manager%time_scheme)
+    @assertEqual(3,t_manager%time_lev%size())
+    @assertEqual(20,t_manager%time_lev%capacity())
+    @assertEqual(t_lev_1,t_manager%time_lev%data_(1))
+    @assertEqual(t_lev_2,t_manager%time_lev%data_(2))
+    @assertEqual(t_lev_3,t_manager%time_lev%data_(3))
+    @assertEqual([10],t_manager%freq_data%data())
+    @assertEqual(1,t_manager%freq_data%size())
+    @assertEqual(20,t_manager%freq_data%capacity())
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+!>  Test init procedure assuming the user chose 'HB'
+!!
+!!
+!!  @author Matteo Ugolotti
+!!
+!---------------------------------------------------------------------------------------------------
+
+@Test
+subroutine test_time_manager__init_HB5()
+    use pfunit_mod
+    use mod_io
+    use mod_kinds,          only: rk, ik
+    use mod_constants,      only: ZERO, PI, ONE, TWO, THREE
+    use type_time_manager,  only: time_manager_t
+
+    implicit none
+    
+    type(time_manager_t)    :: t_manager
+    
+    real(rk)                :: t_lev(11)
+    real(rk)                :: tmp
+    integer(ik)             :: i
+
+    !-----------------------------------------------------------------------------------------------
+    !
+    ! Define input data here that is normally read through the namelist, these are mod_io variables
+    !
+    !-----------------------------------------------------------------------------------------------
+    
+    ! reinitialize frequencies to ZERO
+    frequencies     = ZERO
+
+    time_integrator = 'HB'
+    dt              = 0.001_rk
+    time_steps      = 10
+    ttol            = 1.e-8
+    ntime_instances = 1
+    frequencies(1)  = 1.1_rk
+    frequencies(2)  = 15_rk
+    frequencies(3)  = 13.05_rk
+    frequencies(4)  = 25.0001_rk
+    frequencies(5)  = 26.9_rk
+    nwrite          = 100
+    
+
+    !
+    ! Initialize the time_manager based on the default time parameters, THIS BEING TESTED
+    !
+
+    call t_manager%init()
+    
+
+    !
+    ! Calculate expected HB time levels
+    !
+     
+    do i = 1,11
+        tmp = i
+        t_lev(i) = (TWO*PI)/1.1_rk*(tmp/11._rk)
+    end do 
+
+    !
+    ! Test this subroutine
+    !
+    
+    @assertEqual(time_integrator,t_manager%time_scheme)
+    @assertEqual(11,t_manager%time_lev%size())
+    @assertEqual(20,t_manager%time_lev%capacity())
+    @assertEqual(t_lev(1),t_manager%time_lev%data_(1))
+    @assertEqual(t_lev(2),t_manager%time_lev%data_(2))
+    @assertEqual(t_lev(3),t_manager%time_lev%data_(3))
+    @assertEqual(t_lev(4),t_manager%time_lev%data_(4))
+    @assertEqual(t_lev(5),t_manager%time_lev%data_(5))
+    @assertEqual(t_lev(6),t_manager%time_lev%data_(6))
+    @assertEqual(t_lev(7),t_manager%time_lev%data_(7))
+    @assertEqual(t_lev(8),t_manager%time_lev%data_(8))
+    @assertEqual(t_lev(9),t_manager%time_lev%data_(9))
+    @assertEqual(t_lev(10),t_manager%time_lev%data_(10))
+    @assertEqual(t_lev(11),t_manager%time_lev%data_(11))
+    @assertEqual(1.1_rk,t_manager%freq_data%data_(1))
+    @assertEqual(15.0_rk,t_manager%freq_data%data_(2))
+    @assertEqual(13.05_rk,t_manager%freq_data%data_(3))
+    @assertEqual(25.0001_rk,t_manager%freq_data%data_(4))
+    @assertEqual(26.9_rk,t_manager%freq_data%data_(5))
+    @assertEqual(20,t_manager%freq_data%capacity())
+    @assertEqual(5,t_manager%freq_data%size())
+
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+!>  Test init procedure assuming the user chose 'HB'
+!!
+!!
+!!  @author Matteo Ugolotti
+!!
+!---------------------------------------------------------------------------------------------------
+
+@Test
+subroutine test_time_manager__init_HB25()
+    use pfunit_mod
+    use mod_io
+    use mod_kinds,          only: rk, ik
+    use mod_constants,      only: ZERO, PI, ONE, TWO, THREE
+    use type_time_manager,  only: time_manager_t
+
+    implicit none
+    
+    type(time_manager_t)    :: t_manager
+    
+    real(rk)                :: t_lev(51)
+    real(rk)                :: tmp
+    integer(ik)             :: i
+
+    !-----------------------------------------------------------------------------------------------
+    !
+    ! Define input data here that is normally read through the namelist, these are mod_io variables
+    !
+    !-----------------------------------------------------------------------------------------------
+    
+    ! reinitialize frequencies to ZERO
+    frequencies     = ZERO
+
+    time_integrator = 'HB'
+    dt              = 0.001_rk
+    time_steps      = 10
+    ttol            = 1.e-8
+    ntime_instances = 1
+    frequencies(1)  = 2.1_rk
+    frequencies(2)  = 15_rk
+    frequencies(3)  = 13.05_rk
+    frequencies(4)  = 25.0001_rk
+    frequencies(5)  = 26.9_rk
+    frequencies(6)  = 27.8_rk
+    frequencies(7)  = 30.9_rk
+    frequencies(8)  = 53.5_rk
+    frequencies(9)  = 54.4_rk
+    frequencies(10)  = 60.3_rk
+    frequencies(11)  = 62.2_rk
+    frequencies(12)  = 65.1_rk
+    frequencies(13)  = 69.1_rk
+    frequencies(14)  = 69.5_rk
+    frequencies(15)  = 75.9_rk
+    frequencies(16)  = 78.0_rk
+    frequencies(17)  = 85.0_rk
+    frequencies(18)  = 93.3_rk
+    frequencies(18)  = 98.99_rk
+    frequencies(19)  = 103.4_rk
+    frequencies(20)  = 110.5_rk
+    frequencies(21)  = 120.5_rk
+    frequencies(22)  = 135.1_rk
+    frequencies(23)  = 140.0_rk
+    frequencies(24)  = 156.0_rk
+    frequencies(25)  = 234.09_rk
+    nwrite          = 100
+    
+
+    !
+    ! Initialize the time_manager based on the default time parameters, THIS BEING TESTED
+    !
+
+    call t_manager%init()
+    
+
+    !
+    ! Calculate expected HB time levels
+    !
+     
+    do i = 1,51
+        tmp = i
+        t_lev(i) = (TWO*PI)/2.1_rk*(tmp/51._rk)
+    end do 
+
+    !
+    ! Test this subroutine
+    !
+    
+    @assertEqual(time_integrator,t_manager%time_scheme)
+    @assertEqual(51,t_manager%time_lev%size())
+    @assertEqual(60,t_manager%time_lev%capacity())
+    
+    do i = 1,51
+        @assertEqual(t_lev(i),t_manager%time_lev%data_(i))
+    end do
+    
+    do i = 1,25
+        @assertEqual(frequencies(i),t_manager%freq_data%data_(i))
+    end do
+
+    @assertEqual(40,t_manager%freq_data%capacity())
+    @assertEqual(25,t_manager%freq_data%size())
+
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+!>  Test init procedure assuming the user chose 'HB': pushed also a zero requency
+!!
+!!
+!!  @author Matteo Ugolotti
+!!
+!---------------------------------------------------------------------------------------------------
+
+@Test
+subroutine test_time_manager__init_HB5_0()
+    use pfunit_mod
+    use mod_io
+    use mod_kinds,          only: rk, ik
+    use mod_constants,      only: ZERO, PI, ONE, TWO, THREE
+    use type_time_manager,  only: time_manager_t
+
+    implicit none
+    
+    type(time_manager_t)    :: t_manager
+    
+    real(rk)                :: t_lev(9)
+    real(rk)                :: tmp
+    integer(ik)             :: i
+
+    !-----------------------------------------------------------------------------------------------
+    !
+    ! Define input data here that is normally read through the namelist, these are mod_io variables
+    !
+    !-----------------------------------------------------------------------------------------------
+    
+    ! reinitialize frequencies to ZERO
+    frequencies     = ZERO
+
+    time_integrator = 'HB'
+    dt              = 0.001_rk
+    time_steps      = 10
+    ttol            = 1.e-8
+    ntime_instances = 1
+    frequencies(1)  = 0.3_rk
+    frequencies(2)  = 15_rk
+    frequencies(3)  = 0.0_rk
+    frequencies(4)  = 25.0001_rk
+    frequencies(5)  = 26.9_rk
+    nwrite          = 100
+    
+
+    !
+    ! Initialize the time_manager based on the default time parameters, THIS BEING TESTED
+    !
+
+    call t_manager%init()
+    
+
+    !
+    ! Calculate expected HB time levels
+    !
+     
+    do i = 1,9
+        tmp = i
+        t_lev(i) = (TWO*PI)/0.3_rk*(tmp/9._rk)
+    end do 
+
+    !
+    ! Test this subroutine
+    !
+    
+    @assertEqual(time_integrator,t_manager%time_scheme)
+    @assertEqual(20,t_manager%freq_data%capacity())
+    @assertEqual(4,t_manager%freq_data%size())
+    @assertEqual(9,t_manager%time_lev%size())
+    @assertEqual(20,t_manager%time_lev%capacity())
+    @assertEqual(t_lev(1),t_manager%time_lev%data_(1))
+    @assertEqual(t_lev(2),t_manager%time_lev%data_(2))
+    @assertEqual(t_lev(3),t_manager%time_lev%data_(3))
+    @assertEqual(t_lev(4),t_manager%time_lev%data_(4))
+    @assertEqual(t_lev(5),t_manager%time_lev%data_(5))
+    @assertEqual(t_lev(6),t_manager%time_lev%data_(6))
+    @assertEqual(t_lev(7),t_manager%time_lev%data_(7))
+    @assertEqual(t_lev(8),t_manager%time_lev%data_(8))
+    @assertEqual(t_lev(9),t_manager%time_lev%data_(9))
+    @assertEqual(0.3_rk,t_manager%freq_data%data_(1))
+    @assertEqual(15.0_rk,t_manager%freq_data%data_(2))
+    @assertEqual(25.0001_rk,t_manager%freq_data%data_(3))
+    @assertEqual(26.9_rk,t_manager%freq_data%data_(4))
+
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+!>  Test push_back procedure to verify no doubles frequencies are stored
+!!  The init procedure is called first and 5 frequencies are pushed back by the push_back subroutine
+!!  Only three of them should be stored in freq_data, since two frequencies are pushed twice.
+!!
+!!
+!!  @author Matteo Ugolotti
+!!
+!---------------------------------------------------------------------------------------------------
+
+@Test
+subroutine test_time_manager__init_push_back()
+    
+    use pfunit_mod
+    use mod_io
+    use mod_kinds,          only: rk, ik
+    use mod_constants,      only: ZERO, PI, ONE, TWO, THREE
+    use type_time_manager,  only: time_manager_t
+
+    implicit none
+    
+    type(time_manager_t)    :: t_manager
+    
+    real(rk)                :: t_lev(7)
+    real(rk)                :: tmp
+    integer(ik)             :: i
+
+    !-----------------------------------------------------------------------------------------------
+    !
+    ! Define input data here that is normally read through the namelist, these are mod_io variables
+    !
+    !-----------------------------------------------------------------------------------------------
+    
+    ! reinitialize frequencies to ZERO
+    frequencies     = ZERO
+
+    time_integrator = 'HB'
+    dt              = 0.001_rk
+    time_steps      = 10
+    ttol            = 1.e-8
+    ntime_instances = 1
+    frequencies(1)  = 0.3_rk
+    frequencies(2)  = 5.0_rk
+    frequencies(3)  = 5.0_rk
+    frequencies(4)  = 25.0001_rk
+    frequencies(5)  = 25.0001_rk
+    nwrite          = 100
+    
+
+    !
+    ! Initialize the time_manager based on the default time parameters, THIS BEING TESTED
+    !
+
+    call t_manager%init()
+    
+
+    !
+    ! Calculate expected HB time levels
+    !
+     
+    do i = 1,7
+        tmp = i
+        t_lev(i) = (TWO*PI)/0.3_rk*(tmp/7._rk)
+    end do 
+
+    !
+    ! Test this subroutine
+    !
+    
+    @assertEqual(time_integrator,t_manager%time_scheme)
+    @assertEqual(20,t_manager%freq_data%capacity())
+    @assertEqual(3,t_manager%freq_data%size())
+    @assertEqual(7,t_manager%time_lev%size())
+    @assertEqual(20,t_manager%time_lev%capacity())
+    @assertEqual(t_lev(1),t_manager%time_lev%data_(1))
+    @assertEqual(t_lev(2),t_manager%time_lev%data_(2))
+    @assertEqual(t_lev(3),t_manager%time_lev%data_(3))
+    @assertEqual(t_lev(4),t_manager%time_lev%data_(4))
+    @assertEqual(t_lev(5),t_manager%time_lev%data_(5))
+    @assertEqual(t_lev(6),t_manager%time_lev%data_(6))
+    @assertEqual(t_lev(7),t_manager%time_lev%data_(7))
+    @assertEqual(0.3_rk,t_manager%freq_data%data_(1))
+    @assertEqual(5.0_rk,t_manager%freq_data%data_(2))
+    @assertEqual(25.0001_rk,t_manager%freq_data%data_(3))
+
+
+end subroutine
+

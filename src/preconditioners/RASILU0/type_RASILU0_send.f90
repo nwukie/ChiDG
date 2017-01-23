@@ -52,8 +52,8 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine init(self,mesh,A)
-        class(RASILU0_send_t),  intent(inout)   :: self
-        type(mesh_t),           intent(in)      :: mesh(:)
+        class(RASILU0_send_t),   intent(inout)   :: self
+        type(mesh_t),            intent(in)      :: mesh(:)
         type(chidg_matrix_t),    intent(in)      :: A
 
         type(ivector_t)             :: send_procs
@@ -80,6 +80,7 @@ contains
 
 
         nsend_procs = send_procs%size()
+        if (allocated(self%comm)) deallocate(self%comm)
         allocate(self%comm(nsend_procs), stat=ierr)
         if (ierr /= 0) call AllocationError
 

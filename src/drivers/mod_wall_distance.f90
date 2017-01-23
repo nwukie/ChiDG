@@ -80,8 +80,8 @@ contains
         !
         call wall_distance%set('Time Integrator' , algorithm='Steady'                        )
         call wall_distance%set('Nonlinear Solver', algorithm='Quasi-Newton', options=noptions)
-        call wall_distance%set('Linear Solver'   , algorithm='FGMRES',       options=loptions)
-        call wall_distance%set('Preconditioner'  , algorithm='ILU0'                          )
+        call wall_distance%set('Linear Solver'   , algorithm='fgmres_cgs',   options=loptions)
+        call wall_distance%set('Preconditioner'  , algorithm='RASILU0'                       )
 
 
 

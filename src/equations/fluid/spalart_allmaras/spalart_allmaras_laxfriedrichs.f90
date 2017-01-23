@@ -153,8 +153,14 @@ contains
         flux_y = flux_avg_y + max(abs(diss_m),abs(diss_p))*HALF*diff
         flux_z = flux_avg_z + max(abs(diss_m),abs(diss_p))*HALF*diff
 
-        integrand = flux_x*normx + flux_y*normy + flux_z*normz
+!        integrand = flux_x*normx + flux_y*normy + flux_z*normz
 !        integrand = flux_x*normx*unormx + flux_y*normy*unormy + flux_z*normz*unormz
+
+        integrand = flux_avg_x*normx + flux_avg_y*normy + flux_avg_z*normz
+
+        integrand = integrand + max(abs(diss_m),abs(diss_p))*HALF*diff*normx*unormx
+        integrand = integrand + max(abs(diss_m),abs(diss_p))*HALF*diff*normy*unormy
+        integrand = integrand + max(abs(diss_m),abs(diss_p))*HALF*diff*normz*unormz
 
 
         !

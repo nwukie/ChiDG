@@ -291,7 +291,7 @@ contains
         if (allocated(self%jinv)) deallocate( self%jinv, self%metric, self%quad_pts,            &
                                               self%ddx, self%ddy, self%ddz,                     &
                                               self%ddx_trans, self%ddy_trans, self%ddz_trans,   &
-                                              self%mass, self%invmass)
+                                              self%mass, self%invmass, self%dtau)
         allocate(self%jinv(nnodes),                 &
                  self%metric(3,3,nnodes),           &
                  self%quad_pts(nnodes),             &
@@ -303,7 +303,7 @@ contains
                  self%ddz_trans(nterms_s,nnodes),   &
                  self%mass(nterms_s,nterms_s),      &
                  self%invmass(nterms_s,nterms_s),   &
-                 self%dtau(neqns), stat = ierr)
+                 self%dtau(neqns), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 

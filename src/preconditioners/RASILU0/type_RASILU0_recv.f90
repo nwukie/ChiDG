@@ -67,6 +67,7 @@ contains
         !
         ! Allocate overlapping storage for each domain to receive data into
         !
+        if (allocated(self%dom)) deallocate(self%dom)
         allocate(self%dom(ndom), stat=ierr)
         if (ierr /= 0) call AllocationError
 

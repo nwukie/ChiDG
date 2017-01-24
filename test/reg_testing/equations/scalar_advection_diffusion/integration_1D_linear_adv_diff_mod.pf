@@ -458,6 +458,7 @@ contains
 
 
 
+
         !-------------------------------------------------------------------------------
         !               Initialize and register the diffusion coefficient model
         !-------------------------------------------------------------------------------
@@ -505,7 +506,6 @@ contains
         !call toptions%set('nsteps',100)
         !call toptions%set('nwrite',0)
 
-        call this%chidg%time_integrator%time_manager%init()
 
         ! Set linear solver options to pass during initialization
         call loptions%set('tol',1.e-14_rk)
@@ -579,6 +579,7 @@ contains
         call this%chidg%init('solvers')
 
 
+
         !
         ! Set ChiDG components
         !
@@ -588,6 +589,7 @@ contains
         call this%chidg%set('preconditioner',   algorithm=preconditioner)
 
 
+        call this%chidg%time_integrator%time_manager%init()
         !
         ! Initialize solution
         !

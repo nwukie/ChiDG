@@ -40,7 +40,7 @@ contains
         real(rk),           optional        :: timing
         integer(ik),        optional        :: info
 
-        integer(ik)                 :: idom, ielem, iface, idiff, ifcn, ibc, nelem, itime, ierr
+        integer(ik)                 :: idom, ielem, iface, idiff, ifcn, ibc, itime, ierr
         type(timer_t)               :: timer, comm_timer, loop_timer
         logical                     :: interior_face
         logical                     :: chimera_face 
@@ -119,7 +119,6 @@ contains
             call loop_timer%start()
             do idom = 1,data%ndomains()
                 associate ( mesh => data%mesh(idom), eqnset => data%eqnset(idom) )
-                nelem = mesh(idom)%nelem
 
                 ! Loop through elements in the current domain
                 do ielem = 1,mesh%nelem

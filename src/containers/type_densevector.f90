@@ -715,13 +715,16 @@ contains
 
         real(rk)    :: res(self%nvars_)
         real(rk)    :: modes(self%nterms_)
-        integer(ik) :: ifield
+        integer(ik) :: ifield, itime
 
 
         do ifield = 1,self%nvars_
+            res(ifield) = 0
 
-            modes = self%getvar(ifield)
-            res(ifield) = sum( modes**TWO )
+            do itime = 1,self%ntime_
+                modes = self%getvar(ifield,itime)
+                res(ifield) = res(ifield) + sum( modes**TWO )
+            end do
 
         end do
 

@@ -40,7 +40,8 @@ contains
         type(chidg_vector_t),    intent(inout)   :: x
 
         type(chidg_vector_t)     :: res
-        integer(ik)             :: idom, ielem, iblk, recv_comm, recv_domain, recv_element
+        integer(ik)             :: idom, ielem, iblk, imat, itime, &
+                                   recv_comm, recv_domain, recv_element
         integer(ik)             :: dparent_g, dparent_l, eparent_g, eparent_l
         integer(ik)             :: matrix_proc, vector_proc, nrows, ncols, ierr
         integer(ik)             :: res_istart, res_iend, x_istart, x_iend

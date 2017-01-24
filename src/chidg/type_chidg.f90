@@ -67,9 +67,10 @@ module type_chidg
         ! Auxiliary ChiDG environment that can be used to solve sub-problems
         type(chidg_t), pointer :: auxiliary_environment
 
-        integer(ik) :: ntime        = 1 ! Number of time instances being solved for
-        integer(ik) :: nterms_s     = 0 ! Number of terms in the 3D solution basis expansion
-        integer(ik) :: nterms_s_1d  = 0 ! Number of terms in the 1D solution basis expansion
+        ! Number of terms in 3D/1D solution basis expansion
+        integer(ik)     :: ntime        = 1
+        integer(ik)     :: nterms_s     = 0
+        integer(ik)     :: nterms_s_1d  = 0
 
         ! ChiDG Files
         !type(chidg_file_t)        :: grid_file
@@ -169,6 +170,7 @@ contains
                 if (.not. self%envInitialized ) then
                     call log_init()
 
+                ! Call environment initialization routines by default on first init call
                     ! Order matters here. Functions need to come first. Used by 
                     ! equations and bcs.
                     call register_functions()
@@ -181,9 +183,10 @@ contains
 
                 end if
 
-                if (associated(self%auxiliary_environment)) deallocate(self%auxiliary_environment)
-                allocate(self%auxiliary_environment, stat=ierr)
-                if (ierr /= 0) call AllocationError
+                if (.not. associated(self%auxiliary_environment)) then
+                    allocate(self%auxiliary_environment, stat=ierr)
+                    if (ierr /= 0) call AllocationError
+                end if
 
 
             !
@@ -299,7 +302,7 @@ contains
                             where my_order=1-7 indicates the solution order-of-accuracy."
                 if (self%nterms_s == 0) call chidg_signal(FATAL,user_msg)
 
-                call self%data%initialize_solution_domains(self%nterms_s)
+                call self%data%initialize_solution_domains(self%nterms_s, self%ntime)
 
             !
             ! Initialize communication. Local face communication. Global parallel communication.
@@ -413,8 +416,7 @@ contains
         !
         select case (trim(selector))
 
-            case ('solution order', 'Solution Order', 'solution_order', 'Solution_Order', &
-                  'ntime', 'Number of Time Instances', 'NTIME', 'n time')
+            case ('solution order', 'Solution Order', 'solution_order', 'Solution_Order')
 
                 user_msg = "chidg%set: The component being set needs an integer passed in &
                             along with it. Try 'call chidg%set('your component', integer_input=my_int)"
@@ -490,9 +492,6 @@ contains
                 self%nterms_s_1d = integer_input
                 self%nterms_s    = self%nterms_s_1d * self%nterms_s_1d * self%nterms_s_1d
         
-
-            case ('ntime', 'Number of Time Instances', 'NTIME', 'n time')
-                self%ntime = integer_input
                 
 
             case default
@@ -555,11 +554,8 @@ contains
         if ( IRANK == GLOBAL_MASTER ) then
 
             call read_connectivity_hdf(gridfile,connectivities)
-            
             call read_weights_hdf(gridfile,weights)
 
-            call read_weights_hdf(gridfile,weights)
-            
             call partition_connectivity(connectivities, weights, partitions)
 
             call send_partitions(partitions,MPI_COMM_WORLD)
@@ -798,43 +794,43 @@ contains
 
     
 
-    !>  Initialize all solution and solver storage.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   4/11/2016
-    !!
-    !!  @param[in]  nterms_s    Number of terms in the solution polynomial expansion.
-    !!
-    !-----------------------------------------------------------------------------------------
-    subroutine initialize_solution_domains(self)
-        class(chidg_t),     intent(inout)   :: self
-
-        character(:),   allocatable :: user_msg
-
-        !
-        ! TODO: put in checks for prerequisites
-        !
-
-
-        !
-        ! Check that the order for the solution basis expansion has been set.
-        !
-        user_msg = "chidg%initialize_solution_domains: It appears the 'Solution Order' was &
-                    not set for the current ChiDG instance. Try calling &
-                    'call chidg%set('Solution Order',&
-                    integer_input=my_order)' where my_order=1-7 indicates the solution &
-                    order-of-accuracy."
-        if (self%nterms_s == 0) call chidg_signal(FATAL,user_msg)
-
-        !
-        ! Call domain solution storage initialization: mesh data structures that 
-        ! depend on solution expansion etc.
-        !
-        call self%data%initialize_solution_domains(self%nterms_s,self%ntime)
-
-
-    end subroutine initialize_solution_domains
-    !******************************************************************************************
+!    !>  Initialize all solution and solver storage.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   4/11/2016
+!    !!
+!    !!  @param[in]  nterms_s    Number of terms in the solution polynomial expansion.
+!    !!
+!    !-----------------------------------------------------------------------------------------
+!    subroutine initialize_solution_domains(self)
+!        class(chidg_t),     intent(inout)   :: self
+!
+!        character(:),   allocatable :: user_msg
+!
+!        !
+!        ! TODO: put in checks for prerequisites
+!        !
+!
+!
+!        !
+!        ! Check that the order for the solution basis expansion has been set.
+!        !
+!        user_msg = "chidg%initialize_solution_domains: It appears the 'Solution Order' was &
+!                    not set for the current ChiDG instance. Try calling &
+!                    'call chidg%set('Solution Order',&
+!                    integer_input=my_order)' where my_order=1-7 indicates the solution &
+!                    order-of-accuracy."
+!        if (self%nterms_s == 0) call chidg_signal(FATAL,user_msg)
+!
+!        !
+!        ! Call domain solution storage initialization: mesh data structures that 
+!        ! depend on solution expansion etc.
+!        !
+!        call self%data%initialize_solution_domains(self%nterms_s, self%ntime)
+!
+!
+!    end subroutine initialize_solution_domains
+!    !******************************************************************************************
 
 
 
@@ -1007,6 +1003,7 @@ contains
 
 
 !        call self%auxiliary_environment%start_up('core')
+
 
         call self%time_integrator%iterate(self%data,self%nonlinear_solver,self%linear_solver,self%preconditioner)
 

@@ -459,11 +459,6 @@ contains
     
 
         !
-
-        integer(ik) :: idom
-    
-
-        !
         ! Call blockmatrix_t%clear() on all matrices
         !
         do idom = 1,size(self%dom)
@@ -490,8 +485,14 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !-----------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine destructor(self)
         type(chidg_matrix_t),    intent(inout)   :: self
 
     end subroutine
+
+
+
+
+
+end module type_chidg_matrix

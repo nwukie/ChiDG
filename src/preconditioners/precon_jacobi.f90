@@ -20,8 +20,7 @@ module precon_jacobi
     !-----------------------------------------------------------------------------
     type, extends(preconditioner_t) :: precon_jacobi_t
 
-        !type(densematrix_t), allocatable    :: D(:,:,:)     !< inverse of block diagonal, (ndom,maxelems,ntime)
-        type(chidgMatrix_t) :: D     !< inverse of block diagonal, (ndom,maxelems,ntime)
+        type(chidg_matrix_t) :: D     !< inverse of block diagonal, (ndom,maxelems,ntime)
 
     contains
         procedure   :: init
@@ -48,36 +47,6 @@ contains
     subroutine init(self,data)
         class(precon_jacobi_t), intent(inout)   :: self
         type(chidg_data_t),     intent(in)      :: data
-
-!        integer(ik) :: ndom, ntime
-!        logical     :: increase_maxelems = .false.
-!
-!
-!        ndom = data%ndomains()
-!        ntime = data%ntime()
-!
-!
-!        !
-!        ! Get maximum number of elements
-!        !
-!        maxelems = 0
-!        do idom = 1,ndom
-!
-!            increase_maxelems = ( data%mesh(idom)%nelem > maxelems )
-!
-!            if (increase_maxelems) then
-!                maxelems = data%mesh(idom)%nelem
-!            end if
-!        
-!        end do ! idom
-!
-!
-!        !
-!        ! Allocate storage
-!        !
-!        if (allocated(self%D)) deallocate(self%D)
-!        allocate(self%D(ndom,maxelems,ntime), stat=ierr)
-!        if (ierr /= 0) call AllocationError
 
 
         call self%D%init(data%mesh,mtype='Diagonal')
@@ -120,8 +89,6 @@ contains
                 do itime = 1,size(A%dom(idom)%lblks,2)
                     diag = A%dom(idom)%lblks(ielem,itime)%get_diagonal()
                     self%D%dom(idom)%lblks(ielem,itime)%data_(1)%mat = A%dom(idom)%lblks(ielem,itime)%dmat(diag)
-                    !self%D(idom,ielem,itime) = A%dom(idom)%lblks(ielem,DIAG)
-                    !self%D(idom,ielem,itime) = A%dom(idom)%lblks(ielem,itime)%data_(index)
                 end do
             end do
         end do
@@ -164,7 +131,7 @@ contains
         type(chidg_vector_t),    intent(in)      :: v
 
         type(chidg_vector_t) :: z
-        integer(ik)         :: idom, ielem, idom, itime, ndom
+        integer(ik)         :: idom, ielem, itime, ndom
 
         call self%timer%start()
 

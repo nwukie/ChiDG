@@ -63,7 +63,7 @@ requirements and recommendations regarding compilers:
 .. note:: 
 
     - The GNU Fortran compiler, ``gfortran``, is recommended. **Version >= 5.0 is required**
-    - The Intel Fortran compiler, ``ifort``, is not recommended. Currently a bug in the compiler creates a memory leak in the compiled code. Intel has been notified and was able to reproduce the issue. 
+    - **Do not** use the Intel Fortran compiler, ``ifort``. There are currently several bugs in all versions of the compiler that make it unusable. One bug in the compiler creates a bad memory leak in the compiled code. Intel has been notified and was able to reproduce the issue. 
     - Other Fortran compilers have not been tested and are not supported.
 
 
@@ -71,7 +71,12 @@ requirements and recommendations regarding compilers:
 Step 3: Install the dependencies
 --------------------------------
 
-.. note::  **Make sure the dependencies listed here are available on your machine or that you build them and install them in an appropriate location.**
+.. note::  
+
+    **Make sure** the dependencies listed here are available on your machine or that you
+    build them and install them in an appropriate location.
+
+    When installing dependencies, please place them somewhere other than the ChiDG project directory.
            
         - `CMake`_
         - `HDF5`_
@@ -80,7 +85,6 @@ Step 3: Install the dependencies
         - `BLAS and LAPACK`_
    
    
-        **When installing dependencies, please place them somewhere other than the ChiDG project directory.**
 
 
 
@@ -100,7 +104,8 @@ HDF5
 
 .. note:: 
 
-    Version >= 1.10
+    | Version: ``>= 1.10``
+    | Configure with: ``--enable-fortran``
 
 HDF5 is used as a container for the ChiDG-formatted grid/solution files. The HDF5 library 
 gives the option to build various portions of the library itself, depending on what the 
@@ -112,7 +117,7 @@ following flags to the configuration:
 
 ::
 
-    ./configure --enable-fortran  --enable-fortran2003
+    ./configure --enable-fortran
 
 
 The ChiDG CMake build will try to automatically locate the HDF5 libraries and
@@ -145,11 +150,26 @@ in your ``.bashrc`` or ``.bash_profile`` files if you are using the Bash shell.
 
 MPI
 ~~~
-MPI is used to facilitate the parallel communication in ChiDG.
 
-If your MPI installation is in a non-standard location, CMake will not be able to find it and
-it will tell you so. You may also want to force CMake to use a particular MPI installation if you
-have multiple installations on your machine. Either way, you can direct CMake find your MPI library 
+.. note::
+
+    ChiDG uses the MPI Fortran 2008 module interfaces. Check that the MPI implementation
+    being used supports and is configured to build these interfaces. OpenMPI v2.0.1 tries 
+    to build these by default.
+
+    Also:
+        - MPI should be built with the same compiler that is being used to build ChiDG.
+        - Once MPI is built, it is recommended to use the MPI Fortran compiler wrapper
+          ``mpifort`` as the compiler for ChiDG in `Step 4: Configure the build`_
+
+    Tested:
+       - `OpenMPI <https://www.open-mpi.org>`_, Version 2.0.1.
+       - Intel MPI  :  Found bugs in Intel implementation. Do not use.
+    
+MPI is used to facilitate the parallel communication in ChiDG. If your MPI installation is 
+in a non-standard location, CMake will not be able to find it and it will tell you so. 
+You may also want to force CMake to use a particular MPI installation if you have multiple 
+installations on your machine. Either way, you can direct CMake find your MPI library 
 by **setting the environment variable**: ``MPI_Fortran_COMPILER``.
 
 So, if your MPI installation is located in the directory ``/home/sparky/mpi``, you might
@@ -157,7 +177,7 @@ place the line
 ``export MPI_Fortran_COMPILER=/home/sparky/my_mpi_install/bin/mpif90``
 in your ``.bashrc`` or ``.bash_profile`` files if you are using the Bash shell.
 
-There are many MPI implementations. ChiDG has been tested with `OpenMPI <https://www.open-mpi.org>`_.
+
 
 
 
@@ -224,7 +244,7 @@ Step 4: Configure the build
 |                                                    |                                                                  |
 +----------------------------------------------------+------------------------------------------------------------------+
 |                                                    |                                                                  |
-| **#4** Configure with CMake + user options         | ``cmake ..``  or ``cmake -DCMAKE_Fortran_COMPILER=gfortran ..``  |
+| **#4** Configure with CMake + user options         | ``cmake ..``  or ``cmake -DCMAKE_Fortran_COMPILER=mpifort ..``   |
 |                                                    |                                                                  |
 +----------------------------------------------------+------------------------------------------------------------------+
 
@@ -243,27 +263,38 @@ A typical build configure looks like:
 
 ::
 
-    cmake -DCMAKE_Fortran_COMPILER=gfortran ..
+    cmake -DCMAKE_Fortran_COMPILER=mpifort ..
 
 
 A developer might configure the build using the following option:
  
 ::
 
-    cmake -DCMAKE_Fortran_COMPILER=gfortran -DCMAKE_BUILD_TYPE=Debug ..
+    cmake -DCMAKE_Fortran_COMPILER=mpifort -DCMAKE_BUILD_TYPE=Debug ..
 
 
-=============================== ======================================================= ================
-Parameter                       Description                                             Options
-=============================== ======================================================= ================
-CMAKE_Fortran_COMPILER          Specify a Fortran Compiler       			``gfortran`` 
-                                                                                        
-                                                                                        
-CMAKE_BUILD_TYPE                Specify what type of compiler settings to build with    ``Release``
-                                                                                        ``Debug``
-=============================== ======================================================= ================
+.. =============================== ======================================================= ================
+.. Parameter                       Description                                             Options
+.. =============================== ======================================================= ================
+.. CMAKE_Fortran_COMPILER          Specify a Fortran Compiler       			``gfortran`` 
+..                                                                                         
+..                                                                                         
+.. CMAKE_BUILD_TYPE                Specify what type of compiler settings to build with    ``Release``
+..                                                                                         ``Debug``
+.. =============================== ======================================================= ================
 
 
++------------------------------+-------------------------------------------------------+------------------------+
+| Parameter                    |  Description                                          |  Options               |
++------------------------------+-------------------------------------------------------+------------------------+
+|                              |                                                       |                        |
+| CMAKE_Fortran_COMPILER       | Specify a Fortran Compiler                            | ``mpifort``            |
+|                              |                                                       |                        |
++------------------------------+-------------------------------------------------------+------------------------+
+|                              |                                                       |                        |
+| CMAKE_BUILD_TYPE             | Specify what type of compiler settings to build with  | ``Release``            |
+|                              |                                                       | ``Debug``              |
++------------------------------+-------------------------------------------------------+------------------------+
 
 
 
@@ -292,7 +323,8 @@ Step 5: Build ChiDG
 
 Step 6: Test ChiDG
 -------------------
-ChiDG uses `pFUnit <http://pfunit.sourceforge.net>`_ to support unit and integration testing of the compiled ChiDG library.
+ChiDG uses `pFUnit <http://pfunit.sourceforge.net>`_ to support unit and integration 
+testing of the compiled ChiDG library.
 
 .. note::
 

@@ -307,7 +307,7 @@ requirements and recommendations regarding compilers:</p>
 <p class="first admonition-title">Note</p>
 <ul class="last simple">
 <li>The GNU Fortran compiler, <code class="docutils literal"><span class="pre">gfortran</span></code>, is recommended. <strong>Version &gt;= 5.0 is required</strong></li>
-<li>The Intel Fortran compiler, <code class="docutils literal"><span class="pre">ifort</span></code>, is not recommended. Currently a bug in the compiler creates a memory leak in the compiled code. Intel has been notified and was able to reproduce the issue.</li>
+<li><strong>Do not</strong> use the Intel Fortran compiler, <code class="docutils literal"><span class="pre">ifort</span></code>. There are currently several bugs in all versions of the compiler that make it unusable. One bug in the compiler creates a bad memory leak in the compiled code. Intel has been notified and was able to reproduce the issue.</li>
 <li>Other Fortran compilers have not been tested and are not supported.</li>
 </ul>
 </div>
@@ -316,15 +316,18 @@ requirements and recommendations regarding compilers:</p>
 <h3>Step 3: Install the dependencies<a class="headerlink" href="#step-3-install-the-dependencies" title="Permalink to this headline">¶</a></h3>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p><strong>Make sure the dependencies listed here are available on your machine or that you build them and install them in an appropriate location.</strong></p>
-<ul class="simple">
+<p><strong>Make sure</strong> the dependencies listed here are available on your machine or that you
+build them and install them in an appropriate location.</p>
+<p>When installing dependencies, please place them somewhere other than the ChiDG project directory.</p>
+<blockquote class="last">
+<div><ul class="simple">
 <li><a class="reference internal" href="#cmake">CMake</a></li>
 <li><a class="reference internal" href="#hdf5">HDF5</a></li>
 <li><a class="reference internal" href="#metis">METIS</a></li>
 <li><a class="reference internal" href="#mpi">MPI</a></li>
 <li><a class="reference internal" href="#blas-and-lapack">BLAS and LAPACK</a></li>
 </ul>
-<p class="last"><strong>When installing dependencies, please place them somewhere other than the ChiDG project directory.</strong></p>
+</div></blockquote>
 </div>
 <div class="section" id="cmake">
 <h4>CMake<a class="headerlink" href="#cmake" title="Permalink to this headline">¶</a></h4>
@@ -338,7 +341,10 @@ the <a class="reference external" href="https://cmake.org">CMake Website</a>. Yo
 <h4>HDF5<a class="headerlink" href="#hdf5" title="Permalink to this headline">¶</a></h4>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">Version &gt;= 1.10</p>
+<div class="last line-block">
+<div class="line">Version: <code class="docutils literal"><span class="pre">&gt;=</span> <span class="pre">1.10</span></code></div>
+<div class="line">Configure with: <code class="docutils literal"><span class="pre">--enable-fortran</span></code></div>
+</div>
 </div>
 <p>HDF5 is used as a container for the ChiDG-formatted grid/solution files. The HDF5 library
 gives the option to build various portions of the library itself, depending on what the
@@ -347,7 +353,7 @@ HDF5 documentation and installation guide can be found on
 <a class="reference external" href="https://support.hdfgroup.org/ftp/HDF5/current/src/unpacked/release_docs/INSTALL">HDF5 Website</a>.
 Be sure to configure with the appropriate flags when building HDF5. You likely need to add the
 following flags to the configuration:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">./</span><span class="n">configure</span> <span class="o">--</span><span class="n">enable</span><span class="o">-</span><span class="n">fortran</span>  <span class="o">--</span><span class="n">enable</span><span class="o">-</span><span class="n">fortran2003</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">./</span><span class="n">configure</span> <span class="o">--</span><span class="n">enable</span><span class="o">-</span><span class="n">fortran</span>
 </pre></div>
 </div>
 <p>The ChiDG CMake build will try to automatically locate the HDF5 libraries and
@@ -374,16 +380,36 @@ in your <code class="docutils literal"><span class="pre">.bashrc</span></code> o
 </div>
 <div class="section" id="mpi">
 <h4>MPI<a class="headerlink" href="#mpi" title="Permalink to this headline">¶</a></h4>
-<p>MPI is used to facilitate the parallel communication in ChiDG.</p>
-<p>If your MPI installation is in a non-standard location, CMake will not be able to find it and
-it will tell you so. You may also want to force CMake to use a particular MPI installation if you
-have multiple installations on your machine. Either way, you can direct CMake find your MPI library
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>ChiDG uses the MPI Fortran 2008 module interfaces. Check that the MPI implementation
+being used supports and is configured to build these interfaces. OpenMPI v2.0.1 tries
+to build these by default.</p>
+<dl class="last docutils">
+<dt>Also:</dt>
+<dd><ul class="first last simple">
+<li>MPI should be built with the same compiler that is being used to build ChiDG.</li>
+<li>Once MPI is built, it is recommended to use the MPI Fortran compiler wrapper
+<code class="docutils literal"><span class="pre">mpifort</span></code> as the compiler for ChiDG in <a class="reference internal" href="#step-4-configure-the-build">Step 4: Configure the build</a></li>
+</ul>
+</dd>
+<dt>Tested:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference external" href="https://www.open-mpi.org">OpenMPI</a>, Version 2.0.1.</li>
+<li>Intel MPI  :  Found bugs in Intel implementation. Do not use.</li>
+</ul>
+</dd>
+</dl>
+</div>
+<p>MPI is used to facilitate the parallel communication in ChiDG. If your MPI installation is
+in a non-standard location, CMake will not be able to find it and it will tell you so.
+You may also want to force CMake to use a particular MPI installation if you have multiple
+installations on your machine. Either way, you can direct CMake find your MPI library
 by <strong>setting the environment variable</strong>: <code class="docutils literal"><span class="pre">MPI_Fortran_COMPILER</span></code>.</p>
 <p>So, if your MPI installation is located in the directory <code class="docutils literal"><span class="pre">/home/sparky/mpi</span></code>, you might
 place the line
 <code class="docutils literal"><span class="pre">export</span> <span class="pre">MPI_Fortran_COMPILER=/home/sparky/my_mpi_install/bin/mpif90</span></code>
 in your <code class="docutils literal"><span class="pre">.bashrc</span></code> or <code class="docutils literal"><span class="pre">.bash_profile</span></code> files if you are using the Bash shell.</p>
-<p>There are many MPI implementations. ChiDG has been tested with <a class="reference external" href="https://www.open-mpi.org">OpenMPI</a>.</p>
 </div>
 <div class="section" id="blas-and-lapack">
 <h4>BLAS and LAPACK<a class="headerlink" href="#blas-and-lapack" title="Permalink to this headline">¶</a></h4>
@@ -451,7 +477,7 @@ You may consider opening a new shell or running <code class="docutils literal"><
 <td><code class="docutils literal"><span class="pre">cd</span> <span class="pre">build</span></code></td>
 </tr>
 <tr class="row-odd"><td><strong>#4</strong> Configure with CMake + user options</td>
-<td><code class="docutils literal"><span class="pre">cmake</span> <span class="pre">..</span></code>  or <code class="docutils literal"><span class="pre">cmake</span> <span class="pre">-DCMAKE_Fortran_COMPILER=gfortran</span> <span class="pre">..</span></code></td>
+<td><code class="docutils literal"><span class="pre">cmake</span> <span class="pre">..</span></code>  or <code class="docutils literal"><span class="pre">cmake</span> <span class="pre">-DCMAKE_Fortran_COMPILER=mpifort</span> <span class="pre">..</span></code></td>
 </tr>
 </tbody>
 </table>
@@ -461,29 +487,27 @@ process. They are passed with the <code class="docutils literal"><span class="pr
 </pre></div>
 </div>
 <p>A typical build configure looks like:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">cmake</span> <span class="o">-</span><span class="n">DCMAKE_Fortran_COMPILER</span><span class="o">=</span><span class="n">gfortran</span> <span class="o">..</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">cmake</span> <span class="o">-</span><span class="n">DCMAKE_Fortran_COMPILER</span><span class="o">=</span><span class="n">mpifort</span> <span class="o">..</span>
 </pre></div>
 </div>
 <p>A developer might configure the build using the following option:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">cmake</span> <span class="o">-</span><span class="n">DCMAKE_Fortran_COMPILER</span><span class="o">=</span><span class="n">gfortran</span> <span class="o">-</span><span class="n">DCMAKE_BUILD_TYPE</span><span class="o">=</span><span class="n">Debug</span> <span class="o">..</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">cmake</span> <span class="o">-</span><span class="n">DCMAKE_Fortran_COMPILER</span><span class="o">=</span><span class="n">mpifort</span> <span class="o">-</span><span class="n">DCMAKE_BUILD_TYPE</span><span class="o">=</span><span class="n">Debug</span> <span class="o">..</span>
 </pre></div>
 </div>
 <table border="1" class="docutils">
 <colgroup>
-<col width="30%" />
-<col width="54%" />
-<col width="16%" />
+<col width="28%" />
+<col width="50%" />
+<col width="22%" />
 </colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">Parameter</th>
-<th class="head">Description</th>
-<th class="head">Options</th>
-</tr>
-</thead>
 <tbody valign="top">
+<tr class="row-odd"><td>Parameter</td>
+<td>Description</td>
+<td>Options</td>
+</tr>
 <tr class="row-even"><td>CMAKE_Fortran_COMPILER</td>
 <td>Specify a Fortran Compiler</td>
-<td><code class="docutils literal"><span class="pre">gfortran</span></code></td>
+<td><code class="docutils literal"><span class="pre">mpifort</span></code></td>
 </tr>
 <tr class="row-odd"><td>CMAKE_BUILD_TYPE</td>
 <td>Specify what type of compiler settings to build with</td>
@@ -511,7 +535,8 @@ process. They are passed with the <code class="docutils literal"><span class="pr
 </div>
 <div class="section" id="step-6-test-chidg">
 <h3>Step 6: Test ChiDG<a class="headerlink" href="#step-6-test-chidg" title="Permalink to this headline">¶</a></h3>
-<p>ChiDG uses <a class="reference external" href="http://pfunit.sourceforge.net">pFUnit</a> to support unit and integration testing of the compiled ChiDG library.</p>
+<p>ChiDG uses <a class="reference external" href="http://pfunit.sourceforge.net">pFUnit</a> to support unit and integration
+testing of the compiled ChiDG library.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">Requires web access to retrieve pFUnit source.</p>

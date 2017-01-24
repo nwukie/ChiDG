@@ -184,7 +184,7 @@ contains
         integer(ik)                 :: ielem, irow, icol, eparent_l, idom, ndom, ilower,    &
                                        trans_elem, trans_blk, nrowsA, ncolsA, ncolsB,       &
                                        iblk_diag_parent, iblk_diag, iblk, icomm,            &
-                                       parent_proc, ierr, iproc, idiagLD, idiagA
+                                       parent_proc, ierr, iproc, idiagLD, idiagA, diag_eparent, diag_irow
 
 
         call write_line(' Computing RAS-ILU0 factorization', io_proc=GLOBAL_MASTER)
@@ -242,6 +242,8 @@ contains
             !
             do irow = 2,size(A%dom(idom)%lblks,1)
 
+                diag_irow = self%LD%dom(idom)%lblks(irow,1)%get_diagonal()
+
                 ! Operate on all the L blocks for the current row
                 do icol = 1,A%dom(idom)%local_lower_blocks(irow)%size()
                     ilower = A%dom(idom)%local_lower_blocks(irow)%at(icol)
@@ -255,11 +257,14 @@ contains
 
                         ! Compute and store the contribution to the lower-triangular part of LD
                         !self%LD%dom(idom)%lblks(irow,ilower)%mat = matmul(A%dom(idom)%lblks(irow,ilower)%mat,self%LD%dom(idom)%lblks(eparent_l,DIAG)%mat)
-                        idiag_eparent = self%LD%dom(idom)%lblks(eparent_l,1)%get_diagonal()
-                        self%LD%dom(idom)%lblks(irow,1)%data_(ilower)%mat = matmul(A%dom(idom)%lblks(irow,1)%data_(ilower)%mat,self%LD%dom(idom)%lblks(eparent_l,1)%data_(idiag_eparent)%mat)
+                        diag_eparent = self%LD%dom(idom)%lblks(eparent_l,1)%get_diagonal()
+                        self%LD%dom(idom)%lblks(irow,1)%data_(ilower)%mat = matmul(A%dom(idom)%lblks(irow,1)%data_(ilower)%mat,self%LD%dom(idom)%lblks(eparent_l,1)%data_(diag_eparent)%mat)
 
                         ! Modify the current diagonal by this lower-triangular part multiplied by opposite upper-triangular part. (The component in the transposed position)
-                        self%LD%dom(idom)%lblks(irow,DIAG)%mat = self%LD%dom(idom)%lblks(irow,DIAG)%mat  -  matmul(self%LD%dom(idom)%lblks(irow,ilower)%mat,  A%dom(idom)%lblks(eparent_l,trans_blk)%mat)
+                        !self%LD%dom(idom)%lblks(irow,DIAG)%mat = self%LD%dom(idom)%lblks(irow,DIAG)%mat  -  &
+                        !                                         matmul(self%LD%dom(idom)%lblks(irow,ilower)%mat,  A%dom(idom)%lblks(eparent_l,trans_blk)%mat)
+                        self%LD%dom(idom)%lblks(irow,1)%data_(diag_irow)%mat = self%LD%dom(idom)%lblks(irow,1)%data_(diag_irow)%mat  -  &
+                                                                               matmul(self%LD%dom(idom)%lblks(irow,1)%data_(ilower)%mat,  A%dom(idom)%lblks(eparent_l,1)%data_(trans_blk)%mat)
 
 
                     end if
@@ -268,7 +273,8 @@ contains
 
 
                 ! Pre-Invert current diagonal block and store
-                self%LD%dom(idom)%lblks(irow,DIAG)%mat = inv(self%LD%dom(idom)%lblks(irow,DIAG)%mat)
+                !self%LD%dom(idom)%lblks(irow,DIAG)%mat = inv(self%LD%dom(idom)%lblks(irow,DIAG)%mat)
+                self%LD%dom(idom)%lblks(irow,1)%data_(diag_irow)%mat = inv(self%LD%dom(idom)%lblks(irow,1)%data_(diag_irow)%mat)
 
 
             end do !irow
@@ -301,20 +307,21 @@ contains
                         ! Compute and store the contribution to the lower-triangular part of A comm, since A comm shouldn't 
                         ! get used anywhere else
                         if ( parent_proc /= IRANK ) then
-                            ! If lower block is coupled with another block in the overlap, get DIAGONAL component from A since 
+                            ! If lower block is coupled with another block in the overlap, get DIAGONAL component sent from A since 
                             ! overlap data is stored there
                             iblk_diag_parent = self%recv%dom(idom)%comm(icomm)%elem(trans_elem)%diag%at(1)
 
-                            associate ( lower => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,  &
+                            associate ( lower      => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,  &
                                         upper_diag => self%recv%dom(idom)%comm(icomm)%elem(trans_elem)%blks(iblk_diag_parent)%mat )
                                 lower = matmul(lower,upper_diag)
                             end associate
 
                         else
+                            iblk_diag_parent = self%LD%dom(idom)%lblks(eparent_l,1)%get_diagonal()
                             ! If lower block is coupled with an interior block, get DIAGONAL component from LD, since we 
                             ! don't want to overwrite these entries in A as that would blow away data we need for the MV product
-                            associate( lower => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,  &
-                                       upper_diag => self%LD%dom(idom)%lblks(eparent_l,DIAG)%mat )
+                            associate( lower      => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,  &
+                                       upper_diag => self%LD%dom(idom)%lblks(eparent_l,1)%data_(iblk_diag_parent)%mat )
                                 lower = matmul(lower,upper_diag)
                             end associate
                         end if
@@ -335,7 +342,7 @@ contains
                         else
                             associate ( diag => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(iblk_diag)%mat,  &
                                         lower => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat,    &
-                                        trans => A%dom(idom)%lblks(eparent_l, trans_blk)%mat )
+                                        trans => A%dom(idom)%lblks(eparent_l,1)%data_(trans_blk)%mat )
                                 diag = diag - matmul(lower,trans)
                             end associate
                         end if
@@ -407,7 +414,7 @@ contains
         integer(ik)         :: ielem, eparent_l, irow, icol, idom, ndom, ilower, iupper, &
                                iblk, iblk_diag, icomm, parent_proc, recv_comm, recv_domain, &
                                recv_element, recv_comm_diag, recv_domain_diag, &
-                               recv_element_diag, ncols, nrows
+                               recv_element_diag, ncols, nrows, diag_irow
         logical             :: interior_block
 
 
@@ -451,14 +458,15 @@ contains
                 do icol = 1,A%dom(idom)%local_lower_blocks(irow)%size()
                     ilower = A%dom(idom)%local_lower_blocks(irow)%at(icol)
 
-                    if (allocated(self%LD%dom(idom)%lblks(irow,ilower)%mat) .and. self%LD%dom(idom)%lblks(irow,ilower)%parent_proc() == IRANK) then
+                    !if (allocated(self%LD%dom(idom)%lblks(irow,ilower)%mat) .and. self%LD%dom(idom)%lblks(irow,ilower)%parent_proc() == IRANK) then
+                    if (allocated(self%LD%dom(idom)%lblks(irow,1)%data_(ilower)%mat) .and. self%LD%dom(idom)%lblks(irow,1)%parent_proc(ilower) == IRANK) then
                             ! Get associated parent block index
-                            eparent_l = self%LD%dom(idom)%lblks(irow,ilower)%eparent_l()
+                            eparent_l = self%LD%dom(idom)%lblks(irow,1)%eparent_l(ilower)
                             !z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(self%LD%dom(idom)%lblks(irow,ilower)%mat, z%dom(idom)%vecs(eparent_l)%vec)
 
-                            nrows = size(self%LD%dom(idom)%lblks(irow,ilower)%mat,1)
-                            ncols = size(self%LD%dom(idom)%lblks(irow,ilower)%mat,2)
-                            call DGEMV('N', nrows, ncols, -ONE, self%LD%dom(idom)%lblks(irow,ilower)%mat, nrows, z%dom(idom)%vecs(eparent_l)%vec, 1, ONE, z%dom(idom)%vecs(irow)%vec, 1)
+                            nrows = size(self%LD%dom(idom)%lblks(irow,1)%data_(ilower)%mat,1)
+                            ncols = size(self%LD%dom(idom)%lblks(irow,1)%data_(ilower)%mat,2)
+                            call DGEMV('N', nrows, ncols, -ONE, self%LD%dom(idom)%lblks(irow,1)%data_(ilower)%mat, nrows, z%dom(idom)%vecs(eparent_l)%vec, 1, ONE, z%dom(idom)%vecs(irow)%vec, 1)
 
 
 
@@ -489,7 +497,7 @@ contains
                         eparent_l   = self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%eparent_l()
                     
                         associate ( zvec_diag => z%recv%comm(recv_comm_diag)%dom(recv_domain_diag)%vecs(recv_element_diag)%vec, &
-                                    lower => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat )
+                                    lower     => self%recv%dom(idom)%comm(icomm)%elem(ielem)%blks(ilower)%mat )
 
                         if ( parent_proc == IRANK ) then
 
@@ -580,30 +588,30 @@ contains
 
                     iupper = A%dom(idom)%local_upper_blocks(irow)%at(icol)
 
-                    if ( allocated(A%dom(idom)%lblks(irow,iupper)%mat) ) then
+                    if ( allocated(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat) ) then
 
-                        interior_block = (A%dom(idom)%lblks(irow,iupper)%parent_proc() == IRANK)
+                        interior_block = (A%dom(idom)%lblks(irow,1)%parent_proc(iupper) == IRANK)
 
                         if (interior_block) then
 
                             ! Get associated parent block index
-                            eparent_l = A%dom(idom)%lblks(irow,iupper)%eparent_l()
+                            eparent_l = A%dom(idom)%lblks(irow,1)%eparent_l(iupper)
                             !z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(A%dom(idom)%lblks(irow,iupper)%mat, z%dom(idom)%vecs(eparent_l)%vec)
-                            nrows = size(A%dom(idom)%lblks(irow,iupper)%mat,1)
-                            ncols = size(A%dom(idom)%lblks(irow,iupper)%mat,2)
-                            call DGEMV('N', nrows, ncols, -ONE, A%dom(idom)%lblks(irow,iupper)%mat, nrows, z%dom(idom)%vecs(eparent_l)%vec, 1, ONE, z%dom(idom)%vecs(irow)%vec, 1)
+                            nrows = size(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat,1)
+                            ncols = size(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat,2)
+                            call DGEMV('N', nrows, ncols, -ONE, A%dom(idom)%lblks(irow,1)%data_(iupper)%mat, nrows, z%dom(idom)%vecs(eparent_l)%vec, 1, ONE, z%dom(idom)%vecs(irow)%vec, 1)
 
                         else
 
                             ! Get associated parent block index
-                            recv_comm    = A%dom(idom)%lblks(irow,iupper)%recv_comm
-                            recv_domain  = A%dom(idom)%lblks(irow,iupper)%recv_domain
-                            recv_element = A%dom(idom)%lblks(irow,iupper)%recv_element
+                            recv_comm    = A%dom(idom)%lblks(irow,1)%data_(iupper)%recv_comm
+                            recv_domain  = A%dom(idom)%lblks(irow,1)%data_(iupper)%recv_domain
+                            recv_element = A%dom(idom)%lblks(irow,1)%data_(iupper)%recv_element
                             !z%dom(idom)%vecs(irow)%vec = z%dom(idom)%vecs(irow)%vec - matmul(A%dom(idom)%lblks(irow,iupper)%mat, z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec)
 
-                            nrows = size(A%dom(idom)%lblks(irow,iupper)%mat,1)
-                            ncols = size(A%dom(idom)%lblks(irow,iupper)%mat,2)
-                            call DGEMV('N', nrows, ncols, -ONE, A%dom(idom)%lblks(irow,iupper)%mat, nrows, z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec, 1, ONE, z%dom(idom)%vecs(irow)%vec, 1)
+                            nrows = size(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat,1)
+                            ncols = size(A%dom(idom)%lblks(irow,1)%data_(iupper)%mat,2)
+                            call DGEMV('N', nrows, ncols, -ONE, A%dom(idom)%lblks(irow,1)%data_(iupper)%mat, nrows, z%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec, 1, ONE, z%dom(idom)%vecs(irow)%vec, 1)
 
                         end if
 
@@ -615,7 +623,8 @@ contains
                 !
                 ! Diagonal block
                 !
-                z%dom(idom)%vecs(irow)%vec = matmul(self%LD%dom(idom)%lblks(irow,DIAG)%mat, z%dom(idom)%vecs(irow)%vec)
+                diag_irow = self%LD%dom(idom)%lblks(irow,1)%get_diagonal()
+                z%dom(idom)%vecs(irow)%vec = matmul(self%LD%dom(idom)%lblks(irow,1)%data_(diag_irow)%mat, z%dom(idom)%vecs(irow)%vec)
 
             end do ! irow
 
@@ -687,10 +696,10 @@ contains
                     do iblk_send = 1,size(send_blocks)
                         iblk = send_blocks(iblk_send)
 
-                        nrows = size(A%dom(idom)%lblks(ielem,iblk)%mat,1)
-                        ncols = size(A%dom(idom)%lblks(ielem,iblk)%mat,2)
+                        nrows = size(A%dom(idom)%lblks(ielem,1)%data_(iblk)%mat,1)
+                        ncols = size(A%dom(idom)%lblks(ielem,1)%data_(iblk)%mat,2)
                         if (idomain_g /= 1) call chidg_signal(FATAL,"RAS%comm_recv: invalid tag.")
-                        call MPI_ISend(A%dom(idom)%lblks(ielem,iblk)%mat, nrows*ncols, MPI_REAL8, proc, idomain_g, ChiDG_COMM, request, ierr)
+                        call MPI_ISend(A%dom(idom)%lblks(ielem,1)%data_(iblk)%mat, nrows*ncols, MPI_REAL8, proc, idomain_g, ChiDG_COMM, request, ierr)
 
                         ! Store requests to be checked by MPI_Wait
                         call self%mpi_requests%push_back(request)

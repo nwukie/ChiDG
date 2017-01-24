@@ -84,8 +84,11 @@ contains
 
 
         !
-        ! Start timer
+        ! Reset/Start timers
         !
+        call timer_comm%reset()
+        call timer_blas%reset()
+
         call self%timer%reset()
         call self%timer%start()
         call write_line('           Linear Solver: ', io_proc=GLOBAL_MASTER)

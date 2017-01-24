@@ -113,7 +113,9 @@ contains
                                         Amat   => A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat )
 
                                 
+                                call timer_blas%start()
                                 resvec = resvec + matmul(Amat,xvec)
+                                call timer_blas%stop()
 
                             end associate
                         end if
@@ -158,7 +160,9 @@ contains
                                     nonconforming = ( size(Amat,2) /= size(xvec) )
                                     if (nonconforming) call chidg_signal(FATAL,"operator_chidg_mv: nonconforming Chimera m-v operation")
 
+                                    call timer_blas%start()
                                     resvec = resvec + matmul(Amat,xvec)
+                                    call timer_blas%stop()
 
                                 end associate
                             end if
@@ -267,7 +271,9 @@ contains
                                         xvec   => x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec(x_istart:x_iend),  &
                                         Amat   => A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat )
 
+                                call timer_blas%start()
                                 resvec = resvec + matmul(Amat,xvec)
+                                call timer_blas%stop()
 
                             end associate
                         end if
@@ -318,7 +324,9 @@ contains
                                     nonconforming = ( size(Amat,2) /= size(xvec) )
                                     if (nonconforming) call chidg_signal(FATAL,"operator_chidg_mv: nonconforming Chimera m-v operation")
 
+                                    call timer_blas%start()
                                     resvec = resvec + matmul(Amat,xvec)
+                                    call timer_blas%stop()
 
                                 end associate
                             end if

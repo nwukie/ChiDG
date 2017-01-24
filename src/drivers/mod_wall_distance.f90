@@ -10,6 +10,10 @@ module mod_wall_distance
     use type_dict,          only: dict_t
     use mod_chidg_post,     only: chidg_post,chidg_post_vtk
     use mod_bc,             only: create_bc
+    use mod_io,             only: gridfile
+    use mod_hdf_utilities,  only: get_properties_hdf, check_file_exists_hdf
+    use mod_chidg_mpi,      only: IRANK, NRANK, ChiDG_COMM
+    use type_file_properties,   only: file_properties_t
     implicit none
 
 
@@ -37,14 +41,16 @@ contains
         type(chidg_t),  intent(inout)           :: chidg
         character(*),   intent(in), optional    :: fileout
 
-        character(:), allocatable   :: gridfile, solutionfile, user_msg
+        character(:), allocatable   :: user_msg
         integer(ik)                 :: order
 
         type(chidg_t)                   :: wall_distance
         type(dict_t)                    :: noptions, loptions
         class(bc_state_t),  allocatable :: dirichlet_zero, neumann_zero
         class(function_t),  allocatable :: constant
-        integer(ik)                     :: iorder, p, aux_field_index
+        integer(ik)                     :: iorder, p, aux_field_index, wd_nterms_s, ierr, iproc
+        type(file_properties_t)         :: wd_props
+        logical                         :: wd_file_exists, have_wd_field
 
 
 
@@ -55,6 +61,27 @@ contains
         ! Make sure this ChiDG environment is initialized.
         !
         call wall_distance%start_up('core')
+
+
+
+
+        !
+        ! Initialize options dictionaries
+        !
+        call noptions%set('tol',1.e-8_rk)   ! Set nonlinear solver options
+        call noptions%set('cfl0',10.0_rk)
+        call noptions%set('nsteps',50)
+        call loptions%set('tol',1.e-10_rk)  ! Set linear solver options
+
+
+
+        !
+        ! Set ChiDG components
+        !
+        call wall_distance%set('Time Integrator' , algorithm='Steady'                        )
+        call wall_distance%set('Nonlinear Solver', algorithm='Quasi-Newton', options=noptions)
+        call wall_distance%set('Linear Solver'   , algorithm='fgmres_cgs',   options=loptions)
+        call wall_distance%set('Preconditioner'  , algorithm='RASILU0'                       )
 
 
 
@@ -91,139 +118,169 @@ contains
                                                              bc_farfield = neumann_zero)
 
 
+
         !
-        ! Initialize options dictionaries
+        ! Initialize wall_distance with chidg order in case we are going to read in a solution.
         !
-        call noptions%set('tol',1.e-8_rk)   ! Set nonlinear solver options
-        call noptions%set('cfl0',10.0_rk)
-        call noptions%set('nsteps',50)
-        call loptions%set('tol',1.e-10_rk)  ! Set linear solver options
+        order = chidg%nterms_s_1d
+        call wall_distance%set('Solution Order', integer_input=order)
+        call wall_distance%init('all')
 
 
 
+
         !
-        ! Set ChiDG components
+        ! Check if we already have a wall distance solution
         !
-        call wall_distance%set('Time Integrator' , algorithm='Steady'                        )
-        call wall_distance%set('Nonlinear Solver', algorithm='Quasi-Newton', options=noptions)
-        call wall_distance%set('Linear Solver'   , algorithm='FGMRES',       options=loptions)
-        call wall_distance%set('Preconditioner'  , algorithm='RAS+ILU0'                      )
+        do iproc = 0,NRANK-1
+            if (iproc == IRANK) then
+
+                wd_file_exists = check_file_exists_hdf('wall_distance.h5')
+                if (wd_file_exists) then
+                    wd_props = get_properties_hdf('wall_distance.h5')
+                    wd_nterms_s = wd_props%nterms_s(1)
+
+                    have_wd_field = (wd_nterms_s >= chidg%nterms_s)
+                end if
+
+            end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do
 
 
 
-        ! Get wall-distance approximation for p-Poisson equation using a low-order
-        ! polynomial expansion. We are going in steps of 'p' here to make sure
-        ! we get good convergence of the Newton solver by having a good initial
-        ! solution from the previous calculation.
+
         !
-        !   Polynomial Order:
-        !       P = 2 
+        ! If we have a wall distance file and it has an accurate solution,
+        ! just read from file.
         !
-        !   p-Poisson Parameter:
-        !       p = 2,4,6
+        if (wd_file_exists .and. have_wd_field) then
+
+            call wall_distance%read_solution('wall_distance.h5')
+
         !
-        iorder = 2
-        do p = 2,6,2
-            
+        ! If we don't have an accurate wall distance field in file, solve for a new one.
+        !
+        else
+
+            ! Get wall-distance approximation for p-Poisson equation using a low-order
+            ! polynomial expansion. We are going in steps of 'p' here to make sure
+            ! we get good convergence of the Newton solver by having a good initial
+            ! solution from the previous calculation.
+            !
+            !   Polynomial Order:
+            !       P = 2 
+            !
+            !   p-Poisson Parameter:
+            !       p = 2,4,6
+            !
+            iorder = 2
+            do p = 2,6,2
+                call write_line('Wall Distance Driver : Loop 1 : p = ', p)
+                
+                !
+                ! Update p-Poisson fidelity
+                !
+                call set_p_poisson_parameter(real(p,rk))
+
+
+                !
+                ! (Re)Initialize domain storage, communication, matrix/vector storage
+                !
+                call wall_distance%set('Solution Order', integer_input=iorder)
+                call wall_distance%init('all')
+
+
+                !
+                ! Read solution if it exists.
+                !
+                if (p == 2) then
+                    call create_function(constant,'constant')
+                    call constant%set_option('val',0.1_rk)
+                    call wall_distance%data%sdata%q%project(wall_distance%data%mesh,constant,1)
+
+                else
+                    call wall_distance%read_solution(fileout)
+                end if
+
+
+                !
+                ! Run ChiDG simulation
+                !
+                call wall_distance%report('before')
+                call wall_distance%run()
+                call wall_distance%report('after')
+
+
+                !
+                ! Write wall distance to auxiliary field
+                !
+                call wall_distance%write_solution(fileout)
+
+
+            end do
+
+
+
+
+
+            ! Get wall-distance approximation for p-Poisson equation using a high 'p'
+            ! and increasing polynomial expansion. We are going in steps of 'P' here to 
+            ! make sure we get good convergence of the Newton solver by having a good initial
+            ! solution from the previous calculation.
+            !
+            !   Polynomial Order:
+            !       P = 2,3, ...
+            !
+            !   p-Poisson Parameter:
+            !       p = 6
+            !
+
             !
             ! Update p-Poisson fidelity
             !
+            p = 6
             call set_p_poisson_parameter(real(p,rk))
 
-
-            !
-            ! (Re)Initialize domain storage, communication, matrix/vector storage
-            !
-            call wall_distance%set('Solution Order', integer_input=iorder)
-            call wall_distance%init('all')
+            order = chidg%nterms_s_1d
+            do iorder = 3,order
+                call write_line('Wall Distance Driver : Loop 2 : order = ', iorder)
 
 
-            !
-            ! Read solution if it exists.
-            !
-            if (p == 2) then
-                call create_function(constant,'constant')
-                call constant%set_option('val',0._rk)
-                call wall_distance%data%sdata%q%project(chidg%data%mesh,constant,1)
-
-            else
-                call wall_distance%read_solution(solutionfile)
-            end if
+                !
+                ! (Re)Initialize domain storage, communication, matrix/vector storage
+                !
+                call wall_distance%set('Solution Order', integer_input=iorder)
+                call wall_distance%init('all')
 
 
-            !
-            ! Run ChiDG simulation
-            !
-            call wall_distance%report('before')
-            call wall_distance%run()
-            call wall_distance%report('after')
-
-
-            !
-            ! Write wall distance to auxiliary field
-            !
-            call wall_distance%write_solution(solutionfile)
-
-
-        end do
+                !
+                ! Read solution if it exists.
+                !
+                call wall_distance%read_solution(fileout)
 
 
 
+                !
+                ! Run ChiDG simulation
+                !
+                call wall_distance%report('before')
+                call wall_distance%run()
+                call wall_distance%report('after')
 
 
-        ! Get wall-distance approximation for p-Poisson equation using a high 'p'
-        ! and increasing polynomial expansion. We are going in steps of 'P' here to 
-        ! make sure we get good convergence of the Newton solver by having a good initial
-        ! solution from the previous calculation.
-        !
-        !   Polynomial Order:
-        !       P = 2,3, ...
-        !
-        !   p-Poisson Parameter:
-        !       p = 6
-        !
-
-        !
-        ! Update p-Poisson fidelity
-        !
-        p = 6
-        call set_p_poisson_parameter(real(p,rk))
-
-        order = chidg%nterms_s_1d
-        do iorder = 2,order
+                !
+                ! Write wall distance to auxiliary field
+                !
+                call wall_distance%write_solution(fileout)
 
 
-            !
-            ! (Re)Initialize domain storage, communication, matrix/vector storage
-            !
-            call wall_distance%set('Solution Order', integer_input=iorder)
-            call wall_distance%init('all')
+            end do
 
 
-            !
-            ! Read solution if it exists.
-            !
-            call wall_distance%read_solution(solutionfile)
+        end if ! have_wd_field .and. wd_file_exists
 
-
-            !
-            ! Run ChiDG simulation
-            !
-            call wall_distance%report('before')
-            call wall_distance%run()
-            call wall_distance%report('after')
-
-
-            !
-            ! Write wall distance to auxiliary field
-            !
-            call wall_distance%write_solution(solutionfile)
-
-
-        end do
-
-
-
+        call write_line('Storing Wall Distance field to Auxiliary field ChiDG Vector:')
 
 
         !

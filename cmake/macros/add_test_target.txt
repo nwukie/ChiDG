@@ -79,12 +79,16 @@ macro (add_test_target target_subdirectory test_type)
 
 
 
-	#-----------------------------------------------------------------------------------------------------------
+    #------------------------------------------------------------------------------------------
     #
-    #   Loop through each test file, process with pFUnitParser and generate list of output files for compiler
-    #   DEPENDS option ensures that if the .pf file is changed, the parser will be called to reprocess the file
+    #   Loop through each test file, process with pFUnitParser and generate list of output 
+    #   files for compiler DEPENDS option ensures that if the .pf file is changed, the parser 
+    #   will be called to reprocess the file.
     #
-    #-----------------------------------------------------------------------------------------------------------
+    #   The following code is based on modifications of code by Randovan Bast. See file 
+    #   LICENSE, section BAST for license.
+    #
+    #------------------------------------------------------------------------------------------
 	set(_test_sources)
     foreach (_test ${ARGN})
         #
@@ -105,7 +109,7 @@ macro (add_test_target target_subdirectory test_type)
         add_custom_command(
             OUTPUT ${CMAKE_BINARY_DIR}/generated/test/${testing_dir}/${ARGV0}/${filename}.F90
             COMMAND ${PF_ROOT}/bin/pFUnitParser.py ${CMAKE_SOURCE_DIR}/${filedir}/${filename}.pf ${CMAKE_BINARY_DIR}/generated/test/${testing_dir}/${ARGV0}/${filename}.F90
-            DEPENDS ${CMAKE_SOURCE_DIR}/${filedir}/${filename}.pf
+            DEPENDS ${CMAKE_SOURCE_DIR}/${filedir}/${filename}.pf pfunit
             )
         	
 
@@ -131,7 +135,10 @@ macro (add_test_target target_subdirectory test_type)
 
     #-------------------------------------------------------------------------------------------------------
     #
-	#   Define test target and link with pfunit and coredg libraries
+	#   Define test target and link with pfunit and coredg libraries. These targets are
+    #   excluded from the 'all' target and are instead added as dependencies to the 'check' target.
+    #
+    #   Build test targets using 'make check'
     #
 	#-------------------------------------------------------------------------------------------------------
 	add_executable(${target_name} EXCLUDE_FROM_ALL ${PF_ROOT}/include/driver.F90 ${_test_sources} )
@@ -145,7 +152,7 @@ macro (add_test_target target_subdirectory test_type)
     #
     # Add test executable to the 'check' target. This allows the test to be build with 'make check'
     #
-    add_dependencies(check ${target_name})
+    add_dependencies(check ${target_name} coredg)
 
 
 	#-------------------------------------------------------------------------------------------------------
@@ -169,18 +176,18 @@ macro (add_test_target target_subdirectory test_type)
 
 
 
-	#-------------------------------------------------------------------------------------------------------
-    #
-	#	Add test target to shell script used by Jenkins for executing individual tests
-    #
-	#-------------------------------------------------------------------------------------------------------
-	if (EXISTS "${CMAKE_BINARY_DIR}/bin/${jenkins_file}")
-		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} ${runstring}"\n")
-	else()
-		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} "#!/bin/bash\n")
-		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} "cd $WORKSPACE/build/bin\n")
-		file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} ${runstring}"\n")
-	endif()
+#	 #-------------------------------------------------------------------------------------------------------
+#    #
+#	 #	Add test target to shell script used by Jenkins for executing individual tests
+#    #
+#	 #-------------------------------------------------------------------------------------------------------
+#	 if (EXISTS "${CMAKE_BINARY_DIR}/bin/${jenkins_file}")
+#	 	file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} ${runstring}"\n")
+#	 else()
+#	 	file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} "#!/bin/bash\n")
+#	 	file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} "cd $WORKSPACE/build/bin\n")
+#	 	file(APPEND ${CMAKE_BINARY_DIR}/bin/${jenkins_file} ${runstring}"\n")
+#	 endif()
 	
 
 

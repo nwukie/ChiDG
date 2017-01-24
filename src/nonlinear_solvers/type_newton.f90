@@ -1,4 +1,4 @@
-module newton
+module type_newton
     use messenger,              only: write_line
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, DIAG
@@ -7,7 +7,7 @@ module newton
     use type_linear_solver,     only: linear_solver_t
     use type_chidg_data,        only: chidg_data_t
     use type_preconditioner,    only: preconditioner_t
-    use type_chidgVector
+    use type_chidg_vector
 
     use mod_spatial,    only: update_space
 
@@ -29,7 +29,6 @@ module newton
     !!
     !----------------------------------------------------------------------------------------
     type, extends(nonlinear_solver_t), public :: newton_t
-
 
 
     contains
@@ -74,7 +73,7 @@ contains
         integer(ik)             :: rstart, rend, cstart, cend, nterms
         real(rk)                :: resid, timing
         real(rk), allocatable   :: vals(:)
-        type(chidgVector_t)     :: b, qn, qold, qnew
+        type(chidg_vector_t)     :: b, qn, qold, qnew
       
         real(rk)                :: entropy_error
 
@@ -230,10 +229,4 @@ contains
 
 
 
-end module newton
-
-
-
-
-
-
+end module type_newton

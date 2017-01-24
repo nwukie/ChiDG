@@ -67,19 +67,18 @@ contains
         !
         ! Assemble variables string
         !
-        varstring = "X Y Z"     ! Initialize variables string with mesh coordinates
+        varstring = "X,Y,Z"     ! Initialize variables string with mesh coordinates
         ieq = 1
 
         !
         ! TODO: Generalized TECIO for different equation set in each domain.
         !
         do while (ieq <= data%eqnset(1)%prop%nprimary_fields())
-            varstring = trim(varstring)//" "//trim(data%eqnset(1)%prop%get_primary_field_name(ieq))
+            varstring = trim(varstring)//","//trim(data%eqnset(1)%prop%get_primary_field_name(ieq))
             ieq = ieq + 1
         end do
 
         
-
         !
         ! Open and initialize TecIO file
         !

@@ -201,6 +201,7 @@ contains
         ! Get field index
         field_index = self%get_field_index(field)
 
+
         call self%fields(field_index)%set_data(cache_data,data_type,idirection,seed)
 
 
@@ -238,6 +239,9 @@ contains
 
         ! Get field index
         field_index = self%get_field_index(field)
+        user_msg = "cache_data%get_data: We didn't find the field in the chidg cache."
+        if (field_index == 0) call chidg_signal_one(FATAL,user_msg,field)
+
 
         !
         ! Try to find data for field_index that was linearized wrt seed
@@ -379,6 +383,10 @@ contains
 
 
     !>  Given a field name, find the index of the field in the cache.
+    !!
+    !!  Return:
+    !!      field_index >  0    (Field found)
+    !!      field_index == 0    (Field not found)
     !!
     !!  @author Nathan A. Wukie
     !!  @date   12/2/2016

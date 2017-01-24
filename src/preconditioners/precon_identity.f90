@@ -3,8 +3,8 @@ module precon_identity
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: DIAG
     use type_preconditioner,    only: preconditioner_t
-    use type_chidgMatrix,       only: chidgMatrix_t
-    use type_chidgVector,       only: chidgVector_t
+    use type_chidg_matrix,       only: chidg_matrix_t
+    use type_chidg_vector,       only: chidg_vector_t
 
     use mod_inv,    only: inv
 
@@ -40,8 +40,8 @@ contains
         class(precon_identity_t), intent(inout)   :: self
         !type(blockmatrix_t),    intent(in)      :: A
         !type(blockvector_t),    intent(in)      :: b
-        type(chidgMatrix_t),    intent(in)      :: A
-        type(chidgVector_t),    intent(in)      :: b
+        type(chidg_matrix_t),    intent(in)      :: A
+        type(chidg_vector_t),    intent(in)      :: b
 
 
 
@@ -66,11 +66,11 @@ contains
         class(precon_identity_t), intent(inout)   :: self
         !type(blockmatrix_t),      intent(in)      :: A
         !type(blockvector_t),      intent(in)      :: v
-        type(chidgMatrix_t),      intent(in)      :: A
-        type(chidgVector_t),      intent(in)      :: v
+        type(chidg_matrix_t),      intent(in)      :: A
+        type(chidg_vector_t),      intent(in)      :: v
 
         !type(blockvector_t) :: z
-        type(chidgVector_t) :: z
+        type(chidg_vector_t) :: z
 
 
         !

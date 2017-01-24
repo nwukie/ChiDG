@@ -86,10 +86,6 @@ contains
         class(properties_t),        intent(inout)   :: prop
 
 
-        ! Equation indices
-        integer(ik)     :: iu
-
-
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   ::  &
             mu, dudx, dudy, dudz, flux_x, flux_y, flux_z, integrand
@@ -97,13 +93,6 @@ contains
 
         real(rk),   allocatable, dimension(:)   ::  &
             normx, normy, normz
-
-
-        !
-        ! Get equation indices
-        !
-        iu = prop%get_primary_field_index("u")
-
 
 
         !
@@ -124,7 +113,7 @@ contains
         !
         mu = worker%get_model_field_face('Scalar Diffusion Coefficient', 'value', 'boundary')
 
-        
+
 
         !=================================================
         ! Mass flux

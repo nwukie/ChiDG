@@ -1,12 +1,11 @@
 doc/html
 doc/latex
-build
-build_gnu
-build_intel
+build*
 run*
 media
 testrun
 *.swp
 *~
 *.out
+*.bak
 tags

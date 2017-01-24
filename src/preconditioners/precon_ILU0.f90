@@ -7,8 +7,8 @@ module precon_ILU0
 
     use type_preconditioner,    only: preconditioner_t
     use type_chidg_data,        only: chidg_data_t
-    use type_chidgMatrix,       only: chidgMatrix_t
-    use type_chidgVector
+    use type_chidg_matrix,       only: chidg_matrix_t
+    use type_chidg_vector
     implicit none
 
 
@@ -21,7 +21,7 @@ module precon_ILU0
     !-------------------------------------------------------------------------------------------
     type, extends(preconditioner_t) :: precon_ILU0_t
 
-        type(chidgMatrix_t)     :: LD
+        type(chidg_matrix_t)     :: LD
 
     contains
     
@@ -79,8 +79,8 @@ contains
     !-------------------------------------------------------------------------------------------
     subroutine update(self,A,b)
         class(precon_ILU0_t),    intent(inout)   :: self
-        type(chidgMatrix_t),        intent(in)      :: A
-        type(chidgVector_t),        intent(in)      :: b
+        type(chidg_matrix_t),        intent(in)      :: A
+        type(chidg_vector_t),        intent(in)      :: b
 
 
         integer(ik) :: idom, ielem, itime, idiagA, idiagLD, irow, icol, &
@@ -202,10 +202,10 @@ contains
     !-------------------------------------------------------------------------------------------
     function apply(self,A,v) result(z)
         class(precon_ILU0_t),   intent(inout)   :: self
-        type(chidgMatrix_t),    intent(in)      :: A
-        type(chidgVector_t),    intent(in)      :: v
+        type(chidg_matrix_t),    intent(in)      :: A
+        type(chidg_vector_t),    intent(in)      :: v
 
-        type(chidgVector_t)         :: z
+        type(chidg_vector_t)         :: z
 
         integer(ik) :: ielem, itime, idiag, eparent_l, idom, irow, icol, &
                        ilowerA, ilowerLD, iupper, dparent_g_lower, eparent_g_lower

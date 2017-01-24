@@ -20,13 +20,15 @@ module mod_kinds
     integer, parameter :: ilong  = selected_int_kind(8) ! long
 
     ! floating point kinds
-    integer, parameter :: rsingle = selected_real_kind(6, 37)
-    integer, parameter :: rdouble = selected_real_kind(15, 307)
+    integer, parameter :: rsingle = selected_real_kind(6,  37  )
+    integer, parameter :: rdouble = selected_real_kind(15, 307 )
+    integer, parameter :: rquad   = selected_real_kind(33, 4931)
 
     ! generic/default kinds
     integer, parameter :: ik = ilong     ! default integer kind
     integer, parameter :: rk = rdouble   ! default real kind
-    !integer, parameter :: rk = rsingle   ! default real kind
+    !integer, parameter :: rk = rquad
+    !integer, parameter :: rk = rsingle
 
     ! TECPLOT
     integer, parameter, public :: TEC = 4

@@ -199,8 +199,10 @@ contains
             !
             ! Copy existing key/val pairs
             !
-            temp_keys(1:noptions) = self%option_keys(1:noptions)
-            temp_vals(1:noptions) = self%option_vals(1:noptions)
+            if (noptions > 0) then
+                temp_keys(1:noptions) = self%option_keys(1:noptions)
+                temp_vals(1:noptions) = self%option_vals(1:noptions)
+            end if
 
 
             !

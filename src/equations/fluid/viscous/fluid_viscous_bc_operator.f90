@@ -89,13 +89,10 @@ contains
         class(properties_t),        intent(inout)   :: prop
 
 
-        ! Equation indices
-        integer(ik)     :: irho, irhou, irhov, irhow, irhoE
-
-
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:) ::                                &
-            rho, rhou, rhov, rhow, rhoE, p, T, u, v, w, invrho, mu, lamda,      &
+            rho, rhou, rhov, rhow, rhoE, p, T, u, v, w, invrho, mu, lamda, k,   &
+            mu_l, mu_t, lamda_l, lamda_t, k_l, k_t,                             &
             drho_dx, drhou_dx, drhov_dx, drhow_dx, drhoE_dx,                    &
             drho_dy, drhou_dy, drhov_dy, drhow_dy, drhoE_dy,                    &
             drho_dz, drhou_dz, drhov_dz, drhow_dz, drhoE_dz,                    &
@@ -114,16 +111,6 @@ contains
 
         real(rk) :: const, gam
 
-        !
-        ! Get equation indices
-        !
-        irho  = prop%get_primary_field_index("Density"   )
-        irhou = prop%get_primary_field_index("X-Momentum")
-        irhov = prop%get_primary_field_index("Y-Momentum")
-        irhow = prop%get_primary_field_index("Z-Momentum")
-        irhoE = prop%get_primary_field_index("Energy"    )
-
-
 
         !
         ! Interpolate boundary condition state to face quadrature nodes
@@ -135,13 +122,6 @@ contains
         rhoE = worker%get_primary_field_face("Energy"    ,'value', 'boundary')
 
 
-        !
-        ! Compute model values
-        !
-        !p_old   = prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE)
-        !gam = prop%fluid%compute_gamma(rho,rhou,rhov,rhow,rhoE)
-        p   = worker%get_model_field_face("Pressure", 'value', 'boundary')
-        gam = 1.4_rk
 
 
         !
@@ -168,8 +148,6 @@ contains
         drhoE_dz = worker%get_primary_field_face("Energy"    ,'ddz+lift', 'boundary')
 
 
-        invrho = ONE/rho
-
 
 
 
@@ -181,14 +159,44 @@ contains
         normz = worker%normal(3)
 
 
+        !
+        ! Get Model fields:
+        !   Pressure
+        !   Temperature
+        !   Viscosity
+        !   Second Coefficient of Viscosity
+        !   Thermal Conductivity
+        !
+        p       = worker%get_model_field_face('Pressure',                                  'value', 'boundary')
+        T       = worker%get_model_field_face('Temperature',                               'value', 'boundary')
+        mu_l    = worker%get_model_field_face('Laminar Viscosity',                         'value', 'boundary')
+        mu_t    = worker%get_model_field_face('Turbulent Viscosity',                       'value', 'boundary')
+        lamda_l = worker%get_model_field_face('Second Coefficient of Laminar Viscosity',   'value', 'boundary')
+        lamda_t = worker%get_model_field_face('Second Coefficient of Turbulent Viscosity', 'value', 'boundary')
+        k_l     = worker%get_model_field_face('Laminar Thermal Conductivity',              'value', 'boundary')
+        k_t     = worker%get_model_field_face('Turbulent Thermal Conductivity',            'value', 'boundary')
+        gam = 1.4_rk
+
+
+
+        !
+        ! Compute effective viscosities, conductivity. Laminar + Turbulent.
+        !
+        mu    = mu_l    + mu_t
+        lamda = lamda_l + lamda_t
+        k     = k_l     + k_t
+
+
+
 
 
         !
         ! Compute velocities
         !
-        u = rhou/rho
-        v = rhov/rho
-        w = rhow/rho
+        invrho = ONE/rho
+        u = rhou*invrho
+        v = rhov*invrho
+        w = rhow*invrho
 
 
         !
@@ -254,22 +262,6 @@ contains
 
 
         !
-        ! Compute temperature
-        !
-        !T_old = prop%fluid%compute_temperature(rho,rhou,rhov,rhow,rhoE)
-        T = worker%get_model_field_face("Temperature", 'value', 'boundary')
-
-
-        !
-        ! Compute dynamic viscosity, second coefficient of viscosity
-        !
-        !mu_old    = prop%fluid%compute_viscosity_dynamic(T_old)
-        !lamda_old = prop%fluid%compute_viscosity_second(mu_old,T_old)
-        mu    = worker%get_model_field_face('Viscosity',                       'value', 'boundary')
-        lamda = worker%get_model_field_face('Second Coefficient of Viscosity', 'value', 'boundary')
-
-
-        !
         ! Compute temperature gradient
         !
         dT_dx = dT_drho*drho_dx + dT_drhou*drhou_dx + dT_drhov*drhov_dx + dT_drhow*drhow_dx + dT_drhoE*drhoE_dx
@@ -331,9 +323,12 @@ contains
         !=================================================
         ! Energy flux
         !=================================================
-        flux_x = -(1003._rk*mu/0.8_rk)*dT_dx  -  (u*tau_xx + v*tau_xy + w*tau_xz)
-        flux_y = -(1003._rk*mu/0.8_rk)*dT_dy  -  (u*tau_xy + v*tau_yy + w*tau_yz)
-        flux_z = -(1003._rk*mu/0.8_rk)*dT_dz  -  (u*tau_xz + v*tau_yz + w*tau_zz)
+        !flux_x = -(1003._rk*mu/0.8_rk)*dT_dx  -  (u*tau_xx + v*tau_xy + w*tau_xz)
+        !flux_y = -(1003._rk*mu/0.8_rk)*dT_dy  -  (u*tau_xy + v*tau_yy + w*tau_yz)
+        !flux_z = -(1003._rk*mu/0.8_rk)*dT_dz  -  (u*tau_xz + v*tau_yz + w*tau_zz)
+        flux_x = -k*dT_dx  -  (u*tau_xx + v*tau_xy + w*tau_xz)
+        flux_y = -k*dT_dy  -  (u*tau_xy + v*tau_yy + w*tau_yz)
+        flux_z = -k*dT_dz  -  (u*tau_xz + v*tau_yz + w*tau_zz)
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
 

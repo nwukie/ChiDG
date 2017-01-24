@@ -50,7 +50,7 @@ contains
 
         call self%set_name('Stokes Hypothesis')
 
-        call self%add_model_field('Second Coefficient of Viscosity')
+        call self%add_model_field('Second Coefficient of Laminar Viscosity')
 
 
     end subroutine init
@@ -77,7 +77,7 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        viscosity = worker%get_model_field_general('Viscosity','value')
+        viscosity = worker%get_model_field_general('Laminar Viscosity','value')
 
 
         !
@@ -89,7 +89,7 @@ contains
         !
         ! Contribute second coefficient of viscosity
         !
-        call worker%store_model_field('Second Coefficient of Viscosity', 'value', second_viscosity)
+        call worker%store_model_field('Second Coefficient of Laminar Viscosity', 'value', second_viscosity)
 
 
     end subroutine compute

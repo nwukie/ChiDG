@@ -67,7 +67,7 @@ subroutine test_update_space_linearadvection()
 
     chidgAfile = 'D1E16M1.h5'
     chidgBfile = 'D2E8M1.h5'
-    call create_mesh_file("D1 E16 M1", chidgAfile)
+    call create_mesh_file("D1 NxNxN", chidgAfile, nelem_xi=4, nelem_eta=2, nelem_zeta=2)
     call create_mesh_file("D2 E8 M1 : Abutting : Matching", chidgBfile)
 
 
@@ -87,21 +87,21 @@ subroutine test_update_space_linearadvection()
     call chidgA%set('Solution Order', integer_input=2)
     call chidgB%set('Solution Order', integer_input=2)
 
-    call chidgA%initialize_solution_domains()
-    call chidgB%initialize_solution_domains()
 
 
 
     !
     ! Initialize solution data storage
     !
+    call chidgA%init('domains')
     call chidgA%init('communication')
     call chidgA%init('chimera')
-    call chidgA%initialize_solution_solver()
+    call chidgA%init('solvers')
 
+    call chidgB%init('domains')
     call chidgB%init('communication')
     call chidgB%init('chimera')
-    call chidgB%initialize_solution_solver()
+    call chidgB%init('solvers')
 
 
 
@@ -146,16 +146,16 @@ subroutine test_update_space_linearadvection()
     ! Compare interpolation matrices between standard interior and the chimera faces
     !
     ChiID = chidgB%data%mesh(2)%faces(1,XI_MIN)%ChiID
-    @assertEqual(chidgA%data%mesh(1)%faces(2,XI_MAX)%gq%face%val(:,:,XI_MAX), chidgB%data%mesh(2)%chimera%recv%data(ChiID)%donor_interpolator%at(1))
+    @assertEqual(chidgA%data%mesh(1)%faces(2,XI_MAX)%gq%face%val(:,:,XI_MAX), chidgB%data%mesh(2)%chimera%recv%data(ChiID)%donor_interpolator%at(1), tol)
 
     ChiID = chidgB%data%mesh(2)%faces(3,XI_MIN)%ChiID
-    @assertEqual(chidgA%data%mesh(1)%faces(6,XI_MAX)%gq%face%val(:,:,XI_MAX), chidgB%data%mesh(2)%chimera%recv%data(ChiID)%donor_interpolator%at(1))
+    @assertEqual(chidgA%data%mesh(1)%faces(6,XI_MAX)%gq%face%val(:,:,XI_MAX), chidgB%data%mesh(2)%chimera%recv%data(ChiID)%donor_interpolator%at(1), tol)
 
     ChiID = chidgB%data%mesh(1)%faces(2,XI_MAX)%ChiID
-    @assertEqual(chidgA%data%mesh(1)%faces(3,XI_MIN)%gq%face%val(:,:,XI_MIN), chidgB%data%mesh(1)%chimera%recv%data(ChiID)%donor_interpolator%at(1))
+    @assertEqual(chidgA%data%mesh(1)%faces(3,XI_MIN)%gq%face%val(:,:,XI_MIN), chidgB%data%mesh(1)%chimera%recv%data(ChiID)%donor_interpolator%at(1), tol)
 
     ChiID = chidgB%data%mesh(1)%faces(4,XI_MAX)%ChiID
-    @assertEqual(chidgA%data%mesh(1)%faces(7,XI_MIN)%gq%face%val(:,:,XI_MIN), chidgB%data%mesh(1)%chimera%recv%data(ChiID)%donor_interpolator%at(1))
+    @assertEqual(chidgA%data%mesh(1)%faces(7,XI_MIN)%gq%face%val(:,:,XI_MIN), chidgB%data%mesh(1)%chimera%recv%data(ChiID)%donor_interpolator%at(1), tol)
 
 
     !

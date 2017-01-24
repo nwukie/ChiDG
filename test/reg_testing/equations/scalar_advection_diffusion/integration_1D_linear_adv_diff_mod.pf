@@ -573,10 +573,10 @@ contains
 
 
         call this%chidg%set('Solution Order', integer_input=this%order)
-        call this%chidg%initialize_solution_domains()
+        call this%chidg%init('domains')
         call this%chidg%init('communication')
         call this%chidg%init('chimera')
-        call this%chidg%initialize_solution_solver()
+        call this%chidg%init('solvers')
 
 
         !
@@ -665,8 +665,9 @@ contains
 
 
         !
-        ! Store the number of nonlinear iterations that the solution converged in. Problem is linear
-        ! so it should converge in 1 Newton Step. Really, just the solution of 1 linear system of equations.
+        ! Store the number of nonlinear iterations that the solution converged in. 
+        ! Problem is linear so it should converge in 1 Newton Step. Really, just the 
+        ! solution of 1 linear system of equations.
         !
         if (grid_index <= 2 ) then
             nsteps_convergence(npes_index,grid_index,order_index) = self%chidg%nonlinear_solver%newton_iterations           !conforming grids
@@ -723,7 +724,8 @@ contains
             do igrid = 1,2
                 do iorder = 1,3
 
-                    ! Test that the current convergence for the processor count matches the serial convergence
+                    ! Test that the current convergence for the processor count matches 
+                    ! the serial convergence.
                     nsteps = nsteps_convergence(inpes,igrid,iorder)%size()
 
                     @assertEqual(1, nsteps)

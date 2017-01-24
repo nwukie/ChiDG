@@ -50,8 +50,7 @@ contains
 
         call self%set_name('Sutherlands Law')
 
-        call self%add_model_field('Viscosity')
-
+        call self%add_model_field('Laminar Viscosity')
 
     end subroutine init
     !***************************************************************************************
@@ -93,7 +92,7 @@ contains
         !
         ! Contribute laminar viscosity
         !
-        call worker%store_model_field('Viscosity', 'value', viscosity)
+        call worker%store_model_field('Laminar Viscosity', 'value', viscosity)
 
 
     end subroutine compute

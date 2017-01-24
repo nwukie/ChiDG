@@ -4,9 +4,10 @@ module test_blockmatrix_mod
     use type_point,                 only: point_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use mod_kinds,                  only: rk,ik
-    use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, &
-                                          EIGHT, NINE, TEN, XI_MIN, XI_MAX, ETA_MIN,     &
-                                          ETA_MAX, ZETA_MIN, ZETA_MAX, IO_DESTINATION
+    use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, &
+                                          SEVEN, EIGHT, NINE, TEN, &
+                                          XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, &
+                                          ZETA_MAX, IO_DESTINATION
     use mod_test_utilities,         only: create_mesh
     use type_blockmatrix,           only: blockmatrix_t
     use DNAD_D
@@ -74,7 +75,8 @@ contains
         call this%chidg%set('Solution Order', integer_input=2)
         call this%chidg%set('ntime',          integer_input=2)
 
-        call this%chidg%initialize_solution_domains()
+        !call this%chidg%initialize_solution_domains()
+        call this%chidg%init('domains')
         call this%chidg%init('communication')
 
 
@@ -107,7 +109,7 @@ contains
 
 
     !-----------------------------------------------------------------------------------------
-    !                                       Tests
+    !-----------------------------------------------------------------------------------------
     !-----------------------------------------------------------------------------------------
 
 

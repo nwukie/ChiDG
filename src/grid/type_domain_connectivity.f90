@@ -15,7 +15,9 @@ module type_domain_connectivity
     !------------------------------------------------------------------------------
     type, public :: domain_connectivity_t
 
-        character(:),                   allocatable :: name 
+        !character(:),                   allocatable :: name        !! BUG in Intel Fortran. MPI cant send allocatable character.
+        character(len=1000)                         :: name 
+        integer(ik)                                 :: name_length
         integer(ik)                                 :: nelements    !< Number of elements in the current domain connectivity
         integer(ik)                                 :: nnodes       !< Number of nodes in the global node array
 
@@ -64,9 +66,10 @@ contains
         
         integer(ik) :: ierr
 
-        self%name      = trim(domain_name)
-        self%nnodes    = nnodes
-        self%nelements = nelements
+        self%name        = trim(domain_name)
+        self%name_length = len(trim(domain_name))
+        self%nnodes      = nnodes
+        self%nelements   = nelements
 
 
         allocate(self%data(nelements), stat=ierr)

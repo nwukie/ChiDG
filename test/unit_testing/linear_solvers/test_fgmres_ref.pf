@@ -11,8 +11,8 @@ subroutine test_fgmres_ref_solve()
 
     use type_fgmres,                only: fgmres_t
 
-    use type_chidgMatrix
-    use type_chidgVector,           only: chidgVector_t
+    use type_chidg_matrix
+    use type_chidg_vector,           only: chidg_vector_t
 
     use mod_test_utilities,         only: create_mesh
     implicit none
@@ -21,8 +21,8 @@ subroutine test_fgmres_ref_solve()
     type(point_t),  allocatable :: nodes(:)
     type(domain_connectivity_t) :: connectivity
 
-    type(chidgMatrix_t)         :: A
-    type(chidgVector_t)         :: x, b
+    type(chidg_matrix_t)         :: A
+    type(chidg_vector_t)         :: x, b
     type(fgmres_t)              :: linear_solver
     
     real(rk)    :: tol
@@ -63,9 +63,9 @@ subroutine test_fgmres_ref_solve()
     call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
 
     call chidg%set('Solution Order', integer_input=1)
-    call chidg%initialize_solution_domains()
+    call chidg%init('domains')
     call chidg%init('communication')
-    call chidg%initialize_solution_solver()
+    call chidg%init('solvers')
 
 
     !

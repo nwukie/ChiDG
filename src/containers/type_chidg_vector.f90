@@ -1,14 +1,16 @@
-module type_chidgVector
+module type_chidg_vector
 #include <messenger.h>
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: ZERO, TWO
     use mod_chidg_mpi,              only: GROUP_MASTER, ChiDG_COMM, IRANK
     use type_mesh,                  only: mesh_t
     use type_function,              only: function_t
-    use type_chidgVector_send,      only: chidgVector_send_t
-    use type_chidgVector_recv,      only: chidgVector_recv_t
+    use type_chidg_vector_send,     only: chidg_vector_send_t
+    use type_chidg_vector_recv,     only: chidg_vector_recv_t
     use type_blockvector
-    use mpi_f08,                    only: MPI_AllReduce, MPI_Reduce, MPI_COMM, MPI_REAL8, MPI_SUM, MPI_STATUS_IGNORE, MPI_Recv, MPI_Request, MPI_STATUSES_IGNORE, MPI_INTEGER4
+    use mpi_f08,                    only: MPI_AllReduce, MPI_Reduce, MPI_COMM, MPI_REAL8,    &
+                                          MPI_SUM, MPI_STATUS_IGNORE, MPI_Recv, MPI_Request, &
+                                          MPI_STATUSES_IGNORE, MPI_INTEGER4
     implicit none
 
 
@@ -25,35 +27,38 @@ module type_chidgVector
     !!
     !!
     !!
-    !----------------------------------------------------------------------------------------------------
-    type, public :: chidgVector_t
+    !------------------------------------------------------------------------------------------
+    type, public :: chidg_vector_t
 
         type(blockvector_t),    allocatable :: dom(:)       !< Local block vector storage
 
-        type(chidgVector_send_t)            :: send         !< Information on what to send to other processors
-        type(chidgVector_recv_t)            :: recv         !< Storage to receive data from other processors
+        type(chidg_vector_send_t)           :: send         !< What to send to other processors
+        type(chidg_vector_recv_t)           :: recv         !< Receive data from other processors
 
     contains
 
         generic,    public  :: init => initialize
         procedure,  private :: initialize
 
-        procedure,  public  :: project                          !< Project a function to the global solution basis
-        procedure,  public  :: clear                            !< Zero the densevector data nested in the container
-        generic,    public  :: norm => norm_local, norm_comm    !< Compute the L2 vector norm
-        procedure,  public  :: norm_local                       !< Return the processor-local L2 vector norm of the chidgVector 
-        procedure,  public  :: norm_comm                        !< Return the MPI group L2 vector norm of the chidgVector 
-        procedure,  public  :: sumsqr                           !< Return the sum of the squared processor-local chidgVector entries 
+        procedure,  public  :: project                          !< Project function to basis
+        procedure,  public  :: clear                            !< Zero the densevector data
+        generic,    public  :: norm => norm_local, norm_comm    !< Compute L2 vector norm
+        procedure,  public  :: norm_local                       !< proc-local L2 vector norm
+        procedure,  public  :: norm_comm                        !< MPI group L2 vector norm
+        generic,    public  :: norm_fields => norm_fields_comm  !< L2 norm of independent fields
+        procedure,  public  :: norm_fields_comm                 !< MPI group L2 field norms
+        procedure,  public  :: sumsqr                           !< Sum squared proc-local entries 
+        procedure,  public  :: sumsqr_fields
         procedure,  public  :: dump
 
-        procedure,  public  :: comm_send                        !< Execute non-blocking send of data to communicating processors
-        procedure,  public  :: comm_recv                        !< Execute blocking receives of incomming data
-        procedure,  public  :: comm_wait                        !< Execute a wait on outstanding non-blocking send data
+        procedure,  public  :: comm_send                        !< Nonblocking send to comm procs
+        procedure,  public  :: comm_recv                        !< Blocking recv incomming data
+        procedure,  public  :: comm_wait                        !< Wait to finish send data
 
 !        generic :: assignment(=) => 
 
-    end type chidgVector_t
-    !****************************************************************************************************
+    end type chidg_vector_t
+    !*****************************************************************************************
 
 
 
@@ -68,26 +73,26 @@ module type_chidgVector
 
     public operator (*)
     interface operator(*)
-        module procedure mult_real_chidgVector          ! real * chidgVector
-        module procedure mult_chidgVector_real          ! chidgVector * real
+        module procedure mult_real_chidg_vector          ! real * chidg_vector
+        module procedure mult_chidg_vector_real          ! chidg_vector * real
     end interface
 
 
     public operator (/)
     interface operator (/)
-        module procedure div_real_chidgVector           ! real / chidgVector
-        module procedure div_chidgVector_real           ! chidgVector / real
+        module procedure div_real_chidg_vector           ! real / chidg_vector
+        module procedure div_chidg_vector_real           ! chidg_vector / real
     end interface
 
 
     public operator (-)
     interface operator (-)
-        module procedure sub_chidgVector_chidgVector    ! chidgVector - chidgVector
+        module procedure sub_chidg_vector_chidg_vector    ! chidg_vector - chidg_vector
     end interface
 
     public operator (+)
     interface operator (+)
-        module procedure add_chidgVector_chidgVector    ! chidgVector + chidgVector
+        module procedure add_chidg_vector_chidg_vector    ! chidg_vector + chidg_vector
     end interface
 
 
@@ -111,16 +116,17 @@ contains
 
 
 
-    !>  Allocate and initialize chidgVector_t storage and data.
+    !>  Allocate and initialize chidg_vector_t storage and data.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!  @param[in]  mesh    Array of mesh_t instances used to initialize each blockvector_t subcomponent.
+    !!  @param[in]  mesh    Array of mesh_t instances used to initialize each 
+    !!                      blockvector_t subcomponent.
     !!
-    !----------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine initialize(self,mesh)
-        class(chidgVector_t),   intent(inout)   :: self
+        class(chidg_vector_t),   intent(inout)   :: self
         type(mesh_t),           intent(inout)   :: mesh(:)
 
         integer(ik) :: ierr, ndomains, idom
@@ -151,8 +157,12 @@ contains
         call self%recv%init(mesh)
 
 
+        ! Wait on outstanding mpi_reqests initiated during the send%init(mesh) call
+        call self%send%init_wait()
+
+
     end subroutine initialize
-    !****************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -170,9 +180,9 @@ contains
     !!
     !!  TODO: Should itime be an input parameter here?
     !!
-    !--------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine project(self,mesh,fcn,ivar)
-        class(chidgVector_t),   intent(inout)   :: self
+        class(chidg_vector_t),   intent(inout)   :: self
         type(mesh_t),           intent(in)      :: mesh(:)
         class(function_t),      intent(inout)   :: fcn
         integer(ik),            intent(in)      :: ivar
@@ -189,7 +199,7 @@ contains
         do idom = 1,size(mesh)
 
             ! Check that variable index 'ivar' is valid
-            user_msg = 'initialize_variable: variable index ivar exceeds the number of equations.'
+            user_msg = 'project: variable index ivar exceeds the number of equations.'
             if (ivar > mesh(idom)%neqns ) call chidg_signal(FATAL,user_msg)
 
             do ielem = 1,mesh(idom)%nelem
@@ -211,7 +221,7 @@ contains
 
 
     end subroutine project
-    !*********************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -224,9 +234,9 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine clear(self)
-        class(chidgVector_t),   intent(inout)   :: self
+        class(chidg_vector_t),   intent(inout)   :: self
 
         integer :: idom
 
@@ -240,9 +250,7 @@ contains
         call self%recv%clear()
 
     end subroutine clear
-    !*****************************************************************************************************
-
-
+    !******************************************************************************************
 
 
 
@@ -258,27 +266,22 @@ contains
     !!
     !!  @return res     L2-norm of the vector
     !!
-    !-----------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     function norm_local(self) result(res)
-        class(chidgVector_t),   intent(in)   :: self
+        class(chidg_vector_t),   intent(in)   :: self
 
         real(rk)    :: res
         integer(ik) :: idom, ielem
 
 
-        res = ZERO
-
         ! Loop through domain vectors and compute contribution to vector sum of the squared elements
-        do idom = 1,size(self%dom)
-            res = res + self%dom(idom)%sumsqr()
-        end do ! idom
-
+        res = self%sumsqr()
 
         ! Take the square root of the result
         res = sqrt(res)
 
     end function norm_local
-    !*****************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -290,16 +293,17 @@ contains
 
 
 
-    !>  Compute the L2-Norm of the vector within the space of processors given by the MPI communicator
+    !>  Compute the L2-Norm of the vector within the space of processors given by the MPI 
+    !!  communicator.
     !!  
     !!  @author Nathan A. Wukie
     !!  @date   6/23/2016
     !!
     !!  @return res     L2-norm of the vector
     !!
-    !-----------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     function norm_comm(self,comm) result(norm)
-        class(chidgVector_t),   intent(in)  :: self
+        class(chidg_vector_t),   intent(in)  :: self
         type(mpi_comm),         intent(in)  :: comm
 
         real(rk)    :: sumsqr, norm
@@ -319,7 +323,54 @@ contains
         norm = sqrt(norm)
 
     end function norm_comm
-    !*****************************************************************************************************
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Compute the L2-Norm of the vector within the space of processors given by the MPI 
+    !!  communicator.
+    !!  
+    !!  @author Nathan A. Wukie
+    !!  @date   6/23/2016
+    !!
+    !!  @return res     L2-norm of the vector
+    !!
+    !------------------------------------------------------------------------------------------
+    function norm_fields_comm(self,comm) result(norm)
+        class(chidg_vector_t),   intent(in)  :: self
+        type(mpi_comm),         intent(in)  :: comm
+
+        real(rk), allocatable   :: sumsqr(:), norm(:)
+        integer     :: ierr
+
+
+        ! Compute sum of the squared elements of the processor-local vector
+        sumsqr = self%sumsqr_fields()
+
+
+        ! Alloate norm
+        norm = sumsqr
+        norm = ZERO
+
+
+        ! Reduce sumsqr across all procs, distribute result back to all
+        call MPI_AllReduce(sumsqr,norm,size(sumsqr),MPI_REAL8,MPI_SUM,comm,ierr)
+
+
+        norm = sqrt(norm)
+
+    end function norm_fields_comm
+    !******************************************************************************************
 
 
 
@@ -334,16 +385,18 @@ contains
 
 
 
-    !< Return the sum of the squared chidgVector entries 
+
+
+    !< Return the sum of the squared chidg_vector entries 
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/23/2016
     !!
-    !!  @return res     sum of the squared chidgVector entries
+    !!  @return res     sum of the squared chidg_vector entries
     !!
-    !-----------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     function sumsqr(self) result(res)
-        class(chidgVector_t),   intent(in)   :: self
+        class(chidg_vector_t),   intent(in)   :: self
 
         real(rk)    :: res
         integer(ik) :: idom, ielem
@@ -358,7 +411,49 @@ contains
 
 
     end function sumsqr
-    !*****************************************************************************************************
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !< Return the sum of the squared chidg_vector entries for each field independently.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/17/2017
+    !!
+    !!  @return res     sum of the squared chidg_vector entries
+    !!
+    !------------------------------------------------------------------------------------------
+    function sumsqr_fields(self) result(res)
+        class(chidg_vector_t),   intent(in)   :: self
+
+        real(rk),   allocatable :: res(:)
+        integer(ik) :: idom, ielem
+
+
+        ! Allocate size of res based on assumption of same equation set across domains.
+        res = self%dom(1)%sumsqr_fields()
+        res = ZERO
+
+
+        ! Loop through domain vectors and compute contribution to vector sum of the squared elements
+        do idom = 1,size(self%dom)
+            res = res + self%dom(idom)%sumsqr_fields()
+        end do ! idom
+
+
+    end function sumsqr_fields
+    !******************************************************************************************
+
+
+
 
 
 
@@ -381,11 +476,12 @@ contains
     !!
     !!
     !!
-    !-----------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine comm_send(self)
-        class(chidgVector_t),   intent(inout)   :: self
+        class(chidg_vector_t),   intent(inout)   :: self
 
-        integer(ik)         :: icomm, iproc_send, idom_send, idom, ielem_send, ielem, ierr, data_size, isend
+        integer(ik)         :: icomm, iproc_send, idom_send, idom, ielem_send, &
+                               ielem, ierr, data_size, isend
         type(mpi_request)   :: isend_handle
 
 
@@ -407,8 +503,6 @@ contains
 
                     ! Post non-blocking send message for the vector data
                     data_size = size(self%dom(idom)%vecs(ielem)%vec)
-                    call MPI_ISend(self%dom(idom)%vecs(ielem)%dparent_g_, 1, MPI_INTEGER4, iproc_send, 0, ChiDG_COMM, isend_handle, ierr)
-                    call MPI_ISend(self%dom(idom)%vecs(ielem)%eparent_g_, 1, MPI_INTEGER4, iproc_send, 0, ChiDG_COMM, isend_handle, ierr)
                     call MPI_ISend(self%dom(idom)%vecs(ielem)%vec, data_size, MPI_REAL8, iproc_send, 0, ChiDG_COMM, isend_handle, ierr)
 
                     ! Add non-blocking send handle to list of things to wait on
@@ -425,7 +519,7 @@ contains
 
 
     end subroutine comm_send
-    !*****************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -445,11 +539,12 @@ contains
     !!
     !!
     !!
-    !-----------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine comm_recv(self)
-        class(chidgVector_t),   intent(inout)   :: self
+        class(chidg_vector_t),   intent(inout)   :: self
 
-        integer(ik) :: icomm, idom_recv, ielem_recv, proc_recv, data_size, ierr, dparent_g, eparent_g
+        integer(ik) :: icomm, idom_recv, ielem_recv, proc_recv, data_size, &
+                       ierr, dparent_g, eparent_g
 
         real(rk), allocatable   :: test(:)
 
@@ -464,26 +559,10 @@ contains
             ! Recv each element chunk
             do idom_recv = 1,size(self%recv%comm(icomm)%dom)
                 do ielem_recv = 1,size(self%recv%comm(icomm)%dom(idom_recv)%vecs)
+
                     data_size = size(self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec)
-                    call MPI_Recv(dparent_g, 1, MPI_INTEGER4, proc_recv, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-                    call MPI_Recv(eparent_g, 1, MPI_INTEGER4, proc_recv, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-
-
-                    if ( (dparent_g /= self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%dparent_g()) .or. (eparent_g /= self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%eparent_g()) ) then
-                        call chidg_signal(FATAL,"Error in comm_send/comm_recv alignment")
-                    end if
                     call MPI_Recv(self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec, data_size, MPI_REAL8, proc_recv, 0, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
-!                    test = self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec - real(eparent_g/100._rk,rk)
-!
-!                    if (abs(test(3)) > 0.0000000001_rk) then
-!                        call chidg_signal(FATAL, "comm_recv: wrong value")
-!                    end if
-!
-!                    if ( dparent_g == 1 .and. (eparent_g == 35 .or. eparent_g == 33) ) then
-!                    print*, 'Domain, Element: ', dparent_g, eparent_g
-!                    print*, self%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%vec
-!                    end if
                 end do ! ielem_recv
             end do ! idom_recv
 
@@ -493,7 +572,7 @@ contains
 
 
     end subroutine comm_recv
-    !*****************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -517,9 +596,9 @@ contains
     !!
     !!
     !!
-    !----------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine comm_wait(self)
-        class(chidgVector_t),   intent(in)  :: self
+        class(chidg_vector_t),   intent(in)  :: self
 
         integer(ik) :: nwait, ierr
 
@@ -528,7 +607,7 @@ contains
         call MPI_Waitall(nwait, self%send%isend_handles, MPI_STATUSES_IGNORE, ierr)
 
     end subroutine comm_wait
-    !****************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -549,9 +628,9 @@ contains
     !!
     !!
     !!
-    !-----------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine dump(self)
-        class(chidgVector_t),   intent(in)   :: self
+        class(chidg_vector_t),   intent(in)   :: self
 
         integer(ik) :: idom
 
@@ -561,7 +640,7 @@ contains
         end do ! idom
 
     end subroutine dump
-    !*****************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -575,12 +654,12 @@ contains
 
 
 
-    !---------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     !
     !
     !                              Operator Implementations
     !
-    !---------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
 
 
 
@@ -588,12 +667,12 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !------------------------------------------------------------------------
-    function mult_real_chidgVector(left,right) result(res)
+    !-----------------------------------------------------------------------------------------
+    function mult_real_chidg_vector(left,right) result(res)
         real(rk),               intent(in)  :: left
-        type(chidgVector_t),    intent(in)  :: right
+        type(chidg_vector_t),    intent(in)  :: right
 
-        type(chidgVector_t) :: res
+        type(chidg_vector_t) :: res
         integer(ik)         :: idom, ndom
 
         ndom = size(right%dom)
@@ -607,8 +686,8 @@ contains
         res%send = right%send
         res%recv = right%recv
 
-    end function mult_real_chidgVector
-    !************************************************************************
+    end function mult_real_chidg_vector
+    !*****************************************************************************************
 
 
 
@@ -618,12 +697,12 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !------------------------------------------------------------------------
-    function mult_chidgVector_real(left,right) result(res)
-        type(chidgVector_t),    intent(in)  :: left
+    !----------------------------------------------------------------------------------------
+    function mult_chidg_vector_real(left,right) result(res)
+        type(chidg_vector_t),    intent(in)  :: left
         real(rk),               intent(in)  :: right
 
-        type(chidgVector_t) :: res
+        type(chidg_vector_t) :: res
         integer(ik)         :: idom, ndom
 
         ndom = size(left%dom)
@@ -637,8 +716,8 @@ contains
         res%send = left%send
         res%recv = left%recv
 
-    end function mult_chidgVector_real
-    !************************************************************************
+    end function mult_chidg_vector_real
+    !****************************************************************************************
 
 
 
@@ -649,12 +728,12 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !------------------------------------------------------------------------
-    function div_real_chidgVector(left,right) result(res)
+    !----------------------------------------------------------------------------------------
+    function div_real_chidg_vector(left,right) result(res)
         real(rk),               intent(in)  :: left
-        type(chidgVector_t),    intent(in)  :: right
+        type(chidg_vector_t),    intent(in)  :: right
 
-        type(chidgVector_t) :: res
+        type(chidg_vector_t) :: res
         integer(ik)         :: idom, ndom
 
         ndom = size(right%dom)
@@ -669,8 +748,8 @@ contains
         res%send = right%send
         res%recv = right%recv
 
-    end function div_real_chidgVector
-    !************************************************************************
+    end function div_real_chidg_vector
+    !****************************************************************************************
 
 
 
@@ -680,12 +759,12 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !------------------------------------------------------------------------
-    function div_chidgVector_real(left,right) result(res)
-        type(chidgVector_t),    intent(in)  :: left
+    !----------------------------------------------------------------------------------------
+    function div_chidg_vector_real(left,right) result(res)
+        type(chidg_vector_t),    intent(in)  :: left
         real(rk),               intent(in)  :: right
 
-        type(chidgVector_t) :: res
+        type(chidg_vector_t) :: res
         integer(ik)         :: idom, ndom
 
         ndom = size(left%dom)
@@ -699,8 +778,8 @@ contains
         res%send = left%send
         res%recv = left%recv
 
-    end function div_chidgVector_real
-    !*************************************************************************
+    end function div_chidg_vector_real
+    !****************************************************************************************
 
 
 
@@ -711,12 +790,12 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !------------------------------------------------------------------------
-    function add_chidgVector_chidgVector(left,right) result(res)
-        type(chidgVector_t),    intent(in)  :: left
-        type(chidgVector_t),    intent(in)  :: right
+    !----------------------------------------------------------------------------------------
+    function add_chidg_vector_chidg_vector(left,right) result(res)
+        type(chidg_vector_t),    intent(in)  :: left
+        type(chidg_vector_t),    intent(in)  :: right
 
-        type(chidgVector_t) :: res
+        type(chidg_vector_t) :: res
         integer(ik)         :: idom, ndom
 
         ndom = size(right%dom)
@@ -731,8 +810,8 @@ contains
         res%send = right%send
         res%recv = right%recv
 
-    end function add_chidgVector_chidgVector
-    !*************************************************************************
+    end function add_chidg_vector_chidg_vector
+    !****************************************************************************************
 
 
 
@@ -743,12 +822,12 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !------------------------------------------------------------------------
-    function sub_chidgVector_chidgVector(left,right) result(res)
-        type(chidgVector_t),    intent(in)  :: left
-        type(chidgVector_t),    intent(in)  :: right
+    !----------------------------------------------------------------------------------------
+    function sub_chidg_vector_chidg_vector(left,right) result(res)
+        type(chidg_vector_t),    intent(in)  :: left
+        type(chidg_vector_t),    intent(in)  :: right
 
-        type(chidgVector_t) :: res
+        type(chidg_vector_t) :: res
         integer(ik)         :: idom, ndom
 
         ndom = size(right%dom)
@@ -763,8 +842,8 @@ contains
         res%send = right%send
         res%recv = right%recv
 
-    end function sub_chidgVector_chidgVector
-    !*************************************************************************
+    end function sub_chidg_vector_chidg_vector
+    !****************************************************************************************
 
 
 
@@ -777,16 +856,4 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-end module type_chidgVector
+end module type_chidg_vector

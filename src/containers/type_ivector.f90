@@ -288,17 +288,22 @@ contains
         class(ivector_t),   intent(in)  :: self
         
         integer(ik), allocatable    :: res(:)
-        integer(ik)                 :: size
+        integer(ik)                 :: size_, ierr
         
         !
         ! Get number of stored elements
         !
-        size = self%size()
+        size_ = self%size()
 
         !
         ! Allocate result
         !
-        res = self%data_(1:size)
+        if (size_ > 0) then
+            res = self%data_(1:size_)
+        else
+            allocate(res(0), stat=ierr)
+            if (ierr /= 0) call AllocationError
+        end if
 
 
     end function data

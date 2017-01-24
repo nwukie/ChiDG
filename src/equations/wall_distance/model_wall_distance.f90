@@ -4,7 +4,7 @@ module model_wall_distance
     use mod_constants,      only: HALF, ONE, TWO
     use type_model,         only: model_t
     use type_chidg_worker,  only: chidg_worker_t
-    use eqn_wall_distance,  only: get_p_poisson_parameter
+!    use eqn_wall_distance,  only: get_p_poisson_parameter
     use DNAD_D
     implicit none
 
@@ -77,6 +77,7 @@ contains
 
         real(rk) :: p
 
+
         ! Get primary field to initialize derivatives
         rho  = worker%get_primary_field_general('Density', 'value')
         d    = rho
@@ -97,7 +98,8 @@ contains
         !
         ! Compute wall distance normalization
         !
-        p = get_p_poisson_parameter()
+        !p = get_p_poisson_parameter()
+        p = 6._rk
         mag2 = dddx*dddx + dddy*dddy + dddz*dddz
         d_normalization = (((p/(p-ONE))*d) + mag2**(p/TWO))**((p-ONE)/p) - mag2**((p-ONE)/TWO)
 

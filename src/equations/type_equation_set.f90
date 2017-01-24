@@ -658,6 +658,8 @@ contains
         compute_face  = (interior_face    .or. chimera_face           ) .and. &
                         (differentiate_me .or. differentiate_neighbor )
 
+
+
         if (compute_face) then
 
             !
@@ -1109,9 +1111,9 @@ contains
     subroutine compute_pseudo_timestep(self,idomain,mesh,sdata,cfln,itime)
         class(equation_set_t),  intent(in)      :: self
         integer(ik),            intent(in)      :: idomain
-        type(mesh_t),           intent(in)      :: mesh(:)
+        type(mesh_t),           intent(inout)   :: mesh(:)
         type(solverdata_t),     intent(inout)   :: sdata
-        real(rk),               intent(in)      :: cfln
+        real(rk),               intent(in)      :: cfln(:)
         integer(ik),            intent(in)      :: itime
 
         type(default_pseudo_timestep_t) :: default_timestep

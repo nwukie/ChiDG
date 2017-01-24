@@ -65,7 +65,7 @@ contains
 
             select case ( field_name%get() )
 
-                case ('Wall Distance')
+                case ('Wall Distance : p-Poisson')
                     call wall_distance_driver(chidg,'wall_distance.h5')
 
 

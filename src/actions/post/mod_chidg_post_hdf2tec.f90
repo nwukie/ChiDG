@@ -64,9 +64,7 @@ contains
 
 
         !
-        ! Get nterms_s and eqnset. TODO: Read directly from file
-        !
-        ! TODO: Also, I feel like this isn't used any more. Check into removing it.
+        ! Get nterms_s and eqnset.
         !
         file_props = get_properties_hdf(filename)
 
@@ -93,9 +91,11 @@ contains
         ! Initialize solution data storage
         !
         call chidg%set('Solution Order', integer_input=solution_order)
-        call chidg%initialize_solution_domains()
+!        call chidg%initialize_solution_domains()
+        call chidg%init('domains')
         call chidg%init('communication')
-        call chidg%initialize_solution_solver()
+        call chidg%init('solvers')
+!        call chidg%initialize_solution_solver()
 
 
 
@@ -111,7 +111,6 @@ contains
         !
         ! Write solution in TecIO format
         !
-        !call write_tecio_variables(chidg%data,'0.plt',1)
         call write_tecio_variables_unstructured(chidg%data,'0.plt',1)
 
 

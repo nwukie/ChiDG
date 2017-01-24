@@ -1,4 +1,4 @@
-module type_chidgVector_recv_comm
+module type_chidg_vector_recv_comm
 #include <messenger.h>
     use mod_kinds,          only: ik
     use mod_constants,      only: INTERIOR, CHIMERA
@@ -17,7 +17,7 @@ module type_chidgVector_recv_comm
     !!
     !!
     !----------------------------------------------------------------------------
-    type, public :: chidgVector_recv_comm_t
+    type, public :: chidg_vector_recv_comm_t
 
         integer(ik)                         :: proc
         type(blockvector_t),    allocatable :: dom(:)
@@ -27,7 +27,7 @@ module type_chidgVector_recv_comm
         procedure,  public  :: init
         procedure,  public  :: clear
 
-    end type chidgVector_recv_comm_t
+    end type chidg_vector_recv_comm_t
     !****************************************************************************
 
 
@@ -51,7 +51,7 @@ contains
     !!
     !---------------------------------------------------------------------------------
     subroutine init(self,mesh,iproc,icomm)
-        class(chidgVector_recv_comm_t), intent(inout)   :: self
+        class(chidg_vector_recv_comm_t), intent(inout)   :: self
         type(mesh_t),                   intent(inout)   :: mesh(:)
         integer(ik),                    intent(in)      :: iproc
         integer(ik),                    intent(in)      :: icomm
@@ -193,7 +193,7 @@ contains
                                     if (donor_recv_found) exit
                                 end do !idom_recv
 
-                                if (.not. donor_recv_found) call chidg_signal_three(FATAL,"chidgVector_recv_comm%init: chimera receiver did not find parallel donor.",IRANK,donor_domain_g,donor_element_g)
+                                if (.not. donor_recv_found) call chidg_signal_three(FATAL,"chidg_vector_recv_comm%init: chimera receiver did not find parallel donor.",IRANK,donor_domain_g,donor_element_g)
                             end if !comm_donor
 
 
@@ -233,7 +233,7 @@ contains
     !!
     !----------------------------------------------------------------------------------
     subroutine clear(self)
-        class(chidgVector_recv_comm_t), intent(inout)   :: self
+        class(chidg_vector_recv_comm_t), intent(inout)   :: self
 
         integer(ik) :: idom
 
@@ -252,4 +252,4 @@ contains
 
 
 
-end module type_chidgVector_recv_comm
+end module type_chidg_vector_recv_comm

@@ -15,7 +15,7 @@ module spalart_allmaras_source
     private
 
     
-    !> Volume flux for Fluid Viscous Terms.
+    !>  Spalart-Allmaras Source Term.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   9/23/2016
@@ -55,7 +55,7 @@ contains
         class(spalart_allmaras_source_operator_t),   intent(inout)      :: self
 
         ! Set operator name.
-        call self%set_name("Fluid Spalart-Allmaras Source Operator")
+        call self%set_name("Spalart-Allmaras Source Operator")
 
         ! Set operator type.
         call self%set_operator_type("Volume Diffusive Operator")
@@ -64,7 +64,11 @@ contains
         call self%add_primary_field("Density * NuTilde")
 
         ! Set auxiliary variables being used.
-        call self%add_auxiliary_field("Wall Distance")
+        call self%add_auxiliary_field("Wall Distance : p-Poisson")
+
+        ! Add Turbulent Eddy Viscosity model
+        call self%add_model('Spalart Allmaras Turbulent Model Fields')
+        call self%add_model('Wall Distance : p-Poisson Normalization')
 
     end subroutine init
     !********************************************************************************
@@ -83,51 +87,37 @@ contains
         type(chidg_worker_t),                       intent(inout)   :: worker
         class(properties_t),                        intent(inout)   :: prop
 
-        ! Equation indices
-        integer(ik)    :: irho, irhou, irhov, irhow, irhoE, irho_nutilde
-
 
         type(AD_D), allocatable, dimension(:) ::                                &
-            rho, rhou, rhov, rhow, rhoE, rho_nutilde, p, T, u, v, w, invrho,    &
+            rho, rhou, rhov, rhow, rhoE, rho_nutilde, u, v, w, invrho,    &
             mu, nu, lamda,                                                      &
             drho_dx, drhou_dx, drhov_dx, drhow_dx, drhoE_dx,                    &
             drho_dy, drhou_dy, drhov_dy, drhow_dy, drhoE_dy,                    &
             drho_dz, drhou_dz, drhov_dz, drhow_dz, drhoE_dz,                    &
             drho_nutilde_dx, drho_nutilde_dy, drho_nutilde_dz,                  &
-            du_dx,   dv_dx,    dw_dx,    dT_dx,                                 &
-            du_dy,   dv_dy,    dw_dy,    dT_dy,                                 &
-            du_dz,   dv_dz,    dw_dz,    dT_dz,                                 &
+            du_dx,   dv_dx,    dw_dx,                                           &
+            du_dy,   dv_dy,    dw_dy,                                           &
+            du_dz,   dv_dz,    dw_dz,                                           &
             du_drho, du_drhou, dv_drho,  dv_drhov, dw_drho, dw_drhow,           &
             vorticity2, vorticity, vorticity_bar, vorticity_mod,                &
             f_v1, f_v2, f_t2, f_w, f_n1, production, destruction,               &
             dnutilde_drho, dnutilde_drho_nutilde, chi, r, rbar, g, mu_t,        &
             nutilde, dnutilde_dx, dnutilde_dy, dnutilde_dz,                     &
-            source
+            source, dwall
 
-        real(rk), allocatable, dimension(:) :: dwall, gam
+        real(rk)    :: const, epsilon_vorticity, gam
 
-        real(rk)    :: const, epsilon_vorticity
-
-        !
-        ! Get equation indices
-        !
-        irho         = prop%get_primary_field_index("Density"          )
-        irhou        = prop%get_primary_field_index("X-Momentum"       )
-        irhov        = prop%get_primary_field_index("Y-Momentum"       )
-        irhow        = prop%get_primary_field_index("Z-Momentum"       )
-        irhoE        = prop%get_primary_field_index("Energy"           )
-        irho_nutilde = prop%get_primary_field_index("Density * NuTilde")
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho         = worker%get_primary_field_element("Density"          ,'value')
-        rhou        = worker%get_primary_field_element("X-Momentum"       ,'value')
-        rhov        = worker%get_primary_field_element("Y-Momentum"       ,'value')
-        rhow        = worker%get_primary_field_element("Z-Momentum"       ,'value')
-        rhoE        = worker%get_primary_field_element("Energy"           ,'value')
-        rho_nutilde = worker%get_primary_field_element("Density * NuTilde",'value')
+        rho         = worker%get_primary_field_element('Density'          ,'value')
+        rhou        = worker%get_primary_field_element('X-Momentum'       ,'value')
+        rhov        = worker%get_primary_field_element('Y-Momentum'       ,'value')
+        rhow        = worker%get_primary_field_element('Z-Momentum'       ,'value')
+        rhoE        = worker%get_primary_field_element('Energy'           ,'value')
+        rho_nutilde = worker%get_primary_field_element('Density * NuTilde','value')
 
 
 
@@ -135,36 +125,36 @@ contains
         !
         ! Interpolate solution gradients to quadrature nodes
         !
-        drho_dx  = worker%get_primary_field_element("Density"   ,'ddx+lift')
-        drho_dy  = worker%get_primary_field_element("Density"   ,'ddy+lift')
-        drho_dz  = worker%get_primary_field_element("Density"   ,'ddz+lift')
+        drho_dx  = worker%get_primary_field_element('Density'   ,'ddx+lift')
+        drho_dy  = worker%get_primary_field_element('Density'   ,'ddy+lift')
+        drho_dz  = worker%get_primary_field_element('Density'   ,'ddz+lift')
 
-        drhou_dx = worker%get_primary_field_element("X-Momentum",'ddx+lift')
-        drhou_dy = worker%get_primary_field_element("X-Momentum",'ddy+lift')
-        drhou_dz = worker%get_primary_field_element("X-Momentum",'ddz+lift')
+        drhou_dx = worker%get_primary_field_element('X-Momentum','ddx+lift')
+        drhou_dy = worker%get_primary_field_element('X-Momentum','ddy+lift')
+        drhou_dz = worker%get_primary_field_element('X-Momentum','ddz+lift')
 
-        drhov_dx = worker%get_primary_field_element("Z-Momentum",'ddx+lift')
-        drhov_dy = worker%get_primary_field_element("Z-Momentum",'ddy+lift')
-        drhov_dz = worker%get_primary_field_element("Z-Momentum",'ddz+lift')
+        drhov_dx = worker%get_primary_field_element('Y-Momentum','ddx+lift')
+        drhov_dy = worker%get_primary_field_element('Y-Momentum','ddy+lift')
+        drhov_dz = worker%get_primary_field_element('Y-Momentum','ddz+lift')
 
-        drhow_dx = worker%get_primary_field_element("Z-Momentum",'ddx+lift')
-        drhow_dy = worker%get_primary_field_element("Z-Momentum",'ddy+lift')
-        drhow_dz = worker%get_primary_field_element("Z-Momentum",'ddz+lift')
+        drhow_dx = worker%get_primary_field_element('Z-Momentum','ddx+lift')
+        drhow_dy = worker%get_primary_field_element('Z-Momentum','ddy+lift')
+        drhow_dz = worker%get_primary_field_element('Z-Momentum','ddz+lift')
 
-        drhoE_dx = worker%get_primary_field_element("Energy"    ,'ddx+lift')
-        drhoE_dy = worker%get_primary_field_element("Energy"    ,'ddy+lift')
-        drhoE_dz = worker%get_primary_field_element("Energy"    ,'ddz+lift')
+        drhoE_dx = worker%get_primary_field_element('Energy'    ,'ddx+lift')
+        drhoE_dy = worker%get_primary_field_element('Energy'    ,'ddy+lift')
+        drhoE_dz = worker%get_primary_field_element('Energy'    ,'ddz+lift')
 
-        drho_nutilde_dx = worker%get_primary_field_element("Density * NuTilde",'ddx+lift')
-        drho_nutilde_dy = worker%get_primary_field_element("Density * NuTilde",'ddy+lift')
-        drho_nutilde_dz = worker%get_primary_field_element("Density * NuTilde",'ddz+lift')
+        drho_nutilde_dx = worker%get_primary_field_element('Density * NuTilde','ddx+lift')
+        drho_nutilde_dy = worker%get_primary_field_element('Density * NuTilde','ddy+lift')
+        drho_nutilde_dz = worker%get_primary_field_element('Density * NuTilde','ddz+lift')
 
 
 
         !
         ! Interpolate auxiliary field, Wall Distance
         !
-        dwall = worker%get_auxiliary_field_element('Wall Distance', 'value')
+        dwall = worker%get_model_field_element('Wall Distance', 'value')
 
 
 
@@ -182,14 +172,8 @@ contains
         !
         ! Compute model values
         !
-        !p   = prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE)
-        !T   = prop%fluid%compute_temperature(rho,rhou,rhov,rhow,rhoE)
-        !gam = prop%fluid%compute_gamma(rho,rhou,rhov,rhow,rhoE)
-        p   = worker%get_model_field_element('Pressure',    'value')
-        T   = worker%get_model_field_element('Temperature', 'value')
         gam = 1.4_rk
-
-        mu  = prop%fluid%compute_viscosity_dynamic(T)
+        mu  = worker%get_model_field_element('Laminar Viscosity',   'value')
         nu  = mu*invrho
 
 
@@ -258,6 +242,7 @@ contains
         vorticity2 =  (dw_dy - dv_dz)**TWO  +  (du_dz - dw_dx)**TWO  +  (dv_dx - du_dy)**TWO 
         
         epsilon_vorticity = 1.e-6_rk
+        vorticity = vorticity2
         where(vorticity2 < epsilon_vorticity)
             vorticity = HALF*(epsilon_vorticity + vorticity2/epsilon_vorticity)
         else where
@@ -269,6 +254,7 @@ contains
         vorticity_bar = (nutilde/(SA_kappa*SA_kappa*dwall*dwall))*f_v2
 
 
+        vorticity_mod = vorticity
         where (vorticity_bar >= -SA_c_v2*vorticity)
             vorticity_mod = vorticity + vorticity_bar
         else where
@@ -297,6 +283,7 @@ contains
         !
         ! Compute Production, Destruction
         !
+        production = vorticity_mod
         where ( nutilde >= ZERO )
             production = SA_c_b1*(ONE - f_t2)*vorticity_mod*nutilde
         else where
@@ -304,6 +291,7 @@ contains
         end where
 
 
+        destruction = vorticity_mod
         where ( nutilde >= ZERO )
             destruction = (SA_c_w1*f_w - (SA_c_b1/(SA_kappa*SA_kappa))*f_t2) * (nutilde/dwall)**TWO
         else where
@@ -330,11 +318,14 @@ contains
         !========================================================================
         !                       Spalart-Allmaras Source Term
         !========================================================================
-        source = -rho*(production-destruction)  -  &
-                  (SA_c_b2/SA_sigma)*rho*(dnutilde_dx*dnutilde_dx + dnutilde_dy*dnutilde_dy + dnutilde_dz*dnutilde_dz)  +  &
-                  (ONE/SA_sigma)*(nu + f_n1*nutilde)*(drho_dx*dnutilde_dx + drho_dy*dnutilde_dy + drho_dz*dnutilde_dz)
+        source = -(                                 &
+                    -rho*(production-destruction)   &
+                    -(SA_c_b2/SA_sigma)*rho*(dnutilde_dx*dnutilde_dx + dnutilde_dy*dnutilde_dy + dnutilde_dz*dnutilde_dz)   &
+                    +(ONE/SA_sigma)*(nu + f_n1*nutilde)*(drho_dx*dnutilde_dx + drho_dy*dnutilde_dy + drho_dz*dnutilde_dz)   &
+                  )
 
         call worker%integrate_volume("Density * NuTilde",source)
+
 
     end subroutine compute
     !*********************************************************************************************************

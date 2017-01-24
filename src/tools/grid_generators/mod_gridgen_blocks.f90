@@ -68,27 +68,20 @@ contains
     !!      - Linear element mapping, M1
     !!      - boundary conditions initialized to Scalar Extrapolate.
     !!
-    !!  Particular block can be specified by the input string 'grid':
-    !!      'grid' = "D1 E1 M1"
-    !!      'grid' = "D1 E8 M1"
-    !!      'grid' = "D1 E16 M1"
-    !!      'grid' = "D1 E27 M1"
-    !!
     !!  @author Nathan A. Wukie
     !!  @date   10/17/2016
     !!
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine create_mesh_file__singleblock(filename,grid,equation_sets,group_names,bc_groups,nelem_xi,nelem_eta,nelem_zeta,clusterx)
+    subroutine create_mesh_file__singleblock(filename,equation_sets,group_names,bc_groups,nelem_xi,nelem_eta,nelem_zeta,clusterx)
         character(*),               intent(in)              :: filename
-        character(*),               intent(in)              :: grid
         type(string_t),             intent(in), optional    :: equation_sets(:)
         type(string_t),             intent(in), optional    :: group_names(:,:)
         type(bc_group_t),           intent(in), optional    :: bc_groups(:)
-        integer(ik),                intent(in), optional    :: nelem_xi
-        integer(ik),                intent(in), optional    :: nelem_eta
-        integer(ik),                intent(in), optional    :: nelem_zeta
+        integer(ik),                intent(in)              :: nelem_xi
+        integer(ik),                intent(in)              :: nelem_eta
+        integer(ik),                intent(in)              :: nelem_zeta
         integer(ik),                intent(in), optional    :: clusterx
 
         character(:),                   allocatable :: user_msg
@@ -109,26 +102,7 @@ contains
 
 
         ! Generate coordinates for first block
-        select case (trim(grid))
-            case("D1 E1 M1")
-                call meshgen_1x1x1_linear(xcoords,ycoords,zcoords)
-            case("D1 E4 M1")
-                call meshgen_4x1x1_linear(xcoords,ycoords,zcoords)
-            case("D1 E16 M1")
-                call meshgen_4x2x2_linear(xcoords,ycoords,zcoords)
-            case("D1 E27 M1")
-                call meshgen_3x3x3_linear(xcoords,ycoords,zcoords)
-            case("D1 NxNxN")
-                if ( present(nelem_xi) .and. present(nelem_eta) .and. present(nelem_zeta) ) then
-                    call meshgen_NxNxN_linear(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords,clusterx)
-                else
-                    user_msg = "create_mesh_file__singleblock: For 'D1 NxNxN', need to specify &
-                                the optional inputs 'nelem_xi', 'nelem_eta', 'nelem_zeta'."
-                    call chidg_signal(FATAL,user_msg)
-                end if
-            case default
-                call chidg_signal(FATAL,"create_mesh_file__singleblock: Invalid string to select grid block")
-        end select
+        call meshgen_NxNxN_linear(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords,clusterx)
 
 
 
@@ -250,63 +224,109 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------
-    subroutine create_mesh_file__multiblock(filename,block1,block2,equation_sets,group_names,bc_groups)
+    subroutine create_mesh_file__multiblock(filename,equation_sets,group_names,bc_groups,     &
+                                                          nelem_xi,  nelem_eta,  nelem_zeta,  &
+                                                          xmax,ymax,zmax)
         character(*),       intent(in)              :: filename
-        character(*),       intent(in)              :: block1
-        character(*),       intent(in)              :: block2
         type(string_t),     intent(in), optional    :: equation_sets(:)
         type(string_t),     intent(in), optional    :: group_names(:,:)
         type(bc_group_t),   intent(in), optional    :: bc_groups(:)
+        integer(ik),        intent(in)              :: nelem_xi,  nelem_eta,  nelem_zeta
+        real(rk),           intent(in), optional    :: xmax, ymax, zmax
 
         class(bc_state_t),  allocatable                 :: bc_state
         character(8)                                    :: faces(6)
         integer(HID_T)                                  :: file_id, dom1_id, dom2_id, bcface1_id, bcface2_id, bcgroup_id
-        integer(ik)                                     :: spacedim, mapping, bcface, ierr, igroup, istate
+        integer(ik)                                     :: spacedim, mapping, bcface, ierr, igroup, istate, &
+                                                           nxi_max, neta_max, nzeta_max,xi_mid
         type(point_t),  allocatable                     :: nodes1(:), nodes2(:)
         integer(ik),    allocatable                     :: elements1(:,:), elements2(:,:) 
         integer(ik),    allocatable                     :: faces1(:,:), faces2(:,:)
         real(rk),       allocatable, dimension(:,:,:)   :: xcoords1, ycoords1, zcoords1, &
                                                            xcoords2, ycoords2, zcoords2
-        real(rk)                                        :: xmax_block1,xmin_block2
+        real(rk)                                        :: xmax_block1,xmin_block2, xmax_current,       &
+                                                           xmax_new, ymax_new, zmax_new, ymax_current,  &
+                                                           zmax_current
 
 
+        !
         ! Create/initialize file
+        !
         call initialize_file_hdf(filename)
         file_id = open_file_hdf(filename)
         
 
-        select case (trim(block1))
-            case("D1 E1 M1")
-                call meshgen_1x1x1_linear(xcoords1,ycoords1,zcoords1)
-            case("D1 E2 M1")
-                call meshgen_2x1x1_linear(xcoords1,ycoords1,zcoords1)
-            case("D1 E27 M1")
-                call meshgen_3x3x3_linear(xcoords1,ycoords1,zcoords1)
-            case default
-                call chidg_signal(FATAL,"create_mesh_file__multiblock: Invalid block1 string")
-        end select
+        !
+        ! Generate coordinates
+        !
+        call meshgen_NxNxN_linear(nelem_xi, nelem_eta, nelem_zeta, xcoords1,ycoords1,zcoords1)
 
-
-
-
-        select case (trim(block2))
-            case("D1 E1 M1")
-                call meshgen_NxNxN_linear(1,1,1,xcoords2,ycoords2,zcoords2)
-            case("D1 E2 M1")
-                call meshgen_NxNxN_linear(2,1,1,xcoords2,ycoords2,zcoords2)
-            case("D1 E27 M1")
-                call meshgen_NxNxN_linear(3,3,3,xcoords2,ycoords2,zcoords2)
-            case default
-                call chidg_signal(FATAL,"create_mesh_file__multiblock: Invalid block2 string")
-        end select
 
 
         !
-        ! Translate block2 to end of block1
+        ! Split the block:
+        !   - Take the second half of the block, store to block 2
+        !   - Take the first half of the block, reset to block 1
         !
-        xmax_block1 = maxval(xcoords1)
-        xmin_block2 = minval(xcoords2)
-        xcoords2 = xcoords2 + (xmax_block1-xmin_block2)
+        nxi_max   = size(xcoords1,1)
+        neta_max  = size(xcoords1,2)
+        nzeta_max = size(xcoords1,3)
+        xi_mid    = int(nint(real(nxi_max)/2.))
+
+        xcoords2 = xcoords1(xi_mid:nxi_max,1:neta_max,1:nzeta_max)
+        xcoords1 = xcoords1(1:xi_mid,      1:neta_max,1:nzeta_max)
+
+        ycoords2 = ycoords1(xi_mid:nxi_max,1:neta_max,1:nzeta_max)
+        ycoords1 = ycoords1(1:xi_mid,      1:neta_max,1:nzeta_max)
+
+        zcoords2 = zcoords1(xi_mid:nxi_max,1:neta_max,1:nzeta_max)
+        zcoords1 = zcoords1(1:xi_mid,      1:neta_max,1:nzeta_max)
+
+
+!        !
+!        ! Translate block2 to end of block1, in x-direction
+!        !
+!        xmax_block1 = maxval(xcoords1)
+!        xmin_block2 = minval(xcoords2)
+!        xcoords2 = xcoords2 + (xmax_block1-xmin_block2)
+
+
+
+        !
+        ! Scale block coordinates to have xmax,ymax,zmax
+        !   - normalize current maximum to 1
+        !   - then multiply by desired extent
+        !   - default extents are (1,1,1)
+        !
+        xmax_new = 1._rk
+        ymax_new = 1._rk
+        zmax_new = 1._rk
+        if (present(xmax)) xmax_new = xmax
+        if (present(ymax)) ymax_new = ymax
+        if (present(zmax)) zmax_new = zmax
+
+
+        xmax_current = maxval(xcoords2)
+        xcoords1 = xcoords1/xmax_current
+        xcoords2 = xcoords2/xmax_current
+
+        xcoords1 = xmax_new*xcoords1
+        xcoords2 = xmax_new*xcoords2
+
+
+        ymax_current = maxval(ycoords2)
+        ycoords1 = ycoords1/ymax_current
+        ycoords2 = ycoords2/ymax_current
+
+        ycoords1 = ymax_new*ycoords1
+        ycoords2 = ymax_new*ycoords2
+
+        zmax_current = maxval(zcoords2)
+        zcoords1 = zcoords1/zmax_current
+        zcoords2 = zcoords2/zmax_current
+
+        zcoords1 = zmax_new*zcoords1
+        zcoords2 = zmax_new*zcoords2
 
 
 
@@ -324,8 +344,17 @@ contains
         ! Add domains
         !
         spacedim = 3
-        call add_domain_hdf(file_id,"01",nodes1,elements1,"Scalar Advection",spacedim)
-        call add_domain_hdf(file_id,"02",nodes2,elements2,"Scalar Advection",spacedim)
+        if ( present(equation_sets) ) then
+            call add_domain_hdf(file_id,"01",nodes1,elements1,equation_sets(1)%get(),spacedim)
+            call add_domain_hdf(file_id,"02",nodes2,elements2,equation_sets(2)%get(),spacedim)
+        else
+            call add_domain_hdf(file_id,"01",nodes1,elements1,"Scalar Advection",spacedim)
+            call add_domain_hdf(file_id,"02",nodes2,elements2,"Scalar Advection",spacedim)
+        end if
+
+
+
+
 
 
         !
@@ -504,8 +533,8 @@ contains
         type(point_t),  allocatable                     :: nodes1(:), nodes2(:)
         integer(ik),    allocatable                     :: elements1(:,:), elements2(:,:) 
         integer(ik),    allocatable                     :: faces1(:,:), faces2(:,:)
-        real(rk),       allocatable, dimension(:,:,:)   :: xcoords1, xcoords2, ycoords1, ycoords2, zcoords
-        real(rk)                                        :: xmax,ymax
+        real(rk),       allocatable, dimension(:,:,:)   :: xcoords1, xcoords2, ycoords1, ycoords2, zcoords1, zcoords2
+        real(rk)                                        :: xmax,ymax, xmax_current, ymax_current, zmax_current
 
 
         ! Create/initialize file
@@ -514,7 +543,7 @@ contains
         
 
         ! Generate coordinates for first block
-        call meshgen_2x2x2_linear(xcoords1,ycoords1,zcoords)
+        call meshgen_2x2x2_linear(xcoords1,ycoords1,zcoords1)
 
 
         !
@@ -522,7 +551,6 @@ contains
         !
         xmax = maxval(xcoords1)
         ymax = maxval(ycoords1)
-
 
 
         !
@@ -549,13 +577,36 @@ contains
 
 
         !
+        ! Set zcoords
+        !
+        zcoords2 = zcoords1
+
+
+        !
+        ! Scale coordinates to xmax, ymax, zmax
+        !
+        xmax_current = maxval(xcoords2)
+        ymax_current = maxval(ycoords2)
+        zmax_current = maxval(zcoords2)
+
+        xcoords1 = (1.0_rk)*xcoords1/xmax_current
+        ycoords1 = (1.0_rk)*ycoords1/ymax_current
+        zcoords1 = (1.0_rk)*zcoords1/zmax_current
+
+        xcoords2 = (1.0_rk)*xcoords2/xmax_current
+        ycoords2 = (1.0_rk)*ycoords2/ymax_current
+        zcoords2 = (1.0_rk)*zcoords2/zmax_current
+
+
+
+        !
         ! Get nodes/elements
         !
         mapping = 1
-        nodes1    = get_block_points_plot3d(xcoords1,ycoords1,zcoords)
-        nodes2    = get_block_points_plot3d(xcoords2,ycoords2,zcoords)
-        elements1 = get_block_elements_plot3d(xcoords1,ycoords1,zcoords,mapping,idomain=1)
-        elements2 = get_block_elements_plot3d(xcoords2,ycoords2,zcoords,mapping,idomain=2)
+        nodes1    = get_block_points_plot3d(xcoords1,ycoords1,zcoords1)
+        nodes2    = get_block_points_plot3d(xcoords2,ycoords2,zcoords2)
+        elements1 = get_block_elements_plot3d(xcoords1,ycoords1,zcoords1,mapping,idomain=1)
+        elements2 = get_block_elements_plot3d(xcoords2,ycoords2,zcoords2,mapping,idomain=2)
 
 
         !
@@ -574,8 +625,8 @@ contains
 
         do bcface = 1,6
             ! Get face node indices for boundary 'bcface'
-            faces1 = get_block_boundary_faces_plot3d(xcoords1,ycoords1,zcoords,mapping,bcface)
-            faces2 = get_block_boundary_faces_plot3d(xcoords2,ycoords2,zcoords,mapping,bcface)
+            faces1 = get_block_boundary_faces_plot3d(xcoords1,ycoords1,zcoords1,mapping,bcface)
+            faces2 = get_block_boundary_faces_plot3d(xcoords2,ycoords2,zcoords2,mapping,bcface)
 
             ! Set bc patch face indices
             call set_bc_patch_hdf(dom1_id,faces1,bcface)

@@ -2,8 +2,10 @@ module test_blockvector_operators_mod
     use pfunit_mod
     use type_chidg,                 only: chidg_t
     use mod_kinds,                  only: rk,ik
-    use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, &
-                                          XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, IO_DESTINATION
+    use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, &
+                                          EIGHT, NINE, TEN, &
+                                          XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, &
+                                          ZETA_MAX, IO_DESTINATION
     use type_point,                 only: point_t
     use type_blockvector
     use type_domain_connectivity,   only: domain_connectivity_t
@@ -18,7 +20,7 @@ module test_blockvector_operators_mod
     !!
     !!
     !!
-    !----------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     @TestCase
     type, extends(TestCase) ::  test_blockvector_operators
 
@@ -31,18 +33,17 @@ module test_blockvector_operators_mod
         procedure   ::  tearDown
 
     end type test_blockvector_operators
-    !**********************************************************************************************
+    !******************************************************************************************
 
 
 contains
 
-    !>
-    !! NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
-    !! procedure. The argument names have to match
+    !>  NOTE: make sure to use 'this' instead of 'self' since these are over-writting a 
+    !!  derived type procedure. The argument names have to match
     !!
     !!
     !!
-    !----------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_blockvector_operators),    intent(inout)   :: this
 
@@ -68,7 +69,7 @@ contains
         call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
 
         call this%chidg%set('Solution Order', integer_input=2)
-        call this%chidg%initialize_solution_domains()
+        call this%chidg%init('domains')
 
 
         !
@@ -94,18 +95,23 @@ contains
         this%bv_b%vecs(4)%vec = FIVE
 
 
-    end subroutine
+    end subroutine setUp
+    !******************************************************************************************
     
+    !>
+    !!
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_blockvector_operators),    intent(inout)   :: this
         
-        !
         ! Close ChiDG interface
-        !
         call this%chidg%shut_down('core')
-    end subroutine
-    !*********************************************************************************************************
 
+    end subroutine tearDown
+    !******************************************************************************************
 
 
 
@@ -120,7 +126,7 @@ contains
     !!
     !!
     !!
-    !----------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     @Test
     subroutine test_blockvector_operators_mult_real_bv(self)
         class(test_blockvector_operators),    intent(inout)   :: self
@@ -159,12 +165,8 @@ contains
 
 
     end subroutine test_blockvector_operators_mult_real_bv
-    !***********************************************************************************************************
+    !******************************************************************************************
     
-
-
-
-
 
 
 
@@ -180,7 +182,7 @@ contains
     !!
     !!
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     @Test
     subroutine test_blockvector_operators_mult_bv_real(self)
         class(test_blockvector_operators),    intent(inout)   :: self
@@ -218,9 +220,8 @@ contains
         @assertEqual(4, self%bv_res%vecs(4)%eparent_l())
 
     end subroutine test_blockvector_operators_mult_bv_real
-    !*************************************************************************************************************
+    !******************************************************************************************
     
-
 
 
 
@@ -233,7 +234,7 @@ contains
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     @Test
     subroutine test_blockvector_operators_div_real_bv(self)
         class(test_blockvector_operators),    intent(inout)   :: self
@@ -271,7 +272,7 @@ contains
         @assertEqual(4, self%bv_res%vecs(4)%eparent_l())
 
     end subroutine test_blockvector_operators_div_real_bv
-    !*************************************************************************************************************
+    !******************************************************************************************
     
 
 
@@ -289,7 +290,7 @@ contains
     !!
     !!
     !!
-    !--------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     @Test
     subroutine test_blockvector_operators_div_bv_real(self)
         class(test_blockvector_operators),    intent(inout)   :: self
@@ -327,7 +328,7 @@ contains
 
 
     end subroutine test_blockvector_operators_div_bv_real
-    !***************************************************************************************************************
+    !******************************************************************************************
     
 
 
@@ -343,7 +344,7 @@ contains
     !!
     !!
     !!
-    !----------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     @Test
     subroutine test_blockvector_operators_add_bv_bv(self)
         class(test_blockvector_operators),    intent(inout)   :: self
@@ -382,7 +383,7 @@ contains
 
 
     end subroutine test_blockvector_operators_add_bv_bv
-    !*****************************************************************************************************************
+    !******************************************************************************************
     
 
 
@@ -400,7 +401,7 @@ contains
     !!
     !!
     !!
-    !------------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     @Test
     subroutine test_blockvector_operators_sub_bv_bv(self)
         class(test_blockvector_operators),    intent(inout)   :: self
@@ -438,7 +439,7 @@ contains
 
 
     end subroutine test_blockvector_operators_sub_bv_bv
-    !*******************************************************************************************************************
+    !******************************************************************************************
     
 
 

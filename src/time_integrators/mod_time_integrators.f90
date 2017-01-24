@@ -8,11 +8,11 @@ module mod_time_integrators
 
 
     ! Import solverdata types
-    use steady,                     only: steady_t
-!    use forward_euler,              only: forward_euler_t
-!    use backward_euler,             only: backward_euler_t
-!    use hamonic_balance,            only: harmonic_balance_t !not in yet
-!    use runge_kutta,                only: runge_kutta_t !already in but might be splitted in multiple time_integrators
+    use type_steady,            only: steady_t
+!    use type_forward_euler,     only: forward_euler_t
+!    use type_backward_euler,    only: backward_euler_t
+!    use type_hamonic_balance,   only: harmonic_balance_t !not in yet
+!    use type_runge_kutta,      only: runge_kutta_t !already in but might be splitted in multiple time_integrators
     implicit none
 
 
@@ -70,10 +70,11 @@ contains
 
 
             case default
-                user_msg = "We can't seem to find a time integrator that matches the input string. &
-                            Maybe check that the time integrator string in the input file or driver &
-                            script is valid."
-                dev_msg = "Check that the time integrator is registered properly in create_time_integrator."
+                user_msg = "We can't seem to find a time integrator that matches the input &
+                            string. Maybe check that the time integrator string in the input &
+                            file or driver script is valid."
+                dev_msg = "Check that the time integrator is registered properly in &
+                           create_time_integrator."
                 call chidg_signal_two(OOPS, user_msg, trim(time_string), dev_msg=dev_msg)
         end select
 
@@ -101,7 +102,7 @@ contains
 
 
     end subroutine create_time_integrator
-    !***********************************************************************************************************************
+    !****************************************************************************************
 
 
 

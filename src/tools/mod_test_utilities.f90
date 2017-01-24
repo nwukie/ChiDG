@@ -56,7 +56,8 @@ contains
     subroutine create_mesh_file(selector, filename, equation_sets,  &
                                                     group_names,    &
                                                     bc_groups,      &
-                                                    nelem_xi,nelem_eta,nelem_zeta,clusterx)
+                                                    nelem_xi,  nelem_eta,  nelem_zeta,  &
+                                                    clusterx)
         character(*),                           intent(in)  :: selector
         character(*),                           intent(in)  :: filename
         type(string_t),             optional,   intent(in)  :: equation_sets(:)
@@ -71,79 +72,73 @@ contains
         integer(ik)                 :: ierr
 
 
+        !
         ! Generate grid file base on selector case.
+        !
         select case (trim(selector))
+
             !
             ! Simple, linear, block grids
             !
-            case("D1 E1 M1", "D1 E4 M1", "D1 E16 M1", "D1 E27 M1", "D1 NxNxN")
-                call create_mesh_file__singleblock(filename,trim(selector),equation_sets,   &
-                                                                           group_names,     &
-                                                                           bc_groups,       &
-                                                                           nelem_xi,        &
-                                                                           nelem_eta,       &
-                                                                           nelem_zeta,      &
-                                                                           clusterx)
+            case("D1 NxNxN")
+                call create_mesh_file__singleblock(filename, equation_sets,                     &
+                                                             group_names,                       &
+                                                             bc_groups,                         &
+                                                             nelem_xi, nelem_eta, nelem_zeta,   &
+                                                             clusterx)
 
-            case("D2 E1 M1")
-                call create_mesh_file__multiblock(filename,"D1 E1 M1","D1 E1 M1",equation_sets, &
-                                                                                 group_names,   &
-                                                                                 bc_groups)
-            case("D2 E2 M1")
-                call create_mesh_file__multiblock(filename,"D1 E2 M1","D1 E2 M1",equation_sets, &
-                                                                                 group_names,   &
-                                                                                 bc_groups)
-            case("D2 E27 M1")
-                call create_mesh_file__multiblock(filename,"D1 E27 M1","D1 E27 M1",equation_sets, &
-                                                                                   group_names,   &
-                                                                                   bc_groups)
+            case("D2 NxNxN M1")
+                call create_mesh_file__multiblock(filename, equation_sets,                      &
+                                                            group_names,                        &
+                                                            bc_groups,                          &
+                                                            nelem_xi,  nelem_eta,  nelem_zeta)
 
             case("D2 E8 M1 : Abutting : Matching")
-                call create_mesh_file__D2E8M1(filename,abutting=.true.,             &
-                                                       matching=.true.,             &
-                                                       equation_sets=equation_sets, &
-                                                       group_names=group_names,     &
-                                                       bc_groups=bc_groups)
+                call create_mesh_file__D2E8M1(filename,abutting      = .true.,        &
+                                                       matching      = .true.,        &
+                                                       equation_sets = equation_sets, &
+                                                       group_names   = group_names,   &
+                                                       bc_groups     = bc_groups)
             case("D2 E8 M1 : Overlapping : Matching")
-                call create_mesh_file__D2E8M1(filename,abutting=.false.,            &
-                                                       matching=.true.,             &
-                                                       equation_sets=equation_sets, &
-                                                       group_names=group_names,     &
-                                                       bc_groups=bc_groups)
+                call create_mesh_file__D2E8M1(filename,abutting      = .false.,       &
+                                                       matching      = .true.,        &
+                                                       equation_sets = equation_sets, &
+                                                       group_names   = group_names,   &
+                                                       bc_groups     = bc_groups)
             case("D2 E8 M1 : Overlapping : NonMatching")
-                call create_mesh_file__D2E8M1(filename,abutting=.false.,            &
-                                                       matching=.false.,            &
-                                                       equation_sets=equation_sets, &
-                                                       group_names=group_names,     &
-                                                       bc_groups=bc_groups)
+                call create_mesh_file__D2E8M1(filename,abutting      = .false.,       &
+                                                       matching      = .false.,       &
+                                                       equation_sets = equation_sets, &
+                                                       group_names   = group_names,   &
+                                                       bc_groups     = bc_groups)
 
             !
             ! Circular cylinder
             !
             case("Cylinder : Diagonal : Matching")
-                call create_mesh_file__cylinder(filename,overlap_deg=0._rk,         &
-                                                         group_names=group_names,   &
-                                                         bc_groups=bc_groups)
+                call create_mesh_file__cylinder(filename,overlap_deg = 0._rk,         &
+                                                         group_names = group_names,   &
+                                                         bc_groups   = bc_groups)
             case("Cylinder : Diagonal : NonMatching SingleDonor")
-                call create_mesh_file__cylinder(filename,overlap_deg=2.5_rk,        &
-                                                         group_names=group_names,   &
-                                                         bc_groups=bc_groups)
+                call create_mesh_file__cylinder(filename,overlap_deg = 2.5_rk,        &
+                                                         group_names = group_names,   &
+                                                         bc_groups   = bc_groups)
             case("Cylinder : Diagonal : NonMatching MultipleDonor")
-                call create_mesh_file__cylinder(filename,overlap_deg=5.0_rk,        &
-                                                         group_names=group_names,   &
-                                                         bc_groups=bc_groups)
+                call create_mesh_file__cylinder(filename,overlap_deg = 5.0_rk,        &
+                                                         group_names = group_names,   &
+                                                         bc_groups   = bc_groups)
 
 
             !
             ! Smooth Bump
             !
             case("Smooth Bump")
-                call create_mesh_file__smoothbump(filename,nelem_xi  =nelem_xi,         &
-                                                           nelem_eta =nelem_eta,        &
-                                                           nelem_zeta=nelem_zeta,       &
-                                                           equation_sets=equation_sets, &
-                                                           group_names=group_names,     &
-                                                           bc_groups=bc_groups)
+                call create_mesh_file__smoothbump(filename,nelem_xi      = nelem_xi,        &
+                                                           nelem_eta     = nelem_eta,       &
+                                                           nelem_zeta    = nelem_zeta,      &
+                                                           equation_sets = equation_sets,   &
+                                                           group_names   = group_names,     &
+                                                           bc_groups     = bc_groups)
 
             case default
                 user_msg = "create_mesh_file: There was no valid case that matched the incoming string"

@@ -43,7 +43,7 @@ module mod_interpolate
     use type_face_info,     only: face_info_t
     use type_function_info, only: function_info_t
     use type_recv,          only: recv_t
-    use type_chidgVector,   only: chidgVector_t
+    use type_chidg_vector,   only: chidg_vector_t
     implicit none
 
 
@@ -73,7 +73,7 @@ contains
     !-----------------------------------------------------------------------------------------
     function interpolate_element_autodiff(mesh,q,elem_info,fcn_info,ieqn,itime,interpolation_type) result(var_gq)
         type(mesh_t),           intent(in)      :: mesh(:)
-        type(chidgVector_t),    intent(in)      :: q
+        type(chidg_vector_t),    intent(in)      :: q
         type(element_info_t),   intent(in)      :: elem_info
         type(function_info_t),  intent(in)      :: fcn_info
         integer(ik),            intent(in)      :: ieqn
@@ -202,12 +202,12 @@ contains
     !------------------------------------------------------------------------------------------
     function interpolate_face_autodiff(mesh,q,face_info,fcn_info, ieqn, itime, interpolation_type, interpolation_source) result(var_gq)
         type(mesh_t),           intent(in)              :: mesh(:)
-        type(chidgVector_t),    intent(in)              :: q
+        type(chidg_vector_t),    intent(in)              :: q
         type(face_info_t),      intent(in)              :: face_info
         type(function_info_t),  intent(in)              :: fcn_info
         integer(ik),            intent(in)              :: ieqn
         integer(ik),            intent(in)              :: itime
-        character(len=*),       intent(in)              :: interpolation_type
+        character(*),           intent(in)              :: interpolation_type
         integer(ik),            intent(in)              :: interpolation_source
 
         type(face_info_t)   :: iface_info
@@ -216,7 +216,7 @@ contains
         type(AD_D)                      :: var_gq(mesh(face_info%idomain_l)%elems(face_info%ielement_l)%gq%face%nnodes)
         type(AD_D),         allocatable :: qdiff(:)
         real(rk),           allocatable :: interpolator(:,:)
-        character(len=:),   allocatable :: interpolation_style
+        character(:),       allocatable :: interpolation_style
 
         integer(ik) :: nderiv, set_deriv, iterm, igq, nterms_s, ierr
         logical     :: differentiate_me, conforming_interpolation, chimera_interpolation, parallel_interpolation
@@ -265,6 +265,7 @@ contains
 
             parallel_interpolation = (recv_info%comm /= 0)
 
+        
 
             !
             ! Allocate AD array to store a copy of the solution which starts the differentiation
@@ -373,7 +374,7 @@ contains
     !----------------------------------------------------------------------------------------
     function interpolate_element_standard(mesh,q,idomain_l,ielement_l,ieqn,itime,interpolation_type) result(var_gq)
         type(mesh_t),           intent(in)      :: mesh(:)
-        type(chidgVector_t),    intent(in)      :: q
+        type(chidg_vector_t),    intent(in)      :: q
         integer(ik),            intent(in)      :: idomain_l
         integer(ik),            intent(in)      :: ielement_l
         integer(ik),            intent(in)      :: ieqn
@@ -427,7 +428,7 @@ contains
     !-----------------------------------------------------------------------------------------
     function interpolate_face_standard(mesh,q,idomain_l,ielement_l,iface,ieqn,itime) result(var_gq)
         type(mesh_t),           intent(in)      :: mesh(:)
-        type(chidgVector_t),    intent(in)      :: q
+        type(chidg_vector_t),    intent(in)      :: q
         integer(ik),            intent(in)      :: idomain_l, ielement_l, iface, ieqn
         integer(ik),            intent(in)      :: itime
 
@@ -478,7 +479,7 @@ contains
 !    subroutine interpolate_boundary_autodiff(mesh,face,q,ieqn,points,var)
 !        type(mesh_t),           intent(in)              :: mesh(:)
 !        type(face_info_t),      intent(in)              :: face
-!        type(chidgVector_t),    intent(in)              :: q
+!        type(chidg_vector_t),    intent(in)              :: q
 !        integer(ik),            intent(in)              :: ieqn
 !        type(point_t),          intent(in)              :: points(:)
 !        type(AD_D),             intent(inout)           :: var(:)
@@ -1240,6 +1241,7 @@ contains
             !
             neqns_seed    = function_info%seed%neqns
             nterms_s_seed = function_info%seed%nterms_s
+
             nderiv = neqns_seed  *  nterms_s_seed
 
         end if

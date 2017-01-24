@@ -35,7 +35,7 @@ module type_chidg_data
     !!
     !!  The format here is to have arrays of mesh_t, bcset_t, and eqnset_t components. The 
     !!  index of those arrays corresponds to a domain in the local ChiDG environment. A 
-    !!  solverdata_t component holds chidgVector_t and chidgMatrix_t components that are
+    !!  solverdata_t component holds chidg_vector_t and chidg_matrix_t components that are
     !!  initialized from the domain components and are informed of the number of domains
     !!  in addition to their dependencies on each other.
     !!
@@ -51,12 +51,14 @@ module type_chidg_data
         integer(ik),        private                 :: spacedim_ = 3    !< Default 3D 
 
         
-        type(domain_info_t),            allocatable :: info(:)     !< General container for domain information
-        type(mesh_t),                   allocatable :: mesh(:)     !< Array of mesh instances. One for each domain.
-        type(bcset_t),                  allocatable :: bcset(:)    !< Array of boundary condition sets. One for each domain.
-        type(equation_set_t),           allocatable :: eqnset(:)   !< Array of equation set instances. One for each domain.
+        ! For each domain: info, a mesh, a boundary condition set, and an equation set
+        type(domain_info_t),            allocatable :: info(:)     
+        type(mesh_t),                   allocatable :: mesh(:)     
+        type(bcset_t),                  allocatable :: bcset(:)    
+        type(equation_set_t),           allocatable :: eqnset(:)   
 
-        type(solverdata_t)                          :: sdata       !< Solver data container for solution vectors and matrices
+        ! An object containing matrix and vector storage
+        type(solverdata_t)                          :: sdata
 
 
     contains
@@ -74,7 +76,7 @@ module type_chidg_data
         procedure   :: ndomains                     !< Return number of domains in chidg instance
         procedure   :: ntime
         procedure   :: get_dimensionality
-        procedure   :: get_auxiliary_field_names    !< Return the auxiliary fields that are required
+        procedure   :: get_auxiliary_field_names    !< Return required auxiliary fields
 
         procedure   :: report
 
@@ -109,8 +111,8 @@ contains
 
 
         !
-        ! Assemble array of function_data from the eqnset array to pass to the solver data structure for 
-        ! initialization
+        ! Assemble array of function_data from the eqnset array to pass to the solver data 
+        ! structure for initialization
         !
         ndom = self%ndomains()
         allocate(function_data(ndom), stat=ierr)
@@ -122,7 +124,8 @@ contains
 
 
         !
-        ! Assemble boundary condition coupling information to pass to sdata initialization for LHS storage
+        ! Assemble boundary condition coupling information to pass to sdata initialization 
+        ! for LHS storage
         !
         ndom = self%ndomains()
         allocate(bcset_coupling(ndom), stat=ierr)
@@ -156,7 +159,8 @@ contains
     !!  @date   2/1/2016
     !!
     !!  @param[in]  points      point_t matrix defining the mesh
-    !!  @param[in]  nterms_c    Integer defining the number of terms in the element coordinate expansion
+    !!  @param[in]  nterms_c    Integer defining the number of terms in the element coordinate 
+    !!                          expansion
     !!  @param[in]  eqnset      Character string defining the equationset_t for the domain
     !!  @param[in]  nterms_s    Integer defining the number of terms in the solution expansion
     !!
@@ -199,8 +203,9 @@ contains
         if (ierr /= 0) call AllocationError
 
 
-        ! Copy previously initialized instances to new array. Be careful about pointers components here!
-        ! For example, a pointer from a face to an element would no longer be valid in the new array.
+        ! Copy previously initialized instances to new array. Be careful about pointers 
+        ! components here. For example, a pointer from a face to an element would no 
+        ! longer be valid in the new array.
         if (self%ndomains_ > 1) then
             temp_info(   1:size(self%info))    = self%info(1:size(self%mesh))
             temp_mesh(   1:size(self%mesh))    = self%mesh(1:size(self%mesh))
@@ -222,12 +227,12 @@ contains
 
 
         !
-        ! Check that a domain with the same global index wasn't already added. For example, if a block got 
-        ! split and put on the same processor. Some of the MPI communication assumes one unique global 
-        ! domain index for each domain on the processor.
+        ! Check that a domain with the same global index wasn't already added. For example, if 
+        ! a block got split and put on the same processor. Some of the MPI communication assumes 
+        ! one unique global domain index for each domain on the processor.
         !
-        user_msg = "chidg_data%add_domain: Two domains have the same global index. MPI communication assumes &
-                    this does not happen."
+        user_msg = "chidg_data%add_domain: Two domains have the same global index. MPI &
+                    communication assumes this does not happen."
         if (self%ndomains_ > 1) then
             do idom = 1,size(self%mesh)
                 if (self%mesh(idom)%idomain_g == temp_mesh(idomain_l)%idomain_g) call chidg_signal(FATAL,user_msg)
@@ -265,21 +270,22 @@ contains
 
 
 
-    !>  For a ChiDG domain, add a boundary condition patche and associate it with a 
-    !!  boundary condition group.
+    !>  For a ChiDG domain, add a boundary condition patche and associate it with a boundary 
+    !!  condition group.
     !!
     !!
-    !!  Boundary condition groups hold sets of state functions that are used to compute 
-    !!  an exterior state on the boundary. The boundary condition groups are defined for 
-    !!  the global problem. Here, the individual patches of a given domain are being set 
-    !!  to a specific group.
+    !!  Boundary condition groups hold sets of state functions that are used to compute an 
+    !!  exterior state on the boundary. The boundary condition groups are defined for the 
+    !!  global problem. Here, the individual patches of a given domain are being set to a 
+    !!  specific group.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
     !!  @param[in]  domain          Character string of the selected domain.
     !!  @param[in]  bc_connectivity Face connectivities defining the boundary condition patch.
-    !!  @param[in]  bc_group        Name of boundary condition group to associate with the patch.
+    !!  @param[in]  bc_group        Name of the boundary condition group to associate with the 
+    !!                              patch.
     !!  @param[in]  bc_groups       bc_group_t's for the global problem that can be searched 
     !!                              through and used to initialize.
     !!
@@ -420,7 +426,6 @@ contains
 
 
 
-
     !> Return the number of domains in the chidg_data_t instance.
     !!
     !!  @author Nathan A. Wukie
@@ -444,7 +449,6 @@ contains
 
 
 
-
     !>  Return the dimensionality of the chidg_data_t instance.
     !!
     !!  @author Nathan A. Wukie
@@ -460,6 +464,11 @@ contains
 
     end function get_dimensionality
     !*******************************************************************************************
+
+
+
+
+
 
 
 

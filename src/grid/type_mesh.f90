@@ -508,9 +508,13 @@ contains
             do iface = 1,NFACES
 
                 !
-                ! Check if face has neighbor on local partition
+                ! Check if face has neighbor on local partition.
+                !   - ORPHAN means the exterior state is empty and we want to try and find a connection
+                !   - INTERIOR means the exterior state is already connected, but we want to reinitialize
+                !     the info, for example nterms_s if the order has been increased.
                 !
-                if ( self%faces(ielem,iface)%ftype == ORPHAN ) then
+                if ( (self%faces(ielem,iface)%ftype == ORPHAN  ) .or. &
+                     (self%faces(ielem,iface)%ftype == INTERIOR) ) then
                     call self%find_neighbor_local(ielem,iface,              &
                                                   ineighbor_domain_g,       &
                                                   ineighbor_domain_l,       &
@@ -598,15 +602,18 @@ contains
         integer(ik)             :: ixi,ieta,izeta,iface,ftype,ielem,ierr, ielem_neighbor
         integer(ik)             :: corner_one, corner_two, corner_three, corner_four
         integer(ik)             :: node_indices(4)
-        logical                 :: includes_node_one, includes_node_two, includes_node_three, includes_node_four
-        logical                 :: neighbor_element, searching
+        logical                 :: includes_node_one, includes_node_two,    &
+                                   includes_node_three, includes_node_four, &
+                                   neighbor_element, searching
 
-        integer(ik)             :: ineighbor_domain_g,  ineighbor_domain_l, ineighbor_element_g,    &
-                                   ineighbor_element_l, ineighbor_face,     ineighbor_proc,         &
+        integer(ik)             :: ineighbor_domain_g,  ineighbor_domain_l,     &
+                                   ineighbor_element_g, ineighbor_element_l,    &
+                                   ineighbor_face,     ineighbor_proc,          &
                                    ineighbor_neqns,     ineighbor_nterms_s, neighbor_status
 
         real(rk), allocatable, dimension(:,:)   :: neighbor_ddx, neighbor_ddy, neighbor_ddz, &
-                                                   neighbor_br2_face, neighbor_br2_vol, neighbor_invmass
+                                                   neighbor_br2_face, neighbor_br2_vol,      &
+                                                   neighbor_invmass
 
 
 
@@ -617,14 +624,15 @@ contains
                 ! Check if face has neighbor on another MPI rank.
                 !
                 !   Do this for ORPHAN faces, that are looking for a potential neighbor
-                !   Do this also for INTERIOR faces with off-processor neighbors, in case this is being called as 
-                !    a reinitialization routine, so that element-specific information gets updated, such 
-                !    as neighbor_ddx, etc. because these could have changed if the order of the solution changed
+                !   Do this also for INTERIOR faces with off-processor neighbors, in case 
+                !   this is being called as a reinitialization routine, so that 
+                !   element-specific information gets updated, such as neighbor_ddx, 
+                !   etc. because these could have changed if the order of the solution changed
                 !
-                !if ( (self%faces(ielem,iface)%ftype == ORPHAN) ) then
-                if ( (self%faces(ielem,iface)%ftype == ORPHAN) .or. &
-                     ( (self%faces(ielem,iface)%ftype == INTERIOR) .and. (self%faces(ielem,iface)%ineighbor_proc /= IRANK) ) &
-                     ) then
+                if ( (self%faces(ielem,iface)%ftype == ORPHAN) .or.         &
+                     ( (self%faces(ielem,iface)%ftype == INTERIOR) .and.    &
+                       (self%faces(ielem,iface)%ineighbor_proc /= IRANK) )  &
+                   ) then
 
                     ! send search request for neighbor face among global MPI ranks.
                     searching = .true.

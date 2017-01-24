@@ -8,8 +8,8 @@ module mod_nonlinear_solver
 
 
     ! Import solverdata types
-    use newton,                         only: newton_t
-    use quasi_newton,                   only: quasi_newton_t
+    use type_newton,            only: newton_t
+    use type_quasi_newton,      only: quasi_newton_t
     implicit none
 
 
@@ -35,7 +35,7 @@ contains
     !!  @date   3/15/2016
     !!
     !!
-    !--------------------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine create_nonlinear_solver(string,instance,options)
         character(*),                           intent(in)      :: string
         class(nonlinear_solver_t), allocatable, intent(inout)   :: instance
@@ -55,10 +55,11 @@ contains
                 allocate(instance, source=QUASI_NEWTON)
 
             case default
-                user_msg = "We can't seem to find a nonlinear solver that matches the input string in chidg.nml. &
-                            Maybe check that the nonlinear solver string in the input file or driver &
-                            script is valid."
-                dev_msg  = "Check that the nonlinear solver is registered properly in create_nonlinear_solver."
+                user_msg = "We can't seem to find a nonlinear solver that matches the input &
+                            string in chidg.nml. Maybe check that the nonlinear solver string &
+                            in the input file or driver script is valid."
+                dev_msg  = "Check that the nonlinear solver is registered properly in &
+                            create_nonlinear_solver."
                 call chidg_signal_two(OOPS, user_msg, trim(string), dev_msg=dev_msg)
 
         end select
@@ -79,13 +80,14 @@ contains
         !
         ! Make sure the solver was allocated
         !
-        user_msg = "create_nonlinear_solver: solver was not allocated. Check that the desired solver &
-                                             was registered and instantiated in the mod_nonlinear_solver module"
+        user_msg = "create_nonlinear_solver: solver was not allocated. Check that the &
+                    desired solver was registered and instantiated in the &
+                    mod_nonlinear_solver module"
         if (.not. allocated(instance)) call chidg_signal(FATAL,user_msg)
 
 
     end subroutine create_nonlinear_solver
-    !***********************************************************************************************************************
+    !*****************************************************************************************
 
 
 

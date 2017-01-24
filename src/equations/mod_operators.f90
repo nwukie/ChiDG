@@ -20,7 +20,6 @@ module mod_operators
     use SD_boundary_operator,                       only: SD_boundary_operator_t
     use SD_volume_source,                           only: SD_volume_source_t
     use SD_bc_operator,                             only: SD_bc_operator_t
-!    use WD_volume_source,                           only: WD_volume_source_t
 
     ! Fluid Inviscid Operators
     use euler_volume_operator,                      only: euler_volume_operator_t
@@ -33,6 +32,15 @@ module mod_operators
     use fluid_viscous_volume_operator,              only: fluid_viscous_volume_operator_t
     use fluid_viscous_boundary_average_operator,    only: fluid_viscous_boundary_average_operator_t
     use fluid_viscous_bc_operator,                  only: fluid_viscous_bc_operator_t
+
+    ! Fluid Turbulence Operators
+    use spalart_allmaras_source,                    only: spalart_allmaras_source_operator_t
+    use spalart_allmaras_laxfriedrichs,             only: spalart_allmaras_laxfriedrichs_operator_t
+    use spalart_allmaras_volume_advection,          only: spalart_allmaras_volume_advection_operator_t
+    use spalart_allmaras_bc_advection,              only: spalart_allmaras_bc_advection_operator_t
+    use spalart_allmaras_boundary_diffusion,        only: spalart_allmaras_boundary_diffusion_operator_t
+    use spalart_allmaras_volume_diffusion,          only: spalart_allmaras_volume_diffusion_operator_t
+    use spalart_allmaras_bc_diffusion,              only: spalart_allmaras_bc_diffusion_operator_t
     implicit none
 
 
@@ -165,9 +173,6 @@ contains
         type(SD_bc_operator_t)                          :: SD_bc_operator
         type(SD_volume_source_t)                        :: SD_volume_source
 
-        ! Wall Distance Source Operator
-        !type(WD_volume_source_t)                        :: WD_volume_source
-
         ! Dual Linear Advection Operators
         type(DLA_volume_advective_flux_t)               :: DLA_volume_operator
         type(DLA_boundary_average_advective_flux_t)     :: DLA_average_operator
@@ -186,6 +191,14 @@ contains
         type(fluid_viscous_bc_operator_t)               :: fluid_viscous_bc_operator
 
 
+        ! Fluid Turbulence Operators
+        type(spalart_allmaras_source_operator_t)                :: spalart_allmaras_source_operator
+        type(spalart_allmaras_laxfriedrichs_operator_t)         :: spalart_allmaras_laxfriedrichs_operator
+        type(spalart_allmaras_volume_advection_operator_t)      :: spalart_allmaras_volume_advection_operator
+        type(spalart_allmaras_bc_advection_operator_t)          :: spalart_allmaras_bc_advection_operator
+        type(spalart_allmaras_boundary_diffusion_operator_t)    :: spalart_allmaras_boundary_diffusion_operator
+        type(spalart_allmaras_volume_diffusion_operator_t)      :: spalart_allmaras_volume_diffusion_operator
+        type(spalart_allmaras_bc_diffusion_operator_t)          :: spalart_allmaras_bc_diffusion_operator
 
 
 
@@ -203,9 +216,6 @@ contains
             call operator_factory%register(SD_boundary_operator)
             call operator_factory%register(SD_volume_source)
             call operator_factory%register(SD_bc_operator)
-
-            ! Register Wall Distance Source
-            !call operator_factory%register(WD_volume_source)
 
             ! Register Dual Linear Advection
             call operator_factory%register(DLA_volume_operator)
@@ -225,12 +235,15 @@ contains
             call operator_factory%register(fluid_viscous_boundary_average_operator)
             call operator_factory%register(fluid_viscous_bc_operator)
 
+            ! Register Fluid Turbulence
+            call operator_factory%register(spalart_allmaras_source_operator)
+            call operator_factory%register(spalart_allmaras_laxfriedrichs_operator)
+            call operator_factory%register(spalart_allmaras_volume_advection_operator)
+            call operator_factory%register(spalart_allmaras_bc_advection_operator)
+            call operator_factory%register(spalart_allmaras_boundary_diffusion_operator)
+            call operator_factory%register(spalart_allmaras_volume_diffusion_operator)
+            call operator_factory%register(spalart_allmaras_bc_diffusion_operator)
 
-!            ! Initialize all operators
-!            do iop = 1,operator_factory%operators%size()
-!                call operator_factory%operators%data(iop)%op%init()
-!            end do
-            
 
             operators_initialized = .true.
 

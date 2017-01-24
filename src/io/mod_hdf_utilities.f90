@@ -68,7 +68,7 @@ contains
     !!  get_contains_solution_hdf
     !!
     !!
-    !!  Domains:
+    !!  Domain-level routines:
     !!  ---------------------------
     !!  add_domain_hdf
     !!  create_domain_hdf
@@ -94,9 +94,9 @@ contains
     !!  get_coordinate_order_hdf
     !!  get_coordinate_orders_hdf
     !!
-    !!  set_solution_order_hdf
-    !!  get_solution_order_hdf
-    !!  get_solution_orders_hdf
+    !!  set_domain_field_order_hdf
+    !!  get_field_order_hdf
+    !!  get_field_orders_hdf
     !!
     !!  set_domain_dimensionality_hdf
     !!  get_domain_dimensionality_hdf
@@ -693,7 +693,8 @@ contains
         end if
 
         if ( prop%contains_solution ) then
-            prop%order_s = get_solution_orders_hdf(fid,prop%domain_names)
+            !prop%order_s = get_solution_orders_hdf(fid,prop%domain_names)
+            prop%order_s = get_solution_orders_hdf(fid)
         end if
 
 
@@ -1860,71 +1861,41 @@ contains
     !!  @param[in]  dnames  List of domain names to be interrogated.
     !!
     !----------------------------------------------------------------------------------------
-    function get_solution_orders_hdf(fid, dnames) result(orders)
+    function get_solution_orders_hdf(fid) result(orders)
         integer(HID_T),         intent(in)  :: fid
-        character(len=1024),    intent(in)  :: dnames(:)
 
-        integer(HID_T)              :: did
-        integer(HSIZE_T)            :: adim
-        logical                     :: order_exists
-        integer(ik), allocatable    :: orders(:)
-        integer                     :: ierr, idom, order
-        integer, dimension(1)       :: buf
+        integer(HID_T)                      :: did
+        integer(ik), allocatable            :: orders(:)
+        integer                             :: ierr, idom
+        character(len=1024), allocatable    :: domain_names(:)
+
+
+        !
+        ! Get domains
+        !
+        domain_names = get_domain_names_hdf(fid)
 
 
         !
         ! Allocate storage for orders
         !
-        allocate(orders(size(dnames)), stat=ierr)
+        allocate(orders(size(domain_names)), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
         !
         !  Loop through groups and read domains
         !
-        do idom = 1,size(dnames)
-            !
-            ! Open domain group
-            !
-            call h5gopen_f(fid, "D_"//trim(dnames(idom)), did, ierr)
-            if (ierr /= 0) call chidg_signal_one(FATAL,"get_solution_orders_hdf: error opening domain group.", trim(dnames(idom)) )
-
-            
-            !
-            ! Check 'order_solution' attribute exists
-            !
-            call h5aexists_f(did, 'Solution Order', order_exists, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"get_solution_orders_hdf: error check attribue exists.")
-
-
+        do idom = 1,size(domain_names)
 
             !
-            ! Handle attribute does not exist
+            ! Open domain group, get solution order, close domain group
             !
-            if ( .not. order_exists ) then
-                adim = 1
-                buf = 0
-                call h5ltset_attribute_int_f(did, ".", 'Solution Order', buf, adim, ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"get_solution_orders_hdf: error setting attribute.")
-            end if
+            did = open_domain_hdf(fid,trim(domain_names(idom)))
 
+            orders(idom) = get_solution_order_hdf(did)
 
-
-            !
-            !  Get solution order
-            !
-            call h5ltget_attribute_int_f(did, ".", 'Solution Order', buf, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"get_solution_orders_hdf: error getting 'Solution Order' attribute.")
-
-
-            !
-            ! Compute number of terms in coordinate expansion
-            !
-            order = buf(1)
-            orders(idom) = int(order, kind=ik)
-
-
-            call h5gclose_f(did,ierr)
+            call close_domain_hdf(did)
 
         end do
 

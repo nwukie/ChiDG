@@ -84,7 +84,8 @@ contains
         ! Handle contains_solution
         !
         if ( contains_solution ) then
-            sorder   = get_solution_orders_hdf(fid,dnames)
+            !sorder   = get_solution_orders_hdf(fid,dnames)
+            sorder   = get_solution_orders_hdf(fid)
         else
             allocate(sorder(ndom), stat=ierr)
             if (ierr /= 0) call AllocationError

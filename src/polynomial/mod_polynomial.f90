@@ -5,7 +5,7 @@ module mod_polynomial
 
     use mod_legendre
     use mod_lagrange
-    use mod_ordering,
+    use mod_ordering
     implicit none
 
 contains

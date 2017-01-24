@@ -5,8 +5,8 @@ module mod_hdfio
     use mod_bc,                     only: create_bc
     use mod_chidg_mpi,              only: IRANK, NRANK, ChiDG_COMM
     use mod_hdf_utilities,          only: get_ndomains_hdf, get_domain_names_hdf,                   &
-                                          get_domain_equation_set_hdf, set_solution_order_hdf,      &
-                                          get_solution_order_hdf, set_coordinate_order_hdf,         &
+                                          get_domain_equation_set_hdf, set_coordinate_order_hdf,    &
+                                          set_solution_order_hdf, get_solution_order_hdf,           &
                                           get_domain_mapping_hdf, get_domain_dimensionality_hdf,    &
                                           set_contains_solution_hdf, set_domain_equation_set_hdf,   &
                                           check_file_storage_version_hdf, check_file_exists_hdf,    &
@@ -48,17 +48,23 @@ contains
     !!  read_grid_hdf
     !!
     !!  read_solution_hdf
-    !!      read_field_domain_hdf
+    !!      read_domain_field_hdf
     !!
     !!  write_solution_hdf
     !!      write_variable_hdf
-    !!      write_field_domain_hdf
+    !!      write_domain_field_hdf
     !!
     !!  read_boundaryconditions_hdf
     !!      read_bc_patches_hdf
     !!      read_bc_state_groups_hdf
     !!
     !!  read_connectivity_hdf
+    !!
+    !!  TODO:
+    !!  -----------
+    !!      - Relocate solution_order to a particular variable, instead of the domain.
+    !!        This is in case a variable is writted from another analysis like a wall
+    !!        distance calculation, but then a Navier Stokes solution is started.
     !!      
     !!
     !****************************************************************************************
@@ -179,6 +185,7 @@ contains
             call h5dopen_f(gid, "CoordinateZ", did_z, ierr, H5P_DEFAULT_F)
 
 
+
             !
             !  Get the dataspace id and dimensions
             !
@@ -206,6 +213,7 @@ contains
             cp_pts = c_loc(zpts(1))
             call h5dread_f(did_z, H5T_NATIVE_DOUBLE, cp_pts, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"read_grid_hdf5 -- h5dread_f")
+
 
 
             !
@@ -347,13 +355,13 @@ contains
 
             do ieqn = 1,data%eqnset(idom)%prop%nprimary_fields()
                 field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
-                call read_field_domain_hdf(data,domain_id,field_name,itime,'Primary')
+                call read_domain_field_hdf(data,domain_id,field_name,itime,'Primary')
             end do ! ieqn
 
-            do ieqn = 1,data%eqnset(idom)%prop%nauxiliary_fields()
-                field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
-                call read_field_domain_hdf(data,domain_id,field_name,itime,'Auxiliary')
-            end do ! ieqn
+!            do ieqn = 1,data%eqnset(idom)%prop%nauxiliary_fields()
+!                field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
+!                call read_field_domain_hdf(data,domain_id,field_name,itime,'Auxiliary')
+!            end do ! ieqn
 
             call close_domain_hdf(domain_id)
 
@@ -489,7 +497,7 @@ contains
                         field_index = data%eqnset(idom)%prop%get_primary_field_index(trim(field))
 
                         if (field_index /= 0) then
-                            call write_field_domain_hdf(domain_id,data,field,time)
+                            call write_domain_field_hdf(domain_id,data,field,time)
                         end if
 
 
@@ -504,7 +512,7 @@ contains
                         neqns = data%eqnset(idom)%prop%nprimary_fields()
                         do ieqn = 1,neqns
                             field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
-                            call write_field_domain_hdf(domain_id,data,field_name,time)
+                            call write_domain_field_hdf(domain_id,data,field_name,time)
                         end do ! ieqn
 
                     end if
@@ -556,7 +564,7 @@ contains
     !!  @date   11/5/2016
     !!
     !---------------------------------------------------------------------------------------
-    subroutine read_field_domain_hdf(data,domain_id,field_name,itime,field_type)
+    subroutine read_domain_field_hdf(data,domain_id,field_name,itime,field_type)
         type(chidg_data_t), intent(inout)   :: data
         integer(HID_T),     intent(in)      :: domain_id
         character(*),       intent(in)      :: field_name
@@ -564,9 +572,10 @@ contains
         character(*),       intent(in)      :: field_type
 
 
-        integer(HID_T)          :: gid, sid, vid
-        integer(HSIZE_T)        :: maxdims(3), dims(3)
+        integer(HID_T)          :: gid, sid, vid, memspace
+        integer(HSIZE_T)        :: start(3), count(3), dimsm(3)
         integer, dimension(1)   :: ibuf
+
 
         character(:),   allocatable         :: user_msg, domain_name
         character(100)                      :: cbuf, var_gqp
@@ -576,9 +585,8 @@ contains
         type(c_ptr)                         :: cp_var
 
         integer(ik)                         :: spacedim, ielem_g, aux_vector_index
-        integer                             :: type,    ierr,                     &
-                                               nterms_1d,  nterms_s,   order,  &
-                                               ivar,    ielem,      nterms_ielem,   idom
+        integer                             :: type, ierr, nterms_1d, nterms_s, order,  &
+                                               ivar, ielem, nterms_ielem, idom, ndims
         logical                             :: ElementsEqual, variables_exists
 
 
@@ -638,18 +646,7 @@ contains
         ! Get the dataspace id and dimensions
         !
         call h5dget_space_f(vid, sid, ierr)
-        call h5sget_simple_extent_dims_f(sid, dims, maxdims, ierr)
 
-
-        !
-        ! Read 'variable' dataset
-        !
-        allocate(var(dims(1),dims(2),dims(3)), stat=ierr)               ! Allocate variable buffer
-        if ( ierr /= 0 ) call AllocationError
-        cp_var = c_loc(var(1,1,1))                                      ! Get C-address for buffer
-
-        call h5dread_f(vid, H5T_NATIVE_DOUBLE, cp_var, ierr)            ! Fortran 2003 interface
-        if (ierr /= 0) call chidg_signal(FATAL,"read_field_domain_hdf: h5dread_f")
 
 
 
@@ -660,10 +657,28 @@ contains
 
 
 
+
+        !
+        ! Allocate storage for incoming element modes, create a memory dataspace (memspace)
+        !
+        allocate(var(nterms_s,1,1))
+        cp_var = c_loc(var(1,1,1))
+
+        ndims    = 3
+        dimsm(1) = size(var,1)
+        dimsm(2) = size(var,2)
+        dimsm(3) = size(var,3)
+        call h5screate_simple_f(ndims,dimsm,memspace,ierr)
+
+
+
+
         !
         !  Loop through elements and set 'variable' values
         !
         do ielem = 1,data%mesh(idom)%nelem
+
+
             !
             ! Get number of terms initialized for the current element
             !
@@ -672,7 +687,15 @@ contains
             else if (field_type == 'Auxiliary') then
                 nterms_ielem = data%sdata%auxiliary_field(aux_vector_index)%dom(idom)%vecs(ielem)%nterms() 
             end if
-            ielem_g      = data%mesh(idom)%elems(ielem)%ielement_g
+
+
+            !
+            ! get domain-global element index
+            !
+            ielem_g = data%mesh(idom)%elems(ielem)%ielement_g
+            start = [1-1,ielem_g-1,itime-1]   ! 0-based
+            count = [nterms_s, 1, 1]
+
 
 
             !
@@ -683,20 +706,31 @@ contains
             if (ierr /= 0) call AllocationError
 
 
+
+
+            !
+            ! Select subset of dataspace - sid, read selected modes into cp_var 
+            !
+            call h5sselect_hyperslab_f(sid, H5S_SELECT_SET_F, start, count, ierr)
+            call h5dread_f(vid, H5T_NATIVE_DOUBLE, cp_var, ierr, memspace, sid)
+
+
+
             !
             ! Check for reading lower, higher, or same-order solution
             !
             bufferterms = ZERO
             if ( nterms_s < nterms_ielem ) then
                 ! Reading a lower-order solution
-                bufferterms(1:nterms_s) = var(1:nterms_s, ielem_g, itime)
+                bufferterms(1:nterms_s) = var(1:nterms_s, 1, 1)
             else if ( nterms_s > nterms_ielem ) then
                 ! Reading a higher-order solution
-                bufferterms(1:nterms_ielem) = var(1:nterms_ielem, ielem_g, itime)
+                bufferterms(1:nterms_ielem) = var(1:nterms_ielem, 1, 1)
             else
                 ! Reading a solution of same order
-                bufferterms(1:nterms_ielem) = var(1:nterms_ielem, ielem_g, itime)
+                bufferterms(1:nterms_ielem) = var(1:nterms_ielem, 1, 1)
             end if
+
 
             ! Store modes in ChiDG Vector
             if (field_type == 'Primary') then
@@ -708,18 +742,26 @@ contains
                 call data%sdata%auxiliary_field(aux_vector_index)%dom(idom)%vecs(ielem)%setvar(ivar,itime,real(bufferterms,rk))
             end if
 
+
+
         end do
+
+
+
+
 
 
 
         !
         ! Close variable dataset, domain/variable group.
         !
-        call h5dclose_f(vid,ierr)       ! Close the variable dataset
-        call h5gclose_f(gid,ierr)       ! Close the Domain/Variable group
+        call h5sclose_f(memspace,ierr)  ! Close memory space
+        call h5dclose_f(vid,ierr)       ! Close variable dataset
+        call h5sclose_f(sid,ierr)       ! Close Variable dataspaces
+        call h5gclose_f(gid,ierr)       ! Close Domain/Variable group
 
 
-    end subroutine read_field_domain_hdf
+    end subroutine read_domain_field_hdf
     !*************************************************************************************
    
    
@@ -754,11 +796,13 @@ contains
     !!  @date   11/5/2016
     !!
     !----------------------------------------------------------------------------------------
-    subroutine write_field_domain_hdf(domain_id,data,field_name,itime)
-        integer(HID_T),     intent(in)  :: domain_id
-        type(chidg_data_t), intent(in)  :: data
-        character(*),       intent(in)  :: field_name
-        integer(ik),        intent(in)  :: itime
+    subroutine write_domain_field_hdf(domain_id,data,field_name,itime,attribute_name,attribute_value)
+        integer(HID_T),     intent(in)              :: domain_id
+        type(chidg_data_t), intent(in)              :: data
+        character(*),       intent(in)              :: field_name
+        integer(ik),        intent(in)              :: itime
+        character(*),       intent(in), optional    :: attribute_name
+        real(rk),           intent(in), optional    :: attribute_value
 
 
         type(H5O_INFO_T) :: info
@@ -902,6 +946,11 @@ contains
         end do
 
 
+        !
+        ! Write order of the domain variable
+        !
+        !call h5set_attribute
+
 
 
         call h5pclose_f(crp_list, ierr) ! Close dataset creation property
@@ -910,7 +959,7 @@ contains
         call h5gclose_f(gid,ierr)       ! Close Domain/Variable group
 
 
-    end subroutine write_field_domain_hdf
+    end subroutine write_domain_field_hdf
     !****************************************************************************************
 
 

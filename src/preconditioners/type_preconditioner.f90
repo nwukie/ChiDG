@@ -1,7 +1,7 @@
 module type_preconditioner
     use mod_kinds,          only: rk, ik
-    use type_chidgMatrix,   only: chidgMatrix_t
-    use type_chidgVector,   only: chidgVector_t
+    use type_chidg_matrix,   only: chidg_matrix_t
+    use type_chidg_vector,   only: chidg_vector_t
     use type_chidg_data,    only: chidg_data_t
     use type_timer,         only: timer_t
 
@@ -70,8 +70,8 @@ contains
     !------------------------------------------------------------------------------------
     subroutine update(self,A,b)
         class(preconditioner_t),    intent(inout)   :: self
-        type(chidgMatrix_t),        intent(in)      :: A
-        type(chidgVector_t),        intent(in)      :: b
+        type(chidg_matrix_t),        intent(in)      :: A
+        type(chidg_vector_t),        intent(in)      :: b
 
     end subroutine update
     !************************************************************************************
@@ -91,10 +91,10 @@ contains
     !------------------------------------------------------------------------------------
     function apply(self,A,v) result(z)
         class(preconditioner_t),    intent(inout)   :: self
-        type(chidgMatrix_t),        intent(in)      :: A
-        type(chidgVector_t),        intent(in)      :: v
+        type(chidg_matrix_t),        intent(in)      :: A
+        type(chidg_vector_t),        intent(in)      :: v
 
-        type(chidgVector_t)     :: z
+        type(chidg_vector_t)     :: z
 
 
         !

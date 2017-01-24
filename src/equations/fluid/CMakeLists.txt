@@ -10,5 +10,7 @@ add_lib_sources(
                 type_ideal_gas.f90
                 type_sutherlands_law.f90
                 type_stokes_hypothesis.f90
+                type_reynolds_analogy.f90
+                type_zero_turbulent_model_fields.f90
                 )
 

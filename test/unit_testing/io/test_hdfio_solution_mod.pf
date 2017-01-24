@@ -44,13 +44,13 @@ module test_hdfio_solution_mod
 
 contains
 
-    !>  NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
-    !!  procedure. The argument names have to match
+    !>  NOTE: make sure to use 'this' instead of 'self' since these are over-writting a 
+    !!  derived type procedure. The argument names have to match
     !!
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_hdfio_solution),    intent(inout)   :: this
 
@@ -68,7 +68,7 @@ contains
         !
         ! Create file
         !
-        call create_mesh_file("D1 E27 M1",this%fileorig)
+        call create_mesh_file("D1 NxNxN",this%fileorig,nelem_xi=3,nelem_eta=3,nelem_zeta=3)
 
         !
         ! Initialize chidg domain
@@ -76,16 +76,16 @@ contains
         spacedim = 3
         call this%chidgO1%read_grid(this%fileorig,spacedim)
         call this%chidgO1%set('Solution Order', integer_input=1)
-        call this%chidgO1%initialize_solution_domains()
+        call this%chidgO1%init('domains')
         call this%chidgO1%init('communication')
-        call this%chidgO1%initialize_solution_solver()
+        call this%chidgO1%init('solvers')
 
         spacedim = 3
         call this%chidgO2%read_grid(this%fileorig,spacedim)
         call this%chidgO2%set('Solution Order', integer_input=2)
-        call this%chidgO2%initialize_solution_domains()
+        call this%chidgO2%init('domains')
         call this%chidgO2%init('communication')
-        call this%chidgO2%initialize_solution_solver()
+        call this%chidgO2%init('solvers')
 
 
         !
@@ -95,7 +95,7 @@ contains
         call copy_file(this%fileorig, this%fileO2)
         
     end subroutine
-    !***************************************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -103,7 +103,7 @@ contains
 
     
 
-    !---------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_hdfio_solution),    intent(inout)   :: this
 
@@ -121,7 +121,7 @@ contains
         call delete_file(this%fileO2)
 
     end subroutine
-    !***************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -202,7 +202,7 @@ contains
         end associate
 
     end subroutine test_hdfio_solution_writeO1_read_O1
-    !*********************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -219,7 +219,7 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !---------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     @Test
     subroutine test_hdfio_solution_writeO2_read_O2(this)
         class(test_hdfio_solution),     intent(inout)   :: this 
@@ -277,7 +277,7 @@ contains
        end associate
             
     end subroutine test_hdfio_solution_writeO2_read_O2
-    !************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -298,7 +298,7 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !-------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     @Test
     subroutine test_hdfio_solution_writeO1_read_O2(this)
         class(test_hdfio_solution),     intent(inout)   :: this 
@@ -362,7 +362,7 @@ contains
        end associate
             
     end subroutine test_hdfio_solution_writeO1_read_O2
-    !*********************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -384,7 +384,7 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !---------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     @Test
     subroutine test_hdfio_solution_writeO2_read_O1(this)
         class(test_hdfio_solution),     intent(inout)   :: this 
@@ -447,7 +447,7 @@ contains
        end associate
             
     end subroutine test_hdfio_solution_writeO2_read_O1
-    !***********************************************************************************************
+    !*******************************************************************************************
 
 
 

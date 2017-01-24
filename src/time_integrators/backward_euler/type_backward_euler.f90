@@ -1,4 +1,4 @@
-module backward_euler
+module type_backward_euler
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, DIAG, XI_MIN, XI_MAX
     use type_time_integrator,   only: time_integrator_t
@@ -6,7 +6,7 @@ module backward_euler
     use type_nonlinear_solver,  only: nonlinear_solver_t
     use type_linear_solver,     only: linear_solver_t
     use type_preconditioner,    only: preconditioner_t
-    use type_chidgVector
+    use type_chidg_vector
 
     use mod_spatial,            only: update_space
 
@@ -20,7 +20,7 @@ module backward_euler
     !!
     !!  @author Nathan A. Wukie
     !!
-    !------------------------------------------------------------
+    !----------------------------------------------------------------------------------
     type, extends(time_integrator_t), public :: backward_euler_t
 
     contains
@@ -29,7 +29,7 @@ module backward_euler
         final       :: destructor
 
     end type backward_euler_t
-    !-----------------------------------------------------------
+    !----------------------------------------------------------------------------------
 
 
 
@@ -61,12 +61,13 @@ contains
         class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
 
         character(100)          :: filename
-        integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex, ninner, iinner, ieqn, idom
+        integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex, &
+                                   ninner, iinner, ieqn, idom
         integer(ik)             :: rstart, rend, cstart, cend, nterms
         real(rk)                :: resid, rnorm_0, rnorm_n
         real                    :: tstart, tstop, telapsed
         real(rk), allocatable   :: vals(:)
-        type(chidgVector_t)     :: b, qn, qold, qnew, dtau
+        type(chidg_vector_t)     :: b, qn, qold, qnew, dtau
       
 
 
@@ -333,10 +334,4 @@ contains
 
 
 
-end module backward_euler
-
-
-
-
-
-
+end module type_backward_euler

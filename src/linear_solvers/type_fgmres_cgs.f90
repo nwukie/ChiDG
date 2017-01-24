@@ -10,8 +10,8 @@ module type_fgmres_cgs
     use type_timer,             only: timer_t
     use type_linear_solver,     only: linear_solver_t 
     use type_preconditioner,    only: preconditioner_t
-    use type_chidgVector
-    use type_chidgMatrix
+    use type_chidg_vector
+    use type_chidg_matrix
 
     use operator_chidg_dot,     only: dot
     use operator_chidg_mv,      only: chidg_mv, timer_comm, timer_blas
@@ -59,28 +59,26 @@ contains
     !---------------------------------------------------------------------------------------------
     subroutine solve(self,A,x,b,M)
         class(fgmres_cgs_t),        intent(inout)               :: self
-        type(chidgMatrix_t),        intent(inout)               :: A
-        type(chidgVector_t),        intent(inout)               :: x
-        type(chidgVector_t),        intent(inout)               :: b
+        type(chidg_matrix_t),        intent(inout)               :: A
+        type(chidg_vector_t),        intent(inout)               :: x
+        type(chidg_vector_t),        intent(inout)               :: b
         class(preconditioner_t),    intent(inout), optional     :: M
 
         type(timer_t)   :: timer_mv, timer_dot, timer_norm, timer_precon
 
 
-        type(chidgVector_t)                     :: r, r0, diff, xold, w, x0
-        type(chidgVector_t), allocatable        :: v(:), z(:)
-        real(rk),            allocatable        :: h(:,:), h_square(:,:), dot_tmp(:)
-        real(rk),            allocatable        :: p(:), y(:), c(:), s(:), p_dim(:), y_dim(:)
-        real(rk)                                :: pj, pjp, h_ij, h_ipj, htmp
+        type(chidg_vector_t)                :: r, r0, diff, xold, w, x0
+        type(chidg_vector_t),   allocatable :: v(:), z(:)
+        real(rk),               allocatable :: h(:,:), h_square(:,:), dot_tmp(:), htmp(:,:)
+        real(rk),               allocatable :: p(:), y(:), c(:), s(:), p_dim(:), y_dim(:)
+        real(rk)                            :: pj, pjp, h_ij, h_ipj, norm_before, norm_after, L_crit, crit
 
         integer(ik) :: iparent, ierr, ivec, isol, nvecs, ielem
-        integer(ik) :: i, j, k, l, ii                 ! Loop counters
+        integer(ik) :: i, j, k, l, ii, ih                 ! Loop counters
         real(rk)    :: res, err, r0norm, gam, delta 
 
-        logical     :: converged = .false.
-        logical     :: max_iter  = .false.
-
-        logical :: equal = .false.
+        logical :: converged = .false.
+        logical :: max_iter  = .false.
         logical :: reorthogonalize = .false.
 
 
@@ -120,9 +118,10 @@ contains
         !
         ! Allocate hessenberg matrix to store orthogonalization
         !
-        allocate(h(self%m + 1, self%m), dot_tmp(self%m+1), stat=ierr)
+        allocate(h(self%m + 1, self%m), dot_tmp(self%m+1), htmp(self%m + 1, self%m), stat=ierr)
         if (ierr /= 0) call AllocationError
-        h = ZERO
+        h       = ZERO
+        htmp    = ZERO
         dot_tmp = ZERO
 
 
@@ -165,11 +164,12 @@ contains
             end do
 
 
-            p = ZERO
-            y = ZERO
-            c = ZERO
-            s = ZERO
-            h = ZERO
+            p    = ZERO
+            y    = ZERO
+            c    = ZERO
+            s    = ZERO
+            h    = ZERO
+            htmp = ZERO
 
 
 
@@ -188,6 +188,8 @@ contains
             !
             nvecs = 0
             do j = 1,self%m
+
+
                 nvecs = nvecs + 1
            
                 !
@@ -206,9 +208,13 @@ contains
                 call timer_mv%stop()
 
 
+                norm_before = w%norm(ChiDG_COMM)
+
+
+
                 call timer_dot%start()
                 !
-                ! Orthogonalization loop. Classical Gram-Schmidt
+                ! Orthogonalize once. Classical Gram-Schmidt
                 !
                 do i = 1,j
                     ! Compute the local dot product
@@ -216,7 +222,8 @@ contains
                 end do
 
                 ! Reduce local dot-product values across processors, distribute result back to all
-                call MPI_AllReduce(dot_tmp,h(:,j),j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+                !call MPI_AllReduce(dot_tmp,h(:,j),j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+                call MPI_AllReduce(dot_tmp,h(1:j,j),j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
                 
 
                 do i = 1,j
@@ -229,7 +236,65 @@ contains
 
                 call timer_norm%start()
                 h(j+1,j) = w%norm(ChiDG_COMM)
+                norm_after = h(j+1,j)
                 call timer_norm%stop()
+                !
+                ! End Orthogonalize once.
+                !
+
+
+
+                !
+                ! Selective reorthogonalization
+                !
+                ! Giraud and Langou
+                ! "A robust criterion for the modified Gram-Schmidt algorithm with selective reorthogonalization."
+                ! SIAM J. of Sci. Comp.     Vol. 25, No. 2, pp. 417-441.
+                !
+                ! They recommend L<1 for robustness, but it seems for these problems L can be increased.
+                !
+                L_crit = 1.0_rk
+                crit = sum(abs(h(1:j,j)))/norm_before
+
+                !
+                ! Orthogonalize twice. Classical Gram-Schmidt
+                !
+                reorthogonalize = (crit >= L_crit) 
+                if (reorthogonalize) then
+                    do i = 1,j
+                        ! Compute the local dot product
+                        dot_tmp(i) = dot(w,v(i))
+                    end do
+
+
+                    ! Reduce local dot-product values across processors, distribute result back to all
+                    !call MPI_AllReduce(dot_tmp,htmp(:,j),j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+                    call MPI_AllReduce(dot_tmp,htmp(1:j,j),j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+                    !h(:,j) = h(:,j) + htmp(:,j)
+
+
+                    !htmp(1,1) = 5.0
+
+                    h = htmp + h
+                    !do ih = 1,size(h,2)
+                    !    h(:,ih) = h(:,ih) + htmp(:,ih)
+                    !end do
+
+
+                    do i = 1,j
+                        w = w - htmp(i,j)*v(i)
+                    end do
+
+
+
+                    call timer_norm%start()
+                    h(j+1,j) = w%norm(ChiDG_COMM)
+                    call timer_norm%stop()
+                end if
+                !
+                ! End Orthogonalize twice.
+                !
+                
 
 
 
@@ -300,6 +365,7 @@ contains
                 if ( converged ) then
                     exit
                 end if
+
 
             end do  ! Outer GMRES Loop - restarts after m iterations
 

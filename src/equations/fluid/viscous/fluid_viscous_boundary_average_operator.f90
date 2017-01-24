@@ -88,16 +88,15 @@ contains
         type(chidg_worker_t),                       intent(inout)   :: worker
         class(properties_t),                        intent(inout)   :: prop
 
-        ! Equation indices
-        integer(ik)     :: irho, irhou, irhov, irhow, irhoE
-
-
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:) ::                                    &
             rho_m, rhou_m, rhov_m, rhow_m, rhoE_m,                                  &
             rho_p, rhou_p, rhov_p, rhow_p, rhoE_p,                                  &
-            p_m, T_m, u_m, v_m, w_m, invrho_m, mu_m, lamda_m,                       &
-            p_p, T_p, u_p, v_p, w_p, invrho_p, mu_p, lamda_p,                       &
+            p_m, T_m, u_m, v_m, w_m, invrho_m, mu_m, lamda_m, k_m,                  &
+            p_p, T_p, u_p, v_p, w_p, invrho_p, mu_p, lamda_p, k_p,                  &
+            mu_t_m, mu_t_p, mu_l_m, mu_l_p, lamda_l_m, lamda_l_p,                   &
+            lamda_t_m, lamda_t_p, k_l_m, k_l_p, k_t_m, k_t_p,                       &
+            mul_m, mul_p, mut_m, mut_p,                                             &
             drho_dx_m, drhou_dx_m, drhov_dx_m, drhow_dx_m, drhoE_dx_m,              &
             drho_dy_m, drhou_dy_m, drhov_dy_m, drhow_dy_m, drhoE_dy_m,              &
             drho_dz_m, drhou_dz_m, drhov_dz_m, drhow_dz_m, drhoE_dz_m,              &
@@ -129,14 +128,6 @@ contains
             normx, normy, normz
 
         real(rk) :: const, gam_m, gam_p
-
-        irho  = prop%get_primary_field_index("Density"   )
-        irhou = prop%get_primary_field_index("X-Momentum")
-        irhov = prop%get_primary_field_index("Y-Momentum")
-        irhow = prop%get_primary_field_index("Z-Momentum")
-        irhoE = prop%get_primary_field_index("Energy"    )
-
-        
 
 
         !
@@ -210,17 +201,52 @@ contains
 
 
 
+
         !
-        ! Compute pressure and total enthalpy
+        ! Get model fields:
+        !   Pressure
+        !   Temperature
+        !   Viscosity
+        !   Second Coefficient of Viscosity
+        !   Thermal Conductivity
         !
-        !p_m = prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
-        !p_p = prop%fluid%compute_pressure(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
-        !gam_m = prop%fluid%compute_gamma(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
-        !gam_p = prop%fluid%compute_gamma(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
-        p_m = worker%get_model_field_face('Pressure', 'value', 'face interior')
-        p_p = worker%get_model_field_face('Pressure', 'value', 'face exterior')
-        gam_m = 1.4_rk
-        gam_p = 1.4_rk
+        p_m       = worker%get_model_field_face('Pressure',                                  'value', 'face interior')
+        p_p       = worker%get_model_field_face('Pressure',                                  'value', 'face exterior')
+
+        T_m       = worker%get_model_field_face('Temperature',                               'value', 'face interior')
+        T_p       = worker%get_model_field_face('Temperature',                               'value', 'face exterior')
+
+        mu_l_m    = worker%get_model_field_face('Laminar Viscosity',                         'value', 'face interior')
+        mu_l_p    = worker%get_model_field_face('Laminar Viscosity',                         'value', 'face exterior')
+        mu_t_m    = worker%get_model_field_face('Turbulent Viscosity',                       'value', 'face interior')
+        mu_t_p    = worker%get_model_field_face('Turbulent Viscosity',                       'value', 'face exterior')
+
+        lamda_l_m = worker%get_model_field_face('Second Coefficient of Laminar Viscosity',   'value', 'face interior')
+        lamda_l_p = worker%get_model_field_face('Second Coefficient of Laminar Viscosity',   'value', 'face exterior')
+        lamda_t_m = worker%get_model_field_face('Second Coefficient of Turbulent Viscosity', 'value', 'face interior')
+        lamda_t_p = worker%get_model_field_face('Second Coefficient of Turbulent Viscosity', 'value', 'face exterior')
+
+        k_l_m     = worker%get_model_field_face('Laminar Thermal Conductivity',              'value', 'face interior')
+        k_l_p     = worker%get_model_field_face('Laminar Thermal Conductivity',              'value', 'face exterior')
+        k_t_m     = worker%get_model_field_face('Turbulent Thermal Conductivity',            'value', 'face interior')
+        k_t_p     = worker%get_model_field_face('Turbulent Thermal Conductivity',            'value', 'face exterior')
+
+        gam_m   = 1.4_rk
+        gam_p   = 1.4_rk
+
+
+
+        !
+        ! Compute effective viscosities, conductivity. Laminar + Turbulent
+        !
+        mu_m    = mu_l_m    + mu_t_m
+        mu_p    = mu_l_p    + mu_t_p
+
+        lamda_m = lamda_l_m + lamda_t_m
+        lamda_p = lamda_l_p + lamda_t_p
+
+        k_m     = k_l_m     + k_t_m
+        k_p     = k_l_p     + k_t_p
 
 
 
@@ -342,31 +368,6 @@ contains
 
 
 
-        !
-        ! Compute temperature
-        !
-        !T_m = prop%fluid%compute_temperature(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
-        !T_p = prop%fluid%compute_temperature(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
-        T_m = worker%get_model_field_face('Temperature', 'value', 'face interior')
-        T_p = worker%get_model_field_face('Temperature', 'value', 'face exterior')
-
-
-        !
-        ! Compute dynamic viscosity, second coefficient of viscosity
-        !
-        !mu_m    = prop%fluid%compute_viscosity_dynamic(T_m)
-        !mu_p    = prop%fluid%compute_viscosity_dynamic(T_p)
-
-        !lamda_m = prop%fluid%compute_viscosity_second(mu_m,T_m)
-        !lamda_p = prop%fluid%compute_viscosity_second(mu_p,T_p)
-
-        mu_m = worker%get_model_field_face('Viscosity', 'value', 'face interior')
-        mu_p = worker%get_model_field_face('Viscosity', 'value', 'face exterior')
-
-
-        lamda_m = worker%get_model_field_face('Second Coefficient of Viscosity', 'value', 'face interior')
-        lamda_p = worker%get_model_field_face('Second Coefficient of Viscosity', 'value', 'face exterior')
-
 
 
         !
@@ -484,13 +485,20 @@ contains
         !================================
         !          ENERGY FLUX
         !================================
-        flux_x_m = -(1003._rk*mu_m/0.8_rk)*dT_dx_m  -  (u_m*tau_xx_m + v_m*tau_xy_m + w_m*tau_xz_m)
-        flux_y_m = -(1003._rk*mu_m/0.8_rk)*dT_dy_m  -  (u_m*tau_xy_m + v_m*tau_yy_m + w_m*tau_yz_m)
-        flux_z_m = -(1003._rk*mu_m/0.8_rk)*dT_dz_m  -  (u_m*tau_xz_m + v_m*tau_yz_m + w_m*tau_zz_m)
+        !flux_x_m = -(1003._rk*mu_m/0.8_rk)*dT_dx_m  -  (u_m*tau_xx_m + v_m*tau_xy_m + w_m*tau_xz_m)
+        !flux_y_m = -(1003._rk*mu_m/0.8_rk)*dT_dy_m  -  (u_m*tau_xy_m + v_m*tau_yy_m + w_m*tau_yz_m)
+        !flux_z_m = -(1003._rk*mu_m/0.8_rk)*dT_dz_m  -  (u_m*tau_xz_m + v_m*tau_yz_m + w_m*tau_zz_m)
 
-        flux_x_p = -(1003._rk*mu_p/0.8_rk)*dT_dx_p  -  (u_p*tau_xx_p + v_p*tau_xy_p + w_p*tau_xz_p)
-        flux_y_p = -(1003._rk*mu_p/0.8_rk)*dT_dy_p  -  (u_p*tau_xy_p + v_p*tau_yy_p + w_p*tau_yz_p)
-        flux_z_p = -(1003._rk*mu_p/0.8_rk)*dT_dz_p  -  (u_p*tau_xz_p + v_p*tau_yz_p + w_p*tau_zz_p)
+        !flux_x_p = -(1003._rk*mu_p/0.8_rk)*dT_dx_p  -  (u_p*tau_xx_p + v_p*tau_xy_p + w_p*tau_xz_p)
+        !flux_y_p = -(1003._rk*mu_p/0.8_rk)*dT_dy_p  -  (u_p*tau_xy_p + v_p*tau_yy_p + w_p*tau_yz_p)
+        !flux_z_p = -(1003._rk*mu_p/0.8_rk)*dT_dz_p  -  (u_p*tau_xz_p + v_p*tau_yz_p + w_p*tau_zz_p)
+        flux_x_m = -k_m*dT_dx_m  -  (u_m*tau_xx_m + v_m*tau_xy_m + w_m*tau_xz_m)
+        flux_y_m = -k_m*dT_dy_m  -  (u_m*tau_xy_m + v_m*tau_yy_m + w_m*tau_yz_m)
+        flux_z_m = -k_m*dT_dz_m  -  (u_m*tau_xz_m + v_m*tau_yz_m + w_m*tau_zz_m)
+
+        flux_x_p = -k_p*dT_dx_p  -  (u_p*tau_xx_p + v_p*tau_xy_p + w_p*tau_xz_p)
+        flux_y_p = -k_p*dT_dy_p  -  (u_p*tau_xy_p + v_p*tau_yy_p + w_p*tau_yz_p)
+        flux_z_p = -k_p*dT_dz_p  -  (u_p*tau_xz_p + v_p*tau_yz_p + w_p*tau_zz_p)
 
 
         flux_x = (flux_x_m + flux_x_p)

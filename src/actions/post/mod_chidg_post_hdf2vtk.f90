@@ -7,7 +7,7 @@
 !!  Usage: chidg post 'chidgfile'
 !!  
 !
-!----------------------------------------------------------------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------------------
 module mod_chidg_post_hdf2vtk
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
@@ -32,8 +32,8 @@ contains
     !!
     !!
     !!
-    !
-    !------------------------------------------------------------------------------------------------------------------------------------------
+    !!
+    !------------------------------------------------------------------------------------------
     subroutine chidg_post_hdf2vtk(filename)
 
         character(*)                    ::  filename
@@ -77,9 +77,11 @@ contains
         ! Initialize solution data storage
         !
         call chidg%set('Solution Order', integer_input=solution_order)
-        call chidg%initialize_solution_domains()
+        !call chidg%initialize_solution_domains()
+        call chidg%init('domains')
         call chidg%init('communication')
-        call chidg%initialize_solution_solver()
+        call chidg%init('solvers')
+        !call chidg%initialize_solution_solver()
 
 
         !
@@ -101,7 +103,7 @@ contains
 
 
     end subroutine chidg_post_hdf2vtk 
-    !******************************************************************************************************************************************
+    !******************************************************************************************
 
 
 

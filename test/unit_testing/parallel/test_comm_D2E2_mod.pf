@@ -4,7 +4,7 @@ module test_comm_D2E2_mod
     use mod_test_utilities,         only: create_mesh_file
     use mod_file_utilities,         only: delete_file
     use type_chidg,                 only: chidg_t
-    use type_chidgVector,           only: chidgVector_t
+    use type_chidg_vector,           only: chidg_vector_t
     use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
     use operator_chidg_dot,         only: dot
     use mpi_f08,                    only: MPI_COMM
@@ -41,10 +41,11 @@ module test_comm_D2E2_mod
 
 contains
 
-    !>  This test reads two 2x1x1 element grids using 1, 2, and 4 processors and tests communication data.
+    !>  This test reads two 2x1x1 element grids using 1, 2, and 4 processors and 
+    !!  tests communication data.
     !!
-    !!  Using 1 processor, all communication(face neighbors) should be local. Using 4 processors, all communication
-    !!  should occur globally, across processors.
+    !!  Using 1 processor, all communication(face neighbors) should be local. 
+    !!  Using 4 processors, all communication should occur globally, across processors.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/22/2016
@@ -73,7 +74,7 @@ contains
         ! Create grid file
         !
         if (IRANK == GLOBAL_MASTER) then
-            call create_mesh_file("D2 E2 M1",this%gridfile)
+            call create_mesh_file("D2 NxNxN M1",this%gridfile, nelem_xi=4, nelem_eta=1, nelem_zeta=1)
         end if
         call MPI_Barrier(this%ChiDG_COMM,ierr)
 
@@ -89,9 +90,9 @@ contains
         ! Initialization
         !
         call this%chidg%set('Solution Order', integer_input=this%solution_order)
-        call this%chidg%initialize_solution_domains()
+        call this%chidg%init('domains')
         call this%chidg%init('communication')
-        call this%chidg%initialize_solution_solver()
+        call this%chidg%init('solvers')
 
 
         !
@@ -187,7 +188,7 @@ contains
     subroutine chidgvector__dot_comm(self)
         class(test_comm_D2E2), intent(inout) :: self
 
-        type(chidgVector_t) :: a, b
+        type(chidg_vector_t) :: a, b
         integer(ik)         :: nelem
         real(rk)            :: computed_dot, expected_dot
 

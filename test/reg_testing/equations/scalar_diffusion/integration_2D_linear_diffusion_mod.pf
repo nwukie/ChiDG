@@ -140,7 +140,7 @@ module integration_2D_linear_diffusion_mod
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/19/2016
     !!
-    !-----------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     type, extends(equation_builder_t), public :: test_2D_linear_diffusion_builder_t
 
     contains
@@ -149,7 +149,7 @@ module integration_2D_linear_diffusion_mod
         procedure   :: build
 
     end type test_2D_linear_diffusion_builder_t
-    !******************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -240,7 +240,7 @@ contains
     !!  @date   8/19/2016
     !!
     !!
-    !------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
         class(test_2D_LD_volume_source_t),  intent(inout)   :: self
         type(chidg_worker_t),               intent(inout)   :: worker
@@ -275,7 +275,7 @@ contains
 
 
     end subroutine compute
-    !****************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -350,14 +350,14 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/30/2016
     !!
-    !---------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine init_builder(self)
         class(test_2D_linear_diffusion_builder_t),   intent(inout)  :: self
 
         call self%set_name('Test 2D Linear Diffusion')
 
     end subroutine init_builder
-    !*********************************************************************************************
+    !*****************************************************************************************
 
     
 
@@ -368,7 +368,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/19/2016
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function build(self,blueprint) result(linear_diffusion_eqn)
         class(test_2D_linear_diffusion_builder_t),  intent(in)  :: self
         character(*),                               intent(in)  :: blueprint
@@ -397,7 +397,7 @@ contains
 
 
     end function build
-    !*********************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -477,26 +477,25 @@ contains
         end do
 
     end function getParameters
-    !*******************************************************************************************
+    !******************************************************************************************
 
 
 
     !>  Reporting the parameters of the test
     !!
     !!
-    !-------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     function toString(this) result(string)
         class (case_grid_order),    intent(in)  :: this
         character(:), allocatable   :: string
 
         character(len=200) :: buffer
 
-        !write(buffer,'( "(gridfile, order)=","(", A30,",", I2, ")" )') this%gridfile, this%order
         write(buffer,'( "(nelem_xi, nelem_eta, order)=","(", I2,",", I2,",", I1, ")" )') this%nelem_xi,this%nelem_eta,this%order
         string = trim(buffer)
 
     end function toString
-    !********************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -515,7 +514,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!
     !!
-    !--------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(linear_diffusion_2D),  intent(inout)   :: this
 
@@ -667,10 +666,10 @@ contains
 
 
         call this%chidg%set('Solution Order', integer_input=this%order)
-        call this%chidg%initialize_solution_domains()
-        call this%chidg%init("communication")
-        call this%chidg%init("chimera")
-        call this%chidg%initialize_solution_solver()
+        call this%chidg%init('domains')
+        call this%chidg%init('communication')
+        call this%chidg%init('chimera')
+        call this%chidg%init('solvers')
 
 
         !
@@ -680,24 +679,30 @@ contains
         call this%chidg%set("Nonlinear Solver", algorithm=nonlinear_solver, options=noptions)
         call this%chidg%set("Linear Solver",    algorithm=linear_solver,    options=loptions)
         call this%chidg%set("Preconditioner",   algorithm=preconditioner)
+!=======
+!        call this%chidg%set('Time Integrator',  algorithm=time_integrator,  options=toptions)
+!        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+!        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+!        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
+!>>>>>>> dev
 
 
         !
         ! Initialize solution
         !
-        call create_function(fcn,"constant")
+        call create_function(fcn,'constant')
 
-        call fcn%set_option("val",0.1_rk)
+        call fcn%set_option('val',0.1_rk)
         call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,1)
 
 
         !
         ! Wrap-up initialization activities
         !
-        call this%chidg%init("finalize")
+        call this%chidg%init('finalize')
 
     end subroutine SetUp
-    !******************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -705,7 +710,7 @@ contains
     !!
     !!
     !!
-    !------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(linear_diffusion_2D),  intent(inout)   :: this
 
@@ -717,7 +722,7 @@ contains
         end if
 
     end subroutine tearDown
-    !******************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -738,7 +743,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     @Test(npes=[1,2,3])
     subroutine run_calculations(self)
         class(linear_diffusion_2D),  intent(inout)   :: self
@@ -759,8 +764,9 @@ contains
 
 
         !
-        ! Store the number of nonlinear iterations that the solution converged in. Problem is linear
-        ! so it should converge in 1 Newton Step. Really, just the solution of 1 linear system of equations.
+        ! Store the number of nonlinear iterations that the solution converged in. 
+        ! Problem is linear so it should converge in 1 Newton Step. Really, just the 
+        ! solution of 1 linear system of equations.
         !
         nsteps_convergence(npes_index,grid_index,order_index) = self%chidg%nonlinear_solver%newton_iterations           !conforming grids
 
@@ -778,7 +784,7 @@ contains
 
 
     end subroutine run_calculations
-    !*******************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -798,7 +804,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @author Nathan A. Wukie (AFRL)
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     @Test(npes=[1])
     subroutine test_conv_conform(self)
         class(linear_diffusion_2D),  intent(inout)   :: self
@@ -820,7 +826,7 @@ contains
 
 
     end subroutine test_conv_conform
-    !*******************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -836,7 +842,7 @@ contains
     !!  @date   9/16/2016
     !!
     !!
-    !--------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     @Test(npes=[1])
     subroutine test_err_conform(self)
         class(linear_diffusion_2D),  intent(inout)   :: self
@@ -872,7 +878,7 @@ contains
 
 
     end subroutine test_err_conform
-    !*******************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -900,10 +906,12 @@ contains
 
         integer(ik) :: iu
         integer(ik) :: ielem, idom, ierr, itime
-        real(rk)    :: error_squared_sum, error_squared_sum_reduced, element_error_squared, error
+        real(rk)    :: error_squared_sum, error_squared_sum_reduced, element_error_squared, &
+                       error
 
 
-        associate (mesh => data%mesh, sdata => data%sdata, eqnset => data%eqnset, prop => data%eqnset(1)%prop)
+        associate (mesh => data%mesh, sdata => data%sdata, eqnset => data%eqnset, &
+                   prop => data%eqnset(1)%prop)
 
 
             !
@@ -971,7 +979,7 @@ contains
         error = sqrt(error_squared_sum_reduced)
 
     end function compute_2D_linear_diffusion_error
-    !**********************************************************************************************
+    !*****************************************************************************************
 
 
 

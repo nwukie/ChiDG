@@ -1,22 +1,22 @@
-module type_chidgVector_send
+module type_chidg_vector_send
 #include <messenger.h>
-    use mod_kinds,                  only: ik
-    use type_ivector,               only: ivector_t
-    use type_mesh,                  only: mesh_t
-    use type_chidgVector_send_comm, only: chidgVector_send_comm_t
-    use mpi_f08,                    only: MPI_Request
+    use mod_kinds,                      only: ik
+    use type_ivector,                   only: ivector_t
+    use type_mesh,                      only: mesh_t
+    use type_chidg_vector_send_comm,    only: chidg_vector_send_comm_t
+    use mpi_f08,                        only: MPI_Request, MPI_STATUSES_IGNORE, MPI_Waitall
     implicit none
 
 
 
 
-    !>  Container for storing information about what parts of chidgVector to send to other
+    !>  Container for storing information about what parts of chidg_vector to send to other
     !!  processors.
     !!
-    !!  For each processor that we are sending data to, a chidgVector_send_comm_t instance exists:
+    !!  For each processor that we are sending data to, a chidg_vector_send_comm_t instance exists:
     !!      self%comm(icomm)
     !!
-    !!  The chidgVector_send_comm_t instance contains all the information about what
+    !!  The chidg_vector_send_comm_t instance contains all the information about what
     !!  data we are sending to a specific processor.
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -25,16 +25,17 @@ module type_chidgVector_send
     !!
     !!
     !----------------------------------------------------------------------------------------
-    type, public :: chidgVector_send_t
+    type, public :: chidg_vector_send_t
 
-        type(chidgVector_send_comm_t),  allocatable :: comm(:)
-        type(MPI_Request),              allocatable :: isend_handles(:)
+        type(chidg_vector_send_comm_t),  allocatable :: comm(:)
+        type(MPI_Request),               allocatable :: isend_handles(:)
 
     contains
 
         procedure, public   :: init
+        procedure, public   :: init_wait
 
-    end type chidgVector_send_t
+    end type chidg_vector_send_t
     !*****************************************************************************************
 
 
@@ -56,7 +57,7 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     subroutine init(self,mesh)
-        class(chidgVector_send_t),  intent(inout)   :: self
+        class(chidg_vector_send_t),  intent(inout)   :: self
         type(mesh_t),               intent(in)      :: mesh(:)
 
         integer(ik) :: idom, iproc, nprocs_send, ierr, loc, nsends
@@ -115,7 +116,7 @@ contains
 
         !
         ! Accumulate total number of sends and allocate storage for mpi_requests for each send. 
-        ! That way, chidgVector%comm_wait can wait on them to complete.
+        ! That way, chidg_vector%comm_wait can wait on them to complete.
         !
         nsends = 0
         do iproc = 1,comm_procs%size()
@@ -134,7 +135,34 @@ contains
 
 
 
+    !>  Wait on any outstanding mpi_requests that were sent during 
+    !!  initiailization, self%init.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/13/2017
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine init_wait(self)
+        class(chidg_vector_send_t),  intent(inout)   :: self
+        
+        integer(ik) :: icomm, nrequests, ierr
+
+        
+        do icomm = 1,size(self%comm)
+
+            nrequests = self%comm(icomm)%initialization_requests%size()
+            if (nrequests > 0) then
+                call MPI_Waitall(nrequests, self%comm(icomm)%initialization_requests%data, MPI_STATUSES_IGNORE, ierr)
+            end if
+
+        end do
+
+    end subroutine init_wait
+    !***************************************************************************************
 
 
 
-end module type_chidgVector_send
+
+
+end module type_chidg_vector_send

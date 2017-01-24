@@ -10,7 +10,7 @@
 !!
 !!
 !!
-!--------------------------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------
 @Test
 subroutine test__detect_chimera_donors()
     use pfunit_mod
@@ -66,7 +66,7 @@ subroutine test__detect_chimera_donors()
 
 
     call chidg%set('Solution Order', integer_input=2)
-    call chidg%initialize_solution_domains()
+    call chidg%init('domains')
     call chidg%init('communication')
 
 
@@ -225,4 +225,4 @@ subroutine test__detect_chimera_donors()
 
 
 end subroutine test__detect_chimera_donors
-!*************************************************************************************************************
+!***********************************************************************************************

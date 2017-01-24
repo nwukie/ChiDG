@@ -5,8 +5,8 @@ module test_comm_chimera_mod
     use mod_test_utilities,         only: create_mesh_file
     use mod_file_utilities,         only: delete_file
     use type_chidg,                 only: chidg_t
-    use type_chidgMatrix,           only: chidgMatrix_t
-    use type_chidgVector,           only: chidgVector_t
+    use type_chidg_matrix,           only: chidg_matrix_t
+    use type_chidg_vector,           only: chidg_vector_t
     use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
     use mpi_f08,                    only: MPI_COMM
     use pfunit_mod
@@ -99,9 +99,7 @@ contains
         ! Initialization
         !
         call this%chidg%set('Solution Order', integer_input=this%solution_order)
-        call this%chidg%initialize_solution_domains()
-        !call this%chidg%init('communication',this%ChiDG_COMM)
-        !call this%chidg%init('chimera',this%ChiDG_COMM)
+        call this%chidg%init('domains')
         call this%chidg%init('communication')
         call this%chidg%init('chimera')
 

@@ -98,10 +98,12 @@ contains
         ! Initialize chidg solution data storage
         !
         call this%chidg%set('Solution Order', integer_input=2)
-        call this%chidg%initialize_solution_domains()
+        !call this%chidg%initialize_solution_domains()
+        call this%chidg%init('domains')
         call this%chidg%init('communication')
         call this%chidg%init('chimera')
-        call this%chidg%initialize_solution_solver()
+        call this%chidg%init('solvers')
+        !call this%chidg%initialize_solution_solver()
 
         !
         ! Initialized solution to constant values
@@ -118,14 +120,14 @@ contains
 
     
     end subroutine setUp
-    !***********************************************************************************************
+    !*******************************************************************************************
     
 
     !>
     !!
     !!
     !!
-    !-----------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_interpolate_chimera),    intent(inout)   :: this
 
@@ -136,24 +138,24 @@ contains
         call delete_file(this%filename)
 
     end subroutine tearDown
-    !************************************************************************************************
+    !*******************************************************************************************
 
     
     
     
-    !------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------
     !                               Face - surface interpolation - Autodiff
-    !------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------
         
     
     
-    !>  Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. Testing fuction values. 
+    !>  Interpolation of modes to surface quadrature nodes. Seeding neighbor element. 
+    !!  source=NEIGHBOR. Testing fuction values. 
     !!
     !!  @author Nathan A. Wukie
     !!
     !!
-    !!
-    !------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     @Test
     subroutine test__interpolate_face_chimera_AD__values__idE(self)
         class(test_interpolate_chimera),    intent(inout)   :: self
@@ -228,20 +230,21 @@ contains
         end associate
         
     end subroutine test__interpolate_face_chimera_AD__values__idE
-    !***********************************************************************************************
+    !*******************************************************************************************
     
     
     
     
     
         
-    !> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. source=NEIGHBOR. Testing fuction values. 
+    !> Interpolation of modes to surface quadrature nodes. Seeding neighbor element. 
+    !! source=NEIGHBOR. Testing fuction values. 
     !!
     !!  @author Nathan A. Wukie
     !!
     !!
     !!
-    !-----------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     @Test
     subroutine test__interpolate_face_chimera_AD__derivatives__idF(self)
         class(test_interpolate_chimera),    intent(inout)   :: self
@@ -262,8 +265,8 @@ contains
 
 
             !
-            ! A seed element, this is the current element. Since we are performing a NEIGHBOR interpolation, 
-            ! derivatives should be zero
+            ! A seed element, this is the current element. Since we are performing a 
+            ! NEIGHBOR interpolation, derivatives should be zero
             !
             call fcn%seed%init(idomain_g    = 1,     &
                                idomain_l    = 1,     &
@@ -293,7 +296,8 @@ contains
             ngq    = faces(ielem,iface)%gq%nnodes_f
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
 
-            ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
+            ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
+            ! not yet allocated
             allocate(u_gq(ngq))             ! AD
             allocate(deriv_ref(nderiv))     ! Real
             
@@ -305,14 +309,15 @@ contains
             
             deriv_ref = ZERO
             
-            ! Test that the derivatives for each gq variable are zero, since we seeded with a neighbor element
+            ! Test that the derivatives for each gq variable are zero, since we seeded 
+            ! with a neighbor element
             do igq = 1,ngq
                 @assertEqual(deriv_ref,u_gq(igq)%xp_ad_,tol)
             end do
         end associate
         
     end subroutine test__interpolate_face_chimera_AD__derivatives__idF
-    !**********************************************************************************************
+    !*******************************************************************************************
     
 
 
@@ -322,13 +327,13 @@ contains
 
     
     
-    !> Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. Testing fuction values. 
+    !> Interpolation of modes to surface quadrature nodes. Seeding current element. 
+    !! source=NEIGHBOR. Testing fuction values. 
     !!
     !!  @author Nathan A. Wukie
     !!
     !!
-    !!
-    !----------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     @Test
     subroutine test__interpolate_face_chimera_AD__values__idG(self)
         class(test_interpolate_chimera),    intent(inout)   :: self
@@ -348,8 +353,8 @@ contains
             itime   = 1
 
             !
-            ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so all dervative 
-            ! arrays should be nonzero
+            ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so 
+            ! all dervative arrays should be nonzero
             !
             call fcn%seed%init(idomain_g    = 2,     &
                                idomain_l    = 2,     &
@@ -379,7 +384,8 @@ contains
             ivar = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
             ngq  = faces(ielem,iface)%gq%nnodes_f
             
-            ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
+            ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
+            ! not yet allocated
             allocate(u_gq(ngq))
             allocate(u_ref(ngq))
             
@@ -404,19 +410,20 @@ contains
         end associate
         
     end subroutine test__interpolate_face_chimera_AD__values__idG
-    !*************************************************************************************************
+    !*******************************************************************************************
     
     
     
     
     
-    !>  Interpolation of modes to surface quadrature nodes. Seeding current element. source=NEIGHBOR. 
+    !>  Interpolation of modes to surface quadrature nodes. Seeding current element. 
+    !!  source=NEIGHBOR. 
     !!  Testing fuction derivatives. 
     !!
     !!  @author Nathan A. Wukie
     !!
     !!
-    !-------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     @Test
     subroutine test__interpolate_face_chimera_AD__derivatives__idH(self)
         class(test_interpolate_chimera),    intent(inout)   :: self
@@ -442,8 +449,8 @@ contains
             ChiID = self%chidg%data%mesh(idomain)%faces(ielem,iface)%ChiID
 
             !
-            ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so all 
-            ! dervative arrays should be nonzero
+            ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so 
+            ! all dervative arrays should be nonzero
             !
             call fcn%seed%init(idomain_g    = 2,     &
                                idomain_l    = 2,     &
@@ -473,7 +480,8 @@ contains
             ngq    = faces(ielem,iface)%gq%nnodes_f
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
 
-            ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
+            ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
+            ! not yet allocated
             allocate(u_gq(ngq))
             allocate(deriv_ref(nderiv))
             
@@ -507,7 +515,7 @@ contains
         end associate
         
     end subroutine test__interpolate_face_chimera_AD__derivatives__idH
-    !*************************************************************************************************
+    !*******************************************************************************************
 
 
 

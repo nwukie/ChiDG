@@ -12,8 +12,8 @@ subroutine test_fgmres_solve()
     use type_fgmres,                only: fgmres_t
     use precon_identity,            only: precon_identity_t
 
-    use type_chidgMatrix
-    use type_chidgVector,           only: chidgVector_t
+    use type_chidg_matrix
+    use type_chidg_vector,           only: chidg_vector_t
 
     use mod_test_utilities,         only: create_mesh
     implicit none
@@ -61,9 +61,9 @@ subroutine test_fgmres_solve()
     call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
 
     call chidg%set('Solution Order', integer_input=1)
-    call chidg%initialize_solution_domains()
+    call chidg%init('domains')
     call chidg%init('communication')
-    call chidg%initialize_solution_solver()
+    call chidg%init('solvers')
 
 
 

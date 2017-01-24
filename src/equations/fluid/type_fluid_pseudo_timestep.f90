@@ -44,14 +44,14 @@ contains
     subroutine compute(self,idomain,mesh,prop,sdata,cfl,itime)
         class(fluid_pseudo_timestep_t), intent(in)      :: self
         integer(ik),                    intent(in)      :: idomain
-        type(mesh_t),                   intent(in)      :: mesh(:)
+        type(mesh_t),                   intent(inout)   :: mesh(:)
         type(properties_t),             intent(in)      :: prop
         type(solverdata_t),             intent(inout)   :: sdata
-        real(rk),                       intent(in)      :: cfl
+        real(rk),                       intent(in)      :: cfl(:)
         integer(ik),                    intent(in)      :: itime
 
 
-        integer(ik) :: ielem
+        integer(ik) :: ielem, ieqn
 
         integer(ik) :: irho, irhou, irhov, irhow, irhoE
 
@@ -102,9 +102,10 @@ contains
 
             
 
-            ! Compiling with DEBUG and bounds checking, gfortran will say 'c' is not correct size.
-            ! This is not correct because 'c' should be sized according to the rhs of the expression.
-            ! The sizes of gam, p, and rho are all the same. This is a recognized bug.
+            ! Compiling with DEBUG and bounds checking, gfortran will say 'c' is not 
+            ! correct size. This is not correct because 'c' should be sized according to 
+            ! the rhs of the expression. The sizes of gam, p, and rho are all the same. 
+            ! This is a recognized bug.
             !
             !   GCC/GFortran Bugzilla Bug 52162 
             !
@@ -128,7 +129,8 @@ contains
 
 
             !
-            ! Compute mean characteristic speed. First compute average velocity magnitude and sound speed
+            ! Compute mean characteristic speed. First compute average velocity 
+            ! magnitude and sound speed
             !
             lam = sum(vmag)/size(vmag) + sum(c)/size(vmag)
 
@@ -142,7 +144,10 @@ contains
             !
             ! Compute elemen-local timestep
             !
-            sdata%dt(idomain,ielem) = (cfl*h)/lam
+            !sdata%dt(idomain,ielem) = (cfl*h)/lam
+            do ieqn = 1,size(cfl)
+                mesh(idomain)%elems(ielem)%dtau(ieqn) = cfl(ieqn)*h/lam
+            end do
 
 
 
@@ -151,7 +156,7 @@ contains
 
 
     end subroutine compute
-    !*************************************************************************************************
+    !***************************************************************************************
 
 
 

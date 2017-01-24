@@ -181,9 +181,10 @@ contains
 
 
         character(:),   allocatable :: user_msg
-        integer(ik)                 :: ielem, irow, icol, eparent_l, idom, ndom, ilower, &
-                                       trans_elem, trans_blk, nrowsA, ncolsA, ncolsB,    &
-                                       iblk_diag_parent, iblk_diag, iblk, icomm, parent_proc, ierr, iproc
+        integer(ik)                 :: ielem, irow, icol, eparent_l, idom, ndom, ilower,    &
+                                       trans_elem, trans_blk, nrowsA, ncolsA, ncolsB,       &
+                                       iblk_diag_parent, iblk_diag, iblk, icomm,            &
+                                       parent_proc, ierr, iproc, idiagLD, idiagA
 
 
         call write_line(' Computing RAS-ILU0 factorization', io_proc=GLOBAL_MASTER)
@@ -219,15 +220,21 @@ contains
             !
             ! Store diagonal blocks of A
             !
+            !do ielem = 1,size(A%dom(idom)%lblks,1)
+            !    self%LD%dom(idom)%lblks(ielem,DIAG)%mat = A%dom(idom)%lblks(ielem,DIAG)%mat
+            !end do
             do ielem = 1,size(A%dom(idom)%lblks,1)
-                self%LD%dom(idom)%lblks(ielem,DIAG)%mat = A%dom(idom)%lblks(ielem,DIAG)%mat
+                idiagLD = self%LD%dom(idom)%lblks(ielem,1)%get_diagonal()
+                idiagA  =       A%dom(idom)%lblks(ielem,1)%get_diagonal()
+                self%LD%dom(idom)%lblks(ielem,1)%data_(idiagLD)%mat = A%dom(idom)%lblks(ielem,1)%data_(idiagA)%mat
             end do
 
 
             !
             ! Invert first diagonal block
             !
-            self%LD%dom(idom)%lblks(1,DIAG)%mat = inv(self%LD%dom(idom)%lblks(1,DIAG)%mat)
+            idiagLD = self%LD%dom(idom)%lblks(1,1)%get_diagonal()
+            self%LD%dom(idom)%lblks(1,1)%data_(idiagLD)%mat = inv(self%LD%dom(idom)%lblks(1,1)%data_(idiagLD)%mat)
 
 
             !
@@ -239,14 +246,17 @@ contains
                 do icol = 1,A%dom(idom)%local_lower_blocks(irow)%size()
                     ilower = A%dom(idom)%local_lower_blocks(irow)%at(icol)
 
-                    if (allocated(A%dom(idom)%lblks(irow,ilower)%mat) .and. A%dom(idom)%lblks(irow,ilower)%parent_proc() == IRANK) then
+                    if (allocated(A%dom(idom)%lblks(irow,1)%data_(ilower)%mat) .and. A%dom(idom)%lblks(irow,1)%data_(ilower)%parent_proc() == IRANK) then
 
                         ! Get parent index and transpose block
-                        eparent_l  = A%dom(idom)%lblks(irow,ilower)%eparent_l()
-                        trans_blk  = A%dom(idom)%local_transpose(irow,ilower)
+                        eparent_l  = A%dom(idom)%lblks(irow,1)%eparent_l(ilower)
+                        trans_blk  = A%dom(idom)%lblks(irow,1)%itranspose(ilower)
+                        !trans_blk  = A%dom(idom)%local_transpose(irow,ilower)
 
                         ! Compute and store the contribution to the lower-triangular part of LD
-                        self%LD%dom(idom)%lblks(irow,ilower)%mat = matmul(A%dom(idom)%lblks(irow,ilower)%mat,self%LD%dom(idom)%lblks(eparent_l,DIAG)%mat)
+                        !self%LD%dom(idom)%lblks(irow,ilower)%mat = matmul(A%dom(idom)%lblks(irow,ilower)%mat,self%LD%dom(idom)%lblks(eparent_l,DIAG)%mat)
+                        idiag_eparent = self%LD%dom(idom)%lblks(eparent_l,1)%get_diagonal()
+                        self%LD%dom(idom)%lblks(irow,1)%data_(ilower)%mat = matmul(A%dom(idom)%lblks(irow,1)%data_(ilower)%mat,self%LD%dom(idom)%lblks(eparent_l,1)%data_(idiag_eparent)%mat)
 
                         ! Modify the current diagonal by this lower-triangular part multiplied by opposite upper-triangular part. (The component in the transposed position)
                         self%LD%dom(idom)%lblks(irow,DIAG)%mat = self%LD%dom(idom)%lblks(irow,DIAG)%mat  -  matmul(self%LD%dom(idom)%lblks(irow,ilower)%mat,  A%dom(idom)%lblks(eparent_l,trans_blk)%mat)

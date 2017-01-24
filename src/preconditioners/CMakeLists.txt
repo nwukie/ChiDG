@@ -1,4 +1,4 @@
-#add_subdirectory(RASILU0)
+add_subdirectory(RASILU0)
 
 add_lib_sources(
                 type_preconditioner.f90 

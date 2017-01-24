@@ -71,7 +71,7 @@ contains
 
         type(ivector_t)             :: dom_send
         integer(ik)                 :: idom, idom_send, ierr, iblk, ielem, iface, &
-                                       nelem_send, ielem_send, ielem_n, iface_n, iblk_send, nblks
+                                       nelem_send, ielem_send, ielem_n, iface_n, iblk_send, nblks, idiag, imat
         integer(ik),    allocatable :: send_procs_dom(:)
         logical                     :: comm_domain, overlap_elem
         type(MPI_REQUEST)           :: request
@@ -160,16 +160,20 @@ contains
                 !
                 ! Search for blocks to send that couple with the off-processor domain
                 !
-                do iface = 1,NFACES
+!                do iface = 1,NFACES
+!
+!                    if ( (mesh(idom)%faces(ielem,iface)%ftype          == INTERIOR)  .and. &
+!                         (mesh(idom)%faces(ielem,iface)%ineighbor_proc == proc    ) ) then
+!                        call self%dom(idom_send)%blk_send(ielem_send)%push_back(iface)
+!                    end if
+!
+!                end do
 
-                    if ( (mesh(idom)%faces(ielem,iface)%ftype          == INTERIOR)  .and. &
-                         (mesh(idom)%faces(ielem,iface)%ineighbor_proc == proc    ) ) then
-                        call self%dom(idom_send)%blk_send(ielem_send)%push_back(iface)
-                    end if
-
+                do imat = 1,A%dom(idom)%lblks(ielem,1)%size()
+                     if ( A%dom(idom)%lblks(ielem,1)%parent_proc(imat) == proc ) then
+                         call self%dom(idom_send)%blk_send(ielem_send)%push_back(imat)
+                     end if
                 end do
-
-
 
 
 
@@ -183,30 +187,41 @@ contains
                     ! Get neighbor for iface
                     if ( (mesh(idom)%faces(ielem,iface)%ftype          == INTERIOR) .and. &
                          (mesh(idom)%faces(ielem,iface)%ineighbor_proc == IRANK   ) ) then
+
                         ielem_n = mesh(idom)%faces(ielem,iface)%ineighbor_element_l
 
 
-                        ! Loop through the faces of the neighbor element to see if it is also in the RAS overlap. 
-                        ! If so, add its index to the list of linearization blocks to send for ielem.
-                        do iface_n = 1,NFACES
-                            if ( (mesh(idom)%faces(ielem_n,iface_n)%ineighbor_proc     == proc) .and. &
-                                 (mesh(idom)%faces(ielem_n,iface_n)%ineighbor_domain_g == self%dom(idom_send)%idomain_g) ) then
-                                call self%dom(idom_send)%blk_send(ielem_send)%push_back(iface)
-                                exit
-                            end if
+!                        ! Loop through the faces of the neighbor element to see if it is also in the RAS overlap. 
+!                        ! If so, add its index to the list of linearization blocks to send for ielem.
+!                        do iface_n = 1,NFACES
+!                            if ( (mesh(idom)%faces(ielem_n,iface_n)%ineighbor_proc     == proc) .and. &
+!                                 (mesh(idom)%faces(ielem_n,iface_n)%ineighbor_domain_g == self%dom(idom_send)%idomain_g) ) then
+!                                call self%dom(idom_send)%blk_send(ielem_send)%push_back(iface)
+!                                exit
+!                            end if
+!                        end do
+
+
+                        do imat = 1,A%dom(idom)%lblks(ielem_n,1)%size()
+                             if ( (A%dom(idom)%lblks(ielem_n,1)%parent_proc(imat) == proc ) .and. &
+                                  (A%dom(idom)%lblks(ielem_n,1)%dparent_g(imat)   == self%dom(idom_send)%idomain_g) ) then
+                                 call self%dom(idom_send)%blk_send(ielem_send)%push_back(imat)
+                                 exit
+                             end if
                         end do
 
                     end if
 
-
                 end do
+
 
 
 
                 !
                 ! Add the block diagonal to the list to send
                 !
-                call self%dom(idom_send)%blk_send(ielem_send)%push_back(DIAG)
+                idiag = A%dom(idom)%lblks(ielem,1)%get_diagonal()
+                call self%dom(idom_send)%blk_send(ielem_send)%push_back(idiag)
 
 
 
@@ -224,26 +239,50 @@ contains
                 do iblk_send = 1,self%dom(idom_send)%blk_send(ielem_send)%size()
                     iblk = self%dom(idom_send)%blk_send(ielem_send)%at(iblk_send)
 
-                    call MPI_ISend(A%dom(idom)%lblks(ielem,iblk)%nrows_,       1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
+!                    call MPI_ISend(A%dom(idom)%lblks(ielem,iblk)%nrows_,       1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
+!                    call self%mpi_requests%push_back(request)
+!
+!                    call MPI_ISend(A%dom(idom)%lblks(ielem,iblk)%ncols_,       1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
+!                    call self%mpi_requests%push_back(request)
+!
+!                    call MPI_ISend(A%dom(idom)%lblks(ielem,iblk)%dparent_g_,   1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
+!                    call self%mpi_requests%push_back(request)
+!
+!                    call MPI_ISend(A%dom(idom)%lblks(ielem,iblk)%dparent_l_,   1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
+!                    call self%mpi_requests%push_back(request)
+!
+!                    call MPI_ISend(A%dom(idom)%lblks(ielem,iblk)%eparent_g_,   1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
+!                    call self%mpi_requests%push_back(request)
+!
+!                    call MPI_ISend(A%dom(idom)%lblks(ielem,iblk)%eparent_l_,   1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
+!                    call self%mpi_requests%push_back(request)
+!
+!                    call MPI_ISend(A%dom(idom)%lblks(ielem,iblk)%parent_proc_, 1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
+!                    call self%mpi_requests%push_back(request)
+
+
+                    call MPI_ISend(A%dom(idom)%lblks(ielem,1)%data_(iblk)%nrows_,       1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
                     call self%mpi_requests%push_back(request)
 
-                    call MPI_ISend(A%dom(idom)%lblks(ielem,iblk)%ncols_,       1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
+                    call MPI_ISend(A%dom(idom)%lblks(ielem,1)%data_(iblk)%ncols_,       1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
                     call self%mpi_requests%push_back(request)
 
-                    call MPI_ISend(A%dom(idom)%lblks(ielem,iblk)%dparent_g_,   1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
+                    call MPI_ISend(A%dom(idom)%lblks(ielem,1)%data_(iblk)%dparent_g_,   1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
                     call self%mpi_requests%push_back(request)
 
-                    call MPI_ISend(A%dom(idom)%lblks(ielem,iblk)%dparent_l_,   1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
+                    call MPI_ISend(A%dom(idom)%lblks(ielem,1)%data_(iblk)%dparent_l_,   1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
                     call self%mpi_requests%push_back(request)
 
-                    call MPI_ISend(A%dom(idom)%lblks(ielem,iblk)%eparent_g_,   1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
+                    call MPI_ISend(A%dom(idom)%lblks(ielem,1)%data_(iblk)%eparent_g_,   1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
                     call self%mpi_requests%push_back(request)
 
-                    call MPI_ISend(A%dom(idom)%lblks(ielem,iblk)%eparent_l_,   1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
+                    call MPI_ISend(A%dom(idom)%lblks(ielem,1)%data_(iblk)%eparent_l_,   1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
                     call self%mpi_requests%push_back(request)
 
-                    call MPI_ISend(A%dom(idom)%lblks(ielem,iblk)%parent_proc_, 1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
+                    call MPI_ISend(A%dom(idom)%lblks(ielem,1)%data_(iblk)%parent_proc_, 1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
                     call self%mpi_requests%push_back(request)
+
+
 
                 end do !iblk_send
 

@@ -256,23 +256,40 @@ contains
                     if ( parent_proc == IRANK ) then
 
                         ! Off-diagonal block is associated with element on the recv proc.
-                        do iblk_loop = 1,size(a%lblks,2)
-                            if ( allocated(a%lblks(eparent_l,iblk_loop)%mat) ) then
-                                eparent_g_offdiag_loop   = a%lblks(eparent_l,iblk_loop)%eparent_g()
-                                eparent_l_offdiag_loop   = a%lblks(eparent_l,iblk_loop)%eparent_l()
-                                parent_proc_offdiag_loop = a%lblks(eparent_l,iblk_loop)%parent_proc()
+                        !do iblk_loop = 1,size(a%lblks,2)
+                        !    if ( allocated(a%lblks(eparent_l,iblk_loop)%mat) ) then
+                        !        eparent_g_offdiag_loop   = a%lblks(eparent_l,iblk_loop)%eparent_g()
+                        !        eparent_l_offdiag_loop   = a%lblks(eparent_l,iblk_loop)%eparent_l()
+                        !        parent_proc_offdiag_loop = a%lblks(eparent_l,iblk_loop)%parent_proc()
+                        !
+                        !
+                        !        transpose_found = ( (eparent_g_offdiag_loop == eparent_g_diag  ) .and. &
+                        !                            (parent_proc_offdiag_loop == parent_proc_diag) )
+                        !        if (transpose_found) then
+                        !            self%elem(ielem_recv)%trans_elem(iblk_recv) = eparent_l
+                        !            self%elem(ielem_recv)%trans_blk(iblk_recv)  = iblk_loop
+                        !            exit
+                        !        end if
+                        !    end if
+                        !end do !iblk_loop
 
 
-                                transpose_found = ( (eparent_g_offdiag_loop == eparent_g_diag  ) .and. &
-                                                    (parent_proc_offdiag_loop == parent_proc_diag) )
-                                if (transpose_found) then
-                                    self%elem(ielem_recv)%trans_elem(iblk_recv) = eparent_l
-                                    self%elem(ielem_recv)%trans_blk(iblk_recv)  = iblk_loop
-                                    exit
-                                end if
+                        ! Off-diagonal block is associated with element on the recv proc.
+                        do iblk_loop = 1,a%lblks(eparent_l,1)%size()
+
+                            eparent_g_offdiag_loop   = a%lblks(eparent_l,1)%eparent_g(iblk_loop)
+                            eparent_l_offdiag_loop   = a%lblks(eparent_l,1)%eparent_l(iblk_loop)
+                            parent_proc_offdiag_loop = a%lblks(eparent_l,1)%parent_proc(iblk_loop)
+
+                            transpose_found = ( (eparent_g_offdiag_loop == eparent_g_diag  ) .and. &
+                                                (parent_proc_offdiag_loop == parent_proc_diag) )
+                            if (transpose_found) then
+                                self%elem(ielem_recv)%trans_elem(iblk_recv) = eparent_l
+                                self%elem(ielem_recv)%trans_blk(iblk_recv)  = iblk_loop
+                                exit
                             end if
+                            
                         end do !iblk_loop
-
                         if ( .not. transpose_found ) call chidg_signal(FATAL, "No transposed block found for RASILU0 recv block")
 
 

@@ -299,25 +299,10 @@ contains
                         !
                         ! TODO: Add consideration for ntime and how that affects upper/lower status.
                         !
-                        if ( parent_proc == IRANK ) then
-                            lower_block = (eparent_l < ielem)
-                        else if ( parent_proc < IRANK ) then
-                            lower_block = .true.
-                        else if ( parent_proc > IRANK ) then
-                            lower_block = .false.
-                        end if
-    
-                        if ( parent_proc == IRANK ) then
-                            upper_block = (eparent_l > ielem)
-                        else if ( parent_proc > IRANK ) then
-                            upper_block = .true.
-                        else if ( parent_proc < IRANK ) then
-                            upper_block = .false.
-                        end if
 
+                        lower_block = ( (parent_proc == IRANK .and. eparent_l < ielem) .or. (parent_proc < IRANK) )
+                        upper_block = ( (parent_proc == IRANK .and. eparent_l > ielem) .or. (parent_proc > IRANK) )
 
-                        lower_block = ( (eparent_l < ielem .and. parent_proc == IRANK) .or. (parent_proc < IRANK) )
-                        upper_block = ( (eparent_l > ielem .and. parent_proc == IRANK) .or. (parent_proc > IRANK) )
                         if ( lower_block ) then
                             call self%local_lower_blocks(ielem)%push_back(imat)
                         else if ( upper_block ) then

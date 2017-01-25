@@ -542,7 +542,7 @@ contains
         character(:),       allocatable     :: extension, domain_equation_set
         type(meshdata_t),   allocatable     :: meshdata(:)
         integer                             :: iext, extloc, idom, ndomains, iread, ierr, &
-                                               domain_dimensionality
+                                               domain_dimensionality, ielem
 
 
         if ( IRANK == GLOBAL_MASTER ) call write_line("Reading grid")

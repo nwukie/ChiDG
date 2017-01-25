@@ -69,10 +69,10 @@ contains
                                        ielem_loop, iblk_loop, eparent_l_diag,               &
                                        eparent_l_diag_loop, eparent_l_offdiag_loop,         &
                                        iblk_diag_loop, eparent_g_diag, eparent_g_diag_loop, &
-                                       eparent_g_offdiag_loop, test_elem, test_blk
+                                       eparent_g_offdiag_loop, test_elem, test_blk, idomain_g_recv, ielement_g_recv
         integer(ik)                 :: block_data(7)
         integer(ik), allocatable    :: blk_indices(:)
-        logical                     :: lower_block, upper_block, overlap_element, transpose_found
+        logical                     :: lower_block, upper_block, overlap_element, transpose_found, diagonal
 
         self%proc = proc
 
@@ -103,7 +103,9 @@ contains
             !
             ! Get number of blocks that are being received for the element
             !
-            call MPI_Recv(nblk_recv, 1, MPI_INTEGER4, proc, idomain_g, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(idomain_g_recv,  1, MPI_INTEGER4, proc, idomain_g, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(ielement_g_recv, 1, MPI_INTEGER4, proc, idomain_g, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(nblk_recv,       1, MPI_INTEGER4, proc, idomain_g, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
             ! Initialize element row with the number of blocks being received
             call self%elem(ielem_recv)%init(nblk_recv)
@@ -139,9 +141,13 @@ contains
                 if ( (nrows == 0) .or. (ncols == 0) ) call chidg_signal(FATAL, "nrows/ncols == 0")
                 call self%elem(ielem_recv)%blks(iblk)%init(nrows,ncols,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
 
+               
+                ! Detect diagonal block
+                diagonal = (dparent_g == idomain_g_recv) .and. (eparent_g == ielement_g_recv)
+                if (diagonal) call self%elem(ielem_recv)%diag%push_back(iblk)
 
             end do !iblk
-
+            if (self%elem(ielem_recv)%diag%size() /= 1) call chidg_signal(FATAL,"RASILU0%recv_dom_comm: Error detecting diagonal block sent from overlapping process.")
 
         end do ! ielem_recv
 
@@ -153,27 +159,34 @@ contains
 
 
 
+!        !
+!        ! Find diagonal block
+!        !
+!        do ielem_recv = 1,size(self%elem)
+!
+!            nblk_recv = size(self%elem(ielem_recv)%blks)
+!
+!            do iblk_recv = 1,size(self%elem(ielem_recv)%blks)
+!                iblk = self%elem(ielem_recv)%blk_indices(iblk_recv)
+!
+!                dparent_g   = self%elem(ielem_recv)%blks(iblk_recv)%dparent_g()
+!                eparent_g   = self%elem(ielem_recv)%blks(iblk_recv)%eparent_g()
+!
+!                diagonal = (dparent_g
+!                if (iblk == DIAG) call self%elem(ielem_recv)%diag%push_back(iblk_recv)
+!
+!            end do !iblk
+!            if (self%elem(ielem_recv)%diag%size() /= 1) call chidg_signal(FATAL,"RASILU0_recv_dom_comm%init: Number of diagonal blocks is not equal to one")
+!
+!        end do !ielem_recv
+
+
+
+
+
         !
-        ! Find diagonal block
+        ! Determine block lower/upper status and find transposed block indices
         !
-        do ielem_recv = 1,size(self%elem)
-
-            nblk_recv = size(self%elem(ielem_recv)%blks)
-
-            do iblk_recv = 1,size(self%elem(ielem_recv)%blks)
-                iblk = self%elem(ielem_recv)%blk_indices(iblk_recv)
-
-                if (iblk == DIAG) call self%elem(ielem_recv)%diag%push_back(iblk_recv)
-
-            end do !iblk
-            if (self%elem(ielem_recv)%diag%size() /= 1) call chidg_signal(FATAL,"RASILU0_recv_dom_comm%init: Number of diagonal blocks is not equal to one")
-
-        end do !ielem_recv
-
-
-
-
-
         do ielem_recv = 1,size(self%elem)
 
             iblk_diag        = self%elem(ielem_recv)%diag%at(1)
@@ -183,9 +196,8 @@ contains
 
 
             !
-            ! Find lower/upper blocks
+            ! Determine lower/upper
             !
-            !do iblk_recv = 1,nblk_recv
             do iblk_recv = 1,size(self%elem(ielem_recv)%blks)
                 if ( iblk_recv /= iblk_diag ) then
 
@@ -220,11 +232,6 @@ contains
 
 
 
-
-
-
-
-
             !
             ! Find transposed block
             !
@@ -254,25 +261,6 @@ contains
                     ! Transpose of blocks coupled with the interior
                     !
                     if ( parent_proc == IRANK ) then
-
-                        ! Off-diagonal block is associated with element on the recv proc.
-                        !do iblk_loop = 1,size(a%lblks,2)
-                        !    if ( allocated(a%lblks(eparent_l,iblk_loop)%mat) ) then
-                        !        eparent_g_offdiag_loop   = a%lblks(eparent_l,iblk_loop)%eparent_g()
-                        !        eparent_l_offdiag_loop   = a%lblks(eparent_l,iblk_loop)%eparent_l()
-                        !        parent_proc_offdiag_loop = a%lblks(eparent_l,iblk_loop)%parent_proc()
-                        !
-                        !
-                        !        transpose_found = ( (eparent_g_offdiag_loop == eparent_g_diag  ) .and. &
-                        !                            (parent_proc_offdiag_loop == parent_proc_diag) )
-                        !        if (transpose_found) then
-                        !            self%elem(ielem_recv)%trans_elem(iblk_recv) = eparent_l
-                        !            self%elem(ielem_recv)%trans_blk(iblk_recv)  = iblk_loop
-                        !            exit
-                        !        end if
-                        !    end if
-                        !end do !iblk_loop
-
 
                         ! Off-diagonal block is associated with element on the recv proc.
                         do iblk_loop = 1,a%lblks(eparent_l,1)%size()

@@ -57,9 +57,7 @@ contains
         gq_rule = 1 !> Set collocation quadrature for testing coordinates at quadrature points
         
         
-        print*, 'setup - 1'
         call this%chidg%start_up('core')
-        print*, 'setup - 2'
         allocate(this%faces(6))
         
         !> (x = 0-5 :: y = 0-1 :: z = 0-1)
@@ -83,7 +81,6 @@ contains
         call nodes(8)%set(5._rk, 1._rk, 1._rk)
         this%nodes = nodes
 
-        print*, 'setup - 3'
         mapping = 1
         call connectivity%init(mapping)
         call connectivity%set_domain_index(1)
@@ -91,7 +88,6 @@ contains
         call connectivity%set_element_nodes([1, 2, 3, 4, 5, 6, 7, 8])
         
         
-        print*, 'setup - 4'
         !> Initialize Element geometry and Numerics
         spacedim = 3
         idomain  = 1
@@ -102,7 +98,6 @@ contains
         call this%elem%init_geom(spacedim,nodes,connectivity,idomain,ielem)
         call this%elem%init_sol(neqns,nterms_s,ntime)
         
-        print*, 'setup - 5'
         
         !> Initialize face geometries
         call this%faces(XI_MIN)%init_geom(XI_MIN,this%elem)
@@ -112,7 +107,6 @@ contains
         call this%faces(ZETA_MIN)%init_geom(ZETA_MIN,this%elem)
         call this%faces(ZETA_MAX)%init_geom(ZETA_MAX,this%elem)
 
-        print*, 'setup - 6'
         !> Initialize face neighbors
         ftype = 0
         ineighbor_domain_g  = 0
@@ -143,14 +137,12 @@ contains
                                                       ineighbor_face,ineighbor_neqns,ineighbor_nterms_s,ineighbor_proc)
 
         
-        print*, 'setup - 7'
         call this%faces(XI_MIN)%init_sol(this%elem)
         call this%faces(XI_MAX)%init_sol(this%elem)
         call this%faces(ETA_MIN)%init_sol(this%elem)
         call this%faces(ETA_MAX)%init_sol(this%elem)
         call this%faces(ZETA_MIN)%init_sol(this%elem)
         call this%faces(ZETA_MAX)%init_sol(this%elem)
-        print*, 'setup - 8'
     end subroutine setUp
     !************************************************************************************
     

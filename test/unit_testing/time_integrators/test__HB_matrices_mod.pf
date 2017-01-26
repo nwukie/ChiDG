@@ -8,15 +8,18 @@ module test__HB_matrices_mod
 
     public  :: HB_matrices
 
-    !>
+    !>  This parameter initializes the state for each test
     !!
-    !!
+    !!  @author Mayank Sharma
+    !!  @date   26/1/2017
     !!
     !--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     @testParameter
     type, extends( AbstractTestParameter )  :: case_number_frequencies
         integer(ik)                         :: nfreq
         integer(ik)                         :: ntime
+        real(rk),   allocatable             :: freq(:)
+        real(rk),   allocatable             :: time(:)
         real(rk),   allocatable             :: test_invE(:,:)
         real(rk),   allocatable             :: test_dinvE(:,:)
         real(rk),   allocatable             :: test_D(:,:)
@@ -28,15 +31,18 @@ module test__HB_matrices_mod
 
 
 
-    !>
+    !>  Main texting fixture with test components that get initialized for each test
     !!
-    !!
+    !!  @author Mayank Sharma
+    !!  @date   26/1/2017
     !!
     !--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     @testCase(testParameters = {getParameters()}, constructor = newTest)
     type, extends( ParameterizedTestCase )      :: HB_matrices
         integer(ik)                 :: nfreq
         integer(ik)                 :: ntime
+        real(rk),   allocatable     :: freq(:)
+        real(rk),   allocatable     :: time(:)
         real(rk),   allocatable     :: test_invE(:,:)
         real(rk),   allocatable     :: test_dinvE(:,:)
         real(rk),   allocatable     :: test_D(:,:)
@@ -49,9 +55,10 @@ contains
 
 
 
-    !>
+    !>  Parameter constructors
     !!
-    !!
+    !!  @author Mayank Sharma
+    !!  @date   26/1/2017
     !!
     !--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     function newTest(test_parameter) result(test)
@@ -61,6 +68,8 @@ contains
 
         test%nfreq      = test_parameter%nfreq
         test%ntime      = test_parameter%ntime
+        test%freq       = test_parameter%freq
+        test%time       = test_parameter%time
         test%test_invE  = test_parameter%test_invE
         test%test_dinvE = test_parameter%test_dinvE
         test%test_D     = test_parameter%test_D
@@ -70,9 +79,10 @@ contains
 
 
 
-    !>
+    !>  Parameter initialization
     !!
-    !!
+    !!  @author Mayank Sharma
+    !!  @date   26/1/2017
     !!
     !--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     function getParameters() result(params)
@@ -80,6 +90,8 @@ contains
 
         integer(ik),    allocatable     :: nfreq(:)
         integer(ik),    allocatable     :: ntime(:)
+        real(rk)                        :: freq_1(1), freq_2(2), freq_3(3)
+        real(rk)                        :: time_3(3), time_5(5), time_7(7)
         real(rk),       allocatable     :: test_invE_3x3(:,:), test_invE_5x5(:,:), test_invE_7x7(:,:)
         real(rk),       allocatable     :: test_dinvE_3x3(:,:), test_dinvE_5x5(:,:), test_dinvE_7x7(:,:)
         real(rk),       allocatable     :: test_D_3x3(:,:), test_D_5x5(:,:), test_D_7x7(:,:)
@@ -88,6 +100,18 @@ contains
 
         nfreq = [1, 2, 3]
         ntime = [3, 5, 7]
+
+        freq_1 = [0.20000000000000001]
+        freq_2 = [0.20000000000000001, 0.40000000000000002]
+        freq_3 = [0.20000000000000001, 0.40000000000000002, 0.60000000000000009]
+
+        time_3 = [10.471975511965976, 20.943951023931952, 31.415926535897928]
+        time_5 = [6.2831853071795862, 12.566370614359172, 18.849555921538759, 25.132741228718345, 31.415926535897935]
+        time_7 = [4.4879895051282759, 8.9759790102565518, 13.463968515384826, 17.951958020513104, 22.439947525641379, 26.927937030769652, 31.415926535897928]
+
+        allocate(test_invE_3x3(3,3), test_dinvE_3x3(3,3), test_D_3x3(3,3))
+        allocate(test_invE_5x5(5,5), test_dinvE_5x5(5,5), test_D_5x5(5,5))
+        allocate(test_invE_7x7(7,7), test_dinvE_7x7(7,7), test_D_7x7(7,7))
 
         test_invE_3x3 = transpose(reshape([1.0000000000000000, 0.86602540378443882, -0.49999999999999978, & 
                                            1.0000000000000000, -0.86602540378443837, -0.50000000000000044, &
@@ -180,14 +204,20 @@ contains
 
             select case(icase)
                 case(1)
+                    params(icase)%freq       = freq_1
+                    params(icase)%time       = time_3
                     params(icase)%test_invE  = test_invE_3x3
                     params(icase)%test_dinvE = test_dinvE_3x3
                     params(icase)%test_D     = test_D_3x3
                 case(2)
+                    params(icase)%freq       = freq_2
+                    params(icase)%time       = time_5
                     params(icase)%test_invE  = test_invE_5x5
                     params(icase)%test_dinvE = test_dinvE_5x5
                     params(icase)%test_D     = test_D_5x5
                 case(3)
+                    params(icase)%freq       = freq_3
+                    params(icase)%time       = time_7
                     params(icase)%test_invE  = test_invE_7x7
                     params(icase)%test_dinvE = test_dinvE_7x7
                     params(icase)%test_D     = test_D_7x7
@@ -200,9 +230,10 @@ contains
 
 
 
-    !>
+    !>  Reporting the parameters of the test
     !!
-    !!
+    !!  @author Mayank Sharma
+    !!  @date   26/1/2017
     !!
     !--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     function toString(this) result(string)
@@ -219,8 +250,10 @@ contains
 
 
 
-    !>
+    !>  The main test
     !!
+    !!      - Test the matrices computed using subroutines in the source code with the ones passed in parameter initialization
+    !!      - Test whether the diagonal elements of the pseudo spectral operator are close to 0
     !!
     !!
     !--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -231,30 +264,33 @@ contains
         real(rk)        :: invE(this%ntime, this%ntime)
         real(rk)        :: dinvE(this%ntime, this%ntime)
         real(rk)        :: D(this%ntime, this%ntime)
+        real(rk)        :: primary_tol = 0.00001, secondary_tol = 0.0000001 ! primary_tol is used to compare the test matrices with the computed matrices
+                                                                            ! secondary_tol is used to compare the diagonal elements of D with zero
+        integer(ik)     :: i,j
 
-        real(rk)        :: freq(this%nfreq), time(this%ntime)
-        real(rk)        :: freq_min, dt, multiplier
-        integer(ik)     :: ifreq, itime
+        call calc_inv_E(this%nfreq, this%ntime, this%freq, this%time, invE)
+        call calc_diff_inv_E(this%nfreq, this%ntime, this%freq, this%time, dinvE)
+        call calc_pseudo_spectral_operator(this%nfreq, this%ntime, this%freq, this%time, D)
 
-        do ifreq = 1, this%nfreq
-            freq(ifreq) = real(ifreq,rk)*0.2_rk
+        !
+        ! Compare test matrices with computed matrices within a given tolerance
+        !
+        @assertEqual(this%test_invE, invE, primary_tol)
+        @assertEqual(this%test_dinvE, dinvE, primary_tol)
+        @assertEqual(this%test_D, D, primary_tol)
+
+        !
+        ! Test whether the diagonal elements of the pseudo spectral operator are close to ZERO
+        !
+        do i = 1,this%ntime
+            do j = 1,this%ntime
+                
+                if (i == j) then
+                    @assertEqual(ZERO, D(i,j), secondary_tol)
+                end if
+
+            end do
         end do
-
-        freq_min   = minval(freq)
-        dt         = ONE/real(this%ntime,rk)
-        multiplier = TWO*PI/freq_min
-
-        do itime = 1,this%ntime
-            time(itime) = multiplier*real(itime,rk)*dt
-        end do
-
-        call calc_inv_E(this%nfreq, this%ntime, freq, time, invE)
-        call calc_diff_inv_E(this%nfreq, this%ntime, freq, time, dinvE)
-        call calc_pseudo_spectral_operator(this%nfreq, this%ntime, freq, time, D)
-
-        @assertEqual(this%test_invE, invE)
-        @assertEqual(this%test_dinvE, dinvE)
-        @assertEqual(this%test_D, D)
 
     end subroutine test__HB_matrices
     !**************************************************************************************************************************************************************************

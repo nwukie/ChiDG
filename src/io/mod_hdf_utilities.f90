@@ -2399,6 +2399,7 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     function get_bc_patch_hdf(bcface_id) result(bc_patch)
+        use iso_c_binding,  only: c_ptr, c_loc
         integer(HID_T), intent(in)  :: bcface_id
 
         integer(HID_T)      :: faces_did, faces_sid

@@ -236,9 +236,8 @@ contains
                 ! Write solution if the count is right
                 !
                 !if (wcount == self%nwrite) then
-                    if (data%eqnset(1)%get_name() == 'Navier Stokes') then
-                        call write_solution_hdf(data,'flat_plate_new.h5')
-                        !call write_solution_hdf(data,'40x8x1.h5')
+                !    if (data%eqnset(1)%get_name() == 'Navier Stokes') then
+                !        call write_solution_hdf(data,'aachen_stator_cascade.h5')
                 !        write(filename,'(I2)') niter
                 !        call write_tecio_variables_unstructured(data,trim(filename)//'.dat',niter)
                 !        wcount = 0

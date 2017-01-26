@@ -1,6 +1,6 @@
 node {
     stage('Checkout'){
-        checkout scm
+        checkout([$class: 'GitSCM', branches: [[name: 'dev']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '31bb08f6-d8c2-47f0-a217-af319cc191f9', url: 'https://github.com/nwukie/ChiDG.git']]])
     }
 
     sh 'mkdir -p build'

@@ -88,7 +88,6 @@ contains
         class(properties_t),            intent(inout)   :: prop
 
 
-        integer(ik)                             :: iu
 
         type(AD_D), allocatable, dimension(:)   :: &
             dudx_m, dudy_m, dudz_m, dudx_p, dudy_p, dudz_p, &
@@ -98,11 +97,6 @@ contains
         real(rk),   allocatable, dimension(:)   :: &
             normx, normy, normz
 
-
-        !
-        ! Get variable index
-        !
-        iu = prop%get_primary_field_index("u")
 
         normx = worker%normal(1)
         normy = worker%normal(2)

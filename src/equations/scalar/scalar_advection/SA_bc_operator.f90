@@ -86,10 +86,6 @@ contains
         class(properties_t),        intent(inout)   :: prop
 
 
-        ! Equation indices
-        integer(ik)     :: iu
-
-
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   ::  &
             u, cx, cy, cz,                          &
@@ -97,12 +93,6 @@ contains
 
         real(rk),   allocatable, dimension(:)   ::  &
             normx, normy, normz
-
-
-        !
-        ! Get equation indices
-        !
-        iu = prop%get_primary_field_index("u")
 
 
         !

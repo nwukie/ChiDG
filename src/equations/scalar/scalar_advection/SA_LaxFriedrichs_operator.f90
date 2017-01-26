@@ -69,8 +69,6 @@ contains
         class(properties_t),                intent(inout)   :: prop
 
 
-        integer(ik)              :: iu
-
         type(AD_D), dimension(:), allocatable   ::  &
             u_m,  u_p,                              &
             cx_m, cy_m, cz_m,                       &
@@ -80,11 +78,6 @@ contains
         real(rk),   dimension(:), allocatable   ::  &
             normx, normy, normz, unormx, unormy, unormz
 
-
-        !
-        ! Get integer data
-        !
-        iu = prop%get_primary_field_index("u")
 
 
         !

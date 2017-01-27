@@ -79,7 +79,6 @@ contains
         type(chidg_worker_t),                               intent(inout)   :: worker
         class(properties_t),                                intent(inout)   :: prop
 
-        integer(ik)                             :: iu
 
         type(AD_D), allocatable, dimension(:)   ::  &
             u_m, u_p,                               &
@@ -90,11 +89,6 @@ contains
         real(rk),   allocatable, dimension(:)   ::  &
             normx, normy, normz
 
-
-        !
-        ! Get variable index
-        !
-        iu = prop%get_primary_field_index("u")
 
         
         !

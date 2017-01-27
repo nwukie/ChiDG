@@ -88,9 +88,6 @@ contains
         class(properties_t),        intent(inout)   :: prop
 
 
-        ! Equation indices
-        integer(ik)     :: irho, irhou, irhov, irhow, irhoE
-
 
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   ::          &
@@ -104,16 +101,6 @@ contains
             normx, normy, normz
             
         real(rk) :: gam_bc
-
-
-        !
-        ! Get equation indices
-        !
-        irho  = prop%get_primary_field_index("Density"   )
-        irhou = prop%get_primary_field_index("X-Momentum")
-        irhov = prop%get_primary_field_index("Y-Momentum")
-        irhow = prop%get_primary_field_index("Z-Momentum")
-        irhoE = prop%get_primary_field_index("Energy"    )
 
 
 
@@ -136,10 +123,8 @@ contains
         !
         ! Compute gamma
         !
-        !gam_bc = prop%fluid%compute_gamma(rho_bc,rhou_bc,rhov_bc,rhow_bc,rhoE_bc)
-        !p_bc   = prop%fluid%compute_pressure(rho_bc,rhou_bc,rhov_bc,rhow_bc,rhoE_bc)
-        gam_bc = 1.4_rk
         p_bc   = worker%get_model_field_face('Pressure','value','boundary')
+        gam_bc = 1.4_rk
 
 
 

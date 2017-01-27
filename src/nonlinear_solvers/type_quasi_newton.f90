@@ -241,7 +241,7 @@ contains
                 !        write(filename,'(I2)') niter
                 !        call write_tecio_variables_unstructured(data,trim(filename)//'.dat',niter)
                 !        wcount = 0
-                    end if
+                !    end if
                 !end if
                 wcount = wcount + 1
 

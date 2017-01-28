@@ -733,9 +733,9 @@ contains
         integer(HSIZE_T)                :: adim
         character(len=:),   allocatable :: command
         character(len=1024)             :: option, function_string, gname
-        logical                         :: option_exists, run, property_found, property_exists, set_fcn, list_fcns
+        logical                         :: option_exists, run, property_found, property_exists, set_fcn, list_fcns, read_val
         real(rk)                        :: val
-        integer                         :: ierr, type, igrp, iop, nmembers
+        integer                         :: ierr, type, igrp, iop, nmembers, read_status
         type(svector_t)                 :: bc_state_strings
         type(string_t)                  :: string
         class(function_t),  allocatable :: func
@@ -868,7 +868,14 @@ contains
 
                         command = "Set option value: "
                         call write_line(command, color='blue')
-                        read(*,*) val
+                        read_val = .true.
+                        do while(read_val)
+                            read(*,*,iostat=read_status) val
+                            if (read_status == 0) then
+                                read_val = .false.
+                            end if
+                        end do
+
 
                         !
                         ! Set option

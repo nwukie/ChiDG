@@ -95,10 +95,8 @@ contains
             resid = ONE    ! Force inner loop entry
             niter = 0      ! Initialize inner loop counter
 
-            !do while ( rnorm > self%tol )
 
             do while ( resid > self%tol )
-            !do while ( abs(resid - ONE) < 0.1 )
                 niter = niter + 1
                 call write_line("   niter: ", niter, delimiter='', columns=.True., column_width=20, io_proc=GLOBAL_MASTER)
 

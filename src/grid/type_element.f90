@@ -1177,7 +1177,7 @@ contains
         real(rk)    :: res, tol
 
 
-        tol = 10._rk*RKTOL
+        tol = 1000._rk*RKTOL
         !tol = RKTOL
 
 

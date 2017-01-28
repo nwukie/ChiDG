@@ -706,7 +706,6 @@ contains
 
                         nrows = size(A%dom(idom)%lblks(ielem,1)%data_(iblk)%mat,1)
                         ncols = size(A%dom(idom)%lblks(ielem,1)%data_(iblk)%mat,2)
-                        if (idomain_g /= 1) call chidg_signal(FATAL,"RAS%comm_recv: invalid tag.")
                         call MPI_ISend(A%dom(idom)%lblks(ielem,1)%data_(iblk)%mat, nrows*ncols, MPI_REAL8, proc, idomain_g, ChiDG_COMM, request, ierr)
 
                         ! Store requests to be checked by MPI_Wait
@@ -764,10 +763,9 @@ contains
                         ncols     = self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%ncols_
                         idomain_g = self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%dparent_g_
 
-                        if (idomain_g /= 1) call chidg_signal(FATAL,"RAS%comm_recv: invalid tag.")
-                        !call MPI_Recv(self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%mat, nrows*ncols, MPI_REAL8, proc, idomain_g, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-                        call MPI_IRecv(self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%mat, nrows*ncols, MPI_REAL8, proc, idomain_g, ChiDG_COMM, request, ierr)
-                        call self%mpi_requests%push_back(request)
+                        call MPI_Recv(self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%mat, nrows*ncols, MPI_REAL8, proc, idomain_g, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                        !call MPI_IRecv(self%recv%dom(idom_recv)%comm(icomm)%elem(ielem_recv)%blks(iblk_recv)%mat, nrows*ncols, MPI_REAL8, proc, idomain_g, ChiDG_COMM, request, ierr)
+                        !call self%mpi_requests%push_back(request)
 
                     end do !iblk_recv
 

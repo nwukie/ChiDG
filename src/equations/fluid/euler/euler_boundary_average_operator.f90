@@ -87,9 +87,6 @@ contains
         type(chidg_worker_t),                       intent(inout)   :: worker
         class(properties_t),                        intent(inout)   :: prop
 
-        ! Equation indices
-        integer(ik)     :: irho, irhou, irhov, irhow, irhoE
-
 
         ! Storage at quadrature nodes
         type(AD_D), allocatable,    dimension(:) :: &
@@ -109,13 +106,6 @@ contains
 
         real(rk), allocatable, dimension(:) ::      &
             normx, normy, normz
-
-
-        irho  = prop%get_primary_field_index("Density"   )
-        irhou = prop%get_primary_field_index("X-Momentum")
-        irhov = prop%get_primary_field_index("Y-Momentum")
-        irhow = prop%get_primary_field_index("Z-Momentum")
-        irhoE = prop%get_primary_field_index("Energy"    )
 
 
 
@@ -152,8 +142,6 @@ contains
         !
         ! Compute pressure and total enthalpy
         !
-        !p_m = prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
-        !p_p = prop%fluid%compute_pressure(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
         p_m = worker%get_model_field_face('Pressure', 'value', 'face interior')
         p_p = worker%get_model_field_face('Pressure', 'value', 'face exterior')
 

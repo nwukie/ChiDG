@@ -79,17 +79,9 @@ contains
         class(properties_t),                intent(inout)   :: prop
 
 
-        integer(ik)             :: iu
-
         type(AD_D), allocatable, dimension(:)   ::  &
             u, flux_x, flux_y, flux_z, cx, cy, cz
 
-
-
-        !
-        ! Get variable index from equation set
-        !
-        iu = prop%get_primary_field_index('u')
 
 
         !

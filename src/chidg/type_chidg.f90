@@ -183,6 +183,7 @@ contains
 
                 end if
 
+                ! Allocate an auxiliary ChiDG environment if not already done
                 if (.not. associated(self%auxiliary_environment)) then
                     allocate(self%auxiliary_environment, stat=ierr)
                     if (ierr /= 0) call AllocationError

@@ -7,6 +7,7 @@ module mod_models
 
     use type_ideal_gas,                                 only: ideal_gas_t
     use type_sutherlands_law,                           only: sutherlands_law_t
+    use type_constant_viscosity,                        only: constant_viscosity_t
     use type_stokes_hypothesis,                         only: stokes_hypothesis_t
     use type_reynolds_analogy,                          only: reynolds_analogy_t
     use type_zero_turbulent_model_fields,               only: zero_turbulent_model_fields_t
@@ -240,6 +241,7 @@ contains
 
         type(ideal_gas_t)                               :: IDEAL_GAS
         type(sutherlands_law_t)                         :: SUTHERLANDS_LAW
+        type(constant_viscosity_t)                      :: CONSTANT_VISCOSITY
         type(stokes_hypothesis_t)                       :: STOKES_HYPOTHESIS
         type(reynolds_analogy_t)                        :: REYNOLDS_ANALOGY
         type(zero_turbulent_model_fields_t)             :: ZERO_TURBULENT_MODEL_FIELDS
@@ -251,6 +253,7 @@ contains
 
             call model_factory%register(IDEAL_GAS)
             call model_factory%register(SUTHERLANDS_LAW)
+            call model_factory%register(CONSTANT_VISCOSITY)
             call model_factory%register(STOKES_HYPOTHESIS)
             call model_factory%register(REYNOLDS_ANALOGY)
             call model_factory%register(ZERO_TURBULENT_MODEL_FIELDS)

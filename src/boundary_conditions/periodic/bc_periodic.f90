@@ -44,6 +44,7 @@ contains
         ! Set operator name
         !
         call self%set_name("Periodic")
+        call self%set_family("Periodic")
 
 
 

@@ -80,24 +80,11 @@ contains
         type(chidg_worker_t),           intent(inout)   :: worker
         class(properties_t),            intent(inout)   :: prop
 
-        ! Equation indices
-        integer(ik)    :: irho, irhou, irhov, irhow, irhoE
 
 
         type(AD_D), allocatable, dimension(:) ::    &
             rho, rhou, rhov, rhow, rhoE, p, H,      &
             flux_x, flux_y, flux_z, invrho
-
-
-
-        !
-        ! Get equation indices
-        !
-        irho  = prop%get_primary_field_index("Density"   )
-        irhou = prop%get_primary_field_index("X-Momentum")
-        irhov = prop%get_primary_field_index("Y-Momentum")
-        irhow = prop%get_primary_field_index("Z-Momentum")
-        irhoE = prop%get_primary_field_index("Energy"    )
 
 
 
@@ -118,9 +105,7 @@ contains
         !
         ! Compute pressure and total enthalpy
         !
-        !p = prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE)
         p = worker%get_model_field_element('Pressure','value')
-
         H = (rhoE + p)*invrho
 
         !===========================

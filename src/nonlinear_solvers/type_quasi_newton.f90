@@ -95,10 +95,8 @@ contains
             resid = ONE    ! Force inner loop entry
             niter = 0      ! Initialize inner loop counter
 
-            !do while ( rnorm > self%tol )
 
             do while ( resid > self%tol )
-            !do while ( abs(resid - ONE) < 0.1 )
                 niter = niter + 1
                 call write_line("   niter: ", niter, delimiter='', columns=.True., column_width=20, io_proc=GLOBAL_MASTER)
 
@@ -231,13 +229,12 @@ contains
                 ! Write solution if the count is right
                 !
                 !if (wcount == self%nwrite) then
-                    if (data%eqnset(1)%get_name() == 'Navier Stokes') then
-                        call write_solution_hdf(data,'flat_plate_new.h5')
-                        !call write_solution_hdf(data,'40x8x1.h5')
+                !    if (data%eqnset(1)%get_name() == 'Navier Stokes') then
+                !        call write_solution_hdf(data,'aachen_stator_cascade.h5')
                 !        write(filename,'(I2)') niter
                 !        call write_tecio_variables_unstructured(data,trim(filename)//'.dat',niter)
                 !        wcount = 0
-                    end if
+                !    end if
                 !end if
                 wcount = wcount + 1
 

@@ -226,13 +226,14 @@ contains
     !-------------------------------------------------------------------------------------
     subroutine create_mesh_file__multiblock(filename,equation_sets,group_names,bc_groups,     &
                                                           nelem_xi,  nelem_eta,  nelem_zeta,  &
-                                                          xmax,ymax,zmax)
+                                                          xmax,ymax,zmax,clusterx)
         character(*),       intent(in)              :: filename
         type(string_t),     intent(in), optional    :: equation_sets(:)
         type(string_t),     intent(in), optional    :: group_names(:,:)
         type(bc_group_t),   intent(in), optional    :: bc_groups(:)
         integer(ik),        intent(in)              :: nelem_xi,  nelem_eta,  nelem_zeta
         real(rk),           intent(in), optional    :: xmax, ymax, zmax
+        integer(ik),        intent(in), optional    :: clusterx
 
         class(bc_state_t),  allocatable                 :: bc_state
         character(8)                                    :: faces(6)
@@ -259,7 +260,7 @@ contains
         !
         ! Generate coordinates
         !
-        call meshgen_NxNxN_linear(nelem_xi, nelem_eta, nelem_zeta, xcoords1,ycoords1,zcoords1)
+        call meshgen_NxNxN_linear(nelem_xi, nelem_eta, nelem_zeta, xcoords1,ycoords1,zcoords1,clusterx)
 
 
 
@@ -749,7 +750,7 @@ contains
                         else if ( clusterx == 1 ) then
                             call chidg_signal(FATAL,"meshgen_NxNxN_linear: 'clusterx'=1 not yet implemented.")
                         else
-                            call chidg_signal(FATAL,"meshgen_NxNxN_linear: Invalid value for 'clusterx'. -1,0,1.")
+                            call chidg_signal(FATAL,"meshgen_NxNxN_linear: Invalid value for 'clusterx'. -1,1.")
                         end if
                     else
                         x = real(ipt_xi-1,rk)/real(npts_xi-1,rk)

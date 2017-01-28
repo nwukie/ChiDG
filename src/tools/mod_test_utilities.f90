@@ -91,7 +91,8 @@ contains
                 call create_mesh_file__multiblock(filename, equation_sets,                      &
                                                             group_names,                        &
                                                             bc_groups,                          &
-                                                            nelem_xi,  nelem_eta,  nelem_zeta)
+                                                            nelem_xi,  nelem_eta,  nelem_zeta,  &
+                                                            clusterx=clusterx)
 
             case("D2 E8 M1 : Abutting : Matching")
                 call create_mesh_file__D2E8M1(filename,abutting      = .true.,        &

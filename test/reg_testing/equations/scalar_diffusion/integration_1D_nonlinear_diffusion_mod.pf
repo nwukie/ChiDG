@@ -82,10 +82,10 @@ module integration_1D_nonlinear_diffusion_mod
     ! to test the nonlinear convergence between a case running on
     ! a different number of procs.
     !
-    ! Procs: 1, 2, 3
+    ! Procs: 1, 2, 3, 7, 10
     !
-    real(rk)    :: error(3,2,3)         ! nprocs, ngrids, norders
-    real(rk)    :: error_chimera(3,2,3) ! nprocs, ngrids, norders
+    real(rk)    :: error(5,2,3)         ! nprocs, ngrids, norders
+    real(rk)    :: error_chimera(5,2,3) ! nprocs, ngrids, norders
 
 
     public  :: nonlinear_diffusion_1D
@@ -358,30 +358,18 @@ contains
         integer(ik),        allocatable :: orders(:)
         integer(ik) :: icase
 
-        !nelem_xi = [120, 120, 120, &
-        !            240, 240, 240, &
-        !            120, 120, 120, &
-        !            240, 240, 240 ]
         nelem_xi = [120, 120, 120, &
-        !            240, 240, 240, &
-        !            120, 120, 120, &
+                    240, 240, 240, &
+                    120, 120, 120, &
                     240, 240, 240 ]
 
 
-        !gridtype = [string_t('singleblock'), &
-        !            string_t('singleblock'), &
-        !            string_t('singleblock'), &
-        !            string_t('singleblock'), &
-        !            string_t('singleblock'), &
-        !            string_t('singleblock'), &
-        !            string_t('chimera'),     &
-        !            string_t('chimera'),     &
-        !            string_t('chimera'),     &
-        !            string_t('chimera'),     &
-        !            string_t('chimera'),     &
-        !            string_t('chimera')      &
-        !            ]
-        gridtype = [                         &
+        gridtype = [string_t('singleblock'), &
+                    string_t('singleblock'), &
+                    string_t('singleblock'), &
+                    string_t('singleblock'), &
+                    string_t('singleblock'), &
+                    string_t('singleblock'), &
                     string_t('chimera'),     &
                     string_t('chimera'),     &
                     string_t('chimera'),     &
@@ -391,21 +379,12 @@ contains
                     ]
 
 
-        !files = [ string_t('1D_nonlinear_diffusion_120x1x1.h5'),         &
-        !          string_t('1D_nonlinear_diffusion_120x1x1.h5'),         &
-        !          string_t('1D_nonlinear_diffusion_120x1x1.h5'),         &
-        !          string_t('1D_nonlinear_diffusion_240x1x1.h5'),         &
-        !          string_t('1D_nonlinear_diffusion_240x1x1.h5'),         &
-        !          string_t('1D_nonlinear_diffusion_240x1x1.h5'),         &
-        !          string_t('1D_nonlinear_diffusion_120x1x1_chimera.h5'), &
-        !          string_t('1D_nonlinear_diffusion_120x1x1_chimera.h5'), &
-        !          string_t('1D_nonlinear_diffusion_120x1x1_chimera.h5'), &
-        !          string_t('1D_nonlinear_diffusion_240x1x1_chimera.h5'), &
-        !          string_t('1D_nonlinear_diffusion_240x1x1_chimera.h5'), &
-        !          string_t('1D_nonlinear_diffusion_240x1x1_chimera.h5')  &
-        !          ]
-
-        files = [                                                        &
+        files = [ string_t('1D_nonlinear_diffusion_120x1x1.h5'),         &
+                  string_t('1D_nonlinear_diffusion_120x1x1.h5'),         &
+                  string_t('1D_nonlinear_diffusion_120x1x1.h5'),         &
+                  string_t('1D_nonlinear_diffusion_240x1x1.h5'),         &
+                  string_t('1D_nonlinear_diffusion_240x1x1.h5'),         &
+                  string_t('1D_nonlinear_diffusion_240x1x1.h5'),         &
                   string_t('1D_nonlinear_diffusion_120x1x1_chimera.h5'), &
                   string_t('1D_nonlinear_diffusion_120x1x1_chimera.h5'), &
                   string_t('1D_nonlinear_diffusion_120x1x1_chimera.h5'), &
@@ -414,13 +393,10 @@ contains
                   string_t('1D_nonlinear_diffusion_240x1x1_chimera.h5')  &
                   ]
 
-        !orders = [ 2, 3, 4, &
-        !           2, 3, 4, &
-        !           2, 3, 4, &
-        !           2, 3, 4 ]
+
         orders = [ 2, 3, 4, &
-        !           2, 3, 4, &
-        !           2, 3, 4, &
+                   2, 3, 4, &
+                   2, 3, 4, &
                    2, 3, 4 ]
 
 
@@ -446,7 +422,7 @@ contains
         class (case_grid_order),    intent(in)  :: this
         character(:), allocatable   :: string
 
-        character(len=200) :: buffer
+        character(200) :: buffer
 
         write(buffer,'( "(nelem_xi, gridtype, order)=","(", I3,",", A10,",", I1, ")" )') this%nelem_xi, this%gridtype, this%order
         string = trim(buffer)
@@ -517,7 +493,6 @@ contains
         nonlinear_solver = 'newton'
         linear_solver    = 'fgmres'
         preconditioner   = 'RASILU0'
-        !preconditioner   = 'ILU0'
         IO_DESTINATION   = 'file'
         !------------------------------------------------------------------------------
 
@@ -729,8 +704,7 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    !@Test(npes=[1,2,3])
-    @Test(npes=[1])
+    @Test(npes=[1,2,3,7,10])
     subroutine run_calculations(self)
         class(nonlinear_diffusion_1D),  intent(inout)   :: self
 
@@ -774,49 +748,49 @@ contains
 
 
 
-!    !>
-!    !!
-!    !!  @author Nathan A. Wukie (AFRL)
-!    !!  @date   9/16/2016
-!    !!
-!    !!
-!    !----------------------------------------------------------------------------------------
-!    @Test(npes=[1])
-!    subroutine test_err_conform(self)
-!        class(nonlinear_diffusion_1D),  intent(inout)   :: self
-!
-!        integer(ik) :: inpes, igrid, iorder
-!        real(rk)    :: error_previous, error_current, mesh_parameter_previous, mesh_parameter_current, convergence_rate, tol
-!
-!        tol = 0.1_rk
-!
-!
-!        do inpes = 1,3
-!            do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
-!                do iorder = 1,3
-!
-!                    error_previous = error(inpes,igrid-1,iorder)
-!                    error_current  = error(inpes,igrid  ,iorder)
-!
-!                    mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
-!                    mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
-!
-!                    
-!                    !
-!                    ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
-!                    !
-!                    convergence_rate = (log10(error_previous)-log10(error_current))/(log10(mesh_parameter_previous)-log10(mesh_parameter_current))
-!
-!                
-!                    @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
-!
-!                end do
-!            end do
-!        end do
-!
-!
-!    end subroutine test_err_conform
-!    !****************************************************************************************
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/16/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    @Test(npes=[1])
+    subroutine test_err_conform(self)
+        class(nonlinear_diffusion_1D),  intent(inout)   :: self
+
+        integer(ik) :: inpes, igrid, iorder
+        real(rk)    :: error_previous, error_current, mesh_parameter_previous, mesh_parameter_current, convergence_rate, tol
+
+        tol = 0.1_rk
+
+
+        do inpes = 1,5
+            do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
+                do iorder = 1,3
+
+                    error_previous = error(inpes,igrid-1,iorder)
+                    error_current  = error(inpes,igrid  ,iorder)
+
+                    mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
+                    mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
+
+                    
+                    !
+                    ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
+                    !
+                    convergence_rate = (log10(error_previous)-log10(error_current))/(log10(mesh_parameter_previous)-log10(mesh_parameter_current))
+
+                
+                    @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
+
+                end do
+            end do
+        end do
+
+
+    end subroutine test_err_conform
+    !****************************************************************************************
 
 
 
@@ -844,36 +818,8 @@ contains
 
 
 
-        do inpes = 1,1
-            do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
-                do iorder = 1,3
 
-                    error_previous = error_chimera(inpes,igrid-1,iorder)
-                    error_current  = error_chimera(inpes,igrid  ,iorder)
-
-                    mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
-                    mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
-
-                    
-                    !
-                    ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
-                    !
-                    convergence_rate = (log10(error_previous)-log10(error_current))/(log10(mesh_parameter_previous)-log10(mesh_parameter_current))
-
-                    print*, 'chimera', error_previous, error_current, mesh_parameter_previous, mesh_parameter_current, convergence_rate
-
-                
-                end do
-            end do
-        end do
-
-
-
-
-
-
-
-        do inpes = 1,3
+        do inpes = 1,5
             do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
                 do iorder = 1,3
 
@@ -1084,6 +1030,10 @@ contains
                 inpes = 2
             case(3)
                 inpes = 3
+            case(7)
+                inpes = 4
+            case(10)
+                inpes = 5
         end select
 
     end function get_npes_index

@@ -77,8 +77,10 @@ module type_element
         real(rk), allocatable           :: mass(:,:)        
         real(rk), allocatable           :: invmass(:,:)
 
-        ! Element volume
+        ! Element volume, approx. width of bounding box
         real(rk)                        :: vol
+!        real(rk)                        :: xmin, xmax, ymin, ymax, zmin, zmax
+!        real(rk)                        :: h(3)     
 
 
         ! A psudo-timestep for each equation in the element. Used in the nonlinear solver. 
@@ -245,6 +247,7 @@ contains
         call self%coords%setvar(1,itime = 1,vals = xmodes)
         call self%coords%setvar(2,itime = 1,vals = ymodes)
         call self%coords%setvar(3,itime = 1,vals = zmodes)
+
 
 
         !

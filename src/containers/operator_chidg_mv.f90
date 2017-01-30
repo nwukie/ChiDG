@@ -148,8 +148,8 @@ contains
 
                                 res_istart = res%dom(idom)%vecs(ielem)%get_time_start(itime)
                                 res_iend   = res%dom(idom)%vecs(ielem)%get_time_end(itime)
-                                x_istart   = x%dom(idom)%vecs(eparent_l)%get_time_start(itime)
-                                x_iend     = x%dom(idom)%vecs(eparent_l)%get_time_end(itime)
+                                x_istart   = x%dom(dparent_l)%vecs(eparent_l)%get_time_start(itime)
+                                x_iend     = x%dom(dparent_l)%vecs(eparent_l)%get_time_end(itime)
                                 associate ( resvec => res%dom(idom)%vecs(ielem)%vec(res_istart:res_iend),    &
                                             xvec   => x%dom(dparent_l)%vecs(eparent_l)%vec(x_istart:x_iend), &
                                             Amat   => A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat  ) 

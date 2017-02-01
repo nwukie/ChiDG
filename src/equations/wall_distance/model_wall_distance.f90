@@ -89,10 +89,10 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-!        d    = worker%get_auxiliary_field_general('Wall Distance : p-Poisson', 'value')
-!        dddx = worker%get_auxiliary_field_general('Wall Distance : p-Poisson', 'ddx'  )
-!        dddy = worker%get_auxiliary_field_general('Wall Distance : p-Poisson', 'ddy'  )
-!        dddz = worker%get_auxiliary_field_general('Wall Distance : p-Poisson', 'ddz'  )
+        d    = worker%get_auxiliary_field_general('Wall Distance : p-Poisson', 'value')
+        dddx = worker%get_auxiliary_field_general('Wall Distance : p-Poisson', 'ddx'  )
+        dddy = worker%get_auxiliary_field_general('Wall Distance : p-Poisson', 'ddy'  )
+        dddz = worker%get_auxiliary_field_general('Wall Distance : p-Poisson', 'ddz'  )
 
 
         !

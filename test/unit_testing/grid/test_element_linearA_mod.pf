@@ -61,14 +61,14 @@ contains
         allocate(this%faces(6))
         
         !> (x = 0-5 :: y = 0-1 :: z = 0-1)
-        !!          *-------*
-        !!         /       /|
-        !!    x=5 /       / |
-        !!       /       /  *
-        !!      *-------*  /
-        !!      |       | /
-        !!  z=1 |       |/
-        !!      *-------*
+        !!          *------*
+        !!         /      /|
+        !!    x=5 /      / |
+        !!       /      /  *
+        !!      *------*  /
+        !!      |      | /
+        !!  z=1 |      |/
+        !!      *------*
         !!         y=1
         !!
         call nodes(1)%set(0._rk, 0._rk, 0._rk)
@@ -442,18 +442,27 @@ contains
         @assertEqual(test_metric,self%faces(ETA_MAX)%metric,tol)
         @assertEqual(test_metric,self%faces(ZETA_MIN)%metric,tol)
         @assertEqual(test_metric,self%faces(ZETA_MAX)%metric,tol)
-    end subroutine
+    end subroutine testElement_face_metrics
     !*******************************************************************************************
 
 
-    !>
+
+
+
+    !>  Test scaled normal vectors have been computed correctly. These are really
+    !!  unit vectors scaled by the inverse jacobian of the face metric terms. Essentially,
+    !!  an area scaling.
     !!
+    !!  @author Nathan A. Wukie
     !!
     !------------------------------------------------------------------------------------------
     @Test
     subroutine testelement_face_normals(self)
         class(test_element_lineara),    intent(inout)   :: self
-        real(rk), dimension(self%faces(xi_max)%gq%face%nnodes) :: test_norm_x, test_norm_y, test_norm_z
+
+        real(rk), dimension(self%faces(xi_max)%gq%face%nnodes) :: &
+                test_norm_x, test_norm_y, test_norm_z
+
         real(rk)    :: tol
         
         tol = 1.e-15_rk
@@ -513,7 +522,7 @@ contains
         @assertequal(test_norm_z,self%faces(zeta_max)%norm(:,3),tol)
        
 
-    end subroutine
+    end subroutine testelement_face_normals
     !*******************************************************************************************
 
 
@@ -523,9 +532,9 @@ contains
 
 
 
-    !>
+    !>  Test unit normal vectors have been computed correctly.
     !!
-    !!
+    !!  @author Nathan A. Wukie
     !!
     !------------------------------------------------------------------------------------------
     @Test
@@ -591,7 +600,7 @@ contains
         @assertEqual(test_norm_z,self%faces(ZETA_MAX)%unorm(:,3),tol)
        
 
-    end subroutine
+    end subroutine testElement_face_unit_normals
     !*******************************************************************************************
 
 
@@ -601,6 +610,53 @@ contains
 
 
 
+    !>  Test face areas were computed correctly.
+    !!
+    !!  Face 1: (1 * 1)
+    !!  Face 2: (1 * 1)
+    !!  Face 3: (1 * 5)
+    !!  Face 4: (1 * 5)
+    !!  Face 5: (1 * 5)
+    !!  Face 6: (1 * 5)
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !------------------------------------------------------------------------------------------
+    @Test
+    subroutine testElement_face_area(self)
+        class(test_element_linearA),    intent(inout)   :: self
+
+        real(rk)    :: test_area, tol
+        
+        tol = 1.e-15_rk
+        
+        ! XI_MIN
+        test_area = ONE
+        @assertEqual(test_area,self%faces(XI_MIN)%area,tol)
+        
+        ! XI_MAX
+        test_area = ONE
+        @assertEqual(test_area,self%faces(XI_MAX)%area,tol)
+        
+        ! ETA_MIN
+        test_area = FIVE
+        @assertEqual(test_area,self%faces(ETA_MIN)%area,tol)
+        
+        ! ETA_MAX
+        test_area = FIVE
+        @assertEqual(test_area,self%faces(ETA_MAX)%area,tol)
+
+        ! ZETA_MIN
+        test_area = FIVE
+        @assertEqual(test_area,self%faces(ZETA_MIN)%area,tol)
+        
+        ! ZETA_MAX
+        test_area = FIVE
+        @assertEqual(test_area,self%faces(ZETA_MAX)%area,tol)
+       
+
+    end subroutine testElement_face_area
+    !*******************************************************************************************
 
 
 

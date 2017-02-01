@@ -45,6 +45,11 @@ module mod_bc
     use bc_state_spalart_allmaras_farfield,     only: spalart_allmaras_farfield_t
     use bc_state_spalart_allmaras_wall,         only: spalart_allmaras_wall_t
 
+    ! Artificial Viscosity boundary conditions
+    use bc_state_artificial_viscosity_wall,     only: artificial_viscosity_wall_t
+    use bc_state_artificial_viscosity_inlet,    only: artificial_viscosity_inlet_t
+    use bc_state_artificial_viscosity_outlet,   only: artificial_viscosity_outlet_t
+    use bc_state_artificial_viscosity_symmetry, only: artificial_viscosity_symmetry_t
 
 
 !    use bc_kirchoff,                        only: kirchoff_t
@@ -101,6 +106,11 @@ contains
         type(spalart_allmaras_farfield_t)       :: SPALART_ALLMARAS_FARFIELD
         type(spalart_allmaras_wall_t)           :: SPALART_ALLMARAS_WALL
 
+        type(artificial_viscosity_wall_t)       :: ARTIFICIAL_VISCOSITY_WALL
+        type(artificial_viscosity_inlet_t)      :: ARTIFICIAL_VISCOSITY_INLET
+        type(artificial_viscosity_outlet_t)     :: ARTIFICIAL_VISCOSITY_OUTLET
+        type(artificial_viscosity_symmetry_t)   :: ARTIFICIAL_VISCOSITY_SYMMETRY
+
 
 
         if ( .not. initialized ) then
@@ -129,6 +139,13 @@ contains
             call registered_bcs%push_back(SPALART_ALLMARAS_SYMMETRY)
             call registered_bcs%push_back(SPALART_ALLMARAS_FARFIELD)
             call registered_bcs%push_back(SPALART_ALLMARAS_WALL)
+
+            call registered_bcs%push_back(ARTIFICIAL_VISCOSITY_WALL)
+            call registered_bcs%push_back(ARTIFICIAL_VISCOSITY_INLET)
+            call registered_bcs%push_back(ARTIFICIAL_VISCOSITY_OUTLET)
+            call registered_bcs%push_back(ARTIFICIAL_VISCOSITY_SYMMETRY)
+
+
 
             !
             ! Initialize each boundary condition in set. Doesn't need modified.

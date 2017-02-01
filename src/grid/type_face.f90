@@ -69,6 +69,8 @@ module type_face
         integer(ik)                 :: recv_domain         = 0
         integer(ik)                 :: recv_element        = 0
 
+        ! Neighbor information if neighbor is off-processor
+        real(rk)                        :: neighbor_h(3)                !< Approximate size of neighbor bounding box
         real(rk),           allocatable :: neighbor_ddx(:,:)            !< Derivative of basis functions in x-direction at quadrature nodes
         real(rk),           allocatable :: neighbor_ddy(:,:)            !< Derivative of basis functions in y-direction at quadrature nodes
         real(rk),           allocatable :: neighbor_ddz(:,:)            !< Derivative of basis functions in z-direction at quadrature nodes
@@ -78,7 +80,7 @@ module type_face
 
 
         ! Chimera face offset. For periodic boundary condition.
-        character(len=:),   allocatable :: periodic_type
+        character(:),       allocatable :: periodic_type
         real(rk)                        :: chimera_offset_x = 0._rk
         real(rk)                        :: chimera_offset_y = 0._rk
         real(rk)                        :: chimera_offset_z = 0._rk
@@ -111,6 +113,8 @@ module type_face
         real(rk),           allocatable :: br2_face(:,:)
         real(rk),           allocatable :: br2_vol(:,:)
 
+        ! Face area
+        real(rk)                        :: area
 
         ! Logical tests
         logical :: geomInitialized     = .false.
@@ -465,7 +469,7 @@ contains
         real(rk)    :: dxdxi(self%gq%face%nnodes), dxdeta(self%gq%face%nnodes), dxdzeta(self%gq%face%nnodes)
         real(rk)    :: dydxi(self%gq%face%nnodes), dydeta(self%gq%face%nnodes), dydzeta(self%gq%face%nnodes)
         real(rk)    :: dzdxi(self%gq%face%nnodes), dzdeta(self%gq%face%nnodes), dzdzeta(self%gq%face%nnodes)
-        real(rk)    :: norm_mag(self%gq%face%nnodes)
+        real(rk)    :: norm_mag(self%gq%face%nnodes), face_jinv(self%gq%face%nnodes)
 
         iface = self%iface
         nnodes = self%gq%face%nnodes
@@ -554,7 +558,17 @@ contains
         self%unorm(:,ZETA_DIR) = self%norm(:,ZETA_DIR)/norm_mag
 
 
+        !
+        ! The 'norm' component is really a normal vector scaled by the FACE inverse jacobian.
+        ! This is really an area scaling. We can compute the area scaling(jinv for the face),
+        ! by dividing taking the magnitude of the 'norm' vector.
+        !
+        face_jinv = norm_mag
 
+        !
+        ! Compute the face area by integrating the area scaling over the face
+        !
+        self%area = sum(abs(face_jinv * self%gq%face%weights(:,iface)))
 
 
     end subroutine compute_quadrature_normals

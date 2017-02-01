@@ -41,6 +41,12 @@ module mod_operators
     use spalart_allmaras_boundary_diffusion,        only: spalart_allmaras_boundary_diffusion_operator_t
     use spalart_allmaras_volume_diffusion,          only: spalart_allmaras_volume_diffusion_operator_t
     use spalart_allmaras_bc_diffusion,              only: spalart_allmaras_bc_diffusion_operator_t
+
+    ! Artificial Viscosity Operators
+    use artificial_viscosity_boundary_average_operator, only: artificial_viscosity_boundary_average_operator_t
+    use artificial_viscosity_volume_operator,           only: artificial_viscosity_volume_operator_t
+    use artificial_viscosity_bc_operator,               only: artificial_viscosity_bc_operator_t
+    use artificial_viscosity_source,                    only: artificial_viscosity_source_t
     implicit none
 
 
@@ -201,6 +207,11 @@ contains
         type(spalart_allmaras_bc_diffusion_operator_t)          :: spalart_allmaras_bc_diffusion_operator
 
 
+        ! Artificial Viscosity Operators
+        type(artificial_viscosity_boundary_average_operator_t)  :: artificial_viscosity_boundary_average_operator
+        type(artificial_viscosity_volume_operator_t)            :: artificial_viscosity_volume_operator
+        type(artificial_viscosity_bc_operator_t)                :: artificial_viscosity_bc_operator
+        type(artificial_viscosity_source_t)                     :: artificial_viscosity_source
 
 
         if (.not. operators_initialized) then
@@ -243,6 +254,12 @@ contains
             call operator_factory%register(spalart_allmaras_boundary_diffusion_operator)
             call operator_factory%register(spalart_allmaras_volume_diffusion_operator)
             call operator_factory%register(spalart_allmaras_bc_diffusion_operator)
+
+            ! Register Artificial Viscosity
+            call operator_factory%register(artificial_viscosity_boundary_average_operator)
+            call operator_factory%register(artificial_viscosity_volume_operator)
+            call operator_factory%register(artificial_viscosity_bc_operator)
+            call operator_factory%register(artificial_viscosity_source)
 
 
             operators_initialized = .true.

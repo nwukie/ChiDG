@@ -2161,13 +2161,13 @@ CONTAINS
   
          res%x_ad_ = tmp
          IF(tmp==0.0d0) THEN
-            !print*, 'hi'
             res%xp_ad_ = Set_NaN_D()
             !res%xp_ad_ = 0.0d0
          ELSE
             tmp= 0.5D0/tmp
             res%xp_ad_ = u%xp_ad_*tmp
          ENDIF
+
     END FUNCTION SQRT_D_D
 
 
@@ -2180,7 +2180,7 @@ CONTAINS
          TYPE (AD_D)::res
          INTEGER:: i,j
          REAL(DBL_AD):: tmp
-!         allocate(res%xp_ad_(size(u(1)%xp_ad_)))
+         allocate(res%xp_ad_(size(u(1)%xp_ad_)))
 
          res%x_ad_ = SUM(u%x_ad_)
          DO i=1,size(u(1)%xp_ad_)
@@ -2191,6 +2191,7 @@ CONTAINS
             ENDDO
             res%xp_ad_(i) = tmp
          ENDDO
+
     END FUNCTION SUM_D_D
 
     ELEMENTAL FUNCTION Set_NaN_D() RESULT(res)

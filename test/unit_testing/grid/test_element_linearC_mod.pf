@@ -404,6 +404,56 @@ contains
 
 
 
+    !>  Test face areas were computed correctly.
+    !!
+    !!  Face 1: (1 * 1)
+    !!  Face 2: (1 * 1)
+    !!  Face 3: (1 * 1)
+    !!  Face 4: (1 * 1)
+    !!  Face 5: (1 * 1)
+    !!  Face 6: (1 * 1)
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !------------------------------------------------------------------------------------------
+    @Test
+    subroutine testElement_face_area(self)
+        class(test_element_linearC),    intent(inout)   :: self
+
+        real(rk)    :: test_area, tol
+        
+        tol = 1.e-15_rk
+        
+        ! XI_MIN
+        test_area = ONE
+        @assertEqual(test_area,self%faces(XI_MIN)%area,tol)
+        
+        ! XI_MAX
+        test_area = ONE
+        @assertEqual(test_area,self%faces(XI_MAX)%area,tol)
+        
+        ! ETA_MIN
+        test_area = ONE
+        @assertEqual(test_area,self%faces(ETA_MIN)%area,tol)
+        
+        ! ETA_MAX
+        test_area = ONE
+        @assertEqual(test_area,self%faces(ETA_MAX)%area,tol)
+
+        ! ZETA_MIN
+        test_area = ONE
+        @assertEqual(test_area,self%faces(ZETA_MIN)%area,tol)
+        
+        ! ZETA_MAX
+        test_area = ONE
+        @assertEqual(test_area,self%faces(ZETA_MAX)%area,tol)
+       
+
+    end subroutine testElement_face_area
+    !*******************************************************************************************
+
+
+
 
 
 end module test_element_linearC_mod

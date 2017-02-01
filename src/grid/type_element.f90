@@ -77,10 +77,9 @@ module type_element
         real(rk), allocatable           :: mass(:,:)        
         real(rk), allocatable           :: invmass(:,:)
 
-        ! Element volume, approx. width of bounding box
+        ! Element volume, approx. size of bounding box
         real(rk)                        :: vol
-!        real(rk)                        :: xmin, xmax, ymin, ymax, zmin, zmax
-!        real(rk)                        :: h(3)     
+        real(rk)                        :: h(3)     
 
 
         ! A psudo-timestep for each equation in the element. Used in the nonlinear solver. 
@@ -170,6 +169,9 @@ contains
         type(point_t),  allocatable :: points(:)
         real(rk),       allocatable :: element_mapping(:,:)
         real(rk),       allocatable :: xmodes(:), ymodes(:), zmodes(:)
+        real(rk)                    :: xmin, xmax, xwidth,  &
+                                       ymin, ymax, ywidth,  &
+                                       zmin, zmax, zwidth
         integer(ik)                 :: ierr, nterms_c, ipt, npts_1d, npts, &
                                        mapping, inode, idomain_g, ielem_g
         integer(ik)                 :: ntime = 1
@@ -247,6 +249,27 @@ contains
         call self%coords%setvar(1,itime = 1,vals = xmodes)
         call self%coords%setvar(2,itime = 1,vals = ymodes)
         call self%coords%setvar(3,itime = 1,vals = zmodes)
+
+
+
+        !
+        ! Compute approximate size of bounding box
+        !
+        xmax = maxval(points(:)%c1_)
+        xmin = minval(points(:)%c1_)
+        xwidth = abs(xmax - xmin)
+
+        ymax = maxval(points(:)%c2_)
+        ymin = minval(points(:)%c2_)
+        ywidth = abs(ymax - ymin)
+
+        zmax = maxval(points(:)%c3_)
+        zmin = minval(points(:)%c3_)
+        zwidth = abs(zmax - zmin)
+
+        self%h(1) = xwidth
+        self%h(2) = ywidth
+        self%h(3) = zwidth
 
 
 

@@ -29,7 +29,7 @@
 module type_chidg_worker
 #include <messenger.h>
     use mod_kinds,          only: ik, rk
-    use mod_constants,      only: NFACES, ME, NEIGHBOR, BC, ZERO
+    use mod_constants,      only: NFACES, ME, NEIGHBOR, BC, ZERO, CHIMERA, ONE, THIRD
     use mod_interpolate,    only: interpolate_element_standard, &
                                   interpolate_face_standard,    &
                                   interpolate_face_autodiff
@@ -106,6 +106,11 @@ module type_chidg_worker
         procedure   :: x
         procedure   :: y
         procedure   :: z
+
+        procedure   :: element_size
+        procedure   :: solution_order
+        procedure   :: quadrature_weights
+        procedure   :: face_area
 
         procedure   :: face_type
 
@@ -1292,6 +1297,243 @@ contains
 
 
     end function z
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Return the approximate size of an element bounding box.
+    !!
+    !!  Returns:
+    !!      h(3) = [hx, hy, hz]
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   01/31/2017
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    function element_size(self,source) result(h)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: source
+
+        integer(ik) :: ineighbor_domain_l, ineighbor_element_l
+        real(rk)    :: h(3)
+        logical     :: proc_local, chimera_face
+
+
+        if (source == 'interior') then
+
+            h = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%h
+
+        else if (source == 'exterior') then
+
+            !
+            ! If Chimera face, use interior element size. APPROXIMATION
+            !
+            chimera_face = (self%face_type() == CHIMERA)
+            if (chimera_face) then
+
+                h = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%h
+
+            !
+            ! If conforming face, check for processor status of neighbor.
+            !
+            else
+
+                proc_local = (self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ineighbor_proc  ==  IRANK)
+                if (proc_local) then
+
+                    ineighbor_domain_l  = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ineighbor_domain_l
+                    ineighbor_element_l = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ineighbor_element_l
+                    h = self%mesh(ineighbor_domain_l)%elems(ineighbor_element_l)%h
+
+                else
+
+                    h = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%neighbor_h
+
+                end if
+
+            end if
+
+
+        else
+            call chidg_signal(FATAL,"chidg_worker%element_size(source): Invalid value for 'source'. Options are 'interior', 'exterior'")
+        end if
+
+
+    end function element_size
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Return the order of the solution polynomial expansion.
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   01/31/2017
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    function solution_order(self,source) result(order)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: source
+
+        integer(ik) :: ineighbor_domain_l, ineighbor_element_l, nterms_s, order
+        logical     :: proc_local, chimera_face
+
+
+        if (source == 'interior') then
+
+            nterms_s = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%nterms_s
+
+
+        else if (source == 'exterior') then
+
+            !
+            ! If Chimera face, use interior element order. APPROXIMATION
+            !
+            chimera_face = (self%face_type() == CHIMERA)
+            if (chimera_face) then
+
+                nterms_s = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%nterms_s
+
+            !
+            ! If conforming face, check for processor status of neighbor.
+            !
+            else
+
+                proc_local = (self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ineighbor_proc  ==  IRANK)
+                if (proc_local) then
+
+                    ineighbor_domain_l  = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ineighbor_domain_l
+                    ineighbor_element_l = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ineighbor_element_l
+                    nterms_s = self%mesh(ineighbor_domain_l)%elems(ineighbor_element_l)%nterms_s
+
+                else
+
+                    nterms_s = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ineighbor_nterms_s
+
+                end if
+
+            end if
+
+
+        else
+            call chidg_signal(FATAL,"chidg_worker%solution_order(source): Invalid value for 'source'. Options are 'interior', 'exterior'")
+        end if
+
+
+
+
+        !
+        ! Compute polynomial order from number of terms in the expansion. 
+        !
+        ! ASSUMES TENSOR PRODUCT BASIS
+        !
+        order = nint( real(nterms_s,rk)**(THIRD) - ONE)
+
+    end function solution_order
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Return the quadrature weights for integration.
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   01/31/2017
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    function quadrature_weights(self,source) result(weights)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: source
+
+        real(rk),   allocatable,    dimension(:)    :: weights
+
+
+
+        if (source == 'face') then
+
+            weights = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%gq%face%weights(:,self%iface)
+
+        else if (source == 'element') then
+
+            weights = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%gq%vol%weights
+
+        else
+            call chidg_signal(FATAL,"chidg_worker%quadrature_weights(source): Invalid value for 'source'. Options are 'face', 'element'")
+        end if
+
+
+    end function quadrature_weights
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Return the area of the current face.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   01/31/2017
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    function face_area(self) result(area)
+        class(chidg_worker_t),  intent(in)  :: self
+
+        real(rk)    :: area
+
+        area = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%area
+
+    end function face_area
     !**************************************************************************************
 
 

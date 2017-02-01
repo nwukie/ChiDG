@@ -269,6 +269,7 @@ contains
                 if (.not. seed_found) then
                     cache_data = self%fields(field_index)%value(:,1)
 
+
                     do igq = 1,size(cache_data)
                         cache_data(igq)%xp_ad_ = ZERO
                     end do

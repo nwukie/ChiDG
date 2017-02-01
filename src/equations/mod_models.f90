@@ -12,8 +12,13 @@ module mod_models
     use type_reynolds_analogy,                          only: reynolds_analogy_t
     use type_zero_turbulent_model_fields,               only: zero_turbulent_model_fields_t
     use type_spalart_allmaras_turbulent_model_fields,   only: spalart_allmaras_turbulent_model_fields_t
+    use type_fluid_wave_speed,                          only: fluid_wave_speed_t
 
     use model_wall_distance,                            only: wall_distance_m
+
+    use type_artificial_viscosity_jump_sensor,          only: artificial_viscosity_jump_sensor_t
+
+
     implicit none
 
 
@@ -247,6 +252,8 @@ contains
         type(zero_turbulent_model_fields_t)             :: ZERO_TURBULENT_MODEL_FIELDS
         type(spalart_allmaras_turbulent_model_fields_t) :: SPALART_ALLMARAS_TURBULENT_MODEL_FIELDS
         type(wall_distance_m)                           :: WALL_DISTANCE_NORMALIZATION
+        type(fluid_wave_speed_t)                        :: FLUID_WAVE_SPEED
+        type(artificial_viscosity_jump_sensor_t)        :: ARTIFICIAL_VISCOSITY_JUMP_SENSOR
 
 
         if (.not. models_initialized) then
@@ -259,6 +266,8 @@ contains
             call model_factory%register(ZERO_TURBULENT_MODEL_FIELDS)
             call model_factory%register(SPALART_ALLMARAS_TURBULENT_MODEL_FIELDS)
             call model_factory%register(WALL_DISTANCE_NORMALIZATION)
+            call model_factory%register(FLUID_WAVE_SPEED)
+            call model_factory%register(ARTIFICIAL_VISCOSITY_JUMP_SENSOR)
 
             models_initialized = .true.
 

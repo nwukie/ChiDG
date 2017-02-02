@@ -1,4 +1,5 @@
 module type_quasi_newton
+#include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, DIAG
     use mod_spatial,            only: update_space
@@ -144,7 +145,15 @@ contains
                 !
                 ! Compute new cfl for each field
                 !
-                cfln = self%cfl0*(rnorm0/rnorm)
+                if (allocated(cfln)) deallocate(cfln)
+                allocate(cfln(size(rnorm)), stat=ierr)
+                if (ierr /= 0) call AllocationError
+
+                where (rnorm /= 0.)
+                    cfln = self%cfl0*(rnorm0/rnorm)
+                else where
+                    cfln = 0.1
+                end where
 
 
                 !
@@ -229,12 +238,12 @@ contains
                 ! Write solution if the count is right
                 !
                 !if (wcount == self%nwrite) then
-                !    if (data%eqnset(1)%get_name() == 'Navier Stokes AV') then
-                !        call write_solution_hdf(data,'aachen_stator_cascade.h5')
+                    if (data%eqnset(1)%get_name() == 'Navier Stokes AV') then
+                        call write_solution_hdf(data,'aachen_stator_cascade.h5')
                 !        write(filename,'(I2)') niter
                 !        call write_tecio_variables_unstructured(data,trim(filename)//'.dat',niter)
                 !        wcount = 0
-                !    end if
+                    end if
                 !end if
                 wcount = wcount + 1
 

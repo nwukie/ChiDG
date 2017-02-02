@@ -99,7 +99,8 @@ contains
                 call navier_stokes_eqns%add_operator('Artificial Viscosity Volume Operator')
                 call navier_stokes_eqns%add_operator('Artificial Viscosity BC Operator')
                 call navier_stokes_eqns%add_operator('Artificial Viscosity Source')
-                call navier_stokes_eqns%add_model('Artificial Viscosity Jump Sensor')
+                !call navier_stokes_eqns%add_model('Artificial Viscosity Jump Sensor')
+                call navier_stokes_eqns%add_model('Artificial Viscosity Resolution Sensor')
                 call navier_stokes_eqns%add_model('Fluid Wave Speed')
 
 

@@ -92,6 +92,7 @@ contains
             drho_dy, dnutilde_dy, drho_nutilde_dy,  &
             drho_dz, dnutilde_dz, drho_nutilde_dz,  &
             dnutilde_drho, dnutilde_drhonutilde,    &
+            eps,                                    &
             flux_x, flux_y, flux_z, diffusion, integrand
 
 
@@ -105,6 +106,7 @@ contains
         !
         rho         = worker%get_primary_field_face('Density',          'value','boundary')
         rho_nutilde = worker%get_primary_field_face('Density * NuTilde','value','boundary')
+        eps         = worker%get_primary_field_face('Artificial Viscosity', 'value', 'boundary')
 
 
         !
@@ -178,9 +180,9 @@ contains
         !================================
         diffusion = -(ONE/SA_sigma)*(mu_l + f_n1*rho_nutilde)
 
-        flux_x = diffusion*dnutilde_dx
-        flux_y = diffusion*dnutilde_dy
-        flux_z = diffusion*dnutilde_dz
+        flux_x = (diffusion - eps)*dnutilde_dx
+        flux_y = (diffusion - eps)*dnutilde_dy
+        flux_z = (diffusion - eps)*dnutilde_dz
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
 

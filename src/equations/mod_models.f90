@@ -17,6 +17,7 @@ module mod_models
     use model_wall_distance,                            only: wall_distance_m
 
     use type_artificial_viscosity_jump_sensor,          only: artificial_viscosity_jump_sensor_t
+    use type_artificial_viscosity_resolution_sensor,    only: artificial_viscosity_resolution_sensor_t
 
 
     implicit none
@@ -254,6 +255,7 @@ contains
         type(wall_distance_m)                           :: WALL_DISTANCE_NORMALIZATION
         type(fluid_wave_speed_t)                        :: FLUID_WAVE_SPEED
         type(artificial_viscosity_jump_sensor_t)        :: ARTIFICIAL_VISCOSITY_JUMP_SENSOR
+        type(artificial_viscosity_resolution_sensor_t)  :: ARTIFICIAL_VISCOSITY_RESOLUTION_SENSOR
 
 
         if (.not. models_initialized) then
@@ -268,6 +270,7 @@ contains
             call model_factory%register(WALL_DISTANCE_NORMALIZATION)
             call model_factory%register(FLUID_WAVE_SPEED)
             call model_factory%register(ARTIFICIAL_VISCOSITY_JUMP_SENSOR)
+            call model_factory%register(ARTIFICIAL_VISCOSITY_RESOLUTION_SENSOR)
 
             models_initialized = .true.
 

@@ -62,6 +62,14 @@ contains
     !!  Some interpolation parameters to note that are used inside here:
     !!      - interpolation_type:   'value', 'ddx', 'ddy', 'ddz'
     !!
+    !!  Partial mode expansions can be used to perform interpolations. To do this, pass the 
+    !!  Pmin and Pmax optional arguments. Pmin is the minimum 1D polynomial order to be used
+    !!  in the interpolation. Pmax is the maximum 1D polynomial order to be used in the 
+    !!  interpolation. One might pass Pmin=0, Pmax=1. This would return an interpolation that
+    !!  used only the first 8 modes in the polynomial expansion. The constant mode and all
+    !!  the linear modes, but no modes of higher order.
+    !!
+    !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
@@ -71,20 +79,25 @@ contains
     !!  @param[in]  itime - Index for the time step in solution
     !!
     !-----------------------------------------------------------------------------------------
-    function interpolate_element_autodiff(mesh,q,elem_info,fcn_info,ieqn,itime,interpolation_type) result(var_gq)
-        type(mesh_t),           intent(in)      :: mesh(:)
-        type(chidg_vector_t),    intent(in)      :: q
-        type(element_info_t),   intent(in)      :: elem_info
-        type(function_info_t),  intent(in)      :: fcn_info
-        integer(ik),            intent(in)      :: ieqn
-        integer(ik),            intent(in)      :: itime
-        character(len=*),       intent(in)      :: interpolation_type
+    !function interpolate_element_autodiff(mesh,q,elem_info,fcn_info,ieqn,itime,interpolation_type) result(var_gq)
+    function interpolate_element_autodiff(mesh,q,elem_info,fcn_info,ieqn,itime,interpolation_type,Pmin,Pmax) result(var_gq)
+        type(mesh_t),           intent(in)              :: mesh(:)
+        type(chidg_vector_t),   intent(in)              :: q
+        type(element_info_t),   intent(in)              :: elem_info
+        type(function_info_t),  intent(in)              :: fcn_info
+        integer(ik),            intent(in)              :: ieqn
+        integer(ik),            intent(in)              :: itime
+        character(*),           intent(in)              :: interpolation_type
+        integer(ik),            intent(in), optional    :: Pmin
+        integer(ik),            intent(in), optional    :: Pmax
 
         character(:),   allocatable :: user_msg
-        type(AD_D)  :: var_gq(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%nnodes)
 
+        type(AD_D)  :: var_gq(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%nnodes)
+        type(AD_D)  :: qtmp(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%nterms_s)
         type(AD_D)  :: qdiff(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%nterms_s)
-        integer(ik) :: nderiv, set_deriv, iterm
+
+        integer(ik) :: nderiv, set_deriv, iterm, mode_min, mode_max
         logical     :: differentiate_me
 
         associate( idom => elem_info%idomain_l, ielem => elem_info%ielement_l )
@@ -99,14 +112,29 @@ contains
         ! Allocate derivative arrays for temporary solution variable
         !
         do iterm = 1,mesh(idom)%elems(ielem)%nterms_s
+            qtmp(iterm)  = AD_D(nderiv)
             qdiff(iterm) = AD_D(nderiv)
         end do
 
 
         !
-        ! Copy the solution variables from 'q' to 'qdiff'
+        ! Copy the solution variables from 'q' to 'qtmp'
         !
-        qdiff = q%dom(idom)%vecs(ielem)%getvar(ieqn,itime)
+        qtmp = q%dom(idom)%vecs(ielem)%getvar(ieqn,itime)
+
+        !
+        ! If Pmin,Pmax are present, use a subset of the expansion modes.
+        !
+        ! If not present, use the entire expansion.
+        !
+        qdiff = ZERO
+        if (present(Pmin) .and. present(Pmax)) then
+            mode_min = (Pmin+1)*(Pmin+1)*(Pmin+1)
+            mode_max = (Pmax+1)*(Pmax+1)*(Pmax+1)
+            qdiff(mode_min:mode_max) = qtmp(mode_min:mode_max)
+        else
+            qdiff = qtmp
+        end if
 
 
         !

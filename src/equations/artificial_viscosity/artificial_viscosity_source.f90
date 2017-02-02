@@ -136,7 +136,8 @@ contains
         !================================
         !             FLUX
         !================================
-        source = (ONE/tau)*( (hbar/real(order+1,rk))*lamda*sensor - eps )
+!        source = -(ONE/tau)*( (hbar/real(order+1,rk))*lamda*sensor - eps )
+        source = sensor
 
         call worker%integrate_volume('Artificial Viscosity',source)
 

@@ -95,12 +95,12 @@ contains
                 call navier_stokes_eqns%add_operator('Spalart-Allmaras BC Diffusion Operator')
 
 
-!                call navier_stokes_eqns%add_operator('Artificial Viscosity Boundary Average Operator')
-!                call navier_stokes_eqns%add_operator('Artificial Viscosity Volume Operator')
-!                call navier_stokes_eqns%add_operator('Artificial Viscosity BC Operator')
-!                call navier_stokes_eqns%add_operator('Artificial Viscosity Source')
-!                call navier_stokes_eqns%add_model('Artificial Viscosity Jump Sensor')
-!                call navier_stokes_eqns%add_model('Fluid Wave Speed')
+                call navier_stokes_eqns%add_operator('Artificial Viscosity Boundary Average Operator')
+                call navier_stokes_eqns%add_operator('Artificial Viscosity Volume Operator')
+                call navier_stokes_eqns%add_operator('Artificial Viscosity BC Operator')
+                call navier_stokes_eqns%add_operator('Artificial Viscosity Source')
+                call navier_stokes_eqns%add_model('Artificial Viscosity Jump Sensor')
+                call navier_stokes_eqns%add_model('Fluid Wave Speed')
 
 
                 call navier_stokes_eqns%add_pseudo_timestep(fluid_pseudo_time)

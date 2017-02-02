@@ -166,6 +166,9 @@ contains
         flux_x = -(diffusion_x * deps_dx)
         flux_y = -(diffusion_y * deps_dy)
         flux_z = -(diffusion_z * deps_dz)
+        !flux_x = -deps_dx
+        !flux_y = -deps_dy
+        !flux_z = -deps_dz
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
 

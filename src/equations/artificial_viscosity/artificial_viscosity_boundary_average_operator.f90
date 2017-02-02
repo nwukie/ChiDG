@@ -192,6 +192,13 @@ contains
         flux_x_p = -diffusion_x_p * deps_dx_p
         flux_y_p = -diffusion_y_p * deps_dy_p
         flux_z_p = -diffusion_z_p * deps_dz_p
+!        flux_x_m = -deps_dx_m
+!        flux_y_m = -deps_dy_m
+!        flux_z_m = -deps_dz_m
+!
+!        flux_x_p = -deps_dx_p
+!        flux_y_p = -deps_dy_p
+!        flux_z_p = -deps_dz_p
 
 
         flux_x = (flux_x_m + flux_x_p)

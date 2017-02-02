@@ -154,6 +154,9 @@ contains
         flux_x = -diffusion_x * deps_dx
         flux_y = -diffusion_y * deps_dy
         flux_z = -diffusion_z * deps_dz
+        !flux_x = -deps_dx
+        !flux_y = -deps_dy
+        !flux_z = -deps_dz
 
         call worker%integrate_volume('Artificial Viscosity',flux_x,flux_y,flux_z)
 

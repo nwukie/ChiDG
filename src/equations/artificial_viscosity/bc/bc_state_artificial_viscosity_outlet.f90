@@ -122,9 +122,9 @@ contains
 
 
         deriv_mag = -eps_m/(TEN*sqrt((h(1)*unormx)**TWO + (h(2)*unormy)**TWO + (h(3)*unormz)**TWO) )
-        deps_dx_m = deriv_mag * unormx
-        deps_dy_m = deriv_mag * unormy
-        deps_dz_m = deriv_mag * unormz
+!        deps_dx_m = deriv_mag * unormx
+!        deps_dy_m = deriv_mag * unormy
+!        deps_dz_m = deriv_mag * unormz
 
 
         !
@@ -132,9 +132,9 @@ contains
         !
         call worker%store_bc_state('Artificial Viscosity' , eps_bc,    'value')
 
-        deps_dx_m = ZERO
-        deps_dy_m = ZERO
-        deps_dz_m = ZERO
+!        deps_dx_m = ZERO
+!        deps_dy_m = ZERO
+!        deps_dz_m = ZERO
         call worker%store_bc_state('Artificial Viscosity' , deps_dx_m, 'ddx'  )
         call worker%store_bc_state('Artificial Viscosity' , deps_dy_m, 'ddy'  )
         call worker%store_bc_state('Artificial Viscosity' , deps_dz_m, 'ddz'  )

@@ -137,9 +137,8 @@ contains
             !
             ! Scale the sensor to be [0,maxval]
             !
-            !theta = 1.e-5_rk
             theta = 1.0_rk
-            psi  = -(0.50_rk + 4.25_rk*log10(real(order+1,rk)))
+            psi  = -(2.50_rk + 4.25_rk*log10(real(order+1,rk)))
             dpsi = 0.5_rk
 
 
@@ -156,7 +155,6 @@ contains
             end if
 
 
-!            print*, 'sensor: ', sensor(1)%x_ad_
 
         else
 

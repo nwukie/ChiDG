@@ -181,16 +181,16 @@ contains
         !================================
         diffusion = -(ONE/SA_sigma)*(mu_l + f_n1*rho_nutilde)
 
-        flux_x = (diffusion - eps)*dnutilde_dx
-        flux_y = (diffusion - eps)*dnutilde_dy
-        flux_z = (diffusion - eps)*dnutilde_dz
+        flux_x = (diffusion - 00._rk*eps)*dnutilde_dx
+        flux_y = (diffusion - 00._rk*eps)*dnutilde_dy
+        flux_z = (diffusion - 00._rk*eps)*dnutilde_dz
 
 
         call worker%integrate_volume('Density * NuTilde',flux_x,flux_y,flux_z)
 
 
     end subroutine compute
-    !*********************************************************************************************************
+    !************************************************************************************************
 
 
 

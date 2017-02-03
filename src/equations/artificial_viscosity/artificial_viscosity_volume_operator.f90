@@ -19,7 +19,7 @@ module artificial_viscosity_volume_operator
     !!  @author Nathan A. Wukie
     !!  @date   01/31/2017
     !!
-    !--------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     type, extends(operator_t), public :: artificial_viscosity_volume_operator_t
 
     contains
@@ -28,7 +28,7 @@ module artificial_viscosity_volume_operator
         procedure   :: compute
 
     end type artificial_viscosity_volume_operator_t
-    !********************************************************************************
+    !****************************************************************************************
 
 
 
@@ -48,7 +48,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   01/31/2017
     !!
-    !--------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine init(self)
         class(artificial_viscosity_volume_operator_t),   intent(inout) :: self
         
@@ -69,7 +69,7 @@ contains
 
 
     end subroutine init
-    !********************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -78,7 +78,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   01/31/2017
     !!
-    !!-------------------------------------------------------------------------------------
+    !!----------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
         class(artificial_viscosity_volume_operator_t),  intent(inout)   :: self
         type(chidg_worker_t),                           intent(inout)   :: worker
@@ -154,15 +154,15 @@ contains
 !        flux_x = -diffusion_x * deps_dx
 !        flux_y = -diffusion_y * deps_dy
 !        flux_z = -diffusion_z * deps_dz
-        flux_x = -0.05_rk*deps_dx
-        flux_y = -0.05_rk*deps_dy
-        flux_z = -0.05_rk*deps_dz
+        flux_x = -0.20_rk*deps_dx
+        flux_y = -0.20_rk*deps_dy
+        flux_z = -0.20_rk*deps_dz
 
         call worker%integrate_volume('Artificial Viscosity',flux_x,flux_y,flux_z)
 
 
     end subroutine compute
-    !*********************************************************************************************************
+    !****************************************************************************************
 
 
 

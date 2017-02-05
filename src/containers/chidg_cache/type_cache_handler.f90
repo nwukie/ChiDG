@@ -241,7 +241,7 @@ contains
         logical,                    intent(in)      :: differentiate
 
         integer(ik)                                 :: idomain_l, ielement_l, iface, idepend, &
-                                                       ieqn, ifield, iaux_field
+                                                       ieqn, ifield, iaux_field, idiff
         character(:),   allocatable                 :: field
         type(AD_D),     allocatable, dimension(:)   :: value_gq, ddx_gq, ddy_gq, ddz_gq
 

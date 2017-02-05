@@ -13,6 +13,8 @@ module type_quasi_newton
     use type_linear_solver,     only: linear_solver_t
     use type_preconditioner,    only: preconditioner_t
     use type_chidg_vector
+
+    use ieee_arithmetic,        only: ieee_is_nan
     implicit none
     private
 
@@ -66,11 +68,12 @@ contains
         character(100)          :: filename
         integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex,  &
                                    niter, ieqn, idom, ierr,                     &
-                                   rstart, rend, cstart, cend, nterms, imat, iwrite
+                                   rstart, rend, cstart, cend, nterms, imat, iwrite, step
 
-        real(rk)                :: dtau, amp, cfl, timing, resid, resid_new
+        real(rk)                :: dtau, amp, cfl, timing, resid, resid_new, alpha, f0, fn
         real(rk), allocatable   :: vals(:), cfln(:), rnorm0(:), rnorm(:)
-        type(chidg_vector_t)     :: b, qn, qold, qnew, dqdtau
+        type(chidg_vector_t)    :: b, qn, qold, qnew, dqdtau, q0
+        logical                 :: search
       
 
         wcount = 1
@@ -211,11 +214,69 @@ contains
 
 
 
-                !
-                ! Advance solution with update vector
-                !
-                qnew = qold + dq
 
+                !
+                ! Line Search
+                !
+                q0 = qold
+                f0 = resid
+                search = .true.
+                step = 0
+                do while (search)
+
+                    !
+                    ! Set line increment via backtracking.
+                    !   Try: 1, 0.5, 0.25... 2^-i
+                    !
+                    alpha = TWO**(-real(step,rk)) 
+                    call write_line("       Testing newton direction with 'alpha' = ", alpha)
+
+
+                    !
+                    ! Advance solution along newton direction
+                    !
+                    qn = q0 + alpha*dq
+
+
+                    !
+                    ! Clear working vector
+                    !
+                    call rhs%clear()
+
+
+                    !
+                    ! Set working solution. Test residual at (q). Do not differentiate
+                    !
+                    q = qn
+                    call update_space(data,timing,differentiate=.false.)
+
+                    !
+                    ! Compute new function value
+                    !
+                    fn = rhs%norm(ChiDG_COMM)
+
+
+                    !
+                    ! Test for sufficient reduction
+                    !
+                    if (ieee_is_nan(fn)) then
+                        search = .true.
+                    else if ( fn < f0 ) then
+                        search = .false.
+                    else
+                        search = .true.
+                    end if
+
+
+                    step = step + 1
+
+                end do
+
+
+                !
+                ! Accept new solution
+                !
+                q = qn
 
 
                 !
@@ -224,14 +285,6 @@ contains
                 call rhs%clear()
                 call dq%clear()
                 call lhs%clear()
-
-                
-
-                !
-                ! Store updated solution vector (qnew) to working solution vector (q)
-                !
-                q = qnew
-
 
 
                 !

@@ -153,7 +153,7 @@ contains
                     do iface = 1,NFACES
 
                         call worker%set_face(iface)
-
+ 
                         call eqnset%compute_boundary_advective_operators(worker, differentiate_function)
                         call eqnset%compute_boundary_diffusive_operators(worker, differentiate_function)
                         call eqnset%compute_bc_operators(worker,data%bcset, differentiate_function)

@@ -404,9 +404,11 @@ contains
 
 
         !
-        ! Check if linearization is with respect to an exterior element
+        ! Check if linearization is with respect to an exterior element. 
+        ! Only need this for diff_exterior, and idiff is undefined as a face index for 
+        ! diff_interior or diff_none.
         !
-        if ( diff_interior .or. diff_exterior ) then
+        if ( diff_exterior ) then
             conforming_face = (mesh(idom)%faces(ielem,idiff)%ftype == INTERIOR)
             boundary_face   = (mesh(idom)%faces(ielem,idiff)%ftype == BOUNDARY)
             chimera_face    = (mesh(idom)%faces(ielem,idiff)%ftype == CHIMERA )

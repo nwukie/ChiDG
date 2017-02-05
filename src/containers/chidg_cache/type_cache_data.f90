@@ -49,7 +49,7 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------
-    subroutine resize(self,cache_component,mesh,prop,idomain_l,ielement_l,iface)
+    subroutine resize(self,cache_component,mesh,prop,idomain_l,ielement_l,iface,differentiate)
         class(cache_data_t),    intent(inout)           :: self
         character(*),           intent(in)              :: cache_component
         type(mesh_t),           intent(in)              :: mesh(:)
@@ -57,6 +57,7 @@ contains
         integer(ik),            intent(in)              :: idomain_l
         integer(ik),            intent(in)              :: ielement_l
         integer(ik),            intent(in), optional    :: iface
+        logical,                intent(in), optional    :: differentiate
 
         integer(ik)                 :: nprimary_fields,nmodel_fields, ntotal_fields, ierr, &
                                        ChiID, donor_idomain, ifield, iprimary_field, imodel_field, &
@@ -150,7 +151,7 @@ contains
         ifield = 1
         do iprimary_field = 1,prop(idomain_l)%nprimary_fields()
             field = prop(idomain_l)%get_primary_field_name(iprimary_field)
-            call self%fields(ifield)%resize(field,cache_component,mesh,prop,idomain_l,ielement_l,iface)
+            call self%fields(ifield)%resize(field,cache_component,mesh,prop,idomain_l,ielement_l,iface,differentiate)
             ifield = ifield + 1
         end do
 
@@ -158,7 +159,7 @@ contains
         ! Resize model fields
         do imodel_field = 1,prop(idomain_l)%nmodel_fields()
             field = prop(idomain_l)%get_model_field_name(imodel_field)
-            call self%fields(ifield)%resize(field,cache_component,mesh,prop,idomain_l,ielement_l,iface)
+            call self%fields(ifield)%resize(field,cache_component,mesh,prop,idomain_l,ielement_l,iface,differentiate)
             ifield = ifield + 1
         end do
 
@@ -166,7 +167,7 @@ contains
         ! Resize auxiliary fields
         do iauxiliary_field = 1,prop(idomain_l)%nauxiliary_fields()
             field = prop(idomain_l)%get_auxiliary_field_name(iauxiliary_field)
-            call self%fields(ifield)%resize(field,cache_component,mesh,prop,idomain_l,ielement_l,iface)
+            call self%fields(ifield)%resize(field,cache_component,mesh,prop,idomain_l,ielement_l,iface,differentiate)
             ifield = ifield + 1
         end do
 

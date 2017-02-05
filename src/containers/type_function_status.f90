@@ -105,7 +105,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!  @param[in]  face_info   Container for face information. Location in mesh, type, etc.
-    !!  @param[in]  flux_info   Container for function information. iblk, idonor, iflux, type
+    !!  @param[in]  flux_info   Container for function information. idiff, idonor, iflux, type
     !!  @return     res         True if function needs computed. False if already computed.
     !!
     !-----------------------------------------------------------------------------------------
@@ -156,7 +156,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!  @param[in]  face_info   Container for face information. Location in mesh, type, etc.
-    !!  @param[in]  flux_info   Container for function information. iblk, idonor, iflux, type
+    !!  @param[in]  flux_info   Container for function information. idiff, idonor, iflux, type
     !!  @param[in]  ieqn        Equation index within the function definition
     !!  @return     res         True if function needs computed. False if already computed.
     !!
@@ -173,7 +173,7 @@ contains
 
 
         associate(idomain_l => face_info%idomain_l,  ielement_l => face_info%ielement_l, iface => face_info%iface, &
-                  type => function_info%type, ifcn => function_info%ifcn,  iblk => function_info%idiff )
+                  type => function_info%type, ifcn => function_info%ifcn )
 
 
         function_already_computed = self%dom(idomain_l)%function_equation_computed(type,ielement_l,iface,ifcn,ieqn)
@@ -207,7 +207,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!  @param[in]  face_info   Container for face information. Location in mesh, type, etc.
-    !!  @param[in]  flux_info   Container for function information. iblk, idonor, iflux, type
+    !!  @param[in]  flux_info   Container for function information. idiff, idonor, iflux, type
     !!  @return     res         True if function needs linearized. False if already linearized.
     !!
     !-----------------------------------------------------------------------------------------
@@ -217,21 +217,27 @@ contains
         type(function_info_t),      intent(in)  :: function_info
         
         logical :: function_already_linearized
-        logical :: res
+        logical :: differentiating, res
 
 
         associate(idomain_l => face_info%idomain_l,  ielement_l => face_info%ielement_l, iface => face_info%iface, &
-                  type => function_info%type, ifcn => function_info%ifcn,  iblk => function_info%idiff )
+                  type => function_info%type, ifcn => function_info%ifcn,  idiff => function_info%idiff )
 
+        differentiating = (idiff /= 0)
 
-        function_already_linearized = self%dom(idomain_l)%function_linearized(type,ielement_l,iface,ifcn,iblk)
+        if (differentiating) then
 
+            function_already_linearized = self%dom(idomain_l)%function_linearized(type,ielement_l,iface,ifcn,idiff)
+            if ( function_already_linearized ) then
+                res = .false.
+            else
+                res = .true.
+            end if
 
-
-        if ( function_already_linearized ) then
-            res = .false.
         else
-            res = .true.
+
+            res = .false.
+
         end if
 
         end associate
@@ -256,7 +262,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!  @param[in]  face_info   Container for face information. Location in mesh, type, etc.
-    !!  @param[in]  flux_info   Container for function information. iblk, idonor, iflux, type
+    !!  @param[in]  flux_info   Container for function information. idiff, idonor, iflux, type
     !!  @return     res         True if function needs linearized. False if already linearized.
     !!
     !-----------------------------------------------------------------------------------------
@@ -267,23 +273,27 @@ contains
         integer(ik),                intent(in)  :: ieqn
         
         logical :: function_already_linearized
-        logical :: res
+        logical :: differentiating, res
 
 
         associate(idomain_l => face_info%idomain_l,  ielement_l => face_info%ielement_l, iface => face_info%iface, &
-                  type => function_info%type, ifcn => function_info%ifcn,  iblk => function_info%idiff )
+                  type => function_info%type, ifcn => function_info%ifcn,  idiff => function_info%idiff )
 
+        differentiating = (idiff /= 0) 
 
-        function_already_linearized = self%dom(idomain_l)%function_equation_linearized(type,ielement_l,iface,ifcn,iblk,ieqn)
+        if (differentiating) then
+        
+            function_already_linearized = self%dom(idomain_l)%function_equation_linearized(type,ielement_l,iface,ifcn,idiff,ieqn)
+            if ( function_already_linearized ) then
+                res = .false.
+            else
+                res = .true.
+            end if
 
-
-
-
-
-        if ( function_already_linearized ) then
-            res = .false.
         else
-            res = .true.
+
+            res = .false.
+
         end if
 
         end associate
@@ -326,7 +336,7 @@ contains
 
 
         associate(idomain_l => face_info%idomain_l,  ielement_l => face_info%ielement_l, iface => face_info%iface, &
-                  type => function_info%type, ifcn => function_info%ifcn,  iblk => function_info%idiff )
+                  type => function_info%type, ifcn => function_info%ifcn)
 
 
             self%dom(idomain_l)%function_computed(type,ielement_l,iface,ifcn) = .true.
@@ -370,11 +380,11 @@ contains
 
 
         associate(idomain_l => face_info%idomain_l,  ielement_l => face_info%ielement_l, iface => face_info%iface, &
-                  type => function_info%type, ifcn => function_info%ifcn,  iblk => function_info%idiff )
+                  type => function_info%type, ifcn => function_info%ifcn, idiff => function_info%idiff )
 
 
-            self%dom(idomain_l)%function_linearized(type,ielement_l,iface,ifcn,iblk) = .true.
-            self%dom(idomain_l)%function_equation_linearized(type,ielement_l,iface,ifcn,iblk,ieqn) = .true.
+            self%dom(idomain_l)%function_linearized(type,ielement_l,iface,ifcn,idiff) = .true.
+            self%dom(idomain_l)%function_equation_linearized(type,ielement_l,iface,ifcn,idiff,ieqn) = .true.
 
         end associate
     end subroutine register_function_linearized

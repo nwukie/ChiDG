@@ -68,7 +68,7 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------
-    subroutine resize(self,field,cache_component,mesh,prop,idomain_l,ielement_l,iface)
+    subroutine resize(self,field,cache_component,mesh,prop,idomain_l,ielement_l,iface,differentiate)
         class(cache_data_field_t),  intent(inout)           :: self
         character(*),               intent(in)              :: field
         character(*),               intent(in)              :: cache_component
@@ -77,6 +77,7 @@ contains
         integer(ik),                intent(in)              :: idomain_l
         integer(ik),                intent(in)              :: ielement_l
         integer(ik),                intent(in), optional    :: iface
+        logical,                    intent(in), optional    :: differentiate
 
         character(:),   allocatable :: user_msg
         integer(ik)                 :: nnodes, nnodes_vol, nnodes_face, ndepend_value, &
@@ -146,6 +147,14 @@ contains
                 call chidg_signal_one(FATAL,user_msg, cache_component)
         end select
 
+
+        !
+        ! Override ndepend_value, ndepend_deriv if we are not differentiating
+        !
+        if (.not. differentiate) then
+            ndepend_value = 1
+            ndepend_deriv = 1
+        end if
 
 
 

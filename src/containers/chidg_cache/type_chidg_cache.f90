@@ -54,12 +54,13 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------
-    subroutine resize(self,mesh,prop,idomain_l,ielement_l)
+    subroutine resize(self,mesh,prop,idomain_l,ielement_l,differentiate)
         class(chidg_cache_t),   intent(inout)   :: self
         type(mesh_t),           intent(in)      :: mesh(:)
         type(properties_t),     intent(in)      :: prop(:)
         integer(ik),            intent(in)      :: idomain_l
         integer(ik),            intent(in)      :: ielement_l
+        logical,                intent(in)      :: differentiate
 
         integer(ik) :: iface, ierr
 
@@ -77,7 +78,7 @@ contains
         !
         ! Allocate storage for element cache
         !
-        call self%element%resize('element',mesh,prop,idomain_l,ielement_l)
+        call self%element%resize('element',mesh,prop,idomain_l,ielement_l,differentiate=differentiate)
 
 
 
@@ -86,8 +87,8 @@ contains
         !
         do iface = 1,size(self%faces,1)
 
-            call self%faces(iface,CACHE_FACE_INTERIOR)%resize('face interior',mesh,prop,idomain_l,ielement_l,iface)
-            call self%faces(iface,CACHE_FACE_EXTERIOR)%resize('face exterior',mesh,prop,idomain_l,ielement_l,iface)
+            call self%faces(iface,CACHE_FACE_INTERIOR)%resize('face interior',mesh,prop,idomain_l,ielement_l,iface,differentiate=differentiate)
+            call self%faces(iface,CACHE_FACE_EXTERIOR)%resize('face exterior',mesh,prop,idomain_l,ielement_l,iface,differentiate=differentiate)
 
         end do
 

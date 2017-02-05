@@ -52,7 +52,6 @@ contains
             idom_n = mesh(idom)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
 
         else
-            !idom_n = idom
             idom_n = mesh(idom)%faces(ielem,iface)%ineighbor_domain_l
         end if
 
@@ -102,7 +101,6 @@ contains
             idom_n = mesh(idom)%chimera%recv%data(ChiID)%donor_domain_g%at(idonor)
 
         else
-            !idom_n = idom
             idom_n = mesh(idom)%faces(ielem,iface)%ineighbor_domain_g
         end if
 
@@ -276,10 +274,10 @@ contains
 
     !> Compute the domain and element that is being linearized. These are found by checking
     !! the current element/face neighbors, or by setting the current element itself. Which
-    !! element gets linearized depends on iblk. iblk specifies the direction of the linearization.
-    !! For example, if iblk == XI_MIN, the seed element is that which is the neighbor to the XI_MIN
+    !! element gets linearized depends on idiff. idiff specifies the direction of the linearization.
+    !! For example, if idiff == XI_MIN, the seed element is that which is the neighbor to the XI_MIN
     !! face of the current element. The other behavior is if the linearization of the current
-    !! element is desired. That is handled with iblk == DIAG.
+    !! element is desired. That is handled with idiff == DIAG.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -289,16 +287,16 @@ contains
     !!  @param[in]  ielem   Element index for mesh(idom)%elems(ielem)
     !!  @param[in]  iface   Face index for mesh(idom)%faces(ielem,iface)
     !!  @param[in]  idepend Index of external dependent element. For example, Chimera faces could have more than one dependent element
-    !!  @param[in]  iblk    Linearization index
+    !!  @param[in]  idiff   Linearization index
     !!
     !-------------------------------------------------------------------------------------------------------------------------
-    function face_compute_seed(mesh,idomain_l,ielement_l,iface,idepend,iblk) result(seed)
+    function face_compute_seed(mesh,idomain_l,ielement_l,iface,idepend,idiff) result(seed)
         type(mesh_t),   intent(in)  :: mesh(:)
         integer(ik),    intent(in)  :: idomain_l
         integer(ik),    intent(in)  :: ielement_l
         integer(ik),    intent(in)  :: iface
         integer(ik),    intent(in)  :: idepend
-        integer(ik),    intent(in)  :: iblk
+        integer(ik),    intent(in)  :: idiff
 
 
         type(seed_t)    :: seed
@@ -307,11 +305,12 @@ contains
         logical         :: chimera_face, interior_face, boundary_face
 
 
-        linearize           = (idepend /= 0)
-        linearize_me        = ( iblk == DIAG )
-        linearize_neighbor  = ( iblk == XI_MIN   .or. iblk == XI_MAX   .or. &
-                                iblk == ETA_MIN  .or. iblk == ETA_MAX  .or. &
-                                iblk == ZETA_MIN .or. iblk == ZETA_MAX )
+        !linearize           = (idepend /= 0)
+        linearize           = ( idiff /= 0 )
+        linearize_me        = ( idiff == DIAG )
+        linearize_neighbor  = ( idiff == XI_MIN   .or. idiff == XI_MAX   .or. &
+                                idiff == ETA_MIN  .or. idiff == ETA_MAX  .or. &
+                                idiff == ZETA_MIN .or. idiff == ZETA_MAX )
 
 
         if (linearize) then
@@ -415,7 +414,7 @@ contains
 
         else
 
-            ! If idepend == 0 then no linearization. 
+            ! If idiff == 0 then no linearization. 
             call seed%init(idomain_g    = 0, &
                            idomain_l    = 0, &
                            ielement_g   = 0, &
@@ -449,10 +448,10 @@ contains
 
     !> Compute the domain and element that is being linearized. These are found by checking
     !! the current element/face neighbors, or by setting the current element itself. Which
-    !! element gets linearized depends on iblk. iblk specifies the direction of the linearization.
-    !! For example, if iblk == XI_MIN, the seed element is that which is the neighbor to the XI_MIN
+    !! element gets linearized depends on idiff. idiff specifies the direction of the linearization.
+    !! For example, if idiff == XI_MIN, the seed element is that which is the neighbor to the XI_MIN
     !! face of the current element. The other behavior is if the linearization of the current
-    !! element is desired. That is handled with iblk == DIAG.
+    !! element is desired. That is handled with idiff == DIAG.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -463,15 +462,15 @@ contains
     !!  @param[in]  iface   Face index for mesh(idom)%faces(ielem,iface)
     !!  @param[in]  idepend Index of potential dependent exterior elements. For example, Chimera faces could 
     !!                      have more than one dependent element
-    !!  @param[in]  iblk    Linearization index
+    !!  @param[in]  idiff   Linearization index
     !!
     !-----------------------------------------------------------------------------------------------------------
-    function element_compute_seed(mesh,idomain_l,ielement_l,idepend,iblk) result(seed)
+    function element_compute_seed(mesh,idomain_l,ielement_l,idepend,idiff) result(seed)
         type(mesh_t),   intent(in)  :: mesh(:)
         integer(ik),    intent(in)  :: idomain_l
         integer(ik),    intent(in)  :: ielement_l
         integer(ik),    intent(in)  :: idepend
-        integer(ik),    intent(in)  :: iblk
+        integer(ik),    intent(in)  :: idiff
 
 
         type(seed_t)    :: seed
@@ -480,11 +479,12 @@ contains
         logical         :: chimera_face, interior_face, boundary_face
 
 
-        linearize           = (idepend /= 0)
-        linearize_me        = ( iblk == DIAG )
-        linearize_neighbor  = ( iblk == XI_MIN   .or. iblk == XI_MAX   .or. &
-                                iblk == ETA_MIN  .or. iblk == ETA_MAX  .or. &
-                                iblk == ZETA_MIN .or. iblk == ZETA_MAX )
+        !linearize           = (idepend /= 0)
+        linearize           = ( idiff /= 0 )
+        linearize_me        = ( idiff == DIAG )
+        linearize_neighbor  = ( idiff == XI_MIN   .or. idiff == XI_MAX   .or. &
+                                idiff == ETA_MIN  .or. idiff == ETA_MAX  .or. &
+                                idiff == ZETA_MIN .or. idiff == ZETA_MAX )
 
 
         if (linearize) then
@@ -512,9 +512,9 @@ contains
             elseif ( linearize_neighbor ) then
 
                 !
-                ! Check face in the direction of iblk
+                ! Check face in the direction of idiff
                 !
-                iface = iblk
+                iface = idiff
 
                 !
                 ! Check if linearization direction (iface) is a Interior or Chimera face
@@ -590,7 +590,7 @@ contains
 
         else
 
-            ! If idepend == 0 then no linearization. 
+            ! If idiff == 0 then no linearization. 
             call seed%init(idomain_g    = 0, &
                            idomain_l    = 0, &
                            ielement_g   = 0, &

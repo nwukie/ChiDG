@@ -79,7 +79,6 @@ contains
     !!  @param[in]  itime - Index for the time step in solution
     !!
     !-----------------------------------------------------------------------------------------
-    !function interpolate_element_autodiff(mesh,q,elem_info,fcn_info,ieqn,itime,interpolation_type) result(var_gq)
     function interpolate_element_autodiff(mesh,q,elem_info,fcn_info,ieqn,itime,interpolation_type,Pmin,Pmax) result(var_gq)
         type(mesh_t),           intent(in)              :: mesh(:)
         type(chidg_vector_t),   intent(in)              :: q
@@ -90,6 +89,7 @@ contains
         character(*),           intent(in)              :: interpolation_type
         integer(ik),            intent(in), optional    :: Pmin
         integer(ik),            intent(in), optional    :: Pmax
+
 
         character(:),   allocatable :: user_msg
 
@@ -230,7 +230,7 @@ contains
     !------------------------------------------------------------------------------------------
     function interpolate_face_autodiff(mesh,q,face_info,fcn_info, ieqn, itime, interpolation_type, interpolation_source) result(var_gq)
         type(mesh_t),           intent(in)              :: mesh(:)
-        type(chidg_vector_t),    intent(in)              :: q
+        type(chidg_vector_t),   intent(in)              :: q
         type(face_info_t),      intent(in)              :: face_info
         type(function_info_t),  intent(in)              :: fcn_info
         integer(ik),            intent(in)              :: ieqn

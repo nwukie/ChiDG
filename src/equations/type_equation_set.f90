@@ -1063,37 +1063,41 @@ contains
 
 
 
-!            linearize_me = (idiff == DIAG)
-!            if (linearize_me) then
-!                compute_function = .true.
-!            else
-!                compute_function = ( (mesh(elem_info%idomain_l)%faces(elem_info%ielement_l,idiff)%ftype == INTERIOR) .or. &
-!                                     (mesh(elem_info%idomain_l)%faces(elem_info%ielement_l,idiff)%ftype == CHIMERA) )
-!            end if
+            linearize_me = (idiff == DIAG)
+            if (linearize_me) then
+                compute_function = .true.
+            else
+                compute_function = ( (mesh(elem_info%idomain_l)%faces(elem_info%ielement_l,idiff)%ftype == INTERIOR) .or. &
+                                     (mesh(elem_info%idomain_l)%faces(elem_info%ielement_l,idiff)%ftype == CHIMERA) )
+            end if
                                 
 
-            if (allocated(self%volume_diffusive_operator)) then
-                nfcn = size(self%volume_diffusive_operator)
-                do ifcn = 1,nfcn
-    
-                    !
-                    ! Compute boundary flux once for each donor. 
-                    !   - For interior faces ndepend == 1. 
-                    !   - For Chimera faces ndepend is potentially > 1.
-                    !
-                    do icompute = 1,ncompute
-    
-                        worker%function_info%type    = VOLUME_DIFFUSIVE_FLUX
-                        worker%function_info%ifcn    = ifcn
-                        worker%function_info%idiff   = idiff
-                        worker%function_info%idepend = icompute
-                        worker%function_info%seed    = element_compute_seed(mesh,idom,ielem,icompute,idiff)
-    
-                        call self%volume_diffusive_operator(ifcn)%op%compute(worker,prop)
-    
-                    end do
-    
-                end do ! ifcn
+            if (compute_function) then
+
+                if (allocated(self%volume_diffusive_operator)) then
+                    nfcn = size(self%volume_diffusive_operator)
+                    do ifcn = 1,nfcn
+        
+                        !
+                        ! Compute boundary flux once for each donor. 
+                        !   - For interior faces ndepend == 1. 
+                        !   - For Chimera faces ndepend is potentially > 1.
+                        !
+                        do icompute = 1,ncompute
+        
+                            worker%function_info%type    = VOLUME_DIFFUSIVE_FLUX
+                            worker%function_info%ifcn    = ifcn
+                            worker%function_info%idiff   = idiff
+                            worker%function_info%idepend = icompute
+                            worker%function_info%seed    = element_compute_seed(mesh,idom,ielem,icompute,idiff)
+        
+                            call self%volume_diffusive_operator(ifcn)%op%compute(worker,prop)
+        
+                        end do
+        
+                    end do ! ifcn
+                end if
+
             end if
 
         end do !ipattern

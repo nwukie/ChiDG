@@ -609,6 +609,7 @@ contains
 
         associate ( rhs => sdata%rhs%dom(idomain_l)%vecs, lhs => sdata%lhs)
 
+        if (diff_interior .or. diff_exterior) then
 
             ! Store linearization. Rules for different face types.
             if ( chimera_face ) then
@@ -648,6 +649,7 @@ contains
 
             end if ! ftype
 
+        end if ! diff_...
         end associate
 
         end associate 

@@ -130,7 +130,7 @@ contains
         type(bcset_t),              intent(inout)   :: bc_set(:)
         logical,                    intent(in)      :: differentiate
 
-        integer(ik)                                 :: idomain_l, ielement_l, iface, idepend, ieqn
+        integer(ik)                                 :: idomain_l, ielement_l, iface, idepend, ieqn, idiff
         character(:),   allocatable                 :: field
         type(AD_D),     allocatable, dimension(:)   :: value_gq, ddx_gq, ddy_gq, ddz_gq
 
@@ -163,10 +163,17 @@ contains
         !
         ! Element primary fields volume 'value' cache. Only depends on interior element
         !
+        if (differentiate) then
+            idiff = DIAG
+        else
+            idiff = 0
+        end if
+
         idepend = 1
         do ieqn = 1,worker%mesh(idomain_l)%neqns
 
-                worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,DIAG)
+                !worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,DIAG)
+                worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
                 worker%function_info%idepend = idepend
 
                 value_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'value')
@@ -265,6 +272,12 @@ contains
         !
         ! Element primary fields volume 'value' cache. Only depends on interior element
         !
+        if (differentiate) then
+            idiff = DIAG
+        else
+            idiff = 0
+        end if
+
         idepend = 0 ! no linearization
         do ifield = 1,worker%prop(idomain_l)%nauxiliary_fields()
 
@@ -275,9 +288,11 @@ contains
             iaux_field = worker%solverdata%get_auxiliary_field_index(field)
 
             ! Set seed
-            worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,DIAG)
+            !worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,DIAG)
+            !worker%function_info%idiff   = DIAG
+            worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
             worker%function_info%idepend = idepend
-            worker%function_info%idiff   = DIAG
+            worker%function_info%idiff   = idiff
 
             ! Interpolate modes to nodes
             ieqn = 1    !implicitly assuming only 1 equation in the auxiliary field chidgVector
@@ -327,7 +342,7 @@ contains
         type(bcset_t),              intent(inout)   :: bc_set(:)
         logical,                    intent(in)      :: differentiate
 
-        integer(ik)                 :: iface, imodel, idomain_l, ielement_l, idepend
+        integer(ik)                 :: iface, imodel, idomain_l, ielement_l, idepend, idiff
 
 
         idomain_l  = worker%element_info%idomain_l 
@@ -354,11 +369,18 @@ contains
         !
         ! Element volume cache. Models only depend on interior element
         !
+        if (differentiate) then
+            idiff = DIAG
+        else
+            idiff = 0
+        end if
+
         idepend = 1
         worker%interpolation_source = 'element'
         do imodel = 1,equation_set(idomain_l)%nmodels()
 
-                worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,DIAG)
+                !worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,DIAG)
+                worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
                 worker%function_info%idepend = idepend
 
                 call equation_set(idomain_l)%models(imodel)%model%compute(worker)
@@ -936,9 +958,12 @@ contains
         worker%interpolation_source = 'face interior'
         do imodel = 1,equation_set(idomain_l)%nmodels()
 
-                worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,DIAG)
+                !worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,DIAG)
+                !worker%function_info%idepend = idepend
+                !worker%function_info%idiff   = DIAG
+                worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
                 worker%function_info%idepend = idepend
-                worker%function_info%idiff   = DIAG
+                worker%function_info%idiff   = idiff
 
                 call equation_set(idomain_l)%models(imodel)%model%compute(worker)
         end do

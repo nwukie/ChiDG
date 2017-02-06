@@ -95,13 +95,16 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        turb_total = worker%get_primary_field_element('Density * NuTilde', 'value')
+        !turb_total = worker%get_primary_field_element('Density * NuTilde', 'value')
+        turb_total = worker%get_primary_field_element('Density', 'value')
+
 
 
 
         if (order > 0) then
 
-            turb_low   = worker%get_primary_field_element('Density * NuTilde', 'value', Pmin=0,Pmax=(order-1))
+            !turb_low   = worker%get_primary_field_element('Density * NuTilde', 'value', Pmin=0,Pmax=(order-1))
+            turb_low   = worker%get_primary_field_element('Density', 'value', Pmin=0,Pmax=(order-1))
 
 
 
@@ -118,6 +121,7 @@ contains
             weights = worker%quadrature_weights('element')
             jinv    = worker%inverse_jacobian('element')
 
+            !
 
             !
             ! Integrate
@@ -137,8 +141,8 @@ contains
             !
             ! Scale the sensor to be [0,maxval]
             !
-            theta = 1.0_rk
-            psi  = -(2.50_rk + 4.25_rk*log10(real(order+1,rk)))
+            theta = 100000.0_rk
+            psi  = -(3.0_rk + 4.25_rk*log10(real(order+1,rk)))
             dpsi = 0.5_rk
 
 
@@ -158,7 +162,8 @@ contains
 
         else
 
-            turb_gen = worker%get_primary_field_general('Density * NuTilde', 'value')
+            !turb_gen = worker%get_primary_field_general('Density * NuTilde', 'value')
+            turb_gen = worker%get_primary_field_general('Density', 'value')
             sensor = turb_gen
             sensor = ZERO
 

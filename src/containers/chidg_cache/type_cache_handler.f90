@@ -2,7 +2,7 @@ module type_cache_handler
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: NFACES, INTERIOR, CHIMERA, BOUNDARY, DIAG, ME, NEIGHBOR, HALF, ONE, &
-                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NO_PROC
     use mod_DNAD_tools,     only: face_compute_seed, element_compute_seed
     use mod_interpolate,    only: interpolate_face_autodiff, interpolate_element_autodiff
     use mod_chidg_mpi,      only: IRANK
@@ -359,8 +359,8 @@ contains
             call worker%set_face(iface)
 
             ! Update model 'face interior' 'face exterior' cache entries for 'value'
-            call self%update_model_interior(  worker,equation_set,bc_set,differentiate)
-            call self%update_model_exterior(  worker,equation_set,bc_set,differentiate)
+            call self%update_model_interior(worker,equation_set,bc_set,differentiate)
+            call self%update_model_exterior(worker,equation_set,bc_set,differentiate)
 
         end do !iface
 
@@ -605,12 +605,21 @@ contains
                 do idepend = 1,ndepend
 
                     ! Get coupled bc element to linearize against.
-                    ielement_c = bc_set(idomain_l)%bcs(BC_ID)%bc_patch%coupled_elements(BC_face)%at(idepend)
-                    worker%function_info%seed%idomain_g  = worker%mesh(idomain_l)%elems(ielement_c)%idomain_g
-                    worker%function_info%seed%idomain_l  = worker%mesh(idomain_l)%elems(ielement_c)%idomain_l
-                    worker%function_info%seed%ielement_g = worker%mesh(idomain_l)%elems(ielement_c)%ielement_g
-                    worker%function_info%seed%ielement_l = worker%mesh(idomain_l)%elems(ielement_c)%ielement_l
-                    worker%function_info%seed%iproc      = IRANK
+                    if (differentiate) then
+                        ielement_c = bc_set(idomain_l)%bcs(BC_ID)%bc_patch%coupled_elements(BC_face)%at(idepend)
+                        worker%function_info%seed%idomain_g  = worker%mesh(idomain_l)%elems(ielement_c)%idomain_g
+                        worker%function_info%seed%idomain_l  = worker%mesh(idomain_l)%elems(ielement_c)%idomain_l
+                        worker%function_info%seed%ielement_g = worker%mesh(idomain_l)%elems(ielement_c)%ielement_g
+                        worker%function_info%seed%ielement_l = worker%mesh(idomain_l)%elems(ielement_c)%ielement_l
+                        worker%function_info%seed%iproc      = IRANK
+                    else
+                        worker%function_info%seed%idomain_g  = 0
+                        worker%function_info%seed%idomain_l  = 0
+                        worker%function_info%seed%ielement_g = 0
+                        worker%function_info%seed%ielement_l = 0
+                        worker%function_info%seed%iproc      = NO_PROC
+                    end if
+
 
                     call bc_set(idomain_l)%bcs(BC_ID)%bc_state(istate)%state%compute_bc_state(worker,equation_set(idomain_l)%prop)
 
@@ -1057,13 +1066,22 @@ contains
             do imodel = 1,equation_set(idomain_l)%nmodels()
                 do idepend = 1,ndepend
 
-                    ! Get coupled bc element to linearize against.
-                    ielement_c = bc_set(idomain_l)%bcs(BC_ID)%bc_patch%coupled_elements(BC_face)%at(idepend)
-                    worker%function_info%seed%idomain_g  = worker%mesh(idomain_l)%elems(ielement_c)%idomain_g
-                    worker%function_info%seed%idomain_l  = worker%mesh(idomain_l)%elems(ielement_c)%idomain_l
-                    worker%function_info%seed%ielement_g = worker%mesh(idomain_l)%elems(ielement_c)%ielement_g
-                    worker%function_info%seed%ielement_l = worker%mesh(idomain_l)%elems(ielement_c)%ielement_l
-                    worker%function_info%seed%iproc      = IRANK
+                    if (differentiate) then
+                        ! Get coupled bc element to linearize against.
+                        ielement_c = bc_set(idomain_l)%bcs(BC_ID)%bc_patch%coupled_elements(BC_face)%at(idepend)
+                        worker%function_info%seed%idomain_g  = worker%mesh(idomain_l)%elems(ielement_c)%idomain_g
+                        worker%function_info%seed%idomain_l  = worker%mesh(idomain_l)%elems(ielement_c)%idomain_l
+                        worker%function_info%seed%ielement_g = worker%mesh(idomain_l)%elems(ielement_c)%ielement_g
+                        worker%function_info%seed%ielement_l = worker%mesh(idomain_l)%elems(ielement_c)%ielement_l
+                        worker%function_info%seed%iproc      = IRANK
+                    else
+                        ! Get coupled bc element to linearize against.
+                        worker%function_info%seed%idomain_g  = 0
+                        worker%function_info%seed%idomain_l  = 0
+                        worker%function_info%seed%ielement_g = 0
+                        worker%function_info%seed%ielement_l = 0
+                        worker%function_info%seed%iproc      = NO_PROC
+                    end if
 
                     call equation_set(idomain_l)%models(imodel)%model%compute(worker)
 

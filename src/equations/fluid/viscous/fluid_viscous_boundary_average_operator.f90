@@ -121,7 +121,7 @@ contains
             tau_xx_p, tau_yy_p, tau_zz_p, tau_xy_p, tau_xz_p, tau_yz_p,             &
             flux_x_m, flux_y_m, flux_z_m,                                           &
             flux_x_p, flux_y_p, flux_z_p,                                           &
-            flux_x, flux_y, flux_z, integrand
+            flux_x, flux_y, flux_z, integrand, eps_m, eps_p
 
 
         real(rk), allocatable, dimension(:) ::      &
@@ -147,6 +147,10 @@ contains
 
         rhoE_m = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
         rhoE_p = worker%get_primary_field_face('Energy'    , 'value', 'face exterior')
+
+
+        eps_m  = worker%get_primary_field_face('Artificial Viscosity', 'value', 'face interior')
+        eps_p  = worker%get_primary_field_face('Artificial Viscosity', 'value', 'face exterior')
 
 
         !
@@ -388,22 +392,22 @@ contains
         !
         ! Compute shear stress components
         !
-        tau_xx_m = TWO*mu_m*du_dx_m  +  lamda_m*(du_dx_m + dv_dy_m + dw_dz_m)
-        tau_yy_m = TWO*mu_m*dv_dy_m  +  lamda_m*(du_dx_m + dv_dy_m + dw_dz_m)
-        tau_zz_m = TWO*mu_m*dw_dz_m  +  lamda_m*(du_dx_m + dv_dy_m + dw_dz_m)
+        tau_xx_m = TWO*(mu_m + 0.0_rk*eps_m)*du_dx_m  +  lamda_m*(du_dx_m + dv_dy_m + dw_dz_m)
+        tau_yy_m = TWO*(mu_m + 0.0_rk*eps_m)*dv_dy_m  +  lamda_m*(du_dx_m + dv_dy_m + dw_dz_m)
+        tau_zz_m = TWO*(mu_m + 0.0_rk*eps_m)*dw_dz_m  +  lamda_m*(du_dx_m + dv_dy_m + dw_dz_m)
 
-        tau_xy_m = mu_m*(du_dy_m + dv_dx_m)
-        tau_xz_m = mu_m*(du_dz_m + dw_dx_m)
-        tau_yz_m = mu_m*(dw_dy_m + dv_dz_m)
+        tau_xy_m = (mu_m + 0.0_rk*eps_m)*(du_dy_m + dv_dx_m)
+        tau_xz_m = (mu_m + 0.0_rk*eps_m)*(du_dz_m + dw_dx_m)
+        tau_yz_m = (mu_m + 0.0_rk*eps_m)*(dw_dy_m + dv_dz_m)
 
 
-        tau_xx_p = TWO*mu_p*du_dx_p  +  lamda_p*(du_dx_p + dv_dy_p + dw_dz_p)
-        tau_yy_p = TWO*mu_p*dv_dy_p  +  lamda_p*(du_dx_p + dv_dy_p + dw_dz_p)
-        tau_zz_p = TWO*mu_p*dw_dz_p  +  lamda_p*(du_dx_p + dv_dy_p + dw_dz_p)
+        tau_xx_p = TWO*(mu_p + 0.0_rk*eps_p)*du_dx_p  +  lamda_p*(du_dx_p + dv_dy_p + dw_dz_p)
+        tau_yy_p = TWO*(mu_p + 0.0_rk*eps_p)*dv_dy_p  +  lamda_p*(du_dx_p + dv_dy_p + dw_dz_p)
+        tau_zz_p = TWO*(mu_p + 0.0_rk*eps_p)*dw_dz_p  +  lamda_p*(du_dx_p + dv_dy_p + dw_dz_p)
 
-        tau_xy_p = mu_p*(du_dy_p + dv_dx_p)
-        tau_xz_p = mu_p*(du_dz_p + dw_dx_p)
-        tau_yz_p = mu_p*(dw_dy_p + dv_dz_p)
+        tau_xy_p = (mu_p + 0.0_rk*eps_p)*(du_dy_p + dv_dx_p)
+        tau_xz_p = (mu_p + 0.0_rk*eps_p)*(du_dz_p + dw_dx_p)
+        tau_yz_p = (mu_p + 0.0_rk*eps_p)*(dw_dy_p + dv_dz_p)
 
 
 
@@ -413,6 +417,23 @@ contains
         !================================
         !       MASS FLUX
         !================================
+        flux_x_m = -0.0_rk*eps_m * drho_dx_m
+        flux_y_m = -0.0_rk*eps_m * drho_dy_m
+        flux_z_m = -0.0_rk*eps_m * drho_dz_m
+
+        flux_x_p = -0.0_rk*eps_p * drho_dx_p
+        flux_y_p = -0.0_rk*eps_p * drho_dy_p
+        flux_z_p = -0.0_rk*eps_p * drho_dz_p
+
+        flux_x = (flux_x_m + flux_x_p)
+        flux_y = (flux_y_m + flux_y_p)
+        flux_z = (flux_z_m + flux_z_p)
+
+
+        ! dot with normal vector
+        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
+
+        call worker%integrate_boundary('Density',integrand)
 
 
         !================================

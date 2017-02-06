@@ -70,7 +70,7 @@ contains
                                    niter, ieqn, idom, ierr,                     &
                                    rstart, rend, cstart, cend, nterms, imat, iwrite, step
 
-        real(rk)                :: dtau, amp, cfl, timing, resid, resid_new, alpha, f0, fn
+        real(rk)                :: dtau, amp, cfl, timing, resid, resid_new, alpha, f0, fn, forcing_term
         real(rk), allocatable   :: vals(:), cfln(:), rnorm0(:), rnorm(:)
         type(chidg_vector_t)    :: b, qn, qold, qnew, dqdtau, q0
         logical                 :: search
@@ -208,6 +208,14 @@ contains
                 !
                 ! We need to solve the matrix system Ax=b for the update vector x (dq)
                 !
+
+                !
+                ! Set forcing term
+                !
+                forcing_term = resid/10000._rk
+
+                linear_solver%tol = max(1.e-8_rk, forcing_term)
+
                 call linear_solver%solve(lhs,dq,b,preconditioner)
                 call self%matrix_iterations%push_back(linear_solver%niter)
                 call self%matrix_time%push_back(linear_solver%timer%elapsed())
@@ -261,7 +269,7 @@ contains
                     !
                     if (ieee_is_nan(fn)) then
                         search = .true.
-                    else if ( fn < f0 ) then
+                    else if ( fn < 2.0_rk*f0 ) then
                         search = .false.
                     else
                         search = .true.

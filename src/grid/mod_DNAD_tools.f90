@@ -388,16 +388,16 @@ contains
                 !
                 elseif ( boundary_face ) then
 
-                    call seed%init(idomain_g    = mesh(idomain_l)%elems(ielement_l)%idomain_g,  &
-                                   idomain_l    = mesh(idomain_l)%elems(ielement_l)%idomain_l,  &
-                                   ielement_g   = mesh(idomain_l)%elems(ielement_l)%ielement_g, &
-                                   ielement_l   = mesh(idomain_l)%elems(ielement_l)%ielement_l, &
-                                   neqns        = mesh(idomain_l)%elems(ielement_l)%neqns,      &
-                                   nterms_s     = mesh(idomain_l)%elems(ielement_l)%nterms_s,   &
-                                   iproc        = IRANK,                                        &
-                                   recv_comm    = 0,                                            &
-                                   recv_domain  = 0,                                            &
-                                   recv_element = 0)
+!                    call seed%init(idomain_g    = mesh(idomain_l)%elems(ielement_l)%idomain_g,  &
+!                                   idomain_l    = mesh(idomain_l)%elems(ielement_l)%idomain_l,  &
+!                                   ielement_g   = mesh(idomain_l)%elems(ielement_l)%ielement_g, &
+!                                   ielement_l   = mesh(idomain_l)%elems(ielement_l)%ielement_l, &
+!                                   neqns        = mesh(idomain_l)%elems(ielement_l)%neqns,      &
+!                                   nterms_s     = mesh(idomain_l)%elems(ielement_l)%nterms_s,   &
+!                                   iproc        = IRANK,                                        &
+!                                   recv_comm    = 0,                                            &
+!                                   recv_domain  = 0,                                            &
+!                                   recv_element = 0)
 
 
                 ! Invalid Case

@@ -155,7 +155,7 @@ contains
         self%niter = 0
 
 
-        res = 1._rk
+        res = 1000000000000._rk
         do while (res > self%tol)
 
             !

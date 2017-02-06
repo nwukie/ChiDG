@@ -229,7 +229,7 @@ contains
                     !   Try: 1, 0.5, 0.25... 2^-i
                     !
                     alpha = TWO**(-real(step,rk)) 
-                    call write_line("       Testing newton direction with 'alpha' = ", alpha)
+                    call write_line("       Testing newton direction with 'alpha' = ", alpha, io_proc=GLOBAL_MASTER)
 
 
                     !
@@ -267,6 +267,7 @@ contains
                         search = .true.
                     end if
 
+                    call write_line("       Rn(Q) = ", fn, io_proc=GLOBAL_MASTER)
 
                     step = step + 1
 

@@ -513,7 +513,7 @@ contains
                     call rhs(ielement_l)%setvar(ieqn,itime,vals)
 
 
-                else if ( chimera_face .and. diff_interior ) then
+                else if ( (chimera_face .and. diff_interior) .or. (chimera_face .and. diff_none) ) then
 
                     if (idonor == 1) then
                         vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_

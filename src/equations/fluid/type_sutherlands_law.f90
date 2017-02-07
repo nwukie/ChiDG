@@ -67,8 +67,8 @@ contains
     !!
     !--------------------------------------------------------------------------------------
     subroutine compute(self,worker)
-        class(sutherlands_law_t),     intent(in)      :: self
-        type(chidg_worker_t),   intent(inout)   :: worker
+        class(sutherlands_law_t),   intent(in)      :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
 
         type(AD_D), dimension(:),   allocatable :: &
             viscosity, T

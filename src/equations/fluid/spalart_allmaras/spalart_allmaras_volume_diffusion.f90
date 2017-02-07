@@ -92,7 +92,7 @@ contains
             drho_dy, dnutilde_dy, drho_nutilde_dy,  &
             drho_dz, dnutilde_dz, drho_nutilde_dz,  &
             dnutilde_drho, dnutilde_drhonutilde,    &
-            flux_x, flux_y, flux_z, diffusion, eps
+            flux_x, flux_y, flux_z, diffusion
 
 
         real(rk), allocatable, dimension(:) ::      &
@@ -105,7 +105,6 @@ contains
         !
         rho         = worker%get_primary_field_element('Density',          'value')
         rho_nutilde = worker%get_primary_field_element('Density * NuTilde','value')
-        eps         = worker%get_primary_field_element('Artificial Viscosity', 'value')
 
 
         !
@@ -181,9 +180,9 @@ contains
         !================================
         diffusion = -(ONE/SA_sigma)*(mu_l + f_n1*rho_nutilde)
 
-        flux_x = (diffusion - 00._rk*eps)*dnutilde_dx
-        flux_y = (diffusion - 00._rk*eps)*dnutilde_dy
-        flux_z = (diffusion - 00._rk*eps)*dnutilde_dz
+        flux_x = diffusion*dnutilde_dx
+        flux_y = diffusion*dnutilde_dy
+        flux_z = diffusion*dnutilde_dz
 
 
         call worker%integrate_volume('Density * NuTilde',flux_x,flux_y,flux_z)

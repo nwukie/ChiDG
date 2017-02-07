@@ -10,7 +10,6 @@ module mod_tecio
     use type_chidg_data,        only: chidg_data_t
 
     use mod_constants,          only: OUTPUT_RES
-    use eqn_wall_distance,      only: get_p_poisson_parameter
     implicit none
 
 #include "tecio.f90"
@@ -26,34 +25,36 @@ contains
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------
     subroutine write_tecio_variables_unstructured(data,filename,timeindex)
         type(chidg_data_t),     intent(inout)           :: data
         character(*),           intent(in)              :: filename
         integer(ik),            intent(in)              :: timeindex
 
 
-        integer(ik)        :: nelem_xi, nelem_eta, nelem_zeta
-        integer(ik)        :: ielem_xi, ielem_eta, ielem_zeta
-        integer(ik)        :: npts_xi,  npts_eta,  npts_zeta
-        integer(ik)        :: ipt_xi,   ipt_eta,   ipt_zeta
-        integer(ik)        :: xilim,    etalim,    zetalim
-        integer(ik)        :: npts, icoord, ielem, ielem_global, ielem_offset
-        integer(ik)        :: npts_element, nsub_per_element, nsub_elements, ierr, nelem, istart, ielem_start
-        integer(4)         :: tecstat
+        integer(ik)        :: nelem_xi, nelem_eta, nelem_zeta,  &
+                              ielem_xi, ielem_eta, ielem_zeta,  &
+                              npts_xi,  npts_eta,  npts_zeta,   &
+                              ipt_xi,   ipt_eta,   ipt_zeta,    &
+                              xilim,    etalim,    zetalim,     &
+                              ielem, ielem_global, ielem_offset,&
+                              npts_element, nsub_per_element,   &
+                              nsub_elements, npts, icorrd, ierr,&
+                              nelem, istart, ielem_start, ieq,  &
+                              ivar, idom, itime, icoord
 
-        real(rdouble)      :: val(1), scalar, ddx, ddy, ddz, mag2
+        real(rdouble)      :: val(1)
         real(TEC)          :: valeq(1)
         equivalence           (valeq(1), val(1))
 
     
-        integer(4), allocatable     :: connectivity(:,:)
+        integer(4)                  :: tecstat
+        integer(4),     allocatable :: connectivity(:,:)
 
 
-        real(rk)           :: xi,eta,zeta, p
-        character(100)     :: varstring
-        integer(ik)        :: ieq, ivar, idom, itime
-        character(len=:),   allocatable     :: zonestring
+        real(rk)                    :: xi,eta,zeta, p
+        character(100)              :: varstring
+        character(:),   allocatable :: zonestring
 
 
 
@@ -133,7 +134,7 @@ contains
                 end do !ielem
 
 
-            end do  ! coords
+            end do ! coords
 
 
 
@@ -245,63 +246,7 @@ contains
 
 
     end subroutine write_tecio_variables_unstructured
-    !**************************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    !***********************************************************************************
 
 
 

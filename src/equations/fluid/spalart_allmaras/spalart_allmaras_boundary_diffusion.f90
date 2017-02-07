@@ -85,7 +85,6 @@ contains
             dnutilde_drho_m, dnutilde_drhonutilde_m,        &
             dnutilde_drho_p, dnutilde_drhonutilde_p,        &
             diffusion_m, diffusion_p,                       &
-            eps_m, eps_p,                                   &
             flux_x_m, flux_y_m, flux_z_m,                   &
             flux_x_p, flux_y_p, flux_z_p,                   &
             flux_x, flux_y, flux_z, integrand
@@ -105,8 +104,6 @@ contains
         rho_nutilde_m = worker%get_primary_field_face('Density * NuTilde','value', 'face interior')
         rho_nutilde_p = worker%get_primary_field_face('Density * NuTilde','value', 'face exterior')
 
-        eps_m = worker%get_primary_field_face('Artificial Viscosity','value', 'face interior')
-        eps_p = worker%get_primary_field_face('Artificial Viscosity','value', 'face exterior')
 
         !
         ! Interpolate gradient to quadrature nodes
@@ -211,13 +208,13 @@ contains
         diffusion_m = -(ONE/SA_sigma)*(mu_l_m + f_n1_m*rho_nutilde_m)
         diffusion_p = -(ONE/SA_sigma)*(mu_l_p + f_n1_p*rho_nutilde_p)
 
-        flux_x_m = (diffusion_m - 00._rk*eps_m)*dnutilde_dx_m
-        flux_y_m = (diffusion_m - 00._rk*eps_m)*dnutilde_dy_m
-        flux_z_m = (diffusion_m - 00._rk*eps_m)*dnutilde_dz_m
+        flux_x_m = diffusion_m*dnutilde_dx_m
+        flux_y_m = diffusion_m*dnutilde_dy_m
+        flux_z_m = diffusion_m*dnutilde_dz_m
 
-        flux_x_p = (diffusion_p - 00._rk*eps_p)*dnutilde_dx_p
-        flux_y_p = (diffusion_p - 00._rk*eps_p)*dnutilde_dy_p
-        flux_z_p = (diffusion_p - 00._rk*eps_p)*dnutilde_dz_p
+        flux_x_p = diffusion_p*dnutilde_dx_p
+        flux_y_p = diffusion_p*dnutilde_dy_p
+        flux_z_p = diffusion_p*dnutilde_dz_p
 
 
         flux_x = (flux_x_m + flux_x_p)

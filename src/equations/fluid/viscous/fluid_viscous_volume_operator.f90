@@ -108,7 +108,6 @@ contains
         rhow = worker%get_primary_field_element("Z-Momentum",'value')
         rhoE = worker%get_primary_field_element("Energy"    ,'value')
 
-        eps  = worker%get_primary_field_element('Artificial Viscosity', 'value')
 
 
 
@@ -248,24 +247,19 @@ contains
         !
         ! Compute shear stress components
         !
-        tau_xx = TWO*(mu + 0.0_rk*eps)*du_dx  +  lamda*(du_dx + dv_dy + dw_dz)
-        tau_yy = TWO*(mu + 0.0_rk*eps)*dv_dy  +  lamda*(du_dx + dv_dy + dw_dz)
-        tau_zz = TWO*(mu + 0.0_rk*eps)*dw_dz  +  lamda*(du_dx + dv_dy + dw_dz)
+        tau_xx = TWO*mu*du_dx  +  lamda*(du_dx + dv_dy + dw_dz)
+        tau_yy = TWO*mu*dv_dy  +  lamda*(du_dx + dv_dy + dw_dz)
+        tau_zz = TWO*mu*dw_dz  +  lamda*(du_dx + dv_dy + dw_dz)
 
-        tau_xy = (mu + 0.0_rk*eps)*(du_dy + dv_dx)
-        tau_xz = (mu + 0.0_rk*eps)*(du_dz + dw_dx)
-        tau_yz = (mu + 0.0_rk*eps)*(dw_dy + dv_dz)
+        tau_xy = mu*(du_dy + dv_dx)
+        tau_xz = mu*(du_dz + dw_dx)
+        tau_yz = mu*(dw_dy + dv_dz)
 
 
 
         !===========================
         !        MASS FLUX
         !===========================
-        flux_x = -0._rk*eps * drho_dx
-        flux_y = -0._rk*eps * drho_dy
-        flux_z = -0._rk*eps * drho_dz
-
-        call worker%integrate_volume('Density',flux_x,flux_y,flux_z)
 
         !===========================
         !     X-MOMENTUM FLUX
@@ -297,9 +291,6 @@ contains
         !============================
         !       ENERGY FLUX
         !============================
-        !flux_x = -(1003._rk*mu/0.8_rk)*dT_dx  -  (u*tau_xx + v*tau_xy + w*tau_xz)
-        !flux_y = -(1003._rk*mu/0.8_rk)*dT_dy  -  (u*tau_xy + v*tau_yy + w*tau_yz)
-        !flux_z = -(1003._rk*mu/0.8_rk)*dT_dz  -  (u*tau_xz + v*tau_yz + w*tau_zz)
         flux_x = -k*dT_dx  -  (u*tau_xx + v*tau_xy + w*tau_xz)
         flux_y = -k*dT_dy  -  (u*tau_xy + v*tau_yy + w*tau_yz)
         flux_z = -k*dT_dz  -  (u*tau_xz + v*tau_yz + w*tau_zz)

@@ -127,8 +127,13 @@ endif()
 message(STATUS " ")
 message(STATUS "BLAS/LAPACK Summary:")
 find_package(LAPACK REQUIRED)
-message(STATUS "    LAPACK Libraries: ")
-message(STATUS "        " ${LAPACK_LIBRARIES})
+
+if (LAPACK_FOUND)
+    message(STATUS "    LAPACK Libraries: ")
+    foreach (L ${LAPACK_LIBRARIES})
+        message(STATUS "        " ${L})
+    endforeach()
+endif()
 
 
 
@@ -163,7 +168,9 @@ if (MPI_Fortran_FOUND)
         message(STATUS "        " ${L})
     endforeach()
     message(STATUS "    MPI Include Path: ")
-    message(STATUS "        " ${MPI_Fortran_INCLUDE_PATH})
+    foreach (L ${MPI_Fortran_INCLUDE_PATH})
+        message(STATUS "        " ${L})
+    endforeach()
 endif()
 
 

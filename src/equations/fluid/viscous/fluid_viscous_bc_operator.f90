@@ -104,7 +104,7 @@ contains
             dp_drho, dp_drhou, dp_drhov, dp_drhow, dp_drhoE,                    &
             dke_drho, dke_drhou, dke_drhov, dke_drhow,                          &
             tau_xx, tau_yy, tau_zz, tau_xy, tau_xz, tau_yz,                     &
-            flux_x, flux_y, flux_z, integrand, eps
+            flux_x, flux_y, flux_z, integrand
 
         real(rk),   allocatable, dimension(:)   ::          &
             normx, normy, normz
@@ -121,7 +121,6 @@ contains
         rhow = worker%get_primary_field_face("Z-Momentum",'value', 'boundary')
         rhoE = worker%get_primary_field_face("Energy"    ,'value', 'boundary')
 
-        eps  = worker%get_primary_field_face('Artificial Viscosity', 'value', 'boundary')
 
 
 
@@ -274,26 +273,19 @@ contains
         !
         ! Compute shear stress components
         !
-        tau_xx = TWO*(mu + 0.0_rk*eps)*du_dx  +  lamda*(du_dx + dv_dy + dw_dz)
-        tau_yy = TWO*(mu + 0.0_rk*eps)*dv_dy  +  lamda*(du_dx + dv_dy + dw_dz)
-        tau_zz = TWO*(mu + 0.0_rk*eps)*dw_dz  +  lamda*(du_dx + dv_dy + dw_dz)
+        tau_xx = TWO*mu*du_dx  +  lamda*(du_dx + dv_dy + dw_dz)
+        tau_yy = TWO*mu*dv_dy  +  lamda*(du_dx + dv_dy + dw_dz)
+        tau_zz = TWO*mu*dw_dz  +  lamda*(du_dx + dv_dy + dw_dz)
 
-        tau_xy = (mu + 0.0_rk*eps)*(du_dy + dv_dx)
-        tau_xz = (mu + 0.0_rk*eps)*(du_dz + dw_dx)
-        tau_yz = (mu + 0.0_rk*eps)*(dw_dy + dv_dz)
+        tau_xy = mu*(du_dy + dv_dx)
+        tau_xz = mu*(du_dz + dw_dx)
+        tau_yz = mu*(dw_dy + dv_dz)
 
 
 
         !=================================================
         ! Mass flux
         !=================================================
-        flux_x = -0.0_rk*eps * drho_dx
-        flux_y = -0.0_rk*eps * drho_dy
-        flux_z = -0.0_rk*eps * drho_dz
-
-        integrand = flux_x*normx + flux_y*normy + flux_z*normz
-
-        call worker%integrate_boundary('Density',integrand)
         
 
         !=================================================
@@ -332,9 +324,6 @@ contains
         !=================================================
         ! Energy flux
         !=================================================
-        !flux_x = -(1003._rk*mu/0.8_rk)*dT_dx  -  (u*tau_xx + v*tau_xy + w*tau_xz)
-        !flux_y = -(1003._rk*mu/0.8_rk)*dT_dy  -  (u*tau_xy + v*tau_yy + w*tau_yz)
-        !flux_z = -(1003._rk*mu/0.8_rk)*dT_dz  -  (u*tau_xz + v*tau_yz + w*tau_zz)
         flux_x = -k*dT_dx  -  (u*tau_xx + v*tau_xy + w*tau_xz)
         flux_y = -k*dT_dy  -  (u*tau_xy + v*tau_yy + w*tau_yz)
         flux_z = -k*dT_dz  -  (u*tau_xz + v*tau_yz + w*tau_zz)

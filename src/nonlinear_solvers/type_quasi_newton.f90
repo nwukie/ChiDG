@@ -122,9 +122,9 @@ contains
                 ! Print diagnostics, check tolerance.
                 !
                 call write_line("   R(Q) - Norm: ", resid, delimiter='', columns=.True., column_width=20, io_proc=GLOBAL_MASTER)
+                call self%residual_norm%push_back(resid)
                 if ( resid < self%tol ) exit
                 call self%residual_time%push_back(timing)
-                call self%residual_norm%push_back(resid)
 
 
                 !
@@ -209,13 +209,11 @@ contains
                 ! We need to solve the matrix system Ax=b for the update vector x (dq)
                 !
 
-                !
-                ! Set forcing term
-                !
-                forcing_term = resid/10000._rk
+                ! Set forcing term. Converge 4 orders, or 1.e-8
+                !forcing_term = resid/10000._rk
+                !linear_solver%tol = max(1.e-8_rk, forcing_term)
 
-                linear_solver%tol = max(1.e-8_rk, forcing_term)
-
+                ! Solve system for newton step, dq
                 call linear_solver%solve(lhs,dq,b,preconditioner)
                 call self%matrix_iterations%push_back(linear_solver%niter)
                 call self%matrix_time%push_back(linear_solver%timer%elapsed())
@@ -224,7 +222,7 @@ contains
 
 
                 !
-                ! Line Search
+                ! Line Search for appropriate step
                 !
                 q0 = qold
                 f0 = resid
@@ -265,7 +263,7 @@ contains
 
 
                     !
-                    ! Test for sufficient reduction
+                    ! Test for sufficient reduction. Also allow some growth.
                     !
                     if (ieee_is_nan(fn)) then
                         search = .true.
@@ -300,12 +298,12 @@ contains
                 ! Write solution if the count is right
                 !
                 !if (wcount == self%nwrite) then
-                    if (data%eqnset(1)%get_name() == 'Navier Stokes AV') then
-                        call write_solution_hdf(data,'aachen_cascade_roundte.h5')
+                !    if (data%eqnset(1)%get_name() == 'Navier Stokes AV') then
+                !        call write_solution_hdf(data,'aachen_cascade_roundte.h5')
                 !        write(filename,'(I2)') niter
                 !        call write_tecio_variables_unstructured(data,trim(filename)//'.dat',niter)
                 !        wcount = 0
-                    end if
+                !    end if
                 !end if
                 wcount = wcount + 1
 

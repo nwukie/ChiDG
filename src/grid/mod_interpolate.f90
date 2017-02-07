@@ -93,9 +93,9 @@ contains
 
         character(:),   allocatable :: user_msg
 
-        type(AD_D)  :: var_gq(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%nnodes)
-        type(AD_D)  :: qtmp(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%nterms_s)
-        type(AD_D)  :: qdiff(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%nterms_s)
+        type(AD_D)              :: var_gq(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%nnodes)
+        type(AD_D)              :: qdiff(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%nterms_s)
+        real(rk),   allocatable :: qtmp(:)
 
         integer(ik) :: nderiv, set_deriv, iterm, mode_min, mode_max
         logical     :: differentiate_me
@@ -112,7 +112,6 @@ contains
         ! Allocate derivative arrays for temporary solution variable
         !
         do iterm = 1,mesh(idom)%elems(ielem)%nterms_s
-            qtmp(iterm)  = AD_D(nderiv)
             qdiff(iterm) = AD_D(nderiv)
         end do
 
@@ -243,6 +242,7 @@ contains
 
         type(AD_D)                      :: var_gq(mesh(face_info%idomain_l)%elems(face_info%ielement_l)%gq%face%nnodes)
         type(AD_D),         allocatable :: qdiff(:)
+        real(rk),           allocatable :: qtmp(:)
         real(rk),           allocatable :: interpolator(:,:)
         character(:),       allocatable :: interpolation_style
 
@@ -321,10 +321,22 @@ contains
             ! Copy the solution variables from 'q' to 'qdiff'
             !
             if (parallel_interpolation) then
-                qdiff = q%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%getvar(ieqn,itime)
+                !qdiff = q%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%getvar(ieqn,itime)
+                qtmp = q%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%getvar(ieqn,itime)
             else
-                qdiff = q%dom(iface_info%idomain_l)%vecs(iface_info%ielement_l)%getvar(ieqn,itime)
+                !qdiff = q%dom(iface_info%idomain_l)%vecs(iface_info%ielement_l)%getvar(ieqn,itime)
+                qtmp = q%dom(iface_info%idomain_l)%vecs(iface_info%ielement_l)%getvar(ieqn,itime)
             end if
+
+
+            !
+            ! Copy correct number of modes. We use this because there is the possibility
+            ! that 'q' could be an auxiliary vector with nterms > nterms_s. For example,
+            ! if wall distance was computed for P1, and we are running Navier Stokes P0.
+            ! So we take only up to the modes that we need.
+            !
+            qdiff = qtmp(1:nterms_s)
+
 
 
             !

@@ -468,7 +468,6 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    !function get_primary_field_element(self,field,interp_type) result(var_gq)
     function get_primary_field_element(self,field,interp_type,Pmin,Pmax) result(var_gq)
         class(chidg_worker_t),  intent(in)              :: self
         character(*),           intent(in)              :: field

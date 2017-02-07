@@ -13,7 +13,7 @@ module mod_function
     use fcn_xyz,                            only: xyz_f
     use fcn_gaussian,                       only: gaussian_f
     use fcn_constant,                       only: constant_f
-    use fcn_sin,                            only: sin_f
+    use fcn_sine,                           only: sine_f
     use fcn_polynomial,                     only: polynomial_f
 !    use fcn_cylindricalduct_eigenfunction,  only: cylindricalduct_eigenfunction_f
     use fcn_monopole,                       only: monopole_f
@@ -52,7 +52,7 @@ contains
         type(xyz_f)                             :: xyz
         type(gaussian_f)                        :: gaussian
         type(constant_f)                        :: constant
-        type(sin_f)                             :: sin_function
+        type(sine_f)                            :: sin_function
         type(polynomial_f)                      :: polynomial
 
         !

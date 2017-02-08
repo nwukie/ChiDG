@@ -103,7 +103,7 @@ endif()
 #----------------------------------------------------------------------------------------------
 message(STATUS " ")
 message(STATUS "HDF5 Summary:")
-find_package(HDF5 REQUIRED COMPONENTS Fortran HL Fortran_HL)
+find_package(HDF5 1.10 REQUIRED COMPONENTS Fortran HL Fortran_HL)
 include_directories(${HDF5_INCLUDE_DIRS})
 
 

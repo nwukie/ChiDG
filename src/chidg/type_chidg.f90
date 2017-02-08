@@ -1010,9 +1010,9 @@ contains
 
 !        call self%auxiliary_environment%start_up('core')
 
-        call write_line(" ")
+        call write_line(" ", io_proc=GLOBAL_MASTER)
         call write_line("Entering Time Loop:", io_proc=GLOBAL_MASTER)
-        call write_line(" ")
+        call write_line(" ", io_proc=GLOBAL_MASTER)
 
 
         wcount = 1
@@ -1086,7 +1086,7 @@ contains
 
             do ireport = 0,NRANK-1
                 if ( ireport == IRANK ) then
-                    call write_line('MPI Rank: ', IRANK)
+                    call write_line('MPI Rank: ', IRANK, io_proc=IRANK)
                     call self%data%report('grid')
                 end if
                 call MPI_Barrier(ChiDG_COMM,ierr)

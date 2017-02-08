@@ -19,33 +19,39 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
     !!
+    !!  @param[in]  title       Title of the dataset.
+    !!  @param[in]  variables   Comma-separated list of variables that will be written.
+    !!  @param[in]  filename    Name of the file to be written.
+    !!  @param[in]  filetype    Indicating grid or solution file.
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine init_tecio_file(title,variables,filename,filetype)
         character(*)    :: title
         character(*)    :: variables
         character(*)    :: filename
-        integer(TEC)   :: filetype
+        integer(TEC)    :: filetype
 
         integer(4)      :: tecstat
         character       :: NULLCHAR = char(0)
-        integer(TEC)    :: fileformat = 0           ! 0 = tecplot binary .plt   ::   1 = tecplot subzone loadable .szplt
-!        integer(kind=TEC)   :: filetype   = 0           ! 0 = full  :: 1 = grid  :: 2 = solution
-        integer(TEC)    :: debug      = 0           ! 0 = debug off
-        integer(TEC)    :: isdouble   = 1           ! 0 = single precision  :: 1 = double precision
+        integer(TEC)    :: fileformat = 0       ! 0 = .plt         1 = subzone loadable .szplt
+        integer(TEC)    :: isdouble   = 1       ! 0 = single prec  1 = double prec
+        integer(TEC)    :: debug      = 0       ! 0 = debug off
 
         tecstat = TECINI142(trim(title)//NULLCHAR,      &
                             trim(variables)//NULLCHAR,  &
-                            trim(filename)//NULLCHAR,      &
-                            '.'//NULLCHAR, &
-                            fileformat, &
-                            filetype,   &
-                            debug,      &
+                            trim(filename)//NULLCHAR,   &
+                            '.'//NULLCHAR,              &
+                            fileformat,                 &
+                            filetype,                   &
+                            debug,                      &
                             isdouble)
-        ! Test file initialization
+
         if (tecstat /= 0) stop "Error: Initializing TECINI142"
+
     end subroutine init_tecio_file
-    !***********************************************************************************************************
+    !*****************************************************************************************
+
+
 
 
 
@@ -62,102 +68,25 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
     !!
-    !-----------------------------------------------------------------------------------------------------------
+    !!  @param[in]  zonetitle   Name for the zone being initialized.
+    !!  @param[in]  mesh        mesh_t containing the mesh description to be initialized.
+    !!  @param[in]  writetype   Intidate if a Grid or Solution file is being written.
+    !!  @param[in]  timeindex   Integer index of time strand.
+    !!
+    !-----------------------------------------------------------------------------------------
     subroutine init_tecio_zone(zonetitle,mesh,writetype,timeindex)
             type(mesh_t) , intent(in)        :: mesh
-            integer(ik)  , intent(in)        :: writetype  ! tells us if we are writing a mesh or solution file
+            integer(ik)  , intent(in)        :: writetype
             integer(ik)  , intent(in)        :: timeindex
 
             character(*)   :: zonetitle
-            integer(TEC)   :: zonetype                 = 0     ! 0 - ordered
-            integer(TEC)   :: imax
-            integer(TEC)   :: jmax
-            integer(TEC)   :: kmax
-            integer(TEC)   :: icellmax                 = 0     ! not used
-            integer(TEC)   :: jcellmax                 = 0     ! not used
-            integer(TEC)   :: kcellmax                 = 0     ! not used
-            real(rk)       :: solutiontime             = 0._rk
-            integer(TEC)   :: strandid                 = 0
-            integer(TEC)   :: parentzone               = 0
-            integer(TEC)   :: isblock                  = 1
-            integer(TEC)   :: nfconns                  = 0
-            integer(TEC)   :: fnmode                   = 0
-            integer(TEC)   :: totalnumfacenodes        = 1
-            integer(TEC)   :: totalnumbndryfaces       = 1
-            integer(TEC)   :: totalnumbndryconnections = 1
-            integer(TEC)   :: passivevars(3)           = 0        ! null = all varaibles active
-            integer(TEC)   :: vallocation(3)           = 1        ! null = all variables node-centered
-            integer(TEC)   :: sharvarfrom(3)           = 0        ! null = no data shared between zones
-            integer(TEC)   :: sharconnfrom             = 0
-
-            integer(4)     :: tecstat
-            integer(TEC), pointer :: NullPtr(:) => null()    ! Null pointer array
-
-
-            solutiontime = real(timeindex,rk)
-            strandid = timeindex
-
-
-            tecstat = TECZNE142(trim(zonetitle)//char(0),   &
-                                zonetype,                   &
-                                imax,                       &
-                                jmax,                       &
-                                kmax,                       &
-                                icellmax,                   &
-                                jcellmax,                   &
-                                kcellmax,                   &
-                                real(solutiontime,rdouble), &
-                                strandid,                   &
-                                parentzone,                 &
-                                isblock,                    &
-                                nfconns,                    &
-                                fnmode,                     &
-                                totalnumfacenodes,          &
-                                totalnumbndryfaces,         &
-                                totalnumbndryconnections,   &
-                                NullPtr,                    &
-                                NullPtr,                    &
-                                NullPtr,                    &
-                                sharconnfrom)
-            if(tecstat /= 0) stop "Error in TECZNE initialization"
-
-    end subroutine init_tecio_zone
-    !********************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-    !>  This begins a new zone in the current opened file. Must be called
-    !!  after init_tecplot_file, because it needs an open binary file.
-    !!  If multiple files are open, you can switch between them with the
-    !!  TECFIL142 call, as long as the they can be identified by integer values
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/3/2016
-    !!
-    !-----------------------------------------------------------------------------------------------------------
-    subroutine init_tecio_zone_unstructured(zonetitle,mesh,writetype,timeindex)
-            type(mesh_t) , intent(in)        :: mesh
-            integer(ik)  , intent(in)        :: writetype  ! tells us if we are writing a mesh or solution file
-            integer(ik)  , intent(in)        :: timeindex
-
-            character(*)   :: zonetitle
-            integer(TEC)   :: zonetype                  = 5     ! 0 - ordered, 5 - FEBRICK
+            integer(TEC)   :: zonetype                  = 5    ! 0 - ordered, 5 - FEBRICK
             integer(TEC)   :: numpts
             integer(TEC)   :: numelements
-            integer(TEC)   :: numfaces                  = 0     ! not used
-            integer(TEC)   :: icellmax                  = 0     ! not used
-            integer(TEC)   :: jcellmax                  = 0     ! not used
-            integer(TEC)   :: kcellmax                  = 0     ! not used
+            integer(TEC)   :: numfaces                  = 0    ! not used
+            integer(TEC)   :: icellmax                  = 0    ! not used
+            integer(TEC)   :: jcellmax                  = 0    ! not used
+            integer(TEC)   :: kcellmax                  = 0    ! not used
             real(rk)       :: solutiontime              = 0._rk
             integer(TEC)   :: strandid                  = 0
             integer(TEC)   :: parentzone                = 0
@@ -167,13 +96,13 @@ contains
             integer(TEC)   :: totalnumfacenodes         = 1
             integer(TEC)   :: totalnumbndryfaces        = 1
             integer(TEC)   :: totalnumbndryconnections  = 1
-            integer(TEC)   :: passivevars(3)            = 0        ! null = all varaibles active
-            integer(TEC)   :: vallocation(3)            = 1        ! null = all variables node-centered
-            integer(TEC)   :: sharvarfrom(3)            = 0        ! null = no data shared between zones
+            integer(TEC)   :: passivevars(3)            = 0    ! null = all vars active
+            integer(TEC)   :: vallocation(3)            = 1    ! null = all vars node-centered
+            integer(TEC)   :: sharvarfrom(3)            = 0    ! null = zones share no data
             integer(TEC)   :: sharconnfrom              = 0
 
-            integer(4)     :: tecstat
-            integer(TEC), pointer :: NullPtr(:) => null()    ! Null pointer array
+            integer(4)              :: tecstat
+            integer(TEC),   pointer :: NullPtr(:) => null()    ! Null pointer array
 
 
             solutiontime = real(timeindex,rk)
@@ -207,27 +136,8 @@ contains
                                 sharconnfrom)
             if(tecstat /= 0) stop "Error in TECZNE initialization"
 
-    end subroutine init_tecio_zone_unstructured
-    !********************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    end subroutine init_tecio_zone
+    !****************************************************************************************
 
 
 
@@ -242,7 +152,7 @@ contains
     !!
     !!
     !!
-    !--------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine finalize_tecio()
         integer(kind=TEC) :: tecstat
 
@@ -250,7 +160,7 @@ contains
         if (tecstat /= 0) stop "Error: TECIO finalization error"
 
     end subroutine finalize_tecio
-    !********************************************************************************************************
+    !*****************************************************************************************
 
 
 

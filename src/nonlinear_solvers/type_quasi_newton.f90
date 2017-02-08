@@ -4,7 +4,7 @@ module type_quasi_newton
     use mod_constants,          only: ZERO, ONE, TWO, DIAG
     use mod_spatial,            only: update_space
     use mod_hdfio,              only: write_solution_hdf
-    use mod_tecio,              only: write_tecio_variables_unstructured
+    use mod_tecio,              only: write_tecio_variables
     use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER, IRANK, NRANK
     use mpi_f08,                only: MPI_Barrier
 
@@ -305,7 +305,7 @@ contains
                 !    if (data%eqnset(1)%get_name() == 'Navier Stokes AV') then
                 !        call write_solution_hdf(data,'aachen_cascade_roundte.h5')
                 !        write(filename,'(I2)') niter
-                !        call write_tecio_variables_unstructured(data,trim(filename)//'.dat',niter)
+                !        call write_tecio_variables(data,trim(filename)//'.dat',niter)
                 !        wcount = 0
                 !    end if
                 !end if

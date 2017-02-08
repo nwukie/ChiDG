@@ -17,20 +17,21 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!
-    !!  @param[in]  space_dim   Integer specifying whether to compute the 1D, 2D, or 3D expansion function. 
+    !!  @param[in]  space_dim   Integer specifying whether to compute the 1D, 2D, 
+    !!                          or 3D expansion function. 
     !!  @param[in]  nterms      Number of terms in the polynomial expansion.
     !!  @param[in]  mode        Integer of the mode in the expansion to be computed.
     !!  @param[in]  node        point_t containing (xi,eta,zeta) location on reference element.
     !!
-    !-----------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function PolynomialVal(space_dim,nterms,mode,node) result(polyval)
         integer(ik),    intent(in)  :: space_dim
         integer(ik),    intent(in)  :: nterms
         integer(ik),    intent(in)  :: mode
         type(point_t),  intent(in)  :: node
 
-        real(rk)                    :: xi,eta,zeta
-        real(rk)                    :: polyval
+        real(rk)    :: xi, eta, zeta
+        real(rk)    :: polyval
 
 
         xi   = node%c1_
@@ -40,7 +41,7 @@ contains
         polyval = LegendreVal(space_dim,mode,xi,eta,zeta)
 
     end function PolynomialVal
-    !******************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -48,17 +49,19 @@ contains
 
 
 
-    !> Return directional derivative of a term in a polynomial expansion at a specified (xi, eta, zeta) location.
+    !>  Return directional derivative of a term in a polynomial expansion at a specified 
+    !!  (xi, eta, zeta) location.
     !!
     !!  @author Nathan A. Wukie
     !!
-    !!  @param[in]  space_dim   Integer specifying whether to compute the 1D, 2D, or 3D expansion function.
+    !!  @param[in]  space_dim   Integer specifying whether to compute the 1D, 2D, 
+    !!                          or 3D expansion function.
     !!  @param[in]  nterms      Number of terms in the polynomial expansion.
     !!  @param[in]  mode        Integer of the mode in the expansion to be computed.
     !!  @param[in]  node        point_t containing (xi,eta,zeta) location on reference element.
     !!  @param[in]  dir         Integer indicating direction of the derivative (xi, eta, zeta).
     !!
-    !------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function DPolynomialVal(space_dim,nterms,mode,node,dir) result(dpolyval)
         integer(ik),    intent(in)  :: space_dim
         integer(ik),    intent(in)  :: nterms
@@ -66,8 +69,8 @@ contains
         type(point_t),  intent(in)  :: node
         integer(ik),    intent(in)  :: dir
 
-        real(rk)                    :: xi,eta,zeta
-        real(rk)                    :: dpolyval
+        real(rk)    :: xi, eta, zeta
+        real(rk)    :: dpolyval
 
         xi   = node%c1_
         eta  = node%c2_
@@ -76,7 +79,7 @@ contains
         dpolyval = DLegendreVal(space_dim,mode,xi,eta,zeta,dir)
 
     end function DPolynomialVal
-    !*******************************************************************************************************
+    !****************************************************************************************
 
 
 

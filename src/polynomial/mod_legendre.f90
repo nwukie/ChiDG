@@ -2,6 +2,8 @@ module mod_legendre
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: XI_DIR,ETA_DIR,ZETA_DIR, &
                               ZERO, ONE, TWO, THREE, FOUR, FIVE, EIGHTH, HALF
+    use mod_ordering,   only: xi_order_2d, eta_order_2d, &
+                              xi_order_3d, eta_order_3d, zeta_order_3d
 
     implicit none
 
@@ -15,11 +17,15 @@ contains
     !!
     !!
     !!
-    !----------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function LegendreVal(space_dim,currentmode,xpos,ypos,zpos) result(polyval)
-        integer(kind=ik), intent(in)        :: space_dim,currentmode
-        real(kind=rk),    intent(in)        :: xpos,ypos,zpos
-        real(kind=rk)                       :: polyval
+        integer(ik),    intent(in)  :: space_dim
+        integer(ik),    intent(in)  :: currentmode
+        real(rk),       intent(in)  :: xpos
+        real(rk),       intent(in)  :: ypos
+        real(rk),       intent(in)  :: zpos
+
+        real(rk)                    :: polyval
 
         select case (space_dim)
             case (1)    ! 1D
@@ -32,8 +38,9 @@ contains
                 print*, "Error - LegendreVal: valid space dimensions are (1,2,3)"
                 stop
         end select
+
     end function LegendreVal
-    !*****************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -50,7 +57,7 @@ contains
     !!
     !!
     !!
-    !------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     recursive function LegendreVal1D(nterm,pos) result(polyval)
     !   Compute the value of the nterm
     !   legendre polynomial at the location pos
@@ -77,7 +84,7 @@ contains
 
 
     end function LegendreVal1D
-    !***************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -97,15 +104,14 @@ contains
     !!  @date   3/20/2016
     !!
     !!
-    !---------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function LegendreVal2D(currentmode,xi,eta) result(polyval)
-        use mod_ordering,   only: xi_order_2d,eta_order_2d
+        integer(ik),    intent(in)  :: currentmode
+        real(rk),       intent(in)  :: xi
+        real(rk),       intent(in)  ::eta
 
-        integer(ik), intent(in)   :: currentmode
-        real(rk),    intent(in)   :: xi,eta
-
-        real(rk)                  :: polyval,xi_polyval,eta_polyval
-        integer(ik)               :: xi_mode,eta_mode
+        real(rk)    :: polyval, xi_polyval, eta_polyval
+        integer(ik) :: xi_mode, eta_mode
 
         ! compute current x/y-node indices of 1D tensor product polynomials
         ! Example: for a 2D lagrange polynomial L(x,y)=L(x)*L(y), compute the
@@ -117,8 +123,9 @@ contains
         eta_polyval = LegendreVal1D(eta_mode,eta)
 
         polyval = xi_polyval*eta_polyval
+
     end function LegendreVal2D
-    !****************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -137,15 +144,15 @@ contains
     !!  @date   3/20/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function LegendreVal3D(currentmode,xi,eta,zeta) result(polyval)
-        use mod_ordering,   only: xi_order_3d,eta_order_3d,zeta_order_3d
+        integer(ik),    intent(in)  :: currentmode
+        real(rk),       intent(in)  :: xi
+        real(rk),       intent(in)  :: eta
+        real(rk),       intent(in)  :: zeta
 
-        integer(ik), intent(in)   :: currentmode
-        real(rk),    intent(in)   :: xi,eta,zeta
-
-        real(rk)                  :: polyval,xi_polyval,eta_polyval,zeta_polyval
-        integer(ik)               :: xi_mode,eta_mode,zeta_mode
+        real(rk)    :: polyval, xi_polyval, eta_polyval, zeta_polyval
+        integer(ik) :: xi_mode, eta_mode, zeta_mode
 
         ! compute current x/y-node indices of 1D tensor product polynomials
         ! Example: for a 2D lagrange polynomial L(x,y)=L(x)*L(y), compute the
@@ -161,7 +168,7 @@ contains
         polyval = xi_polyval*eta_polyval*zeta_polyval
 
     end function LegendreVal3D
-    !******************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -179,13 +186,16 @@ contains
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function dlegendreVal(space_dim,currentmode,xi,eta,zeta,dir) result(dpolyval)
-        integer(ik),   intent(in)          :: space_dim,currentmode
-        real(rk),      intent(in)          :: xi,eta,zeta
-        integer(ik),   intent(in)          :: dir
+        integer(ik),    intent(in)  :: space_dim
+        integer(ik),    intent(in)  :: currentmode
+        real(rk),       intent(in)  :: xi
+        real(rk),       intent(in)  :: eta
+        real(rk),       intent(in)  :: zeta
+        integer(ik),    intent(in)  :: dir
 
-        real(rk)                           :: dpolyval
+        real(rk)    :: dpolyval
 
         select case (space_dim)
             case (1)    ! 1D
@@ -200,7 +210,7 @@ contains
         end select
 
     end function dlegendreVal
-    !********************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -210,15 +220,17 @@ contains
 
 
 
-    !>  Compute the first derivative of the nterm Legendre polynomial at the location 'pos' between -1 and 1.
+    !>  Compute the first derivative of the nterm Legendre polynomial at the location 
+    !!  'pos' between -1 and 1.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   3/20/2016
     !!
-    !--------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     recursive function DLegendreVal1D(nterm,pos) result(dpolyval)
         integer(ik), intent(in)    :: nterm
         real(rk),    intent(in)    :: pos
+
         real(rk)                   :: dpolyval
 
         select case (nterm)
@@ -234,7 +246,7 @@ contains
         end select
 
     end function DLegendreVal1D
-    !*******************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -254,17 +266,16 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   3/20/2016
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function DLegendreVal2D(currentmode,xi,eta,dir) result(dpolyval)
-        use mod_ordering,   only: xi_order_2d,eta_order_2d
+        integer(ik),    intent(in)  :: currentmode
+        real(rk),       intent(in)  :: xi
+        real(rk),       intent(in)  :: eta
+        integer(ik),    intent(in)  :: dir
 
-        integer(ik), intent(in)            :: currentmode
-        real(rk),    intent(in)            :: xi,eta
-        integer(ik), intent(in)            :: dir
-
-        integer(ik)                        :: xi_mode,eta_mode
-        real(rk)                           :: dpolyval
-        real(rk)                           :: xi_val,eta_val,dxi_val,deta_val
+        integer(ik) :: xi_mode, eta_mode
+        real(rk)    :: dpolyval
+        real(rk)    :: xi_val, eta_val, dxi_val, deta_val
 
         xi_mode  = xi_order_2d(currentmode)
         eta_mode = eta_order_2d(currentmode)
@@ -283,7 +294,8 @@ contains
                 dpolyval = xi_val*deta_val
 
             case (ZETA_DIR)
-                dpolyval = ZERO     ! By definition of 2D polynomial, no derivative in ZETA dimension
+                ! By definition of 2D polynomial, no derivative in ZETA dimension
+                dpolyval = ZERO 
 
             case default
                 print*, "valid derivative directions are - 'XI_DIR', 'ETA_DIR', 'ZETA_DIR'"
@@ -291,7 +303,7 @@ contains
         end select
 
     end function DLegendreVal2D
-    !*******************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -306,17 +318,17 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   3/20/2016
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function DLegendreVal3D(currentmode,xi,eta,zeta,dir) result(dpolyval)
-        use mod_ordering,   only: xi_order_3d,eta_order_3d,zeta_order_3d
+        integer(ik),    intent(in)  :: currentmode
+        real(rk),       intent(in)  :: xi
+        real(rk),       intent(in)  :: eta
+        real(rk),       intent(in)  :: zeta
+        integer(ik),    intent(in)  :: dir
 
-        integer(ik), intent(in)            :: currentmode
-        real(rk),    intent(in)            :: xi,eta,zeta
-        integer(ik), intent(in)            :: dir
-
-        integer(ik)                        :: xi_mode,eta_mode,zeta_mode
-        real(rk)                           :: dpolyval
-        real(rk)                           :: xi_val,eta_val,zeta_val,dxi_val,deta_val,dzeta_val
+        integer(ik) :: xi_mode, eta_mode, zeta_mode
+        real(rk)    :: dpolyval
+        real(rk)    :: xi_val, eta_val, zeta_val, dxi_val, deta_val, dzeta_val
 
 
 
@@ -349,7 +361,7 @@ contains
         end select
 
     end function DLegendreVal3D
-    !*******************************************************************************************************
+    !*****************************************************************************************
 
 
 

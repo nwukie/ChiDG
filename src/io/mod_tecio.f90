@@ -2,7 +2,8 @@ module mod_tecio
 #include <messenger.h>
     use mod_kinds,              only: rk,ik,rdouble,TEC
     use mod_constants,          only: ONE, HALF, TWO, X_DIR, Y_DIR, Z_DIR
-    use mod_tecio_interface,    only: init_tecio_file, init_tecio_zone, init_tecio_zone_unstructured, finalize_tecio
+    use mod_tecio_interface,    only: init_tecio_file, init_tecio_zone, &
+                                      finalize_tecio
 
     use type_element,           only: element_t
     use type_blockvector,       only: blockvector_t
@@ -26,7 +27,7 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------
-    subroutine write_tecio_variables_unstructured(data,filename,timeindex)
+    subroutine write_tecio_variables(data,filename,timeindex)
         type(chidg_data_t),     intent(inout)           :: data
         character(*),           intent(in)              :: filename
         integer(ik),            intent(in)              :: timeindex
@@ -66,14 +67,17 @@ contains
 
 
         !
-        ! Assemble variables string
+        ! Assemble variables string.
         !
-        varstring = "X,Y,Z"     ! Initialize variables string with mesh coordinates
-        ieq = 1
+        !   Default: Grid coordinates
+        !
+        varstring = "X,Y,Z"
+
 
         !
         ! TODO: Generalized TECIO for different equation set in each domain.
         !
+        ieq = 1
         do while (ieq <= data%eqnset(1)%prop%nprimary_fields())
             varstring = trim(varstring)//","//trim(data%eqnset(1)%prop%get_primary_field_name(ieq))
             ieq = ieq + 1
@@ -98,7 +102,7 @@ contains
             ! Initialize new zone in the TecIO file for the current domain
             !
             zonestring = 'solnzone_'//data%info(idom)%name
-            call init_tecio_zone_unstructured(zonestring,data%mesh(idom),1,timeindex)
+            call init_tecio_zone(zonestring,data%mesh(idom),1,timeindex)
 
 
             xilim   = npts
@@ -123,7 +127,7 @@ contains
                                 ! Get coordinate value at point
                                 val     = real(data%mesh(idom)%elems(ielem)%grid_point(icoord,xi,eta,zeta),rdouble)
                                 tecstat = TECDAT142(1,valeq,1)
-                                if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_variables_unstructured: Error in call to TECDAT142")
+                                if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_variables: Error in call to TECDAT142")
 
                             end do ! ipt_xi
                         end do ! ipt_eta
@@ -160,7 +164,7 @@ contains
                                 itime = 1
                                 val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,itime,xi,eta,zeta),rdouble)
                                 tecstat = TECDAT142(1,valeq,1)
-                                if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_variables_unstructured: Error in call to TECDAT142")
+                                if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_variables: Error in call to TECDAT142")
                                     
 
                             end do
@@ -228,7 +232,7 @@ contains
             end do ! ielem
 
             tecstat = TECNOD142(connectivity)
-            if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_variables_unstructured: Error in call to TECNOD142")
+            if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_variables: Error in call to TECNOD142")
 
             
 
@@ -245,7 +249,7 @@ contains
 
 
 
-    end subroutine write_tecio_variables_unstructured
+    end subroutine write_tecio_variables
     !***********************************************************************************
 
 

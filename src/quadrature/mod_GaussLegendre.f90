@@ -18,12 +18,13 @@ contains
     !!   @param[in]  nnodes   number of Gauss-Legendre quadrature nodes requested
     !!   @param[out] nodes    Gauss-Legendre quadrature node locations
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine gl_nodes(nnodes,nodes)
-        integer(ik), intent(in)                :: nnodes
-        real(rk), dimension(:), intent(out)    :: nodes
-        integer(ik)                            :: i,j,polyterm
-        real(rk)                               :: resid,tol,x,xnew,theta,n
+        integer(ik),    intent(in)      :: nnodes
+        real(rk),       intent(inout)   :: nodes(:)
+
+        integer(ik)                     :: i,j,polyterm
+        real(rk)                        :: resid,tol,x,xnew,theta,n
 
 
         !
@@ -74,8 +75,9 @@ contains
             j=j+1 ! storage location for correct ordering
 
         end do
+
     end subroutine gl_nodes
-    !********************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -92,15 +94,16 @@ contains
     !!  @author  Nathan A. Wukie
     !!
     !!  @param[in] nweights     number of Gauss-Legendre quadrature weights requested
-    !!  @param[out] weights     quadrature weights associated with Gauss-Legendre quadrature nodes
+    !!  @param[out] weights     quadrature weights associated with Gauss-Legendre nodes
     !!
-    !--------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine gl_weights(nweights,weights)
-        integer(ik),                   intent(in)  :: nweights
-        real(rk), dimension(nweights), intent(out) :: weights
-        real(rk), dimension(nweights)              :: nodes
-        integer(ik)                                :: i,polyterm
-        real(rk)                                   :: xi,DPoly
+        integer(ik),    intent(in)    :: nweights
+        real(rk),       intent(inout) :: weights(:)
+
+        real(rk)        :: nodes(nweights)
+        integer(ik)     :: i,polyterm
+        real(rk)        :: xi,DPoly
 
         !
         ! Get quadrature nodes
@@ -132,7 +135,7 @@ contains
 
 
     end subroutine gl_weights
-    !*********************************************************************************************************
+    !******************************************************************************************
 
 
 

@@ -10,10 +10,9 @@ module type_newton
     use type_chidg_vector
 
     use mod_spatial,    only: update_space
-
-    use mod_tecio,      only: write_tecio_variables_unstructured
-
+    use mod_tecio,      only: write_tecio_variables
     use mod_entropy,    only: compute_entropy_error
+
     implicit none
     private
 
@@ -184,7 +183,7 @@ contains
                 ! Write incremental solution
                 !
                 !write(filename, "(I7,A4)") 1000000+niter, '.plt'
-                !call write_tecio_variables_unstructured(data,trim(filename),niter+1)
+                !call write_tecio_variables(data,trim(filename),niter+1)
 
 
             end do ! niter

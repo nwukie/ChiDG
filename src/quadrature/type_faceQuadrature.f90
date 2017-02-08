@@ -21,24 +21,24 @@ module type_faceQuadrature
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     type, public :: faceQuadrature_t
-        integer(ik)                                 :: nnodes
-        type(point_t),  dimension(:,:), allocatable :: nodes    !< (:, iface)
-        real(rk),       dimension(:,:), allocatable :: weights  !< (:, iface)
+        integer(ik)                                     :: nnodes
+        type(point_t),  dimension(:,:),     allocatable :: nodes    !< (:, iface)
+        real(rk),       dimension(:,:),     allocatable :: weights  !< (:, iface)
 
-        real(rk), dimension(:,:,:), allocatable :: val      !< (:,:,iface)
-        real(rk), dimension(:,:,:), allocatable :: val_trans
-        real(rk), dimension(:,:,:), allocatable :: ddxi     !< ''
-        real(rk), dimension(:,:,:), allocatable :: ddeta    !< ''
-        real(rk), dimension(:,:,:), allocatable :: ddzeta   !< ''
+        real(rk),       dimension(:,:,:),   allocatable :: val      !< (:,:,iface)
+        real(rk),       dimension(:,:,:),   allocatable :: val_trans
+        real(rk),       dimension(:,:,:),   allocatable :: ddxi     !< ''
+        real(rk),       dimension(:,:,:),   allocatable :: ddeta    !< ''
+        real(rk),       dimension(:,:,:),   allocatable :: ddzeta   !< ''
 
     contains
 
         procedure :: init
 
     end type faceQuadrature_t
-    !***************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -54,7 +54,7 @@ contains
     !!  TODO: TEST SPACEDIM
     !!
     !!
-    !----------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine init(self,spacedim,nnodes_face,nterms)
         class(faceQuadrature_t),    intent(inout)   :: self
         integer(ik),                intent(in)      :: spacedim
@@ -363,7 +363,7 @@ contains
 
 
     end subroutine init
-    !*******************************************************************************************************
+    !****************************************************************************************
     
 
 

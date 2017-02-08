@@ -18,7 +18,7 @@ module mod_chidg_post_hdf2tec
     use mod_kinds,              only: rk, ik
     use type_chidg,             only: chidg_t
     use type_dict,              only: dict_t
-    use mod_tecio,              only: write_tecio_variables_unstructured
+    use mod_tecio,              only: write_tecio_variables
     use type_file_properties,   only: file_properties_t
     use mod_hdf_utilities,      only: get_properties_hdf
     implicit none
@@ -111,7 +111,7 @@ contains
         !
         ! Write solution in TecIO format
         !
-        call write_tecio_variables_unstructured(chidg%data,'0.plt',1)
+        call write_tecio_variables(chidg%data,'0.plt',1)
 
 
         

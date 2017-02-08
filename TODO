@@ -85,16 +85,10 @@ Nonlinear Solver
 @date   1/28/2016
 
 
-@detail Add line search algorithm 
-@author Nathan A. Wukie
-@date   1/28/2016
-
 
 @detail Check for zero residual on first iteration. Else could get NaN's.
 @author Nathan A. Wukie
 @date   4/14/2016
-
-
 
 
 

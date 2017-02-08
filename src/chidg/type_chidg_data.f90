@@ -551,7 +551,7 @@ contains
         if ( trim(selection) == 'grid' ) then
 
             do idom = 1,self%ndomains()
-                call write_line('Domain ', idom, '  :  ', self%mesh(idom)%nelem, ' Elements')  
+                call write_line('Domain ', idom, '  :  ', self%mesh(idom)%nelem, ' Elements', io_proc=IRANK)
             end do
 
 

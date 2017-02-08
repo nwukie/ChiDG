@@ -70,14 +70,18 @@ contains
                                    niter, ieqn, idom, ierr,                     &
                                    rstart, rend, cstart, cend, nterms, imat, iwrite, step
 
-        real(rk)                :: dtau, amp, cfl, timing, resid, resid_new, alpha, f0, fn, forcing_term
+        real(rk)                :: dtau, amp, cfl, timing, resid, resid_new,    &
+                                   alpha, f0, fn, forcing_term
         real(rk), allocatable   :: vals(:), cfln(:), rnorm0(:), rnorm(:)
         type(chidg_vector_t)    :: b, qn, qold, qnew, dqdtau, q0
         logical                 :: search
       
 
         wcount = 1
-        associate ( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs)
+        associate ( q   => data%sdata%q,    &
+                    dq  => data%sdata%dq,   &
+                    rhs => data%sdata%rhs,  &
+                    lhs => data%sdata%lhs)
 
             call write_line('Entering time', io_proc=GLOBAL_MASTER)
             call write_line(' ', io_proc=GLOBAL_MASTER)
@@ -106,7 +110,8 @@ contains
 
 
                 !
-                ! Store the value of the current inner iteration solution (k) for the solution update (n+1), q_(n+1)_k
+                ! Store the value of the current inner iteration solution (k) 
+                ! for the solution update (n+1), q_(n+1)_k
                 !
                 qold = q
 
@@ -173,8 +178,7 @@ contains
                         do itime = 1,data%mesh(idom)%ntime
                             do ieqn = 1,data%eqnset(idom)%prop%nprimary_fields()
 
-                                !nterms = data%mesh(idom)%nterms_s   ! get number of solution terms
-                                !dtau   = data%sdata%dt(idom,ielem)  ! get element-local timestep
+                                ! get element-local timestep
                                 dtau = data%mesh(idom)%elems(ielem)%dtau(ieqn)
 
                                 ! Need to compute row and column extends in diagonal so we can

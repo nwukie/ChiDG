@@ -17,6 +17,7 @@ program driver
     use type_chidg_manager,         only: chidg_manager_t
     use type_function,              only: function_t
     use mod_function,               only: create_function
+    use mod_chidg_mpi,              only: GLOBAL_MASTER
     use mod_io
 
     ! Actions
@@ -178,8 +179,14 @@ program driver
         !
         call chidg%report('before')
 
-        call write_line("Running ChiDG simulation...",io_proc=GLOBAL_MASTER)
+        call write_line("---------------------------------------------------", io_proc=GLOBAL_MASTER)
+        call write_line("                                                   ", io_proc=GLOBAL_MASTER, delimiter='')
+        call write_line("           Running ChiDG simulation...             ", io_proc=GLOBAL_MASTER, delimiter='')
+        call write_line("                                                   ", io_proc=GLOBAL_MASTER, delimiter='')
+        call write_line("---------------------------------------------------", io_proc=GLOBAL_MASTER)
+
         call chidg%run()
+
         call write_line("Done running ChiDG simulation...",io_proc=GLOBAL_MASTER)
 
         call chidg%report('after')

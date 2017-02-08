@@ -52,7 +52,7 @@ contains
         type(chidg_cache_t)         :: cache
         type(cache_handler_t)       :: cache_handler
 
-        logical                     :: differentiate_function
+        logical                     :: differentiate_function, io_spatial
 
         
         !
@@ -112,7 +112,7 @@ contains
         ! Loop through given element compute the residual functions and also the 
         ! linearization of those functions.
         !
-        call write_line('Updating spatial scheme', io_proc=GLOBAL_MASTER)
+        call write_line('-  Updating spatial scheme', io_proc=GLOBAL_MASTER)
 
 
         ! Loop through domains
@@ -191,9 +191,13 @@ contains
 
 
         call timer%stop()
-        call timer%report('Spatial Discretization Time')
-        call comm_timer%report('    - Spatial comm time:')
-        call loop_timer%report('    - Spatial loop time:')
+
+        io_spatial = .false.
+        if (io_spatial) then
+            call timer%report('Spatial Discretization Time')
+            call comm_timer%report('    - Spatial comm time:')
+            call loop_timer%report('    - Spatial loop time:')
+        end if
 
         if (present(timing)) then
             timing = timer%elapsed()

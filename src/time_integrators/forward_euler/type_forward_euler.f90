@@ -1,16 +1,13 @@
 module type_forward_euler
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO
+    use mod_spatial,            only: update_space
+
     use type_time_integrator,   only: time_integrator_t
     use type_chidg_data,        only: chidg_data_t
     use type_nonlinear_solver,  only: nonlinear_solver_t
     use type_linear_solver,     only: linear_solver_t
     use type_preconditioner,    only: preconditioner_t
     use type_chidg_vector
-
-    use mod_spatial,            only: update_space
-
-    use mod_tecio,              only: write_tecio_variables_unstructured
     implicit none
     private
 
@@ -40,20 +37,21 @@ module type_forward_euler
     !! \f$ \Delta Q = -\Delta t R(Q) \f$
     !!
     !!
-    !! This routine computes \f$ \Delta Q \f$ and updates the solution as \f$ Q^{n+1} = Q^{n} + \Delta Q \f$
+    !! This routine computes \f$ \Delta Q \f$ and updates the solution 
+    !! as \f$ Q^{n+1} = Q^{n} + \Delta Q \f$
     !!
     !!
     !!  @author Nathan A. Wukie
-    !!
+    !!  @date   2/7/2017
     !!
     !----------------------------------------------------------------------------------------
     type, extends(time_integrator_t), public :: forward_euler_t
 
 
     contains
-        procedure   :: iterate
 
-        final :: destructor
+        procedure   :: step
+
     end type forward_euler_t
     !----------------------------------------------------------------------------------------
 
@@ -68,7 +66,7 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine iterate(self,data,nonlinear_solver,linear_solver,preconditioner)
+    subroutine step(self,data,nonlinear_solver,linear_solver,preconditioner)
         class(forward_euler_t),                 intent(inout)   :: self
         type(chidg_data_t),                     intent(inout)   :: data
         class(nonlinear_solver_t),  optional,   intent(inout)   :: nonlinear_solver
@@ -76,86 +74,61 @@ contains
         class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
 
         character(100)          :: filename
-        integer(ik)             :: itime = 1, nsteps, ielem, wcount, iblk, ieqn, idom
+        integer(ik)             :: itime, ielem, iblk, ieqn, idom
         real(rk), allocatable   :: vals(:)
 
 
-        wcount = 1
-        associate ( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs, dt => self%time_manager%dt)
-
-            print*, 'entering time'
-            do itime = 1,self%time_manager%time_steps
-                print*, "Step: ", itime
-
-
-                ! Update Spatial Residual and Linearization (rhs, lin)
-                call update_space(data)
+        associate ( q   => data%sdata%q,    &
+                    dq  => data%sdata%dq,   &
+                    rhs => data%sdata%rhs,  &
+                    lhs => data%sdata%lhs,  &
+                    dt => self%time_manager%dt)
 
 
-                ! Multiply RHS by mass matrix 
-                do idom = 1,data%ndomains()
-                    do ielem = 1,data%mesh(idom)%nelem
-
-                        do ieqn = 1,data%eqnset(idom)%prop%nprimary_fields()
-                            vals = matmul(data%mesh(idom)%elems(ielem)%invmass, rhs%dom(idom)%vecs(ielem)%getvar(ieqn,itime))
-                            call rhs%dom(idom)%vecs(ielem)%setvar(ieqn,itime,vals)
-                        end do
-
-                    end do !ielem
-                end do !idom
+            !
+            ! Update equation Residual (rhs)
+            !
+            call update_space(data, differentiate=.false.)
+            call self%residual_norm%push_back(rhs%norm(ChiDG_COMM))
 
 
-                ! Compute update vector
-                dq = (-dt) * rhs
+            !
+            ! Multiply RHS by mass matrix 
+            !
+            itime = 1
+            do idom = 1,data%ndomains()
+                do ielem = 1,data%mesh(idom)%nelem
+                    do ieqn = 1,data%eqnset(idom)%prop%nprimary_fields()
+
+                        vals = matmul(data%mesh(idom)%elems(ielem)%invmass, rhs%dom(idom)%vecs(ielem)%getvar(ieqn,itime))
+                        call rhs%dom(idom)%vecs(ielem)%setvar(ieqn,itime,vals)
+
+                    end do !ieqn
+                end do !ielem
+            end do !idom
 
 
-                ! Advance solution with update vector
-                q  = q + dq
+            !
+            ! Compute 'Forward Euler' update vector
+            !
+            dq = (-dt) * rhs
 
 
-
-                !
-                ! Print diagnostics
-                !
-                call write_line("   R(Q) - Norm: ", rhs%norm(ChiDG_COMM), delimiter='', io_proc=GLOBAL_MASTER)
-
-
-                if (wcount == self%time_manager%nwrite) then
-                    write(filename, "(I7,A4)") 1000000+itime, '.plt'
-                    call write_tecio_variables_unstructured(data,trim(filename),itime+1)
-                    wcount = 0
-                end if
+            !
+            ! Advance solution with update vector
+            !
+            q  = q + dq
 
 
-                ! Clear residual and linearization storage
-                call rhs%clear()
-                call lhs%clear()
-
-                wcount = wcount + 1
-            end do
+            !
+            ! Clear working vector
+            !
+            call rhs%clear()
 
         end associate
 
-    end subroutine iterate
+    end subroutine step
     !*****************************************************************************************
-
-
-
-
-
-
-
-    
-    !>
-    !!
-    !!
-    !!
-    !----------------------------------------------------
-    subroutine destructor(self)
-        type(forward_euler_t),      intent(in) :: self
-
-    end subroutine destructor
-    !****************************************************
 
 
 

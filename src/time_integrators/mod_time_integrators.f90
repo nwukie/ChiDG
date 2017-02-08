@@ -9,7 +9,7 @@ module mod_time_integrators
 
     ! Import solverdata types
     use type_steady,            only: steady_t
-!    use type_forward_euler,     only: forward_euler_t
+    use type_forward_euler,     only: forward_euler_t
 !    use type_backward_euler,    only: backward_euler_t
 !    use type_hamonic_balance,   only: harmonic_balance_t !not in yet
 !    use type_runge_kutta,      only: runge_kutta_t !already in but might be splitted in multiple time_integrators
@@ -19,7 +19,7 @@ module mod_time_integrators
 
     ! Instantiate solver types for sourcing
     type(steady_t)                      :: STEADY
-!    type(forward_euler_t)               :: FORWARD_EULER
+    type(forward_euler_t)               :: FORWARD_EULER
 !    type(backward_euler_t)              :: BACKWARD_EULER
 !    type(harmonic_balance_t)            :: HB !not in yet
 !    type(runge_kutta_t)                 :: RK
@@ -54,8 +54,8 @@ contains
             case ('steady','Steady','STEADY')
                 allocate(instance, source=STEADY)
 
-!            case ('forward_euler','Forward_Euler','FORWARD_EULER','forward euler')
-!                allocate(instance, source=FORWARD_EULER)
+            case ('forward_euler','Forward_Euler','FORWARD_EULER','forward euler', 'Forward Euler')
+                allocate(instance, source=FORWARD_EULER)
 !
 !            case ('backward_euler', 'Backward_Euler', 'BACKWARD_EULER', 'backward euler', 'Backward Euler', 'BACKWARD EULER')
 !                allocate(instance, source=BACKWARD_EULER)

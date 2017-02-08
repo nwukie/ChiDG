@@ -32,6 +32,8 @@ module type_chidg
                                           establish_chimera_communication
     use mod_chidg_mpi,              only: chidg_mpi_init, chidg_mpi_finalize,   &
                                           IRANK, NRANK, ChiDG_COMM
+
+    use mod_tecio,                  only: write_tecio_variables_unstructured
     use mod_hdfio,                  only: read_grid_hdf, read_boundaryconditions_hdf,   &
                                           read_solution_hdf, write_solution_hdf,        &
                                           read_connectivity_hdf, read_weights_hdf
@@ -993,20 +995,63 @@ contains
     !>  Run ChiDG simulation
     !!
     !!      - This routine passes the domain data, nonlinear solver, linear solver, and 
-    !!        preconditioner components to the time integrator for iteration
+    !!        preconditioner components to the time integrator to take a step.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
+    !!  @date   2/7/2017
     !!
     !------------------------------------------------------------------------------------------
     subroutine run(self)
-        class(chidg_t),     intent(inout)   :: self
+        class(chidg_t), intent(inout)   :: self
 
+        character(100)  :: filename
+        integer(ik)     :: istep, nsteps, wcount
 
 !        call self%auxiliary_environment%start_up('core')
 
+        call write_line(" ")
+        call write_line("Entering Time Loop:", io_proc=GLOBAL_MASTER)
+        call write_line(" ")
 
-        call self%time_integrator%iterate(self%data,self%nonlinear_solver,self%linear_solver,self%preconditioner)
+
+        wcount = 1
+        nsteps = self%time_integrator%time_manager%time_steps
+        do istep = 1,nsteps
+
+            call write_line("- Step ", istep, io_proc=GLOBAL_MASTER)
+
+
+
+            !
+            ! Call time integrator to take a step
+            !
+            call self%time_integrator%step(self%data,self%nonlinear_solver, &
+                                                     self%linear_solver,    &
+                                                     self%preconditioner)
+
+
+
+!            !
+!            ! Write interpolated solution every nwrite steps
+!            !
+!            if (wcount == self%time_integrator%time_manager%nwrite) then
+!                write(filename, "(I7,A4)") 1000000+istep, '.plt'
+!                call write_tecio_variables_unstructured(self%data,trim(filename),istep+1)
+!                wcount = 0
+!            end if
+
+
+            !
+            ! Print diagnostics
+            !
+            call write_line("-  System residual |R(Q)|: ", self%time_integrator%residual_norm%at(istep), delimiter='', io_proc=GLOBAL_MASTER)
+
+
+            wcount = wcount + 1
+
+
+        end do !istep
 
 
     end subroutine run

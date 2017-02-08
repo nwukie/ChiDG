@@ -12,13 +12,13 @@ module type_time_integrator
     implicit none
 
 
-    !> solver abstract type definition
+    !>  Abstraction for time integrators.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/8/2016
+    !!  @date   2/7/2017
     !!
-    !!
-    !------------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     type, abstract, public  :: time_integrator_t
 
         !real(rk)        :: testing
@@ -34,19 +34,11 @@ module type_time_integrator
 
         type(time_manager_t)    :: time_manager
 
-!=======
-!!        real(rk)        :: cfl0     = 1.0_rk       !< Initial CFL number
-!!        real(rk)        :: tol      = 1.e-13_rk    !< Convergence tolerance
-!        real(rk)        :: dt       = 0.001_rk      !< Time-step increment
-!        integer(ik)     :: nsteps   = 1             !< Number of time steps to compute
-!        integer(ik)     :: nwrite   = 10            !< Write data every 'nwrite' steps
-!>>>>>>> dev
 
-
-        type(timer_t)   :: timer                    !< Timer data-type
 
 
         ! Data logs
+        type(timer_t)   :: timer
         type(rvector_t) :: residual_norm
         type(rvector_t) :: residual_time
         type(ivector_t) :: matrix_iterations
@@ -57,16 +49,20 @@ module type_time_integrator
 
     contains
 
-        procedure   :: init         !< General initialization procedure. Should get called automatically.
-        procedure   :: init_spec    !< Specialized initialization for each different integrator. Gets called by general 'init'
+        procedure   :: init         !< General initialization procedure. Should get 
+                                    !< called automatically.
 
-        procedure   :: set          !< Set time_integrator properties.
+        procedure   :: init_spec    !< Specialized initialization for each different 
+                                    !< integrator. Gets called by general 'init'
+
+        procedure   :: set
         procedure   :: report
 
-        procedure(data_interface),   deferred   :: iterate   ! Must define this procedures in the extended type
+        ! Must define this procedure in any extended type
+        procedure(data_interface),   deferred   :: step
 
     end type time_integrator_t
-    !******************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -114,7 +110,7 @@ module type_time_integrator
             use type_linear_solver,     only: linear_solver_t
             use type_preconditioner,    only: preconditioner_t
             import time_integrator_t
-            class(time_integrator_t),                   intent(inout)   :: self
+            class(time_integrator_t),               intent(inout)   :: self
             type(chidg_data_t),                     intent(inout)   :: data
             class(nonlinear_solver_t),  optional,   intent(inout)   :: nonlinear_solver
             class(linear_solver_t),     optional,   intent(inout)   :: linear_solver
@@ -140,7 +136,7 @@ contains
     !!  @param[inout]   domains     Array of domains
     !!  @param[inout]   options     Dictionary containing options
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine init(self,data)
         class(time_integrator_t),   intent(inout)   :: self
         type(chidg_data_t),     intent(inout)   :: data
@@ -155,7 +151,7 @@ contains
         self%solverInitialized = .true.
 
     end subroutine init
-    !************************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -173,9 +169,10 @@ contains
     !!
     !!  @param[in]  options     Dictionary containing base solver options
     !!
-    !! NOTE: time options (toptions) are not used anymore and time info are stored by time_manager
+    !! NOTE: time options (toptions) are not used anymore and time info are stored 
+    !!       by time_manager
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine set(self,options)
         class(time_integrator_t),   intent(inout)   :: self
         type(dict_t),           intent(inout)   :: options
@@ -188,7 +185,7 @@ contains
         !call options%get('cfl0',self%cfl0)
 
     end subroutine set
-    !*************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -208,7 +205,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/8/2016
     !!
-    !-------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine init_spec(self,data,options)
         class(time_integrator_t),   intent(inout)   :: self
         type(chidg_data_t),     intent(inout)   :: data
@@ -217,7 +214,7 @@ contains
 
 
     end subroutine init_spec
-    !*************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -235,7 +232,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine report(self)
         class(time_integrator_t),   intent(in)  :: self
 
@@ -295,7 +292,7 @@ contains
 
 
     end subroutine report
-    !***************************************************************************************************************
+    !******************************************************************************************
 
 
 

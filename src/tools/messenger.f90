@@ -564,7 +564,7 @@ contains
         ! Rules for neatening up the string. Check blank string. Check ltrim.
         !
         if ( blank_line ) then
-            temp_a = temp   ! blank line, done do any modification.
+            temp_a = temp   ! blank line, dont do any modification.
 
         else if ( present(ltrim) ) then
             if ( ltrim ) then

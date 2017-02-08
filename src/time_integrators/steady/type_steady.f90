@@ -30,9 +30,7 @@ module type_steady
 
     contains
 
-        procedure   :: iterate
-
-        final :: destructor
+        procedure   :: step
 
     end type steady_t
     !****************************************************************************************
@@ -61,7 +59,7 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine iterate(self,data,nonlinear_solver,linear_solver,preconditioner)
+    subroutine step(self,data,nonlinear_solver,linear_solver,preconditioner)
         class(steady_t),                        intent(inout)   :: self
         type(chidg_data_t),                     intent(inout)   :: data
         class(nonlinear_solver_t),  optional,   intent(inout)   :: nonlinear_solver
@@ -75,23 +73,17 @@ contains
         call nonlinear_solver%solve(data,linear_solver,preconditioner)
 
 
+        !
+        ! Store end residual from nonlinear solver.
+        !
+        call self%residual_norm%push_back(nonlinear_solver%residual_norm%at(nonlinear_solver%residual_norm%size()))
 
-    end subroutine iterate
+
+    end subroutine step
     !******************************************************************************************
 
 
 
 
-
-
-
     
-    subroutine destructor(self)
-        type(steady_t),      intent(in) :: self
-
-    end subroutine
-
-
-
-
 end module type_steady

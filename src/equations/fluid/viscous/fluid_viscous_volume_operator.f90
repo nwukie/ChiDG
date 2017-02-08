@@ -94,7 +94,7 @@ contains
             dp_drho, dp_drhou, dp_drhov, dp_drhow, dp_drhoE,                    &
             dke_drho, dke_drhou, dke_drhov, dke_drhow,                          &
             tau_xx, tau_yy, tau_zz, tau_xy, tau_xz, tau_yz,                     &
-            flux_x, flux_y, flux_z
+            flux_x, flux_y, flux_z, eps
 
         real(rk)    :: const, gam
 
@@ -107,6 +107,7 @@ contains
         rhov = worker%get_primary_field_element("Y-Momentum",'value')
         rhow = worker%get_primary_field_element("Z-Momentum",'value')
         rhoE = worker%get_primary_field_element("Energy"    ,'value')
+
 
 
 
@@ -260,7 +261,6 @@ contains
         !        MASS FLUX
         !===========================
 
-
         !===========================
         !     X-MOMENTUM FLUX
         !===========================
@@ -291,9 +291,6 @@ contains
         !============================
         !       ENERGY FLUX
         !============================
-        !flux_x = -(1003._rk*mu/0.8_rk)*dT_dx  -  (u*tau_xx + v*tau_xy + w*tau_xz)
-        !flux_y = -(1003._rk*mu/0.8_rk)*dT_dy  -  (u*tau_xy + v*tau_yy + w*tau_yz)
-        !flux_z = -(1003._rk*mu/0.8_rk)*dT_dz  -  (u*tau_xz + v*tau_yz + w*tau_zz)
         flux_x = -k*dT_dx  -  (u*tau_xx + v*tau_xy + w*tau_xz)
         flux_y = -k*dT_dy  -  (u*tau_xy + v*tau_yy + w*tau_yz)
         flux_z = -k*dT_dz  -  (u*tau_xz + v*tau_yz + w*tau_zz)

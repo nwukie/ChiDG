@@ -95,7 +95,8 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        turb_m = worker%get_primary_field_face('Density * NuTilde', 'value', 'face interior')
+        !turb_m = worker%get_primary_field_face('Density * NuTilde', 'value', 'face interior')
+        turb_m = worker%get_primary_field_face('Energy', 'value', 'face interior')
 
 
         !
@@ -144,7 +145,8 @@ contains
             !
             ! Get exterior field
             !
-            turb_p = worker%get_primary_field_face('Density * NuTilde', 'value', 'face exterior')
+            !turb_p = worker%get_primary_field_face('Density * NuTilde', 'value', 'face exterior')
+            turb_p = worker%get_primary_field_face('Energy', 'value', 'face exterior')
 
 
             jump_x   = turb_p*unormx_p + turb_m*unormx_m
@@ -165,7 +167,7 @@ contains
             face_weights = worker%quadrature_weights('face')
             face_area    = worker%face_area()
 
-            integral = integral + sum(integrand * face_weights)
+            integral = integral + abs(sum(integrand * face_weights))
 
             total_area = total_area + face_area
 
@@ -175,7 +177,7 @@ contains
         !
         ! Normalize sensor by area
         !
-        integral = integral/total_area
+        integral = integral/abs(total_area)
 
 
         !
@@ -194,21 +196,49 @@ contains
         ! Scale the sensor to be [0,maxval]
         !
         theta = ONE
+        !psi  = -(2.25_rk + THREE*log10(real(order+1,rk)))
         psi  = -(2.25_rk + THREE*log10(real(order+1,rk)))
         dpsi = HALF
 
 
-        turb_element = worker%get_primary_field_general('Density * NuTilde', 'value')
+
+        !turb_element = worker%get_primary_field_general('Density * NuTilde', 'value')
+        turb_element = worker%get_primary_field_general('Energy', 'value')
         sensor = turb_element
         sensor = ZERO
-        if ( integral <= (psi - dpsi) ) then
+
+!        print*, 'integral: ', abs(integral%x_ad_)
+!        print*, 'log10(integral): ', log10(abs(integral%x_ad_))
+
+        print*, 'integral, p-dp, p+dp: ', integral%x_ad_, (psi-dpsi), (psi+dpsi)
+
+
+        integral = log10(integral)
+
+        if (abs(integral) < 1.e-12) then
+
             sensor = ZERO
-        else if ( integral >= (psi + dpsi) ) then
-            sensor = theta
-        else if ( abs(integral - psi) < dpsi ) then
-            sensor = (HALF*theta)*(ONE + sin(PI*(integral-psi)/(TWO*dpsi)))
+
+        else
+
+            !if ( log10(abs(integral)) <= (psi - dpsi) ) then
+            !    sensor = ZERO
+            !else if ( log10(abs(integral)) >= (psi + dpsi) ) then
+            !    sensor = theta
+            !else if ( abs(log10(abs(integral)) - psi) < dpsi ) then
+            !    sensor = (HALF*theta)*(ONE + sin(PI*(log10(abs(integral))-psi)/(TWO*dpsi)))
+            !end if
+            if ( integral <= (psi - dpsi) ) then
+                sensor = ZERO
+            else if ( integral >= (psi + dpsi) ) then
+                sensor = theta
+            else if ( abs(integral - psi) < dpsi ) then
+                sensor = (HALF*theta)*(ONE + sin(PI*(integral-psi)/(TWO*dpsi)))
+            end if
+
         end if
 
+        print*, 'sensor: ', sensor(1)%x_ad_
 
         call worker%store_model_field('Artificial Viscosity Sensor', 'value', sensor)
 

@@ -149,6 +149,7 @@ contains
         rhoE_p = worker%get_primary_field_face('Energy'    , 'value', 'face exterior')
 
 
+
         !
         ! Interpolate gradient to quadrature nodes
         !
@@ -485,13 +486,6 @@ contains
         !================================
         !          ENERGY FLUX
         !================================
-        !flux_x_m = -(1003._rk*mu_m/0.8_rk)*dT_dx_m  -  (u_m*tau_xx_m + v_m*tau_xy_m + w_m*tau_xz_m)
-        !flux_y_m = -(1003._rk*mu_m/0.8_rk)*dT_dy_m  -  (u_m*tau_xy_m + v_m*tau_yy_m + w_m*tau_yz_m)
-        !flux_z_m = -(1003._rk*mu_m/0.8_rk)*dT_dz_m  -  (u_m*tau_xz_m + v_m*tau_yz_m + w_m*tau_zz_m)
-
-        !flux_x_p = -(1003._rk*mu_p/0.8_rk)*dT_dx_p  -  (u_p*tau_xx_p + v_p*tau_xy_p + w_p*tau_xz_p)
-        !flux_y_p = -(1003._rk*mu_p/0.8_rk)*dT_dy_p  -  (u_p*tau_xy_p + v_p*tau_yy_p + w_p*tau_yz_p)
-        !flux_z_p = -(1003._rk*mu_p/0.8_rk)*dT_dz_p  -  (u_p*tau_xz_p + v_p*tau_yz_p + w_p*tau_zz_p)
         flux_x_m = -k_m*dT_dx_m  -  (u_m*tau_xx_m + v_m*tau_xy_m + w_m*tau_xz_m)
         flux_y_m = -k_m*dT_dy_m  -  (u_m*tau_xy_m + v_m*tau_yy_m + w_m*tau_yz_m)
         flux_z_m = -k_m*dT_dz_m  -  (u_m*tau_xz_m + v_m*tau_yz_m + w_m*tau_zz_m)

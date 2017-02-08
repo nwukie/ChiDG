@@ -1,7 +1,7 @@
 module bc_state_artificial_viscosity_outlet
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ONE, TWO, TEN
+    use mod_constants,          only: ONE, TWO, TEN, ZERO
     use type_bc_state,          only: bc_state_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
@@ -121,16 +121,20 @@ contains
         h = worker%element_size('interior')
 
 
-        deriv_mag = -eps_m/(TEN*sqrt((h(1)*unormx)**TWO + (h(2)*unormy)**TWO + (h(3)*unormz))**TWO)
-        deps_dx_m = deriv_mag * unormx
-        deps_dy_m = deriv_mag * unormy
-        deps_dz_m = deriv_mag * unormz
+        deriv_mag = -eps_m/(TEN*sqrt((h(1)*unormx)**TWO + (h(2)*unormy)**TWO + (h(3)*unormz)**TWO) )
+!        deps_dx_m = deriv_mag * unormx
+!        deps_dy_m = deriv_mag * unormy
+!        deps_dz_m = deriv_mag * unormz
 
 
         !
         ! Store computed boundary state
         !
         call worker%store_bc_state('Artificial Viscosity' , eps_bc,    'value')
+
+!        deps_dx_m = ZERO
+!        deps_dy_m = ZERO
+!        deps_dz_m = ZERO
         call worker%store_bc_state('Artificial Viscosity' , deps_dx_m, 'ddx'  )
         call worker%store_bc_state('Artificial Viscosity' , deps_dy_m, 'ddy'  )
         call worker%store_bc_state('Artificial Viscosity' , deps_dz_m, 'ddz'  )

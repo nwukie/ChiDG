@@ -19,7 +19,7 @@ module artificial_viscosity_boundary_average_operator
     !!  @author Nathan A. Wukie
     !!  @date   1/29/2017
     !!
-    !--------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     type, extends(operator_t), public :: artificial_viscosity_boundary_average_operator_t
 
     contains
@@ -28,7 +28,7 @@ module artificial_viscosity_boundary_average_operator
         procedure   :: compute
 
     end type artificial_viscosity_boundary_average_operator_t
-    !********************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -48,7 +48,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   01/31/2017
     !!
-    !--------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     subroutine init(self)
         class(artificial_viscosity_boundary_average_operator_t),   intent(inout) :: self
         
@@ -69,7 +69,7 @@ contains
 
 
     end subroutine init
-    !********************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -78,7 +78,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   01/31/2017
     !!
-    !!-------------------------------------------------------------------------------------
+    !!------------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
         class(artificial_viscosity_boundary_average_operator_t),    intent(inout)   :: self
         type(chidg_worker_t),                                       intent(inout)   :: worker
@@ -185,13 +185,20 @@ contains
         !================================
         !             FLUX
         !================================
-        flux_x_m = -diffusion_x_m * deps_dx_m
-        flux_y_m = -diffusion_y_m * deps_dy_m
-        flux_z_m = -diffusion_z_m * deps_dz_m
+!        flux_x_m = -diffusion_x_m * deps_dx_m
+!        flux_y_m = -diffusion_y_m * deps_dy_m
+!        flux_z_m = -diffusion_z_m * deps_dz_m
+!
+!        flux_x_p = -diffusion_x_p * deps_dx_p
+!        flux_y_p = -diffusion_y_p * deps_dy_p
+!        flux_z_p = -diffusion_z_p * deps_dz_p
+        flux_x_m = -0.20_rk*deps_dx_m
+        flux_y_m = -0.20_rk*deps_dy_m
+        flux_z_m = -0.20_rk*deps_dz_m
 
-        flux_x_p = -diffusion_x_p * deps_dx_p
-        flux_y_p = -diffusion_y_p * deps_dy_p
-        flux_z_p = -diffusion_z_p * deps_dz_p
+        flux_x_p = -0.20_rk*deps_dx_p
+        flux_y_p = -0.20_rk*deps_dy_p
+        flux_z_p = -0.20_rk*deps_dz_p
 
 
         flux_x = (flux_x_m + flux_x_p)
@@ -206,7 +213,7 @@ contains
 
 
     end subroutine compute
-    !*********************************************************************************************************
+    !********************************************************************************************
 
 
 

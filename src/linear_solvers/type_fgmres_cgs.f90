@@ -59,9 +59,9 @@ contains
     !---------------------------------------------------------------------------------------------
     subroutine solve(self,A,x,b,M)
         class(fgmres_cgs_t),        intent(inout)               :: self
-        type(chidg_matrix_t),        intent(inout)               :: A
-        type(chidg_vector_t),        intent(inout)               :: x
-        type(chidg_vector_t),        intent(inout)               :: b
+        type(chidg_matrix_t),       intent(inout)               :: A
+        type(chidg_vector_t),       intent(inout)               :: x
+        type(chidg_vector_t),       intent(inout)               :: b
         class(preconditioner_t),    intent(inout), optional     :: M
 
         type(timer_t)   :: timer_mv, timer_dot, timer_norm, timer_precon
@@ -155,7 +155,7 @@ contains
         self%niter = 0
 
 
-        res = 1._rk
+        res = 1000000000000._rk
         do while (res > self%tol)
 
             !

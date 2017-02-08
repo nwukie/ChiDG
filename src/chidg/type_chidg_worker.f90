@@ -31,6 +31,7 @@ module type_chidg_worker
     use mod_kinds,          only: ik, rk
     use mod_constants,      only: NFACES, ME, NEIGHBOR, BC, ZERO, CHIMERA, ONE, THIRD
     use mod_interpolate,    only: interpolate_element_standard, &
+                                  interpolate_element_autodiff, &
                                   interpolate_face_standard,    &
                                   interpolate_face_autodiff
 
@@ -110,6 +111,7 @@ module type_chidg_worker
         procedure   :: element_size
         procedure   :: solution_order
         procedure   :: quadrature_weights
+        procedure   :: inverse_jacobian
         procedure   :: face_area
 
         procedure   :: face_type
@@ -466,16 +468,18 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    function get_primary_field_element(self,field,interp_type) result(var_gq)
-        class(chidg_worker_t),  intent(in)  :: self
-        character(*),           intent(in)  :: field
-        character(*),           intent(in)  :: interp_type
+    function get_primary_field_element(self,field,interp_type,Pmin,Pmax) result(var_gq)
+        class(chidg_worker_t),  intent(in)              :: self
+        character(*),           intent(in)              :: field
+        character(*),           intent(in)              :: interp_type
+        integer(ik),            intent(in), optional    :: Pmin
+        integer(ik),            intent(in), optional    :: Pmax
 
         type(AD_D),     allocatable, dimension(:) :: var_gq, tmp_gq
 
         type(face_info_t)               :: face_info
-        character(:),   allocatable     :: cache_component, cache_type
-        integer(ik)                     :: idirection, igq, iface
+        character(:),   allocatable     :: cache_component, cache_type, user_msg
+        integer(ik)                     :: idirection, igq, iface, ifield, idomain_l
 
 
         !
@@ -513,25 +517,51 @@ contains
 
 
         !
-        ! Retrieve data from cache
+        ! If we are requesting an interpolation from a subset of the modal expansion, 
+        ! then perform a new interpolation rather than using the cache.
         !
-        if ( cache_type == 'value') then
-            var_gq = self%cache%get_data(field,'element','value',idirection,self%function_info%seed)
+        if (present(Pmin) .or. present(Pmax)) then
 
-        else if (cache_type == 'derivative') then
-            var_gq = self%cache%get_data(field,'element','derivative',idirection,self%function_info%seed)
+            if (cache_type == 'value') then
+                idomain_l = self%element_info%idomain_l
+                ifield    = self%prop(idomain_l)%get_primary_field_index(field)
 
-        else if (cache_type == 'derivative + lift') then
-            var_gq = self%cache%get_data(field,'element','derivative',idirection,self%function_info%seed)
+                var_gq = interpolate_element_autodiff(self%mesh, self%solverdata%q, self%element_info, self%function_info, ifield, self%itime, interp_type, Pmin, Pmax)
 
-            ! Add lift contributions from each face
-            do iface = 1,NFACES
-                tmp_gq = self%cache%get_data(field,'face interior', 'lift element', idirection, self%function_info%seed,iface)
-                var_gq = var_gq + tmp_gq
-            end do
+            else if ( (cache_type == 'derivative') .or. &
+                      (cache_type == 'derivative + lift') ) then
+                user_msg = "chidg_worker%get_primary_field_element: On partial field interpolations, &
+                            only the 'value' of the field can be interpolated. 'derivative' is not yet implemented."
+                call chidg_signal(FATAL,user_msg)
+            end if
+
+    
+
+        else
+
+
+            !
+            ! Retrieve data from cache
+            !
+            if ( cache_type == 'value') then
+                var_gq = self%cache%get_data(field,'element','value',idirection,self%function_info%seed)
+
+            else if (cache_type == 'derivative') then
+                var_gq = self%cache%get_data(field,'element','derivative',idirection,self%function_info%seed)
+
+            else if (cache_type == 'derivative + lift') then
+                var_gq = self%cache%get_data(field,'element','derivative',idirection,self%function_info%seed)
+
+                ! Add lift contributions from each face
+                do iface = 1,NFACES
+                    tmp_gq = self%cache%get_data(field,'face interior', 'lift element', idirection, self%function_info%seed,iface)
+                    var_gq = var_gq + tmp_gq
+                end do
+
+            end if
+
 
         end if
-
 
 
     end function get_primary_field_element
@@ -1508,6 +1538,71 @@ contains
 
     end function quadrature_weights
     !**************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Return the inverse jacobian mapping for integration.
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   01/31/2017
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    function inverse_jacobian(self,source) result(jinv)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: source
+
+        real(rk),   allocatable,    dimension(:)    :: jinv
+
+
+
+        if (source == 'face') then
+
+            jinv = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%jinv
+
+        else if (source == 'element') then
+
+            jinv = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%jinv
+
+        else
+            call chidg_signal(FATAL,"chidg_worker%inverse_jacobian(source): Invalid value for 'source'. Options are 'face', 'element'")
+        end if
+
+
+    end function inverse_jacobian
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

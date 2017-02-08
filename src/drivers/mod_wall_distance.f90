@@ -280,7 +280,7 @@ contains
 
         end if ! have_wd_field .and. wd_file_exists
 
-        call write_line('Storing Wall Distance field to Auxiliary field ChiDG Vector:')
+        call write_line('Storing Wall Distance field to Auxiliary field ChiDG Vector:', io_proc=GLOBAL_MASTER)
 
 
         !

@@ -35,20 +35,15 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine update_space(data,timing,info)
+    subroutine update_space(data,timing,info,differentiate)
         type(chidg_data_t), intent(inout), target :: data
         real(rk),           optional        :: timing
         integer(ik),        optional        :: info
+        logical,            optional        :: differentiate
 
-        integer(ik)                 :: idom, ielem, iface, idiff, ifcn, ibc, itime, ierr
+        integer(ik)                 :: idom, ielem, iface, idiff, itime, ierr, &
+                                       diff_min, diff_max
         type(timer_t)               :: timer, comm_timer, loop_timer
-        logical                     :: interior_face
-        logical                     :: chimera_face 
-        logical                     :: compute_face 
-
-        logical                     :: compute_function
-        logical                     :: linearize_function
-
 
         type(chidg_worker_t)        :: worker
         type(element_info_t)        :: elem_info
@@ -57,8 +52,24 @@ contains
         type(chidg_cache_t)         :: cache
         type(cache_handler_t)       :: cache_handler
 
+        logical                     :: differentiate_function
 
+        
+        !
+        ! Decide whether to differentiate the discretization or not
+        !
+        if (present(differentiate)) then
+            ! User-specified
+            differentiate_function = differentiate
+        else
+            ! Default, differentiate
+            differentiate_function = .true.
+        end if
+
+
+        !
         ! Initialize Chidg Worker references
+        !
         call worker%init(data%mesh, data%eqnset(:)%prop, data%sdata, cache)
 
 
@@ -133,37 +144,32 @@ contains
 
 
                     ! Update the element cache
-                    call cache_handler%update(worker,data%eqnset,data%bcset)
+                    call cache_handler%update(worker,data%eqnset,data%bcset, differentiate_function)
 
 
 
-                    ! 1-6 = linearization of neighbor blocks, 7 = linearization of Q- block(self)
-                    do idiff = 1,7
+                    ! Faces loop. For the current element, compute the 
+                    ! contributions from boundary integrals.
+                    do iface = 1,NFACES
+
+                        call worker%set_face(iface)
+ 
+                        call eqnset%compute_boundary_advective_operators(worker, differentiate_function)
+                        call eqnset%compute_boundary_diffusive_operators(worker, differentiate_function)
+                        call eqnset%compute_bc_operators(worker,data%bcset, differentiate_function)
+
+                    end do  ! faces loop
+                    
 
 
-                        ! Faces loop. For the current element, compute the 
-                        ! contributions from boundary integrals.
-                        do iface = 1,NFACES
-
-                            call worker%set_face(iface)
-
-                            call eqnset%compute_boundary_advective_operators(worker, idiff)
-                            call eqnset%compute_boundary_diffusive_operators(worker, idiff)
-                            call eqnset%compute_bc_operators(worker,data%bcset,idiff)
-
-                        end do  ! faces loop
-                        
-
-
-                        !
-                        ! Compute volume fluxes
-                        !
-                        call eqnset%compute_volume_advective_operators(worker, idiff)
-                        call eqnset%compute_volume_diffusive_operators(worker, idiff)
+                    !
+                    ! Compute contributions from volume integrals
+                    !
+                    call eqnset%compute_volume_advective_operators(worker, differentiate_function)
+                    call eqnset%compute_volume_diffusive_operators(worker, differentiate_function)
 
 
 
-                    end do  ! idiff
 
                 end do  ! ielem
                 end associate

@@ -124,6 +124,7 @@ contains
 
 
 
+
         !
         ! Interpolate solution gradients to quadrature nodes
         !
@@ -285,7 +286,7 @@ contains
         !=================================================
         ! Mass flux
         !=================================================
-
+        
 
         !=================================================
         ! x-momentum flux
@@ -323,9 +324,6 @@ contains
         !=================================================
         ! Energy flux
         !=================================================
-        !flux_x = -(1003._rk*mu/0.8_rk)*dT_dx  -  (u*tau_xx + v*tau_xy + w*tau_xz)
-        !flux_y = -(1003._rk*mu/0.8_rk)*dT_dy  -  (u*tau_xy + v*tau_yy + w*tau_yz)
-        !flux_z = -(1003._rk*mu/0.8_rk)*dT_dz  -  (u*tau_xz + v*tau_yz + w*tau_zz)
         flux_x = -k*dT_dx  -  (u*tau_xx + v*tau_xy + w*tau_xz)
         flux_y = -k*dT_dy  -  (u*tau_xy + v*tau_yy + w*tau_yz)
         flux_z = -k*dT_dz  -  (u*tau_xz + v*tau_yz + w*tau_zz)

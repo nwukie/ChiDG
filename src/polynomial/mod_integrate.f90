@@ -211,8 +211,8 @@ contains
         type(AD_D), allocatable     :: integrand_n(:)
         type(face_info_t)           :: face_n
         type(function_info_t)       :: function_n
-        integer(ik)                 :: ineighbor_element_l, ineighbor_face, ineighbor_proc, iblk_n, ierr
-        logical                     :: parallel_neighbor
+        integer(ik)                 :: ineighbor_element_l, ineighbor_face, ineighbor_proc, idiff_n, ierr
+        logical                     :: parallel_neighbor, diff_none, diff_interior, diff_exterior
 
 
 
@@ -221,7 +221,7 @@ contains
                     iface       => face_info%iface,         &
                     ifcn        => function_info%ifcn,      &
                     idonor      => function_info%idepend,   &
-                    iblk        => function_info%idiff )
+                    idiff       => function_info%idiff )
 
 
 
@@ -281,10 +281,17 @@ contains
                 !
                 ! Get linearization block for the neighbor element
                 !
-                if ( iblk /= DIAG ) then
-                        iblk_n = DIAG
-                else if ( iblk == DIAG ) then
-                        iblk_n = ineighbor_face
+                diff_none     = (idiff == 0)
+                diff_interior = (idiff == DIAG)
+                diff_exterior = ( (idiff == 1) .or. (idiff == 2) .or. &
+                                  (idiff == 3) .or. (idiff == 4) .or. &
+                                  (idiff == 5) .or. (idiff == 6) )
+                if ( diff_exterior ) then
+                        idiff_n = DIAG
+                else if ( diff_interior ) then
+                        idiff_n = ineighbor_face
+                else if ( diff_none ) then
+                        idiff_n = 0
                 else
                     call chidg_signal(FATAL,"store_boundary_integrals: unexpected value")
                 end if
@@ -294,7 +301,7 @@ contains
                 function_n%ifcn    = function_info%ifcn
                 function_n%idepend = function_info%idepend
                 function_n%seed    = function_info%seed
-                function_n%idiff   = iblk_n
+                function_n%idiff   = idiff_n
 
 
                 associate ( weights_n => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%weights(:,ineighbor_face),   &
@@ -342,7 +349,7 @@ contains
     !!  @param[inout]   lin         Block matrix storing the linearization of the spatial scheme
     !!  @param[in]      ielem       Element index for applying to the correct location in RHS and LIN
     !!  @param[in]      ieqn        Variable index
-    !!  @param[in]      iblk        Block index for the correct linearization block for the current element
+    !!  @param[in]      idiff       Block index for the correct linearization block for the current element
     !!
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/5/2016
@@ -358,16 +365,31 @@ contains
         type(AD_D),             intent(inout)   :: integral(:)
 
         integer(ik)         :: i
-        logical             :: conforming_face, boundary_face, chimera_face
+        logical             :: conforming_face, boundary_face, chimera_face, &
+                               diff_none, diff_interior, diff_exterior
         type(face_info_t)   :: face_info
         real(rk)            :: vals(size(integral))
 
-        associate ( idom => elem_info%idomain_l, ielem => elem_info%ielement_l, iblk => fcn_info%idiff )
+        associate ( idom  => elem_info%idomain_l,   &
+                    ielem => elem_info%ielement_l,  &
+                    idiff => fcn_info%idiff )
+
+
+        diff_none     = (idiff == 0)
+        diff_interior = (idiff == DIAG)
+        diff_exterior = ( (idiff == 1) .or. (idiff == 2) .or. &
+                          (idiff == 3) .or. (idiff == 4) .or. &
+                          (idiff == 5) .or. (idiff == 6) )
+
 
         !
-        ! Only store rhs once. if iblk == DIAG
+        ! Only store rhs once. 
+        !   - If we are differentiating things, only apply function once, when wrt interior
+        !       idiff == DIAG
+        !   - If we are not differentiating things, just apply function.
+        !       idiff == 0
         !
-        if (iblk == DIAG) then
+        if ( diff_interior .or. diff_none ) then
             vals = sdata%rhs%dom(idom)%vecs(ielem)%getvar(ieqn,itime) - integral(:)%x_ad_
             call sdata%rhs%dom(idom)%vecs(ielem)%setvar(ieqn,itime,vals)
         end if
@@ -382,12 +404,14 @@ contains
 
 
         !
-        ! Check if linearization is with respect to an exterior element
+        ! Check if linearization is with respect to an exterior element. 
+        ! Only need this for diff_exterior, and idiff is undefined as a face index for 
+        ! diff_interior or diff_none.
         !
-        if (iblk /= DIAG) then
-            conforming_face = (mesh(idom)%faces(ielem,iblk)%ftype == INTERIOR)
-            boundary_face   = (mesh(idom)%faces(ielem,iblk)%ftype == BOUNDARY)
-            chimera_face    = (mesh(idom)%faces(ielem,iblk)%ftype == CHIMERA )
+        if ( diff_exterior ) then
+            conforming_face = (mesh(idom)%faces(ielem,idiff)%ftype == INTERIOR)
+            boundary_face   = (mesh(idom)%faces(ielem,idiff)%ftype == BOUNDARY)
+            chimera_face    = (mesh(idom)%faces(ielem,idiff)%ftype == CHIMERA )
         end if
 
 
@@ -398,19 +422,24 @@ contains
         face_info%idomain_l  = elem_info%idomain_l
         face_info%ielement_g = elem_info%ielement_g
         face_info%ielement_l = elem_info%ielement_l
-        face_info%iface      = iblk
+        face_info%iface      = idiff
 
 
         !
         ! Store linearization
         !
-        if ((iblk == DIAG) .or. conforming_face) then
-            !call sdata%lhs%store(integral,idom,ielem,iblk,ieqn)
+        if ( diff_interior ) then
             call sdata%lhs%store(integral,face_info,fcn_info%seed,ieqn,itime)
-        else if (chimera_face .and. (iblk /= DIAG)) then
+
+        else if ( diff_exterior .and. conforming_face ) then
+            call sdata%lhs%store(integral,face_info,fcn_info%seed,ieqn,itime)
+        else if ( diff_exterior .and. chimera_face    ) then
             call sdata%lhs%store_chimera(integral,face_info,fcn_info%seed,ieqn,itime)
-        else if (boundary_face .and. (iblk /= DIAG)) then
+        else if ( diff_exterior .and. boundary_face   ) then
             call sdata%lhs%store_bc(integral,face_info,fcn_info%seed,ieqn,itime)
+
+        else if ( diff_none ) then
+            ! No derivatives to store
         else
             call chidg_signal(FATAL,"store_volume_integrals: Invalid condition for storing integrals. Could be a bad face type or linearization direction")
         end if
@@ -455,30 +484,36 @@ contains
         integer(ik),            intent(in)      :: itime
         type(AD_D),             intent(inout)   :: integral(:)
 
-        integer(ik)     :: ftype
         real(rk)        :: vals(size(integral))
 
+        logical         :: boundary_face, chimera_face, conforming_face, diff_interior, diff_none
         logical         :: add_flux = .false.
 
 
         associate ( idomain_l  => face_info%idomain_l, ielement_l  => face_info%ielement_l, iface => face_info%iface, &
-                    ifcn  => function_info%ifcn,       idonor => function_info%idepend,      iblk  => function_info%idiff )
+                    ifcn  => function_info%ifcn,       idonor => function_info%idepend,     idiff => function_info%idiff )
 
-            ftype = mesh(idomain_l)%faces(ielement_l,iface)%ftype
+            conforming_face = (mesh(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR)
+            boundary_face   = (mesh(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY)
+            chimera_face    = (mesh(idomain_l)%faces(ielement_l,iface)%ftype == CHIMERA )
+
+            diff_none     = (idiff == 0)
+            diff_interior = (idiff == DIAG)
 
             associate ( rhs => sdata%rhs%dom(idomain_l)%vecs, lhs => sdata%lhs)
 
                 !
-                ! Only store rhs once. if iblk == DIAG. Also, since the integral could be computed more than once for chimera faces, only store for the first donor.
+                ! Only store rhs once. if idiff == DIAG. Also, since the integral could be computed more than once for chimera faces, only store for the first donor.
                 ! The integral should be the same for any value of idonor. Only the derivatives will change
                 !
-                if ( ftype == BOUNDARY .and. ( ielement_l == function_info%seed%ielement_l ) ) then
+                !if ( boundary_face .and. ( ielement_l == function_info%seed%ielement_l ) ) then
+                if ( (boundary_face .and. diff_interior) .or. (boundary_face .and. diff_none) ) then
 
                     vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_
                     call rhs(ielement_l)%setvar(ieqn,itime,vals)
 
 
-                else if ( ftype == CHIMERA .and. iblk == DIAG ) then
+                else if ( (chimera_face .and. diff_interior) .or. (chimera_face .and. diff_none) ) then
 
                     if (idonor == 1) then
                         vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_
@@ -486,12 +521,12 @@ contains
                     end if
 
 
-                else if ( ftype == INTERIOR ) then
+                else if ( conforming_face ) then
+
                     !
                     ! Check if particular flux function has been added already
                     !
                     add_flux = sdata%function_status%compute_function_equation( face_info, function_info, ieqn)
-
 
 
                     ! Store if needed
@@ -531,7 +566,7 @@ contains
     !!  @param[inout]   lin         Block matrix storing the linearization of the spatial scheme
     !!  @param[in]      ielem       Element index for applying to the correct location in RHS and LIN
     !!  @param[in]      ieqn        Variable index
-    !!  @param[in]      iblk        Block index for the correct linearization block for the current element
+    !!  @param[in]      idiff       Block index for the correct linearization block for the current element
     !!
     !--------------------------------------------------------------------------------------------------------
     subroutine store_boundary_integral_linearization(mesh,sdata,face_info,function_info,ieqn,itime,integral)
@@ -543,54 +578,63 @@ contains
         integer(ik),            intent(in)      :: itime
         type(AD_D),             intent(inout)   :: integral(:)
 
-        integer(ik)                 :: i, idomain_l, ielement_l, iface, ftype, ChiID
-        integer(ik)                 :: iblk, idonor, ifcn
-        type(seed_t)                :: seed
+        integer(ik)                 :: i, idomain_l, ielement_l, iface, ChiID
+        integer(ik)                 :: idiff, idonor, ifcn
         real(rk)                    :: vals(size(integral))
 
-        logical :: add_linearization
+        logical :: conforming_face, boundary_face, chimera_face, &
+                   diff_none, diff_interior, diff_exterior, add_linearization
 
+        associate ( idomain_l  => face_info%idomain_l, ielement_l  => face_info%ielement_l,     iface => face_info%iface, &
+                    ifcn       => function_info%ifcn,  idonor      => function_info%idepend,    idiff => function_info%idiff, seed => function_info%seed )
 
-        idomain_l  = face_info%idomain_l
-        ielement_l = face_info%ielement_l
-        iface      = face_info%iface
-        seed       = function_info%seed
-        ftype      = mesh(idomain_l)%faces(ielement_l,iface)%ftype
-
-        ifcn   = function_info%ifcn
-        idonor = function_info%idepend
-        iblk   = function_info%idiff
+!        idomain_l  = face_info%idomain_l
+!        ielement_l = face_info%ielement_l
+!        iface      = face_info%iface
+!        seed       = function_info%seed
+!
+!        ifcn   = function_info%ifcn
+!        idonor = function_info%idepend
+!        idiff  = function_info%idiff
 
 
         
+        conforming_face = (mesh(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR)
+        boundary_face   = (mesh(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY)
+        chimera_face    = (mesh(idomain_l)%faces(ielement_l,iface)%ftype == CHIMERA )
 
+        diff_none     = ( idiff == 0 )
+        diff_interior = ( idiff == DIAG )
+        diff_exterior = ( (idiff == 1) .or. (idiff == 2) .or. &
+                          (idiff == 3) .or. (idiff == 4) .or. &
+                          (idiff == 5) .or. (idiff == 6) )
 
         associate ( rhs => sdata%rhs%dom(idomain_l)%vecs, lhs => sdata%lhs)
 
+        if (diff_interior .or. diff_exterior) then
 
             ! Store linearization. Rules for different face types.
-            if ( ftype == CHIMERA ) then
+            if ( chimera_face ) then
 
-                if (iblk /= DIAG) then
+                if (diff_exterior) then
                     ! Store linearization of Chimera boundary donor elements.
                     call lhs%store_chimera(integral,face_info,seed,ieqn,itime)
                 else
                     ! Store linearization of Chimera boundary receiver element. Since this could be computed multiple times,
                     ! we just store it once.
                     if (idonor == 1) then
-                        !call lhs%store(integral,idomain_l,ielement_l,iblk,ieqn,itime)
                         call lhs%store(integral,face_info,seed,ieqn,itime)
                     end if
                 end if
 
 
 
-            else if ( (ftype == BOUNDARY) ) then
+            else if ( boundary_face ) then
                 call lhs%store_bc(integral,face_info,seed,ieqn,itime)
 
 
 
-            else if ( ftype == INTERIOR ) then
+            else if ( conforming_face ) then
 
 
                 add_linearization = sdata%function_status%linearize_function_equation( face_info, function_info, ieqn)
@@ -598,7 +642,6 @@ contains
                 ! Store linearization if not already stored
                 if ( add_linearization ) then
                     ! Store linearization
-                    !call lhs%store(integral,idomain_l,ielement_l,iblk,ieqn)
                     call lhs%store(integral,face_info,seed,ieqn,itime)
 
                     ! Register flux as linearized
@@ -608,7 +651,10 @@ contains
 
             end if ! ftype
 
+        end if ! diff_...
         end associate
+
+        end associate 
 
     end subroutine store_boundary_integral_linearization
     !***********************************************************************************************************

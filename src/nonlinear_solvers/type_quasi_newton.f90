@@ -1,4 +1,5 @@
 module type_quasi_newton
+#include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, DIAG
     use mod_spatial,            only: update_space
@@ -12,6 +13,8 @@ module type_quasi_newton
     use type_linear_solver,     only: linear_solver_t
     use type_preconditioner,    only: preconditioner_t
     use type_chidg_vector
+
+    use ieee_arithmetic,        only: ieee_is_nan
     implicit none
     private
 
@@ -65,11 +68,12 @@ contains
         character(100)          :: filename
         integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex,  &
                                    niter, ieqn, idom, ierr,                     &
-                                   rstart, rend, cstart, cend, nterms, imat, iwrite
+                                   rstart, rend, cstart, cend, nterms, imat, iwrite, step
 
-        real(rk)                :: dtau, amp, cfl, timing, resid, resid_new
+        real(rk)                :: dtau, amp, cfl, timing, resid, resid_new, alpha, f0, fn, forcing_term
         real(rk), allocatable   :: vals(:), cfln(:), rnorm0(:), rnorm(:)
-        type(chidg_vector_t)     :: b, qn, qold, qnew, dqdtau
+        type(chidg_vector_t)    :: b, qn, qold, qnew, dqdtau, q0
+        logical                 :: search
       
 
         wcount = 1
@@ -118,9 +122,9 @@ contains
                 ! Print diagnostics, check tolerance.
                 !
                 call write_line("   R(Q) - Norm: ", resid, delimiter='', columns=.True., column_width=20, io_proc=GLOBAL_MASTER)
+                call self%residual_norm%push_back(resid)
                 if ( resid < self%tol ) exit
                 call self%residual_time%push_back(timing)
-                call self%residual_norm%push_back(resid)
 
 
                 !
@@ -144,7 +148,15 @@ contains
                 !
                 ! Compute new cfl for each field
                 !
-                cfln = self%cfl0*(rnorm0/rnorm)
+                if (allocated(cfln)) deallocate(cfln)
+                allocate(cfln(size(rnorm)), stat=ierr)
+                if (ierr /= 0) call AllocationError
+
+                where (rnorm /= 0.)
+                    cfln = self%cfl0*(rnorm0/rnorm)
+                else where
+                    cfln = 0.1
+                end where
 
 
                 !
@@ -196,17 +208,82 @@ contains
                 !
                 ! We need to solve the matrix system Ax=b for the update vector x (dq)
                 !
+
+                ! Set forcing term. Converge 4 orders, or 1.e-8
+                !forcing_term = resid/10000._rk
+                !linear_solver%tol = max(1.e-8_rk, forcing_term)
+
+                ! Solve system for newton step, dq
                 call linear_solver%solve(lhs,dq,b,preconditioner)
                 call self%matrix_iterations%push_back(linear_solver%niter)
                 call self%matrix_time%push_back(linear_solver%timer%elapsed())
 
 
 
-                !
-                ! Advance solution with update vector
-                !
-                qnew = qold + dq
 
+                !
+                ! Line Search for appropriate step
+                !
+                q0 = qold
+                f0 = resid
+                search = .true.
+                step = 0
+                do while (search)
+
+                    !
+                    ! Set line increment via backtracking.
+                    !   Try: 1, 0.5, 0.25... 2^-i
+                    !
+                    alpha = TWO**(-real(step,rk)) 
+                    call write_line("       Testing newton direction with 'alpha' = ", alpha, io_proc=GLOBAL_MASTER)
+
+
+                    !
+                    ! Advance solution along newton direction
+                    !
+                    qn = q0 + alpha*dq
+
+
+                    !
+                    ! Clear working vector
+                    !
+                    call rhs%clear()
+
+
+                    !
+                    ! Set working solution. Test residual at (q). Do not differentiate
+                    !
+                    q = qn
+                    call update_space(data,timing,differentiate=.false.)
+
+                    !
+                    ! Compute new function value
+                    !
+                    fn = rhs%norm(ChiDG_COMM)
+
+
+                    !
+                    ! Test for sufficient reduction. Also allow some growth.
+                    !
+                    if (ieee_is_nan(fn)) then
+                        search = .true.
+                    else if ( fn < 2.0_rk*f0 ) then
+                        search = .false.
+                    else
+                        search = .true.
+                    end if
+
+                    call write_line("       Rn(Q) = ", fn, io_proc=GLOBAL_MASTER)
+
+                    step = step + 1
+
+                end do
+
+
+                !
+                ! Accept new solution
+                !
+                q = qn
 
 
                 !
@@ -216,21 +293,13 @@ contains
                 call dq%clear()
                 call lhs%clear()
 
-                
-
-                !
-                ! Store updated solution vector (qnew) to working solution vector (q)
-                !
-                q = qnew
-
-
 
                 !
                 ! Write solution if the count is right
                 !
                 !if (wcount == self%nwrite) then
                 !    if (data%eqnset(1)%get_name() == 'Navier Stokes AV') then
-                !        call write_solution_hdf(data,'aachen_stator_cascade.h5')
+                !        call write_solution_hdf(data,'aachen_cascade_roundte.h5')
                 !        write(filename,'(I2)') niter
                 !        call write_tecio_variables_unstructured(data,trim(filename)//'.dat',niter)
                 !        wcount = 0

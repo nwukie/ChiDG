@@ -67,7 +67,7 @@ program driver
         ! Set ChiDG Algorithms
         !
 !        call chidg%set('Time Integrator' , algorithm=time_integrator,  options=toptions)
-        call chidg%set('Time Integrator', algorithm=time_integrator)
+        call chidg%set('Time Integrator' , algorithm=time_integrator)
         call chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
         call chidg%set('Linear Solver'   , algorithm=linear_solver,    options=loptions)
         call chidg%set('Preconditioner'  , algorithm=preconditioner                    )
@@ -146,10 +146,10 @@ program driver
             call constant%set_option('val',270000.0_rk)
             call chidg%data%sdata%q%project(chidg%data%mesh,constant,5)
 
-            ! rho_nutilde
-            call constant%set_option('val',0.00003_rk)
-            call chidg%data%sdata%q%project(chidg%data%mesh,constant,6)
-
+!            ! rho_nutilde
+!            call constant%set_option('val',0.00003_rk)
+!            call chidg%data%sdata%q%project(chidg%data%mesh,constant,6)
+!
 !            ! eps
 !            call constant%set_option('val',0.000001_rk)
 !            call chidg%data%sdata%q%project(chidg%data%mesh,constant,7)

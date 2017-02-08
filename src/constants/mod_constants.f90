@@ -140,7 +140,6 @@ module mod_constants
     !
     ! Interpolation source
     !
-    !integer(ik), parameter :: LOCAL     = 0        ! Interpolate from current element
     integer(ik), parameter :: ME       = 0          ! Interpolate from current element
     integer(ik), parameter :: NEIGHBOR = 1          ! Interpolate from neighbor element
     integer(ik), parameter :: BC       = 2          ! Interpolate from exterior BC state

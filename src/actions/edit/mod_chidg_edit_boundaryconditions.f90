@@ -173,6 +173,7 @@ contains
                 !
                 case(1)
                     command = "Enter group name: "
+                    call write_line(' ')
                     call write_line(command, color='blue')
                     read(*,'(A1024)') group_name
 
@@ -192,6 +193,7 @@ contains
                         call print_bc_overview(fid,active_topic='States')
 
                         command = "Enter group name: "
+                        call write_line(' ')
                         call write_line(command, color='blue')
                         read(*,'(A1024)') group_name
 
@@ -210,6 +212,7 @@ contains
                 !
                 case(3)
                     command = "Enter group name: "
+                    call write_line(' ')
                     call write_line(command, color='blue')
                     read(*,'(A1024)') group_name
 
@@ -476,25 +479,6 @@ contains
 
             if (open_domain) call chidg_edit_boundarycondition_domain_patches(fid,trim(domain_name))
 
-!            ndom = get_ndomains_hdf(fid)
-!            ierr = 1
-!            do while ( ierr /= 0 )
-!                read(*,'(I8)', iostat=ierr) idom_hdf
-!                if ( ierr /= 0 )  call write_line("Invalid input: expecting an integer index.")
-!
-!                if ( idom_hdf > ndom ) then
-!                    ierr = 1
-!                    call write_line("Invalid domain range. Enter a number between 1 and ",ndom)
-!                end if
-!
-!            end do
-!
-!
-!            if (idom_hdf /= 0) then
-!                call chidg_edit_boundarycondition_domain_patches(fid,idom_hdf)
-!            else
-!                run_domains = .false.
-!            end if
 
         end do
 
@@ -515,7 +499,6 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    !subroutine chidg_edit_boundarycondition_domain_patches(fid,idom_hdf)
     subroutine chidg_edit_boundarycondition_domain_patches(fid,domain_name)
         integer(HID_T),     intent(in)  :: fid
         character(*),       intent(in)  :: domain_name
@@ -579,7 +562,6 @@ contains
                     run_edit_bc_domain = .false.
 
                 case default
-                    !call chidg_edit_boundarycondition_patch(fid,bcgroup,idom_hdf,iface)
                     call chidg_edit_boundarycondition_patch(fid,bcgroup,domain_id,iface)
 
             end select
@@ -733,7 +715,7 @@ contains
         integer(HSIZE_T)                :: adim
         character(len=:),   allocatable :: command
         character(len=1024)             :: option, function_string, gname
-        logical                         :: option_exists, run, property_found, property_exists, set_fcn, list_fcns, read_val
+        logical                         :: option_exists, run, property_found, property_exists, set_fcn, list_fcns, read_val, run_function
         real(rk)                        :: val
         integer                         :: ierr, type, igrp, iop, nmembers, read_status
         type(svector_t)                 :: bc_state_strings
@@ -839,30 +821,47 @@ contains
 
                     if ( trim(option) == "Function" ) then
 
-                        !
-                        ! Set function
-                        !
-                        command = "Set function (? to list): "
-                        call write_line(" ")
-                        call write_line(command, color='blue')
-                        read(*,"(A1024)") function_string
+                        run_function = .true.
+                        list_fcns = .false.
+                        do while (run_function)
+                            ! Refresh display
+                            call execute_command_line("clear")
+                            call print_overview(fid)
+                            call print_bc_overview(fid,active_topic='States',active_group=trim(group_name))
+                            call print_bc_state_properties(bcgroup_id,trim(pname))
+
+
+                            if (list_fcns) then
+                                call list_functions()
+                                list_fcns = .false.
+                            end if
+
+                            !
+                            ! Set function
+                            !
+                            command = "Set function (? to list): "
+                            call write_line(" ")
+                            call write_line(command, color='blue')
+                            read(*,"(A1024)") function_string
 
 
 
 
-                        set_fcn = (trim(function_string) /= "")
-                        list_fcns = (trim(function_string) == "?")
+                            set_fcn = (trim(function_string) /= "")
+                            list_fcns = (trim(function_string) == "?")
 
-                        if (list_fcns) then
-                            call list_functions()
-                        end if
 
-                        if (set_fcn .and. (.not. list_fcns)) then
-                            call create_function(func,trim(function_string))
-                            call set_bc_property_function_hdf(bcprop,func)
-                            !run = .false.
-                        end if
+                            if (set_fcn .and. (.not. list_fcns)) then
+                                call create_function(func,trim(function_string))
+                                call set_bc_property_function_hdf(bcprop,func)
+                                run_function = .false.
+                            else if ( (.not. set_fcn) .and. (.not. list_fcns) ) then
+                                run_function = .false.
+                            end if
 
+                            print*, 'run: ', run_function
+
+                        end do ! run_function
 
                     else
 

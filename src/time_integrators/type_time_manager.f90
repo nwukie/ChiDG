@@ -15,7 +15,7 @@ module type_time_manager
     !!  @date   12/22/2016
     !!
     !!
-    !--------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
 
     type, public        :: time_manager_t
         
@@ -41,7 +41,7 @@ module type_time_manager
     
 
     end type time_manager_t
-    !--------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
 
 
 contains
@@ -57,7 +57,7 @@ contains
     !!  @date   12/25/2016
     !!
     !!  
-    !--------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine init(self)
         class(time_manager_t),  intent(inout)   :: self
 
@@ -81,15 +81,19 @@ contains
                 
                 call self%set_name(time_integrator)
 
+                self%dt         = 0.
+                self%time_steps = 1
+                self%nwrite     = 0
 
 
-            case ('Forward_Euler', 'Forward Euler', 'forward euler', 'forward_euler', &
-                  'Second Order Runge-Kutta', 'Explicit Midpoint', 'Second Order RK', &
-                  'Modified Euler', 'Second Order Heun Method', &
-                  'Ralston Method', 'Second Order Ralston Method', &
-                  'Third Order Runge-Kutta', 'Third Order Kutta', 'Third Order RK', &
-                  'Runge-Kutta Method', 'Fourth Runge-Kutta Method', 'Fourth Order RK Method', 'RK4', &
-                  'Three-Eighth Rule', 'Fourth Order Kutta', &
+            case ('Forward_Euler', 'Forward Euler', 'forward euler', 'forward_euler',   &
+                  'Second Order Runge-Kutta', 'Explicit Midpoint', 'Second Order RK',   &
+                  'Modified Euler', 'Second Order Heun Method',                         &
+                  'Ralston Method', 'Second Order Ralston Method',                      &
+                  'Third Order Runge-Kutta', 'Third Order Kutta', 'Third Order RK',     &
+                  'Runge-Kutta Method', 'Fourth Runge-Kutta Method',                    &
+                  'Fourth Order RK Method', 'RK4',                                      &
+                  'Three-Eighth Rule', 'Fourth Order Kutta',                            &
                   'Backward_Euler', 'Backward Euler', 'backward euler', 'backward_euler')
 
                 call self%set_name(time_integrator)
@@ -104,14 +108,16 @@ contains
 
 
             
-            case ('Harmonic Balance', 'Harmonic_Balance', 'harmonic balance', 'harmonic_balance', 'HB')
+            case ('Harmonic Balance', 'Harmonic_Balance', 'harmonic balance',   &
+                  'harmonic_balance', 'HB')
                 
                 call self%set_name(time_integrator)
                 !
                 ! Verify that at least one frequency has been passed in
                 !
-                user_msg = "time_integrator%init: The time scheme set needs frequencies passed in along with it. &
-                            Please define at least one frequency different than 0 in chidg.nml"
+                user_msg = "time_integrator%init: The time scheme set needs frequencies &
+                            passed in along with it. Please define at least one frequency &
+                            different than 0 in chidg.nml"
                 if ( (maxval(frequencies) == ZERO) .and. (minval(frequencies) == ZERO) ) call chidg_signal_one(FATAL,user_msg,trim(time_integrator))
                 
                 
@@ -143,9 +149,9 @@ contains
                 end do
 
             case default
-                user_msg = "We can't seem to find a time integrator that matches the input string. &
-                            Maybe check that the time integrator string in the input file or drive &
-                            script is valid"
+                user_msg = "We can't seem to find a time integrator that matches the input &
+                            string. Maybe check that the time integrator string in the input &
+                            file or drive script is valid"
 
                 dev_msg  = "Check that the time integrator is registered properly in type_time_manager."
 
@@ -155,7 +161,7 @@ contains
 
 
     end subroutine init
-    !-----------------------------------------------------------------------------------------------------             
+    !------------------------------------------------------------------------------------------
 
 
 
@@ -168,7 +174,7 @@ contains
     !!
     !!  @param[in] frequency
     !!
-    !------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine push_freq(self,frequency)
         class(time_manager_t),  intent(inout)       :: self
         real(rk),               intent(in)          :: frequency
@@ -196,7 +202,7 @@ contains
 
 
     end subroutine push_freq
-    !------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
 
 
 
@@ -214,7 +220,7 @@ contains
     !!  @param[in] frequency    >frequency we are looking for
     !!
     !!
-    !------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function loc_freq(self,frequency) result(val)
         class(time_manager_t),  intent(in)       :: self
         real(rk),               intent(in)       :: frequency
@@ -234,8 +240,7 @@ contains
         end do  
 
     end function loc_freq
-    !------------------------------------------------------------------------------------------------------
-
+    !----------------------------------------------------------------------------------------- 
 
 
 
@@ -249,7 +254,7 @@ contains
     !!  @param[in]     >name of the time integrator
     !!
     !!
-    !------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine set_name(self,name_string)
         class(time_manager_t),                 intent(inout)       :: self
         character(100),                        intent(in)          :: name_string
@@ -257,7 +262,7 @@ contains
         self%time_scheme = trim(name_string)
 
     end subroutine set_name
-    !------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
 
 
     
@@ -271,16 +276,16 @@ contains
     !!  @param[out]     >name of the time integrator
     !!
     !!
-    !------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function get_name(self) result(res)
-        class(time_manager_t),  intent(inout)       :: self
+        class(time_manager_t),  intent(inout)   :: self
         
-        character(len=:),   allocatable        :: res
+        character(:),   allocatable :: res
 
         res = self%time_scheme
 
     end function get_name
-    !------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
 
 
     

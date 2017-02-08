@@ -225,53 +225,59 @@ contains
 
 
         !
-        ! Time scheme header
+        ! Report if solver took at least one step
         !
-        call write_line(' ')
-        call write_line('---------------------------------   Time Scheme Report  ----------------------------------')
-        call write_line('Newton iterations: ', self%newton_iterations%at(1), columns=.True., column_width=20)
-        call write_line('Total time: ', self%total_time%at(1), columns=.True., column_width=20)
-        call write_line(' ')
-        call write_line('------------------------------------------------------------------------------------------')
+        if (self%newton_iterations%size() > 0) then
+
+            !
+            ! Nonliner solver header
+            !
+            call write_line(' ')
+            call write_line('---------------------------------   Nonlinear Solver Report  ----------------------------------')
+            call write_line('Newton iterations: ', self%newton_iterations%at(1), columns=.True., column_width=20)
+            call write_line('Total time: ', self%total_time%at(1), columns=.True., column_width=20)
+            call write_line(' ')
+            call write_line('------------------------------------------------------------------------------------------')
 
 
 
-        !
-        ! Print per-iteration report
-        !
-        call write_line('Residual time', 'Norm[R]', 'Matrix time', 'Matrix iterations', columns=.True., column_width=20)
+            !
+            ! Print per-iteration report
+            !
+            call write_line('Residual time', 'Norm[R]', 'Matrix time', 'Matrix iterations', columns=.True., column_width=20)
 
 
-        !
-        ! Loop through stored data and print for each newton iteration
-        !
-        do i = 1,self%residual_time%size()
-            residual_time     = self%residual_time%at(i)
-            residual_norm     = self%residual_norm%at(i)
-            matrix_time       = self%matrix_time%at(i)
-            matrix_iterations = self%matrix_iterations%at(i)
-            
-            call write_line(residual_time, residual_norm, matrix_time, matrix_iterations, delimiter=', ', columns=.True., column_width=20)
-        end do
+            !
+            ! Loop through stored data and print for each newton iteration
+            !
+            do i = 1,self%residual_time%size()
+                residual_time     = self%residual_time%at(i)
+                residual_norm     = self%residual_norm%at(i)
+                matrix_time       = self%matrix_time%at(i)
+                matrix_iterations = self%matrix_iterations%at(i)
+                
+                call write_line(residual_time, residual_norm, matrix_time, matrix_iterations, delimiter=', ', columns=.True., column_width=20)
+            end do
 
 
-        !
-        ! Accumulate total residual and matrix solver compute times
-        !
-        total_residual = 0._rk
-        total_matrix   = 0._rk
-        do i = 1,self%residual_time%size()
-            total_residual = total_residual + self%residual_time%at(i)
-            total_matrix   = total_matrix   + self%matrix_time%at(i)
-        end do
+            !
+            ! Accumulate total residual and matrix solver compute times
+            !
+            total_residual = 0._rk
+            total_matrix   = 0._rk
+            do i = 1,self%residual_time%size()
+                total_residual = total_residual + self%residual_time%at(i)
+                total_matrix   = total_matrix   + self%matrix_time%at(i)
+            end do
 
 
 
-        call write_line(' ')
-        call write_line('Total residual time: ', total_residual, columns=.True., column_width=20)
-        call write_line('Total matrix time  : ', total_matrix,   columns=.True., column_width=20)
-        call write_line('------------------------------------------------------------------------------------------')
+            call write_line(' ')
+            call write_line('Total residual time: ', total_residual, columns=.True., column_width=20)
+            call write_line('Total matrix time  : ', total_matrix,   columns=.True., column_width=20)
+            call write_line('------------------------------------------------------------------------------------------')
 
+        end if ! at least one step was taken
 
     end subroutine report
     !****************************************************************************************

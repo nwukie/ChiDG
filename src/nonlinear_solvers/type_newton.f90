@@ -6,14 +6,14 @@ module type_newton
     use type_nonlinear_solver,  only: nonlinear_solver_t
     use type_linear_solver,     only: linear_solver_t
     use type_chidg_data,        only: chidg_data_t
+    use type_system_assembler,  only: system_assembler_t
     use type_preconditioner,    only: preconditioner_t
     use type_chidg_vector
 
-    use mod_spatial,    only: update_space
-
-    use mod_tecio,      only: write_tecio_variables_unstructured
-
+!    use mod_spatial,    only: update_space
+    use mod_tecio,      only: write_tecio_variables
     use mod_entropy,    only: compute_entropy_error
+
     implicit none
     private
 
@@ -35,8 +35,6 @@ module type_newton
 
         procedure   :: solve
 
-        final :: destructor
-
     end type newton_t
     !****************************************************************************************
 
@@ -55,33 +53,36 @@ contains
 
 
 
-    !> Solve for update 'dq'
+    !>  Solve for update 'dq'
+    !!
+    !!  @author Nathan A. Wukie
     !!
     !!
     !!
-    !!
-    !!
-    !-------------------------------------------------------------------------------------------------
-    subroutine solve(self,data,linear_solver,preconditioner)
-        class(newton_t),                    intent(inout)   :: self
-        type(chidg_data_t),                 intent(inout)   :: data
-        class(linear_solver_t),  optional,  intent(inout)   :: linear_solver
-        class(preconditioner_t), optional,  intent(inout)   :: preconditioner
+    !-----------------------------------------------------------------------------------------
+    subroutine solve(self,data,system,linear_solver,preconditioner)
+        class(newton_t),                        intent(inout)   :: self
+        type(chidg_data_t),                     intent(inout)   :: data
+        class(system_assembler_t),  optional,   intent(inout)   :: system
+        class(linear_solver_t),     optional,   intent(inout)   :: linear_solver
+        class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
 
         character(100)          :: filename
-        integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex, niter, iinner, ieqn
-        integer(ik)             :: rstart, rend, cstart, cend, nterms
-        real(rk)                :: resid, timing
+        integer(ik)             :: itime, nsteps, ielem, wcount, iblk,  &
+                                   iindex, niter, iinner, ieqn,         &
+                                   rstart, rend, cstart, cend, nterms
+        real(rk)                :: resid, timing, entropy_error
         real(rk), allocatable   :: vals(:)
-        type(chidg_vector_t)     :: b, qn, qold, qnew
-      
-        real(rk)                :: entropy_error
+        type(chidg_vector_t)    :: b, qn, qold, qnew
 
 
 
 
         wcount = 1
-        associate ( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs)
+        associate ( q   => data%sdata%q,    &
+                    dq  => data%sdata%dq,   &
+                    rhs => data%sdata%rhs,  &
+                    lhs => data%sdata%lhs)
 
             call write_line('Entering time', io_proc=GLOBAL_MASTER)
 
@@ -116,7 +117,8 @@ contains
                 !
                 ! Update Spatial Residual and Linearization (rhs, lin)
                 !
-                call update_space(data,timing)
+                call system%assemble(data,timing=timing,differentiate=.true.)
+!                call update_space(data,timing)
                 resid = rhs%norm(ChiDG_COMM)
 
 
@@ -184,7 +186,7 @@ contains
                 ! Write incremental solution
                 !
                 !write(filename, "(I7,A4)") 1000000+niter, '.plt'
-                !call write_tecio_variables_unstructured(data,trim(filename),niter+1)
+                !call write_tecio_variables(data,trim(filename),niter+1)
 
 
             end do ! niter
@@ -213,18 +215,8 @@ contains
         !call write_line('Entropy error: ', entropy_error, delimiter='')
 
     end subroutine solve
+    !****************************************************************************************
 
-
-
-
-
-
-
-    
-    subroutine destructor(self)
-        type(newton_t),      intent(in) :: self
-
-    end subroutine
 
 
 

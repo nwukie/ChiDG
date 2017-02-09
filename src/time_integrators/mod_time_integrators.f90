@@ -45,7 +45,7 @@ contains
         character(*),                               intent(in)      :: time_string
         class(time_integrator_t),   allocatable,    intent(inout)   :: instance
 
-        character(len=:), allocatable   :: user_msg, dev_msg
+        character(:),   allocatable :: user_msg, dev_msg
 
 
 
@@ -83,9 +83,10 @@ contains
 
 
         !
-        ! Call time_manager initialization
+        ! Call time_integrator initialization
         !
-         call instance%time_manager%init()
+        call instance%init()
+        call instance%time_manager%init()
 
 !        if (present(options)) then
 !            call instance%set(options)

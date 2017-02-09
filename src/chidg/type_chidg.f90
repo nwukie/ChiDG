@@ -33,7 +33,7 @@ module type_chidg
     use mod_chidg_mpi,              only: chidg_mpi_init, chidg_mpi_finalize,   &
                                           IRANK, NRANK, ChiDG_COMM
 
-    use mod_tecio,                  only: write_tecio_variables_unstructured
+    use mod_tecio,                  only: write_tecio_variables
     use mod_hdfio,                  only: read_grid_hdf, read_boundaryconditions_hdf,   &
                                           read_solution_hdf, write_solution_hdf,        &
                                           read_connectivity_hdf, read_weights_hdf
@@ -345,8 +345,6 @@ contains
                 if (.not. allocated(self%preconditioner))   call chidg_signal(FATAL,"chidg%preconditioner component was not allocated")
 
 
-                call write_line("Initializing time integrator...", io_proc=GLOBAL_MASTER)
-                call self%time_integrator%init(self%data)
                 call write_line("Initializing preconditioner...", io_proc=GLOBAL_MASTER)
                 call self%preconditioner%init(self%data)
 

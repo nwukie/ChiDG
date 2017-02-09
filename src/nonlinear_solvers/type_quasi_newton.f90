@@ -2,14 +2,15 @@ module type_quasi_newton
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, DIAG
-    use mod_spatial,            only: update_space
+!    use mod_spatial,            only: update_space
     use mod_hdfio,              only: write_solution_hdf
-    use mod_tecio,              only: write_tecio_variables_unstructured
+    use mod_tecio,              only: write_tecio_variables
     use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER, IRANK, NRANK
     use mpi_f08,                only: MPI_Barrier
 
     use type_chidg_data,        only: chidg_data_t
     use type_nonlinear_solver,  only: nonlinear_solver_t
+    use type_system_assembler,  only: system_assembler_t
     use type_linear_solver,     only: linear_solver_t
     use type_preconditioner,    only: preconditioner_t
     use type_chidg_vector
@@ -59,9 +60,10 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine solve(self,data,linear_solver,preconditioner)
+    subroutine solve(self,data,system,linear_solver,preconditioner)
         class(quasi_newton_t),                  intent(inout)   :: self
         type(chidg_data_t),                     intent(inout)   :: data
+        class(system_assembler_t),  optional,   intent(inout)   :: system
         class(linear_solver_t),     optional,   intent(inout)   :: linear_solver
         class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
 
@@ -119,7 +121,8 @@ contains
                 !
                 ! Update Spatial Residual and Linearization (rhs, lin)
                 !
-                call update_space(data,timing)
+                call system%assemble(data,timing=timing,differentiate=.true.)
+!                call update_space(data,timing)
                 resid = rhs%norm(ChiDG_COMM)
 
 
@@ -258,7 +261,8 @@ contains
                     ! Set working solution. Test residual at (q). Do not differentiate
                     !
                     q = qn
-                    call update_space(data,timing,differentiate=.false.)
+                    call system%assemble(data,timing=timing,differentiate=.true.)
+                    !call update_space(data,timing,differentiate=.false.)
 
                     !
                     ! Compute new function value
@@ -305,7 +309,7 @@ contains
                 !    if (data%eqnset(1)%get_name() == 'Navier Stokes AV') then
                 !        call write_solution_hdf(data,'aachen_cascade_roundte.h5')
                 !        write(filename,'(I2)') niter
-                !        call write_tecio_variables_unstructured(data,trim(filename)//'.dat',niter)
+                !        call write_tecio_variables(data,trim(filename)//'.dat',niter)
                 !        wcount = 0
                 !    end if
                 !end if

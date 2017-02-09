@@ -8,6 +8,7 @@ module type_time_integrator
     use type_rvector,           only: rvector_t
     use type_ivector,           only: ivector_t
     use type_chidg_data,        only: chidg_data_t
+    use type_system_assembler,  only: system_assembler_t
     use type_time_manager,      only: time_manager_t
     implicit none
 
@@ -21,8 +22,6 @@ module type_time_integrator
     !---------------------------------------------------------------------------------------
     type, abstract, public  :: time_integrator_t
 
-        !real(rk)        :: testing
-        logical         :: solverInitialized = .false.
 
 
         ! OPTIONS
@@ -32,31 +31,30 @@ module type_time_integrator
 !        integer(ik)     :: nsteps   = 100           !< Number of time steps to compute     ! included in time_manager_t
 !        integer(ik)     :: nwrite   = 10            !< Write data every 'nwrite' steps     !
 
-        type(time_manager_t)    :: time_manager
+        class(system_assembler_t),  allocatable :: system
+        type(time_manager_t)                    :: time_manager
 
 
 
 
         ! Data logs
-        type(timer_t)   :: timer
-        type(rvector_t) :: residual_norm
-        type(rvector_t) :: residual_time
-        type(ivector_t) :: matrix_iterations
-        type(rvector_t) :: matrix_time
-        type(ivector_t) :: newton_iterations
-        type(rvector_t) :: total_time
+        type(timer_t)       :: timer
+        type(rvector_t)     :: residual_norm
+        type(rvector_t)     :: residual_time
+        type(ivector_t)     :: matrix_iterations
+        type(rvector_t)     :: matrix_time
+        type(ivector_t)     :: newton_iterations
+        type(rvector_t)     :: total_time
 
+        logical             :: solverInitialized = .false.
 
     contains
 
         procedure   :: init         !< General initialization procedure. Should get 
                                     !< called automatically.
-
-        procedure   :: init_spec    !< Specialized initialization for each different 
-                                    !< integrator. Gets called by general 'init'
-
         procedure   :: set
         procedure   :: report
+
 
         ! Must define this procedure in any extended type
         procedure(data_interface),   deferred   :: step
@@ -78,30 +76,6 @@ module type_time_integrator
     !
     !==================================================
     
-    abstract interface
-        subroutine self_interface(self)
-            import time_integrator_t
-            class(time_integrator_t),   intent(inout)   :: self
-        end subroutine
-    end interface
-
-
-
-    abstract interface
-        subroutine init_interface(self,data,options)
-            use type_chidg_data, only: chidg_data_t
-            use type_dict,       only: dict_t
-            import time_integrator_t
-            class(time_integrator_t),    intent(inout)   :: self
-            type(chidg_data_t),     intent(inout)   :: data
-            type(dict_t), optional, intent(inout)   :: options
-        end subroutine
-    end interface
-
-
-
-
-
     ! Interface for passing a domain_t type
     abstract interface
         subroutine data_interface(self,data,nonlinear_solver,linear_solver,preconditioner)
@@ -128,24 +102,13 @@ contains
 
     !>  Common time_integrator initialization interface.
     !!      - Call initialization for options if present
-    !!      - Call user-specified initialization routine for concrete type
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/8/2016
     !!
-    !!  @param[inout]   domains     Array of domains
-    !!  @param[inout]   options     Dictionary containing options
-    !!
     !-----------------------------------------------------------------------------------------
-    subroutine init(self,data)
+    subroutine init(self)
         class(time_integrator_t),   intent(inout)   :: self
-        type(chidg_data_t),     intent(inout)   :: data
-
-
-        !
-        ! Call user-specified initialization
-        !
-        call self%init_spec(data)
 
 
         self%solverInitialized = .true.
@@ -175,7 +138,7 @@ contains
     !------------------------------------------------------------------------------------------
     subroutine set(self,options)
         class(time_integrator_t),   intent(inout)   :: self
-        type(dict_t),           intent(inout)   :: options
+        type(dict_t),               intent(inout)   :: options
 
 
         !call options%get('dt',self%dt)
@@ -208,8 +171,8 @@ contains
     !------------------------------------------------------------------------------------------
     subroutine init_spec(self,data,options)
         class(time_integrator_t),   intent(inout)   :: self
-        type(chidg_data_t),     intent(inout)   :: data
-        type(dict_t), optional, intent(inout)   :: options
+        type(chidg_data_t),         intent(inout)   :: data
+        type(dict_t),   optional,   intent(inout)   :: options
 
 
 

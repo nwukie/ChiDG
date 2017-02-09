@@ -12,34 +12,38 @@ module type_volumeQuadrature
     implicit none
     private
 
+
+
     !> Type defining volume quadrature
     !!      - Contains nodes, weights, and matrices for Gauss-quadrature. Used for
     !!        integration and projection routines. An instance is defined for a specified
     !!        number of quadrature nodes and specified number of terms in a polynomial expansion
     !!
     !!  @author Nathan A. Wukie
-    !-----------------------------------------------------------------------------------------------------------
+    !!
+    !----------------------------------------------------------------------------------------
     type, public :: volumeQuadrature_t
         integer(ik)                 :: nnodes       !< Number of volume quadrature nodes
-        integer(ik)                 :: nterms       !< Number of terms in the polynomial expansion
+        integer(ik)                 :: nterms       !< Number of terms in the polynomial 
+                                                    !< expansion
 
         type(point_t),  allocatable :: nodes(:)     !< Array of quadrature node points
         real(rk),       allocatable :: weights(:)   !< Array of quadrature node weights
 
-        real(rk),       allocatable :: val(:,:)     !< Matrix used to interpolate an expansion to quadrature nodes
-        real(rk),       allocatable :: ddxi(:,:)    !< Matrix used to interpolate partial derivatives(ddxi) to quadrature nodes
-        real(rk),       allocatable :: ddeta(:,:)   !< Matrix used to interpolate partial derivatives(ddeta) to quadrature nodes
-        real(rk),       allocatable :: ddzeta(:,:)  !< Matrix used to interpolate partial derivatives(ddzeta) to quadrature nodes
+        real(rk),       allocatable :: val(:,:)     !< Mat to interp expansion to quad nodes
+        real(rk),       allocatable :: ddxi(:,:)    !< Mat to interp deriv(ddxi)   to quad nodes
+        real(rk),       allocatable :: ddeta(:,:)   !< Mat to interp deriv(ddeta)  to quad nodes
+        real(rk),       allocatable :: ddzeta(:,:)  !< Mat to interp deriv(ddzeta) to quad nodes
 
         real(rk),       allocatable :: mass(:,:)    !< Mass matrix for the reference element
-        real(rk),       allocatable :: dmass(:)     !< Diagonal of the mass matrix for the reference element
+        real(rk),       allocatable :: dmass(:)     !< Diag of the mass matrix the ref element
 
     contains
 
         procedure :: init
 
     end type volumeQuadrature_t
-    !***********************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -50,7 +54,8 @@ contains
 
 
     !> Initialization routine for volumeQuadrature_t instance.
-    !!      - Allocates storage for member data. Initializes ndoes, weights, and interpolation matrices.
+    !!      - Allocates storage for member data. Initializes ndoes, weights, and 
+    !!        interpolation matrices.
     !!
     !!  @author Nathan A. Wukie
     !!  @param[in]  nnodes  Number of nodes used for Gauss-quadrature
@@ -59,7 +64,7 @@ contains
     !!
     !!  TODO: TEST SPACEDIM
     !!
-    !-----------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine init(self,spacedim,nnodes,nterms)
         class(volumeQuadrature_t),  intent(inout)   :: self
         integer(ik),                intent(in)      :: spacedim
@@ -191,7 +196,7 @@ contains
 
 
     end subroutine init
-    !***********************************************************************************************************
+    !****************************************************************************************
 
 
 

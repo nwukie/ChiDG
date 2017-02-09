@@ -345,8 +345,6 @@ contains
                 if (.not. allocated(self%preconditioner))   call chidg_signal(FATAL,"chidg%preconditioner component was not allocated")
 
 
-                call write_line("Initializing time integrator...", io_proc=GLOBAL_MASTER)
-                call self%time_integrator%init(self%data)
                 call write_line("Initializing preconditioner...", io_proc=GLOBAL_MASTER)
                 call self%preconditioner%init(self%data)
 

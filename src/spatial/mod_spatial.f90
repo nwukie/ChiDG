@@ -35,11 +35,10 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine update_space(data,timing,info,differentiate)
-        type(chidg_data_t), intent(inout), target :: data
-        real(rk),           optional        :: timing
-        integer(ik),        optional        :: info
-        logical,            optional        :: differentiate
+    subroutine update_space(data,timing,differentiate)
+        type(chidg_data_t), intent(inout),  target      :: data
+        real(rk),           intent(inout),  optional    :: timing
+        logical,            intent(in),     optional    :: differentiate
 
         integer(ik)                 :: idom, ielem, iface, idiff, itime, ierr, &
                                        diff_min, diff_max

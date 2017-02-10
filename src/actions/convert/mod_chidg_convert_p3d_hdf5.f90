@@ -11,7 +11,7 @@
 module mod_chidg_convert_p3d_hdf5
 #include <messenger.h>
     use mod_kinds,              only: rk,ik, rdouble
-    use mod_constants,          only: IO_DESTINATION, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use mod_constants,          only: IO_DESTINATION, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, TWO
     use mod_hdf_utilities,      only: initialize_file_hdf, set_ndomains_hdf, open_file_hdf, &
                                       set_domain_mapping_hdf, set_domain_dimensionality_hdf, set_domain_equation_set_hdf, &
                                       set_contains_grid_hdf, set_domain_coordinates_hdf, set_domain_elements_hdf, &
@@ -51,9 +51,10 @@ contains
         ! Plot3d vars
         integer(ik)                 :: i, j, k, ext_loc, fileunit, bcface
         integer(ik)                 :: npts, npt_i, npt_j, npt_k
-        integer(ik)                 :: ierr, igrid, nblks, mapping, spacedim
+        integer(ik)                 :: ierr, igrid, nblks, mapping, spacedim, system
         integer(ik),    allocatable :: blkdims(:,:)
-        real(rdouble),  allocatable :: xcoords(:,:,:), ycoords(:,:,:), zcoords(:,:,:)
+        real(rdouble),  allocatable :: coordsx(:,:,:), coordsy(:,:,:), coordsz(:,:,:)
+        real(rdouble),  allocatable :: coords1(:,:,:), coords2(:,:,:), coords3(:,:,:)
         integer,        allocatable :: elements(:,:), faces(:,:)
         type(point_t),  allocatable :: nodes(:)
 
@@ -137,6 +138,13 @@ contains
 
 
 
+            ! Read coordinate system
+            call write_line("Enter coordinate system to use: ")
+            call write_line("Key: (1 = Cartesian, 2 = Cylindrical)")
+            read*, system
+
+
+
             !
             ! Dimensions for reading plot3d grid
             !
@@ -149,19 +157,40 @@ contains
             !
             ! Read block coordinates
             !
-            if (allocated(xcoords)) deallocate(xcoords,ycoords,zcoords)
-            allocate(xcoords(npt_i,npt_j,npt_k),ycoords(npt_i,npt_j,npt_k),zcoords(npt_i,npt_j,npt_k), stat=ierr)
+            if (allocated(coords1)) deallocate(coordsx,coordsy,coordsz)
+            allocate(coordsx(npt_i,npt_j,npt_k),coordsy(npt_i,npt_j,npt_k),coordsz(npt_i,npt_j,npt_k), stat=ierr)
             if (ierr /= 0) stop "memory allocation error: plot3d_to_hdf5"
 
-            read(fileunit) ((( xcoords(i,j,k), i=1,npt_i), j=1,npt_j), k=1,npt_k), &
-                           ((( ycoords(i,j,k), i=1,npt_i), j=1,npt_j), k=1,npt_k), &
-                           ((( zcoords(i,j,k), i=1,npt_i), j=1,npt_j), k=1,npt_k)
+            read(fileunit) ((( coords1(i,j,k), i=1,npt_i), j=1,npt_j), k=1,npt_k), &
+                           ((( coords2(i,j,k), i=1,npt_i), j=1,npt_j), k=1,npt_k), &
+                           ((( coords3(i,j,k), i=1,npt_i), j=1,npt_j), k=1,npt_k)
+
+
+
+
+            !
+            ! Transform coordinates if necessary
+            !
+            if (system == 1) then
+                coords1 = coordsx
+                coords2 = coordsy
+                coords3 = coordsz
+            else if (system == 2) then
+                coords1 = sqrt(coordsx**TWO + coordsy**TWO)
+                coords2 = atan2(coordsy,coordsx)
+                coords3 = coordsz
+            else
+                call chidg_signal(FATAL,"chidg convert: Invalid coordinate system.")
+            end if
+
+
+
 
 
             !
             ! Check mesh conforms to agglomeration routine for higher-order elements
             !
-            call check_block_mapping_conformation_plot3d(xcoords,ycoords,zcoords,mapping)
+            call check_block_mapping_conformation_plot3d(coords1,coords2,coords3,mapping)
 
 
             !
@@ -173,8 +202,8 @@ contains
             !
             ! Get nodes,elements from block
             !
-            nodes    = get_block_points_plot3d(xcoords,ycoords,zcoords)
-            elements = get_block_elements_plot3d(xcoords,ycoords,zcoords,mapping,igrid)
+            nodes    = get_block_points_plot3d(coords1,coords2,coords3)
+            elements = get_block_elements_plot3d(coords1,coords2,coords3,mapping,igrid)
 
 
             !
@@ -203,7 +232,7 @@ contains
             do bcface = 1,6
 
                 ! Get face node indices for boundary 'bcface'
-                faces = get_block_boundary_faces_plot3d(xcoords,ycoords,zcoords,mapping,bcface)
+                faces = get_block_boundary_faces_plot3d(coords1,coords2,coords3,mapping,bcface)
 
                 ! Set bc patch face indices
                 call set_bc_patch_hdf(dom_id,faces,bcface)

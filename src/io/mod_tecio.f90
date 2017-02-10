@@ -44,7 +44,7 @@ contains
                               nelem, istart, ielem_start, ieq,  &
                               ivar, idom, itime, icoord
 
-        real(rdouble)      :: val(1)
+        real(rdouble)      :: val(1), r, theta, z
         real(TEC)          :: valeq(1)
         equivalence           (valeq(1), val(1))
 
@@ -125,7 +125,22 @@ contains
                                 xi = (((real(ipt_xi,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
 
                                 ! Get coordinate value at point
-                                val     = real(data%mesh(idom)%elems(ielem)%grid_point(icoord,xi,eta,zeta),rdouble)
+                                !val     = real(data%mesh(idom)%elems(ielem)%grid_point(icoord,xi,eta,zeta),rdouble)
+                                r     = real(data%mesh(idom)%elems(ielem)%grid_point(1,xi,eta,zeta),rdouble)
+                                theta = real(data%mesh(idom)%elems(ielem)%grid_point(2,xi,eta,zeta),rdouble)
+                                z     = real(data%mesh(idom)%elems(ielem)%grid_point(3,xi,eta,zeta),rdouble)
+
+                                if (icoord == 1) then
+                                    val = r*cos(theta)
+                                else if (icoord == 2) then
+                                    val = r*sin(theta)
+                                else if (icoord == 3) then
+                                    val = z
+                                end if
+
+
+
+
                                 tecstat = TECDAT142(1,valeq,1)
                                 if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_variables: Error in call to TECDAT142")
 

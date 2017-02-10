@@ -14,21 +14,25 @@ module test_element_linearA_mod
     public  :: test_element_linearA
 
 
-    @TestCase
     !>
     !!
     !!  @author Nathan A. Wukie
     !!
     !!
     !--------------------------------------------------------------------------
+    @TestCase
     type, extends(TestCase) ::  test_element_linearA
+
         type(chidg_t)               :: chidg
         type(element_t)             :: elem
         type(face_t),   allocatable :: faces(:)
         type(point_t),  allocatable :: nodes(:)
+
     contains
+
         procedure   ::  setUp
         procedure   ::  tearDown
+
     end type test_element_linearA
     !***************************************************************************
 
@@ -143,6 +147,7 @@ contains
         call this%faces(ETA_MAX)%init_sol(this%elem)
         call this%faces(ZETA_MIN)%init_sol(this%elem)
         call this%faces(ZETA_MAX)%init_sol(this%elem)
+
     end subroutine setUp
     !************************************************************************************
     

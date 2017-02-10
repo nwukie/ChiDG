@@ -348,8 +348,7 @@ contains
         !
         ! Call element metric and matrix calculation routines
         !
-        call self%compute_quadrature_metrics()          ! Compute element metrics
-        call self%compute_element_matrices()            ! Compute mass matrices and derivative matrices
+        call self%compute_element_matrices()
 
 
 
@@ -427,6 +426,48 @@ contains
 
 
 
+    !>  Subroutine computes element-specific matrices
+    !!      - Mass matrix   (mass, invmass)
+    !!      - Matrices of cartesian gradients of basis/test functions (ddx, ddy, ddz)
+    !!      - Cartesian coordinates of quadrature points (quad_pts)
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine compute_element_matrices(self)
+        class(element_t),   intent(inout)   :: self
+
+        !
+        ! Call to compute cartesian coordinates at each quadrature node
+        !
+        call self%compute_quadrature_coords()
+
+        !
+        ! Compute quadrature metrics
+        !
+        call self%compute_quadrature_metrics()
+
+        !
+        ! Call to compute mass matrix
+        !
+        call self%compute_mass_matrix()
+
+        !
+        ! Call to compute matrices of cartesian gradients at each quadrature node
+        !
+        call self%compute_gradients_cartesian()
+
+
+    end subroutine compute_element_matrices
+    !******************************************************************************************
+
+
+
+
+
+
+
 
 
     !> Compute element metric and jacobian terms
@@ -443,12 +484,18 @@ contains
     subroutine compute_quadrature_metrics(self)
         class(element_t),    intent(inout)   :: self
 
-        integer(ik)             :: inode
-        integer(ik)             :: nnodes
+        integer(ik)                 :: inode
+        integer(ik)                 :: nnodes
+        character(:),   allocatable :: coordinate_system
 
-        real(rk)    :: dxdxi(self%gq%vol%nnodes), dxdeta(self%gq%vol%nnodes), dxdzeta(self%gq%vol%nnodes)
-        real(rk)    :: dydxi(self%gq%vol%nnodes), dydeta(self%gq%vol%nnodes), dydzeta(self%gq%vol%nnodes)
-        real(rk)    :: dzdxi(self%gq%vol%nnodes), dzdeta(self%gq%vol%nnodes), dzdzeta(self%gq%vol%nnodes)
+        !real(rk)    :: dxdxi(self%gq%vol%nnodes), dxdeta(self%gq%vol%nnodes), dxdzeta(self%gq%vol%nnodes)
+        !real(rk)    :: dydxi(self%gq%vol%nnodes), dydeta(self%gq%vol%nnodes), dydzeta(self%gq%vol%nnodes)
+        !real(rk)    :: dzdxi(self%gq%vol%nnodes), dzdeta(self%gq%vol%nnodes), dzdzeta(self%gq%vol%nnodes)
+        real(rk)    :: d1dxi(self%gq%vol%nnodes), d1deta(self%gq%vol%nnodes), d1dzeta(self%gq%vol%nnodes)
+        real(rk)    :: d2dxi(self%gq%vol%nnodes), d2deta(self%gq%vol%nnodes), d2dzeta(self%gq%vol%nnodes)
+        real(rk)    :: d3dxi(self%gq%vol%nnodes), d3deta(self%gq%vol%nnodes), d3dzeta(self%gq%vol%nnodes)
+        real(rk)    :: scaling_12(self%gq%vol%nnodes), scaling_13(self%gq%vol%nnodes), &
+                       scaling_23(self%gq%vol%nnodes), scaling_123(self%gq%vol%nnodes)
 
 
         nnodes = self%gq%vol%nnodes
@@ -456,31 +503,44 @@ contains
         !
         ! Compute element metric terms
         !
-        dxdxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%getvar(1,itime = 1))
-        dxdeta  = matmul(self%gqmesh%vol%ddeta, self%coords%getvar(1,itime = 1))
-        dxdzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%getvar(1,itime = 1))
+        d1dxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%getvar(1,itime = 1))
+        d1deta  = matmul(self%gqmesh%vol%ddeta, self%coords%getvar(1,itime = 1))
+        d1dzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%getvar(1,itime = 1))
 
-        dydxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%getvar(2,itime = 1))
-        dydeta  = matmul(self%gqmesh%vol%ddeta, self%coords%getvar(2,itime = 1))
-        dydzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%getvar(2,itime = 1))
+        d2dxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%getvar(2,itime = 1))
+        d2deta  = matmul(self%gqmesh%vol%ddeta, self%coords%getvar(2,itime = 1))
+        d2dzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%getvar(2,itime = 1))
 
-        dzdxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%getvar(3,itime = 1))
-        dzdeta  = matmul(self%gqmesh%vol%ddeta, self%coords%getvar(3,itime = 1))
-        dzdzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%getvar(3,itime = 1))
+        d3dxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%getvar(3,itime = 1))
+        d3deta  = matmul(self%gqmesh%vol%ddeta, self%coords%getvar(3,itime = 1))
+        d3dzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%getvar(3,itime = 1))
 
 
 
 
         !
-        ! TODO: Generalized 2D physical coordinates. Currently assumes x-y
+        ! Define area/volume scaling for coordinate system
+        !   Cartesian:
+        !       12 = x-y  ;  13 = x-z  ;  23 = y-z
         !
-        if ( self%spacedim == TWO_DIM ) then
-            dzdxi   = ZERO
-            dzdeta  = ZERO
-            dzdzeta = ONE
-        end if
-
-
+        !   Cylindrical
+        !       12 = r-theta  ;  13 = r-z  ;  23 = theta-z
+        !
+        coordinate_system = 'Cylindrical'
+        select case (coordinate_system)
+            case ('Cartesian')
+                scaling_12  = ONE
+                scaling_13  = ONE
+                scaling_23  = ONE
+                scaling_123 = ONE
+            case ('Cylindrical')
+                scaling_12  = self%quad_pts(:)%c1_
+                scaling_13  = ONE
+                scaling_23  = self%quad_pts(:)%c1_
+                scaling_123 = self%quad_pts(:)%c1_
+            case default
+                call chidg_signal(FATAL,"element%compute_quadrature_metrics: Invalid coordinate system. Choose 'Cartesian' or 'Cylindrical'.")
+        end select
 
 
 
@@ -488,17 +548,17 @@ contains
         ! Loop through quadrature nodes and compute metric terms
         !
         do inode = 1,nnodes
-            self%metric(1,1,inode) = dydeta(inode)*dzdzeta(inode) - dydzeta(inode)*dzdeta(inode)
-            self%metric(2,1,inode) = dydzeta(inode)*dzdxi(inode)  - dydxi(inode)*dzdzeta(inode)
-            self%metric(3,1,inode) = dydxi(inode)*dzdeta(inode)   - dydeta(inode)*dzdxi(inode)
+            self%metric(1,1,inode) = scaling_23(inode)*d2deta(inode)*d3dzeta(inode) - scaling_23(inode)*d2dzeta(inode)*d3deta(inode)
+            self%metric(2,1,inode) = scaling_23(inode)*d2dzeta(inode)*d3dxi(inode)  - scaling_23(inode)*d2dxi(inode)*d3dzeta(inode)
+            self%metric(3,1,inode) = scaling_23(inode)*d2dxi(inode)*d3deta(inode)   - scaling_23(inode)*d2deta(inode)*d3dxi(inode)
 
-            self%metric(1,2,inode) = dxdzeta(inode)*dzdeta(inode) - dxdeta(inode)*dzdzeta(inode)
-            self%metric(2,2,inode) = dxdxi(inode)*dzdzeta(inode)  - dxdzeta(inode)*dzdxi(inode)
-            self%metric(3,2,inode) = dxdeta(inode)*dzdxi(inode)   - dxdxi(inode)*dzdeta(inode)
+            self%metric(1,2,inode) = scaling_13(inode)*d1dzeta(inode)*d3deta(inode) - scaling_13(inode)*d1deta(inode)*d3dzeta(inode)
+            self%metric(2,2,inode) = scaling_13(inode)*d1dxi(inode)*d3dzeta(inode)  - scaling_13(inode)*d1dzeta(inode)*d3dxi(inode)
+            self%metric(3,2,inode) = scaling_13(inode)*d1deta(inode)*d3dxi(inode)   - scaling_13(inode)*d1dxi(inode)*d3deta(inode)
 
-            self%metric(1,3,inode) = dxdeta(inode)*dydzeta(inode) - dxdzeta(inode)*dydeta(inode)
-            self%metric(2,3,inode) = dxdzeta(inode)*dydxi(inode)  - dxdxi(inode)*dydzeta(inode)
-            self%metric(3,3,inode) = dxdxi(inode)*dydeta(inode)   - dxdeta(inode)*dydxi(inode)
+            self%metric(1,3,inode) = scaling_12(inode)*d1deta(inode)*d2dzeta(inode) - scaling_12(inode)*d1dzeta(inode)*d2deta(inode)
+            self%metric(2,3,inode) = scaling_12(inode)*d1dzeta(inode)*d2dxi(inode)  - scaling_12(inode)*d1dxi(inode)*d2dzeta(inode)
+            self%metric(3,3,inode) = scaling_12(inode)*d1dxi(inode)*d2deta(inode)   - scaling_12(inode)*d1deta(inode)*d2dxi(inode)
         end do
 
 
@@ -508,9 +568,9 @@ contains
         !
         ! Compute inverse cell mapping jacobian
         !
-        self%jinv = dxdxi*dydeta*dzdzeta - dxdeta*dydxi*dzdzeta - &
-                    dxdxi*dydzeta*dzdeta + dxdzeta*dydxi*dzdeta + &
-                    dxdeta*dydzeta*dzdxi - dxdzeta*dydeta*dzdxi
+        self%jinv = scaling_123*(d1dxi*d2deta*d3dzeta  -  d1deta*d2dxi*d3dzeta - &
+                                 d1dxi*d2dzeta*d3deta  +  d1dzeta*d2dxi*d3deta + &
+                                 d1deta*d2dzeta*d3dxi  -  d1dzeta*d2deta*d3dxi)
 
 
 
@@ -531,36 +591,6 @@ contains
 
 
 
-
-    !>  Subroutine computes element-specific matrices
-    !!      - Mass matrix   (mass, invmass)
-    !!      - Matrices of cartesian gradients of basis/test functions (ddx, ddy, ddz)
-    !!      - Cartesian coordinates of quadrature points (quad_pts)
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/1/2016
-    !!
-    !------------------------------------------------------------------------------------------
-    subroutine compute_element_matrices(self)
-        class(element_t),   intent(inout)   :: self
-
-        !
-        ! Call to compute matrices of cartesian gradients at each quadrature node
-        !
-        call self%compute_gradients_cartesian()
-
-        !
-        ! Call to compute mass matrix
-        !
-        call self%compute_mass_matrix()
-
-        !
-        ! Call to compute cartesian coordinates at each quadrature node
-        !
-        call self%compute_quadrature_coords()
-
-    end subroutine compute_element_matrices
-    !******************************************************************************************
 
 
 
@@ -586,17 +616,17 @@ contains
 
         do iterm = 1,self%nterms_s
             do inode = 1,self%gq%vol%nnodes
-                self%ddx(inode,iterm) = self%metric(1,1,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
-                                        self%metric(2,1,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
-                                        self%metric(3,1,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode))
+                self%ddx(inode,iterm) = ( self%metric(1,1,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
+                                          self%metric(2,1,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
+                                          self%metric(3,1,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode)) )
 
-                self%ddy(inode,iterm) = self%metric(1,2,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
-                                        self%metric(2,2,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
-                                        self%metric(3,2,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode))
+                self%ddy(inode,iterm) = ( self%metric(1,2,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
+                                          self%metric(2,2,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
+                                          self%metric(3,2,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode)) ) * self%quad_pts(inode)%c1_
 
-                self%ddz(inode,iterm) = self%metric(1,3,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
-                                        self%metric(2,3,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
-                                        self%metric(3,3,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode))
+                self%ddz(inode,iterm) = ( self%metric(1,3,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
+                                          self%metric(2,3,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
+                                          self%metric(3,3,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode)) )
             end do
         end do
 

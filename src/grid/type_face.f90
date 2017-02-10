@@ -322,9 +322,9 @@ contains
         !
         ! Compute metrics, normals, node coordinates
         !
+        call self%compute_quadrature_coords()
         call self%compute_quadrature_metrics()
         call self%compute_quadrature_normals()
-        call self%compute_quadrature_coords()
         call self%compute_gradients_cartesian()
 
 
@@ -350,10 +350,6 @@ contains
 
 
 
-
-
-
-
     !> Compute metric terms and cell jacobians at face quadrature nodes
     !!
     !!  @author Nathan A. Wukie
@@ -365,13 +361,19 @@ contains
     subroutine compute_quadrature_metrics(self)
         class(face_t),  intent(inout)   :: self
 
-        integer(ik) :: inode, iface
-        integer(ik) :: nnodes
+        integer(ik)                 :: inode, iface
+        integer(ik)                 :: nnodes
+        character(:),   allocatable :: coordinate_system
 
-        real(rk)    :: dxdxi(self%gq%face%nnodes), dxdeta(self%gq%face%nnodes), dxdzeta(self%gq%face%nnodes)
-        real(rk)    :: dydxi(self%gq%face%nnodes), dydeta(self%gq%face%nnodes), dydzeta(self%gq%face%nnodes)
-        real(rk)    :: dzdxi(self%gq%face%nnodes), dzdeta(self%gq%face%nnodes), dzdzeta(self%gq%face%nnodes)
+        real(rk)    :: d1dxi(self%gq%face%nnodes), d1deta(self%gq%face%nnodes), d1dzeta(self%gq%face%nnodes)
+        real(rk)    :: d2dxi(self%gq%face%nnodes), d2deta(self%gq%face%nnodes), d2dzeta(self%gq%face%nnodes)
+        real(rk)    :: d3dxi(self%gq%face%nnodes), d3deta(self%gq%face%nnodes), d3dzeta(self%gq%face%nnodes)
         real(rk)    :: invjac(self%gq%face%nnodes)
+        real(rk)    :: scaling_12(self%gq%face%nnodes), scaling_13(self%gq%face%nnodes), &
+                       scaling_23(self%gq%face%nnodes), scaling_123(self%gq%face%nnodes)
+
+
+
 
         iface  = self%iface
         nnodes = self%gq%face%nnodes
@@ -380,29 +382,44 @@ contains
         ! Evaluate directional derivatives of coordinates at quadrature nodes.
         !
         associate (gq_f => self%gqmesh%face)
-            dxdxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords%getvar(1,itime = 1))
-            dxdeta  = matmul(gq_f%ddeta( :,:,iface), self%coords%getvar(1,itime = 1))
-            dxdzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords%getvar(1,itime = 1))
+            d1dxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords%getvar(1,itime = 1))
+            d1deta  = matmul(gq_f%ddeta( :,:,iface), self%coords%getvar(1,itime = 1))
+            d1dzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords%getvar(1,itime = 1))
 
-            dydxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords%getvar(2,itime = 1))
-            dydeta  = matmul(gq_f%ddeta( :,:,iface), self%coords%getvar(2,itime = 1))
-            dydzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords%getvar(2,itime = 1))
+            d2dxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords%getvar(2,itime = 1))
+            d2deta  = matmul(gq_f%ddeta( :,:,iface), self%coords%getvar(2,itime = 1))
+            d2dzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords%getvar(2,itime = 1))
 
-            dzdxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords%getvar(3,itime = 1))
-            dzdeta  = matmul(gq_f%ddeta( :,:,iface), self%coords%getvar(3,itime = 1))
-            dzdzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords%getvar(3,itime = 1))
+            d3dxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords%getvar(3,itime = 1))
+            d3deta  = matmul(gq_f%ddeta( :,:,iface), self%coords%getvar(3,itime = 1))
+            d3dzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords%getvar(3,itime = 1))
         end associate
 
-        
+
 
         !
-        ! TODO: Generalize 2D physical coordinates. Currently assumes x-y.
+        ! Define area/volume scaling for coordinate system
+        !   Cartesian:
+        !       12 = x-y  ;  13 = x-z  ;  23 = y-z
         !
-        if ( self%spacedim == TWO_DIM ) then
-            dzdxi   = ZERO
-            dzdeta  = ZERO
-            dzdzeta = ONE
-        end if
+        !   Cylindrical
+        !       12 = r-theta  ;  13 = r-z  ;  23 = theta-z
+        !
+        coordinate_system = 'Cylindrical'
+        select case (coordinate_system)
+            case ('Cartesian')
+                scaling_12  = ONE
+                scaling_13  = ONE
+                scaling_23  = ONE
+                scaling_123 = ONE
+            case ('Cylindrical')
+                scaling_12  = self%quad_pts(:)%c1_
+                scaling_13  = ONE
+                scaling_23  = self%quad_pts(:)%c1_
+                scaling_123 = self%quad_pts(:)%c1_
+            case default
+                call chidg_signal(FATAL,"face%compute_quadrature_metrics: Invalid coordinate system. Choose 'Cartesian' or 'Cylindrical'.")
+        end select
 
 
 
@@ -410,26 +427,26 @@ contains
         ! At each quadrature node, compute metric terms.
         !
         do inode = 1,nnodes
-            self%metric(1,1,inode) = dydeta(inode)*dzdzeta(inode) - dydzeta(inode)*dzdeta(inode)
-            self%metric(2,1,inode) = dydzeta(inode)*dzdxi(inode)  - dydxi(inode)*dzdzeta(inode)
-            self%metric(3,1,inode) = dydxi(inode)*dzdeta(inode)   - dydeta(inode)*dzdxi(inode)
+            self%metric(1,1,inode) = scaling_23(inode)*d2deta(inode)*d3dzeta(inode) - scaling_23(inode)*d2dzeta(inode)*d3deta(inode)
+            self%metric(2,1,inode) = scaling_23(inode)*d2dzeta(inode)*d3dxi(inode)  - scaling_23(inode)*d2dxi(inode)*d3dzeta(inode)
+            self%metric(3,1,inode) = scaling_23(inode)*d2dxi(inode)*d3deta(inode)   - scaling_23(inode)*d2deta(inode)*d3dxi(inode)
 
-            self%metric(1,2,inode) = dxdzeta(inode)*dzdeta(inode) - dxdeta(inode)*dzdzeta(inode)
-            self%metric(2,2,inode) = dxdxi(inode)*dzdzeta(inode)  - dxdzeta(inode)*dzdxi(inode)
-            self%metric(3,2,inode) = dxdeta(inode)*dzdxi(inode)   - dxdxi(inode)*dzdeta(inode)
+            self%metric(1,2,inode) = scaling_13(inode)*d1dzeta(inode)*d3deta(inode) - scaling_13(inode)*d1deta(inode)*d3dzeta(inode)
+            self%metric(2,2,inode) = scaling_13(inode)*d1dxi(inode)*d3dzeta(inode)  - scaling_13(inode)*d1dzeta(inode)*d3dxi(inode)
+            self%metric(3,2,inode) = scaling_13(inode)*d1deta(inode)*d3dxi(inode)   - scaling_13(inode)*d1dxi(inode)*d3deta(inode)
 
-            self%metric(1,3,inode) = dxdeta(inode)*dydzeta(inode) - dxdzeta(inode)*dydeta(inode)
-            self%metric(2,3,inode) = dxdzeta(inode)*dydxi(inode)  - dxdxi(inode)*dydzeta(inode)
-            self%metric(3,3,inode) = dxdxi(inode)*dydeta(inode)   - dxdeta(inode)*dydxi(inode)
+            self%metric(1,3,inode) = scaling_12(inode)*d1deta(inode)*d2dzeta(inode) - scaling_12(inode)*d1dzeta(inode)*d2deta(inode)
+            self%metric(2,3,inode) = scaling_12(inode)*d1dzeta(inode)*d2dxi(inode)  - scaling_12(inode)*d1dxi(inode)*d2dzeta(inode)
+            self%metric(3,3,inode) = scaling_12(inode)*d1dxi(inode)*d2deta(inode)   - scaling_12(inode)*d1deta(inode)*d2dxi(inode)
         end do
 
         
         !
         ! compute inverse cell mapping jacobian terms
         !
-        invjac = dxdxi*dydeta*dzdzeta - dxdeta*dydxi*dzdzeta - &
-                 dxdxi*dydzeta*dzdeta + dxdzeta*dydxi*dzdeta + &
-                 dxdeta*dydzeta*dzdxi - dxdzeta*dydeta*dzdxi
+        invjac = scaling_123 * (d1dxi*d2deta*d3dzeta - d1deta*d2dxi*d3dzeta - &
+                                d1dxi*d2dzeta*d3deta + d1dzeta*d2dxi*d3deta + &
+                                d1deta*d2dzeta*d3dxi - d1dzeta*d2deta*d3dxi)
 
 
 
@@ -464,12 +481,16 @@ contains
     !------------------------------------------------------------------------------------------
     subroutine compute_quadrature_normals(self)
         class(face_t),  intent(inout)   :: self
-        integer(ik)                     :: inode, iface, nnodes
 
-        real(rk)    :: dxdxi(self%gq%face%nnodes), dxdeta(self%gq%face%nnodes), dxdzeta(self%gq%face%nnodes)
-        real(rk)    :: dydxi(self%gq%face%nnodes), dydeta(self%gq%face%nnodes), dydzeta(self%gq%face%nnodes)
-        real(rk)    :: dzdxi(self%gq%face%nnodes), dzdeta(self%gq%face%nnodes), dzdzeta(self%gq%face%nnodes)
+        integer(ik)                 :: inode, iface, nnodes
+        character(:),   allocatable :: coordinate_system
+
+        real(rk)    :: d1dxi(self%gq%face%nnodes), d1deta(self%gq%face%nnodes), d1dzeta(self%gq%face%nnodes)
+        real(rk)    :: d2dxi(self%gq%face%nnodes), d2deta(self%gq%face%nnodes), d2dzeta(self%gq%face%nnodes)
+        real(rk)    :: d3dxi(self%gq%face%nnodes), d3deta(self%gq%face%nnodes), d3dzeta(self%gq%face%nnodes)
         real(rk)    :: norm_mag(self%gq%face%nnodes), face_jinv(self%gq%face%nnodes)
+        real(rk)    :: scaling_12(self%gq%face%nnodes), scaling_13(self%gq%face%nnodes), &
+                       scaling_23(self%gq%face%nnodes), scaling_123(self%gq%face%nnodes)
 
         iface = self%iface
         nnodes = self%gq%face%nnodes
@@ -479,29 +500,49 @@ contains
         ! Evaluate directional derivatives of coordinates at quadrature nodes.
         !
         associate (gq_f => self%gqmesh%face)
-            dxdxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%getvar(1,itime = 1))
-            dxdeta  = matmul(gq_f%ddeta(:,:,iface), self%coords%getvar(1,itime = 1))
-            dxdzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%getvar(1,itime = 1))
+            d1dxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%getvar(1,itime = 1))
+            d1deta  = matmul(gq_f%ddeta(:,:,iface), self%coords%getvar(1,itime = 1))
+            d1dzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%getvar(1,itime = 1))
 
-            dydxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%getvar(2,itime = 1))
-            dydeta  = matmul(gq_f%ddeta(:,:,iface), self%coords%getvar(2,itime = 1))
-            dydzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%getvar(2,itime = 1))
+            d2dxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%getvar(2,itime = 1))
+            d2deta  = matmul(gq_f%ddeta(:,:,iface), self%coords%getvar(2,itime = 1))
+            d2dzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%getvar(2,itime = 1))
 
-            dzdxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%getvar(3,itime = 1))
-            dzdeta  = matmul(gq_f%ddeta(:,:,iface), self%coords%getvar(3,itime = 1))
-            dzdzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%getvar(3,itime = 1))
+            d3dxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%getvar(3,itime = 1))
+            d3deta  = matmul(gq_f%ddeta(:,:,iface), self%coords%getvar(3,itime = 1))
+            d3dzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%getvar(3,itime = 1))
         end associate
 
 
 
+
+
+
         !
-        ! TODO: Generalize 2D physical coordinates. Currently assumes x-y.
+        ! Define area/volume scaling for coordinate system
+        !   Cartesian:
+        !       12 = x-y  ;  13 = x-z  ;  23 = y-z
         !
-        if ( self%spacedim == TWO_DIM ) then
-            dzdxi   = ZERO
-            dzdeta  = ZERO
-            dzdzeta = ONE
-        end if
+        !   Cylindrical
+        !       12 = r-theta  ;  13 = r-z  ;  23 = theta-z
+        !
+        coordinate_system = 'Cylindrical'
+        select case (coordinate_system)
+            case ('Cartesian')
+                scaling_12  = ONE
+                scaling_13  = ONE
+                scaling_23  = ONE
+                scaling_123 = ONE
+            case ('Cylindrical')
+                scaling_12  = self%quad_pts(:)%c1_
+                scaling_13  = ONE
+                scaling_23  = self%quad_pts(:)%c1_
+                scaling_123 = self%quad_pts(:)%c1_
+            case default
+                call chidg_signal(FATAL,"face%compute_quadrature_normals: Invalid coordinate system. Choose 'Cartesian' or 'Cylindrical'.")
+        end select
+
+
 
 
         !
@@ -511,25 +552,25 @@ contains
             case (XI_MIN, XI_MAX)
 
                 do inode = 1,nnodes
-                    self%norm(inode,XI_DIR)   = dydeta(inode)*dzdzeta(inode) - dydzeta(inode)*dzdeta(inode)
-                    self%norm(inode,ETA_DIR)  = dxdzeta(inode)*dzdeta(inode) - dxdeta(inode)*dzdzeta(inode)
-                    self%norm(inode,ZETA_DIR) = dxdeta(inode)*dydzeta(inode) - dxdzeta(inode)*dydeta(inode)
+                    self%norm(inode,XI_DIR)   = scaling_23(inode)*d2deta(inode)*d3dzeta(inode) - scaling_23(inode)*d2dzeta(inode)*d3deta(inode)
+                    self%norm(inode,ETA_DIR)  = scaling_13(inode)*d1dzeta(inode)*d3deta(inode) - scaling_13(inode)*d1deta(inode)*d3dzeta(inode)
+                    self%norm(inode,ZETA_DIR) = scaling_12(inode)*d1deta(inode)*d2dzeta(inode) - scaling_12(inode)*d1dzeta(inode)*d2deta(inode)
                 end do
 
             case (ETA_MIN, ETA_MAX)
 
                 do inode = 1,nnodes
-                    self%norm(inode,XI_DIR)   = dydzeta(inode)*dzdxi(inode)  - dydxi(inode)*dzdzeta(inode)
-                    self%norm(inode,ETA_DIR)  = dxdxi(inode)*dzdzeta(inode)  - dxdzeta(inode)*dzdxi(inode)
-                    self%norm(inode,ZETA_DIR) = dxdzeta(inode)*dydxi(inode)  - dxdxi(inode)*dydzeta(inode)
+                    self%norm(inode,XI_DIR)   = scaling_23(inode)*d2dzeta(inode)*d3dxi(inode)  - scaling_23(inode)*d2dxi(inode)*d3dzeta(inode)
+                    self%norm(inode,ETA_DIR)  = scaling_13(inode)*d1dxi(inode)*d3dzeta(inode)  - scaling_13(inode)*d1dzeta(inode)*d3dxi(inode)
+                    self%norm(inode,ZETA_DIR) = scaling_12(inode)*d1dzeta(inode)*d2dxi(inode)  - scaling_12(inode)*d1dxi(inode)*d2dzeta(inode)
                 end do
 
             case (ZETA_MIN, ZETA_MAX)
 
                 do inode = 1,nnodes
-                    self%norm(inode,XI_DIR)   = dydxi(inode)*dzdeta(inode)   - dzdxi(inode)*dydeta(inode)
-                    self%norm(inode,ETA_DIR)  = dzdxi(inode)*dxdeta(inode)   - dxdxi(inode)*dzdeta(inode)
-                    self%norm(inode,ZETA_DIR) = dxdxi(inode)*dydeta(inode)   - dydxi(inode)*dxdeta(inode)
+                    self%norm(inode,XI_DIR)   = scaling_23(inode)*d2dxi(inode)*d3deta(inode)   - scaling_23(inode)*d3dxi(inode)*d2deta(inode)
+                    self%norm(inode,ETA_DIR)  = scaling_13(inode)*d3dxi(inode)*d1deta(inode)   - scaling_13(inode)*d1dxi(inode)*d3deta(inode)
+                    self%norm(inode,ZETA_DIR) = scaling_12(inode)*d1dxi(inode)*d2deta(inode)   - scaling_12(inode)*d2dxi(inode)*d1deta(inode)
                 end do
 
             case default
@@ -604,17 +645,17 @@ contains
 
         do iterm = 1,self%nterms_s
             do inode = 1,nnodes
-                self%ddx(inode,iterm) = self%metric(1,1,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
-                                        self%metric(2,1,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
-                                        self%metric(3,1,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode))
+                self%ddx(inode,iterm) = ( self%metric(1,1,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
+                                          self%metric(2,1,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
+                                          self%metric(3,1,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode)) )
 
-                self%ddy(inode,iterm) = self%metric(1,2,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
-                                        self%metric(2,2,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
-                                        self%metric(3,2,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode))
+                self%ddy(inode,iterm) = ( self%metric(1,2,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
+                                          self%metric(2,2,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
+                                          self%metric(3,2,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode)) ) * self%quad_pts(inode)%c1_
 
-                self%ddz(inode,iterm) = self%metric(1,3,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
-                                        self%metric(2,3,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
-                                        self%metric(3,3,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode))
+                self%ddz(inode,iterm) = ( self%metric(1,3,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
+                                          self%metric(2,3,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
+                                          self%metric(3,3,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode)) )
             end do
         end do
 

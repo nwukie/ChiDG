@@ -1,0 +1,336 @@
+module test_element_linearD_cylindrical_mod
+    use pfunit_mod
+    use mod_kinds,                  only: rk,ik
+    use mod_constants,              only: PI, ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, EIGHT, NINE, TEN, &
+                                          XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use type_chidg,                 only: chidg_t
+    use type_point,                 only: point_t
+    use type_element,               only: element_t
+    use type_face,                  only: face_t
+    use type_element_connectivity,  only: element_connectivity_t
+    use mod_io,                     only: gq_rule
+    implicit none
+
+    public  :: test_element_linearD
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !--------------------------------------------------------------------------
+    @TestCase
+    type, extends(TestCase) ::  test_element_linearD
+
+        type(chidg_t)               :: chidg
+        type(element_t)             :: elem
+        type(face_t),   allocatable :: faces(:)
+        type(point_t),  allocatable :: nodes(:)
+
+    contains
+
+        procedure   ::  setUp
+        procedure   ::  tearDown
+
+    end type test_element_linearD
+    !***************************************************************************
+
+
+contains
+
+    !>  NOTE: make sure to use 'this' instead of 'self' since these are over-writting a 
+    !!  derived type procedure. The argument names have to match
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(test_element_linearD),    intent(inout)   :: this
+        
+        integer(ik), parameter          :: npt = 8
+        type(point_t)                   :: nodes(npt)
+        type(element_connectivity_t)    :: connectivity
+        integer(ik)                     :: ftype, mapping, ielem, idomain, spacedim, ntime, &
+                                           neqns, nterms_s, ineighbor_domain_g,             &
+                                           ineighbor_domain_l, ineighbor_element_g,         &
+                                           ineighbor_element_l, ineighbor_face,             &
+                                           ineighbor_proc, ineighbor_neqns, ineighbor_nterms_s
+        
+        
+        gq_rule = 1 !> Set collocation quadrature for testing coordinates at quadrature points
+        
+        
+        call this%chidg%start_up('core')
+        allocate(this%faces(6))
+        
+        !> (r = 1-2 :: z = 0-1 :: theta = 0-pi/2)
+        !!                  
+        !!           
+        !!       _-------_ _------_
+        !!     _-         -_       -_
+        !!    -             -        -
+        !!   *              *--------*
+        !!    \   _----_   /        /
+        !!     \ -      - /        /
+        !!      *        *--------*
+        !!            
+        !!
+        call nodes(1)%set(1._rk, 0._rk,  0._rk)
+        call nodes(2)%set(2._rk, 0._rk,  0._rk)
+        call nodes(3)%set(1._rk, PI/TWO, 0._rk)
+        call nodes(4)%set(2._rk, PI/TWO, 0._rk)
+        call nodes(5)%set(1._rk, 0._rk,  1._rk)
+        call nodes(6)%set(2._rk, 0._rk,  1._rk)
+        call nodes(7)%set(1._rk, PI/TWO, 1._rk)
+        call nodes(8)%set(2._rk, PI/TWO, 1._rk)
+        this%nodes = nodes
+
+        mapping = 1
+        call connectivity%init(mapping)
+        call connectivity%set_domain_index(1)
+        call connectivity%set_element_index(1)
+        call connectivity%set_element_nodes([1, 2, 3, 4, 5, 6, 7, 8])
+        
+        
+        !> Initialize Element geometry and Numerics
+        spacedim = 3
+        idomain  = 1
+        ielem    = 1
+        neqns    = 2
+        nterms_s = 8
+        ntime    = 1
+        call this%elem%init_geom(spacedim,nodes,connectivity,idomain,ielem)
+        call this%elem%init_sol(neqns,nterms_s,ntime)
+        
+        
+        !> Initialize face geometries
+        call this%faces(XI_MIN)%init_geom(XI_MIN,this%elem)
+        call this%faces(XI_MAX)%init_geom(XI_MAX,this%elem)
+        call this%faces(ETA_MIN)%init_geom(ETA_MIN,this%elem)
+        call this%faces(ETA_MAX)%init_geom(ETA_MAX,this%elem)
+        call this%faces(ZETA_MIN)%init_geom(ZETA_MIN,this%elem)
+        call this%faces(ZETA_MAX)%init_geom(ZETA_MAX,this%elem)
+
+        !> Initialize face neighbors
+        ftype = 0
+        ineighbor_domain_g  = 0
+        ineighbor_domain_l  = 0
+        ineighbor_element_g = 0
+        ineighbor_element_l = 0
+        ineighbor_face      = 0
+        ineighbor_neqns     = 2
+        ineighbor_nterms_s  = 8
+        ineighbor_proc      = 0
+        call this%faces(XI_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,      &
+                                                    ineighbor_element_g,ineighbor_element_l,    &
+                                                    ineighbor_face,ineighbor_neqns,ineighbor_nterms_s,ineighbor_proc)
+        call this%faces(XI_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,      &
+                                                    ineighbor_element_g,ineighbor_element_l,    &
+                                                    ineighbor_face,ineighbor_neqns,ineighbor_nterms_s,ineighbor_proc)
+        call this%faces(ETA_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,     &
+                                                     ineighbor_element_g,ineighbor_element_l,   &
+                                                     ineighbor_face,ineighbor_neqns,ineighbor_nterms_s,ineighbor_proc)
+        call this%faces(ETA_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,     &
+                                                     ineighbor_element_g,ineighbor_element_l,   &
+                                                     ineighbor_face,ineighbor_neqns,ineighbor_nterms_s,ineighbor_proc)
+        call this%faces(ZETA_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,    &
+                                                      ineighbor_element_g,ineighbor_element_l,  &
+                                                      ineighbor_face,ineighbor_neqns,ineighbor_nterms_s,ineighbor_proc)
+        call this%faces(ZETA_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,    &
+                                                      ineighbor_element_g,ineighbor_element_l,  &
+                                                      ineighbor_face,ineighbor_neqns,ineighbor_nterms_s,ineighbor_proc)
+
+        
+        call this%faces(XI_MIN)%init_sol(this%elem)
+        call this%faces(XI_MAX)%init_sol(this%elem)
+        call this%faces(ETA_MIN)%init_sol(this%elem)
+        call this%faces(ETA_MAX)%init_sol(this%elem)
+        call this%faces(ZETA_MIN)%init_sol(this%elem)
+        call this%faces(ZETA_MAX)%init_sol(this%elem)
+
+    end subroutine setUp
+    !************************************************************************************
+    
+
+    !>
+    !!
+    !!
+    !-------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(test_element_linearD),    intent(inout)   :: this
+
+
+        !
+        ! Close ChiDG interface
+        !
+        call this%chidg%shut_down('core')
+
+    end subroutine tearDown
+    !**************************************************************************************
+
+
+
+
+
+    !> Test volume
+    !!
+    !!
+    !!
+    !!---------------------------------------------------------------------------------------
+    @Test
+    subroutine testElement_volume(self)
+        class(test_element_linearD),    intent(inout)   :: self
+        real(rk)    :: test_mass(self%elem%nterms_s,self%elem%nterms_s)
+        real(rk)    :: tol
+        
+        tol = 1.e-14_rk
+        
+        @assertEqual(THREE*PI/FOUR,self%elem%vol,tol)
+
+    end subroutine testElement_volume
+    !*****************************************************************************************
+
+
+
+
+    !------------------------------------------------------------------------------
+    !                                Face tests
+    !------------------------------------------------------------------------------
+
+
+
+
+    !>  Test unit normal vectors have been computed correctly.
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !------------------------------------------------------------------------------------------
+    @Test
+    subroutine testElement_face_unit_normals(self)
+        class(test_element_linearD),    intent(inout)   :: self
+        real(rk), dimension(self%faces(XI_MAX)%gq%face%nnodes) :: test_norm_x, test_norm_y, test_norm_z
+        real(rk)    :: tol
+        
+        tol = 1.e-15_rk
+        
+        ! XI_MIN
+        test_norm_x = -ONE
+        test_norm_y = ZERO
+        test_norm_z = ZERO
+        
+        @assertEqual(test_norm_x,self%faces(XI_MIN)%unorm(:,1),tol)
+        @assertEqual(test_norm_y,self%faces(XI_MIN)%unorm(:,2),tol)
+        @assertEqual(test_norm_z,self%faces(XI_MIN)%unorm(:,3),tol)
+        
+        ! XI_MAX
+        test_norm_x = ONE
+        test_norm_y = ZERO
+        test_norm_z = ZERO
+        
+        @assertEqual(test_norm_x,self%faces(XI_MAX)%unorm(:,1),tol)
+        @assertEqual(test_norm_y,self%faces(XI_MAX)%unorm(:,2),tol)
+        @assertEqual(test_norm_z,self%faces(XI_MAX)%unorm(:,3),tol)
+        
+        ! ETA_MIN
+        test_norm_x = ZERO
+        test_norm_y = -ONE
+        test_norm_z = ZERO
+        
+        @assertEqual(test_norm_x,self%faces(ETA_MIN)%unorm(:,1),tol)
+        @assertEqual(test_norm_y,self%faces(ETA_MIN)%unorm(:,2),tol)
+        @assertEqual(test_norm_z,self%faces(ETA_MIN)%unorm(:,3),tol)     
+        
+        ! ETA_MAX
+        test_norm_x = ZERO
+        test_norm_y = ONE
+        test_norm_z = ZERO
+        
+        @assertEqual(test_norm_x,self%faces(ETA_MAX)%unorm(:,1),tol)
+        @assertEqual(test_norm_y,self%faces(ETA_MAX)%unorm(:,2),tol)
+        @assertEqual(test_norm_z,self%faces(ETA_MAX)%unorm(:,3),tol)
+
+        ! ZETA_MIN
+        test_norm_x = ZERO
+        test_norm_y = ZERO
+        test_norm_z = -ONE
+        
+        @assertEqual(test_norm_x,self%faces(ZETA_MIN)%unorm(:,1),tol)
+        @assertEqual(test_norm_y,self%faces(ZETA_MIN)%unorm(:,2),tol)
+        @assertEqual(test_norm_z,self%faces(ZETA_MIN)%unorm(:,3),tol)
+        
+        ! ZETA_MAX
+        test_norm_x = ZERO
+        test_norm_y = ZERO
+        test_norm_z = ONE
+        
+        @assertEqual(test_norm_x,self%faces(ZETA_MAX)%unorm(:,1),tol)
+        @assertEqual(test_norm_y,self%faces(ZETA_MAX)%unorm(:,2),tol)
+        @assertEqual(test_norm_z,self%faces(ZETA_MAX)%unorm(:,3),tol)
+       
+
+    end subroutine testElement_face_unit_normals
+    !*******************************************************************************************
+
+
+
+
+
+    !>  Test face areas were computed correctly.
+    !!
+    !!  Face 1: (1 * 1)
+    !!  Face 2: (1 * 1)
+    !!  Face 3: (1 * 5)
+    !!  Face 4: (1 * 5)
+    !!  Face 5: (1 * 5)
+    !!  Face 6: (1 * 5)
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !------------------------------------------------------------------------------------------
+    @Test
+    subroutine testElement_face_area(self)
+        class(test_element_linearD),    intent(inout)   :: self
+
+        real(rk)    :: test_area, tol
+        
+        tol = 1.e-15_rk
+        
+        ! XI_MIN
+        test_area = PI/TWO
+        @assertEqual(test_area,self%faces(XI_MIN)%area,tol)
+        
+        ! XI_MAX
+        test_area = PI
+        @assertEqual(test_area,self%faces(XI_MAX)%area,tol)
+        
+        ! ETA_MIN
+        test_area = ONE
+        @assertEqual(test_area,self%faces(ETA_MIN)%area,tol)
+        
+        ! ETA_MAX
+        test_area = ONE
+        @assertEqual(test_area,self%faces(ETA_MAX)%area,tol)
+
+        ! ZETA_MIN
+        test_area = THREE*PI/FOUR
+        @assertEqual(test_area,self%faces(ZETA_MIN)%area,tol)
+        
+        ! ZETA_MAX
+        test_area = THREE*PI/FOUR
+        @assertEqual(test_area,self%faces(ZETA_MAX)%area,tol)
+       
+
+    end subroutine testElement_face_area
+    !*******************************************************************************************
+
+
+
+
+
+
+
+
+
+end module test_element_linearD_cylindrical_mod

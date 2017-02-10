@@ -69,9 +69,9 @@ contains
 
         call self%set_name('Test Case Linear Advection Model')
 
-        call self%add_model_field('Linear X-Advection Velocity')
-        call self%add_model_field('Linear Y-Advection Velocity')
-        call self%add_model_field('Linear Z-Advection Velocity')
+        call self%add_model_field('Scalar X-Advection Velocity')
+        call self%add_model_field('Scalar Y-Advection Velocity')
+        call self%add_model_field('Scalar Z-Advection Velocity')
 
 
     end subroutine init_model
@@ -110,9 +110,9 @@ contains
         cy = ZERO
         cz = ZERO
 
-        call worker%store_model_field('Linear X-Advection Velocity', 'value', cx)
-        call worker%store_model_field('Linear Y-Advection Velocity', 'value', cy)
-        call worker%store_model_field('Linear Z-Advection Velocity', 'value', cz)
+        call worker%store_model_field('Scalar X-Advection Velocity', 'value', cx)
+        call worker%store_model_field('Scalar Y-Advection Velocity', 'value', cy)
+        call worker%store_model_field('Scalar Z-Advection Velocity', 'value', cz)
 
     
     end subroutine compute_model

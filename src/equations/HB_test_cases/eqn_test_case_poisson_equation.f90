@@ -69,7 +69,7 @@ contains
 
         call self%set_name('Test Case Poisson Equation Model')
 
-        call self%add_model_field('Diffusivity')
+        call self%add_model_field('Scalar Diffusion Coefficient')
 
 
     end subroutine init_model
@@ -104,7 +104,7 @@ contains
         !
         alpha = TENTH
 
-        call worker%store_model_field('Diffusivity', 'value', alpha)
+        call worker%store_model_field('Scalar Diffusion Coefficient', 'value', alpha)
 
 
     end subroutine compute_model

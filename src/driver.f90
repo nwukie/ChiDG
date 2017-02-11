@@ -128,7 +128,7 @@ program driver
             call create_function(constant,'constant')
 
             ! rho
-            call constant%set_option('val',1.25_rk)
+            call constant%set_option('val',1.25_k)
             call chidg%data%sdata%q%project(chidg%data%mesh,constant,1)
 
             ! rho_u
@@ -147,12 +147,12 @@ program driver
             call constant%set_option('val',270000.0_rk)
             call chidg%data%sdata%q%project(chidg%data%mesh,constant,5)
 
-!            ! rho_nutilde
-!            call constant%set_option('val',0.00003_rk)
-!            call chidg%data%sdata%q%project(chidg%data%mesh,constant,6)
-!
-!            ! eps
-!            call constant%set_option('val',0.000001_rk)
+            ! rho_nutilde
+            call constant%set_option('val',0.00003_rk)
+            call chidg%data%sdata%q%project(chidg%data%mesh,constant,6)
+
+            ! eps
+            call constant%set_option('val',0.000001_rk)
 !            call chidg%data%sdata%q%project(chidg%data%mesh,constant,7)
 
         else

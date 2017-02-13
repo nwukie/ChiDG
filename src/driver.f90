@@ -110,10 +110,13 @@ program driver
             !
             call create_function(fcn,'gaussian')
             call fcn%set_option('b_x',0._rk)
-            call fcn%set_option('b_y',1.5_rk)
-            call fcn%set_option('b_z',1.5_rk)
-            call fcn%set_option('c',1.0_rk)
+            call fcn%set_option('b_y',3.14_rk)
+            call fcn%set_option('b_z',0._rk)
+            call fcn%set_option('c',0.5_rk)
             call chidg%data%sdata%q%project(chidg%data%mesh,fcn,1)
+!            call create_function(constant,'constant')
+!            call constant%set_option('val',0._rk)
+!            call chidg%data%sdata%q%project(chidg%data%mesh,constant,1)
 
 
 !            call polynomial%set_option('f',3.5_rk)

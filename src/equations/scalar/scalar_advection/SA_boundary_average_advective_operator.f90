@@ -87,7 +87,7 @@ contains
             flux_x, flux_y, flux_z, integrand
 
         real(rk),   allocatable, dimension(:)   ::  &
-            normx, normy, normz
+            normx, normy, normz, r
 
 
         
@@ -122,13 +122,18 @@ contains
         normy = worker%normal(2)
         normz = worker%normal(3)
 
+        !
+        ! Get radius
+        !
+        r = worker%x('boundary')
+
 
         !
         ! Compute boundary average flux
         !
-        flux_x = HALF*(cx_m*u_m + cx_p*u_p)
-        flux_y = HALF*(cy_m*u_m + cy_p*u_p)
-        flux_z = HALF*(cz_m*u_m + cz_p*u_p)
+        flux_x = r*HALF*(cx_m*u_m + cx_p*u_p)
+        flux_y = r*HALF*(cy_m*u_m + cy_p*u_p)
+        flux_z = r*HALF*(cz_m*u_m + cz_p*u_p)
 
 
         !

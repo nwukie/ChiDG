@@ -117,7 +117,7 @@ module type_element
         ! Private utility procedure
         procedure           :: compute_element_matrices
         procedure           :: compute_mass_matrix
-        procedure           :: compute_gradients_cartesian
+        procedure           :: compute_quadrature_gradients
         procedure           :: compute_quadrature_metrics
         procedure           :: compute_quadrature_coords
         procedure           :: assign_quadrature
@@ -456,7 +456,7 @@ contains
         !
         ! Call to compute matrices of cartesian gradients at each quadrature node
         !
-        call self%compute_gradients_cartesian()
+        call self%compute_quadrature_gradients()
 
 
     end subroutine compute_element_matrices
@@ -610,23 +610,23 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine compute_gradients_cartesian(self)
+    subroutine compute_quadrature_gradients(self)
         class(element_t),   intent(inout)   :: self
         integer(ik)                         :: iterm,inode
 
         do iterm = 1,self%nterms_s
             do inode = 1,self%gq%vol%nnodes
-                self%ddx(inode,iterm) = ( self%metric(1,1,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
-                                          self%metric(2,1,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
-                                          self%metric(3,1,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode)) )
+                self%ddx(inode,iterm) = self%metric(1,1,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
+                                        self%metric(2,1,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
+                                        self%metric(3,1,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode))
 
-                self%ddy(inode,iterm) = ( self%metric(1,2,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
-                                          self%metric(2,2,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
-                                          self%metric(3,2,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode)) ) * self%quad_pts(inode)%c1_
+                self%ddy(inode,iterm) = self%metric(1,2,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
+                                        self%metric(2,2,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
+                                        self%metric(3,2,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode))
 
-                self%ddz(inode,iterm) = ( self%metric(1,3,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
-                                          self%metric(2,3,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
-                                          self%metric(3,3,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode)) )
+                self%ddz(inode,iterm) = self%metric(1,3,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
+                                        self%metric(2,3,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
+                                        self%metric(3,3,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode))
             end do
         end do
 
@@ -635,7 +635,7 @@ contains
         self%ddy_trans = transpose(self%ddy)
         self%ddz_trans = transpose(self%ddz)
 
-    end subroutine compute_gradients_cartesian
+    end subroutine compute_quadrature_gradients
     !******************************************************************************************
 
 
@@ -971,13 +971,14 @@ contains
     !!  @date   11/5/2016
     !!
     !-----------------------------------------------------------------------------------------
-    function metric_point(self,cart_dir,comp_dir,xi,eta,zeta) result(val)
-        class(element_t),   intent(in)  :: self
-        integer(ik),        intent(in)  :: cart_dir
-        integer(ik),        intent(in)  :: comp_dir
-        real(rk),           intent(in)  :: xi, eta, zeta
+    function metric_point(self,cart_dir,comp_dir,xi,eta,zeta,scale) result(val)
+        class(element_t),   intent(in)              :: self
+        integer(ik),        intent(in)              :: cart_dir
+        integer(ik),        intent(in)              :: comp_dir
+        real(rk),           intent(in)              :: xi, eta, zeta
+        logical,            intent(in), optional    :: scale
         
-        real(rk)        :: val
+        real(rk)        :: val, r
         type(point_t)   :: node
         real(rk)        :: polyvals(self%nterms_c)
         integer(ik)     :: iterm, spacedim
@@ -1002,6 +1003,20 @@ contains
         ! Evaluate mesh point from dot product of modes and polynomial values
         !
         val = dot_product(self%coords%getvar(cart_dir,itime = 1), polyvals)
+
+
+
+        !
+        !    
+        !
+        if (present(scale)) then
+            if (scale) then
+                if (cart_dir == Y_DIR) then
+                    r = self%grid_point(2,xi,eta,zeta)
+                    val = val * r
+                end if
+            end if
+        end if
 
 
 

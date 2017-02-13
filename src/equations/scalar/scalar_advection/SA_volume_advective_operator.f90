@@ -82,6 +82,8 @@ contains
         type(AD_D), allocatable, dimension(:)   ::  &
             u, flux_x, flux_y, flux_z, cx, cy, cz
 
+        real(rk),   allocatable ::  r(:)
+
 
 
         !
@@ -97,13 +99,17 @@ contains
         cy = worker%get_model_field_element('Scalar Y-Advection Velocity', 'value')
         cz = worker%get_model_field_element('Scalar Z-Advection Velocity', 'value')
 
+        !
+        ! Get radius
+        !
+        r = worker%x('volume')
 
         !
         ! Compute volume flux at quadrature nodes
         !
-        flux_x = cx * u 
-        flux_y = cy * u
-        flux_z = cz * u
+        flux_x = r * cx * u
+        flux_y = r * cy * u
+        flux_z = r * cz * u
 
 
         !

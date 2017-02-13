@@ -132,7 +132,7 @@ module type_face
         procedure           :: compute_quadrature_metrics       !< Compute metric terms at quadrature nodes
         procedure           :: compute_quadrature_normals       !< Compute normals at quadrature nodes
         procedure           :: compute_quadrature_coords        !< Compute cartesian coordinates at quadrature nodes
-        procedure           :: compute_gradients_cartesian      !< Compute gradients in cartesian coordinates
+        procedure           :: compute_quadrature_gradients     !< Compute gradients in cartesian coordinates
 
         procedure           :: get_neighbor_element_g           !< Return neighbor element index
         procedure           :: get_neighbor_element_l           !< Return neighbor element index
@@ -325,7 +325,7 @@ contains
         call self%compute_quadrature_coords()
         call self%compute_quadrature_metrics()
         call self%compute_quadrature_normals()
-        call self%compute_gradients_cartesian()
+        call self%compute_quadrature_gradients()
 
 
         !
@@ -633,7 +633,7 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine compute_gradients_cartesian(self)
+    subroutine compute_quadrature_gradients(self)
         class(face_t),      intent(inout)   :: self
 
         integer(ik)                         :: iterm,inode,iface,nnodes
@@ -645,21 +645,21 @@ contains
 
         do iterm = 1,self%nterms_s
             do inode = 1,nnodes
-                self%ddx(inode,iterm) = ( self%metric(1,1,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
-                                          self%metric(2,1,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
-                                          self%metric(3,1,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode)) )
+                self%ddx(inode,iterm) = self%metric(1,1,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
+                                        self%metric(2,1,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
+                                        self%metric(3,1,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode)) 
 
-                self%ddy(inode,iterm) = ( self%metric(1,2,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
-                                          self%metric(2,2,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
-                                          self%metric(3,2,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode)) ) * self%quad_pts(inode)%c1_
+                self%ddy(inode,iterm) = self%metric(1,2,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
+                                        self%metric(2,2,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
+                                        self%metric(3,2,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode)) 
 
-                self%ddz(inode,iterm) = ( self%metric(1,3,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
-                                          self%metric(2,3,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
-                                          self%metric(3,3,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode)) )
+                self%ddz(inode,iterm) = self%metric(1,3,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
+                                        self%metric(2,3,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
+                                        self%metric(3,3,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode))
             end do
         end do
 
-    end subroutine compute_gradients_cartesian
+    end subroutine compute_quadrature_gradients
     !*******************************************************************************************
 
 

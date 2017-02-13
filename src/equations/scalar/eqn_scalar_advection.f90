@@ -118,8 +118,8 @@ contains
         cz = u
 
         ! Set default values (1,0,0)
-        cx = ONE
-        cy = ZERO
+        cx = ZERO
+        cy = ONE
         cz = ZERO
 
 

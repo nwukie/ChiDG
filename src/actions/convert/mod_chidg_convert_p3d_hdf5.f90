@@ -157,13 +157,13 @@ contains
             !
             ! Read block coordinates
             !
-            if (allocated(coords1)) deallocate(coordsx,coordsy,coordsz)
+            if (allocated(coordsx)) deallocate(coordsx,coordsy,coordsz)
             allocate(coordsx(npt_i,npt_j,npt_k),coordsy(npt_i,npt_j,npt_k),coordsz(npt_i,npt_j,npt_k), stat=ierr)
             if (ierr /= 0) stop "memory allocation error: plot3d_to_hdf5"
 
-            read(fileunit) ((( coords1(i,j,k), i=1,npt_i), j=1,npt_j), k=1,npt_k), &
-                           ((( coords2(i,j,k), i=1,npt_i), j=1,npt_j), k=1,npt_k), &
-                           ((( coords3(i,j,k), i=1,npt_i), j=1,npt_j), k=1,npt_k)
+            read(fileunit) ((( coordsx(i,j,k), i=1,npt_i), j=1,npt_j), k=1,npt_k), &
+                           ((( coordsy(i,j,k), i=1,npt_i), j=1,npt_j), k=1,npt_k), &
+                           ((( coordsz(i,j,k), i=1,npt_i), j=1,npt_j), k=1,npt_k)
 
 
 

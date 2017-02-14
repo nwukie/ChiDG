@@ -52,22 +52,22 @@ module type_element
         integer(ik)     :: ntime                            !< Number of time levels in solution
 
         ! Element quadrature points, mesh points and modes
-        type(element_connectivity_t)    :: connectivity         !< Connectivity list. Integer indices of the associated nodes in block node list
-        type(point_t), allocatable      :: quad_pts(:)          !< Cartesian coordinates of discrete quadrature points
-        type(point_t), allocatable      :: elem_pts(:)          !< Cartesian coordinates of discrete points defining element
-        type(densevector_t)             :: coords               !< Modal representation of cartesian coordinates (nterms_var,(x,y,z))
+        type(element_connectivity_t)    :: connectivity         !< Integer indices of the associated nodes in block node list
+        type(point_t), allocatable      :: quad_pts(:)          !< Coordinates of discrete quadrature points
+        type(point_t), allocatable      :: elem_pts(:)          !< Coordinates of discrete points defining element
+        type(densevector_t)             :: coords               !< Modal expansion of coordinates (nterms_var,(x,y,z))
 
         ! Element metric terms
         real(rk), allocatable           :: metric(:,:,:)        !< metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
-        real(rk), allocatable           :: jinv(:)              !< jacobian terms at quadrature nodes
+        real(rk), allocatable           :: jinv(:)              !< volume jacobian at quadrature nodes
 
         ! Matrices of cartesian gradients of basis/test functions
-        real(rk), allocatable           :: ddx(:,:)             !< Derivative of basis functions in x-direction at quadrature nodes
-        real(rk), allocatable           :: ddy(:,:)             !< Derivative of basis functions in y-direction at quadrature nodes
-        real(rk), allocatable           :: ddz(:,:)             !< Derivative of basis functions in z-direction at quadrature nodes
-        real(rk), allocatable           :: ddx_trans(:,:)       !< Derivative of basis functions in x-direction at quadrature nodes - transposed
-        real(rk), allocatable           :: ddy_trans(:,:)       !< Derivative of basis functions in y-direction at quadrature nodes - transposed
-        real(rk), allocatable           :: ddz_trans(:,:)       !< Derivative of basis functions in z-direction at quadrature nodes - transposed
+        real(rk), allocatable           :: ddx(:,:)             !< Deriv of basis functions in x-direction at quadrature nodes
+        real(rk), allocatable           :: ddy(:,:)             !< Deriv of basis functions in y-direction at quadrature nodes
+        real(rk), allocatable           :: ddz(:,:)             !< Deriv of basis functions in z-direction at quadrature nodes
+        real(rk), allocatable           :: ddx_trans(:,:)       !< ddx transposed
+        real(rk), allocatable           :: ddy_trans(:,:)       !< ddy transposed
+        real(rk), allocatable           :: ddz_trans(:,:)       !< ddz transposed
 
         ! Quadrature matrices
         type(quadrature_t), pointer     :: gq     => null()     !< Pointer to instance for solution expansion
@@ -98,17 +98,19 @@ module type_element
         procedure, public   :: init_sol
 
 
-        ! Compute discrete value for x/y/z-coordinate at a given xi,eta,zeta.
+        ! Compute discrete value for at a given xi,eta,zeta.
         procedure, public   :: x                      
         procedure, public   :: y                      
         procedure, public   :: z                      
-
-        procedure, public   :: grid_point             !< Compute a discrete value for a physical coordinate at a given xi, eta, zeta.
-        procedure, public   :: computational_point    !< Compute a discrete value for a computational coordinate at a given x, y, z.
-        procedure, public   :: metric_point           !< Compute a discrete value for a metric term at a given xi, eta, zeta.
-        procedure, public   :: solution_point         !< Compute a discrete value for the solution at a given xi,eta, zeta.
+        procedure, public   :: grid_point           
+        procedure, public   :: computational_point
+        procedure, public   :: metric_point 
+        procedure, public   :: solution_point   
         procedure, public   :: derivative_point
-        procedure, public   :: project                !< Compute a projection of a function onto the solution basis
+
+
+        ! Compute a projection of a function onto the solution basis
+        procedure, public   :: project
 
 
         ! Get connected face
@@ -240,7 +242,7 @@ contains
 
         
         !
-        ! Compute mesh x,y,z modes
+        ! Compute modal expansion of element coordinates
         !
         xmodes = matmul(element_mapping,self%elem_pts(:)%c1_)
         ymodes = matmul(element_mapping,self%elem_pts(:)%c2_)

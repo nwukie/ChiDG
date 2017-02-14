@@ -71,9 +71,9 @@ module type_face
 
         ! Neighbor information if neighbor is off-processor
         real(rk)                        :: neighbor_h(3)                !< Approximate size of neighbor bounding box
-        real(rk),           allocatable :: neighbor_ddx(:,:)            !< Derivative of basis functions in x-direction at quadrature nodes
-        real(rk),           allocatable :: neighbor_ddy(:,:)            !< Derivative of basis functions in y-direction at quadrature nodes
-        real(rk),           allocatable :: neighbor_ddz(:,:)            !< Derivative of basis functions in z-direction at quadrature nodes
+        real(rk),           allocatable :: neighbor_ddx(:,:)            !< Deriv of basis functions in x-direction at quadrature nodes
+        real(rk),           allocatable :: neighbor_ddy(:,:)            !< Deriv of basis functions in y-direction at quadrature nodes
+        real(rk),           allocatable :: neighbor_ddz(:,:)            !< Deriv of basis functions in z-direction at quadrature nodes
         real(rk),           allocatable :: neighbor_br2_face(:,:)       !< Matrix for computing/obtaining br2 modes at face nodes
         real(rk),           allocatable :: neighbor_br2_vol(:,:)        !< Matrix for computing/obtaining br2 modes at volume nodes
         real(rk),           allocatable :: neighbor_invmass(:,:)    
@@ -99,9 +99,9 @@ module type_face
 
 
         ! Matrices of cartesian gradients of basis/test functions
-        real(rk),           allocatable :: ddx(:,:)             !< Derivative of basis functions in x-direction at quadrature nodes
-        real(rk),           allocatable :: ddy(:,:)             !< Derivative of basis functions in y-direction at quadrature nodes
-        real(rk),           allocatable :: ddz(:,:)             !< Derivative of basis functions in z-direction at quadrature nodes
+        real(rk),           allocatable :: ddx(:,:)             !< Deriv of basis functions in x-direction at quadrature nodes
+        real(rk),           allocatable :: ddy(:,:)             !< Deriv of basis functions in y-direction at quadrature nodes
+        real(rk),           allocatable :: ddz(:,:)             !< Deriv of basis functions in z-direction at quadrature nodes
 
 
         ! Quadrature matrices
@@ -365,12 +365,12 @@ contains
         integer(ik)                 :: nnodes
         character(:),   allocatable :: coordinate_system
 
-        real(rk)    :: d1dxi(self%gq%face%nnodes), d1deta(self%gq%face%nnodes), d1dzeta(self%gq%face%nnodes)
-        real(rk)    :: d2dxi(self%gq%face%nnodes), d2deta(self%gq%face%nnodes), d2dzeta(self%gq%face%nnodes)
-        real(rk)    :: d3dxi(self%gq%face%nnodes), d3deta(self%gq%face%nnodes), d3dzeta(self%gq%face%nnodes)
-        real(rk)    :: invjac(self%gq%face%nnodes)
-        real(rk)    :: scaling_12(self%gq%face%nnodes), scaling_13(self%gq%face%nnodes), &
-                       scaling_23(self%gq%face%nnodes), scaling_123(self%gq%face%nnodes)
+        real(rk),   dimension(self%gq%face%nnodes)  :: &
+            d1dxi, d1deta, d1dzeta, &
+            d2dxi, d2deta, d2dzeta, &
+            d3dxi, d3deta, d3dzeta, &
+            scaling_12, scaling_13, scaling_23, scaling_123, &
+            invjac
 
 
 

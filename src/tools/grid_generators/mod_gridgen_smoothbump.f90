@@ -99,9 +99,9 @@ contains
         !
         spacedim = 3
         if (present(equation_sets)) then
-            call add_domain_hdf(file_id,"01",nodes,elements,equation_sets(1)%get(),spacedim)
+            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian',equation_sets(1)%get(),spacedim)
         else
-            call add_domain_hdf(file_id,"01",nodes,elements,"Euler",spacedim)
+            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian','Euler',spacedim)
         end if
 
 
@@ -109,7 +109,7 @@ contains
         !
         ! Set boundary conditions patch connectivities
         !
-        dom_id = open_domain_hdf(file_id,"01")
+        dom_id = open_domain_hdf(file_id,'01')
 
         do bcface = 1,6
 

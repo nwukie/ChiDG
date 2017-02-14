@@ -1,4 +1,5 @@
 module mod_inv
+#include <messenger.h>
     use mod_kinds,      only: rk,ik,rdouble,rsingle
     use mod_constants,  only: ONE
 
@@ -67,11 +68,11 @@ contains
         else if ( rk == rsingle ) then
             call SGETRF(n, n, Ainv, n, ipiv, info)
         else
-            print*, "inv: error in selected precision"
+            call chidg_signal(FATAL,"inv: Invalid selected precision for matrix inversion.")
         end if
 
         if (info /= 0) then
-         stop 'Matrix is numerically singular!'
+            call chidg_signal(FATAL,"inv: Matrix is numerically singular!")
         end if
 
 
@@ -104,13 +105,13 @@ contains
         else if ( rk == rsingle ) then
             call SGETRI(n, Ainv, n, ipiv, work, n, info)
         else
-            print*, "inv: error in selected precision"
+            call chidg_signal(FATAL,"inv: Invalid selected precision for matrix inversion.")
         end if
 
 
 
         if (info /= 0) then
-            stop 'Matrix inversion failed!'
+            call chidg_signal(FATAL,"inv: matrix inversion failed!.")
         end if
 
     end function inv

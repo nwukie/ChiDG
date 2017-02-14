@@ -44,6 +44,7 @@ module type_mesh
         integer(ik)                     :: nterms_c   = 0               !< Number of terms in the grid coordinate expansion
         integer(ik)                     :: nelem      = 0               !< Number of total elements
         integer(ik)                     :: ntime      = 0               !< Number of time instances
+        character(:),   allocatable     :: coordinate_system            !< 'Cartesian' or 'Cylindrical'
 
         
         !
@@ -127,13 +128,14 @@ contains
     !!  @param[in]  points_g    Rank-3 matrix of coordinate points defining a block mesh
     !!
     !------------------------------------------------------------------------------------------------------------
-    subroutine init_geom(self,idomain_l,spacedim,nterms_c, nodes, connectivity)
+    subroutine init_geom(self,idomain_l,spacedim,nterms_c,nodes,connectivity,coord_system)
         class(mesh_t),                  intent(inout), target   :: self
         integer(ik),                    intent(in)              :: idomain_l
         integer(ik),                    intent(in)              :: spacedim
         integer(ik),                    intent(in)              :: nterms_c
         type(point_t),                  intent(in)              :: nodes(:)
         type(domain_connectivity_t),    intent(in)              :: connectivity
+        character(*),                   intent(in)              :: coord_system
 
 
         !
@@ -149,13 +151,14 @@ contains
         !
         ! Call geometry initialization for elements and faces
         !
-        call self%init_elems_geom(spacedim,nodes,connectivity)
+        call self%init_elems_geom(spacedim,nodes,connectivity,coord_system)
         call self%init_faces_geom(spacedim,nodes,connectivity)
 
 
         !
-        ! Confirm initialization
+        ! Set coordinate system and confirm initialization 
         !
+        self%coordinate_system = coord_system
         self%geomInitialized = .true.
 
 
@@ -245,11 +248,12 @@ contains
     !!  @param[in]  points_g    Rank-3 matrix of coordinate points defining a block mesh
     !!
     !------------------------------------------------------------------------------------------------------------
-    subroutine init_elems_geom(self,spacedim,nodes,connectivity)
+    subroutine init_elems_geom(self,spacedim,nodes,connectivity,coord_system)
         class(mesh_t),                  intent(inout)   :: self
         integer(ik),                    intent(in)      :: spacedim
         type(point_t),                  intent(in)      :: nodes(:)
         type(domain_connectivity_t),    intent(in)      :: connectivity
+        character(*),                   intent(in)      :: coord_system
 
 
         type(point_t),  allocatable     :: points_l(:)
@@ -267,20 +271,14 @@ contains
         !
         ! Compute number of 1d points for a single element
         !
+        ! Really just computing the cube/square-root of nterms_c, the number of 
+        ! terms in the coordinate expansion.
+        !
         npts_1d = 0
-        
-        ! Really just computing the cube/square-root of nterms_c, the number of terms in the coordinate expansion.
-        if ( spacedim == THREE_DIM ) then
-            do while (npts_1d*npts_1d*npts_1d < self%nterms_c)
-                npts_1d = npts_1d + 1
-            end do
+        do while (npts_1d*npts_1d*npts_1d < self%nterms_c)
+            npts_1d = npts_1d + 1
+        end do
 
-        else if ( spacedim == TWO_DIM ) then
-            do while (npts_1d*npts_1d < self%nterms_c)
-                npts_1d = npts_1d + 1
-            end do
-
-        end if
 
 
         !
@@ -290,11 +288,13 @@ contains
         self%nelem      = nelem
         mapping         = (npts_1d - 1)     !> 1 - linear, 2 - quadratic, 3 - cubic, etc.
 
+
         !
         ! Allocate element storage
         !
         allocate(self%elems(nelem), points_l(self%nterms_c), stat=ierr)
         if(ierr /= 0) stop "Memory allocation error: init_elements"
+
 
         !
         ! Call geometry initialization for each element
@@ -303,7 +303,7 @@ contains
         do ielem_l = 1,nelem
 
             element_connectivity = connectivity%get_element_connectivity(ielem_l)
-            call self%elems(ielem_l)%init_geom(spacedim,nodes,element_connectivity,idomain_l,ielem_l)
+            call self%elems(ielem_l)%init_geom(spacedim,nodes,element_connectivity,idomain_l,ielem_l,coord_system)
 
         end do ! ielem
 

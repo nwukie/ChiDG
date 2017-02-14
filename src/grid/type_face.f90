@@ -3,10 +3,8 @@ module type_face
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX,                 &
                                       ZETA_MIN, ZETA_MAX, XI_DIR, ETA_DIR, ZETA_DIR,    &
-                                      X_DIR, Y_DIR, Z_DIR,                              &
-                                      TWO_DIM, THREE_DIM,                               &
-                                      NFACES, NO_INTERIOR_NEIGHBOR, NO_PROC,            &
-                                      ZERO, ONE, TWO, ORPHAN
+                                      NO_INTERIOR_NEIGHBOR, NO_PROC,                    &
+                                      ONE, TWO, ORPHAN
 
     use type_point,             only: point_t
     use type_element,           only: element_t
@@ -35,6 +33,7 @@ module type_face
     !!
     !------------------------------------------------------------------------------------------
     type, public :: face_t
+
         integer(ik)                 :: spacedim             !< Number of spatial dimensions
 
         ! Self information
@@ -88,14 +87,15 @@ module type_face
 
 
         ! Geometry
-        type(point_t),      allocatable :: quad_pts(:)          !< Cartesian coordinates of quadrature nodes
-        type(densevector_t)             :: coords               !< Element coordinates
+        type(densevector_t)             :: coords               !< Modal expansion of coordinates 
+        type(point_t),      allocatable :: quad_pts(:)          !< Discrete coordinates at quadrature nodes
+        character(:),       allocatable :: coordinate_system    !< 'Cartesian' or 'Cylindrical'
 
         ! Metric terms
         real(rk),           allocatable :: jinv(:)              !< array of inverse element jacobians on the face
         real(rk),           allocatable :: metric(:,:,:)        !< Face metric terms
-        real(rk),           allocatable :: norm(:,:)            !< Face normals
-        real(rk),           allocatable :: unorm(:,:)           !< Unit Face normals in cartesian coordinates
+        real(rk),           allocatable :: norm(:,:)            !< Face normal vector - scaled by differential area
+        real(rk),           allocatable :: unorm(:,:)           !< Face normal vector - unit length
 
 
         ! Matrices of cartesian gradients of basis/test functions
@@ -198,6 +198,7 @@ contains
         self%ineighbor_element_l = NO_INTERIOR_NEIGHBOR
         self%ineighbor_proc      = NO_PROC
         
+
         !
         ! Set coordinates
         !
@@ -205,8 +206,9 @@ contains
 
 
         !
-        ! Confirm face grid initialization
+        ! Set coordinate system, confirm initialization.
         !
+        self%coordinate_system = elem%coordinate_system
         self%geomInitialized = .true.
 
     end subroutine init_geom
@@ -405,8 +407,7 @@ contains
         !   Cylindrical
         !       12 = r-theta  ;  13 = r-z  ;  23 = theta-z
         !
-        coordinate_system = 'Cylindrical'
-        select case (coordinate_system)
+        select case (self%coordinate_system)
             case ('Cartesian')
                 scaling_12  = ONE
                 scaling_13  = ONE
@@ -526,8 +527,7 @@ contains
         !   Cylindrical
         !       12 = r-theta  ;  13 = r-z  ;  23 = theta-z
         !
-        coordinate_system = 'Cylindrical'
-        select case (coordinate_system)
+        select case (self%coordinate_system)
             case ('Cartesian')
                 scaling_12  = ONE
                 scaling_13  = ONE

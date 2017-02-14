@@ -52,29 +52,32 @@ contains
         integer(ik), parameter          :: npt = 8
         type(point_t)                   :: nodes(npt)
         type(element_connectivity_t)    :: connectivity
-        integer(ik)                     :: ftype, mapping, ielem, idomain, spacedim, ntime, neqns, nterms_s, &
-                                           ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g,      &
-                                           ineighbor_element_l, ineighbor_face, ineighbor_proc,              &
+        integer(ik)                     :: ftype, mapping, ielem, idomain, spacedim,    &
+                                           ntime, neqns, nterms_s,                      &
+                                           ineighbor_domain_g,  ineighbor_domain_l,     &
+                                           ineighbor_element_g, ineighbor_element_l,    &
+                                           ineighbor_face, ineighbor_proc,              &
                                            ineighbor_neqns, ineighbor_nterms_s
         
         
-        gq_rule = 1 !> Set collocation quadrature for testing coordinates at quadrature points
+        ! Set collocation quadrature for testing coordinates at quadrature nodes
+        gq_rule = 1
         
         
         call this%chidg%start_up('core')
         allocate(this%faces(6))
         
-        !> (x = 0-5 :: y = 0-1 :: z = 0-1)
-        !!          *------*
-        !!         /      /|
-        !!    x=5 /      / |
-        !!       /      /  *
-        !!      *------*  /
-        !!      |      | /
-        !!  z=1 |      |/
-        !!      *------*
-        !!         y=1
-        !!
+        ! (x = 0-5 :: y = 0-1 :: z = 0-1)
+        !          *------*
+        !         /      /|
+        !    x=5 /      / |
+        !       /      /  *
+        !      *------*  /
+        !      |      | /
+        !  z=1 |      |/
+        !      *------*
+        !         y=1
+        !
         call nodes(1)%set(0._rk, 0._rk, 0._rk)
         call nodes(2)%set(5._rk, 0._rk, 0._rk)
         call nodes(3)%set(0._rk, 1._rk, 0._rk)
@@ -92,18 +95,22 @@ contains
         call connectivity%set_element_nodes([1, 2, 3, 4, 5, 6, 7, 8])
         
         
-        !> Initialize Element geometry and Numerics
+        !
+        ! Initialize Element geometry and Numerics
+        !
         spacedim = 3
         idomain  = 1
         ielem    = 1
         neqns    = 2
         nterms_s = 8
         ntime    = 1
-        call this%elem%init_geom(spacedim,nodes,connectivity,idomain,ielem)
+        call this%elem%init_geom(spacedim,nodes,connectivity,idomain,ielem,'Cartesian')
         call this%elem%init_sol(neqns,nterms_s,ntime)
         
         
-        !> Initialize face geometries
+        !
+        ! Initialize face geometries
+        !
         call this%faces(XI_MIN)%init_geom(XI_MIN,this%elem)
         call this%faces(XI_MAX)%init_geom(XI_MAX,this%elem)
         call this%faces(ETA_MIN)%init_geom(ETA_MIN,this%elem)
@@ -111,7 +118,10 @@ contains
         call this%faces(ZETA_MIN)%init_geom(ZETA_MIN,this%elem)
         call this%faces(ZETA_MAX)%init_geom(ZETA_MAX,this%elem)
 
-        !> Initialize face neighbors
+        
+        !
+        ! Initialize face neighbors
+        !
         ftype = 0
         ineighbor_domain_g  = 0
         ineighbor_domain_l  = 0
@@ -123,22 +133,28 @@ contains
         ineighbor_proc      = 0
         call this%faces(XI_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,      &
                                                     ineighbor_element_g,ineighbor_element_l,    &
-                                                    ineighbor_face,ineighbor_neqns,ineighbor_nterms_s,ineighbor_proc)
+                                                    ineighbor_face,ineighbor_neqns,             &
+                                                    ineighbor_nterms_s,ineighbor_proc)
         call this%faces(XI_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,      &
                                                     ineighbor_element_g,ineighbor_element_l,    &
-                                                    ineighbor_face,ineighbor_neqns,ineighbor_nterms_s,ineighbor_proc)
+                                                    ineighbor_face,ineighbor_neqns,             &
+                                                    ineighbor_nterms_s,ineighbor_proc)
         call this%faces(ETA_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,     &
                                                      ineighbor_element_g,ineighbor_element_l,   &
-                                                     ineighbor_face,ineighbor_neqns,ineighbor_nterms_s,ineighbor_proc)
+                                                     ineighbor_face,ineighbor_neqns,            &
+                                                     ineighbor_nterms_s,ineighbor_proc)
         call this%faces(ETA_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,     &
                                                      ineighbor_element_g,ineighbor_element_l,   &
-                                                     ineighbor_face,ineighbor_neqns,ineighbor_nterms_s,ineighbor_proc)
+                                                     ineighbor_face,ineighbor_neqns,            &
+                                                     ineighbor_nterms_s,ineighbor_proc)
         call this%faces(ZETA_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,    &
                                                       ineighbor_element_g,ineighbor_element_l,  &
-                                                      ineighbor_face,ineighbor_neqns,ineighbor_nterms_s,ineighbor_proc)
+                                                      ineighbor_face,ineighbor_neqns,           &
+                                                      ineighbor_nterms_s,ineighbor_proc)
         call this%faces(ZETA_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,    &
                                                       ineighbor_element_g,ineighbor_element_l,  &
-                                                      ineighbor_face,ineighbor_neqns,ineighbor_nterms_s,ineighbor_proc)
+                                                      ineighbor_face,ineighbor_neqns,           &
+                                                      ineighbor_nterms_s,ineighbor_proc)
 
         
         call this%faces(XI_MIN)%init_sol(this%elem)
@@ -179,6 +195,7 @@ contains
     @Test
     subroutine testElement_metric(self)
         class(test_element_linearA),    intent(inout)   :: self
+
         real(rk)    :: test_metric(3,3,self%elem%gq%vol%nnodes)
         
         test_metric(1,1,:) = 0.25_rk
@@ -209,19 +226,21 @@ contains
         
         test_jinv = 0.625_rk
         @assertEqual(test_jinv,self%elem%jinv)
+
     end subroutine testElement_jinv
     !****************************************************************************************
 
     
 
-    @Test
     !> Test mass matrix entries
     !!
     !!
     !!
     !!---------------------------------------------------------------------------------------
+    @Test
     subroutine testElement_mass(self)
         class(test_element_linearA),    intent(inout)   :: self
+
         real(rk)    :: test_mass(self%elem%nterms_s,self%elem%nterms_s)
         real(rk)    :: tol
         
@@ -255,7 +274,7 @@ contains
     @Test
     subroutine testElement_volume(self)
         class(test_element_linearA),    intent(inout)   :: self
-        real(rk)    :: test_mass(self%elem%nterms_s,self%elem%nterms_s)
+
         real(rk)    :: tol
         
         tol = 1.e-14_rk
@@ -266,11 +285,11 @@ contains
     !*****************************************************************************************
 
 
-    @Test
     !> Test cartesian coordinate values at quadrature nodes
     !!
     !!
     !-----------------------------------------------------------------------------------------
+    @Test
     subroutine testElement_quadpts(self)
         class(test_element_linearA),    intent(inout)   :: self
         real(rk), dimension(self%elem%gq%vol%nnodes)    :: test_x, test_y, test_z

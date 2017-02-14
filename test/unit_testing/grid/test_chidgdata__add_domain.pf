@@ -41,7 +41,7 @@ subroutine test_chidgdata__add_domain__onedomain()
     !
     ! call chidg%data%add_domain. THIS IS BEING TESTED
     !
-    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
+    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection','Cartesian')
 
 
 

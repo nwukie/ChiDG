@@ -632,8 +632,8 @@ contains
                                       meshdata(idom)%connectivity,  &
                                       domain_dimensionality,        &
                                       meshdata(idom)%nterms_c,      &
-                                      domain_equation_set           &
-                                      )
+                                      domain_equation_set,          &
+                                      meshdata(idom)%coord_system)
 
         end do
 

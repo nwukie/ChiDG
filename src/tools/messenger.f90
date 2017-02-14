@@ -902,7 +902,17 @@ contains
     subroutine chidg_abort()
         integer(ik) :: ierr
 
+        !
+        ! Abort MPI library
+        !
         call MPI_Abort(ChiDG_COMM,ierr)
+
+        !
+        ! Return error signal to unix process. Particularly important so that
+        ! tests that fail because of setup reasons register a failure in ctest when
+        ! running 'make test'
+        !
+        call exit(-1)
 
     end subroutine chidg_abort
     !******************************************************************************************

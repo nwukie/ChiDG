@@ -179,15 +179,15 @@ contains
 
 
         ! Create boundary conditions
-        call create_bc("Total Inlet", inlet)
-        call create_bc("Pressure Outlet", outlet)
-        call create_bc("Wall", wall)
+        call create_bc('Total Inlet', inlet)
+        call create_bc('Pressure Outlet', outlet)
+        call create_bc('Wall', wall)
 
 
         ! Set bc parameters
-        call inlet%set_fcn_option("Total Pressure","val",110000._rk)
-        call inlet%set_fcn_option("Total Temperature","val",300._rk)
-        call outlet%set_fcn_option("Static Pressure","val",100000._rk)
+        call inlet%set_fcn_option('Total Pressure','val',110000._rk)
+        call inlet%set_fcn_option('Total Temperature','val',300._rk)
+        call outlet%set_fcn_option('Static Pressure','val',100000._rk)
 
         
 
@@ -260,7 +260,7 @@ contains
             !
             spacedim = 3
             write(domainname, '(I2.2)') idomain
-            call add_domain_hdf(file_id,trim(domainname),nodes,elements,"Euler",spacedim)
+            call add_domain_hdf(file_id,trim(domainname),nodes,elements,'Cartesian','Euler',spacedim)
 
 
 
@@ -282,19 +282,19 @@ contains
             !
             ! Set all boundary conditions to walls, inlet, outlet...
             !
-            ! No bc on "XI_MIN/XI_MAX" => Chimera
+            ! No bc on 'XI_MIN/XI_MAX' => Chimera
             !
-            face_strings = ["XI_MIN  ","XI_MAX  ", "ETA_MIN ", "ETA_MAX ", "ZETA_MIN", "ZETA_MAX"]
+            face_strings = ['XI_MIN  ','XI_MAX  ', 'ETA_MIN ', 'ETA_MAX ', 'ZETA_MIN', 'ZETA_MAX']
             do bcface = 1,size(face_strings)
 
-                call h5gopen_f(dom_id,"BoundaryConditions/"//trim(adjustl(face_strings(bcface))),bcface_id,ierr)
+                call h5gopen_f(dom_id,'BoundaryConditions/'//trim(adjustl(face_strings(bcface))),bcface_id,ierr)
 
-                if ( (idomain == 2) .and. (face_strings(bcface) == "ETA_MIN ") ) then
-                    call set_bc_patch_group_hdf(bcface_id,"Outlet")
-                else if ( (idomain == 4) .and. (face_strings(bcface) == "ETA_MIN ") ) then
-                    call set_bc_patch_group_hdf(bcface_id,"Inlet")
-                else if ( (face_strings(bcface) /= "XI_MIN  ") .and. (face_strings(bcface) /= "XI_MAX  ") ) then
-                    call set_bc_patch_group_hdf(bcface_id,"Walls")
+                if ( (idomain == 2) .and. (face_strings(bcface) == 'ETA_MIN ') ) then
+                    call set_bc_patch_group_hdf(bcface_id,'Outlet')
+                else if ( (idomain == 4) .and. (face_strings(bcface) == 'ETA_MIN ') ) then
+                    call set_bc_patch_group_hdf(bcface_id,'Inlet')
+                else if ( (face_strings(bcface) /= 'XI_MIN  ') .and. (face_strings(bcface) /= 'XI_MAX  ') ) then
+                    call set_bc_patch_group_hdf(bcface_id,'Walls')
                 end if
 
                 call h5gclose_f(bcface_id,ierr)
@@ -337,7 +337,7 @@ contains
 
 
         ! Set 'Contains Grid'
-        call set_contains_grid_hdf(file_id,"True")
+        call set_contains_grid_hdf(file_id,'True')
 
 
 

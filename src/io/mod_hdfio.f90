@@ -1,23 +1,25 @@
 module mod_hdfio
 #include <messenger.h>
-    use mod_kinds,                  only: rk,ik,rdouble
-    use mod_constants,              only: ZERO, NFACES, TWO_DIM, THREE_DIM, NO_PROC
-    use mod_bc,                     only: create_bc
-    use mod_chidg_mpi,              only: IRANK, NRANK, ChiDG_COMM
-    use mod_hdf_utilities,          only: get_ndomains_hdf, get_domain_names_hdf,                   &
-                                          get_domain_equation_set_hdf, set_coordinate_order_hdf,    &
-                                          set_solution_order_hdf, get_solution_order_hdf,           &
-                                          get_domain_mapping_hdf, get_domain_dimensionality_hdf,    &
-                                          set_contains_solution_hdf, set_domain_equation_set_hdf,   &
-                                          check_file_storage_version_hdf, check_file_exists_hdf,    &
-                                          get_contains_solution_hdf, get_contains_grid_hdf,         &
-                                          get_bc_state_names_hdf, get_bc_state_hdf,                 &
-                                          get_nbc_state_groups_hdf, get_bc_state_group_names_hdf,   &
-                                          get_bc_patch_group_hdf, get_bc_state_group_family_hdf,    &
-                                          get_bc_patch_hdf, open_file_hdf, close_file_hdf,          &
-                                          open_domain_hdf, close_domain_hdf, initialize_file_hdf,   &
-                                          initialize_file_structure_hdf, open_bc_group_hdf,         &
-                                          close_bc_group_hdf, get_domain_nelements_hdf, get_domain_name_hdf
+    use mod_kinds,             only: rk,ik,rdouble
+    use mod_constants,         only: ZERO, NFACES, TWO_DIM, THREE_DIM, NO_PROC
+    use mod_bc,                only: create_bc
+    use mod_chidg_mpi,         only: IRANK, NRANK, ChiDG_COMM
+    use mod_hdf_utilities,     only: get_ndomains_hdf, get_domain_names_hdf,                        &
+                                     get_domain_equation_set_hdf, set_coordinate_order_hdf,         &
+                                     set_solution_order_hdf, get_solution_order_hdf,                &
+                                     get_domain_mapping_hdf, get_domain_dimensionality_hdf,         &
+                                     set_contains_solution_hdf, set_domain_equation_set_hdf,        &
+                                     get_domain_coordinates_hdf, get_domain_coordinate_system_hdf,  &
+                                     get_domain_connectivity_hdf, get_domain_nnodes_hdf,            &
+                                     check_file_storage_version_hdf, check_file_exists_hdf,         &
+                                     get_contains_solution_hdf, get_contains_grid_hdf,              &
+                                     get_bc_state_names_hdf, get_bc_state_hdf,                      &
+                                     get_nbc_state_groups_hdf, get_bc_state_group_names_hdf,        &
+                                     get_bc_patch_group_hdf, get_bc_state_group_family_hdf,         &
+                                     get_bc_patch_hdf, open_file_hdf, close_file_hdf,               &
+                                     open_domain_hdf, close_domain_hdf, initialize_file_hdf,        &
+                                     initialize_file_structure_hdf, open_bc_group_hdf,              &
+                                     close_bc_group_hdf, get_domain_nelements_hdf, get_domain_name_hdf
 
     use type_svector,               only: svector_t
     use mod_string,                 only: string_t
@@ -93,17 +95,12 @@ contains
         type(partition_t),              intent(in)      :: partition
         type(meshdata_t), allocatable,  intent(inout)   :: meshdata(:)
 
-        integer(HID_T)   :: fid, gid, domain_id, sid, did_x, did_y, did_z, did_e
-        integer(HSIZE_T) :: rank_one_dims(1), rank_two_dims(2), dims(3), maxdims(3)
-
-        type(c_ptr)                                         :: pts
-        type(c_ptr)                                         :: cp_pts, cp_conn
-        real(rdouble), dimension(:), allocatable, target    :: xpts, ypts, zpts
+        integer(HID_T)   :: fid, gid, domain_id
 
         logical                                 :: contains_grid
         character(:),           allocatable     :: user_msg, domain_name
-        integer                                 :: type, ierr, npts, nterms_1d, mapping, &
-                                                   nterms_c, spacedim, ipt, iconn, &
+        integer                                 :: ierr, nterms_1d, mapping, &
+                                                   nterms_c, spacedim, iconn, &
                                                    nconn, nelements, nnodes
 
 
@@ -113,7 +110,9 @@ contains
         fid = open_file_hdf(filename)
 
 
+        !
         ! Check contains grid
+        !
         contains_grid = get_contains_grid_hdf(fid)
         user_msg = "We didn't find a grid to read in the file that was specified. &
                     The file could be a bare ChiDG file or maybe was generated by &
@@ -135,22 +134,12 @@ contains
         !
         do iconn = 1,nconn
 
-
-            ! Get domain name
+            
+            !
+            ! Open domain. Get name, get hdf identifier
+            !
             domain_name = partition%connectivities(iconn)%get_domain_name()
-            
-            
-            !
-            ! Open domain
-            !
             domain_id = open_domain_hdf(fid,trim(domain_name))
-
-
-            !
-            ! Open the Domain/Grid group
-            !
-            call h5gopen_f(domain_id, "Grid", gid, ierr, H5P_DEFAULT_F)
-            if (ierr /= 0) call chidg_signal_one(FATAL,"read_grid_hdf: Domagin/Grid group did not open properly.", trim(domain_name)//'/Grid')
 
 
             !
@@ -160,17 +149,11 @@ contains
             nterms_1d = (mapping + 1)
 
 
-
-
             !
-            ! Get dimension of the current block: 2D, 3D
+            ! Get dimension of the current block: 3D
             !
             spacedim = get_domain_dimensionality_hdf(domain_id)
-            if ( spacedim == THREE_DIM ) then
-                nterms_c = nterms_1d * nterms_1d * nterms_1d
-            else if ( spacedim == TWO_DIM ) then
-                nterms_c = nterms_1d * nterms_1d
-            end if
+            nterms_c = nterms_1d * nterms_1d * nterms_1d
 
             meshdata(iconn)%nterms_c = nterms_c
             meshdata(iconn)%name     = domain_name
@@ -178,54 +161,10 @@ contains
 
 
             !
-            !  Open the Coordinate datasets
+            ! Get coordinates
             !
-            call h5dopen_f(gid, "CoordinateX", did_x, ierr, H5P_DEFAULT_F)
-            call h5dopen_f(gid, "CoordinateY", did_y, ierr, H5P_DEFAULT_F)
-            call h5dopen_f(gid, "CoordinateZ", did_z, ierr, H5P_DEFAULT_F)
-
-
-
-            !
-            !  Get the dataspace id and dimensions
-            !
-            call h5dget_space_f(did_x, sid, ierr)
-            call h5sget_simple_extent_dims_f(sid, rank_one_dims, maxdims, ierr)
-            npts = rank_one_dims(1)
-
-
-            !
-            !  Read x-points
-            !
-            allocate(xpts(npts),stat=ierr)
-            cp_pts = c_loc(xpts(1))
-            call h5dread_f(did_x, H5T_NATIVE_DOUBLE, cp_pts, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"read_grid_hdf5 -- h5dread_f")
-
-
-            allocate(ypts(npts))
-            cp_pts = c_loc(ypts(1))
-            call h5dread_f(did_y, H5T_NATIVE_DOUBLE, cp_pts, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"read_grid_hdf5 -- h5dread_f")
-
-
-            allocate(zpts(npts))
-            cp_pts = c_loc(zpts(1))
-            call h5dread_f(did_z, H5T_NATIVE_DOUBLE, cp_pts, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"read_grid_hdf5 -- h5dread_f")
-
-
-
-            !
-            !  Accumulate pts into a single points_t matrix to initialize domain
-            !
-            allocate(meshdata(iconn)%points(npts), stat=ierr)
-            if (ierr /= 0) call AllocationError
-                
-
-            do ipt = 1,rank_one_dims(1)
-                call meshdata(iconn)%points(ipt)%set(real(xpts(ipt),rk),real(ypts(ipt),rk),real(zpts(ipt),rk))
-            end do
+            meshdata(iconn)%points       = get_domain_coordinates_hdf(domain_id)
+            meshdata(iconn)%coord_system = get_domain_coordinate_system_hdf(domain_id)
 
 
             !
@@ -243,30 +182,12 @@ contains
             meshdata(iconn)%eqnset = get_domain_equation_set_hdf(domain_id)
 
 
-            !
-            ! Close the Coordinate datasets
-            !
-            call h5dclose_f(did_x,ierr)
-            call h5dclose_f(did_y,ierr)
-            call h5dclose_f(did_z,ierr)
-
 
             !
-            ! Close the dataspace id
+            ! Close the Domain group
             !
-            call h5sclose_f(sid,ierr)
-
-
-            !
-            ! Close the Domain/Grid group
-            !
-            call h5gclose_f(gid,ierr)
             call close_domain_hdf(domain_id)
 
-
-
-            ! Deallocate points for the current domain
-            deallocate(zpts,ypts,xpts)
 
 
         end do  ! iconn
@@ -1247,12 +1168,9 @@ contains
         character(*),                               intent(in)      :: filename
         type(domain_connectivity_t), allocatable,   intent(inout)   :: connectivities(:)
 
-        integer(HID_T)   :: fid, domain_id, grid_id, sid, did_x, did_e
-        integer(HSIZE_T) :: rank_one_dims(1), rank_two_dims(2), dims(3), maxdims(3)
+        integer(HID_T)   :: fid, domain_id
 
-        integer,                     allocatable, target    :: connectivity(:,:)
-        type(c_ptr)                                         :: cp_conn
-
+        integer(ik),            allocatable :: connectivity(:,:)
         character(len=1024),    allocatable :: domain_names(:)
         character(:),           allocatable :: user_msg, domain_name
         integer                             :: type, ierr, ndomains,    &
@@ -1294,71 +1212,21 @@ contains
                 domain_name = domain_names(idom)
                 domain_id = open_domain_hdf(fid,trim(domain_name))
 
-                !
-                ! Open the Grid group
-                !
-                call h5gopen_f(domain_id, "Grid", grid_id, ierr, H5P_DEFAULT_F)
-                user_msg = "read_connectivity_hdf: Domain/Grid group did not open properly."
-                if (ierr /= 0) call chidg_signal_one(FATAL,user_msg, trim(domain_name)//"/Grid")
-
 
                 !
-                ! Get number of nodes in the domain
+                ! Get connectivity and total number of nodes in the domain
                 !
-                call h5dopen_f(grid_id, "CoordinateX", did_x, ierr, H5P_DEFAULT_F)
-                user_msg = "read_connectivity_hdf: Domain/Grid/CoordinateX group did not open properly."
-                if (ierr /= 0) call chidg_signal(FATAL,user_msg)
+                connectivity = get_domain_connectivity_hdf(domain_id)
+                nnodes       = get_domain_nnodes_hdf(domain_id)
 
 
                 !
-                !  Get the dataspace id and dimensions
-                !
-                call h5dget_space_f(did_x, sid, ierr)
-                user_msg = "read_connectivity_hdf: h5dget_space_f did not return 'CoordinateX' dataspace properly."
-                if (ierr /= 0) call chidg_signal(FATAL,user_msg)
-                call h5sget_simple_extent_dims_f(sid, rank_one_dims, maxdims, ierr)
-                user_msg = "read_connectivity_hdf: h5sget_simple_extent_dims_f did not return extent propertly."
-                if (ierr == -1) call chidg_signal(FATAL,user_msg)
-                call h5sclose_f(sid,ierr)
-                nnodes = rank_one_dims(1)
-
-
-                !
-                ! Open Elements connectivity dataset
-                !
-                call h5dopen_f(grid_id, "Elements", did_e, ierr, H5P_DEFAULT_F)
-                user_msg = "read_connectivity_hdf: h5dopen_f did not open 'Elements' dataset propertly."
-                if (ierr /= 0) call chidg_signal(FATAL,user_msg)
-
-                !
-                !  Get the dataspace id and dimensions
-                !
-                call h5dget_space_f(did_e, sid, ierr)
-                user_msg = "read_connectivity_hdf: h5dget_space_f did not return 'Elements' dataspace propertly."
-                if (ierr /= 0) call chidg_signal(FATAL,user_msg)
-                call h5sget_simple_extent_dims_f(sid, rank_two_dims, maxdims, ierr)
-                user_msg = "read_connectivity_hdf: h5sget_simple_extent_dims_f did not return extent propertly."
-                if (ierr == -1) call chidg_signal(FATAL,user_msg)
-                if (allocated(connectivity)) deallocate(connectivity)
-                allocate(connectivity(rank_two_dims(1),rank_two_dims(2)))
-
-
-                !
-                ! Read connectivity
-                ! 
-                cp_conn = c_loc(connectivity(1,1))
-                call h5dread_f(did_e, H5T_NATIVE_INTEGER, cp_conn, ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"read_connectivity_hdf5 -- h5dread_f")
-
-
-
-
                 ! Initialize domain connectivity structure
+                !
                 nelements = size(connectivity,1)
                 call connectivities(idom)%init(domain_name,nelements, nnodes)
 
 
-                !connectivities(idom)%data = connectivity
                 do ielem = 1,nelements
                     mapping = connectivity(ielem,3)
                     call connectivities(idom)%data(ielem)%init(mapping)
@@ -1367,11 +1235,7 @@ contains
                 end do
 
 
-                ! Close identifiers
-                call h5dclose_f(did_e,  ierr)
-                call h5dclose_f(did_x,  ierr)
-                call h5sclose_f(sid,    ierr)
-                call h5gclose_f(grid_id,ierr)
+                ! Close domain
                 call close_domain_hdf(domain_id)
 
         end do  ! idom

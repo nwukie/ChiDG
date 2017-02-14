@@ -3,7 +3,7 @@ module type_element
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES,XI_MIN,XI_MAX,ETA_MIN, &
                                       ETA_MAX,ZETA_MIN,ZETA_MAX,ONE,ZERO, &
-                                      X_DIR, Y_DIR, Z_DIR, XI_DIR, ETA_DIR, ZETA_DIR, &
+                                      DIR_1, DIR_2, DIR_3, DIR_THETA, XI_DIR, ETA_DIR, ZETA_DIR, &
                                       TWO_DIM, THREE_DIM, RKTOL, VALID_POINT, INVALID_POINT
     use mod_quadrature,         only: GQ, get_quadrature
     use mod_grid,               only: get_element_mapping, face_corners
@@ -26,9 +26,17 @@ module type_element
     !!
     !!  ************************************************************************************
     !!  NOTE: could be dangerous to declare static arrays of elements using gfortran because
-    !!        the compiler doens't have complete finalization rules implemented. Using 
+    !!        the compiler doesn't have complete finalization rules implemented. Using 
     !!        allocatables seems to work fine.
     !!  ************************************************************************************
+    !!
+    !!  Coordinate systems:
+    !!      Coordinates could be in either 'Cartesian' or 'Cylindrical' systems.
+    !!      As such, coordinate indices are marked by (1,2,3):
+    !! 
+    !!      'Cartesian'   system: 1 = x  ;  2 = y      ;  3 = z
+    !!      'Cylindrical' system: 1 = r  ;  2 = theta  ;  3 = z
+    !!
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -53,9 +61,10 @@ module type_element
 
         ! Element quadrature points, mesh points and modes
         type(element_connectivity_t)    :: connectivity         !< Integer indices of the associated nodes in block node list
-        type(point_t), allocatable      :: quad_pts(:)          !< Coordinates of discrete quadrature points
-        type(point_t), allocatable      :: elem_pts(:)          !< Coordinates of discrete points defining element
+        type(point_t),  allocatable     :: quad_pts(:)          !< Coordinates of discrete quadrature points
+        type(point_t),  allocatable     :: elem_pts(:)          !< Coordinates of discrete points defining element
         type(densevector_t)             :: coords               !< Modal expansion of coordinates (nterms_var,(x,y,z))
+        character(:),   allocatable     :: coordinate_system    !< 'Cartesian', 'Cylindrical'
 
         ! Element metric terms
         real(rk), allocatable           :: metric(:,:,:)        !< metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
@@ -103,6 +112,7 @@ module type_element
         procedure, public   :: y                      
         procedure, public   :: z                      
         procedure, public   :: grid_point           
+        procedure, public   :: physical_point
         procedure, public   :: computational_point
         procedure, public   :: metric_point 
         procedure, public   :: solution_point   
@@ -159,18 +169,19 @@ contains
     !!  @date   11/5/2016
     !!
     !---------------------------------------------------------------------------------------
-    subroutine init_geom(self,spacedim,nodes,connectivity,idomain_l,ielem_l)
+    subroutine init_geom(self,spacedim,nodes,connectivity,idomain_l,ielem_l,coord_system)
         class(element_t),               intent(inout)   :: self
         integer(ik),                    intent(in)      :: spacedim
         type(point_t),                  intent(in)      :: nodes(:)
         type(element_connectivity_t),   intent(in)      :: connectivity
         integer(ik),                    intent(in)      :: idomain_l
         integer(ik),                    intent(in)      :: ielem_l
+        character(*),                   intent(in)      :: coord_system
 
         character(:),   allocatable :: user_msg
         type(point_t),  allocatable :: points(:)
         real(rk),       allocatable :: element_mapping(:,:)
-        real(rk),       allocatable :: xmodes(:), ymodes(:), zmodes(:)
+        real(rk),       allocatable :: modes1(:), modes2(:), modes3(:)
         real(rk)                    :: xmin, xmax, xwidth,  &
                                        ymin, ymax, ywidth,  &
                                        zmin, zmax, zwidth
@@ -244,13 +255,13 @@ contains
         !
         ! Compute modal expansion of element coordinates
         !
-        xmodes = matmul(element_mapping,self%elem_pts(:)%c1_)
-        ymodes = matmul(element_mapping,self%elem_pts(:)%c2_)
-        zmodes = matmul(element_mapping,self%elem_pts(:)%c3_)
+        modes1 = matmul(element_mapping,self%elem_pts(:)%c1_)
+        modes2 = matmul(element_mapping,self%elem_pts(:)%c2_)
+        modes3 = matmul(element_mapping,self%elem_pts(:)%c3_)
 
-        call self%coords%setvar(1,itime = 1,vals = xmodes)
-        call self%coords%setvar(2,itime = 1,vals = ymodes)
-        call self%coords%setvar(3,itime = 1,vals = zmodes)
+        call self%coords%setvar(1,itime = 1,vals = modes1)
+        call self%coords%setvar(2,itime = 1,vals = modes2)
+        call self%coords%setvar(3,itime = 1,vals = modes3)
 
 
 
@@ -276,8 +287,9 @@ contains
 
 
         !
-        ! Confirm element geometry was initialized
+        ! Set coordinate system and confirm initialization 
         !
+        self%coordinate_system = coord_system
         self%geomInitialized = .true.   
 
 
@@ -306,6 +318,7 @@ contains
     !!  @date   11/12/2016
     !!
     !!
+    !-----------------------------------------------------------------------------------------
     subroutine init_sol(self,neqns,nterms_s,ntime)
         class(element_t),   intent(inout) :: self
         integer(ik),        intent(in)    :: neqns
@@ -321,8 +334,13 @@ contains
         self%ntime       = ntime        ! Set number of time steps in solution
 
 
-        call self%assign_quadrature()   ! With nterms_s and nterms_c defined, we can assign a quadrature instance
-        nnodes = self%gq%vol%nnodes     ! With a quadrature instance assigned, we have the number of quadrature nodes
+        !
+        ! With nterms_s and nterms_c defined:
+        !   - assign quadrature instance
+        !   - get number of quadrature nodes
+        !
+        call self%assign_quadrature()
+        nnodes = self%gq%vol%nnodes
 
 
         !
@@ -430,8 +448,8 @@ contains
 
     !>  Subroutine computes element-specific matrices
     !!      - Mass matrix   (mass, invmass)
-    !!      - Matrices of cartesian gradients of basis/test functions (ddx, ddy, ddz)
-    !!      - Cartesian coordinates of quadrature points (quad_pts)
+    !!      - Matrices of gradients of basis/test functions (ddx, ddy, ddz)
+    !!      - Coordinates of quadrature points (quad_pts)
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -441,7 +459,7 @@ contains
         class(element_t),   intent(inout)   :: self
 
         !
-        ! Call to compute cartesian coordinates at each quadrature node
+        ! Call to compute coordinates at each quadrature node
         !
         call self%compute_quadrature_coords()
 
@@ -456,7 +474,7 @@ contains
         call self%compute_mass_matrix()
 
         !
-        ! Call to compute matrices of cartesian gradients at each quadrature node
+        ! Call to compute matrices of gradients at each quadrature node
         !
         call self%compute_quadrature_gradients()
 
@@ -490,14 +508,11 @@ contains
         integer(ik)                 :: nnodes
         character(:),   allocatable :: coordinate_system
 
-        !real(rk)    :: dxdxi(self%gq%vol%nnodes), dxdeta(self%gq%vol%nnodes), dxdzeta(self%gq%vol%nnodes)
-        !real(rk)    :: dydxi(self%gq%vol%nnodes), dydeta(self%gq%vol%nnodes), dydzeta(self%gq%vol%nnodes)
-        !real(rk)    :: dzdxi(self%gq%vol%nnodes), dzdeta(self%gq%vol%nnodes), dzdzeta(self%gq%vol%nnodes)
-        real(rk)    :: d1dxi(self%gq%vol%nnodes), d1deta(self%gq%vol%nnodes), d1dzeta(self%gq%vol%nnodes)
-        real(rk)    :: d2dxi(self%gq%vol%nnodes), d2deta(self%gq%vol%nnodes), d2dzeta(self%gq%vol%nnodes)
-        real(rk)    :: d3dxi(self%gq%vol%nnodes), d3deta(self%gq%vol%nnodes), d3dzeta(self%gq%vol%nnodes)
-        real(rk)    :: scaling_12(self%gq%vol%nnodes), scaling_13(self%gq%vol%nnodes), &
-                       scaling_23(self%gq%vol%nnodes), scaling_123(self%gq%vol%nnodes)
+        real(rk),   dimension(self%gq%vol%nnodes)   ::  &
+            d1dxi, d1deta, d1dzeta,                     &
+            d2dxi, d2deta, d2dzeta,                     &
+            d3dxi, d3deta, d3dzeta,                     &
+            scaling_12, scaling_13, scaling_23, scaling_123
 
 
         nnodes = self%gq%vol%nnodes
@@ -528,8 +543,7 @@ contains
         !   Cylindrical
         !       12 = r-theta  ;  13 = r-z  ;  23 = theta-z
         !
-        coordinate_system = 'Cylindrical'
-        select case (coordinate_system)
+        select case (self%coordinate_system)
             case ('Cartesian')
                 scaling_12  = ONE
                 scaling_13  = ONE
@@ -604,7 +618,7 @@ contains
 
 
 
-    !>  Compute matrices containing cartesian gradients of basis/test function
+    !>  Compute matrices containing gradients of basis/test function
     !!  at each quadrature node.
     !!
     !!  @author Nathan A. Wukie
@@ -650,7 +664,7 @@ contains
 
 
 
-    !>  Compute cartesian coordinates at each quadrature point
+    !>  Compute coordinates at each quadrature point
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -661,25 +675,26 @@ contains
     !-----------------------------------------------------------------------------------------
     subroutine compute_quadrature_coords(self)
         class(element_t),   intent(inout)   :: self
-        integer(ik)                         :: nnodes
-        real(rk)                            :: x(self%gq%vol%nnodes),y(self%gq%vol%nnodes),z(self%gq%vol%nnodes)
-        integer(ik)                         :: inode
+
+        integer(ik)                                 :: nnodes
+        real(rk),   dimension(self%gq%vol%nnodes)   :: coord1, coord2, coord3
+        integer(ik)                                 :: inode
 
         nnodes = self%gq%vol%nnodes
 
         !
-        ! compute cartesian coordinates associated with quadrature points
+        ! compute coordinates associated with quadrature points
         !
-        x = matmul(self%gqmesh%vol%val,self%coords%getvar(1,itime = 1))
-        y = matmul(self%gqmesh%vol%val,self%coords%getvar(2,itime = 1))
-        z = matmul(self%gqmesh%vol%val,self%coords%getvar(3,itime = 1))
+        coord1 = matmul(self%gqmesh%vol%val,self%coords%getvar(1,itime = 1))
+        coord2 = matmul(self%gqmesh%vol%val,self%coords%getvar(2,itime = 1))
+        coord3 = matmul(self%gqmesh%vol%val,self%coords%getvar(3,itime = 1))
 
 
         !
-        ! Initialize each point with cartesian coordinates
+        ! Initialize each point with coordinates
         !
         do inode = 1,nnodes
-            call self%quad_pts(inode)%set(x(inode),y(inode),z(inode))
+            call self%quad_pts(inode)%set(coord1(inode),coord2(inode),coord3(inode))
         end do
 
     end subroutine compute_quadrature_coords
@@ -890,6 +905,55 @@ contains
 
 
 
+    !>  Convert local(xi,eta,zeta) coordinates to global coordinates(x,y,z)
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/5/2016
+    !!
+    !------------------------------------------------------------------------------------------
+    function physical_point(self,xi,eta,zeta) result(phys_point)
+        class(element_t),   intent(in)  :: self
+        real(rk),           intent(in)  :: xi,eta,zeta
+
+        real(rk)                   :: val1, val2, val3
+        type(point_t)              :: point, phys_point
+        real(rk)                   :: polyvals(self%nterms_c)
+        integer(ik)                :: iterm, spacedim
+
+        call point%set(xi,eta,zeta)
+
+        spacedim = self%spacedim
+
+        !
+        ! Evaluate polynomial modes at node location
+        !
+        do iterm = 1,self%nterms_c
+
+            polyvals(iterm)  = polynomialVal(spacedim,self%nterms_c,iterm,point)
+
+        end do
+
+        
+        !
+        ! Evaluate x from dot product of modes and polynomial values
+        !
+        val1 = dot_product(self%coords%getvar(1, itime=1),polyvals)
+        val2 = dot_product(self%coords%getvar(2, itime=1),polyvals)
+        val3 = dot_product(self%coords%getvar(3, itime=1),polyvals)
+
+
+        !
+        ! Set physical coordinates
+        !
+        call phys_point%set(val1,val2,val3) 
+
+
+    end function physical_point
+    !******************************************************************************************
+
 
 
 
@@ -963,7 +1027,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!  @param[in]  elem        element_t containing the geometry definition and data
-    !!  @param[in]  cart_dir    Cartesian coordinate being differentiated
+    !!  @param[in]  phys_dir    physical coordinate being differentiated
     !!  @param[in]  comp_dir    Computational coordinate being differentiated with respect to
     !!  @param[in]  xi          Computational coordinate - xi
     !!  @param[in]  eta         Computational coordinate - eta
@@ -973,9 +1037,9 @@ contains
     !!  @date   11/5/2016
     !!
     !-----------------------------------------------------------------------------------------
-    function metric_point(self,cart_dir,comp_dir,xi,eta,zeta,scale) result(val)
+    function metric_point(self,phys_dir,comp_dir,xi,eta,zeta,scale) result(val)
         class(element_t),   intent(in)              :: self
-        integer(ik),        intent(in)              :: cart_dir
+        integer(ik),        intent(in)              :: phys_dir
         integer(ik),        intent(in)              :: comp_dir
         real(rk),           intent(in)              :: xi, eta, zeta
         logical,            intent(in), optional    :: scale
@@ -986,8 +1050,8 @@ contains
         integer(ik)     :: iterm, spacedim
 
 
-        if (cart_dir > 3) call chidg_signal(FATAL,"Error: metric_point -- card_dir exceeded 3 physical coordinates")
-        if (comp_dir > 3) call chidg_signal(FATAL,"Error: metric_point -- comp_dir exceeded 3 physical coordinates")
+        if (phys_dir > 3) call chidg_signal(FATAL,"element%metric_point: phys_dir exceeded 3 physical coordinates")
+        if (comp_dir > 3) call chidg_signal(FATAL,"element%metric_point: comp_dir exceeded 3 physical coordinates")
 
         call node%set(xi,eta,zeta)
 
@@ -1004,34 +1068,23 @@ contains
         !
         ! Evaluate mesh point from dot product of modes and polynomial values
         !
-        val = dot_product(self%coords%getvar(cart_dir,itime = 1), polyvals)
+        val = dot_product(self%coords%getvar(phys_dir, itime=1), polyvals)
 
 
 
         !
-        !    
+        ! Apply scaling due to coordinate system.
         !
         if (present(scale)) then
             if (scale) then
-                if (cart_dir == Y_DIR) then
-                    r = self%grid_point(2,xi,eta,zeta)
-                    val = val * r
+                if (self%coordinate_system == 'Cartesian') then
+
+                else if (self%coordinate_system == 'Cylindrical') then
+                    if (phys_dir == DIR_THETA) then
+                        r = self%grid_point(2,xi,eta,zeta)
+                        val = val * r
+                    end if
                 end if
-            end if
-        end if
-
-
-
-        !
-        ! 2D/3D. For metric terms, unlike solution derivatives, dzdzeta is 1 for 2D, 0 else.
-        !
-        if ( spacedim == TWO_DIM ) then
-            if      ( (cart_dir == X_DIR) .and. (comp_dir == ZETA_DIR) ) then
-                val = ZERO
-            else if ( (cart_dir == Y_DIR) .and. (comp_dir == ZETA_DIR) ) then
-                val = ZERO
-            else if ( (cart_dir == Z_DIR) .and. (comp_dir == ZETA_DIR) ) then
-                val = ONE
             end if
         end if
 
@@ -1063,6 +1116,7 @@ contains
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/5/2016
     !!
+    !-----------------------------------------------------------------------------------------
     function solution_point(self,q,ivar,itime,xi,eta,zeta) result(val)
         class(element_t),       intent(in)      :: self
         class(densevector_t),   intent(in)      :: q
@@ -1152,15 +1206,15 @@ contains
         !
         ! Compute metrics at node
         !
-        metric(1,1) = self%metric_point(X_DIR,XI_DIR,  xi,eta,zeta)
-        metric(2,1) = self%metric_point(Y_DIR,XI_DIR,  xi,eta,zeta)
-        metric(3,1) = self%metric_point(Z_DIR,XI_DIR,  xi,eta,zeta)
-        metric(1,2) = self%metric_point(X_DIR,ETA_DIR, xi,eta,zeta)
-        metric(2,2) = self%metric_point(Y_DIR,ETA_DIR, xi,eta,zeta)
-        metric(3,2) = self%metric_point(Z_DIR,ETA_DIR, xi,eta,zeta)
-        metric(1,3) = self%metric_point(X_DIR,ZETA_DIR,xi,eta,zeta)
-        metric(2,3) = self%metric_point(Y_DIR,ZETA_DIR,xi,eta,zeta)
-        metric(3,3) = self%metric_point(Z_DIR,ZETA_DIR,xi,eta,zeta)
+        metric(1,1) = self%metric_point(DIR_1,XI_DIR,  xi,eta,zeta)
+        metric(2,1) = self%metric_point(DIR_2,XI_DIR,  xi,eta,zeta)
+        metric(3,1) = self%metric_point(DIR_3,XI_DIR,  xi,eta,zeta)
+        metric(1,2) = self%metric_point(DIR_1,ETA_DIR, xi,eta,zeta)
+        metric(2,2) = self%metric_point(DIR_2,ETA_DIR, xi,eta,zeta)
+        metric(3,2) = self%metric_point(DIR_3,ETA_DIR, xi,eta,zeta)
+        metric(1,3) = self%metric_point(DIR_1,ZETA_DIR,xi,eta,zeta)
+        metric(2,3) = self%metric_point(DIR_2,ZETA_DIR,xi,eta,zeta)
+        metric(3,3) = self%metric_point(DIR_3,ZETA_DIR,xi,eta,zeta)
 
 
         !
@@ -1175,21 +1229,21 @@ contains
 
 
         do iterm = 1,self%nterms_s
-            if (dir == X_DIR) then
+            if (dir == DIR_1) then
                 dxi_dx   = metric(2,2)*metric(3,3) - metric(2,3)*metric(3,2)
                 deta_dx  = metric(2,3)*metric(3,1) - metric(2,1)*metric(3,3)
                 dzeta_dx = metric(2,1)*metric(3,2) - metric(2,2)*metric(3,1)
                 deriv(iterm) = dxi_dx   * ddxi(iterm)   * (ONE/jinv) + &
                                deta_dx  * ddeta(iterm)  * (ONE/jinv) + &
                                dzeta_dx * ddzeta(iterm) * (ONE/jinv)
-            else if (dir == Y_DIR) then
+            else if (dir == DIR_2) then
                 dxi_dy   = metric(1,3)*metric(3,2) - metric(1,2)*metric(3,3)
                 deta_dy  = metric(1,1)*metric(3,3) - metric(1,3)*metric(3,1)
                 dzeta_dy = metric(1,2)*metric(3,1) - metric(1,1)*metric(3,2)
                 deriv(iterm) = dxi_dy   * ddxi(iterm)   * (ONE/jinv) + &
                                deta_dy  * ddeta(iterm)  * (ONE/jinv) + &
                                dzeta_dy * ddzeta(iterm) * (ONE/jinv)
-            else if (dir == Z_DIR) then
+            else if (dir == DIR_3) then
                 dxi_dz   = metric(1,2)*metric(2,3) - metric(1,3)*metric(2,2)
                 deta_dz  = metric(1,3)*metric(2,1) - metric(1,1)*metric(2,3)
                 dzeta_dz = metric(1,1)*metric(2,2) - metric(1,2)*metric(2,1)
@@ -1218,7 +1272,8 @@ contains
 
 
     
-    !>  Compute a computational location(xi,eta,zeta), based on the location in cartesian space (x,y,z)
+    !>  Compute a computational location(xi,eta,zeta), based on the location in 
+    !!  physical space (x,y,z), (r,theta,z)
     !!
     !!  NOTE: Will return a location, even if the newton solve did not converge. So make
     !!        sure to check the 'status' component of the returned point_t to check if 
@@ -1233,15 +1288,14 @@ contains
     !!  @param[in]  z       Real value for z-coordinate.
     !!
     !-----------------------------------------------------------------------------------------
-    function computational_point(self,x,y,z) result(loc)
+    function computational_point(self,coord1,coord2,coord3) result(loc)
         class(element_t),   intent(in)  :: self
-        real(rk),           intent(in)  :: x
-        real(rk),           intent(in)  :: y
-        real(rk),           intent(in)  :: z
+        real(rk),           intent(in)  :: coord1
+        real(rk),           intent(in)  :: coord2
+        real(rk),           intent(in)  :: coord3
 
-        type(point_t)       :: loc
-        real(rk)            :: xi,  eta, zeta,   &
-                               xn,  yn,  zn
+        type(point_t)       :: loc, point_n
+        real(rk)            :: xi, eta, zeta
         integer(ik)         :: inewton
 
         real(rk)    :: mat(3,3), minv(3,3)
@@ -1262,34 +1316,33 @@ contains
         zeta = ZERO
         do inewton = 1,20
 
+
             !
-            ! Compute local cartesian coordinates as a function of xi,eta,zeta
+            ! Compute local physical coordinates as a function of xi,eta,zeta
             !
-            xn = self%x(xi,eta,zeta)
-            yn = self%y(xi,eta,zeta)
-            zn = self%z(xi,eta,zeta)
+            point_n  = self%physical_point(xi,eta,zeta)
 
 
             !
             ! Assemble residual vector
             !
-            R(1) = -(xn - x)
-            R(2) = -(yn - y)
-            R(3) = -(zn - z)
+            R(1) = -(point_n%c1_ - coord1)
+            R(2) = -(point_n%c2_ - coord2)
+            R(3) = -(point_n%c3_ - coord3)
 
 
             !
             ! Assemble coordinate jacobian matrix
             !
-            mat(1,1) = self%metric_point(X_DIR,XI_DIR,  xi,eta,zeta)
-            mat(2,1) = self%metric_point(Y_DIR,XI_DIR,  xi,eta,zeta)
-            mat(3,1) = self%metric_point(Z_DIR,XI_DIR,  xi,eta,zeta)
-            mat(1,2) = self%metric_point(X_DIR,ETA_DIR, xi,eta,zeta)
-            mat(2,2) = self%metric_point(Y_DIR,ETA_DIR, xi,eta,zeta)
-            mat(3,2) = self%metric_point(Z_DIR,ETA_DIR, xi,eta,zeta)
-            mat(1,3) = self%metric_point(X_DIR,ZETA_DIR,xi,eta,zeta)
-            mat(2,3) = self%metric_point(Y_DIR,ZETA_DIR,xi,eta,zeta)
-            mat(3,3) = self%metric_point(Z_DIR,ZETA_DIR,xi,eta,zeta)
+            mat(1,1) = self%metric_point(DIR_1,XI_DIR,  xi,eta,zeta)
+            mat(2,1) = self%metric_point(DIR_2,XI_DIR,  xi,eta,zeta)
+            mat(3,1) = self%metric_point(DIR_3,XI_DIR,  xi,eta,zeta)
+            mat(1,2) = self%metric_point(DIR_1,ETA_DIR, xi,eta,zeta)
+            mat(2,2) = self%metric_point(DIR_2,ETA_DIR, xi,eta,zeta)
+            mat(3,2) = self%metric_point(DIR_3,ETA_DIR, xi,eta,zeta)
+            mat(1,3) = self%metric_point(DIR_1,ZETA_DIR,xi,eta,zeta)
+            mat(2,3) = self%metric_point(DIR_2,ZETA_DIR,xi,eta,zeta)
+            mat(3,3) = self%metric_point(DIR_3,ZETA_DIR,xi,eta,zeta)
 
 
             !

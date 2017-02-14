@@ -165,7 +165,7 @@ contains
     !!  @param[in]  nterms_s    Integer defining the number of terms in the solution expansion
     !!
     !------------------------------------------------------------------------------------------
-    subroutine add_domain(self,name,nodes,connectivity,spacedim,nterms_c,eqnset)
+    subroutine add_domain(self,name,nodes,connectivity,spacedim,nterms_c,eqnset,coord_system)
         class(chidg_data_t),            intent(inout)   :: self
         character(*),                   intent(in)      :: name
         type(point_t),                  intent(in)      :: nodes(:)
@@ -173,6 +173,7 @@ contains
         integer(ik),                    intent(in)      :: spacedim
         integer(ik),                    intent(in)      :: nterms_c
         character(*),                   intent(in)      :: eqnset
+        character(*),                   intent(in)      :: coord_system
 
         integer(ik)                 :: idomain_l, ierr, idom
         character(:),   allocatable :: user_msg
@@ -223,7 +224,7 @@ contains
         !
         ! Initialize new mesh
         !
-        call temp_mesh(idomain_l)%init_geom(idomain_l,spacedim,nterms_c,nodes,connectivity)
+        call temp_mesh(idomain_l)%init_geom(idomain_l,spacedim,nterms_c,nodes,connectivity,coord_system)
 
 
         !

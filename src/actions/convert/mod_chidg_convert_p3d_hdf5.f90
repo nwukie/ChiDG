@@ -12,10 +12,11 @@ module mod_chidg_convert_p3d_hdf5
 #include <messenger.h>
     use mod_kinds,              only: rk,ik, rdouble
     use mod_constants,          only: IO_DESTINATION, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, TWO
-    use mod_hdf_utilities,      only: initialize_file_hdf, set_ndomains_hdf, open_file_hdf, &
-                                      set_domain_mapping_hdf, set_domain_dimensionality_hdf, set_domain_equation_set_hdf, &
-                                      set_contains_grid_hdf, set_domain_coordinates_hdf, set_domain_elements_hdf, &
-                                      set_bc_patch_hdf, add_domain_hdf, open_domain_hdf, close_domain_hdf, &
+    use mod_hdf_utilities,      only: initialize_file_hdf, set_ndomains_hdf, open_file_hdf,     &
+                                      set_domain_mapping_hdf, set_domain_dimensionality_hdf,    &
+                                      set_domain_equation_set_hdf, set_contains_grid_hdf,       &
+                                      set_domain_coordinates_hdf, set_bc_patch_hdf,             &
+                                      add_domain_hdf, open_domain_hdf, close_domain_hdf,        &
                                       close_file_hdf, close_hdf, open_hdf
     use mod_plot3d_utilities,   only: get_block_elements_plot3d, get_block_boundary_faces_plot3d, &
                                       check_block_mapping_conformation_plot3d, get_block_points_plot3d
@@ -57,6 +58,7 @@ contains
         real(rdouble),  allocatable :: coords1(:,:,:), coords2(:,:,:), coords3(:,:,:)
         integer,        allocatable :: elements(:,:), faces(:,:)
         type(point_t),  allocatable :: nodes(:)
+        character(:),   allocatable :: coord_system
 
         ! equation set string
         character(len=1024)         :: eqnset_string
@@ -96,6 +98,7 @@ contains
         call initialize_file_hdf(file_prefix)
         file_id = open_file_hdf(file_prefix)
 
+
         !
         ! Open plot3d grid, read number of domains
         !
@@ -110,11 +113,11 @@ contains
         allocate(blkdims(3,nblks),stat=ierr)
         if (ierr /= 0) call AllocationError
 
+
         !
         ! Read index dimensions from Plot3D file for each block
         !
         read(fileunit) (blkdims(1,igrid), blkdims(2,igrid), blkdims(3,igrid), igrid=1,nblks)
-
 
 
         !
@@ -167,7 +170,6 @@ contains
 
 
 
-
             !
             ! Transform coordinates if necessary
             !
@@ -175,10 +177,12 @@ contains
                 coords1 = coordsx
                 coords2 = coordsy
                 coords3 = coordsz
+                coord_system = 'Cartesian'
             else if (system == 2) then
                 coords1 = sqrt(coordsx**TWO + coordsy**TWO)
                 coords2 = atan2(coordsy,coordsx)
                 coords3 = coordsz
+                coord_system = 'Cylindrical'
             else
                 call chidg_signal(FATAL,"chidg convert: Invalid coordinate system.")
             end if
@@ -217,7 +221,7 @@ contains
             !
             ! Add new domain to file
             !
-            call add_domain_hdf(file_id,trim(blockname),nodes,elements,trim(eqnset_string),spacedim)
+            call add_domain_hdf(file_id,trim(blockname),nodes,elements,coord_system,trim(eqnset_string),spacedim)
 
 
             !

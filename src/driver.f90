@@ -128,7 +128,7 @@ program driver
             call create_function(constant,'constant')
 
             ! rho
-            call constant%set_option('val',1.25_k)
+            call constant%set_option('val',1.25_rk)
             call chidg%data%sdata%q%project(chidg%data%mesh,constant,1)
 
             ! rho_u

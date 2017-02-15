@@ -98,9 +98,9 @@ contains
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
-        dudx  = worker%get_primary_field_face('u','ddx + lift', 'boundary')
-        dudy  = worker%get_primary_field_face('u','ddy + lift', 'boundary')
-        dudz  = worker%get_primary_field_face('u','ddz + lift', 'boundary')
+        dudx  = worker%get_primary_field_face('u','grad1 + lift', 'boundary')
+        dudy  = worker%get_primary_field_face('u','grad2 + lift', 'boundary')
+        dudz  = worker%get_primary_field_face('u','grad3 + lift', 'boundary')
 
 
         normx = worker%normal(1)

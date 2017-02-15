@@ -84,9 +84,9 @@ contains
         ! Interpolate solution to quadrature nodes
         !
         rho  = worker%get_primary_field_general('Density',    'value')
-        rhou = worker%get_primary_field_general('X-Momentum', 'value')
-        rhov = worker%get_primary_field_general('Y-Momentum', 'value')
-        rhow = worker%get_primary_field_general('Z-Momentum', 'value')
+        rhou = worker%get_primary_field_general('Momentum-1', 'value')
+        rhov = worker%get_primary_field_general('Momentum-2', 'value')
+        rhow = worker%get_primary_field_general('Momentum-3', 'value')
         rhoE = worker%get_primary_field_general('Energy',     'value')
 
 

@@ -106,9 +106,9 @@ contains
         ! Get u_m from face interior to initialize derivatives
         !
         u_bc    = worker%get_primary_field_face('u','value', 'face interior')
-        dudx_bc = worker%get_primary_field_face('u','ddx',   'face interior')
-        dudy_bc = worker%get_primary_field_face('u','ddy',   'face interior')
-        dudz_bc = worker%get_primary_field_face('u','ddz',   'face interior')
+        dudx_bc = worker%get_primary_field_face('u','grad1', 'face interior')
+        dudy_bc = worker%get_primary_field_face('u','grad2', 'face interior')
+        dudz_bc = worker%get_primary_field_face('u','grad3', 'face interior')
 
 
         !
@@ -130,9 +130,9 @@ contains
         !
         ! Store boundary condition state, gradient
         !
-        call worker%store_bc_state('u', dudx_bc, 'ddx')
-        call worker%store_bc_state('u', dudy_bc, 'ddy')
-        call worker%store_bc_state('u', dudz_bc, 'ddz')
+        call worker%store_bc_state('u', dudx_bc, 'grad1')
+        call worker%store_bc_state('u', dudy_bc, 'grad2')
+        call worker%store_bc_state('u', dudz_bc, 'grad3')
 
 
     end subroutine compute_bc_state

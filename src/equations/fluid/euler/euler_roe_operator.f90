@@ -57,9 +57,9 @@ contains
 
         ! Set operator equations
         call self%add_primary_field("Density"   )
-        call self%add_primary_field("X-Momentum")
-        call self%add_primary_field("Y-Momentum")
-        call self%add_primary_field("Z-Momentum")
+        call self%add_primary_field("Momentum-1")
+        call self%add_primary_field("Momentum-2")
+        call self%add_primary_field("Momentum-3")
         call self%add_primary_field("Energy"    )
 
     end subroutine init
@@ -115,14 +115,14 @@ contains
         rho_m  = worker%get_primary_field_face('Density'   , 'value', 'face interior')
         rho_p  = worker%get_primary_field_face('Density'   , 'value', 'face exterior')
 
-        rhou_m = worker%get_primary_field_face('X-Momentum', 'value', 'face interior')
-        rhou_p = worker%get_primary_field_face('X-Momentum', 'value', 'face exterior')
+        rhou_m = worker%get_primary_field_face('Momentum-1', 'value', 'face interior')
+        rhou_p = worker%get_primary_field_face('Momentum-1', 'value', 'face exterior')
 
-        rhov_m = worker%get_primary_field_face('Y-Momentum', 'value', 'face interior')
-        rhov_p = worker%get_primary_field_face('Y-Momentum', 'value', 'face exterior')
+        rhov_m = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
+        rhov_p = worker%get_primary_field_face('Momentum-2', 'value', 'face exterior')
 
-        rhow_m = worker%get_primary_field_face('Z-Momentum', 'value', 'face interior')
-        rhow_p = worker%get_primary_field_face('Z-Momentum', 'value', 'face exterior')
+        rhow_m = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
+        rhow_p = worker%get_primary_field_face('Momentum-3', 'value', 'face exterior')
 
         rhoE_m = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
         rhoE_p = worker%get_primary_field_face('Energy'    , 'value', 'face exterior')
@@ -262,7 +262,7 @@ contains
 
         integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)
 
-        call worker%integrate_boundary('X-Momentum',integrand)
+        call worker%integrate_boundary('Momentum-1',integrand)
 
 
         !================================
@@ -272,7 +272,7 @@ contains
 
         integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)
 
-        call worker%integrate_boundary('Y-Momentum',integrand)
+        call worker%integrate_boundary('Momentum-2',integrand)
 
         !================================
         !       Z-MOMENTUM FLUX
@@ -281,7 +281,7 @@ contains
 
         integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)
 
-        call worker%integrate_boundary('Z-Momentum',integrand)
+        call worker%integrate_boundary('Momentum-3',integrand)
 
         !================================
         !          ENERGY FLUX

@@ -237,9 +237,9 @@ contains
         ! Interpolate solution to quadrature nodes
         !
         u    = worker%get_primary_field_general('u', 'value')
-        dudx = worker%get_primary_field_general('u', 'ddx')
-        dudy = worker%get_primary_field_general('u', 'ddy')
-        dudz = worker%get_primary_field_general('u', 'ddz')
+        dudx = worker%get_primary_field_general('u', 'grad1')
+        dudy = worker%get_primary_field_general('u', 'grad2')
+        dudz = worker%get_primary_field_general('u', 'grad3')
 
 
 

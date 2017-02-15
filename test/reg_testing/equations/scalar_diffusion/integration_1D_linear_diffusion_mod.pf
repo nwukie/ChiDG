@@ -254,9 +254,9 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        source = worker%get_primary_field_element('u',"ddx + lift")
+        source = worker%get_primary_field_element('u','grad1 + lift')
 
-        x = worker%x("volume")
+        x = worker%x('volume')
 
         source = FOUR*PI*PI*dsin(TWO*PI*x)
 
@@ -716,12 +716,6 @@ contains
         call this%chidg%set("Nonlinear Solver", algorithm=nonlinear_solver, options=noptions)
         call this%chidg%set("Linear Solver",    algorithm=linear_solver,    options=loptions)
         call this%chidg%set("Preconditioner",   algorithm=preconditioner)
-!=======
-!        call this%chidg%set('Time Integrator',  algorithm=time_integrator,  options=toptions)
-!        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
-!        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
-!        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
-!>>>>>>> dev
 
         call this%chidg%time_integrator%time_manager%init()
 

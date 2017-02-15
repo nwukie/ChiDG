@@ -404,29 +404,33 @@ contains
         if (interp_type == 'value') then
             cache_type = 'value'
             idirection = 0
-        else if (interp_type == 'ddx') then
-            cache_type = 'derivative'
+        else if (interp_type == 'grad1') then
+            cache_type = 'gradient'
             idirection = 1
-        else if (interp_type == 'ddy') then
-            cache_type = 'derivative'
+        else if (interp_type == 'grad2') then
+            cache_type = 'gradient'
             idirection = 2
-        else if (interp_type == 'ddz') then
-            cache_type = 'derivative'
+        else if (interp_type == 'grad3') then
+            cache_type = 'gradient'
             idirection = 3
 
 
-        else if ( (interp_type == 'ddx + lift') .or. &
-                  (interp_type == 'ddx+lift'  ) ) then
-            cache_type = 'derivative + lift'
+        else if ( (interp_type == 'grad1 + lift') .or. &
+                  (interp_type == 'grad1+lift'  ) ) then
+            cache_type = 'gradient + lift'
             idirection = 1
-        else if ( (interp_type == 'ddy + lift') .or. &
-                  (interp_type == 'ddy+lift'  ) ) then
-            cache_type = 'derivative + lift'
+        else if ( (interp_type == 'grad2 + lift') .or. &
+                  (interp_type == 'grad2+lift'  ) ) then
+            cache_type = 'gradient + lift'
             idirection = 2
-        else if ( (interp_type == 'ddz + lift') .or. &
-                  (interp_type == 'ddz+lift'  ) ) then
-            cache_type = 'derivative + lift'
+        else if ( (interp_type == 'grad3 + lift') .or. &
+                  (interp_type == 'grad3+lift'  ) ) then
+            cache_type = 'gradient + lift'
             idirection = 3
+        else
+            user_msg = "chidg_worker%get_primary_field_face: Invalid interpolation &
+                        type. 'value', 'grad1', 'grad2', 'grad3', 'grad1+lift', 'grad2+lift', 'grad3+lift'"
+            call chidg_signal(FATAL,user_msg)
         end if
 
 
@@ -437,11 +441,11 @@ contains
         if (cache_type == 'value') then
             var_gq = self%cache%get_data(field,cache_component,'value',idirection,self%function_info%seed,self%iface)
 
-        else if (cache_type == 'derivative') then
-            var_gq = self%cache%get_data(field,cache_component,'derivative',idirection,self%function_info%seed,self%iface)
+        else if (cache_type == 'gradient') then
+            var_gq = self%cache%get_data(field,cache_component,'gradient',idirection,self%function_info%seed,self%iface)
 
-        else if (cache_type == 'derivative + lift') then
-            var_gq = self%cache%get_data(field,cache_component,'derivative',idirection,self%function_info%seed,self%iface)
+        else if (cache_type == 'gradient + lift') then
+            var_gq = self%cache%get_data(field,cache_component,'gradient',idirection,self%function_info%seed,self%iface)
 
             ! Modify derivative by face lift stabilized by a factor of NFACES
             var_gq = var_gq + real(NFACES,rk)*self%cache%get_data(field,cache_component,'lift face',idirection,self%function_info%seed,self%iface)
@@ -488,29 +492,33 @@ contains
         if (interp_type == 'value') then
             cache_type = 'value'
             idirection = 0
-        else if (interp_type == 'ddx') then
-            cache_type = 'derivative'
+        else if (interp_type == 'grad1') then
+            cache_type = 'gradient'
             idirection = 1
-        else if (interp_type == 'ddy') then
-            cache_type = 'derivative'
+        else if (interp_type == 'grad2') then
+            cache_type = 'gradient'
             idirection = 2
-        else if (interp_type == 'ddz') then
-            cache_type = 'derivative'
+        else if (interp_type == 'grad3') then
+            cache_type = 'gradient'
             idirection = 3
 
 
-        else if ( (interp_type == 'ddx + lift') .or. &
-                  (interp_type == 'ddx+lift'  ) ) then
-            cache_type = 'derivative + lift'
+        else if ( (interp_type == 'grad1 + lift') .or. &
+                  (interp_type == 'grad1+lift'  ) ) then
+            cache_type = 'gradient + lift'
             idirection = 1
-        else if ( (interp_type == 'ddy + lift') .or. &
-                  (interp_type == 'ddy+lift'  ) ) then
-            cache_type = 'derivative + lift'
+        else if ( (interp_type == 'grad2 + lift') .or. &
+                  (interp_type == 'grad2+lift'  ) ) then
+            cache_type = 'gradient + lift'
             idirection = 2
-        else if ( (interp_type == 'ddz + lift') .or. &
-                  (interp_type == 'ddz+lift'  ) ) then
-            cache_type = 'derivative + lift'
+        else if ( (interp_type == 'grad3 + lift') .or. &
+                  (interp_type == 'grad3+lift'  ) ) then
+            cache_type = 'gradient + lift'
             idirection = 3
+        else
+            user_msg = "chidg_worker%get_primary_field_element: Invalid interpolation &
+                        type. 'value', 'grad1', 'grad2', 'grad3', 'grad1+lift', 'grad2+lift', 'grad3+lift'"
+            call chidg_signal(FATAL,user_msg)
         end if
 
 
@@ -528,10 +536,10 @@ contains
 
                 var_gq = interpolate_element_autodiff(self%mesh, self%solverdata%q, self%element_info, self%function_info, ifield, self%itime, interp_type, Pmin, Pmax)
 
-            else if ( (cache_type == 'derivative') .or. &
-                      (cache_type == 'derivative + lift') ) then
+            else if ( (cache_type == 'gradient') .or. &
+                      (cache_type == 'gradient + lift') ) then
                 user_msg = "chidg_worker%get_primary_field_element: On partial field interpolations, &
-                            only the 'value' of the field can be interpolated. 'derivative' is not yet implemented."
+                            only the 'value' of the field can be interpolated. 'gradient' is not yet implemented."
                 call chidg_signal(FATAL,user_msg)
             end if
 
@@ -546,11 +554,11 @@ contains
             if ( cache_type == 'value') then
                 var_gq = self%cache%get_data(field,'element','value',idirection,self%function_info%seed)
 
-            else if (cache_type == 'derivative') then
-                var_gq = self%cache%get_data(field,'element','derivative',idirection,self%function_info%seed)
+            else if (cache_type == 'gradient') then
+                var_gq = self%cache%get_data(field,'element','gradient',idirection,self%function_info%seed)
 
-            else if (cache_type == 'derivative + lift') then
-                var_gq = self%cache%get_data(field,'element','derivative',idirection,self%function_info%seed)
+            else if (cache_type == 'gradient + lift') then
+                var_gq = self%cache%get_data(field,'element','gradient',idirection,self%function_info%seed)
 
                 ! Add lift contributions from each face
                 do iface = 1,NFACES
@@ -656,16 +664,16 @@ contains
         if (interp_type == 'value') then
             cache_type = 'value'
             idirection = 0
-        else if ( (interp_type == 'ddx')          .or. &
-                  (interp_type == 'ddy')          .or. &
-                  (interp_type == 'ddz')          .or. &
-                  (interp_type == 'ddx + lift')   .or. &
-                  (interp_type == 'ddx+lift'  )   .or. &
-                  (interp_type == 'ddy + lift')   .or. &
-                  (interp_type == 'ddy+lift'  )   .or. &
-                  (interp_type == 'ddz + lift')   .or. &
-                  (interp_type == 'ddz+lift'  ) ) then
-                user_msg = 'chidg_worker%get_model_field_face: Computing derivatives for model &
+        else if ( (interp_type == 'grad1')          .or. &
+                  (interp_type == 'grad2')          .or. &
+                  (interp_type == 'grad3')          .or. &
+                  (interp_type == 'grad1 + lift')   .or. &
+                  (interp_type == 'grad1+lift'  )   .or. &
+                  (interp_type == 'grad2 + lift')   .or. &
+                  (interp_type == 'grad2+lift'  )   .or. &
+                  (interp_type == 'grad3 + lift')   .or. &
+                  (interp_type == 'grad3+lift'  ) ) then
+                user_msg = 'chidg_worker%get_model_field_face: Computing gradients for model &
                             fields is not yet implemented.'
                 call chidg_signal(FATAL,user_msg)
                                     
@@ -718,16 +726,16 @@ contains
         if (interp_type == 'value') then
             cache_type = 'value'
             idirection = 0
-        else if ( (interp_type == 'ddx')        .or. &
-                  (interp_type == 'ddy')        .or. &
-                  (interp_type == 'ddz')        .or. &
-                  (interp_type == 'ddx+lift'  ) .or. &
-                  (interp_type == 'ddy+lift'  ) .or. &
-                  (interp_type == 'ddz+lift'  ) .or. &
-                  (interp_type == 'ddx + lift') .or. &
-                  (interp_type == 'ddy + lift') .or. &
-                  (interp_type == 'ddz + lift') ) then
-            user_msg = 'chidg_worker%get_model_field_element: Computing derivatives for model &
+        else if ( (interp_type == 'grad1')        .or. &
+                  (interp_type == 'grad2')        .or. &
+                  (interp_type == 'grad3')        .or. &
+                  (interp_type == 'grad1+lift'  ) .or. &
+                  (interp_type == 'grad2+lift'  ) .or. &
+                  (interp_type == 'grad3+lift'  ) .or. &
+                  (interp_type == 'grad1 + lift') .or. &
+                  (interp_type == 'grad2 + lift') .or. &
+                  (interp_type == 'grad3 + lift') ) then
+            user_msg = 'chidg_worker%get_model_field_element: Computing gradients for model &
                         fields is not yet implemented.'
             call chidg_signal(FATAL,user_msg)
         end if
@@ -797,22 +805,22 @@ contains
         if (interp_type == 'value') then
             cache_type = 'value'
             idirection = 0
-        else if (interp_type == 'ddx') then
-            cache_type = 'derivative'
+        else if (interp_type == 'grad1') then
+            cache_type = 'gradient'
             idirection = 1
-        else if (interp_type == 'ddy') then
-            cache_type = 'derivative'
+        else if (interp_type == 'grad2') then
+            cache_type = 'gradient'
             idirection = 2
-        else if (interp_type == 'ddz') then
-            cache_type = 'derivative'
+        else if (interp_type == 'grad3') then
+            cache_type = 'gradient'
             idirection = 3
 
-        else if ( (interp_type == 'ddx+lift'  ) .or. &
-                  (interp_type == 'ddy+lift'  ) .or. &
-                  (interp_type == 'ddz+lift'  ) .or. &
-                  (interp_type == 'ddx + lift') .or. &
-                  (interp_type == 'ddy + lift') .or. &
-                  (interp_type == 'ddz + lift') ) then
+        else if ( (interp_type == 'grad1+lift'  ) .or. &
+                  (interp_type == 'grad2+lift'  ) .or. &
+                  (interp_type == 'grad3+lift'  ) .or. &
+                  (interp_type == 'grad1 + lift') .or. &
+                  (interp_type == 'grad2 + lift') .or. &
+                  (interp_type == 'grad3 + lift') ) then
                 user_msg = 'chidg_worker%get_auxiliary_field_face: Computing lifted derivatives for auxiliary &
                             fields is not supported.'
                 call chidg_signal(FATAL,user_msg)
@@ -873,25 +881,25 @@ contains
         if (interp_type == 'value') then
             cache_type = 'value'
             idirection = 0
-        else if (interp_type == 'ddx') then
-            cache_type = 'derivative'
+        else if (interp_type == 'grad1') then
+            cache_type = 'gradient'
             idirection = 1
-        else if (interp_type == 'ddy') then
-            cache_type = 'derivative'
+        else if (interp_type == 'grad2') then
+            cache_type = 'gradient'
             idirection = 2
-        else if (interp_type == 'ddz') then
-            cache_type = 'derivative'
+        else if (interp_type == 'grad3') then
+            cache_type = 'gradient'
             idirection = 3
 
 
-        else if ( (interp_type == 'ddx+lift'  ) .or. &
-                  (interp_type == 'ddy+lift'  ) .or. &
-                  (interp_type == 'ddz+lift'  ) .or. &
-                  (interp_type == 'ddx + lift') .or. &
-                  (interp_type == 'ddy + lift') .or. &
-                  (interp_type == 'ddz + lift') ) then
+        else if ( (interp_type == 'grad1+lift'  ) .or. &
+                  (interp_type == 'grad2+lift'  ) .or. &
+                  (interp_type == 'grad3+lift'  ) .or. &
+                  (interp_type == 'grad1 + lift') .or. &
+                  (interp_type == 'grad2 + lift') .or. &
+                  (interp_type == 'grad3 + lift') ) then
 
-            user_msg = 'chidg_worker%get_auxiliary_field_element: Computing lifted derivatives for auxiliary &
+            user_msg = 'chidg_worker%get_auxiliary_field_element: Computing lifted gradients for auxiliary &
                         fields is not supported.'
             call chidg_signal(FATAL,user_msg)
 
@@ -953,18 +961,18 @@ contains
         if (data_type == 'value') then
             cache_type = 'value'
             idirection = 0
-        else if (data_type == 'ddx') then
-            cache_type = 'derivative'
+        else if (data_type == 'grad1') then
+            cache_type = 'gradient'
             idirection = 1
-        else if (data_type == 'ddy') then
-            cache_type = 'derivative'
+        else if (data_type == 'grad2') then
+            cache_type = 'gradient'
             idirection = 2
-        else if (data_type == 'ddz') then
-            cache_type = 'derivative'
+        else if (data_type == 'grad3') then
+            cache_type = 'gradient'
             idirection = 3
         else
             user_msg = "chidg_worker%store_bc_state: Invalid data_type specification. &
-                        Options are 'value', 'ddx', 'ddy', 'ddz'."
+                        Options are 'value', 'grad1', 'grad2', 'grad3'."
             call chidg_signal_one(FATAL,user_msg,trim(data_type))
         end if
 
@@ -976,8 +984,8 @@ contains
         if (cache_type == 'value') then
             call self%cache%set_data(field,'face exterior',cache_data,'value',0,self%function_info%seed,self%iface)
 
-        else if (cache_type == 'derivative') then
-            call self%cache%set_data(field,'face exterior',cache_data,'derivative',idirection,self%function_info%seed,self%iface)
+        else if (cache_type == 'gradient') then
+            call self%cache%set_data(field,'face exterior',cache_data,'gradient',idirection,self%function_info%seed,self%iface)
 
         end if
 
@@ -1019,18 +1027,18 @@ contains
         if (data_type == 'value') then
             cache_type = 'value'
             idirection = 0
-        else if (data_type == 'ddx') then
-            cache_type = 'derivative'
+        else if (data_type == 'grad1') then
+            cache_type = 'gradient'
             idirection = 1
-        else if (data_type == 'ddy') then
-            cache_type = 'derivative'
+        else if (data_type == 'grad2') then
+            cache_type = 'gradient'
             idirection = 2
-        else if (data_type == 'ddz') then
-            cache_type = 'derivative'
+        else if (data_type == 'grad3') then
+            cache_type = 'gradient'
             idirection = 3
         else
             user_msg = "chidg_worker%store_model_field: Invalid data_type specification. &
-                        Options are 'value', 'ddx', 'ddy', 'ddz'."
+                        Options are 'value', 'grad1', 'grad2', 'grad3'."
             call chidg_signal_one(FATAL,user_msg,trim(data_type))
         end if
 
@@ -1041,19 +1049,15 @@ contains
         !
         if (cache_type == 'value') then
 
-!            field_current = self%cache%get_data(model_field,self%interpolation_source,'value',0,self%function_info%seed,self%iface)
-!            field_update = field_current + cache_data
             field_update = cache_data
 
             call self%cache%set_data(model_field,self%interpolation_source,field_update,'value',0,self%function_info%seed,self%iface)
 
-        else if (cache_type == 'derivative') then
+        else if (cache_type == 'gradient') then
 
-!            field_current = self%cache%get_data(model_field,self%interpolation_source,'derivative',idirection,self%function_info%seed,self%iface)
-!            field_update = field_current + cache_data
             field_update = cache_data
 
-            call self%cache%set_data(model_field,self%interpolation_source,field_update,'derivative',idirection,self%function_info%seed,self%iface)
+            call self%cache%set_data(model_field,self%interpolation_source,field_update,'gradient',idirection,self%function_info%seed,self%iface)
 
         end if
 
@@ -1409,15 +1413,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
     !>  Return the order of the solution polynomial expansion.
     !!
     !!
@@ -1546,11 +1541,6 @@ contains
 
 
 
-
-
-
-
-
     !>  Return the inverse jacobian mapping for integration.
     !!
     !!
@@ -1583,27 +1573,6 @@ contains
 
     end function inverse_jacobian
     !**************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

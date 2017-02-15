@@ -56,17 +56,17 @@ contains
         !
         ! Set operator name
         !
-        call self%set_name("Spalart-Allmaras Volume Diffusion Operator")
+        call self%set_name('Spalart-Allmaras Volume Diffusion Operator')
 
         !
         ! Set operator type
         !
-        call self%set_operator_type("Volume Diffusive Flux")
+        call self%set_operator_type('Volume Diffusive Flux')
 
         !
         ! Set operator equations
         !
-        call self%add_primary_field("Density * NuTilde")
+        call self%add_primary_field('Density * NuTilde')
 
     end subroutine init
     !********************************************************************************
@@ -80,9 +80,9 @@ contains
     !!
     !!-------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(spalart_allmaras_volume_diffusion_operator_t),   intent(inout)   :: self
-        type(chidg_worker_t),                       intent(inout)   :: worker
-        class(properties_t),                        intent(inout)   :: prop
+        class(spalart_allmaras_volume_diffusion_operator_t),    intent(inout)   :: self
+        type(chidg_worker_t),                                   intent(inout)   :: worker
+        class(properties_t),                                    intent(inout)   :: prop
 
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:) ::    &
@@ -110,13 +110,13 @@ contains
         !
         ! Interpolate gradient to quadrature nodes
         !
-        drho_dx         = worker%get_primary_field_element('Density',          'ddx+lift')
-        drho_dy         = worker%get_primary_field_element('Density',          'ddy+lift')
-        drho_dz         = worker%get_primary_field_element('Density',          'ddz+lift')
+        drho_dx         = worker%get_primary_field_element('Density',          'grad1+lift')
+        drho_dy         = worker%get_primary_field_element('Density',          'grad2+lift')
+        drho_dz         = worker%get_primary_field_element('Density',          'grad3+lift')
 
-        drho_nutilde_dx = worker%get_primary_field_element('Density * NuTilde','ddx+lift')
-        drho_nutilde_dy = worker%get_primary_field_element('Density * NuTilde','ddy+lift')
-        drho_nutilde_dz = worker%get_primary_field_element('Density * NuTilde','ddz+lift')
+        drho_nutilde_dx = worker%get_primary_field_element('Density * NuTilde','grad1+lift')
+        drho_nutilde_dy = worker%get_primary_field_element('Density * NuTilde','grad2+lift')
+        drho_nutilde_dz = worker%get_primary_field_element('Density * NuTilde','grad3+lift')
 
 
 

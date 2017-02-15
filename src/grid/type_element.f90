@@ -71,12 +71,12 @@ module type_element
         real(rk), allocatable           :: jinv(:)              !< volume jacobian at quadrature nodes
 
         ! Matrices of cartesian gradients of basis/test functions
-        real(rk), allocatable           :: ddx(:,:)             !< Deriv of basis functions in x-direction at quadrature nodes
-        real(rk), allocatable           :: ddy(:,:)             !< Deriv of basis functions in y-direction at quadrature nodes
-        real(rk), allocatable           :: ddz(:,:)             !< Deriv of basis functions in z-direction at quadrature nodes
-        real(rk), allocatable           :: ddx_trans(:,:)       !< ddx transposed
-        real(rk), allocatable           :: ddy_trans(:,:)       !< ddy transposed
-        real(rk), allocatable           :: ddz_trans(:,:)       !< ddz transposed
+        real(rk), allocatable           :: grad1(:,:)           !< Grad of basis functions in at quadrature nodes
+        real(rk), allocatable           :: grad2(:,:)           !< Grad of basis functions in at quadrature nodes
+        real(rk), allocatable           :: grad3(:,:)           !< Grad of basis functions in at quadrature nodes
+        real(rk), allocatable           :: grad1_trans(:,:)     !< transpose grad1
+        real(rk), allocatable           :: grad2_trans(:,:)     !< transpose grad2
+        real(rk), allocatable           :: grad3_trans(:,:)     !< transpose grad3
 
         ! Quadrature matrices
         type(quadrature_t), pointer     :: gq     => null()     !< Pointer to instance for solution expansion
@@ -329,9 +329,9 @@ contains
         integer(ik) :: nnodes
 
 
-        self%nterms_s    = nterms_s     ! Set number of terms in modal expansion of solution
-        self%neqns       = neqns        ! Set number of equations being solved
-        self%ntime       = ntime        ! Set number of time steps in solution
+        self%nterms_s    = nterms_s     ! number of terms in solution expansion
+        self%neqns       = neqns        ! number of equations being solved
+        self%ntime       = ntime        ! number of time steps in solution
 
 
         !
@@ -346,19 +346,21 @@ contains
         !
         ! (Re)Allocate storage for element data structures
         !
-        if (allocated(self%jinv)) deallocate( self%jinv, self%metric, self%quad_pts,            &
-                                              self%ddx, self%ddy, self%ddz,                     &
-                                              self%ddx_trans, self%ddy_trans, self%ddz_trans,   &
-                                              self%mass, self%invmass, self%dtau)
+        if (allocated(self%jinv)) &
+            deallocate( self%jinv, self%metric, self%quad_pts,                &
+                        self%grad1, self%grad2, self%grad3,                   &
+                        self%grad1_trans, self%grad2_trans, self%grad3_trans, &
+                        self%mass, self%invmass, self%dtau)
+
         allocate(self%jinv(nnodes),                 &
                  self%metric(3,3,nnodes),           &
                  self%quad_pts(nnodes),             &
-                 self%ddx(nnodes,nterms_s),         &
-                 self%ddy(nnodes,nterms_s),         &
-                 self%ddz(nnodes,nterms_s),         &
-                 self%ddx_trans(nterms_s,nnodes),   &
-                 self%ddy_trans(nterms_s,nnodes),   &
-                 self%ddz_trans(nterms_s,nnodes),   &
+                 self%grad1(nnodes,nterms_s),         &
+                 self%grad2(nnodes,nterms_s),         &
+                 self%grad3(nnodes,nterms_s),         &
+                 self%grad1_trans(nterms_s,nnodes),   &
+                 self%grad2_trans(nterms_s,nnodes),   &
+                 self%grad3_trans(nterms_s,nnodes),   &
                  self%mass(nterms_s,nterms_s),      &
                  self%invmass(nterms_s,nterms_s),   &
                  self%dtau(neqns), stat=ierr)
@@ -448,7 +450,7 @@ contains
 
     !>  Subroutine computes element-specific matrices
     !!      - Mass matrix   (mass, invmass)
-    !!      - Matrices of gradients of basis/test functions (ddx, ddy, ddz)
+    !!      - Matrices of gradients of basis/test functions (grad1, grad2, grad3)
     !!      - Coordinates of quadrature points (quad_pts)
     !!
     !!  @author Nathan A. Wukie
@@ -632,24 +634,24 @@ contains
 
         do iterm = 1,self%nterms_s
             do inode = 1,self%gq%vol%nnodes
-                self%ddx(inode,iterm) = self%metric(1,1,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
+                self%grad1(inode,iterm) = self%metric(1,1,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
                                         self%metric(2,1,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
                                         self%metric(3,1,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode))
 
-                self%ddy(inode,iterm) = self%metric(1,2,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
+                self%grad2(inode,iterm) = self%metric(1,2,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
                                         self%metric(2,2,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
                                         self%metric(3,2,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode))
 
-                self%ddz(inode,iterm) = self%metric(1,3,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
+                self%grad3(inode,iterm) = self%metric(1,3,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
                                         self%metric(2,3,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
                                         self%metric(3,3,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode))
             end do
         end do
 
 
-        self%ddx_trans = transpose(self%ddx)
-        self%ddy_trans = transpose(self%ddy)
-        self%ddz_trans = transpose(self%ddz)
+        self%grad1_trans = transpose(self%grad1)
+        self%grad2_trans = transpose(self%grad2)
+        self%grad3_trans = transpose(self%grad3)
 
     end subroutine compute_quadrature_gradients
     !******************************************************************************************
@@ -1251,7 +1253,7 @@ contains
                                deta_dz  * ddeta(iterm)  * (ONE/jinv) + &
                                dzeta_dz * ddzeta(iterm) * (ONE/jinv)
             else
-                call chidg_signal(FATAL,"element%derivative_point: Invalid value for 'dir' parameter. 'ddx', 'ddy', 'ddz'.")
+                call chidg_signal(FATAL,"element%derivative_point: Invalid value for 'dir' parameter. (1,2,3).")
             end if
         end do
 

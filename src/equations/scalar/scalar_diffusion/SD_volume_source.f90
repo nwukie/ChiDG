@@ -82,7 +82,7 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        source = worker%get_primary_field_element('u','ddx + lift')
+        source = worker%get_primary_field_element('u','grad1 + lift')
 
         x = worker%x('volume')
         y = worker%y('volume')

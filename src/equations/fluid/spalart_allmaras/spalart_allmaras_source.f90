@@ -66,7 +66,7 @@ contains
         ! Set auxiliary variables being used.
         call self%add_auxiliary_field("Wall Distance : p-Poisson")
 
-        ! Add Turbulent Eddy Viscosity model
+        ! Add Turbulent Egrad2 Viscosity model
         call self%add_model('Spalart Allmaras Turbulent Model Fields')
         call self%add_model('Wall Distance : p-Poisson Normalization')
 
@@ -113,9 +113,9 @@ contains
         ! Interpolate solution to quadrature nodes
         !
         rho         = worker%get_primary_field_element('Density'          ,'value')
-        rhou        = worker%get_primary_field_element('X-Momentum'       ,'value')
-        rhov        = worker%get_primary_field_element('Y-Momentum'       ,'value')
-        rhow        = worker%get_primary_field_element('Z-Momentum'       ,'value')
+        rhou        = worker%get_primary_field_element('Momentum-1'       ,'value')
+        rhov        = worker%get_primary_field_element('Momentum-2'       ,'value')
+        rhow        = worker%get_primary_field_element('Momentum-3'       ,'value')
         rhoE        = worker%get_primary_field_element('Energy'           ,'value')
         rho_nutilde = worker%get_primary_field_element('Density * NuTilde','value')
 
@@ -125,29 +125,29 @@ contains
         !
         ! Interpolate solution gradients to quadrature nodes
         !
-        drho_dx  = worker%get_primary_field_element('Density'   ,'ddx+lift')
-        drho_dy  = worker%get_primary_field_element('Density'   ,'ddy+lift')
-        drho_dz  = worker%get_primary_field_element('Density'   ,'ddz+lift')
+        drho_dx  = worker%get_primary_field_element('Density'   ,'grad1+lift')
+        drho_dy  = worker%get_primary_field_element('Density'   ,'grad2+lift')
+        drho_dz  = worker%get_primary_field_element('Density'   ,'grad3+lift')
 
-        drhou_dx = worker%get_primary_field_element('X-Momentum','ddx+lift')
-        drhou_dy = worker%get_primary_field_element('X-Momentum','ddy+lift')
-        drhou_dz = worker%get_primary_field_element('X-Momentum','ddz+lift')
+        drhou_dx = worker%get_primary_field_element('Momentum-1','grad1+lift')
+        drhou_dy = worker%get_primary_field_element('Momentum-1','grad2+lift')
+        drhou_dz = worker%get_primary_field_element('Momentum-1','grad3+lift')
 
-        drhov_dx = worker%get_primary_field_element('Y-Momentum','ddx+lift')
-        drhov_dy = worker%get_primary_field_element('Y-Momentum','ddy+lift')
-        drhov_dz = worker%get_primary_field_element('Y-Momentum','ddz+lift')
+        drhov_dx = worker%get_primary_field_element('Momentum-2','grad1+lift')
+        drhov_dy = worker%get_primary_field_element('Momentum-2','grad2+lift')
+        drhov_dz = worker%get_primary_field_element('Momentum-2','grad3+lift')
 
-        drhow_dx = worker%get_primary_field_element('Z-Momentum','ddx+lift')
-        drhow_dy = worker%get_primary_field_element('Z-Momentum','ddy+lift')
-        drhow_dz = worker%get_primary_field_element('Z-Momentum','ddz+lift')
+        drhow_dx = worker%get_primary_field_element('Momentum-3','grad1+lift')
+        drhow_dy = worker%get_primary_field_element('Momentum-3','grad2+lift')
+        drhow_dz = worker%get_primary_field_element('Momentum-3','grad3+lift')
 
-        drhoE_dx = worker%get_primary_field_element('Energy'    ,'ddx+lift')
-        drhoE_dy = worker%get_primary_field_element('Energy'    ,'ddy+lift')
-        drhoE_dz = worker%get_primary_field_element('Energy'    ,'ddz+lift')
+        drhoE_dx = worker%get_primary_field_element('Energy'    ,'grad1+lift')
+        drhoE_dy = worker%get_primary_field_element('Energy'    ,'grad2+lift')
+        drhoE_dz = worker%get_primary_field_element('Energy'    ,'grad3+lift')
 
-        drho_nutilde_dx = worker%get_primary_field_element('Density * NuTilde','ddx+lift')
-        drho_nutilde_dy = worker%get_primary_field_element('Density * NuTilde','ddy+lift')
-        drho_nutilde_dz = worker%get_primary_field_element('Density * NuTilde','ddz+lift')
+        drho_nutilde_dx = worker%get_primary_field_element('Density * NuTilde','grad1+lift')
+        drho_nutilde_dy = worker%get_primary_field_element('Density * NuTilde','grad2+lift')
+        drho_nutilde_dz = worker%get_primary_field_element('Density * NuTilde','grad3+lift')
 
 
 
@@ -324,7 +324,7 @@ contains
                     +(ONE/SA_sigma)*(nu + f_n1*nutilde)*(drho_dx*dnutilde_dx + drho_dy*dnutilde_dy + drho_dz*dnutilde_dz)   &
                   )
 
-        call worker%integrate_volume("Density * NuTilde",source)
+        call worker%integrate_volume('Density * NuTilde',source)
 
 
     end subroutine compute

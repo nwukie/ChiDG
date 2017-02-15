@@ -59,9 +59,9 @@ contains
         ! Set operator equations
         !
         call self%add_primary_field("Density"   )
-        call self%add_primary_field("X-Momentum")
-        call self%add_primary_field("Y-Momentum")
-        call self%add_primary_field("Z-Momentum")
+        call self%add_primary_field("Momentum-1")
+        call self%add_primary_field("Momentum-2")
+        call self%add_primary_field("Momentum-3")
         call self%add_primary_field("Energy"    )
 
     end subroutine init
@@ -116,9 +116,9 @@ contains
         ! Interpolate boundary condition state to face quadrature nodes
         !
         rho  = worker%get_primary_field_face("Density"   ,'value', 'boundary')
-        rhou = worker%get_primary_field_face("X-Momentum",'value', 'boundary')
-        rhov = worker%get_primary_field_face("Y-Momentum",'value', 'boundary')
-        rhow = worker%get_primary_field_face("Z-Momentum",'value', 'boundary')
+        rhou = worker%get_primary_field_face("Momentum-1",'value', 'boundary')
+        rhov = worker%get_primary_field_face("Momentum-2",'value', 'boundary')
+        rhow = worker%get_primary_field_face("Momentum-3",'value', 'boundary')
         rhoE = worker%get_primary_field_face("Energy"    ,'value', 'boundary')
 
 
@@ -128,25 +128,25 @@ contains
         !
         ! Interpolate solution gradients to quadrature nodes
         !
-        drho_dx  = worker%get_primary_field_face("Density"   ,'ddx+lift', 'boundary')
-        drho_dy  = worker%get_primary_field_face("Density"   ,'ddy+lift', 'boundary')
-        drho_dz  = worker%get_primary_field_face("Density"   ,'ddz+lift', 'boundary')
+        drho_dx  = worker%get_primary_field_face("Density"   ,'grad1+lift', 'boundary')
+        drho_dy  = worker%get_primary_field_face("Density"   ,'grad2+lift', 'boundary')
+        drho_dz  = worker%get_primary_field_face("Density"   ,'grad3+lift', 'boundary')
 
-        drhou_dx = worker%get_primary_field_face("X-Momentum",'ddx+lift', 'boundary')
-        drhou_dy = worker%get_primary_field_face("X-Momentum",'ddy+lift', 'boundary')
-        drhou_dz = worker%get_primary_field_face("X-Momentum",'ddz+lift', 'boundary')
+        drhou_dx = worker%get_primary_field_face("Momentum-1",'grad1+lift', 'boundary')
+        drhou_dy = worker%get_primary_field_face("Momentum-1",'grad2+lift', 'boundary')
+        drhou_dz = worker%get_primary_field_face("Momentum-1",'grad3+lift', 'boundary')
 
-        drhov_dx = worker%get_primary_field_face("Y-Momentum",'ddx+lift', 'boundary')
-        drhov_dy = worker%get_primary_field_face("Y-Momentum",'ddy+lift', 'boundary')
-        drhov_dz = worker%get_primary_field_face("Y-Momentum",'ddz+lift', 'boundary')
+        drhov_dx = worker%get_primary_field_face("Momentum-2",'grad1+lift', 'boundary')
+        drhov_dy = worker%get_primary_field_face("Momentum-2",'grad2+lift', 'boundary')
+        drhov_dz = worker%get_primary_field_face("Momentum-2",'grad3+lift', 'boundary')
 
-        drhow_dx = worker%get_primary_field_face("Z-Momentum",'ddx+lift', 'boundary')
-        drhow_dy = worker%get_primary_field_face("Z-Momentum",'ddy+lift', 'boundary')
-        drhow_dz = worker%get_primary_field_face("Z-Momentum",'ddz+lift', 'boundary')
+        drhow_dx = worker%get_primary_field_face("Momentum-3",'grad1+lift', 'boundary')
+        drhow_dy = worker%get_primary_field_face("Momentum-3",'grad2+lift', 'boundary')
+        drhow_dz = worker%get_primary_field_face("Momentum-3",'grad3+lift', 'boundary')
 
-        drhoE_dx = worker%get_primary_field_face("Energy"    ,'ddx+lift', 'boundary')
-        drhoE_dy = worker%get_primary_field_face("Energy"    ,'ddy+lift', 'boundary')
-        drhoE_dz = worker%get_primary_field_face("Energy"    ,'ddz+lift', 'boundary')
+        drhoE_dx = worker%get_primary_field_face("Energy"    ,'grad1+lift', 'boundary')
+        drhoE_dy = worker%get_primary_field_face("Energy"    ,'grad2+lift', 'boundary')
+        drhoE_dz = worker%get_primary_field_face("Energy"    ,'grad3+lift', 'boundary')
 
 
 
@@ -297,7 +297,7 @@ contains
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-        call worker%integrate_boundary('X-Momentum',integrand)
+        call worker%integrate_boundary('Momentum-1',integrand)
 
         !=================================================
         ! y-momentum flux
@@ -308,7 +308,7 @@ contains
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-        call worker%integrate_boundary('Y-Momentum',integrand)
+        call worker%integrate_boundary('Momentum-2',integrand)
 
         !=================================================
         ! z-momentum flux
@@ -319,7 +319,7 @@ contains
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
 
-        call worker%integrate_boundary('Z-Momentum',integrand)
+        call worker%integrate_boundary('Momentum-3',integrand)
 
         !=================================================
         ! Energy flux

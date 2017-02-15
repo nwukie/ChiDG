@@ -81,9 +81,9 @@ contains
         ! Interpolate solution to quadrature nodes
         !
         rho         = worker%get_primary_field_face('Density',           'value', 'boundary')
-        rhou        = worker%get_primary_field_face('X-Momentum',        'value', 'boundary')
-        rhov        = worker%get_primary_field_face('Y-Momentum',        'value', 'boundary')
-        rhow        = worker%get_primary_field_face('Z-Momentum',        'value', 'boundary')
+        rhou        = worker%get_primary_field_face('Momentum-1',        'value', 'boundary')
+        rhov        = worker%get_primary_field_face('Momentum-2',        'value', 'boundary')
+        rhow        = worker%get_primary_field_face('Momentum-3',        'value', 'boundary')
         rho_nutilde = worker%get_primary_field_face('Density * NuTilde', 'value', 'boundary')
 
 

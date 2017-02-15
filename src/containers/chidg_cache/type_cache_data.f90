@@ -279,17 +279,17 @@ contains
 
 
 
-            case('derivative')
+            case('gradient')
 
-                ! Try to find derivative differentiated wrt seed.
+                ! Try to find gradient differentiated wrt seed.
                 seed_found = .false.
-                do iseed = 1,size(self%fields(field_index)%derivative_seeds)
+                do iseed = 1,size(self%fields(field_index)%gradient_seeds)
                     
-                    has_seed = (self%fields(field_index)%derivative_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
-                               (self%fields(field_index)%derivative_seeds(iseed)%ielement_g == seed%ielement_g)
+                    has_seed = (self%fields(field_index)%gradient_seeds(iseed)%idomain_g  == seed%idomain_g) .and. &
+                               (self%fields(field_index)%gradient_seeds(iseed)%ielement_g == seed%ielement_g)
 
                     if (has_seed) then
-                        cache_data = self%fields(field_index)%derivative(:,idirection,iseed)
+                        cache_data = self%fields(field_index)%gradient(:,idirection,iseed)
                         seed_found = .true.
                         exit
                     end if
@@ -297,9 +297,9 @@ contains
                 end do
 
                 ! If the current component doesn't have a linearization wrt seed, just take any
-                ! derivative and zero out autodiff
+                ! gradient and zero out autodiff
                 if (.not. seed_found) then
-                    cache_data = self%fields(field_index)%derivative(:,idirection,1)
+                    cache_data = self%fields(field_index)%gradient(:,idirection,1)
 
                     do igq = 1,size(cache_data)
                         cache_data(igq)%xp_ad_ = ZERO
@@ -366,7 +366,7 @@ contains
             case default
 
                 user_msg = "cache_data%get_data: Invalid data type for getting data. Options are &
-                            'value', 'derivative', 'lift face', or 'lift element'"
+                            'value', 'gradient', 'lift face', or 'lift element'"
                 call chidg_signal_one(FATAL,user_msg,trim(cache_type))
 
 
@@ -374,7 +374,7 @@ contains
 
 
 
-        if (.not. allocated(cache_data(1)%xp_ad_) ) call chidg_signal(FATAL,"get_data: derivatives not allocated")
+        if (.not. allocated(cache_data(1)%xp_ad_) ) call chidg_signal(FATAL,"get_data: gradients not allocated")
 
 
     end function get_data

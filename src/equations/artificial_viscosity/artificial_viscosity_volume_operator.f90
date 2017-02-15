@@ -102,9 +102,9 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        deps_dx = worker%get_primary_field_element('Artificial Viscosity', 'ddx+lift')
-        deps_dy = worker%get_primary_field_element('Artificial Viscosity', 'ddy+lift')
-        deps_dz = worker%get_primary_field_element('Artificial Viscosity', 'ddz+lift')
+        deps_dx = worker%get_primary_field_element('Artificial Viscosity', 'grad1+lift')
+        deps_dy = worker%get_primary_field_element('Artificial Viscosity', 'grad2+lift')
+        deps_dz = worker%get_primary_field_element('Artificial Viscosity', 'grad3+lift')
 
 
 

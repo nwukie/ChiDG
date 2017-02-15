@@ -114,25 +114,25 @@ contains
         !
         ! Interpolate solution gradients to quadrature nodes
         !
-        drho_dx  = worker%get_primary_field_element("Density"   ,'ddx+lift')
-        drho_dy  = worker%get_primary_field_element("Density"   ,'ddy+lift')
-        drho_dz  = worker%get_primary_field_element("Density"   ,'ddz+lift')
+        drho_dx  = worker%get_primary_field_element("Density"   ,'grad1+lift')
+        drho_dy  = worker%get_primary_field_element("Density"   ,'grad2+lift')
+        drho_dz  = worker%get_primary_field_element("Density"   ,'grad3+lift')
 
-        drhou_dx = worker%get_primary_field_element("X-Momentum",'ddx+lift')
-        drhou_dy = worker%get_primary_field_element("X-Momentum",'ddy+lift')
-        drhou_dz = worker%get_primary_field_element("X-Momentum",'ddz+lift')
+        drhou_dx = worker%get_primary_field_element("X-Momentum",'grad1+lift')
+        drhou_dy = worker%get_primary_field_element("X-Momentum",'grad2+lift')
+        drhou_dz = worker%get_primary_field_element("X-Momentum",'grad3+lift')
 
-        drhov_dx = worker%get_primary_field_element("Y-Momentum",'ddx+lift')
-        drhov_dy = worker%get_primary_field_element("Y-Momentum",'ddy+lift')
-        drhov_dz = worker%get_primary_field_element("Y-Momentum",'ddz+lift')
+        drhov_dx = worker%get_primary_field_element("Y-Momentum",'grad1+lift')
+        drhov_dy = worker%get_primary_field_element("Y-Momentum",'grad2+lift')
+        drhov_dz = worker%get_primary_field_element("Y-Momentum",'grad3+lift')
 
-        drhow_dx = worker%get_primary_field_element("Z-Momentum",'ddx+lift')
-        drhow_dy = worker%get_primary_field_element("Z-Momentum",'ddy+lift')
-        drhow_dz = worker%get_primary_field_element("Z-Momentum",'ddz+lift')
+        drhow_dx = worker%get_primary_field_element("Z-Momentum",'grad1+lift')
+        drhow_dy = worker%get_primary_field_element("Z-Momentum",'grad2+lift')
+        drhow_dz = worker%get_primary_field_element("Z-Momentum",'grad3+lift')
 
-        drhoE_dx = worker%get_primary_field_element("Energy"    ,'ddx+lift')
-        drhoE_dy = worker%get_primary_field_element("Energy"    ,'ddy+lift')
-        drhoE_dz = worker%get_primary_field_element("Energy"    ,'ddz+lift')
+        drhoE_dx = worker%get_primary_field_element("Energy"    ,'grad1+lift')
+        drhoE_dy = worker%get_primary_field_element("Energy"    ,'grad2+lift')
+        drhoE_dz = worker%get_primary_field_element("Energy"    ,'grad3+lift')
 
 
 

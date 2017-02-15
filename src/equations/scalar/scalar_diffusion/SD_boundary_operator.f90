@@ -106,14 +106,14 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        dudx_m = worker%get_primary_field_face('u', 'ddx + lift', 'face interior')
-        dudy_m = worker%get_primary_field_face('u', 'ddy + lift', 'face interior')
-        dudz_m = worker%get_primary_field_face('u', 'ddz + lift', 'face interior')
+        dudx_m = worker%get_primary_field_face('u', 'grad1 + lift', 'face interior')
+        dudy_m = worker%get_primary_field_face('u', 'grad2 + lift', 'face interior')
+        dudz_m = worker%get_primary_field_face('u', 'grad3 + lift', 'face interior')
 
 
-        dudx_p = worker%get_primary_field_face('u', 'ddx + lift', 'face exterior')
-        dudy_p = worker%get_primary_field_face('u', 'ddy + lift', 'face exterior')
-        dudz_p = worker%get_primary_field_face('u', 'ddz + lift', 'face exterior')
+        dudx_p = worker%get_primary_field_face('u', 'grad1 + lift', 'face exterior')
+        dudy_p = worker%get_primary_field_face('u', 'grad2 + lift', 'face exterior')
+        dudz_p = worker%get_primary_field_face('u', 'grad3 + lift', 'face exterior')
 
 
         !

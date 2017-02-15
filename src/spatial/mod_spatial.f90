@@ -53,6 +53,7 @@ contains
 
         logical                     :: differentiate_function, io_spatial
 
+
         
         !
         ! Decide whether to differentiate the discretization or not
@@ -164,6 +165,7 @@ contains
                     !
                     ! Compute contributions from volume integrals
                     !
+
                     call eqnset%compute_volume_advective_operators(worker, differentiate_function)
                     call eqnset%compute_volume_diffusive_operators(worker, differentiate_function)
 

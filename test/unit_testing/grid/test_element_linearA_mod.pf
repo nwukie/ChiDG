@@ -308,6 +308,7 @@ contains
         @assertEqual(test_x,self%elem%quad_pts(:)%c1_)
         @assertEqual(test_y,self%elem%quad_pts(:)%c2_)
         @assertEqual(test_z,self%elem%quad_pts(:)%c3_)
+
     end subroutine testElement_quadpts
     !*******************************************************************************************
 
@@ -322,7 +323,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     @Test
-    subroutine testElement_ddx(self)
+    subroutine testElement_grad1(self)
         class(test_element_linearA),    intent(inout)   :: self
         real(rk), dimension(self%elem%gq%vol%nnodes, 8) :: test
         real(rk), dimension(self%elem%gq%vol%nnodes)    :: xi, eta, zeta
@@ -337,16 +338,18 @@ contains
         
         
         
-        test(:,1) = ZERO                !> Mode 1
-        test(:,2) = ZERO                !> Mode 2
-        test(:,3) = ZERO                !> Mode 3
-        test(:,4) = 0.4_rk              !> Mode 4
-        test(:,5) = 0.4_rk * eta        !> Mode 5
-        test(:,6) = 0.4_rk * zeta       !> Mode 6
-        test(:,7) = ZERO                !> Mode 7
-        test(:,8) = 0.4_rk * eta * zeta !> Mode 8
-        @assertEqual(test,self%elem%ddx,tol)
-    end subroutine
+        test(:,1) = ZERO                    ! Mode 1
+        test(:,2) = ZERO                    ! Mode 2
+        test(:,3) = ZERO                    ! Mode 3
+        test(:,4) = 0.4_rk                  ! Mode 4
+        test(:,5) = 0.4_rk * eta            ! Mode 5
+        test(:,6) = 0.4_rk * zeta           ! Mode 6
+        test(:,7) = ZERO                    ! Mode 7
+        test(:,8) = 0.4_rk * eta * zeta     ! Mode 8
+
+        @assertEqual(test,self%elem%grad1,tol)
+
+    end subroutine testElement_grad1
     !*******************************************************************************************
 
 
@@ -358,7 +361,44 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     @Test
-    subroutine testElement_ddy(self)
+    subroutine testElement_grad2(self)
+       class(test_element_linearA),    intent(inout)   :: self
+       real(rk), dimension(self%elem%gq%vol%nnodes, 8) :: test
+       real(rk), dimension(self%elem%gq%vol%nnodes)    :: xi, eta, zeta
+       
+       real(rk) :: tol
+       
+       tol = 1.e-14_rk
+       
+       xi   = self%elem%gq%vol%nodes(:)%c1_
+       eta  = self%elem%gq%vol%nodes(:)%c2_
+       zeta = self%elem%gq%vol%nodes(:)%c3_
+       
+       
+       test(:,1) = ZERO                ! Mode 1
+       test(:,2) = TWO                 ! Mode 2
+       test(:,3) = ZERO                ! Mode 3
+       test(:,4) = ZERO                ! Mode 4
+       test(:,5) = TWO * xi            ! Mode 5
+       test(:,6) = ZERO                ! Mode 6
+       test(:,7) = TWO * zeta          ! Mode 7
+       test(:,8) = TWO * xi * zeta     ! Mode 8
+
+       @assertEqual(test,self%elem%grad2,tol)
+
+    end subroutine testElement_grad2
+    !*******************************************************************************************
+
+
+
+
+
+    !> Test cartesian gradient matrices
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    @Test
+    subroutine testElement_grad3(self)
        class(test_element_linearA),    intent(inout)   :: self
        real(rk), dimension(self%elem%gq%vol%nnodes, 8) :: test
        real(rk), dimension(self%elem%gq%vol%nnodes)    :: xi, eta, zeta
@@ -373,53 +413,18 @@ contains
        
        
        
-       test(:,1) = ZERO                !> Mode 1
-       test(:,2) = TWO                 !> Mode 2
-       test(:,3) = ZERO                !> Mode 3
-       test(:,4) = ZERO                !> Mode 4
-       test(:,5) = TWO * xi            !> Mode 5
-       test(:,6) = ZERO                !> Mode 6
-       test(:,7) = TWO * zeta          !> Mode 7
-       test(:,8) = TWO * xi * zeta     !> Mode 8
-       @assertEqual(test,self%elem%ddy,tol)
-    end subroutine
-    !*******************************************************************************************
+       test(:,1) = ZERO                ! Mode 1
+       test(:,2) = ZERO                ! Mode 2
+       test(:,3) = TWO                 ! Mode 3
+       test(:,4) = ZERO                ! Mode 4
+       test(:,5) = ZERO                ! Mode 5
+       test(:,6) = TWO * xi            ! Mode 6
+       test(:,7) = TWO * eta           ! Mode 7
+       test(:,8) = TWO * xi * eta      ! Mode 8
 
-
-
-
-
-    !> Test cartesian gradient matrices
-    !!
-    !!
-    !------------------------------------------------------------------------------------------
-    @Test
-    subroutine testElement_ddz(self)
-       class(test_element_linearA),    intent(inout)   :: self
-       real(rk), dimension(self%elem%gq%vol%nnodes, 8) :: test
-       real(rk), dimension(self%elem%gq%vol%nnodes)    :: xi, eta, zeta
+       @assertEqual(test,self%elem%grad3,tol)
        
-       real(rk) :: tol
-       
-       tol = 1.e-14_rk
-       
-       xi   = self%elem%gq%vol%nodes(:)%c1_
-       eta  = self%elem%gq%vol%nodes(:)%c2_
-       zeta = self%elem%gq%vol%nodes(:)%c3_
-       
-       
-       
-       test(:,1) = ZERO                !> Mode 1
-       test(:,2) = ZERO                !> Mode 2
-       test(:,3) = TWO                 !> Mode 3
-       test(:,4) = ZERO                !> Mode 4
-       test(:,5) = ZERO                !> Mode 5
-       test(:,6) = TWO * xi            !> Mode 6
-       test(:,7) = TWO * eta           !> Mode 7
-       test(:,8) = TWO * xi * eta      !> Mode 8
-       @assertEqual(test,self%elem%ddz,tol)
-       
-    end subroutine
+    end subroutine testElement_grad3
     !*******************************************************************************************
 
 
@@ -466,6 +471,7 @@ contains
         @assertEqual(test_metric,self%faces(ETA_MAX)%metric,tol)
         @assertEqual(test_metric,self%faces(ZETA_MIN)%metric,tol)
         @assertEqual(test_metric,self%faces(ZETA_MAX)%metric,tol)
+
     end subroutine testElement_face_metrics
     !*******************************************************************************************
 
@@ -690,18 +696,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 !------------------------------------------------------------------------------
 !      element%mesh_point, element%solution_point, element%metric_point, element%computational_point
 !------------------------------------------------------------------------------
@@ -733,7 +727,7 @@ contains
 
         @assertEqual(ref_coords,check_coords)
 
-    end subroutine
+    end subroutine test__mesh_point__x
     !*******************************************************************************************
 
 
@@ -766,7 +760,7 @@ contains
 
         @assertEqual(ref_coords,check_coords)
 
-    end subroutine
+    end subroutine test__mesh_point__y
     !*******************************************************************************************
 
 
@@ -799,7 +793,7 @@ contains
 
         @assertEqual(ref_coords,check_coords)
 
-    end subroutine
+    end subroutine test__mesh_point__z
     !*******************************************************************************************
 
 

@@ -58,9 +58,9 @@ contains
 
         ! Set operator equations
         call self%add_primary_field("Density"   )
-        call self%add_primary_field("X-Momentum")
-        call self%add_primary_field("Y-Momentum")
-        call self%add_primary_field("Z-Momentum")
+        call self%add_primary_field("Momentum-1")
+        call self%add_primary_field("Momentum-2")
+        call self%add_primary_field("Momentum-3")
         call self%add_primary_field("Energy"    )
 
     end subroutine init
@@ -92,9 +92,9 @@ contains
         ! Interpolate solution to quadrature nodes
         !
         rho  = worker%get_primary_field_element("Density"   ,'value')
-        rhou = worker%get_primary_field_element("X-Momentum",'value')
-        rhov = worker%get_primary_field_element("Y-Momentum",'value')
-        rhow = worker%get_primary_field_element("Z-Momentum",'value')
+        rhou = worker%get_primary_field_element("Momentum-1",'value')
+        rhov = worker%get_primary_field_element("Momentum-2",'value')
+        rhow = worker%get_primary_field_element("Momentum-3",'value')
         rhoE = worker%get_primary_field_element("Energy"    ,'value')
 
 
@@ -125,7 +125,7 @@ contains
         flux_y = (rhou*rhov)*invrho
         flux_z = (rhou*rhow)*invrho
 
-        call worker%integrate_volume('X-Momentum',flux_x,flux_y,flux_z)
+        call worker%integrate_volume('Momentum-1',flux_x,flux_y,flux_z)
 
 
         !============================
@@ -135,7 +135,7 @@ contains
         flux_y = (rhov*rhov)*invrho  +  p
         flux_z = (rhov*rhow)*invrho
 
-        call worker%integrate_volume('Y-Momentum',flux_x,flux_y,flux_z)
+        call worker%integrate_volume('Momentum-2',flux_x,flux_y,flux_z)
 
         !============================
         !     Z-MOMENTUM FLUX
@@ -144,7 +144,7 @@ contains
         flux_y = (rhow*rhov)*invrho
         flux_z = (rhow*rhow)*invrho  +  p
 
-        call worker%integrate_volume('Z-Momentum',flux_x,flux_y,flux_z)
+        call worker%integrate_volume('Momentum-3',flux_x,flux_y,flux_z)
 
         !============================
         !       ENERGY FLUX

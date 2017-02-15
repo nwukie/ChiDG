@@ -110,13 +110,13 @@ contains
         !
         ! Interpolate gradient to quadrature nodes
         !
-        drho_dx         = worker%get_primary_field_face('Density',          'ddx+lift','boundary')
-        drho_dy         = worker%get_primary_field_face('Density',          'ddy+lift','boundary')
-        drho_dz         = worker%get_primary_field_face('Density',          'ddz+lift','boundary')
+        drho_dx         = worker%get_primary_field_face('Density',          'grad1+lift','boundary')
+        drho_dy         = worker%get_primary_field_face('Density',          'grad2+lift','boundary')
+        drho_dz         = worker%get_primary_field_face('Density',          'grad3+lift','boundary')
 
-        drho_nutilde_dx = worker%get_primary_field_face('Density * NuTilde','ddx+lift','boundary')
-        drho_nutilde_dy = worker%get_primary_field_face('Density * NuTilde','ddy+lift','boundary')
-        drho_nutilde_dz = worker%get_primary_field_face('Density * NuTilde','ddz+lift','boundary')
+        drho_nutilde_dx = worker%get_primary_field_face('Density * NuTilde','grad1+lift','boundary')
+        drho_nutilde_dy = worker%get_primary_field_face('Density * NuTilde','grad2+lift','boundary')
+        drho_nutilde_dz = worker%get_primary_field_face('Density * NuTilde','grad3+lift','boundary')
 
 
 

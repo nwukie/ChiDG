@@ -59,7 +59,8 @@ contains
                                            ineighbor_proc, ineighbor_neqns, ineighbor_nterms_s
         
         
-        gq_rule = 1 !> Set collocation quadrature for testing coordinates at quadrature points
+        ! Set collocation quadratur for testing coordinates at quadrature points 
+        gq_rule = 1
         
         
         call this%chidg%start_up('core')
@@ -319,6 +320,42 @@ contains
 
     end subroutine testElement_mass
     !*****************************************************************************************
+
+
+
+
+
+
+    !>  Test cartesian coordinate values at quadrature nodes.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   02/14/2017
+    !!
+    !-----------------------------------------------------------------------------------------
+    @Test
+    subroutine testElement_quadpts(self)
+        class(test_element_linearD),    intent(inout)   :: self
+
+        real(rk), dimension(self%elem%gq%vol%nnodes)    :: test_r, test_theta, test_z
+        real(rk)                                        :: r1,r2,theta1,theta2,z1,z2
+
+        r1     = 1.5_rk    - 0.5_rk*sqrt(ONE/THREE)
+        r2     = 1.5_rk    + 0.5_rk*sqrt(ONE/THREE)
+        theta1 = (PI/FOUR) - (PI/FOUR)*sqrt(ONE/THREE)
+        theta2 = (PI/FOUR) + (PI/FOUR)*sqrt(ONE/THREE)
+        z1     = 0.5_rk    - 0.5_rk*sqrt(ONE/THREE)
+        z2     = 0.5_rk    + 0.5_rk*sqrt(ONE/THREE)
+
+        test_r     = [r1, r2, r1, r2, r1, r2, r1, r2]
+        test_theta = [theta1, theta1, theta2, theta2, theta1, theta1, theta2, theta2]
+        test_z     = [z1, z1, z1, z1, z2, z2, z2, z2]
+        
+        @assertEqual(test_r,     self%elem%quad_pts(:)%c1_)
+        @assertEqual(test_theta, self%elem%quad_pts(:)%c2_)
+        @assertEqual(test_z,     self%elem%quad_pts(:)%c3_)
+
+    end subroutine testElement_quadpts
+    !*******************************************************************************************
 
 
 

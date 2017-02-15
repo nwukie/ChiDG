@@ -78,10 +78,10 @@ contains
         !
         ! Interpolate interior solution to quadrature nodes
         !
-        rhoNutilde_m     = worker%get_primary_field_face("Density * NuTilde", 'value', 'face interior')
-        drhoNutilde_dx_m = worker%get_primary_field_face("Density * NuTilde", 'ddx',   'face interior')
-        drhoNutilde_dy_m = worker%get_primary_field_face("Density * NuTilde", 'ddy',   'face interior')
-        drhoNutilde_dz_m = worker%get_primary_field_face("Density * NuTilde", 'ddz',   'face interior')
+        rhoNutilde_m     = worker%get_primary_field_face('Density * NuTilde', 'value', 'face interior')
+        drhoNutilde_dx_m = worker%get_primary_field_face('Density * NuTilde', 'grad1', 'face interior')
+        drhoNutilde_dy_m = worker%get_primary_field_face('Density * NuTilde', 'grad2', 'face interior')
+        drhoNutilde_dz_m = worker%get_primary_field_face('Density * NuTilde', 'grad3', 'face interior')
 
 
 
@@ -89,15 +89,15 @@ contains
         ! Store boundary condition state - Dirichlet Zero
         !
         rhoNutilde_m = ZERO
-        call worker%store_bc_state("Density * NuTilde", rhoNutilde_m,'value')
+        call worker%store_bc_state('Density * NuTilde', rhoNutilde_m,'value')
 
 
         !
         ! Store boundary condition gradient - Extrapolate
         !
-        call worker%store_bc_state("Density * NuTilde", drhoNutilde_dx_m, 'ddx')
-        call worker%store_bc_state("Density * NuTilde", drhoNutilde_dy_m, 'ddy')
-        call worker%store_bc_state("Density * NuTilde", drhoNutilde_dz_m, 'ddz')
+        call worker%store_bc_state('Density * NuTilde', drhoNutilde_dx_m, 'grad1')
+        call worker%store_bc_state('Density * NuTilde', drhoNutilde_dy_m, 'grad2')
+        call worker%store_bc_state('Density * NuTilde', drhoNutilde_dz_m, 'grad3')
                                                 
     end subroutine compute_bc_state
     !*****************************************************************************************

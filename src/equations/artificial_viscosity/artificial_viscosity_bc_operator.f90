@@ -105,9 +105,9 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        deps_dx = worker%get_primary_field_face('Artificial Viscosity', 'ddx+lift', 'boundary')
-        deps_dy = worker%get_primary_field_face('Artificial Viscosity', 'ddy+lift', 'boundary')
-        deps_dz = worker%get_primary_field_face('Artificial Viscosity', 'ddz+lift', 'boundary')
+        deps_dx = worker%get_primary_field_face('Artificial Viscosity', 'grad1+lift', 'boundary')
+        deps_dy = worker%get_primary_field_face('Artificial Viscosity', 'grad2+lift', 'boundary')
+        deps_dz = worker%get_primary_field_face('Artificial Viscosity', 'grad3+lift', 'boundary')
 
         
 

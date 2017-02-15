@@ -110,7 +110,7 @@ contains
         !
         ! Initialize derivative arrays
         !
-        dudx_bc = ZERO * worker%get_primary_field_face('u', 'ddx','face interior')
+        dudx_bc = ZERO * worker%get_primary_field_face('u', 'grad1','face interior')
         dudy_bc = ZERO * dudx_bc
         dudz_bc = ZERO * dudx_bc
 
@@ -123,9 +123,9 @@ contains
 
 
         call worker%store_bc_state('u', u_bc,    'value')
-        call worker%store_bc_state('u', dudx_bc, 'ddx'  )
-        call worker%store_bc_state('u', dudy_bc, 'ddy'  )
-        call worker%store_bc_state('u', dudz_bc, 'ddz'  )
+        call worker%store_bc_state('u', dudx_bc, 'grad1')
+        call worker%store_bc_state('u', dudy_bc, 'grad2')
+        call worker%store_bc_state('u', dudz_bc, 'grad3')
 
 
 

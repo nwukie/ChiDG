@@ -83,16 +83,16 @@ contains
         ! Interpolate solution to quadrature nodes
         !
         rho_m         = worker%get_primary_field_face('Density',           'value', 'face interior')
-        rhou_m        = worker%get_primary_field_face('X-Momentum',        'value', 'face interior')
-        rhov_m        = worker%get_primary_field_face('Y-Momentum',        'value', 'face interior')
-        rhow_m        = worker%get_primary_field_face('Z-Momentum',        'value', 'face interior')
+        rhou_m        = worker%get_primary_field_face('Momentum-1',        'value', 'face interior')
+        rhov_m        = worker%get_primary_field_face('Momentum-2',        'value', 'face interior')
+        rhow_m        = worker%get_primary_field_face('Momentum-3',        'value', 'face interior')
         rho_nutilde_m = worker%get_primary_field_face('Density * NuTilde', 'value', 'face interior')
 
 
         rho_p         = worker%get_primary_field_face('Density',           'value', 'face exterior')
-        rhou_p        = worker%get_primary_field_face('X-Momentum',        'value', 'face exterior')
-        rhov_p        = worker%get_primary_field_face('Y-Momentum',        'value', 'face exterior')
-        rhow_p        = worker%get_primary_field_face('Z-Momentum',        'value', 'face exterior')
+        rhou_p        = worker%get_primary_field_face('Momentum-1',        'value', 'face exterior')
+        rhov_p        = worker%get_primary_field_face('Momentum-2',        'value', 'face exterior')
+        rhow_p        = worker%get_primary_field_face('Momentum-3',        'value', 'face exterior')
         rho_nutilde_p = worker%get_primary_field_face('Density * NuTilde', 'value', 'face exterior')
 
 

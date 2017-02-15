@@ -46,13 +46,13 @@ contains
         class(spalart_allmaras_boundary_diffusion_operator_t),   intent(inout) :: self
         
         ! Set operator name
-        call self%set_name("Spalart-Allmaras Boundary Diffusion Operator")
+        call self%set_name('Spalart-Allmaras Boundary Diffusion Operator')
 
         ! Set operator type
-        call self%set_operator_type("Boundary Diffusive Flux")
+        call self%set_operator_type('Boundary Diffusive Flux')
 
         ! Set operator equations
-        call self%add_primary_field("Density * NuTilde")
+        call self%add_primary_field('Density * NuTilde')
 
     end subroutine init
     !********************************************************************************
@@ -66,9 +66,9 @@ contains
     !!
     !!-------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(spalart_allmaras_boundary_diffusion_operator_t),   intent(inout)   :: self
-        type(chidg_worker_t),                       intent(inout)   :: worker
-        class(properties_t),                        intent(inout)   :: prop
+        class(spalart_allmaras_boundary_diffusion_operator_t),  intent(inout)   :: self
+        type(chidg_worker_t),                                   intent(inout)   :: worker
+        class(properties_t),                                    intent(inout)   :: prop
 
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:) ::            &
@@ -108,20 +108,20 @@ contains
         !
         ! Interpolate gradient to quadrature nodes
         !
-        drho_dx_m         = worker%get_primary_field_face('Density',          'ddx+lift', 'face interior')
-        drho_dy_m         = worker%get_primary_field_face('Density',          'ddy+lift', 'face interior')
-        drho_dz_m         = worker%get_primary_field_face('Density',          'ddz+lift', 'face interior')
-        drho_dx_p         = worker%get_primary_field_face('Density',          'ddx+lift', 'face exterior')
-        drho_dy_p         = worker%get_primary_field_face('Density',          'ddy+lift', 'face exterior')
-        drho_dz_p         = worker%get_primary_field_face('Density',          'ddz+lift', 'face exterior')
+        drho_dx_m         = worker%get_primary_field_face('Density',          'grad1+lift', 'face interior')
+        drho_dy_m         = worker%get_primary_field_face('Density',          'grad2+lift', 'face interior')
+        drho_dz_m         = worker%get_primary_field_face('Density',          'grad3+lift', 'face interior')
+        drho_dx_p         = worker%get_primary_field_face('Density',          'grad1+lift', 'face exterior')
+        drho_dy_p         = worker%get_primary_field_face('Density',          'grad2+lift', 'face exterior')
+        drho_dz_p         = worker%get_primary_field_face('Density',          'grad3+lift', 'face exterior')
 
 
-        drho_nutilde_dx_m = worker%get_primary_field_face('Density * NuTilde','ddx+lift', 'face interior')
-        drho_nutilde_dy_m = worker%get_primary_field_face('Density * NuTilde','ddy+lift', 'face interior')
-        drho_nutilde_dz_m = worker%get_primary_field_face('Density * NuTilde','ddz+lift', 'face interior')
-        drho_nutilde_dx_p = worker%get_primary_field_face('Density * NuTilde','ddx+lift', 'face exterior')
-        drho_nutilde_dy_p = worker%get_primary_field_face('Density * NuTilde','ddy+lift', 'face exterior')
-        drho_nutilde_dz_p = worker%get_primary_field_face('Density * NuTilde','ddz+lift', 'face exterior')
+        drho_nutilde_dx_m = worker%get_primary_field_face('Density * NuTilde','grad1+lift', 'face interior')
+        drho_nutilde_dy_m = worker%get_primary_field_face('Density * NuTilde','grad2+lift', 'face interior')
+        drho_nutilde_dz_m = worker%get_primary_field_face('Density * NuTilde','grad3+lift', 'face interior')
+        drho_nutilde_dx_p = worker%get_primary_field_face('Density * NuTilde','grad1+lift', 'face exterior')
+        drho_nutilde_dy_p = worker%get_primary_field_face('Density * NuTilde','grad2+lift', 'face exterior')
+        drho_nutilde_dz_p = worker%get_primary_field_face('Density * NuTilde','grad3+lift', 'face exterior')
 
 
 

@@ -67,9 +67,9 @@ contains
         ! Set operator equations
         !
         call self%add_primary_field("Density"   )
-        call self%add_primary_field("X-Momentum")
-        call self%add_primary_field("Y-Momentum")
-        call self%add_primary_field("Z-Momentum")
+        call self%add_primary_field("Momentum-1")
+        call self%add_primary_field("Momentum-2")
+        call self%add_primary_field("Momentum-3")
         call self%add_primary_field("Energy"    )
 
     end subroutine init
@@ -136,14 +136,14 @@ contains
         rho_m  = worker%get_primary_field_face("Density"   , 'value', 'face interior')
         rho_p  = worker%get_primary_field_face("Density"   , 'value', 'face exterior')
 
-        rhou_m = worker%get_primary_field_face('X-Momentum', 'value', 'face interior')
-        rhou_p = worker%get_primary_field_face('X-Momentum', 'value', 'face exterior')
+        rhou_m = worker%get_primary_field_face('Momentum-1', 'value', 'face interior')
+        rhou_p = worker%get_primary_field_face('Momentum-1', 'value', 'face exterior')
 
-        rhov_m = worker%get_primary_field_face('Y-Momentum', 'value', 'face interior')
-        rhov_p = worker%get_primary_field_face('Y-Momentum', 'value', 'face exterior')
+        rhov_m = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
+        rhov_p = worker%get_primary_field_face('Momentum-2', 'value', 'face exterior')
 
-        rhow_m = worker%get_primary_field_face('Z-Momentum', 'value', 'face interior')
-        rhow_p = worker%get_primary_field_face('Z-Momentum', 'value', 'face exterior')
+        rhow_m = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
+        rhow_p = worker%get_primary_field_face('Momentum-3', 'value', 'face exterior')
 
         rhoE_m = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
         rhoE_p = worker%get_primary_field_face('Energy'    , 'value', 'face exterior')
@@ -153,40 +153,40 @@ contains
         !
         ! Interpolate gradient to quadrature nodes
         !
-        drho_dx_m  = worker%get_primary_field_face("Density"   , 'ddx+lift', 'face interior')
-        drho_dy_m  = worker%get_primary_field_face("Density"   , 'ddy+lift', 'face interior')
-        drho_dz_m  = worker%get_primary_field_face("Density"   , 'ddz+lift', 'face interior')
-        drho_dx_p  = worker%get_primary_field_face("Density"   , 'ddx+lift', 'face exterior')
-        drho_dy_p  = worker%get_primary_field_face("Density"   , 'ddy+lift', 'face exterior')
-        drho_dz_p  = worker%get_primary_field_face("Density"   , 'ddz+lift', 'face exterior')
+        drho_dx_m  = worker%get_primary_field_face("Density"   , 'grad1+lift', 'face interior')
+        drho_dy_m  = worker%get_primary_field_face("Density"   , 'grad2+lift', 'face interior')
+        drho_dz_m  = worker%get_primary_field_face("Density"   , 'grad3+lift', 'face interior')
+        drho_dx_p  = worker%get_primary_field_face("Density"   , 'grad1+lift', 'face exterior')
+        drho_dy_p  = worker%get_primary_field_face("Density"   , 'grad2+lift', 'face exterior')
+        drho_dz_p  = worker%get_primary_field_face("Density"   , 'grad3+lift', 'face exterior')
 
-        drhou_dx_m = worker%get_primary_field_face('X-Momentum', 'ddx+lift', 'face interior')
-        drhou_dy_m = worker%get_primary_field_face('X-Momentum', 'ddy+lift', 'face interior')
-        drhou_dz_m = worker%get_primary_field_face('X-Momentum', 'ddz+lift', 'face interior')
-        drhou_dx_p = worker%get_primary_field_face('X-Momentum', 'ddx+lift', 'face exterior')
-        drhou_dy_p = worker%get_primary_field_face('X-Momentum', 'ddy+lift', 'face exterior')
-        drhou_dz_p = worker%get_primary_field_face('X-Momentum', 'ddz+lift', 'face exterior')
+        drhou_dx_m = worker%get_primary_field_face('Momentum-1', 'grad1+lift', 'face interior')
+        drhou_dy_m = worker%get_primary_field_face('Momentum-1', 'grad2+lift', 'face interior')
+        drhou_dz_m = worker%get_primary_field_face('Momentum-1', 'grad3+lift', 'face interior')
+        drhou_dx_p = worker%get_primary_field_face('Momentum-1', 'grad1+lift', 'face exterior')
+        drhou_dy_p = worker%get_primary_field_face('Momentum-1', 'grad2+lift', 'face exterior')
+        drhou_dz_p = worker%get_primary_field_face('Momentum-1', 'grad3+lift', 'face exterior')
 
-        drhov_dx_m = worker%get_primary_field_face('Y-Momentum', 'ddx+lift', 'face interior')
-        drhov_dy_m = worker%get_primary_field_face('Y-Momentum', 'ddy+lift', 'face interior')
-        drhov_dz_m = worker%get_primary_field_face('Y-Momentum', 'ddz+lift', 'face interior')
-        drhov_dx_p = worker%get_primary_field_face('Y-Momentum', 'ddx+lift', 'face exterior')
-        drhov_dy_p = worker%get_primary_field_face('Y-Momentum', 'ddy+lift', 'face exterior')
-        drhov_dz_p = worker%get_primary_field_face('Y-Momentum', 'ddz+lift', 'face exterior')
+        drhov_dx_m = worker%get_primary_field_face('Momentum-2', 'grad1+lift', 'face interior')
+        drhov_dy_m = worker%get_primary_field_face('Momentum-2', 'grad2+lift', 'face interior')
+        drhov_dz_m = worker%get_primary_field_face('Momentum-2', 'grad3+lift', 'face interior')
+        drhov_dx_p = worker%get_primary_field_face('Momentum-2', 'grad1+lift', 'face exterior')
+        drhov_dy_p = worker%get_primary_field_face('Momentum-2', 'grad2+lift', 'face exterior')
+        drhov_dz_p = worker%get_primary_field_face('Momentum-2', 'grad3+lift', 'face exterior')
 
-        drhow_dx_m = worker%get_primary_field_face('Z-Momentum', 'ddx+lift', 'face interior')
-        drhow_dy_m = worker%get_primary_field_face('Z-Momentum', 'ddy+lift', 'face interior')
-        drhow_dz_m = worker%get_primary_field_face('Z-Momentum', 'ddz+lift', 'face interior')
-        drhow_dx_p = worker%get_primary_field_face('Z-Momentum', 'ddx+lift', 'face exterior')
-        drhow_dy_p = worker%get_primary_field_face('Z-Momentum', 'ddy+lift', 'face exterior')
-        drhow_dz_p = worker%get_primary_field_face('Z-Momentum', 'ddz+lift', 'face exterior')
+        drhow_dx_m = worker%get_primary_field_face('Momentum-3', 'grad1+lift', 'face interior')
+        drhow_dy_m = worker%get_primary_field_face('Momentum-3', 'grad2+lift', 'face interior')
+        drhow_dz_m = worker%get_primary_field_face('Momentum-3', 'grad3+lift', 'face interior')
+        drhow_dx_p = worker%get_primary_field_face('Momentum-3', 'grad1+lift', 'face exterior')
+        drhow_dy_p = worker%get_primary_field_face('Momentum-3', 'grad2+lift', 'face exterior')
+        drhow_dz_p = worker%get_primary_field_face('Momentum-3', 'grad3+lift', 'face exterior')
 
-        drhoE_dx_m = worker%get_primary_field_face('Energy'    , 'ddx+lift', 'face interior')
-        drhoE_dy_m = worker%get_primary_field_face('Energy'    , 'ddy+lift', 'face interior')
-        drhoE_dz_m = worker%get_primary_field_face('Energy'    , 'ddz+lift', 'face interior')
-        drhoE_dx_p = worker%get_primary_field_face('Energy'    , 'ddx+lift', 'face exterior')
-        drhoE_dy_p = worker%get_primary_field_face('Energy'    , 'ddy+lift', 'face exterior')
-        drhoE_dz_p = worker%get_primary_field_face('Energy'    , 'ddz+lift', 'face exterior')
+        drhoE_dx_m = worker%get_primary_field_face('Energy'    , 'grad1+lift', 'face interior')
+        drhoE_dy_m = worker%get_primary_field_face('Energy'    , 'grad2+lift', 'face interior')
+        drhoE_dz_m = worker%get_primary_field_face('Energy'    , 'grad3+lift', 'face interior')
+        drhoE_dx_p = worker%get_primary_field_face('Energy'    , 'grad1+lift', 'face exterior')
+        drhoE_dy_p = worker%get_primary_field_face('Energy'    , 'grad2+lift', 'face exterior')
+        drhoE_dz_p = worker%get_primary_field_face('Energy'    , 'grad3+lift', 'face exterior')
 
 
         invrho_m = ONE/rho_m
@@ -435,7 +435,7 @@ contains
         ! dot with normal vector
         integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
 
-        call worker%integrate_boundary('X-Momentum',integrand)
+        call worker%integrate_boundary('Momentum-1',integrand)
 
 
         !================================
@@ -457,7 +457,7 @@ contains
         ! dot with normal vector
         integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
 
-        call worker%integrate_boundary('Y-Momentum',integrand)
+        call worker%integrate_boundary('Momentum-2',integrand)
 
 
         !================================
@@ -480,7 +480,7 @@ contains
         ! dot with normal vector
         integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
 
-        call worker%integrate_boundary('Z-Momentum',integrand)
+        call worker%integrate_boundary('Momentum-3',integrand)
 
 
         !================================

@@ -70,9 +70,9 @@ module type_face
 
         ! Neighbor information if neighbor is off-processor
         real(rk)                        :: neighbor_h(3)                !< Approximate size of neighbor bounding box
-        real(rk),           allocatable :: neighbor_ddx(:,:)            !< Deriv of basis functions in x-direction at quadrature nodes
-        real(rk),           allocatable :: neighbor_ddy(:,:)            !< Deriv of basis functions in y-direction at quadrature nodes
-        real(rk),           allocatable :: neighbor_ddz(:,:)            !< Deriv of basis functions in z-direction at quadrature nodes
+        real(rk),           allocatable :: neighbor_grad1(:,:)          !< Grad of basis functions in at quadrature nodes
+        real(rk),           allocatable :: neighbor_grad2(:,:)          !< Grad of basis functions in at quadrature nodes
+        real(rk),           allocatable :: neighbor_grad3(:,:)          !< Grad of basis functions in at quadrature nodes
         real(rk),           allocatable :: neighbor_br2_face(:,:)       !< Matrix for computing/obtaining br2 modes at face nodes
         real(rk),           allocatable :: neighbor_br2_vol(:,:)        !< Matrix for computing/obtaining br2 modes at volume nodes
         real(rk),           allocatable :: neighbor_invmass(:,:)    
@@ -99,9 +99,9 @@ module type_face
 
 
         ! Matrices of cartesian gradients of basis/test functions
-        real(rk),           allocatable :: ddx(:,:)             !< Deriv of basis functions in x-direction at quadrature nodes
-        real(rk),           allocatable :: ddy(:,:)             !< Deriv of basis functions in y-direction at quadrature nodes
-        real(rk),           allocatable :: ddz(:,:)             !< Deriv of basis functions in z-direction at quadrature nodes
+        real(rk),           allocatable :: grad1(:,:)           !< Deriv of basis functions in at quadrature nodes
+        real(rk),           allocatable :: grad2(:,:)           !< Deriv of basis functions in at quadrature nodes
+        real(rk),           allocatable :: grad3(:,:)           !< Deriv of basis functions in at quadrature nodes
 
 
         ! Quadrature matrices
@@ -308,15 +308,15 @@ contains
         ! (Re)Allocate storage for face data structures.
         !
         if (allocated(self%jinv)) deallocate(self%jinv, self%quad_pts, self%metric, &
-                                             self%norm, self%unorm, self%ddx, self%ddy, self%ddz)
+                                             self%norm, self%unorm, self%grad1, self%grad2, self%grad3)
         allocate(self%quad_pts(nnodes),                     &
                  self%jinv(nnodes),                         &
                  self%metric(3,3,nnodes),                   &
                  self%norm(nnodes,3),                       &
                  self%unorm(nnodes,3),                      &
-                 self%ddx(nnodes,self%nterms_s),            &
-                 self%ddy(nnodes,self%nterms_s),            &
-                 self%ddz(nnodes,self%nterms_s), stat=ierr) 
+                 self%grad1(nnodes,self%nterms_s),          &
+                 self%grad2(nnodes,self%nterms_s),          &
+                 self%grad3(nnodes,self%nterms_s), stat=ierr) 
         if (ierr /= 0) call AllocationError
 
 
@@ -645,17 +645,20 @@ contains
 
         do iterm = 1,self%nterms_s
             do inode = 1,nnodes
-                self%ddx(inode,iterm) = self%metric(1,1,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
-                                        self%metric(2,1,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
-                                        self%metric(3,1,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode)) 
+                self%grad1(inode,iterm) = &
+                    self%metric(1,1,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
+                    self%metric(2,1,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
+                    self%metric(3,1,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode)) 
 
-                self%ddy(inode,iterm) = self%metric(1,2,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
-                                        self%metric(2,2,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
-                                        self%metric(3,2,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode)) 
+                self%grad2(inode,iterm) = &
+                    self%metric(1,2,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
+                    self%metric(2,2,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
+                    self%metric(3,2,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode)) 
 
-                self%ddz(inode,iterm) = self%metric(1,3,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
-                                        self%metric(2,3,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
-                                        self%metric(3,3,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode))
+                self%grad3(inode,iterm) = &
+                    self%metric(1,3,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
+                    self%metric(2,3,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
+                    self%metric(3,3,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode))
             end do
         end do
 

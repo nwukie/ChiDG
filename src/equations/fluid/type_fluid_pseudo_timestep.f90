@@ -67,9 +67,9 @@ contains
         ! Get variable indices
         !
         irho  = prop%get_primary_field_index("Density"   )
-        irhou = prop%get_primary_field_index("X-Momentum")
-        irhov = prop%get_primary_field_index("Y-Momentum")
-        irhow = prop%get_primary_field_index("Z-Momentum")
+        irhou = prop%get_primary_field_index("Momentum-1")
+        irhov = prop%get_primary_field_index("Momentum-2")
+        irhow = prop%get_primary_field_index("Momentum-3")
         irhoE = prop%get_primary_field_index("Energy"    )
 
 

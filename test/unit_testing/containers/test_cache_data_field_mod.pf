@@ -43,8 +43,10 @@ module test_cache_data_field_mod
         integer(ik)                 :: solution_order = 2
 
     contains
+
         procedure   ::  setUp
         procedure   ::  tearDown
+
     end type test_cache_data_field
     !***************************************************************************
 
@@ -76,7 +78,9 @@ contains
         call this%chidg%read_grid(this%filename,3)
         call this%chidg%read_boundaryconditions(this%filename)
 
+        !
         ! Initialize
+        !
         call this%chidg%set('Solution Order', integer_input=this%solution_order)
         call this%chidg%init('domains')
         call this%chidg%init('communication')
@@ -125,10 +129,17 @@ contains
         ielem   = 14
         iface   = 1
 
+
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data_field%resize('Test Field','face interior',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem,iface)
+        call cache_data_field%resize('Test Field','face interior',                  &
+                                                   self%chidg%data%mesh,            &
+                                                   self%chidg%data%eqnset(:)%prop,  &
+                                                   idomain,                         &
+                                                   ielem,                           &
+                                                   iface,                           &
+                                                   differentiate=.true.)
 
 
         !
@@ -169,7 +180,13 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data_field%resize('Test Field','face interior',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem,iface)
+        call cache_data_field%resize('Test Field','face interior',                  &
+                                                  self%chidg%data%mesh,             &
+                                                  self%chidg%data%eqnset(:)%prop,   &
+                                                  idomain,                          &
+                                                  ielem,                            &
+                                                  iface,                            &
+                                                  differentiate=.true.)
 
 
         !
@@ -179,7 +196,7 @@ contains
         nnodes_vol  = self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%vol%nnodes
 
         ! TEST 'value' ALLOCATION
-        ! Number of ndoes
+        ! Number of nodes
         @assertEqual(size(cache_data_field%value,1), nnodes_face)
         ! Number of dependent elements
         @assertEqual(size(cache_data_field%value,2), 1)
@@ -234,7 +251,13 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data_field%resize('Test Field','face exterior',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem,iface)
+        call cache_data_field%resize('Test Field','face exterior',                  &
+                                                  self%chidg%data%mesh,             &
+                                                  self%chidg%data%eqnset(:)%prop,   &
+                                                  idomain,                          &
+                                                  ielem,                            &
+                                                  iface,                            &
+                                                  differentiate=.true.)
 
 
         !
@@ -275,7 +298,13 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data_field%resize('Test Field','face exterior',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem,iface)
+        call cache_data_field%resize('Test Field','face exterior',                      &
+                                                  self%chidg%data%mesh,                 &
+                                                  self%chidg%data%eqnset(:)%prop,       &
+                                                  idomain,                              &
+                                                  ielem,                                &
+                                                  iface,                                &
+                                                  differentiate=.true.)
 
 
         !
@@ -284,7 +313,7 @@ contains
         nnodes_face = self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%face%nnodes
         nnodes_vol  = self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%vol%nnodes
 
-        ! Number of ndoes
+        ! Number of nodes
         @assertEqual(size(cache_data_field%value,1), nnodes_face)
         ! Number of dependent elements
         @assertEqual(size(cache_data_field%value,2), 1)
@@ -339,7 +368,12 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data_field%resize('Test Field','element',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem)
+        call cache_data_field%resize('Test Field','element',                        &
+                                                  self%chidg%data%mesh,             &
+                                                  self%chidg%data%eqnset(:)%prop,   &
+                                                  idomain,                          &
+                                                  ielem,                            &
+                                                  differentiate=.true.)
 
 
         !
@@ -378,7 +412,12 @@ contains
         !
         ! Call resize routine. THIS IS BEING TESTED.
         !
-        call cache_data_field%resize('Test Field','element',self%chidg%data%mesh,self%chidg%data%eqnset(:)%prop,idomain,ielem)
+        call cache_data_field%resize('Test Field','element',                        &
+                                                  self%chidg%data%mesh,             &
+                                                  self%chidg%data%eqnset(:)%prop,   &
+                                                  idomain,                          &
+                                                  ielem,                            &
+                                                  differentiate=.true.)
 
 
         !
@@ -387,7 +426,7 @@ contains
         nnodes_face = self%chidg%data%mesh(idomain)%elems(ielem)%gq%face%nnodes
         nnodes_vol  = self%chidg%data%mesh(idomain)%elems(ielem)%gq%vol%nnodes
 
-        ! Number of ndoes
+        ! Number of nodes
         @assertEqual(size(cache_data_field%value,1), nnodes_vol)
         ! Number of dependent elements
         @assertEqual(size(cache_data_field%value,2), 1)

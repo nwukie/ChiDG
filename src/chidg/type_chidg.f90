@@ -1019,7 +1019,7 @@ contains
 
             call write_line("- Step ", istep, io_proc=GLOBAL_MASTER)
 
-
+            self%data%sdata%t = self%time_integrator%time_manager%dt*istep
 
             !
             ! Call time integrator to take a step

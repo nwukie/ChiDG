@@ -91,6 +91,7 @@ contains
         self%name = field
 
 
+
         !
         ! Get number of nodes(nnodes - face/element), number of elements that the function 
         ! value depends on(ndepend_value), number of elements that the function derivative 
@@ -149,11 +150,14 @@ contains
 
 
         !
-        ! Override ndepend_value, ndepend_deriv if we are not differentiating
+        ! Override ndepend_value, ndepend_deriv if we are not differentiating.
+        ! Default if 'differentiate' is not present, continue with differentiation.
         !
-        if (.not. differentiate) then
-            ndepend_value = 1
-            ndepend_deriv = 1
+        if (present(differentiate)) then
+            if (.not. differentiate) then
+                ndepend_value = 1
+                ndepend_deriv = 1
+            end if
         end if
 
 

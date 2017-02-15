@@ -712,26 +712,26 @@ contains
         !
         ! Set ChiDG components
         !
-        call this%chidg%set("Time Integrator",  algorithm=time_integrator)
-        call this%chidg%set("Nonlinear Solver", algorithm=nonlinear_solver, options=noptions)
-        call this%chidg%set("Linear Solver",    algorithm=linear_solver,    options=loptions)
-        call this%chidg%set("Preconditioner",   algorithm=preconditioner)
+        call this%chidg%set('Time Integrator',  algorithm=time_integrator)
+        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
 
         call this%chidg%time_integrator%time_manager%init()
 
         !
         ! Initialize solution
         !
-        call create_function(fcn,"constant")
+        call create_function(fcn,'constant')
 
-        call fcn%set_option("val",0.1_rk)
+        call fcn%set_option('val',0.1_rk)
         call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,1)
 
 
         !
         ! Wrap-up initialization activities
         !
-        call this%chidg%init("finalize")
+        call this%chidg%init('finalize')
 
     end subroutine SetUp
     !*****************************************************************************************
@@ -934,7 +934,40 @@ contains
 
         tol = 0.1_rk
 
-        do inpes = 1,3
+
+
+        do inpes = 1,1
+            do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
+                do iorder = 1,4
+
+                    error_previous = error(inpes,igrid-1,iorder)
+                    error_current  = error(inpes,igrid  ,iorder)
+
+                    mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
+                    mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
+
+                    
+                    !
+                    ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
+                    !
+                    convergence_rate = (log10(error_previous)-log10(error_current)) / &
+                                       (log10(mesh_parameter_previous)-log10(mesh_parameter_current))
+
+                    
+                    print*, error_previous, error_current, mesh_parameter_previous, mesh_parameter_current, convergence_rate
+                
+
+                end do
+            end do
+        end do
+
+
+
+
+
+
+        !do inpes = 1,3
+        do inpes = 1,1
             do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
                 do iorder = 1,4
 
@@ -985,7 +1018,8 @@ contains
         tol = 0.1_rk
 
 
-        do inpes = 1,3
+        !do inpes = 1,3
+        do inpes = 1,1
             do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
                 do iorder = 1,3
 
@@ -1042,7 +1076,10 @@ contains
         real(rk)    :: error_squared_sum, error_squared_sum_reduced, element_error_squared, error
 
 
-        associate (mesh => data%mesh, sdata => data%sdata, eqnset => data%eqnset, prop => data%eqnset(1)%prop)
+        associate (mesh   => data%mesh,     &
+                   sdata  => data%sdata,    &
+                   eqnset => data%eqnset,   &
+                   prop   => data%eqnset(1)%prop)
 
 
             !

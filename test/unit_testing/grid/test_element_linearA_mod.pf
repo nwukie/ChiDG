@@ -713,8 +713,8 @@ contains
         integer(ik)             :: icoord, ipt
                         
 
-        xi = [-1.0_rk, -0.5_rk, 0.5_rk, 1.0_rk, 0.5_rk]
-        eta = [-ONE, -ONE, -ONE, -ONE, ZERO]
+        xi   = [-1.0_rk, -0.5_rk, 0.5_rk, 1.0_rk, 0.5_rk]
+        eta  = [-ONE, -ONE, -ONE, -ONE, ZERO]
         zeta = [-ONE, -ONE, -ONE, -ONE, ZERO] 
 
         ref_coords = [ZERO, 1.25_rk, 3.75_rk, 5._rk, 3.75_rk]

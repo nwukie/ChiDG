@@ -113,6 +113,7 @@ module type_chidg_worker
         procedure   :: quadrature_weights
         procedure   :: inverse_jacobian
         procedure   :: face_area
+        procedure   :: coordinate_system
 
         procedure   :: face_type
 
@@ -1603,6 +1604,27 @@ contains
 
 
 
+
+
+
+
+
+    !>  Return the coordinate system of the current geometric object.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   02/15/2017
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    function coordinate_system(self) result(system)
+        class(chidg_worker_t),  intent(in)  :: self
+
+        character(:),   allocatable :: system
+
+        system = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%coordinate_system
+
+    end function coordinate_system
+    !**************************************************************************************
 
 
 

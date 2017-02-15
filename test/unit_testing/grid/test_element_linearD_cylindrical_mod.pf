@@ -328,6 +328,16 @@ contains
 
     !>  Test cartesian coordinate values at quadrature nodes.
     !!
+    !!  Slope of coordinate functions:
+    !!      r = (2-1)/2  = 0.5
+    !!      t = (pi/2)/2 = pi/4
+    !!      z = (1-0)/2  = 0.5
+    !!
+    !!  Coordinate at center:
+    !!      r = 1.5
+    !!      t = pi/4
+    !!      z = 0.5
+    !!
     !!  @author Nathan A. Wukie
     !!  @date   02/14/2017
     !!
@@ -362,6 +372,158 @@ contains
 
 
 
+    !>  Test physical gradient(component 1) of basis functions at quadrature nodes.
+    !!
+    !!  grad1 = [ (dxi/dr)(df/dxi) + (deta/dr)(df/deta) + (dzeta/dr)(df/dzeta) ] * J
+    !!
+    !!  For this element configuration, the cross derivative coupling is zero so the 
+    !!  formula simplifies to:
+    !!
+    !!  grad1 = (dxi/dr)(df/dxi)(J)
+    !!
+    !!  Also note:
+    !!      - there is r-scaling in (dxi/dr). 
+    !!      - there is r-scaling in Jinv leading to 1/r because of multiplication by J
+    !!      - these cancel, so no r scaling
+    !!
+    !------------------------------------------------------------------------------------------
+    @Test
+    subroutine testElement_grad1(self)
+        class(test_element_linearD),    intent(inout)   :: self
+        real(rk), dimension(self%elem%gq%vol%nnodes, 8) :: test
+        real(rk), dimension(self%elem%gq%vol%nnodes)    :: xi, eta, zeta
+        
+        real(rk) :: tol
+        
+        tol = 1.e-14_rk
+        
+        xi   = self%elem%gq%vol%nodes(:)%c1_
+        eta  = self%elem%gq%vol%nodes(:)%c2_
+        zeta = self%elem%gq%vol%nodes(:)%c3_
+        
+        
+        
+        test(:,1) = ZERO                ! Mode 1
+        test(:,2) = ZERO                ! Mode 2
+        test(:,3) = ZERO                ! Mode 3
+        test(:,4) = TWO                 ! Mode 4
+        test(:,5) = TWO * eta           ! Mode 5
+        test(:,6) = TWO * zeta          ! Mode 6
+        test(:,7) = ZERO                ! Mode 7
+        test(:,8) = TWO * eta * zeta    ! Mode 8
+
+        @assertEqual(test,self%elem%grad1,tol)
+
+    end subroutine testElement_grad1
+    !*******************************************************************************************
+
+
+
+
+
+
+    !>  Test physical gradients(component 2) of basis functions at quadrature nodes.
+    !!
+    !!  grad2 = [ (dxi/dtheta)(df/dxi) + (deta/dtheta)(df/deta) + (dzeta/dtheta)(df/dzeta) ] * J
+    !!
+    !!  For this element configuration, the cross derivative coupling is zero so the 
+    !!  formula simplifies to:
+    !!
+    !!  grad2 = (deta/dtheta)(df/deta)(J)
+    !!
+    !!  Also note:
+    !!      - there is no r-scaling in (deta/dtheta). 
+    !!      - there is r-scaling in Jinv leading to 1/r because of multiplication by J
+    !!
+    !------------------------------------------------------------------------------------------
+    @Test
+    subroutine testElement_grad2(self)
+        class(test_element_linearD),    intent(inout)   :: self
+
+        real(rk), dimension(self%elem%gq%vol%nnodes, 8) :: test
+        real(rk), dimension(self%elem%gq%vol%nnodes)    :: xi, eta, zeta, r
+        
+        real(rk) :: tol
+        
+        tol = 1.e-14_rk
+        
+        xi   = self%elem%gq%vol%nodes(:)%c1_
+        eta  = self%elem%gq%vol%nodes(:)%c2_
+        zeta = self%elem%gq%vol%nodes(:)%c3_
+        r    = self%elem%quad_pts(:)%c1_
+        
+        
+        test(:,1) = ZERO                                            ! Mode 1
+        test(:,2) = (ONE/FOUR)*(16._rk/PI)*(ONE/r)                  ! Mode 2
+        test(:,3) = ZERO                                            ! Mode 3
+        test(:,4) = ZERO                                            ! Mode 4
+        test(:,5) = (ONE/FOUR)*(16._rk/PI)*(ONE/r) * xi             ! Mode 5
+        test(:,6) = ZERO                                            ! Mode 6
+        test(:,7) = (ONE/FOUR)*(16._rk/PI)*(ONE/r) * zeta           ! Mode 7
+        test(:,8) = (ONE/FOUR)*(16._rk/PI)*(ONE/r) * xi * zeta      ! Mode 8
+
+        @assertEqual(test,self%elem%grad2,tol)
+
+    end subroutine testElement_grad2
+    !*******************************************************************************************
+
+
+
+
+
+    !> Test physical gradients(component 3) of basis functions at quadrature nodes.
+    !!
+    !!  grad3 = [ (dxi/dz)(df/dxi) + (deta/dz)(df/deta) + (dzeta/dz)(df/dzeta) ] * J
+    !!
+    !!  For this element configuration, the cross derivative coupling is zero so the 
+    !!  formula simplifies to:
+    !!
+    !!  grad3 = (dxi/dz)(df/dxi)(J)
+    !!
+    !!  Also note:
+    !!      - there is r-scaling in (dxi/dz). 
+    !!      - there is r-scaling in Jinv leading to 1/r because of multiplication by J
+    !!      - these cancel, so no r scaling
+    !!
+    !------------------------------------------------------------------------------------------
+    @Test
+    subroutine testElement_grad3(self)
+        class(test_element_linearD),    intent(inout)   :: self
+
+        real(rk), dimension(self%elem%gq%vol%nnodes, 8) :: test
+        real(rk), dimension(self%elem%gq%vol%nnodes)    :: xi, eta, zeta
+        
+        real(rk) :: tol
+        
+        tol = 1.e-14_rk
+        
+        xi   = self%elem%gq%vol%nodes(:)%c1_
+        eta  = self%elem%gq%vol%nodes(:)%c2_
+        zeta = self%elem%gq%vol%nodes(:)%c3_
+        
+        test(:,1) = ZERO                ! Mode 1
+        test(:,2) = ZERO                ! Mode 2
+        test(:,3) = TWO                 ! Mode 3
+        test(:,4) = ZERO                ! Mode 4
+        test(:,5) = ZERO                ! Mode 5
+        test(:,6) = TWO * xi            ! Mode 6
+        test(:,7) = TWO * eta           ! Mode 7
+        test(:,8) = TWO * xi * eta      ! Mode 8
+
+        @assertEqual(test,self%elem%grad3,tol)
+
+    end subroutine testElement_grad3
+    !*******************************************************************************************
+
+
+
+
+
+
+
+
+
+
 
     !------------------------------------------------------------------------------
     !                                Face tests
@@ -378,63 +540,65 @@ contains
     @Test
     subroutine testElement_face_unit_normals(self)
         class(test_element_linearD),    intent(inout)   :: self
-        real(rk), dimension(self%faces(XI_MAX)%gq%face%nnodes) :: test_norm_x, test_norm_y, test_norm_z
+
         real(rk)    :: tol
+        real(rk), dimension(self%faces(XI_MAX)%gq%face%nnodes) :: &
+            test_norm_r, test_norm_t, test_norm_z
         
         tol = 1.e-15_rk
         
         ! XI_MIN
-        test_norm_x = -ONE
-        test_norm_y = ZERO
+        test_norm_r = -ONE
+        test_norm_t = ZERO
         test_norm_z = ZERO
         
-        @assertEqual(test_norm_x,self%faces(XI_MIN)%unorm(:,1),tol)
-        @assertEqual(test_norm_y,self%faces(XI_MIN)%unorm(:,2),tol)
+        @assertEqual(test_norm_r,self%faces(XI_MIN)%unorm(:,1),tol)
+        @assertEqual(test_norm_t,self%faces(XI_MIN)%unorm(:,2),tol)
         @assertEqual(test_norm_z,self%faces(XI_MIN)%unorm(:,3),tol)
         
         ! XI_MAX
-        test_norm_x = ONE
-        test_norm_y = ZERO
+        test_norm_r = ONE
+        test_norm_t = ZERO
         test_norm_z = ZERO
         
-        @assertEqual(test_norm_x,self%faces(XI_MAX)%unorm(:,1),tol)
-        @assertEqual(test_norm_y,self%faces(XI_MAX)%unorm(:,2),tol)
+        @assertEqual(test_norm_r,self%faces(XI_MAX)%unorm(:,1),tol)
+        @assertEqual(test_norm_t,self%faces(XI_MAX)%unorm(:,2),tol)
         @assertEqual(test_norm_z,self%faces(XI_MAX)%unorm(:,3),tol)
         
         ! ETA_MIN
-        test_norm_x = ZERO
-        test_norm_y = -ONE
+        test_norm_r = ZERO
+        test_norm_t = -ONE
         test_norm_z = ZERO
         
-        @assertEqual(test_norm_x,self%faces(ETA_MIN)%unorm(:,1),tol)
-        @assertEqual(test_norm_y,self%faces(ETA_MIN)%unorm(:,2),tol)
+        @assertEqual(test_norm_r,self%faces(ETA_MIN)%unorm(:,1),tol)
+        @assertEqual(test_norm_t,self%faces(ETA_MIN)%unorm(:,2),tol)
         @assertEqual(test_norm_z,self%faces(ETA_MIN)%unorm(:,3),tol)     
         
         ! ETA_MAX
-        test_norm_x = ZERO
-        test_norm_y = ONE
+        test_norm_r = ZERO
+        test_norm_t = ONE
         test_norm_z = ZERO
         
-        @assertEqual(test_norm_x,self%faces(ETA_MAX)%unorm(:,1),tol)
-        @assertEqual(test_norm_y,self%faces(ETA_MAX)%unorm(:,2),tol)
+        @assertEqual(test_norm_r,self%faces(ETA_MAX)%unorm(:,1),tol)
+        @assertEqual(test_norm_t,self%faces(ETA_MAX)%unorm(:,2),tol)
         @assertEqual(test_norm_z,self%faces(ETA_MAX)%unorm(:,3),tol)
 
         ! ZETA_MIN
-        test_norm_x = ZERO
-        test_norm_y = ZERO
+        test_norm_r = ZERO
+        test_norm_t = ZERO
         test_norm_z = -ONE
         
-        @assertEqual(test_norm_x,self%faces(ZETA_MIN)%unorm(:,1),tol)
-        @assertEqual(test_norm_y,self%faces(ZETA_MIN)%unorm(:,2),tol)
+        @assertEqual(test_norm_r,self%faces(ZETA_MIN)%unorm(:,1),tol)
+        @assertEqual(test_norm_t,self%faces(ZETA_MIN)%unorm(:,2),tol)
         @assertEqual(test_norm_z,self%faces(ZETA_MIN)%unorm(:,3),tol)
         
         ! ZETA_MAX
-        test_norm_x = ZERO
-        test_norm_y = ZERO
+        test_norm_r = ZERO
+        test_norm_t = ZERO
         test_norm_z = ONE
         
-        @assertEqual(test_norm_x,self%faces(ZETA_MAX)%unorm(:,1),tol)
-        @assertEqual(test_norm_y,self%faces(ZETA_MAX)%unorm(:,2),tol)
+        @assertEqual(test_norm_r,self%faces(ZETA_MAX)%unorm(:,1),tol)
+        @assertEqual(test_norm_t,self%faces(ZETA_MAX)%unorm(:,2),tol)
         @assertEqual(test_norm_z,self%faces(ZETA_MAX)%unorm(:,3),tol)
        
 

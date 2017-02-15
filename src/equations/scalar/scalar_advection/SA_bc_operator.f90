@@ -92,7 +92,7 @@ contains
             flux_x, flux_y, flux_z, integrand
 
         real(rk),   allocatable, dimension(:)   ::  &
-            normx, normy, normz, r
+            normx, normy, normz
 
 
         !
@@ -116,17 +116,13 @@ contains
         normy = worker%normal(2)
         normz = worker%normal(3)
 
-        !
-        ! Get radius
-        !
-        r = worker%x('boundary')
 
         !=================================================
         ! Mass flux
         !=================================================
-        flux_x = r*cx*u
-        flux_y = r*cy*u
-        flux_z = r*cz*u
+        flux_x = cx*u
+        flux_y = cy*u
+        flux_z = cz*u
 
         integrand = flux_x*normx + flux_y*normy + flux_z*normz
 

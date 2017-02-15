@@ -446,25 +446,23 @@ contains
         integer(ik),        allocatable :: orders(:)
         integer(ik) :: icase
 
-        nelem_xi  = [ 16, 16, 16, 16, &
-                      32, 32, 32, 32 ]
+        nelem_xi  = [ 16, 16, 16,  &
+                      32, 32, 32  ]
 
-        nelem_eta = [ 16, 16, 16, 16, &
-                      32, 32, 32, 32 ]
+        nelem_eta = [ 16, 16, 16,  &
+                      32, 32, 32  ]
 
         files = [ string_t('2D_linear_diffusion_16x16x1.h5'), &
                   string_t('2D_linear_diffusion_16x16x1.h5'), &
                   string_t('2D_linear_diffusion_16x16x1.h5'), &
-                  string_t('2D_linear_diffusion_16x16x1.h5'), &
-                  string_t('2D_linear_diffusion_32x32x1.h5'), &
                   string_t('2D_linear_diffusion_32x32x1.h5'), &
                   string_t('2D_linear_diffusion_32x32x1.h5'), &
                   string_t('2D_linear_diffusion_32x32x1.h5')  &
                   ]
 
 
-        orders = [ 2, 3, 4, 5, &
-                   2, 3, 4, 5 ]
+        orders = [ 2, 3, 4, &
+                   2, 3, 4 ]
 
 
         !Initialize the test case container with the parameter
@@ -649,13 +647,6 @@ contains
 
 
 
-
-
-
-
-
-
-
         !
         ! Read grid
         !
@@ -678,12 +669,6 @@ contains
         call this%chidg%set("Nonlinear Solver", algorithm=nonlinear_solver, options=noptions)
         call this%chidg%set("Linear Solver",    algorithm=linear_solver,    options=loptions)
         call this%chidg%set("Preconditioner",   algorithm=preconditioner)
-!=======
-!        call this%chidg%set('Time Integrator',  algorithm=time_integrator,  options=toptions)
-!        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
-!        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
-!        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
-!>>>>>>> dev
 
         call this%chidg%time_integrator%time_manager%init()
 
@@ -813,7 +798,7 @@ contains
 
         do inpes = 1,3
             do igrid = 1,2
-                do iorder = 1,4
+                do iorder = 1,3
 
                     ! Test that the current convergence for the processor count matches the serial convergence
                     nsteps = nsteps_convergence(inpes,igrid,iorder)%size()
@@ -855,7 +840,7 @@ contains
 
         do inpes = 1,3
             do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
-                do iorder = 1,4
+                do iorder = 1,3
 
                     error_previous = error(inpes,igrid-1,iorder)
                     error_current  = error(inpes,igrid  ,iorder)

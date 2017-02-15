@@ -432,15 +432,13 @@ contains
         integer(ik) :: icase
 
 
-        nelem_xi = [ 20, 20, 20, 20, &
-                     30, 30, 30, 30, &
-                     20, 20, 20,     &
-                     30, 30, 30      &
+        nelem_xi = [ 20, 20, 20, &
+                     30, 30, 30, &
+                     20, 20, 20, &
+                     30, 30, 30  &
                      ]
 
         gridtype = [ string_t("singleblock"), &
-                     string_t("singleblock"), &
-                     string_t("singleblock"), &
                      string_t("singleblock"), &
                      string_t("singleblock"), &
                      string_t("singleblock"), &
@@ -459,8 +457,6 @@ contains
         files = [ string_t("1D_linear_diffusion_20x1x1.h5"),         &
                   string_t("1D_linear_diffusion_20x1x1.h5"),         &
                   string_t("1D_linear_diffusion_20x1x1.h5"),         &
-                  string_t("1D_linear_diffusion_20x1x1.h5"),         &
-                  string_t("1D_linear_diffusion_30x1x1.h5"),         &
                   string_t("1D_linear_diffusion_30x1x1.h5"),         &
                   string_t("1D_linear_diffusion_30x1x1.h5"),         &
                   string_t("1D_linear_diffusion_30x1x1.h5"),         &
@@ -473,10 +469,10 @@ contains
                   ]
 
 
-        orders = [ 2, 3, 4, 5, &
-                   2, 3, 4, 5, &
-                   2, 3, 4,    &
-                   2, 3, 4     &
+        orders = [ 2, 3, 4, &
+                   2, 3, 4, &
+                   2, 3, 4, &
+                   2, 3, 4  &
                    ]
 
 
@@ -855,7 +851,7 @@ contains
 
         do inpes = 1,3
             do igrid = 1,2
-                do iorder = 1,4
+                do iorder = 1,3
 
                     ! Test that the current convergence for the processor count matches the serial convergence
                     nsteps = nsteps_convergence(inpes,igrid,iorder)%size()
@@ -935,41 +931,9 @@ contains
         tol = 0.1_rk
 
 
-
-        do inpes = 1,1
+        do inpes = 1,3
             do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
-                do iorder = 1,4
-
-                    error_previous = error(inpes,igrid-1,iorder)
-                    error_current  = error(inpes,igrid  ,iorder)
-
-                    mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
-                    mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
-
-                    
-                    !
-                    ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
-                    !
-                    convergence_rate = (log10(error_previous)-log10(error_current)) / &
-                                       (log10(mesh_parameter_previous)-log10(mesh_parameter_current))
-
-                    
-                    print*, error_previous, error_current, mesh_parameter_previous, mesh_parameter_current, convergence_rate
-                
-
-                end do
-            end do
-        end do
-
-
-
-
-
-
-        !do inpes = 1,3
-        do inpes = 1,1
-            do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
-                do iorder = 1,4
+                do iorder = 1,3
 
                     error_previous = error(inpes,igrid-1,iorder)
                     error_current  = error(inpes,igrid  ,iorder)
@@ -986,6 +950,7 @@ contains
 
                 
                     @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
+                    @assertLessThan(convergence_rate, real(iorder+1,rk)+tol)
 
                 end do
             end do
@@ -1018,8 +983,7 @@ contains
         tol = 0.1_rk
 
 
-        !do inpes = 1,3
-        do inpes = 1,1
+        do inpes = 1,3
             do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
                 do iorder = 1,3
 
@@ -1038,6 +1002,7 @@ contains
 
                 
                     @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
+                    @assertLessThan(convergence_rate, real(iorder+1,rk)+tol)
 
                 end do
             end do

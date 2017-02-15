@@ -76,7 +76,7 @@ contains
             flux_x, flux_y, flux_z, integrand
 
         real(rk),   dimension(:), allocatable   ::  &
-            normx, normy, normz, unormx, unormy, unormz, r
+            normx, normy, normz, unormx, unormy, unormz
 
 
 
@@ -109,17 +109,13 @@ contains
         unormy = worker%unit_normal(2)
         unormz = worker%unit_normal(3)
 
-        !
-        ! Get radius
-        !
-        r = worker%x('boundary')
 
         !
         ! Compute boundary upwind flux
         !
-        flux_x = r * max(abs(cx_m),abs(cx_p))*HALF*(u_m - u_p)
-        flux_y = r * max(abs(cy_m),abs(cy_p))*HALF*(u_m - u_p)
-        flux_z = r * max(abs(cz_m),abs(cz_p))*HALF*(u_m - u_p)
+        flux_x = max(abs(cx_m),abs(cx_p))*HALF*(u_m - u_p)
+        flux_y = max(abs(cy_m),abs(cy_p))*HALF*(u_m - u_p)
+        flux_z = max(abs(cz_m),abs(cz_p))*HALF*(u_m - u_p)
 
         integrand = flux_x*normx*unormx + flux_y*normy*unormy + flux_z*normz*unormz
 

@@ -23,6 +23,7 @@ module mod_operators
 
     ! Fluid Inviscid Operators
     use euler_volume_operator,                      only: euler_volume_operator_t
+    use euler_volume_cylindrical_source,            only: euler_volume_cylindrical_source_t
     use euler_boundary_average_operator,            only: euler_boundary_average_operator_t
     use euler_roe_operator,                         only: euler_roe_operator_t
     use euler_laxfriedrichs_operator,               only: euler_laxfriedrichs_operator_t
@@ -186,6 +187,7 @@ contains
 
         ! Fluid Inviscid Operators
         type(euler_volume_operator_t)                   :: euler_volume_operator
+        type(euler_volume_cylindrical_source_t)         :: euler_volume_cylindrical_source
         type(euler_boundary_average_operator_t)         :: euler_average_operator
         type(euler_roe_operator_t)                      :: euler_roe_operator
         type(euler_laxfriedrichs_operator_t)            :: euler_laxfriedrichs_operator
@@ -236,6 +238,7 @@ contains
 
             ! Register Fluid Inviscid
             call operator_factory%register(euler_volume_operator)
+            call operator_factory%register(euler_volume_cylindrical_source)
             call operator_factory%register(euler_average_operator)
             call operator_factory%register(euler_roe_operator)
             call operator_factory%register(euler_laxfriedrichs_operator)

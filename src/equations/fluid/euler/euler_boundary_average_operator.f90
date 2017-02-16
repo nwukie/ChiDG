@@ -90,52 +90,61 @@ contains
 
         ! Storage at quadrature nodes
         type(AD_D), allocatable,    dimension(:) :: &
-            rho_m,      rho_p,                      &
-            rhou_m,     rhou_p,                     &
-            rhov_m,     rhov_p,                     &
-            rhow_m,     rhow_p,                     &
-            rhoe_m,     rhoe_p,                     &
-            rhor_p,     rhot_p,                     &
+            density_m,  density_p,                  &
+            mom1_m,     mom1_p,                     &
+            mom2_m,     mom2_p,                     &
+            mom3_m,     mom3_p,                     &
+            energy_m,   energy_p,                   &
+            enthalpy_m, enthalpy_p,                 &
             p_m,        p_p,                        &
-            H_m,        H_p,                        &
-            flux_x_m,   flux_y_m,   flux_z_m,       &
-            flux_x_p,   flux_y_p,   flux_z_p,       &
-            flux_x,     flux_y,     flux_z,         &
-            invrho_m,   invrho_p,                   &
+            flux_1_m,   flux_2_m,   flux_3_m,       &
+            flux_1_p,   flux_2_p,   flux_3_p,       &
+            flux_1,     flux_2,     flux_3,         &
+            invdensity_m, invdensity_p,             &
             integrand
 
         real(rk), allocatable, dimension(:) ::      &
-            normx, normy, normz
+            norm_1, norm_2, norm_3
 
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho_m  = worker%get_primary_field_face('Density'   , 'value', 'face interior')
-        rho_p  = worker%get_primary_field_face('Density'   , 'value', 'face exterior')
+        density_m = worker%get_primary_field_face('Density'   , 'value', 'face interior')
+        density_p = worker%get_primary_field_face('Density'   , 'value', 'face exterior')
 
-        rhou_m = worker%get_primary_field_face('Momentum-1', 'value', 'face interior')
-        rhou_p = worker%get_primary_field_face('Momentum-1', 'value', 'face exterior')
+        mom1_m    = worker%get_primary_field_face('Momentum-1', 'value', 'face interior')
+        mom1_p    = worker%get_primary_field_face('Momentum-1', 'value', 'face exterior')
 
-        rhov_m = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
-        rhov_p = worker%get_primary_field_face('Momentum-2', 'value', 'face exterior')
+        mom2_m    = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
+        mom2_p    = worker%get_primary_field_face('Momentum-2', 'value', 'face exterior')
 
-        rhow_m = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
-        rhow_p = worker%get_primary_field_face('Momentum-3', 'value', 'face exterior')
+        mom3_m    = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
+        mom3_p    = worker%get_primary_field_face('Momentum-3', 'value', 'face exterior')
 
-        rhoE_m = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
-        rhoE_p = worker%get_primary_field_face('Energy'    , 'value', 'face exterior')
-
-
-        invrho_m = ONE/rho_m
-        invrho_p = ONE/rho_p
+        energy_m  = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
+        energy_p  = worker%get_primary_field_face('Energy'    , 'value', 'face exterior')
 
 
+        !
+        ! Account for cylindrical. Get tangential momentum from angular momentum.
+        !
+        if (worker%coordinate_system() == 'Cylindrical') then
+            mom2_m = mom2_m / worker%coordinate('1','boundary')
+            mom2_p = mom2_p / worker%coordinate('1','boundary')
+        end if
 
-        normx = worker%normal(1)
-        normy = worker%normal(2)
-        normz = worker%normal(3)
+
+
+        invdensity_m = ONE/density_m
+        invdensity_p = ONE/density_p
+
+
+
+        norm_1 = worker%normal(1)
+        norm_2 = worker%normal(2)
+        norm_3 = worker%normal(3)
 
 
 
@@ -145,117 +154,126 @@ contains
         p_m = worker%get_model_field_face('Pressure', 'value', 'face interior')
         p_p = worker%get_model_field_face('Pressure', 'value', 'face exterior')
 
-        H_m = (rhoE_m + p_m)*invrho_m
-        H_p = (rhoE_p + p_p)*invrho_p
+        enthalpy_m = (energy_m + p_m)*invdensity_m
+        enthalpy_p = (energy_p + p_p)*invdensity_p
 
 
 
-        !================================
-        !       MASS FLUX
-        !================================
-        flux_x_m = rhou_m
-        flux_y_m = rhov_m
-        flux_z_m = rhow_m
+        !=================================================
+        ! mass flux
+        !=================================================
+        flux_1_m = mom1_m
+        flux_2_m = mom2_m
+        flux_3_m = mom3_m
 
-        flux_x_p = rhou_p
-        flux_y_p = rhov_p
-        flux_z_p = rhow_p
+        flux_1_p = mom1_p
+        flux_2_p = mom2_p
+        flux_3_p = mom3_p
 
-        flux_x = (flux_x_m + flux_x_p)
-        flux_y = (flux_y_m + flux_y_p)
-        flux_z = (flux_z_m + flux_z_p)
-
+        flux_1 = (flux_1_m + flux_1_p)
+        flux_2 = (flux_2_m + flux_2_p)
+        flux_3 = (flux_3_m + flux_3_p)
 
         ! dot with normal vector
-        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
+        integrand = HALF*(flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3)
 
         call worker%integrate_boundary('Density',integrand)
 
 
-        !================================
-        !       X-MOMENTUM FLUX
-        !================================
-        flux_x_m = (rhou_m*rhou_m)*invrho_m + p_m
-        flux_y_m = (rhou_m*rhov_m)*invrho_m
-        flux_z_m = (rhou_m*rhow_m)*invrho_m
+        !=================================================
+        ! momentum-1 flux
+        !=================================================
+        flux_1_m = (mom1_m*mom1_m)*invdensity_m + p_m
+        flux_2_m = (mom1_m*mom2_m)*invdensity_m
+        flux_3_m = (mom1_m*mom3_m)*invdensity_m
 
-        flux_x_p = (rhou_p*rhou_p)*invrho_p + p_p
-        flux_y_p = (rhou_p*rhov_p)*invrho_p
-        flux_z_p = (rhou_p*rhow_p)*invrho_p
+        flux_1_p = (mom1_p*mom1_p)*invdensity_p + p_p
+        flux_2_p = (mom1_p*mom2_p)*invdensity_p
+        flux_3_p = (mom1_p*mom3_p)*invdensity_p
 
-        flux_x = (flux_x_m + flux_x_p)
-        flux_y = (flux_y_m + flux_y_p)
-        flux_z = (flux_z_m + flux_z_p)
+        flux_1 = (flux_1_m + flux_1_p)
+        flux_2 = (flux_2_m + flux_2_p)
+        flux_3 = (flux_3_m + flux_3_p)
 
 
         ! dot with normal vector
-        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
+        integrand = HALF*(flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3)
 
         call worker%integrate_boundary('Momentum-1',integrand)
 
 
-        !================================
-        !       Y-MOMENTUM FLUX
-        !================================
-        flux_x_m = (rhov_m*rhou_m)*invrho_m
-        flux_y_m = (rhov_m*rhov_m)*invrho_m + p_m
-        flux_z_m = (rhov_m*rhow_m)*invrho_m
+        !=================================================
+        ! momentum-2 flux
+        !=================================================
+        flux_1_m = (mom2_m*mom1_m)*invdensity_m
+        flux_2_m = (mom2_m*mom2_m)*invdensity_m + p_m
+        flux_3_m = (mom2_m*mom3_m)*invdensity_m
 
-        flux_x_p = (rhov_p*rhou_p)*invrho_p
-        flux_y_p = (rhov_p*rhov_p)*invrho_p + p_p
-        flux_z_p = (rhov_p*rhow_p)*invrho_p
+        flux_1_p = (mom2_p*mom1_p)*invdensity_p
+        flux_2_p = (mom2_p*mom1_p)*invdensity_p + p_p
+        flux_3_p = (mom2_p*mom1_p)*invdensity_p
 
-        flux_x = (flux_x_m + flux_x_p)
-        flux_y = (flux_y_m + flux_y_p)
-        flux_z = (flux_z_m + flux_z_p)
+        flux_1 = (flux_1_m + flux_1_p)
+        flux_2 = (flux_2_m + flux_2_p)
+        flux_3 = (flux_3_m + flux_3_p)
 
 
         ! dot with normal vector
-        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
+        integrand = HALF*(flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3)
+
+
+        !
+        ! Convert to tangential to angular momentum flux
+        !
+        if (worker%coordinate_system() == 'Cylindrical') then
+            integrand = integrand * worker%coordinate('1','boundary')
+        end if
+
+
 
         call worker%integrate_boundary('Momentum-2',integrand)
 
 
-        !================================
-        !       Z-MOMENTUM FLUX
-        !================================
-        flux_x_m = (rhow_m*rhou_m)*invrho_m
-        flux_y_m = (rhow_m*rhov_m)*invrho_m
-        flux_z_m = (rhow_m*rhow_m)*invrho_m + p_m
+        !=================================================
+        ! momentum-3 flux
+        !=================================================
+        flux_1_m = (mom3_m*mom1_m)*invdensity_m
+        flux_2_m = (mom3_m*mom2_m)*invdensity_m
+        flux_3_m = (mom3_m*mom3_m)*invdensity_m + p_m
 
-        flux_x_p = (rhow_p*rhou_p)*invrho_p
-        flux_y_p = (rhow_p*rhov_p)*invrho_p
-        flux_z_p = (rhow_p*rhow_p)*invrho_p + p_p
+        flux_1_p = (mom3_p*mom1_p)*invdensity_p
+        flux_2_p = (mom3_p*mom2_p)*invdensity_p
+        flux_3_p = (mom3_p*mom3_p)*invdensity_p + p_p
 
-        flux_x = (flux_x_m + flux_x_p)
-        flux_y = (flux_y_m + flux_y_p)
-        flux_z = (flux_z_m + flux_z_p)
+        flux_1 = (flux_1_m + flux_1_p)
+        flux_2 = (flux_2_m + flux_2_p)
+        flux_3 = (flux_3_m + flux_3_p)
 
 
         ! dot with normal vector
-        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
+        integrand = HALF*(flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3)
 
         call worker%integrate_boundary('Momentum-3',integrand)
 
 
-        !================================
-        !          ENERGY FLUX
-        !================================
-        flux_x_m = rhou_m*H_m
-        flux_y_m = rhov_m*H_m
-        flux_z_m = rhow_m*H_m
+        !=================================================
+        ! energy flux
+        !=================================================
+        flux_1_m = enthalpy_m * mom1_m
+        flux_2_m = enthalpy_m * mom2_m
+        flux_3_m = enthalpy_m * mom3_m
 
-        flux_x_p = rhou_p*H_p
-        flux_y_p = rhov_p*H_p
-        flux_z_p = rhow_p*H_p
+        flux_1_p = enthalpy_p * mom1_p
+        flux_2_p = enthalpy_p * mom2_p
+        flux_3_p = enthalpy_p * mom3_p
 
-        flux_x = (flux_x_m + flux_x_p)
-        flux_y = (flux_y_m + flux_y_p)
-        flux_z = (flux_z_m + flux_z_p)
+        flux_1 = (flux_1_m + flux_1_p)
+        flux_2 = (flux_2_m + flux_2_p)
+        flux_3 = (flux_3_m + flux_3_p)
 
 
         ! dot with normal vector
-        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
+        integrand = HALF*(flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3)
 
         call worker%integrate_boundary('Energy',integrand)
 

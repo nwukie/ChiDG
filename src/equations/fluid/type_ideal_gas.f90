@@ -77,27 +77,34 @@ contains
         type(chidg_worker_t),   intent(inout)   :: worker
 
         type(AD_D), dimension(:),   allocatable :: &
-            rho, rhou, rhov, rhow, rhoE, P, T
+            density, mom1, mom2, mom3, energy, pressure, temperature
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho  = worker%get_primary_field_general('Density',    'value')
-        rhou = worker%get_primary_field_general('Momentum-1', 'value')
-        rhov = worker%get_primary_field_general('Momentum-2', 'value')
-        rhow = worker%get_primary_field_general('Momentum-3', 'value')
-        rhoE = worker%get_primary_field_general('Energy',     'value')
+        density = worker%get_primary_field_general('Density',    'value')
+        mom1    = worker%get_primary_field_general('Momentum-1', 'value')
+        mom2    = worker%get_primary_field_general('Momentum-2', 'value')
+        mom3    = worker%get_primary_field_general('Momentum-3', 'value')
+        energy  = worker%get_primary_field_general('Energy',     'value')
+
+
+        !
+        ! Account for cylindrical. Get tangential momentum from angular momentum.
+        !
+        if (worker%coordinate_system() == 'Cylindrical') then
+            mom2 = mom2 / worker%coordinate('1')
+        end if
+
+
+        pressure = (self%gam-ONE)*(energy - HALF*( (mom1*mom1) + (mom2*mom2) + (mom3*mom3) )/density )
+        temperature = pressure/(density*self%R)
 
 
 
-        P = (self%gam-ONE)*(rhoE - HALF*( (rhou*rhou) + (rhov*rhov) + (rhow*rhow) )/rho )
-        T = P/(rho*self%R)
-
-
-
-        call worker%store_model_field('Pressure',    'value', P)
-        call worker%store_model_field('Temperature', 'value', T)
+        call worker%store_model_field('Pressure',    'value', pressure)
+        call worker%store_model_field('Temperature', 'value', temperature)
 
 
     end subroutine compute

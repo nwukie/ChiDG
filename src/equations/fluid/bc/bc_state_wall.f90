@@ -88,13 +88,11 @@ contains
         type(chidg_worker_t),   intent(inout)   :: worker
         class(properties_t),    intent(inout)   :: prop
 
-        ! Equation indices
-        integer(ik)     :: irho, irhou, irhov, irhow, irhoE
 
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   ::      &
-            rho_m,  rhou_m,  rhov_m,  rhow_m,  rhoE_m,  &
-            rho_bc, rhou_bc, rhov_bc, rhow_bc, rhoE_bc, &
+            density_m,  mom1_m,  mom2_m,  mom3_m,  energy_m,  &
+            density_bc, mom1_bc, mom2_bc, mom3_bc, energy_bc, &
             drho_dx_m, drhou_dx_m, drhov_dx_m, drhow_dx_m, drhoE_dx_m,  &
             drho_dy_m, drhou_dy_m, drhov_dy_m, drhow_dy_m, drhoE_dy_m,  &
             drho_dz_m, drhou_dz_m, drhov_dz_m, drhow_dz_m, drhoE_dz_m,  &
@@ -103,24 +101,26 @@ contains
 
 
         !
-        ! Get equation indices
-        !
-        irho  = prop%get_primary_field_index("Density"   )
-        irhou = prop%get_primary_field_index("Momentum-1")
-        irhov = prop%get_primary_field_index("Momentum-2")
-        irhow = prop%get_primary_field_index("Momentum-3")
-        irhoE = prop%get_primary_field_index("Energy"    )
-
-
-
-        !
         ! Interpolate interior solution to quadrature nodes
         !
-        rho_m  = worker%get_primary_field_face("Density"   , 'value', 'face interior')
-        rhou_m = worker%get_primary_field_face("Momentum-1", 'value', 'face interior')
-        rhov_m = worker%get_primary_field_face("Momentum-2", 'value', 'face interior')
-        rhow_m = worker%get_primary_field_face("Momentum-3", 'value', 'face interior')
-        rhoE_m = worker%get_primary_field_face("Energy"    , 'value', 'face interior')
+        density_m = worker%get_primary_field_face("Density"   , 'value', 'face interior')
+        mom1_m    = worker%get_primary_field_face("Momentum-1", 'value', 'face interior')
+        mom2_m    = worker%get_primary_field_face("Momentum-2", 'value', 'face interior')
+        mom3_m    = worker%get_primary_field_face("Momentum-3", 'value', 'face interior')
+        energy_m  = worker%get_primary_field_face("Energy"    , 'value', 'face interior')
+
+
+
+        !
+        ! Account for cylindrical. Get tangential momentum from angular momentum.
+        !
+        if (worker%coordinate_system() == 'Cylindrical') then
+            mom2_m = mom2_m / worker%coordinate('1','boundary')
+        end if
+    
+
+
+
 
 
         drho_dx_m  = worker%get_primary_field_face("Density"   , 'grad1', 'face interior')
@@ -148,39 +148,39 @@ contains
 
 
         ! Initialize arrays
-        rho_bc  = rho_m
-        rhou_bc = rho_m
-        rhov_bc = rho_m
-        rhow_bc = rho_m
-        rhoE_bc = rho_m
+        density_bc = density_m
+        mom1_bc    = density_m
+        mom2_bc    = density_m
+        mom3_bc    = density_m
+        energy_bc  = density_m
 
 
         ! Zero momentum
-        rhou_bc = ZERO
-        rhov_bc = ZERO
-        rhow_bc = ZERO
+        mom1_bc = ZERO
+        mom2_bc = ZERO
+        mom3_bc = ZERO
 
 
-        u_m = rhou_m/rho_m
-        v_m = rhov_m/rho_m
-        w_m = rhow_m/rho_m
+        u_m = mom1_m/density_m
+        v_m = mom2_m/density_m
+        w_m = mom3_m/density_m
 
         VMag2 = u_m*u_m + v_m*v_m + w_m*w_m
 
         !
         ! Energy subtract momentum
         !
-        rhoE_bc = rhoE_m - (rho_m*HALF)*VMag2
+        energy_bc = energy_m - (density_m*HALF)*VMag2
 
 
         !
         ! Store boundary condition state
         !
-        call worker%store_bc_state("Density"   ,rho_bc, 'value')
-        call worker%store_bc_state("Momentum-1",rhou_bc,'value')
-        call worker%store_bc_state("Momentum-2",rhov_bc,'value')
-        call worker%store_bc_state("Momentum-3",rhow_bc,'value')
-        call worker%store_bc_state("Energy"    ,rhoE_bc,'value')
+        call worker%store_bc_state("Density"   , density_bc, 'value')
+        call worker%store_bc_state("Momentum-1", mom1_bc,    'value')
+        call worker%store_bc_state("Momentum-2", mom2_bc,    'value')
+        call worker%store_bc_state("Momentum-3", mom3_bc,    'value')
+        call worker%store_bc_state("Energy"    , energy_bc,  'value')
 
 
         drho_dx_m = ZERO

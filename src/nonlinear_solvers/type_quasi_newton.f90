@@ -2,7 +2,6 @@ module type_quasi_newton
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, DIAG
-!    use mod_spatial,            only: update_space
     use mod_hdfio,              only: write_solution_hdf
     use mod_tecio,              only: write_tecio_variables
     use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER, IRANK, NRANK
@@ -122,7 +121,6 @@ contains
                 ! Update Spatial Residual and Linearization (rhs, lin)
                 !
                 call system%assemble(data,timing=timing,differentiate=.true.)
-!                call update_space(data,timing)
                 resid = rhs%norm(ChiDG_COMM)
 
 
@@ -306,7 +304,7 @@ contains
                 ! Write solution if the count is right
                 !
                 !if (wcount == self%nwrite) then
-                !    if (data%eqnset(1)%get_name() == 'Navier Stokes AV') then
+                !    if (data%eqnset(1)%get_name() == 'Euler') then
                 !        call write_solution_hdf(data,'aachen_cascade_roundte.h5')
                 !        write(filename,'(I2)') niter
                 !        call write_tecio_variables(data,trim(filename)//'.dat',niter)

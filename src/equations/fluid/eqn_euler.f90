@@ -64,7 +64,7 @@ contains
         !
         ! Set equation set name
         !
-        call euler_eqns%set_name("Euler")
+        call euler_eqns%set_name('Euler')
         
 
         !
@@ -74,6 +74,7 @@ contains
 
 
             case('default')
+
                 call euler_eqns%add_operator('Euler Volume Flux')
                 call euler_eqns%add_operator('Euler Boundary Average Flux')
                 call euler_eqns%add_operator('Euler Roe Flux')
@@ -85,6 +86,7 @@ contains
                 call euler_eqns%add_model('Ideal Gas')
 
 
+!                call euler_eqns%add_operator('Euler Volume Cylindrical Source')
 
             case default
                 call chidg_signal_one(FATAL, "build_euler: I didn't recognize the construction parameter &

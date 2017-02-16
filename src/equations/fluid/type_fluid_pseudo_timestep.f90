@@ -88,6 +88,13 @@ contains
 
 
             !
+            ! Account for Cylindrical coordinates. Get tangential momentum from angular momentum
+            !
+            if ( mesh(idomain)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
+                rhov = rhov / mesh(idomain)%elems(ielem)%quad_pts(:)%c1_
+            end if
+
+            !
             ! Compute pressure
             !
             !p = prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE)

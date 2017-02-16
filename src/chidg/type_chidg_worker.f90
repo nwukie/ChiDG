@@ -107,6 +107,7 @@ module type_chidg_worker
         procedure   :: x
         procedure   :: y
         procedure   :: z
+        procedure   :: coordinate
 
         procedure   :: element_size
         procedure   :: solution_order
@@ -1340,6 +1341,82 @@ contains
 
 
 
+
+    !>  Interface for returning coordinates.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   02/16/2017
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    function coordinate(self,string,user_source) result(coords)
+        class(chidg_worker_t),  intent(in)              :: self
+        character(*),           intent(in)              :: string
+        character(*),           intent(in), optional    :: user_source
+
+
+        character(:),   allocatable                 :: user_msg, source
+        real(rk),       allocatable, dimension(:)   :: gq_1, gq_2, gq_3, coords
+
+
+        !
+        ! Select source
+        !
+        if ( present(user_source) ) then
+            source = user_source
+        else
+            source = self%interpolation_source
+        end if
+
+
+        !
+        ! Get coordinates
+        !
+        if ( (source == 'boundary') .or. (source == 'face interior') .or. (source == 'face exterior') ) then
+            gq_1 = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:)%c1_
+            gq_2 = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:)%c2_
+            gq_3 = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:)%c3_
+        else if ( (source == 'volume') .or. (source == 'element') ) then
+            gq_1 = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:)%c1_
+            gq_2 = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:)%c2_
+            gq_3 = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:)%c3_
+        else
+            user_msg = "chidg_worker%coordinate: Invalid source for returning coordinate. Options are 'boundary' and 'volume'."
+            call chidg_signal_one(FATAL,user_msg,source)
+        end if
+
+
+
+
+        !
+        ! Define coordinate to return.
+        !
+        select case (string)
+            case ('1')
+                coords = gq_1
+            case ('2')
+                coords = gq_2
+            case ('3')
+                coords = gq_3
+
+            
+!            case ('x')
+!
+!            case ('y')
+!
+!            case ('r')
+!
+!            case ('theta')
+!
+!            case ('z')
+!
+            case default
+                call chidg_signal_one(FATAL,"chidg_worker%coordinate: Invalid string for selecting coordinate.",string)
+        end select
+
+
+    end function coordinate
+    !**************************************************************************************
 
 
 

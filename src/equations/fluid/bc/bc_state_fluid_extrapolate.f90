@@ -90,10 +90,6 @@ contains
         class(properties_t),        intent(inout)   :: prop
 
 
-        ! Equation indices
-        integer(ik) :: irho, irhou, irhov, irhow, irhoE
-
-
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   ::      &
             rho_m,  rhou_m,  rhov_m,  rhow_m,  rhoE_m,  &
@@ -110,17 +106,6 @@ contains
         type(point_t),  allocatable, dimension(:)   :: coords
         real(rk),       allocatable, dimension(:)   ::  &
             p_bc, normx, normy, normz
-
-
-        !
-        ! Get equation indices
-        !
-        irho  = prop%get_primary_field_index("Density"   )
-        irhou = prop%get_primary_field_index("Momentum-1")
-        irhov = prop%get_primary_field_index("Momentum-2")
-        irhow = prop%get_primary_field_index("Momentum-3")
-        irhoE = prop%get_primary_field_index("Energy"    )
-
 
 
         !

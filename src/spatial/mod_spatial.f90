@@ -165,7 +165,6 @@ contains
                     !
                     ! Compute contributions from volume integrals
                     !
-
                     call eqnset%compute_volume_advective_operators(worker, differentiate_function)
                     call eqnset%compute_volume_diffusive_operators(worker, differentiate_function)
 

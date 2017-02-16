@@ -210,8 +210,8 @@ contains
         flux_3_m = (mom2_m*mom3_m)*invdensity_m
 
         flux_1_p = (mom2_p*mom1_p)*invdensity_p
-        flux_2_p = (mom2_p*mom1_p)*invdensity_p + p_p
-        flux_3_p = (mom2_p*mom1_p)*invdensity_p
+        flux_2_p = (mom2_p*mom2_p)*invdensity_p + p_p
+        flux_3_p = (mom2_p*mom3_p)*invdensity_p
 
         flux_1 = (flux_1_m + flux_1_p)
         flux_2 = (flux_2_m + flux_2_p)

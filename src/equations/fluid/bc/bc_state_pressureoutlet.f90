@@ -96,7 +96,7 @@ contains
             drho_dy_m, drhou_dy_m, drhov_dy_m, drhow_dy_m, drhoE_dy_m,  &
             drho_dz_m, drhou_dz_m, drhov_dz_m, drhow_dz_m, drhoE_dz_m,  &
             u_bc,   v_bc,    w_bc,                                      &
-            H_bc
+            H_bc, p_req
 
 
         real(rk)                                    :: time, gam_m
@@ -153,8 +153,9 @@ contains
         !
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_m = mom2_m / worker%coordinate('1','boundary')
-            p_bc   = p_bc / (worker%coordinate('1','boundary')**(1./12.))
+            p_req   = p_bc + (10.4_rk*10.4_rk*((worker%coordinate('1','boundary'))**(3.0_rk)) )*density_m/2._rk
         end if
+
 
 
 
@@ -184,7 +185,7 @@ contains
         !
         ! Compute boundary condition energy and enthalpy
         !
-        energy_bc = p_bc/(gam_m - ONE) + (density_bc*HALF)*(u_bc*u_bc + v_bc*v_bc + w_bc*w_bc)
+        energy_bc = p_req/(gam_m - ONE) + (density_bc*HALF)*(u_bc*u_bc + v_bc*v_bc + w_bc*w_bc)
 
 
 
@@ -206,7 +207,7 @@ contains
         call worker%store_bc_state('Momentum-1',mom1_bc,    'value')
         call worker%store_bc_state('Momentum-2',mom2_bc,    'value')
         call worker%store_bc_state('Momentum-3',mom3_bc,    'value')
-        call worker%store_bc_state('Energy'    ,energy_bc,'value')
+        call worker%store_bc_state('Energy'    ,energy_bc,  'value')
 
 
 

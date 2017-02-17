@@ -248,6 +248,7 @@ contains
                 self%lblks(ielem,itime)%idomain_l  = mesh%elems(ielem)%idomain_l
                 self%lblks(ielem,itime)%ielement_g = mesh%elems(ielem)%ielement_g
                 self%lblks(ielem,itime)%ielement_l = mesh%elems(ielem)%ielement_l
+                self%lblks(ielem,itime)%mass       = mesh%elems(ielem)%mass
 
 
                 !--------------------------------------------

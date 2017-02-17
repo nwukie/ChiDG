@@ -3,6 +3,7 @@ module type_densematrix_vector
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: ZERO
     use type_densematrix,   only: densematrix_t
+    use type_element,       only: element_t
     use DNAD_D
     implicit none
 
@@ -27,6 +28,8 @@ module type_densematrix_vector
 
         type(densematrix_t),   allocatable  :: data_(:)
 
+        real (rk), allocatable              :: mass(:,:)
+
     contains
         ! Initializers
         procedure, public   :: init                 !< initialize with size and capacity = 0
@@ -49,6 +52,7 @@ module type_densematrix_vector
         procedure, public   :: set_recv_comm
         procedure, public   :: set_recv_domain
         procedure, public   :: set_recv_element
+        procedure, public   :: get_mass_matrix
         procedure, public   :: get_recv_comm
         procedure, public   :: get_recv_domain
         procedure, public   :: get_recv_element
@@ -70,7 +74,7 @@ module type_densematrix_vector
         procedure, public   :: get_ielement_g   !< return the global element index which the densematrix vector is associated with
         procedure, public   :: get_idomain_l    !< return the local domain index which the densematrix_vector is associated with
         procedure, public   :: get_ielement_l   !< return the local element indexwhich the densematrix vector is associated with
-
+        
 
     end type densematrix_vector_t
     !*****************************************************************************************
@@ -488,6 +492,26 @@ contains
     end function dmat
     !****************************************************************************************
 
+
+
+    !>  Set the mass matrix attribute of the densematrix vector equal to the mass matrix
+    !!  coming in from an object of type_element
+    !!
+    !!  @Mayank Sharma + Matteo Ugolotti
+    !!  @date   2/13/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine get_mass_matrix(self,elem)
+        class(densematrix_vector_t),    intent(inout)   :: self
+        class(element_t),               intent(in)      :: elem
+
+
+        self%mass = elem%mass
+
+
+    end subroutine get_mass_matrix
+    !****************************************************************************************
 
 
 

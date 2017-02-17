@@ -13,12 +13,13 @@ module type_harmonic_balance
     use type_preconditioner,    only: preconditioner_t
     use type_rvector,           only: rvector_t
     use mod_HB_matrices,        only: calc_pseudo_spectral_operator
+    use mod_time_HB,            only: get_pseudo_spectral_operator
     use type_chidg_vector
 
     implicit none
     private
 
-
+    real(rk)        :: D(:,:)
 
     !>
     !!
@@ -38,7 +39,6 @@ module type_harmonic_balance
         type(ik)                   :: ntime     = self%time_manager%time_lev%size()
         real(rk), dimension(:)     :: freq_data = self%time_manager%freq_data%data()
         real(rk), dimension(:)     :: time_lev  = self%time_manager%time_lev%data()
-        real(rk)                   :: D(:,:)    ! Refers to the pseudo spectral operator
 
         procedure   :: init
         procedure   :: step
@@ -95,6 +95,12 @@ contains
         allocate(self%system, source=assemble_harmonic_balance, stat=ierr)
         if (ierr /= 0) call AllocationError
 
+        
+        !
+        ! Compute the pseudo spectral operator
+        !
+        call calc_pseudo_spectral_operator(self%nfreq,self%ntime,self%freq_data,self%time_lev,D)
+        call get_pseudo_spectral_operator(D)
 
     end subroutine init
     !*************************************************************************************************
@@ -157,12 +163,6 @@ contains
 
 
         !
-        ! Compute the pseudo spectral operator
-        !
-        call calc_pseudo_spectral_operator(nfreq,ntime,freq_data,time_lev,D)
-
-
-        !
         ! Spatial update needed
         !
         call update_space(data,timing,differentiate)
@@ -189,15 +189,15 @@ contains
                             !
                             ! Temporary variables for computing the temporal rhs contributions
                             !
-                            temp_1 = d(itime_outer,itime_inner)*matmul(mesh(idom)%elems(ielem)%mass, &
-                                                            q%dom(idom)%vecs%getvar(ivar,itime_inner))
+                            temp_1 = D(itime_outer,itime_inner)*matmul(mesh(idom)%elems(ielem)%mass, &
+                                                            q%dom(idom)%vecs(ielem)%getvar(ivar,itime_inner))
 
-                            temp_2 = rhs%dom(idom)%vecs%getvar(ivar,itime_inner) + temp_1
+                            temp_2 = rhs%dom(idom)%vecs(ielem)%getvar(ivar,itime_inner) + temp_1
 
                             !
                             ! Add the temporal contributions in the rhs
                             !
-                            rhs%dom(idom)%vecs%setvar(ivar,itime_inner,temp_2)
+                            call rhs%dom(idom)%vecs(ielem)%setvar(ivar,itime_inner,temp_2)
 
                         end do  ! ivar
 

@@ -96,7 +96,7 @@ contains
             drho_dy_m, drhou_dy_m, drhov_dy_m, drhow_dy_m, drhoE_dy_m,  &
             drho_dz_m, drhou_dz_m, drhov_dz_m, drhow_dz_m, drhoE_dz_m,  &
             u_bc,   v_bc,    w_bc,                                      &
-            H_bc, p_req
+            H_bc, p_req, p_ref
 
 
         real(rk)                                    :: time, gam_m
@@ -104,6 +104,7 @@ contains
         real(rk),       allocatable, dimension(:)   ::  &
             p_bc, norm_1, norm_2, norm_3
 
+        real(rk)    :: K, v_z, v_theta_ref, r_ref
 
         !
         ! Get back pressure from function.
@@ -152,8 +153,20 @@ contains
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
         if (worker%coordinate_system() == 'Cylindrical') then
+
             mom2_m = mom2_m / worker%coordinate('1','boundary')
-            p_req   = p_bc + (10.4_rk*10.4_rk*((worker%coordinate('1','boundary'))**(3.0_rk)) )*density_m/2._rk
+
+
+
+            K   = 10._rk
+            v_z = 10._rk
+
+            r_ref = 1.5_rk
+            v_theta_ref = K/r_ref
+
+            p_ref = 110000._rk - (density_m/2._rk)*(v_theta_ref*v_theta_ref + v_z*v_z)
+            p_req   = p_ref + density_m*K*K*(1._rk/(r_ref*r_ref) - 1._rk/(worker%coordinate('1','boundary')**(2.0_rk)))  / 2._rk
+
         end if
 
 

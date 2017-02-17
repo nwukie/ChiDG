@@ -123,7 +123,9 @@ contains
         real(rk)                                    :: gam_m, cp_m, M, time
         type(point_t),  allocatable, dimension(:)   :: coords
         real(rk),       allocatable, dimension(:)   ::  &
-            TT, PT, n1, n2, n3, nmag
+            TT, PT, n1, n2, n3, nmag, alpha
+            
+        real(rk) :: K, v_z
 
 
         !
@@ -146,6 +148,11 @@ contains
         n1 = n1/nmag
         n2 = n2/nmag
         n3 = n3/nmag
+
+
+
+
+
 
 
         !
@@ -187,6 +194,19 @@ contains
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_m = mom2_m / worker%coordinate('1','boundary')
         end if
+
+
+        !
+        ! Override user-input
+        !
+        n1 = 0._rk
+
+        K   = 10._rk
+        v_z = 10._rk
+
+        alpha = atan2( K/worker%coordinate('1','boundary') , v_z )
+        n2 = sin(alpha)
+        n3 = cos(alpha)
 
 
 

@@ -2,8 +2,8 @@ module mod_time_HB
     use mod_kinds,  only: rk,ik
     implicit none
 
-    real(rk)        :: D(:,:)
-
+    real(rk), allocatable        :: D(:,:)
+    logical                      :: harmonic_balance = .false.
 
 
 contains
@@ -20,7 +20,10 @@ contains
     subroutine get_pseudo_spectral_operator(D_orig)
         real(rk),   intent(in)          :: D_orig(:,:)
 
+
         D = D_orig
+
+        harmonic_balance = .true.
 
 
     end subroutine get_pseudo_spectral_operator

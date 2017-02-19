@@ -19,7 +19,11 @@ module type_harmonic_balance
     implicit none
     private
 
-    real(rk)        :: D(:,:)
+    integer(ik)                 :: nfreq
+    integer(ik)                 :: ntime
+    real(rk), allocatable       :: freq_data(:)
+    real(rk), allocatable       :: time_lev(:) 
+    real(rk), allocatable       :: D(:,:)
 
     !>
     !!
@@ -29,17 +33,10 @@ module type_harmonic_balance
     !-------------------------------------------------------------------------------------------------
     type, extends(time_integrator_t), public    :: harmonic_balance_t
         
-
-    !
-    ! TODO: Figure out if the objects defined here can be used as they are in the system assembler
-    !
+   
+    
     contains
         
-        type(ik)                   :: nfreq     = self%time_manager%freq_data%size()
-        type(ik)                   :: ntime     = self%time_manager%time_lev%size()
-        real(rk), dimension(:)     :: freq_data = self%time_manager%freq_data%data()
-        real(rk), dimension(:)     :: time_lev  = self%time_manager%time_lev%data()
-
         procedure   :: init
         procedure   :: step
         
@@ -95,11 +92,16 @@ contains
         allocate(self%system, source=assemble_harmonic_balance, stat=ierr)
         if (ierr /= 0) call AllocationError
 
-        
+        nfreq     = self%time_manager%freq_data%size()
+        ntime     = self%time_manager%time_lev%size()
+        freq_data = self%time_manager%freq_data%data()
+        time_lev  = self%time_manager%time_lev%data() 
+
+
         !
         ! Compute the pseudo spectral operator
         !
-        call calc_pseudo_spectral_operator(self%nfreq,self%ntime,self%freq_data,self%time_lev,D)
+        call calc_pseudo_spectral_operator(nfreq,ntime,freq_data,time_lev,D)
         call get_pseudo_spectral_operator(D)
 
     end subroutine init
@@ -174,13 +176,13 @@ contains
 
             do idom = 1,data%ndomains()
 
-                associate ( mesh => data%mesh(idom), eqnset => data%eqnset(idom) )
+                !associate ( mesh => data%mesh(idom), eqnset => data%eqnset(idom) )
 
                 if (allocated(temp_1) .and. allocated(temp_2)) deallocate(temp_1,temp_2)
-                allocate(temp_1(mesh%nterms_s),temp_2(mesh%nterms_s), stat=ierr)
+                allocate(temp_1(data%mesh(idom)%nterms_s),temp_2(data%mesh(idom)%nterms_s), stat=ierr)
                 if (ierr /= 0) call AllocationError
 
-                do ielem = 1,mesh%nelem
+                do ielem = 1,data%mesh(idom)%nelem
 
                     do itime_inner = 1,ntime
 
@@ -189,7 +191,7 @@ contains
                             !
                             ! Temporary variables for computing the temporal rhs contributions
                             !
-                            temp_1 = D(itime_outer,itime_inner)*matmul(mesh(idom)%elems(ielem)%mass, &
+                            temp_1 = D(itime_outer,itime_inner)*matmul(data%mesh(idom)%elems(ielem)%mass, &
                                                             q%dom(idom)%vecs(ielem)%getvar(ivar,itime_inner))
 
                             temp_2 = rhs%dom(idom)%vecs(ielem)%getvar(ivar,itime_inner) + temp_1
@@ -205,7 +207,7 @@ contains
 
                 end do  ! ielem
 
-                end associate
+                !end associate
 
             end do  ! idom
 

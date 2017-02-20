@@ -17,7 +17,8 @@ module mod_hdfio
                                           get_bc_patch_hdf, open_file_hdf, close_file_hdf,          &
                                           open_domain_hdf, close_domain_hdf, initialize_file_hdf,   &
                                           initialize_file_structure_hdf, open_bc_group_hdf,         &
-                                          close_bc_group_hdf, get_domain_nelements_hdf, get_domain_name_hdf
+                                          close_bc_group_hdf, get_domain_nelements_hdf,             &
+                                          get_domain_name_hdf, check_file_structure_hdf
 
     use type_svector,               only: svector_t
     use mod_string,                 only: string_t
@@ -407,6 +408,7 @@ contains
         integer(ik)                     :: idom, ieqn, neqns, iwrite, spacedim, time, field_index, iproc
         integer                         :: ierr, order_s
         logical                         :: file_exists
+        integer(ik)                     :: itime
 
         !
         ! Check for file existence
@@ -838,7 +840,7 @@ contains
         logical     :: DataExists, ElementsEqual, exists
         integer(ik) :: type, ierr, ndomains,    &
                        order, ivar, ielem, idom, nelem_g, &
-                       ielement_g, nterms_s
+                       ielement_g, nterms_s, ntime
 
 
         !

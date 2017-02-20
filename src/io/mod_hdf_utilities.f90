@@ -303,7 +303,7 @@ contains
         integer(HID_T),     intent(in)  :: fid
         type(chidg_data_t), intent(in)  :: data
 
-        integer(ik)                 :: idom
+        integer(ik)                 :: idom, time
         integer(HID_T)              :: domain_id
         character(:),   allocatable :: domain_name
 
@@ -567,14 +567,19 @@ contains
         integer(HID_T)      , intent(in)    :: fid
         type(chidg_data_t)    , intent(in)    :: data
 
-        integer(ik)         :: time_lev, ntimes
+        integer(ik)                         :: time_lev, ntimes
+        character(len=1024),    allocatable :: msg
 
         time_lev = get_ntimes_hdf(fid)
         ntimes   = data%ntime()
     
-        msg = "The attribute ntimes to HDF5 fils is not updated. To avoid this, delete the existing HDF5 file"
 
-        if ( time_lev =/ ntimes ) call chidg_signal(WARNING, msg)
+        if ( time_lev /= ntimes ) then
+            
+            msg = "The attribute ntimes to HDF5 fils is not updated. To avoid this, delete the existing HDF5 file"
+            call chidg_signal(WARN, msg)
+        end if
+
 
     end subroutine check_file_ntimes_hdf
     !*****************************************************************************************
@@ -605,7 +610,7 @@ contains
         type(chidg_data_t)  ,intent(in) :: data
 
         integer(ik)                        :: domain_number, idom, domain_check, dimension
-        character(len=1024),   allocatable :: dom_names(:), domain_name
+        character(len=1024),   allocatable :: dom_names(:), domain_name, msg
         
         !
         ! check whether the number of domians is correct or not. IF it is, then 
@@ -624,7 +629,7 @@ contains
             !
             ! check if the name of the domainis are correct
             !
-            dom_names = get_domain_names(id)
+            dom_names = get_domain_names_hdf(id)
 
             do idom = 1, domain_number
                 
@@ -1210,7 +1215,7 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,"get_ntimess_hdf: h5ltget_attribute_int_f had a problem getting the number of time levels")
         time_lev = int(buf(1), kind=ik)
 
-    function get_ntimes_hdf
+    end function get_ntimes_hdf
     !****************************************************************************************
 
 

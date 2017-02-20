@@ -419,21 +419,28 @@ contains
         !
         if (.not. file_exists) then
 
-            ! Create a new file
-            if (IRANK == GLOBAL_MASTER) then
-                call initialize_file_hdf(file_name)
-            end if
-            call MPI_Barrier(ChiDG_COMM,ierr)
-
-            ! Initialize the file structure.
-            do iproc = 0,NRANK-1
-                if (iproc == IRANK) then
-                    fid = open_file_hdf(file_name)
-                    call initialize_file_structure_hdf(fid,data)
-                    call close_file_hdf(fid)
+                ! Create a new file
+                if (IRANK == GLOBAL_MASTER) then
+                    call initialize_file_hdf(file_name)
                 end if
                 call MPI_Barrier(ChiDG_COMM,ierr)
-            end do
+
+                ! Initialize the file structure.
+                do iproc = 0,NRANK-1
+                    if (iproc == IRANK) then
+                        fid = open_file_hdf(file_name)
+                        call initialize_file_structure_hdf(fid,data)
+                        call close_file_hdf(fid)
+                    end if
+                    call MPI_Barrier(ChiDG_COMM,ierr)
+                end do
+
+            else
+
+                ! If it already exists, check if the the structure is correct 
+                fid = open_file_hdf(file_name)
+                call check_file_structure_hdf(fid,data)
+                call close_file_hdf(fid)
 
         end if
 
@@ -452,7 +459,6 @@ contains
                 !
                 ! Write solution for each domain
                 !
-                time = 1
                 do idom = 1,data%ndomains()
 
                     domain_name = data%info(idom)%name
@@ -487,35 +493,42 @@ contains
                     !
                     call set_solution_order_hdf(domain_id,order_s)
 
-
-
+                    
                     !
-                    ! If specified, only write specified field.
+                    ! Loop through time levels
                     !
-                    if (present(field)) then
+                    do itime = 1,data%ntime() !!!!!! close this loop
 
-                        field_index = data%eqnset(idom)%prop%get_primary_field_index(trim(field))
-
-                        if (field_index /= 0) then
-                            call write_domain_field_hdf(domain_id,data,field,time)
-                        end if
-
-
-                    !
-                    ! Else, write each field in the file.
-                    !
-                    else
 
                         !
-                        ! For each field: get the name, write to file
-                        ! 
-                        neqns = data%eqnset(idom)%prop%nprimary_fields()
-                        do ieqn = 1,neqns
-                            field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
-                            call write_domain_field_hdf(domain_id,data,field_name,time)
-                        end do ! ieqn
+                        ! If specified, only write specified field.
+                        !
+                        if (present(field)) then
 
-                    end if
+                            field_index = data%eqnset(idom)%prop%get_primary_field_index(trim(field))
+
+                            if (field_index /= 0) then
+                                call write_domain_field_hdf(domain_id,data,field,itime)
+                            end if
+
+
+                        !
+                        ! Else, write each field in the file.
+                        !
+                        else
+
+                            !
+                            ! For each field: get the name, write to file
+                            ! 
+                            neqns = data%eqnset(idom)%prop%nprimary_fields()
+                            do ieqn = 1,neqns
+                                field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
+                                call write_domain_field_hdf(domain_id,data,field_name,itime)
+                            end do ! ieqn
+
+                        end if
+
+                    end do ! itime
 
                     call close_domain_hdf(domain_id)
 
@@ -795,6 +808,12 @@ contains
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/5/2016
     !!
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   02/20/2017
+    !!
+    !!  Expanded the dataspace to include all the time levels
+    !!
     !----------------------------------------------------------------------------------------
     subroutine write_domain_field_hdf(domain_id,data,field_name,itime,attribute_name,attribute_value)
         integer(HID_T),     intent(in)              :: domain_id
@@ -843,9 +862,12 @@ contains
         nelem_g     = data%mesh(idom)%get_nelements_global()
         nterms_s    = data%mesh(idom)%nterms_s
         ndims       = 3
+        ntime       = data%ntime() !need to be sure this data is update from time_manager
 
-        ! TODO: Should probarbly better inform that dataspace dimension here. Probably set mesh%ntime
-        dims(1:3)    = [nterms_s, nelem_g, itime]
+        !
+        ! Set the dimensions of the dataspace to write in
+        !
+        dims(1:3)    = [nterms_s, nelem_g, ntime]
         maxdims(1:3) = H5S_UNLIMITED_F
 
 
@@ -869,6 +891,7 @@ contains
         call h5lexists_f(gid, trim(field_name), exists, ierr)
         if (exists) then
             ! Open the existing dataset
+            ! TODO: check if we need to open the existing file with crp_list properties rather than H5P_DEFAULT_
             call h5dopen_f(gid, trim(field_name), did, ierr, H5P_DEFAULT_F)
             if (ierr /= 0) call chidg_signal(FATAL,"write_field_domain_hdf: variable does not exist or was not opened correctly.")
 
@@ -922,7 +945,7 @@ contains
             !
             call h5sselect_hyperslab_f(sid, H5S_SELECT_SET_F, start, count, ierr)
 
-
+!here
             !
             ! Create a memory dataspace
             !

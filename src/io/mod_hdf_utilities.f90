@@ -53,7 +53,7 @@ contains
     !!  open_file_hdf
     !!  close_file_hdf
     !!  check_file_storage_version_hdf
-    !!
+    !!  
     !!  set_storage_version_major_hdf
     !!  set_storage_version_minor_hdf
     !!  get_storage_version_major_hdf
@@ -67,6 +67,8 @@ contains
     !!  set_contains_solution_hdf
     !!  get_contains_solution_hdf
     !!
+    !!  set_ntimes_hdf
+    !!  get_ntimes_hdf
     !!
     !!  Domain-level routines:
     !!  ---------------------------
@@ -139,7 +141,9 @@ contains
     !!  check_link_exists_hdf
     !!  check_file_exists_hdf
     !!  check_file_has_extension_hdf
-    !!      
+    !!  check_file_structure_hdf      
+    !!  check_file_domains_hdf
+    !!  check_file_ntimes_hdf
     !!
     !****************************************************************************************
 
@@ -303,7 +307,9 @@ contains
         integer(HID_T)              :: domain_id
         character(:),   allocatable :: domain_name
 
-
+        ! Add attribute ntime to the file
+        time = data%ntime()
+        call set_ntimes_hdf(fid,time)
 
         do idom = 1,data%ndomains()
 
@@ -501,6 +507,142 @@ contains
     !*****************************************************************************************
 
 
+
+
+
+
+
+
+
+
+
+    !>  Check if an already existing HDF5 file has the correct structure to be use to write 
+    !!  a new solution
+    !!
+    !!  Errors if incompatible.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   02/20/2017
+    !!
+    !!  TODO: add check to the domains' attribute (dimensionality, equation-set)
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine check_file_structure_hdf(fid,data)
+    
+        integer(HID_T)      , intent(in)  :: fid
+        type(chidg_data_t)  , intent(in)  :: data
+        
+        ! Check if the version is correct
+        call check_file_storage_version_hdf(fid)
+    
+        ! Check if the number and names of the domains are correct
+        call check_file_domains_hdf(fid,data)
+        
+        ! Check the number of time levels
+        call check_file_ntimes_hdf(fid,data)
+
+
+    end subroutine check_file_structure_hdf
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Check check that the ntimes attirbute of the existing file matches the  
+    !!  a new data solution
+    !!
+    !!  Errors if incompatible.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   02/20/2017
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine check_file_ntimes_hdf(fid,data)
+        
+        integer(HID_T)      , intent(in)    :: fid
+        type(chidg_data_t)    , intent(in)    :: data
+
+        integer(ik)         :: time_lev, ntimes
+
+        time_lev = get_ntimes_hdf(fid)
+        ntimes   = data%ntime()
+    
+        msg = "The attribute ntimes to HDF5 fils is not updated. To avoid this, delete the existing HDF5 file"
+
+        if ( time_lev =/ ntimes ) call chidg_signal(WARNING, msg)
+
+    end subroutine check_file_ntimes_hdf
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Check if the number of domains and name in an old HDF5 file are coherent with the
+    !!  new solution
+    !!
+    !!  Errors if incompatible.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   02/20/2017
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine check_file_domains_hdf(id,data)
+
+        integer(HID_T)      ,intent(in) :: id
+        type(chidg_data_t)  ,intent(in) :: data
+
+        integer(ik)                        :: domain_number, idom, domain_check, dimension
+        character(len=1024),   allocatable :: dom_names(:), domain_name
+        
+        !
+        ! check whether the number of domians is correct or not. IF it is, then 
+        ! compare domains' names
+        !
+        
+        domain_number = data%ndomains()
+        domain_check  = get_ndomains_hdf(id)
+
+        if (domain_number /= domain_check) then
+            msg = "The number of domains in the existing file and the number of domains that need to be stored &
+                    do not match. Please, delete the existing HDF5 file."
+            call chidg_signal(FATAL,msg)
+        else
+
+            !
+            ! check if the name of the domainis are correct
+            !
+            dom_names = get_domain_names(id)
+
+            do idom = 1, domain_number
+                
+                domain_name = "D_"//trim(data%info(idom)%name)
+                        
+                msg = "There exists a mismatch in a domain's name due to the overwriting of and existing HDF5 &
+                       file. To avoid this delete the existing HDF5 file."
+
+                if ( domain_name /= dom_names(idom) ) call chidg_signal(FATAL,msg)
+
+            end do
+        
+        end if
+        
+
+
+    end subroutine check_file_domains_hdf
+    !*****************************************************************************************
 
 
 
@@ -989,6 +1131,7 @@ contains
 
 
 
+
     !>  Given a file identifier, return the number of domains in an hdf5 file.
     !!
     !!  @author Nathan A. Wukie
@@ -1011,6 +1154,64 @@ contains
     end function get_ndomains_hdf
     !****************************************************************************************
 
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, set the number of time levels in an hdf5 file.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   02/20/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_ntimes_hdf(fid,ntimes)
+        integer(HID_T), intent(in)  :: fid
+        integer(ik),    intent(in)  :: ntimes
+
+        integer(ik)         :: ierr
+
+        call h5ltset_attribute_int_f(fid, "/", "ntimes", [ntimes], SIZE_ONE, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_ntimes_hdf: Error h5ltget_attribute_int_f")
+
+    end subroutine set_ntimes_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, return the number of time levels in an hdf5 file.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   02/20/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_ntimes_hdf(fid) result(time_lev)
+        integer(HID_T), intent(in)  :: fid
+        
+        integer                 :: ierr
+        integer(ik)             :: time_lev
+        integer, dimension(1)   :: buf
+
+        call h5ltget_attribute_int_f(fid, "/", "ntimes", buf, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_ntimess_hdf: h5ltget_attribute_int_f had a problem getting the number of time levels")
+        time_lev = int(buf(1), kind=ik)
+
+    function get_ntimes_hdf
+    !****************************************************************************************
 
 
 

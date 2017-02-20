@@ -2,7 +2,7 @@ module type_time_manager
 #include <messenger.h>
     
     use mod_kinds,      only: rk,ik
-    use mod_constants, only: PI,ZERO,ONE,TWO
+    use mod_constants,  only: PI,ZERO,ONE,TWO
     use type_rvector,   only: rvector_t
     use mod_io
 

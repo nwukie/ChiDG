@@ -52,7 +52,6 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------------
-    !subroutine add_face(self,idomain,ielement,iface)
     function add_face(self,idomain,ielement,iface) result(iface_bc)
         class(bc_patch_t),  intent(inout)   :: self
         integer(ik),        intent(in)      :: idomain
@@ -84,7 +83,6 @@ contains
         if (ierr /= 0) call AllocationError
 
 
-    !end subroutine add_face
     end function add_face
     !**************************************************************************************************
 

@@ -79,11 +79,10 @@ module type_face
 
 
         ! Chimera face offset. For periodic boundary condition.
-        character(:),       allocatable :: periodic_type
-        real(rk)                        :: chimera_offset_x = 0._rk
-        real(rk)                        :: chimera_offset_y = 0._rk
-        real(rk)                        :: chimera_offset_z = 0._rk
-        real(rk)                        :: chimera_offset_theta = 0._rk
+        logical                         :: periodic_offset  = .false.
+        real(rk)                        :: chimera_offset_1 = 0._rk
+        real(rk)                        :: chimera_offset_2 = 0._rk
+        real(rk)                        :: chimera_offset_3 = 0._rk
 
 
         ! Geometry

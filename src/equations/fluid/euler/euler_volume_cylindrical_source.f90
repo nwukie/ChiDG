@@ -110,9 +110,13 @@ contains
         !=================================================
         ! momentum-1 flux
         !=================================================
-        source = (density*v*v + p) / worker%coordinate('1','volume')
+        if (worker%coordinate_system() == 'Cylindrical') then
 
-        call worker%integrate_volume('Momentum-1',source)
+            source = (density*v*v + p) / worker%coordinate('1','volume')
+
+            call worker%integrate_volume('Momentum-1',source)
+
+        end if
 
 
         !=================================================

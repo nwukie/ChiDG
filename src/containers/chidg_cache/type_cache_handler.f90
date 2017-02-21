@@ -613,7 +613,6 @@ contains
                         worker%function_info%seed%iproc      = NO_PROC
                     end if
 
-
                     call bc_set(idomain_l)%bcs(BC_ID)%bc_state(istate)%state%compute_bc_state(worker,equation_set(idomain_l)%prop)
 
                 end do !idepend

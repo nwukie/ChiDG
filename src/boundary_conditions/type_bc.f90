@@ -432,30 +432,22 @@ contains
                     ! Set face type - 'ftype'
                     !
                     if ( self%get_family() == 'Periodic' ) then
-                        !
+
                         ! Set to ORPHAN face so it will be recognized as chimera in the detection process.
-                        !
                         mesh%faces(ielem,iface)%ftype = ORPHAN
 
-                        !
-                        ! Set periodic offset from boundary condition to the face. To be used in detection of gq_donor.
-                        !
-                        if ( self%bc_state(1)%state%bcproperties%compute('type', time, pnt) == ONE ) then
-                            mesh%faces(ielem,iface)%periodic_type = 'cartesian'
-                        else if ( self%bc_state(1)%state%bcproperties%compute('type', time, pnt) == TWO ) then
-                            mesh%faces(ielem,iface)%periodic_type = 'cylindrical'
-                        end if
-
                         ! time, pnt do nothing here, but interface for function requires them.
-                        mesh%faces(ielem,iface)%chimera_offset_x     = self%bc_state(1)%state%bcproperties%compute('offset_x',     time, pnt)
-                        mesh%faces(ielem,iface)%chimera_offset_y     = self%bc_state(1)%state%bcproperties%compute('offset_y',     time, pnt)
-                        mesh%faces(ielem,iface)%chimera_offset_z     = self%bc_state(1)%state%bcproperties%compute('offset_z',     time, pnt)
-                        mesh%faces(ielem,iface)%chimera_offset_theta = self%bc_state(1)%state%bcproperties%compute('offset_theta', time, pnt)
+                        mesh%faces(ielem,iface)%periodic_offset  = .true.
+                        mesh%faces(ielem,iface)%chimera_offset_1 = self%bc_state(1)%state%bcproperties%compute('Offset-1',time,pnt)
+                        mesh%faces(ielem,iface)%chimera_offset_2 = self%bc_state(1)%state%bcproperties%compute('Offset-2',time,pnt)
+                        mesh%faces(ielem,iface)%chimera_offset_3 = self%bc_state(1)%state%bcproperties%compute('Offset-3',time,pnt)
 
                     else if ( allocated(self%bc_state) .and. (.not. self%get_family() == 'Periodic') ) then
                         mesh%faces(ielem,iface)%ftype = BOUNDARY
+
                     else
                         mesh%faces(ielem,iface)%ftype = ORPHAN
+
                     end if
 
 

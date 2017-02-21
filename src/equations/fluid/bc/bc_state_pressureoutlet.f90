@@ -102,9 +102,10 @@ contains
         real(rk)                                    :: time, gam_m
         type(point_t),  allocatable, dimension(:)   :: coords
         real(rk),       allocatable, dimension(:)   ::  &
-            p_bc, norm_1, norm_2, norm_3
+            p_bc, norm_1, norm_2, norm_3, r
 
-        real(rk)    :: K, v_z, v_theta_ref, r_ref
+        real(rk)    :: K, u_z, r_ref, u_theta_ref, omega
+
 
         !
         ! Get back pressure from function.
@@ -158,17 +159,40 @@ contains
 
 
 
-            K   = 10._rk
-            v_z = 10._rk
+!            K   = 10._rk
+!            v_z = 10._rk
+!
+!            r_ref = 1.5_rk
+!            u_theta_ref = K/r_ref
+!
+!            p_ref = 110000._rk - (density_m/2._rk)*(u_theta_ref*u_theta_ref + v_z*v_z)
+!            p_req   = p_ref + density_m*K*K*(1._rk/(r_ref*r_ref) - 1._rk/(worker%coordinate('1','boundary')**(2.0_rk)))  / 2._rk
 
-            r_ref = 1.5_rk
-            v_theta_ref = K/r_ref
 
-            p_ref = 110000._rk - (density_m/2._rk)*(v_theta_ref*v_theta_ref + v_z*v_z)
-            p_req   = p_ref + density_m*K*K*(1._rk/(r_ref*r_ref) - 1._rk/(worker%coordinate('1','boundary')**(2.0_rk)))  / 2._rk
+
+            r_ref       = 2.0_rk
+            omega       = 20._rk
+            u_z         = 20._rk
+            u_theta_ref = omega*r_ref
+            p_ref       = 110000._rk - (density_m/2._rk)*(u_z*u_z  +  u_theta_ref*u_theta_ref)
+
+            r = worker%coordinate('1','boundary')
+            p_req = density_m
+            p_req = 0._rk
+
+            where (r < r_ref) 
+                p_req = p_ref + (density_m/2._rk)*omega*omega*(r**2._rk - r_ref**2._rk)     
+            else where
+                p_req = p_ref + (density_m/2._rk)*omega*omega*(r_ref**4._rk)*((1._rk/(r_ref**2._rk)) - (1._rk/(r**2._rk))) 
+            end where
+
+
+
 
         end if
 
+        p_req = density_m
+        p_req = p_bc
 
 
 

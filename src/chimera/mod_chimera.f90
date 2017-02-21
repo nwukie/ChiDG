@@ -210,7 +210,7 @@ contains
 
         real(rk)                :: gq_coords(3), parallel_coords(3), donor_vol, local_vol, parallel_vol
         real(rk), allocatable   :: donor_vols(:)
-        real(rk)                :: offset_x, offset_y, offset_z,                                            &
+        real(rk)                :: offset_1, offset_2, offset_3,                                            &
                                    dxdxi, dxdeta, dxdzeta, dydxi, dydeta, dydzeta, dzdxi, dzdeta, dzdzeta,  &
                                    donor_jinv, parallel_jinv
         real(rk)        :: donor_metric(3,3), parallel_metric(3,3)
@@ -292,11 +292,11 @@ contains
                             !
                             ! Get offset coordinates from face for potential periodic offset.
                             !
-                            call compute_periodic_offset(mesh(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface), gq_node, offset_x, offset_y, offset_z)
+                            call compute_periodic_offset(mesh(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface), gq_node, offset_1, offset_2, offset_3)
 
-                            call gq_node%add_x(offset_x)
-                            call gq_node%add_y(offset_y)
-                            call gq_node%add_z(offset_z)
+                            call gq_node%add_x(offset_1)
+                            call gq_node%add_y(offset_2)
+                            call gq_node%add_z(offset_3)
 
 
                             searching = .true.

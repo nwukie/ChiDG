@@ -134,6 +134,7 @@ contains
                 ! Loop through elements in the current domain
                 do ielem = 1,mesh%nelem
 
+
                     elem_info%idomain_g  = mesh%elems(ielem)%idomain_g
                     elem_info%idomain_l  = mesh%elems(ielem)%idomain_l
                     elem_info%ielement_g = mesh%elems(ielem)%ielement_g

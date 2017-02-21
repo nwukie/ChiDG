@@ -86,6 +86,7 @@ contains
                 call laminar_navier_stokes_eqns%add_model('Stokes Hypothesis')
                 call laminar_navier_stokes_eqns%add_model('Reynolds Analogy')
                 call laminar_navier_stokes_eqns%add_model('Zero Turbulent Model Fields')
+                call laminar_navier_stokes_eqns%add_model('Shear Stress')
 
 
                 call laminar_navier_stokes_eqns%add_pseudo_timestep(fluid_pseudo_time)

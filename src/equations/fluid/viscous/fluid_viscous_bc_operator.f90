@@ -90,20 +90,17 @@ contains
 
 
         ! Storage at quadrature nodes
-        type(AD_D), allocatable, dimension(:) ::                                &
-            rho, rhou, rhov, rhow, rhoE, p, T, u, v, w, invrho, mu, lamda, k,   &
-            mu_l, mu_t, lamda_l, lamda_t, k_l, k_t,                             &
-            drho_dx, drhou_dx, drhov_dx, drhow_dx, drhoE_dx,                    &
-            drho_dy, drhou_dy, drhov_dy, drhow_dy, drhoE_dy,                    &
-            drho_dz, drhou_dz, drhov_dz, drhow_dz, drhoE_dz,                    &
-            du_dx,   dv_dx,    dw_dx,    dT_dx,                                 &
-            du_dy,   dv_dy,    dw_dy,    dT_dy,                                 &
-            du_dz,   dv_dz,    dw_dz,    dT_dz,                                 &
-            du_drho, du_drhou, dv_drho,  dv_drhov, dw_drho, dw_drhow,           &
-            dT_drho, dT_drhou, dT_drhov, dT_drhow, dT_drhoE,                    &
-            dp_drho, dp_drhou, dp_drhov, dp_drhow, dp_drhoE,                    &
-            dke_drho, dke_drhou, dke_drhov, dke_drhow,                          &
-            tau_xx, tau_yy, tau_zz, tau_xy, tau_xz, tau_yz,                     &
+        type(AD_D), allocatable, dimension(:) ::                &
+            rho, rhou, rhov, rhow, rhoE, p, u, v, w, invrho,    &
+            drho_dx, drhou_dx, drhov_dx, drhow_dx, drhoE_dx,    &
+            drho_dy, drhou_dy, drhov_dy, drhow_dy, drhoE_dy,    &
+            drho_dz, drhou_dz, drhov_dz, drhow_dz, drhoE_dz,    &
+            dT_drho, dT_drhou, dT_drhov, dT_drhow, dT_drhoE,    &
+            dp_drho, dp_drhou, dp_drhov, dp_drhow, dp_drhoE,    &
+            dke_drho, dke_drhou, dke_drhov, dke_drhow,          &
+            dT_dx,   dT_dy,    dT_dz,                           &
+            k,       k_l,      k_t,                             &
+            tau_xx, tau_yy, tau_zz, tau_xy, tau_xz, tau_yz,     &
             flux_x, flux_y, flux_z, integrand
 
         real(rk),   allocatable, dimension(:)   ::          &
@@ -120,9 +117,6 @@ contains
         rhov = worker%get_primary_field_face("Momentum-2",'value', 'boundary')
         rhow = worker%get_primary_field_face("Momentum-3",'value', 'boundary')
         rhoE = worker%get_primary_field_face("Energy"    ,'value', 'boundary')
-
-
-
 
 
         !
@@ -163,29 +157,19 @@ contains
         !
         ! Get Model fields:
         !   Pressure
-        !   Temperature
-        !   Viscosity
-        !   Second Coefficient of Viscosity
         !   Thermal Conductivity
         !
-        p       = worker%get_model_field_face('Pressure',                                  'value', 'boundary')
-        T       = worker%get_model_field_face('Temperature',                               'value', 'boundary')
-        mu_l    = worker%get_model_field_face('Laminar Viscosity',                         'value', 'boundary')
-        mu_t    = worker%get_model_field_face('Turbulent Viscosity',                       'value', 'boundary')
-        lamda_l = worker%get_model_field_face('Second Coefficient of Laminar Viscosity',   'value', 'boundary')
-        lamda_t = worker%get_model_field_face('Second Coefficient of Turbulent Viscosity', 'value', 'boundary')
-        k_l     = worker%get_model_field_face('Laminar Thermal Conductivity',              'value', 'boundary')
-        k_t     = worker%get_model_field_face('Turbulent Thermal Conductivity',            'value', 'boundary')
+        p       = worker%get_model_field_face('Pressure',                       'value', 'boundary')
+        k_l     = worker%get_model_field_face('Laminar Thermal Conductivity',   'value', 'boundary')
+        k_t     = worker%get_model_field_face('Turbulent Thermal Conductivity', 'value', 'boundary')
         gam = 1.4_rk
 
 
 
         !
-        ! Compute effective viscosities, conductivity. Laminar + Turbulent.
+        ! Compute effective conductivity. Laminar + Turbulent.
         !
-        mu    = mu_l    + mu_t
-        lamda = lamda_l + lamda_t
-        k     = k_l     + k_t
+        k = k_l + k_t
 
 
 
@@ -198,19 +182,6 @@ contains
         u = rhou*invrho
         v = rhov*invrho
         w = rhow*invrho
-
-
-        !
-        ! Compute velocity jacobians
-        !
-        du_drho  = -invrho*invrho*rhou
-        du_drhou =  invrho
-
-        dv_drho  = -invrho*invrho*rhov
-        dv_drhov =  invrho
-
-        dw_drho  = -invrho*invrho*rhow
-        dw_drhow =  invrho
 
 
 
@@ -246,20 +217,6 @@ contains
 
 
 
-        !
-        ! Compute velocity gradients
-        !
-        du_dx = du_drho*drho_dx  +  du_drhou*drhou_dx
-        du_dy = du_drho*drho_dy  +  du_drhou*drhou_dy
-        du_dz = du_drho*drho_dz  +  du_drhou*drhou_dz
-
-        dv_dx = dv_drho*drho_dx  +  dv_drhov*drhov_dx
-        dv_dy = dv_drho*drho_dy  +  dv_drhov*drhov_dy
-        dv_dz = dv_drho*drho_dz  +  dv_drhov*drhov_dz
-
-        dw_dx = dw_drho*drho_dx  +  dw_drhow*drhow_dx
-        dw_dy = dw_drho*drho_dy  +  dw_drhow*drhow_dy
-        dw_dz = dw_drho*drho_dz  +  dw_drhow*drhow_dz
 
 
         !
@@ -271,17 +228,15 @@ contains
 
 
         !
-        ! Compute shear stress components
+        ! get shear stress components
         !
-        tau_xx = TWO*mu*du_dx  +  lamda*(du_dx + dv_dy + dw_dz)
-        tau_yy = TWO*mu*dv_dy  +  lamda*(du_dx + dv_dy + dw_dz)
-        tau_zz = TWO*mu*dw_dz  +  lamda*(du_dx + dv_dy + dw_dz)
+        tau_xx = worker%get_model_field_face('Shear-11', 'value', 'boundary')
+        tau_yy = worker%get_model_field_face('Shear-22', 'value', 'boundary')
+        tau_zz = worker%get_model_field_face('Shear-33', 'value', 'boundary')
 
-        tau_xy = mu*(du_dy + dv_dx)
-        tau_xz = mu*(du_dz + dw_dx)
-        tau_yz = mu*(dw_dy + dv_dz)
-
-
+        tau_xy = worker%get_model_field_face('Shear-12', 'value', 'boundary')
+        tau_xz = worker%get_model_field_face('Shear-13', 'value', 'boundary')
+        tau_yz = worker%get_model_field_face('Shear-23', 'value', 'boundary')
 
         !=================================================
         ! Mass flux

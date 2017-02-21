@@ -6,6 +6,7 @@ module mod_models
     use type_model,             only: model_t
 
     use type_ideal_gas,                                 only: ideal_gas_t
+    use type_shear_stress,                              only: shear_stress_t
     use type_sutherlands_law,                           only: sutherlands_law_t
     use type_constant_viscosity,                        only: constant_viscosity_t
     use type_stokes_hypothesis,                         only: stokes_hypothesis_t
@@ -246,6 +247,7 @@ contains
         integer(ik) :: imodel
 
         type(ideal_gas_t)                               :: IDEAL_GAS
+        type(shear_stress_t)                            :: SHEAR_STRESS
         type(sutherlands_law_t)                         :: SUTHERLANDS_LAW
         type(constant_viscosity_t)                      :: CONSTANT_VISCOSITY
         type(stokes_hypothesis_t)                       :: STOKES_HYPOTHESIS
@@ -261,6 +263,7 @@ contains
         if (.not. models_initialized) then
 
             call model_factory%register(IDEAL_GAS)
+            call model_factory%register(SHEAR_STRESS)
             call model_factory%register(SUTHERLANDS_LAW)
             call model_factory%register(CONSTANT_VISCOSITY)
             call model_factory%register(STOKES_HYPOTHESIS)

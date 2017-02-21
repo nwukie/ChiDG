@@ -81,8 +81,8 @@ contains
                 call laminar_navier_stokes_eqns%add_operator('Fluid Viscous BC Operator')
 
                 call laminar_navier_stokes_eqns%add_model('Ideal Gas')
-                !call laminar_navier_stokes_eqns%add_model('Sutherlands Law')
-                call laminar_navier_stokes_eqns%add_model('Constant Viscosity')
+                call laminar_navier_stokes_eqns%add_model('Sutherlands Law')
+                !call laminar_navier_stokes_eqns%add_model('Constant Viscosity')
                 call laminar_navier_stokes_eqns%add_model('Stokes Hypothesis')
                 call laminar_navier_stokes_eqns%add_model('Reynolds Analogy')
                 call laminar_navier_stokes_eqns%add_model('Zero Turbulent Model Fields')

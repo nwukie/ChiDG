@@ -12,13 +12,13 @@ module fluid_viscous_boundary_average_operator
 
 
 
-    !>  Implementation of the Navier-Stokes viscous boundary average flux
+    !> Implementation of the Euler boundary average flux
     !!
     !!  - At a boundary interface, the solution states Q- and Q+ exists on opposite 
     !!    sides of the boundary. The average flux is computed as Favg = 1/2(F(Q-) + F(Q+))
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   8/29/2016
+    !!  @date   1/28/2016
     !!
     !--------------------------------------------------------------------------------
     type, extends(operator_t), public :: fluid_viscous_boundary_average_operator_t
@@ -77,10 +77,10 @@ contains
 
 
 
-    !>  Boundary Flux routine for Navier Stokes
+    !>  Boundary Flux routine for Euler
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   8/29/2016
+    !!  @date   1/28/2016
     !!
     !!-------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
@@ -89,30 +89,38 @@ contains
         class(properties_t),                        intent(inout)   :: prop
 
         ! Storage at quadrature nodes
-        type(AD_D), allocatable, dimension(:) ::                        &
-            rho_m, rhou_m, rhov_m, rhow_m, rhoE_m,                      &
-            rho_p, rhou_p, rhov_p, rhow_p, rhoE_p,                      &
-            p_m, u_m, v_m, w_m, invrho_m,                               &
-            p_p, u_p, v_p, w_p, invrho_p,                               &
-            k_m, k_p, k_l_m, k_l_p, k_t_m, k_t_p,                       &
-            drho_dx_m, drhou_dx_m, drhov_dx_m, drhow_dx_m, drhoE_dx_m,  &
-            drho_dy_m, drhou_dy_m, drhov_dy_m, drhow_dy_m, drhoE_dy_m,  &
-            drho_dz_m, drhou_dz_m, drhov_dz_m, drhow_dz_m, drhoE_dz_m,  &
-            drho_dx_p, drhou_dx_p, drhov_dx_p, drhow_dx_p, drhoE_dx_p,  &
-            drho_dy_p, drhou_dy_p, drhov_dy_p, drhow_dy_p, drhoE_dy_p,  &
-            drho_dz_p, drhou_dz_p, drhov_dz_p, drhow_dz_p, drhoE_dz_p,  &
-            dT_dx_m,   dT_dy_m,    dT_dz_m,                             &
-            dT_dx_p,   dT_dy_p,    dT_dz_p,                             &
-            dT_drho_m, dT_drhou_m, dT_drhov_m, dT_drhow_m, dT_drhoE_m,  &
-            dT_drho_p, dT_drhou_p, dT_drhov_p, dT_drhow_p, dT_drhoE_p,  &
-            dp_drho_m, dp_drhou_m, dp_drhov_m, dp_drhow_m, dp_drhoE_m,  &
-            dp_drho_p, dp_drhou_p, dp_drhov_p, dp_drhow_p, dp_drhoE_p,  &
-            dke_drho_m, dke_drhou_m, dke_drhov_m, dke_drhow_m,          &
-            dke_drho_p, dke_drhou_p, dke_drhov_p, dke_drhow_p,          &
-            tau_xx_m, tau_yy_m, tau_zz_m, tau_xy_m, tau_xz_m, tau_yz_m, &
-            tau_xx_p, tau_yy_p, tau_zz_p, tau_xy_p, tau_xz_p, tau_yz_p, &
-            flux_x_m, flux_y_m, flux_z_m,                               &
-            flux_x_p, flux_y_p, flux_z_p,                               &
+        type(AD_D), allocatable, dimension(:) ::                                    &
+            rho_m, rhou_m, rhov_m, rhow_m, rhoE_m,                                  &
+            rho_p, rhou_p, rhov_p, rhow_p, rhoE_p,                                  &
+            p_m, T_m, u_m, v_m, w_m, invrho_m, mu_m, lamda_m, k_m,                  &
+            p_p, T_p, u_p, v_p, w_p, invrho_p, mu_p, lamda_p, k_p,                  &
+            mu_t_m, mu_t_p, mu_l_m, mu_l_p, lamda_l_m, lamda_l_p,                   &
+            lamda_t_m, lamda_t_p, k_l_m, k_l_p, k_t_m, k_t_p,                       &
+            mul_m, mul_p, mut_m, mut_p,                                             &
+            drho_dx_m, drhou_dx_m, drhov_dx_m, drhow_dx_m, drhoE_dx_m,              &
+            drho_dy_m, drhou_dy_m, drhov_dy_m, drhow_dy_m, drhoE_dy_m,              &
+            drho_dz_m, drhou_dz_m, drhov_dz_m, drhow_dz_m, drhoE_dz_m,              &
+            drho_dx_p, drhou_dx_p, drhov_dx_p, drhow_dx_p, drhoE_dx_p,              &
+            drho_dy_p, drhou_dy_p, drhov_dy_p, drhow_dy_p, drhoE_dy_p,              &
+            drho_dz_p, drhou_dz_p, drhov_dz_p, drhow_dz_p, drhoE_dz_p,              &
+            du_dx_m,   dv_dx_m,    dw_dx_m,    dT_dx_m,                             &
+            du_dy_m,   dv_dy_m,    dw_dy_m,    dT_dy_m,                             &
+            du_dz_m,   dv_dz_m,    dw_dz_m,    dT_dz_m,                             &
+            du_dx_p,   dv_dx_p,    dw_dx_p,    dT_dx_p,                             &
+            du_dy_p,   dv_dy_p,    dw_dy_p,    dT_dy_p,                             &
+            du_dz_p,   dv_dz_p,    dw_dz_p,    dT_dz_p,                             &
+            du_drho_m, du_drhou_m, dv_drho_m,  dv_drhov_m, dw_drho_m, dw_drhow_m,   &
+            du_drho_p, du_drhou_p, dv_drho_p,  dv_drhov_p, dw_drho_p, dw_drhow_p,   &
+            dT_drho_m, dT_drhou_m, dT_drhov_m, dT_drhow_m, dT_drhoE_m,              &
+            dT_drho_p, dT_drhou_p, dT_drhov_p, dT_drhow_p, dT_drhoE_p,              &
+            dp_drho_m, dp_drhou_m, dp_drhov_m, dp_drhow_m, dp_drhoE_m,              &
+            dp_drho_p, dp_drhou_p, dp_drhov_p, dp_drhow_p, dp_drhoE_p,              &
+            dke_drho_m, dke_drhou_m, dke_drhov_m, dke_drhow_m,                      &
+            dke_drho_p, dke_drhou_p, dke_drhov_p, dke_drhow_p,                      &
+            tau_xx_m, tau_yy_m, tau_zz_m, tau_xy_m, tau_xz_m, tau_yz_m,             &
+            tau_xx_p, tau_yy_p, tau_zz_p, tau_xy_p, tau_xz_p, tau_yz_p,             &
+            flux_x_m, flux_y_m, flux_z_m,                                           &
+            flux_x_p, flux_y_p, flux_z_p,                                           &
             flux_x, flux_y, flux_z, integrand
 
 
@@ -120,7 +128,6 @@ contains
             normx, normy, normz
 
         real(rk) :: const, gam_m, gam_p
-
 
 
         !
@@ -204,13 +211,26 @@ contains
         !   Second Coefficient of Viscosity
         !   Thermal Conductivity
         !
-        p_m       = worker%get_model_field_face('Pressure',                       'value', 'face interior')
-        p_p       = worker%get_model_field_face('Pressure',                       'value', 'face exterior')
+        p_m       = worker%get_model_field_face('Pressure',                                  'value', 'face interior')
+        p_p       = worker%get_model_field_face('Pressure',                                  'value', 'face exterior')
 
-        k_l_m     = worker%get_model_field_face('Laminar Thermal Conductivity',   'value', 'face interior')
-        k_l_p     = worker%get_model_field_face('Laminar Thermal Conductivity',   'value', 'face exterior')
-        k_t_m     = worker%get_model_field_face('Turbulent Thermal Conductivity', 'value', 'face interior')
-        k_t_p     = worker%get_model_field_face('Turbulent Thermal Conductivity', 'value', 'face exterior')
+        T_m       = worker%get_model_field_face('Temperature',                               'value', 'face interior')
+        T_p       = worker%get_model_field_face('Temperature',                               'value', 'face exterior')
+
+        mu_l_m    = worker%get_model_field_face('Laminar Viscosity',                         'value', 'face interior')
+        mu_l_p    = worker%get_model_field_face('Laminar Viscosity',                         'value', 'face exterior')
+        mu_t_m    = worker%get_model_field_face('Turbulent Viscosity',                       'value', 'face interior')
+        mu_t_p    = worker%get_model_field_face('Turbulent Viscosity',                       'value', 'face exterior')
+
+        lamda_l_m = worker%get_model_field_face('Second Coefficient of Laminar Viscosity',   'value', 'face interior')
+        lamda_l_p = worker%get_model_field_face('Second Coefficient of Laminar Viscosity',   'value', 'face exterior')
+        lamda_t_m = worker%get_model_field_face('Second Coefficient of Turbulent Viscosity', 'value', 'face interior')
+        lamda_t_p = worker%get_model_field_face('Second Coefficient of Turbulent Viscosity', 'value', 'face exterior')
+
+        k_l_m     = worker%get_model_field_face('Laminar Thermal Conductivity',              'value', 'face interior')
+        k_l_p     = worker%get_model_field_face('Laminar Thermal Conductivity',              'value', 'face exterior')
+        k_t_m     = worker%get_model_field_face('Turbulent Thermal Conductivity',            'value', 'face interior')
+        k_t_p     = worker%get_model_field_face('Turbulent Thermal Conductivity',            'value', 'face exterior')
 
         gam_m   = 1.4_rk
         gam_p   = 1.4_rk
@@ -218,10 +238,16 @@ contains
 
 
         !
-        ! Compute effective conductivity. Laminar + Turbulent
+        ! Compute effective viscosities, conductivity. Laminar + Turbulent
         !
-        k_m = k_l_m + k_t_m
-        k_p = k_l_p + k_t_p
+        mu_m    = mu_l_m    + mu_t_m
+        mu_p    = mu_l_p    + mu_t_p
+
+        lamda_m = lamda_l_m + lamda_t_m
+        lamda_p = lamda_l_p + lamda_t_p
+
+        k_m     = k_l_m     + k_t_m
+        k_p     = k_l_p     + k_t_p
 
 
 
@@ -235,6 +261,30 @@ contains
         u_p = rhou_p/rho_p
         v_p = rhov_p/rho_p
         w_p = rhow_p/rho_p
+
+
+
+        !
+        ! Compute velocity jacobians
+        !
+        du_drho_m  = -invrho_m*invrho_m*rhou_m
+        dv_drho_m  = -invrho_m*invrho_m*rhov_m
+        dw_drho_m  = -invrho_m*invrho_m*rhow_m
+        du_drho_p  = -invrho_p*invrho_p*rhou_p
+        dv_drho_p  = -invrho_p*invrho_p*rhov_p
+        dw_drho_p  = -invrho_p*invrho_p*rhow_p
+
+        du_drhou_m =  invrho_m
+        dv_drhov_m =  invrho_m
+        dw_drhow_m =  invrho_m
+        du_drhou_p =  invrho_p
+        dv_drhov_p =  invrho_p
+        dw_drhow_p =  invrho_p
+
+
+
+
+
 
 
 
@@ -289,6 +339,37 @@ contains
         dT_drhoE_p = const*invrho_p*dp_drhoE_p
 
 
+        !
+        ! Compute velocity gradients
+        !
+        du_dx_m = du_drho_m*drho_dx_m  +  du_drhou_m*drhou_dx_m
+        du_dy_m = du_drho_m*drho_dy_m  +  du_drhou_m*drhou_dy_m
+        du_dz_m = du_drho_m*drho_dz_m  +  du_drhou_m*drhou_dz_m
+
+        dv_dx_m = dv_drho_m*drho_dx_m  +  dv_drhov_m*drhov_dx_m
+        dv_dy_m = dv_drho_m*drho_dy_m  +  dv_drhov_m*drhov_dy_m
+        dv_dz_m = dv_drho_m*drho_dz_m  +  dv_drhov_m*drhov_dz_m
+
+        dw_dx_m = dw_drho_m*drho_dx_m  +  dw_drhow_m*drhow_dx_m
+        dw_dy_m = dw_drho_m*drho_dy_m  +  dw_drhow_m*drhow_dy_m
+        dw_dz_m = dw_drho_m*drho_dz_m  +  dw_drhow_m*drhow_dz_m
+
+
+        du_dx_p = du_drho_p*drho_dx_p  +  du_drhou_p*drhou_dx_p
+        du_dy_p = du_drho_p*drho_dy_p  +  du_drhou_p*drhou_dy_p
+        du_dz_p = du_drho_p*drho_dz_p  +  du_drhou_p*drhou_dz_p
+
+        dv_dx_p = dv_drho_p*drho_dx_p  +  dv_drhov_p*drhov_dx_p
+        dv_dy_p = dv_drho_p*drho_dy_p  +  dv_drhov_p*drhov_dy_p
+        dv_dz_p = dv_drho_p*drho_dz_p  +  dv_drhov_p*drhov_dz_p
+
+        dw_dx_p = dw_drho_p*drho_dx_p  +  dw_drhow_p*drhow_dx_p
+        dw_dy_p = dw_drho_p*drho_dy_p  +  dw_drhow_p*drhow_dy_p
+        dw_dz_p = dw_drho_p*drho_dz_p  +  dw_drhow_p*drhow_dz_p
+
+
+
+
 
         !
         ! Compute temperature gradient
@@ -308,21 +389,39 @@ contains
         !
         ! Compute shear stress components
         !
-        tau_xx_m = worker%get_model_field_face('Shear-11', 'value', 'face interior')
-        tau_yy_m = worker%get_model_field_face('Shear-22', 'value', 'face interior')
-        tau_zz_m = worker%get_model_field_face('Shear-33', 'value', 'face interior')
+        tau_xx_m = TWO*mu_m*du_dx_m  +  lamda_m*(du_dx_m + dv_dy_m + dw_dz_m)
+        tau_yy_m = TWO*mu_m*dv_dy_m  +  lamda_m*(du_dx_m + dv_dy_m + dw_dz_m)
+        tau_zz_m = TWO*mu_m*dw_dz_m  +  lamda_m*(du_dx_m + dv_dy_m + dw_dz_m)
 
-        tau_xy_m = worker%get_model_field_face('Shear-12', 'value', 'face interior')
-        tau_xz_m = worker%get_model_field_face('Shear-13', 'value', 'face interior')
-        tau_yz_m = worker%get_model_field_face('Shear-23', 'value', 'face interior')
+        tau_xy_m = mu_m*(du_dy_m + dv_dx_m)
+        tau_xz_m = mu_m*(du_dz_m + dw_dx_m)
+        tau_yz_m = mu_m*(dw_dy_m + dv_dz_m)
 
-        tau_xx_p = worker%get_model_field_face('Shear-11', 'value', 'face exterior')
-        tau_yy_p = worker%get_model_field_face('Shear-22', 'value', 'face exterior')
-        tau_zz_p = worker%get_model_field_face('Shear-33', 'value', 'face exterior')
 
-        tau_xy_p = worker%get_model_field_face('Shear-12', 'value', 'face exterior')
-        tau_xz_p = worker%get_model_field_face('Shear-13', 'value', 'face exterior')
-        tau_yz_p = worker%get_model_field_face('Shear-23', 'value', 'face exterior')
+        tau_xx_p = TWO*mu_p*du_dx_p  +  lamda_p*(du_dx_p + dv_dy_p + dw_dz_p)
+        tau_yy_p = TWO*mu_p*dv_dy_p  +  lamda_p*(du_dx_p + dv_dy_p + dw_dz_p)
+        tau_zz_p = TWO*mu_p*dw_dz_p  +  lamda_p*(du_dx_p + dv_dy_p + dw_dz_p)
+
+        tau_xy_p = mu_p*(du_dy_p + dv_dx_p)
+        tau_xz_p = mu_p*(du_dz_p + dw_dx_p)
+        tau_yz_p = mu_p*(dw_dy_p + dv_dz_p)
+
+        !tau_xx_m = worker%get_model_field_face('Shear-11', 'value', 'face interior')
+        !tau_yy_m = worker%get_model_field_face('Shear-22', 'value', 'face interior')
+        !tau_zz_m = worker%get_model_field_face('Shear-33', 'value', 'face interior')
+
+        !tau_xy_m = worker%get_model_field_face('Shear-12', 'value', 'face interior')
+        !tau_xz_m = worker%get_model_field_face('Shear-13', 'value', 'face interior')
+        !tau_yz_m = worker%get_model_field_face('Shear-23', 'value', 'face interior')
+
+
+        !tau_xx_p = worker%get_model_field_face('Shear-11', 'value', 'face exterior')
+        !tau_yy_p = worker%get_model_field_face('Shear-22', 'value', 'face exterior')
+        !tau_zz_p = worker%get_model_field_face('Shear-33', 'value', 'face exterior')
+
+        !tau_xy_p = worker%get_model_field_face('Shear-12', 'value', 'face exterior')
+        !tau_xz_p = worker%get_model_field_face('Shear-13', 'value', 'face exterior')
+        !tau_yz_p = worker%get_model_field_face('Shear-23', 'value', 'face exterior')
 
 
 

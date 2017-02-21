@@ -3,28 +3,30 @@ module mod_time_integrators
     use mod_kinds,              only: rk,ik
     use type_time_integrator,   only: time_integrator_t
     use type_dict,              only: dict_t
-
+    use type_time_manager,      only: time_manager_t
 
 
 
     ! Import solverdata types
     use type_steady,               only: steady_t
     use type_forward_euler,        only: forward_euler_t
+    use type_steady,            only: steady_t
+!    use type_forward_euler,     only: forward_euler_t
 !    use type_backward_euler,    only: backward_euler_t
 !    use type_hamonic_balance,   only: harmonic_balance_t !not in yet
 !    use type_runge_kutta,      only: runge_kutta_t !already in but might be splitted in multiple time_integrators
-    use type_explicit_runge_kutta, only: explicit_runge_kutta_t
+!    use type_explicit_runge_kutta, only: explicit_runge_kutta_t
     implicit none
 
 
 
     ! Instantiate solver types for sourcing
     type(steady_t)                      :: STEADY
-    type(forward_euler_t)               :: FORWARD_EULER
+!    type(forward_euler_t)               :: FORWARD_EULER
 !    type(backward_euler_t)              :: BACKWARD_EULER
 !    type(harmonic_balance_t)            :: HB !not in yet
 !    type(runge_kutta_t)                 :: RK
-    type(explicit_runge_kutta_t)        :: EXPLICIT_RK
+!    type(explicit_runge_kutta_t)        :: EXPLICIT_RK
 
     logical :: initialized = .false.
 
@@ -47,6 +49,7 @@ contains
         character(*),                               intent(in)      :: time_string
         class(time_integrator_t),   allocatable,    intent(inout)   :: instance
 
+        type(time_manager_t)        :: time_manager
         character(:),   allocatable :: user_msg, dev_msg
 
 
@@ -56,8 +59,8 @@ contains
             case ('steady','Steady','STEADY')
                 allocate(instance, source=STEADY)
 
-            case ('forward_euler','Forward_Euler','FORWARD_EULER','forward euler', 'Forward Euler')
-                allocate(instance, source=FORWARD_EULER)
+!            case ('forward_euler','Forward_Euler','FORWARD_EULER','forward euler', 'Forward Euler')
+!                allocate(instance, source=FORWARD_EULER)
 !
 !            case ('backward_euler', 'Backward_Euler', 'BACKWARD_EULER', 'backward euler', 'Backward Euler', 'BACKWARD EULER')
 !                allocate(instance, source=BACKWARD_EULER)
@@ -65,9 +68,9 @@ contains
 !            case ('Harmonic Balance', 'Harmonic_Balance', 'harmonic balance', 'harmonic_balance', 'HB')
 !                allocate(instance, source=HB)
             
-            case ('Second Order Runge_Kutta', 'Explict Midpoint', 'Second Order RK', 'Modified Euler', 'Second Order Ralston Method', 'Third Order Runge-Kutta', 'Third Order Kutta', 'Third Order RK', &
-                   'Runge-Kutta Method', 'Fourth Runge-Kutta Method', 'Fourth Order RK Method', 'RK4', 'Three-Eighth Rule', 'Fourth Order Kutta') ! this probably needs to be split up in several RK schemes
-                allocate(instance, source=EXPLICIT_RK)
+!            case ('Second Order Runge_Kutta', 'Explict Midpoint', 'Second Order RK', 'Modified Euler', 'Second Order Ralston Method', 'Third Order Runge-Kutta', 'Third Order Kutta', 'Third Order RK', &
+!                   'Runge-Kutta Method', 'Fourth Runge-Kutta Method', 'Fourth Order RK Method', 'RK4', 'Three-Eighth Rule', 'Fourth Order Kutta') ! this probably needs to be split up in several RK schemes
+!                allocate(instance, source=EXPLICIT_RK)
 
 
 
@@ -88,7 +91,8 @@ contains
         ! Call time_integrator initialization
         !
         call instance%init()
-        call instance%time_manager%init()
+!        call instance%time_manager%init()
+        call time_manager%init()
 
 !        if (present(options)) then
 !            call instance%set(options)

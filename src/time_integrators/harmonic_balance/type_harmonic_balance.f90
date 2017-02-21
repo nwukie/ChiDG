@@ -5,6 +5,7 @@ module type_harmonic_balance
     use mod_spatial,            only: update_space
 
     use type_time_integrator,   only: time_integrator_t
+    use type_time_manager,      only: time_manager_t
     use type_system_assembler,  only: system_assembler_t
     
     use type_chidg_data,        only: chidg_data_t
@@ -19,10 +20,6 @@ module type_harmonic_balance
     implicit none
     private
 
-    integer(ik)                 :: nfreq
-    integer(ik)                 :: ntime
-    real(rk), allocatable       :: freq_data(:)
-    real(rk), allocatable       :: time_lev(:) 
     real(rk), allocatable       :: D(:,:)
 
     !>
@@ -85,24 +82,26 @@ contains
     subroutine init(self)
         class(harmonic_balance_t),  intent(inout)   :: self
 
+        type(time_manager_t)                :: time_manager
         integer(ik)                         :: ierr
         type(assemble_harmonic_balance_t)   :: assemble_harmonic_balance
-
+        integer(ik)                         :: nfreq, ntime
+        real(rk), allocatable               :: freq_data(:), time_lev(:)
 
         allocate(self%system, source=assemble_harmonic_balance, stat=ierr)
         if (ierr /= 0) call AllocationError
 
-        nfreq     = self%time_manager%freq_data%size()
-        ntime     = self%time_manager%time_lev%size()
-        freq_data = self%time_manager%freq_data%data()
-        time_lev  = self%time_manager%time_lev%data() 
+        nfreq     = time_manager%freq_data%size()
+        ntime     = time_manager%time_lev%size()
+        freq_data = time_manager%freq_data%data()
+        time_lev  = time_manager%time_lev%data() 
 
 
         !
         ! Compute the pseudo spectral operator
         !
         call calc_pseudo_spectral_operator(nfreq,ntime,freq_data,time_lev,D)
-        call get_pseudo_spectral_operator(D)
+        !call get_pseudo_spectral_operator(D)
 
     end subroutine init
     !*************************************************************************************************
@@ -159,8 +158,10 @@ contains
         logical,                              intent(in),    optional     :: differentiate
 
         
+        type(time_manager_t)    :: time_manager
         integer(ik)             :: itime_outer, itime_inner, idom, ielem, ivar    ! Loop counters
         real(rk), allocatable   :: temp_1(:), temp_2(:)     ! Temporary variables
+        integer(ik)             :: ntime
         integer(ik)             :: ierr
 
 
@@ -171,6 +172,8 @@ contains
 
         
         associate ( rhs => data%sdata%rhs, q => data%sdata%q )
+
+        ntime = time_manager%time_lev%size()
 
         do itime_outer = 1,ntime
 

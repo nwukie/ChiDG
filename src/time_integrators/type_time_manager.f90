@@ -1,9 +1,10 @@
 module type_time_manager
 #include <messenger.h>
     
-    use mod_kinds,      only: rk,ik
-    use mod_constants,  only: PI,ZERO,ONE,TWO
-    use type_rvector,   only: rvector_t
+    use mod_kinds,       only: rk,ik
+    use mod_constants,   only: PI,ZERO,ONE,TWO
+    use type_rvector,    only: rvector_t
+    use mod_HB_matrices, only: calc_pseudo_spectral_operator
     use mod_io
 
     implicit none
@@ -24,13 +25,17 @@ module type_time_manager
 
         ! Unsteady time parameter
         real(rk)                :: dt          != 0.001_rk
-        integer(ik)             :: time_steps  != 100
+        integer(ik)             :: time_steps  != 100       ! TODO: time_steps .ne. ntime for time marching
+                                                            !       (ntime = 1) but for HB time_steps .eq. ntime
         integer(ik)             :: nwrite      != 10
+        integer(ik)             :: ntime = 1   ! ntime is 1 for all present time-marching schemes 
+                                               ! and updated for HB according to no. of frequencies (=2K + 1) 
         
         ! HB time parameter
         type(rvector_t)         :: freq_data   !> we have a limit of 100 freq's based on the array size in the namelist file
         type(rvector_t)         :: time_lev
-    
+        real(rk), allocatable   :: D(:,:)
+
     contains
 
         procedure   :: init             !< Initialization procedure to store all the time information needed
@@ -147,6 +152,18 @@ contains
                    call  self%time_lev%push_back( (TWO*PI)/minval(self%freq_data%data()) * (tmp/n_times) )
 
                 end do
+
+                !
+                ! ntime added to help with changes made in operator_chidg_mv
+                !
+                self%ntime = self%time_lev%size()
+
+                !
+                ! Compute the pseudo spectral operator when the HB time integrator is specified
+                ! in the namelist file
+                !
+                call calc_pseudo_spectral_operator(self%freq_data%size(),self%time_steps, &
+                                                   self%freq_data%data(),self%time_lev%data(),self%D)
 
             case default
                 user_msg = "We can't seem to find a time integrator that matches the input &

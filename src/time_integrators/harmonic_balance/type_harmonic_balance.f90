@@ -14,13 +14,12 @@ module type_harmonic_balance
     use type_preconditioner,    only: preconditioner_t
     use type_rvector,           only: rvector_t
     use mod_HB_matrices,        only: calc_pseudo_spectral_operator
-    use mod_time_HB,            only: get_pseudo_spectral_operator
+!    use mod_time_HB,            only: get_pseudo_spectral_operator
     use type_chidg_vector
 
     implicit none
     private
 
-    real(rk), allocatable       :: D(:,:)
 
     !>
     !!
@@ -91,17 +90,6 @@ contains
         allocate(self%system, source=assemble_harmonic_balance, stat=ierr)
         if (ierr /= 0) call AllocationError
 
-        nfreq     = time_manager%freq_data%size()
-        ntime     = time_manager%time_lev%size()
-        freq_data = time_manager%freq_data%data()
-        time_lev  = time_manager%time_lev%data() 
-
-
-        !
-        ! Compute the pseudo spectral operator
-        !
-        call calc_pseudo_spectral_operator(nfreq,ntime,freq_data,time_lev,D)
-        !call get_pseudo_spectral_operator(D)
 
     end subroutine init
     !*************************************************************************************************
@@ -163,6 +151,7 @@ contains
         real(rk), allocatable   :: temp_1(:), temp_2(:)     ! Temporary variables
         integer(ik)             :: ntime
         integer(ik)             :: ierr
+        real(rk),allocatable    :: D(:,:)
 
 
         !
@@ -173,7 +162,11 @@ contains
         
         associate ( rhs => data%sdata%rhs, q => data%sdata%q )
 
+        !
+        ! Set local variables equal to the values set in time_manager
+        !
         ntime = time_manager%time_lev%size()
+        D = time_manager%D
 
         do itime_outer = 1,ntime
 

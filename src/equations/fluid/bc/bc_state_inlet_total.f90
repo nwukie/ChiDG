@@ -1,4 +1,4 @@
-module bc_state_totalinlet
+module bc_state_inlet_total
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ONE, TWO
@@ -17,14 +17,14 @@ module bc_state_totalinlet
     !!  @date   2/8/2016
     !!
     !-------------------------------------------------------------------------------------------
-    type, public, extends(bc_state_t) :: totalinlet_t
+    type, public, extends(bc_state_t) :: inlet_total_t
 
     contains
 
         procedure   :: init
         procedure   :: compute_bc_state
 
-    end type totalinlet_t
+    end type inlet_total_t
     !*******************************************************************************************
 
 
@@ -43,23 +43,14 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(totalinlet_t),   intent(inout) :: self
+        class(inlet_total_t),   intent(inout) :: self
         
         !
         ! Set name, family
         !
-        call self%set_name("Total Inlet")
+        call self%set_name("Inlet - Total")
         call self%set_family("Inlet")
 
-
-!        !
-!        ! Set operator equations
-!        !
-!        call self%set_equation("Density"   )
-!        call self%set_equation("Momentum-1")
-!        call self%set_equation("Momentum-2")
-!        call self%set_equation("Momentum-3")
-!        call self%set_equation("Energy"    )
 
 
         !
@@ -100,7 +91,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop)
-        class(totalinlet_t),    intent(inout)   :: self
+        class(inlet_total_t),   intent(inout)   :: self
         type(chidg_worker_t),   intent(inout)   :: worker
         class(properties_t),    intent(inout)   :: prop
 
@@ -114,16 +105,14 @@ contains
             drho_dz_m, drhou_dz_m, drhov_dz_m, drhow_dz_m, drhoE_dz_m,  &
             u_m,    v_m,    w_m,                                        &
             u_bc,   v_bc,   w_bc,                                       &
-            T_bc,   vmag2_m, vmag, H_bc, p_ref, PT
+            T_bc,   vmag2_m, vmag, H_bc
 
 
         real(rk)                                    :: gam_m, cp_m, M, time
         type(point_t),  allocatable, dimension(:)   :: coords
         real(rk),       allocatable, dimension(:)   ::  &
-            TT, n1, n2, n3, nmag, alpha, r, u_theta
-            ! PT
+            TT, n1, n2, n3, nmag, alpha, r, PT
             
-        real(rk) :: K, u_z, u_theta_ref, omega, r_ref
 
 
         !
@@ -131,7 +120,7 @@ contains
         !
         coords = worker%coords()
         time   = worker%time()
-!        PT = self%bcproperties%compute('Total Pressure',     time, coords)
+        PT = self%bcproperties%compute('Total Pressure',     time, coords)
         TT = self%bcproperties%compute('Total Temperature',  time, coords)
 
 
@@ -191,53 +180,7 @@ contains
         !
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_m = mom2_m / worker%coordinate('1','boundary')
-
-
-            !
-            ! Override user-input
-            !
-            r_ref       = 2._rk
-            omega       = 20._rk
-            u_z         = 20._rk
-            u_theta_ref = omega*r_ref
-            p_ref       = 110000._rk - (density_m/2._rk)*(u_z*u_z  +  u_theta_ref*u_theta_ref)
-
-
-            !
-            ! Compute variation in total pressure and u_theta
-            !
-            r = worker%coordinate('1','boundary')
-            PT = density_m
-            PT = 0._rk
-
-            u_theta = r
-            u_theta = 0._rk
-            where (r < r_ref)
-                PT = p_ref + (density_m/2._rk)*(u_z*u_z + u_theta_ref*u_theta_ref) + density_m*omega*omega*(r*r - r_ref*r_ref)
-                u_theta = omega*r
-            else where
-                PT = 110000._rk
-                u_theta = omega*r_ref*r_ref/r
-            end where
-
-            !
-            ! Compute flow angle
-            !
-            n1 = 0._rk
-            alpha = atan2( u_theta , u_z )
-            n2 = sin(alpha)
-            n3 = cos(alpha)
-
-
         end if
-
-
-        n1 = 1._rk
-        n2 = 0._rk
-        n3 = 0._rk
-
-        PT = density_m
-        PT = self%bcproperties%compute('Total Pressure',     time, coords)
 
 
 
@@ -352,4 +295,4 @@ contains
 
 
 
-end module bc_state_totalinlet
+end module bc_state_inlet_total

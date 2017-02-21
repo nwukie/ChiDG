@@ -131,19 +131,19 @@ program driver
             call create_function(constant,'constant')
 
             ! rho
-            call constant%set_option('val',1.15_rk)
+            call constant%set_option('val',1.19_rk)
             call chidg%data%sdata%q%project(chidg%data%mesh,constant,1)
 
             ! rho_u
-            call constant%set_option('val',0.0_rk)
+            call constant%set_option('val',30.0_rk)
             call chidg%data%sdata%q%project(chidg%data%mesh,constant,2)
 
             ! rho_v
-            call constant%set_option('val',20.0_rk)
+            call constant%set_option('val',0.0_rk)
             call chidg%data%sdata%q%project(chidg%data%mesh,constant,3)
 
             ! rho_w
-            call constant%set_option('val',20.0_rk)
+            call constant%set_option('val',0.0_rk)
             call chidg%data%sdata%q%project(chidg%data%mesh,constant,4)
 
             ! rho_E

@@ -1072,15 +1072,6 @@ contains
 
 
 
-!            linearize_me = (idiff == DIAG)
-!            if (linearize_me) then
-!                compute_function = .true.
-!            else
-!                compute_function = ( (mesh(elem_info%idomain_l)%faces(elem_info%ielement_l,idiff)%ftype == INTERIOR) .or. &
-!                                     (mesh(elem_info%idomain_l)%faces(elem_info%ielement_l,idiff)%ftype == CHIMERA) )
-!            end if
-
-
             if (diff_none) then
                 compute_function = .true.
             else if (diff_interior) then

@@ -54,6 +54,7 @@ contains
         class(shear_stress_t), intent(inout)   :: self
 
         call self%set_name('Shear Stress')
+        call self%set_dependency('Grad(Q)')
 
         call self%add_model_field('Shear-11')
         call self%add_model_field('Shear-22')
@@ -139,8 +140,8 @@ contains
         !
         ! Get previously computed viscosities
         !
-        mu_l    = worker%get_model_field_general('Laminar Viscosity',                         'value')
-        mu_t    = worker%get_model_field_general('Turbulent Viscosity',                       'value')
+        mu_l    = worker%get_model_field_general('Laminar Viscosity',   'value')
+        mu_t    = worker%get_model_field_general('Turbulent Viscosity', 'value')
 
         lamda_l = worker%get_model_field_general('Second Coefficient of Laminar Viscosity',   'value')
         lamda_t = worker%get_model_field_general('Second Coefficient of Turbulent Viscosity', 'value')
@@ -154,9 +155,6 @@ contains
         !
         mu    = mu_l    + mu_t
         lamda = lamda_l + lamda_t
-
-
-
 
 
 
@@ -222,8 +220,6 @@ contains
 
 
         else if (worker%coordinate_system() == 'Cylindrical') then
-
-            !r = worker%coordinate('1')
 
 
 

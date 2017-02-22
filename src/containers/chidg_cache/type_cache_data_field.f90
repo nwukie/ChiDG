@@ -106,7 +106,12 @@ contains
                 nnodes_face = mesh(idomain_l)%elems(ielement_l)%gq%face%nnodes
 
                 ! Interior element
+                !ndepend_value = 1
+                ! The potential here is that model field values depend on exterior elements.
                 ndepend_value = 1
+                do iface_loop = 1,NFACES
+                    ndepend_value = ndepend_value + self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface_loop)
+                end do
 
                 ! Interior element + All Exterior Elements
                 ndepend_deriv = 1
@@ -122,8 +127,10 @@ contains
                 nnodes_vol  = mesh(idomain_l)%faces(ielement_l,iface)%gq%vol%nnodes
                 nnodes_face = mesh(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
 
-                ! Interior element
-                ndepend_value = 1
+                ! Interior element + Face Exterior Elements
+                !ndepend_value = 1
+                ! The potential here is that model field values depend on exterior elements.
+                ndepend_value = 1 + self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface)
 
                 ! Interior element + Face Exterior Elements
                 ndepend_deriv = 1 + self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface)
@@ -136,7 +143,8 @@ contains
                 nnodes_face = mesh(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
 
                 ! Exterior Elements
-                ndepend_value = self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface)
+                !ndepend_value = self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface)
+                ndepend_value = 1 + self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface)
 
                 ! Interior element + Face Exterior Elements
                 ndepend_deriv = 1 + self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface)
@@ -208,20 +216,6 @@ contains
         ! Clear entries
         !
         call self%clear()
-!        !
-!        ! Clear seed contents, zero values
-!        !
-!        do iseed = 1,size(self%value_seeds)
-!            call self%value_seeds(iseed)%clear()
-!        end do
-!
-!        do iseed = 1,size(self%gradient_seeds)
-!            call self%gradient_seeds(iseed)%clear()
-!        end do
-!
-!        do iseed = 1,size(self%lift_seeds)
-!            call self%lift_seeds(iseed)%clear()
-!        end do
 
 
 

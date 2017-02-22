@@ -339,7 +339,11 @@ contains
         type(bcset_t),              intent(inout)   :: bc_set(:)
         logical,                    intent(in)      :: differentiate
 
-        integer(ik)                 :: iface, imodel, idomain_l, ielement_l, idepend, idiff
+        logical                     :: diff_none, diff_interior, diff_exterior, compute_model
+        integer(ik)                 :: iface, imodel, idomain_l, ielement_l, idepend, idiff, &
+                                       ipattern, ndepend
+        integer(ik),    allocatable :: compute_pattern(:)
+        character(:),   allocatable :: dependency
 
 
         idomain_l  = worker%element_info%idomain_l 
@@ -363,25 +367,126 @@ contains
 
 
 
-        !
-        ! Element volume cache. Models only depend on interior element
-        !
-        if (differentiate) then
-            idiff = DIAG
-        else
-            idiff = 0
-        end if
 
-        idepend = 1
+
+
+
+        !
+        ! Compute element model field. Potentially differentiated wrt exterior elements.
+        !
         worker%interpolation_source = 'element'
         do imodel = 1,equation_set(idomain_l)%nmodels()
 
-            worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
-            worker%function_info%idepend = idepend
+            !
+            ! Get model dependency
+            !
+            dependency = equation_set(idomain_l)%models(imodel)%model%get_dependency()
 
-            call equation_set(idomain_l)%models(imodel)%model%compute(worker)
+            !
+            ! Determine pattern to compute functions. Depends on if we are differentiating 
+            ! or not. These will be used to set idiff, indicating the differentiation
+            ! direction.
+            !
+            if (differentiate) then
+                ! compute function, wrt (all exterior)/interior states
+                if (dependency == 'Q-') then
+                    compute_pattern = [DIAG]
+                else if ( (dependency == 'Q-,Q+') .or. &
+                          (dependency == 'Grad(Q)') ) then
+                    compute_pattern = [1,2,3,4,5,6,DIAG]
+                else
+                    call chidg_signal(FATAL,"cache_handler%update_model_fields: Invalid model dependency string.")
+                end if
+            else
+                ! compute function, but do not differentiate
+                compute_pattern = [0]
+            end if
 
+
+
+
+            !
+            ! Execute compute pattern
+            !
+            do ipattern = 1,size(compute_pattern)
+
+            
+                !
+                ! get differentiation indicator
+                !
+                idiff = compute_pattern(ipattern)
+
+                diff_none = (idiff == 0)
+                diff_interior = (idiff == DIAG)
+                diff_exterior = ( (idiff == 1) .or. (idiff == 2) .or. &
+                                  (idiff == 3) .or. (idiff == 4) .or. &
+                                  (idiff == 5) .or. (idiff == 6) )
+
+
+
+                if (diff_interior .or. diff_none) then
+                    compute_model = .true.
+                else if (diff_exterior) then
+                    compute_model = ( (worker%mesh(idomain_l)%faces(ielement_l,idiff)%ftype == INTERIOR) .or. &
+                                      (worker%mesh(idomain_l)%faces(ielement_l,idiff)%ftype == CHIMERA) )
+                end if
+
+
+
+                if (compute_model) then
+
+                    if (diff_none .or. diff_interior) then
+                        ndepend = 1
+                    else
+                        call worker%set_face(idiff)
+                        ndepend = get_ndepend_exterior(worker,equation_set,bc_set,differentiate)
+                    end if
+
+                    do idepend = 1,ndepend
+                        worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
+                        worker%function_info%idepend = idepend
+
+                        call equation_set(idomain_l)%models(imodel)%model%compute(worker)
+                    end do !idepend
+                end if !compute
+
+
+            end do !ipattern
         end do !imodel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+!        !
+!        ! Element volume cache. Models only depend on interior element
+!        !
+!        if (differentiate) then
+!            idiff = DIAG
+!        else
+!            idiff = 0
+!        end if
+!
+!        idepend = 1
+!        worker%interpolation_source = 'element'
+!        do imodel = 1,equation_set(idomain_l)%nmodels()
+!
+!            worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
+!            worker%function_info%idepend = idepend
+!
+!            call equation_set(idomain_l)%models(imodel)%model%compute(worker)
+!
+!        end do !imodel
 
 
     end subroutine update_model_fields
@@ -923,8 +1028,10 @@ contains
         type(bcset_t),              intent(inout)   :: bc_set(:)
         logical,                    intent(in)      :: differentiate
 
-        integer(ik)                 :: idepend, imodel, idomain_l, ielement_l, iface, idiff
-        character(:),   allocatable :: field
+        logical                     :: exterior_coupling
+        integer(ik)                 :: idepend, imodel, idomain_l, ielement_l, iface, idiff, ndepend
+        integer(ik),    allocatable :: compute_pattern(:)
+        character(:),   allocatable :: field, dependency
         type(AD_D),     allocatable :: value_gq(:)
 
 
@@ -932,30 +1039,85 @@ contains
         ielement_l = worker%element_info%ielement_l 
         iface      = worker%iface
 
-        !
-        ! Set differentiation indicator
-        !
-        if (differentiate) then
-            idiff = DIAG
-        else
-            idiff = 0
-        end if
 
 
 
         !
-        ! Update models for 'face interior'. Only depends on interior element.
+        ! Update models for 'face interior'. Differentiated wrt interior.
         !
         idepend = 1
         worker%interpolation_source = 'face interior'
         do imodel = 1,equation_set(idomain_l)%nmodels()
 
-                worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
-                worker%function_info%idepend = idepend
-                worker%function_info%idiff   = idiff
+            !
+            ! Set differentiation indicator
+            !
+            if (differentiate) then
+                idiff = DIAG
+            else
+                idiff = 0 
+            end if
 
-                call equation_set(idomain_l)%models(imodel)%model%compute(worker)
-        end do
+
+            worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+            worker%function_info%idepend = idepend
+            worker%function_info%idiff   = idiff
+
+            call equation_set(idomain_l)%models(imodel)%model%compute(worker)
+
+
+        end do !imodel
+
+
+
+
+        !
+        ! Update models for 'face interior'. Differentiated wrt exterior.
+        !
+        worker%interpolation_source = 'face interior'
+        if ( (worker%face_type() == INTERIOR) .or. (worker%face_type() == CHIMERA) ) then
+            if (differentiate) then
+
+                do imodel = 1,equation_set(idomain_l)%nmodels()
+
+                    !
+                    ! Get model dependency 
+                    !
+                    dependency = equation_set(idomain_l)%models(imodel)%model%get_dependency()
+
+
+                    exterior_coupling = (dependency == 'Q-,Q+') .or. (dependency == 'Grad(Q)')
+                    if ( exterior_coupling ) then
+
+                        !
+                        ! Set differentiation indicator
+                        !
+                        idiff = iface
+
+                        ! 
+                        ! Compute the number of exterior element dependencies
+                        !
+                        ndepend = get_ndepend_exterior(worker,equation_set,bc_set,differentiate)
+
+                        !
+                        ! Loop through external dependencies and compute model
+                        !
+                        do idepend = 1,ndepend
+                            worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+                            worker%function_info%idepend = idepend
+                            worker%function_info%idiff   = idiff
+
+                            call equation_set(idomain_l)%models(imodel)%model%compute(worker)
+                        end do !idepend
+
+                    end if 
+
+
+                end do !imodel
+
+            end if !differentiate
+        end if ! INTERIOR or CHIMERA
+
 
 
     end subroutine update_model_interior
@@ -995,20 +1157,8 @@ contains
         ielement_l = worker%element_info%ielement_l 
         iface      = worker%iface
 
-        !
-        ! Set differentiation indicator
-        !
-        if (differentiate) then
-            idiff = iface
-        else
-            idiff = 0
-        end if
 
 
-        ! 
-        ! Compute the number of exterior element dependencies for face exterior state
-        !
-        ndepend = get_ndepend_exterior(worker,equation_set,bc_set,differentiate)
 
 
 
@@ -1018,7 +1168,20 @@ contains
         !
         worker%interpolation_source = 'face exterior'
         if ( (worker%face_type() == INTERIOR) .or. (worker%face_type() == CHIMERA) ) then
+
+            !
+            ! Set differentiation indicator. Differentiate 'face exterior' wrt EXTERIOR elements
+            !
+            if (differentiate) then
+                idiff = iface
+            else
+                idiff = 0
+            end if
             
+            ! 
+            ! Compute the number of exterior element dependencies for face exterior state
+            !
+            ndepend = get_ndepend_exterior(worker,equation_set,bc_set,differentiate)
             do imodel = 1,equation_set(idomain_l)%nmodels()
                 do idepend = 1,ndepend
 
@@ -1031,6 +1194,39 @@ contains
             end do !imodel
 
 
+            !
+            ! Set differentiation indicator. Differentiate 'face exterior' wrt INTERIOR element
+            ! Only need to compute if differentiating
+            !
+            if (differentiate) then
+
+                idiff = DIAG
+            
+                ! 
+                ! Compute the number of exterior element dependencies for face exterior state
+                !
+                ndepend = 1
+                do imodel = 1,equation_set(idomain_l)%nmodels()
+                    do idepend = 1,ndepend
+
+                        worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+                        worker%function_info%idepend = idepend
+
+                        call equation_set(idomain_l)%models(imodel)%model%compute(worker)
+
+                    end do !idepend
+                end do !imodel
+
+            end if
+
+
+
+
+
+
+
+
+
 
 
         !
@@ -1039,6 +1235,11 @@ contains
         worker%interpolation_source = 'face exterior'
         else if ( (worker%face_type() == BOUNDARY) ) then
 
+            ! 
+            ! Compute the number of exterior element dependencies for face exterior state
+            !
+            ndepend = get_ndepend_exterior(worker,equation_set,bc_set,differentiate)
+
             BC_ID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_ID
             BC_face = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_face
 
@@ -1046,7 +1247,7 @@ contains
                 do idepend = 1,ndepend
 
                     if (differentiate) then
-                        ! Get coupled bc element to linearize against.
+                        ! Get coupled bc element to differentiate wrt
                         ielement_c = bc_set(idomain_l)%bcs(BC_ID)%bc_patch%coupled_elements(BC_face)%at(idepend)
                         worker%function_info%seed%idomain_g  = worker%mesh(idomain_l)%elems(ielement_c)%idomain_g
                         worker%function_info%seed%idomain_l  = worker%mesh(idomain_l)%elems(ielement_c)%idomain_l
@@ -1054,7 +1255,7 @@ contains
                         worker%function_info%seed%ielement_l = worker%mesh(idomain_l)%elems(ielement_c)%ielement_l
                         worker%function_info%seed%iproc      = IRANK
                     else
-                        ! Get coupled bc element to linearize against.
+                        ! Set no differentiation
                         worker%function_info%seed%idomain_g  = 0
                         worker%function_info%seed%idomain_l  = 0
                         worker%function_info%seed%ielement_g = 0

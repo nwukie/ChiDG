@@ -11,6 +11,7 @@ add_lib_sources(
                 type_fluid_pseudo_timestep.f90
                 type_ideal_gas.f90
                 type_shear_stress.f90
+                type_temperature_gradient.f90
                 type_sutherlands_law.f90
                 type_constant_viscosity.f90
                 type_stokes_hypothesis.f90

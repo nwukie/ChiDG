@@ -80,181 +80,131 @@ contains
         type(chidg_worker_t),                   intent(inout)   :: worker
         class(properties_t),                    intent(inout)   :: prop
 
-        type(AD_D), allocatable, dimension(:) ::                &
-            rho, rhou, rhov, rhow, rhoE, p, u, v, w, invrho,    &
-            drho_dx, drhou_dx, drhov_dx, drhow_dx, drhoE_dx,    &
-            drho_dy, drhou_dy, drhov_dy, drhow_dy, drhoE_dy,    &
-            drho_dz, drhou_dz, drhov_dz, drhow_dz, drhoE_dz,    &
-            dT_drho, dT_drhou, dT_drhov, dT_drhow, dT_drhoE,    &
-            dp_drho, dp_drhou, dp_drhov, dp_drhow, dp_drhoE,    &
-            dke_drho, dke_drhou, dke_drhov, dke_drhow,          &
-            dT_dx,   dT_dy,    dT_dz,                           &
-            k,       k_l,      k_t,                             &
-            tau_xx, tau_yy, tau_zz, tau_xy, tau_xz, tau_yz,     &
-            flux_x, flux_y, flux_z, eps
+        type(AD_D), allocatable, dimension(:) ::    &
+            density, mom1, mom2, mom3, energy,      &
+            u, v, w, invdensity,                    &
+            grad1_T, grad2_T, grad3_T,              &
+            k,       k_l,     k_t,                  &
+            tau_11, tau_22, tau_33,                 &
+            tau_12, tau_13, tau_23,                 &
+            flux_1, flux_2, flux_3
 
-        real(rk)    :: const, gam
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho  = worker%get_primary_field_element('Density'   ,'value')
-        rhou = worker%get_primary_field_element('Momentum-1','value')
-        rhov = worker%get_primary_field_element('Momentum-2','value')
-        rhow = worker%get_primary_field_element('Momentum-3','value')
-        rhoE = worker%get_primary_field_element('Energy'    ,'value')
+        density = worker%get_primary_field_element('Density'   ,'value')
+        mom1    = worker%get_primary_field_element('Momentum-1','value')
+        mom2    = worker%get_primary_field_element('Momentum-2','value')
+        mom3    = worker%get_primary_field_element('Momentum-3','value')
+        energy  = worker%get_primary_field_element('Energy'    ,'value')
 
 
         !
-        ! Interpolate solution gradients to quadrature nodes
+        ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
-        drho_dx  = worker%get_primary_field_element('Density'   ,'grad1+lift')
-        drho_dy  = worker%get_primary_field_element('Density'   ,'grad2+lift')
-        drho_dz  = worker%get_primary_field_element('Density'   ,'grad3+lift')
-
-        drhou_dx = worker%get_primary_field_element('Momentum-1','grad1+lift')
-        drhou_dy = worker%get_primary_field_element('Momentum-1','grad2+lift')
-        drhou_dz = worker%get_primary_field_element('Momentum-1','grad3+lift')
-
-        drhov_dx = worker%get_primary_field_element('Momentum-2','grad1+lift')
-        drhov_dy = worker%get_primary_field_element('Momentum-2','grad2+lift')
-        drhov_dz = worker%get_primary_field_element('Momentum-2','grad3+lift')
-
-        drhow_dx = worker%get_primary_field_element('Momentum-3','grad1+lift')
-        drhow_dy = worker%get_primary_field_element('Momentum-3','grad2+lift')
-        drhow_dz = worker%get_primary_field_element('Momentum-3','grad3+lift')
-
-        drhoE_dx = worker%get_primary_field_element('Energy'    ,'grad1+lift')
-        drhoE_dy = worker%get_primary_field_element('Energy'    ,'grad2+lift')
-        drhoE_dz = worker%get_primary_field_element('Energy'    ,'grad3+lift')
-
+        if (worker%coordinate_system() == 'Cylindrical') then
+            mom2 = mom2 / worker%coordinate('1','volume')
+        end if
 
 
         !
         ! Get Model fields:
-        !   Pressure
-        !   Temperature
-        !   Viscosity
         !   Second Coefficient of Viscosity
         !   Thermal Conductivity
         !
-        p   = worker%get_model_field_element('Pressure',                       'value')
         k_l = worker%get_model_field_element('Laminar Thermal Conductivity',   'value')
         k_t = worker%get_model_field_element('Turbulent Thermal Conductivity', 'value')
-        gam = 1.4_rk
 
 
         !
-        ! Compute effective conductivity. Laminar + Turbulent.
+        ! compute effective conductivity. Laminar + Turbulent.
         !
         k = k_l + k_t
 
 
-
         !
-        ! Compute velocities
+        ! compute velocities
         !
-        invrho = ONE/rho
-        u = rhou*invrho
-        v = rhov*invrho
-        w = rhow*invrho
-
+        invdensity = ONE/density
+        u          = mom1*invdensity
+        v          = mom2*invdensity
+        w          = mom3*invdensity
 
 
         !
-        ! Compute Kinetic Energy Jacobians
+        ! get temperature gradient
         !
-        dke_drho  = -HALF*(u*u + v*v + w*w)
-        dke_drhou = u
-        dke_drhov = v
-        dke_drhow = w
-
-
-        !
-        ! Compute Pressure Jacobians
-        !
-        dp_drho  = -(gam-ONE)*dke_drho
-        dp_drhou = -(gam-ONE)*dke_drhou
-        dp_drhov = -(gam-ONE)*dke_drhov
-        dp_drhow = -(gam-ONE)*dke_drhow
-        dp_drhoE =  dp_drhow    ! Initialize derivatives
-        dp_drhoE =  (gam-ONE)   ! No negative sign
-
-        
-        !
-        ! Compute Temperature Jacobians
-        !
-        const = ONE/287.15_rk
-        dT_drho  = const*invrho*dp_drho  -  const*invrho*invrho*p
-        dT_drhou = const*invrho*dp_drhou
-        dT_drhov = const*invrho*dp_drhov
-        dT_drhow = const*invrho*dp_drhow
-        dT_drhoE = const*invrho*dp_drhoE
-
-
-        !
-        ! Compute temperature gradient
-        !
-        dT_dx = dT_drho*drho_dx + dT_drhou*drhou_dx + dT_drhov*drhov_dx + dT_drhow*drhow_dx + dT_drhoE*drhoE_dx
-        dT_dy = dT_drho*drho_dy + dT_drhou*drhou_dy + dT_drhov*drhov_dy + dT_drhow*drhow_dy + dT_drhoE*drhoE_dy
-        dT_dz = dT_drho*drho_dz + dT_drhou*drhou_dz + dT_drhov*drhov_dz + dT_drhow*drhow_dz + dT_drhoE*drhoE_dz
+        grad1_T = worker%get_model_field_element('Temperature Gradient - 1', 'value')
+        grad2_T = worker%get_model_field_element('Temperature Gradient - 2', 'value')
+        grad3_T = worker%get_model_field_element('Temperature Gradient - 3', 'value')
 
 
         !
         ! get shear stress components
         !
-        tau_xx = worker%get_model_field_element('Shear-11', 'value')
-        tau_yy = worker%get_model_field_element('Shear-22', 'value')
-        tau_zz = worker%get_model_field_element('Shear-33', 'value')
+        tau_11 = worker%get_model_field_element('Shear-11', 'value')
+        tau_22 = worker%get_model_field_element('Shear-22', 'value')
+        tau_33 = worker%get_model_field_element('Shear-33', 'value')
 
-        tau_xy = worker%get_model_field_element('Shear-12', 'value')
-        tau_xz = worker%get_model_field_element('Shear-13', 'value')
-        tau_yz = worker%get_model_field_element('Shear-23', 'value')
-
-
+        tau_12 = worker%get_model_field_element('Shear-12', 'value')
+        tau_13 = worker%get_model_field_element('Shear-13', 'value')
+        tau_23 = worker%get_model_field_element('Shear-23', 'value')
 
 
 
-        !===========================
-        !        MASS FLUX
-        !===========================
 
-        !===========================
-        !     X-MOMENTUM FLUX
-        !===========================
-        flux_x = -tau_xx
-        flux_y = -tau_xy
-        flux_z = -tau_xz
 
-        call worker%integrate_volume('Momentum-1',flux_x,flux_y,flux_z)
+        !----------------------------------
+        !            mass flux
+        !----------------------------------
 
-        !============================
-        !     Y-MOMENTUM FLUX
-        !============================
-        flux_x = -tau_xy
-        flux_y = -tau_yy
-        flux_z = -tau_yz
 
-        call worker%integrate_volume('Momentum-2',flux_x,flux_y,flux_z)
+        !----------------------------------
+        !         momentum-1 flux
+        !----------------------------------
+        flux_1 = -tau_11
+        flux_2 = -tau_12
+        flux_3 = -tau_13
 
-        !============================
-        !     Z-MOMENTUM FLUX
-        !============================
-        flux_x = -tau_xz
-        flux_y = -tau_yz
-        flux_z = -tau_zz
+        call worker%integrate_volume('Momentum-1',flux_1,flux_2,flux_3)
 
-        call worker%integrate_volume('Momentum-3',flux_x,flux_y,flux_z)
+        !----------------------------------
+        !         momentum-2 flux
+        !----------------------------------
+        flux_1 = -tau_12
+        flux_2 = -tau_22
+        flux_3 = -tau_23
 
-        !============================
-        !       ENERGY FLUX
-        !============================
-        flux_x = -k*dT_dx  -  (u*tau_xx + v*tau_xy + w*tau_xz)
-        flux_y = -k*dT_dy  -  (u*tau_xy + v*tau_yy + w*tau_yz)
-        flux_z = -k*dT_dz  -  (u*tau_xz + v*tau_yz + w*tau_zz)
+        !
+        ! Convert to tangential to angular momentum flux
+        !
+        if (worker%coordinate_system() == 'Cylindrical') then
+            flux_1 = flux_1 * worker%coordinate('1','volume')
+            flux_2 = flux_2 * worker%coordinate('1','volume')
+            flux_3 = flux_3 * worker%coordinate('1','volume')
+        end if
 
-        call worker%integrate_volume('Energy',flux_x,flux_y,flux_z)
+        call worker%integrate_volume('Momentum-2',flux_1,flux_2,flux_3)
+
+        !----------------------------------
+        !         momentum-3 flux
+        !----------------------------------
+        flux_1 = -tau_13
+        flux_2 = -tau_23
+        flux_3 = -tau_33
+
+        call worker%integrate_volume('Momentum-3',flux_1,flux_2,flux_3)
+
+        !----------------------------------
+        !           energy flux
+        !----------------------------------
+        flux_1 = -k*grad1_T  -  (u*tau_11 + v*tau_12 + w*tau_13)
+        flux_2 = -k*grad2_T  -  (u*tau_12 + v*tau_22 + w*tau_23)
+        flux_3 = -k*grad3_T  -  (u*tau_13 + v*tau_23 + w*tau_33)
+
+        call worker%integrate_volume('Energy',flux_1,flux_2,flux_3)
 
     end subroutine compute
     !*********************************************************************************************************

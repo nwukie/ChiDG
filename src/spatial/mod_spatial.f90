@@ -193,7 +193,7 @@ contains
 
         call timer%stop()
 
-        io_spatial = .false.
+        io_spatial = .true.
         if (io_spatial) then
             call timer%report('Spatial Discretization Time')
             call comm_timer%report('    - Spatial comm time:')

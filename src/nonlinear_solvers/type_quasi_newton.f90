@@ -259,8 +259,7 @@ contains
                     ! Set working solution. Test residual at (q). Do not differentiate
                     !
                     q = qn
-                    call system%assemble(data,timing=timing,differentiate=.true.)
-                    !call update_space(data,timing,differentiate=.false.)
+                    call system%assemble(data,timing=timing,differentiate=.false.)
 
                     !
                     ! Compute new function value

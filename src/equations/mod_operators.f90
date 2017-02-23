@@ -18,7 +18,6 @@ module mod_operators
     ! Scalar Diffusion Operators
     use SD_volume_operator,                         only: SD_volume_operator_t
     use SD_boundary_operator,                       only: SD_boundary_operator_t
-    use SD_volume_source,                           only: SD_volume_source_t
     use SD_bc_operator,                             only: SD_bc_operator_t
 
     ! Fluid Inviscid Operators
@@ -179,7 +178,6 @@ contains
         type(SD_volume_operator_t)                      :: SD_volume_operator
         type(SD_boundary_operator_t)                    :: SD_boundary_operator
         type(SD_bc_operator_t)                          :: SD_bc_operator
-        type(SD_volume_source_t)                        :: SD_volume_source
 
         ! Dual Linear Advection Operators
         type(DLA_volume_advective_flux_t)               :: DLA_volume_operator
@@ -229,7 +227,6 @@ contains
             ! Register Linear Diffusion
             call operator_factory%register(SD_volume_operator)
             call operator_factory%register(SD_boundary_operator)
-            call operator_factory%register(SD_volume_source)
             call operator_factory%register(SD_bc_operator)
 
             ! Register Dual Linear Advection

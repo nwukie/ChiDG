@@ -42,13 +42,13 @@ contains
         class(SA_LaxFriedrichs_operator_t),   intent(inout)  :: self
 
         ! Set operator name
-        call self%set_name("Scalar Advection LaxFriedrichs Operator")
+        call self%set_name('Scalar Advection LaxFriedrichs Operator')
 
         ! Set operator type
-        call self%set_operator_type("Boundary Advective Operator")
+        call self%set_operator_type('Boundary Advective Operator')
 
         ! Set operator equations
-        call self%add_primary_field("u")
+        call self%add_primary_field('u')
 
     end subroutine init
     !***********************************************************************************************
@@ -71,12 +71,12 @@ contains
 
         type(AD_D), dimension(:), allocatable   ::  &
             u_m,  u_p,                              &
-            cx_m, cy_m, cz_m,                       &
-            cx_p, cy_p, cz_p,                       &
-            flux_x, flux_y, flux_z, integrand
+            c1_m, c2_m, c3_m,                       &
+            c1_p, c2_p, c3_p,                       &
+            flux_1, flux_2, flux_3, integrand
 
         real(rk),   dimension(:), allocatable   ::  &
-            normx, normy, normz, unormx, unormy, unormz
+            norm_1, norm_2, norm_3, unorm_1, unorm_2, unorm_3
 
 
 
@@ -90,34 +90,34 @@ contains
         !
         ! Get model coefficients
         !
-        cx_m = worker%get_model_field_face('Scalar X-Advection Velocity', 'value', 'face interior')
-        cy_m = worker%get_model_field_face('Scalar Y-Advection Velocity', 'value', 'face interior')
-        cz_m = worker%get_model_field_face('Scalar Z-Advection Velocity', 'value', 'face interior')
-        cx_p = worker%get_model_field_face('Scalar X-Advection Velocity', 'value', 'face exterior')
-        cy_p = worker%get_model_field_face('Scalar Y-Advection Velocity', 'value', 'face exterior')
-        cz_p = worker%get_model_field_face('Scalar Z-Advection Velocity', 'value', 'face exterior')
+        c1_m = worker%get_model_field_face('Scalar Advection Velocity-1', 'value', 'face interior')
+        c2_m = worker%get_model_field_face('Scalar Advection Velocity-2', 'value', 'face interior')
+        c3_m = worker%get_model_field_face('Scalar Advection Velocity-3', 'value', 'face interior')
+        c1_p = worker%get_model_field_face('Scalar Advection Velocity-1', 'value', 'face exterior')
+        c2_p = worker%get_model_field_face('Scalar Advection Velocity-2', 'value', 'face exterior')
+        c3_p = worker%get_model_field_face('Scalar Advection Velocity-3', 'value', 'face exterior')
         
 
         !
         ! Get normal vector
         !
-        normx  = worker%normal(1)
-        normy  = worker%normal(2)
-        normz  = worker%normal(3)
+        norm_1  = worker%normal(1)
+        norm_2  = worker%normal(2)
+        norm_3  = worker%normal(3)
 
-        unormx = worker%unit_normal(1)
-        unormy = worker%unit_normal(2)
-        unormz = worker%unit_normal(3)
+        unorm_1 = worker%unit_normal(1)
+        unorm_2 = worker%unit_normal(2)
+        unorm_3 = worker%unit_normal(3)
 
 
         !
         ! Compute boundary upwind flux
         !
-        flux_x = max(abs(cx_m),abs(cx_p))*HALF*(u_m - u_p)
-        flux_y = max(abs(cy_m),abs(cy_p))*HALF*(u_m - u_p)
-        flux_z = max(abs(cz_m),abs(cz_p))*HALF*(u_m - u_p)
+        flux_1 = max(abs(c1_m),abs(c1_p))*HALF*(u_m - u_p)
+        flux_2 = max(abs(c2_m),abs(c2_p))*HALF*(u_m - u_p)
+        flux_3 = max(abs(c3_m),abs(c3_p))*HALF*(u_m - u_p)
 
-        integrand = flux_x*normx*unormx + flux_y*normy*unormy + flux_z*normz*unormz
+        integrand = flux_1*norm_1*unorm_1 + flux_2*norm_2*unorm_2 + flux_3*norm_3*unorm_3
 
 
 

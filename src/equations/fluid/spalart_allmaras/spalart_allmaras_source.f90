@@ -55,20 +55,21 @@ contains
         class(spalart_allmaras_source_operator_t),   intent(inout)      :: self
 
         ! Set operator name.
-        call self%set_name("Spalart-Allmaras Source Operator")
+        call self%set_name('Spalart-Allmaras Source Operator')
 
         ! Set operator type.
-        call self%set_operator_type("Volume Diffusive Operator")
+        call self%set_operator_type('Volume Diffusive Operator')
 
         ! Set operator equations being integrated.
-        call self%add_primary_field("Density * NuTilde")
+        call self%add_primary_field('Density * NuTilde')
 
         ! Set auxiliary variables being used.
-        call self%add_auxiliary_field("Wall Distance : p-Poisson")
+        call self%add_auxiliary_field('Wall Distance : p-Poisson')
 
         ! Add Turbulent Egrad2 Viscosity model
         call self%add_model('Spalart Allmaras Turbulent Model Fields')
         call self%add_model('Wall Distance : p-Poisson Normalization')
+        call self%add_model('Vorticity')
 
     end subroutine init
     !********************************************************************************
@@ -88,22 +89,16 @@ contains
         class(properties_t),                        intent(inout)   :: prop
 
 
-        type(AD_D), allocatable, dimension(:) ::                                &
-            rho, rhou, rhov, rhow, rhoE, rho_nutilde, u, v, w, invrho,    &
-            mu, nu, lamda,                                                      &
-            drho_dx, drhou_dx, drhov_dx, drhow_dx, drhoE_dx,                    &
-            drho_dy, drhou_dy, drhov_dy, drhow_dy, drhoE_dy,                    &
-            drho_dz, drhou_dz, drhov_dz, drhow_dz, drhoE_dz,                    &
-            drho_nutilde_dx, drho_nutilde_dy, drho_nutilde_dz,                  &
-            du_dx,   dv_dx,    dw_dx,                                           &
-            du_dy,   dv_dy,    dw_dy,                                           &
-            du_dz,   dv_dz,    dw_dz,                                           &
-            du_drho, du_drhou, dv_drho,  dv_drhov, dw_drho, dw_drhow,           &
-            vorticity2, vorticity, vorticity_bar, vorticity_mod,                &
-            f_v1, f_v2, f_t2, f_w, f_n1, production, destruction,               &
-            dnutilde_drho, dnutilde_drho_nutilde, chi, r, rbar, g, mu_t,        &
-            nutilde, dnutilde_dx, dnutilde_dy, dnutilde_dz,                     &
-            source, dwall
+        type(AD_D), allocatable, dimension(:) ::                            &
+            rho, rho_nutilde, invrho,                                       &
+            mu, nu, lamda,                                                  &
+            grad1_rho,          grad2_rho,          grad3_rho,              &
+            grad1_rho_nutilde,  grad2_rho_nutilde,  grad3_rho_nutilde,      &
+            vorticity2, vorticity, vorticity_bar, vorticity_mod,            &
+            f_v1, f_v2, f_t2, f_w, f_n1, production, destruction,           &
+            dnutilde_drho, dnutilde_drho_nutilde, chi, r, rbar, g, mu_t,    &
+            nutilde, grad1_nutilde, grad2_nutilde, grad3_nutilde,           &
+            source, dwall, vorticity_1, vorticity_2, vorticity_3
 
         real(rk)    :: const, epsilon_vorticity, gam
 
@@ -113,41 +108,20 @@ contains
         ! Interpolate solution to quadrature nodes
         !
         rho         = worker%get_primary_field_element('Density'          ,'value')
-        rhou        = worker%get_primary_field_element('Momentum-1'       ,'value')
-        rhov        = worker%get_primary_field_element('Momentum-2'       ,'value')
-        rhow        = worker%get_primary_field_element('Momentum-3'       ,'value')
-        rhoE        = worker%get_primary_field_element('Energy'           ,'value')
         rho_nutilde = worker%get_primary_field_element('Density * NuTilde','value')
-
 
 
 
         !
         ! Interpolate solution gradients to quadrature nodes
         !
-        drho_dx  = worker%get_primary_field_element('Density'   ,'grad1+lift')
-        drho_dy  = worker%get_primary_field_element('Density'   ,'grad2+lift')
-        drho_dz  = worker%get_primary_field_element('Density'   ,'grad3+lift')
+        grad1_rho         = worker%get_primary_field_element('Density',          'grad1+lift')
+        grad2_rho         = worker%get_primary_field_element('Density',          'grad2+lift')
+        grad3_rho         = worker%get_primary_field_element('Density',          'grad3+lift')
 
-        drhou_dx = worker%get_primary_field_element('Momentum-1','grad1+lift')
-        drhou_dy = worker%get_primary_field_element('Momentum-1','grad2+lift')
-        drhou_dz = worker%get_primary_field_element('Momentum-1','grad3+lift')
-
-        drhov_dx = worker%get_primary_field_element('Momentum-2','grad1+lift')
-        drhov_dy = worker%get_primary_field_element('Momentum-2','grad2+lift')
-        drhov_dz = worker%get_primary_field_element('Momentum-2','grad3+lift')
-
-        drhow_dx = worker%get_primary_field_element('Momentum-3','grad1+lift')
-        drhow_dy = worker%get_primary_field_element('Momentum-3','grad2+lift')
-        drhow_dz = worker%get_primary_field_element('Momentum-3','grad3+lift')
-
-        drhoE_dx = worker%get_primary_field_element('Energy'    ,'grad1+lift')
-        drhoE_dy = worker%get_primary_field_element('Energy'    ,'grad2+lift')
-        drhoE_dz = worker%get_primary_field_element('Energy'    ,'grad3+lift')
-
-        drho_nutilde_dx = worker%get_primary_field_element('Density * NuTilde','grad1+lift')
-        drho_nutilde_dy = worker%get_primary_field_element('Density * NuTilde','grad2+lift')
-        drho_nutilde_dz = worker%get_primary_field_element('Density * NuTilde','grad3+lift')
+        grad1_rho_nutilde = worker%get_primary_field_element('Density * NuTilde','grad1+lift')
+        grad2_rho_nutilde = worker%get_primary_field_element('Density * NuTilde','grad2+lift')
+        grad3_rho_nutilde = worker%get_primary_field_element('Density * NuTilde','grad3+lift')
 
 
 
@@ -162,9 +136,9 @@ contains
         ! Divide by density
         !
         invrho  = ONE/rho
-        u       = rhou*invrho
-        v       = rhov*invrho
-        w       = rhow*invrho
+!        u       = rhou*invrho
+!        v       = rhov*invrho
+!        w       = rhow*invrho
         nutilde = rho_nutilde*invrho
 
 
@@ -205,41 +179,14 @@ contains
 
 
         !
-        ! Compute velocity jacobians
-        !
-        du_drho  = -invrho*invrho*rhou
-        du_drhou =  invrho
-
-        dv_drho  = -invrho*invrho*rhov
-        dv_drhov =  invrho
-
-        dw_drho  = -invrho*invrho*rhow
-        dw_drhow =  invrho
-
-
-
-
-        !
-        ! Compute velocity gradients
-        !
-        du_dx = du_drho*drho_dx  +  du_drhou*drhou_dx
-        du_dy = du_drho*drho_dy  +  du_drhou*drhou_dy
-        du_dz = du_drho*drho_dz  +  du_drhou*drhou_dz
-
-        dv_dx = dv_drho*drho_dx  +  dv_drhov*drhov_dx
-        dv_dy = dv_drho*drho_dy  +  dv_drhov*drhov_dy
-        dv_dz = dv_drho*drho_dz  +  dv_drhov*drhov_dz
-
-        dw_dx = dw_drho*drho_dx  +  dw_drhow*drhow_dx
-        dw_dy = dw_drho*drho_dy  +  dw_drhow*drhow_dy
-        dw_dz = dw_drho*drho_dz  +  dw_drhow*drhow_dz
-
-
-
-        !
         ! Compute vorticity and modified vorticity
         !
-        vorticity2 =  (dw_dy - dv_dz)**TWO  +  (du_dz - dw_dx)**TWO  +  (dv_dx - du_dy)**TWO 
+        vorticity_1 = worker%get_model_field_element('Vorticity-1', 'value')
+        vorticity_2 = worker%get_model_field_element('Vorticity-2', 'value')
+        vorticity_3 = worker%get_model_field_element('Vorticity-3', 'value')
+
+        !vorticity2 =  (dw_dy - dv_dz)**TWO  +  (du_dz - dw_dx)**TWO  +  (dv_dx - du_dy)**TWO 
+        vorticity2 =  vorticity_1**TWO  +  vorticity_2**TWO  +  vorticity_3**TWO 
         
         epsilon_vorticity = 1.e-6_rk
         vorticity = vorticity2
@@ -300,18 +247,18 @@ contains
 
 
         !
-        ! Compute partial derivatives of nutilde
+        ! Compute jacobian of nutilde
         !
         dnutilde_drho         = -invrho*invrho*rho_nutilde
         dnutilde_drho_nutilde =  invrho
 
 
         !
-        ! Compute cartesian derivatives
+        ! Compute gradient of nutilde
         !
-        dnutilde_dx = dnutilde_drho*drho_dx  +  dnutilde_drho_nutilde*drho_nutilde_dx
-        dnutilde_dy = dnutilde_drho*drho_dy  +  dnutilde_drho_nutilde*drho_nutilde_dy
-        dnutilde_dz = dnutilde_drho*drho_dz  +  dnutilde_drho_nutilde*drho_nutilde_dz
+        grad1_nutilde = dnutilde_drho*grad1_rho  +  dnutilde_drho_nutilde*grad1_rho_nutilde
+        grad2_nutilde = dnutilde_drho*grad2_rho  +  dnutilde_drho_nutilde*grad2_rho_nutilde
+        grad3_nutilde = dnutilde_drho*grad3_rho  +  dnutilde_drho_nutilde*grad3_rho_nutilde
 
 
 
@@ -320,8 +267,8 @@ contains
         !========================================================================
         source = -(                                 &
                     -rho*(production-destruction)   &
-                    -(SA_c_b2/SA_sigma)*rho*(dnutilde_dx*dnutilde_dx + dnutilde_dy*dnutilde_dy + dnutilde_dz*dnutilde_dz)   &
-                    +(ONE/SA_sigma)*(nu + f_n1*nutilde)*(drho_dx*dnutilde_dx + drho_dy*dnutilde_dy + drho_dz*dnutilde_dz)   &
+                    -(SA_c_b2/SA_sigma)*rho*(grad1_nutilde*grad1_nutilde + grad2_nutilde*grad2_nutilde + grad3_nutilde*grad3_nutilde)   &
+                    +(ONE/SA_sigma)*(nu + f_n1*nutilde)*(grad1_rho*grad1_nutilde + grad2_rho*grad2_nutilde + grad3_rho*grad3_nutilde)   &
                   )
 
         call worker%integrate_volume('Density * NuTilde',source)

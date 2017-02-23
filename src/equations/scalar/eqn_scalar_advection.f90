@@ -82,9 +82,9 @@ contains
         call self%set_name('Default Advection Velocity Model')
         call self%set_dependency('Q-')
 
-        call self%add_model_field('Scalar X-Advection Velocity')
-        call self%add_model_field('Scalar Y-Advection Velocity')
-        call self%add_model_field('Scalar Z-Advection Velocity')
+        call self%add_model_field('Scalar Advection Velocity-1')
+        call self%add_model_field('Scalar Advection Velocity-2')
+        call self%add_model_field('Scalar Advection Velocity-3')
 
     end subroutine init_model
     !***************************************************************************************
@@ -105,29 +105,29 @@ contains
         type(chidg_worker_t),               intent(inout)   :: worker
 
         type(AD_D), dimension(:),   allocatable :: &
-            u,cx,cy,cz
+            u, c1, c2, c3
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        u    = worker%get_primary_field_general('u', 'value')
+        u = worker%get_primary_field_general('u', 'value')
 
 
         ! Initialize derivatives
-        cx = u
-        cy = u
-        cz = u
+        c1 = u
+        c2 = u
+        c3 = u
 
         ! Set default values (1,0,0)
-        cx = ZERO
-        cy = ONE
-        cz = ZERO
+        c1 = ZERO
+        c2 = ONE
+        c3 = ZERO
 
 
 
-        call worker%store_model_field('Scalar X-Advection Velocity','value',cx)
-        call worker%store_model_field('Scalar Y-Advection Velocity','value',cy)
-        call worker%store_model_field('Scalar Z-Advection Velocity','value',cz)
+        call worker%store_model_field('Scalar Advection Velocity-1','value',c1)
+        call worker%store_model_field('Scalar Advection Velocity-2','value',c2)
+        call worker%store_model_field('Scalar Advection Velocity-3','value',c3)
 
 
     end subroutine compute_model

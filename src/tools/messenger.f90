@@ -1,6 +1,7 @@
 module messenger
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: IO_DESTINATION
+    use mod_version,    only: GIT_SHA1
     use mod_chidg_mpi,  only: IRANK, GLOBAL_MASTER, ChiDG_COMM
     implicit none
 
@@ -31,7 +32,9 @@ contains
     !!-----------------------------------------------------------------------------------------
     subroutine log_init()
 
-        logical :: file_opened = .false.
+        logical         :: file_opened = .false.
+        character(8)    :: date
+        character(10)   :: time
 
         !
         ! Open file
@@ -42,7 +45,27 @@ contains
             open(newunit=unit, file='chidg.log')
         end if
 
+
+        !
+        ! Confirm log initialized
+        !
         log_initialized = .true.
+
+
+        !
+        ! Write log header
+        !
+        call date_and_time(date,time)
+
+        call write_line('-----------------------------------------------------', io_proc=GLOBAL_MASTER)
+        call write_line(' ', io_proc=GLOBAL_MASTER)
+        call write_line('Date:      ', date(:4)//" "//date(5:6)//" "//date(7:8), ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('Time:      ', time(:2)//":"//time(3:4)//":"//time(5:6), ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('Git commit: ', GIT_SHA1, io_proc=GLOBAL_MASTER)
+        call write_line(' ', io_proc=GLOBAL_MASTER)
+        call write_line('-----------------------------------------------------', io_proc=GLOBAL_MASTER)
+
+
 
     end subroutine log_init
     !******************************************************************************************

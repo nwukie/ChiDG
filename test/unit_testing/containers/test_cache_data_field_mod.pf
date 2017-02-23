@@ -198,8 +198,8 @@ contains
         ! TEST 'value' ALLOCATION
         ! Number of nodes
         @assertEqual(size(cache_data_field%value,1), nnodes_face)
-        ! Number of dependent elements
-        @assertEqual(size(cache_data_field%value,2), 1)
+        ! Number of dependent elements. Should be 1 + nexterior neighbors
+        @assertEqual(size(cache_data_field%value,2), 2)
 
         ! TEST 'gradient' ALLOCATION
         ! Number of nodes
@@ -316,7 +316,7 @@ contains
         ! Number of nodes
         @assertEqual(size(cache_data_field%value,1), nnodes_face)
         ! Number of dependent elements
-        @assertEqual(size(cache_data_field%value,2), 1)
+        @assertEqual(size(cache_data_field%value,2), 2)
 
         ! Number of nodes
         @assertEqual(size(cache_data_field%gradient,1), nnodes_face)
@@ -429,7 +429,7 @@ contains
         ! Number of nodes
         @assertEqual(size(cache_data_field%value,1), nnodes_vol)
         ! Number of dependent elements
-        @assertEqual(size(cache_data_field%value,2), 1)
+        @assertEqual(size(cache_data_field%value,2), 7)
 
         ! Number of nodes
         @assertEqual(size(cache_data_field%gradient,1), nnodes_vol)

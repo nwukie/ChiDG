@@ -202,6 +202,7 @@ contains
         class(p_laplace_model), intent(inout)   :: self
 
         call self%set_name('p-Laplace')
+        call self%set_dependency('Q-')
 
         call self%add_model_field('Scalar Diffusion Coefficient')
 
@@ -231,33 +232,34 @@ contains
         type(chidg_worker_t),       intent(inout)   :: worker
 
         type(AD_D), dimension(:),   allocatable :: &
-            u, dudx, dudy, dudz, mag2, mu
+            u, grad1_u, grad2_u, grad3_u, sumsqr, mu
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        u    = worker%get_primary_field_general('u', 'value')
-        dudx = worker%get_primary_field_general('u', 'grad1')
-        dudy = worker%get_primary_field_general('u', 'grad2')
-        dudz = worker%get_primary_field_general('u', 'grad3')
+        u       = worker%get_primary_field_general('u', 'value')
+        grad1_u = worker%get_primary_field_general('u', 'grad1')
+        grad2_u = worker%get_primary_field_general('u', 'grad2')
+        grad3_u = worker%get_primary_field_general('u', 'grad3')
 
 
 
         !
-        ! Compute magnitude of gradient
+        ! Square components of gradient and sum
         !
-        mag2 = dudx*dudx + dudy*dudy + dudz*dudz
+        sumsqr = grad1_u*grad1_u  +  grad2_u*grad2_u  +  grad3_u*grad3_u
 
         
         !
         ! Compute p-Laplace diffusion coefficient
         !
-        ! mu = (dudx**2 + dudy**2 + dudz**2)**((p-2)/2)
+        ! mu = (grad1(u)**2 + grad2(u)**2 + grad3(u)**2)**((p-2)/2)
+        !
         !
         if (abs(p-2._rk) > 1.e-8_rk) then
-            mu = mag2**((p-TWO)/TWO)
+            mu = sumsqr**((p-TWO)/TWO)
         else
-            mu = mag2
+            mu = sumsqr
             mu = ONE
         end if
 

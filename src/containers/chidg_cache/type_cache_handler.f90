@@ -95,6 +95,8 @@ contains
         !
         idomain_l  = worker%element_info%idomain_l 
         ielement_l = worker%element_info%ielement_l 
+
+
         call worker%cache%resize(worker%mesh,worker%prop,idomain_l,ielement_l,differentiate)
 
 
@@ -376,6 +378,7 @@ contains
         !
         worker%interpolation_source = 'element'
         do imodel = 1,equation_set(idomain_l)%nmodels()
+
 
             !
             ! Get model dependency
@@ -1048,6 +1051,7 @@ contains
         idepend = 1
         worker%interpolation_source = 'face interior'
         do imodel = 1,equation_set(idomain_l)%nmodels()
+
 
             !
             ! Set differentiation indicator

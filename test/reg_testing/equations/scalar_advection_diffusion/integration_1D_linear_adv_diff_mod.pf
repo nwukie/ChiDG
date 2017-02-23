@@ -220,9 +220,9 @@ contains
         call self%set_name('Testing 1D Linear Advection Diffusion :: Coefficient Model')
         call self%set_dependency('Q-')
 
-        call self%add_model_field('Scalar X-Advection Velocity')
-        call self%add_model_field('Scalar Y-Advection Velocity')
-        call self%add_model_field('Scalar Z-Advection Velocity')
+        call self%add_model_field('Scalar Advection Velocity-1')
+        call self%add_model_field('Scalar Advection Velocity-2')
+        call self%add_model_field('Scalar Advection Velocity-3')
         call self%add_model_field('Scalar Diffusion Coefficient')
 
     end subroutine init_model

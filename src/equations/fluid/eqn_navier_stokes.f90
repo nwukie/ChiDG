@@ -75,16 +75,19 @@ contains
                 call navier_stokes_eqns%add_operator('Euler Boundary Average Flux')
                 call navier_stokes_eqns%add_operator('Euler Roe Flux')
                 call navier_stokes_eqns%add_operator('Euler BC Flux')
+                call navier_stokes_eqns%add_operator('Euler Volume Cylindrical Source')
 
                 call navier_stokes_eqns%add_operator('Fluid Viscous Volume Operator')
                 call navier_stokes_eqns%add_operator('Fluid Viscous Boundary Average Operator')
                 call navier_stokes_eqns%add_operator('Fluid Viscous BC Operator')
+                call navier_stokes_eqns%add_operator('Fluid Viscous Volume Cylindrical Source')
 
                 call navier_stokes_eqns%add_model('Ideal Gas')
                 call navier_stokes_eqns%add_model('Sutherlands Law')
                 call navier_stokes_eqns%add_model('Stokes Hypothesis')
                 call navier_stokes_eqns%add_model('Reynolds Analogy')
 !                call navier_stokes_eqns%add_model('Zero Turbulent Model Fields')
+
 
 
 
@@ -98,6 +101,9 @@ contains
                 call navier_stokes_eqns%add_operator('Spalart-Allmaras BC Diffusion Operator')
 
 
+                ! Add shear stress after turbulence viscosity models from SA so they are computed first
+                call navier_stokes_eqns%add_model('Shear Stress')
+                call navier_stokes_eqns%add_model('Temperature Gradient')
 
 
                 call navier_stokes_eqns%add_pseudo_timestep(fluid_pseudo_time)

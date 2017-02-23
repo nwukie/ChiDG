@@ -21,7 +21,10 @@ include(cmake/macros/add_exe_sources.txt)
 include(cmake/macros/add_lib_sources.txt)
 include(cmake/macros/add_test_target.txt)
 include(cmake/macros/add_test_sources.txt)
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
+
+
 
 # Set output directories
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -246,8 +249,15 @@ add_subdirectory(src)
 include_directories(${CMAKE_SOURCE_DIR}/src/tools)
 
 
-
-
+#
+# Initialize GIT_SHA1 variable with git commit hash
+#
+# Write git SHA1 to mod_version.f90. Text substitution in 'mod_version.f90.in' generates 'mod_version.f90'
+#
+include(GetGitRevisionDescription)
+get_git_head_revision(GIT_REFSPEC GIT_SHA1)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/constants/mod_version.f90.in" "${CMAKE_CURRENT_BINARY_DIR}/mod_version.f90" @ONLY)
+list(APPEND LIB_SRCS "${CMAKE_CURRENT_BINARY_DIR}/mod_version.f90")
 
 
 

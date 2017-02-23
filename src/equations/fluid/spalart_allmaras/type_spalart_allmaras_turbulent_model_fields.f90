@@ -54,6 +54,7 @@ contains
         class(spalart_allmaras_turbulent_model_fields_t), intent(inout)   :: self
 
         call self%set_name('Spalart Allmaras Turbulent Model Fields')
+        call self%set_dependency('Q-')
 
         call self%add_model_field('Turbulent Viscosity')
         call self%add_model_field('Second Coefficient of Turbulent Viscosity')
@@ -84,23 +85,23 @@ contains
         type(chidg_worker_t),   intent(inout)   :: worker
 
         type(AD_D), dimension(:),   allocatable ::              &
-            rho, mu, nu, rho_nutilde, mu_t, nutilde, lamda_t,   &
+            density, mu, nu, density_nutilde, mu_t, nutilde, lamda_t,   &
             chi, f_v1, k_t
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho         = worker%get_primary_field_general('Density',           'value')
-        rho_nutilde = worker%get_primary_field_general('Density * NuTilde', 'value')
+        density         = worker%get_primary_field_general('Density',           'value')
+        density_nutilde = worker%get_primary_field_general('Density * NuTilde', 'value')
 
 
         !
         ! Get viscosity: compute nu, nutilde
         !
         mu      = worker%get_model_field_general('Laminar Viscosity', 'value')
-        nu      = mu/rho
-        nutilde = rho_nutilde/rho
+        nu      = mu/density
+        nutilde = density_nutilde/density
 
 
 
@@ -114,9 +115,9 @@ contains
         !
         ! Initialize derivatives, compute mu_t
         !
-        mu_t = rho
+        mu_t = density
         where (nutilde >= 0)
-            mu_t = rho * nutilde * f_v1
+            mu_t = density * nutilde * f_v1
         else where
             mu_t = ZERO
         end where

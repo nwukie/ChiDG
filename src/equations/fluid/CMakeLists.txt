@@ -17,6 +17,7 @@ add_lib_sources(
                 type_stokes_hypothesis.f90
                 type_reynolds_analogy.f90
                 type_zero_turbulent_model_fields.f90
+                type_model_vorticity.f90
                 type_fluid_wave_speed.f90
                 )
 

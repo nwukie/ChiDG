@@ -179,8 +179,8 @@ contains
 
 
         ! Create boundary conditions
-        call create_bc('Total Inlet', inlet)
-        call create_bc('Pressure Outlet', outlet)
+        call create_bc('Inlet - Total', inlet)
+        call create_bc('Outlet - Constant Pressure', outlet)
         call create_bc('Wall', wall)
 
 

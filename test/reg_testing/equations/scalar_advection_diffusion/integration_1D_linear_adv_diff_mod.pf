@@ -218,6 +218,7 @@ contains
         class(testing_1D_linear_adv_diff_model_t),    intent(inout)   :: self
 
         call self%set_name('Testing 1D Linear Advection Diffusion :: Coefficient Model')
+        call self%set_dependency('Q-')
 
         call self%add_model_field('Scalar X-Advection Velocity')
         call self%add_model_field('Scalar Y-Advection Velocity')

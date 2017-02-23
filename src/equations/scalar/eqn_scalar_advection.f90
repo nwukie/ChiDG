@@ -80,6 +80,7 @@ contains
         class(default_advection_model), intent(inout)   :: self
 
         call self%set_name('Default Advection Velocity Model')
+        call self%set_dependency('Q-')
 
         call self%add_model_field('Scalar X-Advection Velocity')
         call self%add_model_field('Scalar Y-Advection Velocity')

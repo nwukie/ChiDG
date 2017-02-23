@@ -78,11 +78,11 @@ contains
         real(rk), allocatable   :: vals(:)
 
 
-        associate ( q   => data%sdata%q,    &
-                    dq  => data%sdata%dq,   &
-                    rhs => data%sdata%rhs,  &
-                    lhs => data%sdata%lhs,  &
-                    dt => self%time_manager%dt)
+        associate ( q   => data%sdata%q,        &
+                    dq  => data%sdata%dq,       &
+                    rhs => data%sdata%rhs,      &
+                    lhs => data%sdata%lhs,      &
+                    dt  => data%time_manager%dt)
 
 
             !

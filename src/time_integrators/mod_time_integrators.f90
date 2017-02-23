@@ -86,7 +86,7 @@ contains
         ! Call time_integrator initialization
         !
         call instance%init()
-        call instance%time_manager%init()
+!        call instance%time_manager%init() !the time_manager needs to be initialized in chidg%init
 
 !        if (present(options)) then
 !            call instance%set(options)

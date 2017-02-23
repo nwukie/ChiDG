@@ -70,7 +70,7 @@ module type_chidg
         type(chidg_t), pointer :: auxiliary_environment
 
         ! Number of terms in 3D/1D solution basis expansion
-        integer(ik)     :: ntime        = 1
+        !integer(ik)     :: ntime        = 1    !now this is in data%time_manager%
         integer(ik)     :: nterms_s     = 0
         integer(ik)     :: nterms_s_1d  = 0
 
@@ -286,11 +286,24 @@ contains
             ! Call all initialization routines.
             !
             case ('all')
+                call self%init('timeinfo')
                 call self%init('domains')
                 call self%init('communication')
                 call self%init('chimera')
                 call self%init('solvers')
                 call self%init('finalize')
+                call self%init('algorithm')
+
+
+            !
+            ! Initialize time_manger in chidg%data to allow 'domains' initialization
+            !
+            case ('timeinfo')
+                call write_line("Initializing time info...",io_proc=GLOBAL_MASTER)
+
+                ! Initialize time_manager
+                call self%data%time_manager%init()
+            
 
 
             !
@@ -305,7 +318,8 @@ contains
                             where my_order=1-7 indicates the solution order-of-accuracy."
                 if (self%nterms_s == 0) call chidg_signal(FATAL,user_msg)
 
-                call self%data%initialize_solution_domains(self%nterms_s, self%ntime)
+                !call self%data%initialize_solution_domains(self%nterms_s, self%ntime)
+                call self%data%initialize_solution_domains(self%nterms_s)
 
             !
             ! Initialize communication. Local face communication. Global parallel communication.
@@ -345,10 +359,13 @@ contains
                 if (.not. allocated(self%preconditioner))   call chidg_signal(FATAL,"chidg%preconditioner component was not allocated")
 
 
+            case('algorithm')   !< These initialization needs to happen after all other initializatoion
+                
+                !
+                ! Initialize preconditioner
+                !
                 call write_line("Initializing preconditioner...", io_proc=GLOBAL_MASTER)
                 call self%preconditioner%init(self%data)
-
-
 
             case default
                 call chidg_signal_one(WARN,'chidg%init: Invalid initialization string',trim(activity))
@@ -1014,7 +1031,7 @@ contains
 
 
         wcount = 1
-        nsteps = self%time_integrator%time_manager%time_steps
+        nsteps = self%data%time_manager%ntime
         do istep = 1,nsteps
 
             call write_line("- Step ", istep, io_proc=GLOBAL_MASTER)

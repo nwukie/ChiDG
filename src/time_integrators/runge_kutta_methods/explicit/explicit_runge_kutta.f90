@@ -99,12 +99,12 @@ module explicit_runga_kutta
 
 
         wcount = 1
-        associate( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs, dt => self%time_manager%dt )
+        associate( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs, dt => data%time_manager%dt )
         
         !
         ! Get name of the RK method being used
         !
-        time_scheme = self%time_manager%get_name()
+        time_scheme = data%time_manager%get_name()
 
         !
         ! Get nstage, a and b for a particular scheme
@@ -113,6 +113,7 @@ module explicit_runga_kutta
         call method_selector(time_scheme,nstage,a,b)
 
             print *, 'entering time'
+            ! TODO: time_manager is now part of chidg%data and nsteps needs to be added to time_manager
             do itime = 1,self%time_manager%nsteps
                 print *, 'Step: ', itime
 
@@ -195,7 +196,7 @@ module explicit_runga_kutta
                 call write_line('   R(Q) - Norm:    ', rhs%norm(ChiDG_COMM),delimiter = '')
 
 
-                if (wcount == self%time_manager%nwrite) then
+                if (wcount == data%time_manager%nwrite) then
                     write(filename,'(I7,A4)') 1000000 + itime, '.plt'
                     call write_tecio_variables_unstructured(data,time(filename),itime + 1)
                     wcount = 0

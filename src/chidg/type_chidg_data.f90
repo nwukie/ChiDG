@@ -18,6 +18,7 @@ module type_chidg_data
     use mod_string,                     only: string_t
     use type_equation_set,              only: equation_set_t
     use type_solverdata,                only: solverdata_t
+    use type_time_manager,              only: time_manager_t
 
     use type_equationset_function_data, only: equationset_function_data_t
     use type_bcset_coupling,            only: bcset_coupling_t
@@ -47,7 +48,7 @@ module type_chidg_data
 
         logical                                     :: solverInitialized = .false.
         integer(ik),        private                 :: ndomains_ = 0
-        integer(ik),        private                 :: ntime_    = 1
+        !integer(ik),        private                 :: ntime_    = 1   !now part of time_manager
         integer(ik),        private                 :: spacedim_ = 3    !< Default 3D 
 
         
@@ -59,6 +60,9 @@ module type_chidg_data
 
         ! An object containing matrix and vector storage
         type(solverdata_t)                          :: sdata
+
+        ! An object containing time information
+        type(time_manager_t)                        :: time_manager
 
 
     contains
@@ -360,19 +364,18 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine initialize_solution_domains(self,nterms_s,ntime)
+    subroutine initialize_solution_domains(self,nterms_s)
         class(chidg_data_t),    intent(inout)   :: self
         integer(ik),            intent(in)      :: nterms_s
-        integer(ik),            intent(in)      :: ntime
 
         integer(ik) :: idomain, neqns
 
-        self%ntime_ = ntime
+        !self%ntime_ = ntime    !we do not neet to pass ntime in, since ntime is contained in data%time_manager%ntime
 
         ! Initialize mesh numerics based on equation set and polynomial expansion order
         do idomain = 1,self%ndomains()
             neqns = self%eqnset(idomain)%prop%nprimary_fields()
-            call self%mesh(idomain)%init_sol(neqns,nterms_s,ntime)
+            call self%mesh(idomain)%init_sol(neqns,nterms_s,self%time_manager%ntime)
         end do
 
 
@@ -524,7 +527,7 @@ contains
 
         integer :: ndom
 
-        ndom = self%ntime_
+        ndom = self%time_manager%ntime
 
     end function ntime
     !*******************************************************************************************

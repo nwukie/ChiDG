@@ -24,7 +24,7 @@ module type_time_manager
 
         ! Unsteady time parameter
         real(rk)                :: dt          != 0.001_rk
-        integer(ik)             :: time_steps  != 100
+        integer(ik)             :: ntime       != 100
         integer(ik)             :: nwrite      != 10
         
         ! HB time parameter
@@ -81,8 +81,8 @@ contains
                 
                 call self%set_name(time_integrator)
 
-                self%dt         = 0.
-                self%time_steps = 1
+                self%dt         = 0
+                self%ntime      = 1
                 self%nwrite     = 0
 
 
@@ -99,11 +99,11 @@ contains
                 call self%set_name(time_integrator)
 
                 !
-                ! add dt, time_steps and nwrite to the time_manager
+                ! add dt, ntime and nwrite to the time_manager
                 !
                 
                 self%dt         = dt
-                self%time_steps = time_steps
+                self%ntime      = time_steps !time_steps comes from mod_io.f90
                 self%nwrite     = nwrite
 
 
@@ -147,6 +147,13 @@ contains
                    call  self%time_lev%push_back( (TWO*PI)/minval(self%freq_data%data()) * (tmp/n_times) )
 
                 end do
+
+                !
+                ! Define ntime for HB equal to the size of time_lev
+                !
+
+                self%ntime = self%time_lev%size()
+
 
             case default
                 user_msg = "We can't seem to find a time integrator that matches the input &

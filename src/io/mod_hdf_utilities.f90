@@ -525,7 +525,7 @@ contains
     !!  @date   02/20/2017
     !!
     !!  TODO: add check to the domains' attribute (dimensionality, equation-set)
-    !!
+    !!        Many other check can be implemented. This is the first step
     !-----------------------------------------------------------------------------------------
     subroutine check_file_structure_hdf(fid,data)
     
@@ -538,7 +538,7 @@ contains
         ! Check if the number and names of the domains are correct
         call check_file_domains_hdf(fid,data)
         
-        ! Check the number of time levels
+        ! Check the number of time levels, and update it in case.
         call check_file_ntimes_hdf(fid,data)
 
 
@@ -576,8 +576,12 @@ contains
 
         if ( time_lev /= ntimes ) then
             
-            msg = "The attribute ntimes to HDF5 fils is not updated. To avoid this, delete the existing HDF5 file"
+            msg = "The attribute ntimes in the existing  HDF5 fils is not up-to-date. It will automatically be updated"
             call chidg_signal(WARN, msg)
+
+            !update ntimes
+            call set_ntimes_hdf(fid,ntimes)
+
         end if
 
 

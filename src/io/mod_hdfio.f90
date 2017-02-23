@@ -395,6 +395,10 @@ contains
     !!  @param[in]      filename    Character string of the file to be written to
     !!  @param[inout]   data        chidg_data_t containing solution to be written
     !!
+    !!
+    !!  @autor Matteo Ugolotti
+    !!  @date   2/22/2017
+    !!
     !----------------------------------------------------------------------------------------
     subroutine write_solution_hdf(data,file_name,field)
         type(chidg_data_t), intent(in)              :: data

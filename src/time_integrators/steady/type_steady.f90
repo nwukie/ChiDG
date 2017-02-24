@@ -78,8 +78,9 @@ contains
     !!  @date   2/8/2017
     !!
     !----------------------------------------------------------------------------------------
-    subroutine init(self)
+    subroutine init(self,data)
         class(steady_t),    intent(inout)   :: self
+        type(chidg_data_t), intent(in)      :: data
 
         integer(ik)             :: ierr
         type(assemble_steady_t) :: assemble_steady

@@ -107,9 +107,9 @@ contains
     !!  @date   2/8/2016
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine init(self)
+    subroutine init(self,data)
         class(time_integrator_t),   intent(inout)   :: self
-
+        type(chidg_data_t),         intent(in)      :: data
 
         self%solverInitialized = .true.
 

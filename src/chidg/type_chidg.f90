@@ -197,7 +197,7 @@ contains
             !
             case ('namelist')
                 call read_input()
-
+                call self%data%time_manager%init()
 
             case default
                 call chidg_signal_one(WARN,'chidg%start_up: Invalid start-up string.',trim(activity))
@@ -286,24 +286,12 @@ contains
             ! Call all initialization routines.
             !
             case ('all')
-                call self%init('timeinfo')
                 call self%init('domains')
                 call self%init('communication')
                 call self%init('chimera')
                 call self%init('solvers')
                 call self%init('finalize')
-                call self%init('algorithm')
 
-
-            !
-            ! Initialize time_manger in chidg%data to allow 'domains' initialization
-            !
-            case ('timeinfo')
-                call write_line("Initializing time info...",io_proc=GLOBAL_MASTER)
-
-                ! Initialize time_manager
-                call self%data%time_manager%init()
-            
 
 
             !
@@ -358,14 +346,19 @@ contains
                 if (.not. allocated(self%linear_solver))    call chidg_signal(FATAL,"chidg%linear_solver component was not allocated")
                 if (.not. allocated(self%preconditioner))   call chidg_signal(FATAL,"chidg%preconditioner component was not allocated")
 
-
-            case('algorithm')   !< These initialization needs to happen after all other initializatoion
                 
                 !
                 ! Initialize preconditioner
                 !
                 call write_line("Initializing preconditioner...", io_proc=GLOBAL_MASTER)
                 call self%preconditioner%init(self%data)
+                
+                !
+                ! Initialize time_integrator 
+                !
+                call write_line("Initializing time_integrator...", io_proc=GLOBAL_MASTER)
+                call self%time_integrator%init(self%data)
+
 
             case default
                 call chidg_signal_one(WARN,'chidg%init: Invalid initialization string',trim(activity))

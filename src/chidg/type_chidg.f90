@@ -160,6 +160,8 @@ contains
             ! Start up ChiDG core
             !
             case ('core')
+                
+                call self%data%time_manager%init()
 
                 ! Default communicator for 'communication' is MPI_COMM_WORLD
                 if ( present(comm) ) then
@@ -197,7 +199,6 @@ contains
             !
             case ('namelist')
                 call read_input()
-                call self%data%time_manager%init()
 
             case default
                 call chidg_signal_one(WARN,'chidg%start_up: Invalid start-up string.',trim(activity))

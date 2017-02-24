@@ -308,7 +308,7 @@ contains
         character(:),   allocatable :: domain_name
 
         ! Add attribute ntime to the file
-        time = data%ntime()
+        time = data%ntime() - 1 ! To be consistend with the hdf5 0-base
         call set_ntimes_hdf(fid,time)
 
         do idom = 1,data%ndomains()
@@ -565,13 +565,13 @@ contains
     subroutine check_file_ntimes_hdf(fid,data)
         
         integer(HID_T)      , intent(in)    :: fid
-        type(chidg_data_t)    , intent(in)    :: data
+        type(chidg_data_t)  , intent(in)    :: data
 
         integer(ik)                         :: time_lev, ntimes
         character(len=1024),    allocatable :: msg
 
         time_lev = get_ntimes_hdf(fid)
-        ntimes   = data%ntime()
+        ntimes   = data%ntime() - 1
     
 
         if ( time_lev /= ntimes ) then

@@ -3,7 +3,7 @@ module type_forward_euler
     use mod_spatial,            only: update_space
 
     use type_time_integrator,   only: time_integrator_t
-    use type_time_manager,      only: time_manager_t
+    use mod_time,               only: time_manager
     use type_chidg_data,        only: chidg_data_t
     use type_nonlinear_solver,  only: nonlinear_solver_t
     use type_linear_solver,     only: linear_solver_t
@@ -74,7 +74,6 @@ contains
         class(linear_solver_t),     optional,   intent(inout)   :: linear_solver
         class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
 
-        type(time_manager_t)    :: time_manager
         character(100)          :: filename
         integer(ik)             :: itime, ielem, iblk, ieqn, idom
         real(rk), allocatable   :: vals(:)

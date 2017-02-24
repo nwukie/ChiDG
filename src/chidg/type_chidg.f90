@@ -22,7 +22,7 @@ module type_chidg
     use type_dict,                  only: dict_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use type_partition,             only: partition_t
-    use type_time_manager,          only: time_manager_t
+    use mod_time,                   only: time_manager
 
     use mod_time_integrators,       only: create_time_integrator
     use mod_linear_solver,          only: create_linear_solver
@@ -1004,7 +1004,6 @@ contains
     subroutine run(self)
         class(chidg_t), intent(inout)   :: self
 
-        type(time_manager_t)    :: time_manager
         character(100)          :: filename
         integer(ik)             :: istep, nsteps, wcount
 

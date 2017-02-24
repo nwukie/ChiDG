@@ -10,7 +10,7 @@ add_lib_sources(
                 mod_time_integrators.f90
                 type_timer.f90
                 type_time_manager.f90
-                #mod_time_HB.f90
+                mod_time.f90
                 )
 
                 

@@ -4,7 +4,7 @@ module operator_chidg_mv
     use mod_constants,      only: ZERO, ONE
     use mod_chidg_mpi,      only: IRANK, ChiDG_COMM
     use type_chidg_matrix,  only: chidg_matrix_t
-    use type_time_manager,  only: time_manager_t
+    use mod_time,           only: time_manager
     use type_chidg_vector
 
     use type_timer,         only: timer_t
@@ -41,7 +41,6 @@ contains
         type(chidg_vector_t),    intent(inout)   :: x
 
         type(chidg_vector_t)        :: res
-        type(time_manager_t)        :: time_manager
         integer(ik)                 :: idom, ielem, iblk, imat, itime, ivar,  &
                                        itime_i, recv_comm, recv_domain, recv_element
         integer(ik)                 :: dparent_g, dparent_l, eparent_g, eparent_l
@@ -55,15 +54,6 @@ contains
         real(rk),     allocatable   :: temp_1(:), temp_2(:)
 
 
-        HB_flag = time_manager%get_name()
-
-        if ( HB_flag == 'Harmonic Balance' .or. HB_flag == 'Harmonic_Balance' .or. HB_flag == 'harmonic balance' &
-             .or. HB_flag == 'harmonic_balance' .or. HB_flag == 'HB') then
-
-            HB_flag_status = .true.
-            D = time_manager%D
-
-        end if
 
 
         !
@@ -132,49 +122,8 @@ contains
                                             Amat   => A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat )
 
                                    
-                                    !
-                                    ! TODO: Where does timer move?
-                                    !
                                     call timer_blas%start()
- 
                                     resvec = resvec + matmul(Amat,xvec)
-                                    
-                                    if (HB_flag_status .and. &
-                                        imat == A%dom(idom)%lblks(ielem,itime)%get_diagonal()) then
-
-                                        do itime_i = 1,size(A%dom(idom)%lblks,2)
-                                          
-                                            if (itime_i /= itime) then
-                                         
-                                                !
-                                                ! TODO: Need another associate statement?
-                                                ! TODO: ielem = eparent_l when imat = DIAG?
-                                                !
-                                                associate ( nvars  => x%dom(idom)%vecs(ielem)%nvars(), &
-                                                            nterms => x%dom(idom)%vecs(ielem)%nterms(), &
-                                                            mass   => A%dom(idom)%lblks(ielem,itime_i)%mass )
-
-                                                if (allocated(temp_1) .and. allocated(temp_2)) deallocate(temp_1,temp_2)
-                                                allocate(temp_1(nterms), temp_2(nterms), stat=ierr)
-                                                if (ierr /= 0) call AllocationError
-
-                                                do ivar = 1,nvars
-
-                                                    temp_1 = D(itime,itime_i)*matmul(mass,x%dom(idom)%vecs(ielem)% &
-                                                                                          getvar(ivar,itime_i))
-                                                    temp_2 = res%dom(idom)%vecs(ielem)%getvar(ivar,itime_i) + temp_1
-                                                    call res%dom(idom)%vecs(ielem)%setvar(ivar,itime_i,temp_2)
-
-                                                end do  ! ivar
-
-                                                end associate
-
-                                            end if
-
-                                        end do  ! itime_i
-
-                                    end if
-
                                     call timer_blas%stop()
 
 
@@ -234,6 +183,61 @@ contains
                         !end do ! itime
                     end do ! ielem
                 end if  ! allocated
+
+                
+                !
+                ! Routine for harmonic balance computations
+                ! Used only when harmonic balance is specified
+                !
+                HB_flag = time_manager%get_name()
+
+                if (HB_flag == 'Harmonic Balance' .or. HB_flag == 'Harmonic_Balance' .or. HB_flag == 'harmonic balance' &
+                    .or. HB_flag == 'harmonic_balance' .or. HB_flag == 'HB') then
+
+                    D = time_manager%D
+
+                    do ielem = 1,size(A%dom(idom)%lblks,1) 
+
+                        imat = A%dom(idom)%lblks(ielem,itime)%get_diagonal()
+
+                        matrix_proc = IRANK
+                        vector_proc = A%dom(idom)%chi_blks(ielem,itime)%parent_proc(imat)
+
+                        local_multiply    = (matrix_proc == vector_proc)
+                        parallel_multiply = (matrix_proc /= vector_proc)
+
+                        if (local_multiply) then
+                            do itime_i = 1,size(A%dom(idom)%lblks,2)
+                                if (itime_i /= itime) then
+
+                                    associate ( nvars  => x%dom(idom)%vecs(ielem)%nvars(), &
+                                                nterms => x%dom(idom)%vecs(ielem)%nterms(), &
+                                                mass   => A%dom(idom)%lblks(ielem,itime_i)%mass )
+
+                                    if (allocated(temp_1) .and. allocated(temp_2)) deallocate(temp_1,temp_2)
+                                    allocate(temp_1(nterms),temp_2(nterms), stat=ierr)
+                                    if (ierr /= 0) call AllocationError
+
+                                    call timer_blas%start()
+                                    do ivar = 1,nvars
+
+                                        temp_1 = D(itime,itime_i)*matmul(mass,x%dom(idom)%vecs(ielem)% &
+                                                                              getvar(ivar,itime_i))
+                                        temp_2 = res%dom(idom)%vecs(ielem)%getvar(ivar,itime_i) + temp_1
+                                        call res%dom(idom)%vecs(ielem)%setvar(ivar,itime_i,temp_2)
+
+                                    end do  ! ivar
+                                    call timer_blas%stop()
+
+                                    end associate
+
+                                end if 
+                            end do  ! itime_i
+                        end if  ! locla_multiply
+
+                    end do  ! ielem
+
+                end if  ! HB_flag
 
 
 
@@ -336,44 +340,6 @@ contains
                                     call timer_blas%start()
                                     resvec = resvec + matmul(Amat,xvec)
                                     call timer_blas%stop()
-
-
-                                    if (HB_flag_status .and. &
-                                        imat == A%dom(idom)%lblks(ielem,itime)%get_diagonal()) then
-
-                                        do itime_i = 1,size(A%dom(idom)%lblks,2)
-                                          
-                                            if (itime_i /= itime) then
-                                           
-                                                !
-                                                ! TODO: Need another associate statement?
-                                                ! TODO: recv_element = ielem when imat = DIAG?
-                                                !
-
-                                                associate ( nvars  => x%recv%comm(recv_comm)%dom(recv_domain)%vecs(ielem)%nvars(), &
-                                                            nterms => x%recv%comm(recv_comm)%dom(recv_domain)%vecs(ielem)%nterms(), &
-                                                            mass   => A%dom(idom)%lblks(ielem,itime_i)%mass )
-
-                                                if (allocated(temp_1) .and. allocated(temp_2)) deallocate(temp_1,temp_2)
-                                                allocate(temp_1(nterms), temp_2(nterms), stat=ierr)
-                                                if (ierr /= 0) call AllocationError
-
-                                                do ivar = 1,nvars
-
-                                                    temp_1 = D(itime,itime_i)*matmul(mass,x%recv%comm(recv_comm)% &
-                                                                                    dom(recv_domain)%vecs(ielem)%getvar(ivar,itime_i))
-                                                    temp_2 = res%dom(idom)%vecs(ielem)%getvar(ivar,itime_i) + temp_1
-                                                    call res%dom(idom)%vecs(ielem)%setvar(ivar,itime_i,temp_2)
-
-                                                end do  ! ivar
-
-                                                end associate
-
-                                            end if
-
-                                        end do  ! itime_i
-
-                                    end if
 
                                 end associate
                             end if

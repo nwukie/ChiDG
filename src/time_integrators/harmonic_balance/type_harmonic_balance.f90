@@ -5,7 +5,7 @@ module type_harmonic_balance
     use mod_spatial,            only: update_space
 
     use type_time_integrator,   only: time_integrator_t
-    use type_time_manager,      only: time_manager_t
+    use mod_time,               only: time_manager
     use type_system_assembler,  only: system_assembler_t
     
     use type_chidg_data,        only: chidg_data_t
@@ -81,7 +81,6 @@ contains
     subroutine init(self)
         class(harmonic_balance_t),  intent(inout)   :: self
 
-        type(time_manager_t)                :: time_manager
         integer(ik)                         :: ierr
         type(assemble_harmonic_balance_t)   :: assemble_harmonic_balance
         integer(ik)                         :: nfreq, ntime
@@ -145,8 +144,6 @@ contains
         real(rk),                             intent(inout), optional     :: timing
         logical,                              intent(in),    optional     :: differentiate
 
-        
-        type(time_manager_t)    :: time_manager
         integer(ik)             :: itime_outer, itime_inner, idom, ielem, ivar    ! Loop counters
         real(rk), allocatable   :: temp_1(:), temp_2(:)     ! Temporary variables
         integer(ik)             :: ntime

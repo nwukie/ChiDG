@@ -8,40 +8,5 @@ module mod_time
 
 
 
-contains
-
-
-
-    !>
-    !!
-    !!
-    !!
-    !!
-    !--------------------------------------------------------
-    subroutine initialize_time_manager()
-
-        call time_manager%init()
-
-
-    end subroutine initialize_time_manager
-    !********************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 end module mod_time

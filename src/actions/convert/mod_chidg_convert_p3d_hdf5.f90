@@ -12,6 +12,7 @@ module mod_chidg_convert_p3d_hdf5
 #include <messenger.h>
     use mod_kinds,              only: rk,ik, rdouble
     use mod_constants,          only: IO_DESTINATION, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, TWO
+    use mod_equations,          only: equation_builder_factory
     use mod_hdf_utilities,      only: initialize_file_hdf, set_ndomains_hdf, open_file_hdf,     &
                                       set_domain_mapping_hdf, set_domain_dimensionality_hdf,    &
                                       set_domain_equation_set_hdf, set_contains_grid_hdf,       &
@@ -214,8 +215,20 @@ contains
             ! Read equation set from user
             !
             call write_line("Setting equation set for domain ", igrid, delimiter=" ")
-            call write_line("Enter equation set: ")
-            read(*,"(A1024)") eqnset_string
+            call write_line("Enter equation set(? to list): ")
+
+            do
+                read(*,'(A1024)', iostat=ierr) eqnset_string
+                if ( (ierr/=0)  ) print*, "Invalid input. Try again :)"
+
+                if (trim(eqnset_string) == '?') then
+                    call equation_builder_factory%list()
+                else
+                    if ( equation_builder_factory%has(trim(eqnset_string)) ) exit
+                    print*, "We didn't find '"//trim(eqnset_string)//"' registered in ChiDG :/. Try another equation and remember you can enter '?' to list the registered equation sets."
+                end if
+
+            end do
 
 
             !

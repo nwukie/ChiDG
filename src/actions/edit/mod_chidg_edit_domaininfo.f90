@@ -2,6 +2,7 @@ module mod_chidg_edit_domaininfo
 #include <messenger.h>
     use mod_kinds,      only: rk, ik
     use mod_constants,  only: NFACES, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use mod_equations,  only: equation_builder_factory
     use hdf5
     use h5lt
 
@@ -57,17 +58,6 @@ contains
             call write_line(' ')
             call write_line(bc_commands,color='blue')
 
-!            ierr = 1
-!            do while ( ierr /= 0 )
-!                read(*,'(I8)', iostat=ierr) idom_hdf
-!                if ( ierr /= 0 )  call write_line("Invalid input: expecting an integer index.")
-!
-!                if ( idom_hdf > ndom ) then
-!                    ierr = 1
-!                    call write_line("Invalid domain range. Enter a number between 1 and ",ndom)
-!                end if
-!
-!            end do
 
 
             read(*,'(A1024)') domain_name
@@ -294,6 +284,9 @@ contains
         integer(HID_T),     intent(in)  :: domain_id
 
 
+        logical                             :: list_equations
+        logical                             :: equation_not_found
+        character(:),           allocatable :: not_found_string
         integer(ik)                         :: ierr, idom, iind
         integer(HID_T)                      :: did
         character(len=1024), allocatable    :: dnames(:)
@@ -302,21 +295,57 @@ contains
         integer(ik),        allocatable     :: dindices(:)
 
 
-        !
-        ! Refresh display
-        !
-        call execute_command_line("clear")
-        call print_overview(fid,domain_id)
+        list_equations = .false.
+        equation_not_found = .false.
+        do
+
+            !
+            ! Refresh display
+            !
+            call execute_command_line("clear")
+            call print_overview(fid,domain_id)
 
 
 
-        !
-        ! Print command options, accept user selection.
-        !
-        call write_line(' ')
-        call write_line("Enter equation set: ",color='blue')
-        read(*,'(A1024)') equation_set
+            !
+            ! Print command options, accept user selection.
+            !
+            call write_line(' ')
+            call write_line("Enter equation set(? to list): ",color='blue')
 
+
+            if (list_equations) call equation_builder_factory%list()
+
+            not_found_string = "We didn't find '"//trim(equation_set)//"' registered &
+                                in ChiDG :/. Try another equation and remember you can &
+                                enter '?' to list the registered equation sets."
+            if (equation_not_found) call write_line(not_found_string)
+
+
+
+            read(*,'(A1024)', iostat=ierr) equation_set
+            if ( (ierr/=0)  ) print*, "Invalid input. Try again :)"
+
+
+
+
+            ! List equations
+            if (trim(equation_set) == '?') then
+                list_equations = .true.
+                equation_not_found = .false.
+
+            ! Exit without changes
+            else if (trim(equation_set) == '') then
+                exit
+
+            ! Check registered, exit if valid
+            else
+                if ( equation_builder_factory%has(trim(equation_set)) ) exit
+                list_equations     = .false.
+                equation_not_found = .true.
+            end if
+
+        end do
 
 
         !

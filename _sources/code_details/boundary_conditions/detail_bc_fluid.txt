@@ -7,7 +7,7 @@ Fluid boundary conditions
 Inlet - Total
 -------------
 
-Specify total conditions and flow normal vector at an inlet boundary.
+Setting ``Inlet - Total`` imposes total conditions and flow normal vector at an inlet boundary.
 
 
 =====================   =======================================================================
@@ -58,7 +58,7 @@ The gradient of the boundary state is extrapolated:
 Outlet - Constant Pressure
 --------------------------
 
-Specify constant static pressure on an outlet boundary.
+Setting ``Outlet - Constant Pressure`` imposes constant static pressure on an outlet boundary.
 
 =====================   =======================================================================
 Parameter               Description

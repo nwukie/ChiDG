@@ -92,6 +92,7 @@
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../../getting_started/getting_started.html#step-4-configure-the-build">Step 4: Configure the build</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../getting_started/getting_started.html#step-5-build-chidg">Step 5: Build ChiDG</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../getting_started/getting_started.html#step-6-test-chidg">Step 6: Test ChiDG</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../../getting_started/getting_started.html#usage">Usage</a><ul>
@@ -143,20 +144,39 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../mesh/detail_mesh.html">Mesh</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../mesh/detail_mesh.html#elements">Elements</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#metric-terms">Metric terms</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#derivatives">Derivatives</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mesh/detail_mesh.html#coordinate-systems">Coordinate Systems</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mesh/detail_mesh.html#id1">Mesh</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#elements">Elements</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#faces">Faces</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#chimera-interfaces">Chimera Interfaces</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="../mesh/detail_mesh.html#faces">Faces</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#face-metrics">Face metrics</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#face-normals">Face normals</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="../mesh/detail_mesh.html#chimera-interfaces">Chimera Interfaces</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../mesh/detail_mesh.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../equations/detail_equations.html">Equation Sets</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#mathematical-background">Mathematical background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-operators">ChiDG Operators</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../equations/detail_equations.html#registering-new-operators">Registering new operators</a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-equation-sets">ChiDG Equation Sets</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../boundary_conditions/detail_boundary_conditions.html">Boundary conditions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../boundary_conditions/detail_bc_theory.html">Theory + Abstractions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_theory.html#boundary-condition-patch">Boundary condition patch</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_theory.html#boundary-condition-state-functions">Boundary condition state functions</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html">Fluid boundary conditions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#inlet-total">Inlet - Total</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#outlet-constant-pressure">Outlet - Constant Pressure</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#wall">Wall</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#symmetry">Symmetry</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#farfield">Farfield</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../boundary_conditions/detail_bc_periodic.html">Periodic boundary condition</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../solvers/detail_solvers.html">Solvers</a><ul>
@@ -184,15 +204,6 @@
 <li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#restricted-additive-schwarz-block-ilu0">Restricted Additive Schwarz + block-ILU0</a></li>
 </ul>
 </li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="../equations/detail_equations.html">Equation Sets</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#mathematical-background">Mathematical background</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-operators">ChiDG Operators</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../equations/detail_equations.html#registering-new-operators">Registering new operators</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-equation-sets">ChiDG Equation Sets</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../containers/detail_containers.html">ChiDG Matrix/Vector</a><ul>

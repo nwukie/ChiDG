@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>ChiDG Matrix/Vector &mdash; ChiDG 0.1 documentation</title>
+  <title>Boundary conditions &mdash; ChiDG 0.1 documentation</title>
   
 
   
@@ -34,8 +34,8 @@
   
     <link rel="top" title="ChiDG 0.1 documentation" href="../../index.html"/>
         <link rel="up" title="Code details" href="../details_main.html"/>
-        <link rel="next" title="Parallelization" href="../parallel/detail_parallel.html"/>
-        <link rel="prev" title="Solvers" href="../solvers/detail_solvers.html"/> 
+        <link rel="next" title="Theory + Abstractions" href="detail_bc_theory.html"/>
+        <link rel="prev" title="Equation Sets" href="../equations/detail_equations.html"/> 
 
   
   <script src="../../_static/js/modernizr.min.js"></script>
@@ -162,21 +162,21 @@
 <li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-equation-sets">ChiDG Equation Sets</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../boundary_conditions/detail_boundary_conditions.html">Boundary conditions</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../boundary_conditions/detail_bc_theory.html">Theory + Abstractions</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_theory.html#boundary-condition-patch">Boundary condition patch</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_theory.html#boundary-condition-state-functions">Boundary condition state functions</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Boundary conditions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="detail_bc_theory.html">Theory + Abstractions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="detail_bc_theory.html#boundary-condition-patch">Boundary condition patch</a></li>
+<li class="toctree-l4"><a class="reference internal" href="detail_bc_theory.html#boundary-condition-state-functions">Boundary condition state functions</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html">Fluid boundary conditions</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#inlet-total">Inlet - Total</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#outlet-constant-pressure">Outlet - Constant Pressure</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#wall">Wall</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#symmetry">Symmetry</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#farfield">Farfield</a></li>
+<li class="toctree-l3"><a class="reference internal" href="detail_bc_fluid.html">Fluid boundary conditions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="detail_bc_fluid.html#inlet-total">Inlet - Total</a></li>
+<li class="toctree-l4"><a class="reference internal" href="detail_bc_fluid.html#outlet-constant-pressure">Outlet - Constant Pressure</a></li>
+<li class="toctree-l4"><a class="reference internal" href="detail_bc_fluid.html#wall">Wall</a></li>
+<li class="toctree-l4"><a class="reference internal" href="detail_bc_fluid.html#symmetry">Symmetry</a></li>
+<li class="toctree-l4"><a class="reference internal" href="detail_bc_fluid.html#farfield">Farfield</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="../boundary_conditions/detail_bc_periodic.html">Periodic boundary condition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="detail_bc_periodic.html">Periodic boundary condition</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../solvers/detail_solvers.html">Solvers</a><ul>
@@ -206,15 +206,15 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">ChiDG Matrix/Vector</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#chidg-vector">ChiDG Vector</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#block-vector">Block Vector</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#dense-vector">Dense Vector</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../containers/detail_containers.html">ChiDG Matrix/Vector</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../containers/detail_containers.html#chidg-vector">ChiDG Vector</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#block-vector">Block Vector</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#dense-vector">Dense Vector</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#chidg-matrix">ChiDG Matrix</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#block-matrix">Block Matrix</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#dense-matrix">Dense Matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../containers/detail_containers.html#chidg-matrix">ChiDG Matrix</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#block-matrix">Block Matrix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#dense-matrix">Dense Matrix</a></li>
 </ul>
 </li>
 </ul>
@@ -274,11 +274,11 @@
       
           <li><a href="../details_main.html">Code details</a> &raquo;</li>
       
-    <li>ChiDG Matrix/Vector</li>
+    <li>Boundary conditions</li>
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="../../_sources/code_details/containers/detail_containers.txt" rel="nofollow"> View page source</a>
+            <a href="../../_sources/code_details/boundary_conditions/detail_boundary_conditions.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -288,35 +288,9 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="chidg-matrix-vector">
-<h1>ChiDG Matrix/Vector<a class="headerlink" href="#chidg-matrix-vector" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="chidg-vector">
-<h2>ChiDG Vector<a class="headerlink" href="#chidg-vector" title="Permalink to this headline">¶</a></h2>
-<a class="reference internal image-reference" href="../../_images/d__chidgvector.png"><img alt="../../_images/d__chidgvector.png" src="../../_images/d__chidgvector.png" style="width: 95%;" /></a>
-<div class="section" id="block-vector">
-<h3>Block Vector<a class="headerlink" href="#block-vector" title="Permalink to this headline">¶</a></h3>
-<a class="reference internal image-reference" href="../../_images/d__blockvector.png"><img alt="../../_images/d__blockvector.png" src="../../_images/d__blockvector.png" style="width: 95%;" /></a>
-</div>
-<div class="section" id="dense-vector">
-<h3>Dense Vector<a class="headerlink" href="#dense-vector" title="Permalink to this headline">¶</a></h3>
-<a class="reference internal image-reference" href="../../_images/d__densevector.png"><img alt="../../_images/d__densevector.png" src="../../_images/d__densevector.png" style="width: 95%;" /></a>
-</div>
-</div>
-<div class="section" id="chidg-matrix">
-<h2>ChiDG Matrix<a class="headerlink" href="#chidg-matrix" title="Permalink to this headline">¶</a></h2>
-<a class="reference internal image-reference" href="../../_images/d__chidgmatrix.png"><img alt="../../_images/d__chidgmatrix.png" src="../../_images/d__chidgmatrix.png" style="width: 95%;" /></a>
-<div class="section" id="block-matrix">
-<h3>Block Matrix<a class="headerlink" href="#block-matrix" title="Permalink to this headline">¶</a></h3>
-<a class="reference internal image-reference" href="../../_images/d__blockmatrix_lblks.png"><img alt="../../_images/d__blockmatrix_lblks.png" src="../../_images/d__blockmatrix_lblks.png" style="width: 95%;" /></a>
-<a class="reference internal image-reference" href="../../_images/d__blockmatrix_local_linearization.png"><img alt="../../_images/d__blockmatrix_local_linearization.png" src="../../_images/d__blockmatrix_local_linearization.png" style="width: 95%;" /></a>
-<a class="reference internal image-reference" href="../../_images/d__blockmatrix_chimera_linearization.png"><img alt="../../_images/d__blockmatrix_chimera_linearization.png" src="../../_images/d__blockmatrix_chimera_linearization.png" style="width: 95%;" /></a>
-<a class="reference internal image-reference" href="../../_images/d__blockmatrix_bc_linearization.png"><img alt="../../_images/d__blockmatrix_bc_linearization.png" src="../../_images/d__blockmatrix_bc_linearization.png" style="width: 95%;" /></a>
-</div>
-<div class="section" id="dense-matrix">
-<h3>Dense Matrix<a class="headerlink" href="#dense-matrix" title="Permalink to this headline">¶</a></h3>
-<a class="reference internal image-reference" href="../../_images/d__densematrix.png"><img alt="../../_images/d__densematrix.png" src="../../_images/d__densematrix.png" style="width: 95%;" /></a>
-<a class="reference internal image-reference" href="../../_images/d__densematrix_detail.png"><img alt="../../_images/d__densematrix_detail.png" src="../../_images/d__densematrix_detail.png" style="width: 95%;" /></a>
-</div>
+  <div class="section" id="boundary-conditions">
+<h1>Boundary conditions<a class="headerlink" href="#boundary-conditions" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
 </div>
 </div>
 
@@ -327,10 +301,10 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="../parallel/detail_parallel.html" class="btn btn-neutral float-right" title="Parallelization" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="detail_bc_theory.html" class="btn btn-neutral float-right" title="Theory + Abstractions" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="../solvers/detail_solvers.html" class="btn btn-neutral" title="Solvers" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="../equations/detail_equations.html" class="btn btn-neutral" title="Equation Sets" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

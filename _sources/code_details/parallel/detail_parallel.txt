@@ -52,7 +52,7 @@ This is shown here for a domain before and after partitioning for two processors
     :figclass: align-center
 
     **Global element indices**
-.. figure:: local_indices.png
+.. figure:: local_indices_new.png
     :width: 270 pt
     :align: right
     :figclass: align-center

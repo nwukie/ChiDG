@@ -2,6 +2,46 @@
 Mesh
 ====
 
+
+
+------------------
+Coordinate Systems
+------------------
+
+ChiDG supports two coordinate systems: ``Cartesian`` and ``Cylindrical``. In the
+code, many things are referred to only by coordinate index. The convention for these
+indices is defined here as:
+
+
+.. math:: 
+
+    (x,y,z) \rightarrow (1,2,3)
+
+    (r, \theta, z)  \rightarrow (1,2,3)
+
+
+Additionally, effort has been put forth to represent data in a manner consistent
+with vector-calculus. For example, test function gradient components are computed
+as:
+
+.. math::
+
+    \nabla \psi = \frac{\partial \psi}{\partial x}\hat{x} + \frac{\partial \psi}{\partial y} \hat{y} + \frac{\partial \psi}{\partial z} \hat{z}
+
+    \nabla \psi = \frac{\partial \psi}{\partial r}\hat{r} + \frac{1}{r}\frac{\partial \psi}{\partial \theta} \hat{\theta} + \frac{\partial \psi}{\partial z} \hat{z}
+
+
+
+
+
+
+
+
+
+----
+Mesh
+----
+
 The ``mesh_t`` data structure contains an entire geometry description for a single
 domain. This exists as an array of ``element_t`` types, and array of ``face_t`` types,
 and a ``chimera_t`` instance. An ``element_t`` exists for every element in the ``mesh_t``
@@ -22,7 +62,7 @@ domain. For a given ``element_t``, a ``face_t`` instance exists for each face.
 
 
 
--------------
+
 Elements
 -------------
 
@@ -35,7 +75,7 @@ general information that could be useful to users. This includes:
     quad_pts(:)     An array of points defining the location of each volume quadrature node in real space.
     metric(3,3,:)   An array, defining for each quadrature point, a matrix of element metric values.
     jinv(:)         An array of inverse element jacobian values at each volume quadrature node.
-    ddx(:,:)        An array of derivatives of the basis functions with respect to real coordinates at volume quadrature nodes.
+    grad1(:,:)      An array of gradients of the basis functions with respect to physical coordinates at volume quadrature nodes.
 
 
 .. image:: d__element.png
@@ -44,7 +84,7 @@ general information that could be useful to users. This includes:
 
 
 Metric terms
-------------
+~~~~~~~~~~~~
 
 The metric terms are defined at each quadrature point in the ``metric(:,:,:)`` component 
 of a given ``element_t``. To access the matrix of metric components for a given quadrature 
@@ -54,7 +94,7 @@ node 'igq', the component can be used as
 
     metric(:,:,igq)
 
-This returns the metric components at the quadrature node in a 3x3 matrix as:
+This returns the metric components(``Cartesian`` or ``Cylindrical``) at the quadrature node in a 3x3 matrix as:
 
 .. math::
 
@@ -63,7 +103,14 @@ This returns the metric components at the quadrature node in a 3x3 matrix as:
       \eta_x  \quad \eta_y  \quad   \eta_z \\
       \zeta_x \quad \zeta_y \quad   \zeta_z
     \end{pmatrix} 
-
+    \quad
+    \quad
+    \quad
+    \begin{pmatrix}
+      r \xi_r   \quad r \xi_\theta   \quad   r \xi_z  \\
+      \eta_r    \quad   \eta_\theta  \quad     \eta_z \\
+      r \zeta_r \quad r \zeta_\theta \quad   r \zeta_z
+    \end{pmatrix} 
 
 Alternatively, a given metric term can be accessed for the set of quadrature nodes as
 
@@ -74,15 +121,18 @@ Alternatively, a given metric term can be accessed for the set of quadrature nod
 which would return a 1D array of values for :math:`\xi_x` corresponding to each volume
 quadrature node.
 
-The inverse element jacobian terms ``jinv(:)`` are defined at each quadrature node as
+The inverse element jacobian terms(``Cartesian`` or ``Cylindrical``) ``jinv(:)`` are defined at each quadrature node as
 
 .. math::
 
-    J^{-1} = ( x_\xi \xi_x + x_\eta \eta_x + x_\zeta \zeta_x )
+    J^{-1} = ( x_\xi y_\eta z_\zeta  -  x_\eta y_\xi z_\zeta  -  x_\xi y_\zeta z_\eta  +  x_\zeta y_\xi z_\eta  +  x_\eta y_\zeta z_\xi  -  x_\zeta y_\eta z_\xi )
+
+    J^{-1} = r ( r_\xi \theta_\eta z_\zeta  -  r_\eta \theta_\xi z_\zeta  -  r_\xi \theta_\zeta z_\eta  +  r_\zeta \theta_\xi z_\eta  +  r_\eta \theta_\zeta z_\xi  -  r_\zeta \theta_\eta z_\xi )
 
 
-Derivatives
------------
+
+Derivatives + Gradients
+~~~~~~~~~~~~~~~~~~~~~~~
 
 The derivatives of basis functions with respect to the computational coordinates on a 
 reference element are already defined in a quadrature instance associated with an 
@@ -100,21 +150,24 @@ element in the component ``element%gq%vol``. For example, the component
         \end{pmatrix}
 
 
-Derivatives in real space coordinates in an ``element_t`` can be computed using 
-``ddx(:,:)`` components. The derivatives of basis functions with respect to real 
-coordinates(:math:`x,y,z` , :math:`r,\theta,z` ) are specific to each ``element_t`` 
-and these derivatives can be accessed in the ``ddx``, ``ddy``, ``ddz`` components. 
-The ``element%ddx`` component for example gives
+Gradients in pysical coordinates in an ``element_t`` can be computed using 
+``grad1(:,:)``, ``grad2(:,:)``, and ``grad3(:,:)``  components. The gradients
+of basis functions with respect to physical 
+coordinates(:math:`x,y,z` , :math:`r,\theta,z` ) are specific to each 
+``element_t`` and these derivatives can be accessed in the 
+``grad1``, ``grad2``, ``grad3`` components. For example, the ``element%grad1`` component 
+contains the gradient along the 1st physical coordinate  for all test functions at all
+quadrature nodes as:
 
 
 .. math::
 
-    \frac{\partial \psi_{igq, imode}}{\partial x} =
+    \nabla_1 \psi_{ngq, nmode} =
         \begin{pmatrix}
-            \frac{\partial \psi_{1,1}}{\partial x} &  \frac{\partial \psi_{1,2}}{\partial x}  & \cdots  & \frac{\partial \psi_{1,N}}{\partial x} \\
-            \frac{\partial \psi_{2,1}}{\partial x}  & \frac{\partial \psi_{2,2}}{\partial x}  & \cdots  & \frac{\partial \psi_{2,N}}{\partial x} \\
+            \nabla_1 \psi_{1,1}  &  \nabla_1 \psi_{1,2}  & \cdots  & \nabla_1 \psi_{1,N} \\
+            \nabla_1 \psi_{2,1}  &  \nabla_1 \psi_{2,2}  & \cdots  & \nabla_1 \psi_{2,N} \\
             \vdots & \vdots & \vdots & \vdots \\
-            \frac{\partial \psi_{{ngq},1}}{\partial x} & \frac{\partial \psi_{{ngq},2}}{\partial x} &  \cdots &  \frac{\partial \psi_{{ngq},N}}{\partial x} \\
+            \nabla_1 \psi_{{ngq},1}  & \nabla_1 \psi_{{ngq},2}  &  \cdots &  \nabla_1 \psi_{{ngq},N} \\
         \end{pmatrix}
 
 
@@ -131,7 +184,7 @@ The ``element%ddx`` component for example gives
 
 
 
--------------
+
 Faces
 -------------
 
@@ -141,7 +194,7 @@ Faces
 
 
 Face metrics
-------------
+~~~~~~~~~~~~
 
 Metric terms for the ``face_t`` data structure are defined exactly the same as for the 
 ``element_t`` data structure. The difference is that the ``metric`` and ``jinv`` components of 
@@ -150,7 +203,7 @@ structure, which returns values for volume quadrature nodes.
 
 
 Face normals
-------------
+~~~~~~~~~~~~
 
 
 .. math::
@@ -206,7 +259,7 @@ Unit normal vectors can be accessed in the ``unorm`` component and are computed 
 
 
 
-------------------
+
 Chimera Interfaces
 ------------------
 
@@ -232,7 +285,7 @@ entry in the ``mesh%chimera%recv%data`` components. It can be accessed as
     mesh%chimera%recv%data(ChiID)
 
 Example
--------
+~~~~~~~
 
 Consider an example with two mesh domains, as shown below.
 ``mesh(1)`` contains four elements. ``mesh(2)`` contains eight elements.
@@ -255,9 +308,6 @@ Each CHIMERA face has its own set of chimera information, which can be accessed 
 .. image:: d__chimera_demo_b.png
     :width: 90 %
     :align: center
-
-
-
 
 
 

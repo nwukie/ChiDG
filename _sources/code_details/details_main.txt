@@ -8,8 +8,9 @@ Code details
     architecture/detail_architecture
     chidg/detail_chidg
     mesh/detail_mesh
-    solvers/detail_solvers
     equations/detail_equations
+    boundary_conditions/detail_boundary_conditions
+    solvers/detail_solvers
     containers/detail_containers
     parallel/detail_parallel
     autodiff/detail_autodiff

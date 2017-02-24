@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>ChiDG Matrix/Vector &mdash; ChiDG 0.1 documentation</title>
+  <title>Fluid boundary conditions &mdash; ChiDG 0.1 documentation</title>
   
 
   
@@ -33,9 +33,9 @@
 
   
     <link rel="top" title="ChiDG 0.1 documentation" href="../../index.html"/>
-        <link rel="up" title="Code details" href="../details_main.html"/>
-        <link rel="next" title="Parallelization" href="../parallel/detail_parallel.html"/>
-        <link rel="prev" title="Solvers" href="../solvers/detail_solvers.html"/> 
+        <link rel="up" title="Boundary conditions" href="detail_boundary_conditions.html"/>
+        <link rel="next" title="Periodic boundary condition" href="detail_bc_periodic.html"/>
+        <link rel="prev" title="Theory + Abstractions" href="detail_bc_theory.html"/> 
 
   
   <script src="../../_static/js/modernizr.min.js"></script>
@@ -162,21 +162,21 @@
 <li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-equation-sets">ChiDG Equation Sets</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../boundary_conditions/detail_boundary_conditions.html">Boundary conditions</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../boundary_conditions/detail_bc_theory.html">Theory + Abstractions</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_theory.html#boundary-condition-patch">Boundary condition patch</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_theory.html#boundary-condition-state-functions">Boundary condition state functions</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="detail_boundary_conditions.html">Boundary conditions</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="detail_bc_theory.html">Theory + Abstractions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="detail_bc_theory.html#boundary-condition-patch">Boundary condition patch</a></li>
+<li class="toctree-l4"><a class="reference internal" href="detail_bc_theory.html#boundary-condition-state-functions">Boundary condition state functions</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html">Fluid boundary conditions</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#inlet-total">Inlet - Total</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#outlet-constant-pressure">Outlet - Constant Pressure</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#wall">Wall</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#symmetry">Symmetry</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#farfield">Farfield</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Fluid boundary conditions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#inlet-total">Inlet - Total</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#outlet-constant-pressure">Outlet - Constant Pressure</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#wall">Wall</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#symmetry">Symmetry</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#farfield">Farfield</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="../boundary_conditions/detail_bc_periodic.html">Periodic boundary condition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="detail_bc_periodic.html">Periodic boundary condition</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../solvers/detail_solvers.html">Solvers</a><ul>
@@ -206,15 +206,15 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">ChiDG Matrix/Vector</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#chidg-vector">ChiDG Vector</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#block-vector">Block Vector</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#dense-vector">Dense Vector</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../containers/detail_containers.html">ChiDG Matrix/Vector</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../containers/detail_containers.html#chidg-vector">ChiDG Vector</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#block-vector">Block Vector</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#dense-vector">Dense Vector</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#chidg-matrix">ChiDG Matrix</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#block-matrix">Block Matrix</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#dense-matrix">Dense Matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../containers/detail_containers.html#chidg-matrix">ChiDG Matrix</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#block-matrix">Block Matrix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#dense-matrix">Dense Matrix</a></li>
 </ul>
 </li>
 </ul>
@@ -274,11 +274,13 @@
       
           <li><a href="../details_main.html">Code details</a> &raquo;</li>
       
-    <li>ChiDG Matrix/Vector</li>
+          <li><a href="detail_boundary_conditions.html">Boundary conditions</a> &raquo;</li>
+      
+    <li>Fluid boundary conditions</li>
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="../../_sources/code_details/containers/detail_containers.txt" rel="nofollow"> View page source</a>
+            <a href="../../_sources/code_details/boundary_conditions/detail_bc_fluid.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -288,35 +290,226 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="chidg-matrix-vector">
-<h1>ChiDG Matrix/Vector<a class="headerlink" href="#chidg-matrix-vector" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="chidg-vector">
-<h2>ChiDG Vector<a class="headerlink" href="#chidg-vector" title="Permalink to this headline">¶</a></h2>
-<a class="reference internal image-reference" href="../../_images/d__chidgvector.png"><img alt="../../_images/d__chidgvector.png" src="../../_images/d__chidgvector.png" style="width: 95%;" /></a>
-<div class="section" id="block-vector">
-<h3>Block Vector<a class="headerlink" href="#block-vector" title="Permalink to this headline">¶</a></h3>
-<a class="reference internal image-reference" href="../../_images/d__blockvector.png"><img alt="../../_images/d__blockvector.png" src="../../_images/d__blockvector.png" style="width: 95%;" /></a>
+  <div class="section" id="fluid-boundary-conditions">
+<h1>Fluid boundary conditions<a class="headerlink" href="#fluid-boundary-conditions" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="inlet-total">
+<h2>Inlet - Total<a class="headerlink" href="#inlet-total" title="Permalink to this headline">¶</a></h2>
+<p>Specify total conditions and flow normal vector at an inlet boundary.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="77%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">Total</span> <span class="pre">Pressure</span></code></td>
+<td>Set <code class="docutils literal"><span class="pre">Total</span> <span class="pre">Presure</span></code> <span class="math">\(p_0\)</span> at the inlet boundary</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">Total</span> <span class="pre">Temperature</span></code></td>
+<td>Set <code class="docutils literal"><span class="pre">Total</span> <span class="pre">Temperature</span></code> <span class="math">\(T_0\)</span> at the inlet boundary</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">Normal-1</span></code></td>
+<td>Set first component of flow normal vector <span class="math">\(\vec{n}\)</span></td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">Normal-2</span></code></td>
+<td>Set second component of flow normal vector <span class="math">\(\vec{n}\)</span></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">Normal-3</span></code></td>
+<td>Set third component of flow normal vector <span class="math">\(\vec{n}\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>Momentum is extrapolated from the interior and used to compute velocity, <span class="math">\(\vec{V}\)</span>.
+With the user-specified normal and Total quantities, static quantities to compute the
+boundary condition solution state <span class="math">\(Q_{bc}\)</span> are computed as:</p>
+<div class="math">
+\[ \begin{align}\begin{aligned}T_{bc} &amp;= T_0 -  \frac{|\vec{V}_-|}{2 c_p}\\p_{bc} &amp;= p_0\bigg( \frac{T_{bc}}{T_0} \bigg)^{\frac{\gamma}{\gamma - 1}}\\\vec{V}_{bc} &amp;= \vec{V}_- \cdot \vec{n}\end{aligned}\end{align} \]</div>
+<p>With these static quantities, the boundary condition state is computed as:</p>
+<div class="math">
+\[ \begin{align}\begin{aligned}\rho_{bc} &amp;= \frac{p_{bc}}{R T_{bc}}\\\vec{\rho V}_{bc} &amp;= \rho_{bc} \vec{V}_{bc}\\\rho E_{bc} &amp;= \frac{p_{bc}}{\gamma - 1} + \frac{\rho}{2}( \vec{V}_{bc} \cdot \vec{V}_{bc} )\end{aligned}\end{align} \]</div>
+<p>The gradient of the boundary state is extrapolated:</p>
+<div class="math">
+\[\nabla Q_{bc} = \nabla Q_{-}\]</div>
 </div>
-<div class="section" id="dense-vector">
-<h3>Dense Vector<a class="headerlink" href="#dense-vector" title="Permalink to this headline">¶</a></h3>
-<a class="reference internal image-reference" href="../../_images/d__densevector.png"><img alt="../../_images/d__densevector.png" src="../../_images/d__densevector.png" style="width: 95%;" /></a>
+<div class="section" id="outlet-constant-pressure">
+<h2>Outlet - Constant Pressure<a class="headerlink" href="#outlet-constant-pressure" title="Permalink to this headline">¶</a></h2>
+<p>Specify constant static pressure on an outlet boundary.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="77%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">Static</span> <span class="pre">Pressure</span></code></td>
+<td>Set <code class="docutils literal"><span class="pre">Static</span> <span class="pre">Presure</span></code> <span class="math">\(p\)</span> at the outlet boundary</td>
+</tr>
+</tbody>
+</table>
+<p>Density and Momentum are extrapolated from the interior state. The boundary condition state
+is computed as:</p>
+<div class="math">
+\[ \begin{align}\begin{aligned}\rho_{bc} &amp;= \rho_{-}\\\vec{\rho V}_{bc} &amp;= \vec{\rho V}_{-}\\\rho E_{bc} &amp;= \frac{p}{\gamma - 1} + \frac{\rho_{bc}}{2}( \vec{V}_{-} \cdot \vec{V}_{-} )\end{aligned}\end{align} \]</div>
+<p>The gradient of the boundary state is extrapolated:</p>
+<div class="math">
+\[\nabla Q_{bc} = \nabla Q_{-}\]</div>
 </div>
+<div class="section" id="wall">
+<h2>Wall<a class="headerlink" href="#wall" title="Permalink to this headline">¶</a></h2>
+<p>A <code class="docutils literal"><span class="pre">Wall</span></code> state function sets the normal component of momentum to zero and
+subtracts its kinetic energy contribution from the extrapolated energy from the interior.
+For weakly imposed boundary conditions for the <code class="docutils literal"><span class="pre">Euler</span></code> equations, this defines a Slip Wall.
+For weakly imposed boundary conditions For the <code class="docutils literal"><span class="pre">Navier-Stokes</span></code> equations,
+this defines a No-Slip Wall. The normal flux for either case</p>
+<p>Heat transfer is defined to be adiabatic, <span class="math">\(\nabla T = 0\)</span>.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="77%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>no parameters</td>
+<td>&nbsp;</td>
+</tr>
+</tbody>
+</table>
+<p>The normal component of the advective flux is given by:</p>
+<div class="math">
+\[\begin{split}\vec{F}^a(Q) \cdot \vec{n} =
+\begin{pmatrix}
+    \vec{\rho V} \cdot \vec{n} \\
+    \rho u \vec{V} \cdot \vec{n} + p n_1 \\
+    \rho v \vec{V} \cdot \vec{n} + p n_2 \\
+    \rho w \vec{V} \cdot \vec{n} + p n_3 \\
+    \rho H \vec{V} \cdot \vec{n}
+\end{pmatrix}\end{split}\]</div>
+<p>A slip wall is defined as <span class="math">\(\vec{V}_{bc} \cdot \vec{n} = 0\)</span>. A no-slip wall is defined as
+<span class="math">\(\vec{V}_{bc} = 0\)</span>.</p>
+<p>Imposing either of these conditions on the normal flux yields the same result:</p>
+<div class="math">
+\[\begin{split}\vec{F}^a(Q) \cdot \vec{n} =
+\begin{pmatrix}
+    0 \\
+    p_- n_1 \\
+    p_- n_2 \\
+    p_- n_3 \\
+    0
+\end{pmatrix}\end{split}\]</div>
+<p>So, for the Euler equations imposing <span class="math">\(\vec{V}_{bc} = 0\)</span> yields a slip wall.
+For the Navier-Stokes equations, imposing <span class="math">\(\vec{V}_{bc} = 0\)</span> yields a no-slip wall.</p>
+<p>The boundary solution state is computed by extrapolating density, setting momentum to
+zero, and subtracting the lost kinetic energy from the interior energy:</p>
+<div class="math">
+\[\begin{split}Q_{bc} =
+\begin{pmatrix}
+    \rho_{-} \\
+    0 \\
+    0 \\
+    0 \\
+    \rho E_{-} - \frac{\rho_{-}}{2}(\vec{V}_{-} \cdot \vec{V}_{-})
+\end{pmatrix}\end{split}\]</div>
+<p>The gradient of the boundary state is computed using the no-slip condition and
+also the adiabatic condition <span class="math">\(\nabla T = 0\)</span>.</p>
+<p>If the temperature is a function of the primary fields <span class="math">\(T = T(\rho,\vec{\rho V},\rho E)\)</span>,
+then the gradient of temperature can be computed using the Chain Rule as:</p>
+<div class="math">
+\[\nabla T = \frac{\partial T}{\partial \rho} \nabla (\rho)  +  \frac{\partial T}{\partial \rho u} \nabla (\rho u)  +  \frac{\partial T}{\partial \rho v} \nabla(\rho v)  +  \frac{\partial T}{\partial \rho w}\nabla(\rho w)  +  \frac{\partial T}{\partial \rho E} \nabla(\rho E)\]</div>
+<p>One can determine that the jacobian of temperature with respect to momentum goes to zero
+with velocity, <span class="math">\(\frac{\partial T}{\vec{\rho V}} \rightarrow 0\)</span>
+as <span class="math">\(V \rightarrow 0\)</span>. The adiabatic condition can then be imposed by setting gradients
+of density and energy to zero:</p>
+<div class="math">
+\[\begin{split}\nabla Q_{bc} =
+\begin{pmatrix}
+    0 \\
+    \nabla \vec{\rho V}_{-} \\
+    0 \\
+\end{pmatrix}\end{split}\]</div>
 </div>
-<div class="section" id="chidg-matrix">
-<h2>ChiDG Matrix<a class="headerlink" href="#chidg-matrix" title="Permalink to this headline">¶</a></h2>
-<a class="reference internal image-reference" href="../../_images/d__chidgmatrix.png"><img alt="../../_images/d__chidgmatrix.png" src="../../_images/d__chidgmatrix.png" style="width: 95%;" /></a>
-<div class="section" id="block-matrix">
-<h3>Block Matrix<a class="headerlink" href="#block-matrix" title="Permalink to this headline">¶</a></h3>
-<a class="reference internal image-reference" href="../../_images/d__blockmatrix_lblks.png"><img alt="../../_images/d__blockmatrix_lblks.png" src="../../_images/d__blockmatrix_lblks.png" style="width: 95%;" /></a>
-<a class="reference internal image-reference" href="../../_images/d__blockmatrix_local_linearization.png"><img alt="../../_images/d__blockmatrix_local_linearization.png" src="../../_images/d__blockmatrix_local_linearization.png" style="width: 95%;" /></a>
-<a class="reference internal image-reference" href="../../_images/d__blockmatrix_chimera_linearization.png"><img alt="../../_images/d__blockmatrix_chimera_linearization.png" src="../../_images/d__blockmatrix_chimera_linearization.png" style="width: 95%;" /></a>
-<a class="reference internal image-reference" href="../../_images/d__blockmatrix_bc_linearization.png"><img alt="../../_images/d__blockmatrix_bc_linearization.png" src="../../_images/d__blockmatrix_bc_linearization.png" style="width: 95%;" /></a>
+<div class="section" id="symmetry">
+<h2>Symmetry<a class="headerlink" href="#symmetry" title="Permalink to this headline">¶</a></h2>
+<p>A <code class="docutils literal"><span class="pre">Symmetry</span></code> condition defines the velocity gradient normal to the boundary as zero.
+However, in contrast to the <code class="docutils literal"><span class="pre">Wall</span></code> boundary condition implementation where the
+condition is imposed on the normal component of the flux, here the normal component
+of momentum is mirrored about the boundary face such that the normal component
+of momentum is effectively zero.</p>
+<p>The consequence of this implementation is that is effectively a slip-wall condition
+for both the <code class="docutils literal"><span class="pre">Euler</span></code> and <code class="docutils literal"><span class="pre">Navier-Stokes</span></code> equations.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="77%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>no parameters</td>
+<td>&nbsp;</td>
+</tr>
+</tbody>
+</table>
+<p>First, the normal component of momentum is computed. It is then mirrored about the
+boundary face such that the normal momentum is zero. The boundary condition state is
+computed as:</p>
+<div class="math">
+\[\begin{split}Q_{bc} =
+\begin{pmatrix}
+    \rho_{-} \\
+    \vec{\rho V}_{bc} - 2(\vec{\rho V}_{-} \cdot \vec{n})\vec{n} \\
+    \rho E_{-}
+\end{pmatrix}\end{split}\]</div>
+<p>The gradient of the boundary state is extrapolated:</p>
+<div class="math">
+\[\nabla Q_{bc} = \nabla Q_{-}\]</div>
 </div>
-<div class="section" id="dense-matrix">
-<h3>Dense Matrix<a class="headerlink" href="#dense-matrix" title="Permalink to this headline">¶</a></h3>
-<a class="reference internal image-reference" href="../../_images/d__densematrix.png"><img alt="../../_images/d__densematrix.png" src="../../_images/d__densematrix.png" style="width: 95%;" /></a>
-<a class="reference internal image-reference" href="../../_images/d__densematrix_detail.png"><img alt="../../_images/d__densematrix_detail.png" src="../../_images/d__densematrix_detail.png" style="width: 95%;" /></a>
-</div>
+<div class="section" id="farfield">
+<h2>Farfield<a class="headerlink" href="#farfield" title="Permalink to this headline">¶</a></h2>
+<p>Specify static inflow/outflow conditions at a farfield boundary.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="77%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Parameter</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">Density</span></code></td>
+<td>Set static <code class="docutils literal"><span class="pre">Density</span></code> <span class="math">\(\rho\)</span> at the farfield boundary</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">Pressure</span></code></td>
+<td>Set static <code class="docutils literal"><span class="pre">Pressure</span></code> <span class="math">\(p\)</span> at the farfield boundary</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">Velocity-1</span></code></td>
+<td>Set first component of flow velocity <span class="math">\(\vec{V}\)</span></td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">Velocity-2</span></code></td>
+<td>Set second component of flow velocity <span class="math">\(\vec{V}\)</span></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">Velocity-3</span></code></td>
+<td>Set third component of flow velocity <span class="math">\(\vec{V}\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>To-be-continued...</p>
 </div>
 </div>
 
@@ -327,10 +520,10 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="../parallel/detail_parallel.html" class="btn btn-neutral float-right" title="Parallelization" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="detail_bc_periodic.html" class="btn btn-neutral float-right" title="Periodic boundary condition" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="../solvers/detail_solvers.html" class="btn btn-neutral" title="Solvers" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="detail_bc_theory.html" class="btn btn-neutral" title="Theory + Abstractions" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

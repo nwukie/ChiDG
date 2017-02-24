@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>ChiDG Matrix/Vector &mdash; ChiDG 0.1 documentation</title>
+  <title>Theory + Abstractions &mdash; ChiDG 0.1 documentation</title>
   
 
   
@@ -33,9 +33,9 @@
 
   
     <link rel="top" title="ChiDG 0.1 documentation" href="../../index.html"/>
-        <link rel="up" title="Code details" href="../details_main.html"/>
-        <link rel="next" title="Parallelization" href="../parallel/detail_parallel.html"/>
-        <link rel="prev" title="Solvers" href="../solvers/detail_solvers.html"/> 
+        <link rel="up" title="Boundary conditions" href="detail_boundary_conditions.html"/>
+        <link rel="next" title="Fluid boundary conditions" href="detail_bc_fluid.html"/>
+        <link rel="prev" title="Boundary conditions" href="detail_boundary_conditions.html"/> 
 
   
   <script src="../../_static/js/modernizr.min.js"></script>
@@ -162,21 +162,21 @@
 <li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-equation-sets">ChiDG Equation Sets</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../boundary_conditions/detail_boundary_conditions.html">Boundary conditions</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../boundary_conditions/detail_bc_theory.html">Theory + Abstractions</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_theory.html#boundary-condition-patch">Boundary condition patch</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_theory.html#boundary-condition-state-functions">Boundary condition state functions</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="detail_boundary_conditions.html">Boundary conditions</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Theory + Abstractions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#boundary-condition-patch">Boundary condition patch</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#boundary-condition-state-functions">Boundary condition state functions</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html">Fluid boundary conditions</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#inlet-total">Inlet - Total</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#outlet-constant-pressure">Outlet - Constant Pressure</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#wall">Wall</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#symmetry">Symmetry</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#farfield">Farfield</a></li>
+<li class="toctree-l3"><a class="reference internal" href="detail_bc_fluid.html">Fluid boundary conditions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="detail_bc_fluid.html#inlet-total">Inlet - Total</a></li>
+<li class="toctree-l4"><a class="reference internal" href="detail_bc_fluid.html#outlet-constant-pressure">Outlet - Constant Pressure</a></li>
+<li class="toctree-l4"><a class="reference internal" href="detail_bc_fluid.html#wall">Wall</a></li>
+<li class="toctree-l4"><a class="reference internal" href="detail_bc_fluid.html#symmetry">Symmetry</a></li>
+<li class="toctree-l4"><a class="reference internal" href="detail_bc_fluid.html#farfield">Farfield</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="../boundary_conditions/detail_bc_periodic.html">Periodic boundary condition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="detail_bc_periodic.html">Periodic boundary condition</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../solvers/detail_solvers.html">Solvers</a><ul>
@@ -206,15 +206,15 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">ChiDG Matrix/Vector</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#chidg-vector">ChiDG Vector</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#block-vector">Block Vector</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#dense-vector">Dense Vector</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../containers/detail_containers.html">ChiDG Matrix/Vector</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../containers/detail_containers.html#chidg-vector">ChiDG Vector</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#block-vector">Block Vector</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#dense-vector">Dense Vector</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#chidg-matrix">ChiDG Matrix</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#block-matrix">Block Matrix</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#dense-matrix">Dense Matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../containers/detail_containers.html#chidg-matrix">ChiDG Matrix</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#block-matrix">Block Matrix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../containers/detail_containers.html#dense-matrix">Dense Matrix</a></li>
 </ul>
 </li>
 </ul>
@@ -274,11 +274,13 @@
       
           <li><a href="../details_main.html">Code details</a> &raquo;</li>
       
-    <li>ChiDG Matrix/Vector</li>
+          <li><a href="detail_boundary_conditions.html">Boundary conditions</a> &raquo;</li>
+      
+    <li>Theory + Abstractions</li>
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="../../_sources/code_details/containers/detail_containers.txt" rel="nofollow"> View page source</a>
+            <a href="../../_sources/code_details/boundary_conditions/detail_bc_theory.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -288,34 +290,93 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="chidg-matrix-vector">
-<h1>ChiDG Matrix/Vector<a class="headerlink" href="#chidg-matrix-vector" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="chidg-vector">
-<h2>ChiDG Vector<a class="headerlink" href="#chidg-vector" title="Permalink to this headline">¶</a></h2>
-<a class="reference internal image-reference" href="../../_images/d__chidgvector.png"><img alt="../../_images/d__chidgvector.png" src="../../_images/d__chidgvector.png" style="width: 95%;" /></a>
-<div class="section" id="block-vector">
-<h3>Block Vector<a class="headerlink" href="#block-vector" title="Permalink to this headline">¶</a></h3>
-<a class="reference internal image-reference" href="../../_images/d__blockvector.png"><img alt="../../_images/d__blockvector.png" src="../../_images/d__blockvector.png" style="width: 95%;" /></a>
+  <div class="section" id="theory-abstractions">
+<h1>Theory + Abstractions<a class="headerlink" href="#theory-abstractions" title="Permalink to this headline">¶</a></h1>
+<p>Boundary conditions in ChiDG are abstracted and represented as a boundary condition
+data type, <code class="docutils literal"><span class="pre">bc_t</span></code>. The boundary condition data type itself is separated into two
+distinct concepts. These are <strong>geometry</strong> and <strong>state</strong>. The concepts of geometry and
+boundary condition state functions exist separetely from each other. Together, they
+form a <code class="docutils literal"><span class="pre">bc_t</span></code>:</p>
+<div class="highlight-Fortran"><div class="highlight"><pre><span></span><span class="k">type</span><span class="p">,</span> <span class="k">public</span> <span class="kd">::</span> <span class="n">bc_t</span>
+
+    <span class="kt">integer</span>                                 <span class="kd">::</span> <span class="n">BC_ID</span>
+    <span class="kt">character</span><span class="p">(:),</span>               <span class="k">allocatable</span> <span class="kd">::</span> <span class="n">bc_family</span>
+    <span class="k">type</span><span class="p">(</span><span class="n">bc_patch_t</span><span class="p">)</span>                        <span class="kd">::</span> <span class="n">bc_patch</span>
+    <span class="k">type</span><span class="p">(</span><span class="n">bc_state_wrapper_t</span><span class="p">),</span>   <span class="k">allocatable</span> <span class="kd">::</span> <span class="n">bc_state</span><span class="p">(:)</span>
+
+<span class="k">contains</span>
+
+    <span class="p">...</span>
+
+<span class="k">end type </span><span class="n">bc_t</span>
+</pre></div>
 </div>
-<div class="section" id="dense-vector">
-<h3>Dense Vector<a class="headerlink" href="#dense-vector" title="Permalink to this headline">¶</a></h3>
-<a class="reference internal image-reference" href="../../_images/d__densevector.png"><img alt="../../_images/d__densevector.png" src="../../_images/d__densevector.png" style="width: 95%;" /></a>
+<p><code class="docutils literal"><span class="pre">bc_t</span></code> objects are responsible for defining an external solution state over
+a defined geometric boundary. That is, <code class="docutils literal"><span class="pre">bc_state_t</span></code> objects provide
+an external solution state <span class="math">\(Q_{BC}\)</span> over a geometry region defined by
+<code class="docutils literal"><span class="pre">bc_patch_t</span></code>. The concept is that boundary conditions provide an external
+solution state <span class="math">\(Q_{BC}\)</span> but do not actually compute a flux contribution
+<span class="math">\(F(Q_{BC})\)</span> to any elements. Flux contributions are left to <code class="docutils literal"><span class="pre">operator_t</span></code>
+objects that are defined and added to <code class="docutils literal"><span class="pre">equation_set_t</span></code> objects that compute
+<span class="math">\(F(Q_{BC})\)</span> assuming <span class="math">\(Q_{BC}\)</span> has already been defined by some
+boundary condition state function.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>Boundary conditions that do not have any allocated <code class="docutils literal"><span class="pre">bc_state_t</span></code> function
+objects are flagged as Chimera boundaries. The ChiDG infrastructure will
+then automatically attempt to find Chimera donors for the faces associated
+with the <code class="docutils literal"><span class="pre">bc_patch_t</span></code> geometry representation.</p>
+<p class="last">So, to initiate Chimera block-to-block communication, one is required only
+to <strong>not</strong> associate any boundary condition state functions with the block
+patches on the interior grid regions.</p>
 </div>
+<div class="section" id="boundary-condition-patch">
+<h2>Boundary condition patch<a class="headerlink" href="#boundary-condition-patch" title="Permalink to this headline">¶</a></h2>
+<p>The geometry over which a boundary condition is to be applied is represented
+by a boundary condition patch, <code class="docutils literal"><span class="pre">bc_patch_t</span></code>. This consists of sets of triple
+indices(Domain,Element,Face) defining particular faces associated with the
+boundary condition patch. The <code class="docutils literal"><span class="pre">bc_patch_t</span></code> contains vectors for storing
+these sets of integers.</p>
+<div class="highlight-Fortran"><div class="highlight"><pre><span></span><span class="k">type</span><span class="p">,</span> <span class="k">public</span> <span class="kd">::</span> <span class="n">bc_patch_t</span>
+
+    <span class="k">type</span><span class="p">(</span><span class="n">ivector_t</span><span class="p">)</span>     <span class="kd">::</span> <span class="n">idomain_l_</span>
+    <span class="k">type</span><span class="p">(</span><span class="n">ivector_t</span><span class="p">)</span>     <span class="kd">::</span> <span class="n">ielement_l_</span>
+    <span class="k">type</span><span class="p">(</span><span class="n">ivector_t</span><span class="p">)</span>     <span class="kd">::</span> <span class="n">iface_</span>
+
+<span class="k">contains</span>
+
+    <span class="p">...</span>
+
+<span class="k">end type </span><span class="n">bc_patch_t</span>
+</pre></div>
 </div>
-<div class="section" id="chidg-matrix">
-<h2>ChiDG Matrix<a class="headerlink" href="#chidg-matrix" title="Permalink to this headline">¶</a></h2>
-<a class="reference internal image-reference" href="../../_images/d__chidgmatrix.png"><img alt="../../_images/d__chidgmatrix.png" src="../../_images/d__chidgmatrix.png" style="width: 95%;" /></a>
-<div class="section" id="block-matrix">
-<h3>Block Matrix<a class="headerlink" href="#block-matrix" title="Permalink to this headline">¶</a></h3>
-<a class="reference internal image-reference" href="../../_images/d__blockmatrix_lblks.png"><img alt="../../_images/d__blockmatrix_lblks.png" src="../../_images/d__blockmatrix_lblks.png" style="width: 95%;" /></a>
-<a class="reference internal image-reference" href="../../_images/d__blockmatrix_local_linearization.png"><img alt="../../_images/d__blockmatrix_local_linearization.png" src="../../_images/d__blockmatrix_local_linearization.png" style="width: 95%;" /></a>
-<a class="reference internal image-reference" href="../../_images/d__blockmatrix_chimera_linearization.png"><img alt="../../_images/d__blockmatrix_chimera_linearization.png" src="../../_images/d__blockmatrix_chimera_linearization.png" style="width: 95%;" /></a>
-<a class="reference internal image-reference" href="../../_images/d__blockmatrix_bc_linearization.png"><img alt="../../_images/d__blockmatrix_bc_linearization.png" src="../../_images/d__blockmatrix_bc_linearization.png" style="width: 95%;" /></a>
+<p>Boundary condition patches are currently created in the conversion process from
+Plot3D-formatted grid files to ChiDG-formatted grid files. In the conversion
+process, the block boundaries in the Plot3D grid file are taken as boundary condition
+patches.</p>
 </div>
-<div class="section" id="dense-matrix">
-<h3>Dense Matrix<a class="headerlink" href="#dense-matrix" title="Permalink to this headline">¶</a></h3>
-<a class="reference internal image-reference" href="../../_images/d__densematrix.png"><img alt="../../_images/d__densematrix.png" src="../../_images/d__densematrix.png" style="width: 95%;" /></a>
-<a class="reference internal image-reference" href="../../_images/d__densematrix_detail.png"><img alt="../../_images/d__densematrix_detail.png" src="../../_images/d__densematrix_detail.png" style="width: 95%;" /></a>
+<div class="section" id="boundary-condition-state-functions">
+<h2>Boundary condition state functions<a class="headerlink" href="#boundary-condition-state-functions" title="Permalink to this headline">¶</a></h2>
+<p>Boundary condition state functions, <code class="docutils literal"><span class="pre">bc_state_t</span></code>, are responsible for defining
+the solution state exterior to a computational domain, <span class="math">\(Q_{BC}\)</span>. This can
+be computed as a function of the interior state and some user-specified parameters,
+<span class="math">\(Q_{BC}(Q_-,U_{input})\)</span>.</p>
+<div class="highlight-Fortran"><div class="highlight"><pre><span></span><span class="k">type</span><span class="p">,</span> <span class="k">public</span><span class="p">,</span> <span class="k">abstract</span> <span class="kd">::</span> <span class="n">bc_state_t</span>
+
+    <span class="kt">character</span><span class="p">(:),</span>   <span class="k">allocatable</span> <span class="kd">::</span> <span class="n">name</span>
+    <span class="kt">character</span><span class="p">(:),</span>   <span class="k">allocatable</span> <span class="kd">::</span> <span class="n">family</span>
+
+    <span class="k">type</span><span class="p">(</span><span class="n">bcproperty_set_t</span><span class="p">)</span>      <span class="kd">::</span> <span class="n">bcproperties</span>
+
+<span class="k">contains</span>
+
+<span class="k">    procedure</span><span class="p">(</span><span class="n">bc_state_init</span><span class="p">),</span>       <span class="k">deferred</span>    <span class="kd">::</span> <span class="n">init</span>
+    <span class="k">procedure</span><span class="p">(</span><span class="n">bc_state_compute</span><span class="p">),</span>    <span class="k">deferred</span>    <span class="kd">::</span> <span class="n">compute_bc_state</span>
+
+    <span class="p">...</span>
+
+<span class="k">end type </span><span class="n">bc_state_t</span>
+</pre></div>
 </div>
 </div>
 </div>
@@ -327,10 +388,10 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="../parallel/detail_parallel.html" class="btn btn-neutral float-right" title="Parallelization" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="detail_bc_fluid.html" class="btn btn-neutral float-right" title="Fluid boundary conditions" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="../solvers/detail_solvers.html" class="btn btn-neutral" title="Solvers" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="detail_boundary_conditions.html" class="btn btn-neutral" title="Boundary conditions" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

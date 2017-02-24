@@ -34,7 +34,7 @@
   
     <link rel="top" title="ChiDG 0.1 documentation" href="../../index.html"/>
         <link rel="up" title="Code details" href="../details_main.html"/>
-        <link rel="next" title="Solvers" href="../solvers/detail_solvers.html"/>
+        <link rel="next" title="Equation Sets" href="../equations/detail_equations.html"/>
         <link rel="prev" title="ChiDG Instance" href="../chidg/detail_chidg.html"/> 
 
   
@@ -92,6 +92,7 @@
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../../getting_started/getting_started.html#step-4-configure-the-build">Step 4: Configure the build</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../getting_started/getting_started.html#step-5-build-chidg">Step 5: Build ChiDG</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../getting_started/getting_started.html#step-6-test-chidg">Step 6: Test ChiDG</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../../getting_started/getting_started.html#usage">Usage</a><ul>
@@ -143,20 +144,39 @@
 </ul>
 </li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Mesh</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#elements">Elements</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#metric-terms">Metric terms</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#derivatives">Derivatives</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#coordinate-systems">Coordinate Systems</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id1">Mesh</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#elements">Elements</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#faces">Faces</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#chimera-interfaces">Chimera Interfaces</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#faces">Faces</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#face-metrics">Face metrics</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#face-normals">Face normals</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#chimera-interfaces">Chimera Interfaces</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../equations/detail_equations.html">Equation Sets</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#mathematical-background">Mathematical background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-operators">ChiDG Operators</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../equations/detail_equations.html#registering-new-operators">Registering new operators</a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-equation-sets">ChiDG Equation Sets</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../boundary_conditions/detail_boundary_conditions.html">Boundary conditions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../boundary_conditions/detail_bc_theory.html">Theory + Abstractions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_theory.html#boundary-condition-patch">Boundary condition patch</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_theory.html#boundary-condition-state-functions">Boundary condition state functions</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html">Fluid boundary conditions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#inlet-total">Inlet - Total</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#outlet-constant-pressure">Outlet - Constant Pressure</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#wall">Wall</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#symmetry">Symmetry</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#farfield">Farfield</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../boundary_conditions/detail_bc_periodic.html">Periodic boundary condition</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../solvers/detail_solvers.html">Solvers</a><ul>
@@ -184,15 +204,6 @@
 <li class="toctree-l4"><a class="reference internal" href="../solvers/detail_solvers.html#restricted-additive-schwarz-block-ilu0">Restricted Additive Schwarz + block-ILU0</a></li>
 </ul>
 </li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="../equations/detail_equations.html">Equation Sets</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#mathematical-background">Mathematical background</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-operators">ChiDG Operators</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../equations/detail_equations.html#registering-new-operators">Registering new operators</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="../equations/detail_equations.html#chidg-equation-sets">ChiDG Equation Sets</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../containers/detail_containers.html">ChiDG Matrix/Vector</a><ul>
@@ -279,6 +290,21 @@
             
   <div class="section" id="mesh">
 <h1>Mesh<a class="headerlink" href="#mesh" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="coordinate-systems">
+<h2>Coordinate Systems<a class="headerlink" href="#coordinate-systems" title="Permalink to this headline">¶</a></h2>
+<p>ChiDG supports two coordinate systems: <code class="docutils literal"><span class="pre">Cartesian</span></code> and <code class="docutils literal"><span class="pre">Cylindrical</span></code>. In the
+code, many things are referred to only by coordinate index. The convention for these
+indices is defined here as:</p>
+<div class="math">
+\[ \begin{align}\begin{aligned}(x,y,z) \rightarrow (1,2,3)\\(r, \theta, z)  \rightarrow (1,2,3)\end{aligned}\end{align} \]</div>
+<p>Additionally, effort has been put forth to represent data in a manner consistent
+with vector-calculus. For example, test function gradient components are computed
+as:</p>
+<div class="math">
+\[ \begin{align}\begin{aligned}\nabla \psi = \frac{\partial \psi}{\partial x}\hat{x} + \frac{\partial \psi}{\partial y} \hat{y} + \frac{\partial \psi}{\partial z} \hat{z}\\\nabla \psi = \frac{\partial \psi}{\partial r}\hat{r} + \frac{1}{r}\frac{\partial \psi}{\partial \theta} \hat{\theta} + \frac{\partial \psi}{\partial z} \hat{z}\end{aligned}\end{align} \]</div>
+</div>
+<div class="section" id="id1">
+<h2>Mesh<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
 <p>The <code class="docutils literal"><span class="pre">mesh_t</span></code> data structure contains an entire geometry description for a single
 domain. This exists as an array of <code class="docutils literal"><span class="pre">element_t</span></code> types, and array of <code class="docutils literal"><span class="pre">face_t</span></code> types,
 and a <code class="docutils literal"><span class="pre">chimera_t</span></code> instance. An <code class="docutils literal"><span class="pre">element_t</span></code> exists for every element in the <code class="docutils literal"><span class="pre">mesh_t</span></code>
@@ -286,31 +312,39 @@ domain. For a given <code class="docutils literal"><span class="pre">element_t</
 <a class="reference internal image-reference" href="../../_images/d_mesh_exploded.png"><img alt="../../_images/d_mesh_exploded.png" class="align-center" src="../../_images/d_mesh_exploded.png" style="width: 90%;" /></a>
 <a class="reference internal image-reference" href="../../_images/d_mesh_arrays.png"><img alt="../../_images/d_mesh_arrays.png" class="align-center" src="../../_images/d_mesh_arrays.png" style="width: 90%;" /></a>
 <div class="section" id="elements">
-<h2>Elements<a class="headerlink" href="#elements" title="Permalink to this headline">¶</a></h2>
+<h3>Elements<a class="headerlink" href="#elements" title="Permalink to this headline">¶</a></h3>
 <p>An <code class="docutils literal"><span class="pre">element_t</span></code> instance contains information needed by the framework and also
 general information that could be useful to users. This includes:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">elem_pts</span><span class="p">(:)</span>     <span class="n">An</span> <span class="n">array</span> <span class="n">of</span> <span class="n">points</span> <span class="n">defining</span> <span class="n">the</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">real</span> <span class="n">space</span><span class="p">(</span><span class="n">cartesian</span><span class="p">,</span> <span class="n">cylindrical</span><span class="p">,</span> <span class="n">etc</span><span class="o">.</span><span class="p">)</span>
 <span class="n">quad_pts</span><span class="p">(:)</span>     <span class="n">An</span> <span class="n">array</span> <span class="n">of</span> <span class="n">points</span> <span class="n">defining</span> <span class="n">the</span> <span class="n">location</span> <span class="n">of</span> <span class="n">each</span> <span class="n">volume</span> <span class="n">quadrature</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">real</span> <span class="n">space</span><span class="o">.</span>
 <span class="n">metric</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">,:)</span>   <span class="n">An</span> <span class="n">array</span><span class="p">,</span> <span class="n">defining</span> <span class="k">for</span> <span class="n">each</span> <span class="n">quadrature</span> <span class="n">point</span><span class="p">,</span> <span class="n">a</span> <span class="n">matrix</span> <span class="n">of</span> <span class="n">element</span> <span class="n">metric</span> <span class="n">values</span><span class="o">.</span>
 <span class="n">jinv</span><span class="p">(:)</span>         <span class="n">An</span> <span class="n">array</span> <span class="n">of</span> <span class="n">inverse</span> <span class="n">element</span> <span class="n">jacobian</span> <span class="n">values</span> <span class="n">at</span> <span class="n">each</span> <span class="n">volume</span> <span class="n">quadrature</span> <span class="n">node</span><span class="o">.</span>
-<span class="n">ddx</span><span class="p">(:,:)</span>        <span class="n">An</span> <span class="n">array</span> <span class="n">of</span> <span class="n">derivatives</span> <span class="n">of</span> <span class="n">the</span> <span class="n">basis</span> <span class="n">functions</span> <span class="k">with</span> <span class="n">respect</span> <span class="n">to</span> <span class="n">real</span> <span class="n">coordinates</span> <span class="n">at</span> <span class="n">volume</span> <span class="n">quadrature</span> <span class="n">nodes</span><span class="o">.</span>
+<span class="n">grad1</span><span class="p">(:,:)</span>      <span class="n">An</span> <span class="n">array</span> <span class="n">of</span> <span class="n">gradients</span> <span class="n">of</span> <span class="n">the</span> <span class="n">basis</span> <span class="n">functions</span> <span class="k">with</span> <span class="n">respect</span> <span class="n">to</span> <span class="n">physical</span> <span class="n">coordinates</span> <span class="n">at</span> <span class="n">volume</span> <span class="n">quadrature</span> <span class="n">nodes</span><span class="o">.</span>
 </pre></div>
 </div>
 <a class="reference internal image-reference" href="../../_images/d__element.png"><img alt="../../_images/d__element.png" class="align-center" src="../../_images/d__element.png" style="width: 80%;" /></a>
 <div class="section" id="metric-terms">
-<h3>Metric terms<a class="headerlink" href="#metric-terms" title="Permalink to this headline">¶</a></h3>
+<h4>Metric terms<a class="headerlink" href="#metric-terms" title="Permalink to this headline">¶</a></h4>
 <p>The metric terms are defined at each quadrature point in the <code class="docutils literal"><span class="pre">metric(:,:,:)</span></code> component
 of a given <code class="docutils literal"><span class="pre">element_t</span></code>. To access the matrix of metric components for a given quadrature
 node &#8216;igq&#8217;, the component can be used as</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">metric</span><span class="p">(:,:,</span><span class="n">igq</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>This returns the metric components at the quadrature node in a 3x3 matrix as:</p>
+<p>This returns the metric components(<code class="docutils literal"><span class="pre">Cartesian</span></code> or <code class="docutils literal"><span class="pre">Cylindrical</span></code>) at the quadrature node in a 3x3 matrix as:</p>
 <div class="math">
 \[\begin{split}\begin{pmatrix}
   \xi_x   \quad \xi_y   \quad   \xi_z \\
   \eta_x  \quad \eta_y  \quad   \eta_z \\
   \zeta_x \quad \zeta_y \quad   \zeta_z
+\end{pmatrix}
+\quad
+\quad
+\quad
+\begin{pmatrix}
+  r \xi_r   \quad r \xi_\theta   \quad   r \xi_z  \\
+  \eta_r    \quad   \eta_\theta  \quad     \eta_z \\
+  r \zeta_r \quad r \zeta_\theta \quad   r \zeta_z
 \end{pmatrix}\end{split}\]</div>
 <p>Alternatively, a given metric term can be accessed for the set of quadrature nodes as</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">metric</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,:)</span>
@@ -318,12 +352,12 @@ node &#8216;igq&#8217;, the component can be used as</p>
 </div>
 <p>which would return a 1D array of values for <span class="math">\(\xi_x\)</span> corresponding to each volume
 quadrature node.</p>
-<p>The inverse element jacobian terms <code class="docutils literal"><span class="pre">jinv(:)</span></code> are defined at each quadrature node as</p>
+<p>The inverse element jacobian terms(<code class="docutils literal"><span class="pre">Cartesian</span></code> or <code class="docutils literal"><span class="pre">Cylindrical</span></code>) <code class="docutils literal"><span class="pre">jinv(:)</span></code> are defined at each quadrature node as</p>
 <div class="math">
-\[J^{-1} = ( x_\xi \xi_x + x_\eta \eta_x + x_\zeta \zeta_x )\]</div>
+\[ \begin{align}\begin{aligned}J^{-1} = ( x_\xi y_\eta z_\zeta  -  x_\eta y_\xi z_\zeta  -  x_\xi y_\zeta z_\eta  +  x_\zeta y_\xi z_\eta  +  x_\eta y_\zeta z_\xi  -  x_\zeta y_\eta z_\xi )\\J^{-1} = r ( r_\xi \theta_\eta z_\zeta  -  r_\eta \theta_\xi z_\zeta  -  r_\xi \theta_\zeta z_\eta  +  r_\zeta \theta_\xi z_\eta  +  r_\eta \theta_\zeta z_\xi  -  r_\zeta \theta_\eta z_\xi )\end{aligned}\end{align} \]</div>
 </div>
-<div class="section" id="derivatives">
-<h3>Derivatives<a class="headerlink" href="#derivatives" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="derivatives-gradients">
+<h4>Derivatives + Gradients<a class="headerlink" href="#derivatives-gradients" title="Permalink to this headline">¶</a></h4>
 <p>The derivatives of basis functions with respect to the computational coordinates on a
 reference element are already defined in a quadrature instance associated with an
 element in the component <code class="docutils literal"><span class="pre">element%gq%vol</span></code>. For example, the component
@@ -336,33 +370,36 @@ element in the component <code class="docutils literal"><span class="pre">elemen
         \vdots &amp; \vdots &amp; \vdots &amp; \vdots \\
         \frac{\partial \psi_{{ngq},1}}{\partial \xi} &amp; \frac{\partial \psi_{{ngq},2}}{\partial \xi} &amp;  \cdots &amp;  \frac{\partial \psi_{{ngq},N}}{\partial \xi} \\
     \end{pmatrix}\end{split}\]</div>
-<p>Derivatives in real space coordinates in an <code class="docutils literal"><span class="pre">element_t</span></code> can be computed using
-<code class="docutils literal"><span class="pre">ddx(:,:)</span></code> components. The derivatives of basis functions with respect to real
-coordinates(<span class="math">\(x,y,z\)</span> , <span class="math">\(r,\theta,z\)</span> ) are specific to each <code class="docutils literal"><span class="pre">element_t</span></code>
-and these derivatives can be accessed in the <code class="docutils literal"><span class="pre">ddx</span></code>, <code class="docutils literal"><span class="pre">ddy</span></code>, <code class="docutils literal"><span class="pre">ddz</span></code> components.
-The <code class="docutils literal"><span class="pre">element%ddx</span></code> component for example gives</p>
+<p>Gradients in pysical coordinates in an <code class="docutils literal"><span class="pre">element_t</span></code> can be computed using
+<code class="docutils literal"><span class="pre">grad1(:,:)</span></code>, <code class="docutils literal"><span class="pre">grad2(:,:)</span></code>, and <code class="docutils literal"><span class="pre">grad3(:,:)</span></code>  components. The gradients
+of basis functions with respect to physical
+coordinates(<span class="math">\(x,y,z\)</span> , <span class="math">\(r,\theta,z\)</span> ) are specific to each
+<code class="docutils literal"><span class="pre">element_t</span></code> and these derivatives can be accessed in the
+<code class="docutils literal"><span class="pre">grad1</span></code>, <code class="docutils literal"><span class="pre">grad2</span></code>, <code class="docutils literal"><span class="pre">grad3</span></code> components. For example, the <code class="docutils literal"><span class="pre">element%grad1</span></code> component
+contains the gradient along the 1st physical coordinate  for all test functions at all
+quadrature nodes as:</p>
 <div class="math">
-\[\begin{split}\frac{\partial \psi_{igq, imode}}{\partial x} =
+\[\begin{split}\nabla_1 \psi_{ngq, nmode} =
     \begin{pmatrix}
-        \frac{\partial \psi_{1,1}}{\partial x} &amp;  \frac{\partial \psi_{1,2}}{\partial x}  &amp; \cdots  &amp; \frac{\partial \psi_{1,N}}{\partial x} \\
-        \frac{\partial \psi_{2,1}}{\partial x}  &amp; \frac{\partial \psi_{2,2}}{\partial x}  &amp; \cdots  &amp; \frac{\partial \psi_{2,N}}{\partial x} \\
+        \nabla_1 \psi_{1,1}  &amp;  \nabla_1 \psi_{1,2}  &amp; \cdots  &amp; \nabla_1 \psi_{1,N} \\
+        \nabla_1 \psi_{2,1}  &amp;  \nabla_1 \psi_{2,2}  &amp; \cdots  &amp; \nabla_1 \psi_{2,N} \\
         \vdots &amp; \vdots &amp; \vdots &amp; \vdots \\
-        \frac{\partial \psi_{{ngq},1}}{\partial x} &amp; \frac{\partial \psi_{{ngq},2}}{\partial x} &amp;  \cdots &amp;  \frac{\partial \psi_{{ngq},N}}{\partial x} \\
+        \nabla_1 \psi_{{ngq},1}  &amp; \nabla_1 \psi_{{ngq},2}  &amp;  \cdots &amp;  \nabla_1 \psi_{{ngq},N} \\
     \end{pmatrix}\end{split}\]</div>
 </div>
 </div>
 <div class="section" id="faces">
-<h2>Faces<a class="headerlink" href="#faces" title="Permalink to this headline">¶</a></h2>
+<h3>Faces<a class="headerlink" href="#faces" title="Permalink to this headline">¶</a></h3>
 <a class="reference internal image-reference" href="../../_images/d__face.png"><img alt="../../_images/d__face.png" class="align-center" src="../../_images/d__face.png" style="width: 90%;" /></a>
 <div class="section" id="face-metrics">
-<h3>Face metrics<a class="headerlink" href="#face-metrics" title="Permalink to this headline">¶</a></h3>
+<h4>Face metrics<a class="headerlink" href="#face-metrics" title="Permalink to this headline">¶</a></h4>
 <p>Metric terms for the <code class="docutils literal"><span class="pre">face_t</span></code> data structure are defined exactly the same as for the
 <code class="docutils literal"><span class="pre">element_t</span></code> data structure. The difference is that the <code class="docutils literal"><span class="pre">metric</span></code> and <code class="docutils literal"><span class="pre">jinv</span></code> components of
 <code class="docutils literal"><span class="pre">face_t</span></code> return values for boundary quadrature nodes. This contrasts the <code class="docutils literal"><span class="pre">element_t</span></code>
 structure, which returns values for volume quadrature nodes.</p>
 </div>
 <div class="section" id="face-normals">
-<h3>Face normals<a class="headerlink" href="#face-normals" title="Permalink to this headline">¶</a></h3>
+<h4>Face normals<a class="headerlink" href="#face-normals" title="Permalink to this headline">¶</a></h4>
 <div class="math">
 \[\vec{x} = [x, y, z]     \quad   \vec{\xi} = [\xi, \eta, \zeta]\]</div>
 <p>Face normal vectors are stored for each face quadrature node. The component <code class="docutils literal"><span class="pre">norm</span></code> is the
@@ -394,7 +431,7 @@ component are outward facing. This applied to <span class="math">\(\eta\)</span>
 </div>
 </div>
 <div class="section" id="chimera-interfaces">
-<h2>Chimera Interfaces<a class="headerlink" href="#chimera-interfaces" title="Permalink to this headline">¶</a></h2>
+<h3>Chimera Interfaces<a class="headerlink" href="#chimera-interfaces" title="Permalink to this headline">¶</a></h3>
 <p>Each <code class="docutils literal"><span class="pre">mesh_t</span></code> instance contains a <code class="docutils literal"><span class="pre">mesh%chimera</span></code> component that holds all information
 regarding chimera communication for that particular mesh block. This takes the
 form of <code class="docutils literal"><span class="pre">chimera_receiver</span></code> and <code class="docutils literal"><span class="pre">chimera_donor</span></code> components. Currently, only
@@ -408,7 +445,7 @@ entry in the <code class="docutils literal"><span class="pre">mesh%chimera%recv%
 </pre></div>
 </div>
 <div class="section" id="example">
-<h3>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h3>
+<h4>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h4>
 <p>Consider an example with two mesh domains, as shown below.
 <code class="docutils literal"><span class="pre">mesh(1)</span></code> contains four elements. <code class="docutils literal"><span class="pre">mesh(2)</span></code> contains eight elements.
 <code class="docutils literal"><span class="pre">mesh(1)</span></code> overlaps with <code class="docutils literal"><span class="pre">mesh(2)</span></code>. In particular, the top faces of elements E3 and E4 lie
@@ -422,6 +459,7 @@ the ID ChiID=2.</p>
 </div>
 </div>
 </div>
+</div>
 
 
            </div>
@@ -430,7 +468,7 @@ the ID ChiID=2.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="../solvers/detail_solvers.html" class="btn btn-neutral float-right" title="Solvers" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="../equations/detail_equations.html" class="btn btn-neutral float-right" title="Equation Sets" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="../chidg/detail_chidg.html" class="btn btn-neutral" title="ChiDG Instance" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

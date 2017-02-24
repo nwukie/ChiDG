@@ -1,0 +1,16 @@
+===================
+Boundary conditions
+===================
+
+
+.. toctree::
+    :maxdepth: 2
+    :hidden:
+
+    detail_bc_theory
+    detail_bc_fluid
+    detail_bc_periodic
+
+
+
+

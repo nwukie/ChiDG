@@ -234,8 +234,8 @@ contains
     !!
     !-----------------------------------------------------------------------------------------------------
     subroutine list_bcs()
-        integer                         :: nbcs, ibc
-        character(len=:),   allocatable :: bcname
+        integer                     :: nbcs, ibc
+        character(:),   allocatable :: bcname
 
         nbcs = registered_bcs%size()
 

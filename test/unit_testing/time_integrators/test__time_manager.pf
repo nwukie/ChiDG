@@ -104,7 +104,7 @@ subroutine test_time_manager__init_unsteady()
 
     @assertEqual(time_integrator,t_manager%time_scheme)
     @assertEqual(dt,t_manager%dt)
-    @assertEqual(time_steps,t_manager%time_steps)
+    @assertEqual(time_steps,t_manager%ntime)
     @assertEqual(nwrite,t_manager%nwrite)
      
 

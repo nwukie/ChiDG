@@ -685,7 +685,7 @@ contains
 !        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
 !>>>>>>> dev
 
-        call this%chidg%time_integrator%time_manager%init()
+        call this%chidg%data%time_manager%init()
 
         !
         ! Initialize solution

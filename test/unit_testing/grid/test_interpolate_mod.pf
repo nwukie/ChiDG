@@ -219,11 +219,14 @@ contains
         itime   = 1
 
         ngq = self%chidg%data%mesh(1)%faces(ielem,iface)%gq%nnodes_f
+        print*, ngq
 
         allocate(u_gq(ngq))
         allocate(u_ref(ngq))
         
-        
+        print*, size(self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%face%val(:,:,iface),1)
+        print*, size(self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%face%val(:,:,iface),2)
+        print*, size(self%chidg%data%sdata%q%dom(idomain)%vecs(ielem)%getvar(ieqn,itime)) 
         !
         ! PROCEDURE BEING TESTED
         !

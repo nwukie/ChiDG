@@ -1,0 +1,8 @@
+Note:
+
+mod_version.f90.in is used during the CMake configuration procedure.
+CMake generates a file mod_version.f90 from mod_version.f90.in, substituting
+the git hash of the current checked-out commit. This allows us to report the
+git hash in the ChiDG log header for records and code tracking purposes.
+The generated mod_version.f90 is added to the library_sources CMake variable
+in the main configuration file, not here.

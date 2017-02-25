@@ -630,7 +630,7 @@ contains
 
                     end do ! ifcn
 
-                end if ! boundary_advective_flux loop
+                end if ! allocated boundary_advective_flux
 
             end do !ipattern
 

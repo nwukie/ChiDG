@@ -25,6 +25,10 @@ contains
     !!  The GIT_SHA1 parameter substitution is performed by CMake during
     !!  configuration.
     !!
+    !!  Isolating the variable substitution to a function call prevents
+    !!  annoying and unnecessary recompilation of all files whenever 
+    !!  the HEAD is updated to a different commit.
+    !!
     !!  @author Nathan A. Wukie
     !!  @date   2/24/2017
     !!
@@ -32,7 +36,7 @@ contains
     function get_git_hash() result(hash)
         
         character(40), parameter    :: GIT_SHA1 = "@GIT_SHA1@"
-        character(40)   :: hash
+        character(40)               :: hash
 
         hash = GIT_SHA1
 

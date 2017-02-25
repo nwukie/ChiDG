@@ -56,17 +56,17 @@ contains
         !
         ! Set operator name
         !
-        call self%set_name("Spalart-Allmaras Volume Diffusion Operator")
+        call self%set_name('Spalart-Allmaras Volume Diffusion Operator')
 
         !
         ! Set operator type
         !
-        call self%set_operator_type("Volume Diffusive Flux")
+        call self%set_operator_type('Volume Diffusive Flux')
 
         !
         ! Set operator equations
         !
-        call self%add_primary_field("Density * NuTilde")
+        call self%add_primary_field('Density * NuTilde')
 
     end subroutine init
     !********************************************************************************
@@ -80,57 +80,57 @@ contains
     !!
     !!-------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(spalart_allmaras_volume_diffusion_operator_t),   intent(inout)   :: self
-        type(chidg_worker_t),                       intent(inout)   :: worker
-        class(properties_t),                        intent(inout)   :: prop
+        class(spalart_allmaras_volume_diffusion_operator_t),    intent(inout)   :: self
+        type(chidg_worker_t),                                   intent(inout)   :: worker
+        class(properties_t),                                    intent(inout)   :: prop
 
         ! Storage at quadrature nodes
-        type(AD_D), allocatable, dimension(:) ::    &
-            rho, rho_nutilde, invrho,               &
-            nutilde, chi, f_n1, nu_l, mu_l,         &
-            drho_dx, dnutilde_dx, drho_nutilde_dx,  &
-            drho_dy, dnutilde_dy, drho_nutilde_dy,  &
-            drho_dz, dnutilde_dz, drho_nutilde_dz,  &
-            dnutilde_drho, dnutilde_drhonutilde,    &
-            flux_x, flux_y, flux_z, diffusion
+        type(AD_D), allocatable, dimension(:) ::                    &
+            density, density_nutilde, invdensity,                   &
+            nutilde, chi, f_n1, nu_l, mu_l,                         &
+            grad1_density, grad1_nutilde, grad1_density_nutilde,    &
+            grad2_density, grad2_nutilde, grad2_density_nutilde,    &
+            grad3_density, grad3_nutilde, grad3_density_nutilde,    &
+            dnutilde_ddensity, dnutilde_ddensitynutilde,            &
+            flux_1, flux_2, flux_3, diffusion
 
 
         real(rk), allocatable, dimension(:) ::      &
-            normx, normy, normz
+            norm_1, norm_2, norm_3
 
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho         = worker%get_primary_field_element('Density',          'value')
-        rho_nutilde = worker%get_primary_field_element('Density * NuTilde','value')
+        density         = worker%get_primary_field_element('Density',          'value')
+        density_nutilde = worker%get_primary_field_element('Density * NuTilde','value')
 
 
         !
         ! Interpolate gradient to quadrature nodes
         !
-        drho_dx         = worker%get_primary_field_element('Density',          'ddx+lift')
-        drho_dy         = worker%get_primary_field_element('Density',          'ddy+lift')
-        drho_dz         = worker%get_primary_field_element('Density',          'ddz+lift')
+        grad1_density         = worker%get_primary_field_element('Density',          'grad1+lift')
+        grad2_density         = worker%get_primary_field_element('Density',          'grad2+lift')
+        grad3_density         = worker%get_primary_field_element('Density',          'grad3+lift')
 
-        drho_nutilde_dx = worker%get_primary_field_element('Density * NuTilde','ddx+lift')
-        drho_nutilde_dy = worker%get_primary_field_element('Density * NuTilde','ddy+lift')
-        drho_nutilde_dz = worker%get_primary_field_element('Density * NuTilde','ddz+lift')
-
-
+        grad1_density_nutilde = worker%get_primary_field_element('Density * NuTilde','grad1+lift')
+        grad2_density_nutilde = worker%get_primary_field_element('Density * NuTilde','grad2+lift')
+        grad3_density_nutilde = worker%get_primary_field_element('Density * NuTilde','grad3+lift')
 
 
 
-        invrho = ONE/rho
+
+
+        invdensity = ONE/density
 
 
         !
         ! Get normal vector
         !
-        normx = worker%normal(1)
-        normy = worker%normal(2)
-        normz = worker%normal(3)
+        norm_1 = worker%normal(1)
+        norm_2 = worker%normal(2)
+        norm_3 = worker%normal(3)
 
 
 
@@ -140,19 +140,19 @@ contains
         !   Viscosity
         !
         mu_l = worker%get_model_field_element('Laminar Viscosity','value')
-        nu_l = mu_l*invrho
+        nu_l = mu_l*invdensity
 
 
         !
         ! Compute nutilde, chi
         !
-        nutilde = rho_nutilde*invrho
+        nutilde = density_nutilde*invdensity
         chi     = nutilde/nu_l
 
 
 
         ! Initialize derivatives first
-        f_n1 = rho
+        f_n1 = density
         where (nutilde >= ZERO)
             f_n1 = ONE
         else where
@@ -164,13 +164,13 @@ contains
         !
         ! Compute nutilde jacobians for gradient calculation using chain-rule.
         !
-        dnutilde_drho        = -rho_nutilde*invrho*invrho
-        dnutilde_drhonutilde =  invrho
+        dnutilde_ddensity        = -density_nutilde*invdensity*invdensity
+        dnutilde_ddensitynutilde =  invdensity
 
 
-        dnutilde_dx = dnutilde_drho * drho_dx  +  dnutilde_drhonutilde * drho_nutilde_dx
-        dnutilde_dy = dnutilde_drho * drho_dy  +  dnutilde_drhonutilde * drho_nutilde_dy
-        dnutilde_dz = dnutilde_drho * drho_dz  +  dnutilde_drhonutilde * drho_nutilde_dz
+        grad1_nutilde = dnutilde_ddensity * grad1_density  +  dnutilde_ddensitynutilde * grad1_density_nutilde
+        grad2_nutilde = dnutilde_ddensity * grad2_density  +  dnutilde_ddensitynutilde * grad2_density_nutilde
+        grad3_nutilde = dnutilde_ddensity * grad3_density  +  dnutilde_ddensitynutilde * grad3_density_nutilde
 
 
 
@@ -178,14 +178,14 @@ contains
         !================================
         !       TURBULENCE FLUX
         !================================
-        diffusion = -(ONE/SA_sigma)*(mu_l + f_n1*rho_nutilde)
+        diffusion = -(ONE/SA_sigma)*(mu_l + f_n1*density_nutilde)
 
-        flux_x = diffusion*dnutilde_dx
-        flux_y = diffusion*dnutilde_dy
-        flux_z = diffusion*dnutilde_dz
+        flux_1 = diffusion*grad1_nutilde
+        flux_2 = diffusion*grad2_nutilde
+        flux_3 = diffusion*grad3_nutilde
 
 
-        call worker%integrate_volume('Density * NuTilde',flux_x,flux_y,flux_z)
+        call worker%integrate_volume('Density * NuTilde',flux_1,flux_2,flux_3)
 
 
     end subroutine compute

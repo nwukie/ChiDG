@@ -27,8 +27,10 @@ module test_element_linearB_mod
         type(face_t), allocatable   :: faces(:)
 
     contains
+
         procedure   ::  setUp
         procedure   ::  tearDown
+
     end type test_element_linearB
     !********************************************************************
 
@@ -36,11 +38,11 @@ module test_element_linearB_mod
 contains
 
 
-    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
-    !! procedure. The argument names have to match
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting 
+    !! a derived type procedure. The argument names have to match
     !!
     !!
-    !-----------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_element_linearB),    intent(inout)   :: this
         
@@ -48,9 +50,11 @@ contains
         type(point_t)                   :: nodes(npt)
         type(element_connectivity_t)    :: connectivity
         real(rk)                        :: sqrt_two, inv_sqrt_two
-        integer(ik)                     :: ftype, mapping, ielem, idomain, spacedim, neqns, nterms_s, ntime, &
-                                           ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g,      &
-                                           ineighbor_element_l, ineighbor_face, ineighbor_proc,              &
+        integer(ik)                     :: ftype, mapping, ielem, idomain, spacedim, &
+                                           neqns, nterms_s, ntime, &
+                                           ineighbor_domain_g,  ineighbor_domain_l,  &
+                                           ineighbor_element_g, ineighbor_element_l, &
+                                           ineighbor_face, ineighbor_proc,           &
                                            ineighbor_neqns, ineighbor_nterms_s
         
         
@@ -98,11 +102,8 @@ contains
         neqns    = 2
         nterms_s = 8
         ntime    = 1
-        call this%elem%init_geom(spacedim,nodes,connectivity,idomain,ielem)
+        call this%elem%init_geom(spacedim,nodes,connectivity,idomain,ielem,'Cartesian')
         call this%elem%init_sol(neqns,nterms_s,ntime)
-
-
-
 
 
 
@@ -151,14 +152,14 @@ contains
         call this%faces(ZETA_MIN)%init_sol(this%elem)
         call this%faces(ZETA_MAX)%init_sol(this%elem)
     end subroutine setUp
-    !**************************************************************************************************
+    !**************************************************************************************
     
 
     !>
     !!
     !!
     !!
-    !--------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_element_linearB),    intent(inout)   :: this
 
@@ -169,7 +170,7 @@ contains
         call this%chidg%shut_down('core')
 
     end subroutine tearDown
-    !**************************************************************************************************
+    !**************************************************************************************
 
 
 
@@ -181,7 +182,7 @@ contains
     !!
     !!
     !!
-    !--------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     @Test
     subroutine testElement_metric(self)
         class(test_element_linearB),    intent(inout)   :: self
@@ -204,7 +205,7 @@ contains
         @assertEqual(test_metric,self%elem%metric,tol)
         
     end subroutine testElement_metric
-    !**************************************************************************************************
+    !**************************************************************************************
 
 
 
@@ -215,7 +216,7 @@ contains
     !!
     !!
     !!
-    !--------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     @Test
     subroutine testElement_jinv(self)
         class(test_element_linearB),    intent(inout)   :: self
@@ -225,7 +226,7 @@ contains
         test_jinv = 1._rk/8._rk
         @assertEqual(test_jinv,self%elem%jinv,tol)
     end subroutine testElement_jinv
-    !**************************************************************************************************
+    !**************************************************************************************
     
     
     
@@ -233,7 +234,7 @@ contains
     !!
     !!
     !!
-    !--------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     @Test
     subroutine testElement_mass(self)
         class(test_element_linearB),    intent(inout)   :: self
@@ -256,18 +257,18 @@ contains
         
         @assertEqual(test_mass,self%elem%mass,tol)
     end subroutine testElement_mass
-    !***************************************************************************************************
+    !***************************************************************************************
 
 
     !>
     !!
     !!
     !!
-    !--------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     @Test
     subroutine testElement_volume(self)
         class(test_element_linearB),    intent(inout)   :: self
-        real(rk)    :: test_mass(self%elem%nterms_s,self%elem%nterms_s)
+
         real(rk)    :: tol
         
         tol = 1.e-15_rk
@@ -275,7 +276,7 @@ contains
         @assertEqual(self%elem%vol,1._rk,tol)
 
     end subroutine testElement_volume
-    !***************************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -289,7 +290,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     @Test
     subroutine testElement_face_metrics(self)
         class(test_element_linearB),    intent(inout)   :: self
@@ -316,8 +317,9 @@ contains
         @assertEqual(test_metric,self%faces(ETA_MAX)%metric,tol)
         @assertEqual(test_metric,self%faces(ZETA_MIN)%metric,tol)
         @assertEqual(test_metric,self%faces(ZETA_MAX)%metric,tol)
+
     end subroutine testElement_face_metrics
-    !****************************************************************************************************
+    !****************************************************************************************
 
 
     !>
@@ -325,7 +327,7 @@ contains
     !!
     !!
     !!
-    !----------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     @Test
     subroutine testElement_face_normals(self)
         class(test_element_linearB),    intent(inout)   :: self
@@ -391,7 +393,7 @@ contains
        
 
     end subroutine testElement_face_normals
-    !*****************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -452,19 +454,6 @@ contains
 
     end subroutine testElement_face_area
     !*******************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

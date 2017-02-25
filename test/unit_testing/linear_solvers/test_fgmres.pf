@@ -58,7 +58,7 @@ subroutine test_fgmres_solve()
     !
     ! Initialize domain
     !
-    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
+    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection','Cartesian')
 
     call chidg%set('Solution Order', integer_input=1)
     call chidg%init('domains')
@@ -68,7 +68,11 @@ subroutine test_fgmres_solve()
 
 
 
-    associate ( A => chidg%data%sdata%lhs, b => chidg%data%sdata%rhs, x => chidg%data%sdata%dq, M => chidg%preconditioner )
+    associate ( A => chidg%data%sdata%lhs,  &
+                b => chidg%data%sdata%rhs,  &
+                x => chidg%data%sdata%dq,   &
+                M => chidg%preconditioner )
+
         ! Initialize blockmatrix data (A)
         !
         ! [4  3  0]

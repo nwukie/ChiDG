@@ -70,10 +70,10 @@ contains
         !
         nterms_c = 8
         spacedim = 3
-        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
+        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection','Cartesian')
 
         call this%chidg%set('Solution Order', integer_input=2)
-        call this%chidg%set('ntime',          integer_input=2)
+        call this%chidg%set('time', algorithm='steady')
 
         !call this%chidg%initialize_solution_domains()
         call this%chidg%init('domains')

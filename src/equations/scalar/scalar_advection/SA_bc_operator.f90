@@ -49,17 +49,17 @@ contains
         !
         ! Set operator name
         !
-        call self%set_name("Scalar Advection BC Operator")
+        call self%set_name('Scalar Advection BC Operator')
 
         !
         ! Set operator type
         !
-        call self%set_operator_type("BC Diffusive Operator")
+        call self%set_operator_type('BC Diffusive Operator')
 
         !
         ! Set operator equations
         !
-        call self%add_primary_field("u")
+        call self%add_primary_field('u')
 
     end subroutine init
     !********************************************************************************
@@ -88,11 +88,11 @@ contains
 
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   ::  &
-            u, cx, cy, cz,                          &
-            flux_x, flux_y, flux_z, integrand
+            u, c1, c2, c3,                          &
+            flux_1, flux_2, flux_3, integrand
 
         real(rk),   allocatable, dimension(:)   ::  &
-            normx, normy, normz
+            norm_1, norm_2, norm_3
 
 
         !
@@ -104,27 +104,27 @@ contains
         !
         ! Get model coefficients
         !
-        cx = worker%get_model_field_face('Scalar X-Advection Velocity', 'value', 'boundary')
-        cy = worker%get_model_field_face('Scalar Y-Advection Velocity', 'value', 'boundary')
-        cz = worker%get_model_field_face('Scalar Z-Advection Velocity', 'value', 'boundary')
+        c1 = worker%get_model_field_face('Scalar Advection Velocity-1', 'value', 'boundary')
+        c2 = worker%get_model_field_face('Scalar Advection Velocity-2', 'value', 'boundary')
+        c3 = worker%get_model_field_face('Scalar Advection Velocity-3', 'value', 'boundary')
 
         
         !
         ! Get normal vectors
         !
-        normx = worker%normal(1)
-        normy = worker%normal(2)
-        normz = worker%normal(3)
+        norm_1 = worker%normal(1)
+        norm_2 = worker%normal(2)
+        norm_3 = worker%normal(3)
 
 
         !=================================================
         ! Mass flux
         !=================================================
-        flux_x = cx*u
-        flux_y = cy*u
-        flux_z = cz*u
+        flux_1 = c1*u
+        flux_2 = c2*u
+        flux_3 = c3*u
 
-        integrand = flux_x*normx + flux_y*normy + flux_z*normz
+        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
 
         call worker%integrate_boundary('u',integrand)
 

@@ -105,15 +105,18 @@ program driver
         !
         if (solutionfile_in == 'none') then
 
-!            !
-!            ! Set initial solution
-!            !
+            !
+            ! Set initial solution
+            !
 !            call create_function(fcn,'gaussian')
 !            call fcn%set_option('b_x',0._rk)
-!            call fcn%set_option('b_y',1.5_rk)
-!            call fcn%set_option('b_z',1.5_rk)
-!            call fcn%set_option('c',1.0_rk)
+!            call fcn%set_option('b_y',3.14_rk)
+!            call fcn%set_option('b_z',0._rk)
+!            call fcn%set_option('c',0.5_rk)
 !            call chidg%data%sdata%q%project(chidg%data%mesh,fcn,1)
+!            call create_function(constant,'constant')
+!            call constant%set_option('val',0._rk)
+!            call chidg%data%sdata%q%project(chidg%data%mesh,constant,1)
 
 
 !            call polynomial%set_option('f',3.5_rk)
@@ -128,11 +131,11 @@ program driver
             call create_function(constant,'constant')
 
             ! rho
-            call constant%set_option('val',1.25_rk)
+            call constant%set_option('val',1.15_rk)
             call chidg%data%sdata%q%project(chidg%data%mesh,constant,1)
 
             ! rho_u
-            call constant%set_option('val',60.0_rk)
+            call constant%set_option('val',50.0_rk)
             call chidg%data%sdata%q%project(chidg%data%mesh,constant,2)
 
             ! rho_v
@@ -144,7 +147,7 @@ program driver
             call chidg%data%sdata%q%project(chidg%data%mesh,constant,4)
 
             ! rho_E
-            call constant%set_option('val',270000.0_rk)
+            call constant%set_option('val',248000.0_rk)
             call chidg%data%sdata%q%project(chidg%data%mesh,constant,5)
 
 !            ! rho_nutilde

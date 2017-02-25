@@ -49,6 +49,7 @@ contains
         class(constant_viscosity_t), intent(inout)   :: self
 
         call self%set_name('Constant Viscosity')
+        call self%set_dependency('Q-')
 
         call self%add_model_field('Laminar Viscosity')
 

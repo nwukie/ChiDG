@@ -99,9 +99,9 @@ contains
         !
         spacedim = 3
         if (present(equation_sets)) then
-            call add_domain_hdf(file_id,"01",nodes,elements,equation_sets(1)%get(),spacedim)
+            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian',equation_sets(1)%get(),spacedim)
         else
-            call add_domain_hdf(file_id,"01",nodes,elements,"Euler",spacedim)
+            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian','Euler',spacedim)
         end if
 
 
@@ -109,7 +109,7 @@ contains
         !
         ! Set boundary conditions patch connectivities
         !
-        dom_id = open_domain_hdf(file_id,"01")
+        dom_id = open_domain_hdf(file_id,'01')
 
         do bcface = 1,6
 
@@ -147,9 +147,9 @@ contains
             call create_bc_group_hdf(file_id,'Inlet')
             bcgroup_id = open_bc_group_hdf(file_id,'Inlet')
 
-            call create_bc("Total Inlet", bc_state)
-            call bc_state%set_fcn_option("Total Pressure",   "val",110000._rk)
-            call bc_state%set_fcn_option("Total Temperature","val",300._rk   )
+            call create_bc('Inlet - Total', bc_state)
+            call bc_state%set_fcn_option('Total Pressure',   'val',110000._rk)
+            call bc_state%set_fcn_option('Total Temperature','val',300._rk   )
 
             call add_bc_state_hdf(bcgroup_id,bc_state)
             call close_bc_group_hdf(bcgroup_id)
@@ -159,8 +159,8 @@ contains
             call create_bc_group_hdf(file_id,'Outlet')
             bcgroup_id = open_bc_group_hdf(file_id,'Outlet')
 
-            call create_bc("Pressure Outlet", bc_state)
-            call bc_state%set_fcn_option("Static Pressure","val",100000._rk)
+            call create_bc('Outlet - Constant Pressure', bc_state)
+            call bc_state%set_fcn_option('Static Pressure','val',100000._rk)
 
             call add_bc_state_hdf(bcgroup_id,bc_state)
             call close_bc_group_hdf(bcgroup_id)
@@ -170,7 +170,7 @@ contains
             call create_bc_group_hdf(file_id,'Walls')
             bcgroup_id = open_bc_group_hdf(file_id,'Walls')
 
-            call create_bc("Wall", bc_state)
+            call create_bc('Wall', bc_state)
 
             call add_bc_state_hdf(bcgroup_id,bc_state)
             call close_bc_group_hdf(bcgroup_id)
@@ -187,19 +187,19 @@ contains
         !
         ! Set boundary condition groups for each patch
         !
-        patch_names = ["XI_MIN  ","XI_MAX  ", "ETA_MIN ", "ETA_MAX ", "ZETA_MIN", "ZETA_MAX"]
+        patch_names = ['XI_MIN  ','XI_MAX  ', 'ETA_MIN ', 'ETA_MAX ', 'ZETA_MIN', 'ZETA_MAX']
         do bcface = 1,size(patch_names)
 
-            call h5gopen_f(dom_id,"BoundaryConditions/"//trim(adjustl(patch_names(bcface))),patch_id,ierr)
+            call h5gopen_f(dom_id,'BoundaryConditions/'//trim(adjustl(patch_names(bcface))),patch_id,ierr)
 
 
             ! Set bc_group
             if (present(group_names)) then
                 call set_bc_patch_group_hdf(patch_id,group_names(1,bcface)%get())
             else
-                if (trim(adjustl(patch_names(bcface))) == "XI_MIN") then
+                if (trim(adjustl(patch_names(bcface))) == 'XI_MIN') then
                     call set_bc_patch_group_hdf(patch_id,'Inlet')
-                else if (trim(adjustl(patch_names(bcface))) == "XI_MAX") then
+                else if (trim(adjustl(patch_names(bcface))) == 'XI_MAX') then
                     call set_bc_patch_group_hdf(patch_id,'Outlet')
                 else
                     call set_bc_patch_group_hdf(patch_id,'Walls')
@@ -214,60 +214,11 @@ contains
 
 
 
-
-
-!        if (present(bc_states)) then
-!
-!            bc_states_set(XI_MIN)   = bc_states(1,XI_MIN)
-!            bc_states_set(XI_MAX)   = bc_states(1,XI_MAX)
-!            bc_states_set(ETA_MIN)  = bc_states(1,ETA_MIN)
-!            bc_states_set(ETA_MAX)  = bc_states(1,ETA_MAX)
-!            bc_states_set(ZETA_MIN) = bc_states(1,ZETA_MIN)
-!            bc_states_set(ZETA_MAX) = bc_states(1,ZETA_MAX)
-!
-!        else
-!
-!            ! Create boundary conditions
-!            call create_bc("Total Inlet",     bc_states_set(XI_MIN)%state)
-!            call create_bc("Pressure Outlet", bc_states_set(XI_MAX)%state)
-!            call create_bc("Wall", bc_states_set(ETA_MIN)%state )
-!            call create_bc("Wall", bc_states_set(ETA_MAX)%state )
-!            call create_bc("Wall", bc_states_set(ZETA_MIN)%state)
-!            call create_bc("Wall", bc_states_set(ZETA_MAX)%state)
-!
-!
-!            ! Set Inlet bc parameters
-!            call bc_states_set(XI_MIN)%state%set_fcn_option("TotalPressure","val",110000._rk)
-!            call bc_states_set(XI_MIN)%state%set_fcn_option("TotalTemperature","val",300._rk)
-!
-!            ! Set Outlet bc parameter
-!            call bc_states_set(XI_MAX)%state%set_fcn_option("Static Pressure","val",100000._rk)
-!
-!        end if
-
-
-
-!        !
-!        ! Set all boundary conditions to walls, inlet, outlet...
-!        !
-!        !
-!        face_strings = ["XI_MIN  ","XI_MAX  ", "ETA_MIN ", "ETA_MAX ", "ZETA_MIN", "ZETA_MAX"]
-!        do bcface = 1,size(face_strings)
-!
-!            call h5gopen_f(dom_id,"BoundaryConditions/"//trim(adjustl(face_strings(bcface))),bcface_id,ierr)
-!
-!            call add_bc_state_hdf(bcface_id,bc_states_set(bcface)%state)
-!
-!            call h5gclose_f(bcface_id,ierr)
-!
-!        end do
-
-
         call close_domain_hdf(dom_id)
 
 
         ! Set 'Contains Grid', close file
-        call set_contains_grid_hdf(file_id,"True")
+        call set_contains_grid_hdf(file_id,'True')
         call close_file_hdf(file_id)
         call close_hdf()
 
@@ -341,7 +292,7 @@ contains
         allocate(xcoords(npt_x,npt_y,npt_z), &
                  ycoords(npt_x,npt_y,npt_z), &
                  zcoords(npt_x,npt_y,npt_z), stat=ierr)
-        if (ierr /= 0) stop "Allocation Error"
+        if (ierr /= 0) call AllocationError
 
 
 

@@ -1,20 +1,21 @@
 module messenger
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: IO_DESTINATION
+    use mod_version,    only: GIT_SHA1
     use mod_chidg_mpi,  only: IRANK, GLOBAL_MASTER, ChiDG_COMM
     implicit none
 
 
-    character(len=:), allocatable   :: line                         ! Line that gets assembled and written
-    character(len=2), parameter     :: default_delimiter = '  '     ! Delimiter of line parameters
-    character(len=:), allocatable   :: current_delimiter            ! Delimiter of line parameters
-    integer                         :: default_column_width = 20    ! Default column width
-    integer                         :: unit                         ! Unit of log file
-    integer, parameter              :: max_msg_length = 300         ! Maximum width of message line
-    integer                         :: msg_length = max_msg_length  ! Default msg_length
-    logical                         :: log_initialized = .false.    ! Status of log file
+    character(:), allocatable   :: line                         ! Line that gets assembled and written
+    character(:), allocatable   :: color_begin, color_end
+    character(2), parameter     :: default_delimiter = '  '     ! Delimiter of line parameters
+    character(:), allocatable   :: current_delimiter            ! Delimiter of line parameters
+    integer                     :: default_column_width = 20    ! Default column width
+    integer                     :: unit                         ! Unit of log file
+    integer, parameter          :: max_msg_length = 300         ! Maximum width of message line
+    integer                     :: msg_length = max_msg_length  ! Default msg_length
+    logical                     :: log_initialized = .false.    ! Status of log file
 
-    character(len=:), allocatable   :: color_begin, color_end
 
 contains
 
@@ -31,7 +32,9 @@ contains
     !!-----------------------------------------------------------------------------------------
     subroutine log_init()
 
-        logical :: file_opened = .false.
+        logical         :: file_opened = .false.
+        character(8)    :: date
+        character(10)   :: time
 
         !
         ! Open file
@@ -42,7 +45,27 @@ contains
             open(newunit=unit, file='chidg.log')
         end if
 
+
+        !
+        ! Confirm log initialized
+        !
         log_initialized = .true.
+
+
+        !
+        ! Write log header
+        !
+        call date_and_time(date,time)
+
+        call write_line('-----------------------------------------------------', io_proc=GLOBAL_MASTER)
+        call write_line(' ', io_proc=GLOBAL_MASTER)
+        call write_line('Date:      ', date(:4)//" "//date(5:6)//" "//date(7:8), ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('Time:      ', time(:2)//":"//time(3:4)//":"//time(5:6), ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('Git commit: ', GIT_SHA1, io_proc=GLOBAL_MASTER)
+        call write_line(' ', io_proc=GLOBAL_MASTER)
+        call write_line('-----------------------------------------------------', io_proc=GLOBAL_MASTER)
+
+
 
     end subroutine log_init
     !******************************************************************************************
@@ -651,8 +674,8 @@ contains
         integer :: line_trim
         integer :: lstart, lend, section
 
-        character(len=:), allocatable :: writeline
-        integer                       :: section_length
+        character(:),   allocatable :: writeline, file_line
+        integer                     :: section_length
 
 
         !
@@ -753,7 +776,9 @@ contains
 
             else if ( trim(IO_DESTINATION) == 'file' ) then
                 if (log_initialized) then
-                    write(unit,*) writeline
+                    !file_line = writeline
+                    file_line = remove_formatting(writeline)
+                    write(unit,*) file_line
                 else
                     stop "Trying to write a line, but log file not inititlized. Call chidg%init('env')"
                 end if
@@ -763,7 +788,11 @@ contains
             else if ( trim(IO_DESTINATION) == 'both' ) then
                 if (log_initialized) then
                     print*, writeline
-                    write(unit,*) writeline
+
+                    !file_line = writeline
+                    file_line = remove_formatting(writeline)
+                    write(unit,*) file_line
+
                 else
                     stop "Trying to write a line, but log file not inititlized. Call chidg%init('env')"
                 end if
@@ -894,6 +923,83 @@ contains
 
 
 
+    !>  Given a character-array, search for color/formatting strings and remove them.
+    !!
+    !!  Useful for writing to file, where we don't want to litter the file with ASCI
+    !!  formatting strings.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/20/2017
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    function remove_formatting(string) result(string_out)
+        character(*),   intent(in)  :: string
+
+        character(:),   allocatable :: string_out
+        integer(ik)                 :: format_begin, format_end
+        logical                     :: contains_formatting 
+
+        !
+        ! Initialize string_out
+        !
+        string_out = string
+
+        
+        contains_formatting = ( index(string_out,achar(27)) /= 0 )
+        do while (contains_formatting)
+
+
+            !
+            ! Check contains formatting
+            !
+            format_begin = index(string_out,achar(27))
+            if (format_begin /= 0) then
+
+                !
+                ! Find terminating string location
+                !
+                format_end = format_begin
+                do while ( string_out(format_end:format_end) /= 'm' )
+                    format_end = format_end + 1
+                    if (format_end > len(string_out)) exit
+                end do
+            
+
+                !
+                ! Remove formatting entry
+                !
+                if ( (format_begin == 1) .and. (format_end == len(string_out)) ) then
+                    string_out = ' '
+                else if ( (format_begin == 1) .and. (format_end /= len(string_out)) ) then
+                    string_out = string_out(format_end+1:)
+                else if ( (format_begin /= 1) .and. (format_end == len(string_out)) ) then
+                    string_out = string_out(1:format_begin-1)
+                else if ( (format_begin /= 1) .and. (format_end /= len(string_out)) ) then
+                    string_out = string_out(1:format_begin-1)//string_out(format_end+1:)
+                else
+                    print*, 'remove_formatting: unexpected case for removing formatting from output strings.'
+                end if
+
+
+            end if
+
+            !
+            ! Check exit condition
+            !
+            contains_formatting = ( index(string_out,achar(27)) /= 0 )
+
+        end do !contains_formatting
+
+
+    end function remove_formatting
+    !******************************************************************************************
+
+
+
+
+
+
     !>
     !!
     !!
@@ -902,7 +1008,17 @@ contains
     subroutine chidg_abort()
         integer(ik) :: ierr
 
+        !
+        ! Abort MPI library
+        !
         call MPI_Abort(ChiDG_COMM,ierr)
+
+        ! Send error signal to unix process.
+        ! Important for tests that fail because of setup problems. 
+        ! This returns an error status to the ctest runner in 'make test'
+        ! 
+        call exit(-1)
+
 
     end subroutine chidg_abort
     !******************************************************************************************

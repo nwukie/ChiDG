@@ -85,18 +85,18 @@ contains
         class(properties_t),                                intent(inout)   :: prop
 
         ! Storage at quadrature nodes
-        type(AD_D), allocatable, dimension(:) ::    &
-            rho, rho_nutilde, invrho,               &
-            nutilde, chi, f_n1, nu_l, mu_l,         &
-            drho_dx, dnutilde_dx, drho_nutilde_dx,  &
-            drho_dy, dnutilde_dy, drho_nutilde_dy,  &
-            drho_dz, dnutilde_dz, drho_nutilde_dz,  &
-            dnutilde_drho, dnutilde_drhonutilde,    &
-            flux_x, flux_y, flux_z, diffusion, integrand
+        type(AD_D), allocatable, dimension(:) ::            &
+            rho, rho_nutilde, invrho,                       &
+            nutilde, chi, f_n1, nu_l, mu_l,                 &
+            grad1_rho, grad1_nutilde, grad1_rho_nutilde,    &
+            grad2_rho, grad2_nutilde, grad2_rho_nutilde,    &
+            grad3_rho, grad3_nutilde, grad3_rho_nutilde,    &
+            dnutilde_drho, dnutilde_drhonutilde,            &
+            flux_1, flux_2, flux_3, diffusion, integrand
 
 
         real(rk), allocatable, dimension(:) ::      &
-            normx, normy, normz
+            norm_1, norm_2, norm_3
 
 
 
@@ -110,13 +110,13 @@ contains
         !
         ! Interpolate gradient to quadrature nodes
         !
-        drho_dx         = worker%get_primary_field_face('Density',          'ddx+lift','boundary')
-        drho_dy         = worker%get_primary_field_face('Density',          'ddy+lift','boundary')
-        drho_dz         = worker%get_primary_field_face('Density',          'ddz+lift','boundary')
+        grad1_rho         = worker%get_primary_field_face('Density',          'grad1+lift','boundary')
+        grad2_rho         = worker%get_primary_field_face('Density',          'grad2+lift','boundary')
+        grad3_rho         = worker%get_primary_field_face('Density',          'grad3+lift','boundary')
 
-        drho_nutilde_dx = worker%get_primary_field_face('Density * NuTilde','ddx+lift','boundary')
-        drho_nutilde_dy = worker%get_primary_field_face('Density * NuTilde','ddy+lift','boundary')
-        drho_nutilde_dz = worker%get_primary_field_face('Density * NuTilde','ddz+lift','boundary')
+        grad1_rho_nutilde = worker%get_primary_field_face('Density * NuTilde','grad1+lift','boundary')
+        grad2_rho_nutilde = worker%get_primary_field_face('Density * NuTilde','grad2+lift','boundary')
+        grad3_rho_nutilde = worker%get_primary_field_face('Density * NuTilde','grad3+lift','boundary')
 
 
 
@@ -128,9 +128,9 @@ contains
         !
         ! Get normal vector
         !
-        normx = worker%normal(1)
-        normy = worker%normal(2)
-        normz = worker%normal(3)
+        norm_1 = worker%normal(1)
+        norm_2 = worker%normal(2)
+        norm_3 = worker%normal(3)
 
 
 
@@ -168,22 +168,22 @@ contains
         dnutilde_drhonutilde =  invrho
 
 
-        dnutilde_dx = dnutilde_drho * drho_dx  +  dnutilde_drhonutilde * drho_nutilde_dx
-        dnutilde_dy = dnutilde_drho * drho_dy  +  dnutilde_drhonutilde * drho_nutilde_dy
-        dnutilde_dz = dnutilde_drho * drho_dz  +  dnutilde_drhonutilde * drho_nutilde_dz
+        grad1_nutilde = dnutilde_drho * grad1_rho  +  dnutilde_drhonutilde * grad1_rho_nutilde
+        grad2_nutilde = dnutilde_drho * grad2_rho  +  dnutilde_drhonutilde * grad2_rho_nutilde
+        grad3_nutilde = dnutilde_drho * grad3_rho  +  dnutilde_drhonutilde * grad3_rho_nutilde
 
 
-        !================================
-        !       TURBULENCE FLUX
-        !================================
+        !-------------------------------------
+        !           TURBULENCE FLUX
+        !-------------------------------------
         diffusion = -(ONE/SA_sigma)*(mu_l + f_n1*rho_nutilde)
 
 
-        flux_x = diffusion*dnutilde_dx
-        flux_y = diffusion*dnutilde_dy
-        flux_z = diffusion*dnutilde_dz
+        flux_1 = diffusion*grad1_nutilde
+        flux_2 = diffusion*grad2_nutilde
+        flux_3 = diffusion*grad3_nutilde
 
-        integrand = flux_x*normx + flux_y*normy + flux_z*normz
+        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
 
         call worker%integrate_boundary('Density * NuTilde',integrand)
 

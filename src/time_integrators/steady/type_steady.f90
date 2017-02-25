@@ -18,8 +18,7 @@ module type_steady
 
 
 
-    !>  Solve to steady-state.
-    !!
+    !>  Object implementing solving a system of equations to steady-state.
     !!
     !!
     !!  @author Nathan A. Wukie

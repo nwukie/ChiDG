@@ -7,8 +7,6 @@ module SD_volume_operator
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use DNAD_D
-
-    use SD_properties,          only: SD_properties_t
     implicit none
     private
 
@@ -44,13 +42,13 @@ contains
         class(SD_volume_operator_t),   intent(inout)      :: self
 
         ! Set operator name
-        call self%set_name("Scalar Diffusion Volume Operator")
+        call self%set_name('Scalar Diffusion Volume Operator')
 
         ! Set operator type
-        call self%set_operator_type("Volume Diffusive Operator")
+        call self%set_operator_type('Volume Diffusive Operator')
 
         ! Set operator equations
-        call self%add_primary_field("u")
+        call self%add_primary_field('u')
 
     end subroutine init
     !********************************************************************************
@@ -74,15 +72,15 @@ contains
 
 
         type(AD_D), allocatable, dimension(:)   ::  &
-            flux_x, flux_y, flux_z, dudx, dudy, dudz, mu
+            flux_1, flux_2, flux_3, grad1_u, grad2_u, grad3_u, mu
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        dudx = worker%get_primary_field_element('u','ddx + lift')
-        dudy = worker%get_primary_field_element('u','ddy + lift')
-        dudz = worker%get_primary_field_element('u','ddz + lift')
+        grad1_u = worker%get_primary_field_element('u','grad1 + lift')
+        grad2_u = worker%get_primary_field_element('u','grad2 + lift')
+        grad3_u = worker%get_primary_field_element('u','grad3 + lift')
 
 
         !
@@ -94,15 +92,15 @@ contains
         !
         ! Compute volume flux at quadrature nodes
         !
-        flux_x = -mu*dudx
-        flux_y = -mu*dudy
-        flux_z = -mu*dudz
+        flux_1 = -mu*grad1_u
+        flux_2 = -mu*grad2_u
+        flux_3 = -mu*grad3_u
 
 
         !
         ! Integrate volume flux
         !
-        call worker%integrate_volume('u',flux_x,flux_y,flux_z)
+        call worker%integrate_volume('u',flux_1,flux_2,flux_3)
 
 
 

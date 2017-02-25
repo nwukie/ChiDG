@@ -39,7 +39,7 @@ subroutine test_blockvector_distribute()
     idomain  = 1
     spacedim = 3
     nterms_c = 8
-    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
+    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection','Cartesian')
 
     call chidg%set('Solution Order', integer_input=2)
     call chidg%init('domains')

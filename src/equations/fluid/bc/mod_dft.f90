@@ -1,7 +1,8 @@
 module mod_dft
 #include <messenger.h>
     use mod_kinds,      only: ik, rk
-    use mod_constants,  only: PI, ZERO, ONE, TWO, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, X_DIR, Y_DIR, Z_DIR
+    use mod_constants,  only: PI, ZERO, ONE, TWO, DIR_2, &
+                              XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use type_mesh,      only: mesh_t
     use type_point,     only: point_t
     use DNAD_D
@@ -96,7 +97,7 @@ contains
             !
             ! Get mean y-coordinate from element. y-coordinate variable = 2. Mode = 1
             ! 
-            var  = Y_DIR    ! y-coordinate index
+            var  = DIR_2    ! y-coordinate index
             mode = 1        ! Coordinate average
             mean_y_coordinates(ielem_bc) = mesh%elems(ielem)%coords%getterm(var,mode,itime)
             mean_y_elements(ielem_bc)    = ielem

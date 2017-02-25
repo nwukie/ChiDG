@@ -27,8 +27,8 @@ module type_cache_data_field
         type(seed_t),   allocatable :: value_seeds(:)
 
 
-        type(AD_D),     allocatable :: derivative(:,:,:)    ! (nnodes, ndimension, ndepend_deriv)
-        type(seed_t),   allocatable :: derivative_seeds(:)
+        type(AD_D),     allocatable :: gradient(:,:,:)      ! (nnodes, ndimension, ndepend_deriv)
+        type(seed_t),   allocatable :: gradient_seeds(:)
 
 
         type(AD_D),     allocatable :: lift_face(:,:,:)     ! (nnodes_face, ndimension, ndepend_deriv)
@@ -91,6 +91,7 @@ contains
         self%name = field
 
 
+
         !
         ! Get number of nodes(nnodes - face/element), number of elements that the function 
         ! value depends on(ndepend_value), number of elements that the function derivative 
@@ -105,7 +106,12 @@ contains
                 nnodes_face = mesh(idomain_l)%elems(ielement_l)%gq%face%nnodes
 
                 ! Interior element
+                !ndepend_value = 1
+                ! The potential here is that model field values depend on exterior elements.
                 ndepend_value = 1
+                do iface_loop = 1,NFACES
+                    ndepend_value = ndepend_value + self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface_loop)
+                end do
 
                 ! Interior element + All Exterior Elements
                 ndepend_deriv = 1
@@ -121,8 +127,10 @@ contains
                 nnodes_vol  = mesh(idomain_l)%faces(ielement_l,iface)%gq%vol%nnodes
                 nnodes_face = mesh(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
 
-                ! Interior element
-                ndepend_value = 1
+                ! Interior element + Face Exterior Elements
+                !ndepend_value = 1
+                ! The potential here is that model field values depend on exterior elements.
+                ndepend_value = 1 + self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface)
 
                 ! Interior element + Face Exterior Elements
                 ndepend_deriv = 1 + self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface)
@@ -135,7 +143,8 @@ contains
                 nnodes_face = mesh(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
 
                 ! Exterior Elements
-                ndepend_value = self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface)
+                !ndepend_value = self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface)
+                ndepend_value = 1 + self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface)
 
                 ! Interior element + Face Exterior Elements
                 ndepend_deriv = 1 + self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface)
@@ -149,11 +158,14 @@ contains
 
 
         !
-        ! Override ndepend_value, ndepend_deriv if we are not differentiating
+        ! Override ndepend_value, ndepend_deriv if we are not differentiating.
+        ! Default if 'differentiate' is not present, continue with differentiation.
         !
-        if (.not. differentiate) then
-            ndepend_value = 1
-            ndepend_deriv = 1
+        if (present(differentiate)) then
+            if (.not. differentiate) then
+                ndepend_value = 1
+                ndepend_deriv = 1
+            end if
         end if
 
 
@@ -177,21 +189,21 @@ contains
 
 
         !
-        ! Re/Allocate 'derivative', 'lift' components
+        ! Re/Allocate 'gradient', 'lift' components
         !
-        if (allocated(self%derivative)) then
-            reallocate = ( (size(self%derivative,1) /= nnodes)       .or. &
-                           (size(self%derivative,2) /= 3)            .or. &
-                           (size(self%derivative,3) /= ndepend_deriv) )
+        if (allocated(self%gradient)) then
+            reallocate = ( (size(self%gradient,1) /= nnodes)       .or. &
+                           (size(self%gradient,2) /= 3)            .or. &
+                           (size(self%gradient,3) /= ndepend_deriv) )
 
-            if (reallocate) deallocate(self%derivative, self%derivative_seeds, &
+            if (reallocate) deallocate(self%gradient, self%gradient_seeds, &
                                        self%lift_face, self%lift_element, self%lift_seeds)
         end if
 
 
-        if ( .not. allocated(self%derivative) ) then
-            allocate(self%derivative(nnodes,3,ndepend_deriv),       &
-                     self%derivative_seeds(ndepend_deriv),          &
+        if ( .not. allocated(self%gradient) ) then
+            allocate(self%gradient(nnodes,3,ndepend_deriv),       &
+                     self%gradient_seeds(ndepend_deriv),          &
                      self%lift_face(nnodes_face,3,ndepend_deriv),   &
                      self%lift_element(nnodes_vol,3,ndepend_deriv), &
                      self%lift_seeds(ndepend_deriv),    stat=ierr)
@@ -204,20 +216,6 @@ contains
         ! Clear entries
         !
         call self%clear()
-!        !
-!        ! Clear seed contents, zero values
-!        !
-!        do iseed = 1,size(self%value_seeds)
-!            call self%value_seeds(iseed)%clear()
-!        end do
-!
-!        do iseed = 1,size(self%derivative_seeds)
-!            call self%derivative_seeds(iseed)%clear()
-!        end do
-!
-!        do iseed = 1,size(self%lift_seeds)
-!            call self%lift_seeds(iseed)%clear()
-!        end do
 
 
 
@@ -297,15 +295,15 @@ contains
 
 
             !
-            ! Set variable 'derivative' data
+            ! Set variable 'gradient' data
             !
-            case('derivative')
+            case('gradient')
                 ! Search to see if a value differentiated wrt seed already exists
                 seed_location = 0
                 seed_found = .false.
-                do iseed = 1,size(self%derivative_seeds)
-                    seed_found = ( (seed%idomain_g  == self%derivative_seeds(iseed)%idomain_g) .and. &
-                                   (seed%ielement_g == self%derivative_seeds(iseed)%ielement_g) )
+                do iseed = 1,size(self%gradient_seeds)
+                    seed_found = ( (seed%idomain_g  == self%gradient_seeds(iseed)%idomain_g) .and. &
+                                   (seed%ielement_g == self%gradient_seeds(iseed)%ielement_g) )
 
                     if (seed_found) then
                         seed_location = iseed
@@ -316,8 +314,8 @@ contains
 
                 ! If matching seed was not found, find first empty seed location and place there
                 if (.not. seed_found) then
-                    do iseed = 1,size(self%derivative_seeds)
-                        empty_seed = (self%derivative_seeds(iseed)%idomain_g == 0)
+                    do iseed = 1,size(self%gradient_seeds)
+                        empty_seed = (self%gradient_seeds(iseed)%idomain_g == 0)
 
                         if (empty_seed) then
                             seed_location = iseed
@@ -333,8 +331,8 @@ contains
 
 
                 ! Store data
-                self%derivative(:,idirection,seed_location) = cache_data
-                self%derivative_seeds(seed_location) = seed
+                self%gradient(:,idirection,seed_location) = cache_data
+                self%gradient_seeds(seed_location) = seed
 
 
             !
@@ -423,7 +421,7 @@ contains
             case default
                 user_msg = "cache_data_field%store: The incoming variable data_type did &
                             not have an valid value. Acceptable entries are 'value', &
-                            'derivative', 'lift face', or 'lift element'"
+                            'gradient', 'lift face', or 'lift element'"
                 call chidg_signal_one(FATAL,user_msg,data_type)
 
         end select
@@ -502,14 +500,14 @@ contains
 
 
 !        !
-!        ! Zero values, derivatives, lift
+!        ! Zero values, gradients, lift
 !        !
 !        if (allocated(self%value)) then
 !            self%value = ZERO
 !        end if
 !
-!        if (allocated(self%derivative)) then
-!            self%derivative = ZERO
+!        if (allocated(self%gradient)) then
+!            self%gradient = ZERO
 !        end if
 !
 !        if (allocated(self%lift_face)) then
@@ -529,8 +527,8 @@ contains
             call self%value_seeds(iseed)%clear()
         end do
 
-        do iseed = 1,size(self%derivative_seeds)
-            call self%derivative_seeds(iseed)%clear()
+        do iseed = 1,size(self%gradient_seeds)
+            call self%gradient_seeds(iseed)%clear()
         end do
 
         do iseed = 1,size(self%lift_seeds)

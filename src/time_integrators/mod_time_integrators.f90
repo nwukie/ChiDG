@@ -40,7 +40,7 @@ contains
     !!
     !!
     !!
-    !--------------------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine create_time_integrator(time_string,instance)
         character(*),                               intent(in)      :: time_string
         class(time_integrator_t),   allocatable,    intent(inout)   :: instance

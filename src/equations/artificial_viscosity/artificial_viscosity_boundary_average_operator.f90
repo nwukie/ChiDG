@@ -110,14 +110,14 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        deps_dx_m  = worker%get_primary_field_face('Artificial Viscosity', 'ddx+lift', 'face interior')
-        deps_dx_p  = worker%get_primary_field_face('Artificial Viscosity', 'ddx+lift', 'face exterior')
+        deps_dx_m  = worker%get_primary_field_face('Artificial Viscosity', 'grad1+lift', 'face interior')
+        deps_dx_p  = worker%get_primary_field_face('Artificial Viscosity', 'grad1+lift', 'face exterior')
 
-        deps_dy_m  = worker%get_primary_field_face('Artificial Viscosity', 'ddy+lift', 'face interior')
-        deps_dy_p  = worker%get_primary_field_face('Artificial Viscosity', 'ddy+lift', 'face exterior')
+        deps_dy_m  = worker%get_primary_field_face('Artificial Viscosity', 'grad2+lift', 'face interior')
+        deps_dy_p  = worker%get_primary_field_face('Artificial Viscosity', 'grad2+lift', 'face exterior')
 
-        deps_dz_m  = worker%get_primary_field_face('Artificial Viscosity', 'ddz+lift', 'face interior')
-        deps_dz_p  = worker%get_primary_field_face('Artificial Viscosity', 'ddz+lift', 'face exterior')
+        deps_dz_m  = worker%get_primary_field_face('Artificial Viscosity', 'grad3+lift', 'face interior')
+        deps_dz_p  = worker%get_primary_field_face('Artificial Viscosity', 'grad3+lift', 'face exterior')
 
 
 

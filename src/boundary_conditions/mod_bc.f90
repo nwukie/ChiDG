@@ -31,8 +31,9 @@ module mod_bc
     ! Fluid boundary conditions
     use bc_state_wall,                          only: wall_t
     use bc_state_moving_wall,                   only: moving_wall_t
-    use bc_state_totalinlet,                    only: totalinlet_t
-    use bc_state_pressureoutlet,                only: pressureoutlet_t
+    use bc_state_inlet_total,                   only: inlet_total_t
+    use bc_state_outlet_constant_pressure,      only: outlet_constant_pressure_t
+    use bc_state_outlet_point_pressure,         only: outlet_point_pressure_t
     use bc_state_fluid_extrapolate,             only: fluid_extrapolate_t
     use bc_state_momentum_inlet,                only: momentum_inlet_t
     use bc_state_symmetry,                      only: symmetry_t
@@ -93,8 +94,9 @@ contains
 
         type(wall_t)                            :: WALL
         type(moving_wall_t)                     :: MOVING_WALL
-        type(totalinlet_t)                      :: TOTALINLET
-        type(pressureoutlet_t)                  :: PRESSUREOUTLET
+        type(inlet_total_t)                     :: INLET_TOTAL
+        type(outlet_constant_pressure_t)        :: OUTLET_CONSTANT_PRESSURE
+        type(outlet_point_pressure_t)           :: OUTLET_POINT_PRESSURE
         type(fluid_extrapolate_t)               :: FLUID_EXTRAPOLATE
         type(momentum_inlet_t)                  :: MOMENTUM_INLET
         type(symmetry_t)                        :: SYMMETRY
@@ -127,8 +129,9 @@ contains
 
             call registered_bcs%push_back(WALL)
             call registered_bcs%push_back(MOVING_WALL)
-            call registered_bcs%push_back(TOTALINLET)
-            call registered_bcs%push_back(PRESSUREOUTLET)
+            call registered_bcs%push_back(INLET_TOTAL)
+            call registered_bcs%push_back(OUTLET_CONSTANT_PRESSURE)
+            call registered_bcs%push_back(OUTLET_POINT_PRESSURE)
             call registered_bcs%push_back(FLUID_EXTRAPOLATE)
             call registered_bcs%push_back(MOMENTUM_INLET)
             call registered_bcs%push_back(SYMMETRY)
@@ -231,8 +234,8 @@ contains
     !!
     !-----------------------------------------------------------------------------------------------------
     subroutine list_bcs()
-        integer                         :: nbcs, ibc
-        character(len=:),   allocatable :: bcname
+        integer                     :: nbcs, ibc
+        character(:),   allocatable :: bcname
 
         nbcs = registered_bcs%size()
 

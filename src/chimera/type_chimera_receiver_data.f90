@@ -37,9 +37,9 @@ module type_chimera_receiver_data
         type(ivector_t)                 :: donor_element_g          !< Vector of element indices for the location in the corresponding domain
         type(ivector_t)                 :: donor_element_l          !< Vector of element indices for the location in the corresponding domain
         type(mvector_t)                 :: donor_interpolator       !< Vector of matrices defining the Chimera interpolation
-        type(mvector_t)                 :: donor_interpolator_ddx
-        type(mvector_t)                 :: donor_interpolator_ddy
-        type(mvector_t)                 :: donor_interpolator_ddz
+        type(mvector_t)                 :: donor_interpolator_grad1
+        type(mvector_t)                 :: donor_interpolator_grad2
+        type(mvector_t)                 :: donor_interpolator_grad3
 
         ! For donor elements being comminucated from off-processor, their location in the recv container for accessing components
         type(ivector_t)                 :: donor_recv_comm          !< Indices of comm container
@@ -121,9 +121,9 @@ contains
         call self%donor_element_g%clear()         
         call self%donor_element_l%clear()         
         call self%donor_interpolator%clear()       
-        call self%donor_interpolator_ddx%clear()
-        call self%donor_interpolator_ddy%clear()
-        call self%donor_interpolator_ddz%clear()
+        call self%donor_interpolator_grad1%clear()
+        call self%donor_interpolator_grad2%clear()
+        call self%donor_interpolator_grad3%clear()
 
         call self%donor_recv_comm%clear()
         call self%donor_recv_domain%clear()

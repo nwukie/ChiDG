@@ -35,63 +35,64 @@ contains
     !!  @param[inout]   lin     Domain linearization matrix
     !!  @param[in]      iblk    Selected block of the linearization being computed. lin(ielem,iblk), where iblk = (1-7)
     !!  @param[in]      ieqn    Index of the variable associated with the flux being integrated
-    !!  @param[inout]   flux_x  x-Flux and derivatives at quadrature points
-    !!  @param[inout]   flux_y  y-Flux and derivatives at quadrature points
-    !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
+    !!  @param[inout]   flux1   First component of flux at quadrature points
+    !!  @param[inout]   flux2   Second component of flux at quadrature points
+    !!  @param[inout]   flux3   Third component of flux at quadrature points
     !!
     !--------------------------------------------------------------------------------------------------------
-    subroutine integrate_volume_vector_flux(mesh,sdata,elem_info,fcn_info,ieqn,itime,flux_x,flux_y,flux_z)
+    subroutine integrate_volume_vector_flux(mesh,sdata,elem_info,fcn_info,ieqn,itime,flux1,flux2,flux3)
         type(mesh_t),           intent(in)      :: mesh(:)
         type(solverdata_t),     intent(inout)   :: sdata
         type(element_info_t),   intent(in)      :: elem_info
         type(function_info_t),  intent(in)      :: fcn_info
         integer(ik),            intent(in)      :: ieqn
         integer(ik),            intent(in)      :: itime
-        type(AD_D),             intent(inout)   :: flux_x(:), flux_y(:), flux_z(:)
+        type(AD_D),             intent(inout)   :: flux1(:), flux2(:), flux3(:)
 
 
-        type(AD_D), dimension(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%nterms_s)    :: integral, integral_x, integral_y, integral_z
+        type(AD_D), dimension(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%nterms_s)    :: &
+            integral, integral1, integral2, integral3
 
 
         associate( idom => elem_info%idomain_l, ielem => elem_info%ielement_l, idiff => fcn_info%idiff, &
-                   weights => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%weights,     &
-                   jinv => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%jinv,                  &
-                   ddx_trans => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%ddx_trans,      &
-                   ddy_trans => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%ddy_trans,      &
-                   ddz_trans => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%ddz_trans )
+                   weights     => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%weights, &
+                   jinv        => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%jinv,           &
+                   grad1_trans => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%grad1_trans,    &
+                   grad2_trans => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%grad2_trans,    &
+                   grad3_trans => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%grad3_trans )
 
 
         !
         ! Multiply each component by quadrature weights and element jacobians
         !
-        flux_x = flux_x * weights * jinv
-        flux_y = flux_y * weights * jinv
-        flux_z = flux_z * weights * jinv
+        flux1 = flux1 * weights * jinv
+        flux2 = flux2 * weights * jinv
+        flux3 = flux3 * weights * jinv
 
 
         !
-        ! FLUX-X: Multiply by column of test function gradients, integrate
+        ! FLUX-1: Multiply by column of test function gradients, integrate
         !
-        integral_x = matmul(ddx_trans,flux_x)
+        integral1 = matmul(grad1_trans,flux1)
 
 
         !
-        ! FLUX-Y: Multiply by column of test function gradients, integrate
+        ! FLUX-2: Multiply by column of test function gradients, integrate
         !
-        integral_y = matmul(ddy_trans,flux_y)
+        integral2 = matmul(grad2_trans,flux2)
 
 
         !
-        ! FLUX-Z: Multiply by column of test function gradients, integrate
+        ! FLUX-3: Multiply by column of test function gradients, integrate
         !
-        integral_z = matmul(ddz_trans,flux_z)
+        integral3 = matmul(grad3_trans,flux3)
 
 
 
         !
         ! Add componends from each coordiate direction
         !
-        integral = integral_x + integral_y + integral_z
+        integral = integral1 + integral2 + integral3
 
         
         !
@@ -115,20 +116,19 @@ contains
 
 
 
-    !>  Compute the volume integral of a flux vector
+    !>  Compute the volume integral of a source function.
     !!
     !!      - Adds value contribution to the rhs vector
     !!      - Adds the derivative contribution to the linearization matrix
     !!
     !!  @author Nathan A. Wukie
+    !!
     !!  @param[in]      elem    Element being integrated over
     !!  @param[inout]   rhs     Right-hand side vector storage
     !!  @param[inout]   lin     Domain linearization matrix
     !!  @param[in]      iblk    Selected block of the linearization being computed. lin(ielem,iblk), where iblk = (1-7)
     !!  @param[in]      ieqn    Index of the variable associated with the flux being integrated
-    !!  @param[inout]   flux_x  x-Flux and derivatives at quadrature points
-    !!  @param[inout]   flux_y  y-Flux and derivatives at quadrature points
-    !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
+    !!  @param[inout]   source  source function to integrate
     !!
     !--------------------------------------------------------------------------------------------------------
     subroutine integrate_volume_scalar_source(mesh,sdata,elem_info,fcn_info,ieqn,itime,source)
@@ -192,9 +192,7 @@ contains
     !!  @param[inout]   lin     Domain linearization matrix
     !!  @param[in]      iblk    Selected block of the linearization being computed. lin(ielem,iblk), where iblk = (1-7)
     !!  @param[in]      ieqn    Index of the variable associated with the flux being integrated
-    !!  @param[inout]   flux_x  x-Flux and derivatives at quadrature points
-    !!  @param[inout]   flux_y  y-Flux and derivatives at quadrature points
-    !!  @param[inout]   flux_z  z-Flux and derivatives at quadrature points
+    !!  @param[inout]   flux    function to integrate over the boundary
     !!
     !--------------------------------------------------------------------------------------------------------
     subroutine integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,ieqn,itime,integrand)
@@ -243,9 +241,9 @@ contains
         !
         ! Integrate and apply once
         !
-        associate ( weights => mesh(idomain_l)%faces(ielement_l,iface)%gq%face%weights(:,iface), &
-                    jinv => mesh(idomain_l)%faces(ielement_l,iface)%jinv, &
-                    val => mesh(idomain_l)%faces(ielement_l,iface)%gq%face%val(:,:,iface), &
+        associate ( weights  => mesh(idomain_l)%faces(ielement_l,iface)%gq%face%weights(:,iface),   &
+                    jinv     => mesh(idomain_l)%faces(ielement_l,iface)%jinv,                       &
+                    val      => mesh(idomain_l)%faces(ielement_l,iface)%gq%face%val(:,:,iface),     &
                     valtrans => mesh(idomain_l)%faces(ielement_l, iface)%gq%face%val_trans(:,:,iface) )
 
 
@@ -304,10 +302,10 @@ contains
                 function_n%idiff   = idiff_n
 
 
-                associate ( weights_n => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%weights(:,ineighbor_face),   &
-                            jinv_n    => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%jinv,                                & 
-                            val_n     => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%val(:,:,ineighbor_face),     &
-                            valtrans_n => mesh(idomain_l)%faces(ineighbor_element_l, ineighbor_face)%gq%face%val_trans(:,:,ineighbor_face) )
+                associate ( weights_n  => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%weights(:,ineighbor_face),   &
+                            jinv_n     => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%jinv,                                & 
+                            val_n      => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%val(:,:,ineighbor_face),     &
+                            valtrans_n => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%val_trans(:,:,ineighbor_face) )
 
                     integrand_n = integrand_n * weights_n
 
@@ -585,18 +583,8 @@ contains
         logical :: conforming_face, boundary_face, chimera_face, &
                    diff_none, diff_interior, diff_exterior, add_linearization
 
-        associate ( idomain_l  => face_info%idomain_l, ielement_l  => face_info%ielement_l,     iface => face_info%iface, &
-                    ifcn       => function_info%ifcn,  idonor      => function_info%idepend,    idiff => function_info%idiff, seed => function_info%seed )
-
-!        idomain_l  = face_info%idomain_l
-!        ielement_l = face_info%ielement_l
-!        iface      = face_info%iface
-!        seed       = function_info%seed
-!
-!        ifcn   = function_info%ifcn
-!        idonor = function_info%idepend
-!        idiff  = function_info%idiff
-
+        associate ( idomain_l => face_info%idomain_l, ielement_l => face_info%ielement_l,  iface => face_info%iface, &
+                    ifcn      => function_info%ifcn,  idonor     => function_info%idepend, idiff => function_info%idiff, seed => function_info%seed )
 
         
         conforming_face = (mesh(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR)
@@ -658,25 +646,6 @@ contains
 
     end subroutine store_boundary_integral_linearization
     !***********************************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

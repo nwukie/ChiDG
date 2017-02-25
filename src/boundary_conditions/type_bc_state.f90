@@ -40,6 +40,7 @@ module type_bc_state
         procedure(bc_state_init),       deferred :: init
         procedure(bc_state_compute),    deferred :: compute_bc_state
 
+        procedure   :: init_bc_specialized
         procedure   :: init_bc_coupling
 
         procedure   :: set_name
@@ -89,6 +90,30 @@ contains
 
 
 
+    !>  Default specialized initialization procedure. This is called from the base bc%init procedure
+    !!  and can be overwritten by derived types to implement specialized initiailization details.
+    !!
+    !!  By default, this routine does nothing. However, a particular bc_state_t could reimplement
+    !!  this routine to perform some specialized initialization calculations during initialization.
+    !!
+    !!  For example, a point pressure outlet boundary condition may want to find a particular 
+    !!  quadrature node to set pressure at. init_bc_specialized could be defined for that
+    !!  bc_state_t implementation to search the quadrature nodes over all the bc_patch faces
+    !!  to find the correct node to set the pressure at.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/21/2017
+    !!
+    !----------------------------------------------------------------------------------------------
+    subroutine init_bc_specialized(self,mesh,bc_patch)
+        class(bc_state_t),  intent(inout)   :: self
+        type(mesh_t),       intent(in)      :: mesh
+        type(bc_patch_t),   intent(in)      :: bc_patch
+
+
+
+    end subroutine init_bc_specialized
+    !**********************************************************************************************
 
 
 

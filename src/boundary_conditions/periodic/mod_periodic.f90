@@ -20,68 +20,30 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------
-    subroutine compute_periodic_offset( face, gq_node, offset_x, offset_y, offset_z )
+    subroutine compute_periodic_offset( face, gq_node, offset_1, offset_2, offset_3 )
         type(face_t),   intent(in)      :: face
         type(point_t),  intent(in)      :: gq_node
-        real(rk),       intent(inout)   :: offset_x
-        real(rk),       intent(inout)   :: offset_y
-        real(rk),       intent(inout)   :: offset_z
+        real(rk),       intent(inout)   :: offset_1
+        real(rk),       intent(inout)   :: offset_2
+        real(rk),       intent(inout)   :: offset_3
 
-        real(rk)    :: x1, y1, r1, theta1, x2, y2, theta2
 
 
 
         !
-        ! Periodicity offset methods
+        ! Define periodicity offset
         !
-        if ( allocated(face%periodic_type) ) then
+        if ( face%periodic_offset ) then
 
-
-
-            if ( face%periodic_type == 'cartesian' ) then
-                !print*, 'Computing cartesian periodic offset'
-                offset_x = face%chimera_offset_x
-                offset_y = face%chimera_offset_y
-                offset_z = face%chimera_offset_z
-
-
-
-            else if ( face%periodic_type == 'cylindrical' ) then
-                !print*, 'Computing cylindrical periodic offset'
-                x1 = gq_node%c1_
-                y1 = gq_node%c2_
-                r1     = sqrt(x1**TWO + y1**TWO)
-                theta1 = atan2(y1,x1)
-
-                theta2 = theta1 + (PI/180._rk)*face%chimera_offset_theta
-                x2     = r1*cos(theta2)
-                y2     = r1*sin(theta2)
-
-
-                offset_x = x2-x1
-                offset_y = y2-y1
-                offset_z = ZERO
-
-
-            else
-
-                call chidg_signal(FATAL,"mod_periodic::compute_periodic_offset - Face has invalid value for face%periodic_type")
-
-            end if
-
-
-
-
+            offset_1 = face%chimera_offset_1
+            offset_2 = face%chimera_offset_2
+            offset_3 = face%chimera_offset_3
 
         else
 
-            !
-            ! No periodic type was allocated so no offset.
-            !
-            !print*, 'No periodic offset'
-            offset_x = ZERO
-            offset_y = ZERO
-            offset_z = ZERO
+            offset_1 = ZERO
+            offset_2 = ZERO
+            offset_3 = ZERO
 
         end if
 

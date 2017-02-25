@@ -643,8 +643,8 @@ contains
                                       meshdata(idom)%connectivity,  &
                                       domain_dimensionality,        &
                                       meshdata(idom)%nterms_c,      &
-                                      domain_equation_set           &
-                                      )
+                                      domain_equation_set,          &
+                                      meshdata(idom)%coord_system)
 
         end do
 
@@ -1030,7 +1030,7 @@ contains
 
             call write_line("- Step ", istep, io_proc=GLOBAL_MASTER)
 
-
+            self%data%sdata%t = self%time_integrator%time_manager%dt*istep
 
             !
             ! Call time integrator to take a step

@@ -43,13 +43,13 @@ contains
         class(SA_volume_advective_operator_t),   intent(inout)  :: self
 
         ! Set operator name
-        call self%set_name("Scalar Advection Volume Operator")
+        call self%set_name('Scalar Advection Volume Operator')
 
         ! Set operator type
-        call self%set_operator_type("Volume Advective Operator")
+        call self%set_operator_type('Volume Advective Operator')
 
         ! Set operator equations
-        call self%add_primary_field("u")
+        call self%add_primary_field('u')
 
     end subroutine init
     !********************************************************************************
@@ -75,13 +75,12 @@ contains
     !------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
         class(SA_volume_advective_operator_t),  intent(inout)   :: self
-        type(chidg_worker_t),               intent(inout)   :: worker
-        class(properties_t),                intent(inout)   :: prop
+        type(chidg_worker_t),                   intent(inout)   :: worker
+        class(properties_t),                    intent(inout)   :: prop
 
 
         type(AD_D), allocatable, dimension(:)   ::  &
-            u, flux_x, flux_y, flux_z, cx, cy, cz
-
+            u, flux_1, flux_2, flux_3, c1, c2, c3
 
 
         !
@@ -93,23 +92,23 @@ contains
         !
         ! Get model coefficients
         !
-        cx = worker%get_model_field_element('Scalar X-Advection Velocity', 'value')
-        cy = worker%get_model_field_element('Scalar Y-Advection Velocity', 'value')
-        cz = worker%get_model_field_element('Scalar Z-Advection Velocity', 'value')
+        c1 = worker%get_model_field_element('Scalar Advection Velocity-1', 'value')
+        c2 = worker%get_model_field_element('Scalar Advection Velocity-2', 'value')
+        c3 = worker%get_model_field_element('Scalar Advection Velocity-3', 'value')
 
 
         !
         ! Compute volume flux at quadrature nodes
         !
-        flux_x = cx * u 
-        flux_y = cy * u
-        flux_z = cz * u
+        flux_1 = c1 * u
+        flux_2 = c2 * u
+        flux_3 = c3 * u
 
 
         !
         ! Integrate volume flux
         !
-        call worker%integrate_volume('u',flux_x,flux_y,flux_z)
+        call worker%integrate_volume('u',flux_1,flux_2,flux_3)
 
 
 

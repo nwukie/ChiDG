@@ -95,9 +95,9 @@ contains
         ! Interpolate interior solution to quadrature nodes
         !
         eps_m      = worker%get_primary_field_face('Artificial Viscosity' , 'value', 'face interior')
-        deps_dx_m  = worker%get_primary_field_face('Artificial Viscosity' , 'ddx',   'face interior')
-        deps_dy_m  = worker%get_primary_field_face('Artificial Viscosity' , 'ddy',   'face interior')
-        deps_dz_m  = worker%get_primary_field_face('Artificial Viscosity' , 'ddz',   'face interior')
+        deps_dx_m  = worker%get_primary_field_face('Artificial Viscosity' , 'grad1', 'face interior')
+        deps_dy_m  = worker%get_primary_field_face('Artificial Viscosity' , 'grad2', 'face interior')
+        deps_dz_m  = worker%get_primary_field_face('Artificial Viscosity' , 'grad3', 'face interior')
 
 
 
@@ -135,9 +135,9 @@ contains
 !        deps_dx_m = ZERO
 !        deps_dy_m = ZERO
 !        deps_dz_m = ZERO
-        call worker%store_bc_state('Artificial Viscosity' , deps_dx_m, 'ddx'  )
-        call worker%store_bc_state('Artificial Viscosity' , deps_dy_m, 'ddy'  )
-        call worker%store_bc_state('Artificial Viscosity' , deps_dz_m, 'ddz'  )
+        call worker%store_bc_state('Artificial Viscosity' , deps_dx_m, 'grad1')
+        call worker%store_bc_state('Artificial Viscosity' , deps_dy_m, 'grad2')
+        call worker%store_bc_state('Artificial Viscosity' , deps_dz_m, 'grad3')
                                                 
 
     end subroutine compute_bc_state

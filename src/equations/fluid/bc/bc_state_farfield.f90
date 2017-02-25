@@ -54,9 +54,9 @@ contains
 
         call self%bcproperties%add('Density',   'Required')
         call self%bcproperties%add('Pressure',  'Required')
-        call self%bcproperties%add('X-Velocity','Required')
-        call self%bcproperties%add('Y-Velocity','Required')
-        call self%bcproperties%add('Z-Velocity','Required')
+        call self%bcproperties%add('Velocity-1','Required')
+        call self%bcproperties%add('Velocity-2','Required')
+        call self%bcproperties%add('Velocity-3','Required')
 
 
 
@@ -90,13 +90,10 @@ contains
         type(chidg_worker_t),   intent(inout)   :: worker
         class(properties_t),    intent(inout)   :: prop
 
-        ! Equation indices
-        integer(ik)     :: irho, irhou, irhov, irhow, irhoE
-
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   ::      &
-            rho_m,  rhou_m,  rhov_m,  rhow_m,  rhoE_m,  &
-            rho_bc, rhou_bc, rhov_bc, rhow_bc, rhoE_bc, p_bc, &
+            density_m,  mom1_m,  mom2_m,  mom3_m,  energy_m,  &
+            density_bc, mom1_bc, mom2_bc, mom3_bc, energy_bc, p_bc, &
             drho_dx_m, drhou_dx_m, drhov_dx_m, drhow_dx_m, drhoE_dx_m,  &
             drho_dy_m, drhou_dy_m, drhov_dy_m, drhow_dy_m, drhoE_dy_m,  &
             drho_dz_m, drhou_dz_m, drhov_dz_m, drhow_dz_m, drhoE_dz_m,  &
@@ -107,7 +104,7 @@ contains
         real(rk)    :: time
 
         real(rk), allocatable, dimension(:) ::              &
-            unormx, unormy, unormz,                         &
+            unorm_1, unorm_2, unorm_3,                         &
             rho_input, p_input, u_input, v_input, w_input, T_input, c_input
 
         type(point_t),  allocatable, dimension(:)   :: coords
@@ -115,28 +112,16 @@ contains
         logical, allocatable, dimension(:)  :: inflow, outflow
 
 
-
-        !
-        ! Get equation indices
-        !
-        irho  = prop%get_primary_field_index("Density"   )
-        irhou = prop%get_primary_field_index("X-Momentum")
-        irhov = prop%get_primary_field_index("Y-Momentum")
-        irhow = prop%get_primary_field_index("Z-Momentum")
-        irhoE = prop%get_primary_field_index("Energy"    )
-
-
-
         !
         ! Get boundary condition input parameters
         !
         coords = worker%coords()
         time   = worker%time()
-        rho_input = self%bcproperties%compute("Density",    time, coords)
-        p_input   = self%bcproperties%compute("Pressure",   time, coords)
-        u_input   = self%bcproperties%compute("X-Velocity", time, coords)
-        v_input   = self%bcproperties%compute("Y-Velocity", time, coords)
-        w_input   = self%bcproperties%compute("Z-Velocity", time, coords)
+        rho_input = self%bcproperties%compute('Density',    time, coords)
+        p_input   = self%bcproperties%compute('Pressure',   time, coords)
+        u_input   = self%bcproperties%compute('Velocity-1', time, coords)
+        v_input   = self%bcproperties%compute('Velocity-2', time, coords)
+        w_input   = self%bcproperties%compute('Velocity-3', time, coords)
 
         T_input = p_input/(rho_input*287.15_rk)
         c_input = sqrt(1.4_rk*287.15_rk*T_input)
@@ -146,73 +131,87 @@ contains
         !
         ! Interpolate interior solution to quadrature nodes
         !
-        rho_m  = worker%get_primary_field_face('Density'   , 'value', 'face interior')
-        rhou_m = worker%get_primary_field_face('X-Momentum', 'value', 'face interior')
-        rhov_m = worker%get_primary_field_face('Y-Momentum', 'value', 'face interior')
-        rhow_m = worker%get_primary_field_face('Z-Momentum', 'value', 'face interior')
-        rhoE_m = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
+        density_m  = worker%get_primary_field_face('Density'   , 'value', 'face interior')
+        mom1_m = worker%get_primary_field_face('Momentum-1', 'value', 'face interior')
+        mom2_m = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
+        mom3_m = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
+        energy_m = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
+
+
+
+        !
+        ! Account for cylindrical. Get tangential momentum from angular momentum.
+        !
+        if (worker%coordinate_system() == 'Cylindrical') then
+            mom2_m = mom2_m / worker%coordinate('1','boundary')
+        end if
+
+
+
+
+
 
         
-        !p_m = prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
-        !T_m = p_m/(rho_m*287.15_rk)
+        !p_m = prop%fluid%compute_pressure(density_m,mom1_m,mom2_m,mom3_m,energy_m)
+        !T_m = p_m/(density_m*287.15_rk)
         !p_m = worker%get_model_field_face('Pressure',    'value', 'face interior')
         !T_m = worker%get_model_field_face('Temperature', 'value', 'face interior')
-        p_m = (1.4_rk - ONE)*(rhoE_m - HALF*(rhou_m*rhou_m + rhov_m*rhov_m + rhow_m*rhow_m)/rho_m)
-        T_m = p_m/(rho_m*287.15_rk)
+        p_m = (1.4_rk - ONE)*(energy_m - HALF*(mom1_m*mom1_m + mom2_m*mom2_m + mom3_m*mom3_m)/density_m)
+        T_m = p_m/(density_m*287.15_rk)
 
 
         c_m = sqrt(1.4_rk*287.15_rk*T_m)
-!        T_m = prop%fluid%compute_temperature(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
+!        T_m = prop%fluid%compute_temperature(density_m,mom1_m,mom2_m,mom3_m,energy_m)
 
 
 
-        drho_dx_m  = worker%get_primary_field_face('Density'   , 'ddx', 'face interior')
-        drho_dy_m  = worker%get_primary_field_face('Density'   , 'ddy', 'face interior')
-        drho_dz_m  = worker%get_primary_field_face('Density'   , 'ddz', 'face interior')
+        drho_dx_m  = worker%get_primary_field_face('Density'   , 'grad1', 'face interior')
+        drho_dy_m  = worker%get_primary_field_face('Density'   , 'grad2', 'face interior')
+        drho_dz_m  = worker%get_primary_field_face('Density'   , 'grad3', 'face interior')
 
-        drhou_dx_m = worker%get_primary_field_face('X-Momentum', 'ddx', 'face interior')
-        drhou_dy_m = worker%get_primary_field_face('X-Momentum', 'ddy', 'face interior')
-        drhou_dz_m = worker%get_primary_field_face('X-Momentum', 'ddz', 'face interior')
+        drhou_dx_m = worker%get_primary_field_face('Momentum-1', 'grad1', 'face interior')
+        drhou_dy_m = worker%get_primary_field_face('Momentum-1', 'grad2', 'face interior')
+        drhou_dz_m = worker%get_primary_field_face('Momentum-1', 'grad3', 'face interior')
 
-        drhov_dx_m = worker%get_primary_field_face('Y-Momentum', 'ddx', 'face interior')
-        drhov_dy_m = worker%get_primary_field_face('Y-Momentum', 'ddy', 'face interior')
-        drhov_dz_m = worker%get_primary_field_face('Y-Momentum', 'ddz', 'face interior')
+        drhov_dx_m = worker%get_primary_field_face('Momentum-2', 'grad1', 'face interior')
+        drhov_dy_m = worker%get_primary_field_face('Momentum-2', 'grad2', 'face interior')
+        drhov_dz_m = worker%get_primary_field_face('Momentum-2', 'grad3', 'face interior')
 
-        drhow_dx_m = worker%get_primary_field_face('Z-Momentum', 'ddx', 'face interior')
-        drhow_dy_m = worker%get_primary_field_face('Z-Momentum', 'ddy', 'face interior')
-        drhow_dz_m = worker%get_primary_field_face('Z-Momentum', 'ddz', 'face interior')
+        drhow_dx_m = worker%get_primary_field_face('Momentum-3', 'grad1', 'face interior')
+        drhow_dy_m = worker%get_primary_field_face('Momentum-3', 'grad2', 'face interior')
+        drhow_dz_m = worker%get_primary_field_face('Momentum-3', 'grad3', 'face interior')
         
-        drhoE_dx_m = worker%get_primary_field_face('Energy'    , 'ddx', 'face interior')
-        drhoE_dy_m = worker%get_primary_field_face('Energy'    , 'ddy', 'face interior')
-        drhoE_dz_m = worker%get_primary_field_face('Energy'    , 'ddz', 'face interior')
+        drhoE_dx_m = worker%get_primary_field_face('Energy'    , 'grad1', 'face interior')
+        drhoE_dy_m = worker%get_primary_field_face('Energy'    , 'grad2', 'face interior')
+        drhoE_dz_m = worker%get_primary_field_face('Energy'    , 'grad3', 'face interior')
 
 
 
 
 
         ! Initialize arrays
-        rho_bc  = rho_m
-        rhou_bc = rhou_m
-        rhov_bc = rhov_m
-        rhow_bc = rhow_m
-        rhoE_bc = rhoE_m
-        R_inf   = rho_m
-        R_extrapolated = rho_m
-        u_bc_norm = rho_m
-        v_bc_norm = rho_m
-        w_bc_norm = rho_m
-        u_bc_tang = rho_m
-        v_bc_tang = rho_m
-        w_bc_tang = rho_m
-        entropy_bc = rho_m
+        density_bc = density_m
+        mom1_bc    = mom1_m
+        mom2_bc    = mom2_m
+        mom3_bc    = mom3_m
+        energy_bc  = energy_m
+        R_inf      = density_m
+        R_extrapolated = density_m
+        u_bc_norm = density_m
+        v_bc_norm = density_m
+        w_bc_norm = density_m
+        u_bc_tang = density_m
+        v_bc_tang = density_m
+        w_bc_tang = density_m
+        entropy_bc = density_m
 
 
         !
         ! Get unit normal vector
         !
-        unormx = worker%unit_normal(1)
-        unormy = worker%unit_normal(2)
-        unormz = worker%unit_normal(3)
+        unorm_1 = worker%unit_normal(1)
+        unorm_2 = worker%unit_normal(2)
+        unorm_3 = worker%unit_normal(3)
 
 
 
@@ -220,7 +219,7 @@ contains
         !
         ! Dot momentum with normal vector
         !
-        normal_momentum = rhou_m*unormx + rhov_m*unormy + rhow_m*unormz
+        normal_momentum = mom1_m*unorm_1 + mom2_m*unorm_2 + mom3_m*unorm_3
 
 
         !
@@ -233,17 +232,17 @@ contains
         !
         ! Compute internal velocities
         !
-        u_m = rhou_m/rho_m
-        v_m = rhov_m/rho_m
-        w_m = rhow_m/rho_m
+        u_m = mom1_m/density_m
+        v_m = mom2_m/density_m
+        w_m = mom3_m/density_m
 
 
 
         !
         ! Compute Riemann invariants
         !
-        R_inf          = (u_input*unormx + v_input*unormy + w_input*unormz) - TWO*c_input/(1.4_rk - ONE)
-        R_extrapolated = (u_m*unormx     + v_m*unormy     + w_m*unormz    ) + TWO*c_m/(1.4_rk - ONE)
+        R_inf          = (u_input*unorm_1 + v_input*unorm_2 + w_input*unorm_3) - TWO*c_input/(1.4_rk - ONE)
+        R_extrapolated = (u_m*unorm_1     + v_m*unorm_2     + w_m*unorm_3    ) + TWO*c_m/(1.4_rk - ONE)
 
 
         !
@@ -251,9 +250,9 @@ contains
         !
         c_bc = ((1.4_rk - ONE)/FOUR)*(R_extrapolated - R_inf)
 
-        u_bc_norm = HALF*(R_extrapolated + R_inf)*unormx
-        v_bc_norm = HALF*(R_extrapolated + R_inf)*unormy
-        w_bc_norm = HALF*(R_extrapolated + R_inf)*unormz
+        u_bc_norm = HALF*(R_extrapolated + R_inf)*unorm_1
+        v_bc_norm = HALF*(R_extrapolated + R_inf)*unorm_2
+        w_bc_norm = HALF*(R_extrapolated + R_inf)*unorm_3
 
 
 
@@ -262,19 +261,19 @@ contains
         !
         where (inflow)
 
-            u_bc_tang = u_input - (u_input*unormx + v_input*unormy + w_input*unormz)*unormx
-            v_bc_tang = v_input - (u_input*unormx + v_input*unormy + w_input*unormz)*unormy
-            w_bc_tang = w_input - (u_input*unormx + v_input*unormy + w_input*unormz)*unormz
+            u_bc_tang = u_input - (u_input*unorm_1 + v_input*unorm_2 + w_input*unorm_3)*unorm_1
+            v_bc_tang = v_input - (u_input*unorm_1 + v_input*unorm_2 + w_input*unorm_3)*unorm_2
+            w_bc_tang = w_input - (u_input*unorm_1 + v_input*unorm_2 + w_input*unorm_3)*unorm_3
 
             entropy_bc = p_input/(rho_input**1.4_rk)
 
         elsewhere !outflow
 
-            u_bc_tang = u_m - (u_m*unormx + v_m*unormy + w_m*unormz)*unormx
-            v_bc_tang = v_m - (u_m*unormx + v_m*unormy + w_m*unormz)*unormy
-            w_bc_tang = w_m - (u_m*unormx + v_m*unormy + w_m*unormz)*unormz
+            u_bc_tang = u_m - (u_m*unorm_1 + v_m*unorm_2 + w_m*unorm_3)*unorm_1
+            v_bc_tang = v_m - (u_m*unorm_1 + v_m*unorm_2 + w_m*unorm_3)*unorm_2
+            w_bc_tang = w_m - (u_m*unorm_1 + v_m*unorm_2 + w_m*unorm_3)*unorm_3
 
-            entropy_bc = p_m/(rho_m**1.4_rk)
+            entropy_bc = p_m/(density_m**1.4_rk)
 
         end where
 
@@ -283,47 +282,57 @@ contains
         !
         ! Compute boundary state
         !
-        rho_bc  = (c_bc*c_bc/(entropy_bc*1.4_rk))**(ONE/(1.4_rk-ONE))
-        rhou_bc = (u_bc_norm + u_bc_tang)*rho_bc
-        rhov_bc = (v_bc_norm + v_bc_tang)*rho_bc
-        rhow_bc = (w_bc_norm + w_bc_tang)*rho_bc
+        density_bc  = (c_bc*c_bc/(entropy_bc*1.4_rk))**(ONE/(1.4_rk-ONE))
+        mom1_bc = (u_bc_norm + u_bc_tang)*density_bc
+        mom2_bc = (v_bc_norm + v_bc_tang)*density_bc
+        mom3_bc = (w_bc_norm + w_bc_tang)*density_bc
 
-        p_bc   = (rho_bc**1.4_rk)*entropy_bc
-        rhoE_bc = (p_bc/(1.4_rk - ONE)) + HALF*(rhou_bc*rhou_bc + rhov_bc*rhov_bc + rhow_bc*rhow_bc)/rho_bc
+        p_bc   = (density_bc**1.4_rk)*entropy_bc
+        energy_bc = (p_bc/(1.4_rk - ONE)) + HALF*(mom1_bc*mom1_bc + mom2_bc*mom2_bc + mom3_bc*mom3_bc)/density_bc
+
+
+
+
+        !
+        ! Account for cylindrical. Convert tangential momentum back to angular momentum.
+        !
+        if (worker%coordinate_system() == 'Cylindrical') then
+            mom2_bc = mom2_bc * worker%coordinate('1','boundary')
+        end if
 
 
         !
         ! Store boundary condition state
         !
-        call worker%store_bc_state('Density'   ,rho_bc, 'value')
-        call worker%store_bc_state('X-Momentum',rhou_bc,'value')
-        call worker%store_bc_state('Y-Momentum',rhov_bc,'value')
-        call worker%store_bc_state('Z-Momentum',rhow_bc,'value')
-        call worker%store_bc_state('Energy'    ,rhoE_bc,'value')
+        call worker%store_bc_state('Density'   , density_bc, 'value')
+        call worker%store_bc_state('Momentum-1', mom1_bc,    'value')
+        call worker%store_bc_state('Momentum-2', mom2_bc,    'value')
+        call worker%store_bc_state('Momentum-3', mom3_bc,    'value')
+        call worker%store_bc_state('Energy'    , energy_bc,  'value')
 
 
         
         
         
-        call worker%store_bc_state('Density'   ,drho_dx_m,  'ddx')
-        call worker%store_bc_state('Density'   ,drho_dy_m,  'ddy')
-        call worker%store_bc_state('Density'   ,drho_dz_m,  'ddz')
+        call worker%store_bc_state('Density'   , drho_dx_m,  'grad1')
+        call worker%store_bc_state('Density'   , drho_dy_m,  'grad2')
+        call worker%store_bc_state('Density'   , drho_dz_m,  'grad3')
                                                 
-        call worker%store_bc_state('X-Momentum',drhou_dx_m, 'ddx')
-        call worker%store_bc_state('X-Momentum',drhou_dy_m, 'ddy')
-        call worker%store_bc_state('X-Momentum',drhou_dz_m, 'ddz')
+        call worker%store_bc_state('Momentum-1', drhou_dx_m, 'grad1')
+        call worker%store_bc_state('Momentum-1', drhou_dy_m, 'grad2')
+        call worker%store_bc_state('Momentum-1', drhou_dz_m, 'grad3')
                                                 
-        call worker%store_bc_state('Y-Momentum',drhov_dx_m, 'ddx')
-        call worker%store_bc_state('Y-Momentum',drhov_dy_m, 'ddy')
-        call worker%store_bc_state('Y-Momentum',drhov_dz_m, 'ddz')
+        call worker%store_bc_state('Momentum-2', drhov_dx_m, 'grad1')
+        call worker%store_bc_state('Momentum-2', drhov_dy_m, 'grad2')
+        call worker%store_bc_state('Momentum-2', drhov_dz_m, 'grad3')
                                                 
-        call worker%store_bc_state('Z-Momentum',drhow_dx_m, 'ddx')
-        call worker%store_bc_state('Z-Momentum',drhow_dy_m, 'ddy')
-        call worker%store_bc_state('Z-Momentum',drhow_dz_m, 'ddz')
+        call worker%store_bc_state('Momentum-3', drhow_dx_m, 'grad1')
+        call worker%store_bc_state('Momentum-3', drhow_dy_m, 'grad2')
+        call worker%store_bc_state('Momentum-3', drhow_dz_m, 'grad3')
                                                 
-        call worker%store_bc_state('Energy'    ,drhoE_dx_m, 'ddx')
-        call worker%store_bc_state('Energy'    ,drhoE_dy_m, 'ddy')
-        call worker%store_bc_state('Energy'    ,drhoE_dz_m, 'ddz')
+        call worker%store_bc_state('Energy'    , drhoE_dx_m, 'grad1')
+        call worker%store_bc_state('Energy'    , drhoE_dy_m, 'grad2')
+        call worker%store_bc_state('Energy'    , drhoE_dz_m, 'grad3')
 
 
 

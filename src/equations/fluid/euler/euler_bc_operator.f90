@@ -58,9 +58,9 @@ contains
         ! Set operator equations
         !
         call self%add_primary_field("Density"   )
-        call self%add_primary_field("X-Momentum")
-        call self%add_primary_field("Y-Momentum")
-        call self%add_primary_field("Z-Momentum")
+        call self%add_primary_field("Momentum-1")
+        call self%add_primary_field("Momentum-2")
+        call self%add_primary_field("Momentum-3")
         call self%add_primary_field("Energy"    )
 
     end subroutine init
@@ -87,18 +87,14 @@ contains
         type(chidg_worker_t),       intent(inout)   :: worker
         class(properties_t),        intent(inout)   :: prop
 
+        ! data at quadrature nodes
+        type(AD_D), allocatable, dimension(:)   ::              &
+            density_bc, mom1_bc, mom2_bc, mom3_bc, energy_bc,   &
+            u_bc, v_bc, w_bc, H_bc, p_bc,                       &
+            flux_1, flux_2, flux_3, integrand
 
-
-        ! Storage at quadrature nodes
-        type(AD_D), allocatable, dimension(:)   ::          &
-            rho_bc,  rhou_bc, rhov_bc, rhow_bc, rhoE_bc,    &
-            u_bc,    v_bc,    w_bc,                         &
-            H_bc,    p_bc,                                  &
-            flux_x,  flux_y,  flux_z,  integrand
-
-
-        real(rk),   allocatable, dimension(:)   ::          &
-            normx, normy, normz
+        real(rk),   allocatable, dimension(:)   ::  &
+            norm_1, norm_2, norm_3
             
         real(rk) :: gam_bc
 
@@ -107,16 +103,27 @@ contains
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
-        rho_bc  = worker%get_primary_field_face("Density"   ,'value', 'boundary')
-        rhou_bc = worker%get_primary_field_face("X-Momentum",'value', 'boundary')
-        rhov_bc = worker%get_primary_field_face("Y-Momentum",'value', 'boundary')
-        rhow_bc = worker%get_primary_field_face("Z-Momentum",'value', 'boundary')
-        rhoE_bc = worker%get_primary_field_face("Energy"    ,'value', 'boundary')
+        density_bc = worker%get_primary_field_face('Density'   , 'value', 'boundary')
+        mom1_bc    = worker%get_primary_field_face('Momentum-1', 'value', 'boundary')
+        mom2_bc    = worker%get_primary_field_face('Momentum-2', 'value', 'boundary')
+        mom3_bc    = worker%get_primary_field_face('Momentum-3', 'value', 'boundary')
+        energy_bc  = worker%get_primary_field_face('Energy'    , 'value', 'boundary')
 
 
-        normx = worker%normal(1)
-        normy = worker%normal(2)
-        normz = worker%normal(3)
+        !
+        ! Account for cylindrical. Get tangential momentum from angular momentum.
+        !
+        if (worker%coordinate_system() == 'Cylindrical') then
+            mom2_bc = mom2_bc / worker%coordinate('1','boundary')
+        end if
+
+
+
+
+
+        norm_1 = worker%normal(1)
+        norm_2 = worker%normal(2)
+        norm_3 = worker%normal(3)
 
 
 
@@ -131,72 +138,81 @@ contains
         !
         ! Compute velocity components
         !
-        u_bc = rhou_bc/rho_bc
-        v_bc = rhov_bc/rho_bc
-        w_bc = rhow_bc/rho_bc
+        u_bc = mom1_bc/density_bc
+        v_bc = mom2_bc/density_bc
+        w_bc = mom3_bc/density_bc
 
 
 
         !
         ! Compute boundary condition energy and enthalpy
         !
-        H_bc = (rhoE_bc + p_bc)/rho_bc
+        H_bc = (energy_bc + p_bc)/density_bc
 
 
 
 
         !=================================================
-        ! Mass flux
+        ! mass flux
         !=================================================
-        flux_x = (rho_bc * u_bc)
-        flux_y = (rho_bc * v_bc)
-        flux_z = (rho_bc * w_bc)
+        flux_1 = (density_bc * u_bc)
+        flux_2 = (density_bc * v_bc)
+        flux_3 = (density_bc * w_bc)
 
-        integrand = flux_x*normx + flux_y*normy + flux_z*normz
+        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
+
 
         call worker%integrate_boundary('Density',integrand)
 
         !=================================================
-        ! x-momentum flux
+        ! momentum-1 flux
         !=================================================
-        flux_x = (rho_bc * u_bc * u_bc) + p_bc
-        flux_y = (rho_bc * u_bc * v_bc)
-        flux_z = (rho_bc * u_bc * w_bc)
+        flux_1 = (density_bc * u_bc * u_bc) + p_bc
+        flux_2 = (density_bc * u_bc * v_bc)
+        flux_3 = (density_bc * u_bc * w_bc)
 
-        integrand = flux_x*normx + flux_y*normy + flux_z*normz
+        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
 
-        call worker%integrate_boundary('X-Momentum',integrand)
-
-        !=================================================
-        ! y-momentum flux
-        !=================================================
-        flux_x = (rho_bc * v_bc * u_bc)
-        flux_y = (rho_bc * v_bc * v_bc) + p_bc
-        flux_z = (rho_bc * v_bc * w_bc)
-
-        integrand = flux_x*normx + flux_y*normy + flux_z*normz
-
-        call worker%integrate_boundary('Y-Momentum',integrand)
+        call worker%integrate_boundary('Momentum-1',integrand)
 
         !=================================================
-        ! z-momentum flux
+        ! momentum-2 flux
         !=================================================
-        flux_x = (rho_bc * w_bc * u_bc)
-        flux_y = (rho_bc * w_bc * v_bc)
-        flux_z = (rho_bc * w_bc * w_bc) + p_bc
+        flux_1 = (density_bc * v_bc * u_bc)
+        flux_2 = (density_bc * v_bc * v_bc) + p_bc
+        flux_3 = (density_bc * v_bc * w_bc)
 
-        integrand = flux_x*normx + flux_y*normy + flux_z*normz
+        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
 
-        call worker%integrate_boundary('Z-Momentum',integrand)
+        !
+        ! Convert to tangential to angular momentum flux
+        !
+        if (worker%coordinate_system() == 'Cylindrical') then
+            integrand = integrand * worker%coordinate('1','boundary')
+        end if
+
+        call worker%integrate_boundary('Momentum-2',integrand)
 
         !=================================================
-        ! Energy flux
+        ! momentum-3 flux
         !=================================================
-        flux_x = (rho_bc * u_bc * H_bc)
-        flux_y = (rho_bc * v_bc * H_bc)
-        flux_z = (rho_bc * w_bc * H_bc)
+        flux_1 = (density_bc * w_bc * u_bc)
+        flux_2 = (density_bc * w_bc * v_bc)
+        flux_3 = (density_bc * w_bc * w_bc) + p_bc
 
-        integrand = flux_x*normx + flux_y*normy + flux_z*normz
+        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
+
+
+        call worker%integrate_boundary('Momentum-3',integrand)
+
+        !=================================================
+        ! energy flux
+        !=================================================
+        flux_1 = (density_bc * u_bc * H_bc)
+        flux_2 = (density_bc * v_bc * H_bc)
+        flux_3 = (density_bc * w_bc * H_bc)
+
+        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
 
         call worker%integrate_boundary('Energy',integrand)
 

@@ -39,8 +39,8 @@ module test_mesh_linear_mod
 
 contains
 
-    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
-    !! procedure. The argument names have to match
+    !>  NOTE: make sure to use 'this' instead of 'self' since these are over-writting 
+    !!  a derived type procedure. The argument names have to match.
     !!
     !!
     !!
@@ -95,18 +95,26 @@ contains
         neqns    = 1
         nterms_s = 8
         ntime    = 1
-        call this%mesh%init_geom(idomain,spacedim,nterms_c,nodes,connectivity)
+        call this%mesh%init_geom(idomain,spacedim,nterms_c,nodes,connectivity,'Cartesian')
         call this%mesh%init_sol(neqns,nterms_s,ntime)
         call this%mesh%init_comm_local()
 
-    end subroutine
+    end subroutine setUp
+    !****************************************************************************************
     
 
 
+    !>
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_mesh_linear),    intent(inout)   :: this
+
+
     end subroutine
-    !****************************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -120,18 +128,20 @@ contains
     !!
     !!
     !!
-    !----------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     @Test
     subroutine testMesh_integers(self)
         class(test_mesh_linear),    intent(inout)   :: self
-        integer(ik) :: neqns, nterms_s, nterms_c, nelem_xi, nelem_eta, nelem_zeta, nelem, idomain, ntime
+
+        integer(ik) :: neqns, nterms_s, nterms_c, nelem_xi, nelem_eta, &
+                       nelem_zeta, nelem, idomain, ntime
         
-        neqns       = 1
-        ntime       = 1
-        idomain     = 1
-        nterms_s    = 8
-        nterms_c    = 8
-        nelem       = 27
+        neqns    = 1
+        ntime    = 1
+        idomain  = 1
+        nterms_s = 8
+        nterms_c = 8
+        nelem    = 27
 
         @assertEqual(neqns,self%mesh%neqns)
         @assertEqual(ntime,self%mesh%ntime)
@@ -141,7 +151,7 @@ contains
         @assertEqual(idomain,self%mesh%idomain_g)
 
     end subroutine testMesh_integers
-    !*****************************************************************************************************
+    !***************************************************************************************
     
     
     
@@ -151,7 +161,7 @@ contains
     !!
     !!
     !!
-    !-----------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     @Test
     subroutine testMesh_elements_initialized(self)
         class(test_mesh_linear),    intent(inout)   :: self
@@ -163,7 +173,7 @@ contains
         end do
         
     end subroutine testMesh_elements_initialized
-    !******************************************************************************************************
+    !****************************************************************************************
         
         
         
@@ -173,7 +183,7 @@ contains
     !!
     !!
     !!
-    !------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     @Test
     subroutine testMesh_faces_initialized(self)
         class(test_mesh_linear),    intent(inout)   :: self
@@ -185,18 +195,20 @@ contains
                 @assertTrue(self%mesh%faces(ielem,iface)%numInitialized)
             end do
         end do
+
     end subroutine testMesh_faces_initialized
-    !******************************************************************************************************
+    !****************************************************************************************
         
     
     
-    !>  Test to make sure the parent and neighbor element indices are correct for an interior element
+    !>  Test to make sure the parent and neighbor element indices are correct for an 
+    !!  interior element.
     !!
     !!  @author Nathan A. Wukie
     !!
     !!
     !!
-    !------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     @Test
     subroutine testMesh_indices_interior(self)
         class(test_mesh_linear),    intent(inout)   :: self
@@ -220,7 +232,7 @@ contains
         end associate
 
     end subroutine testMesh_indices_interior
-    !*******************************************************************************************************
+    !****************************************************************************************
     
     
 
@@ -230,7 +242,7 @@ contains
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     @Test
     subroutine testMesh_indices_boundary(self)
         class(test_mesh_linear),    intent(inout)   :: self
@@ -246,7 +258,7 @@ contains
         end associate
         
     end subroutine testMesh_indices_boundary
-    !*******************************************************************************************************
+    !****************************************************************************************
     
     
     
@@ -262,7 +274,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     @Test
     subroutine testMesh_E1_faces_ftype(self)
         class(test_mesh_linear),    intent(inout)   :: self
@@ -303,7 +315,7 @@ contains
         
         end associate
     end subroutine testMesh_E1_faces_ftype
-    !**********************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -315,7 +327,7 @@ contains
     !!
     !!
     !!
-    !-----------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     @Test
     subroutine testMesh_E2_faces_ftype(self)
         class(test_mesh_linear),    intent(inout)   :: self
@@ -356,7 +368,7 @@ contains
         
         end associate
     end subroutine testMesh_E2_faces_ftype
-    !*************************************************************************************************
+    !***************************************************************************************
     
     
     
@@ -366,7 +378,7 @@ contains
     !!
     !!
     !!
-    !--------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     @Test
     subroutine testMesh_E14_faces_ftype(self)
         class(test_mesh_linear),    intent(inout)   :: self
@@ -407,21 +419,21 @@ contains
         
         end associate
     end subroutine testMesh_E14_faces_ftype
-    !***************************************************************************************************
+    !***************************************************************************************
 
 
 
 
 
 
-    !>  Test that the routine mesh%get_comm_procs is returning all the correct processor ranks that have 
-    !!  been set in self%ineighbor_proc
+    !>  Test that the routine mesh%get_comm_procs is returning all the correct processor 
+    !!  ranks that have been set in self%ineighbor_proc
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/30/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     @Test
     subroutine testMesh__get_comm_procs(self)
         class(test_mesh_linear),    intent(inout)   :: self
@@ -430,8 +442,8 @@ contains
 
         !
         ! Initially, all processor ranks should be set to 1, since this is run in serial.
-        ! So, we will manually set a few neighbor ranks to make sure they are getting detected and 
-        ! returned correctly.
+        ! So, we will manually set a few neighbor ranks to make sure they are getting 
+        ! detected and returned correctly.
         !
         self%mesh%faces(14,XI_MIN)%ineighbor_proc   = 2
         self%mesh%faces(14,XI_MAX)%ineighbor_proc   = 3
@@ -458,7 +470,7 @@ contains
         @assertEqual([2,3,4,5,6],comm_procs)
 
     end subroutine testMesh__get_comm_procs
-    !****************************************************************************************************
+    !****************************************************************************************
 
 
 

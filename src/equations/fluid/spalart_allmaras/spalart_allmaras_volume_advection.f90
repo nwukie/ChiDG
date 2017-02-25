@@ -42,13 +42,13 @@ contains
         class(spalart_allmaras_volume_advection_operator_t),   intent(inout)  :: self
 
         ! Set operator name
-        call self%set_name("Spalart-Allmaras Volume Advection Operator")
+        call self%set_name('Spalart-Allmaras Volume Advection Operator')
 
         ! Set operator type
-        call self%set_operator_type("Volume Advective Operator")
+        call self%set_operator_type('Volume Advective Operator')
 
         ! Set operator equations
-        call self%add_primary_field("Density * NuTilde")
+        call self%add_primary_field('Density * NuTilde')
 
     end subroutine init
     !***********************************************************************************************
@@ -69,58 +69,67 @@ contains
         class(properties_t),                                 intent(inout)   :: prop
 
 
-        type(AD_D), dimension(:), allocatable   ::  &
-            rho, rhou, rhov, rhow, rho_nutilde,     &
-            invrho, u, v, w, flux_x, flux_y, flux_z
+        type(AD_D), dimension(:), allocatable   ::      &
+            density, mom1, mom2, mom3, density_nutilde, &
+            invdensity, u, v, w, flux_1, flux_2, flux_3
 
         real(rk),   dimension(:), allocatable   ::  &
-            normx, normy, normz, unormx, unormy, unormz
+            norm_1, norm_2, norm_3, unorm_1, unorm_2, unorm_3
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho         = worker%get_primary_field_element('Density',           'value')
-        rhou        = worker%get_primary_field_element('X-Momentum',        'value')
-        rhov        = worker%get_primary_field_element('Y-Momentum',        'value')
-        rhow        = worker%get_primary_field_element('Z-Momentum',        'value')
-        rho_nutilde = worker%get_primary_field_element('Density * NuTilde', 'value')
+        density         = worker%get_primary_field_element('Density',           'value')
+        mom1            = worker%get_primary_field_element('Momentum-1',        'value')
+        mom2            = worker%get_primary_field_element('Momentum-2',        'value')
+        mom3            = worker%get_primary_field_element('Momentum-3',        'value')
+        density_nutilde = worker%get_primary_field_element('Density * NuTilde', 'value')
+
+
+
+        !
+        ! Account for cylindrical. Get tangential momentum from angular momentum.
+        !
+        if (worker%coordinate_system() == 'Cylindrical') then
+            mom2 = mom2 / worker%coordinate('1','element')
+        end if
 
 
 
         !
         ! Compute velocities
         !
-        invrho = ONE/rho
-        u = rhou*invrho
-        v = rhov*invrho
-        w = rhow*invrho
+        invdensity = ONE/density
+        u = mom1*invdensity
+        v = mom2*invdensity
+        w = mom3*invdensity
 
 
         !
         ! Get normal vector
         !
-        normx  = worker%normal(1)
-        normy  = worker%normal(2)
-        normz  = worker%normal(3)
+        norm_1  = worker%normal(1)
+        norm_2  = worker%normal(2)
+        norm_3  = worker%normal(3)
 
-        unormx = worker%unit_normal(1)
-        unormy = worker%unit_normal(2)
-        unormz = worker%unit_normal(3)
+        unorm_1 = worker%unit_normal(1)
+        unorm_2 = worker%unit_normal(2)
+        unorm_3 = worker%unit_normal(3)
 
 
         !
         ! Compute average flux and field difference.
         ! 
-        flux_x = u*rho_nutilde
-        flux_y = v*rho_nutilde
-        flux_z = w*rho_nutilde
+        flux_1 = u*density_nutilde
+        flux_2 = v*density_nutilde
+        flux_3 = w*density_nutilde
 
 
         !
         ! Integrate flux
         !
-        call worker%integrate_volume('Density * NuTilde',flux_x,flux_y,flux_z)
+        call worker%integrate_volume('Density * NuTilde',flux_1,flux_2,flux_3)
 
 
     end subroutine compute

@@ -1012,6 +1012,11 @@ contains
         call write_line("Entering Time Loop:", io_proc=GLOBAL_MASTER)
         call write_line(" ", io_proc=GLOBAL_MASTER)
 
+        
+        !
+        ! Initialize time integrator state
+        !
+        call self%time_integrator%initialize_state(self%data)
 
         wcount = 1
         nsteps = self%time_integrator%time_manager%time_steps

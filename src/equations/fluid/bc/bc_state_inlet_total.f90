@@ -112,6 +112,7 @@ contains
         type(point_t),  allocatable, dimension(:)   :: coords
         real(rk),       allocatable, dimension(:)   ::  &
             TT, n1, n2, n3, nmag, alpha, r, PT
+        integer(ik) :: ierr
             
 
 
@@ -130,6 +131,12 @@ contains
         n1 = self%bcproperties%compute('Normal-1', time, coords)
         n2 = self%bcproperties%compute('Normal-2', time, coords)
         n3 = self%bcproperties%compute('Normal-3', time, coords)
+
+
+        !   Explicit allocation to handle GCC bug:
+        !       GCC/GFortran Bugzilla Bug 52162 
+        allocate(nmag(size(n1)), stat=ierr)
+        if (ierr /= 0) call AllocationError
 
         nmag = sqrt(n1*n1 + n2*n2 + n3*n3)
         n1 = n1/nmag

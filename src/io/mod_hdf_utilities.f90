@@ -2569,6 +2569,11 @@ contains
         !
         ! Convert to ChiDG integer type
         !
+        !   Explicit allocation to handle GCC bug:
+        !       GCC/GFortran Bugzilla Bug 52162 
+        !
+        allocate(connectivity_ik(size(connectivity,1),size(connectivity,2)),stat=ierr)
+        if (ierr /= 0) call AllocationError
         connectivity_ik = int(connectivity, ik)
 
 

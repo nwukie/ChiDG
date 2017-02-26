@@ -50,14 +50,15 @@ module type_time_integrator
 
     contains
 
-        procedure   :: init         !< General initialization procedure. Should get 
-                                    !< called automatically.
+        procedure   :: init             ! General initialization procedure. Should get 
+                                        ! called automatically.
         procedure   :: set
         procedure   :: report
 
 
         ! Must define this procedure in any extended type
-        procedure(data_interface),   deferred   :: step
+        procedure(data_interface),   deferred   :: step             ! define the time integrator stepping procedure
+        procedure(state_interface),  deferred   :: initialize_state ! process a read solution for the current time-integrator
 
     end type time_integrator_t
     !*****************************************************************************************
@@ -93,6 +94,15 @@ module type_time_integrator
     end interface
 
 
+    ! Interface for passing a domain_t type
+    abstract interface
+        subroutine state_interface(self,data)
+            use type_chidg_data,        only: chidg_data_t
+            import time_integrator_t
+            class(time_integrator_t),               intent(inout)   :: self
+            type(chidg_data_t),                     intent(inout)   :: data
+        end subroutine
+    end interface
 
 
 contains

@@ -1,0 +1,198 @@
+! Compute a matrix-vector multiplication between chidg_matrix and chidg_vector
+! instances that have been initialized with a single block geometry
+!
+! Block is 2x2x2
+! 
+! @author Mayank Sharma
+! @date   2/26/2017
+!
+!-----------------------------------------------------------------------------------------------------------------
+@Test
+subroutine test_chidg_matrix_operator_HB_mv()
+    use pfunit_mod
+
+    use mod_kinds,          only: rk,ik
+    use mod_constants
+    use type_chidg,         only: chidg_t
+    use type_chidg_matrix,  only: chidg_matrix_t
+    use type_chidg_vector,  only: chidg_vector_t
+    use type_meshdata,      only: meshdata_t
+    use type_bc,            only: bc_t
+    use mod_bc,             only: create_bc
+    use mod_test_utilities, only: create_mesh_file
+    use mod_file_utilities, only: delete_file
+    use mod_time,           only: time_manager
+
+    use operator_chidg_mv,  only: chidg_mv
+    implicit none
+
+
+    type(chidg_t)                       :: chidg
+    type(meshdata_t),   allocatable     :: meshdata(:)
+    class(bc_t),        allocatable     :: bc
+    integer(ik)                         :: idom, spacedim, nterms_s, idiag, idom_d, ielem_d, itime, ielem
+    real(rk),           dimension(8)    :: bref_1, bref_HB_1, bref_HB_2, bref_HB_3, bref_HB_4
+    real(rk),           dimension(8)    :: vals
+    real(rk)                            :: tol
+    real(rk),           dimension(3,3)  :: D_ref
+    character(:),       allocatable     :: time_integrator
+
+    type(chidg_matrix_t)                :: A
+    type(chidg_vector_t)                :: x, b
+
+
+    tol             = 1.e-13_rk
+    spacedim        = 3
+    nterms_s        = 8
+    IO_DESTINATION  = 'file'
+    time_integrator = 'harmonic_balance'
+
+    
+    !
+    ! Set time_manager values since no .nml file is being used
+    !
+    time_manager%dt = 0             ! Not used for HB
+    time_manager%time_steps = 1     ! Not used for HB
+    time_manager%nwrite = 0         ! Not used for HB
+    time_manager%freq_data = 2*PI
+
+
+    !
+    ! Initialize ChiDG
+    ! Also initializes time_manager
+    !
+    call chidg%start_up('core')
+
+
+    !
+    ! Create grid file
+    !
+    filename = "D1_2x2x2_singleblock.h5"
+    call create_mesh_file("D1 NxNxN", filename, nelem_xi = 2, nelem_eta = 2, nelem_zeta = 2)
+
+
+    !
+    ! Get grid points
+    !
+    call chidg%read_grid(filename,spacedim)
+    call chidg%read_boundaryconditions(filename)
+
+
+    !
+    ! Initalize ChiDG Chimera interfaces
+    !
+    call chidg%set('Solution Order', integer_input = 2)
+    call chidg%set('Time Integrator', algorithm = time_integrator)
+    call chidg%init('domains')
+    call chidg%init('communication')
+
+
+    !
+    ! Initialize data containers
+    !
+    call A%init(chidg%data%mesh, mtype = 'full')
+    call x%init(chidg%data%mesh)
+    call b%init(chidg%data%mesh)
+
+
+    !
+    ! Initialize chidg_matrix and corresponding chidg_vector data
+    ! TODO: All matrices are residual linearizations wrt the element
+    !       itself, for convenience. Can be changed.
+    !
+    ! There are 3 time levels here since there is 1 HB frequency
+    !
+    ielem = 1
+    itime = 1
+    imat  = A%dom(1)%lblks(ielem,itime)%get_diagonal()
+    A%dom(1)%lblks(ielem,itime)%data_(imat)%mat = ONE
+    vals  = 0.1_rk
+    call x%dom(1)%vecs(ielem)%settime(2,vals)
+
+
+    ielem = 3
+    itime = 2
+    imat  = A%dom(1)%lblks(ielem,itime)%get_diagonal()
+    A%dom(1)%lblks(ielem,itime)%data_(imat)%mat = TWO
+    vals  = 0.2_rk
+    call x%dom(1)%vecs(ielem)%settime(3,vals)
+
+
+    ielem = 7
+    itime = 2
+    imat  = A%dom(1)%lblks(ielem,itime)%get_diagonal()
+    A%dom(1)%lblks(ielem,itime)%data_(imat)%mat = THREE
+    vals  = 0.4_rk
+    call x%dom(1)%vecs(ielem)%settime(2,vals)
+
+
+    ielem = 6
+    itime = 3
+    imat  = A%dom(idom)%lblks(ielem,itime)%get_diagonal()
+    A%dom(1)%lblks(ielem,itime)%data_(imat)%mat = FOUR
+
+    vals  = 0.5_rk
+    call x%dom(idom)%vecs(8)%settime(3,vals)
+
+
+    !
+    ! Set mass matrices in the densevector_matrices
+    !
+    do ielem = 1,8
+        do itime = 1,3
+
+            A%dom(1)%lblks(ielem,itime)%mass = chidg%data%mesh%elems(ielem)%mass
+
+        end do
+    end do
+
+
+    !
+    ! Perform matrx-vector multiplication. THIS IS BEING TESTED
+    !
+    b = chidg_mv(A,x)
+
+    
+    !D_ref = transpose(reshape([-4.4408920985006262E-016, 3.6275987284684352, -3.6275987284684348, &
+    !                           -3.6275987284684357, 1.3322676295501878E-015, 3.6275987284684343,  &
+    !                           3.6275987284684361, -3.6275987284684352, -5.8501974966035143E-016], shape(D_ref)))
+
+    
+    !
+    ! Note that D_ref defined above can also be used for reference calculations
+    !
+    associate ( D => time_manager%D )
+
+        bref_1 = (THREE*0.4_rk)*nterms_s    ! Residual linearization at ielem = 7, itime = 2 \times (densevector)
+        vals = 0.1_rk; bref_HB_1 = D(1,2)*matmul(A%dom(1)%lblks(1,2)%mass,vals) + &
+                                   D(3,2)*matmul(A%dom(1)%lblks(1,2)%mass,vals)
+        vals = 0.4_rk; bref_HB_2 = D(1,2)*matmul(A%dom(1)%lblks(7,2)%mass,vals) + &
+                                   D(3,2)*matmul(A%dom(1)%lblks(7,2)%mass,vals)             
+        vals = 0.2_rk; bref_HB_3 = D(1,3)*matmul(A%dom(1)%lblks(3,3)%mass,vals) + &
+                                   D(1,3)*matmul(A%dom(1)%lblks(3,3)%mass,vals)
+        vals = 0.5_rk; bref_HB_4 = D(1,3)*matmul(A%dom(1)%lblks(8,3)%mass,vals) + &
+                                   D(2,3)*matmul(A%dom(1)%lblks(8,3)%mass,vals)
+
+    end associate
+
+    !
+    ! Test MV operation
+    !
+    @assertEqual()
+    @assertEqual()
+
+
+    !
+    ! Close ChiDG interface
+    !
+    call chidg%shut_down('core')
+
+
+    !
+    ! Clean up
+    !
+    call delete_file(filename)
+
+
+end subroutine test_chidg_matrix_operator_HB_mv
+!*****************************************************************************************************************

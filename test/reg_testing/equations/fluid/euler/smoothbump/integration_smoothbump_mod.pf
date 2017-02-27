@@ -370,7 +370,7 @@ contains
 
 
 
-        call this%chidg%time_integrator%time_manager%init()
+        call this%chidg%data%time_manager%init()
 
 
         call this%chidg%set('Solution Order', integer_input=this%order)

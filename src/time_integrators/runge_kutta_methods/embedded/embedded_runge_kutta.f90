@@ -97,13 +97,14 @@ module embedded_runge_kutta
 
 
         wcount = 1
-        associate( q => data%sdata%dq, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs, dt => self%time_manager%dt )
+        associate( q => data%sdata%dq, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs, dt => data%time_manager%dt )
 
         !
         ! Since embedded methods have a varying time step size, the number of steps isn't known beforehand
         ! The iteration is done through a while loop which quits when t > t_end
         ! TODO: Get from time_manager via chidg.nml?
         !
+        ! TODO: WATCH OUT here, time_manager is now part of chidg%data
         t_start = ZERO 
         t_end   = t_start + (dt*self%time_manager%nsteps)
         t       = t_start
@@ -111,7 +112,7 @@ module embedded_runge_kutta
         !
         ! Get name of the embedded RK method being used
         !
-        time_scheme = self%time_manager%get_name()
+        time_scheme = data%time_manager%get_name()
 
         !
         ! Get nstage, a, b, and err for a particular method
@@ -202,7 +203,9 @@ module embedded_runge_kutta
                 ! ttol is a user defined tolerance which is used to judge the error magnitude
                 ! TODO: Componentwise tolerance and error using absolute and relative tolerances?
                 !
-                if (error_mag <= self%time_manager%ttol) then
+
+                ! TODO: WATCH OUT here, time_manager is now part of chidg%data and ttol is not a time_manager's object
+                if (error_mag <= data%time_manager%ttol) then
                     
                     ! Advance time by dt
                     t = t + dt
@@ -218,7 +221,7 @@ module embedded_runge_kutta
                     ! Print diagnostics
                     call write_line('   R(Q) - Norm:     ', rhs%norm(ChiDG_COMM),delimiter = '')
 
-                    if (wcount == self%time_manager%nwrite) then
+                    if (wcount == data%time_manager%nwrite) then
                         write(filename,'(I7,A4)') 1000000 + itime, '.plt'
                         call write_tecio_variables_unstructured(data,time(filename),itime + 1)
                         wcount = 0
@@ -231,7 +234,7 @@ module embedded_runge_kutta
                 !
                 ! delta is used to adjust the step size
                 !
-                delta = (HALF*self%time_manager%ttol/error_mag)**(ONE/(p + 1))
+                delta = (HALF*data%time_manager%ttol/error_mag)**(ONE/(p + 1))
 
                 !
                 ! Built in safeguards to prevent too big or too small adjustments

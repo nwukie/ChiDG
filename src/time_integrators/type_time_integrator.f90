@@ -9,7 +9,7 @@ module type_time_integrator
     use type_ivector,           only: ivector_t
     use type_chidg_data,        only: chidg_data_t
     use type_system_assembler,  only: system_assembler_t
-    use type_time_manager,      only: time_manager_t
+    !use type_time_manager,      only: time_manager_t
     implicit none
 
 
@@ -32,7 +32,7 @@ module type_time_integrator
 !        integer(ik)     :: nwrite   = 10            !< Write data every 'nwrite' steps     !
 
         class(system_assembler_t),  allocatable :: system
-        type(time_manager_t)                    :: time_manager
+        !type(time_manager_t)                    :: time_manager    ! now part of chidg%data
 
 
 
@@ -117,9 +117,9 @@ contains
     !!  @date   2/8/2016
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine init(self)
+    subroutine init(self,data)
         class(time_integrator_t),   intent(inout)   :: self
-
+        type(chidg_data_t),         intent(in)      :: data
 
         self%solverInitialized = .true.
 

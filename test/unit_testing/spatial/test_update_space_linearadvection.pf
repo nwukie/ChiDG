@@ -62,7 +62,7 @@ subroutine test_update_space_linearadvection()
     ! Initialize ChiDG
     !
     call chidgA%start_up('core')
-
+    call chidgB%start_up('core')
 
 
     chidgAfile = 'D1E16M1.h5'

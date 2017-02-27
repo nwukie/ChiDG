@@ -63,7 +63,7 @@ contains
         ! Initialize ChiDG environment
         !
         call this%chidgO1%start_up('core')
-
+        call this%chidgO2%start_up('core')
 
         !
         ! Create file

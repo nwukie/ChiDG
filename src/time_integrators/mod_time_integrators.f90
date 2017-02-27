@@ -3,18 +3,15 @@ module mod_time_integrators
     use mod_kinds,              only: rk,ik
     use type_time_integrator,   only: time_integrator_t
     use type_dict,              only: dict_t
-    use mod_time,               only: time_manager
+    use mod_time,               only: time_manager_global
 
 
     ! Import solverdata types
-!    use type_steady,               only: steady_t
-!    use type_forward_euler,        only: forward_euler_t
-    use type_steady,            only: steady_t
-    use type_forward_euler,     only: forward_euler_t
+    use type_steady,               only: steady_t
+    use type_forward_euler,        only: forward_euler_t
 !    use type_backward_euler,    only: backward_euler_t
-!    use type_hamonic_balance,   only: harmonic_balance_t !not in yet
-!    use type_runge_kutta,      only: runge_kutta_t !already in but might be splitted in multiple time_integrators
-!    use type_explicit_runge_kutta, only: explicit_runge_kutta_t
+    use type_harmonic_balance,     only: harmonic_balance_t !not in yet
+    use type_explicit_runge_kutta, only: explicit_runge_kutta_t
     implicit none
 
 
@@ -23,9 +20,8 @@ module mod_time_integrators
     type(steady_t)                      :: STEADY
     type(forward_euler_t)               :: FORWARD_EULER
 !    type(backward_euler_t)              :: BACKWARD_EULER
-!    type(harmonic_balance_t)            :: HB !not in yet
-!    type(runge_kutta_t)                 :: RK
-!    type(explicit_runge_kutta_t)        :: EXPLICIT_RK
+    type(harmonic_balance_t)            :: HB !not in yet
+    type(explicit_runge_kutta_t)        :: EXPLICIT_RK
 
     logical :: initialized = .false.
 
@@ -63,12 +59,12 @@ contains
 !            case ('backward_euler', 'Backward_Euler', 'BACKWARD_EULER', 'backward euler', 'Backward Euler', 'BACKWARD EULER')
 !                allocate(instance, source=BACKWARD_EULER)
             
-!            case ('Harmonic Balance', 'Harmonic_Balance', 'harmonic balance', 'harmonic_balance', 'HB')
-!                allocate(instance, source=HB)
+            case ('Harmonic Balance', 'Harmonic_Balance', 'harmonic balance', 'harmonic_balance', 'HB')
+                allocate(instance, source=HB)
             
-!            case ('Second Order Runge_Kutta', 'Explict Midpoint', 'Second Order RK', 'Modified Euler', 'Second Order Ralston Method', 'Third Order Runge-Kutta', 'Third Order Kutta', 'Third Order RK', &
-!                   'Runge-Kutta Method', 'Fourth Runge-Kutta Method', 'Fourth Order RK Method', 'RK4', 'Three-Eighth Rule', 'Fourth Order Kutta') ! this probably needs to be split up in several RK schemes
-!                allocate(instance, source=EXPLICIT_RK)
+            case ('Second Order Runge_Kutta', 'Explict Midpoint', 'Second Order RK', 'Modified Euler', 'Second Order Ralston Method', 'Third Order Runge-Kutta', 'Third Order Kutta', 'Third Order RK', &
+                   'Runge-Kutta Method', 'Fourth Runge-Kutta Method', 'Fourth Order RK Method', 'RK4', 'Three-Eighth Rule', 'Fourth Order Kutta') ! this probably needs to be split up in several RK schemes
+                allocate(instance, source=EXPLICIT_RK)
 
 
 

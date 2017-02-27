@@ -12,6 +12,7 @@ module type_chidg
 
     use type_chidg_data,            only: chidg_data_t
     use type_time_integrator,       only: time_integrator_t
+    use mod_time,                   only: time_manager_global
     use type_linear_solver,         only: linear_solver_t
     use type_nonlinear_solver,      only: nonlinear_solver_t
     use type_preconditioner,        only: preconditioner_t
@@ -162,6 +163,11 @@ contains
             case ('core')
 
                 call self%data%time_manager%init()
+
+                !
+                ! Initialize global time_manager variable
+                !
+                call time_manager_global%init()
 
                 ! Default communicator for 'communication' is MPI_COMM_WORLD
                 if ( present(comm) ) then

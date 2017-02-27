@@ -4,7 +4,7 @@ module operator_chidg_mv
     use mod_constants,      only: ZERO, ONE
     use mod_chidg_mpi,      only: IRANK, ChiDG_COMM
     use type_chidg_matrix,  only: chidg_matrix_t
-    use mod_time,           only: time_manager
+    use mod_time,           only: time_manager_global
     use type_chidg_vector
 
     use type_timer,         only: timer_t
@@ -82,7 +82,7 @@ contains
         call timer_comm%stop()
 
 
-        do itime = 1,time_manager%ntime
+        do itime = 1,time_manager_global%ntime
 
             !
             ! Compute A*x for local matrix-vector product
@@ -191,12 +191,12 @@ contains
                 ! Routine for harmonic balance computations
                 ! Used only when harmonic balance is specified
                 !
-                HB_flag = time_manager%get_name()
+                HB_flag = time_manager_global%get_name()
 
                 if (HB_flag == 'Harmonic Balance' .or. HB_flag == 'Harmonic_Balance' .or. HB_flag == 'harmonic balance' &
                     .or. HB_flag == 'harmonic_balance' .or. HB_flag == 'HB') then
 
-                    D = time_manager%D
+                    D = time_manager_global%D
 
                     do ielem = 1,size(A%dom(idom)%lblks,1) 
 
@@ -235,7 +235,7 @@ contains
 
                                 end if 
                             end do  ! itime_i
-                        end if  ! local_multiply
+                        end if  ! locla_multiply
 
                     end do  ! ielem
 
@@ -302,7 +302,7 @@ contains
 
 
 
-        do itime = 1,time_manager%ntime
+        do itime = 1,time_manager_global%ntime
 
             !
             ! Compute A*x for parallel matrix-vector product

@@ -4,7 +4,7 @@ module mod_time
 
     implicit none
 
-    type(time_manager_t)    :: time_manager
+    type(time_manager_t)    :: time_manager_global
 
 
 

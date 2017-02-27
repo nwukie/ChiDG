@@ -11,6 +11,36 @@ module mod_version
     integer, parameter          :: ChiDG_VERSION_MAJOR = 0
     integer, parameter          :: ChiDG_VERSION_MINOR = 2
 
-    character(40), parameter    :: GIT_SHA1 = "@GIT_SHA1@"
+
+
+
+
+
+contains
+
+
+    !>  Return the Git SHA1 hash string associated with the commit used
+    !!  to build the ChiDG library.
+    !!
+    !!  The GIT_SHA1 parameter substitution is performed by CMake during
+    !!  configuration.
+    !!
+    !!  Isolating the variable substitution to a function call prevents
+    !!  annoying and unnecessary recompilation of all files whenever 
+    !!  the HEAD is updated to a different commit.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/24/2017
+    !!
+    !----------------------------------------------------------------------
+    function get_git_hash() result(hash)
+        
+        character(40), parameter    :: GIT_SHA1 = "@GIT_SHA1@"
+        character(40)               :: hash
+
+        hash = GIT_SHA1
+
+    end function get_git_hash
+    !**********************************************************************
 
 end module mod_version

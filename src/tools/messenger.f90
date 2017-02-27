@@ -1,7 +1,8 @@
 module messenger
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: IO_DESTINATION
-    use mod_version,    only: GIT_SHA1
+    !use mod_version,    only: GIT_SHA1
+    use mod_version,    only: get_git_hash
     use mod_chidg_mpi,  only: IRANK, GLOBAL_MASTER, ChiDG_COMM
     implicit none
 
@@ -61,7 +62,7 @@ contains
         call write_line(' ', io_proc=GLOBAL_MASTER)
         call write_line('Date:      ', date(:4)//" "//date(5:6)//" "//date(7:8), ltrim=.false., io_proc=GLOBAL_MASTER)
         call write_line('Time:      ', time(:2)//":"//time(3:4)//":"//time(5:6), ltrim=.false., io_proc=GLOBAL_MASTER)
-        call write_line('Git commit: ', GIT_SHA1, io_proc=GLOBAL_MASTER)
+        call write_line('Git commit: ', get_git_hash(), io_proc=GLOBAL_MASTER)
         call write_line(' ', io_proc=GLOBAL_MASTER)
         call write_line('-----------------------------------------------------', io_proc=GLOBAL_MASTER)
 

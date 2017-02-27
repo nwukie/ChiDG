@@ -60,7 +60,7 @@ contains
     !!  that also have their derivatives initialized.
     !!
     !!  Some interpolation parameters to note that are used inside here:
-    !!      - interpolation_type:   'value', 'ddx', 'ddy', 'ddz'
+    !!      - interpolation_type:   'value', 'grad1', 'grad2', 'grad3'
     !!
     !!  Partial mode expansions can be used to perform interpolations. To do this, pass the 
     !!  Pmin and Pmax optional arguments. Pmin is the minimum 1D polynomial order to be used
@@ -165,19 +165,19 @@ contains
             case('value')
                 var_gq = matmul(mesh(idom)%elems(ielem)%gq%vol%val,qdiff)
 
-            case('ddx')
-                var_gq = matmul(mesh(idom)%elems(ielem)%ddx,qdiff)
+            case('grad1')
+                var_gq = matmul(mesh(idom)%elems(ielem)%grad1,qdiff)
 
-            case('ddy')
-                var_gq = matmul(mesh(idom)%elems(ielem)%ddy,qdiff)
+            case('grad2')
+                var_gq = matmul(mesh(idom)%elems(ielem)%grad2,qdiff)
 
-            case('ddz')
-                var_gq = matmul(mesh(idom)%elems(ielem)%ddz,qdiff)
+            case('grad3')
+                var_gq = matmul(mesh(idom)%elems(ielem)%grad3,qdiff)
 
             case default
-                user_msg = "interpolate_element_autodiff: The 'interpolation_type' incoming parameter was not&
-                            a valid string. Valid strings for 'interpolation_type' include &
-                            'value', 'ddx', 'ddy', 'ddz'."
+                user_msg = "interpolate_element_autodiff: The 'interpolation_type' incoming&
+                            parameter was not a valid string. Valid strings for &
+                            'interpolation_type' include 'value', 'grad1', 'grad2', 'grad3'."
                 call chidg_signal_one(FATAL,user_msg,interpolation_type)
         end select
 
@@ -207,7 +207,7 @@ contains
     !!  matrix-vector multiplication.
     !!
     !!  Some interpolation parameters to note that a user might select:
-    !!      - interpolation_type:   'value', 'ddx', 'ddy', 'ddz'
+    !!      - interpolation_type:   'value', 'grad1', 'grad2', 'grad3'
     !!      - interpolation_source: ME, NEIGHBOR
     !!
     !!  @author Nathan A. Wukie
@@ -218,7 +218,7 @@ contains
     !!  @param[in]      q                       Solution vector
     !!  @param[in]      ieqn                    Index of field being interpolated
     !!  @param[inout]   var_gq                  Autodiff values of field evaluated at gq points
-    !!  @param[in]      interpolation_type      Interpolate 'value', 'ddx', 'ddy', 'ddz'
+    !!  @param[in]      interpolation_type      Interpolate 'value', 'grad1', 'grad2', 'grad3'
     !!  @param[in]      interpolation_source    ME/NEIGHBOR indicating element to interpolate from
     !!
     !!  @author Mayank Sharma + Matteo Ugolotti
@@ -321,10 +321,8 @@ contains
             ! Copy the solution variables from 'q' to 'qdiff'
             !
             if (parallel_interpolation) then
-                !qdiff = q%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%getvar(ieqn,itime)
                 qtmp = q%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%getvar(ieqn,itime)
             else
-                !qdiff = q%dom(iface_info%idomain_l)%vecs(iface_info%ielement_l)%getvar(ieqn,itime)
                 qtmp = q%dom(iface_info%idomain_l)%vecs(iface_info%ielement_l)%getvar(ieqn,itime)
             end if
 
@@ -432,22 +430,18 @@ contains
         select case (interpolation_type)
             case('value')
                 var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%gq%vol%val, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
-            case('ddx')
-                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%ddx, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
-            case('ddy')
-                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%ddy, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
-            case('ddz')
-                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%ddz, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
+            case('grad1')
+                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%grad1, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
+            case('grad2')
+                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%grad2, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
+            case('grad3')
+                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%grad3, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
             case default
-                call chidg_signal(FATAL,"interpolate_element_standard: invalid interpolation_type. Options are 'value', 'ddx', 'ddy', 'ddz'.")
+                call chidg_signal(FATAL,"interpolate_element_standard: invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
         end select
 
     end function interpolate_element_standard
     !*****************************************************************************************
-
-
-
-
 
 
 
@@ -484,9 +478,6 @@ contains
 
     end function interpolate_face_standard
     !*****************************************************************************************
-
-
-
 
 
 
@@ -826,7 +817,7 @@ contains
     !!  the polynomial expansion at the quadrature nodes. This routine returns the 
     !!  interpolation matrix. Additionally, an interpolation could be computing the actual 
     !!  value of the expansion at the nodes('value'), or it could be computing derivatives 
-    !!  ('ddx', 'ddy', 'ddz'). The interpolation_type specifies what kind of interpolation 
+    !!  ('grad1', 'grad2', 'grad3'). The interpolation_type specifies what kind of interpolation 
     !!  to perform.
     !!
     !!  Given a face, interpolation type, and interpolation source, this routine returns
@@ -862,14 +853,14 @@ contains
             select case(interpolation_type)
                 case('value')
                     interpolator = mesh(idom)%faces(ielem,iface)%gq%face%val(:,:,iface)
-                case('ddx')
-                    interpolator = mesh(idom)%faces(ielem,iface)%ddx
-                case('ddy')
-                    interpolator = mesh(idom)%faces(ielem,iface)%ddy
-                case('ddz')
-                    interpolator = mesh(idom)%faces(ielem,iface)%ddz
+                case('grad1')
+                    interpolator = mesh(idom)%faces(ielem,iface)%grad1
+                case('grad2')
+                    interpolator = mesh(idom)%faces(ielem,iface)%grad2
+                case('grad3')
+                    interpolator = mesh(idom)%faces(ielem,iface)%grad3
                 case default
-                    call chidg_signal(FATAL,"get_face_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'ddx', 'ddy', 'ddz'.")
+                    call chidg_signal(FATAL,"get_face_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
             end select
 
 
@@ -890,27 +881,27 @@ contains
                     select case(interpolation_type)
                         case('value')
                             interpolator = mesh(idom)%faces(ielem,iface)%gq%face%val(:,:,donor_face%iface)    ! THIS PROBABLY NEEDS IMPROVED
-                        case('ddx')
-                            interpolator = mesh(idom)%faces(ielem,iface)%neighbor_ddx
-                        case('ddy')
-                            interpolator = mesh(idom)%faces(ielem,iface)%neighbor_ddy
-                        case('ddz')
-                            interpolator = mesh(idom)%faces(ielem,iface)%neighbor_ddz
+                        case('grad1')
+                            interpolator = mesh(idom)%faces(ielem,iface)%neighbor_grad1
+                        case('grad2')
+                            interpolator = mesh(idom)%faces(ielem,iface)%neighbor_grad2
+                        case('grad3')
+                            interpolator = mesh(idom)%faces(ielem,iface)%neighbor_grad3
                         case default
-                            call chidg_signal(FATAL,"get_face_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'ddx', 'ddy', 'ddz'.")
+                            call chidg_signal(FATAL,"get_face_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
                     end select
                 else
                     select case(interpolation_type)
                         case('value')
                             interpolator = mesh(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%gq%face%val(:,:,donor_face%iface)
-                        case('ddx')
-                            interpolator = mesh(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%ddx
-                        case('ddy')
-                            interpolator = mesh(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%ddy
-                        case('ddz')
-                            interpolator = mesh(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%ddz
+                        case('grad1')
+                            interpolator = mesh(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%grad1
+                        case('grad2')
+                            interpolator = mesh(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%grad2
+                        case('grad3')
+                            interpolator = mesh(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%grad3
                         case default
-                            call chidg_signal(FATAL,"get_face_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'ddx', 'ddy', 'ddz'.")
+                            call chidg_signal(FATAL,"get_face_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
                     end select
                 end if
 
@@ -921,14 +912,14 @@ contains
                     select case(interpolation_type)
                         case('value')
                             interpolator = mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator%at(idonor)
-                        case('ddx')
-                            interpolator = mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_ddx%at(idonor)
-                        case('ddy')
-                            interpolator = mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_ddy%at(idonor)
-                        case('ddz')
-                            interpolator = mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_ddz%at(idonor)
+                        case('grad1')
+                            interpolator = mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_grad1%at(idonor)
+                        case('grad2')
+                            interpolator = mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_grad2%at(idonor)
+                        case('grad3')
+                            interpolator = mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_grad3%at(idonor)
                         case default
-                            call chidg_signal(FATAL,"get_face_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'ddx', 'ddy', 'ddz'.")
+                            call chidg_signal(FATAL,"get_face_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
                     end select
 
             else

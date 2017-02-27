@@ -70,9 +70,14 @@ module mod_constants
     !
     ! Spatial direction
     !
-    integer(ik), parameter :: X_DIR     = 1
-    integer(ik), parameter :: y_DIR     = 2
-    integer(ik), parameter :: Z_DIR     = 3
+    integer(ik), parameter :: DIR_1     = 1
+    integer(ik), parameter :: DIR_2     = 2
+    integer(ik), parameter :: DIR_3     = 3
+    integer(ik), parameter :: DIR_X     = 1
+    integer(ik), parameter :: DIR_Y     = 2
+    integer(ik), parameter :: DIR_R     = 1
+    integer(ik), parameter :: DIR_THETA = 2
+    integer(ik), parameter :: DIR_Z     = 3
 
     integer(ik), parameter :: XI_DIR    = 1
     integer(ik), parameter :: ETA_DIR   = 2
@@ -186,7 +191,7 @@ module mod_constants
     ! IO constants
     !
     integer(ik),   parameter    :: MAXBLOCKS        = 200
-    character(6)                :: IO_DESTINATION   = 'both'
+    character(6)                :: IO_DESTINATION   = 'file'
     integer(ik)                 :: OUTPUT_RES       = 5
 
 

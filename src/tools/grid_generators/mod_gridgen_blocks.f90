@@ -120,16 +120,16 @@ contains
         spacedim = 3
 
         if ( present(equation_sets) ) then
-            call add_domain_hdf(file_id,"01",nodes,elements,equation_sets(1)%get(),spacedim)
+            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian',equation_sets(1)%get(),spacedim)
         else
-            call add_domain_hdf(file_id,"01",nodes,elements,"Scalar Advection",spacedim)
+            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian','Scalar Advection',spacedim)
         end if
 
 
         !
         ! Set boundary conditions patch connectivities
         !
-        dom_id = open_domain_hdf(file_id,"01")
+        dom_id = open_domain_hdf(file_id,'01')
 
         do bcface = 1,size(patch_names)
             
@@ -143,9 +143,9 @@ contains
 
 
         !
-        ! Create bc_state, "Scalar Extrapolate"
+        ! Create bc_state, 'Scalar Extrapolate'
         !
-        call create_bc("Scalar Extrapolate", bc_state)
+        call create_bc('Scalar Extrapolate', bc_state)
 
 
         !
@@ -176,10 +176,10 @@ contains
         !
         ! Set boundary condition groups for each patch
         !
-        patch_names = ["XI_MIN  ","XI_MAX  ", "ETA_MIN ", "ETA_MAX ", "ZETA_MIN", "ZETA_MAX"]
+        patch_names = ['XI_MIN  ','XI_MAX  ', 'ETA_MIN ', 'ETA_MAX ', 'ZETA_MIN', 'ZETA_MAX']
         do bcface = 1,size(patch_names)
 
-            call h5gopen_f(dom_id,"BoundaryConditions/"//trim(adjustl(patch_names(bcface))),patch_id,ierr)
+            call h5gopen_f(dom_id,'BoundaryConditions/'//trim(adjustl(patch_names(bcface))),patch_id,ierr)
 
 
             ! Set bc_group
@@ -197,7 +197,7 @@ contains
 
 
         ! Set 'Contains Grid'
-        call set_contains_grid_hdf(file_id,"True")
+        call set_contains_grid_hdf(file_id,'True')
 
         ! Close file
         call close_domain_hdf(dom_id)
@@ -346,11 +346,11 @@ contains
         !
         spacedim = 3
         if ( present(equation_sets) ) then
-            call add_domain_hdf(file_id,"01",nodes1,elements1,equation_sets(1)%get(),spacedim)
-            call add_domain_hdf(file_id,"02",nodes2,elements2,equation_sets(2)%get(),spacedim)
+            call add_domain_hdf(file_id,'01',nodes1,elements1,'Cartesian',equation_sets(1)%get(),spacedim)
+            call add_domain_hdf(file_id,'02',nodes2,elements2,'Cartesian',equation_sets(2)%get(),spacedim)
         else
-            call add_domain_hdf(file_id,"01",nodes1,elements1,"Scalar Advection",spacedim)
-            call add_domain_hdf(file_id,"02",nodes2,elements2,"Scalar Advection",spacedim)
+            call add_domain_hdf(file_id,'01',nodes1,elements1,'Cartesian','Scalar Advection',spacedim)
+            call add_domain_hdf(file_id,'02',nodes2,elements2,'Cartesian','Scalar Advection',spacedim)
         end if
 
 
@@ -361,8 +361,8 @@ contains
         !
         ! Set boundary conditions patch connectivities
         !
-        dom1_id = open_domain_hdf(file_id,"01")
-        dom2_id = open_domain_hdf(file_id,"02")
+        dom1_id = open_domain_hdf(file_id,'01')
+        dom2_id = open_domain_hdf(file_id,'02')
 
         do bcface = 1,6
             ! Get face node indices for boundary 'bcface'
@@ -376,9 +376,9 @@ contains
 
 
         !
-        ! Create bc_state, "Scalar Extrapolate"
+        ! Create bc_state, 'Scalar Extrapolate'
         !
-        call create_bc("Scalar Extrapolate", bc_state)
+        call create_bc('Scalar Extrapolate', bc_state)
 
 
 
@@ -412,17 +412,17 @@ contains
         !
         ! Assign groups to boundary condition patches
         !
-        faces = ["XI_MIN  ","XI_MAX  ", "ETA_MIN ", "ETA_MAX ", "ZETA_MIN", "ZETA_MAX"]
+        faces = ['XI_MIN  ','XI_MAX  ', 'ETA_MIN ', 'ETA_MAX ', 'ZETA_MIN', 'ZETA_MAX']
         do bcface = 1,size(faces)
-            call h5gopen_f(dom1_id,"BoundaryConditions/"//trim(adjustl(faces(bcface))),bcface1_id,ierr)
-            call h5gopen_f(dom2_id,"BoundaryConditions/"//trim(adjustl(faces(bcface))),bcface2_id,ierr)
+            call h5gopen_f(dom1_id,'BoundaryConditions/'//trim(adjustl(faces(bcface))),bcface1_id,ierr)
+            call h5gopen_f(dom2_id,'BoundaryConditions/'//trim(adjustl(faces(bcface))),bcface2_id,ierr)
 
             if (present(group_names)) then
                 call set_bc_patch_group_hdf(bcface1_id,group_names(1,bcface)%get())
                 call set_bc_patch_group_hdf(bcface2_id,group_names(2,bcface)%get())
             else
-                call set_bc_patch_group_hdf(bcface1_id,"Default")
-                call set_bc_patch_group_hdf(bcface2_id,"Default")
+                call set_bc_patch_group_hdf(bcface1_id,'Default')
+                call set_bc_patch_group_hdf(bcface2_id,'Default')
             end if
 
             call h5gclose_f(bcface1_id,ierr)
@@ -432,7 +432,7 @@ contains
 
 
         ! Set 'Contains Grid'
-        call set_contains_grid_hdf(file_id,"True")
+        call set_contains_grid_hdf(file_id,'True')
 
         ! Close file
         call close_domain_hdf(dom1_id)
@@ -614,15 +614,15 @@ contains
         ! Add domains
         !
         spacedim = 3
-        call add_domain_hdf(file_id,"01",nodes1,elements1,"Scalar Advection",spacedim)
-        call add_domain_hdf(file_id,"02",nodes2,elements2,"Scalar Advection",spacedim)
+        call add_domain_hdf(file_id,'01',nodes1,elements1,'Cartesian','Scalar Advection',spacedim)
+        call add_domain_hdf(file_id,'02',nodes2,elements2,'Cartesian','Scalar Advection',spacedim)
 
 
         !
         ! Set boundary conditions patch connectivities
         !
-        dom1_id = open_domain_hdf(file_id,"01")
-        dom2_id = open_domain_hdf(file_id,"02")
+        dom1_id = open_domain_hdf(file_id,'01')
+        dom2_id = open_domain_hdf(file_id,'02')
 
         do bcface = 1,6
             ! Get face node indices for boundary 'bcface'
@@ -639,9 +639,9 @@ contains
 
 
         !
-        ! Create bc_state, "Scalar Extrapolate"
+        ! Create bc_state, 'Scalar Extrapolate'
         !
-        call create_bc("Scalar Extrapolate", bc_state)
+        call create_bc('Scalar Extrapolate', bc_state)
 
 
 
@@ -649,7 +649,7 @@ contains
         ! Add bc_group's
         !
         if (present(bc_groups)) then
-            user_msg = "create_mesh_file__D2E8M1: Not quite ready to accept custom bc_group sets."
+            user_msg = 'create_mesh_file__D2E8M1: Not quite ready to accept custom bc_group sets.'
             call chidg_signal(FATAL,user_msg)
         else
             call create_bc_group_hdf(file_id,'Default')
@@ -668,26 +668,26 @@ contains
         !
         ! Set boundary condition states for Domain 1: Leave XI_MAX empty
         !
-        faces = ["XI_MIN  ", "ETA_MIN ", "ETA_MAX ", "ZETA_MIN", "ZETA_MAX"]
+        faces = ['XI_MIN  ', 'ETA_MIN ', 'ETA_MAX ', 'ZETA_MIN', 'ZETA_MAX']
         do bcface = 1,size(faces)
-            call h5gopen_f(dom1_id,"BoundaryConditions/"//trim(adjustl(faces(bcface))),bcface_id,ierr)
-            call set_bc_patch_group_hdf(bcface_id,"Default")
+            call h5gopen_f(dom1_id,'BoundaryConditions/'//trim(adjustl(faces(bcface))),bcface_id,ierr)
+            call set_bc_patch_group_hdf(bcface_id,'Default')
             call h5gclose_f(bcface_id,ierr)
         end do
 
         !
         ! Set boundary condition states for Domain 2: Leave XI_MIN empty
         !
-        faces = ["XI_MAX  ", "ETA_MIN ", "ETA_MAX ", "ZETA_MIN", "ZETA_MAX"]
+        faces = ['XI_MAX  ', 'ETA_MIN ', 'ETA_MAX ', 'ZETA_MIN', 'ZETA_MAX']
         do bcface = 1,size(faces)
-            call h5gopen_f(dom2_id,"BoundaryConditions/"//trim(adjustl(faces(bcface))),bcface_id,ierr)
-            call set_bc_patch_group_hdf(bcface_id,"Default")
+            call h5gopen_f(dom2_id,'BoundaryConditions/'//trim(adjustl(faces(bcface))),bcface_id,ierr)
+            call set_bc_patch_group_hdf(bcface_id,'Default')
             call h5gclose_f(bcface_id,ierr)
         end do
 
 
         ! Set 'Contains Grid'
-        call set_contains_grid_hdf(file_id,"True")
+        call set_contains_grid_hdf(file_id,'True')
 
         ! Close file
         call close_domain_hdf(dom1_id)

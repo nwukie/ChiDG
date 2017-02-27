@@ -66,11 +66,10 @@ contains
         !
         spacedim = 3
         nterms_c = 8
-        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
+        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection','Cartesian')
 
         call this%chidg%set('Solution Order', integer_input=2)
         call this%chidg%init('domains')
-!        call this%chidg%initialize_solution_domains()
 
 
         !
@@ -79,16 +78,22 @@ contains
         call this%bvec%init(this%chidg%data%mesh(1))
     
     
-    end subroutine
+    end subroutine setUp
+    !*****************************************************************************************
     
+
+    !>
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_blockvector),    intent(inout)   :: this
         
-        !
         ! Close ChiDG interface
-        !
         call this%chidg%shut_down('core')
-    end subroutine
+
+    end subroutine tearDown
     !*******************************************************************************************
 
 

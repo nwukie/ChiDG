@@ -46,13 +46,13 @@ contains
         class(spalart_allmaras_boundary_diffusion_operator_t),   intent(inout) :: self
         
         ! Set operator name
-        call self%set_name("Spalart-Allmaras Boundary Diffusion Operator")
+        call self%set_name('Spalart-Allmaras Boundary Diffusion Operator')
 
         ! Set operator type
-        call self%set_operator_type("Boundary Diffusive Flux")
+        call self%set_operator_type('Boundary Diffusive Flux')
 
         ! Set operator equations
-        call self%add_primary_field("Density * NuTilde")
+        call self%add_primary_field('Density * NuTilde')
 
     end subroutine init
     !********************************************************************************
@@ -66,9 +66,9 @@ contains
     !!
     !!-------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(spalart_allmaras_boundary_diffusion_operator_t),   intent(inout)   :: self
-        type(chidg_worker_t),                       intent(inout)   :: worker
-        class(properties_t),                        intent(inout)   :: prop
+        class(spalart_allmaras_boundary_diffusion_operator_t),  intent(inout)   :: self
+        type(chidg_worker_t),                                   intent(inout)   :: worker
+        class(properties_t),                                    intent(inout)   :: prop
 
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:) ::            &
@@ -76,22 +76,22 @@ contains
             rho_p, rho_nutilde_p, invrho_p,                 &
             nutilde_m, chi_m, f_n1_m, nu_l_m, mu_l_m,       &
             nutilde_p, chi_p, f_n1_p, nu_l_p, mu_l_p,       &
-            drho_dx_m, dnutilde_dx_m, drho_nutilde_dx_m,    &
-            drho_dy_m, dnutilde_dy_m, drho_nutilde_dy_m,    &
-            drho_dz_m, dnutilde_dz_m, drho_nutilde_dz_m,    &
-            drho_dx_p, dnutilde_dx_p, drho_nutilde_dx_p,    &
-            drho_dy_p, dnutilde_dy_p, drho_nutilde_dy_p,    &
-            drho_dz_p, dnutilde_dz_p, drho_nutilde_dz_p,    &
+            grad1_rho_m, grad1_nutilde_m, grad1_rho_nutilde_m,    &
+            grad2_rho_m, grad2_nutilde_m, grad2_rho_nutilde_m,    &
+            grad3_rho_m, grad3_nutilde_m, grad3_rho_nutilde_m,    &
+            grad1_rho_p, grad1_nutilde_p, grad1_rho_nutilde_p,    &
+            grad2_rho_p, grad2_nutilde_p, grad2_rho_nutilde_p,    &
+            grad3_rho_p, grad3_nutilde_p, grad3_rho_nutilde_p,    &
             dnutilde_drho_m, dnutilde_drhonutilde_m,        &
             dnutilde_drho_p, dnutilde_drhonutilde_p,        &
             diffusion_m, diffusion_p,                       &
-            flux_x_m, flux_y_m, flux_z_m,                   &
-            flux_x_p, flux_y_p, flux_z_p,                   &
-            flux_x, flux_y, flux_z, integrand
+            flux_1_m, flux_2_m, flux_3_m,                   &
+            flux_1_p, flux_2_p, flux_3_p,                   &
+            flux_1, flux_2, flux_3, integrand
 
 
         real(rk), allocatable, dimension(:) ::      &
-            normx, normy, normz
+            norm_1, norm_2, norm_3
 
 
 
@@ -108,20 +108,20 @@ contains
         !
         ! Interpolate gradient to quadrature nodes
         !
-        drho_dx_m         = worker%get_primary_field_face('Density',          'ddx+lift', 'face interior')
-        drho_dy_m         = worker%get_primary_field_face('Density',          'ddy+lift', 'face interior')
-        drho_dz_m         = worker%get_primary_field_face('Density',          'ddz+lift', 'face interior')
-        drho_dx_p         = worker%get_primary_field_face('Density',          'ddx+lift', 'face exterior')
-        drho_dy_p         = worker%get_primary_field_face('Density',          'ddy+lift', 'face exterior')
-        drho_dz_p         = worker%get_primary_field_face('Density',          'ddz+lift', 'face exterior')
+        grad1_rho_m         = worker%get_primary_field_face('Density',          'grad1+lift', 'face interior')
+        grad2_rho_m         = worker%get_primary_field_face('Density',          'grad2+lift', 'face interior')
+        grad3_rho_m         = worker%get_primary_field_face('Density',          'grad3+lift', 'face interior')
+        grad1_rho_p         = worker%get_primary_field_face('Density',          'grad1+lift', 'face exterior')
+        grad2_rho_p         = worker%get_primary_field_face('Density',          'grad2+lift', 'face exterior')
+        grad3_rho_p         = worker%get_primary_field_face('Density',          'grad3+lift', 'face exterior')
 
 
-        drho_nutilde_dx_m = worker%get_primary_field_face('Density * NuTilde','ddx+lift', 'face interior')
-        drho_nutilde_dy_m = worker%get_primary_field_face('Density * NuTilde','ddy+lift', 'face interior')
-        drho_nutilde_dz_m = worker%get_primary_field_face('Density * NuTilde','ddz+lift', 'face interior')
-        drho_nutilde_dx_p = worker%get_primary_field_face('Density * NuTilde','ddx+lift', 'face exterior')
-        drho_nutilde_dy_p = worker%get_primary_field_face('Density * NuTilde','ddy+lift', 'face exterior')
-        drho_nutilde_dz_p = worker%get_primary_field_face('Density * NuTilde','ddz+lift', 'face exterior')
+        grad1_rho_nutilde_m = worker%get_primary_field_face('Density * NuTilde','grad1+lift', 'face interior')
+        grad2_rho_nutilde_m = worker%get_primary_field_face('Density * NuTilde','grad2+lift', 'face interior')
+        grad3_rho_nutilde_m = worker%get_primary_field_face('Density * NuTilde','grad3+lift', 'face interior')
+        grad1_rho_nutilde_p = worker%get_primary_field_face('Density * NuTilde','grad1+lift', 'face exterior')
+        grad2_rho_nutilde_p = worker%get_primary_field_face('Density * NuTilde','grad2+lift', 'face exterior')
+        grad3_rho_nutilde_p = worker%get_primary_field_face('Density * NuTilde','grad3+lift', 'face exterior')
 
 
 
@@ -134,9 +134,9 @@ contains
         !
         ! Get normal vector
         !
-        normx = worker%normal(1)
-        normy = worker%normal(2)
-        normz = worker%normal(3)
+        norm_1 = worker%normal(1)
+        norm_2 = worker%normal(2)
+        norm_3 = worker%normal(3)
 
 
 
@@ -191,39 +191,39 @@ contains
         dnutilde_drho_p        = -rho_nutilde_p*invrho_p*invrho_p
         dnutilde_drhonutilde_p =  invrho_p
 
-        dnutilde_dx_m = dnutilde_drho_m * drho_dx_m  +  dnutilde_drhonutilde_m * drho_nutilde_dx_m
-        dnutilde_dy_m = dnutilde_drho_m * drho_dy_m  +  dnutilde_drhonutilde_m * drho_nutilde_dy_m
-        dnutilde_dz_m = dnutilde_drho_m * drho_dz_m  +  dnutilde_drhonutilde_m * drho_nutilde_dz_m
+        grad1_nutilde_m = dnutilde_drho_m * grad1_rho_m  +  dnutilde_drhonutilde_m * grad1_rho_nutilde_m
+        grad2_nutilde_m = dnutilde_drho_m * grad2_rho_m  +  dnutilde_drhonutilde_m * grad2_rho_nutilde_m
+        grad3_nutilde_m = dnutilde_drho_m * grad3_rho_m  +  dnutilde_drhonutilde_m * grad3_rho_nutilde_m
 
-        dnutilde_dx_p = dnutilde_drho_p * drho_dx_p  +  dnutilde_drhonutilde_p * drho_nutilde_dx_p
-        dnutilde_dy_p = dnutilde_drho_p * drho_dy_p  +  dnutilde_drhonutilde_p * drho_nutilde_dy_p
-        dnutilde_dz_p = dnutilde_drho_p * drho_dz_p  +  dnutilde_drhonutilde_p * drho_nutilde_dz_p
-
-
+        grad1_nutilde_p = dnutilde_drho_p * grad1_rho_p  +  dnutilde_drhonutilde_p * grad1_rho_nutilde_p
+        grad2_nutilde_p = dnutilde_drho_p * grad2_rho_p  +  dnutilde_drhonutilde_p * grad2_rho_nutilde_p
+        grad3_nutilde_p = dnutilde_drho_p * grad3_rho_p  +  dnutilde_drhonutilde_p * grad3_rho_nutilde_p
 
 
-        !================================
-        !       TURBULENCE FLUX
-        !================================
+
+
+        !-----------------------------------------
+        !            TURBULENCE FLUX
+        !-----------------------------------------
         diffusion_m = -(ONE/SA_sigma)*(mu_l_m + f_n1_m*rho_nutilde_m)
         diffusion_p = -(ONE/SA_sigma)*(mu_l_p + f_n1_p*rho_nutilde_p)
 
-        flux_x_m = diffusion_m*dnutilde_dx_m
-        flux_y_m = diffusion_m*dnutilde_dy_m
-        flux_z_m = diffusion_m*dnutilde_dz_m
+        flux_1_m = diffusion_m*grad1_nutilde_m
+        flux_2_m = diffusion_m*grad2_nutilde_m
+        flux_3_m = diffusion_m*grad3_nutilde_m
 
-        flux_x_p = diffusion_p*dnutilde_dx_p
-        flux_y_p = diffusion_p*dnutilde_dy_p
-        flux_z_p = diffusion_p*dnutilde_dz_p
+        flux_1_p = diffusion_p*grad1_nutilde_p
+        flux_2_p = diffusion_p*grad2_nutilde_p
+        flux_3_p = diffusion_p*grad3_nutilde_p
 
 
-        flux_x = (flux_x_m + flux_x_p)
-        flux_y = (flux_y_m + flux_y_p)
-        flux_z = (flux_z_m + flux_z_p)
+        flux_1 = (flux_1_m + flux_1_p)
+        flux_2 = (flux_2_m + flux_2_p)
+        flux_3 = (flux_3_m + flux_3_p)
 
 
         ! dot with normal vector
-        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
+        integrand = HALF*(flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3)
 
         call worker%integrate_boundary('Density * NuTilde',integrand)
 

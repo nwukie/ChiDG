@@ -18,11 +18,11 @@ module mod_operators
     ! Scalar Diffusion Operators
     use SD_volume_operator,                         only: SD_volume_operator_t
     use SD_boundary_operator,                       only: SD_boundary_operator_t
-    use SD_volume_source,                           only: SD_volume_source_t
     use SD_bc_operator,                             only: SD_bc_operator_t
 
     ! Fluid Inviscid Operators
     use euler_volume_operator,                      only: euler_volume_operator_t
+    use euler_volume_cylindrical_source,            only: euler_volume_cylindrical_source_t
     use euler_boundary_average_operator,            only: euler_boundary_average_operator_t
     use euler_roe_operator,                         only: euler_roe_operator_t
     use euler_laxfriedrichs_operator,               only: euler_laxfriedrichs_operator_t
@@ -32,6 +32,7 @@ module mod_operators
     use fluid_viscous_volume_operator,              only: fluid_viscous_volume_operator_t
     use fluid_viscous_boundary_average_operator,    only: fluid_viscous_boundary_average_operator_t
     use fluid_viscous_bc_operator,                  only: fluid_viscous_bc_operator_t
+    use fluid_viscous_volume_cylindrical_source,    only: fluid_viscous_volume_cylindrical_source_t
 
     ! Fluid Turbulence Operators
     use spalart_allmaras_source,                    only: spalart_allmaras_source_operator_t
@@ -177,7 +178,6 @@ contains
         type(SD_volume_operator_t)                      :: SD_volume_operator
         type(SD_boundary_operator_t)                    :: SD_boundary_operator
         type(SD_bc_operator_t)                          :: SD_bc_operator
-        type(SD_volume_source_t)                        :: SD_volume_source
 
         ! Dual Linear Advection Operators
         type(DLA_volume_advective_flux_t)               :: DLA_volume_operator
@@ -186,6 +186,7 @@ contains
 
         ! Fluid Inviscid Operators
         type(euler_volume_operator_t)                   :: euler_volume_operator
+        type(euler_volume_cylindrical_source_t)         :: euler_volume_cylindrical_source
         type(euler_boundary_average_operator_t)         :: euler_average_operator
         type(euler_roe_operator_t)                      :: euler_roe_operator
         type(euler_laxfriedrichs_operator_t)            :: euler_laxfriedrichs_operator
@@ -195,6 +196,7 @@ contains
         type(fluid_viscous_volume_operator_t)           :: fluid_viscous_volume_operator
         type(fluid_viscous_boundary_average_operator_t) :: fluid_viscous_boundary_average_operator
         type(fluid_viscous_bc_operator_t)               :: fluid_viscous_bc_operator
+        type(fluid_viscous_volume_cylindrical_source_t) :: fluid_viscous_volume_cylindrical_source
 
 
         ! Fluid Turbulence Operators
@@ -225,7 +227,6 @@ contains
             ! Register Linear Diffusion
             call operator_factory%register(SD_volume_operator)
             call operator_factory%register(SD_boundary_operator)
-            call operator_factory%register(SD_volume_source)
             call operator_factory%register(SD_bc_operator)
 
             ! Register Dual Linear Advection
@@ -236,15 +237,17 @@ contains
 
             ! Register Fluid Inviscid
             call operator_factory%register(euler_volume_operator)
+            call operator_factory%register(euler_volume_cylindrical_source)
             call operator_factory%register(euler_average_operator)
             call operator_factory%register(euler_roe_operator)
             call operator_factory%register(euler_laxfriedrichs_operator)
             call operator_factory%register(euler_bc_operator)
 
             ! Register Fluid Viscous
-            call operator_factory%register(fluid_viscous_volume_operator)
             call operator_factory%register(fluid_viscous_boundary_average_operator)
             call operator_factory%register(fluid_viscous_bc_operator)
+            call operator_factory%register(fluid_viscous_volume_operator)
+            call operator_factory%register(fluid_viscous_volume_cylindrical_source)
 
             ! Register Fluid Turbulence
             call operator_factory%register(spalart_allmaras_source_operator)

@@ -38,6 +38,18 @@ module type_model
     !!  viscosity. Also the equation of state can have source terms
     !!  that could be accounted for by including extra models.
     !!
+    !!  Model dependencies:
+    !!  -------------------
+    !!  Models can have different dependency strings, indicating to the infrastructure
+    !!  what the model needs differentiated with respect to when they are being computed.
+    !!  The model initialization routine shall set the dependency string for the model
+    !!  being implemented:
+    !!      Options:
+    !!          call self%set_dependency('Q-')
+    !!          call self%set_dependency('Q-,Q+')
+    !!          call self%set_dependency('Grad(Q)')  implicitly 'Q-,Q+'
+    !!  
+    !!
     !!  @author Nathan A. Wukie
     !!  @date   11/29/2016
     !!
@@ -45,6 +57,7 @@ module type_model
     type, public, abstract :: model_t
 
         character(:),   allocatable :: name
+        character(:),   allocatable :: dependency
         type(string_t), allocatable :: model_fields(:)
 
     contains
@@ -54,6 +67,9 @@ module type_model
 
         procedure   :: set_name
         procedure   :: get_name
+
+        procedure   :: set_dependency
+        procedure   :: get_dependency
 
         procedure   :: add_model_field
         procedure   :: get_model_field
@@ -121,10 +137,100 @@ contains
 
         character(:),   allocatable :: string
 
-        string = self%name
+        if (allocated(self%name)) then
+            string = self%name
+        else
+            string = ' '
+        end if
 
     end function get_name
     !*************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Set the 'dependency' component of the model_t.
+    !!
+    !!  This should be called from 'init' in a model implementation.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/21/2016
+    !!
+    !-------------------------------------------------------------------------------------
+    subroutine set_dependency(self,string)
+        class(model_t), intent(inout)   :: self
+        character(*),   intent(in)      :: string
+
+        character(:),   allocatable :: user_msg
+
+        if ( (trim(string) == 'Q-')     .or.    &
+             (trim(string) == 'Q-,Q+')  .or.    &
+             (trim(string) == 'Grad(Q)') ) then
+            self%dependency = string
+        else
+            user_msg = "model%set_dependency: Invalid model dependency string. Valid &
+                        options are 'Q-', 'Q-,Q+', and 'Grad(Q)'."
+            call chidg_signal_one(FATAL,user_msg,self%get_name())
+        end if
+
+    end subroutine set_dependency
+    !*************************************************************************************
+
+
+
+
+    !>  Return the 'dependency' of the model_t.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/21/2016
+    !!
+    !-------------------------------------------------------------------------------------
+    function get_dependency(self) result(string)
+        class(model_t), intent(in)  :: self
+
+        character(:),   allocatable :: string, user_msg
+
+        if (allocated(self%dependency)) then
+            string = self%dependency
+        else
+            user_msg = "model%set_dependency: A model dependency string was never set &
+                        for the current model. Make sure self%set_dependency is getting &
+                        called in the model initialization routine, model%init()"
+            call chidg_signal_one(FATAL,user_msg,self%get_name())
+        end if
+
+
+    end function get_dependency
+    !*************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -122,7 +122,8 @@ contains
         !
         ! Compute function
         !
-        val = v_x * v_y * v_z
+        !val = v_x * v_y * v_z
+        val = v_y
 
     end function compute
     !***********************************************************************************

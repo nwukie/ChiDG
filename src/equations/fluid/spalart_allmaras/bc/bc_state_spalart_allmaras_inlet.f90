@@ -46,8 +46,8 @@ contains
         !
         ! Set operator name
         !
-        call self%set_name("Spalart Allmaras Inlet")
-        call self%set_family("Inlet")
+        call self%set_name('Spalart Allmaras Inlet')
+        call self%set_family('Inlet')
 
 
         !
@@ -81,9 +81,12 @@ contains
 
 
         ! Storage at quadrature nodes
-        type(AD_D),     allocatable, dimension(:)   ::              &
-            rhoNutilde_m, rhoNutilde_bc,                            &
-            drhoNutilde_dx_m, drhoNutilde_dy_m, drhoNutilde_dz_m, rho_m, mu_m, nu_m
+        type(AD_D),     allocatable, dimension(:)   ::  &
+            density_nutilde_m, density_nutilde_bc,      &
+            grad1_density_nutilde_m,                    &
+            grad2_density_nutilde_m,                    &
+            grad3_density_nutilde_m,                    &
+            density_m, mu_m, nu_m
 
         real(rk)                                    :: time
         type(point_t),  allocatable, dimension(:)   :: coords
@@ -93,11 +96,12 @@ contains
         !
         ! Interpolate interior solution to quadrature nodes
         !
-        rho_m            = worker%get_primary_field_face('Density',           'value', 'face interior')
-        rhoNutilde_m     = worker%get_primary_field_face('Density * NuTilde', 'value', 'face interior')
-        drhoNutilde_dx_m = worker%get_primary_field_face('Density * NuTilde', 'ddx',   'face interior')
-        drhoNutilde_dy_m = worker%get_primary_field_face('Density * NuTilde', 'ddy',   'face interior')
-        drhoNutilde_dz_m = worker%get_primary_field_face('Density * NuTilde', 'ddz',   'face interior')
+        density_m               = worker%get_primary_field_face('Density',           'value', 'face interior')
+        density_nutilde_m       = worker%get_primary_field_face('Density * NuTilde', 'value', 'face interior')
+
+        grad1_density_nutilde_m = worker%get_primary_field_face('Density * NuTilde', 'grad1', 'face interior')
+        grad2_density_nutilde_m = worker%get_primary_field_face('Density * NuTilde', 'grad2', 'face interior')
+        grad3_density_nutilde_m = worker%get_primary_field_face('Density * NuTilde', 'grad3', 'face interior')
 
 
         
@@ -106,30 +110,30 @@ contains
         !
         coords = worker%coords()
         time   = worker%time()
-        nutilde_nu = self%bcproperties%compute("Turbulent Viscosity Ratio",time, coords)
+        nutilde_nu = self%bcproperties%compute('Turbulent Viscosity Ratio',time, coords)
 
 
         !
         ! Compute boundary condition state
         !
-        !rhoNutilde_bc = nutilde_nu * rhoNutilde_m
-        !rhoNutilde_bc = rho_m * (nutilde_nu * nu_m)
-        rhoNutilde_bc = rho_m * (nutilde_nu * 1.e-5_rk)
+        !density_nutilde_bc = nutilde_nu * density_nutilde_m
+        !density_nutilde_bc = density_m * (nutilde_nu * nu_m)
+        density_nutilde_bc = density_m * (nutilde_nu * 1.e-5_rk)
 
 
 
         !
         ! Store boundary condition state
         !
-        call worker%store_bc_state('Density * NuTilde', rhoNutilde_bc,'value')
+        call worker%store_bc_state('Density * NuTilde', density_nutilde_bc,'value')
 
 
         !
         ! Store boundary condition gradient - Extrapolate
         !
-        call worker%store_bc_state('Density * NuTilde', drhoNutilde_dx_m, 'ddx')
-        call worker%store_bc_state('Density * NuTilde', drhoNutilde_dy_m, 'ddy')
-        call worker%store_bc_state('Density * NuTilde', drhoNutilde_dz_m, 'ddz')
+        call worker%store_bc_state('Density * NuTilde', grad1_density_nutilde_m, 'grad1')
+        call worker%store_bc_state('Density * NuTilde', grad2_density_nutilde_m, 'grad2')
+        call worker%store_bc_state('Density * NuTilde', grad3_density_nutilde_m, 'grad3')
                                                 
     end subroutine compute_bc_state
     !*****************************************************************************************

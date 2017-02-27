@@ -53,6 +53,7 @@ contains
 
         logical                     :: differentiate_function, io_spatial
 
+
         
         !
         ! Decide whether to differentiate the discretization or not
@@ -133,6 +134,7 @@ contains
                 ! Loop through elements in the current domain
                 do ielem = 1,mesh%nelem
 
+
                     elem_info%idomain_g  = mesh%elems(ielem)%idomain_g
                     elem_info%idomain_l  = mesh%elems(ielem)%idomain_l
                     elem_info%ielement_g = mesh%elems(ielem)%ielement_g
@@ -191,7 +193,7 @@ contains
 
         call timer%stop()
 
-        io_spatial = .false.
+        io_spatial = .true.
         if (io_spatial) then
             call timer%report('Spatial Discretization Time')
             call comm_timer%report('    - Spatial comm time:')

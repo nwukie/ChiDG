@@ -49,6 +49,7 @@ contains
         class(sutherlands_law_t), intent(inout)   :: self
 
         call self%set_name('Sutherlands Law')
+        call self%set_dependency('Q-')
 
         call self%add_model_field('Laminar Viscosity')
 

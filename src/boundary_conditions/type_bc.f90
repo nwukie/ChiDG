@@ -18,9 +18,9 @@ module type_bc
 
     !>  Primary boundary condition container.
     !!
-    !!  - contains a bc_family;             defining a general classification for the bc
-    !!  - contains a bc_patch;              defining the bc geometry
-    !!  - contains an array of bc_state's;  defining the solution state computed by the bc
+    !!      : contains a bc_family;             defining a general classification for the bc
+    !!      : contains a bc_patch;              defining the bc geometry
+    !!      : contains an array of bc_state's;  defining the solution state computed by the bc
     !!
     !!  Convention is that a given bc_t will exists in an array of bc_t's. Maybe something
     !!  like:
@@ -31,8 +31,15 @@ module type_bc
     !!  in such an array. In this way, the bc_t knows where it is located and can inform
     !!  other entities about where it is located.
     !!
+    !!  If some other component has a BC_ID, they can access the particular boundary condition
+    !!  associated with that identifier with:
+    !!
+    !!      bcs(BC_ID)
+    !!
+    !!
     !!  bc_family may be:
     !!      'Wall', 'Inlet', 'Outlet', 'Symmetry', 'Periodic', 'Farfield', 'Scalar'
+    !!
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
@@ -53,26 +60,25 @@ module type_bc
         ! Boundary condition patch
         type(bc_patch_t)                        :: bc_patch
 
-        ! Boundary condition state
+        ! Boundary condition function group
         class(bc_state_wrapper_t),  allocatable :: bc_state(:)
 
     contains
 
-        procedure           :: init_bc              !< Main boundary condition initialization routine.
+        procedure           :: init_bc              ! Main boundary condition initialization routine.
 
-        procedure           :: init_bc_group        !< Initialize boundary condition group
-        procedure           :: init_bc_patch        !< Initialize boundary condition patch
-        procedure, private  :: init_bc_spec         !< Optional User-specialized initialization routine.
-        procedure, private  :: init_bc_coupling     !< Initialize coupling interaction between bc elements.
+        procedure           :: init_bc_group        ! Initialize boundary condition group
+        procedure           :: init_bc_patch        ! Initialize boundary condition patch
+        procedure, private  :: init_bc_specialized  ! Optional User-specialized initialization routine.
+        procedure, private  :: init_bc_coupling     ! Initialize coupling interaction between bc elements.
 
 
 
-        procedure   :: set_family           !< Set the boundary condition family.
-        procedure   :: get_family           !< Return the boundary condition family.
+        procedure   :: add_bc_state         ! Add a bc_state function to the boundary condition.
 
-        procedure   :: add_bc_state         !< Add a bc_state function to the boundary condition.
-
-        procedure   :: get_ncoupled_elems   !< Return the number of elements coupled with a specified boundary element.
+        procedure   :: set_family           ! Set the boundary condition family.
+        procedure   :: get_family           ! Return the boundary condition family.
+        procedure   :: get_ncoupled_elems   ! Return the number of elements coupled with a specified boundary element.
 
 
     end type bc_t
@@ -99,13 +105,13 @@ contains
     !!  @date   6/10/2016
     !!
     !!  @param[inout]   mesh            mesh_t object containing elements and faces
-    !!  @param[in]      bconnectivity   Connectivity information for faces defining a boundary condition
+    !!  @param[in]      bc_connectivity Connectivity information for faces defining a boundary condition
     !!
     !---------------------------------------------------------------------------------------------------
-    subroutine init_bc(self,mesh,bconnectivity,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
+    subroutine init_bc(self,mesh,bc_connectivity,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
         class(bc_t),                    intent(inout)           :: self
         type(mesh_t),                   intent(inout)           :: mesh
-        type(boundary_connectivity_t),  intent(in)              :: bconnectivity
+        type(boundary_connectivity_t),  intent(in)              :: bc_connectivity
         character(*),                   intent(in)              :: bc_group
         type(bc_group_t),               intent(in)              :: bc_groups(:)
         class(bc_state_t),              intent(in), optional    :: bc_wall
@@ -120,14 +126,14 @@ contains
         !
         ! Boundary condition group initialization
         !
-        call self%init_bc_group(mesh,bconnectivity,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
+        call self%init_bc_group(bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
 
 
 
         !
         ! Boundary condition patch initialization
         !
-        call self%init_bc_patch(mesh,bconnectivity,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
+        call self%init_bc_patch(mesh,bc_connectivity)
 
 
     end subroutine init_bc
@@ -148,10 +154,8 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------------
-    subroutine init_bc_group(self,mesh,bconnectivity,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
+    subroutine init_bc_group(self,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
         class(bc_t),                    intent(inout)           :: self
-        type(mesh_t),                   intent(inout)           :: mesh
-        type(boundary_connectivity_t),  intent(in)              :: bconnectivity
         character(*),                   intent(in)              :: bc_group
         type(bc_group_t),               intent(in)              :: bc_groups(:)
         class(bc_state_t),              intent(in), optional    :: bc_wall
@@ -187,7 +191,7 @@ contains
 
                 
                 !
-                ! Set default boundary condition states if they were pass in:
+                ! Set default boundary condition states if they were passed in:
                 !
                 if ( present(bc_wall) .and. (trim(bc_groups(igroup)%family) == 'Wall') ) then
                     if (allocated(bc_state)) deallocate(bc_state)
@@ -279,27 +283,19 @@ contains
     !!  @date   11/19/2016
     !!
     !----------------------------------------------------------------------------------------------------
-    subroutine init_bc_patch(self,mesh,bconnectivity,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
+    subroutine init_bc_patch(self,mesh,bc_connectivity)
         class(bc_t),                    intent(inout)           :: self
         type(mesh_t),                   intent(inout)           :: mesh
-        type(boundary_connectivity_t),  intent(in)              :: bconnectivity
-        character(*),                   intent(in)              :: bc_group
-        type(bc_group_t),               intent(in)              :: bc_groups(:)
-        class(bc_state_t),              intent(in), optional    :: bc_wall
-        class(bc_state_t),              intent(in), optional    :: bc_inlet
-        class(bc_state_t),              intent(in), optional    :: bc_outlet
-        class(bc_state_t),              intent(in), optional    :: bc_symmetry
-        class(bc_state_t),              intent(in), optional    :: bc_farfield
-        class(bc_state_t),              intent(in), optional    :: bc_periodic
+        type(boundary_connectivity_t),  intent(in)              :: bc_connectivity
 
 
-        type(point_t)                   :: pnt, point_one, point_two, point_three
-        character(len=:),   allocatable :: bcname, user_msg
-        real(rk)                        :: time, x, y, z
-        integer(ik)                     :: nelem_xi, nelem_eta, nelem_zeta, nelem_bc, ielem_bc,         & 
-                                           xi_begin, eta_begin, zeta_begin, xi_end, eta_end, zeta_end,  & 
-                                           ixi, ieta, izeta, ierr, ielem, ielem_test, nface_nodes,      &
-                                           iface, inode, i, nfaces_bc, iface_bc, BC_face, ncoupled_elements
+        type(point_t)               :: pnt, point_one, point_two, point_three
+        character(:),   allocatable :: bcname, user_msg
+        real(rk)                    :: time, x, y, z
+        integer(ik)                 :: nelem_xi, nelem_eta, nelem_zeta, nelem_bc, ielem_bc,         & 
+                                       xi_begin, eta_begin, zeta_begin, xi_end, eta_end, zeta_end,  & 
+                                       ixi, ieta, izeta, ierr, ielem, ielem_test, nface_nodes,      &
+                                       iface, inode, i, nfaces_bc, iface_bc, BC_face, ncoupled_elements
 
         logical,        allocatable :: node_matched(:), xi_face, eta_face, zeta_face
         integer(ik),    allocatable :: element_nodes(:)
@@ -309,7 +305,7 @@ contains
         !
         ! Get number of elements/faces associated with boundary condition.
         !
-        nelem_bc = bconnectivity%get_nfaces()
+        nelem_bc = bc_connectivity%get_nfaces()
 
 
         !
@@ -317,11 +313,11 @@ contains
         !
         ! Find owner element, determine iface
         !
-        nelem_bc = bconnectivity%get_nfaces()
+        nelem_bc = bc_connectivity%get_nfaces()
         iface_bc = 0
         do ielem_bc = 1,nelem_bc
 
-            nface_nodes = size(bconnectivity%data(ielem_bc)%data)
+            nface_nodes = size(bc_connectivity%data(ielem_bc)%data)
             if ( allocated(node_matched) ) deallocate(node_matched)
             allocate(node_matched(nface_nodes), stat=ierr)
             if (ierr /= 0) call AllocationError
@@ -337,7 +333,7 @@ contains
                 node_matched = .false.
                 do inode = 1,nface_nodes
                     element_nodes = mesh%elems(ielem)%connectivity%get_element_nodes()
-                    face_node     = bconnectivity%data(ielem_bc)%get_face_node(inode)
+                    face_node     = bc_connectivity%data(ielem_bc)%get_face_node(inode)
                     if ( any(element_nodes == face_node) ) then
                         node_matched(inode) = .true.
                     end if
@@ -355,22 +351,22 @@ contains
                     !
                     ! Get xi,eta,zeta for three points, defining a face
                     !
-                    x = mesh%nodes(bconnectivity%data(ielem_bc)%data(1))%c1_
-                    y = mesh%nodes(bconnectivity%data(ielem_bc)%data(1))%c2_
-                    z = mesh%nodes(bconnectivity%data(ielem_bc)%data(1))%c3_
+                    x = mesh%nodes(bc_connectivity%data(ielem_bc)%data(1))%c1_
+                    y = mesh%nodes(bc_connectivity%data(ielem_bc)%data(1))%c2_
+                    z = mesh%nodes(bc_connectivity%data(ielem_bc)%data(1))%c3_
                     point_one = mesh%elems(ielem)%computational_point(x,y,z)
                     
 
-                    x = mesh%nodes(bconnectivity%data(ielem_bc)%data(2))%c1_
-                    y = mesh%nodes(bconnectivity%data(ielem_bc)%data(2))%c2_
-                    z = mesh%nodes(bconnectivity%data(ielem_bc)%data(2))%c3_
+                    x = mesh%nodes(bc_connectivity%data(ielem_bc)%data(2))%c1_
+                    y = mesh%nodes(bc_connectivity%data(ielem_bc)%data(2))%c2_
+                    z = mesh%nodes(bc_connectivity%data(ielem_bc)%data(2))%c3_
                     point_two = mesh%elems(ielem)%computational_point(x,y,z)
 
 
 
-                    x = mesh%nodes(bconnectivity%data(ielem_bc)%data(nface_nodes))%c1_
-                    y = mesh%nodes(bconnectivity%data(ielem_bc)%data(nface_nodes))%c2_
-                    z = mesh%nodes(bconnectivity%data(ielem_bc)%data(nface_nodes))%c3_
+                    x = mesh%nodes(bc_connectivity%data(ielem_bc)%data(nface_nodes))%c1_
+                    y = mesh%nodes(bc_connectivity%data(ielem_bc)%data(nface_nodes))%c2_
+                    z = mesh%nodes(bc_connectivity%data(ielem_bc)%data(nface_nodes))%c3_
                     point_three = mesh%elems(ielem)%computational_point(x,y,z)
 
                     ! Check to make sure the computational point coordinates were all valid and found.
@@ -432,30 +428,22 @@ contains
                     ! Set face type - 'ftype'
                     !
                     if ( self%get_family() == 'Periodic' ) then
-                        !
+
                         ! Set to ORPHAN face so it will be recognized as chimera in the detection process.
-                        !
                         mesh%faces(ielem,iface)%ftype = ORPHAN
 
-                        !
-                        ! Set periodic offset from boundary condition to the face. To be used in detection of gq_donor.
-                        !
-                        if ( self%bc_state(1)%state%bcproperties%compute('type', time, pnt) == ONE ) then
-                            mesh%faces(ielem,iface)%periodic_type = 'cartesian'
-                        else if ( self%bc_state(1)%state%bcproperties%compute('type', time, pnt) == TWO ) then
-                            mesh%faces(ielem,iface)%periodic_type = 'cylindrical'
-                        end if
-
                         ! time, pnt do nothing here, but interface for function requires them.
-                        mesh%faces(ielem,iface)%chimera_offset_x     = self%bc_state(1)%state%bcproperties%compute('offset_x',     time, pnt)
-                        mesh%faces(ielem,iface)%chimera_offset_y     = self%bc_state(1)%state%bcproperties%compute('offset_y',     time, pnt)
-                        mesh%faces(ielem,iface)%chimera_offset_z     = self%bc_state(1)%state%bcproperties%compute('offset_z',     time, pnt)
-                        mesh%faces(ielem,iface)%chimera_offset_theta = self%bc_state(1)%state%bcproperties%compute('offset_theta', time, pnt)
+                        mesh%faces(ielem,iface)%periodic_offset  = .true.
+                        mesh%faces(ielem,iface)%chimera_offset_1 = self%bc_state(1)%state%bcproperties%compute('Offset-1',time,pnt)
+                        mesh%faces(ielem,iface)%chimera_offset_2 = self%bc_state(1)%state%bcproperties%compute('Offset-2',time,pnt)
+                        mesh%faces(ielem,iface)%chimera_offset_3 = self%bc_state(1)%state%bcproperties%compute('Offset-3',time,pnt)
 
                     else if ( allocated(self%bc_state) .and. (.not. self%get_family() == 'Periodic') ) then
                         mesh%faces(ielem,iface)%ftype = BOUNDARY
+
                     else
                         mesh%faces(ielem,iface)%ftype = ORPHAN
+
                     end if
 
 
@@ -477,13 +465,13 @@ contains
         !
         ! Call user-specialized boundary condition initialization
         !
-        call self%init_bc_spec(mesh)
+        call self%init_bc_specialized(mesh)
 
 
         !
         ! Call user-specialized boundary coupling initialization
         !
-        call self%init_bc_coupling(mesh,self%bc_patch)
+        call self%init_bc_coupling(mesh)
 
 
 
@@ -521,24 +509,35 @@ contains
 
 
 
-    !>  Default specialized initialization procedure. This is called from the base bc%init procedure
-    !!  and can be overwritten by derived types to implement specialized initiailization details.
+    !>  Call init_bc_specialized for all bc_state_t objects that have been attached to the 
+    !!  boundary condition.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   1/31/2016
     !!
     !!  @param[inout]   mesh        mesh_t object containing elements and faces
-    !!  @param[in]      iface       block face index to which the boundary condition is being applied
     !!
     !----------------------------------------------------------------------------------------------
-    subroutine init_bc_spec(self,mesh)
+    subroutine init_bc_specialized(self,mesh)
         class(bc_t),    intent(inout)   :: self
         type(mesh_t),   intent(inout)   :: mesh
 
 
+        integer(ik) :: iop
+
+        !
+        ! Have bc_operators initialize the boundary condition coupling
+        !
+        if (allocated(self%bc_state)) then
+            do iop = 1,size(self%bc_state)
+
+                call self%bc_state(iop)%state%init_bc_specialized(mesh,self%bc_patch)
+
+            end do !iop
+        end if
 
 
-    end subroutine init_bc_spec
+    end subroutine init_bc_specialized
     !**********************************************************************************************
 
 
@@ -561,10 +560,9 @@ contains
     !!  @date   2/16/2016
     !!
     !----------------------------------------------------------------------------------------------
-    subroutine init_bc_coupling(self,mesh,bc_patch)
+    subroutine init_bc_coupling(self,mesh)
         class(bc_t),        intent(inout)   :: self
         type(mesh_t),       intent(in)      :: mesh
-        type(bc_patch_t),   intent(inout)   :: bc_patch
 
         integer(ik) :: iop
 
@@ -574,7 +572,7 @@ contains
         if (allocated(self%bc_state)) then
             do iop = 1,size(self%bc_state)
 
-                call self%bc_state(iop)%state%init_bc_coupling(mesh,bc_patch)
+                call self%bc_state(iop)%state%init_bc_coupling(mesh,self%bc_patch)
 
             end do !iop
         end if

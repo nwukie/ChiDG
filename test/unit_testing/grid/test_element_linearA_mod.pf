@@ -14,21 +14,25 @@ module test_element_linearA_mod
     public  :: test_element_linearA
 
 
-    @TestCase
     !>
     !!
     !!  @author Nathan A. Wukie
     !!
     !!
     !--------------------------------------------------------------------------
+    @TestCase
     type, extends(TestCase) ::  test_element_linearA
+
         type(chidg_t)               :: chidg
         type(element_t)             :: elem
         type(face_t),   allocatable :: faces(:)
         type(point_t),  allocatable :: nodes(:)
+
     contains
+
         procedure   ::  setUp
         procedure   ::  tearDown
+
     end type test_element_linearA
     !***************************************************************************
 
@@ -48,29 +52,32 @@ contains
         integer(ik), parameter          :: npt = 8
         type(point_t)                   :: nodes(npt)
         type(element_connectivity_t)    :: connectivity
-        integer(ik)                     :: ftype, mapping, ielem, idomain, spacedim, ntime, neqns, nterms_s, &
-                                           ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g,      &
-                                           ineighbor_element_l, ineighbor_face, ineighbor_proc,              &
+        integer(ik)                     :: ftype, mapping, ielem, idomain, spacedim,    &
+                                           ntime, neqns, nterms_s,                      &
+                                           ineighbor_domain_g,  ineighbor_domain_l,     &
+                                           ineighbor_element_g, ineighbor_element_l,    &
+                                           ineighbor_face, ineighbor_proc,              &
                                            ineighbor_neqns, ineighbor_nterms_s
         
         
-        gq_rule = 1 !> Set collocation quadrature for testing coordinates at quadrature points
+        ! Set collocation quadrature for testing coordinates at quadrature nodes
+        gq_rule = 1
         
         
         call this%chidg%start_up('core')
         allocate(this%faces(6))
         
-        !> (x = 0-5 :: y = 0-1 :: z = 0-1)
-        !!          *------*
-        !!         /      /|
-        !!    x=5 /      / |
-        !!       /      /  *
-        !!      *------*  /
-        !!      |      | /
-        !!  z=1 |      |/
-        !!      *------*
-        !!         y=1
-        !!
+        ! (x = 0-5 :: y = 0-1 :: z = 0-1)
+        !          *------*
+        !         /      /|
+        !    x=5 /      / |
+        !       /      /  *
+        !      *------*  /
+        !      |      | /
+        !  z=1 |      |/
+        !      *------*
+        !         y=1
+        !
         call nodes(1)%set(0._rk, 0._rk, 0._rk)
         call nodes(2)%set(5._rk, 0._rk, 0._rk)
         call nodes(3)%set(0._rk, 1._rk, 0._rk)
@@ -88,18 +95,22 @@ contains
         call connectivity%set_element_nodes([1, 2, 3, 4, 5, 6, 7, 8])
         
         
-        !> Initialize Element geometry and Numerics
+        !
+        ! Initialize Element geometry and Numerics
+        !
         spacedim = 3
         idomain  = 1
         ielem    = 1
         neqns    = 2
         nterms_s = 8
         ntime    = 1
-        call this%elem%init_geom(spacedim,nodes,connectivity,idomain,ielem)
+        call this%elem%init_geom(spacedim,nodes,connectivity,idomain,ielem,'Cartesian')
         call this%elem%init_sol(neqns,nterms_s,ntime)
         
         
-        !> Initialize face geometries
+        !
+        ! Initialize face geometries
+        !
         call this%faces(XI_MIN)%init_geom(XI_MIN,this%elem)
         call this%faces(XI_MAX)%init_geom(XI_MAX,this%elem)
         call this%faces(ETA_MIN)%init_geom(ETA_MIN,this%elem)
@@ -107,7 +118,10 @@ contains
         call this%faces(ZETA_MIN)%init_geom(ZETA_MIN,this%elem)
         call this%faces(ZETA_MAX)%init_geom(ZETA_MAX,this%elem)
 
-        !> Initialize face neighbors
+        
+        !
+        ! Initialize face neighbors
+        !
         ftype = 0
         ineighbor_domain_g  = 0
         ineighbor_domain_l  = 0
@@ -119,22 +133,28 @@ contains
         ineighbor_proc      = 0
         call this%faces(XI_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,      &
                                                     ineighbor_element_g,ineighbor_element_l,    &
-                                                    ineighbor_face,ineighbor_neqns,ineighbor_nterms_s,ineighbor_proc)
+                                                    ineighbor_face,ineighbor_neqns,             &
+                                                    ineighbor_nterms_s,ineighbor_proc)
         call this%faces(XI_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,      &
                                                     ineighbor_element_g,ineighbor_element_l,    &
-                                                    ineighbor_face,ineighbor_neqns,ineighbor_nterms_s,ineighbor_proc)
+                                                    ineighbor_face,ineighbor_neqns,             &
+                                                    ineighbor_nterms_s,ineighbor_proc)
         call this%faces(ETA_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,     &
                                                      ineighbor_element_g,ineighbor_element_l,   &
-                                                     ineighbor_face,ineighbor_neqns,ineighbor_nterms_s,ineighbor_proc)
+                                                     ineighbor_face,ineighbor_neqns,            &
+                                                     ineighbor_nterms_s,ineighbor_proc)
         call this%faces(ETA_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,     &
                                                      ineighbor_element_g,ineighbor_element_l,   &
-                                                     ineighbor_face,ineighbor_neqns,ineighbor_nterms_s,ineighbor_proc)
+                                                     ineighbor_face,ineighbor_neqns,            &
+                                                     ineighbor_nterms_s,ineighbor_proc)
         call this%faces(ZETA_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,    &
                                                       ineighbor_element_g,ineighbor_element_l,  &
-                                                      ineighbor_face,ineighbor_neqns,ineighbor_nterms_s,ineighbor_proc)
+                                                      ineighbor_face,ineighbor_neqns,           &
+                                                      ineighbor_nterms_s,ineighbor_proc)
         call this%faces(ZETA_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,    &
                                                       ineighbor_element_g,ineighbor_element_l,  &
-                                                      ineighbor_face,ineighbor_neqns,ineighbor_nterms_s,ineighbor_proc)
+                                                      ineighbor_face,ineighbor_neqns,           &
+                                                      ineighbor_nterms_s,ineighbor_proc)
 
         
         call this%faces(XI_MIN)%init_sol(this%elem)
@@ -143,6 +163,7 @@ contains
         call this%faces(ETA_MAX)%init_sol(this%elem)
         call this%faces(ZETA_MIN)%init_sol(this%elem)
         call this%faces(ZETA_MAX)%init_sol(this%elem)
+
     end subroutine setUp
     !************************************************************************************
     
@@ -174,6 +195,7 @@ contains
     @Test
     subroutine testElement_metric(self)
         class(test_element_linearA),    intent(inout)   :: self
+
         real(rk)    :: test_metric(3,3,self%elem%gq%vol%nnodes)
         
         test_metric(1,1,:) = 0.25_rk
@@ -204,19 +226,21 @@ contains
         
         test_jinv = 0.625_rk
         @assertEqual(test_jinv,self%elem%jinv)
+
     end subroutine testElement_jinv
     !****************************************************************************************
 
     
 
-    @Test
     !> Test mass matrix entries
     !!
     !!
     !!
     !!---------------------------------------------------------------------------------------
+    @Test
     subroutine testElement_mass(self)
         class(test_element_linearA),    intent(inout)   :: self
+
         real(rk)    :: test_mass(self%elem%nterms_s,self%elem%nterms_s)
         real(rk)    :: tol
         
@@ -250,7 +274,7 @@ contains
     @Test
     subroutine testElement_volume(self)
         class(test_element_linearA),    intent(inout)   :: self
-        real(rk)    :: test_mass(self%elem%nterms_s,self%elem%nterms_s)
+
         real(rk)    :: tol
         
         tol = 1.e-14_rk
@@ -261,11 +285,11 @@ contains
     !*****************************************************************************************
 
 
-    @Test
     !> Test cartesian coordinate values at quadrature nodes
     !!
     !!
     !-----------------------------------------------------------------------------------------
+    @Test
     subroutine testElement_quadpts(self)
         class(test_element_linearA),    intent(inout)   :: self
         real(rk), dimension(self%elem%gq%vol%nnodes)    :: test_x, test_y, test_z
@@ -284,6 +308,7 @@ contains
         @assertEqual(test_x,self%elem%quad_pts(:)%c1_)
         @assertEqual(test_y,self%elem%quad_pts(:)%c2_)
         @assertEqual(test_z,self%elem%quad_pts(:)%c3_)
+
     end subroutine testElement_quadpts
     !*******************************************************************************************
 
@@ -298,7 +323,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     @Test
-    subroutine testElement_ddx(self)
+    subroutine testElement_grad1(self)
         class(test_element_linearA),    intent(inout)   :: self
         real(rk), dimension(self%elem%gq%vol%nnodes, 8) :: test
         real(rk), dimension(self%elem%gq%vol%nnodes)    :: xi, eta, zeta
@@ -313,16 +338,18 @@ contains
         
         
         
-        test(:,1) = ZERO                !> Mode 1
-        test(:,2) = ZERO                !> Mode 2
-        test(:,3) = ZERO                !> Mode 3
-        test(:,4) = 0.4_rk              !> Mode 4
-        test(:,5) = 0.4_rk * eta        !> Mode 5
-        test(:,6) = 0.4_rk * zeta       !> Mode 6
-        test(:,7) = ZERO                !> Mode 7
-        test(:,8) = 0.4_rk * eta * zeta !> Mode 8
-        @assertEqual(test,self%elem%ddx,tol)
-    end subroutine
+        test(:,1) = ZERO                    ! Mode 1
+        test(:,2) = ZERO                    ! Mode 2
+        test(:,3) = ZERO                    ! Mode 3
+        test(:,4) = 0.4_rk                  ! Mode 4
+        test(:,5) = 0.4_rk * eta            ! Mode 5
+        test(:,6) = 0.4_rk * zeta           ! Mode 6
+        test(:,7) = ZERO                    ! Mode 7
+        test(:,8) = 0.4_rk * eta * zeta     ! Mode 8
+
+        @assertEqual(test,self%elem%grad1,tol)
+
+    end subroutine testElement_grad1
     !*******************************************************************************************
 
 
@@ -334,7 +361,44 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     @Test
-    subroutine testElement_ddy(self)
+    subroutine testElement_grad2(self)
+       class(test_element_linearA),    intent(inout)   :: self
+       real(rk), dimension(self%elem%gq%vol%nnodes, 8) :: test
+       real(rk), dimension(self%elem%gq%vol%nnodes)    :: xi, eta, zeta
+       
+       real(rk) :: tol
+       
+       tol = 1.e-14_rk
+       
+       xi   = self%elem%gq%vol%nodes(:)%c1_
+       eta  = self%elem%gq%vol%nodes(:)%c2_
+       zeta = self%elem%gq%vol%nodes(:)%c3_
+       
+       
+       test(:,1) = ZERO                ! Mode 1
+       test(:,2) = TWO                 ! Mode 2
+       test(:,3) = ZERO                ! Mode 3
+       test(:,4) = ZERO                ! Mode 4
+       test(:,5) = TWO * xi            ! Mode 5
+       test(:,6) = ZERO                ! Mode 6
+       test(:,7) = TWO * zeta          ! Mode 7
+       test(:,8) = TWO * xi * zeta     ! Mode 8
+
+       @assertEqual(test,self%elem%grad2,tol)
+
+    end subroutine testElement_grad2
+    !*******************************************************************************************
+
+
+
+
+
+    !> Test cartesian gradient matrices
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    @Test
+    subroutine testElement_grad3(self)
        class(test_element_linearA),    intent(inout)   :: self
        real(rk), dimension(self%elem%gq%vol%nnodes, 8) :: test
        real(rk), dimension(self%elem%gq%vol%nnodes)    :: xi, eta, zeta
@@ -349,53 +413,18 @@ contains
        
        
        
-       test(:,1) = ZERO                !> Mode 1
-       test(:,2) = TWO                 !> Mode 2
-       test(:,3) = ZERO                !> Mode 3
-       test(:,4) = ZERO                !> Mode 4
-       test(:,5) = TWO * xi            !> Mode 5
-       test(:,6) = ZERO                !> Mode 6
-       test(:,7) = TWO * zeta          !> Mode 7
-       test(:,8) = TWO * xi * zeta     !> Mode 8
-       @assertEqual(test,self%elem%ddy,tol)
-    end subroutine
-    !*******************************************************************************************
+       test(:,1) = ZERO                ! Mode 1
+       test(:,2) = ZERO                ! Mode 2
+       test(:,3) = TWO                 ! Mode 3
+       test(:,4) = ZERO                ! Mode 4
+       test(:,5) = ZERO                ! Mode 5
+       test(:,6) = TWO * xi            ! Mode 6
+       test(:,7) = TWO * eta           ! Mode 7
+       test(:,8) = TWO * xi * eta      ! Mode 8
 
-
-
-
-
-    !> Test cartesian gradient matrices
-    !!
-    !!
-    !------------------------------------------------------------------------------------------
-    @Test
-    subroutine testElement_ddz(self)
-       class(test_element_linearA),    intent(inout)   :: self
-       real(rk), dimension(self%elem%gq%vol%nnodes, 8) :: test
-       real(rk), dimension(self%elem%gq%vol%nnodes)    :: xi, eta, zeta
+       @assertEqual(test,self%elem%grad3,tol)
        
-       real(rk) :: tol
-       
-       tol = 1.e-14_rk
-       
-       xi   = self%elem%gq%vol%nodes(:)%c1_
-       eta  = self%elem%gq%vol%nodes(:)%c2_
-       zeta = self%elem%gq%vol%nodes(:)%c3_
-       
-       
-       
-       test(:,1) = ZERO                !> Mode 1
-       test(:,2) = ZERO                !> Mode 2
-       test(:,3) = TWO                 !> Mode 3
-       test(:,4) = ZERO                !> Mode 4
-       test(:,5) = ZERO                !> Mode 5
-       test(:,6) = TWO * xi            !> Mode 6
-       test(:,7) = TWO * eta           !> Mode 7
-       test(:,8) = TWO * xi * eta      !> Mode 8
-       @assertEqual(test,self%elem%ddz,tol)
-       
-    end subroutine
+    end subroutine testElement_grad3
     !*******************************************************************************************
 
 
@@ -442,6 +471,7 @@ contains
         @assertEqual(test_metric,self%faces(ETA_MAX)%metric,tol)
         @assertEqual(test_metric,self%faces(ZETA_MIN)%metric,tol)
         @assertEqual(test_metric,self%faces(ZETA_MAX)%metric,tol)
+
     end subroutine testElement_face_metrics
     !*******************************************************************************************
 
@@ -666,18 +696,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 !------------------------------------------------------------------------------
 !      element%mesh_point, element%solution_point, element%metric_point, element%computational_point
 !------------------------------------------------------------------------------
@@ -695,8 +713,8 @@ contains
         integer(ik)             :: icoord, ipt
                         
 
-        xi = [-1.0_rk, -0.5_rk, 0.5_rk, 1.0_rk, 0.5_rk]
-        eta = [-ONE, -ONE, -ONE, -ONE, ZERO]
+        xi   = [-1.0_rk, -0.5_rk, 0.5_rk, 1.0_rk, 0.5_rk]
+        eta  = [-ONE, -ONE, -ONE, -ONE, ZERO]
         zeta = [-ONE, -ONE, -ONE, -ONE, ZERO] 
 
         ref_coords = [ZERO, 1.25_rk, 3.75_rk, 5._rk, 3.75_rk]
@@ -709,7 +727,7 @@ contains
 
         @assertEqual(ref_coords,check_coords)
 
-    end subroutine
+    end subroutine test__mesh_point__x
     !*******************************************************************************************
 
 
@@ -742,7 +760,7 @@ contains
 
         @assertEqual(ref_coords,check_coords)
 
-    end subroutine
+    end subroutine test__mesh_point__y
     !*******************************************************************************************
 
 
@@ -775,7 +793,7 @@ contains
 
         @assertEqual(ref_coords,check_coords)
 
-    end subroutine
+    end subroutine test__mesh_point__z
     !*******************************************************************************************
 
 

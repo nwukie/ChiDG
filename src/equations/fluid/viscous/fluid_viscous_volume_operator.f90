@@ -51,17 +51,17 @@ contains
         class(fluid_viscous_volume_operator_t),   intent(inout)      :: self
 
         ! Set operator name
-        call self%set_name("Fluid Viscous Volume Operator")
+        call self%set_name('Fluid Viscous Volume Operator')
 
         ! Set operator type
-        call self%set_operator_type("Volume Diffusive Operator")
+        call self%set_operator_type('Volume Diffusive Operator')
 
         ! Set operator equations
-        call self%add_primary_field("Density"   )
-        call self%add_primary_field("X-Momentum")
-        call self%add_primary_field("Y-Momentum")
-        call self%add_primary_field("Z-Momentum")
-        call self%add_primary_field("Energy"    )
+        call self%add_primary_field('Density'   )
+        call self%add_primary_field('Momentum-1')
+        call self%add_primary_field('Momentum-2')
+        call self%add_primary_field('Momentum-3')
+        call self%add_primary_field('Energy'    )
 
     end subroutine init
     !********************************************************************************
@@ -80,222 +80,131 @@ contains
         type(chidg_worker_t),                   intent(inout)   :: worker
         class(properties_t),                    intent(inout)   :: prop
 
-        type(AD_D), allocatable, dimension(:) ::                                &
-            rho, rhou, rhov, rhow, rhoE, p, T, u, v, w, invrho, mu, lamda, k,   &
-            mu_l, mu_t, lamda_l, lamda_t, k_l, k_t,                             &
-            drho_dx, drhou_dx, drhov_dx, drhow_dx, drhoE_dx,                    &
-            drho_dy, drhou_dy, drhov_dy, drhow_dy, drhoE_dy,                    &
-            drho_dz, drhou_dz, drhov_dz, drhow_dz, drhoE_dz,                    &
-            du_dx,   dv_dx,    dw_dx,    dT_dx,                                 &
-            du_dy,   dv_dy,    dw_dy,    dT_dy,                                 &
-            du_dz,   dv_dz,    dw_dz,    dT_dz,                                 &
-            du_drho, du_drhou, dv_drho,  dv_drhov, dw_drho, dw_drhow,           &
-            dT_drho, dT_drhou, dT_drhov, dT_drhow, dT_drhoE,                    &
-            dp_drho, dp_drhou, dp_drhov, dp_drhow, dp_drhoE,                    &
-            dke_drho, dke_drhou, dke_drhov, dke_drhow,                          &
-            tau_xx, tau_yy, tau_zz, tau_xy, tau_xz, tau_yz,                     &
-            flux_x, flux_y, flux_z, eps
+        type(AD_D), allocatable, dimension(:) ::    &
+            density, mom1, mom2, mom3, energy,      &
+            u, v, w, invdensity,                    &
+            grad1_T, grad2_T, grad3_T,              &
+            k,       k_l,     k_t,                  &
+            tau_11, tau_22, tau_33,                 &
+            tau_12, tau_13, tau_23,                 &
+            flux_1, flux_2, flux_3
 
-        real(rk)    :: const, gam
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho  = worker%get_primary_field_element("Density"   ,'value')
-        rhou = worker%get_primary_field_element("X-Momentum",'value')
-        rhov = worker%get_primary_field_element("Y-Momentum",'value')
-        rhow = worker%get_primary_field_element("Z-Momentum",'value')
-        rhoE = worker%get_primary_field_element("Energy"    ,'value')
-
-
+        density = worker%get_primary_field_element('Density'   ,'value')
+        mom1    = worker%get_primary_field_element('Momentum-1','value')
+        mom2    = worker%get_primary_field_element('Momentum-2','value')
+        mom3    = worker%get_primary_field_element('Momentum-3','value')
+        energy  = worker%get_primary_field_element('Energy'    ,'value')
 
 
         !
-        ! Interpolate solution gradients to quadrature nodes
+        ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
-        drho_dx  = worker%get_primary_field_element("Density"   ,'ddx+lift')
-        drho_dy  = worker%get_primary_field_element("Density"   ,'ddy+lift')
-        drho_dz  = worker%get_primary_field_element("Density"   ,'ddz+lift')
-
-        drhou_dx = worker%get_primary_field_element("X-Momentum",'ddx+lift')
-        drhou_dy = worker%get_primary_field_element("X-Momentum",'ddy+lift')
-        drhou_dz = worker%get_primary_field_element("X-Momentum",'ddz+lift')
-
-        drhov_dx = worker%get_primary_field_element("Y-Momentum",'ddx+lift')
-        drhov_dy = worker%get_primary_field_element("Y-Momentum",'ddy+lift')
-        drhov_dz = worker%get_primary_field_element("Y-Momentum",'ddz+lift')
-
-        drhow_dx = worker%get_primary_field_element("Z-Momentum",'ddx+lift')
-        drhow_dy = worker%get_primary_field_element("Z-Momentum",'ddy+lift')
-        drhow_dz = worker%get_primary_field_element("Z-Momentum",'ddz+lift')
-
-        drhoE_dx = worker%get_primary_field_element("Energy"    ,'ddx+lift')
-        drhoE_dy = worker%get_primary_field_element("Energy"    ,'ddy+lift')
-        drhoE_dz = worker%get_primary_field_element("Energy"    ,'ddz+lift')
-
+        if (worker%coordinate_system() == 'Cylindrical') then
+            mom2 = mom2 / worker%coordinate('1','volume')
+        end if
 
 
         !
         ! Get Model fields:
-        !   Pressure
-        !   Temperature
-        !   Viscosity
         !   Second Coefficient of Viscosity
         !   Thermal Conductivity
         !
-        p       = worker%get_model_field_element('Pressure',                                  'value')
-        T       = worker%get_model_field_element('Temperature',                               'value')
-        mu_l    = worker%get_model_field_element('Laminar Viscosity',                         'value')
-        mu_t    = worker%get_model_field_element('Turbulent Viscosity',                       'value')
-        lamda_l = worker%get_model_field_element('Second Coefficient of Laminar Viscosity',   'value')
-        lamda_t = worker%get_model_field_element('Second Coefficient of Turbulent Viscosity', 'value')
-        k_l     = worker%get_model_field_element('Laminar Thermal Conductivity',              'value')
-        k_t     = worker%get_model_field_element('Turbulent Thermal Conductivity',            'value')
-        gam = 1.4_rk
+        k_l = worker%get_model_field_element('Laminar Thermal Conductivity',   'value')
+        k_t = worker%get_model_field_element('Turbulent Thermal Conductivity', 'value')
 
 
         !
-        ! Compute effective viscosities, conductivity. Laminar + Turbulent.
+        ! compute effective conductivity. Laminar + Turbulent.
         !
-        mu    = mu_l    + mu_t
-        lamda = lamda_l + lamda_t
-        k     = k_l     + k_t
-
+        k = k_l + k_t
 
 
         !
-        ! Compute velocities
+        ! compute velocities
         !
-        invrho = ONE/rho
-        u = rhou*invrho
-        v = rhov*invrho
-        w = rhow*invrho
-
-
-        !
-        ! Compute velocity jacobians
-        !
-        du_drho  = -invrho*invrho*rhou
-        du_drhou =  invrho
-
-        dv_drho  = -invrho*invrho*rhov
-        dv_drhov =  invrho
-
-        dw_drho  = -invrho*invrho*rhow
-        dw_drhow =  invrho
-
+        invdensity = ONE/density
+        u          = mom1*invdensity
+        v          = mom2*invdensity
+        w          = mom3*invdensity
 
 
         !
-        ! Compute Kinetic Energy Jacobians
+        ! get temperature gradient
         !
-        dke_drho  = -HALF*(u*u + v*v + w*w)
-        dke_drhou = u
-        dke_drhov = v
-        dke_drhow = w
-
-
-        !
-        ! Compute Pressure Jacobians
-        !
-        dp_drho  = -(gam-ONE)*dke_drho
-        dp_drhou = -(gam-ONE)*dke_drhou
-        dp_drhov = -(gam-ONE)*dke_drhov
-        dp_drhow = -(gam-ONE)*dke_drhow
-        dp_drhoE =  dp_drhow    ! Initialize derivatives
-        dp_drhoE =  (gam-ONE)   ! No negative sign
-
-        
-        !
-        ! Compute Temperature Jacobians
-        !
-        const = ONE/287.15_rk
-        dT_drho  = const*invrho*dp_drho  -  const*invrho*invrho*p
-        dT_drhou = const*invrho*dp_drhou
-        dT_drhov = const*invrho*dp_drhov
-        dT_drhow = const*invrho*dp_drhow
-        dT_drhoE = const*invrho*dp_drhoE
-
+        grad1_T = worker%get_model_field_element('Temperature Gradient - 1', 'value')
+        grad2_T = worker%get_model_field_element('Temperature Gradient - 2', 'value')
+        grad3_T = worker%get_model_field_element('Temperature Gradient - 3', 'value')
 
 
         !
-        ! Compute velocity gradients
+        ! get shear stress components
         !
-        du_dx = du_drho*drho_dx  +  du_drhou*drhou_dx
-        du_dy = du_drho*drho_dy  +  du_drhou*drhou_dy
-        du_dz = du_drho*drho_dz  +  du_drhou*drhou_dz
+        tau_11 = worker%get_model_field_element('Shear-11', 'value')
+        tau_22 = worker%get_model_field_element('Shear-22', 'value')
+        tau_33 = worker%get_model_field_element('Shear-33', 'value')
 
-        dv_dx = dv_drho*drho_dx  +  dv_drhov*drhov_dx
-        dv_dy = dv_drho*drho_dy  +  dv_drhov*drhov_dy
-        dv_dz = dv_drho*drho_dz  +  dv_drhov*drhov_dz
-
-        dw_dx = dw_drho*drho_dx  +  dw_drhow*drhow_dx
-        dw_dy = dw_drho*drho_dy  +  dw_drhow*drhow_dy
-        dw_dz = dw_drho*drho_dz  +  dw_drhow*drhow_dz
+        tau_12 = worker%get_model_field_element('Shear-12', 'value')
+        tau_13 = worker%get_model_field_element('Shear-13', 'value')
+        tau_23 = worker%get_model_field_element('Shear-23', 'value')
 
 
+
+
+
+        !----------------------------------
+        !            mass flux
+        !----------------------------------
+
+
+        !----------------------------------
+        !         momentum-1 flux
+        !----------------------------------
+        flux_1 = -tau_11
+        flux_2 = -tau_12
+        flux_3 = -tau_13
+
+        call worker%integrate_volume('Momentum-1',flux_1,flux_2,flux_3)
+
+        !----------------------------------
+        !         momentum-2 flux
+        !----------------------------------
+        flux_1 = -tau_12
+        flux_2 = -tau_22
+        flux_3 = -tau_23
 
         !
-        ! Compute temperature gradient
+        ! Convert to tangential to angular momentum flux
         !
-        dT_dx = dT_drho*drho_dx + dT_drhou*drhou_dx + dT_drhov*drhov_dx + dT_drhow*drhow_dx + dT_drhoE*drhoE_dx
-        dT_dy = dT_drho*drho_dy + dT_drhou*drhou_dy + dT_drhov*drhov_dy + dT_drhow*drhow_dy + dT_drhoE*drhoE_dy
-        dT_dz = dT_drho*drho_dz + dT_drhou*drhou_dz + dT_drhov*drhov_dz + dT_drhow*drhow_dz + dT_drhoE*drhoE_dz
+        if (worker%coordinate_system() == 'Cylindrical') then
+            flux_1 = flux_1 * worker%coordinate('1','volume')
+            flux_2 = flux_2 * worker%coordinate('1','volume')
+            flux_3 = flux_3 * worker%coordinate('1','volume')
+        end if
 
+        call worker%integrate_volume('Momentum-2',flux_1,flux_2,flux_3)
 
-        !
-        ! Compute shear stress components
-        !
-        tau_xx = TWO*mu*du_dx  +  lamda*(du_dx + dv_dy + dw_dz)
-        tau_yy = TWO*mu*dv_dy  +  lamda*(du_dx + dv_dy + dw_dz)
-        tau_zz = TWO*mu*dw_dz  +  lamda*(du_dx + dv_dy + dw_dz)
+        !----------------------------------
+        !         momentum-3 flux
+        !----------------------------------
+        flux_1 = -tau_13
+        flux_2 = -tau_23
+        flux_3 = -tau_33
 
-        tau_xy = mu*(du_dy + dv_dx)
-        tau_xz = mu*(du_dz + dw_dx)
-        tau_yz = mu*(dw_dy + dv_dz)
+        call worker%integrate_volume('Momentum-3',flux_1,flux_2,flux_3)
 
+        !----------------------------------
+        !           energy flux
+        !----------------------------------
+        flux_1 = -k*grad1_T  -  (u*tau_11 + v*tau_12 + w*tau_13)
+        flux_2 = -k*grad2_T  -  (u*tau_12 + v*tau_22 + w*tau_23)
+        flux_3 = -k*grad3_T  -  (u*tau_13 + v*tau_23 + w*tau_33)
 
-
-        !===========================
-        !        MASS FLUX
-        !===========================
-
-        !===========================
-        !     X-MOMENTUM FLUX
-        !===========================
-        flux_x = -tau_xx
-        flux_y = -tau_xy
-        flux_z = -tau_xz
-
-        call worker%integrate_volume('X-Momentum',flux_x,flux_y,flux_z)
-
-        !============================
-        !     Y-MOMENTUM FLUX
-        !============================
-        flux_x = -tau_xy
-        flux_y = -tau_yy
-        flux_z = -tau_yz
-
-        call worker%integrate_volume('Y-Momentum',flux_x,flux_y,flux_z)
-
-        !============================
-        !     Z-MOMENTUM FLUX
-        !============================
-        flux_x = -tau_xz
-        flux_y = -tau_yz
-        flux_z = -tau_zz
-
-        call worker%integrate_volume('Z-Momentum',flux_x,flux_y,flux_z)
-
-        !============================
-        !       ENERGY FLUX
-        !============================
-        flux_x = -k*dT_dx  -  (u*tau_xx + v*tau_xy + w*tau_xz)
-        flux_y = -k*dT_dy  -  (u*tau_xy + v*tau_yy + w*tau_yz)
-        flux_z = -k*dT_dz  -  (u*tau_xz + v*tau_yz + w*tau_zz)
-
-        call worker%integrate_volume('Energy',flux_x,flux_y,flux_z)
+        call worker%integrate_volume('Energy',flux_1,flux_2,flux_3)
 
     end subroutine compute
     !*********************************************************************************************************

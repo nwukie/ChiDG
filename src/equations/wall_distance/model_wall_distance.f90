@@ -50,6 +50,7 @@ contains
         class(wall_distance_m), intent(inout)   :: self
 
         call self%set_name('Wall Distance : p-Poisson Normalization')
+        call self%set_dependency('Q-')
 
         call self%add_model_field('Wall Distance')
 
@@ -73,26 +74,26 @@ contains
         type(chidg_worker_t),       intent(inout)   :: worker
 
         type(AD_D), dimension(:),   allocatable :: &
-            d, dddx, dddy, dddz, d_normalization, mag2, rho
+            d, grad1_d, grad2_d, grad3_d, d_normalization, sumsqr, rho
 
         real(rk) :: p
 
 
         ! Get primary field to initialize derivatives
-        rho  = worker%get_primary_field_general('Density', 'value')
-        d    = rho
-        dddx = rho
-        dddy = rho
-        dddz = rho
+        rho     = worker%get_primary_field_general('Density', 'value')
+        d       = rho
+        grad1_d = rho
+        grad2_d = rho
+        grad3_d = rho
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        d    = worker%get_auxiliary_field_general('Wall Distance : p-Poisson', 'value')
-        dddx = worker%get_auxiliary_field_general('Wall Distance : p-Poisson', 'ddx'  )
-        dddy = worker%get_auxiliary_field_general('Wall Distance : p-Poisson', 'ddy'  )
-        dddz = worker%get_auxiliary_field_general('Wall Distance : p-Poisson', 'ddz'  )
+        d       = worker%get_auxiliary_field_general('Wall Distance : p-Poisson', 'value')
+        grad1_d = worker%get_auxiliary_field_general('Wall Distance : p-Poisson', 'grad1')
+        grad2_d = worker%get_auxiliary_field_general('Wall Distance : p-Poisson', 'grad2')
+        grad3_d = worker%get_auxiliary_field_general('Wall Distance : p-Poisson', 'grad3')
 
 
         !
@@ -100,8 +101,8 @@ contains
         !
         !p = get_p_poisson_parameter()
         p = 6._rk
-        mag2 = dddx*dddx + dddy*dddy + dddz*dddz
-        d_normalization = (((p/(p-ONE))*d) + mag2**(p/TWO))**((p-ONE)/p) - mag2**((p-ONE)/TWO)
+        sumsqr = grad1_d*grad1_d + grad2_d*grad2_d + grad3_d*grad3_d
+        d_normalization = (((p/(p-ONE))*d) + sumsqr**(p/TWO))**((p-ONE)/p) - sumsqr**((p-ONE)/TWO)
 
 
         !

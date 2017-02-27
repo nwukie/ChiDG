@@ -65,7 +65,7 @@ subroutine test_integrate_boundary_unit_constant()
     spacedim = 3
     mapping  = 1
     nterms_c = 8
-    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
+    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection','Cartesian')
 
 
     !
@@ -267,7 +267,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     nterms_c = 8
 
 
-    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
+    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection','Cartesian')
 
 
     !

@@ -131,7 +131,13 @@ contains
 
 
         ! Add domain to ChiDG, initialize
-        call this%chidg%data%add_domain('D_01',meshdata%points,meshdata%connectivity,spacedim,nterms_c,'Scalar Advection')
+        call this%chidg%data%add_domain('D_01',                 &
+                                        meshdata%points,        &
+                                        meshdata%connectivity,  &
+                                        spacedim,               &
+                                        nterms_c,               &
+                                        'Scalar Advection',     &
+                                        'Cartesian')
 
         call this%chidg%set('Solution Order', integer_input=2)
         call this%chidg%init('domains')

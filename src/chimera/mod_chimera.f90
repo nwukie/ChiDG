@@ -18,7 +18,6 @@ module mod_chimera
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: NFACES, ORPHAN, CHIMERA, &
-                                      X_DIR,  Y_DIR,   Z_DIR, &
                                       XI_DIR, ETA_DIR, ZETA_DIR, &
                                       ONE, ZERO, TWO, TWO_DIM, THREE_DIM, &
                                       INVALID_POINT, VALID_POINT, NO_PROC
@@ -211,7 +210,7 @@ contains
 
         real(rk)                :: gq_coords(3), parallel_coords(3), donor_vol, local_vol, parallel_vol
         real(rk), allocatable   :: donor_vols(:)
-        real(rk)                :: offset_x, offset_y, offset_z,                                            &
+        real(rk)                :: offset_1, offset_2, offset_3,                                            &
                                    dxdxi, dxdeta, dxdzeta, dydxi, dydeta, dydzeta, dzdxi, dzdeta, dzdzeta,  &
                                    donor_jinv, parallel_jinv
         real(rk)        :: donor_metric(3,3), parallel_metric(3,3)
@@ -293,11 +292,11 @@ contains
                             !
                             ! Get offset coordinates from face for potential periodic offset.
                             !
-                            call compute_periodic_offset(mesh(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface), gq_node, offset_x, offset_y, offset_z)
+                            call compute_periodic_offset(mesh(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface), gq_node, offset_1, offset_2, offset_3)
 
-                            call gq_node%add_x(offset_x)
-                            call gq_node%add_y(offset_y)
-                            call gq_node%add_z(offset_z)
+                            call gq_node%add_x(offset_1)
+                            call gq_node%add_y(offset_2)
+                            call gq_node%add_z(offset_3)
 
 
                             searching = .true.
@@ -446,15 +445,15 @@ contains
                                 end do
 
                                 ! Compute local metric
-                                dxdxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
-                                dydxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
-                                dzdxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
-                                dxdeta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
-                                dydeta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
-                                dzdeta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
-                                dxdzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
-                                dydzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
-                                dzdzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
+                                dxdxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                                dydxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                                dzdxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                                dxdeta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                                dydeta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                                dzdeta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                                dxdzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                                dydzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                                dzdzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
 
                                 donor_metric(1,1) = dydeta*dzdzeta - dydzeta*dzdeta
                                 donor_metric(2,1) = dydzeta*dzdxi  - dydxi*dzdzeta
@@ -736,15 +735,15 @@ contains
 
 
                             ! Compute metric terms for the point in the donor element
-                            dxdxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
-                            dydxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
-                            dzdxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
-                            dxdeta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
-                            dydeta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
-                            dzdeta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
-                            dxdzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
-                            dydzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
-                            dzdzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_)
+                            dxdxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                            dydxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                            dzdxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                            dxdeta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                            dydeta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                            dzdeta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                            dxdzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                            dydzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                            dzdzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
 
                             parallel_metric(1,1) = dydeta*dzdzeta - dydzeta*dzdeta
                             parallel_metric(2,1) = dydzeta*dzdxi  - dydxi*dzdzeta
@@ -801,9 +800,9 @@ contains
     !!
     !! These matrices get stored in:
     !!      mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator
-    !!      mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_ddx
-    !!      mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_ddy
-    !!      mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_ddz
+    !!      mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_grad1
+    !!      mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_grad2
+    !!      mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_grad3
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -819,7 +818,7 @@ contains
 
         real(rk)        :: jinv, ddxi, ddeta, ddzeta
         real(rk), allocatable, dimension(:,:)   ::  &
-            interpolator, interpolator_ddx, interpolator_ddy, interpolator_ddz, metric
+            interpolator, interpolator_grad1, interpolator_grad2, interpolator_grad3, metric
 
 
 
@@ -855,11 +854,14 @@ contains
                     !
                     ! Allocate interpolator matrix
                     !
-                    if (allocated(interpolator)) deallocate(interpolator, interpolator_ddx, interpolator_ddy, interpolator_ddz)
-                    allocate(interpolator(    npts,donor_nterms_s), &
-                             interpolator_ddx(npts,donor_nterms_s), &
-                             interpolator_ddy(npts,donor_nterms_s), &
-                             interpolator_ddz(npts,donor_nterms_s), stat=ierr)
+                    if (allocated(interpolator)) deallocate(interpolator,       &
+                                                            interpolator_grad1, &
+                                                            interpolator_grad2, &
+                                                            interpolator_grad3)
+                    allocate(interpolator(      npts,donor_nterms_s), &
+                             interpolator_grad1(npts,donor_nterms_s), &
+                             interpolator_grad2(npts,donor_nterms_s), &
+                             interpolator_grad3(npts,donor_nterms_s), stat=ierr)
                     if (ierr /= 0) call AllocationError
 
                     !
@@ -877,7 +879,7 @@ contains
 
                             
                             !
-                            ! Compute derivative interpolators, ddx, ddy, ddz
+                            ! Compute gradient interpolators, grad1, grad2, grad3
                             !
                             ddxi   = DPolynomialVal(spacedim,donor_nterms_s,iterm,node,XI_DIR  )
                             ddeta  = DPolynomialVal(spacedim,donor_nterms_s,iterm,node,ETA_DIR )
@@ -888,15 +890,15 @@ contains
                             jinv   = mesh(idom)%chimera%recv%data(ChiID)%donor_jinv(idonor)%at(ipt)
 
                             ! Compute cartesian derivative interpolator for gq node
-                            interpolator_ddx(ipt,iterm) = metric(1,1) * ddxi   * (ONE/jinv) + &
-                                                          metric(2,1) * ddeta  * (ONE/jinv) + &
-                                                          metric(3,1) * ddzeta * (ONE/jinv)
-                            interpolator_ddy(ipt,iterm) = metric(1,2) * ddxi   * (ONE/jinv) + &
-                                                          metric(2,2) * ddeta  * (ONE/jinv) + &
-                                                          metric(3,2) * ddzeta * (ONE/jinv)
-                            interpolator_ddz(ipt,iterm) = metric(1,3) * ddxi   * (ONE/jinv) + &
-                                                          metric(2,3) * ddeta  * (ONE/jinv) + &
-                                                          metric(3,3) * ddzeta * (ONE/jinv)
+                            interpolator_grad1(ipt,iterm) = metric(1,1) * ddxi   * (ONE/jinv) + &
+                                                            metric(2,1) * ddeta  * (ONE/jinv) + &
+                                                            metric(3,1) * ddzeta * (ONE/jinv)
+                            interpolator_grad2(ipt,iterm) = metric(1,2) * ddxi   * (ONE/jinv) + &
+                                                            metric(2,2) * ddeta  * (ONE/jinv) + &
+                                                            metric(3,2) * ddzeta * (ONE/jinv)
+                            interpolator_grad3(ipt,iterm) = metric(1,3) * ddxi   * (ONE/jinv) + &
+                                                            metric(2,3) * ddeta  * (ONE/jinv) + &
+                                                            metric(3,3) * ddzeta * (ONE/jinv)
 
                         end do ! ipt
                     end do ! iterm
@@ -905,10 +907,9 @@ contains
                     ! Store interpolators
                     !
                     call mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator%push_back(interpolator)
-                    call mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_ddx%push_back(interpolator_ddx)
-                    call mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_ddy%push_back(interpolator_ddy)
-                    call mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_ddz%push_back(interpolator_ddz)
-
+                    call mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_grad1%push_back(interpolator_grad1)
+                    call mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_grad2%push_back(interpolator_grad2)
+                    call mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_grad3%push_back(interpolator_grad3)
 
 
                 end do  ! idonor

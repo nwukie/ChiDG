@@ -2,12 +2,11 @@ module type_forward_euler
     use mod_kinds,              only: rk,ik
     use mod_spatial,            only: update_space
 
-    use type_time_integrator,   only: time_integrator_t
-    use mod_time,               only: time_manager
-    use type_chidg_data,        only: chidg_data_t
-    use type_nonlinear_solver,  only: nonlinear_solver_t
-    use type_linear_solver,     only: linear_solver_t
-    use type_preconditioner,    only: preconditioner_t
+    use type_time_integrator_marching,  only: time_integrator_marching_t
+    use type_chidg_data,                only: chidg_data_t
+    use type_nonlinear_solver,          only: nonlinear_solver_t
+    use type_linear_solver,             only: linear_solver_t
+    use type_preconditioner,            only: preconditioner_t
     use type_chidg_vector
     implicit none
     private
@@ -46,7 +45,7 @@ module type_forward_euler
     !!  @date   2/7/2017
     !!
     !----------------------------------------------------------------------------------------
-    type, extends(time_integrator_t), public :: forward_euler_t
+    type, extends(time_integrator_marching_t), public :: forward_euler_t
 
 
     contains
@@ -83,7 +82,7 @@ contains
                     dq  => data%sdata%dq,   &
                     rhs => data%sdata%rhs,  &
                     lhs => data%sdata%lhs,  &
-                    dt => time_manager%dt)
+                    dt => data%time_manager%dt)
 
 
             !

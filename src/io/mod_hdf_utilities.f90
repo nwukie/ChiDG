@@ -23,7 +23,7 @@ module mod_hdf_utilities
     ! HDF5 storage format
     !
     integer, parameter :: STORAGE_FORMAT_MAJOR = 1
-    integer, parameter :: STORAGE_FORMAT_MINOR = 2
+    integer, parameter :: STORAGE_FORMAT_MINOR = 3
 
 
     ! Attribute sizes
@@ -86,9 +86,16 @@ contains
     !!  get_domain_indices_hdf
     !!
     !!  set_domain_coordinates_hdf
-    !!  set_domain_elements_hdf
+    !!  get_domain_coordinates_hdf
+    !!
+    !!  set_domain_coordinate_system_hdf
+    !!  get_domain_coordinate_system_hdf
+    !!
+    !!  set_domain_connectivity_hdf
+    !!  get_domain_connectivity_hdf
     !!
     !!  get_domain_nelements_hdf
+    !!  get_domain_nnodes_hdf
     !!
     !!  set_coordinate_order_hdf
     !!  get_coordinate_order_hdf
@@ -766,11 +773,12 @@ contains
     !!  @date   10/17/2016
     !!
     !---------------------------------------------------------------------------------------
-    subroutine add_domain_hdf(fid,domain_name,nodes,elements,equation_set,spacedim)
+    subroutine add_domain_hdf(fid,domain_name,nodes,elements,coord_system,equation_set,spacedim)
         integer(HID_T), intent(in)  :: fid
         character(*),   intent(in)  :: domain_name
         type(point_t),  intent(in)  :: nodes(:)
         integer(ik),    intent(in)  :: elements(:,:)
+        character(*),   intent(in)  :: coord_system
         character(*),   intent(in)  :: equation_set
         integer(ik),    intent(in)  :: spacedim
 
@@ -803,7 +811,10 @@ contains
         call set_domain_coordinates_hdf(dom_id,nodes)
 
         ! Set elements
-        call set_domain_elements_hdf(dom_id,elements)
+        call set_domain_connectivity_hdf(dom_id,elements)
+
+        ! Set coordinate system
+        call set_domain_coordinate_system_hdf(dom_id,coord_system)
 
         ! Write equation set attribute
         call set_domain_equation_set_hdf(dom_id,trim(equation_set))
@@ -1194,6 +1205,8 @@ contains
 
     !>  Return status of file attribute "/Contains Grid".
     !!
+    !!  Attribute: /Contains Grid
+    !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
     !!
@@ -1581,9 +1594,11 @@ contains
 
 
 
-    !>  For a block-domain, set the domain coordinates
+    !>  For a domain, set the domain coordinates
     !!
-    !!  /D_domainname/Grid/Coordinates
+    !!  /D_domainname/Grid/Coordinate1
+    !!  /D_domainname/Grid/Coordinate2
+    !!  /D_domainname/Grid/Coordinate3
     !!
     !!  @author Nathan A. Wukie 
     !!  @date   10/15/2016
@@ -1642,11 +1657,11 @@ contains
         !
         ! Create datasets for grid coordinates
         !
-        call h5dcreate_f(grid_id, "CoordinateX", H5T_NATIVE_DOUBLE, xspace_id, xset_id, ierr)
+        call h5dcreate_f(grid_id, "Coordinate1", H5T_NATIVE_DOUBLE, xspace_id, xset_id, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5dcreate_f")
-        call h5dcreate_f(grid_id, "CoordinateY", H5T_NATIVE_DOUBLE, yspace_id, yset_id, ierr)
+        call h5dcreate_f(grid_id, "Coordinate2", H5T_NATIVE_DOUBLE, yspace_id, yset_id, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5dcreate_f")
-        call h5dcreate_f(grid_id, "CoordinateZ", H5T_NATIVE_DOUBLE, zspace_id, zset_id, ierr)
+        call h5dcreate_f(grid_id, "Coordinate3", H5T_NATIVE_DOUBLE, zspace_id, zset_id, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5dcreate_f")
 
         !
@@ -1689,6 +1704,255 @@ contains
 
     end subroutine set_domain_coordinates_hdf
     !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  For a domain, get the domain coordinates
+    !!
+    !!  /D_domainname/Grid/Coordinate1
+    !!  /D_domainname/Grid/Coordinate2
+    !!  /D_domainname/Grid/Coordinate3
+    !!
+    !!  @author Nathan A. Wukie 
+    !!  @date   02/14/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_domain_coordinates_hdf(dom_id) result(nodes)
+        integer(HID_T), intent(in)  :: dom_id
+
+        type(point_t), allocatable  :: nodes(:)
+
+        integer(HID_T)              :: grid_id, did_1, did_2, did_3, sid
+        integer(HSIZE_T)            :: rank_one_dims(1), maxdims(3)
+        integer(ik)                 :: ierr, ipt, npts
+        logical                     :: exists
+
+        real(rdouble), dimension(:), allocatable, target    :: pts1, pts2, pts3
+        type(c_ptr)                                         :: cp_pts, cp_conn
+
+
+        !
+        ! Create a grid-group within the current block domain
+        !
+        exists = check_link_exists_hdf(dom_id,"Grid")
+        if (exists) then
+            call h5gopen_f(dom_id,"Grid", grid_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_domain_coordinates_hdf: h5gopen_f")
+        else
+            call chidg_signal(FATAL,"get_domain_coordinates_hdf: The current domain does not contain a 'Grid'.")
+        end if
+
+
+        !
+        !  Open the Coordinate datasets
+        !
+        call h5dopen_f(grid_id, "Coordinate1", did_1, ierr, H5P_DEFAULT_F)
+        call h5dopen_f(grid_id, "Coordinate2", did_2, ierr, H5P_DEFAULT_F)
+        call h5dopen_f(grid_id, "Coordinate3", did_3, ierr, H5P_DEFAULT_F)
+
+
+        !
+        !  Get the dataspace id and dimensions
+        !
+        call h5dget_space_f(did_1, sid, ierr)
+        call h5sget_simple_extent_dims_f(sid, rank_one_dims, maxdims, ierr)
+        npts = rank_one_dims(1)
+
+
+        !
+        !  Read points 1,2,3
+        !
+        allocate(pts1(npts), pts2(npts), pts3(npts), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        cp_pts = c_loc(pts1(1))
+        call h5dread_f(did_1, H5T_NATIVE_DOUBLE, cp_pts, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_domain_coordinates_hdf: h5dread_f")
+
+        cp_pts = c_loc(pts2(1))
+        call h5dread_f(did_2, H5T_NATIVE_DOUBLE, cp_pts, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_domain_coordinates_hdf: h5dread_f")
+
+        cp_pts = c_loc(pts3(1))
+        call h5dread_f(did_3, H5T_NATIVE_DOUBLE, cp_pts, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_domain_coordinates_hdf: h5dread_f")
+
+
+
+        !
+        !  Accumulate pts into a single points_t matrix to initialize domain
+        !
+        allocate(nodes(npts), stat=ierr)
+        if (ierr /= 0) call AllocationError
+            
+
+        do ipt = 1,rank_one_dims(1)
+            call nodes(ipt)%set(real(pts1(ipt),rk),real(pts2(ipt),rk),real(pts3(ipt),rk))
+        end do
+
+
+        ! Close the Coordinate datasets
+        call h5dclose_f(did_1,ierr)
+        call h5dclose_f(did_2,ierr)
+        call h5dclose_f(did_3,ierr)
+
+        ! Close the dataspace id
+        call h5sclose_f(sid,ierr)
+
+        ! Close Grid group
+        call h5gclose_f(grid_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_domain_coordinates_her: h5gclose_f")
+
+
+    end function get_domain_coordinates_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  For a domain, set the domain coordinate system.
+    !!
+    !!  Attribute: /D_domainname/Grid/Coordinate System
+    !!  Values: 'Cartesian' or 'Cylindrical'
+    !!
+    !!  @author Nathan A. Wukie 
+    !!  @date   02/14/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_domain_coordinate_system_hdf(dom_id,coord_system)
+        integer(HID_T), intent(in)  :: dom_id
+        character(*),   intent(in)  :: coord_system
+
+        character(:),   allocatable :: user_msg
+        integer(HID_T)              :: grid_id
+        integer(ik)                 :: ierr
+        logical                     :: exists, cartesian, cylindrical
+
+
+
+        !
+        ! Check valid input
+        !
+        cartesian   = (coord_system == 'Cartesian')
+        cylindrical = (coord_system == 'Cylindrical')
+        user_msg = "set_domain_coordinate_system_hdf: Invalid coordinate system. Valid systems are 'Cartesian' or 'Cylindrical'."
+        if (.not. (cartesian .or. cylindrical)) call chidg_signal_one(FATAL,user_msg,coord_system)
+
+
+
+
+        !
+        ! Create a grid-group within the current block domain
+        !
+        exists = check_link_exists_hdf(dom_id,"Grid")
+        if (exists) then
+            call h5gopen_f(dom_id,"Grid", grid_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinate_system_hdf: h5gopen_f")
+        else
+            call chidg_signal(FATAL,"set_domain_coordinate_system_hdf: The current domain does not contain a 'Grid'.")
+        end if
+
+
+        !
+        ! Set 'Coordinate System' attribute
+        !
+        call h5ltset_attribute_string_f(grid_id,".","Coordinate System",coord_system,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinate_system_hdf: Error setting 'Coordinate System' attribute.")
+
+
+
+        !
+        ! Close Grid group
+        !
+        call h5gclose_f(grid_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinate_system_hdf: h5gclose_f")
+
+
+    end subroutine set_domain_coordinate_system_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  For a domain, get the domain coordinate system.
+    !!
+    !!  Attribute: /D_domainname/Grid/Coordinate System
+    !!  Values: 'Cartesian' or 'Cylindrical'
+    !!
+    !!  @author Nathan A. Wukie 
+    !!  @date   02/14/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_domain_coordinate_system_hdf(dom_id) result(coord_system_trim)
+        integer(HID_T), intent(in)  :: dom_id
+
+        character(1024)             :: coord_system
+        character(:),   allocatable :: coord_system_trim
+
+        integer(HID_T)      :: grid_id
+        integer(ik)         :: ierr
+        logical             :: exists
+
+
+        !
+        ! Create a grid-group within the current block domain
+        !
+        exists = check_link_exists_hdf(dom_id,"Grid")
+        if (exists) then
+            call h5gopen_f(dom_id,"Grid", grid_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_domain_coordinate_system_hdf: h5gopen_f")
+        else
+            call chidg_signal(FATAL,"get_domain_coordinate_system_hdf: The current domain does not contain a 'Grid'.")
+        end if
+
+
+        !
+        ! Get 'Coordinate System' attribute
+        !
+        call h5ltget_attribute_string_f(grid_id,".","Coordinate System",coord_system,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_domain_coordinate_system_hdf: Error getting 'Coordinate System' attribute.")
+
+        
+        ! Trim blanks
+        coord_system_trim = trim(coord_system)
+
+
+        !
+        ! Close Grid group
+        !
+        call h5gclose_f(grid_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_domain_coordinate_system_hdf: h5gclose_f")
+
+
+    end function get_domain_coordinate_system_hdf
+    !***************************************************************************************
+
+
+
+
 
 
 
@@ -2145,7 +2409,7 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine set_domain_elements_hdf(dom_id,elements)
+    subroutine set_domain_connectivity_hdf(dom_id,elements)
         integer(HID_T), intent(in)  :: dom_id
         integer(ik),    intent(in)  :: elements(:,:)
 
@@ -2170,7 +2434,7 @@ contains
         else
             call h5gcreate_f(dom_id,"Grid", grid_id, ierr)
         end if
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5gcreate_f/h5gopen_f")
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_hdf: h5gcreate_f/h5gopen_f")
 
 
         !
@@ -2179,20 +2443,20 @@ contains
         exists = check_link_exists_hdf(grid_id,"Elements")
         if (exists) then
             call h5dopen_f(grid_id,"Elements", element_set_id, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5dopen_f")
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_hdf: h5dopen_f")
 
             !
             ! Write element connectivities
             !
             call h5dwrite_f(element_set_id, H5T_NATIVE_INTEGER, elements, dims_rank_two, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5dwrite_f")
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_hdf: h5dwrite_f")
 
         else
             call h5screate_simple_f(2, dims_rank_two, element_space_id, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5screate_simple_f")
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_hdf: h5screate_simple_f")
 
             call h5dcreate_f(grid_id, "Elements", H5T_NATIVE_INTEGER, element_space_id, element_set_id, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5dcreate_f")
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_hdf: h5dcreate_f")
 
 
 
@@ -2200,10 +2464,10 @@ contains
             ! Write element connectivities
             !
             call h5dwrite_f(element_set_id, H5T_NATIVE_INTEGER, elements, dims_rank_two, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5dwrite_f")
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_hdf: h5dwrite_f")
 
             call h5sclose_f(element_space_id,ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5sclose_f")
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_hdf: h5sclose_f")
 
         end if
 
@@ -2212,14 +2476,119 @@ contains
         ! Close dataset, dataspace, Grid group
         !
         call h5dclose_f(element_set_id,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5dclose_f")
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_hdf: h5dclose_f")
         call h5gclose_f(grid_id,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_elements_hdf: h5gclose_f")
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_hdf: h5gclose_f")
 
 
 
-    end subroutine set_domain_elements_hdf
+    end subroutine set_domain_connectivity_hdf
     !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Get the element connectivities for a domain.
+    !!
+    !!  Returns array of element connectivities as
+    !!      elements(nelem, size_connectivity)
+    !!
+    !!  /D_domainname/Grid/Elements
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/15/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_domain_connectivity_hdf(dom_id) result(connectivity_ik)
+        integer(HID_T), intent(in)  :: dom_id
+
+
+        integer(ik)         :: ierr
+        integer(HID_T)      :: grid_id, did_e, sid
+        integer(HSIZE_T)    :: rank_two_dims(2), maxdims(3)
+        logical             :: exists
+
+        character(:),   allocatable         :: user_msg
+        integer(ik),    allocatable         :: connectivity_ik(:,:)
+        integer,        allocatable, target :: connectivity(:,:)
+        type(c_ptr)                         :: cp_conn
+
+
+        !
+        ! Open 'Grid' group for the current domain
+        !
+        exists = check_link_exists_hdf(dom_id,'Grid')
+        if (exists) then
+            call h5gopen_f(dom_id, 'Grid', grid_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_domain_connectivity_hdf: h5gopen_f")
+        else
+            call chidg_signal(FATAL,"get_domain_connectivity_hdf: Current domain does not have a 'Grid' group.")
+        end if
+
+
+        !
+        ! Open Elements connectivity dataset
+        !
+        call h5dopen_f(grid_id, 'Elements', did_e, ierr, H5P_DEFAULT_F)
+        user_msg = "get_domain_connectivity_hdf: h5dopen_f did not open 'Elements' dataset propertly."
+        if (ierr /= 0) call chidg_signal(FATAL,user_msg)
+
+
+        !
+        !  Get the dataspace id and dimensions. (nelem, connectivity size)
+        !
+        call h5dget_space_f(did_e, sid, ierr)
+        user_msg = "get_domain_connectivity_hdf: h5dget_space_f did not return 'Elements' dataspace propertly."
+        if (ierr /= 0) call chidg_signal(FATAL,user_msg)
+
+        call h5sget_simple_extent_dims_f(sid, rank_two_dims, maxdims, ierr)
+        user_msg = "get_domain_connectivity_hdf: h5sget_simple_extent_dims_f did not return extent propertly."
+        if (ierr == -1) call chidg_signal(FATAL,user_msg)
+
+
+        !
+        ! Allocate/Read connectivity
+        ! 
+        allocate(connectivity(rank_two_dims(1),rank_two_dims(2)), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        cp_conn = c_loc(connectivity(1,1))
+        call h5dread_f(did_e, H5T_NATIVE_INTEGER, cp_conn, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_domain_connectivity_hdf5: h5dread_f")
+
+
+        !
+        ! Convert to ChiDG integer type
+        !
+        !   Explicit allocation to handle GCC bug:
+        !       GCC/GFortran Bugzilla Bug 52162 
+        !
+        allocate(connectivity_ik(size(connectivity,1),size(connectivity,2)),stat=ierr)
+        if (ierr /= 0) call AllocationError
+        connectivity_ik = int(connectivity, ik)
+
+
+        !
+        ! Close identifiers
+        !
+        call h5dclose_f(did_e,  ierr)
+        call h5sclose_f(sid,    ierr)
+        call h5gclose_f(grid_id,ierr)
+
+
+    end function get_domain_connectivity_hdf
+    !****************************************************************************************
+
+
 
 
 
@@ -2288,6 +2657,98 @@ contains
 
     end function get_domain_nelements_hdf
     !***************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Given a domain identifier, return the number of nodes in the domain.
+    !!
+    !!  TODO: Switch this to read an attribute. That way we can use this in 
+    !!        solution files without grids.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/30/2016
+    !!
+    !---------------------------------------------------------------------------------------
+    function get_domain_nnodes_hdf(domain_id) result(nnodes)
+        integer(HID_T), intent(in)  :: domain_id
+
+        integer(HID_T)              :: did, sid, grid_id
+        integer(HSIZE_T)            :: rank_one_dims(1), maxdims(2)
+        character(:), allocatable   :: user_msg
+        logical                     :: grid_exists
+        integer(ik)                 :: ierr, nnodes
+
+
+        !
+        ! Check file has a node set 
+        !
+        grid_exists = check_link_exists_hdf(domain_id,'Grid/Coordinate1')
+        user_msg = "get_domain_nelements_hdf: Trying to determine the number of elements in a &
+                    domain without a 'Grid/Elements' group. This file probably doesn't contain &
+                    a grid, so you will want to figure out how to remedy this."
+        if (.not. grid_exists) call chidg_signal(FATAL,user_msg)
+
+
+        !
+        ! Open the Grid group
+        !
+        call h5gopen_f(domain_id, 'Grid', grid_id, ierr, H5P_DEFAULT_F)
+        user_msg = "get_domain_nnodes_hdf: Domain/Grid group did not open properly."
+        if (ierr /= 0) call chidg_signal(FATAL,user_msg)
+
+
+        !
+        ! Get number of nodes in the domain
+        !
+        call h5dopen_f(grid_id, 'Coordinate1', did, ierr, H5P_DEFAULT_F)
+        user_msg = "get_domain_nnodes_hdf: Domain/Grid/Coordinate1 group did not open properly."
+        if (ierr /= 0) call chidg_signal(FATAL,user_msg)
+
+
+        !
+        !  Get the dataspace id and dimensions
+        !
+        call h5dget_space_f(did, sid, ierr)
+        user_msg = "get_domain_nnodes_hdf: h5dget_space_f did not return 'Coordinate1' dataspace properly."
+        if (ierr /= 0) call chidg_signal(FATAL,user_msg)
+
+        call h5sget_simple_extent_dims_f(sid, rank_one_dims, maxdims, ierr)
+        user_msg = "get_domain_nnodes_hdf: h5sget_simple_extent_dims_f did not return extent propertly."
+        if (ierr == -1) call chidg_signal(FATAL,user_msg)
+
+        
+        !
+        ! Get node count from size of coordinate dataset in file
+        !
+        nnodes = int(rank_one_dims(1), ik)
+
+
+        !
+        ! Close identifiers
+        !
+        call h5sclose_f(sid,ierr)
+        call h5dclose_f(did,ierr)
+        call h5gclose_f(grid_id,ierr)
+
+
+    end function get_domain_nnodes_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
 
 
 

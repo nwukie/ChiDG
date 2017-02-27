@@ -71,7 +71,7 @@ module type_chidg
         type(chidg_t), pointer :: auxiliary_environment
 
         ! Number of terms in 3D/1D solution basis expansion
-        integer(ik)     :: ntime        = 1
+        !integer(ik)     :: ntime        = 1    !now this is in data%time_manager
         integer(ik)     :: nterms_s     = 0
         integer(ik)     :: nterms_s_1d  = 0
 
@@ -161,6 +161,8 @@ contains
             ! Start up ChiDG core
             !
             case ('core')
+
+                call self%data%time_manager%init()
 
                 ! Default communicator for 'communication' is MPI_COMM_WORLD
                 if ( present(comm) ) then
@@ -306,7 +308,8 @@ contains
                             where my_order=1-7 indicates the solution order-of-accuracy."
                 if (self%nterms_s == 0) call chidg_signal(FATAL,user_msg)
 
-                call self%data%initialize_solution_domains(self%nterms_s, self%ntime)
+                !call self%data%initialize_solution_domains(self%nterms_s, self%ntime)
+                call self%data%initialize_solution_domains(self%nterms_s)
 
             !
             ! Initialize communication. Local face communication. Global parallel communication.
@@ -346,9 +349,17 @@ contains
                 if (.not. allocated(self%preconditioner))   call chidg_signal(FATAL,"chidg%preconditioner component was not allocated")
 
 
+                !
+                ! Initialize preconditioner
+                !
                 call write_line("Initializing preconditioner...", io_proc=GLOBAL_MASTER)
                 call self%preconditioner%init(self%data)
 
+                !
+                ! Initialize time_integrator
+                !
+                call write_line("Initializing time_integrator...", io_proc=GLOBAL_MASTER)
+                call self%time_integrator%init(self%data)
 
 
             case default
@@ -633,8 +644,8 @@ contains
                                       meshdata(idom)%connectivity,  &
                                       domain_dimensionality,        &
                                       meshdata(idom)%nterms_c,      &
-                                      domain_equation_set           &
-                                      )
+                                      domain_equation_set,          &
+                                      meshdata(idom)%coord_system)
 
         end do
 
@@ -1013,14 +1024,19 @@ contains
         call write_line("Entering Time Loop:", io_proc=GLOBAL_MASTER)
         call write_line(" ", io_proc=GLOBAL_MASTER)
 
+        
+        !
+        ! Initialize time integrator state
+        !
+        call self%time_integrator%initialize_state(self%data)
 
         wcount = 1
-        nsteps = time_manager%time_steps
+        nsteps = self%data%time_manager%nsteps
         do istep = 1,nsteps
 
             call write_line("- Step ", istep, io_proc=GLOBAL_MASTER)
 
-            self%data%sdata%t = time_manager%dt*istep
+            self%data%sdata%t = self%data%time_manager%dt*istep
 
             !
             ! Call time integrator to take a step

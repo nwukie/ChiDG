@@ -8,7 +8,9 @@ module mod_version
     implicit none
 
     ! ChiDG version
-    integer, parameter :: ChiDG_VERSION_MAJOR = 0
-    integer, parameter :: ChiDG_VERSION_MINOR = 2
+    integer, parameter          :: ChiDG_VERSION_MAJOR = 0
+    integer, parameter          :: ChiDG_VERSION_MINOR = 2
+
+    character(40), parameter    :: GIT_SHA1 = "@GIT_SHA1@"
 
 end module mod_version

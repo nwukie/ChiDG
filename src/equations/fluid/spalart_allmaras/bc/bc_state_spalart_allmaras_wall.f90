@@ -44,8 +44,8 @@ contains
         !
         ! Set operator name
         !
-        call self%set_name("Spalart Allmaras Wall")
-        call self%set_family("Wall")
+        call self%set_name('Spalart Allmaras Wall')
+        call self%set_family('Wall')
 
     end subroutine init
     !********************************************************************************
@@ -72,32 +72,32 @@ contains
 
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   :: &
-            rhoNutilde_m, drhoNutilde_dx_m, drhoNutilde_dy_m, drhoNutilde_dz_m
+            density_nutilde_m, grad1_density_nutilde_m, grad2_density_nutilde_m, grad3_density_nutilde_m
 
 
         !
         ! Interpolate interior solution to quadrature nodes
         !
-        rhoNutilde_m     = worker%get_primary_field_face("Density * NuTilde", 'value', 'face interior')
-        drhoNutilde_dx_m = worker%get_primary_field_face("Density * NuTilde", 'ddx',   'face interior')
-        drhoNutilde_dy_m = worker%get_primary_field_face("Density * NuTilde", 'ddy',   'face interior')
-        drhoNutilde_dz_m = worker%get_primary_field_face("Density * NuTilde", 'ddz',   'face interior')
+        density_nutilde_m       = worker%get_primary_field_face('Density * NuTilde', 'value', 'face interior')
+        grad1_density_nutilde_m = worker%get_primary_field_face('Density * NuTilde', 'grad1', 'face interior')
+        grad2_density_nutilde_m = worker%get_primary_field_face('Density * NuTilde', 'grad2', 'face interior')
+        grad3_density_nutilde_m = worker%get_primary_field_face('Density * NuTilde', 'grad3', 'face interior')
 
 
 
         !
         ! Store boundary condition state - Dirichlet Zero
         !
-        rhoNutilde_m = ZERO
-        call worker%store_bc_state("Density * NuTilde", rhoNutilde_m,'value')
+        density_nutilde_m = ZERO
+        call worker%store_bc_state('Density * NuTilde', density_nutilde_m,'value')
 
 
         !
         ! Store boundary condition gradient - Extrapolate
         !
-        call worker%store_bc_state("Density * NuTilde", drhoNutilde_dx_m, 'ddx')
-        call worker%store_bc_state("Density * NuTilde", drhoNutilde_dy_m, 'ddy')
-        call worker%store_bc_state("Density * NuTilde", drhoNutilde_dz_m, 'ddz')
+        call worker%store_bc_state('Density * NuTilde', grad1_density_nutilde_m, 'grad1')
+        call worker%store_bc_state('Density * NuTilde', grad2_density_nutilde_m, 'grad2')
+        call worker%store_bc_state('Density * NuTilde', grad3_density_nutilde_m, 'grad3')
                                                 
     end subroutine compute_bc_state
     !*****************************************************************************************

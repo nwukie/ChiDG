@@ -49,17 +49,17 @@ contains
         !
         ! Set operator name
         !
-        call self%set_name("Scalar Diffusion BC Operator")
+        call self%set_name('Scalar Diffusion BC Operator')
 
         !
         ! Set operator type
         !
-        call self%set_operator_type("BC Diffusive Operator")
+        call self%set_operator_type('BC Diffusive Operator')
 
         !
         ! Set operator equations
         !
-        call self%add_primary_field("u")
+        call self%add_primary_field('u')
 
     end subroutine init
     !********************************************************************************
@@ -88,24 +88,25 @@ contains
 
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   ::  &
-            mu, dudx, dudy, dudz, flux_x, flux_y, flux_z, integrand
-
+            grad1_u, grad2_u, grad3_u,              &
+            flux_1,  flux_2,  flux_3,               &
+            integrand, mu
 
         real(rk),   allocatable, dimension(:)   ::  &
-            normx, normy, normz
+            norm_1, norm_2, norm_3
 
 
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
-        dudx  = worker%get_primary_field_face('u','ddx + lift', 'boundary')
-        dudy  = worker%get_primary_field_face('u','ddy + lift', 'boundary')
-        dudz  = worker%get_primary_field_face('u','ddz + lift', 'boundary')
+        grad1_u = worker%get_primary_field_face('u','grad1 + lift', 'boundary')
+        grad2_u = worker%get_primary_field_face('u','grad2 + lift', 'boundary')
+        grad3_u = worker%get_primary_field_face('u','grad3 + lift', 'boundary')
 
 
-        normx = worker%normal(1)
-        normy = worker%normal(2)
-        normz = worker%normal(3)
+        norm_1 = worker%normal(1)
+        norm_2 = worker%normal(2)
+        norm_3 = worker%normal(3)
 
 
         !
@@ -118,11 +119,11 @@ contains
         !=================================================
         ! Mass flux
         !=================================================
-        flux_x = -mu*dudx
-        flux_y = -mu*dudy
-        flux_z = -mu*dudz
+        flux_1 = -mu*grad1_u
+        flux_2 = -mu*grad2_u
+        flux_3 = -mu*grad3_u
 
-        integrand = flux_x*normx + flux_y*normy + flux_z*normz
+        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
 
         call worker%integrate_boundary('u',integrand)
 

@@ -33,11 +33,6 @@ module euler_volume_operator
 
 
 
-
-
-
-
-
 contains
 
 
@@ -58,9 +53,9 @@ contains
 
         ! Set operator equations
         call self%add_primary_field("Density"   )
-        call self%add_primary_field("X-Momentum")
-        call self%add_primary_field("Y-Momentum")
-        call self%add_primary_field("Z-Momentum")
+        call self%add_primary_field("Momentum-1")
+        call self%add_primary_field("Momentum-2")
+        call self%add_primary_field("Momentum-3")
         call self%add_primary_field("Energy"    )
 
     end subroutine init
@@ -81,24 +76,34 @@ contains
         class(properties_t),            intent(inout)   :: prop
 
 
-
         type(AD_D), allocatable, dimension(:) ::    &
-            rho, rhou, rhov, rhow, rhoE, p, H,      &
-            flux_x, flux_y, flux_z, invrho
+            density, mom1, mom2, mom3, energy,      &
+            invdensity, enthalpy, p,                &
+            flux_1, flux_2, flux_3
 
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho  = worker%get_primary_field_element("Density"   ,'value')
-        rhou = worker%get_primary_field_element("X-Momentum",'value')
-        rhov = worker%get_primary_field_element("Y-Momentum",'value')
-        rhow = worker%get_primary_field_element("Z-Momentum",'value')
-        rhoE = worker%get_primary_field_element("Energy"    ,'value')
+        density = worker%get_primary_field_element("Density"   ,'value')
+        mom1    = worker%get_primary_field_element("Momentum-1",'value')
+        mom2    = worker%get_primary_field_element("Momentum-2",'value')
+        mom3    = worker%get_primary_field_element("Momentum-3",'value')
+        energy  = worker%get_primary_field_element("Energy"    ,'value')
 
 
-        invrho = ONE/rho
+        !
+        ! Account for cylindrical. Get tangential momentum from angular momentum.
+        !
+        if (worker%coordinate_system() == 'Cylindrical') then
+            mom2 = mom2 / worker%coordinate('1','volume')
+        end if
+
+
+
+
+        invdensity = ONE/density
 
 
 
@@ -106,54 +111,68 @@ contains
         ! Compute pressure and total enthalpy
         !
         p = worker%get_model_field_element('Pressure','value')
-        H = (rhoE + p)*invrho
-
-        !===========================
-        !        MASS FLUX
-        !===========================
-        flux_x = rhou
-        flux_y = rhov
-        flux_z = rhow
-
-        call worker%integrate_volume('Density',flux_x,flux_y,flux_z)
+        enthalpy = (energy + p)*invdensity
 
 
-        !===========================
-        !     X-MOMENTUM FLUX
-        !===========================
-        flux_x = (rhou*rhou)*invrho  +  p
-        flux_y = (rhou*rhov)*invrho
-        flux_z = (rhou*rhow)*invrho
+        !=================================================
+        ! mass flux
+        !=================================================
+        flux_1 = mom1
+        flux_2 = mom2
+        flux_3 = mom3
 
-        call worker%integrate_volume('X-Momentum',flux_x,flux_y,flux_z)
+        call worker%integrate_volume('Density',flux_1,flux_2,flux_3)
 
 
-        !============================
-        !     Y-MOMENTUM FLUX
-        !============================
-        flux_x = (rhov*rhou)*invrho
-        flux_y = (rhov*rhov)*invrho  +  p
-        flux_z = (rhov*rhow)*invrho
+        !=================================================
+        ! momentum-1 flux
+        !=================================================
+        flux_1 = (mom1 * mom1) * invdensity  +  p
+        flux_2 = (mom1 * mom2) * invdensity
+        flux_3 = (mom1 * mom3) * invdensity
 
-        call worker%integrate_volume('Y-Momentum',flux_x,flux_y,flux_z)
+        call worker%integrate_volume('Momentum-1',flux_1,flux_2,flux_3)
 
-        !============================
-        !     Z-MOMENTUM FLUX
-        !============================
-        flux_x = (rhow*rhou)*invrho
-        flux_y = (rhow*rhov)*invrho
-        flux_z = (rhow*rhow)*invrho  +  p
 
-        call worker%integrate_volume('Z-Momentum',flux_x,flux_y,flux_z)
+        !=================================================
+        ! momentum-2 flux
+        !=================================================
+        flux_1 = (mom2 * mom1) * invdensity
+        flux_2 = (mom2 * mom2) * invdensity  +  p
+        flux_3 = (mom2 * mom3) * invdensity
 
-        !============================
-        !       ENERGY FLUX
-        !============================
-        flux_x = rhou*H
-        flux_y = rhov*H
-        flux_z = rhow*H
+        !
+        ! Convert to tangential to angular momentum flux
+        !
+        if (worker%coordinate_system() == 'Cylindrical') then
+            flux_1 = flux_1 * worker%coordinate('1','volume')
+            flux_2 = flux_2 * worker%coordinate('1','volume')
+            flux_3 = flux_3 * worker%coordinate('1','volume')
+        end if
 
-        call worker%integrate_volume('Energy',flux_x,flux_y,flux_z)
+        call worker%integrate_volume('Momentum-2',flux_1,flux_2,flux_3)
+
+
+        !=================================================
+        ! momentum-3 flux
+        !=================================================
+        flux_1 = (mom3 * mom1) * invdensity
+        flux_2 = (mom3 * mom2) * invdensity
+        flux_3 = (mom3 * mom3) * invdensity  +  p
+
+        call worker%integrate_volume('Momentum-3',flux_1,flux_2,flux_3)
+
+
+        !=================================================
+        ! energy flux
+        !=================================================
+        flux_1 = enthalpy * mom1
+        flux_2 = enthalpy * mom2
+        flux_3 = enthalpy * mom3
+
+        call worker%integrate_volume('Energy',flux_1,flux_2,flux_3)
+
+    
 
     end subroutine compute
     !*********************************************************************************************************

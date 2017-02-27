@@ -81,16 +81,15 @@ contains
 
         
         ! Initialize domain
-        nterms_c      = npt
+        nterms_c            = npt
         this%solution_order = 3
         this%nterms_s       = 27
-        spacedim      = 3
+        spacedim            = 3
 
-        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
+        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection','Cartesian')
 
         call this%chidg%set('Solution Order', integer_input=this%solution_order)
         call this%chidg%init('domains')
-!        call this%chidg%initialize_solution_domains()
 
         
     end subroutine setUp

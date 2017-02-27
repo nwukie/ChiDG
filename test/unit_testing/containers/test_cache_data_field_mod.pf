@@ -147,7 +147,7 @@ contains
         !
         @assertEqual(cache_data_field%name,'Test Field')
         @assertTrue(allocated(cache_data_field%value))
-        @assertTrue(allocated(cache_data_field%derivative))
+        @assertTrue(allocated(cache_data_field%gradient))
         @assertTrue(allocated(cache_data_field%lift_face))
         @assertTrue(allocated(cache_data_field%lift_element))
         
@@ -198,16 +198,16 @@ contains
         ! TEST 'value' ALLOCATION
         ! Number of nodes
         @assertEqual(size(cache_data_field%value,1), nnodes_face)
-        ! Number of dependent elements
-        @assertEqual(size(cache_data_field%value,2), 1)
+        ! Number of dependent elements. Should be 1 + nexterior neighbors
+        @assertEqual(size(cache_data_field%value,2), 2)
 
-        ! TEST 'derivative' ALLOCATION
+        ! TEST 'gradient' ALLOCATION
         ! Number of nodes
-        @assertEqual(size(cache_data_field%derivative,1), nnodes_face)
+        @assertEqual(size(cache_data_field%gradient,1), nnodes_face)
         ! Number of spatial dimentions
-        @assertEqual(size(cache_data_field%derivative,2), 3)
+        @assertEqual(size(cache_data_field%gradient,2), 3)
         ! Number of dependent elements
-        @assertEqual(size(cache_data_field%derivative,3), 2)
+        @assertEqual(size(cache_data_field%gradient,3), 2)
 
         ! TEST 'lift' ALLOCATION
         ! Number of nodes
@@ -265,7 +265,7 @@ contains
         !
         @assertEqual(cache_data_field%name, 'Test Field')
         @assertTrue(allocated(cache_data_field%value))
-        @assertTrue(allocated(cache_data_field%derivative))
+        @assertTrue(allocated(cache_data_field%gradient))
         @assertTrue(allocated(cache_data_field%lift_face))
         @assertTrue(allocated(cache_data_field%lift_element))
         
@@ -316,14 +316,14 @@ contains
         ! Number of nodes
         @assertEqual(size(cache_data_field%value,1), nnodes_face)
         ! Number of dependent elements
-        @assertEqual(size(cache_data_field%value,2), 1)
+        @assertEqual(size(cache_data_field%value,2), 2)
 
         ! Number of nodes
-        @assertEqual(size(cache_data_field%derivative,1), nnodes_face)
+        @assertEqual(size(cache_data_field%gradient,1), nnodes_face)
         ! Number of spatial dimentions
-        @assertEqual(size(cache_data_field%derivative,2), 3)
+        @assertEqual(size(cache_data_field%gradient,2), 3)
         ! Number of dependent elements
-        @assertEqual(size(cache_data_field%derivative,3), 2)
+        @assertEqual(size(cache_data_field%gradient,3), 2)
 
         ! Number of nodes
         @assertEqual(size(cache_data_field%lift_face,1), nnodes_face)
@@ -381,7 +381,7 @@ contains
         !
         @assertEqual(cache_data_field%name,'Test Field')
         @assertTrue(allocated(cache_data_field%value))
-        @assertTrue(allocated(cache_data_field%derivative))
+        @assertTrue(allocated(cache_data_field%gradient))
         @assertTrue(allocated(cache_data_field%lift_face))
         @assertTrue(allocated(cache_data_field%lift_element))
         
@@ -429,14 +429,14 @@ contains
         ! Number of nodes
         @assertEqual(size(cache_data_field%value,1), nnodes_vol)
         ! Number of dependent elements
-        @assertEqual(size(cache_data_field%value,2), 1)
+        @assertEqual(size(cache_data_field%value,2), 7)
 
         ! Number of nodes
-        @assertEqual(size(cache_data_field%derivative,1), nnodes_vol)
+        @assertEqual(size(cache_data_field%gradient,1), nnodes_vol)
         ! Number of spatial dimentions
-        @assertEqual(size(cache_data_field%derivative,2), 3)
+        @assertEqual(size(cache_data_field%gradient,2), 3)
         ! Number of dependent elements
-        @assertEqual(size(cache_data_field%derivative,3), 7)
+        @assertEqual(size(cache_data_field%gradient,3), 7)
 
         ! Number of nodes
         @assertEqual(size(cache_data_field%lift_face,1), nnodes_face)

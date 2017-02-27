@@ -65,9 +65,10 @@ contains
     !!
     !-------------------------------------------------------------------------------------------------------
     function build(self,blueprint) result(scalar_advection_diffusion_eqn)
-        class(scalar_advection_diffusion),    intent(in)  :: self
-        character(len=*),           intent(in)  :: blueprint
+        class(scalar_advection_diffusion),  intent(in)  :: self
+        character(*),                       intent(in)  :: blueprint
 
+        character(:),       allocatable     :: user_msg
         type(equation_set_t)                :: scalar_advection_diffusion_eqn
         type(linear_coefficient_model_t)    :: scalar_model
         
@@ -96,8 +97,10 @@ contains
                 call scalar_advection_diffusion_eqn%prop%add_scalar(scalar_model)
 
             case default
-                call chidg_signal_one(FATAL, "build_scalar_advection_diffusion: I didn't recognize the construction &
-                                              parameter that was passed to build the equation set.", blueprint)
+                user_msg = "build_scalar_advection_diffusion: I didn't recogvize the &
+                            construction parameter that was passed to build the equation &
+                            set."
+                call chidg_signal_one(FATAL, user_msg, blueprint)
 
         end select
 

@@ -3,7 +3,7 @@ module type_explicit_runge_kutta
     use mod_constants,                  only: ZERO,HALF,ONE,TWO,SIX
     use mod_spatial,                    only: update_space
 
-    use type_time_integrator,           only: time_integrator_t
+    use type_time_integrator_marching,  only: time_integrator_marching_t
     use type_chidg_data,                only: chidg_data_t
     use type_nonlinear_solver,          only: nonlinear_solver_t
     use type_linear_solver,             only: linear_solver_t
@@ -51,7 +51,7 @@ module type_explicit_runge_kutta
     !!
     !!
     !---------------------------------------------------------------------------------------------------------------------
-    type, extends(time_integrator_t), public :: explicit_runge_kutta_t
+    type, extends(time_integrator_marching_t), public :: explicit_runge_kutta_t
 
 
 
@@ -102,16 +102,16 @@ contains
         real(rk),            allocatable     :: vals(:)
 
 
-        associate( q => data%sdata%q,      &
-                   dq => data%sdata%dq,    &
-                   rhs => data%sdata%rhs,  &
-                   lhs => data%sdata%lhs,  &
-                   dt => self%time_manager%dt )
+        associate( q   => data%sdata%q,      &
+                   dq  => data%sdata%dq,     &
+                   rhs => data%sdata%rhs,    &
+                   lhs => data%sdata%lhs,    & 
+                   dt  => data%time_manager%dt )
         
             !
             ! Get name of the RK method being used
             !
-            time_scheme = self%time_manager%get_name()
+            time_scheme = data%time_manager%get_name()
 
             !
             ! Get nstage, a and b for a particular scheme

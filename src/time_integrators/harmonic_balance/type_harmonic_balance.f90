@@ -1,20 +1,18 @@
 module type_harmonic_balance
 #include<messenger.h>
-    use messenger,              only: write_line
-    use mod_kinds,              only: rk,ik
-    use mod_spatial,            only: update_space
+    use messenger,                       only: write_line
+    use mod_kinds,                       only: rk,ik
+    use mod_spatial,                     only: update_space
 
-    use type_time_integrator,   only: time_integrator_t
-    use mod_time,               only: time_manager
-    use type_system_assembler,  only: system_assembler_t
+    use type_time_integrator_spectral,   only: time_integrator_spectral_t
+    use type_system_assembler,           only: system_assembler_t
     
-    use type_chidg_data,        only: chidg_data_t
-    use type_nonlinear_solver,  only: nonlinear_solver_t
-    use type_linear_solver,     only: linear_solver_t
-    use type_preconditioner,    only: preconditioner_t
-    use type_rvector,           only: rvector_t
-    use mod_HB_matrices,        only: calc_pseudo_spectral_operator
-!    use mod_time_HB,            only: get_pseudo_spectral_operator
+    use type_chidg_data,                 only: chidg_data_t
+    use type_nonlinear_solver,           only: nonlinear_solver_t
+    use type_linear_solver,              only: linear_solver_t
+    use type_preconditioner,             only: preconditioner_t
+    use type_rvector,                    only: rvector_t
+    use mod_HB_matrices,                 only: calc_pseudo_spectral_operator
     use type_chidg_vector
 
     implicit none
@@ -27,7 +25,7 @@ module type_harmonic_balance
     !!  @date   2/13/2017
     !!
     !-------------------------------------------------------------------------------------------------
-    type, extends(time_integrator_t), public    :: harmonic_balance_t
+    type, extends(time_integrator_spectral_t), public    :: harmonic_balance_t
         
    
     
@@ -76,15 +74,16 @@ contains
     !!  @author Matteo Ugolotti + Mayank Sharma
     !!  @date 2/13/2017
     !!
+    !!  @author Mayank Sharma
+    !!  @date   2/26/2017
     !!
     !-------------------------------------------------------------------------------------------------
-    subroutine init(self)
+    subroutine init(self,data)
         class(harmonic_balance_t),  intent(inout)   :: self
+        type(chidg_data_t),         intent(in)      :: data
 
         integer(ik)                         :: ierr
         type(assemble_harmonic_balance_t)   :: assemble_harmonic_balance
-        integer(ik)                         :: nfreq, ntime
-        real(rk), allocatable               :: freq_data(:), time_lev(:)
 
         allocate(self%system, source=assemble_harmonic_balance, stat=ierr)
         if (ierr /= 0) call AllocationError
@@ -115,14 +114,12 @@ contains
 
         !
         ! Simply solve the nonlinear system. No iteration in time.
-        ! TODO: To be verified
         !
         call nonlinear_solver%solve(data,self%system,linear_solver,preconditioner)
 
 
         !
         ! Store end residual from nonlinear solver.
-        ! TODO: To be verified
         !
         call self%residual_norm%push_back(nonlinear_solver%residual_norm%at(nonlinear_solver%residual_norm%size()))
     
@@ -162,8 +159,8 @@ contains
         !
         ! Set local variables equal to the values set in time_manager
         !
-        ntime = time_manager%time_lev%size()
-        D = time_manager%D
+        ntime = data%time_manager%time_lev%size()
+        D = data%time_manager%D
 
         do itime_outer = 1,ntime
 

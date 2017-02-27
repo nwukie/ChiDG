@@ -168,7 +168,7 @@ contains
                 ! Compute the pseudo spectral operator when the HB time integrator is specified
                 ! in the namelist file
                 !
-                call calc_pseudo_spectral_operator(self%freq_data%size(),self%time_steps, &
+                call calc_pseudo_spectral_operator(self%freq_data%size(),self%ntime, &
                                                    self%freq_data%data(),self%time_lev%data(),self%D)
 !                
 !                ! Define ntime for HB equal to the size of time_lev

@@ -34,6 +34,8 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/6/2016
     !!
+    !!  @author Mayank Sharma
+    !!  @date   2/23/2017
     !!
     !------------------------------------------------------------------------------------
     function chidg_mv(A,x) result(res)
@@ -233,7 +235,7 @@ contains
 
                                 end if 
                             end do  ! itime_i
-                        end if  ! locla_multiply
+                        end if  ! local_multiply
 
                     end do  ! ielem
 

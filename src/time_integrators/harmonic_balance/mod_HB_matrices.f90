@@ -1,4 +1,5 @@
 module mod_HB_matrices
+#include<messenger.h>
 
 !*****************************************************************************************
 !*                                                                                       *
@@ -155,8 +156,9 @@ contains
         real(rk),dimension(:),          intent(in)          :: omega,t
         real(rk),dimension(ntime,ntime),intent(inout)       :: D 
 
-        real(rk),dimension(ntime,ntime)                     :: inv_E,diff_inv_E,E
+        real(rk),       dimension(ntime,ntime)              :: inv_E,diff_inv_E,E
         integer(ik)                                         :: i
+        character(:),   allocatable                         :: user_msg, dev_msg
 
 
         !
@@ -165,7 +167,14 @@ contains
         call calc_inv_E(nfreq,ntime,omega,t,inv_E)
 
         call calc_diff_inv_E(nfreq,ntime,omega,t,diff_inv_E)
+    
+        user_msg = 'The size of an array being inverted here is ZERO. Check &
+                    the frequencies you have entered in chidg.nml'
+        dev_msg  = 'The inv subroutine expects a valid non-zero integer matrix size. Check &
+                    in time_manager.f90'
 
+        if (size(inv_E,1) == 0) call chidg_signal_two(FATAL, user_msg, size(inv_E,1), dev_msg)
+        
         E = inv(inv_E)
 
         D = matmul(diff_inv_E,E)

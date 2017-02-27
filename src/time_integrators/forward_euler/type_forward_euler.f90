@@ -82,7 +82,7 @@ contains
                     dq  => data%sdata%dq,   &
                     rhs => data%sdata%rhs,  &
                     lhs => data%sdata%lhs,  &
-                    dt => self%time_manager%dt)
+                    dt => data%time_manager%dt)
 
 
             !

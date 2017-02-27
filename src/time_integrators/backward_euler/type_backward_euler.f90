@@ -79,13 +79,13 @@ contains
 
         wcount = 1
         ninner = 10
-        associate ( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs, dt => self%time_manager%dt)
+        associate ( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs, dt => data%time_manager%dt)
 
         !
         ! TIME STEP LOOP
         !
         print*, 'hi - 2'
-        do itime = 1,self%time_manager%time_steps
+        do itime = 1,data%ntime()
             print*, "Step: ", itime
 
         print*, 'hi - 3'
@@ -165,7 +165,7 @@ contains
                    
                         if (allocated(lhs%dom(idom)%lblks(ielem,iblk)%mat)) then
                             ! Add mass matrix divided by dt to the block diagonal
-                            lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  =  lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  +   data%mesh(idom)%elems(ielem)%mass/self%time_manager%dt
+                            lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  =  lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  +   data%mesh(idom)%elems(ielem)%mass/data%time_manager%dt
                         end if
 
                     end do
@@ -300,7 +300,7 @@ contains
 
         print*, 'hi - 15'
 
-            if (wcount == self%time_manager%nwrite) then
+            if (wcount == data%time_manager%nwrite) then
                 write(filename, "(I7,A4)") 1000000+itime, '.plt'
                 call write_tecio_variables_unstructured(data,trim(filename),itime+1)
                 wcount = 0

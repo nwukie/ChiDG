@@ -24,7 +24,8 @@ module type_time_manager
 
         ! Unsteady time parameter
         real(rk)                :: dt          != 0.001_rk
-        integer(ik)             :: time_steps  != 100
+        integer(ik)             :: ntime       != 1         !< Number of time levels in HB (=1 for steady)
+        integer(ik)             :: nsteps      != 100       !< Number of time steps in time_marching solution
         integer(ik)             :: nwrite      != 10
         
         ! HB time parameter
@@ -81,8 +82,9 @@ contains
                 
                 call self%set_name(time_integrator)
 
-                self%dt         = 0.
-                self%time_steps = 1
+                self%dt         = 0
+                self%ntime      = 1
+                self%nsteps     = 1
                 self%nwrite     = 0
 
 
@@ -99,11 +101,12 @@ contains
                 call self%set_name(time_integrator)
 
                 !
-                ! add dt, time_steps and nwrite to the time_manager
+                ! add dt, ntimes, nsteps and nwrite to the time_manager
                 !
                 
                 self%dt         = dt
-                self%time_steps = time_steps
+                self%nsteps     = time_steps
+                self%ntime      = 1
                 self%nwrite     = nwrite
 
 
@@ -112,6 +115,8 @@ contains
                   'harmonic_balance', 'HB')
                 
                 call self%set_name(time_integrator)
+                self%nsteps     = 1
+
                 !
                 ! Verify that at least one frequency has been passed in
                 !
@@ -147,6 +152,13 @@ contains
                    call  self%time_lev%push_back( (TWO*PI)/minval(self%freq_data%data()) * (tmp/n_times) )
 
                 end do
+
+                !
+                ! Define ntime for HB equal to the size of time_lev
+                !
+                
+                self%ntime = self%time_lev%size()
+
 
             case default
                 user_msg = "We can't seem to find a time integrator that matches the input &

@@ -243,7 +243,6 @@ contains
         !call toptions%set('nsteps',100)
         !call toptions%set('nwrite',0)
 
-
         ! Set linear solver options to pass during initialization
         call loptions%set('tol',1.e-8_rk)
 
@@ -353,7 +352,7 @@ contains
         call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
         call this%chidg%set('Preconditioner',   algorithm=preconditioner)
 
-        call this%chidg%time_integrator%time_manager%init()
+        call this%chidg%data%time_manager%init()
 
         !
         ! Initialize solution data storage

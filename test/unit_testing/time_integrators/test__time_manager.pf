@@ -2,6 +2,8 @@
 !!
 !!
 !!  @author Matteo Ugolotti
+!!  
+!!  TODO: update tests with new features in time_manager  
 !!
 !---------------------------------------------------------------------------------------------------
 
@@ -45,6 +47,9 @@ subroutine test_time_manager__init_steady()
     !
 
     @assertEqual(time_integrator,t_manager%time_scheme)
+    @assertEqual(1,t_manager%nsteps)
+    @assertEqual(0,t_manager%nwrite)
+    @assertEqual(1,t_manager%ntime)
      
 
 end subroutine
@@ -104,7 +109,7 @@ subroutine test_time_manager__init_unsteady()
 
     @assertEqual(time_integrator,t_manager%time_scheme)
     @assertEqual(dt,t_manager%dt)
-    @assertEqual(time_steps,t_manager%time_steps)
+    @assertEqual(time_steps,t_manager%nsteps)
     @assertEqual(nwrite,t_manager%nwrite)
      
 

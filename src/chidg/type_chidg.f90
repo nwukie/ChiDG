@@ -70,7 +70,8 @@ module type_chidg
         type(chidg_t), pointer :: auxiliary_environment
 
         ! Number of terms in 3D/1D solution basis expansion
-        !integer(ik)     :: ntime        = 1    !now this is in data%time_manager%
+        
+        !integer(ik)     :: ntime        = 1    !now this is in data%time_manager
         integer(ik)     :: nterms_s     = 0
         integer(ik)     :: nterms_s_1d  = 0
 
@@ -161,6 +162,8 @@ contains
             !
             case ('core')
                 
+                call self%data%time_manager%init()
+
                 call self%data%time_manager%init()
 
                 ! Default communicator for 'communication' is MPI_COMM_WORLD
@@ -347,7 +350,6 @@ contains
                 if (.not. allocated(self%linear_solver))    call chidg_signal(FATAL,"chidg%linear_solver component was not allocated")
                 if (.not. allocated(self%preconditioner))   call chidg_signal(FATAL,"chidg%preconditioner component was not allocated")
 
-                
                 !
                 ! Initialize preconditioner
                 !
@@ -355,7 +357,7 @@ contains
                 call self%preconditioner%init(self%data)
                 
                 !
-                ! Initialize time_integrator 
+                ! Initialize time_integrator
                 !
                 call write_line("Initializing time_integrator...", io_proc=GLOBAL_MASTER)
                 call self%time_integrator%init(self%data)
@@ -1023,9 +1025,15 @@ contains
         call write_line("Entering Time Loop:", io_proc=GLOBAL_MASTER)
         call write_line(" ", io_proc=GLOBAL_MASTER)
 
+        
+        !
+        ! Initialize time integrator state
+        !
+        call self%time_integrator%initialize_state(self%data)
 
         wcount = 1
-        nsteps = self%data%time_manager%ntime
+        nsteps = self%data%time_manager%nsteps
+
         do istep = 1,nsteps
 
             call write_line("- Step ", istep, io_proc=GLOBAL_MASTER)

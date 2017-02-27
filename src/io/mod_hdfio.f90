@@ -768,7 +768,8 @@ contains
             ! Get number of terms initialized for the current element
             !
             if (field_type == 'Primary') then
-                nterms_ielem = data%sdata%q%dom(idom)%vecs(ielem)%nterms()
+                !nterms_ielem = data%sdata%q%dom(idom)%vecs(ielem)%nterms()
+                nterms_ielem = data%sdata%q_in%dom(idom)%vecs(ielem)%nterms()
             else if (field_type == 'Auxiliary') then
                 nterms_ielem = data%sdata%auxiliary_field(aux_vector_index)%dom(idom)%vecs(ielem)%nterms() 
             end if
@@ -835,7 +836,8 @@ contains
             ! Store modes in ChiDG Vector
             if (field_type == 'Primary') then
                 ivar = data%eqnset(idom)%prop%get_primary_field_index(trim(field_name))
-                call data%sdata%q%dom(idom)%vecs(ielem)%setvar(ivar,itime,real(bufferterms,rk))
+                !call data%sdata%q%dom(idom)%vecs(ielem)%setvar(ivar,itime,real(bufferterms,rk))
+                call data%sdata%q_in%dom(idom)%vecs(ielem)%setvar(ivar,itime,real(bufferterms,rk))
             else if (field_type == 'Auxiliary') then
                 ! Implicitly assuming that an auxiliary field chidgVector contains only one field.
                 ivar = 1

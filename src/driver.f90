@@ -113,10 +113,10 @@ program driver
 !            call fcn%set_option('b_y',3.14_rk)
 !            call fcn%set_option('b_z',0._rk)
 !            call fcn%set_option('c',0.5_rk)
-!            call chidg%data%sdata%q%project(chidg%data%mesh,fcn,1)
+!            call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,1)
 !            call create_function(constant,'constant')
 !            call constant%set_option('val',0._rk)
-!            call chidg%data%sdata%q%project(chidg%data%mesh,constant,1)
+!            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,1)
 
 
 !            call polynomial%set_option('f',3.5_rk)
@@ -125,38 +125,38 @@ program driver
 !            ! d
 !            call create_function(constant,'constant')
 !            call constant%set_option('val',0.001_rk)
-!            call chidg%data%sdata%q%project(chidg%data%mesh,constant,1)
+!            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,1)
 
 
             call create_function(constant,'constant')
 
             ! rho
             call constant%set_option('val',1.15_rk)
-            call chidg%data%sdata%q%project(chidg%data%mesh,constant,1)
+            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,1)
 
             ! rho_u
             call constant%set_option('val',50.0_rk)
-            call chidg%data%sdata%q%project(chidg%data%mesh,constant,2)
+            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,2)
 
             ! rho_v
             call constant%set_option('val',0.0_rk)
-            call chidg%data%sdata%q%project(chidg%data%mesh,constant,3)
+            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,3)
 
             ! rho_w
             call constant%set_option('val',0.0_rk)
-            call chidg%data%sdata%q%project(chidg%data%mesh,constant,4)
+            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,4)
 
             ! rho_E
             call constant%set_option('val',248000.0_rk)
-            call chidg%data%sdata%q%project(chidg%data%mesh,constant,5)
+            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,5)
 
 !            ! rho_nutilde
 !            call constant%set_option('val',0.00003_rk)
-!            call chidg%data%sdata%q%project(chidg%data%mesh,constant,6)
+!            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,6)
 !
 !            ! eps
 !            call constant%set_option('val',0.000001_rk)
-!            call chidg%data%sdata%q%project(chidg%data%mesh,constant,7)
+!            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,7)
 
         else
 

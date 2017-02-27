@@ -24,7 +24,8 @@ module type_time_manager
 
         ! Unsteady time parameter
         real(rk)                :: dt          != 0.001_rk
-        integer(ik)             :: ntime       != 100
+        integer(ik)             :: ntime       != 1         !< Number of time levels in HB (=1 for steady)
+        integer(ik)             :: nsteps      != 100       !< Number of time steps in time_marching solution
         integer(ik)             :: nwrite      != 10
         
         ! HB time parameter
@@ -83,6 +84,7 @@ contains
 
                 self%dt         = 0
                 self%ntime      = 1
+                self%nsteps     = 1
                 self%nwrite     = 0
 
 
@@ -99,11 +101,12 @@ contains
                 call self%set_name(time_integrator)
 
                 !
-                ! add dt, ntime and nwrite to the time_manager
+                ! add dt, ntimes, nsteps and nwrite to the time_manager
                 !
                 
                 self%dt         = dt
-                self%ntime      = time_steps !time_steps comes from mod_io.f90
+                self%nsteps     = time_steps
+                self%ntime      = 1
                 self%nwrite     = nwrite
 
 
@@ -112,6 +115,8 @@ contains
                   'harmonic_balance', 'HB')
                 
                 call self%set_name(time_integrator)
+                self%nsteps     = 1
+
                 !
                 ! Verify that at least one frequency has been passed in
                 !
@@ -151,7 +156,6 @@ contains
                 !
                 ! Define ntime for HB equal to the size of time_lev
                 !
-
                 self%ntime = self%time_lev%size()
 
 

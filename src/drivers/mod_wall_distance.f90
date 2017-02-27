@@ -197,7 +197,7 @@ contains
                 if (p == 2) then
                     call create_function(constant,'constant')
                     call constant%set_option('val',0.1_rk)
-                    call wall_distance%data%sdata%q%project(wall_distance%data%mesh,constant,1)
+                    call wall_distance%data%sdata%q_in%project(wall_distance%data%mesh,constant,1)
 
                 else
                     call wall_distance%read_solution(fileout)

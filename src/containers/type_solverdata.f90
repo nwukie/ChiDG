@@ -35,6 +35,11 @@ module type_solverdata
 
 
         !
+        ! Container for reading data
+        !
+        type(chidg_vector_t)            :: q_in
+
+        !
         ! Auxiliary fields
         !
         type(string_t),         allocatable :: auxiliary_field_name(:)
@@ -119,10 +124,10 @@ contains
         call self%dq%init( mesh)
         call self%rhs%init(mesh)
         call self%lhs%init(mesh,bcset_coupling,'full')
+        call self%q_in%init(mesh)
 
         ! Initialize matrix parallel recv data
         call self%lhs%init_recv(self%rhs)
-
 
 
 

@@ -1,16 +1,15 @@
 module type_steady
 #include <messenger.h>
-    use messenger,              only: write_line
-    use mod_kinds,              only: rk,ik
-    use mod_spatial,            only: update_space
+    use mod_kinds,                      only: rk,ik
+    use mod_spatial,                    only: update_space
 
-    use type_time_integrator,   only: time_integrator_t
-    use type_system_assembler,  only: system_assembler_t
+    use type_time_integrator_steady,    only: time_integrator_steady_t
+    use type_system_assembler,          only: system_assembler_t
 
-    use type_chidg_data,        only: chidg_data_t
-    use type_nonlinear_solver,  only: nonlinear_solver_t
-    use type_linear_solver,     only: linear_solver_t
-    use type_preconditioner,    only: preconditioner_t
+    use type_chidg_data,                only: chidg_data_t
+    use type_nonlinear_solver,          only: nonlinear_solver_t
+    use type_linear_solver,             only: linear_solver_t
+    use type_preconditioner,            only: preconditioner_t
     use type_chidg_vector
 
     implicit none
@@ -25,7 +24,7 @@ module type_steady
     !!  @date   4/29/2016
     !!
     !----------------------------------------------------------------------------------------
-    type, extends(time_integrator_t), public :: steady_t
+    type, extends(time_integrator_steady_t), public :: steady_t
 
 
 

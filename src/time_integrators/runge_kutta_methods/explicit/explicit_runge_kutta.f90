@@ -114,7 +114,9 @@ module explicit_runga_kutta
 
             print *, 'entering time'
             ! TODO: time_manager is now part of chidg%data and nsteps needs to be added to time_manager
-            do itime = 1,self%time_manager%nsteps
+            
+            do itime = 1,data%time_manager%nsteps
+
                 print *, 'Step: ', itime
 
                 !

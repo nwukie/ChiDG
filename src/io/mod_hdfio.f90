@@ -1073,13 +1073,14 @@ contains
 
 
 
-    !>  Read boundary condition state functions from file and initialize in bcdata.
+    !>  Read boundary condition state groups from file and return.
+    !!
+    !!  Reads and returns all boundary condition state groups, regardless of if they
+    !!  are used on the current partition or not.
+    !!
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/31/2016
-    !!
-    !!
-    !!
     !!
     !---------------------------------------------------------------------------------------
     subroutine read_bc_state_groups_hdf(fid, bc_groups, partition)

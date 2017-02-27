@@ -9,7 +9,8 @@ module type_chidg_data
     ! Primary chidg_data_t components
     use type_domain_info,               only: domain_info_t
     use type_mesh,                      only: mesh_t
-    use type_bcset,                     only: bcset_t
+    !use type_bcset,                     only: bcset_t
+    use type_bc,                        only: bc_t
     use type_bc,                        only: bc_t
     use type_bc_state,                  only: bc_state_t
     use type_bcvector,                  only: bcvector_t
@@ -48,6 +49,7 @@ module type_chidg_data
 
         logical                                     :: solverInitialized = .false.
         integer(ik),        private                 :: ndomains_ = 0
+        integer(ik),        private                 :: nbcs_     = 0
         integer(ik),        private                 :: spacedim_ = 3
 
         
@@ -58,7 +60,7 @@ module type_chidg_data
 
         ! Boundary conditions are not specified per-domain. 
         ! A boundary condition 
-        type(bcset_t),                  allocatable :: bcset(:)    
+        type(bc_t),                     allocatable :: bc(:)    
 
 
         ! An object containing matrix and vector storage
@@ -72,6 +74,7 @@ module type_chidg_data
         ! Modifiers for adding domains and boundary conditions
         procedure   :: add_domain
         procedure   :: add_bc
+        procedure   :: add_bc_patch
 
         ! Initialization procedure for solution data. Execute after all domains are added.
         procedure   :: initialize_solution_domains
@@ -187,7 +190,6 @@ contains
 
         type(domain_info_t),            allocatable :: temp_info(:)
         type(mesh_t),                   allocatable :: temp_mesh(:)
-        !type(bcset_t),                  allocatable :: temp_bcset(:)
         type(equation_set_t),           allocatable :: temp_eqnset(:)
 
 
@@ -205,7 +207,6 @@ contains
         allocate( &
                  temp_info(self%ndomains_),   &
                  temp_mesh(self%ndomains_),   &
-                 !temp_bcset(self%ndomains_),  &
                  temp_eqnset(self%ndomains_), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -216,7 +217,6 @@ contains
         if (self%ndomains_ > 1) then
             temp_info(   1:size(self%info))    = self%info(1:size(self%mesh))
             temp_mesh(   1:size(self%mesh))    = self%mesh(1:size(self%mesh))
-            !temp_bcset(  1:size(self%bcset))   = self%bcset(1:size(self%mesh))
             temp_eqnset( 1:size(self%eqnset))  = self%eqnset(1:size(self%mesh))
         end if
 
@@ -260,7 +260,6 @@ contains
         !
         call move_alloc(temp_info,self%info)
         call move_alloc(temp_mesh,self%mesh)
-        !call move_alloc(temp_bcset,self%bcset)
         call move_alloc(temp_eqnset,self%eqnset)
 
 
@@ -321,6 +320,60 @@ contains
         logical                             :: group_found, group_set
 
 
+        type(bc_t), allocatable :: temp_bcs(:)
+
+
+        !
+        ! Increment number of boundary conditions
+        !
+        self%nbcs_ = self%nbcs_ + 1
+
+
+        !
+        ! Set BC_ID
+        !
+        bc%BC_ID = self%nbcs_
+        BC_ID    = self%nbcs_
+
+
+        !
+        ! Allocate number of boundary conditions
+        !
+        allocate(temp_bcs(self%nbcs_), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        !
+        ! Copy any previously allocated boundary conditions to new array
+        !
+        if ( self%nbcs_ > 1) then
+            temp_bcs(1:size(self%bc)) = self%bc(1:size(self%bc))
+        end if
+
+
+        !
+        ! Allocate new boundary condition
+        !
+        temp_bcs(self%nbcs) = bc
+
+
+        !
+        ! Move allocation to bcset storage
+        !
+        call move_alloc(temp_bcs,self%bc)
+
+
+
+
+
+
+
+
+
+
+
+
+
         !
         ! Get domain index from domain string
         !
@@ -350,6 +403,49 @@ contains
 
     end subroutine add_bc
     !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Add a bc_patch_t to the appropriate boundary condition.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/27/2017
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine add_bc_patch(self,bc_patch_data)
+        class(chidg_data_t),    intent(inout)   :: self
+        type(bc_patch_data_t),  intent(in)      :: bc_patch_data
+
+
+
+
+
+
+
+
+
+
+
+
+
+    end subroutine add_bc_patch
+    !*******************************************************************************************
+
+
 
 
 

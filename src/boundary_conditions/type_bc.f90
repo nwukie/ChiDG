@@ -11,6 +11,7 @@ module type_bc
     use type_mesh,                  only: mesh_t
     use type_point,                 only: point_t
     use type_boundary_connectivity, only: boundary_connectivity_t
+    use mpi_f08,                    only: mpi_comm
     implicit none
 
 
@@ -54,11 +55,15 @@ module type_bc
         ! Index of the boundary condition in a set. So a bc knows its location
         integer(ik)                             :: BC_ID
 
+        ! MPI communicator that gets setup for parallel bc's
+        type(mpi_comm)                          :: BC_COMM
+
+
         ! Boundary condition family
         character(:),               allocatable :: bc_family
 
-        ! Boundary condition patch
-        type(bc_patch_t)                        :: bc_patch
+        ! Boundary condition patches
+        type(bc_patch_t),           allocatable :: bc_patch(:)
 
         ! Boundary condition function group
         class(bc_state_wrapper_t),  allocatable :: bc_state(:)
@@ -66,7 +71,6 @@ module type_bc
     contains
 
         procedure           :: init_bc              ! Main boundary condition initialization routine.
-
         procedure           :: init_bc_group        ! Initialize boundary condition group
         procedure           :: init_bc_patch        ! Initialize boundary condition patch
         procedure, private  :: init_bc_specialized  ! Optional User-specialized initialization routine.
@@ -78,6 +82,8 @@ module type_bc
 
         procedure   :: set_family           ! Set the boundary condition family.
         procedure   :: get_family           ! Return the boundary condition family.
+
+        procedure   :: nfaces               ! Return total number of faces in 
         procedure   :: get_ncoupled_elems   ! Return the number of elements coupled with a specified boundary element.
 
 
@@ -110,7 +116,7 @@ contains
     !---------------------------------------------------------------------------------------------------
     subroutine init_bc(self,mesh,bc_connectivity,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
         class(bc_t),                    intent(inout)           :: self
-        type(mesh_t),                   intent(inout)           :: mesh
+        type(mesh_t),                   intent(inout)           :: mesh(:)
         type(boundary_connectivity_t),  intent(in)              :: bc_connectivity
         character(*),                   intent(in)              :: bc_group
         type(bc_group_t),               intent(in)              :: bc_groups(:)
@@ -122,6 +128,7 @@ contains
         class(bc_state_t),              intent(in), optional    :: bc_periodic
 
 
+        integer(ik) :: iface_bc, idom, ielem, iface, ncoupled_elements
 
         !
         ! Boundary condition group initialization
@@ -134,6 +141,49 @@ contains
         ! Boundary condition patch initialization
         !
         call self%init_bc_patch(mesh,bc_connectivity)
+
+
+
+
+
+
+        !
+        ! Call user-specialized boundary condition initialization
+        !
+        call self%init_bc_specialized(mesh)
+
+
+        !
+        ! Call user-specialized boundary coupling initialization
+        !
+        call self%init_bc_coupling(mesh)
+
+
+
+        !
+        ! set ncoupled elements back to mesh face
+        !
+        do ipatch = 1,size(self%bc_patch)
+            do iface_bc = 1,self%bc_patch(ipatch)%nfaces()
+
+                idom  = self%bc_patch(ipatch)%idomain_l(iface_bc)
+                ielem = self%bc_patch(ipatch)%ielement_l(iface_bc)
+                iface = self%bc_patch(ipatch)%iface(iface_bc)
+
+                mesh(idom)%faces(ielem,iface)%BC_ndepend = self%bc_patch(ipatch)%ncoupled_element(iface_bc)
+
+            end do !iface_bc
+        end do !ipatch
+
+
+
+
+
+
+
+
+
+
 
 
     end subroutine init_bc
@@ -462,34 +512,34 @@ contains
 
 
 
-        !
-        ! Call user-specialized boundary condition initialization
-        !
-        call self%init_bc_specialized(mesh)
-
-
-        !
-        ! Call user-specialized boundary coupling initialization
-        !
-        call self%init_bc_coupling(mesh)
-
-
-
-
-        !
-        ! Push ncoupled elements back to mesh face
-        !
-        do iface_bc = 1,self%bc_patch%nfaces()
-
-            !idom  = self%bc_patch%idomain_l(iface_bc)
-            ielem = self%bc_patch%ielement_l(iface_bc)
-            iface = self%bc_patch%iface(iface_bc)
-
-            ncoupled_elements = self%bc_patch%coupled_elements(iface_bc)%size()
-
-            mesh%faces(ielem,iface)%BC_ndepend = ncoupled_elements
-
-        end do !iface_bc
+!        !
+!        ! Call user-specialized boundary condition initialization
+!        !
+!        call self%init_bc_specialized(mesh)
+!
+!
+!        !
+!        ! Call user-specialized boundary coupling initialization
+!        !
+!        call self%init_bc_coupling(mesh)
+!
+!
+!
+!
+!        !
+!        ! Push ncoupled elements back to mesh face
+!        !
+!        do iface_bc = 1,self%bc_patch%nfaces()
+!
+!            !idom  = self%bc_patch%idomain_l(iface_bc)
+!            ielem = self%bc_patch%ielement_l(iface_bc)
+!            iface = self%bc_patch%iface(iface_bc)
+!
+!            ncoupled_elements = self%bc_patch%coupled_elements(iface_bc)%size()
+!
+!            mesh%faces(ielem,iface)%BC_ndepend = ncoupled_elements
+!
+!        end do !iface_bc
 
 
 
@@ -596,14 +646,15 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------------
-    function get_ncoupled_elems(self,ielem) result(ncoupled_elems)
+    function get_ncoupled_elems(self,ipatch,iface) result(ncoupled_elems)
         class(bc_t),    intent(inout)   :: self
-        integer(ik),    intent(in)      :: ielem
+        integer(ik),    intent(in)      :: ipatch
+        integer(ik),    intent(in)      :: iface
 
         integer(ik) :: ncoupled_elems
 
 
-        ncoupled_elems = self%bc_patch%coupled_elements(ielem)%size()
+        ncoupled_elems = self%bc_patch(ipatch)%coupled_elements(iface)%size()
 
 
     end function get_ncoupled_elems

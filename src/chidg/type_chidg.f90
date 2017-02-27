@@ -715,6 +715,41 @@ contains
         end do
 
 
+
+
+
+        !
+        ! Add boundary condition groups
+        !
+        do ibc = 1,size(bc_groups)
+
+            call self%data%add_bc(bc_groups(igroup),  bc_wall=bc_wall,          &
+                                                      bc_inlet=bc_inlet,        &
+                                                      bc_outlet=bc_outlet,      &
+                                                      bc_symmetry=bc_symmetry,  &
+                                                      bc_farfield=bc_farfield,  &
+                                                      bc_periodic=bc_periodic)
+
+        end do !ibc
+
+
+
+
+        !
+        ! Add boundary condition patches
+        !
+        do ipatch = 1,size(bc_patches)
+
+            call self%data%add_bc_patch(bc_patches(ipatch))
+
+        end do !ipatch
+
+
+
+
+
+
+
         !
         ! Add boundary conditions to ChiDG
         !

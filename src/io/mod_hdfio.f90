@@ -559,7 +559,7 @@ contains
                     !
                     ! Loop through time levels
                     !
-                    do itime = 1,data%ntime() !!!!!! close this loop
+                    do itime = 1,data%ntime()
 
 
                         !

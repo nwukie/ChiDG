@@ -20,6 +20,7 @@ module type_bc_patch
         type(ivector_t)                 :: idomain_l_
         type(ivector_t)                 :: ielement_l_
         type(ivector_t)                 :: iface_
+
         type(ivector_t), allocatable    :: coupled_elements(:)
 
     contains

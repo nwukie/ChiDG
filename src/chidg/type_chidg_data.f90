@@ -48,15 +48,18 @@ module type_chidg_data
 
         logical                                     :: solverInitialized = .false.
         integer(ik),        private                 :: ndomains_ = 0
-        !integer(ik),        private                 :: ntime_    = 1   !now part of time_manager
-        integer(ik),        private                 :: spacedim_ = 3    !< Default 3D 
+        integer(ik),        private                 :: spacedim_ = 3
 
         
-        ! For each domain: info, a mesh, a boundary condition set, and an equation set
+        ! For each domain: info, a mesh, and an equation set
         type(domain_info_t),            allocatable :: info(:)     
         type(mesh_t),                   allocatable :: mesh(:)     
-        type(bcset_t),                  allocatable :: bcset(:)    
         type(equation_set_t),           allocatable :: eqnset(:)   
+
+        ! Boundary conditions are not specified per-domain. 
+        ! A boundary condition 
+        type(bcset_t),                  allocatable :: bcset(:)    
+
 
         ! An object containing matrix and vector storage
         type(solverdata_t)                          :: sdata
@@ -184,7 +187,7 @@ contains
 
         type(domain_info_t),            allocatable :: temp_info(:)
         type(mesh_t),                   allocatable :: temp_mesh(:)
-        type(bcset_t),                  allocatable :: temp_bcset(:)
+        !type(bcset_t),                  allocatable :: temp_bcset(:)
         type(equation_set_t),           allocatable :: temp_eqnset(:)
 
 
@@ -202,7 +205,7 @@ contains
         allocate( &
                  temp_info(self%ndomains_),   &
                  temp_mesh(self%ndomains_),   &
-                 temp_bcset(self%ndomains_),  &
+                 !temp_bcset(self%ndomains_),  &
                  temp_eqnset(self%ndomains_), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -213,7 +216,7 @@ contains
         if (self%ndomains_ > 1) then
             temp_info(   1:size(self%info))    = self%info(1:size(self%mesh))
             temp_mesh(   1:size(self%mesh))    = self%mesh(1:size(self%mesh))
-            temp_bcset(  1:size(self%bcset))   = self%bcset(1:size(self%mesh))
+            !temp_bcset(  1:size(self%bcset))   = self%bcset(1:size(self%mesh))
             temp_eqnset( 1:size(self%eqnset))  = self%eqnset(1:size(self%mesh))
         end if
 
@@ -257,7 +260,7 @@ contains
         !
         call move_alloc(temp_info,self%info)
         call move_alloc(temp_mesh,self%mesh)
-        call move_alloc(temp_bcset,self%bcset)
+        !call move_alloc(temp_bcset,self%bcset)
         call move_alloc(temp_eqnset,self%eqnset)
 
 
@@ -274,7 +277,7 @@ contains
 
 
 
-    !>  For a ChiDG domain, add a boundary condition patche and associate it with a boundary 
+    !>  For a ChiDG domain, add a boundary condition patch and associate it with a boundary 
     !!  condition group.
     !!
     !!

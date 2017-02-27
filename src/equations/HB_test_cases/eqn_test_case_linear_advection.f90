@@ -68,10 +68,12 @@ contains
         class(test_case_linear_advection_model), intent(inout)  :: self
 
         call self%set_name('Test Case Linear Advection Model')
+        call self%set_dependency('Q-')
 
-        call self%add_model_field('Scalar X-Advection Velocity')
-        call self%add_model_field('Scalar Y-Advection Velocity')
-        call self%add_model_field('Scalar Z-Advection Velocity')
+
+        call self%add_model_field('Scalar Advection Velocity-1')
+        call self%add_model_field('Scalar Advection Velocity-2')
+        call self%add_model_field('Scalar Advection Velocity-3')
 
 
     end subroutine init_model
@@ -110,9 +112,9 @@ contains
         cy = ZERO
         cz = ZERO
 
-        call worker%store_model_field('Scalar X-Advection Velocity', 'value', cx)
-        call worker%store_model_field('Scalar Y-Advection Velocity', 'value', cy)
-        call worker%store_model_field('Scalar Z-Advection Velocity', 'value', cz)
+        call worker%store_model_field('Scalar Advection Velocity-1', 'value', cx)
+        call worker%store_model_field('Scalar Advection Velocity-2', 'value', cy)
+        call worker%store_model_field('Scalar Advection Velocity-3', 'value', cz)
 
     
     end subroutine compute_model

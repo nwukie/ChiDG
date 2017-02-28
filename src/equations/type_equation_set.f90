@@ -19,12 +19,12 @@ module type_equation_set
     use type_equationset_function_data, only: equationset_function_data_t
     use type_chidg_worker,              only: chidg_worker_t
     use type_mesh,                      only: mesh_t
+    use type_bc,                        only: bc_t
     use type_solverdata,                only: solverdata_t
     use type_element_info,              only: element_info_t
     use type_face_info,                 only: face_info_t
     use type_function_info,             only: function_info_t
     use type_pseudo_timestep,           only: pseudo_timestep_t, default_pseudo_timestep_t
-    use type_bcset,                     only: bcset_t
     implicit none
     private
 
@@ -1136,14 +1136,15 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------
-    subroutine compute_bc_operators(self,worker,bcset,differentiate)
+    subroutine compute_bc_operators(self,worker,bc,differentiate)
         class(equation_set_t),      intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
-        type(bcset_t),              intent(inout)   :: bcset(:)
+        type(bc_t),                 intent(inout)   :: bc(:)
         logical,                    intent(in)      :: differentiate
 
         integer(ik),    allocatable :: compute_pattern(:)
-        integer(ik)                 :: nfcn, ifcn, icompute, ncompute, BC_ID, BC_face, ielement_c, idiff, ipattern
+        integer(ik)                 :: nfcn, ifcn, icompute, ncompute, bc_ID, patch_ID, &
+                                       patch_face, idiff, ipattern
         logical                     :: boundary_face, compute
 
         associate( mesh  => worker%mesh,                    &
@@ -1191,11 +1192,11 @@ contains
 
 
                 !
-                ! Get index of boundary condition. Get index in bc_patch that 
-                ! corresponds to current face.
+                ! Get index of boundary condition, patch, patch face. 
                 !
-                BC_ID   = mesh(idom)%faces(ielem,iface)%BC_ID
-                BC_face = mesh(idom)%faces(ielem,iface)%BC_face
+                bc_ID      = mesh(idom)%faces(ielem,iface)%bc_ID
+                patch_ID   = mesh(idom)%faces(ielem,iface)%patch_ID
+                patch_face = mesh(idom)%faces(ielem,iface)%patch_face
 
 
                 if (allocated(self%bc_operator)) then
@@ -1218,13 +1219,19 @@ contains
                             !
                             ! Get coupled element to linearize against.
                             !
-                            ielement_c = bcset(idom)%bcs(BC_ID)%bc_patch%coupled_elements(BC_face)%at(icompute)
-                            worker%function_info%seed%idomain_g  = mesh(idom)%elems(ielement_c)%idomain_g
-                            worker%function_info%seed%idomain_l  = mesh(idom)%elems(ielement_c)%idomain_l
-                            worker%function_info%seed%ielement_g = mesh(idom)%elems(ielement_c)%ielement_g
-                            worker%function_info%seed%ielement_l = mesh(idom)%elems(ielement_c)%ielement_l
-                            worker%function_info%seed%iproc      = IRANK
+                            !ielement_c = bc(idom)%bcs(BC_ID)%bc_patch%coupled_elements(BC_face)%at(icompute)
+                            worker%function_info%seed%idomain_g  = bc(bc_ID)%bc_patch(patch_ID)%idomain_g_coupled(patch_face)%at(icompute)
+                            worker%function_info%seed%idomain_l  = bc(bc_ID)%bc_patch(patch_ID)%idomain_l_coupled(patch_face)%at(icompute)
+                            worker%function_info%seed%ielement_g = bc(bc_ID)%bc_patch(patch_ID)%ielement_g_coupled(patch_face)%at(icompute)
+                            worker%function_info%seed%ielement_l = bc(bc_ID)%bc_patch(patch_ID)%ielement_l_coupled(patch_face)%at(icompute)
+                            worker%function_info%seed%iproc      = bc(bc_ID)%bc_patch(patch_ID)%proc_coupled(patch_face)%at(icompute)
                             worker%function_info%idepend         = icompute
+!                            worker%function_info%seed%idomain_g  = mesh(idom)%elems(ielement_c)%idomain_g
+!                            worker%function_info%seed%idomain_l  = mesh(idom)%elems(ielement_c)%idomain_l
+!                            worker%function_info%seed%ielement_g = mesh(idom)%elems(ielement_c)%ielement_g
+!                            worker%function_info%seed%ielement_l = mesh(idom)%elems(ielement_c)%ielement_l
+!                            worker%function_info%seed%iproc      = IRANK
+!                            worker%function_info%idepend         = icompute
 
                             call self%bc_operator(ifcn)%op%compute(worker,prop)
 
@@ -1308,7 +1315,7 @@ contains
                 ncompute = mesh(idom)%chimera%recv%data(ChiID)%ndonors()
 
             else if ( bc_face ) then
-                ncompute = mesh(idom)%faces(ielem,iface)%BC_ndepend
+                ncompute = mesh(idom)%faces(ielem,iface)%bc_ndepend
 
             else
                 ! Standard conforming neighbor, only one dependent element.

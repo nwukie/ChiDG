@@ -614,23 +614,15 @@ contains
         call this%chidg%read_boundaryconditions(this%gridfile)
 
 
-
-        call this%chidg%set('Solution Order', integer_input=this%order)
-        call this%chidg%init('domains')
-        call this%chidg%init('communication')
-        call this%chidg%init('chimera')
-        call this%chidg%init('solvers')
-
-
         !
         ! Set ChiDG components
         !
+        call this%chidg%set('Solution Order',   integer_input=this%order)
         call this%chidg%set('Time Integrator',  algorithm=time_integrator)
         call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
         call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
         call this%chidg%set('Preconditioner',   algorithm=preconditioner)
 
-        call this%chidg%data%time_manager%init()
 
         !
         ! Need to enforce reorthogonalization in FGMRES because the vector 
@@ -647,6 +639,12 @@ contains
 
 
         !
+        ! Wrap-up initialization activities
+        !
+        call this%chidg%init('all')
+
+
+        !
         ! Initialize solution. 
         !
         ! This problem depends strongly on having a good initial solution, or else
@@ -659,10 +657,6 @@ contains
         call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,1)
 
 
-        !
-        ! Wrap-up initialization activities
-        !
-        call this%chidg%init('finalize')
 
     end subroutine SetUp
     !****************************************************************************************

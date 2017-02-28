@@ -505,9 +505,6 @@ contains
         ! Loop through each local element and call initialization for each face
         !
         do ielem = 1,self%nelem
-
-            print*, 'init_comm_local - ielem: ', ielem
-
             do iface = 1,NFACES
 
                 !

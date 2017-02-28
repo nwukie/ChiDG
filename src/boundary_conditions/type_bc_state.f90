@@ -48,14 +48,14 @@ module type_bc_state
         procedure   :: set_family
         procedure   :: get_family
 
-        procedure   :: set_fcn               !< Set a particular function definition for a specified bcfunction_t
-        procedure   :: set_fcn_option        !< Set function-specific options for a specified bcfunction_t
+        procedure   :: set_fcn               ! Set a particular function definition for a specified bcfunction_t
+        procedure   :: set_fcn_option        ! Set function-specific options for a specified bcfunction_t
 
-        procedure   :: get_nproperties       !< Return the number of properties associated with the boundary condition.
-        procedure   :: get_property_name     !< Return the name of a property given a property index.
-        procedure   :: get_noptions          !< Return the number of available options for a given property, specified by a property index.
-        procedure   :: get_option_key        !< Return the key for an option, given a property index and subsequent option index.
-        procedure   :: get_option_value      !< Return the value of a given key, inside of a specified property.
+        procedure   :: get_nproperties       ! Return the number of properties associated with the boundary condition.
+        procedure   :: get_property_name     ! Return the name of a property given a property index.
+        procedure   :: get_noptions          ! Return the number of available options for a given property, specified by a property index.
+        procedure   :: get_option_key        ! Return the key for an option, given a property index and subsequent option index.
+        procedure   :: get_option_value      ! Return the value of a given key, inside of a specified property.
 
     end type bc_state_t
     !*********************************************************************************************
@@ -134,7 +134,7 @@ contains
     !----------------------------------------------------------------------------------------------
     subroutine init_bc_coupling(self,mesh,bc_patch)
         class(bc_state_t),  intent(inout)   :: self
-        type(mesh_t),       intent(in)      :: mesh
+        type(mesh_t),       intent(in)      :: mesh(:)
         type(bc_patch_t),   intent(inout)   :: bc_patch(:)
 
         integer(ik) :: ipatch, iface_bc, idomain_g, idomain_l, ielement_g, ielement_l
@@ -147,7 +147,6 @@ contains
         ! So, strictly local coupling.
         !
         do ipatch = 1,size(bc_patch)
-
             do iface_bc = 1,bc_patch(ipatch)%nfaces()
 
 
@@ -171,7 +170,6 @@ contains
 
 
             end do ! iface_bc
-
         end do !ipatch
 
 

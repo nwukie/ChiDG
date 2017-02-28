@@ -344,7 +344,7 @@ contains
                                 string_t('Walls') ]
 
 
-            call create_mesh_file('Smooth Bump',this%gridfile,equation_sets=[string_t('Euler')],     &
+            call create_mesh_file('Smooth Bump',this%gridfile,equation_sets=[string_t('Euler')], &
                                                               group_names = group_names,    &
                                                               bc_groups   = bc_groups,      &
                                                               nelem_xi    = this%nelem_xi,  &
@@ -360,20 +360,21 @@ contains
         call this%chidg%read_grid(this%gridfile,spacedim)
         call this%chidg%read_boundaryconditions(this%gridfile)
 
+
+
         !
         ! Set ChiDG components
         !
-        call this%chidg%set('time_integrator',  algorithm=time_integrator)
-        call this%chidg%set('nonlinear_solver', algorithm=nonlinear_solver, options=noptions)
-        call this%chidg%set('linear_solver',    algorithm=linear_solver,    options=loptions)
-        call this%chidg%set('preconditioner',   algorithm=preconditioner)
+        call this%chidg%set('Solution Order',   integer_input=this%order)
+        call this%chidg%set('Time Integrator',  algorithm=time_integrator)
+        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
 
 
-
-        call this%chidg%data%time_manager%init()
-
-
-        call this%chidg%set('Solution Order', integer_input=this%order)
+        !
+        ! Wrap-up initialization activities
+        !
         call this%chidg%init('all')
 
 

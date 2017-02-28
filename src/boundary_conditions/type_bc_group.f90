@@ -13,9 +13,9 @@ module type_bc_group
     !-------------------------------------------------------------------------
     type, public :: bc_group_t
         
-        character(:),       allocatable :: name         !< Boundary State Group name
-        character(:),       allocatable :: family       !< Boundary State Group family
-        type(bcvector_t)                :: bc_states    !< Vector of boundary condition state functions for each group.
+        character(:),       allocatable :: name         ! Boundary State Group name
+        character(:),       allocatable :: family       ! Boundary State Group family
+        type(bcvector_t)                :: bc_states    ! Vector of boundary condition state functions for each group.
 
     end type bc_group_t
     !*************************************************************************

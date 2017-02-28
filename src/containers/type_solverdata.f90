@@ -8,7 +8,6 @@ module type_solverdata
     use type_mesh,                      only: mesh_t
     use type_function_status,           only: function_status_t
     use type_equationset_function_data, only: equationset_function_data_t
-    use type_bcset_coupling,            only: bcset_coupling_t
     use type_element_info,              only: element_info_t
     use type_face_info,                 only: face_info_t
     use type_function_info,             only: function_info_t
@@ -108,10 +107,13 @@ contains
     !!                              each function in eqnset.
     !!
     !-------------------------------------------------------------------------------------------
-    subroutine init_base(self,mesh,bcset_coupling,function_data)
+    !subroutine init_base(self,mesh,bcset_coupling,function_data)
+    !subroutine init_base(self,mesh,bc,function_data)
+    subroutine init_base(self,mesh,function_data)
         class(solverdata_t),                intent(inout)           :: self
         type(mesh_t),                       intent(inout)           :: mesh(:)
-        type(bcset_coupling_t),             intent(in)              :: bcset_coupling(:)
+!        type(bc_t),                         intent(inout)           :: bc(:)
+!        type(bcset_coupling_t),             intent(in)              :: bcset_coupling(:)
         type(equationset_function_data_t),  intent(in)              :: function_data(:)
         
 
@@ -123,7 +125,8 @@ contains
         call self%q%init(  mesh)
         call self%dq%init( mesh)
         call self%rhs%init(mesh)
-        call self%lhs%init(mesh,bcset_coupling,'full')
+!        call self%lhs%init(mesh,bcset_coupling,'full')
+        call self%lhs%init(mesh,'full')
         call self%q_in%init(mesh)
 
         ! Initialize matrix parallel recv data

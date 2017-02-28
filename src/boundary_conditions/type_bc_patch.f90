@@ -19,6 +19,8 @@ module type_bc_patch
     !-----------------------------------------------------------------------------------------
     type, public :: bc_patch_t
 
+        integer(ik)                     :: patch_ID
+
         ! List of faces. Each combination(domain,element,face) in the
         ! vectors defines a face in the patch.
         type(ivector_t)                 :: idomain_g_
@@ -70,7 +72,6 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    !function add_face(self,idomain,ielement,iface) result(iface_bc)
     function add_face(self,idomain_g,idomain_l,ielement_g,ielement_l,iface) result(iface_bc)
         class(bc_patch_t),  intent(inout)   :: self
         integer(ik),        intent(in)      :: idomain_g
@@ -152,8 +153,8 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     function idomain_g(self,ind) result(idom_bc)
-        class(bc_patch_t),  intent(inout)   :: self
-        integer(ik),        intent(in)      :: ind
+        class(bc_patch_t),  intent(in)  :: self
+        integer(ik),        intent(in)  :: ind
 
         integer(ik) :: idom_bc
 
@@ -171,8 +172,8 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     function idomain_l(self,ind) result(idom_bc)
-        class(bc_patch_t),  intent(inout)   :: self
-        integer(ik),        intent(in)      :: ind
+        class(bc_patch_t),  intent(in)  :: self
+        integer(ik),        intent(in)  :: ind
 
         integer(ik) :: idom_bc
 
@@ -192,8 +193,8 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     function ielement_g(self,ind) result(ielem_bc)
-        class(bc_patch_t),  intent(inout)   :: self
-        integer(ik),        intent(in)      :: ind
+        class(bc_patch_t),  intent(in)  :: self
+        integer(ik),        intent(in)  :: ind
 
         integer(ik) :: ielem_bc
 
@@ -212,8 +213,8 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     function ielement_l(self,ind) result(ielem_bc)
-        class(bc_patch_t),  intent(inout)   :: self
-        integer(ik),        intent(in)      :: ind
+        class(bc_patch_t),  intent(in)  :: self
+        integer(ik),        intent(in)  :: ind
 
         integer(ik) :: ielem_bc
 
@@ -236,8 +237,8 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     function iface(self,ind) result(iface_bc)
-        class(bc_patch_t),  intent(inout)   :: self
-        integer(ik),        intent(in)      :: ind
+        class(bc_patch_t),  intent(in)  :: self
+        integer(ik),        intent(in)  :: ind
 
         integer(ik) :: iface_bc
 

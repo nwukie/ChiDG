@@ -1006,7 +1006,7 @@ contains
             ! Get name of current domain
             !
             domain = partition%connectivities(iconn)%get_domain_name()
-            bc_patch_data(iconn)%domain_ = domain
+            bc_patch_data(iconn)%domain_name = domain
 
 
             !

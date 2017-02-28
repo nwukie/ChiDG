@@ -39,7 +39,8 @@ module mod_hdfio
                                      get_bc_patch_hdf, open_file_hdf, close_file_hdf,               &
                                      open_domain_hdf, close_domain_hdf, initialize_file_hdf,        &
                                      initialize_file_structure_hdf, open_bc_group_hdf,              &
-                                     close_bc_group_hdf, get_domain_nelements_hdf, get_domain_name_hdf
+                                     close_bc_group_hdf, get_domain_nelements_hdf,                  &
+                                     get_domain_name_hdf, set_ntimes_hdf
 
     use type_svector,               only: svector_t
     use mod_string,                 only: string_t
@@ -239,11 +240,6 @@ contains
     !!  @param[inout]   data        chidg_data_t that will accept the solution modes
     !!
     !!
-    !!  @author Matteo Ugolotti
-    !!  @date   2/24/2017
-    !!
-    !!  Added capability to read and restart non-steady simulations
-    !!
     !----------------------------------------------------------------------------------------
     subroutine read_solution_hdf(filename,data)
         character(*),       intent(in)      :: filename
@@ -252,17 +248,17 @@ contains
         integer(HID_T)                  :: fid, domain_id
         integer                         :: ierr
 
-        integer(ik)                     :: idom, ndomains, ieqn, neqns, itime, itime_s, itime_e
-        integer(ik)                     :: ihdf_s = 0, check_t
-        character(:),       allocatable :: field_name, user_msg, domain_name, time_int_name
+        integer(ik)                     :: idom, ndomains, ieqn, neqns, itime, itime_e
+!        integer(ik)                     :: ihdf_s = 0
+        character(:),       allocatable :: field_name, user_msg, domain_name
         logical                         :: file_exists, contains_solution
-        character(:),       allocatable :: flag
+!        character(:),       allocatable :: flag
 
-        !
-        ! Get the desired time_integrator name for the current run
-        !
-
-        time_int_name = trim( data%time_manager%get_name() )
+!        !
+!        ! Get the desired time_integrator name for the current run
+!        !
+!
+!        time_int_name = trim( data%time_manager%get_name() )
 
 
         !
@@ -287,113 +283,114 @@ contains
         fid = open_file_hdf(filename)
 
 
-        !
-        ! Based on the choosen time_integrator read previous solution differently
-        !
-        !   STEADY: read the only time step available
-        !   TIME MARCHING:      1) restart a time marching solution: read the last two time steps
-        !                       2) restart from a steady solution: read in the previous solution
-        !                          and store it the first two time steps
-        !   HARMONIC BALANCE:   1) restart a steady solution: store it for all time levels
-        !                       2) restart a previous HB solution with the same frequencies
-        !                       3) restart a previous HB solution with diff. frequencies TODO
-        !
-        
-        select case (time_int_name)
-
-            case ('steady', 'Steady')
-
-                itime_s = 1
-                itime_e = 1
-
-                flag = 'steady'
-        
-            case ('Forward_Euler', 'Forward Euler', 'forward euler', 'forward_euler',   &
-                  'Second Order Runge-Kutta', 'Explicit Midpoint', 'Second Order RK',   &
-                  'Modified Euler', 'Second Order Heun Method',                         &
-                  'Ralston Method', 'Second Order Ralston Method',                      &
-                  'Third Order Runge-Kutta', 'Third Order Kutta', 'Third Order RK',     &
-                  'Runge-Kutta Method', 'Fourth Runge-Kutta Method',                    &
-                  'Fourth Order RK Method', 'RK4',                                      &
-                  'Three-Eighth Rule', 'Fourth Order Kutta',                            &
-                  'Backward_Euler', 'Backward Euler', 'backward euler', 'backward_euler')
-
-                !
-                ! Two time levels are read in to restart a time marching run
-                !
-
-                ! Time locations in the q vector
-                itime_s = 1
-                itime_e = 2
-                
-                ! Check if the previous soultion is steady or not
-                check_t = get_ntimes_hdf(fid)
-                
-                !if it is steady
-                if ( check_t == 0 ) then
-
-                    flag = 'steady'
-                    !TODO: double check!
-                
-                ! if we restart a time marching analysis
-                else 
-
-                    ! First time step (of the last 2) in the existing hdf5 file
-                    ! In 0-base (ex 6 time lev in chidg are 5 time lev in hdf5)
-                    ihdf_s = get_ntimes_hdf(fid) - 1
-
-                    flag = 'time_marching'
-
-                end if
-
-            case ('Harmonic Balance', 'Harmonic_Balance', 'harmonic balance',   &
-                  'harmonic_balance', 'HB')
-        
-                !
-                !  All times levels in HB solution are initialized
-                !
-
-                ! All HB time levels
-                itime_s = 1
-                itime_e = data%ntime() 
-                
-                ! Check if the previous solution is steady or HB
-                check_t = get_ntimes_hdf(fid)
-                
-                ! If it steady than all the HB time levels are initialized with the
-                ! previous steady solution
-                if ( check_t == 0 ) then
-                    
-                    flag = 'steady'
-                
-                ! If the previous solution is HB and has the same number of frequencies
-                ! store in q the correspondent previous solution
-                else if ( check_t == (itime_e - 1) ) then
-
-                    flag = 'HB'
-
-                ! If the previous solution is HB but with different number of 
-                ! frequencies, then....
-                else
-
-                    ! TODO: add this case when there is a mismatch of frequencies
-
-                end if
-
-            case default
-
-                ! The time_integrtor name should have already been checked by time_manager%init.
-                ! No need for warning messages
-        
-        end select
+!        !
+!        ! Based on the choosen time_integrator read previous solution differently
+!        !
+!        !   STEADY: read the only time step available
+!        !   TIME MARCHING:      1) restart a time marching solution: read the last two time steps
+!        !                       2) restart from a steady solution: read in the previous solution
+!        !                          and store it the first two time steps
+!        !   HARMONIC BALANCE:   1) restart a steady solution: store it for all time levels
+!        !                       2) restart a previous HB solution with the same frequencies
+!        !                       3) restart a previous HB solution with diff. frequencies TODO
+!        !
+!        
+!        select case (time_int_name)
+!
+!            case ('steady', 'Steady')
+!
+!                itime_s = 1
+!                itime_e = 1
+!
+!                flag = 'steady'
+!        
+!            case ('Forward_Euler', 'Forward Euler', 'forward euler', 'forward_euler',   &
+!                  'Second Order Runge-Kutta', 'Explicit Midpoint', 'Second Order RK',   &
+!                  'Modified Euler', 'Second Order Heun Method',                         &
+!                  'Ralston Method', 'Second Order Ralston Method',                      &
+!                  'Third Order Runge-Kutta', 'Third Order Kutta', 'Third Order RK',     &
+!                  'Runge-Kutta Method', 'Fourth Runge-Kutta Method',                    &
+!                  'Fourth Order RK Method', 'RK4',                                      &
+!                  'Three-Eighth Rule', 'Fourth Order Kutta',                            &
+!                  'Backward_Euler', 'Backward Euler', 'backward euler', 'backward_euler')
+!
+!                !
+!                ! Two time levels are read in to restart a time marching run
+!                !
+!
+!                ! Time locations in the q vector
+!                itime_s = 1
+!                itime_e = 2
+!                
+!                ! Check if the previous soultion is steady or not
+!                check_t = get_ntimes_hdf(fid)
+!                
+!                !if it is steady
+!                if ( check_t == 0 ) then
+!
+!                    flag = 'steady'
+!                    !TODO: double check!
+!                
+!                ! if we restart a time marching analysis
+!                else 
+!
+!                    ! First time step (of the last 2) in the existing hdf5 file
+!                    ! In 0-base (ex 6 time lev in chidg are 5 time lev in hdf5)
+!                    ihdf_s = get_ntimes_hdf(fid) - 1
+!
+!                    flag = 'time_marching'
+!
+!                end if
+!
+!            case ('Harmonic Balance', 'Harmonic_Balance', 'harmonic balance',   &
+!                  'harmonic_balance', 'HB')
+!        
+!                !
+!                !  All times levels in HB solution are initialized
+!                !
+!
+!                ! All HB time levels
+!                itime_s = 1
+!                itime_e = data%ntime() 
+!                
+!                ! Check if the previous solution is steady or HB
+!                check_t = get_ntimes_hdf(fid)
+!                
+!                ! If it steady than all the HB time levels are initialized with the
+!                ! previous steady solution
+!                if ( check_t == 0 ) then
+!                    
+!                    flag = 'steady'
+!                
+!                ! If the previous solution is HB and has the same number of frequencies
+!                ! store in q the correspondent previous solution
+!                else if ( check_t == (itime_e - 1) ) then
+!
+!                    flag = 'HB'
+!
+!                ! If the previous solution is HB but with different number of 
+!                ! frequencies, then....
+!                else
+!
+!                    ! TODO: add this case when there is a mismatch of frequencies
+!
+!                end if
+!
+!            case default
+!
+!                ! The time_integrtor name should have already been checked by time_manager%init.
+!                ! No need for warning messages
+!        
+!        end select
 
 
 
         !
         ! Read solution for each time step
         !
+        itime_e = get_ntimes_hdf(fid)
 
-        do itime = itime_s,itime_e 
+        do itime = 1, itime_e 
 
             !
             ! Read solution for each domain
@@ -411,7 +408,7 @@ contains
 
                 do ieqn = 1,data%eqnset(idom)%prop%nprimary_fields()
                     field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
-                            call read_domain_field_hdf(data,domain_id,field_name,itime,ihdf_s,flag,'Primary')
+                            call read_domain_field_hdf(data,domain_id,field_name,itime,'Primary')
                 end do ! ieqn
 
     !            do ieqn = 1,data%eqnset(idom)%prop%nauxiliary_fields()
@@ -516,7 +513,10 @@ contains
 
 
                 fid = open_file_hdf(file_name)
-
+                !
+                ! Set the attribute times to the hdf file
+                !
+                call set_ntimes_hdf(fid,data%ntime())
 
                 !
                 ! Write solution for each domain
@@ -554,7 +554,6 @@ contains
                     ! Set some data about the block: solution order + equation set
                     !
                     call set_solution_order_hdf(domain_id,order_s)
-
                     
                     !
                     ! Loop through time levels
@@ -639,22 +638,13 @@ contains
     !!  @date   11/5/2016
     !!
     !!
-    !!  @author Matteo Ugolotti
-    !!  @data   2/24/2017
-    !!
-    !!  @param[in]      hdf_time    Integer of the initial time instance to read in from
-    !!                              domain/Variable dataspace (time marching)
-    !!  @param[in]      switch      Time integrator used in the previous solution
-    !!
     !---------------------------------------------------------------------------------------
-    subroutine read_domain_field_hdf(data,domain_id,field_name,itime,hdf_time,switch,field_type)
+    subroutine read_domain_field_hdf(data,domain_id,field_name,itime,field_type)
         type(chidg_data_t),         intent(inout)   :: data
         integer(HID_T),             intent(in)      :: domain_id
         character(*),               intent(in)      :: field_name
         integer(ik),                intent(in)      :: itime
         character(*),               intent(in)      :: field_type
-        integer(ik),                intent(in)      :: hdf_time
-        character(:),  allocatable, intent(in)      :: switch
 
 
         integer(HID_T)          :: gid, sid, vid, memspace
@@ -779,24 +769,25 @@ contains
             ! get domain-global element index
             !
             ielem_g = data%mesh(idom)%elems(ielem)%ielement_g
-            
-            
-            !
-            ! Select the the correct time levels in the HDF5 file based on the time_integrator
-            ! used in the previous solution
-            !
-            if ( switch == 'steady' ) then
-                start = [1-1,ielem_g-1,hdf_time]   ! 0-based
-            else if ( switch == 'HB' ) then
-                start = [1-1,ielem_g-1,itime-1]   ! 0-based
-            else !( switch == 'time_marching' )
-                start = [1-1,ielem_g-1,(hdf_time + itime)-1]   ! 0-based
-            end if
-
-            !
-            ! Chunk of data in domain/Variable dataspace to be read
-            !
+            start = [1-1,ielem_g-1,itime-1] ! 0-based 
             count = [nterms_s, 1, 1]
+            
+!            !
+!            ! Select the the correct time levels in the HDF5 file based on the time_integrator
+!            ! used in the previous solution
+!            !
+!            if ( switch == 'steady' ) then
+!                start = [1-1,ielem_g-1,hdf_time]   ! 0-based
+!            else if ( switch == 'HB' ) then
+!                start = [1-1,ielem_g-1,itime-1]   ! 0-based
+!            else !( switch == 'time_marching' )
+!                start = [1-1,ielem_g-1,(hdf_time + itime)-1]   ! 0-based
+!            end if
+!
+!            !
+!            ! Chunk of data in domain/Variable dataspace to be read
+!            !
+!            count = [nterms_s, 1, 1]
 
 
             !

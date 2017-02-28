@@ -7,8 +7,8 @@ module type_chidg
     use mod_bc,                     only: register_bcs
     use mod_function,               only: register_functions
     use mod_grid,                   only: initialize_grid
-    use mod_io,                     only: read_input
-    use mod_string,                 only: get_file_extension, string_t
+    !use mod_io,                     only: read_input
+    use mod_string,                 only: get_file_extension, string_t, get_file_prefix
 
     use type_chidg_data,            only: chidg_data_t
     use type_time_integrator,       only: time_integrator_t
@@ -41,6 +41,7 @@ module type_chidg
     use mod_partitioners,           only: partition_connectivity, send_partitions, &
                                           recv_partition
     use mpi_f08
+    use mod_io
     implicit none
 
 
@@ -961,6 +962,7 @@ contains
     !!
     !!  @param[in]  solutionfile    String containing a solution file name, including extension.
     !!
+    !!
     !------------------------------------------------------------------------------------------
     subroutine write_solution(self,solutionfile)
         class(chidg_t),     intent(inout)           :: self
@@ -1016,15 +1018,16 @@ contains
     subroutine run(self)
         class(chidg_t), intent(inout)   :: self
 
-        character(100)  :: filename
-        integer(ik)     :: istep, nsteps, wcount
+        character(100)              :: filename
+        character(:),   allocatable :: prefix
+        integer(ik)                 :: istep, nsteps, wcount
 
 !        call self%auxiliary_environment%start_up('core')
 
         call write_line(" ", io_proc=GLOBAL_MASTER)
         call write_line("Entering Time Loop:", io_proc=GLOBAL_MASTER)
         call write_line(" ", io_proc=GLOBAL_MASTER)
-
+        
         
         !
         ! Initialize time integrator state
@@ -1033,8 +1036,14 @@ contains
 
         wcount = 1
         nsteps = self%data%time_manager%nsteps
+        
+        !
+        ! Get the prefix in the file name in case of multiple output files
+        !
+        prefix = get_file_prefix(solutionfile_out,'.h5')       
 
         do istep = 1,nsteps
+            
 
             call write_line("- Step ", istep, io_proc=GLOBAL_MASTER)
 
@@ -1046,8 +1055,19 @@ contains
             call self%time_integrator%step(self%data,self%nonlinear_solver, &
                                                      self%linear_solver,    &
                                                      self%preconditioner)
-
-
+           
+           
+            ! In case of steady or time_spectral analysis
+            if ( self%data%time_manager%nwrite == 1 ) then
+                call self%write_solution(solutionfile_out)
+            ! In case of time_marching analysis
+            else
+                if (wcount == self%data%time_manager%nwrite) then
+                    write(filename, "(A,I7.7,A3)") trim(prefix)//'_', istep, '.h5'
+                    call self%write_solution(filename)
+                    wcount = 0
+                end if
+            end if
 
 !            !
 !            ! Write interpolated solution every nwrite steps

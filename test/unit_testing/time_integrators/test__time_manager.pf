@@ -48,7 +48,7 @@ subroutine test_time_manager__init_steady()
 
     @assertEqual(time_integrator,t_manager%time_scheme)
     @assertEqual(1,t_manager%nsteps)
-    @assertEqual(0,t_manager%nwrite)
+    @assertEqual(1,t_manager%nwrite)
     @assertEqual(1,t_manager%ntime)
      
 

@@ -12,7 +12,7 @@ subroutine test_chidg_matrix_operator_HB_mv()
     use pfunit_mod
 
     use mod_kinds,          only: rk,ik
-    use mod_constants
+    use mod_constants,      only: ONE,TWO,THREE,PI,FOUR,IO_DESTINATION
     use type_chidg,         only: chidg_t
     use type_chidg_matrix,  only: chidg_matrix_t
     use type_chidg_vector,  only: chidg_vector_t
@@ -21,7 +21,7 @@ subroutine test_chidg_matrix_operator_HB_mv()
     use mod_bc,             only: create_bc
     use mod_test_utilities, only: create_mesh_file
     use mod_file_utilities, only: delete_file
-    use mod_time,           only: time_manager
+    use mod_time,           only: time_manager_global
 
     use operator_chidg_mv,  only: chidg_mv
     implicit none
@@ -30,12 +30,13 @@ subroutine test_chidg_matrix_operator_HB_mv()
     type(chidg_t)                       :: chidg
     type(meshdata_t),   allocatable     :: meshdata(:)
     class(bc_t),        allocatable     :: bc
-    integer(ik)                         :: idom, spacedim, nterms_s, idiag, idom_d, ielem_d, itime, ielem
-    real(rk),           dimension(8)    :: bref_1, bref_HB_1, bref_HB_2, bref_HB_3, bref_HB_4
+    integer(ik)                         :: idom, spacedim, nterms_s, idiag, idom_d, ielem_d, itime, ielem, imat
+    real(rk),           dimension(8)    :: bref_1, bref_HB_1, bref_HB_2, bref_HB_3, bref_HB_4, &
+                                           bref_HB_5, bref_HB_6, bref_HB_7, bref_HB_8
     real(rk),           dimension(8)    :: vals
     real(rk)                            :: tol
     real(rk),           dimension(3,3)  :: D_ref
-    character(:),       allocatable     :: time_integrator
+    character(:),       allocatable     :: filename, time_integrator
 
     type(chidg_matrix_t)                :: A
     type(chidg_vector_t)                :: x, b
@@ -51,17 +52,22 @@ subroutine test_chidg_matrix_operator_HB_mv()
     !
     ! Set time_manager values since no .nml file is being used
     !
-    time_manager%dt = 0             ! Not used for HB
-    time_manager%time_steps = 1     ! Not used for HB
-    time_manager%nwrite = 0         ! Not used for HB
-    time_manager%freq_data = 2*PI
+    time_manager_global%dt     = 0     ! Not used for HB
+    time_manager_global%nsteps = 1     ! Not used for HB
+    time_manager_global%nwrite = 0     ! Not used for HB
+    time_manager_global%ntime  = 3
+    call time_manager_global%freq_data%push_back(2.0_rk*PI)
 
+
+    chidg%data%time_manager%ntime = 3
 
     !
     ! Initialize ChiDG
     ! Also initializes time_manager
     !
     call chidg%start_up('core')
+    call chidg%set('Solution Order', integer_input = 2)
+    call chidg%set('Time Integrator', algorithm = time_integrator)
 
 
     !
@@ -70,6 +76,7 @@ subroutine test_chidg_matrix_operator_HB_mv()
     filename = "D1_2x2x2_singleblock.h5"
     call create_mesh_file("D1 NxNxN", filename, nelem_xi = 2, nelem_eta = 2, nelem_zeta = 2)
 
+!    chidg%data%mesh%ntime = 3
 
     !
     ! Get grid points
@@ -81,11 +88,12 @@ subroutine test_chidg_matrix_operator_HB_mv()
     !
     ! Initalize ChiDG Chimera interfaces
     !
-    call chidg%set('Solution Order', integer_input = 2)
-    call chidg%set('Time Integrator', algorithm = time_integrator)
+!    call chidg%set('Solution Order', integer_input = 2)
+!    call chidg%set('Time Integrator', algorithm = time_integrator)
     call chidg%init('domains')
     call chidg%init('communication')
 
+    print *, 'mesh:ntime = ', chidg%data%mesh%ntime
 
     !
     ! Initialize data containers
@@ -107,7 +115,7 @@ subroutine test_chidg_matrix_operator_HB_mv()
     imat  = A%dom(1)%lblks(ielem,itime)%get_diagonal()
     A%dom(1)%lblks(ielem,itime)%data_(imat)%mat = ONE
     vals  = 0.1_rk
-    call x%dom(1)%vecs(ielem)%settime(2,vals)
+    call x%dom(1)%vecs(ielem)%setvar(1,2,vals)
 
 
     ielem = 3
@@ -115,7 +123,7 @@ subroutine test_chidg_matrix_operator_HB_mv()
     imat  = A%dom(1)%lblks(ielem,itime)%get_diagonal()
     A%dom(1)%lblks(ielem,itime)%data_(imat)%mat = TWO
     vals  = 0.2_rk
-    call x%dom(1)%vecs(ielem)%settime(3,vals)
+    call x%dom(1)%vecs(ielem)%setvar(1,3,vals)
 
 
     ielem = 7
@@ -123,7 +131,7 @@ subroutine test_chidg_matrix_operator_HB_mv()
     imat  = A%dom(1)%lblks(ielem,itime)%get_diagonal()
     A%dom(1)%lblks(ielem,itime)%data_(imat)%mat = THREE
     vals  = 0.4_rk
-    call x%dom(1)%vecs(ielem)%settime(2,vals)
+    call x%dom(1)%vecs(ielem)%setvar(1,2,vals)
 
 
     ielem = 6
@@ -132,19 +140,19 @@ subroutine test_chidg_matrix_operator_HB_mv()
     A%dom(1)%lblks(ielem,itime)%data_(imat)%mat = FOUR
 
     vals  = 0.5_rk
-    call x%dom(idom)%vecs(8)%settime(3,vals)
+    call x%dom(idom)%vecs(8)%setvar(1,3,vals)
 
 
-    !
-    ! Set mass matrices in the densevector_matrices
-    !
-    do ielem = 1,8
-        do itime = 1,3
-
-            A%dom(1)%lblks(ielem,itime)%mass = chidg%data%mesh%elems(ielem)%mass
-
-        end do
-    end do
+!    !
+!    ! Set mass matrices in the densevector_matrices
+!    !
+!    do ielem = 1,8
+!        do itime = 1,3
+!
+!            A%dom(1)%lblks(ielem,itime)%mass = chidg%data%mesh%elems(ielem)%mass
+!
+!        end do
+!    end do
 
 
     !
@@ -161,25 +169,32 @@ subroutine test_chidg_matrix_operator_HB_mv()
     !
     ! Note that D_ref defined above can also be used for reference calculations
     !
-    associate ( D => time_manager%D )
+    associate ( D => time_manager_global%D )
 
         bref_1 = (THREE*0.4_rk)*nterms_s    ! Residual linearization at ielem = 7, itime = 2 \times (densevector)
-        vals = 0.1_rk; bref_HB_1 = D(1,2)*matmul(A%dom(1)%lblks(1,2)%mass,vals) + &
-                                   D(3,2)*matmul(A%dom(1)%lblks(1,2)%mass,vals)
-        vals = 0.4_rk; bref_HB_2 = D(1,2)*matmul(A%dom(1)%lblks(7,2)%mass,vals) + &
-                                   D(3,2)*matmul(A%dom(1)%lblks(7,2)%mass,vals)             
-        vals = 0.2_rk; bref_HB_3 = D(1,3)*matmul(A%dom(1)%lblks(3,3)%mass,vals) + &
-                                   D(1,3)*matmul(A%dom(1)%lblks(3,3)%mass,vals)
-        vals = 0.5_rk; bref_HB_4 = D(1,3)*matmul(A%dom(1)%lblks(8,3)%mass,vals) + &
-                                   D(2,3)*matmul(A%dom(1)%lblks(8,3)%mass,vals)
+        vals = 0.1_rk; bref_HB_1 = D(1,2)*matmul(A%dom(1)%lblks(1,2)%mass,vals)
+        vals = 0.1_rk; bref_HB_2 = D(3,2)*matmul(A%dom(1)%lblks(1,2)%mass,vals)
+        vals = 0.4_rk; bref_HB_3 = D(1,2)*matmul(A%dom(1)%lblks(7,2)%mass,vals)
+        vals = 0.4_rk; bref_HB_4 = D(3,2)*matmul(A%dom(1)%lblks(7,2)%mass,vals)
+        vals = 0.2_rk; bref_HB_5 = D(1,3)*matmul(A%dom(1)%lblks(3,3)%mass,vals)
+        vals = 0.2_rk; bref_HB_6 = D(2,3)*matmul(A%dom(1)%lblks(3,3)%mass,vals)
+        vals = 0.5_rk; bref_HB_7 = D(1,3)*matmul(A%dom(1)%lblks(8,3)%mass,vals)
+        vals = 0.5_rk; bref_HB_8 = D(2,3)*matmul(A%dom(1)%lblks(8,3)%mass,vals)
 
     end associate
 
     !
     ! Test MV operation
     !
-    @assertEqual()
-    @assertEqual()
+    @assertEqual(bref_1,b%dom(1)%vecs(7)%getvar(1,2),tol)
+    @assertEqual(bref_HB_1,b%dom(1)%vecs(1)%getvar(1,1),tol)
+    @assertEqual(bref_HB_2,b%dom(1)%vecs(1)%getvar(1,3),tol)
+    @assertEqual(bref_HB_3,b%dom(1)%vecs(7)%getvar(1,1),tol)
+    @assertEqual(bref_HB_4,b%dom(1)%vecs(7)%getvar(1,3),tol)
+    @assertEqual(bref_HB_5,b%dom(1)%vecs(3)%getvar(1,1),tol)
+    @assertEqual(bref_HB_6,b%dom(1)%vecs(3)%getvar(1,2),tol)
+    @assertEqual(bref_HB_7,b%dom(1)%vecs(8)%getvar(1,1),tol)
+    @assertEqual(bref_HB_8,b%dom(1)%vecs(8)%getvar(1,2),tol)
 
 
     !

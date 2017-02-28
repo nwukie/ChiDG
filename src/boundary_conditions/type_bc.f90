@@ -49,7 +49,7 @@ module type_bc
     !!  @date   8/30/2016
     !!  @note   Reorganized into bc patch, and bc operators
     !!
-    !--------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     type, public :: bc_t
 
         ! Index of the boundary condition in a set. So a bc knows its location
@@ -57,7 +57,6 @@ module type_bc
 
         ! MPI communicator that gets setup for parallel bc's
         type(mpi_comm)                          :: BC_COMM
-
 
         ! Boundary condition family
         character(:),               allocatable :: bc_family
@@ -78,17 +77,18 @@ module type_bc
 
 
 
-        procedure   :: add_bc_state         ! Add a bc_state function to the boundary condition.
+        procedure   :: add_bc_state         ! Add a bc_state instance to the boundary condition.
+        procedure   :: add_bc_patch         ! Add a bc_patch instance to the boundary condition.
 
         procedure   :: set_family           ! Set the boundary condition family.
         procedure   :: get_family           ! Return the boundary condition family.
 
         procedure   :: nfaces               ! Return total number of faces in 
-        procedure   :: get_ncoupled_elems   ! Return the number of elements coupled with a specified boundary element.
+        procedure   :: ncoupled_elements    ! Return the number of elements coupled with a specified boundary element.
 
 
     end type bc_t
-    !*********************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -113,7 +113,7 @@ contains
     !!  @param[inout]   mesh            mesh_t object containing elements and faces
     !!  @param[in]      bc_connectivity Connectivity information for faces defining a boundary condition
     !!
-    !---------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine init_bc(self,mesh,bc_connectivity,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
         class(bc_t),                    intent(inout)           :: self
         type(mesh_t),                   intent(inout)           :: mesh(:)
@@ -128,12 +128,12 @@ contains
         class(bc_state_t),              intent(in), optional    :: bc_periodic
 
 
-        integer(ik) :: iface_bc, idom, ielem, iface, ncoupled_elements
+        integer(ik) :: ipatch, iface_bc, idom, ielem, iface, ncoupled_elements
 
-        !
-        ! Boundary condition group initialization
-        !
-        call self%init_bc_group(bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
+!        !
+!        ! Boundary condition group initialization
+!        !
+!        call self%init_bc_group(bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
 
 
 
@@ -170,7 +170,7 @@ contains
                 ielem = self%bc_patch(ipatch)%ielement_l(iface_bc)
                 iface = self%bc_patch(ipatch)%iface(iface_bc)
 
-                mesh(idom)%faces(ielem,iface)%BC_ndepend = self%bc_patch(ipatch)%ncoupled_element(iface_bc)
+                mesh(idom)%faces(ielem,iface)%BC_ndepend = self%bc_patch(ipatch)%ncoupled_elements(iface_bc)
 
             end do !iface_bc
         end do !ipatch
@@ -187,7 +187,7 @@ contains
 
 
     end subroutine init_bc
-    !**********************************************************************************************
+    !******************************************************************************************
     
 
 
@@ -197,17 +197,19 @@ contains
 
 
 
-    !>  Initialize boundary condition group.
+    !>  Initialize array of boundary condition state functions, bc_state_t, from an incoming
+    !!  boundary condition group, bc_group_t. Also sets the Family type of the boundary condition.
+    !!
     !!
     !!  @author Nathan A. Wukie
     !!  @date   11/19/2016
+    !!  @date   2/27/2017   modifications for more general boundary conditions.
     !!
-    !!
-    !-----------------------------------------------------------------------------------------------
-    subroutine init_bc_group(self,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
+    !------------------------------------------------------------------------------------------
+    !subroutine init_bc_group(self,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
+    subroutine init_bc_group(self,bc_group,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
         class(bc_t),                    intent(inout)           :: self
-        character(*),                   intent(in)              :: bc_group
-        type(bc_group_t),               intent(in)              :: bc_groups(:)
+        type(bc_group_t),               intent(in)              :: bc_group
         class(bc_state_t),              intent(in), optional    :: bc_wall
         class(bc_state_t),              intent(in), optional    :: bc_inlet
         class(bc_state_t),              intent(in), optional    :: bc_outlet
@@ -219,102 +221,74 @@ contains
         character(:),       allocatable     :: user_msg
         class(bc_state_t),  allocatable     :: bc_state
         integer(ik)                         :: istate, igroup, ierr
-        logical                             :: group_found, group_set
-
 
 
 
         !
-        ! Find the correct bc_group in bc_groups(:)
+        ! Set Family
         !
-        group_set = .false.
-        do igroup = 1,size(bc_groups)
+        call self%set_family(bc_group%family)
 
-            group_found = (trim(bc_group) == trim(bc_groups(igroup)%name) )
-            if (group_found .and. (.not. group_set)) then
+        
+        !
+        ! Set override boundary condition states if they were passed in:
+        !
+        if ( present(bc_wall) .and. (trim(bc_group%family) == 'Wall') ) then
+            if (allocated(bc_state)) deallocate(bc_state)
+            allocate(bc_state, source=bc_wall, stat=ierr)
+            call self%add_bc_state(bc_state)
 
+        else if ( present(bc_inlet) .and. (trim(bc_group%family) == 'Inlet') ) then
+            if (allocated(bc_state)) deallocate(bc_state)
+            allocate(bc_state, source=bc_inlet, stat=ierr)
+            call self%add_bc_state(bc_state)
 
-                !
-                ! Set Family
-                !
-                call self%set_family(bc_groups(igroup)%family)
+        else if ( present(bc_outlet) .and. (trim(bc_group%family) == 'Outlet') ) then
+            if (allocated(bc_state)) deallocate(bc_state)
+            allocate(bc_state, source=bc_outlet, stat=ierr)
+            call self%add_bc_state(bc_state)
 
-                
-                !
-                ! Set default boundary condition states if they were passed in:
-                !
-                if ( present(bc_wall) .and. (trim(bc_groups(igroup)%family) == 'Wall') ) then
-                    if (allocated(bc_state)) deallocate(bc_state)
-                    allocate(bc_state, source=bc_wall, stat=ierr)
-                    call self%add_bc_state(bc_state)
+        else if ( present(bc_symmetry) .and. (trim(bc_group%family) == 'Symmetry') ) then
+            if (allocated(bc_state)) deallocate(bc_state)
+            allocate(bc_state, source=bc_symmetry, stat=ierr)
+            call self%add_bc_state(bc_state)
 
-                else if ( present(bc_inlet) .and. (trim(bc_groups(igroup)%family) == 'Inlet') ) then
-                    if (allocated(bc_state)) deallocate(bc_state)
-                    allocate(bc_state, source=bc_inlet, stat=ierr)
-                    call self%add_bc_state(bc_state)
-
-                else if ( present(bc_outlet) .and. (trim(bc_groups(igroup)%family) == 'Outlet') ) then
-                    if (allocated(bc_state)) deallocate(bc_state)
-                    allocate(bc_state, source=bc_outlet, stat=ierr)
-                    call self%add_bc_state(bc_state)
-
-                else if ( present(bc_symmetry) .and. (trim(bc_groups(igroup)%family) == 'Symmetry') ) then
-                    if (allocated(bc_state)) deallocate(bc_state)
-                    allocate(bc_state, source=bc_symmetry, stat=ierr)
-                    call self%add_bc_state(bc_state)
-
-                else if ( present(bc_farfield) .and. (trim(bc_groups(igroup)%family) == 'Farfield') ) then
-                    if (allocated(bc_state)) deallocate(bc_state)
-                    allocate(bc_state, source=bc_farfield, stat=ierr)
-                    call self%add_bc_state(bc_state)
-                else if ( present(bc_periodic) .and. (trim(bc_groups(igroup)%family) == 'Periodic') ) then
-                    if (allocated(bc_state)) deallocate(bc_state)
-                    allocate(bc_state, source=bc_periodic, stat=ierr)
-                    call self%add_bc_state(bc_state)
+        else if ( present(bc_farfield) .and. (trim(bc_group%family) == 'Farfield') ) then
+            if (allocated(bc_state)) deallocate(bc_state)
+            allocate(bc_state, source=bc_farfield, stat=ierr)
+            call self%add_bc_state(bc_state)
+        else if ( present(bc_periodic) .and. (trim(bc_group%family) == 'Periodic') ) then
+            if (allocated(bc_state)) deallocate(bc_state)
+            allocate(bc_state, source=bc_periodic, stat=ierr)
+            call self%add_bc_state(bc_state)
 
 
-                !
-                ! If no default boundary condition was set for the group, add the states from the file:
-                !
-                else
+        !
+        ! If no default boundary condition was set for the group, add the states from the file:
+        !
+        else
 
-                    ! Add all bc_states in the group to the boundary condition
-                    do istate = 1,bc_groups(igroup)%bc_states%size()
+            ! Add all bc_states in the group to the boundary condition
+            do istate = 1,bc_group%bc_states%size()
 
-                        ! Get boundary condition state
-                        if (allocated(bc_state)) deallocate(bc_state)
-                        allocate(bc_state, source=bc_groups(igroup)%bc_states%at(istate), stat=ierr)
-                        if (ierr /= 0) call AllocationError
+                ! Get boundary condition state
+                if (allocated(bc_state)) deallocate(bc_state)
+                allocate(bc_state, source=bc_group%bc_states%at(istate), stat=ierr)
+                if (ierr /= 0) call AllocationError
 
-                        ! Add boundary condition state
-                        call self%add_bc_state(bc_state)
+                ! Add boundary condition state
+                call self%add_bc_state(bc_state)
 
-                    end do !istate
+            end do !istate
 
-                end if
-
-                group_set = .true.
-            end if
-
-        end do
+        end if
 
 
 
-
-        user_msg = "chidg_data%add_bc: It looks like we didn't find a boundary state group that &
-                    matches with the string indicated in a boundary patch. Make sure that a &
-                    boundary state group with the correct name exists. Also make sure that the name &
-                    set on the boundary patch corresponds to one of the boundary state groups that exists."
-        if ((.not. group_set) .and. ((trim(bc_group) /= 'empty') .and. (trim(bc_group) /= 'Empty')) ) &
-            call chidg_signal_one(FATAL,user_msg,trim(bc_group))
-
-
-        if ( (trim(bc_group) == 'empty') .or. &
-             (trim(bc_group) == 'Empty') ) call self%set_family('Empty')
 
 
     end subroutine init_bc_group
-    !***********************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -332,7 +306,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   11/19/2016
     !!
-    !----------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine init_bc_patch(self,mesh,bc_connectivity)
         class(bc_t),                    intent(inout)           :: self
         type(mesh_t),                   intent(inout)           :: mesh
@@ -350,6 +324,33 @@ contains
         logical,        allocatable :: node_matched(:), xi_face, eta_face, zeta_face
         integer(ik),    allocatable :: element_nodes(:)
         integer(ik)                 :: face_node
+
+!        logical                     :: group_found, group_set
+
+
+
+
+
+
+
+!        user_msg = "chidg_data%add_bc: It looks like we didn't find a boundary state group that &
+!                    matches with the string indicated in a boundary patch. Make sure that a &
+!                    boundary state group with the correct name exists. Also make sure that the name &
+!                    set on the boundary patch corresponds to one of the boundary state groups that exists."
+!        if ((.not. group_set) .and. ((trim(bc_group%name) /= 'empty') .and. (trim(bc_group%name) /= 'Empty')) ) &
+!            call chidg_signal_one(FATAL,user_msg,trim(bc_group%name))
+!
+!
+!        if ( (trim(bc_group) == 'empty') .or. &
+!             (trim(bc_group) == 'Empty') ) call self%set_family('Empty')
+!
+
+
+
+
+
+
+
 
 
         !
@@ -546,7 +547,7 @@ contains
 
 
     end subroutine init_bc_patch
-    !**********************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -567,10 +568,10 @@ contains
     !!
     !!  @param[inout]   mesh        mesh_t object containing elements and faces
     !!
-    !----------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine init_bc_specialized(self,mesh)
         class(bc_t),    intent(inout)   :: self
-        type(mesh_t),   intent(inout)   :: mesh
+        type(mesh_t),   intent(inout)   :: mesh(:)
 
 
         integer(ik) :: iop
@@ -588,7 +589,7 @@ contains
 
 
     end subroutine init_bc_specialized
-    !**********************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -609,7 +610,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/16/2016
     !!
-    !----------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine init_bc_coupling(self,mesh)
         class(bc_t),        intent(inout)   :: self
         type(mesh_t),       intent(in)      :: mesh
@@ -628,7 +629,7 @@ contains
         end if
 
     end subroutine init_bc_coupling
-    !**********************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -645,8 +646,8 @@ contains
     !!
     !!
     !!
-    !----------------------------------------------------------------------------------------------
-    function get_ncoupled_elems(self,ipatch,iface) result(ncoupled_elems)
+    !------------------------------------------------------------------------------------------
+    function ncoupled_elements(self,ipatch,iface) result(ncoupled_elems)
         class(bc_t),    intent(inout)   :: self
         integer(ik),    intent(in)      :: ipatch
         integer(ik),    intent(in)      :: iface
@@ -654,11 +655,11 @@ contains
         integer(ik) :: ncoupled_elems
 
 
-        ncoupled_elems = self%bc_patch(ipatch)%coupled_elements(iface)%size()
+        ncoupled_elems = self%bc_patch(ipatch)%ncoupled_elements(iface)
 
 
-    end function get_ncoupled_elems
-    !**********************************************************************************************
+    end function ncoupled_elements
+    !******************************************************************************************
 
 
 
@@ -678,7 +679,7 @@ contains
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine add_bc_state(self,bc_state)
         class(bc_t),        intent(inout)   :: self
         class(bc_state_t),  intent(in)      :: bc_state
@@ -724,7 +725,81 @@ contains
 
 
     end subroutine add_bc_state
-    !**************************************************************************************************
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Add a bc_patch instance to the boundary condition.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/30/2016
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine add_bc_state(self,bc_state)
+        class(bc_t),        intent(inout)   :: self
+        class(bc_state_t),  intent(in)      :: bc_state
+
+        integer(ik) :: iop, ierr
+        class(bc_state_wrapper_t),   allocatable :: temp(:) 
+
+
+        !
+        ! Allocate temp storage for (size+1), copy current states to temp
+        !        
+        if (allocated(self%bc_state)) then
+
+            allocate(temp(size(self%bc_state) + 1), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+            ! Copy previously added states to temp
+            do iop = 1,size(self%bc_state)
+                allocate(temp(iop)%state, source=self%bc_state(iop)%state, stat=ierr)
+                if (ierr /= 0) call AllocationError
+            end do
+
+        else
+
+            allocate(temp(1), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+        end if
+
+
+        !
+        ! Allocate new state to end
+        !
+        allocate(temp(size(temp))%state, source=bc_state, stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+
+        !
+        ! Move temp allocation to bc
+        !
+        call move_alloc(temp, self%bc_state)
+
+
+    end subroutine add_bc_state
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -749,7 +824,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine set_family(self,family)
         class(bc_t),        intent(inout)   :: self
         character(*),       intent(in)      :: family
@@ -776,7 +851,7 @@ contains
         end if
 
     end subroutine set_family
-    !***************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -793,7 +868,7 @@ contains
     !!  @date   11/4/2016
     !!
     !!
-    !---------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     function get_family(self) result(family)
         class(bc_t),        intent(inout)   :: self
 
@@ -812,7 +887,44 @@ contains
         end if
 
     end function get_family
-    !***************************************************************************************************
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Return number of faces attached to the boundary condition. Includes contributions from
+    !!  all bc_patches attached to the boundary condition.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/27/2017
+    !!
+    !------------------------------------------------------------------------------------------
+    function nfaces(self) result(nfaces_)
+        class(bc_t),    intent(in)  :: self
+
+        integer(ik) :: ipatch, nfaces_
+
+        nfaces_ = 0
+        do ipatch = 1,size(self%bc_patch)
+
+            nfaces_ = nfaces_ + self%bc_patch(ipatch)%nfaces()
+
+        end do !ipatch
+
+    end function nfaces
+    !******************************************************************************************
+
+
+
+
+
+
 
 
 

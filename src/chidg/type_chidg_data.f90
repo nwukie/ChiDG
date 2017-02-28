@@ -73,8 +73,9 @@ module type_chidg_data
 
         ! Modifiers for adding domains and boundary conditions
         procedure   :: add_domain
-        procedure   :: add_bc
+        procedure   :: add_bc_group
         procedure   :: add_bc_patch
+        procedure   :: create_new_bc
 
         ! Initialization procedure for solution data. Execute after all domains are added.
         procedure   :: initialize_solution_domains
@@ -276,8 +277,9 @@ contains
 
 
 
-    !>  For a ChiDG domain, add a boundary condition patch and associate it with a boundary 
-    !!  condition group.
+    !>  Create a new boundary condition and add the incoming
+    !>  !For a ChiDG domain, add a boundary condition patch and associate it with a boundary 
+    !!  !condition group.
     !!
     !!
     !!  Boundary condition groups hold sets of state functions that are used to compute an 
@@ -299,12 +301,13 @@ contains
     !!  as an option for bc_wall, bc_inlet, bc_outlet, bc_symmetry
     !!
     !------------------------------------------------------------------------------------------
-    subroutine add_bc(self,domain,bc_connectivity,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
+    !subroutine add_bc_group(self,domain,bc_connectivity,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
+    !    character(*),                   intent(in)              :: bc_group
+    !    character(*),                   intent(in)              :: domain
+    !    type(boundary_connectivity_t),  intent(in)              :: bc_connectivity
+    subroutine add_bc_group(self,bc_group,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
         class(chidg_data_t),            intent(inout)           :: self
-        character(*),                   intent(in)              :: domain
-        type(boundary_connectivity_t),  intent(in)              :: bc_connectivity
-        character(*),                   intent(in)              :: bc_group
-        type(bc_group_t),               intent(in)              :: bc_groups(:)
+        type(bc_group_t),               intent(in)              :: bc_group
         class(bc_state_t),              intent(in), optional    :: bc_wall
         class(bc_state_t),              intent(in), optional    :: bc_inlet
         class(bc_state_t),              intent(in), optional    :: bc_outlet
@@ -315,13 +318,127 @@ contains
 
         character(:),       allocatable     :: user_msg
         class(bc_state_t),  allocatable     :: bc_state
-        type(bc_t)                          :: bc
         integer(ik)                         :: idom, BC_ID, istate, igroup, ierr
         logical                             :: group_found, group_set
 
 
-        type(bc_t), allocatable :: temp_bcs(:)
 
+
+        !
+        ! Create a new boundary condition
+        !
+        BC_ID = self%create_new_bc()
+
+
+
+
+        !
+        ! Initialize boundary condition state functions from bc_group
+        !
+        call self%bc(BC_ID)%init_bc_group(bc_group, bc_wall,        &
+                                                    bc_inlet,       &
+                                                    bc_outlet,      &
+                                                    bc_symmetry,    &
+                                                    bc_farfield,    &
+                                                    bc_periodic)
+
+
+
+
+!
+!        !
+!        ! Initialize new boundary condition from mesh data and connectivity information.
+!        ! NOTE: init_bc needs called after the boundary condition has been added to the 
+!        !       set so it can inform the mesh about it's BC_ID.
+!        !
+!        call self%bcset(idom)%bcs(BC_ID)%init_bc(self%mesh(idom),bc_connectivity,bc_group,bc_groups, &
+!                                                                                 bc_wall,            &
+!                                                                                 bc_inlet,           &
+!                                                                                 bc_outlet,          &
+!                                                                                 bc_symmetry,        &
+!                                                                                 bc_farfield,        &
+!                                                                                 bc_periodic)
+
+
+    end subroutine add_bc_group
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  ProAdd a bc_patch_t to the appropriate boundary condition.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/27/2017
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine add_bc_patch(self,bc_patch_data)
+        class(chidg_data_t),    intent(inout)   :: self
+        type(bc_patch_data_t),  intent(in)      :: bc_patch_data
+
+
+        
+        !
+        ! Find the correct boundary condition to add bc_patch to
+        !
+        do ibc = 1,size(self%bc)
+
+            patch_group = bc_patch_data
+
+
+        end do
+
+
+
+
+        !
+        ! Once bc is found, initialize bc_patch on bc
+        !
+        call self%bc(BC_ID)%init_bc_patch(bc_patch_data
+
+
+
+
+
+    end subroutine add_bc_patch
+    !*******************************************************************************************
+
+
+
+
+
+
+
+
+    
+
+    !>  Extend the self%bc array to include another instance. Return the ID of the new
+    !!  boundary condition where it can be found in the array.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/27/2017
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    function create_new_bc(self) result(BC_ID)
+        class(chidg_data_t),    intent(inout)   :: self
+
+        type(bc_t)              :: bc
+        type(bc_t), allocatable :: temp_bcs(:)
+        integer(ik)             :: BC_ID, ierr
 
         !
         ! Increment number of boundary conditions
@@ -330,7 +447,7 @@ contains
 
 
         !
-        ! Set BC_ID
+        ! Set BC_ID in new boundary condition and return result
         !
         bc%BC_ID = self%nbcs_
         BC_ID    = self%nbcs_
@@ -358,95 +475,14 @@ contains
 
 
         !
-        ! Move allocation to bcset storage
+        ! Attach extended allocation to chidg_data%bc
         !
         call move_alloc(temp_bcs,self%bc)
 
 
 
-
-
-
-
-
-
-
-
-
-
-        !
-        ! Get domain index from domain string
-        !
-        idom = self%get_domain_index(domain)
-
-
-        !
-        ! Add a new boundary condition and get ID
-        !
-        BC_ID = self%bcset(idom)%add(bc)
-
-
-
-        !
-        ! Initialize new boundary condition from mesh data and connectivity information.
-        ! NOTE: init_bc needs called after the boundary condition has been added to the 
-        !       set so it can inform the mesh about it's BC_ID.
-        !
-        call self%bcset(idom)%bcs(BC_ID)%init_bc(self%mesh(idom),bc_connectivity,bc_group,bc_groups, &
-                                                                                 bc_wall,            &
-                                                                                 bc_inlet,           &
-                                                                                 bc_outlet,          &
-                                                                                 bc_symmetry,        &
-                                                                                 bc_farfield,        &
-                                                                                 bc_periodic)
-
-
-    end subroutine add_bc
+    end function create_new_bc
     !******************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    !>  Add a bc_patch_t to the appropriate boundary condition.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/27/2017
-    !!
-    !!
-    !------------------------------------------------------------------------------------------
-    subroutine add_bc_patch(self,bc_patch_data)
-        class(chidg_data_t),    intent(inout)   :: self
-        type(bc_patch_data_t),  intent(in)      :: bc_patch_data
-
-
-
-
-
-
-
-
-
-
-
-
-
-    end subroutine add_bc_patch
-    !*******************************************************************************************
-
-
-
 
 
 

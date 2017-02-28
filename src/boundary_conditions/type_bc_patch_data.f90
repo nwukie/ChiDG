@@ -25,7 +25,7 @@ module type_bc_patch_data
         ! Boundary condition patch information
         character(:),                   allocatable :: domain_              ! Domain name the bcdata is associated with.
         type(boundary_connectivity_t),  allocatable :: bc_connectivity(:)   ! Face connectivities for faces defining the patch.
-        type(svector_t)                             :: bc_group             ! Boundary State Group the patch is associated with.
+        type(svector_t)                             :: bc_group_name        ! Boundary State Group the patch is associated with.
 
     end type bc_patch_data_t
     !******************************************************************************

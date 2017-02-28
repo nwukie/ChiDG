@@ -108,8 +108,8 @@ contains
     !--------------------------------------------------------------------------------
     subroutine init_bc_specialized(self,mesh,bc_patch)
         class(outlet_point_pressure_t), intent(inout)   :: self
-        type(mesh_t),                   intent(in)      :: mesh
-        type(bc_patch_t),               intent(in)      :: bc_patch
+        type(mesh_t),                   intent(in)      :: mesh(:)
+        type(bc_patch_t),               intent(in)      :: bc_patch(:)
 
         type(point_t)                               :: point
         type(point_t),  allocatable, dimension(:)   :: coords, quad_pts
@@ -117,47 +117,47 @@ contains
         integer(ik)     :: iface_bc, iface, ielement
         real(rk)        :: time
 
-
-        !
-        ! Get user-specified node. Need coord,time here because thats the
-        ! function interface. They aren't really doing anything.
-        !
-        point%c1_ = 0._rk
-        point%c2_ = 0._rk
-        point%c3_ = 0._rk
-        coords = [point]
-        time   = 0._rk
-        node1  = self%bcproperties%compute('Coordinate-1',time,coords)
-        node2  = self%bcproperties%compute('Coordinate-2',time,coords)
-        node3  = self%bcproperties%compute('Coordinate-3',time,coords)
-
-
-
-
-        !
-        ! Loop through patch, find quadrature node closest to user-specified node.
-        !
-        do iface_bc = 1,bc_patch%nfaces()
-
-            ! get face location
-            ielement = bc_patch%ielement_l_%at(iface_bc)
-            iface    = bc_patch%iface_%at(iface_bc)
-            
-            ! get points at quadrature nodes for current face
-            quad_pts = mesh%faces(ielement,iface)%quad_pts
-
-            ! compute distance of quadrature nodes to user node
-            dist = sqrt( (quad_pts(:)%c1_ - node1(1))**TWO + &
-                         (quad_pts(:)%c2_ - node2(1))**TWO + &
-                         (quad_pts(:)%c3_ - node3(1))**TWO )
-        
-
-            
-
-
-
-        end do !iface
-
+!
+!        !
+!        ! Get user-specified node. Need coord,time here because thats the
+!        ! function interface. They aren't really doing anything.
+!        !
+!        point%c1_ = 0._rk
+!        point%c2_ = 0._rk
+!        point%c3_ = 0._rk
+!        coords = [point]
+!        time   = 0._rk
+!        node1  = self%bcproperties%compute('Coordinate-1',time,coords)
+!        node2  = self%bcproperties%compute('Coordinate-2',time,coords)
+!        node3  = self%bcproperties%compute('Coordinate-3',time,coords)
+!
+!
+!
+!
+!        !
+!        ! Loop through patch, find quadrature node closest to user-specified node.
+!        !
+!        do iface_bc = 1,bc_patch%nfaces()
+!
+!            ! get face location
+!            ielement = bc_patch%ielement_l_%at(iface_bc)
+!            iface    = bc_patch%iface_%at(iface_bc)
+!            
+!            ! get points at quadrature nodes for current face
+!            quad_pts = mesh%faces(ielement,iface)%quad_pts
+!
+!            ! compute distance of quadrature nodes to user node
+!            dist = sqrt( (quad_pts(:)%c1_ - node1(1))**TWO + &
+!                         (quad_pts(:)%c2_ - node2(1))**TWO + &
+!                         (quad_pts(:)%c3_ - node3(1))**TWO )
+!        
+!
+!            
+!
+!
+!
+!        end do !iface
+!
 
     end subroutine init_bc_specialized
     !********************************************************************************

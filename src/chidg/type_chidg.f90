@@ -682,7 +682,7 @@ contains
 
         character(5),           dimension(1)    :: extensions
         character(:),           allocatable     :: extension
-        type(bc_patch_data_t),  allocatable     :: bc_patches(:)
+        type(bc_patch_data_t),  allocatable     :: bc_patch_data(:)
         type(bc_group_t),       allocatable     :: bc_groups(:)
         type(string_t)                          :: group_name
         integer                                 :: idom, ndomains, iface, ierr, iread
@@ -704,7 +704,7 @@ contains
 
 
                 if ( extension == '.h5' ) then
-                    call read_boundaryconditions_hdf(gridfile,bc_patches,bc_groups,self%partition)
+                    call read_boundaryconditions_hdf(gridfile,bc_patch_data,bc_groups,self%partition)
                 else
                     call chidg_signal(FATAL,"chidg%read_boundaryconditions: grid file extension not recognized")
                 end if
@@ -719,16 +719,16 @@ contains
 
 
         !
-        ! Add boundary condition groups
+        ! Add all boundary condition groups
         !
         do ibc = 1,size(bc_groups)
 
-            call self%data%add_bc(bc_groups(igroup),  bc_wall=bc_wall,          &
-                                                      bc_inlet=bc_inlet,        &
-                                                      bc_outlet=bc_outlet,      &
-                                                      bc_symmetry=bc_symmetry,  &
-                                                      bc_farfield=bc_farfield,  &
-                                                      bc_periodic=bc_periodic)
+            call self%data%add_bc_group(bc_groups(igroup), bc_wall=bc_wall,          &
+                                                           bc_inlet=bc_inlet,        &
+                                                           bc_outlet=bc_outlet,      &
+                                                           bc_symmetry=bc_symmetry,  &
+                                                           bc_farfield=bc_farfield,  &
+                                                           bc_periodic=bc_periodic)
 
         end do !ibc
 
@@ -738,10 +738,14 @@ contains
         !
         ! Add boundary condition patches
         !
-        do ipatch = 1,size(bc_patches)
+        ndomains = size(bc_patch_data)
+        do idom = 1,ndomains
+            do iface = 1,NFACES
+            
+                call self%data%add_bc_patch(bc_patch_data(idom)%bc_group_name%at(iface)%get(),  &
+                                            bc_patch_data(idom)%bc_connectivity(face))
 
-            call self%data%add_bc_patch(bc_patches(ipatch))
-
+            end do !iface
         end do !ipatch
 
 
@@ -750,27 +754,27 @@ contains
 
 
 
-        !
-        ! Add boundary conditions to ChiDG
-        !
-        ndomains = size(bc_patches)
-        do idom = 1,ndomains
-            do iface = 1,NFACES
-
-                group_name = bc_patches(idom)%bc_group%at(iface)
-                call self%data%add_bc(bc_patches(idom)%domain_,                 &
-                                      bc_patches(idom)%bc_connectivity(iface),  &
-                                      group_name%get(),                         &
-                                      bc_groups,                                &
-                                      bc_wall=bc_wall,                          &
-                                      bc_inlet=bc_inlet,                        &
-                                      bc_outlet=bc_outlet,                      &
-                                      bc_symmetry=bc_symmetry,                  &
-                                      bc_farfield=bc_farfield,                  &
-                                      bc_periodic=bc_periodic)
-
-            end do !iface
-        end do !idom
+!        !
+!        ! Add boundary conditions to ChiDG
+!        !
+!        ndomains = size(bc_patches)
+!        do idom = 1,ndomains
+!            do iface = 1,NFACES
+!
+!                group_name = bc_patches(idom)%bc_group%at(iface)
+!                call self%data%add_bc(bc_patches(idom)%domain_,                 &
+!                                      bc_patches(idom)%bc_connectivity(iface),  &
+!                                      group_name%get(),                         &
+!                                      bc_groups,                                &
+!                                      bc_wall=bc_wall,                          &
+!                                      bc_inlet=bc_inlet,                        &
+!                                      bc_outlet=bc_outlet,                      &
+!                                      bc_symmetry=bc_symmetry,                  &
+!                                      bc_farfield=bc_farfield,                  &
+!                                      bc_periodic=bc_periodic)
+!
+!            end do !iface
+!        end do !idom
 
 
     end subroutine read_boundaryconditions

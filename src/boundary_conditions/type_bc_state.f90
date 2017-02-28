@@ -107,8 +107,8 @@ contains
     !----------------------------------------------------------------------------------------------
     subroutine init_bc_specialized(self,mesh,bc_patch)
         class(bc_state_t),  intent(inout)   :: self
-        type(mesh_t),       intent(in)      :: mesh
-        type(bc_patch_t),   intent(in)      :: bc_patch
+        type(mesh_t),       intent(in)      :: mesh(:)
+        type(bc_patch_t),   intent(in)      :: bc_patch(:)
 
 
 

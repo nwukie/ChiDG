@@ -176,13 +176,13 @@ contains
             !
             call this%chidgO1%write_solution(this%fileO1)
 
-
             !
             ! Reset variable
             !
             do ielem = 1,this%chidgO1%data%mesh(1)%nelem
                 q(ielem)%vec = -1._rk
             end do
+print*, 'stop1'
 
 
             !
@@ -191,6 +191,7 @@ contains
             call this%chidgO1%read_solution(this%fileO1)
 
 
+print*, 'stop2'
             !
             ! Test that the read solution values equal the reference values
             !

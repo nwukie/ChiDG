@@ -85,7 +85,7 @@ contains
                 self%dt         = 0
                 self%ntime      = 1
                 self%nsteps     = 1
-                self%nwrite     = 1
+                self%nwrite     = 0
 
 
             case ('Forward_Euler', 'Forward Euler', 'forward euler', 'forward_euler',   &
@@ -116,7 +116,7 @@ contains
                 
                 call self%set_name(time_integrator)
                 self%nsteps     = 1
-                self%nwrite     = 1
+                self%nwrite     = 0
                 !
                 ! Verify that at least one frequency has been passed in
                 !

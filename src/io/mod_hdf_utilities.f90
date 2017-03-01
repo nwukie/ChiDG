@@ -314,10 +314,6 @@ contains
         integer(HID_T)              :: domain_id
         character(:),   allocatable :: domain_name
 
-        ! Add attribute ntime to the file
-        time = data%ntime() - 1 ! To be consistend with the hdf5 0-base
-        call set_ntimes_hdf(fid,time)
-
         do idom = 1,data%ndomains()
 
             ! Create domain group

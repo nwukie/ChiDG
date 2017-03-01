@@ -1057,16 +1057,10 @@ contains
                                                      self%preconditioner)
            
            
-            ! In case of steady or time_spectral analysis
-            if ( self%data%time_manager%nwrite == 1 ) then
-                call self%write_solution(solutionfile_out)
-            ! In case of time_marching analysis
-            else
-                if (wcount == self%data%time_manager%nwrite) then
-                    write(filename, "(A,I7.7,A3)") trim(prefix)//'_', istep, '.h5'
-                    call self%write_solution(filename)
-                    wcount = 0
-                end if
+            if (wcount == self%data%time_manager%nwrite) then
+                write(filename, "(A,I7.7,A3)") trim(prefix)//'_', istep, '.h5'
+                call self%write_solution(filename)
+                wcount = 0
             end if
 
 !            !
@@ -1089,6 +1083,11 @@ contains
 
 
         end do !istep
+                
+        !
+        ! Write the final solution to hdf file
+        !        
+        call self%write_solution(solutionfile_out)
 
 
     end subroutine run

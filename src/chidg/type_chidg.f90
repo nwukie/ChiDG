@@ -962,6 +962,7 @@ contains
         integer(ik)     :: istep, nsteps, wcount
 
 !        call self%auxiliary_environment%start_up('core')
+    
 
         call write_line(" ", io_proc=GLOBAL_MASTER)
         call write_line("Entering Time Loop:", io_proc=GLOBAL_MASTER)

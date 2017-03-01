@@ -367,15 +367,15 @@ contains
         call create_function(fcn,'constant')
 
         call fcn%set_option('val',1.15_rk)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,1)
+        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
         call fcn%set_option('val',50.0_rk)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,2)
+        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,2)
         call fcn%set_option('val',ZERO)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,3)
+        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,3)
         call fcn%set_option('val',ZERO)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,4)
+        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,4)
         call fcn%set_option('val',248000.0_rk)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,5)
+        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,5)
 
 
     end subroutine SetUp

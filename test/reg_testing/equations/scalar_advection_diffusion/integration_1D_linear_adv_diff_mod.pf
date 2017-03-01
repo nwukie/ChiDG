@@ -72,7 +72,6 @@ module integration_1D_linear_adv_diff_mod
     use mod_equations,                  only: equation_builder_factory
     use type_equation_builder,          only: equation_builder_t
     use type_equation_set,              only: equation_set_t
-    use type_scalar,                    only: scalar_t
     implicit none
 
 
@@ -257,9 +256,9 @@ contains
         cz_model = cz
         mu_model = mu
 
-        call worker%store_model_field('Scalar X-Advection Velocity',  'value', cx_model)
-        call worker%store_model_field('Scalar Y-Advection Velocity',  'value', cy_model)
-        call worker%store_model_field('Scalar Z-Advection Velocity',  'value', cz_model)
+        call worker%store_model_field('Scalar Advection Velocity-1',  'value', cx_model)
+        call worker%store_model_field('Scalar Advection Velocity-2',  'value', cy_model)
+        call worker%store_model_field('Scalar Advection Velocity-3',  'value', cz_model)
         call worker%store_model_field('Scalar Diffusion Coefficient', 'value', mu_model)
 
     end subroutine compute_model
@@ -638,7 +637,7 @@ contains
         !
         ! Set ChiDG components
         !
-        call this%chidg%set('Solution Order', integer_input=this%order)
+        call this%chidg%set('Solution Order',   integer_input=this%order)
         call this%chidg%set('time_integrator',  algorithm=time_integrator)
         call this%chidg%set('nonlinear_solver', algorithm=nonlinear_solver, options=noptions)
         call this%chidg%set('linear_solver',    algorithm=linear_solver,    options=loptions)
@@ -656,7 +655,7 @@ contains
         !
         call create_function(fcn,'constant')
         call fcn%set_option('val',0.1_rk)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,1)
+        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
 
 
     end subroutine SetUp

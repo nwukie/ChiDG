@@ -52,7 +52,7 @@ module type_equation_set
         ! Name
         character(:),               allocatable :: name 
 
-        ! Properties/Fields/Materials
+        ! Properties/Fields
         type(properties_t)                      :: prop
 
         ! Operators

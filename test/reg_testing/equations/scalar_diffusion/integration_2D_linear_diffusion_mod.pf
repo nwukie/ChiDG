@@ -67,7 +67,6 @@ module integration_2D_linear_diffusion_mod
     use mod_equations,                  only: equation_builder_factory
     use type_equation_builder,          only: equation_builder_t
     use type_equation_set,              only: equation_set_t
-    use type_linear_coefficient_model,  only: linear_coefficient_model_t
     implicit none
 
 
@@ -676,7 +675,7 @@ contains
         !
         call create_function(fcn,'constant')
         call fcn%set_option('val',0.1_rk)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,1)
+        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
 
 
     end subroutine SetUp

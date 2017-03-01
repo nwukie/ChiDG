@@ -2,8 +2,6 @@ module type_properties
 #include <messenger.h>
     use mod_kinds,      only: rk, ik
     use type_field,     only: field_t
-    use type_fluid,     only: fluid_t
-    use type_scalar,    only: scalar_t
     implicit none
 
 
@@ -24,14 +22,7 @@ module type_properties
         type(field_t),   allocatable :: auxiliary_fields(:)
         type(field_t),   allocatable :: model_fields(:)
 
-        ! Materials
-        class(fluid_t),     allocatable :: fluid
-        class(scalar_t),    allocatable :: scalar
-
     contains
-
-        procedure   :: add_fluid
-        procedure   :: add_scalar
 
         procedure   :: add_primary_field
         procedure   :: add_auxiliary_field
@@ -606,58 +597,6 @@ contains
 
 
 
-
-
-
-
-
-
-    !>  Add a fluid definition to the properties type
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/25/2016
-    !!
-    !------------------------------------------------------------------------------------------
-    subroutine add_fluid(self,fluid)
-        class(properties_t),    intent(inout)   :: self
-        class(fluid_t),         intent(in)      :: fluid
-
-        integer(ik) :: ierr
-
-        ! Allocate new material definition
-        if (allocated(self%fluid)) deallocate(self%fluid)
-        allocate(self%fluid, source=fluid, stat=ierr)
-        if (ierr /= 0) call AllocationError
-
-    end subroutine add_fluid
-    !******************************************************************************************
-
-
-
-
-
-
-
-
-    !>  Add a fluid definition to the properties type
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/25/2016
-    !!
-    !------------------------------------------------------------------------------------------
-    subroutine add_scalar(self,scalar)
-        class(properties_t),    intent(inout)   :: self
-        class(scalar_t),        intent(in)      :: scalar
-
-        integer(ik) :: ierr
-
-        ! Allocate new material definition
-        if (allocated(self%scalar)) deallocate(self%scalar)
-        allocate(self%scalar, source=scalar, stat=ierr)
-        if (ierr /= 0) call AllocationError
-
-    end subroutine add_scalar
-    !******************************************************************************************
 
 
 

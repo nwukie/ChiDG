@@ -719,7 +719,7 @@ contains
         !
         call create_function(fcn,'constant')
         call fcn%set_option('val',0.1_rk)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,1)
+        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
 
     end subroutine SetUp
     !*****************************************************************************************

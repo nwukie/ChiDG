@@ -145,7 +145,7 @@ contains
 
 
                     ! Update the element cache
-                    call cache_handler%update(worker,data%eqnset,data%bcset, differentiate_function)
+                    call cache_handler%update(worker,data%eqnset,data%bc, differentiate_function)
 
 
 
@@ -157,7 +157,7 @@ contains
  
                         call eqnset%compute_boundary_advective_operators(worker, differentiate_function)
                         call eqnset%compute_boundary_diffusive_operators(worker, differentiate_function)
-                        call eqnset%compute_bc_operators(worker,data%bcset, differentiate_function)
+                        call eqnset%compute_bc_operators(worker,data%bc, differentiate_function)
 
                     end do  ! faces loop
                     

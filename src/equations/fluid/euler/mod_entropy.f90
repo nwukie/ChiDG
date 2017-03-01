@@ -1,13 +1,12 @@
 module mod_entropy
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: TWO, ZERO, THREE
-
-    use type_chidg_data,    only: chidg_data_t
-
+    use mod_constants,      only: ZERO, HALF, ONE, TWO, THREE
     use mod_interpolate,    only: interpolate_element_standard
     use mod_chidg_mpi,      only: ChiDG_COMM
     use mpi_f08,            only: MPI_AllReduce, MPI_REAL8, MPI_SUM
     use DNAD_D
+
+    use type_chidg_data,    only: chidg_data_t
     implicit none
 
 
@@ -100,7 +99,8 @@ contains
                     !
                     ! Compute pressure
                     !
-                    p = prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE)
+                    !p = prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE)
+                    p = (1.4_rk-ONE)*(rhoE - HALF*( (rhou*rhou) + (rhov*rhov) + (rhow*rhow) )/rho )
 
 
                     !

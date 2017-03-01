@@ -9,11 +9,10 @@ module type_chidg_data
     ! Primary chidg_data_t components
     use type_domain_info,               only: domain_info_t
     use type_mesh,                      only: mesh_t
-    use type_bcset,                     only: bcset_t
     use type_bc,                        only: bc_t
     use type_bc_state,                  only: bc_state_t
-    use type_bcvector,                  only: bcvector_t
     use type_bc_group,                  only: bc_group_t
+    use type_bcvector,                  only: bcvector_t
     use type_svector,                   only: svector_t
     use mod_string,                     only: string_t
     use type_equation_set,              only: equation_set_t
@@ -48,15 +47,17 @@ module type_chidg_data
 
         logical                                     :: solverInitialized = .false.
         integer(ik),        private                 :: ndomains_ = 0
-        !integer(ik),        private                 :: ntime_    = 1   !now part of time_manager
-        integer(ik),        private                 :: spacedim_ = 3    !< Default 3D 
+        integer(ik),        private                 :: spacedim_ = 3
 
         
-        ! For each domain: info, a mesh, a boundary condition set, and an equation set
+        ! For each domain: info, a mesh, and an equation set
         type(domain_info_t),            allocatable :: info(:)     
         type(mesh_t),                   allocatable :: mesh(:)     
-        type(bcset_t),                  allocatable :: bcset(:)    
         type(equation_set_t),           allocatable :: eqnset(:)   
+
+        ! Boundary conditions are not specified per-domain. 
+        ! A boundary condition for each bc_group in the file.
+        type(bc_t),                     allocatable :: bc(:)    
 
         ! An object containing matrix and vector storage
         type(solverdata_t)                          :: sdata
@@ -68,18 +69,21 @@ module type_chidg_data
 
         ! Modifiers for adding domains and boundary conditions
         procedure   :: add_domain
-        procedure   :: add_bc
+        procedure   :: add_bc_group
+        procedure   :: add_bc_patch
+        procedure   :: new_bc
 
         ! Initialization procedure for solution data. Execute after all domains are added.
         procedure   :: initialize_solution_domains
+        procedure   :: initialize_solution_bc
         procedure   :: initialize_solution_solver
 
         ! Accessors
-        procedure   :: get_domain_index             !< Given a domain name, return domain index
-        procedure   :: ndomains                     !< Return number of domains in chidg instance
+        procedure   :: get_domain_index             ! Given a domain name, return domain index
+        procedure   :: ndomains                     ! Return number of domains in chidg instance
         procedure   :: ntime
         procedure   :: get_dimensionality
-        procedure   :: get_auxiliary_field_names    !< Return required auxiliary fields
+        procedure   :: get_auxiliary_field_names    ! Return required auxiliary fields
 
         procedure   :: report
 
@@ -126,23 +130,25 @@ contains
         end do
 
 
-        !
-        ! Assemble boundary condition coupling information to pass to sdata initialization 
-        ! for LHS storage
-        !
-        ndom = self%ndomains()
-        allocate(bcset_coupling(ndom), stat=ierr)
-        if ( ierr /= 0 ) call AllocationError
-
-        do idom = 1,self%ndomains()
-            bcset_coupling(idom) = self%bcset(idom)%get_bcset_coupling()
-        end do
+!        !
+!        ! Assemble boundary condition coupling information to pass to sdata initialization 
+!        ! for LHS storage
+!        !
+!        ndom = self%ndomains()
+!        allocate(bcset_coupling(ndom), stat=ierr)
+!        if ( ierr /= 0 ) call AllocationError
+!
+!        do idom = 1,self%ndomains()
+!            bcset_coupling(idom) = self%bcset(idom)%get_bcset_coupling()
+!        end do
 
 
         !
         ! Initialize solver data 
         !
-        call self%sdata%init(self%mesh, bcset_coupling, function_data)
+        !call self%sdata%init(self%mesh, bcset_coupling, function_data)
+        !call self%sdata%init(self%mesh, self%bc, function_data)
+        call self%sdata%init(self%mesh, function_data)
 
     end subroutine initialize_solution_solver
     !******************************************************************************************
@@ -184,7 +190,6 @@ contains
 
         type(domain_info_t),            allocatable :: temp_info(:)
         type(mesh_t),                   allocatable :: temp_mesh(:)
-        type(bcset_t),                  allocatable :: temp_bcset(:)
         type(equation_set_t),           allocatable :: temp_eqnset(:)
 
 
@@ -202,7 +207,6 @@ contains
         allocate( &
                  temp_info(self%ndomains_),   &
                  temp_mesh(self%ndomains_),   &
-                 temp_bcset(self%ndomains_),  &
                  temp_eqnset(self%ndomains_), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -213,7 +217,6 @@ contains
         if (self%ndomains_ > 1) then
             temp_info(   1:size(self%info))    = self%info(1:size(self%mesh))
             temp_mesh(   1:size(self%mesh))    = self%mesh(1:size(self%mesh))
-            temp_bcset(  1:size(self%bcset))   = self%bcset(1:size(self%mesh))
             temp_eqnset( 1:size(self%eqnset))  = self%eqnset(1:size(self%mesh))
         end if
 
@@ -257,7 +260,6 @@ contains
         !
         call move_alloc(temp_info,self%info)
         call move_alloc(temp_mesh,self%mesh)
-        call move_alloc(temp_bcset,self%bcset)
         call move_alloc(temp_eqnset,self%eqnset)
 
 
@@ -274,8 +276,9 @@ contains
 
 
 
-    !>  For a ChiDG domain, add a boundary condition patche and associate it with a boundary 
-    !!  condition group.
+    !>  Create a new boundary condition and add the incoming
+    !>  !For a ChiDG domain, add a boundary condition patch and associate it with a boundary 
+    !!  !condition group.
     !!
     !!
     !!  Boundary condition groups hold sets of state functions that are used to compute an 
@@ -297,12 +300,9 @@ contains
     !!  as an option for bc_wall, bc_inlet, bc_outlet, bc_symmetry
     !!
     !------------------------------------------------------------------------------------------
-    subroutine add_bc(self,domain,bc_connectivity,bc_group,bc_groups,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
+    subroutine add_bc_group(self,bc_group,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
         class(chidg_data_t),            intent(inout)           :: self
-        character(*),                   intent(in)              :: domain
-        type(boundary_connectivity_t),  intent(in)              :: bc_connectivity
-        character(*),                   intent(in)              :: bc_group
-        type(bc_group_t),               intent(in)              :: bc_groups(:)
+        type(bc_group_t),               intent(in)              :: bc_group
         class(bc_state_t),              intent(in), optional    :: bc_wall
         class(bc_state_t),              intent(in), optional    :: bc_inlet
         class(bc_state_t),              intent(in), optional    :: bc_outlet
@@ -311,43 +311,184 @@ contains
         class(bc_state_t),              intent(in), optional    :: bc_periodic
 
 
-        character(:),       allocatable     :: user_msg
-        class(bc_state_t),  allocatable     :: bc_state
-        type(bc_t)                          :: bc
-        integer(ik)                         :: idom, BC_ID, istate, igroup, ierr
-        logical                             :: group_found, group_set
+        integer(ik)                         :: bc_ID
 
 
         !
-        ! Get domain index from domain string
+        ! Create a new boundary condition
         !
-        idom = self%get_domain_index(domain)
-
-
-        !
-        ! Add a new boundary condition and get ID
-        !
-        BC_ID = self%bcset(idom)%add(bc)
+        bc_ID = self%new_bc()
 
 
 
         !
-        ! Initialize new boundary condition from mesh data and connectivity information.
-        ! NOTE: init_bc needs called after the boundary condition has been added to the 
-        !       set so it can inform the mesh about it's BC_ID.
+        ! Initialize boundary condition state functions from bc_group
         !
-        call self%bcset(idom)%bcs(BC_ID)%init_bc(self%mesh(idom),bc_connectivity,bc_group,bc_groups, &
-                                                                                 bc_wall,            &
-                                                                                 bc_inlet,           &
-                                                                                 bc_outlet,          &
-                                                                                 bc_symmetry,        &
-                                                                                 bc_farfield,        &
-                                                                                 bc_periodic)
+        call self%bc(bc_ID)%init_bc_group(bc_group, bc_wall,        &
+                                                    bc_inlet,       &
+                                                    bc_outlet,      &
+                                                    bc_symmetry,    &
+                                                    bc_farfield,    &
+                                                    bc_periodic)
 
 
-    end subroutine add_bc
+
+    end subroutine add_bc_group
     !******************************************************************************************
 
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Add a bc_patch_t to the appropriate boundary condition.
+    !!
+    !!  NOTE: boundary condition groups must be added BEFORE this is called.
+    !!
+    !!  Searches through boundary condition groups that have already been added, self%bc,
+    !!  searching for one with the correct name defined in the patch. Once found, initialize
+    !!  the patch connectivity data on the boundary condition identified.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/27/2017
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine add_bc_patch(self, domain_name, patch_bc_name, bc_connectivity)
+        class(chidg_data_t),            intent(inout)   :: self
+        character(*),                   intent(in)      :: domain_name
+        character(*),                   intent(in)      :: patch_bc_name
+        type(boundary_connectivity_t),  intent(in)      :: bc_connectivity
+
+        character(:),   allocatable :: bc_name, user_msg
+        integer(ik)                 :: bc_ID, ibc, idom
+        logical                     :: found_bc
+
+        
+        !
+        ! Find the correct boundary condition to add bc_patch to
+        !
+        do ibc = 1,size(self%bc)
+
+            bc_name = self%bc(ibc)%get_name()
+            found_bc = (trim(patch_bc_name) == trim(bc_name))
+
+            if (found_bc) bc_ID = ibc
+            if (found_bc) exit
+
+        end do
+
+
+
+
+        !
+        ! Once bc is found, initialize bc_patch on bc
+        !
+        if (found_bc) then
+            
+            !
+            ! Find domain index in mesh(:) from domain_name
+            !
+            idom = self%get_domain_index(domain_name)
+
+            call self%bc(bc_ID)%init_bc_patch(self%mesh(idom), bc_connectivity)
+
+        else
+
+
+            user_msg = "chidg_data%add_bc_patch: It looks like we didn't find a boundary state &
+                        group that matches with the string indicated in a boundary patch. Make &
+                        sure that a boundary state group with the correct name exists. Also make &
+                        sure that the name set on the boundary patch corresponds to one of the &
+                        boundary state groups that exists."
+            if ( (trim(patch_bc_name) /= 'empty') .and. &
+                 (trim(patch_bc_name) /= 'Empty') ) &
+                call chidg_signal_one(FATAL,user_msg,trim(patch_bc_name))
+
+        end if
+
+
+    end subroutine add_bc_patch
+    !*******************************************************************************************
+
+
+
+
+
+
+
+
+    
+
+    !>  Extend the self%bc array to include another instance. Return the ID of the new
+    !!  boundary condition where it can be found in the array as self%bc(bc_ID)
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/27/2017
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    function new_bc(self) result(bc_ID)
+        class(chidg_data_t),    intent(inout)   :: self
+
+        type(bc_t), allocatable :: temp_bcs(:)
+        integer(ik)             :: bc_ID, ierr, nbc
+
+
+        !
+        ! Get number of boundary conditions
+        !
+        if (allocated(self%bc)) then
+            nbc = size(self%bc)
+        else
+            nbc = 0
+        end if
+
+
+        !
+        ! Increment number of boundary conditions
+        !
+        nbc = nbc + 1
+
+
+        !
+        ! Allocate number of boundary conditions
+        !
+        allocate(temp_bcs(nbc), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        !
+        ! Copy any previously allocated boundary conditions to new array
+        !
+        if ( nbc > 1) then
+            temp_bcs(1:size(self%bc)) = self%bc(1:size(self%bc))
+        end if
+
+
+        !
+        ! Set ID of new bc and store to array
+        !
+        bc_ID = nbc
+        temp_bcs(bc_ID)%bc_ID = bc_ID
+
+
+        !
+        ! Attach extended allocation to chidg_data%bc
+        !
+        call move_alloc(temp_bcs,self%bc)
+
+
+
+    end function new_bc
+    !******************************************************************************************
 
 
 
@@ -380,6 +521,55 @@ contains
 
 
     end subroutine initialize_solution_domains
+    !******************************************************************************************
+
+
+
+
+
+
+    
+    !>  Initialize the 
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/28/2017
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine initialize_solution_bc(self)
+        class(chidg_data_t),    intent(inout)   :: self
+
+        integer(ik) :: ibc
+
+
+        !
+        ! Call bc-specific specialized routine. Default does nothing
+        !
+        do ibc = 1,size(self%bc)
+            call self%bc(ibc)%init_bc_specialized(self%mesh)
+        end do
+
+
+
+        !
+        ! Initialize boundary condition coupling. 
+        !
+        do ibc = 1,size(self%bc)
+            call self%bc(ibc)%init_bc_coupling(self%mesh)
+        end do
+
+
+
+        !
+        ! Propagate boundary condition coupling. 
+        !
+        do ibc = 1,size(self%bc)
+            call self%bc(ibc)%propagate_bc_coupling(self%mesh)
+        end do
+
+
+
+    end subroutine initialize_solution_bc
     !******************************************************************************************
 
 

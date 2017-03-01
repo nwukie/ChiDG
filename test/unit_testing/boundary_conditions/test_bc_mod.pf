@@ -1,160 +1,244 @@
 module test_bc_mod
     use pfunit_mod
-    use mod_kinds,      only: rk,ik
-    use mod_constants,  only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
-                              XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                              IO_DESTINATION
-    use type_chidg,     only: chidg_t
-    use type_point,     only: point_t
-    use mod_testutils,  only: meshgen
-    use mock_bc,        only: bc_m
+    use mod_kinds,          only: rk,ik
+    use mod_bc,             only: create_bc
+    use type_chidg,         only: chidg_t
+    use type_bc_state,      only: bc_state_t
+    use type_bc_group,      only: bc_group_t
+    use type_bc,            only: bc_t
     implicit none
 
     public  :: test_bc
 
-@TestCase
+
+    !>  Test bc_t procedures.
+    !!
+    !!  Test init_bc_group:
+    !!      - Standard initialization with multiple bc_state objects in the
+    !!        group.
+    !!      - Also overriding initialization with an incoming bc_state object
+    !!        to override the bc_group initialization.
+    !!
+    !!  Test init_bc_patch:
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/1/2017
+    !!
+    !--------------------------------------------------------------------------
+    @TestCase
     type, extends(TestCase) ::  test_bc
 
-        type(chidg_t)          :: chidg
+        type(chidg_t)   :: chidg
 
     contains
+
         procedure   ::  setUp
         procedure   ::  tearDown
+
     end type test_bc
+    !***************************************************************************
 
 
 contains
-    !-----------------------------------------------------------------------------------------------
-    ! NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived type 
-    ! procedure. The argument names have to match
-    !-----------------------------------------------------------------------------------------------
+
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a 
+    !! derived type procedure. The argument names have to match
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/1/2017
+    !!
+    !--------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_bc),    intent(inout)   :: this
-        
-        integer(ik), parameter     :: npt = 27
-        type(point_t), allocatable :: pts(:,:,:)
-        integer(ik)                :: nterms_c, nterms_s, idomain
 
-        !
-        ! Send log to file
-        !
-        IO_DESTINATION = 'file'
         
-
         !
-        ! Initialize chidg environment
-        !
+        ! Start up ChiDG
+        ! 
         call this%chidg%start_up('core')
-        
 
-        !
-        ! Generate points for a 2x2x2 element mesh
-        !
-        call meshgen('222',pts)
-        
 
-        !
-        ! Call domain initialization
-        !
-        idomain  = 1
-        nterms_c = 8
-        nterms_s = 8
 
-        call this%chidg%data%add_domain('D_01',pts,nterms_c,'scalar',nterms_c)
-
-    end subroutine
+    end subroutine setUp
+    !**************************************************************************************
     
+
+    !>
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_bc),    intent(inout)   :: this
-    end subroutine
 
 
-    !-----------------------------------------------------------------------------------------------
-    !                                       TESTS
-    !-----------------------------------------------------------------------------------------------
-    
+        !
+        ! Close ChiDG interface
+        !
+        call this%chidg%shut_down('core')
 
-    ! Test boundary condition storage was allocated
-    !-----------------------------------------------------
+    end subroutine tearDown
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Test calling bc%init_bc_group.
+    !!
+    !!  1: Initialize one bc_group object with multiple state functions. 
+    !!  2: Pass the bc_group to a bc_t object using init_bc_group
+    !!  3: Check number of allocated state functions and names
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/1/2017
+    !!
+    !!-------------------------------------------------------------------------------------
     @Test
-    subroutine test_bc_allocated(self)
-        class(test_bc),    intent(inout)   :: self
+    subroutine test_bc__init_bc_group(self)
+        class(test_bc), intent(inout)   :: self
 
-        type(bc_m)  :: bc
-        integer(ik) :: iface
+        class(bc_state_t),  allocatable :: bc_state
+        type(bc_group_t)                :: bc_group
+        type(bc_t)                      :: bc
+
         
-        associate (mesh => self%chidg%data%mesh(1), sdata => self%chidg%data%sdata)
-            
-            ! Block face for the boundary condition to be applied
-            iface = XI_MIN
-            
-            ! Call boundary condition initialization. We are testing that the boundary condition data was allocated
-            call bc%init(mesh,iface)
-            
-            @assertTrue(allocated(bc%ielems))
-            @assertTrue(allocated(bc%ifaces))
-            
-        end associate
-    end subroutine
-    
-    
-    
-    
-    
-    ! Test boundary condition storage includes the correct elements
-    !-----------------------------------------------------
+        !
+        ! Initialize bc_group with some data
+        !
+        ! Create a boundary condition state function, add it to the bc_group
+        !
+        call bc_group%set_name('Group One')
+
+        call create_bc('Scalar Value', bc_state)
+        call bc_group%add_bc_state(bc_state)
+        call create_bc('Scalar Derivative', bc_state)
+        call bc_group%add_bc_state(bc_state)
+
+
+        !
+        ! Call init_bc_group. THIS IS BEING TESTED.
+        !
+        call bc%init_bc_group(bc_group)
+
+
+
+        @assertEqual(size(bc%bc_state), 2)
+        @assertEqual(bc%bc_family, 'Scalar')
+        @assertEqual(bc%bc_state(1)%state%get_name(), 'Scalar Value')
+        @assertEqual(bc%bc_state(2)%state%get_name(), 'Scalar Derivative')
+
+
+    end subroutine test_bc__init_bc_group
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Test calling bc%init_bc_group and passing in an overriding bc_state.
+    !!
+    !!  1: Initialize one bc_group object. 
+    !!  2: Initialize a bc_state object that will be passed in to override the bc_group.
+    !!  2: Pass the bc_group and bc_state to a bc_t object using init_bc_group
+    !!  3: Check number of allocated state functions and names
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/1/2017
+    !!
+    !!-------------------------------------------------------------------------------------
     @Test
-    subroutine test_bc_ielems(self)
-        class(test_bc),    intent(inout)   :: self
+    subroutine test_bc__init_bc_group__override(self)
+        class(test_bc), intent(inout)   :: self
 
-        type(bc_m)  :: bc
-        integer(ik) :: iface
-        integer(ik) :: ielems_ref(4)
+        class(bc_state_t),  allocatable :: bc_state
+        type(bc_group_t)                :: bc_group
+        type(bc_t)                      :: bc
+
         
-        associate (mesh => self%chidg%data%mesh(1), sdata => self%chidg%data%sdata)
-        
-            
-            ! Block face for the boundary condition to be applied
-            iface = XI_MIN
-            
-            ! Call boundary condition initialization. We are testing that the boundary condition data was allocated
-            call bc%init(mesh,iface)
-            ielems_ref = [1,3,5,7]
-            
-            @assertEqual(ielems_ref,bc%ielems)
-        
-        end associate
-    end subroutine
+        !
+        ! Initialize bc_group with some data
+        !
+        ! Create a boundary condition state function, add it to the bc_group
+        !
+        call bc_group%set_name('Group One')
+        call create_bc('Scalar Value', bc_state)
+        call bc_group%add_bc_state(bc_state)
+        call create_bc('Scalar Derivative', bc_state)
+        call bc_group%add_bc_state(bc_state)
+
+
+        !
+        ! Reallocate bc_state to the object we will override with.
+        !
+        call create_bc('Scalar Derivative', bc_state)
+
+
+        !
+        ! Call init_bc_group. THIS IS BEING TESTED.
+        !
+        ! Here we are passing in bc_group, but overriding it with bc_state, if bc_group 
+        ! is a 'Scalar' family.
+        !
+        call bc%init_bc_group(bc_group,bc_scalar=bc_state)
+
+
+
+        !
+        ! We expect bc_group to have been overridden
+        !
+        @assertEqual(size(bc%bc_state), 1)
+        @assertEqual(bc%bc_family, 'Scalar')
+        @assertEqual(bc%bc_state(1)%state%get_name(), 'Scalar Derivative')
+
+
+    end subroutine test_bc__init_bc_group__override
+    !**************************************************************************************
 
 
 
 
 
 
-    ! Test boundary condition storage includes the correct faces
-    !-----------------------------------------------------
+
+
+    !>  Test calling bc%init_bc_group and passing in an overriding bc_state.
+    !!
+    !!  1: Initialize one bc_group object. 
+    !!  2: Initialize a bc_state object that will be passed in to override the bc_group.
+    !!  2: Pass the bc_group and bc_state to a bc_t object using init_bc_group
+    !!  3: Check number of allocated state functions and names
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/1/2017
+    !!
+    !!-------------------------------------------------------------------------------------
     @Test
-    subroutine test_bc_ifaces(self)
-        class(test_bc),    intent(inout)   :: self
+    subroutine test_bc__init_bc_patch(self)
+        class(test_bc), intent(inout)   :: self
 
-        type(bc_m)  :: bc
-        integer(ik) :: iface
-        integer(ik) :: ifaces_ref(4)
-        
-        associate (mesh => self%chidg%data%mesh(1), sdata => self%chidg%data%sdata)
-        
-            
-            ! Block face for the boundary condition to be applied
-            iface = XI_MIN
-            
-            ! Call boundary condition initialization. We are testing that the boundary condition data was allocated
-            call bc%init(mesh,iface)
-            ifaces_ref = [XI_MIN, XI_MIN, XI_MIN, XI_MIN]
-            
-            @assertEqual(ifaces_ref,bc%ifaces)
-        
-        end associate
-    end subroutine
+        type(bc_t)                      :: bc
+
+
+
+
+
+
+
+    end subroutine test_bc__init_bc_patch
+    !**************************************************************************************
+
+
+
+
+
+
 
 
 

@@ -1,0 +1,386 @@
+module test_bc_patch_mod
+    use pfunit_mod
+    use mod_kinds,          only: rk,ik
+    use mod_constants,      only: IO_DESTINATION
+    use type_chidg,         only: chidg_t
+    use type_bc_patch,      only: bc_patch_t
+    implicit none
+
+    public  :: test_bc_patch
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/28/2017
+    !!
+    !--------------------------------------------------------------------------
+    @TestCase
+    type, extends(TestCase) ::  test_bc_patch
+
+        type(chidg_t)               :: chidg
+        type(bc_patch_t)            :: bc_patch
+
+    contains
+
+        procedure   ::  setUp
+        procedure   ::  tearDown
+
+    end type test_bc_patch
+    !***************************************************************************
+
+
+contains
+
+
+    !----------------------------------------------------------------------------------
+    !
+    !                                       SETUP
+    !
+    !----------------------------------------------------------------------------------
+
+
+
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a 
+    !! derived type procedure. The argument names have to match
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !----------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(test_bc_patch),    intent(inout)   :: this
+        
+        integer(ik) :: ftype, mapping, ielem, idomain, spacedim,    &
+                       ntime, neqns, nterms_s
+        
+        !
+        ! Start up ChiDG
+        !
+        IO_DESTINATION = 'file'
+        call this%chidg%start_up('core')
+        
+    end subroutine setUp
+    !**********************************************************************************
+    
+
+    !>
+    !!
+    !!
+    !----------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(test_bc_patch),    intent(inout)   :: this
+
+        !
+        ! Close ChiDG interface
+        !
+        call this%chidg%shut_down('core')
+
+    end subroutine tearDown
+    !**********************************************************************************
+
+
+
+
+
+
+    !----------------------------------------------------------------------------------
+    !
+    !                                       TESTS
+    !
+    !----------------------------------------------------------------------------------
+
+
+
+
+    !> Test 'add_face' procedure of bc_patch_t.
+    !!
+    !!  Call bc_patch%add_face ONE time.
+    !!
+    !!  Check:
+    !!      returned patch_face identifier
+    !!      number of faces
+    !!      stored face indices
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/28/2017
+    !!
+    !!---------------------------------------------------------------------------------
+    @Test
+    subroutine test_bc_patch__add_face__one(self)
+        class(test_bc_patch),    intent(inout)   :: self
+
+        type(bc_patch_t)    :: bc_patch
+        integer(ik)         :: idomain_g,   idomain_l,  &
+                               ielement_g,  ielement_l, &
+                               iface, patch_face
+
+        idomain_g  = 2
+        idomain_l  = 1
+        ielement_g = 4
+        ielement_l = 2
+        iface      = 5
+
+        !
+        ! THIS IS BEING TESTED
+        !
+        patch_face = bc_patch%add_face(idomain_g, idomain_l, ielement_g, ielement_l, iface)
+
+
+        !
+        ! Test one face
+        !
+        @assertEqual(bc_patch%nfaces(), 1)
+        @assertEqual(patch_face, 1)
+
+        !
+        ! Test components were set correctly
+        !
+        @assertEqual(bc_patch%idomain_g_%at(patch_face), idomain_g)
+        @assertEqual(bc_patch%idomain_l_%at(patch_face), idomain_l)
+        @assertEqual(bc_patch%ielement_g_%at(patch_face), ielement_g)
+        @assertEqual(bc_patch%ielement_l_%at(patch_face), ielement_l)
+        @assertEqual(bc_patch%iface_%at(patch_face), iface)
+        
+    end subroutine test_bc_patch__add_face__one
+    !**********************************************************************************
+
+
+
+
+
+    !> Test 'add_face' procedure of bc_patch_t.
+    !!
+    !!  Call bc_patch%add_face TWO times.
+    !!
+    !!  Check:
+    !!      returned patch_face identifiers
+    !!      number of faces
+    !!      stored face indices
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/28/2017
+    !!
+    !!---------------------------------------------------------------------------------
+    @Test
+    subroutine test_bc_patch__add_face__two(self)
+        class(test_bc_patch),    intent(inout)   :: self
+
+        type(bc_patch_t)    :: bc_patch
+        integer(ik)         :: idomain_g,   idomain_l,  &
+                               ielement_g,  ielement_l, &
+                               iface, patch_face
+
+        idomain_g  = 2
+        idomain_l  = 1
+        ielement_g = 4
+        ielement_l = 2
+        iface      = 5
+
+        !
+        ! THIS IS BEING TESTED
+        !
+        patch_face = bc_patch%add_face(idomain_g, idomain_l, ielement_g, ielement_l, iface)
+
+
+        !
+        ! Test first face
+        !
+        @assertEqual(bc_patch%nfaces(), 1)
+        @assertEqual(patch_face, 1)
+
+        !
+        ! Test components were set correctly
+        !
+        @assertEqual(bc_patch%idomain_g_%at(patch_face), idomain_g)
+        @assertEqual(bc_patch%idomain_l_%at(patch_face), idomain_l)
+        @assertEqual(bc_patch%ielement_g_%at(patch_face), ielement_g)
+        @assertEqual(bc_patch%ielement_l_%at(patch_face), ielement_l)
+        @assertEqual(bc_patch%iface_%at(patch_face), iface)
+
+
+
+
+
+
+
+
+
+        idomain_g  = 3
+        idomain_l  = 2
+        ielement_g = 5
+        ielement_l = 3
+        iface      = 6
+
+        !
+        ! THIS IS BEING TESTED
+        !
+        patch_face = bc_patch%add_face(idomain_g, idomain_l, ielement_g, ielement_l, iface)
+
+
+        !
+        ! Test second face
+        !
+        @assertEqual(bc_patch%nfaces(), 2)
+        @assertEqual(patch_face, 2)
+
+        !
+        ! Test components were set correctly
+        !
+        @assertEqual(bc_patch%idomain_g_%at(patch_face), idomain_g)
+        @assertEqual(bc_patch%idomain_l_%at(patch_face), idomain_l)
+        @assertEqual(bc_patch%ielement_g_%at(patch_face), ielement_g)
+        @assertEqual(bc_patch%ielement_l_%at(patch_face), ielement_l)
+        @assertEqual(bc_patch%iface_%at(patch_face), iface)
+
+
+
+        
+    end subroutine test_bc_patch__add_face__two
+    !**********************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !> Test 'add_coupled_element' procedure of bc_patch_t.
+    !!
+    !!  Call bc_patch%add_coupled_element TWO times.
+    !!
+    !!  Check:
+    !!      number of coupled elements
+    !!      stored element indices
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/28/2017
+    !!
+    !!---------------------------------------------------------------------------------
+    @Test
+    subroutine test_bc_patch__add_coupled_element__two(self)
+        class(test_bc_patch),    intent(inout)   :: self
+
+        type(bc_patch_t)    :: bc_patch
+        integer(ik)         :: idomain_g,   idomain_l,  &
+                               ielement_g,  ielement_l, &
+                               proc, patch_face
+
+
+
+        !
+        ! First, add a bc_patch face so there is storage allocated for element coupling
+        !
+        patch_face = bc_patch%add_face(idomain_g=1, &
+                                       idomain_l=1, &
+                                       ielement_g=1,&
+                                       ielement_l=1,&
+                                       iface=1)
+
+
+
+
+
+
+        idomain_g  = 2
+        idomain_l  = 1
+        ielement_g = 4
+        ielement_l = 2
+        proc       = 5
+
+        !
+        ! THIS IS BEING TESTED
+        !
+        call bc_patch%add_coupled_element(patch_face, idomain_g,    &
+                                                      idomain_l,    &
+                                                      ielement_g,   &
+                                                      ielement_l,   &
+                                                      proc)
+
+
+        !
+        ! Test first face
+        !
+        @assertEqual(bc_patch%ncoupled_elements(patch_face), 1)
+
+        !
+        ! Test components were set correctly
+        !
+        @assertEqual(bc_patch%idomain_g_coupled(patch_face)%at(1),  idomain_g)
+        @assertEqual(bc_patch%idomain_l_coupled(patch_face)%at(1),  idomain_l)
+        @assertEqual(bc_patch%ielement_g_coupled(patch_face)%at(1), ielement_g)
+        @assertEqual(bc_patch%ielement_l_coupled(patch_face)%at(1), ielement_l)
+        @assertEqual(bc_patch%proc_coupled(patch_face)%at(1),       proc)
+
+
+
+
+
+
+
+
+
+        idomain_g  = 3
+        idomain_l  = 2
+        ielement_g = 5
+        ielement_l = 3
+        proc       = 6
+
+        !
+        ! THIS IS BEING TESTED
+        !
+        call bc_patch%add_coupled_element(patch_face, idomain_g,    &
+                                                      idomain_l,    &
+                                                      ielement_g,   &
+                                                      ielement_l,   &
+                                                      proc)
+
+
+        !
+        ! Test second face
+        !
+        @assertEqual(bc_patch%ncoupled_elements(patch_face), 2)
+
+        !
+        ! Test components were set correctly
+        !
+        @assertEqual(bc_patch%idomain_g_coupled(patch_face)%at(2),  idomain_g)
+        @assertEqual(bc_patch%idomain_l_coupled(patch_face)%at(2),  idomain_l)
+        @assertEqual(bc_patch%ielement_g_coupled(patch_face)%at(2), ielement_g)
+        @assertEqual(bc_patch%ielement_l_coupled(patch_face)%at(2), ielement_l)
+        @assertEqual(bc_patch%proc_coupled(patch_face)%at(2),       proc)
+
+
+
+        
+    end subroutine test_bc_patch__add_coupled_element__two
+    !**********************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+end module test_bc_patch_mod

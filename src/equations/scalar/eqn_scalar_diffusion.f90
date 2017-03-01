@@ -2,7 +2,6 @@ module eqn_scalar_diffusion
 #include <messenger.h>
     use type_equation_set,              only: equation_set_t
     use type_equation_builder,          only: equation_builder_t
-    use type_linear_coefficient_model,  only: linear_coefficient_model_t
     implicit none
 
 
@@ -65,7 +64,6 @@ contains
 
         character(:),       allocatable     :: user_msg
         type(equation_set_t)                :: scalar_diffusion_eqn
-        type(linear_coefficient_model_t)    :: linear_coefficient_model
         
 
         !
@@ -85,7 +83,6 @@ contains
                 call scalar_diffusion_eqn%add_operator("Scalar Diffusion Volume Operator")
                 call scalar_diffusion_eqn%add_operator("Scalar Diffusion BC Operator")
 
-                call scalar_diffusion_eqn%prop%add_scalar(linear_coefficient_model)
 
             case default
                 user_msg = "build scalar diffusion: I didn't recognize the construction &

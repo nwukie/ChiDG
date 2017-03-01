@@ -118,7 +118,7 @@ contains
         integer(ik)                                           :: ipt_xi, ipt_eta, ipt_zeta
         integer(ik)                                           :: xilim, etalim, zetalim
         integer(ik)                                           :: npts, icoord
-        real(rdouble)                                         :: val(1)
+        real(rdouble)                                         :: val(1), r_coord, theta_coord, z_coord
         real(rk)                                              :: xi, eta, zeta
         integer(ik)                                           :: ival, ielem, ierr
 
@@ -154,14 +154,33 @@ contains
                 !Write sampling for current element  
                 do ipt_zeta = 1,zetalim
                     zeta = (((real(ipt_zeta,rk) - ONE)/(real(npts,rk) - ONE)) - HALF)*TWO
- 
                         do ipt_eta = 1,etalim
                             eta = (((real(ipt_eta,rk) - ONE)/(real(npts,rk) - ONE)) - HALF)*TWO
-
                                 do ipt_xi = 1,xilim
                                     xi = (((real(ipt_xi,rk) - ONE)/(real(npts,rk) - ONE)) - HALF)*TWO
 
-                                    val = real(data%mesh(idom)%elems(ielem)%grid_point(icoord,xi,eta,zeta),rdouble)
+
+                                    ! Get coordinate value at point
+                                    if ( data%mesh(idom)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
+                                        r_coord     = real(data%mesh(idom)%elems(ielem)%grid_point(1,xi,eta,zeta),rdouble)
+                                        theta_coord = real(data%mesh(idom)%elems(ielem)%grid_point(2,xi,eta,zeta),rdouble)
+                                        z_coord     = real(data%mesh(idom)%elems(ielem)%grid_point(3,xi,eta,zeta),rdouble)
+
+                                        if (icoord == 1) then
+                                            val = r_coord*cos(theta_coord)
+                                        else if (icoord == 2) then
+                                            val = r_coord*sin(theta_coord)
+                                        else if (icoord == 3) then
+                                            val = z_coord
+                                        end if
+
+                                    else
+
+                                        val = real(data%mesh(idom)%elems(ielem)%grid_point(icoord,xi,eta,zeta),rdouble)
+
+                                    end if
+
+
                                     ival = ival + 1           ! Counter for the coordinate arrays
                                     select case(icoord)
                                         case(1)
@@ -173,9 +192,7 @@ contains
                                     end select
 
                                 end do  ! ipt_xi
-
                         end do  ! ipt_eta
-
                 end do  ! ipt_zeta
 
             end do  ! ielem
@@ -252,24 +269,20 @@ contains
 
                 do ipt_zeta = 1,zetalim
                     zeta = (((real(ipt_zeta,rk) - ONE)/(real(npts,rk) - ONE)) - HALF)*TWO
- 
                     do ipt_eta = 1,etalim
                         eta = (((real(ipt_eta,rk) - ONE)/(real(npts,rk) - ONE)) - HALF)*TWO
- 
                         do ipt_xi = 1,xilim
                             xi = (((real(ipt_xi,rk) - ONE)/(real(npts,rk) - ONE)) - HALF)*TWO
 
                             ! Get solution value at a point 
                             itime = 1
-                            val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q%dom(idom)%vecs(ielem),ivar,itime,xi,eta,zeta),rdouble)
+                            val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q_in%dom(idom)%vecs(ielem),ivar,itime,xi,eta,zeta),rdouble)
                             ival = ival + 1                   ! Counter for conservative variable array
                             cons_var_val(ivar,ival) = val(1)  ! Store values in the array
                                                               ! Each row of the array contains the values for one conservative variable
 
                         end do  ! ipt_xi
-                           
                     end do  ! ipt_eta
-                
                 end do  ! ipt_zeta
 
             end do  ! ielem

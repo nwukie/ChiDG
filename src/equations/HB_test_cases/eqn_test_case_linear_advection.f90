@@ -3,7 +3,6 @@ module eqn_test_case_linear_advection
     use mod_constants,                  only: ZERO,ONE
     use type_equation_set,              only: equation_set_t
     use type_equation_builder,          only: equation_builder_t
-    use type_linear_coefficient_model,  only: linear_coefficient_model_t
     use type_chidg_worker,              only: chidg_worker_t
     use type_model,                     only: model_t   
     use mod_models,                     only: model_factory

@@ -48,14 +48,14 @@ module type_bc_state
         procedure   :: set_family
         procedure   :: get_family
 
-        procedure   :: set_fcn               !< Set a particular function definition for a specified bcfunction_t
-        procedure   :: set_fcn_option        !< Set function-specific options for a specified bcfunction_t
+        procedure   :: set_fcn               ! Set a particular function definition for a specified bcfunction_t
+        procedure   :: set_fcn_option        ! Set function-specific options for a specified bcfunction_t
 
-        procedure   :: get_nproperties       !< Return the number of properties associated with the boundary condition.
-        procedure   :: get_property_name     !< Return the name of a property given a property index.
-        procedure   :: get_noptions          !< Return the number of available options for a given property, specified by a property index.
-        procedure   :: get_option_key        !< Return the key for an option, given a property index and subsequent option index.
-        procedure   :: get_option_value      !< Return the value of a given key, inside of a specified property.
+        procedure   :: get_nproperties       ! Return the number of properties associated with the boundary condition.
+        procedure   :: get_property_name     ! Return the name of a property given a property index.
+        procedure   :: get_noptions          ! Return the number of available options for a given property, specified by a property index.
+        procedure   :: get_option_key        ! Return the key for an option, given a property index and subsequent option index.
+        procedure   :: get_option_value      ! Return the value of a given key, inside of a specified property.
 
     end type bc_state_t
     !*********************************************************************************************
@@ -107,8 +107,8 @@ contains
     !----------------------------------------------------------------------------------------------
     subroutine init_bc_specialized(self,mesh,bc_patch)
         class(bc_state_t),  intent(inout)   :: self
-        type(mesh_t),       intent(in)      :: mesh
-        type(bc_patch_t),   intent(in)      :: bc_patch
+        type(mesh_t),       intent(in)      :: mesh(:)
+        type(bc_patch_t),   intent(in)      :: bc_patch(:)
 
 
 
@@ -129,36 +129,48 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/16/2016
+    !!  @date   2/27/2017   updated for multiple patches
     !!
     !----------------------------------------------------------------------------------------------
     subroutine init_bc_coupling(self,mesh,bc_patch)
         class(bc_state_t),  intent(inout)   :: self
-        type(mesh_t),       intent(in)      :: mesh
-        type(bc_patch_t),   intent(inout)   :: bc_patch
+        type(mesh_t),       intent(in)      :: mesh(:)
+        type(bc_patch_t),   intent(inout)   :: bc_patch(:)
 
-        integer(ik) :: iface_bc, ielem
+        integer(ik) :: ipatch, iface_bc, idomain_g, idomain_l, ielement_g, ielement_l
 
 
 
         !
-        ! Loop through elements and set default coupling information
+        ! For each patch, loop through faces and set default element coupling.
+        ! Default is that each face is coupled only with its owner element.
+        ! So, strictly local coupling.
         !
-        do iface_bc = 1,bc_patch%nfaces()
+        do ipatch = 1,size(bc_patch)
+            do iface_bc = 1,bc_patch(ipatch)%nfaces()
 
 
-            !
-            ! Get block-element index of current iface_bc
-            !
-            ielem = bc_patch%ielement_l(iface_bc)
+                !
+                ! Get block-element index of current iface_bc
+                !
+                idomain_g  = bc_patch(ipatch)%idomain_g(iface_bc)
+                idomain_l  = bc_patch(ipatch)%idomain_l(iface_bc)
+                ielement_g = bc_patch(ipatch)%ielement_g(iface_bc)
+                ielement_l = bc_patch(ipatch)%ielement_l(iface_bc)
 
-            
-            !
-            ! Add the element index as the only dependency.
-            !
-            call bc_patch%coupled_elements(iface_bc)%push_back(ielem)
+                
+                !
+                ! Add the element index as the only dependency.
+                !
+                call bc_patch(ipatch)%add_coupled_element(iface_bc, idomain_g,  &
+                                                                    idomain_l,  &
+                                                                    ielement_g, &
+                                                                    ielement_l, &
+                                                                    IRANK)
 
 
-        end do ! iface_bc
+            end do ! iface_bc
+        end do !ipatch
 
 
     end subroutine init_bc_coupling
@@ -444,6 +456,9 @@ contains
     !!      - Symmetry
     !!      - Periodic
     !!      - Farfield
+    !!      - Scalar
+    !!      - Extrapolation
+    !!      - Empty
     !!
     !!  @author Nathan A. Wukie
     !!  @date   11/21/2016
@@ -460,15 +475,15 @@ contains
         !
         ! Check incoming bc_state family
         !
-        if ( (trim(bc_family) == "Inlet")           .or. &
-             (trim(bc_family) == "Outlet")          .or. &
-             (trim(bc_family) == "Wall")            .or. &
-             (trim(bc_family) == "Symmetry")        .or. &
-             (trim(bc_family) == "Periodic")        .or. &
-             (trim(bc_family) == "Farfield")        .or. &
-             (trim(bc_family) == "Scalar")          .or. &
-             (trim(bc_family) == "Extrapolation")   .or. &
-             (trim(bc_family) == "Empty") ) then
+        if ( (trim(bc_family) == 'Inlet')           .or. &
+             (trim(bc_family) == 'Outlet')          .or. &
+             (trim(bc_family) == 'Wall')            .or. &
+             (trim(bc_family) == 'Symmetry')        .or. &
+             (trim(bc_family) == 'Periodic')        .or. &
+             (trim(bc_family) == 'Farfield')        .or. &
+             (trim(bc_family) == 'Scalar')          .or. &
+             (trim(bc_family) == 'Extrapolation')   .or. &
+             (trim(bc_family) == 'Empty') ) then
 
 
             self%family = trim(bc_family)

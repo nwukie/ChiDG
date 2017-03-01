@@ -1,18 +1,33 @@
-! Compute a matrix-vector multiplication between chidg_matrix and chidg_vector
-! instances that have been initialized with a single block geometry
+!   Compute a matrix-vector multiplication between chidg_matrix and chidg_vector
+!   instances that have been initialized with a single block geometry
 !
-! Block is 2x2x2
+!   Block is 2x2x2
+!
+!           * ------- * ------- *    
+!         /         /         / |
+!        * ------- * ------- *  |    
+!      /         /         / |  *         
+!     * ------- * ------- *  | /|
+!     |         |         |  *  |
+!     |         |         | /|  *
+!     * ------- * ------- *  | /
+!     |         |         |  *
+!     |         |         | /
+!     * ------- * ------- *      
 ! 
-! @author Mayank Sharma
-! @date   2/26/2017
+!   @author Mayank Sharma
+!   @date   2/26/2017
 !
 !-----------------------------------------------------------------------------------------------------------------
 @Test
 subroutine test_chidg_matrix_operator_HB_mv()
+#include<messenger.h>
     use pfunit_mod
-
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ONE,TWO,THREE,PI,FOUR,IO_DESTINATION
+    use mod_constants,      only: ONE,TWO,THREE,PI,FOUR,FIVE,SIX,SEVEN, &
+                                  EIGHT,NINE,TEN,XI_MIN,XI_MAX,ETA_MIN, &
+                                  ZETA_MIN,ZETA_MAX,IO_DESTINATION
+    use mod_io,             only: time_integrator,frequencies
     use type_chidg,         only: chidg_t
     use type_chidg_matrix,  only: chidg_matrix_t
     use type_chidg_vector,  only: chidg_vector_t
@@ -35,8 +50,7 @@ subroutine test_chidg_matrix_operator_HB_mv()
                                            bref_HB_5, bref_HB_6, bref_HB_7, bref_HB_8
     real(rk),           dimension(8)    :: vals
     real(rk)                            :: tol
-    real(rk),           dimension(3,3)  :: D_ref
-    character(:),       allocatable     :: filename, time_integrator
+    character(:),       allocatable     :: filename
 
     type(chidg_matrix_t)                :: A
     type(chidg_vector_t)                :: x, b
@@ -47,27 +61,30 @@ subroutine test_chidg_matrix_operator_HB_mv()
     nterms_s        = 8
     IO_DESTINATION  = 'file'
     time_integrator = 'harmonic_balance'
+    frequencies(1)  = 2.0_rk*PI
 
     
-    !
-    ! Set time_manager values since no .nml file is being used
-    !
-    time_manager_global%dt     = 0     ! Not used for HB
-    time_manager_global%nsteps = 1     ! Not used for HB
-    time_manager_global%nwrite = 0     ! Not used for HB
-    time_manager_global%ntime  = 3
-    call time_manager_global%freq_data%push_back(2.0_rk*PI)
-
-
-    chidg%data%time_manager%ntime = 3
-
-    !
     ! Initialize ChiDG
     ! Also initializes time_manager
     !
     call chidg%start_up('core')
-    call chidg%set('Solution Order', integer_input = 2)
+    call chidg%set('Solution Order', integer_input=2)
     call chidg%set('Time Integrator', algorithm = time_integrator)
+
+
+!    !
+!    ! Set time manager values
+!    !
+!    time_manager_global%ntime = 3
+!    time_manager_global%D     = transpose(reshape([-4.4408920985006262E-016, 3.6275987284684352, -3.6275987284684348, &
+!                                                   -3.6275987284684357, 1.3322676295501878E-015, 3.6275987284684343,  &
+!                                                   3.6275987284684361, -3.6275987284684352, -5.8501974966035143E-016], shape(D_ref)))
+!
+!
+!    chidg%data%time_manager%ntime = 3
+!    chidg%data%time_manager%D     = transpose(reshape([-4.4408920985006262E-016, 3.6275987284684352, -3.6275987284684348, &
+!                                                   -3.6275987284684357, 1.3322676295501878E-015, 3.6275987284684343,  &
+!                                                   3.6275987284684361, -3.6275987284684352, -5.8501974966035143E-016], shape(D_ref)))
 
 
     !
@@ -76,7 +93,6 @@ subroutine test_chidg_matrix_operator_HB_mv()
     filename = "D1_2x2x2_singleblock.h5"
     call create_mesh_file("D1 NxNxN", filename, nelem_xi = 2, nelem_eta = 2, nelem_zeta = 2)
 
-!    chidg%data%mesh%ntime = 3
 
     !
     ! Get grid points
@@ -88,12 +104,8 @@ subroutine test_chidg_matrix_operator_HB_mv()
     !
     ! Initalize ChiDG Chimera interfaces
     !
-!    call chidg%set('Solution Order', integer_input = 2)
-!    call chidg%set('Time Integrator', algorithm = time_integrator)
     call chidg%init('domains')
     call chidg%init('communication')
-
-    print *, 'mesh:ntime = ', chidg%data%mesh%ntime
 
     !
     ! Initialize data containers
@@ -136,23 +148,11 @@ subroutine test_chidg_matrix_operator_HB_mv()
 
     ielem = 6
     itime = 3
-    imat  = A%dom(idom)%lblks(ielem,itime)%get_diagonal()
+    imat  = A%dom(1)%lblks(ielem,itime)%get_diagonal()
     A%dom(1)%lblks(ielem,itime)%data_(imat)%mat = FOUR
 
     vals  = 0.5_rk
-    call x%dom(idom)%vecs(8)%setvar(1,3,vals)
-
-
-!    !
-!    ! Set mass matrices in the densevector_matrices
-!    !
-!    do ielem = 1,8
-!        do itime = 1,3
-!
-!            A%dom(1)%lblks(ielem,itime)%mass = chidg%data%mesh%elems(ielem)%mass
-!
-!        end do
-!    end do
+    call x%dom(1)%vecs(8)%setvar(1,3,vals)
 
 
     !
@@ -160,15 +160,7 @@ subroutine test_chidg_matrix_operator_HB_mv()
     !
     b = chidg_mv(A,x)
 
-    
-    !D_ref = transpose(reshape([-4.4408920985006262E-016, 3.6275987284684352, -3.6275987284684348, &
-    !                           -3.6275987284684357, 1.3322676295501878E-015, 3.6275987284684343,  &
-    !                           3.6275987284684361, -3.6275987284684352, -5.8501974966035143E-016], shape(D_ref)))
-
-    
-    !
-    ! Note that D_ref defined above can also be used for reference calculations
-    !
+   
     associate ( D => time_manager_global%D )
 
         bref_1 = (THREE*0.4_rk)*nterms_s    ! Residual linearization at ielem = 7, itime = 2 \times (densevector)
@@ -195,7 +187,6 @@ subroutine test_chidg_matrix_operator_HB_mv()
     @assertEqual(bref_HB_6,b%dom(1)%vecs(3)%getvar(1,2),tol)
     @assertEqual(bref_HB_7,b%dom(1)%vecs(8)%getvar(1,1),tol)
     @assertEqual(bref_HB_8,b%dom(1)%vecs(8)%getvar(1,2),tol)
-
 
     !
     ! Close ChiDG interface

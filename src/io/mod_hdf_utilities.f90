@@ -519,77 +519,34 @@ contains
 
 
 
-    !>  Check if an already existing HDF5 file has the correct structure to be use to write 
-    !!  a new solution
-    !!
-    !!  Errors if incompatible.
-    !!
-    !!  @author Matteo Ugolotti
-    !!  @date   02/20/2017
-    !!
-    !!  TODO: add check to the domains' attribute (dimensionality, equation-set)
-    !!        Many other check can be implemented. This is the first step
-    !-----------------------------------------------------------------------------------------
-    subroutine check_file_structure_hdf(fid,data)
-    
-        integer(HID_T)      , intent(in)  :: fid
-        type(chidg_data_t)  , intent(in)  :: data
-        
-        ! Check if the version is correct
-        call check_file_storage_version_hdf(fid)
-    
-        ! Check if the number and names of the domains are correct
-        call check_file_domains_hdf(fid,data)
-        
-        ! Check the number of time levels, and update it in case.
-        call check_file_ntimes_hdf(fid,data)
-
-
-    end subroutine check_file_structure_hdf
-    !*****************************************************************************************
-
-
-
-
-
-
-
-
-
-    !>  Check check that the ntimes attirbute of the existing file matches the  
-    !!  a new data solution
-    !!
-    !!  Errors if incompatible.
-    !!
-    !!  @author Matteo Ugolotti
-    !!  @date   02/20/2017
-    !!
-    !-----------------------------------------------------------------------------------------
-    subroutine check_file_ntimes_hdf(fid,data)
-        
-        integer(HID_T)      , intent(in)    :: fid
-        type(chidg_data_t)  , intent(in)    :: data
-
-        integer(ik)                         :: time_lev, ntimes
-        character(len=1024),    allocatable :: msg
-
-        time_lev = get_ntimes_hdf(fid)
-        ntimes   = data%ntime() - 1
-    
-
-        if ( time_lev /= ntimes ) then
-            
-            msg = "The attribute ntimes in the existing  HDF5 fils is not up-to-date. It will automatically be updated"
-            call chidg_signal(WARN, msg)
-
-            !update ntimes
-            call set_ntimes_hdf(fid,ntimes)
-
-        end if
-
-
-    end subroutine check_file_ntimes_hdf
-    !*****************************************************************************************
+!    !>  Check if an already existing HDF5 file has the correct structure to be use to write 
+!    !!  a new solution
+!    !!
+!    !!  Errors if incompatible.
+!    !!
+!    !!  @author Matteo Ugolotti
+!    !!  @date   02/20/2017
+!    !!
+!    !!  TODO: add check to the domains' attribute (dimensionality, equation-set)
+!    !!        Many other check can be implemented. This is the first step
+!    !-----------------------------------------------------------------------------------------
+!    subroutine check_file_structure_hdf(fid,data)
+!    
+!        integer(HID_T)      , intent(in)  :: fid
+!        type(chidg_data_t)  , intent(in)  :: data
+!        
+!        ! Check if the version is correct
+!        call check_file_storage_version_hdf(fid)
+!    
+!        ! Check if the number and names of the domains are correct
+!        call check_file_domains_hdf(fid,data)
+!        
+!        ! Check the number of time levels, and update it in case.
+!        call check_file_ntimes_hdf(fid,data)
+!
+!
+!    end subroutine check_file_structure_hdf
+!    !*****************************************************************************************
 
 
 
@@ -599,62 +556,105 @@ contains
 
 
 
-
-    !>  Check if the number of domains and name in an old HDF5 file are coherent with the
-    !!  new solution
-    !!
-    !!  Errors if incompatible.
-    !!
-    !!  @author Matteo Ugolotti
-    !!  @date   02/20/2017
-    !!
-    !!
-    !!
-    !-----------------------------------------------------------------------------------------
-    subroutine check_file_domains_hdf(id,data)
-
-        integer(HID_T)      ,intent(in) :: id
-        type(chidg_data_t)  ,intent(in) :: data
-
-        integer(ik)                        :: domain_number, idom, domain_check, dimension
-        character(len=1024),   allocatable :: dom_names(:), domain_name, msg
-        
-        !
-        ! check whether the number of domians is correct or not. IF it is, then 
-        ! compare domains' names
-        !
-        
-        domain_number = data%ndomains()
-        domain_check  = get_ndomains_hdf(id)
-
-        if (domain_number /= domain_check) then
-            msg = "The number of domains in the existing file and the number of domains that need to be stored &
-                    do not match. Please, delete the existing HDF5 file."
-            call chidg_signal(FATAL,msg)
-        else
-
-            !
-            ! check if the name of the domainis are correct
-            !
-            dom_names = get_domain_names_hdf(id)
-
-            do idom = 1, domain_number
-                
-                domain_name = "D_"//trim(data%info(idom)%name)
-                        
-                msg = "There exists a mismatch in a domain's name due to the overwriting of and existing HDF5 &
-                       file. To avoid this delete the existing HDF5 file."
-
-                if ( domain_name /= dom_names(idom) ) call chidg_signal(FATAL,msg)
-
-            end do
-        
-        end if
-        
+!    !>  Check check that the ntimes attirbute of the existing file matches the  
+!    !!  a new data solution
+!    !!
+!    !!  Errors if incompatible.
+!    !!
+!    !!  @author Matteo Ugolotti
+!    !!  @date   02/20/2017
+!    !!
+!    !-----------------------------------------------------------------------------------------
+!    subroutine check_file_ntimes_hdf(fid,data)
+!        
+!        integer(HID_T)      , intent(in)    :: fid
+!        type(chidg_data_t)  , intent(in)    :: data
+!
+!        integer(ik)                         :: time_lev, ntimes
+!        character(len=1024),    allocatable :: msg
+!
+!        time_lev = get_ntimes_hdf(fid)
+!        ntimes   = data%ntime() - 1
+!    
+!
+!        if ( time_lev /= ntimes ) then
+!            
+!            msg = "The attribute ntimes in the existing  HDF5 fils is not up-to-date. It will automatically be updated"
+!            call chidg_signal(WARN, msg)
+!
+!            !update ntimes
+!            call set_ntimes_hdf(fid,ntimes)
+!
+!        end if
+!
+!
+!    end subroutine check_file_ntimes_hdf
+!    !*****************************************************************************************
 
 
-    end subroutine check_file_domains_hdf
-    !*****************************************************************************************
+
+
+
+
+
+
+
+
+!    !>  Check if the number of domains and name in an old HDF5 file are coherent with the
+!    !!  new solution
+!    !!
+!    !!  Errors if incompatible.
+!    !!
+!    !!  @author Matteo Ugolotti
+!    !!  @date   02/20/2017
+!    !!
+!    !!
+!    !!
+!    !-----------------------------------------------------------------------------------------
+!    subroutine check_file_domains_hdf(id,data)
+!
+!        integer(HID_T)      ,intent(in) :: id
+!        type(chidg_data_t)  ,intent(in) :: data
+!
+!        integer(ik)                        :: domain_number, idom, domain_check, dimension
+!        character(len=1024),   allocatable :: dom_names(:), domain_name, msg
+!        
+!        !
+!        ! check whether the number of domians is correct or not. IF it is, then 
+!        ! compare domains' names
+!        !
+!        
+!        domain_number = data%ndomains()
+!        domain_check  = get_ndomains_hdf(id)
+!
+!        if (domain_number /= domain_check) then
+!            msg = "The number of domains in the existing file and the number of domains that need to be stored &
+!                    do not match. Please, delete the existing HDF5 file."
+!            call chidg_signal(FATAL,msg)
+!        else
+!
+!            !
+!            ! check if the name of the domainis are correct
+!            !
+!            dom_names = get_domain_names_hdf(id)
+!
+!            do idom = 1, domain_number
+!                
+!                domain_name = "D_"//trim(data%info(idom)%name)
+!                        
+!                msg = "There exists a mismatch in a domain's name due to the overwriting of and existing HDF5 &
+!                       file. To avoid this delete the existing HDF5 file."
+!
+!                if ( domain_name /= dom_names(idom) ) call chidg_signal(FATAL,msg)
+!
+!            end do
+!        
+!        end if
+!        
+!
+!
+!    end subroutine check_file_domains_hdf
+!    !*****************************************************************************************
 
 
 

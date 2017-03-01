@@ -4,43 +4,28 @@ module mod_hdfio
     use mod_constants,              only: ZERO, NFACES, TWO_DIM, THREE_DIM, NO_PROC
     use mod_bc,                     only: create_bc
     use mod_chidg_mpi,              only: IRANK, NRANK, ChiDG_COMM
-    use mod_hdf_utilities,          only: get_ndomains_hdf, get_domain_names_hdf,                   &
-                                          get_domain_equation_set_hdf, set_coordinate_order_hdf,    &
-                                          set_solution_order_hdf, get_solution_order_hdf,           &
-                                          get_domain_mapping_hdf, get_domain_dimensionality_hdf,    &
-                                          set_contains_solution_hdf, set_domain_equation_set_hdf,   &
-                                          check_file_storage_version_hdf, check_file_exists_hdf,    &
-                                          get_contains_solution_hdf, get_contains_grid_hdf,         &
-                                          get_bc_state_names_hdf, get_bc_state_hdf,                 &
-                                          get_nbc_state_groups_hdf, get_bc_state_group_names_hdf,   &
-                                          get_bc_patch_group_hdf, get_bc_state_group_family_hdf,    &
-                                          get_bc_patch_hdf, open_file_hdf, close_file_hdf,          &
-                                          open_domain_hdf, close_domain_hdf, initialize_file_hdf,   &
-                                          initialize_file_structure_hdf, open_bc_group_hdf,         &
-                                          close_bc_group_hdf, get_domain_nelements_hdf,             &
-                                          get_domain_name_hdf, check_file_structure_hdf,            &
-                                          get_ntimes_hdf
-    use mod_kinds,             only: rk,ik,rdouble
-    use mod_constants,         only: ZERO, NFACES, TWO_DIM, THREE_DIM, NO_PROC
-    use mod_bc,                only: create_bc
-    use mod_chidg_mpi,         only: IRANK, NRANK, ChiDG_COMM
-    use mod_hdf_utilities,     only: get_ndomains_hdf, get_domain_names_hdf,                        &
-                                     get_domain_equation_set_hdf, set_coordinate_order_hdf,         &
-                                     set_solution_order_hdf, get_solution_order_hdf,                &
-                                     get_domain_mapping_hdf, get_domain_dimensionality_hdf,         &
-                                     set_contains_solution_hdf, set_domain_equation_set_hdf,        &
-                                     get_domain_coordinates_hdf, get_domain_coordinate_system_hdf,  &
-                                     get_domain_connectivity_hdf, get_domain_nnodes_hdf,            &
-                                     check_file_storage_version_hdf, check_file_exists_hdf,         &
-                                     get_contains_solution_hdf, get_contains_grid_hdf,              &
-                                     get_bc_state_names_hdf, get_bc_state_hdf,                      &
-                                     get_nbc_state_groups_hdf, get_bc_state_group_names_hdf,        &
-                                     get_bc_patch_group_hdf, get_bc_state_group_family_hdf,         &
-                                     get_bc_patch_hdf, open_file_hdf, close_file_hdf,               &
-                                     open_domain_hdf, close_domain_hdf, initialize_file_hdf,        &
-                                     initialize_file_structure_hdf, open_bc_group_hdf,              &
-                                     close_bc_group_hdf, get_domain_nelements_hdf,                  &
-                                     get_domain_name_hdf, set_ntimes_hdf
+
+    use mod_kinds,                  only: rk,ik,rdouble
+    use mod_constants,              only: ZERO, NFACES, TWO_DIM, THREE_DIM, NO_PROC
+    use mod_bc,                     only: create_bc
+    use mod_chidg_mpi,              only: IRANK, NRANK, ChiDG_COMM
+    use mod_hdf_utilities,          only: get_ndomains_hdf, get_domain_names_hdf,                        &
+                                          get_domain_equation_set_hdf, set_coordinate_order_hdf,         &
+                                          set_solution_order_hdf, get_solution_order_hdf,                &
+                                          get_domain_mapping_hdf, get_domain_dimensionality_hdf,         &
+                                          set_contains_solution_hdf, set_domain_equation_set_hdf,        &
+                                          get_domain_coordinates_hdf, get_domain_coordinate_system_hdf,  &
+                                          get_domain_connectivity_hdf, get_domain_nnodes_hdf,            &
+                                          check_file_storage_version_hdf, check_file_exists_hdf,         &
+                                          get_contains_solution_hdf, get_contains_grid_hdf,              &
+                                          get_bc_state_names_hdf, get_bc_state_hdf,                      &
+                                          get_nbc_state_groups_hdf, get_bc_state_group_names_hdf,        &
+                                          get_bc_patch_group_hdf, get_bc_state_group_family_hdf,         &
+                                          get_bc_patch_hdf, open_file_hdf, close_file_hdf,               &
+                                          open_domain_hdf, close_domain_hdf, initialize_file_hdf,        &
+                                          initialize_file_structure_hdf, open_bc_group_hdf,              &
+                                          close_bc_group_hdf, get_domain_nelements_hdf,                  &
+                                          get_domain_name_hdf, set_ntimes_hdf, get_ntimes_hdf
 
     use type_svector,               only: svector_t
     use mod_string,                 only: string_t
@@ -258,6 +243,11 @@ contains
         !
         ndomains = data%ndomains()
 
+        !
+        ! Open file
+        !
+        fid = open_file_hdf(filename)
+
 
         !
         ! Check file contains solution
@@ -268,11 +258,6 @@ contains
                     to default values instead."
         if (.not. contains_solution) call chidg_signal(FATAL,user_msg)
 
-
-        !
-        ! Open file
-        !
-        fid = open_file_hdf(filename)
 
 
         !

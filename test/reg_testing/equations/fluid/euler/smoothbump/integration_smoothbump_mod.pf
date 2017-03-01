@@ -275,8 +275,7 @@ contains
         nonlinear_solver = 'quasi_newton'
         linear_solver    = 'fgmres_cgs'
         preconditioner   = 'RASILU0'
-        !IO_DESTINATION   = 'file'
-        IO_DESTINATION   = 'both'
+        IO_DESTINATION   = 'file'
         !------------------------------------------------------------------------------
 
 

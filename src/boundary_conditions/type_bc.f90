@@ -115,7 +115,7 @@ contains
     !!  @date   2/27/2017   modifications for more general boundary conditions.
     !!
     !------------------------------------------------------------------------------------------
-    subroutine init_bc_group(self,bc_group,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
+    subroutine init_bc_group(self,bc_group,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic,bc_scalar)
         class(bc_t),        intent(inout)           :: self
         type(bc_group_t),   intent(in)              :: bc_group
         class(bc_state_t),  intent(in), optional    :: bc_wall
@@ -124,6 +124,7 @@ contains
         class(bc_state_t),  intent(in), optional    :: bc_symmetry
         class(bc_state_t),  intent(in), optional    :: bc_farfield
         class(bc_state_t),  intent(in), optional    :: bc_periodic
+        class(bc_state_t),  intent(in), optional    :: bc_scalar
 
         integer(ik) :: istate, ierr, state_ID
 
@@ -162,6 +163,10 @@ contains
         else if ( present(bc_periodic) .and. (trim(bc_group%family) == 'Periodic') ) then
             state_ID = self%new_bc_state()
             allocate(self%bc_state(state_ID)%state, source=bc_periodic, stat=ierr)
+
+        else if ( present(bc_scalar) .and. (trim(bc_group%family) == 'Scalar') ) then
+            state_ID = self%new_bc_state()
+            allocate(self%bc_state(state_ID)%state, source=bc_scalar, stat=ierr)
 
 
         !
@@ -743,9 +748,7 @@ contains
     function get_family(self) result(family)
         class(bc_t),        intent(inout)   :: self
 
-        character(:),   allocatable :: family
-
-        character(:),   allocatable :: user_msg
+        character(:),   allocatable :: family, user_msg
 
 
         if (allocated(self%bc_family)) then

@@ -1,8 +1,9 @@
 module test_bc_patch_mod
     use pfunit_mod
-    use mod_kinds,                  only: rk,ik
-    use type_chidg,                 only: chidg_t
-    use type_bc_patch,              only: bc_patch_t
+    use mod_kinds,          only: rk,ik
+    use mod_constants,      only: IO_DESTINATION
+    use type_chidg,         only: chidg_t
+    use type_bc_patch,      only: bc_patch_t
     implicit none
 
     public  :: test_bc_patch
@@ -56,6 +57,7 @@ contains
         !
         ! Start up ChiDG
         !
+        IO_DESTINATION = 'file'
         call this%chidg%start_up('core')
         
     end subroutine setUp

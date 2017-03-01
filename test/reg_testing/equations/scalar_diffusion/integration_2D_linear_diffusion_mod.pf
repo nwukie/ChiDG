@@ -577,6 +577,15 @@ contains
         linear_solver    = "fgmres"
         preconditioner   = "ILU0"
         IO_DESTINATION   = "file"
+
+
+        ! Set linear solver options to pass during initialization
+        call loptions%set("tol",1.e-14_rk)
+
+        ! Set nonlinear solver options
+        call noptions%set("tol",5.e-10_rk)
+        call noptions%set("cfl0",1.0_rk)
+        call noptions%set("nsteps",100)
         !------------------------------------------------------------------------------
 
         !
@@ -587,20 +596,6 @@ contains
         this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
 
 
-
-        ! Set timescheme options to pass during initialization
-        !call toptions%set("dt", 0.1_rk) ! means nothing here
-        !call toptions%set("nsteps",100)
-        !call toptions%set("nwrite",0)
-
-
-        ! Set linear solver options to pass during initialization
-        call loptions%set("tol",1.e-14_rk)
-
-        ! Set nonlinear solver options
-        call noptions%set("tol",5.e-10_rk)
-        call noptions%set("cfl0",1.0_rk)
-        call noptions%set("nsteps",100)
 
 
 

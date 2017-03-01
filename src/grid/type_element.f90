@@ -1306,9 +1306,11 @@ contains
         real(rk)    :: res, tol
 
 
-        tol = 1000._rk*RKTOL
+        !tol = 2._rk*RKTOL
+        !tol = 10._rk*RKTOL
         !tol = RKTOL
 
+        tol = 1000._rk*RKTOL
 
         !
         ! Newton iteration to find the donor local coordinates

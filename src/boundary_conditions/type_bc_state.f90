@@ -456,6 +456,9 @@ contains
     !!      - Symmetry
     !!      - Periodic
     !!      - Farfield
+    !!      - Scalar
+    !!      - Extrapolation
+    !!      - Empty
     !!
     !!  @author Nathan A. Wukie
     !!  @date   11/21/2016
@@ -472,15 +475,15 @@ contains
         !
         ! Check incoming bc_state family
         !
-        if ( (trim(bc_family) == "Inlet")           .or. &
-             (trim(bc_family) == "Outlet")          .or. &
-             (trim(bc_family) == "Wall")            .or. &
-             (trim(bc_family) == "Symmetry")        .or. &
-             (trim(bc_family) == "Periodic")        .or. &
-             (trim(bc_family) == "Farfield")        .or. &
-             (trim(bc_family) == "Scalar")          .or. &
-             (trim(bc_family) == "Extrapolation")   .or. &
-             (trim(bc_family) == "Empty") ) then
+        if ( (trim(bc_family) == 'Inlet')           .or. &
+             (trim(bc_family) == 'Outlet')          .or. &
+             (trim(bc_family) == 'Wall')            .or. &
+             (trim(bc_family) == 'Symmetry')        .or. &
+             (trim(bc_family) == 'Periodic')        .or. &
+             (trim(bc_family) == 'Farfield')        .or. &
+             (trim(bc_family) == 'Scalar')          .or. &
+             (trim(bc_family) == 'Extrapolation')   .or. &
+             (trim(bc_family) == 'Empty') ) then
 
 
             self%family = trim(bc_family)

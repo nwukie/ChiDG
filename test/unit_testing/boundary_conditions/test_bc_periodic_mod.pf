@@ -1,169 +1,244 @@
-! Test periodic boundary conditions to ensure face type(ftype) is being set correctly and neighbor elements(ineighbor) are being set correctly
 module test_bc_periodic_mod
     use pfunit_mod
-    use mod_kinds,      only: rk,ik
-    use mod_constants,  only: XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, ETA_MAX, ZETA_MAX, IO_DESTINATION
-    use type_chidg,     only: chidg_t
-    use type_point,     only: point_t
-    use mod_testutils,  only: meshgen
+    use mod_kinds,          only: rk,ik
+    use mod_constants,      only: ONE
+    use mod_test_utilities, only: create_mesh_file
+    use mod_file_utilities, only: delete_file
+    use mod_string,         only: string_t
+    use mod_bc,             only: create_bc
+    use type_chidg,         only: chidg_t
+    use type_bc_state,      only: bc_state_t
+    use type_bc_group,      only: bc_group_t
+    use mod_io
+    implicit none
+
+    public  :: test_bc_periodic
 
 
-
+    !>  This test sets up a 2x2x2-element grid specifying 'Periodic' boundary
+    !!  state functions on all 6 faces with the appropriate offset parameters
+    !!  to initialize periodic coupling with the opposite face.
+    !!
+    !!  The current test is that all of the setup and initialization is 
+    !!  completed without error. Thid includes setting up the Chimera
+    !!  interpolations induced from the Periodic boundary.
+    !!
+    !!  At the moment, no hard check is done to ensure that particular 
+    !!  elements are connected to the correct element in the periodic location.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/1/2017
+    !!
+    !!
+    !--------------------------------------------------------------------------
     @TestCase
-    type, extends(TestCase) :: test_periodic_bc
+    type, extends(TestCase) ::  test_bc_periodic
+
         type(chidg_t)   :: chidg
 
     contains
-        procedure   :: setUp
-        procedure   :: tearDown
 
-    end type test_periodic_bc
+        procedure   ::  setUp
+        procedure   ::  tearDown
+
+    end type test_bc_periodic
+    !**************************************************************************
 
 
 contains
 
-
-
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a 
+    !! derived type procedure. The argument names have to match
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
     subroutine setUp(this)
-        class(test_periodic_bc),    intent(inout)   :: this
-
-        type(point_t), allocatable  :: pts(:,:,:)
-        integer(ik)                 :: nterms_c, nterms_s
+        class(test_bc_periodic),    intent(inout)   :: this
         
+        class(bc_state_t),  allocatable :: bc_state
+        type(bc_group_t)                :: bc_groups(6)
+        type(string_t)                  :: group_names(1,6)
+
+
+        !------------------------------------------------------------------------------
         !
-        ! Send log to file
+        ! Define input data here that is normally read through the namelist input file
         !
-        IO_DESTINATION = 'file'
+        ! As a result, we don't call chidg%init('io')
+        !
+        !------------------------------------------------------------------------------
+        basis            = "legendre"
+        spacedim         = 3
+        gq_rule          = 1
+        time_integrator  = "steady"
+        nonlinear_solver = "newton"
+        linear_solver    = "fgmres"
+        preconditioner   = "ILU0"
+        IO_DESTINATION   = "file"
+
+
+        ! Set linear solver options to pass during initialization
+        call loptions%set("tol",1.e-14_rk)
+
+        ! Set nonlinear solver options
+        call noptions%set("tol",5.e-10_rk)
+        call noptions%set("cfl0",1.0_rk)
+        call noptions%set("nsteps",100)
+        !------------------------------------------------------------------------------
 
 
         !
-        ! Initialize chidg enironment
-        !
-        call this%chidg%start_up('core') 
+        ! Start up ChiDG
+        ! 
+        call this%chidg%start_up('core')
 
 
         !
-        ! Generage points for a 2x2x2 element mesh
+        ! Create mesh. 2x2x2. Periodic offsets specified on all boundaries
         !
-        call meshgen('222',pts)
+        if (IRANK == GLOBAL_MASTER) then
+
+
+            call create_bc('Periodic', bc_state)
+
+
+            call bc_state%set_fcn_option('Offset-1','val',ONE)
+            call bc_state%set_fcn_option('Offset-2','val',ZERO)
+            call bc_state%set_fcn_option('Offset-3','val',ZERO)
+            bc_groups(1)%name = 'Periodic X Min'
+            call bc_groups(1)%bc_states%push_back(bc_state)
+
+            call bc_state%set_fcn_option('Offset-1','val',-ONE)
+            call bc_state%set_fcn_option('Offset-2','val',ZERO)
+            call bc_state%set_fcn_option('Offset-3','val',ZERO)
+            bc_groups(2)%name = 'Periodic X Max'
+            call bc_groups(2)%bc_states%push_back(bc_state)
+
+            call bc_state%set_fcn_option('Offset-1','val',ZERO)
+            call bc_state%set_fcn_option('Offset-2','val',ONE)
+            call bc_state%set_fcn_option('Offset-3','val',ZERO)
+            bc_groups(3)%name = 'Periodic Y Min'
+            call bc_groups(3)%bc_states%push_back(bc_state)
+
+            call bc_state%set_fcn_option('Offset-1','val',ZERO)
+            call bc_state%set_fcn_option('Offset-2','val',-ONE)
+            call bc_state%set_fcn_option('Offset-3','val',ZERO)
+            bc_groups(4)%name = 'Periodic Y Max'
+            call bc_groups(4)%bc_states%push_back(bc_state)
+
+            call bc_state%set_fcn_option('Offset-1','val',ZERO)
+            call bc_state%set_fcn_option('Offset-2','val',ZERO)
+            call bc_state%set_fcn_option('Offset-3','val',ONE)
+            bc_groups(5)%name = 'Periodic Z Min'
+            call bc_groups(5)%bc_states%push_back(bc_state)
+
+            call bc_state%set_fcn_option('Offset-1','val',ZERO)
+            call bc_state%set_fcn_option('Offset-2','val',ZERO)
+            call bc_state%set_fcn_option('Offset-3','val',-ONE)
+            bc_groups(6)%name = 'Periodic Z Max'
+            call bc_groups(6)%bc_states%push_back(bc_state)
+
+
+            group_names(1,:) = [ string_t('Periodic X Min'), &
+                                 string_t('Periodic X Max'), &
+                                 string_t('Periodic Y Min'), &
+                                 string_t('Periodic Y Max'), &
+                                 string_t('Periodic Z Min'), &
+                                 string_t('Periodic Z Max') ]
+
+
+            call create_mesh_file('D1 NxNxN','test_file.h5',equation_sets=[string_t('Scalar Advection')], &
+                                                            group_names = group_names,   &
+                                                            bc_groups   = bc_groups,     &
+                                                            nelem_xi    = 2,             &
+                                                            nelem_eta   = 2,             &
+                                                            nelem_zeta  = 2)
+        end if
 
 
         !
-        ! Call domain initialization
+        ! Read grid
         !
-        idomain  = 1
-        nterms_c = 8
-        nterms_s = 8
+        call this%chidg%read_grid('test_file.h5')
+        call this%chidg%read_boundaryconditions('test_file.h5')
 
 
-        call this%chidg%data%add_domain('D_01',pts,nterms_c,'scalar',nterms_s)
+        !
+        ! Set ChiDG components
+        !
+        call this%chidg%set('Solution Order',   integer_input=2)
+        call this%chidg%set('Time Integrator',  algorithm=time_integrator)
+        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
 
-    end subroutine
+
+        !
+        ! Wrap-up initialization activities
+        !
+        call this%chidg%init('all')
 
 
+
+    end subroutine setUp
+    !*************************************************************************************
+    
+
+    !>
+    !!
+    !!
+    !-------------------------------------------------------------------------------------
     subroutine tearDown(this)
-        class(test_periodic_bc), intent(inout)  :: this
-
-    end subroutine
+        class(test_bc_periodic),    intent(inout)   :: this
 
 
+        !
+        ! Close ChiDG interface
+        !
+        call this%chidg%shut_down('core')
 
-!---------------------------------------------------------------------------------
-!                               TESTS
-!---------------------------------------------------------------------------------
 
-    !
-    ! Test to ensure the periodic face types have been set to ftype=0 (interior)
-    !
+        if (IRANK == GLOBAL_MASTER) then
+            call delete_file('test_file_.h5')
+        end if
+
+
+
+    end subroutine tearDown
+    !*************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  The purpose of this test is just to make sure the above setUp routine is called
+    !!  and executes without error.
+    !!
+    !!  If this routine passes, it means the above setup was executed without triggering
+    !!  an error. This implies all Chimera boundaries associated with the Periodic
+    !!  boundaries found quadrature donors, and the Periodic boundary itself was allocated
+    !!  and initialized without an error in initialization.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/1/2017
+    !!
+    !!-------------------------------------------------------------------------------------
     @Test
-    subroutine test_periodic_bc_XI_MIN_ftype(self)
-        class(test_periodic_bc),    intent(inout)   :: self
+    subroutine test_bc__periodic__setup(self)
+        class(test_bc_periodic), intent(inout)   :: self
 
-        integer(ik) :: finterior
+        @assertTrue(.true.)
 
-
-        finterior = 0       ! interior face = 0
-
-        !call self%chidg%data%domains(1)%init_bc('periodic',XI_MIN)
-        call self%chidg%data%add_bc('D_01','periodic',XI_MIN)
+    end subroutine test_bc__periodic__setup
+    !**************************************************************************************
 
 
-        
-        ! Test that the XI_MIN and XI_MAX faces of the block have been set
-        ! to interior faces. ftype = 0 
-        associate ( faces => self%chidg%data%mesh(1)%faces )
-
-            ! Check all the XI_MIN faces
-            @assertEqual(finterior,faces(1,XI_MIN)%ftype)
-            @assertEqual(finterior,faces(3,XI_MIN)%ftype)
-            @assertEqual(finterior,faces(5,XI_MIN)%ftype)
-            @assertEqual(finterior,faces(7,XI_MIN)%ftype)
-
-            ! Check all the XI_MAX faces
-            @assertEqual(finterior,faces(2,XI_MAX)%ftype)
-            @assertEqual(finterior,faces(4,XI_MAX)%ftype)
-            @assertEqual(finterior,faces(6,XI_MAX)%ftype)
-            @assertEqual(finterior,faces(8,XI_MAX)%ftype)
-
-        end associate
-
-    end subroutine
-
-
-    !
-    ! Test to ensure the periodic face neighbor element indices were reset correctly
-    !
-    @Test
-    subroutine test_periodic_bc_XI_MIN_ineighbor(self)
-        class(test_periodic_bc),    intent(inout)   :: self
-
-        integer(ik) :: ielem, ineighbor
-
-        !call self%chidg%data%domains(1)%init_bc('periodic',XI_MIN)
-        call self%chidg%data%add_bc('D_01','periodic',XI_MIN)
-
-
-        ! Test that the XI_MIN faces have the XI_MAX face elements as their neighbors
-        associate ( faces => self%chidg%data%mesh(1)%faces )
-
-            !! CHECK ALL THE XI_MIN FACES
-            ielem     = 1
-            ineighbor = 2   ! XI_MIN for element 1 should have element 2 as its neighbor
-            @assertEqual(ineighbor,faces(ielem,XI_MIN)%ineighbor)
-
-            ielem     = 3
-            ineighbor = 4   ! XI_MIN for element 3 should have element 4 as its neighbor
-            @assertEqual(ineighbor,faces(ielem,XI_MIN)%ineighbor)
-
-            ielem     = 5
-            ineighbor = 6   ! XI_MIN for element 5 shoudl have element 6 as its neighbor
-            @assertEqual(ineighbor,faces(ielem,XI_MIN)%ineighbor)
-
-            ielem     = 7
-            ineighbor = 8   ! XI_MIN for element 7 should have element 8 as its neighbor
-            @assertEqual(ineighbor,faces(ielem,XI_MIN)%ineighbor)
-
-
-
-            !! CHECK ALL THE XI_MAX FACES
-            ielem     = 2
-            ineighbor = 1   ! XI_MAX for element 2 should have element 1 as its neighbor
-            @assertEqual(ineighbor,faces(ielem,XI_MAX)%ineighbor)
-
-            ielem     = 4
-            ineighbor = 3   ! XI_MAX for element 4 should have element 3 as its neighbor
-            @assertEqual(ineighbor,faces(ielem,XI_MAX)%ineighbor)
-
-            ielem     = 6
-            ineighbor = 5   ! XI_MAX for element 6 should have element 5 as its neighbor
-            @assertEqual(ineighbor,faces(ielem,XI_MAX)%ineighbor)
-            
-            ielem     = 8
-            ineighbor = 7
-            @assertEqual(ineighbor,faces(ielem,XI_MAX)%ineighbor)
-
-        end associate
-    end subroutine
 
 
 
@@ -172,35 +247,3 @@ contains
 
 
 end module test_bc_periodic_mod
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

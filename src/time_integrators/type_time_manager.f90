@@ -150,7 +150,7 @@ contains
                 !
                 
                 ! n = 2*(number of frequencies) + 1
-                n_times = TWO*self%freq_data%size() + ONE
+                n_times = 2*self%freq_data%size() + 1
                 
                 do i = 1, n_times
                     

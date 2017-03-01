@@ -203,7 +203,7 @@ contains
                         imat = A%dom(idom)%lblks(ielem,itime)%get_diagonal()
 
                         matrix_proc = IRANK
-                        vector_proc = A%dom(idom)%chi_blks(ielem,itime)%parent_proc(imat)
+                        vector_proc = A%dom(idom)%lblks(ielem,itime)%parent_proc(imat)
 
                         local_multiply    = (matrix_proc == vector_proc)
                         parallel_multiply = (matrix_proc /= vector_proc)
@@ -225,8 +225,8 @@ contains
 
                                         temp_1 = D(itime,itime_i)*matmul(mass,x%dom(idom)%vecs(ielem)% &
                                                                               getvar(ivar,itime_i))
-                                        temp_2 = res%dom(idom)%vecs(ielem)%getvar(ivar,itime_i) + temp_1
-                                        call res%dom(idom)%vecs(ielem)%setvar(ivar,itime_i,temp_2)
+                                        temp_2 = res%dom(idom)%vecs(ielem)%getvar(ivar,itime) + temp_1
+                                        call res%dom(idom)%vecs(ielem)%setvar(ivar,itime,temp_2)
 
                                     end do  ! ivar
                                     call timer_blas%stop()

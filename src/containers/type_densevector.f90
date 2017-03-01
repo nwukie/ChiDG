@@ -326,7 +326,7 @@ contains
         class(densevector_t),   intent(in)      :: self
         integer(ik),            intent(in)      :: ivar, itime
 
-        real(rk)                                :: modes_out(self%ntime_*self%nterms_)
+        real(rk)                                :: modes_out(self%nterms_)
         integer(ik)                             :: istart, iend
         
         !

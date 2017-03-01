@@ -11,7 +11,8 @@ module type_bc
     use type_mesh,                  only: mesh_t
     use type_point,                 only: point_t
     use type_boundary_connectivity, only: boundary_connectivity_t
-    use mpi_f08,                    only: mpi_comm
+    use mod_chidg_mpi,              only: IRANK, NRANK
+    use mpi_f08,                    only: mpi_comm, MPI_Allgather, MPI_LOGICAL
     implicit none
 
 
@@ -70,8 +71,12 @@ module type_bc
 
     contains
 
+        ! bc component addition routines
         procedure   :: init_bc_group            ! Initialize boundary condition group
         procedure   :: init_bc_patch            ! Initialize boundary condition patch
+
+        ! infrastructure initialization routine
+        procedure   :: init_bc_comm             !
         procedure   :: init_bc_specialized      ! Optional User-specialized initialization routine.
         procedure   :: init_bc_coupling         ! Initialize coupling interaction between bc elements.
         procedure   :: propagate_bc_coupling    ! Propagate coupling information to mesh
@@ -400,6 +405,79 @@ contains
 
 
     end subroutine init_bc_patch
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Initialize parallel boundary condition communicators.
+    !!
+    !!  When init_bc_comm is called, it is expected that it is also being called on all other
+    !!  processors for the same bc_t. Convention is that all processors have all the same 
+    !!  boundary condition groups added. However, the patches added to these groups 
+    !!  will be different on each processor.
+    !!
+    !!  Example: Processors 0,1,2 both have all the boundary conditions. However, not all
+    !!           the boundary condition objects on each processor have geometry associated
+    !!           with them.
+    !!
+    !!      Proc 0                  Proc 1                  Proc 2              bc_COMM
+    !!      ------                  ------                  ------              -------
+    !!
+    !!      bc_one                  bc_one                  bc_one               [0,2]
+    !!        bc_patch(1)             bc_patch(empty)         bc_patch(1)
+    !!
+    !!
+    !!      bc_two                  bc_two                  bc_two               [1,2]
+    !!        bc_patch(empty)         bc_patch(1)             bc_patch(1)
+    !!
+    !!
+    !!  The goal of init_bc_comm is for each boundary condition (ex. bc_one, bc_two) to know
+    !!  what other processors have geometry allocated for the same boundary condition.
+    !!  In this way, if some boundary condition implementation required interaction between
+    !!  elements, boundary conditions could talk directly to the processors that also contain
+    !!  portions of a boundary condition patch.
+    !!
+    !!
+    !!  init_bc_comm creats an MPI communicator, bc%bc_COMM, that includes the processors
+    !!  with bc_patch data that has been added, indicating they contain part of the boundary.
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/1/2017
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine init_bc_comm(self,mesh)
+        class(bc_t),    intent(inout)   :: self
+        type(mesh_t),   intent(inout)   :: mesh(:)
+
+        logical :: irank_has_geometry
+        logical :: ranks_have_geometry(NRANK)
+
+
+        !
+        ! Check if current processor contains geometry associated with the bc_t
+        !
+        if (allocated(self%bc_patch)) irank_has_geometry = .true.
+
+
+        !
+        ! Send this information to all and receive back information from all
+        !
+        call MPI_Allgather(irank_has_geometry,1,MPI_LOGICAL,ranks_have_geometry,1,MPI_LOGICAL, ChiDG_COMM)
+
+
+        print*, IRANK, ':', self%bc_name, ':', ranks_have_geometry
+
+
+
+    end subroutine init_bc_comm
     !******************************************************************************************
 
 

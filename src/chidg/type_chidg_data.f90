@@ -547,8 +547,7 @@ contains
             !
             ! Prepare boundary condition parallel communication
             !
-
-
+            call self%bc(ibc)%init_bc_comm(self%mesh)
 
             !
             ! Call bc-specific specialized routine. Default does nothing

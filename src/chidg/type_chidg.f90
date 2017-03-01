@@ -162,12 +162,12 @@ contains
             !
             case ('core')
 
-                call self%data%time_manager%init()
-
-                !
-                ! Initialize global time_manager variable
-                !
-                call time_manager_global%init()
+!                call self%data%time_manager%init()
+!
+!                !
+!                ! Initialize global time_manager variable
+!                !
+!                call time_manager_global%init()
 
                 ! Default communicator for 'communication' is MPI_COMM_WORLD
                 if ( present(comm) ) then
@@ -198,6 +198,13 @@ contains
                     allocate(self%auxiliary_environment, stat=ierr)
                     if (ierr /= 0) call AllocationError
                 end if
+
+                call self%data%time_manager%init()
+
+                !
+                ! Initialize global time_manager variable
+                !
+                call time_manager_global%init()
 
 
             !

@@ -72,21 +72,6 @@ subroutine test_chidg_matrix_operator_HB_mv()
     call chidg%set('Time Integrator', algorithm = time_integrator)
 
 
-!    !
-!    ! Set time manager values
-!    !
-!    time_manager_global%ntime = 3
-!    time_manager_global%D     = transpose(reshape([-4.4408920985006262E-016, 3.6275987284684352, -3.6275987284684348, &
-!                                                   -3.6275987284684357, 1.3322676295501878E-015, 3.6275987284684343,  &
-!                                                   3.6275987284684361, -3.6275987284684352, -5.8501974966035143E-016], shape(D_ref)))
-!
-!
-!    chidg%data%time_manager%ntime = 3
-!    chidg%data%time_manager%D     = transpose(reshape([-4.4408920985006262E-016, 3.6275987284684352, -3.6275987284684348, &
-!                                                   -3.6275987284684357, 1.3322676295501878E-015, 3.6275987284684343,  &
-!                                                   3.6275987284684361, -3.6275987284684352, -5.8501974966035143E-016], shape(D_ref)))
-
-
     !
     ! Create grid file
     !
@@ -192,6 +177,11 @@ subroutine test_chidg_matrix_operator_HB_mv()
     ! Close ChiDG interface
     !
     call chidg%shut_down('core')
+
+    !
+    ! The time_integrator is reset to steady so that it can be used by the next test
+    !
+    time_integrator = 'steady'
 
 
     !

@@ -55,5 +55,145 @@ subroutine test_densevector_INIT()
     @assertEqual(eparent_g,vec%eparent_g())
     @assertEqual(eparent_l,vec%eparent_l())
 
+
 end subroutine test_densevector_INIT
+!*******************************************************************************
+
+
+
+
+!>  Test densevector initialization for ntime > 1
+!!
+!!  @author Mayank Sharma
+!!  @date   3/1/2017
+!!
+!!
+!--------------------------------------------------------------------------------
+@Test
+subroutine test_densevector_INIT_2()
+    use pfunit_mod
+    use mod_kinds,          only: rk,ik
+    use type_densevector
+
+    implicit none
+    type(densevector_t) :: vec
+    integer(ik)         :: nterms, neqns, vsize, nentries, ntime
+    integer(ik)         :: dparent_g, dparent_l, eparent_g, eparent_l
+
+
+    !
+    ! Test initialize procedure
+    !
+    nterms    = 8
+    neqns     = 5
+    ntime     = 3
+    vsize     = nterms*neqns*ntime
+    nentries  = vsize
+    dparent_g = 2
+    dparent_l = 1
+    eparent_g = 55 
+    eparent_l = 15
+
+    call vec%init(nterms,neqns,ntime,dparent_g,dparent_l,eparent_g,eparent_l)
+
+    @assertEqual(vsize,vec%nentries())
+    @assertEqual(dparent_g,vec%dparent_g())
+    @assertEqual(dparent_l,vec%dparent_l())
+    @assertEqual(eparent_g,vec%eparent_g())
+    @assertEqual(eparent_l,vec%eparent_l())
+
+
+    !
+    ! Test reinitialization
+    !
+    nterms    = 27
+    neqns     = 1
+    ntime     = 7
+    vsize     = nterms*neqns*ntime
+    nentries  = vsize
+    dparent_g = 3
+    dparent_l = 2
+    eparent_g = 22 
+    eparent_l = 12
+
+    call vec%init(nterms,neqns,ntime,dparent_g,dparent_l,eparent_g,eparent_l)
+
+    @assertEqual(nentries,vec%nentries())
+    @assertEqual(dparent_g,vec%dparent_g())
+    @assertEqual(dparent_l,vec%dparent_l())
+    @assertEqual(eparent_g,vec%eparent_g())
+    @assertEqual(eparent_l,vec%eparent_l())
+
+
+end subroutine test_densevector_INIT_2
+!*******************************************************************************
+
+
+
+
+!>  Test getvar subroutine in type_densevector
+!!
+!!  @author Mayank Sharma
+!!  @date   3/1/2017
+!!
+!!
+!--------------------------------------------------------------------------------
+@Test
+subroutine test_densevector_GETVAR()
+#include<messenger.h>
+    use pfunit_mod
+    use mod_kinds,          only: rk,ik
+    use type_densevector
+    implicit none
+
+    type(densevector_t)     :: vec
+    integer(ik)             :: nterms, neqns, ntime, vsize, nentries
+    integer(ik)             :: dparent_g, dparent_l, eparent_g, eparent_l
+    integer(ik)             :: ierr
+    real(rk), allocatable   :: vals(:)
+    real(rk)                :: tol
+
+
+    tol = 1.e-13_rk
+
+    !
+    ! Initialize densevector
+    !
+    nterms    = 8
+    neqns     = 5
+    ntime     = 3
+    vsize     = nterms*neqns*ntime
+    nentries  = vsize
+    dparent_g = 2
+    dparent_l = 1
+    eparent_g = 55
+    eparent_l = 15
+
+    call vec%init(nterms,neqns,ntime,dparent_g,dparent_l,eparent_g,eparent_l)
+
+    if (allocated(vals)) deallocate(vals)
+    allocate(vals(nterms), stat=ierr)
+    if (ierr /= 0) call AllocationError
+
+    !
+    ! Set values in the densevector
+    !
+    vals = 0.1_rk
+    call vec%setvar(1,2,vals)
+
+    vals = 0.2_rk
+    call vec%setvar(4,3,vals)
+
+    vals = 0.7_rk
+    call vec%setvar(2,1,vals)
+
+    !
+    ! Test getvar
+    !
+    @assertEqual(0.1_rk,vec%getvar(1,2),tol)
+    @assertEqual(0.2_rk,vec%getvar(4,3),tol)
+    @assertEqual(0.7_rk,vec%getvar(2,1),tol)
+
+
+end subroutine test_densevector_GETVAR
 !*******************************************************************************

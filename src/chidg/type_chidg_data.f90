@@ -542,29 +542,29 @@ contains
         integer(ik) :: ibc
 
 
-        !
-        ! Call bc-specific specialized routine. Default does nothing
-        !
         do ibc = 1,size(self%bc)
+
+            !
+            ! Prepare boundary condition parallel communication
+            !
+
+
+
+            !
+            ! Call bc-specific specialized routine. Default does nothing
+            !
             call self%bc(ibc)%init_bc_specialized(self%mesh)
-        end do
 
-
-
-        !
-        ! Initialize boundary condition coupling. 
-        !
-        do ibc = 1,size(self%bc)
+            !
+            ! Initialize boundary condition coupling. 
+            !
             call self%bc(ibc)%init_bc_coupling(self%mesh)
-        end do
 
-
-
-        !
-        ! Propagate boundary condition coupling. 
-        !
-        do ibc = 1,size(self%bc)
+            !
+            ! Propagate boundary condition coupling. 
+            !
             call self%bc(ibc)%propagate_bc_coupling(self%mesh)
+
         end do
 
 

@@ -290,6 +290,7 @@ contains
             !
             case ('all')
                 call self%init('domains')
+                call self%init('bc')
                 call self%init('communication')
                 call self%init('chimera')
                 call self%init('solvers')
@@ -311,6 +312,11 @@ contains
 
                 !call self%data%initialize_solution_domains(self%nterms_s, self%ntime)
                 call self%data%initialize_solution_domains(self%nterms_s)
+
+            case ('bc')
+                call write_line("Initializing boundary condition coupling...", io_proc=GLOBAL_MASTER)
+                call self%data%initialize_solution_bc()
+
 
             !
             ! Initialize communication. Local face communication. Global parallel communication.
@@ -683,10 +689,11 @@ contains
 
         character(5),           dimension(1)    :: extensions
         character(:),           allocatable     :: extension
-        type(bc_patch_data_t),  allocatable     :: bc_patches(:)
+        type(bc_patch_data_t),  allocatable     :: bc_patch_data(:)
+        type(string_t)                          :: bc_group_name
         type(bc_group_t),       allocatable     :: bc_groups(:)
         type(string_t)                          :: group_name
-        integer                                 :: idom, ndomains, iface, ierr, iread
+        integer                                 :: idom, ndomains, iface, ibc, ierr, iread
 
         if (IRANK == GLOBAL_MASTER) call write_line('Reading boundary conditions')
 
@@ -705,7 +712,7 @@ contains
 
 
                 if ( extension == '.h5' ) then
-                    call read_boundaryconditions_hdf(gridfile,bc_patches,bc_groups,self%partition)
+                    call read_boundaryconditions_hdf(gridfile,bc_patch_data,bc_groups,self%partition)
                 else
                     call chidg_signal(FATAL,"chidg%read_boundaryconditions: grid file extension not recognized")
                 end if
@@ -716,27 +723,40 @@ contains
         end do
 
 
+
+
+
         !
-        ! Add boundary conditions to ChiDG
+        ! Add all boundary condition groups
         !
-        ndomains = size(bc_patches)
+        do ibc = 1,size(bc_groups)
+
+            call self%data%add_bc_group(bc_groups(ibc), bc_wall=bc_wall,          &
+                                                        bc_inlet=bc_inlet,        &
+                                                        bc_outlet=bc_outlet,      &
+                                                        bc_symmetry=bc_symmetry,  &
+                                                        bc_farfield=bc_farfield,  &
+                                                        bc_periodic=bc_periodic)
+
+        end do !ibc
+
+
+        !
+        ! Add boundary condition patches
+        !
+        ndomains = size(bc_patch_data)
         do idom = 1,ndomains
             do iface = 1,NFACES
-
-                group_name = bc_patches(idom)%bc_group%at(iface)
-                call self%data%add_bc(bc_patches(idom)%domain_,                 &
-                                      bc_patches(idom)%bc_connectivity(iface),  &
-                                      group_name%get(),                         &
-                                      bc_groups,                                &
-                                      bc_wall=bc_wall,                          &
-                                      bc_inlet=bc_inlet,                        &
-                                      bc_outlet=bc_outlet,                      &
-                                      bc_symmetry=bc_symmetry,                  &
-                                      bc_farfield=bc_farfield,                  &
-                                      bc_periodic=bc_periodic)
+            
+                bc_group_name = bc_patch_data(idom)%bc_group_name%at(iface)
+                call self%data%add_bc_patch(bc_patch_data(idom)%domain_name,            &
+                                            bc_group_name%get(),                        &
+                                            bc_patch_data(idom)%bc_connectivity(iface))
 
             end do !iface
-        end do !idom
+        end do !ipatch
+
+
 
 
     end subroutine read_boundaryconditions
@@ -800,83 +820,6 @@ contains
     end subroutine read_solution
     !*****************************************************************************************
 
-
-
-
-
-
-    
-
-!    !>  Initialize all solution and solver storage.
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   4/11/2016
-!    !!
-!    !!  @param[in]  nterms_s    Number of terms in the solution polynomial expansion.
-!    !!
-!    !-----------------------------------------------------------------------------------------
-!    subroutine initialize_solution_domains(self)
-!        class(chidg_t),     intent(inout)   :: self
-!
-!        character(:),   allocatable :: user_msg
-!
-!        !
-!        ! TODO: put in checks for prerequisites
-!        !
-!
-!
-!        !
-!        ! Check that the order for the solution basis expansion has been set.
-!        !
-!        user_msg = "chidg%initialize_solution_domains: It appears the 'Solution Order' was &
-!                    not set for the current ChiDG instance. Try calling &
-!                    'call chidg%set('Solution Order',&
-!                    integer_input=my_order)' where my_order=1-7 indicates the solution &
-!                    order-of-accuracy."
-!        if (self%nterms_s == 0) call chidg_signal(FATAL,user_msg)
-!
-!        !
-!        ! Call domain solution storage initialization: mesh data structures that 
-!        ! depend on solution expansion etc.
-!        !
-!        call self%data%initialize_solution_domains(self%nterms_s, self%ntime)
-!
-!
-!    end subroutine initialize_solution_domains
-!    !******************************************************************************************
-
-
-
-
-
-
-
-
-    !>  Initialize all solution and solver storage.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   4/11/2016
-    !!
-    !!  @param[in]  nterms_s    Number of terms in the solution polynomial expansion.
-    !!
-    !------------------------------------------------------------------------------------------
-    subroutine initialize_solution_solver(self)
-        class(chidg_t),     intent(inout)   :: self
-
-
-        !
-        ! TODO: put in checks for prerequisites
-        !
-
-        !
-        ! Call solver solution storage initialization: vectors, matrices, etc.
-        !
-        call self%data%initialize_solution_solver()
-
-
-
-    end subroutine initialize_solution_solver
-    !******************************************************************************************
 
 
 
@@ -1021,6 +964,7 @@ contains
         integer(ik)                 :: istep, nsteps, wcount
 
 !        call self%auxiliary_environment%start_up('core')
+    
 
         call write_line(" ", io_proc=GLOBAL_MASTER)
         call write_line("Entering Time Loop:", io_proc=GLOBAL_MASTER)

@@ -331,10 +331,10 @@ contains
             call bc_state%set_fcn_option('Static Pressure', 'val', 93000._rk )
             call bc_groups(2)%bc_states%push_back(bc_state)
 
-
-
             call create_bc('Wall', bc_state)
             call bc_groups(3)%bc_states%push_back(bc_state)
+
+
 
             ! Define patch group names
             group_names(1,:) = [string_t('Inlet') , &
@@ -345,7 +345,7 @@ contains
                                 string_t('Walls') ]
 
 
-            call create_mesh_file('Smooth Bump',this%gridfile,equation_sets=[string_t('Euler')],     &
+            call create_mesh_file('Smooth Bump',this%gridfile,equation_sets=[string_t('Euler')], &
                                                               group_names = group_names,    &
                                                               bc_groups   = bc_groups,      &
                                                               nelem_xi    = this%nelem_xi,  &
@@ -361,20 +361,21 @@ contains
         call this%chidg%read_grid(this%gridfile,spacedim)
         call this%chidg%read_boundaryconditions(this%gridfile)
 
+
+
         !
         ! Set ChiDG components
         !
-        call this%chidg%set('time_integrator',  algorithm=time_integrator)
-        call this%chidg%set('nonlinear_solver', algorithm=nonlinear_solver, options=noptions)
-        call this%chidg%set('linear_solver',    algorithm=linear_solver,    options=loptions)
-        call this%chidg%set('preconditioner',   algorithm=preconditioner)
+        call this%chidg%set('Solution Order',   integer_input=this%order)
+        call this%chidg%set('Time Integrator',  algorithm=time_integrator)
+        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
 
 
-
-        call this%chidg%data%time_manager%init()
-
-
-        call this%chidg%set('Solution Order', integer_input=this%order)
+        !
+        ! Wrap-up initialization activities
+        !
         call this%chidg%init('all')
 
 
@@ -384,15 +385,15 @@ contains
         call create_function(fcn,'constant')
 
         call fcn%set_option('val',1.13262_rk)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,1)
+        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
         call fcn%set_option('val',190.339029_rk)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,2)
+        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,2)
         call fcn%set_option('val',ZERO)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,3)
+        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,3)
         call fcn%set_option('val',ZERO)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,4)
+        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,4)
         call fcn%set_option('val',248493.425_rk)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,5)
+        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,5)
 
 
 

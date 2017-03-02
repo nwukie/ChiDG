@@ -969,9 +969,9 @@ contains
     !!                              for the domains in the partition
     !!
     !----------------------------------------------------------------------------------------
-    subroutine read_boundaryconditions_hdf(filename, bc_patches, bc_groups, partition)
+    subroutine read_boundaryconditions_hdf(filename, bc_patch_data, bc_groups, partition)
         character(*),           intent(in)                  :: filename
-        type(bc_patch_data_t),  intent(inout), allocatable  :: bc_patches(:)
+        type(bc_patch_data_t),  intent(inout), allocatable  :: bc_patch_data(:)
         type(bc_group_t),       intent(inout), allocatable  :: bc_groups(:)
         type(partition_t),      intent(in)                  :: partition
 
@@ -990,14 +990,14 @@ contains
         !  Allocate for number of domains in the partition
         !
         nconn = size(partition%connectivities)
-        allocate(bc_patches(nconn), stat=ierr)
+        allocate(bc_patch_data(nconn), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
         !
         ! Read boundary condition patches
         !
-        call read_bc_patches_hdf(fid,bc_patches,partition)
+        call read_bc_patches_hdf(fid,bc_patch_data,partition)
 
 
         !
@@ -1030,9 +1030,9 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine read_bc_patches_hdf(fid, bc_patches, partition)
+    subroutine read_bc_patches_hdf(fid, bc_patch_data, partition)
         integer(HID_T),         intent(in)      :: fid
-        type(bc_patch_data_t),  intent(inout)   :: bc_patches(:)
+        type(bc_patch_data_t),  intent(inout)   :: bc_patch_data(:)
         type(partition_t),      intent(in)      :: partition
 
         integer(ik)                 :: iconn, nconn, iface, ierr
@@ -1059,13 +1059,13 @@ contains
             ! Get name of current domain
             !
             domain = partition%connectivities(iconn)%get_domain_name()
-            bc_patches(iconn)%domain_ = domain
+            bc_patch_data(iconn)%domain_name = domain
 
 
             !
             ! Allocation bcs for current domain
             !
-            allocate(bc_patches(iconn)%bc_connectivity(NFACES), stat=ierr)
+            allocate(bc_patch_data(iconn)%bc_connectivity(NFACES), stat=ierr)
             if (ierr /= 0) call AllocationError
 
 
@@ -1087,15 +1087,15 @@ contains
 
 
                 ! Store boundary condition connectivity
-                call bc_patches(iconn)%bc_connectivity(iface)%init(nbcfaces)
+                call bc_patch_data(iconn)%bc_connectivity(iface)%init(nbcfaces)
                 do ibc_face = 1,nbcfaces
-                    bc_patches(iconn)%bc_connectivity(iface)%data(ibc_face)%data = bc_patch(ibc_face,:)
+                    bc_patch_data(iconn)%bc_connectivity(iface)%data(ibc_face)%data = bc_patch(ibc_face,:)
                 end do
 
                 
                 ! Read Boundary State Group
                 bc_state_group = get_bc_patch_group_hdf(patch_id)
-                call bc_patches(iconn)%bc_group%push_back(string_t(bc_state_group))
+                call bc_patch_data(iconn)%bc_group_name%push_back(string_t(bc_state_group))
 
 
                 ! Close face boundary condition group
@@ -1126,13 +1126,14 @@ contains
 
 
 
-    !>  Read boundary condition state functions from file and initialize in bcdata.
+    !>  Read boundary condition state groups from file and return.
+    !!
+    !!  Reads and returns all boundary condition state groups, regardless of if they
+    !!  are used on the current partition or not.
+    !!
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/31/2016
-    !!
-    !!
-    !!
     !!
     !---------------------------------------------------------------------------------------
     subroutine read_bc_state_groups_hdf(fid, bc_groups, partition)

@@ -8,6 +8,7 @@ add_lib_sources(mod_io.f90
                 mod_vtkio.f90
                 mod_file_utilities.f90
                 mod_plot3d_utilities.f90
+                mod_chimera_io.f90
                 type_file_properties.f90
                 type_chidg_file.f90
                 )

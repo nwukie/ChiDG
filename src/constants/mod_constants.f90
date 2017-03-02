@@ -191,7 +191,7 @@ module mod_constants
     ! IO constants
     !
     integer(ik),   parameter    :: MAXBLOCKS        = 200
-    character(6)                :: IO_DESTINATION   = 'file'
+    character(6)                :: IO_DESTINATION   = 'both'
     integer(ik)                 :: OUTPUT_RES       = 5
 
 

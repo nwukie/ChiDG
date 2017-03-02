@@ -94,11 +94,13 @@ subroutine test_update_space_linearadvection()
     ! Initialize solution data storage
     !
     call chidgA%init('domains')
+    call chidgA%init('bc')
     call chidgA%init('communication')
     call chidgA%init('chimera')
     call chidgA%init('solvers')
 
     call chidgB%init('domains')
+    call chidgB%init('bc')
     call chidgB%init('communication')
     call chidgB%init('chimera')
     call chidgB%init('solvers')

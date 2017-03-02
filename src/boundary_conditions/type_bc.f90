@@ -2,7 +2,7 @@ module type_bc
 #include <messenger.h>
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                          BOUNDARY, ORPHAN, ZERO, ONE, TWO, RKTOL
+                                          BOUNDARY, ORPHAN, ZERO, ONE, TWO, RKTOL, NO_ID
 
     use type_bc_patch,              only: bc_patch_t
     use type_bc_group,              only: bc_group_t
@@ -11,8 +11,9 @@ module type_bc
     use type_mesh,                  only: mesh_t
     use type_point,                 only: point_t
     use type_boundary_connectivity, only: boundary_connectivity_t
-    use mod_chidg_mpi,              only: IRANK, NRANK
-    use mpi_f08,                    only: mpi_comm, MPI_Allgather, MPI_LOGICAL
+    use mod_chidg_mpi,              only: IRANK, NRANK, ChiDG_COMM
+    use mpi_f08,                    only: mpi_comm, MPI_Comm_split, MPI_Allgather, &
+                                          MPI_LOGICAL, MPI_UNDEFINED
     implicit none
 
 
@@ -235,11 +236,6 @@ contains
         integer(ik)                 :: face_node
 
 
-        !
-        ! Create a new bc_patch
-        !
-        patch_ID = self%new_bc_patch()
-
 
         !
         ! Get number of elements/faces associated with boundary condition.
@@ -254,6 +250,7 @@ contains
         !
         nelem_bc = bc_connectivity%get_nfaces()
         iface_bc = 0
+        patch_ID = NO_ID
         do ielem_bc = 1,nelem_bc
 
             nface_nodes = size(bc_connectivity%data(ielem_bc)%data)
@@ -278,11 +275,21 @@ contains
                     end if
                 end do
 
+
+
+
         
 
                 ! If all match, set element/face indices in boundary condition list.
                 if ( all(node_matched) ) then
                     iface_bc = iface_bc + 1
+
+                    !
+                    ! Since a geometry region was detected on the current processor,
+                    ! create a new bc_patch if one hasn't already been created:
+                    !
+                    if (patch_ID == NO_ID) patch_ID = self%new_bc_patch()
+
 
 
                     !
@@ -457,24 +464,44 @@ contains
         class(bc_t),    intent(inout)   :: self
         type(mesh_t),   intent(inout)   :: mesh(:)
 
-        logical :: irank_has_geometry
-        logical :: ranks_have_geometry(NRANK)
+        logical                     :: irank_has_geometry, ranks_have_geometry(NRANK)
+        integer(ik)                 :: ierr, color
+        character(:),   allocatable :: user_msg
 
 
-!        !
-!        ! Check if current processor contains geometry associated with the bc_t
-!        !
-!        if (allocated(self%bc_patch)) irank_has_geometry = .true.
-!
-!
-!        !
-!        ! Send this information to all and receive back information from all
-!        !
-!        print*, IRANK, ' irank_has_geometry: ', irank_has_geometry
-!        call MPI_Allgather(irank_has_geometry,1,MPI_LOGICAL,ranks_have_geometry,1,MPI_LOGICAL, ChiDG_COMM)
-!
-!
-!        print*, IRANK, ':', self%bc_name, ':', ranks_have_geometry
+        !
+        ! Check if current processor contains geometry associated with the bc_t
+        !
+        irank_has_geometry = allocated(self%bc_patch)
+
+
+
+        !
+        ! Send this single information to all and receive back ordered information from all
+        !
+        call MPI_Allgather(irank_has_geometry,1,MPI_LOGICAL,ranks_have_geometry,1,MPI_LOGICAL,ChiDG_COMM,ierr)
+        user_msg = "bc%init_bc_comm: Error in collective MPI_Allgather for determining which &
+                    MPI ranks contain portions of a boundary condition bc_patch."
+        if (ierr /= 0) call chidg_signal(FATAL,user_msg)
+
+
+        !
+        ! Create a new MPI communicator for the current boundary condition 
+        ! that includes only those processors with bc_patch data that
+        ! has been allocated; indicating they contain a portion of the 
+        ! bc geometry.
+        !
+        if (irank_has_geometry) then
+            color = 0
+        else
+            color = MPI_UNDEFINED
+        end if
+
+        call MPI_Comm_split(ChiDG_COMM, color, IRANK, self%bc_COMM, ierr)
+        user_msg = "bc%init_bc_comm: Error in collective MPI_Comm_split when trying &
+                    to create a communicator for exchanging boundary condition data &
+                    between processors."
+        if (ierr /= 0) call chidg_signal(FATAL,user_msg)
 
 
 

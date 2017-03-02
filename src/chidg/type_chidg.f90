@@ -951,68 +951,110 @@ contains
     !!      - This routine passes the domain data, nonlinear solver, linear solver, and 
     !!        preconditioner components to the time integrator to take a step.
     !!
+    !!  Optional input parameters:
+    !!      write_initial   control writing initial solution to file. Default: .false.
+    !!      write_final     control writing final solution to file. Default: .true.
+    !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!  @date   2/7/2017
     !!
     !------------------------------------------------------------------------------------------
-    subroutine run(self)
-        class(chidg_t), intent(inout)   :: self
+    subroutine run(self, write_initial, write_final)
+        class(chidg_t), intent(inout)           :: self
+        logical,        intent(in), optional    :: write_initial
+        logical,        intent(in), optional    :: write_final
 
         character(100)              :: filename
         character(:),   allocatable :: prefix
         integer(ik)                 :: istep, nsteps, wcount
+        logical                     :: option_write_initial, option_write_final
 
-!        call self%auxiliary_environment%start_up('core')
     
 
-        call write_line(" ", io_proc=GLOBAL_MASTER)
-        call write_line("Entering Time Loop:", io_proc=GLOBAL_MASTER)
-        call write_line(" ", io_proc=GLOBAL_MASTER)
-        
+        call write_line("---------------------------------------------------", io_proc=GLOBAL_MASTER)
+        call write_line("                                                   ", io_proc=GLOBAL_MASTER, delimiter='none')
+        call write_line("           Running ChiDG simulation...             ", io_proc=GLOBAL_MASTER, delimiter='none')
+        call write_line("                                                   ", io_proc=GLOBAL_MASTER, delimiter='none')
+        call write_line("---------------------------------------------------", io_proc=GLOBAL_MASTER)
+
+
+
+!        call self%auxiliary_environment%start_up('core')
+
+
+        !
+        ! Check optional incoming parameters
+        !
+        if (present(write_initial)) then
+            option_write_initial = write_initial
+        else
+            option_write_initial = .false.
+        end if
+
+        if (present(write_final)) then
+            option_write_final = write_final
+        else
+            option_write_final = .true.
+        end if
+
+
+
+
+        !
+        ! Write initial solution
+        !
+        if (option_write_initial) call self%write_solution('initial.h5')
+
+
+
+
         
         !
         ! Initialize time integrator state
         !
         call self%time_integrator%initialize_state(self%data)
 
-        wcount = 1
-        nsteps = self%data%time_manager%nsteps
         
         !
         ! Get the prefix in the file name in case of multiple output files
         !
         prefix = get_file_prefix(solutionfile_out,'.h5')       
 
+
+
+
+        !
+        ! Execute time_integrator, nsteps times 
+        !
+        wcount = 1
+        nsteps = self%data%time_manager%nsteps
         do istep = 1,nsteps
             
 
             call write_line("- Step ", istep, io_proc=GLOBAL_MASTER)
 
-            self%data%sdata%t = self%data%time_manager%dt*istep
 
             !
-            ! Call time integrator to take a step
+            ! 1: Update time t
+            ! 2: Call time integrator to take a step
             !
+            self%data%sdata%t = self%data%time_manager%dt*istep
             call self%time_integrator%step(self%data,self%nonlinear_solver, &
                                                      self%linear_solver,    &
                                                      self%preconditioner)
            
            
+
+            !
+            ! Write solution every nwrite steps
+            !
             if (wcount == self%data%time_manager%nwrite) then
                 write(filename, "(A,I7.7,A3)") trim(prefix)//'_', istep, '.h5'
                 call self%write_solution(filename)
                 wcount = 0
             end if
 
-!            !
-!            ! Write interpolated solution every nwrite steps
-!            !
-!            if (wcount == self%time_integrator%time_manager%nwrite) then
-!                write(filename, "(I7,A4)") 1000000+istep, '.plt'
-!                call write_tecio_variables_unstructured(self%data,trim(filename),istep+1)
-!                wcount = 0
-!            end if
 
 
             !
@@ -1025,11 +1067,12 @@ contains
 
 
         end do !istep
+
                 
         !
         ! Write the final solution to hdf file
         !        
-        call self%write_solution(solutionfile_out)
+        if (option_write_final) call self%write_solution(solutionfile_out)
 
 
     end subroutine run

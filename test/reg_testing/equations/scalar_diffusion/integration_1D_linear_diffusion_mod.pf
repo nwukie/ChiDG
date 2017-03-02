@@ -780,7 +780,7 @@ contains
         !
         ! Run ChiDG simulation
         !
-        call self%chidg%run()
+        call self%chidg%run(write_initial=.false., write_final=.false.)
 
 
         !

@@ -461,19 +461,20 @@ contains
         logical :: ranks_have_geometry(NRANK)
 
 
-        !
-        ! Check if current processor contains geometry associated with the bc_t
-        !
-        if (allocated(self%bc_patch)) irank_has_geometry = .true.
-
-
-        !
-        ! Send this information to all and receive back information from all
-        !
-        call MPI_Allgather(irank_has_geometry,1,MPI_LOGICAL,ranks_have_geometry,1,MPI_LOGICAL, ChiDG_COMM)
-
-
-        print*, IRANK, ':', self%bc_name, ':', ranks_have_geometry
+!        !
+!        ! Check if current processor contains geometry associated with the bc_t
+!        !
+!        if (allocated(self%bc_patch)) irank_has_geometry = .true.
+!
+!
+!        !
+!        ! Send this information to all and receive back information from all
+!        !
+!        print*, IRANK, ' irank_has_geometry: ', irank_has_geometry
+!        call MPI_Allgather(irank_has_geometry,1,MPI_LOGICAL,ranks_have_geometry,1,MPI_LOGICAL, ChiDG_COMM)
+!
+!
+!        print*, IRANK, ':', self%bc_name, ':', ranks_have_geometry
 
 
 

@@ -310,7 +310,7 @@ contains
         integer(HID_T),     intent(in)  :: fid
         type(chidg_data_t), intent(in)  :: data
 
-        integer(ik)                 :: idom, time
+        integer(ik)                 :: idom
         integer(HID_T)              :: domain_id
         character(:),   allocatable :: domain_name
 

@@ -817,7 +817,7 @@ contains
         nelem_g     = data%mesh(idom)%get_nelements_global()
         nterms_s    = data%mesh(idom)%nterms_s
         ndims       = 3
-        ntime       = data%ntime() !need to be sure this data is update from time_manager
+        ntime       = data%ntime()
 
         !
         ! Set the dimensions of the dataspace to write in
@@ -846,7 +846,6 @@ contains
         call h5lexists_f(gid, trim(field_name), exists, ierr)
         if (exists) then
             ! Open the existing dataset
-            ! TODO: check if we need to open the existing file with crp_list properties rather than H5P_DEFAULT_
             call h5dopen_f(gid, trim(field_name), did, ierr, H5P_DEFAULT_F)
             if (ierr /= 0) call chidg_signal(FATAL,"write_field_domain_hdf: variable does not exist or was not opened correctly.")
 
@@ -900,7 +899,6 @@ contains
             !
             call h5sselect_hyperslab_f(sid, H5S_SELECT_SET_F, start, count, ierr)
 
-!here
             !
             ! Create a memory dataspace
             !

@@ -165,8 +165,6 @@ contains
                 
                 call self%data%time_manager%init()
 
-                call self%data%time_manager%init()
-
                 ! Default communicator for 'communication' is MPI_COMM_WORLD
                 if ( present(comm) ) then
                     ChiDG_COMM = comm

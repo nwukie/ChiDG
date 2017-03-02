@@ -7,8 +7,8 @@ module type_chidg
     use mod_bc,                     only: register_bcs
     use mod_function,               only: register_functions
     use mod_grid,                   only: initialize_grid
-    use mod_io,                     only: read_input
-    use mod_string,                 only: get_file_extension, string_t
+    !use mod_io,                     only: read_input
+    use mod_string,                 only: get_file_extension, string_t, get_file_prefix
 
     use type_chidg_data,            only: chidg_data_t
     use type_time_integrator,       only: time_integrator_t
@@ -41,6 +41,7 @@ module type_chidg
     use mod_partitioners,           only: partition_connectivity, send_partitions, &
                                           recv_partition
     use mpi_f08
+    use mod_io
     implicit none
 
 
@@ -70,6 +71,7 @@ module type_chidg
         type(chidg_t), pointer :: auxiliary_environment
 
         ! Number of terms in 3D/1D solution basis expansion
+        
         !integer(ik)     :: ntime        = 1    !now this is in data%time_manager
         integer(ik)     :: nterms_s     = 0
         integer(ik)     :: nterms_s_1d  = 0
@@ -160,7 +162,7 @@ contains
             ! Start up ChiDG core
             !
             case ('core')
-
+                
                 call self%data%time_manager%init()
 
                 ! Default communicator for 'communication' is MPI_COMM_WORLD
@@ -199,7 +201,6 @@ contains
             !
             case ('namelist')
                 call read_input()
-
 
             case default
                 call chidg_signal_one(WARN,'chidg%start_up: Invalid start-up string.',trim(activity))
@@ -296,6 +297,7 @@ contains
                 call self%init('finalize')
 
 
+
             !
             ! Initialize domain data that depend on the solution expansion
             !
@@ -353,13 +355,12 @@ contains
                 if (.not. allocated(self%linear_solver))    call chidg_signal(FATAL,"chidg%linear_solver component was not allocated")
                 if (.not. allocated(self%preconditioner))   call chidg_signal(FATAL,"chidg%preconditioner component was not allocated")
 
-
                 !
                 ! Initialize preconditioner
                 !
                 call write_line("Initializing preconditioner...", io_proc=GLOBAL_MASTER)
                 call self%preconditioner%init(self%data)
-
+                
                 !
                 ! Initialize time_integrator
                 !
@@ -902,6 +903,7 @@ contains
     !!
     !!  @param[in]  solutionfile    String containing a solution file name, including extension.
     !!
+    !!
     !------------------------------------------------------------------------------------------
     subroutine write_solution(self,solutionfile)
         class(chidg_t),     intent(inout)           :: self
@@ -957,8 +959,9 @@ contains
     subroutine run(self)
         class(chidg_t), intent(inout)   :: self
 
-        character(100)  :: filename
-        integer(ik)     :: istep, nsteps, wcount
+        character(100)              :: filename
+        character(:),   allocatable :: prefix
+        integer(ik)                 :: istep, nsteps, wcount
 
 !        call self%auxiliary_environment%start_up('core')
     
@@ -966,7 +969,7 @@ contains
         call write_line(" ", io_proc=GLOBAL_MASTER)
         call write_line("Entering Time Loop:", io_proc=GLOBAL_MASTER)
         call write_line(" ", io_proc=GLOBAL_MASTER)
-
+        
         
         !
         ! Initialize time integrator state
@@ -975,7 +978,14 @@ contains
 
         wcount = 1
         nsteps = self%data%time_manager%nsteps
+        
+        !
+        ! Get the prefix in the file name in case of multiple output files
+        !
+        prefix = get_file_prefix(solutionfile_out,'.h5')       
+
         do istep = 1,nsteps
+            
 
             call write_line("- Step ", istep, io_proc=GLOBAL_MASTER)
 
@@ -987,8 +997,13 @@ contains
             call self%time_integrator%step(self%data,self%nonlinear_solver, &
                                                      self%linear_solver,    &
                                                      self%preconditioner)
-
-
+           
+           
+            if (wcount == self%data%time_manager%nwrite) then
+                write(filename, "(A,I7.7,A3)") trim(prefix)//'_', istep, '.h5'
+                call self%write_solution(filename)
+                wcount = 0
+            end if
 
 !            !
 !            ! Write interpolated solution every nwrite steps
@@ -1010,6 +1025,11 @@ contains
 
 
         end do !istep
+                
+        !
+        ! Write the final solution to hdf file
+        !        
+        call self%write_solution(solutionfile_out)
 
 
     end subroutine run

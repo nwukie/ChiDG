@@ -32,7 +32,8 @@ module type_time_integrator
 !        integer(ik)     :: nwrite   = 10            !< Write data every 'nwrite' steps     !
 
         class(system_assembler_t),  allocatable :: system
-        !type(time_manager_t)                    :: time_manager    ! now part of chidg%data
+
+!        type(time_manager_t)                    :: time_manager    ! now part of chidg%data
 
 
 

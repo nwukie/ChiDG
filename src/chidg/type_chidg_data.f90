@@ -65,6 +65,7 @@ module type_chidg_data
         ! An object containing time information
         type(time_manager_t)                        :: time_manager
 
+
     contains
 
         ! Modifiers for adding domains and boundary conditions

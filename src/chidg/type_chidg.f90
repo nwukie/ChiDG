@@ -71,8 +71,6 @@ module type_chidg
         type(chidg_t), pointer :: auxiliary_environment
 
         ! Number of terms in 3D/1D solution basis expansion
-        
-        !integer(ik)     :: ntime        = 1    !now this is in data%time_manager
         integer(ik)     :: nterms_s     = 0
         integer(ik)     :: nterms_s_1d  = 0
 
@@ -241,6 +239,12 @@ contains
                 case ('core')   ! All except mpi
                     call log_finalize()
                     call close_hdf()
+
+                    if (allocated(self%time_integrator))  deallocate(self%time_integrator)
+                    if (allocated(self%preconditioner))   deallocate(self%preconditioner)
+                    if (allocated(self%linear_solver))    deallocate(self%linear_solver)
+                    if (allocated(self%nonlinear_solver)) deallocate(self%nonlinear_solver)
+                    call self%data%release()
 
 
                 case default

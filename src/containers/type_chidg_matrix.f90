@@ -43,6 +43,7 @@ module type_chidg_matrix
         procedure   :: clear                                !< Zero matrix-values
 
 
+        procedure   :: release
         final       :: destructor
 
     end type chidg_matrix_t
@@ -445,8 +446,6 @@ contains
 
 
 
-
-
     !> Set all ChiDGMatrix matrix-values to zero
     !!
     !!  @author Nathan A. Wukie
@@ -476,6 +475,20 @@ contains
 
 
 
+
+    !>  Release allocated resources.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/3/2017
+    !!
+    !-------------------------------------------------------------------------------------------
+    subroutine release(self)
+        class(chidg_matrix_t),  intent(inout)   :: self
+
+        if (allocated(self%dom)) deallocate(self%dom)
+
+    end subroutine release
+    !*******************************************************************************************
 
 
 

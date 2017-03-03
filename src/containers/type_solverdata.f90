@@ -76,6 +76,8 @@ module type_solverdata
         procedure           :: get_auxiliary_field_index
         procedure           :: get_auxiliary_field_name
 
+        procedure           :: release
+
     end type solverdata_t
     !*******************************************************************************************
 
@@ -379,6 +381,46 @@ contains
 
     end function nauxiliary_fields
     !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Release allocated data.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/3/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine release(self)
+       class(solverdata_t), intent(inout)   :: self 
+
+        ! Release chidg_vector data
+        call self%q%release()
+        call self%dq%release()
+        call self%q_in%release()
+        call self%rhs%release()
+
+        ! Release chidg_matrix data
+        call self%lhs%release()
+
+
+    end subroutine release
+    !****************************************************************************************
+
+
+
+
+
 
 
 

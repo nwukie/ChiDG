@@ -79,6 +79,9 @@ module type_chidg_data
         procedure   :: initialize_solution_bc
         procedure   :: initialize_solution_solver
 
+        ! Release allocated memory
+        procedure   :: release
+
         ! Accessors
         procedure   :: get_domain_index             ! Given a domain name, return domain index
         procedure   :: ndomains                     ! Return number of domains in chidg instance
@@ -703,8 +706,6 @@ contains
 
 
 
-
-
     !> Return the number of time instances in the chidg_data_t instance.
     !!
     !!  @author Nathan A. Wukie
@@ -722,6 +723,30 @@ contains
     end function ntime
     !*******************************************************************************************
 
+
+
+
+
+
+
+    !>  Release allocated memory.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/3/2017
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine release(self)
+        class(chidg_data_t),    intent(inout)   :: self
+
+        if (allocated(self%mesh))   deallocate(self%mesh)
+        if (allocated(self%eqnset)) deallocate(self%eqnset)
+        if (allocated(self%bc))     deallocate(self%bc)
+
+        call self%sdata%release()
+
+    end subroutine release
+    !*******************************************************************************************
 
 
 

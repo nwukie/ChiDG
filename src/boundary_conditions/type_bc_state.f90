@@ -7,6 +7,7 @@ module type_bc_state
     use type_properties,            only: properties_t
     use type_mesh,                  only: mesh_t
     use type_bc_patch,              only: bc_patch_t
+    use mpi_f08,                    only: mpi_comm
     implicit none
 
 
@@ -105,10 +106,11 @@ contains
     !!  @date   2/21/2017
     !!
     !----------------------------------------------------------------------------------------------
-    subroutine init_bc_specialized(self,mesh,bc_patch)
+    subroutine init_bc_specialized(self,mesh,bc_patch,bc_COMM)
         class(bc_state_t),  intent(inout)   :: self
         type(mesh_t),       intent(in)      :: mesh(:)
         type(bc_patch_t),   intent(in)      :: bc_patch(:)
+        type(mpi_comm),     intent(in)      :: bc_COMM
 
 
 

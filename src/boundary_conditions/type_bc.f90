@@ -12,8 +12,8 @@ module type_bc
     use type_point,                 only: point_t
     use type_boundary_connectivity, only: boundary_connectivity_t
     use mod_chidg_mpi,              only: IRANK, NRANK, ChiDG_COMM
-    use mpi_f08,                    only: mpi_comm, MPI_Comm_split, MPI_Allgather, &
-                                          MPI_LOGICAL, MPI_UNDEFINED
+    use mpi_f08,                    only: mpi_comm, MPI_Comm_split, MPI_Comm_size, &
+                                          MPI_Allgather, MPI_LOGICAL, MPI_UNDEFINED
     implicit none
 
 
@@ -77,7 +77,7 @@ module type_bc
         procedure   :: init_bc_patch            ! Initialize boundary condition patch
 
         ! infrastructure initialization routine
-        procedure   :: init_bc_comm             !
+        procedure   :: init_bc_comm             ! Setup parallel boundary condition infrastructure
         procedure   :: init_bc_specialized      ! Optional User-specialized initialization routine.
         procedure   :: init_bc_coupling         ! Initialize coupling interaction between bc elements.
         procedure   :: propagate_bc_coupling    ! Propagate coupling information to mesh
@@ -422,6 +422,60 @@ contains
 
 
 
+
+
+
+!
+!    !>  Call all infrastructure-based boundary condition initialization routines:
+!    !!
+!    !!  Calls:
+!    !!      - init_bc_comm
+!    !!      - init_bc_specialized
+!    !!      - init_bc_coupling
+!    !!      - propagate_bc_coupling
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   3/2/2017
+!    !!
+!    !------------------------------------------------------------------------------------------
+!    subroutine init(self,mesh)
+!        class(bc_t),    intent(inout)   :: self
+!        type(mesh_t),   intent(in)      :: mesh(:)
+!
+!
+!        !
+!        ! Prepare boundary condition parallel communication
+!        !
+!        call self%bc(ibc)%init_bc_comm(self%mesh, self%bc_comm, self%bc_IRANK, self%bc_NRANK)
+!
+!        !
+!        ! Call bc-specific specialized routine. Default does nothing
+!        !
+!        call self%bc(ibc)%init_bc_specialized(self%mesh)
+!
+!        !
+!        ! Initialize boundary condition coupling. 
+!        !
+!        call self%bc(ibc)%init_bc_coupling(self%mesh)
+!
+!        !
+!        ! Propagate boundary condition coupling. 
+!        !
+!        call self%bc(ibc)%propagate_bc_coupling(self%mesh)
+!
+!
+!
+!    end subroutine init
+!    !******************************************************************************************
+
+
+
+
+
+
+
+
+
     !>  Initialize parallel boundary condition communicators.
     !!
     !!  When init_bc_comm is called, it is expected that it is also being called on all other
@@ -539,7 +593,7 @@ contains
             if (allocated(self%bc_patch)) then
 
                 do iop = 1,size(self%bc_state)
-                    call self%bc_state(iop)%state%init_bc_specialized(mesh,self%bc_patch)
+                    call self%bc_state(iop)%state%init_bc_specialized(mesh,self%bc_patch, self%bc_COMM)
                 end do !iop
 
             end if !bc_patch

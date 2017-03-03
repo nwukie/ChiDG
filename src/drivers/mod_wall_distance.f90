@@ -157,6 +157,7 @@ contains
         if (wd_file_exists .and. have_wd_field) then
 
             call wall_distance%read_solution('wall_distance.h5')
+            wall_distance%data%sdata%q = wall_distance%data%sdata%q_in
 
         !
         ! If we don't have an accurate wall distance field in file, solve for a new one.

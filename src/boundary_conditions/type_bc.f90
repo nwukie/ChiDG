@@ -425,63 +425,13 @@ contains
 
 
 
-!
-!    !>  Call all infrastructure-based boundary condition initialization routines:
-!    !!
-!    !!  Calls:
-!    !!      - init_bc_comm
-!    !!      - init_bc_specialized
-!    !!      - init_bc_coupling
-!    !!      - propagate_bc_coupling
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   3/2/2017
-!    !!
-!    !------------------------------------------------------------------------------------------
-!    subroutine init(self,mesh)
-!        class(bc_t),    intent(inout)   :: self
-!        type(mesh_t),   intent(in)      :: mesh(:)
-!
-!
-!        !
-!        ! Prepare boundary condition parallel communication
-!        !
-!        call self%bc(ibc)%init_bc_comm(self%mesh, self%bc_comm, self%bc_IRANK, self%bc_NRANK)
-!
-!        !
-!        ! Call bc-specific specialized routine. Default does nothing
-!        !
-!        call self%bc(ibc)%init_bc_specialized(self%mesh)
-!
-!        !
-!        ! Initialize boundary condition coupling. 
-!        !
-!        call self%bc(ibc)%init_bc_coupling(self%mesh)
-!
-!        !
-!        ! Propagate boundary condition coupling. 
-!        !
-!        call self%bc(ibc)%propagate_bc_coupling(self%mesh)
-!
-!
-!
-!    end subroutine init
-!    !******************************************************************************************
-
-
-
-
-
-
-
-
-
     !>  Initialize parallel boundary condition communicators.
     !!
-    !!  When init_bc_comm is called, it is expected that it is also being called on all other
-    !!  processors for the same bc_t. Convention is that all processors have all the same 
-    !!  boundary condition groups added. However, the patches added to these groups 
-    !!  will be different on each processor.
+    !!  When init_bc_comm is called, it is expected that it is also being called on all 
+    !!  other processors for the same bc_t. Convention is that all processors have all 
+    !!  the same boundary condition groups added. However, the patches added to these 
+    !!  groups will be different on each processor. Some processors that contain no part
+    !!  of the boundary condition geometry will have no patch data.
     !!
     !!  Example: Processors 0,1,2 both have all the boundary conditions. However, not all
     !!           the boundary condition objects on each processor have geometry associated
@@ -507,6 +457,9 @@ contains
     !!
     !!  init_bc_comm creats an MPI communicator, bc%bc_COMM, that includes the processors
     !!  with bc_patch data that has been added, indicating they contain part of the boundary.
+    !!  For those processors that do not contain geometry for a particular bc_t, the bc%bc_COMM
+    !!  component is set to MPI_COMM_NULL and should not be used because it has no part in 
+    !!  communication for that boundary condition.
     !!
     !!
     !!  @author Nathan A. Wukie
@@ -546,7 +499,7 @@ contains
         ! bc geometry.
         !
         if (irank_has_geometry) then
-            color = 0
+            color = 1
         else
             color = MPI_UNDEFINED
         end if

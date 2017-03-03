@@ -10,7 +10,8 @@ module bc_state_outlet_point_pressure
     use type_properties,        only: properties_t
     use type_point,             only: point_t
     use mod_chidg_mpi,          only: IRANK
-    use mpi_f08,                only: mpi_comm, MPI_REAL8, MPI_Allgather, MPI_Comm_rank, MPI_Comm_size, MPI_COMM_NULL, MPI_Comm_compare
+    !use mpi_f08,                only: mpi_comm, MPI_REAL8, MPI_Allgather, MPI_Comm_rank, MPI_Comm_size, MPI_COMM_NULL, MPI_Comm_compare
+    use mpi_f08
     use DNAD_D
     implicit none
 
@@ -115,18 +116,17 @@ contains
         type(bc_patch_t),               intent(in)      :: bc_patch(:)
         type(mpi_comm),                 intent(in)      :: bc_comm
 
+        character(:),   allocatable                 :: user_msg
         type(point_t)                               :: point
         type(point_t),  allocatable, dimension(:)   :: coords, quad_pts
-        real(rk),       allocatable, dimension(:)   :: node1, node2, node3, dist_face
+        real(rk),       allocatable, dimension(:)   :: node1, node2, node3, dist_face, dist_bc_global
+        real(rk)                                    :: time, dist_bc
         integer(ik)                                 :: iface_bc, iface, ielement, ipatch, &
                                                        node_idomain_g, node_ielement_g, node_iface, &
                                                        node_index, minloc_dist_face,     &
                                                        idomain_l, ielement_l, rank_min, bc_IRANK, bc_NRANK, ierr
-        real(rk)                                    :: time, dist_bc
-        real(rk),       allocatable                 :: dist_bc_global(:)
         
         
-        print*, IRANK, 'point - 1'
 
         !
         ! Get user-specified node. Need coord,time here because thats the
@@ -142,39 +142,34 @@ contains
         node3  = self%bcproperties%compute('Coordinate-3',time,coords)
 
 
-        print*, IRANK, 'point - 2'
 
 
         !
         ! Loop through proc-local patches, find quadrature node closest to user-specified node.
         !
         dist_bc = huge(ONE)  !initialize closest distance on the proc-local bc
-
-
-        !
-        ! Search 
-        !
         do ipatch = 1,size(bc_patch)
             do iface_bc = 1,bc_patch(ipatch)%nfaces()
 
-        print*, IRANK, 'point - 3'
-                ! get face location
+                !
+                ! get face location in local mesh
+                !
                 idomain_l  = bc_patch(ipatch)%idomain_l_%at(iface_bc)
                 ielement_l = bc_patch(ipatch)%ielement_l_%at(iface_bc)
                 iface      = bc_patch(ipatch)%iface_%at(iface_bc)
                 
+
                 ! get points at quadrature nodes for current face
                 quad_pts = mesh(idomain_l)%faces(ielement_l,iface)%quad_pts
 
-                ! compute distance from quadrature nodes to user node
+                ! compute distance from quadrature nodes to user-specified node
                 dist_face = sqrt( (quad_pts(:)%c1_ - node1(1))**TWO + &
                                   (quad_pts(:)%c2_ - node2(1))**TWO + &
                                   (quad_pts(:)%c3_ - node3(1))**TWO ) 
 
-                ! Get location of gq minimum distance node on current face
+                ! Get index location of node with minimum distance to user-specified node
                 minloc_dist_face = minloc(dist_face,1)
             
-        print*, IRANK, 'point - 4'
 
                 ! If new minimum is found, record location, update local dist_bc
                 if (dist_face(minloc_dist_face) < dist_bc) then
@@ -194,46 +189,42 @@ contains
 
 
 
-        print*, IRANK, 'point - 5'
         !
         ! Get rank of current proc in bc communicator and total number of ranks
         !
+        user_msg = "bc_state_outlet_point_pressure%init_bc_specialized: The mpi communicator passed &
+                    in was detected as a Null communicator and is invalid for use. Something must have &
+                    gone wrong, possibly in bc_t or at a previous point during initialization."
+        if (bc_COMM == MPI_COMM_NULL) call chidg_signal(FATAL,user_msg)
         call MPI_Comm_rank(bc_COMM,bc_IRANK)
         call MPI_Comm_size(bc_COMM,bc_NRANK)
 
-        print*, IRANK, 'point - 6'
 
         !
-        ! Have communicator root gather minimum values from all members
+        ! Have gather minimum values from all member processors
         !
         allocate(dist_bc_global(bc_NRANK), stat=ierr)
         if (ierr /= 0) call AllocationError
-        print*, 'bc_NRANK: ', bc_NRANK
-        print*, (bc_COMM == MPI_COMM_NULL)
-        print*, MPI_Comm_compare(bc_COMM, MPI_COMM_NULL, result)
-        call MPI_Allgather(dist_bc, 1, MPI_REAL8, dist_bc_global, bc_NRANK, MPI_REAL8, bc_COMM)
-!
-!        print*, IRANK, 'point - 7'
-!
-!        !
-!        ! Determine which processor has the minimum distance.
-!        ! Minus 1 because ranks are 0-based.
-!        !
-!        rank_min = minloc(dist_bc_global,1) - 1
-!
-!        print*, IRANK, 'point - 8'
-!
-!        !
-!        ! If minimum distance is on current proc, store node values
-!        !
-!        if (rank_min == bc_IRANK) then
-!            self%node_idomain_g  = node_idomain_g
-!            self%node_ielement_g = node_ielement_g
-!            self%node_iface      = node_iface
-!            self%node_index      = node_index
-!        end if
-!
-!        print*, IRANK, 'point - 9'
+        call MPI_Allgather(dist_bc, 1, MPI_REAL8, dist_bc_global, 1, MPI_REAL8, bc_COMM)
+
+
+        !
+        ! Determine which processor has the minimum distance.
+        ! Minus 1 because ranks are 0-based.
+        !
+        rank_min = minloc(dist_bc_global,1) - 1
+
+
+        !
+        ! If minimum distance is on current proc, store node values
+        !
+        if (rank_min == bc_IRANK) then
+            self%node_idomain_g  = node_idomain_g
+            self%node_ielement_g = node_ielement_g
+            self%node_iface      = node_iface
+            self%node_index      = node_index
+        end if
+
 
 
     end subroutine init_bc_specialized
@@ -356,27 +347,39 @@ contains
 
 
         !
-        ! Compute boundary condition energy
+        ! Compute pressure from extrapolated data
         !
         p_m = (gam_m-ONE)*(energy_m - HALF*( (mom1_m*mom1_m) + (mom2_m*mom2_m) + (mom3_m*mom3_m) )/density_m )
 
+
+
+        !
+        ! By default, the boundary condition state for pressure is extrapolated
+        !
+        p_bc = p_m
+
+
+        !
+        ! For the particular node closest to that specified by the user, set
+        ! the boundary condition state for pressure to the user-specified value
+        !
+        ! The information regarding the closest node is computed in init_bc_specialized
+        ! during initialization.
+        !
         face_has_node = (worker%element_info%idomain_g  == self%node_idomain_g)  .and. &
                         (worker%element_info%ielement_g == self%node_ielement_g) .and. &
                         (worker%iface                   == self%node_iface)
-
-        p_bc = p_m
         if (face_has_node) then
-
-            !
-            ! Face contains user-specified node. 
-            ! Set pressure at particular node, keep extrapolated values for all others
-            !
             p_bc(self%node_index) = p_user(1)
-
         end if !face_has_node
 
 
+        !
+        ! Compute boundary condition state for energy
+        !
         energy_bc = p_bc/(gam_m - ONE)  + (density_bc*HALF)*(u_bc*u_bc + v_bc*v_bc + w_bc*w_bc)
+
+
 
 
         !

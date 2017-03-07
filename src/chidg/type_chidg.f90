@@ -7,8 +7,8 @@ module type_chidg
     use mod_bc,                     only: register_bcs
     use mod_function,               only: register_functions
     use mod_grid,                   only: initialize_grid
-    use mod_io,                     only: read_input
-    use mod_string,                 only: get_file_extension, string_t
+    !use mod_io,                     only: read_input
+    use mod_string,                 only: get_file_extension, string_t, get_file_prefix
 
     use type_chidg_data,            only: chidg_data_t
     use type_time_integrator,       only: time_integrator_t
@@ -42,6 +42,7 @@ module type_chidg
     use mod_partitioners,           only: partition_connectivity, send_partitions, &
                                           recv_partition
     use mpi_f08
+    use mod_io
     implicit none
 
 
@@ -71,7 +72,6 @@ module type_chidg
         type(chidg_t), pointer :: auxiliary_environment
 
         ! Number of terms in 3D/1D solution basis expansion
-        !integer(ik)     :: ntime        = 1    !now this is in data%time_manager
         integer(ik)     :: nterms_s     = 0
         integer(ik)     :: nterms_s_1d  = 0
 
@@ -162,13 +162,6 @@ contains
             !
             case ('core')
 
-!                call self%data%time_manager%init()
-!
-!                !
-!                ! Initialize global time_manager variable
-!                !
-!                call time_manager_global%init()
-
                 ! Default communicator for 'communication' is MPI_COMM_WORLD
                 if ( present(comm) ) then
                     ChiDG_COMM = comm
@@ -213,7 +206,6 @@ contains
             case ('namelist')
                 call read_input()
 
-
             case default
                 call chidg_signal_one(WARN,'chidg%start_up: Invalid start-up string.',trim(activity))
 
@@ -253,6 +245,12 @@ contains
                 case ('core')   ! All except mpi
                     call log_finalize()
                     call close_hdf()
+
+                    if (allocated(self%time_integrator))  deallocate(self%time_integrator)
+                    if (allocated(self%preconditioner))   deallocate(self%preconditioner)
+                    if (allocated(self%linear_solver))    deallocate(self%linear_solver)
+                    if (allocated(self%nonlinear_solver)) deallocate(self%nonlinear_solver)
+                    call self%data%release()
 
 
                 case default
@@ -302,10 +300,12 @@ contains
             !
             case ('all')
                 call self%init('domains')
+                call self%init('bc')
                 call self%init('communication')
                 call self%init('chimera')
                 call self%init('solvers')
                 call self%init('finalize')
+
 
 
             !
@@ -322,6 +322,11 @@ contains
 
                 !call self%data%initialize_solution_domains(self%nterms_s, self%ntime)
                 call self%data%initialize_solution_domains(self%nterms_s)
+
+            case ('bc')
+                call write_line("Initializing boundary condition coupling...", io_proc=GLOBAL_MASTER)
+                call self%data%initialize_solution_bc()
+
 
             !
             ! Initialize communication. Local face communication. Global parallel communication.
@@ -360,13 +365,12 @@ contains
                 if (.not. allocated(self%linear_solver))    call chidg_signal(FATAL,"chidg%linear_solver component was not allocated")
                 if (.not. allocated(self%preconditioner))   call chidg_signal(FATAL,"chidg%preconditioner component was not allocated")
 
-
                 !
                 ! Initialize preconditioner
                 !
                 call write_line("Initializing preconditioner...", io_proc=GLOBAL_MASTER)
                 call self%preconditioner%init(self%data)
-
+                
                 !
                 ! Initialize time_integrator
                 !
@@ -695,10 +699,11 @@ contains
 
         character(5),           dimension(1)    :: extensions
         character(:),           allocatable     :: extension
-        type(bc_patch_data_t),  allocatable     :: bc_patches(:)
+        type(bc_patch_data_t),  allocatable     :: bc_patch_data(:)
+        type(string_t)                          :: bc_group_name
         type(bc_group_t),       allocatable     :: bc_groups(:)
         type(string_t)                          :: group_name
-        integer                                 :: idom, ndomains, iface, ierr, iread
+        integer                                 :: idom, ndomains, iface, ibc, ierr, iread
 
         if (IRANK == GLOBAL_MASTER) call write_line('Reading boundary conditions')
 
@@ -717,7 +722,7 @@ contains
 
 
                 if ( extension == '.h5' ) then
-                    call read_boundaryconditions_hdf(gridfile,bc_patches,bc_groups,self%partition)
+                    call read_boundaryconditions_hdf(gridfile,bc_patch_data,bc_groups,self%partition)
                 else
                     call chidg_signal(FATAL,"chidg%read_boundaryconditions: grid file extension not recognized")
                 end if
@@ -728,27 +733,40 @@ contains
         end do
 
 
+
+
+
         !
-        ! Add boundary conditions to ChiDG
+        ! Add all boundary condition groups
         !
-        ndomains = size(bc_patches)
+        do ibc = 1,size(bc_groups)
+
+            call self%data%add_bc_group(bc_groups(ibc), bc_wall=bc_wall,          &
+                                                        bc_inlet=bc_inlet,        &
+                                                        bc_outlet=bc_outlet,      &
+                                                        bc_symmetry=bc_symmetry,  &
+                                                        bc_farfield=bc_farfield,  &
+                                                        bc_periodic=bc_periodic)
+
+        end do !ibc
+
+
+        !
+        ! Add boundary condition patches
+        !
+        ndomains = size(bc_patch_data)
         do idom = 1,ndomains
             do iface = 1,NFACES
-
-                group_name = bc_patches(idom)%bc_group%at(iface)
-                call self%data%add_bc(bc_patches(idom)%domain_,                 &
-                                      bc_patches(idom)%bc_connectivity(iface),  &
-                                      group_name%get(),                         &
-                                      bc_groups,                                &
-                                      bc_wall=bc_wall,                          &
-                                      bc_inlet=bc_inlet,                        &
-                                      bc_outlet=bc_outlet,                      &
-                                      bc_symmetry=bc_symmetry,                  &
-                                      bc_farfield=bc_farfield,                  &
-                                      bc_periodic=bc_periodic)
+            
+                bc_group_name = bc_patch_data(idom)%bc_group_name%at(iface)
+                call self%data%add_bc_patch(bc_patch_data(idom)%domain_name,            &
+                                            bc_group_name%get(),                        &
+                                            bc_patch_data(idom)%bc_connectivity(iface))
 
             end do !iface
-        end do !idom
+        end do !ipatch
+
+
 
 
     end subroutine read_boundaryconditions
@@ -812,83 +830,6 @@ contains
     end subroutine read_solution
     !*****************************************************************************************
 
-
-
-
-
-
-    
-
-!    !>  Initialize all solution and solver storage.
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   4/11/2016
-!    !!
-!    !!  @param[in]  nterms_s    Number of terms in the solution polynomial expansion.
-!    !!
-!    !-----------------------------------------------------------------------------------------
-!    subroutine initialize_solution_domains(self)
-!        class(chidg_t),     intent(inout)   :: self
-!
-!        character(:),   allocatable :: user_msg
-!
-!        !
-!        ! TODO: put in checks for prerequisites
-!        !
-!
-!
-!        !
-!        ! Check that the order for the solution basis expansion has been set.
-!        !
-!        user_msg = "chidg%initialize_solution_domains: It appears the 'Solution Order' was &
-!                    not set for the current ChiDG instance. Try calling &
-!                    'call chidg%set('Solution Order',&
-!                    integer_input=my_order)' where my_order=1-7 indicates the solution &
-!                    order-of-accuracy."
-!        if (self%nterms_s == 0) call chidg_signal(FATAL,user_msg)
-!
-!        !
-!        ! Call domain solution storage initialization: mesh data structures that 
-!        ! depend on solution expansion etc.
-!        !
-!        call self%data%initialize_solution_domains(self%nterms_s, self%ntime)
-!
-!
-!    end subroutine initialize_solution_domains
-!    !******************************************************************************************
-
-
-
-
-
-
-
-
-    !>  Initialize all solution and solver storage.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   4/11/2016
-    !!
-    !!  @param[in]  nterms_s    Number of terms in the solution polynomial expansion.
-    !!
-    !------------------------------------------------------------------------------------------
-    subroutine initialize_solution_solver(self)
-        class(chidg_t),     intent(inout)   :: self
-
-
-        !
-        ! TODO: put in checks for prerequisites
-        !
-
-        !
-        ! Call solver solution storage initialization: vectors, matrices, etc.
-        !
-        call self%data%initialize_solution_solver()
-
-
-
-    end subroutine initialize_solution_solver
-    !******************************************************************************************
 
 
 
@@ -972,6 +913,7 @@ contains
     !!
     !!  @param[in]  solutionfile    String containing a solution file name, including extension.
     !!
+    !!
     !------------------------------------------------------------------------------------------
     subroutine write_solution(self,solutionfile)
         class(chidg_t),     intent(inout)           :: self
@@ -1019,22 +961,63 @@ contains
     !!      - This routine passes the domain data, nonlinear solver, linear solver, and 
     !!        preconditioner components to the time integrator to take a step.
     !!
+    !!  Optional input parameters:
+    !!      write_initial   control writing initial solution to file. Default: .false.
+    !!      write_final     control writing final solution to file. Default: .true.
+    !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!  @date   2/7/2017
     !!
     !------------------------------------------------------------------------------------------
-    subroutine run(self)
-        class(chidg_t), intent(inout)   :: self
+    subroutine run(self, write_initial, write_final)
+        class(chidg_t), intent(inout)           :: self
+        logical,        intent(in), optional    :: write_initial
+        logical,        intent(in), optional    :: write_final
 
-        character(100)          :: filename
-        integer(ik)             :: istep, nsteps, wcount
+        character(100)              :: filename
+        character(:),   allocatable :: prefix
+        integer(ik)                 :: istep, nsteps, wcount
+        logical                     :: option_write_initial, option_write_final
+
+    
+
+        call write_line("---------------------------------------------------", io_proc=GLOBAL_MASTER)
+        call write_line("                                                   ", io_proc=GLOBAL_MASTER, delimiter='none')
+        call write_line("           Running ChiDG simulation...             ", io_proc=GLOBAL_MASTER, delimiter='none')
+        call write_line("                                                   ", io_proc=GLOBAL_MASTER, delimiter='none')
+        call write_line("---------------------------------------------------", io_proc=GLOBAL_MASTER)
+
+
 
 !        call self%auxiliary_environment%start_up('core')
 
-        call write_line(" ", io_proc=GLOBAL_MASTER)
-        call write_line("Entering Time Loop:", io_proc=GLOBAL_MASTER)
-        call write_line(" ", io_proc=GLOBAL_MASTER)
+
+        !
+        ! Check optional incoming parameters
+        !
+        if (present(write_initial)) then
+            option_write_initial = write_initial
+        else
+            option_write_initial = .false.
+        end if
+
+        if (present(write_final)) then
+            option_write_final = write_final
+        else
+            option_write_final = .true.
+        end if
+
+
+
+
+        !
+        ! Write initial solution
+        !
+        if (option_write_initial) call self%write_solution('initial.h5')
+
+
+
 
         
         !
@@ -1042,31 +1025,46 @@ contains
         !
         call self%time_integrator%initialize_state(self%data)
 
+        
+        !
+        ! Get the prefix in the file name in case of multiple output files
+        !
+        prefix = get_file_prefix(solutionfile_out,'.h5')       
+
+
+
+
+        !
+        ! Execute time_integrator, nsteps times 
+        !
         wcount = 1
         nsteps = self%data%time_manager%nsteps
         do istep = 1,nsteps
+            
 
             call write_line("- Step ", istep, io_proc=GLOBAL_MASTER)
 
-            self%data%sdata%t = self%data%time_manager%dt*istep
 
             !
-            ! Call time integrator to take a step
+            ! 1: Update time t
+            ! 2: Call time integrator to take a step
             !
+            self%data%sdata%t = self%data%time_manager%dt*istep
             call self%time_integrator%step(self%data,self%nonlinear_solver, &
                                                      self%linear_solver,    &
                                                      self%preconditioner)
+           
+           
 
+            !
+            ! Write solution every nwrite steps
+            !
+            if (wcount == self%data%time_manager%nwrite) then
+                write(filename, "(A,I7.7,A3)") trim(prefix)//'_', istep, '.h5'
+                call self%write_solution(filename)
+                wcount = 0
+            end if
 
-
-!            !
-!            ! Write interpolated solution every nwrite steps
-!            !
-!            if (wcount == self%time_integrator%time_manager%nwrite) then
-!                write(filename, "(I7,A4)") 1000000+istep, '.plt'
-!                call write_tecio_variables_unstructured(self%data,trim(filename),istep+1)
-!                wcount = 0
-!            end if
 
 
             !
@@ -1079,6 +1077,12 @@ contains
 
 
         end do !istep
+
+                
+        !
+        ! Write the final solution to hdf file
+        !        
+        if (option_write_final) call self%write_solution(solutionfile_out)
 
 
     end subroutine run

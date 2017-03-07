@@ -84,6 +84,7 @@ contains
         type(assemble_steady_t) :: assemble_steady
 
 
+        if (allocated(self%system)) deallocate(self%system)
         allocate(self%system, source=assemble_steady, stat=ierr)
         if (ierr /= 0) call AllocationError
 

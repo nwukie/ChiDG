@@ -122,7 +122,7 @@ contains
                 
                 call self%set_name(time_integrator)
                 self%nsteps     = 1
-
+                self%nwrite     = 0
                 !
                 ! Verify that at least one frequency has been passed in
                 !

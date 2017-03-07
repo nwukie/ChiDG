@@ -1,7 +1,9 @@
 add_test_sources(boundary_conditions
-                 test_bcset_mod.pf
+                 test_bc_patch_mod.pf
                  test_bc_mod.pf
                  test_bc_periodic_mod.pf
+                 #test_bc_mod.pf
+                 #test_bc_periodic_mod.pf
                  ) 
 
 

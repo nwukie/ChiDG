@@ -223,7 +223,6 @@ contains
         allocate(u_gq(ngq))
         allocate(u_ref(ngq))
         
-        
         !
         ! PROCEDURE BEING TESTED
         !

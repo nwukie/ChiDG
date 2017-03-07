@@ -80,18 +80,27 @@ subroutine test_integrate_boundary_unit_constant()
     bc_groups(1)%family = 'Inlet'
     call bc_groups(1)%bc_states%push_back(bc)
 
+    !
+    ! Create a bc_group to chidg_data
+    !
+    call chidg%data%add_bc_group(bc_groups(1))
+
+
+    !
+    ! Add bc_patches
+    !
     call bc_connectivity%data(1)%set_face_nodes([1, 3, 5, 7])
-    call chidg%data%add_bc('D_01',bc_connectivity,"Test Integrate",bc_groups)
+    call chidg%data%add_bc_patch('D_01',"Test Integrate",bc_connectivity)
     call bc_connectivity%data(1)%set_face_nodes([2, 4, 6, 8])
-    call chidg%data%add_bc('D_01',bc_connectivity,"Test Integrate",bc_groups)
+    call chidg%data%add_bc_patch('D_01',"Test Integrate",bc_connectivity)
     call bc_connectivity%data(1)%set_face_nodes([1, 2, 5, 6])
-    call chidg%data%add_bc('D_01',bc_connectivity,"Test Integrate",bc_groups)
+    call chidg%data%add_bc_patch('D_01',"Test Integrate",bc_connectivity)
     call bc_connectivity%data(1)%set_face_nodes([3, 4, 7, 8])
-    call chidg%data%add_bc('D_01',bc_connectivity,"Test Integrate",bc_groups)
+    call chidg%data%add_bc_patch('D_01',"Test Integrate",bc_connectivity)
     call bc_connectivity%data(1)%set_face_nodes([1, 2, 3, 4])
-    call chidg%data%add_bc('D_01',bc_connectivity,"Test Integrate",bc_groups)
+    call chidg%data%add_bc_patch('D_01',"Test Integrate",bc_connectivity)
     call bc_connectivity%data(1)%set_face_nodes([5, 6, 7, 8])
-    call chidg%data%add_bc('D_01',bc_connectivity,"Test Integrate",bc_groups)
+    call chidg%data%add_bc_patch('D_01',"Test Integrate",bc_connectivity)
 
 
 
@@ -99,12 +108,11 @@ subroutine test_integrate_boundary_unit_constant()
     ! Initialize solver data
     !
     call chidg%set('Solution Order', integer_input=1)
-    !call chidg%initialize_solution_domains()
     call chidg%init('domains')
+    call chidg%init('bc')
     call chidg%init('communication')
     call chidg%init('chimera')
     call chidg%init('solvers')
-    !call chidg%initialize_solution_solver()
 
 
 
@@ -281,18 +289,27 @@ subroutine test_integrate_boundary_nonunit_constant()
     bc_groups(1)%family = 'Inlet'
     call bc_groups(1)%bc_states%push_back(bc)
 
+    !
+    ! Add bc_group to chidg_data
+    !
+    call chidg%data%add_bc_group(bc_groups(1))
+
+
+    !
+    ! Add bc_patches to chidg_data
+    !
     call bc_connectivity%data(1)%set_face_nodes([1, 3, 5, 7])
-    call chidg%data%add_bc('D_01',bc_connectivity,"Test Integrate",bc_groups)
+    call chidg%data%add_bc_patch('D_01',"Test Integrate",bc_connectivity)
     call bc_connectivity%data(1)%set_face_nodes([2, 4, 6, 8])
-    call chidg%data%add_bc('D_01',bc_connectivity,"Test Integrate",bc_groups)
+    call chidg%data%add_bc_patch('D_01',"Test Integrate",bc_connectivity)
     call bc_connectivity%data(1)%set_face_nodes([1, 2, 5, 6])
-    call chidg%data%add_bc('D_01',bc_connectivity,"Test Integrate",bc_groups)
+    call chidg%data%add_bc_patch('D_01',"Test Integrate",bc_connectivity)
     call bc_connectivity%data(1)%set_face_nodes([3, 4, 7, 8])
-    call chidg%data%add_bc('D_01',bc_connectivity,"Test Integrate",bc_groups)
+    call chidg%data%add_bc_patch('D_01',"Test Integrate",bc_connectivity)
     call bc_connectivity%data(1)%set_face_nodes([1, 2, 3, 4])
-    call chidg%data%add_bc('D_01',bc_connectivity,"Test Integrate",bc_groups)
+    call chidg%data%add_bc_patch('D_01',"Test Integrate",bc_connectivity)
     call bc_connectivity%data(1)%set_face_nodes([5, 6, 7, 8])
-    call chidg%data%add_bc('D_01',bc_connectivity,"Test Integrate",bc_groups)
+    call chidg%data%add_bc_patch('D_01',"Test Integrate",bc_connectivity)
 
 
     !
@@ -300,12 +317,11 @@ subroutine test_integrate_boundary_nonunit_constant()
     !
 
     call chidg%set('Solution Order', integer_input=1)
-!    call chidg%initialize_solution_domains()
     call chidg%init('domains')
+    call chidg%init('bc')
     call chidg%init('communication')
     call chidg%init('chimera')
     call chidg%init('solvers')
-!    call chidg%initialize_solution_solver()
 
 
     !

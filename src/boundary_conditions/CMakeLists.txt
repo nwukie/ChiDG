@@ -5,7 +5,7 @@ add_lib_sources(
                 type_bc_state.f90
                 type_bc_state_wrapper.f90
                 type_bc_patch.f90
-                type_bcset.f90 
+#                type_bcset.f90 
                 mod_bc.f90 
                 type_bcproperty.f90
                 type_bcproperty_set.f90

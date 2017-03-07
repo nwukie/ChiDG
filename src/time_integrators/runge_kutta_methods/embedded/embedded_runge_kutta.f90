@@ -105,6 +105,7 @@ module embedded_runge_kutta
         ! TODO: Get from time_manager via chidg.nml?
         !
         ! TODO: WATCH OUT here, time_manager is now part of chidg%data
+
         t_start = ZERO 
         t_end   = t_start + (dt*self%time_manager%nsteps)
         t       = t_start
@@ -205,6 +206,7 @@ module embedded_runge_kutta
                 !
 
                 ! TODO: WATCH OUT here, time_manager is now part of chidg%data and ttol is not a time_manager's object
+                
                 if (error_mag <= data%time_manager%ttol) then
                     
                     ! Advance time by dt

@@ -108,6 +108,7 @@ subroutine test_time_manager__init_unsteady()
     !
 
     @assertEqual(time_integrator,t_manager%time_scheme)
+    @assertEqual(1,t_manager%ntime)
     @assertEqual(dt,t_manager%dt)
     @assertEqual(time_steps,t_manager%nsteps)
     @assertEqual(nwrite,t_manager%nwrite)
@@ -182,6 +183,9 @@ subroutine test_time_manager__init_HB1()
     
     @assertEqual(time_integrator,t_manager%time_scheme)
     @assertEqual(3,t_manager%time_lev%size())
+    @assertEqual(3,t_manager%ntime)
+    @assertEqual(1,t_manager%nsteps)
+    @assertEqual(0,t_manager%nwrite)
     @assertEqual(20,t_manager%time_lev%capacity())
     @assertEqual(t_lev_1,t_manager%time_lev%data_(1))
     @assertEqual(t_lev_2,t_manager%time_lev%data_(2))

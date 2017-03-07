@@ -115,6 +115,45 @@ contains
 
 
 
+    !> It reads in a file name and returns only the prefix, based on the expected extension 
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   2/27/2017
+    !!
+    !!  @param[in]  file        Character string containing a file name
+    !!  @param[in]  extensions  Character string of the expected extension
+    !!
+    !---------------------------------------------------------------------------------------------
+    function get_file_prefix(file,extension) result(prefix)
+        character(*),       intent(in)  :: file
+        character(*),       intent(in)  :: extension
+
+        character(len=:), allocatable   :: prefix
+        integer                         :: iext, extloc
+        
+        !
+        ! Check if the file name has already the extension
+        !
+        extloc = index(file, trim(extension))
+
+        if ( extloc == 0 ) then
+            prefix = file
+        else
+            prefix = trim(file(1:extloc-1))
+        end if
+
+    end function get_file_prefix
+    !**********************************************************************************************
+
+
+
+
+
+
+
+
+
+
     !> Given a file name and a list of possible extensions, return an extension if 
     !! it is contained in the file string.
     !!

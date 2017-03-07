@@ -67,7 +67,6 @@ module eqn_wall_distance
     use mod_constants,         only: ZERO, ONE, TWO, THREE
     use type_equation_set,     only: equation_set_t
     use type_equation_builder, only: equation_builder_t
-    use type_scalar,           only: scalar_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use type_operator,          only: operator_t

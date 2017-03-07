@@ -67,7 +67,6 @@ contains
                 allocate(instance, source=EXPLICIT_RK)
 
 
-
             case default
                 user_msg = "We can't seem to find a time integrator that matches the input &
                             string. Maybe check that the time integrator string in the input &
@@ -77,19 +76,6 @@ contains
                 call chidg_signal_two(OOPS, user_msg, trim(time_string), dev_msg=dev_msg)
         end select
 
-
-
-
-
-        !
-        ! Call time_integrator initialization
-        !
-!        call instance%init() ! The time_integrator is now initialized in chidg%init() case 'finalized'
-!        call instance%time_manager%init() ! the time_manager is now initialized in chidg%start_up case 'core'
-
-!        if (present(options)) then
-!            call instance%set(options)
-!        end if
 
 
 

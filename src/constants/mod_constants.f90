@@ -180,10 +180,11 @@ module mod_constants
 
 
     !
-    ! MPI constants
+    ! MPI and ID constants
     !
     integer(ik),    parameter   :: NO_PARTITION = -1
     integer(ik),    parameter   :: NO_PROC      = -2
+    integer(ik),    parameter   :: NO_ID        = -1
 
 
 

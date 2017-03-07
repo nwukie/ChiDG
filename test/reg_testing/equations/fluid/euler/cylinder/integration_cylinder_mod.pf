@@ -226,7 +226,6 @@ contains
         linear_solver    = 'fgmres'
         preconditioner   = 'RASILU0'
         IO_DESTINATION   = 'file'
-        !IO_DESTINATION   = 'both'
         !------------------------------------------------------------------------------
 
         !
@@ -243,6 +242,7 @@ contains
         !call toptions%set('nsteps',100)
         !call toptions%set('nwrite',0)
 
+        
         ! Set linear solver options to pass during initialization
         call loptions%set('tol',1.e-8_rk)
 
@@ -257,7 +257,6 @@ contains
         ! Initialize ChiDG environment
         !
         call this%chidg%start_up('core',this%ChiDG_COMM)
-
 
 
 
@@ -347,17 +346,17 @@ contains
         !
         ! Set ChiDG components
         !
+        call this%chidg%set('Solution Order',   integer_input=this%order)
         call this%chidg%set('Time Integrator',  algorithm=time_integrator)
         call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
         call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
         call this%chidg%set('Preconditioner',   algorithm=preconditioner)
 
-        call this%chidg%data%time_manager%init()
+
 
         !
         ! Initialize solution data storage
         !
-        call this%chidg%set('Solution Order', integer_input=this%order)
         call this%chidg%init('all')
 
 
@@ -365,18 +364,25 @@ contains
         !
         ! Initialize solution
         !
-        call create_function(fcn,'constant')
+        if (this%order == 1) then
+            call create_function(fcn,'constant')
 
-        call fcn%set_option('val',1.15_rk)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,1)
-        call fcn%set_option('val',50.0_rk)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,2)
-        call fcn%set_option('val',ZERO)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,3)
-        call fcn%set_option('val',ZERO)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,4)
-        call fcn%set_option('val',248000.0_rk)
-        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,5)
+            call fcn%set_option('val',1.15_rk)
+            call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
+            call fcn%set_option('val',50.0_rk)
+            call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,2)
+            call fcn%set_option('val',ZERO)
+            call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,3)
+            call fcn%set_option('val',ZERO)
+            call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,4)
+            call fcn%set_option('val',248000.0_rk)
+            call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,5)
+
+        else
+
+            call this%chidg%read_solution('cylinder_solution.h5')
+
+        end if
 
 
     end subroutine SetUp
@@ -392,6 +398,9 @@ contains
 
         ! Close ChiDG
         call this%chidg%shut_down('core')
+
+        call delete_file(this%gridfile)
+        call delete_file('cylinder_solution.h5')
 
     end subroutine tearDown
     !*******************************************************************************************
@@ -436,7 +445,11 @@ contains
         !
         ! Run ChiDG simulation
         !
-        call self%chidg%run()
+        call self%chidg%run(write_initial=.false., write_final=.false.)
+
+
+        call self%chidg%write_solution('cylinder_solution.h5')
+
 
 
         !

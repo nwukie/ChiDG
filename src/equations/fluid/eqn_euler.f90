@@ -5,7 +5,6 @@ module eqn_euler
     use type_mesh,                  only: mesh_t
     use type_solverdata,            only: solverdata_t
     use type_fluid_pseudo_timestep, only: fluid_pseudo_timestep_t
-    use perfect_gas,                only: perfect_gas_t
     implicit none
 
 
@@ -58,7 +57,6 @@ contains
         character(*),   intent(in)  :: blueprint
 
         type(equation_set_t)            :: euler_eqns
-        type(perfect_gas_t)             :: perfect_gas
         type(fluid_pseudo_timestep_t)   :: fluid_pseudo_time
 
         !
@@ -82,7 +80,6 @@ contains
                 call euler_eqns%add_operator('Euler Volume Cylindrical Source')
 
                 call euler_eqns%add_pseudo_timestep(fluid_pseudo_time)
-                call euler_eqns%prop%add_fluid(perfect_gas)
 
                 call euler_eqns%add_model('Ideal Gas')
 

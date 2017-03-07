@@ -130,11 +130,11 @@ contains
                 !
                 ! Tolerance check
                 !
-                if ( resid < self%tol ) exit
-
-
-                call self%residual_time%push_back(timing)   ! non-essential record-keeping
                 call self%residual_norm%push_back(resid)
+                if ( resid < self%tol ) exit
+                call self%residual_time%push_back(timing)   ! non-essential record-keeping
+
+
 
 
 

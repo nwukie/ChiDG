@@ -197,12 +197,27 @@ contains
         integer(ik),            intent(in)      :: idirection
         type(seed_t),           intent(in)      :: seed
 
-        integer(ik) :: field_index
+        character(:),   allocatable :: user_msg
+        integer(ik)                 :: field_index
 
-        ! Get field index
+        !
+        ! Get field index in the cache
+        !
         field_index = self%get_field_index(field)
 
+        !
+        ! Check incoming field was found
+        !
+        user_msg = "cache_data%set_data: The incoming field being set in the cache &
+                    was not found. Check that the field being stored is included in &
+                    an operator_t or model_t with something like &
+                    model%add_model_field('My Field')."
+        if (field_index == 0) call chidg_signal_one(FATAL,user_msg,trim(field))
 
+        
+        !
+        ! Store field to cache
+        !
         call self%fields(field_index)%set_data(cache_data,data_type,idirection,seed)
 
 

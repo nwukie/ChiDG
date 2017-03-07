@@ -6,7 +6,6 @@ module type_chidg_matrix
     use type_mesh,              only: mesh_t
     use type_face_info,         only: face_info_t
     use type_seed,              only: seed_t
-    use type_bcset_coupling,    only: bcset_coupling_t
     use type_chidg_vector,       only: chidg_vector_t
     use DNAD_D
     implicit none
@@ -44,6 +43,7 @@ module type_chidg_matrix
         procedure   :: clear                                !< Zero matrix-values
 
 
+        procedure   :: release
         final       :: destructor
 
     end type chidg_matrix_t
@@ -66,10 +66,13 @@ contains
     !!  
     !!
     !------------------------------------------------------------------------------------------
-    subroutine initialize(self,mesh,bcset_coupling,mtype)
+    !subroutine initialize(self,mesh,bcset_coupling,mtype)
+    !subroutine initialize(self,mesh,bc,mtype)
+    subroutine initialize(self,mesh,mtype)
         class(chidg_matrix_t),   intent(inout)           :: self
         type(mesh_t),           intent(in)              :: mesh(:)
-        type(bcset_coupling_t), intent(in), optional    :: bcset_coupling(:)
+        !type(bc_t),             intent(in), optional    :: bc(:)
+        !type(bcset_coupling_t), intent(in), optional    :: bcset_coupling(:)
         character(*),           intent(in)              :: mtype
 
         integer(ik) :: ierr, ndomains, idom
@@ -443,8 +446,6 @@ contains
 
 
 
-
-
     !> Set all ChiDGMatrix matrix-values to zero
     !!
     !!  @author Nathan A. Wukie
@@ -474,6 +475,20 @@ contains
 
 
 
+
+    !>  Release allocated resources.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/3/2017
+    !!
+    !-------------------------------------------------------------------------------------------
+    subroutine release(self)
+        class(chidg_matrix_t),  intent(inout)   :: self
+
+        if (allocated(self%dom)) deallocate(self%dom)
+
+    end subroutine release
+    !*******************************************************************************************
 
 
 

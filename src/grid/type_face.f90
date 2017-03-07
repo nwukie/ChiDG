@@ -41,9 +41,10 @@ module type_face
         integer(ik)                 :: iface                !< XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
         integer(ik)                 :: ChiID = 0            !< Identifier for domain-local Chimera interfaces
 
-        integer(ik)                 :: BC_ID  = 0           !< Identifier for Boundary Condition index bcs(BC_ID)
-        integer(ik)                 :: BC_face = 0          !< Index in bc_patch bcs(BC_ID)%bc_patch%coupled_elements(BC_face)
-        integer(ik)                 :: BC_ndepend = 0       !< Number of coupled element if bc face.
+        integer(ik)                 :: bc_ID      = 0       !< Identifier for Boundary Condition index bcs(bc_ID)
+        integer(ik)                 :: patch_ID   = 0       !< Identifier for boundary condition patch bc(bc_ID)%bc_patch(patch_ID)
+        integer(ik)                 :: patch_face = 0       !< Index in bc_patch bcs(bc_ID)%bc_patch(patch_ID)%coupled_elements(patch_face)
+        integer(ik)                 :: bc_ndepend = 0       !< Number of coupled element if bc face.
 
         ! Owner-element information
         integer(ik)                 :: idomain_g            !< Global index of the parent domain

@@ -1,25 +1,31 @@
 module mod_hdfio
 #include <messenger.h>
-    use mod_kinds,             only: rk,ik,rdouble
-    use mod_constants,         only: ZERO, NFACES, TWO_DIM, THREE_DIM, NO_PROC
-    use mod_bc,                only: create_bc
-    use mod_chidg_mpi,         only: IRANK, NRANK, ChiDG_COMM
-    use mod_hdf_utilities,     only: get_ndomains_hdf, get_domain_names_hdf,                        &
-                                     get_domain_equation_set_hdf, set_coordinate_order_hdf,         &
-                                     set_solution_order_hdf, get_solution_order_hdf,                &
-                                     get_domain_mapping_hdf, get_domain_dimensionality_hdf,         &
-                                     set_contains_solution_hdf, set_domain_equation_set_hdf,        &
-                                     get_domain_coordinates_hdf, get_domain_coordinate_system_hdf,  &
-                                     get_domain_connectivity_hdf, get_domain_nnodes_hdf,            &
-                                     check_file_storage_version_hdf, check_file_exists_hdf,         &
-                                     get_contains_solution_hdf, get_contains_grid_hdf,              &
-                                     get_bc_state_names_hdf, get_bc_state_hdf,                      &
-                                     get_nbc_state_groups_hdf, get_bc_state_group_names_hdf,        &
-                                     get_bc_patch_group_hdf, get_bc_state_group_family_hdf,         &
-                                     get_bc_patch_hdf, open_file_hdf, close_file_hdf,               &
-                                     open_domain_hdf, close_domain_hdf, initialize_file_hdf,        &
-                                     initialize_file_structure_hdf, open_bc_group_hdf,              &
-                                     close_bc_group_hdf, get_domain_nelements_hdf, get_domain_name_hdf
+    use mod_kinds,                  only: rk,ik,rdouble
+    use mod_constants,              only: ZERO, NFACES, TWO_DIM, THREE_DIM, NO_PROC
+    use mod_bc,                     only: create_bc
+    use mod_chidg_mpi,              only: IRANK, NRANK, ChiDG_COMM
+
+    use mod_kinds,                  only: rk,ik,rdouble
+    use mod_constants,              only: ZERO, NFACES, TWO_DIM, THREE_DIM, NO_PROC
+    use mod_bc,                     only: create_bc
+    use mod_chidg_mpi,              only: IRANK, NRANK, ChiDG_COMM
+    use mod_hdf_utilities,          only: get_ndomains_hdf, get_domain_names_hdf,                        &
+                                          get_domain_equation_set_hdf, set_coordinate_order_hdf,         &
+                                          set_solution_order_hdf, get_solution_order_hdf,                &
+                                          get_domain_mapping_hdf, get_domain_dimensionality_hdf,         &
+                                          set_contains_solution_hdf, set_domain_equation_set_hdf,        &
+                                          get_domain_coordinates_hdf, get_domain_coordinate_system_hdf,  &
+                                          get_domain_connectivity_hdf, get_domain_nnodes_hdf,            &
+                                          check_file_storage_version_hdf, check_file_exists_hdf,         &
+                                          get_contains_solution_hdf, get_contains_grid_hdf,              &
+                                          get_bc_state_names_hdf, get_bc_state_hdf,                      &
+                                          get_nbc_state_groups_hdf, get_bc_state_group_names_hdf,        &
+                                          get_bc_patch_group_hdf, get_bc_state_group_family_hdf,         &
+                                          get_bc_patch_hdf, open_file_hdf, close_file_hdf,               &
+                                          open_domain_hdf, close_domain_hdf, initialize_file_hdf,        &
+                                          initialize_file_structure_hdf, open_bc_group_hdf,              &
+                                          close_bc_group_hdf, get_domain_nelements_hdf,                  &
+                                          get_domain_name_hdf, set_ntimes_hdf, get_ntimes_hdf
 
     use type_svector,               only: svector_t
     use mod_string,                 only: string_t
@@ -218,6 +224,7 @@ contains
     !!  @param[in]      filename    Character string of the file to be read from
     !!  @param[inout]   data        chidg_data_t that will accept the solution modes
     !!
+    !!
     !----------------------------------------------------------------------------------------
     subroutine read_solution_hdf(filename,data)
         character(*),       intent(in)      :: filename
@@ -226,23 +233,15 @@ contains
         integer(HID_T)                  :: fid, domain_id
         integer                         :: ierr
 
-        integer(ik)                     :: idom, ndomains, ieqn, neqns, itime
+        integer(ik)                     :: idom, ndomains, ieqn, neqns, itime, ntime
         character(:),       allocatable :: field_name, user_msg, domain_name
         logical                         :: file_exists, contains_solution
-
 
 
         !
         ! Get number of domains contained in the ChiDG data instance
         !
         ndomains = data%ndomains()
-
-
-        !
-        ! Set default time instance
-        !
-        itime = 1
-
 
         !
         ! Open file
@@ -260,34 +259,43 @@ contains
         if (.not. contains_solution) call chidg_signal(FATAL,user_msg)
 
 
+
         !
-        ! Read solution for each domain
+        ! Read solution for each time step
         !
-        do idom = 1,ndomains
+        ntime = get_ntimes_hdf(fid)
+
+        do itime = 1, ntime
+
+            !
+            ! Read solution for each domain
+            !
+            do idom = 1,ndomains
 
 
-            ! Get domain name and number of primary fields
-            domain_name = data%info(idom)%name
+                ! Get domain name and number of primary fields
+                domain_name = data%info(idom)%name
 
 
 
-            ! For each primary field in the domain, get the field name and read from file.
-            domain_id = open_domain_hdf(fid,domain_name)
+                ! For each primary field in the domain, get the field name and read from file.
+                domain_id = open_domain_hdf(fid,domain_name)
 
-            do ieqn = 1,data%eqnset(idom)%prop%nprimary_fields()
-                field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
-                call read_domain_field_hdf(data,domain_id,field_name,itime,'Primary')
-            end do ! ieqn
+                do ieqn = 1,data%eqnset(idom)%prop%nprimary_fields()
+                    field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
+                            call read_domain_field_hdf(data,domain_id,field_name,itime,'Primary')
+                end do ! ieqn
 
-!            do ieqn = 1,data%eqnset(idom)%prop%nauxiliary_fields()
-!                field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
-!                call read_field_domain_hdf(data,domain_id,field_name,itime,'Auxiliary')
-!            end do ! ieqn
+    !            do ieqn = 1,data%eqnset(idom)%prop%nauxiliary_fields()
+    !                field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
+    !                call read_field_domain_hdf(data,domain_id,field_name,itime,'Auxiliary')
+    !            end do ! ieqn
 
-            call close_domain_hdf(domain_id)
+                call close_domain_hdf(domain_id)
 
-        end do ! idom
+            end do ! idom
 
+        end do ! itime
 
         ! Close file
         call close_file_hdf(fid)
@@ -315,6 +323,10 @@ contains
     !!  @param[in]      filename    Character string of the file to be written to
     !!  @param[inout]   data        chidg_data_t containing solution to be written
     !!
+    !!
+    !!  @autor Matteo Ugolotti
+    !!  @date   2/22/2017
+    !!
     !----------------------------------------------------------------------------------------
     subroutine write_solution_hdf(data,file_name,field)
         type(chidg_data_t), intent(in)              :: data
@@ -328,6 +340,7 @@ contains
         integer(ik)                     :: idom, ieqn, neqns, iwrite, spacedim, time, field_index, iproc
         integer                         :: ierr, order_s
         logical                         :: file_exists
+        integer(ik)                     :: itime
 
         !
         ! Check for file existence
@@ -340,21 +353,28 @@ contains
         !
         if (.not. file_exists) then
 
-            ! Create a new file
-            if (IRANK == GLOBAL_MASTER) then
-                call initialize_file_hdf(file_name)
-            end if
-            call MPI_Barrier(ChiDG_COMM,ierr)
-
-            ! Initialize the file structure.
-            do iproc = 0,NRANK-1
-                if (iproc == IRANK) then
-                    fid = open_file_hdf(file_name)
-                    call initialize_file_structure_hdf(fid,data)
-                    call close_file_hdf(fid)
+                ! Create a new file
+                if (IRANK == GLOBAL_MASTER) then
+                    call initialize_file_hdf(file_name)
                 end if
                 call MPI_Barrier(ChiDG_COMM,ierr)
-            end do
+
+                ! Initialize the file structure.
+                do iproc = 0,NRANK-1
+                    if (iproc == IRANK) then
+                        fid = open_file_hdf(file_name)
+                        call initialize_file_structure_hdf(fid,data)
+                        call close_file_hdf(fid)
+                    end if
+                    call MPI_Barrier(ChiDG_COMM,ierr)
+                end do
+
+            else
+
+                ! If it already exists, check if the the structure is correct 
+                !fid = open_file_hdf(file_name)
+                !call check_file_structure_hdf(fid,data)
+                !call close_file_hdf(fid)
 
         end if
 
@@ -368,12 +388,14 @@ contains
 
 
                 fid = open_file_hdf(file_name)
-
+                !
+                ! Set the attribute times to the hdf file
+                !
+                call set_ntimes_hdf(fid,data%ntime())
 
                 !
                 ! Write solution for each domain
                 !
-                time = 1
                 do idom = 1,data%ndomains()
 
                     domain_name = data%info(idom)%name
@@ -407,36 +429,42 @@ contains
                     ! Set some data about the block: solution order + equation set
                     !
                     call set_solution_order_hdf(domain_id,order_s)
-
-
-
+                    
                     !
-                    ! If specified, only write specified field.
+                    ! Loop through time levels
                     !
-                    if (present(field)) then
+                    do itime = 1,data%ntime()
 
-                        field_index = data%eqnset(idom)%prop%get_primary_field_index(trim(field))
-
-                        if (field_index /= 0) then
-                            call write_domain_field_hdf(domain_id,data,field,time)
-                        end if
-
-
-                    !
-                    ! Else, write each field in the file.
-                    !
-                    else
 
                         !
-                        ! For each field: get the name, write to file
-                        ! 
-                        neqns = data%eqnset(idom)%prop%nprimary_fields()
-                        do ieqn = 1,neqns
-                            field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
-                            call write_domain_field_hdf(domain_id,data,field_name,time)
-                        end do ! ieqn
+                        ! If specified, only write specified field.
+                        !
+                        if (present(field)) then
 
-                    end if
+                            field_index = data%eqnset(idom)%prop%get_primary_field_index(trim(field))
+
+                            if (field_index /= 0) then
+                                call write_domain_field_hdf(domain_id,data,field,itime)
+                            end if
+
+
+                        !
+                        ! Else, write each field in the file.
+                        !
+                        else
+
+                            !
+                            ! For each field: get the name, write to file
+                            ! 
+                            neqns = data%eqnset(idom)%prop%nprimary_fields()
+                            do ieqn = 1,neqns
+                                field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
+                                call write_domain_field_hdf(domain_id,data,field_name,itime)
+                            end do ! ieqn
+
+                        end if
+
+                    end do ! itime
 
                     call close_domain_hdf(domain_id)
 
@@ -484,13 +512,14 @@ contains
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/5/2016
     !!
+    !!
     !---------------------------------------------------------------------------------------
     subroutine read_domain_field_hdf(data,domain_id,field_name,itime,field_type)
-        type(chidg_data_t), intent(inout)   :: data
-        integer(HID_T),     intent(in)      :: domain_id
-        character(*),       intent(in)      :: field_name
-        integer(ik),        intent(in)      :: itime
-        character(*),       intent(in)      :: field_type
+        type(chidg_data_t),         intent(inout)   :: data
+        integer(HID_T),             intent(in)      :: domain_id
+        character(*),               intent(in)      :: field_name
+        integer(ik),                intent(in)      :: itime
+        character(*),               intent(in)      :: field_type
 
 
         integer(HID_T)          :: gid, sid, vid, memspace
@@ -615,9 +644,25 @@ contains
             ! get domain-global element index
             !
             ielem_g = data%mesh(idom)%elems(ielem)%ielement_g
-            start = [1-1,ielem_g-1,itime-1]   ! 0-based
+            start = [1-1,ielem_g-1,itime-1] ! 0-based 
             count = [nterms_s, 1, 1]
-
+            
+!            !
+!            ! Select the the correct time levels in the HDF5 file based on the time_integrator
+!            ! used in the previous solution
+!            !
+!            if ( switch == 'steady' ) then
+!                start = [1-1,ielem_g-1,hdf_time]   ! 0-based
+!            else if ( switch == 'HB' ) then
+!                start = [1-1,ielem_g-1,itime-1]   ! 0-based
+!            else !( switch == 'time_marching' )
+!                start = [1-1,ielem_g-1,(hdf_time + itime)-1]   ! 0-based
+!            end if
+!
+!            !
+!            ! Chunk of data in domain/Variable dataspace to be read
+!            !
+!            count = [nterms_s, 1, 1]
 
 
             !
@@ -718,6 +763,12 @@ contains
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/5/2016
     !!
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   02/20/2017
+    !!
+    !!  Expanded the dataspace to include all the time levels
+    !!
     !----------------------------------------------------------------------------------------
     subroutine write_domain_field_hdf(domain_id,data,field_name,itime,attribute_name,attribute_value)
         integer(HID_T),     intent(in)              :: domain_id
@@ -742,7 +793,7 @@ contains
         logical     :: DataExists, ElementsEqual, exists
         integer(ik) :: type, ierr, ndomains,    &
                        order, ivar, ielem, idom, nelem_g, &
-                       ielement_g, nterms_s
+                       ielement_g, nterms_s, ntime
 
 
         !
@@ -766,9 +817,12 @@ contains
         nelem_g     = data%mesh(idom)%get_nelements_global()
         nterms_s    = data%mesh(idom)%nterms_s
         ndims       = 3
+        ntime       = data%ntime()
 
-        ! TODO: Should probarbly better inform that dataspace dimension here. Probably set mesh%ntime
-        dims(1:3)    = [nterms_s, nelem_g, itime]
+        !
+        ! Set the dimensions of the dataspace to write in
+        !
+        dims(1:3)    = [nterms_s, nelem_g, ntime]
         maxdims(1:3) = H5S_UNLIMITED_F
 
 
@@ -845,7 +899,6 @@ contains
             !
             call h5sselect_hyperslab_f(sid, H5S_SELECT_SET_F, start, count, ierr)
 
-
             !
             ! Create a memory dataspace
             !
@@ -916,9 +969,9 @@ contains
     !!                              for the domains in the partition
     !!
     !----------------------------------------------------------------------------------------
-    subroutine read_boundaryconditions_hdf(filename, bc_patches, bc_groups, partition)
+    subroutine read_boundaryconditions_hdf(filename, bc_patch_data, bc_groups, partition)
         character(*),           intent(in)                  :: filename
-        type(bc_patch_data_t),  intent(inout), allocatable  :: bc_patches(:)
+        type(bc_patch_data_t),  intent(inout), allocatable  :: bc_patch_data(:)
         type(bc_group_t),       intent(inout), allocatable  :: bc_groups(:)
         type(partition_t),      intent(in)                  :: partition
 
@@ -937,14 +990,14 @@ contains
         !  Allocate for number of domains in the partition
         !
         nconn = size(partition%connectivities)
-        allocate(bc_patches(nconn), stat=ierr)
+        allocate(bc_patch_data(nconn), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
         !
         ! Read boundary condition patches
         !
-        call read_bc_patches_hdf(fid,bc_patches,partition)
+        call read_bc_patches_hdf(fid,bc_patch_data,partition)
 
 
         !
@@ -977,9 +1030,9 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine read_bc_patches_hdf(fid, bc_patches, partition)
+    subroutine read_bc_patches_hdf(fid, bc_patch_data, partition)
         integer(HID_T),         intent(in)      :: fid
-        type(bc_patch_data_t),  intent(inout)   :: bc_patches(:)
+        type(bc_patch_data_t),  intent(inout)   :: bc_patch_data(:)
         type(partition_t),      intent(in)      :: partition
 
         integer(ik)                 :: iconn, nconn, iface, ierr
@@ -1006,13 +1059,13 @@ contains
             ! Get name of current domain
             !
             domain = partition%connectivities(iconn)%get_domain_name()
-            bc_patches(iconn)%domain_ = domain
+            bc_patch_data(iconn)%domain_name = domain
 
 
             !
             ! Allocation bcs for current domain
             !
-            allocate(bc_patches(iconn)%bc_connectivity(NFACES), stat=ierr)
+            allocate(bc_patch_data(iconn)%bc_connectivity(NFACES), stat=ierr)
             if (ierr /= 0) call AllocationError
 
 
@@ -1034,15 +1087,15 @@ contains
 
 
                 ! Store boundary condition connectivity
-                call bc_patches(iconn)%bc_connectivity(iface)%init(nbcfaces)
+                call bc_patch_data(iconn)%bc_connectivity(iface)%init(nbcfaces)
                 do ibc_face = 1,nbcfaces
-                    bc_patches(iconn)%bc_connectivity(iface)%data(ibc_face)%data = bc_patch(ibc_face,:)
+                    bc_patch_data(iconn)%bc_connectivity(iface)%data(ibc_face)%data = bc_patch(ibc_face,:)
                 end do
 
                 
                 ! Read Boundary State Group
                 bc_state_group = get_bc_patch_group_hdf(patch_id)
-                call bc_patches(iconn)%bc_group%push_back(string_t(bc_state_group))
+                call bc_patch_data(iconn)%bc_group_name%push_back(string_t(bc_state_group))
 
 
                 ! Close face boundary condition group
@@ -1073,13 +1126,14 @@ contains
 
 
 
-    !>  Read boundary condition state functions from file and initialize in bcdata.
+    !>  Read boundary condition state groups from file and return.
+    !!
+    !!  Reads and returns all boundary condition state groups, regardless of if they
+    !!  are used on the current partition or not.
+    !!
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/31/2016
-    !!
-    !!
-    !!
     !!
     !---------------------------------------------------------------------------------------
     subroutine read_bc_state_groups_hdf(fid, bc_groups, partition)

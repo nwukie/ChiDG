@@ -167,14 +167,6 @@ program driver
 
         end if
 
-        
-
-
-        !
-        ! Write initial solution
-        !
-        if (initial_write) call chidg%write_solution(solutionfile_out)
-
 
 
         !
@@ -182,25 +174,9 @@ program driver
         !
         call chidg%report('before')
 
-
-        call write_line("---------------------------------------------------", io_proc=GLOBAL_MASTER)
-        call write_line("                                                   ", io_proc=GLOBAL_MASTER, delimiter='none')
-        call write_line("           Running ChiDG simulation...             ", io_proc=GLOBAL_MASTER, delimiter='none')
-        call write_line("                                                   ", io_proc=GLOBAL_MASTER, delimiter='none')
-        call write_line("---------------------------------------------------", io_proc=GLOBAL_MASTER)
-
-        call chidg%run()
+        call chidg%run(write_initial=initial_write, write_final=final_write)
 
         call chidg%report('after')
-
-
-
-
-
-        !
-        ! Write final solution
-        !
-        if (final_write) call chidg%write_solution(solutionfile_out)
 
 
 

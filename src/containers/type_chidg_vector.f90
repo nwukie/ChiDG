@@ -40,20 +40,22 @@ module type_chidg_vector
         generic,    public  :: init => initialize
         procedure,  private :: initialize
 
-        procedure,  public  :: project                          !< Project function to basis
-        procedure,  public  :: clear                            !< Zero the densevector data
-        generic,    public  :: norm => norm_local, norm_comm    !< Compute L2 vector norm
-        procedure,  public  :: norm_local                       !< proc-local L2 vector norm
-        procedure,  public  :: norm_comm                        !< MPI group L2 vector norm
-        generic,    public  :: norm_fields => norm_fields_comm  !< L2 norm of independent fields
-        procedure,  public  :: norm_fields_comm                 !< MPI group L2 field norms
-        procedure,  public  :: sumsqr                           !< Sum squared proc-local entries 
+        procedure,  public  :: project                          ! Project function to basis
+        procedure,  public  :: clear                            ! Zero the densevector data
+        generic,    public  :: norm => norm_local, norm_comm    ! Compute L2 vector norm
+        procedure,  public  :: norm_local                       ! proc-local L2 vector norm
+        procedure,  public  :: norm_comm                        ! MPI group L2 vector norm
+        generic,    public  :: norm_fields => norm_fields_comm  ! L2 norm of independent fields
+        procedure,  public  :: norm_fields_comm                 ! MPI group L2 field norms
+        procedure,  public  :: sumsqr                           ! Sum squared proc-local entries 
         procedure,  public  :: sumsqr_fields
         procedure,  public  :: dump
 
-        procedure,  public  :: comm_send                        !< Nonblocking send to comm procs
-        procedure,  public  :: comm_recv                        !< Blocking recv incomming data
-        procedure,  public  :: comm_wait                        !< Wait to finish send data
+        procedure,  public  :: comm_send                        ! Nonblocking send to comm procs
+        procedure,  public  :: comm_recv                        ! Blocking recv incomming data
+        procedure,  public  :: comm_wait                        ! Wait to finish send data
+
+        procedure,  public  :: release                          ! Release allocated resources
 
 !        generic :: assignment(=) => 
 
@@ -647,6 +649,20 @@ contains
 
 
 
+
+    !>  Release allocated resources.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/3/2017
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine release(self)
+        class(chidg_vector_t),  intent(inout)   :: self
+
+        if (allocated(self%dom)) deallocate(self%dom)
+
+    end subroutine release
+    !****************************************************************************************
 
 
 

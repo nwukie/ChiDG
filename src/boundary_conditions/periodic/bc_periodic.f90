@@ -50,17 +50,19 @@ contains
 
 
         !
-        ! Add functions
-        !
-        call self%bcproperties%add('Offset-1',      'Required')
-        call self%bcproperties%add('Offset-2',      'Required')
-        call self%bcproperties%add('Offset-3',      'Required')
-
-
-        !
         ! Add parameters
         !
+        call self%bcproperties%add('Offset-1', 'Required')
+        call self%bcproperties%add('Offset-2', 'Required')
+        call self%bcproperties%add('Offset-3', 'Required')
 
+
+        !
+        ! Set default values
+        !
+        call self%set_fcn_option('Offset-1', 'val', 0._rk)
+        call self%set_fcn_option('Offset-2', 'val', 0._rk)
+        call self%set_fcn_option('Offset-3', 'val', 0._rk)
 
 
     end subroutine init

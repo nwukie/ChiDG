@@ -129,7 +129,12 @@ contains
                 !
                 call write_line("   R(Q) - Norm: ", resid, delimiter='', columns=.True., column_width=20, io_proc=GLOBAL_MASTER)
                 call self%residual_norm%push_back(resid)
+
                 if ( resid < self%tol ) exit
+                if ( ieee_is_nan(resid) ) then
+                    call chidg_signal(FATAL,"quasi_newton%solve: NaN residual calculation. Check initial solution and operator objects.")
+                end if
+
                 call self%residual_time%push_back(timing)
 
 
@@ -139,15 +144,22 @@ contains
                 if (niter == 1) then
                     rnorm0 = rhs%norm_fields(ChiDG_COMM)
                 end if
-
-
                 rnorm = rhs%norm_fields(ChiDG_COMM)
 
 
-                ! Update initial residual norm if it has increased
-                where (rnorm > rnorm0)
-                    rnorm0 = rnorm0 + 0.3_rk*(rnorm - rnorm0)
-                end where
+
+
+                !
+                ! During the first few iterations, allow the initial residual norm to update
+                ! if it has increased. Otherwise, if a solution converged to an error floor
+                ! and the residual raised a little bit, then the CFL would essentially reset
+                ! from infinity to CFL0, which we do not want.
+                !
+                if (niter < 5) then
+                    where (rnorm > rnorm0)
+                        rnorm0 = rnorm0 + 0.3_rk*(rnorm - rnorm0)
+                    end where
+                end if
 
 
 
@@ -268,14 +280,19 @@ contains
 
 
                     !
-                    ! Test for sufficient reduction. Also allow some growth.
+                    ! Test for |R| increasing too much or NaN. 
+                    !   If residual is reasonably large, still allow some growth.
+                    !   If the residual is small enough, we don't want any growth.
+                    ! 
                     !
                     if (ieee_is_nan(fn)) then
                         search = .true.
-                    else if ( fn < 2.0_rk*f0 ) then
-                        search = .false.
-                    else
+                    else if ( (fn > 1.e-3_rk) .and. (fn > 2.0_rk*f0) ) then
                         search = .true.
+                    else if ( (fn < 1.e-3_rk) .and. (fn > f0) ) then
+                        search = .true.
+                    else
+                        search = .false.
                     end if
 
                     call write_line("       Rn(Q) = ", fn, io_proc=GLOBAL_MASTER)

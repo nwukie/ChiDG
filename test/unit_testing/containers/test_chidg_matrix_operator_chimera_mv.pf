@@ -71,6 +71,7 @@ subroutine test_chidg_matrix_operator_chimera_mv()
     !
     call chidg%set('Solution Order', integer_input=2)
     call chidg%init('domains')
+    call chidg%init('bc')
     call chidg%init('communication')
     call chidg%init('chimera')
     call chidg%init('solvers')

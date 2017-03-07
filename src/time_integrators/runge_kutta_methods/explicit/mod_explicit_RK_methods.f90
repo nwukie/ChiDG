@@ -174,7 +174,7 @@ contains
         ! a is a lower triangular matrix
         !
         a      = ZERO
-        a(2,1) = HALF; a(3,1) = -ONE, a(3,2) = TWO 
+        a(2,1) = HALF; a(3,1) = -ONE; a(3,2) = TWO 
 
 
         b = [SIXTH,TWO_THR,SIXTH]
@@ -279,8 +279,8 @@ contains
     subroutine method_selector(time_scheme,nstage,a,b)
         character(len = :), allocatable, intent(in)     :: time_scheme
         integer(ik),                     intent(inout)  :: nstage
-        real(rk),           allocatable, intent(inout)  :: a
-        real(rk),           allocatable, intent(inout)  :: b
+        real(rk),           allocatable, intent(inout)  :: a(:,:)
+        real(rk),           allocatable, intent(inout)  :: b(:)
 
 
         select case(time_scheme)
@@ -298,7 +298,7 @@ contains
                 call kutta_3rd_order(nstage,a,b)
 
             case('Runge-Kutta Method', 'Fourth Runge-Kutta Method', 'Fourth Order RK Method', 'RK4')
-                call runge_kutta_4th_order
+                call runge_kutta_4th_order(nstage,a,b)
 
             case('Three-Eighth Rule', 'Fourth Order Kutta')
                 call three_eighth_4th_order(nstage,a,b)

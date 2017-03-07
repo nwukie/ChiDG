@@ -18,6 +18,7 @@ program driver
     use type_function,              only: function_t
     use mod_function,               only: create_function
     use mod_chidg_mpi,              only: GLOBAL_MASTER, ChiDG_COMM
+    use eqn_wall_distance,          only: set_p_poisson_parameter
     use mod_io
 
     ! Actions
@@ -59,8 +60,8 @@ program driver
         ! Initialize ChiDG environment
         !
         call chidg%start_up('mpi')
-        call chidg%start_up('core')
         call chidg%start_up('namelist')
+        call chidg%start_up('core')
 
 
 
@@ -91,6 +92,7 @@ program driver
         call chidg%read_boundaryconditions(gridfile)
 
 
+!        call set_p_poisson_parameter(4._rk)
 
         !
         ! Initialize communication, storage, auxiliary fields
@@ -121,21 +123,23 @@ program driver
 
 !            call polynomial%set_option('f',3.5_rk)
 !            call create_function(polynomial,'polynomial')
-!
+
+
 !            ! d
-!            call create_function(constant,'constant')
-!            call constant%set_option('val',0.001_rk)
+!            !call create_function(constant,'constant')
+!            !call constant%set_option('val',10000.0_rk)
+!            call create_function(constant,'Radius')
 !            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,1)
 
 
             call create_function(constant,'constant')
 
             ! rho
-            call constant%set_option('val',1.15_rk)
+            call constant%set_option('val',1.20_rk)
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,1)
 
             ! rho_u
-            call constant%set_option('val',50.0_rk)
+            call constant%set_option('val',180.0_rk)
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,2)
 
             ! rho_v
@@ -147,13 +151,13 @@ program driver
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,4)
 
             ! rho_E
-            call constant%set_option('val',248000.0_rk)
+            call constant%set_option('val',208000.0_rk)
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,5)
 
-!            ! rho_nutilde
-!            call constant%set_option('val',0.00003_rk)
-!            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,6)
-!
+            ! rho_nutilde
+            call constant%set_option('val',0.00003_rk)
+            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,6)
+
 !            ! eps
 !            call constant%set_option('val',0.000001_rk)
 !            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,7)

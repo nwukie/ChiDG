@@ -170,8 +170,6 @@ contains
                     call eqnset%compute_volume_diffusive_operators(worker, differentiate_function)
 
 
-
-
                 end do  ! ielem
                 end associate
             end do  ! idom

@@ -52,12 +52,25 @@ contains
 
 
 
+        !
+        ! Add boundary condition parameters
+        !
         call self%bcproperties%add('Density',   'Required')
         call self%bcproperties%add('Pressure',  'Required')
         call self%bcproperties%add('Velocity-1','Required')
         call self%bcproperties%add('Velocity-2','Required')
         call self%bcproperties%add('Velocity-3','Required')
 
+
+
+        !
+        ! Set default parameter values
+        !
+        call self%set_fcn_option('Density',    'val', 1.2_rk)
+        call self%set_fcn_option('Pressure',   'val', 100000._rk)
+        call self%set_fcn_option('Velocity-1', 'val', 0._rk)
+        call self%set_fcn_option('Velocity-2', 'val', 0._rk)
+        call self%set_fcn_option('Velocity-3', 'val', 0._rk)
 
 
 

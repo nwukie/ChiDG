@@ -53,7 +53,7 @@ contains
         integer(4),     allocatable :: connectivity(:,:)
 
 
-        real(rk)                    :: xi,eta,zeta, p
+        real(rk)                    :: xi,eta,zeta,p, sumsqr, d_normalization, grad1_d, grad2_d, grad3_d
         character(100)              :: varstring
         character(:),   allocatable :: zonestring
 
@@ -183,7 +183,7 @@ contains
 
                                 ! Get solution value at point
                                 itime = 1
-                                val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q_in%dom(idom)%vecs(ielem),ivar,itime,xi,eta,zeta),rdouble)
+                                val   = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q_in%dom(idom)%vecs(ielem),ivar,itime,xi,eta,zeta),rdouble)
                                 tecstat = TECDAT142(1,valeq,1)
                                 if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_variables: Error in call to TECDAT142")
                                     

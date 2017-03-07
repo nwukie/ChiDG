@@ -4,6 +4,7 @@ module bc_state_spalart_allmaras_farfield
     use type_bc_state,          only: bc_state_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
+    use ieee_arithmetic,        only: ieee_is_nan
     use DNAD_D
     implicit none
     
@@ -81,10 +82,10 @@ contains
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   :: &
             density_m, mom1_m, mom2_m, mom3_m, normal_momentum, &
-            density_nutilde_m, density_nutilde_bc, nutilde_nu,  &
+            density_nutilde_m, density_nutilde_bc,              &
             grad1_density_nutilde_m, grad2_density_nutilde_m, grad3_density_nutilde_m
 
-        real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3
+        real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3, nutilde_nu
         logical,    allocatable, dimension(:)   :: inflow, outflow
 
 
@@ -144,7 +145,6 @@ contains
         where(inflow)
             density_nutilde_bc = density_m * (nutilde_nu * 1.e-5_rk)
         end where
-
 
 
 

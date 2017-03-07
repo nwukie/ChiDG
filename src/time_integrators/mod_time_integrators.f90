@@ -10,7 +10,7 @@ module mod_time_integrators
     use type_steady,               only: steady_t
     use type_forward_euler,        only: forward_euler_t
 !    use type_backward_euler,    only: backward_euler_t
-    use type_harmonic_balance,     only: harmonic_balance_t !not in yet
+    use type_harmonic_balance,     only: harmonic_balance_t 
     use type_explicit_runge_kutta, only: explicit_runge_kutta_t
     implicit none
 
@@ -20,7 +20,7 @@ module mod_time_integrators
     type(steady_t)                      :: STEADY
     type(forward_euler_t)               :: FORWARD_EULER
 !    type(backward_euler_t)              :: BACKWARD_EULER
-    type(harmonic_balance_t)            :: HB !not in yet
+    type(harmonic_balance_t)            :: HB 
     type(explicit_runge_kutta_t)        :: EXPLICIT_RK
 
     logical :: initialized = .false.

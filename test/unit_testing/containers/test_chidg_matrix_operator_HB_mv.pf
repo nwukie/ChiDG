@@ -24,7 +24,7 @@ subroutine test_chidg_matrix_operator_HB_mv()
 #include<messenger.h>
     use pfunit_mod
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ONE,TWO,THREE,PI,FOUR,FIVE,SIX,SEVEN, &
+    use mod_constants,      only: ZERO,ONE,TWO,THREE,PI,FOUR,FIVE,SIX,SEVEN, &
                                   EIGHT,NINE,TEN,XI_MIN,XI_MAX,ETA_MIN, &
                                   ZETA_MIN,ZETA_MAX,IO_DESTINATION
     use mod_io,             only: time_integrator,frequencies
@@ -179,10 +179,10 @@ subroutine test_chidg_matrix_operator_HB_mv()
     call chidg%shut_down('core')
 
     !
-    ! The time_integrator is reset to steady so that it can be used by the next test
+    ! Reset mod_io variables to default values
     !
     time_integrator = 'steady'
-
+    frequencies     = ZERO
 
     !
     ! Clean up

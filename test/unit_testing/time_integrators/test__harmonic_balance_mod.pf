@@ -22,6 +22,12 @@ module test__harmonic_balance_mod
     use type_chidg_vector,      only: chidg_vector_t
     use mod_string,             only: string_t
    
+    use type_chidg_worker,      only: chidg_worker_t
+    use type_properties,        only: properties_t
+
+    use mod_operators,          only: operator_factory
+    use type_operator,          only: operator_t
+
     use mod_equations,          only: equation_builder_factory
     use type_equation_builder,  only: equation_builder_t
     use type_equation_set,      only: equation_set_t
@@ -31,6 +37,26 @@ module test__harmonic_balance_mod
     use type_harmonic_balance,  only: harmonic_balance_t,assemble_harmonic_balance_t
  
     implicit none
+
+
+
+    !>
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/7/2017
+    !!
+    !---------------------------------------------------------------------------------------------
+    type, extends(operator_t), public   :: test_blank_operator_t
+
+
+    contains
+
+        procedure   :: init    => init_blank
+        procedure   :: compute => compute_blank
+
+
+    end type test_blank_operator_t
+    !*********************************************************************************************
 
 
 
@@ -56,6 +82,47 @@ module test__harmonic_balance_mod
 
 
 contains
+
+
+
+    !>
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/7/2017
+    !!
+    !---------------------------------------------------------------------------------------------
+    subroutine init_blank(self)
+        class(test_blank_operator_t),   intent(inout)   :: self
+
+        ! Set operator name
+        call self%set_name("Test Blank Operator")
+
+        ! Set operator type
+        call self%set_operator_type("Volume Diffusive Flux") 
+
+        ! Set operator equations
+        call self%add_primary_field("u")
+
+
+    end subroutine init_blank
+    !*********************************************************************************************
+
+
+
+    !>
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/7/2017
+    !!
+    !---------------------------------------------------------------------------------------------
+    subroutine compute_blank(self,worker,prop)
+        class(test_blank_operator_t),   intent(inout)   :: self
+        type(chidg_worker_t),           intent(inout)   :: worker
+        class(properties_t),            intent(inout)   :: prop
+
+
+    end subroutine compute_blank
+    !*********************************************************************************************
 
 
 
@@ -94,6 +161,11 @@ contains
         !
         call test_blank_eqn%set_name("Test Blank Equation Set")
 
+        !
+        ! Add spatial operators
+        !
+        call test_blank_eqn%add_operator("Test Blank Operator")
+
 
     end function build
     !*********************************************************************************************
@@ -108,6 +180,7 @@ contains
     !---------------------------------------------------------------------------------------------
     @Test
     subroutine test__harmonic_balance
+        type(test_blank_operator_t)             :: operator_test_blank_equation_set
         type(test_blank_equation_set_builder_t) :: builder_test_blank_equation_set
         type(assemble_harmonic_balance_t)       :: assemble_HB
         type(chidg_t)                           :: chidg
@@ -122,6 +195,13 @@ contains
                                                    ref_11, ref_12, ref_13, ref_14, ref_15
         real(rk)                                :: tol
         character(:),       allocatable         :: filename
+
+
+        !
+        ! Initialize and register operator 
+        !
+        call operator_test_blank_equation_set%init()
+        call operator_factory%register(operator_test_blank_equation_set)
 
 
         !

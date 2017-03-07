@@ -144,7 +144,7 @@ contains
         integer(ik)             :: itime_outer, itime_inner, idom, ielem, ivar    ! Loop counters
         real(rk), allocatable   :: temp_1(:), temp_2(:)     ! Temporary variables
         integer(ik)             :: ntime
-        integer(ik)             :: ierr
+        integer(ik)             :: ierr,i,j
         real(rk),allocatable    :: D(:,:)
 
 
@@ -155,6 +155,7 @@ contains
 
         
         associate ( rhs => data%sdata%rhs, q => data%sdata%q )
+    
 
         !
         ! Set local variables equal to the values set in time_manager
@@ -184,12 +185,12 @@ contains
                             temp_1 = D(itime_outer,itime_inner)*matmul(data%mesh(idom)%elems(ielem)%mass, &
                                                             q%dom(idom)%vecs(ielem)%getvar(ivar,itime_inner))
 
-                            temp_2 = rhs%dom(idom)%vecs(ielem)%getvar(ivar,itime_inner) + temp_1
+                            temp_2 = rhs%dom(idom)%vecs(ielem)%getvar(ivar,itime_outer) + temp_1
 
                             !
                             ! Add the temporal contributions in the rhs
                             !
-                            call rhs%dom(idom)%vecs(ielem)%setvar(ivar,itime_inner,temp_2)
+                            call rhs%dom(idom)%vecs(ielem)%setvar(ivar,itime_outer,temp_2)
 
                         end do  ! ivar
 

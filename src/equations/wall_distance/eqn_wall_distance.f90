@@ -202,6 +202,7 @@ contains
 
         call self%set_name('p-Laplace')
         call self%set_dependency('Q-')
+        !call self%set_dependency('Grad(Q)')
 
         call self%add_model_field('Scalar Diffusion Coefficient')
 
@@ -237,10 +238,13 @@ contains
         ! Interpolate solution to quadrature nodes
         !
         u       = worker%get_primary_field_general('u', 'value')
+        !grad1_u = worker%get_primary_field_general('u', 'grad1+lift')
+        !grad2_u = worker%get_primary_field_general('u', 'grad2+lift')
+        !grad3_u = worker%get_primary_field_general('u', 'grad3+lift')
+
         grad1_u = worker%get_primary_field_general('u', 'grad1')
         grad2_u = worker%get_primary_field_general('u', 'grad2')
         grad3_u = worker%get_primary_field_general('u', 'grad3')
-
 
 
         !

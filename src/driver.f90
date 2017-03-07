@@ -18,6 +18,7 @@ program driver
     use type_function,              only: function_t
     use mod_function,               only: create_function
     use mod_chidg_mpi,              only: GLOBAL_MASTER, ChiDG_COMM
+    use eqn_wall_distance,          only: set_p_poisson_parameter
     use mod_io
 
     ! Actions
@@ -91,6 +92,7 @@ program driver
         call chidg%read_boundaryconditions(gridfile)
 
 
+!        call set_p_poisson_parameter(4._rk)
 
         !
         ! Initialize communication, storage, auxiliary fields
@@ -121,10 +123,12 @@ program driver
 
 !            call polynomial%set_option('f',3.5_rk)
 !            call create_function(polynomial,'polynomial')
-!
+
+
 !            ! d
-!            call create_function(constant,'constant')
-!            call constant%set_option('val',0.001_rk)
+!            !call create_function(constant,'constant')
+!            !call constant%set_option('val',10000.0_rk)
+!            call create_function(constant,'Radius')
 !            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,1)
 
 
@@ -147,7 +151,7 @@ program driver
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,4)
 
             ! rho_E
-            call constant%set_option('val',250000.0_rk)
+            call constant%set_option('val',208000.0_rk)
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,5)
 
             ! rho_nutilde

@@ -71,11 +71,11 @@ contains
                                    niter, ieqn, idom, ierr,                     &
                                    rstart, rend, cstart, cend, nterms, imat, iwrite, step
 
-        real(rk)                :: dtau, amp, cfl, timing, resid, resid_new,    &
+        real(rk)                :: dtau, amp, cfl, timing, resid, resid0, resid_new,    &
                                    alpha, f0, fn, forcing_term
         real(rk), allocatable   :: vals(:), cfln(:), rnorm0(:), rnorm(:)
         type(chidg_vector_t)    :: b, qn, qold, qnew, dqdtau, q0
-        logical                 :: search
+        logical                 :: search, absolute_convergence, relative_convergence
       
 
         wcount = 1
@@ -105,7 +105,12 @@ contains
             niter = 0      ! Initialize inner loop counter
 
 
-            do while ( resid > self%tol )
+            !absolute_convergence = (resid > self%tol)
+            absolute_convergence = .true.
+            relative_convergence = .true.
+
+            !do while ( resid > self%tol )
+            do while ( absolute_convergence .and. relative_convergence )
                 niter = niter + 1
                 call write_line("   niter: ", niter, delimiter='', columns=.True., column_width=20, io_proc=GLOBAL_MASTER)
 
@@ -142,6 +147,7 @@ contains
                 ! Compute and store residual norm for each field
                 !
                 if (niter == 1) then
+                    resid0 = rhs%norm(ChiDG_COMM)
                     rnorm0 = rhs%norm_fields(ChiDG_COMM)
                 end if
                 rnorm = rhs%norm_fields(ChiDG_COMM)
@@ -285,6 +291,7 @@ contains
                     !   If the residual is small enough, we don't want any growth.
                     ! 
                     !
+!                    search = .false.
                     if (ieee_is_nan(fn)) then
                         search = .true.
                     else if ( (fn > 1.e-3_rk) .and. (fn > 2.0_rk*f0) ) then
@@ -321,7 +328,7 @@ contains
                 !
                 !if (wcount == self%nwrite) then
                 !    if (data%eqnset(1)%get_name() == 'Euler') then
-                !        call write_solution_hdf(data,'aachen_cascade_roundte.h5')
+                !        call write_solution_hdf(data,'joukowski_rans_ref0.h5')
                 !        write(filename,'(I2)') niter
                 !        call write_tecio_variables(data,trim(filename)//'.dat',niter)
                 !        wcount = 0
@@ -330,6 +337,14 @@ contains
                 wcount = wcount + 1
 
                 call MPI_Barrier(ChiDG_COMM,ierr)
+
+
+
+
+                absolute_convergence = (resid > self%tol)
+                relative_convergence = ( (log10(resid0) - log10(resid)) < real(self%norders_reduction,rk) )
+
+
 
             end do ! niter
 

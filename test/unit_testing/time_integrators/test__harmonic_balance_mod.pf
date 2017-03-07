@@ -1,0 +1,301 @@
+!
+!
+!
+!  @author Mayank Sharma 
+!  @date   3/1/2017
+!
+!-----------------------------------------------------------------------------------------------
+module test__harmonic_balance_mod
+#include<messenger.h>
+    use pfunit_mod
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: ZERO,ONE,TWO,PI,IO_DESTINATION
+    use mod_io,                 only: time_integrator,frequencies
+    use type_chidg,             only: chidg_t
+    use type_meshdata,          only: meshdata_t
+    use type_bc,                only: bc_t
+    use mod_bc,                 only: create_bc
+    use mod_test_utilities,     only: create_mesh_file
+    use mod_file_utilities,     only: delete_file
+    use mod_spatial,            only: update_space
+    use mod_time,               only: time_manager_global
+    use type_chidg_vector,      only: chidg_vector_t
+    use mod_string,             only: string_t
+   
+    use mod_equations,          only: equation_builder_factory
+    use type_equation_builder,  only: equation_builder_t
+    use type_equation_set,      only: equation_set_t
+    
+    use type_time_integrator,   only: time_integrator_t
+    use type_system_assembler,  only: system_assembler_t
+    use type_harmonic_balance,  only: harmonic_balance_t,assemble_harmonic_balance_t
+ 
+    implicit none
+
+
+
+    !>
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/7/2017
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------
+    type, extends(equation_builder_t), public   :: test_blank_equation_set_builder_t
+
+
+    contains
+
+        procedure   :: init => init_builder
+        procedure   :: build
+
+
+    end type test_blank_equation_set_builder_t
+    !*********************************************************************************************
+
+
+
+contains
+
+
+
+    !>
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/7/2017
+    !!
+    !---------------------------------------------------------------------------------------------
+    subroutine init_builder(self)
+        class(test_blank_equation_set_builder_t), intent(inout) :: self
+
+        call self%set_name("Test Blank Equation Set")
+
+
+    end subroutine init_builder
+    !*********************************************************************************************
+
+
+
+    !>
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/7/2017
+    !!
+    !---------------------------------------------------------------------------------------------
+    function build(self,blueprint) result(test_blank_eqn)
+        class(test_blank_equation_set_builder_t), intent(in)    :: self
+        character(*),                             intent(in)    :: blueprint
+
+        type(equation_set_t)            :: test_blank_eqn
+
+
+        !
+        ! Set equation set name
+        !
+        call test_blank_eqn%set_name("Test Blank Equation Set")
+
+
+    end function build
+    !*********************************************************************************************
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------------
+    @Test
+    subroutine test__harmonic_balance
+        type(test_blank_equation_set_builder_t) :: builder_test_blank_equation_set
+        type(assemble_harmonic_balance_t)       :: assemble_HB
+        type(chidg_t)                           :: chidg
+        type(meshdata_t),   allocatable         :: meshdata(:)
+        class(bc_t),        allocatable         :: bc
+        type(chidg_vector_t)                    :: q_temp, rhs_temp
+        type(string_t)                          :: eqnset(1)
+        integer(ik)                             :: spacedim, nterms_s, ielem, itime, ierr
+        real(rk),           dimension(8)        :: vals, vref_a, vref_b
+        real(rk),           dimension(8)        :: ref_1, ref_2, ref_3, ref_4, ref_5,  &
+                                                   ref_6, ref_7, ref_8, ref_9, ref_10, &
+                                                   ref_11, ref_12, ref_13, ref_14, ref_15
+        real(rk)                                :: tol
+        character(:),       allocatable         :: filename
+
+
+        !
+        ! Initialize and register equation set builder
+        !
+        call builder_test_blank_equation_set%init()
+        call equation_builder_factory%register(builder_test_blank_equation_set)
+
+
+        !
+        ! Define input data
+        !
+        tol             = 1.e-13_rk
+        spacedim        = 3
+        nterms_s        = 8
+        IO_DESTINATION  = 'file'
+        time_integrator = 'harmonic_balance'
+        frequencies     = ZERO
+        frequencies(1)  = 2.0_rk*PI
+
+
+        !
+        ! Initialize ChiDG
+        ! Also initializes time_manager
+        !
+        call chidg%start_up('core')
+        call chidg%set('Solution Order', integer_input=2)
+        call chidg%set('Time Integrator', algorithm = time_integrator)
+
+        
+        !
+        ! Set equation set string
+        !
+        call eqnset(1)%set("Test Blank Equation Set")
+
+
+        !
+        ! Create grid file
+        !
+        filename = "D1_2x2x2_singleblock.h5"
+        call create_mesh_file("D1 NxNxN", filename, equation_sets = eqnset, &
+                                                    nelem_xi = 2, nelem_eta = 2, nelem_zeta = 2)
+
+
+        !
+        ! Get grid points
+        !
+        call chidg%read_grid(filename,spacedim)
+        call chidg%read_boundaryconditions(filename)
+
+
+
+        !
+        ! Initialize ChiDG interfaces
+        !
+        call chidg%init('domains')
+        call chidg%init('communication')
+        call chidg%init('solvers')
+
+        call chidg%time_integrator%init(chidg%data)
+        
+        
+        associate ( q   => chidg%data%sdata%q, &
+                    rhs => chidg%data%sdata%rhs)
+
+            !
+            ! Set residual vector
+            !
+            vals  = 0.3_rk
+            call rhs%dom(1)%vecs(3)%settime(1,vals)
+
+            vals = 0.1_rk
+            call rhs%dom(1)%vecs(1)%settime(2,vals)
+
+            vals = 0.2_rk
+            call rhs%dom(1)%vecs(7)%settime(2,vals)
+
+            vals = 0.4_rk
+            call rhs%dom(1)%vecs(6)%settime(3,vals)
+             
+
+            !
+            ! Set solution vector
+            !
+            vals = 0.8_rk
+            call q%dom(1)%vecs(2)%settime(1,vals)
+
+            vals = 0.6_rk
+            call q%dom(1)%vecs(8)%settime(1,vals)
+
+            vals = 0.7_rk
+            call q%dom(1)%vecs(1)%settime(2,vals)
+
+            vals = 0.9_rk
+            call q%dom(1)%vecs(5)%settime(3,vals)
+
+
+            !
+            ! Perform harmonic balance assemble operation
+            ! THIS IS BEING TESTED
+            !
+            call assemble_HB%assemble(chidg%data)
+
+
+            !
+            ! Compute reference values
+            !
+            associate ( D => chidg%data%time_manager%D, &
+                        mesh => chidg%data%mesh(1) )
+                
+                vref_a = 0.7_rk
+                ref_1 = D(1,2)*matmul(mesh%elems(1)%mass,vref_a)
+                vref_a = 0.1_rk; vref_b = 0.7_rk
+                ref_2 = vref_a + D(2,2)*matmul(mesh%elems(1)%mass,vref_b) 
+                vref_a = 0.7_rk
+                ref_3 = D(3,2)*matmul(mesh%elems(1)%mass,vref_a)
+                vref_a = 0.8_rk 
+                ref_4 = D(1,1)*matmul(mesh%elems(2)%mass,vref_a)
+                ref_5 = D(2,1)*matmul(mesh%elems(2)%mass,vref_a)
+                ref_6 = D(3,1)*matmul(mesh%elems(2)%mass,vref_a)
+                vref_a = 0.3_rk
+                ref_7 = vref_a
+                vref_a = 0.9_rk 
+                ref_8 = D(1,3)*matmul(mesh%elems(5)%mass,vref_a)
+                ref_9 = D(2,3)*matmul(mesh%elems(5)%mass,vref_a) 
+                ref_10 = D(3,3)*matmul(mesh%elems(5)%mass,vref_a)
+                vref_a = 0.4_rk
+                ref_11 = vref_a
+                vref_a = 0.2_rk
+                ref_12 = vref_a
+                vref_a = 0.6_rk 
+                ref_13 = D(1,1)*matmul(mesh%elems(8)%mass,vref_a)
+                ref_14 = D(2,1)*matmul(mesh%elems(8)%mass,vref_a) 
+                ref_15 = D(3,1)*matmul(mesh%elems(8)%mass,vref_a)
+
+
+            end associate
+
+
+            !
+            ! Test assemble operation
+            !
+            @assertEqual(ref_1,rhs%dom(1)%vecs(1)%gettime(1),tol)
+            @assertEqual(ref_2,rhs%dom(1)%vecs(1)%gettime(2),tol)
+            @assertEqual(ref_3,rhs%dom(1)%vecs(1)%gettime(3),tol)
+            @assertEqual(ref_4,rhs%dom(1)%vecs(2)%gettime(1),tol)
+            @assertEqual(ref_5,rhs%dom(1)%vecs(2)%gettime(2),tol)
+            @assertEqual(ref_6,rhs%dom(1)%vecs(2)%gettime(3),tol)
+            @assertEqual(ref_7,rhs%dom(1)%vecs(3)%gettime(1),tol)
+            @assertEqual(ref_8,rhs%dom(1)%vecs(5)%gettime(1),tol)
+            @assertEqual(ref_9,rhs%dom(1)%vecs(5)%gettime(2),tol)
+            @assertEqual(ref_10,rhs%dom(1)%vecs(5)%gettime(3),tol)
+            @assertEqual(ref_11,rhs%dom(1)%vecs(6)%gettime(3),tol)
+            @assertEqual(ref_12,rhs%dom(1)%vecs(7)%gettime(2),tol)
+            @assertEqual(ref_13,rhs%dom(1)%vecs(8)%gettime(1),tol)
+            @assertEqual(ref_14,rhs%dom(1)%vecs(8)%gettime(2),tol)
+            @assertEqual(ref_15,rhs%dom(1)%vecs(8)%gettime(3),tol)
+
+
+        end associate
+
+
+        call chidg%shut_down('core')
+
+        !
+        ! Reset io variables so that they can be used by other tests
+        !
+        time_integrator = 'steady'
+        
+        call delete_file(filename)
+
+
+    end subroutine test__harmonic_balance
+    !*********************************************************************************************
+
+end module test__harmonic_balance_mod
+!***********************************************************************************************

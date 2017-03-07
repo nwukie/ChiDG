@@ -59,8 +59,8 @@ program driver
         ! Initialize ChiDG environment
         !
         call chidg%start_up('mpi')
-        call chidg%start_up('core')
         call chidg%start_up('namelist')
+        call chidg%start_up('core')
 
 
 
@@ -150,10 +150,10 @@ program driver
             call constant%set_option('val',250000.0_rk)
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,5)
 
-!            ! rho_nutilde
-!            call constant%set_option('val',0.00003_rk)
-!            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,6)
-!
+            ! rho_nutilde
+            call constant%set_option('val',0.00003_rk)
+            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,6)
+
 !            ! eps
 !            call constant%set_option('val',0.000001_rk)
 !            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,7)

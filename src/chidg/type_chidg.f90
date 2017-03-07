@@ -161,7 +161,6 @@ contains
             !
             case ('core')
 
-                call self%data%time_manager%init()
 
                 ! Default communicator for 'communication' is MPI_COMM_WORLD
                 if ( present(comm) ) then
@@ -193,6 +192,7 @@ contains
                     if (ierr /= 0) call AllocationError
                 end if
 
+                call self%data%time_manager%init()
 
             !
             ! Start up Namelist

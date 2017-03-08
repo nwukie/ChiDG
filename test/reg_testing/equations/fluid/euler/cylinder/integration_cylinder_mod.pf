@@ -396,11 +396,28 @@ contains
     subroutine tearDown(this)
         class(cylinder),  intent(inout)   :: this
 
+        !
         ! Close ChiDG
+        !
         call this%chidg%shut_down('core')
 
-        call delete_file(this%gridfile)
-        call delete_file('cylinder_solution.h5')
+
+        !
+        ! Delete grid file
+        !
+        if (IRANK == GLOBAL_MASTER) then
+            call delete_file(this%gridfile)
+        end if
+
+        
+        !
+        ! Only delete solution file after 
+        !
+        if ( (this%getProcessRank() == GLOBAL_MASTER)   .and. &
+             (this%getNumProcessesRequested() == 10)    .and. &
+             (this%order == 4) ) then
+            call delete_file('cylinder_solution.h5')
+        end if
 
     end subroutine tearDown
     !*******************************************************************************************

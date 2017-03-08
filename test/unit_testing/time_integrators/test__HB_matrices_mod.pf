@@ -262,15 +262,24 @@ contains
     subroutine test__HB_matrices(this)
         class(HB_matrices), intent(inout)       :: this
 
-        real(rk), allocatable   :: invE(:,:), dinvE(:,:), D(:,:)
-        real(rk)                :: primary_tol = 0.00001, secondary_tol = 0.0000001 ! primary_tol is used to compare the test matrices with the computed matrices
+        real(rk),   allocatable    :: invE(:,:) 
+        real(rk),   allocatable    :: dinvE(:,:)
+        real(rk),   allocatable    :: D(:,:)
+        real(rk)                   :: primary_tol = 0.00001, secondary_tol = 0.0000001 ! primary_tol is used to compare the test matrices with the computed matrices
                                                                             ! secondary_tol is used to compare the diagonal elements of D with zero
         integer(ik)     :: i,j,ierr
 
+
+        !
+        ! Allocate the HB matrices
+        !
         if (allocated(invE) .and. allocated(dinvE) .and. allocated(D)) deallocate(invE,dinvE,D)
-        allocate(invE(this%ntime,this%ntime), dinvE(this%ntime,this%ntime), D(this%ntime,this%ntime))
+        allocate(invE(this%ntime,this%ntime), dinvE(this%ntime,this%ntime))
         if (ierr /= 0) call AllocationError
 
+        !
+        ! Compute HB matrices. THIS IS BEING TESTED
+        !
         call calc_inv_E(this%nfreq, this%ntime, this%freq, this%time, invE)
         call calc_diff_inv_E(this%nfreq, this%ntime, this%freq, this%time, dinvE)
         call calc_pseudo_spectral_operator(this%nfreq, this%ntime, this%freq, this%time, D)

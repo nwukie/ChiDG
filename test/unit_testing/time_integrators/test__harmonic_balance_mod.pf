@@ -1,4 +1,5 @@
-!
+!  Test if the temporal components of the residual are computed correctly
+!  in the harmonic balance method
 !
 !
 !  @author Mayank Sharma 
@@ -10,7 +11,7 @@ module test__harmonic_balance_mod
     use pfunit_mod
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO,ONE,TWO,PI,IO_DESTINATION
-    use mod_io,                 only: time_integrator,frequencies
+    use mod_io                 
     use type_chidg,             only: chidg_t
     use type_meshdata,          only: meshdata_t
     use type_bc,                only: bc_t
@@ -40,7 +41,7 @@ module test__harmonic_balance_mod
 
 
 
-    !>
+    !>  Define an operator for the equation set used in this test
     !!
     !!  @author Mayank Sharma
     !!  @date   3/7/2017
@@ -60,11 +61,11 @@ module test__harmonic_balance_mod
 
 
 
-    !>
+    !>  Define a new equation set builder for this test. The equation set is 'blank' because
+    !!  we want to set the spatial residual terms ourselves and not have the code compute them
     !!
     !!  @author Mayank Sharma
     !!  @date   3/7/2017
-    !!
     !!
     !---------------------------------------------------------------------------------------------
     type, extends(equation_builder_t), public   :: test_blank_equation_set_builder_t
@@ -85,7 +86,8 @@ contains
 
 
 
-    !>
+    !>  Initialize operator. The operator type doesn't matter here since we aren't computing
+    !!  here
     !!
     !!  @author Mayank Sharma
     !!  @date   3/7/2017
@@ -109,7 +111,7 @@ contains
 
 
 
-    !>
+    !>  Compute operator terms. NOTHING is being done here
     !!
     !!  @author Mayank Sharma
     !!  @date   3/7/2017
@@ -126,7 +128,7 @@ contains
 
 
 
-    !>
+    !>  Initialize equation set builder
     !!
     !!  @author Mayank Sharma
     !!  @date   3/7/2017
@@ -143,7 +145,7 @@ contains
 
 
 
-    !>
+    !>  Implement the equation set builder definition
     !!
     !!  @author Mayank Sharma
     !!  @date   3/7/2017
@@ -172,10 +174,10 @@ contains
 
 
 
-    !>
+    !>  Test the temporal residual contributions from the harmonic balance method
     !!
-    !!
-    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/7/2017
     !!
     !---------------------------------------------------------------------------------------------
     @Test
@@ -214,13 +216,16 @@ contains
         !
         ! Define input data
         !
-        tol             = 1.e-13_rk
-        spacedim        = 3
-        nterms_s        = 8
-        IO_DESTINATION  = 'file'
-        time_integrator = 'harmonic_balance'
-        frequencies     = ZERO
-        frequencies(1)  = 2.0_rk*PI
+        tol              = 1.e-13_rk
+        spacedim         = 3
+        nterms_s         = 8
+        IO_DESTINATION   = 'file'
+        time_integrator  = 'harmonic_balance'
+        nonlinear_solver = 'newton'
+        linear_solver    = 'fgmres'
+        preconditioner   = 'ILU0'
+        frequencies      = ZERO
+        frequencies(1)   = 2.0_rk*PI
 
 
         !
@@ -228,8 +233,25 @@ contains
         ! Also initializes time_manager
         !
         call chidg%start_up('core')
-        call chidg%set('Solution Order', integer_input=2)
-        call chidg%set('Time Integrator', algorithm = time_integrator)
+
+        
+!        !
+!        ! Set linear and nonlinear solver options
+!        !
+!        call loptions%set("tol",1.e-15_rk)
+!        call noptions%set("tol",5.e-11_rk)
+!        call noptions%set("cfl0",1.0_rk)
+!        call noptions%set("nsteps",100)
+
+
+        !
+        ! Set chidg components
+        !
+        call chidg%set('Solution Order',   integer_input=2)
+        call chidg%set('Time Integrator',  algorithm = time_integrator)
+!        call chidg%set('Nonlinear Solver', algorithm = nonlinear_solver, options = noptions)
+!        call chidg%set('Linear Solver',    algorithm = linear_solver,    options = loptions)
+!        call chidg%set('Preconditioner',   algorithm = preconditioner)
 
         
         !
@@ -253,22 +275,24 @@ contains
         call chidg%read_boundaryconditions(filename)
 
 
-
         !
         ! Initialize ChiDG interfaces
+        ! TODO: Initialize all interfaces
         !
+!        call chidg%init('all')
         call chidg%init('domains')
+        call chidg%init('bc')
         call chidg%init('communication')
         call chidg%init('solvers')
 
         call chidg%time_integrator%init(chidg%data)
         
-        
+
         associate ( q   => chidg%data%sdata%q, &
                     rhs => chidg%data%sdata%rhs)
 
             !
-            ! Set residual vector
+            ! Set spatial residual contributions
             !
             vals  = 0.3_rk
             call rhs%dom(1)%vecs(3)%settime(1,vals)
@@ -377,5 +401,5 @@ contains
     end subroutine test__harmonic_balance
     !*********************************************************************************************
 
+
 end module test__harmonic_balance_mod
-!***********************************************************************************************

@@ -142,7 +142,7 @@ contains
         !
         density_nutilde_bc = density_nutilde_m
         where(inflow)
-            density_nutilde_bc = density_m * (nutilde_nu * 1.e-5_rk)
+            density_nutilde_bc = density_m * (nutilde_nu * 0.00018_rk)
         end where
 
 

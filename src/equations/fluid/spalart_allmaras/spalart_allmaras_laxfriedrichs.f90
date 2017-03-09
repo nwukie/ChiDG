@@ -2,6 +2,7 @@ module spalart_allmaras_laxfriedrichs
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO,ONE,TWO,HALF
+    use mod_fluid,              only: omega
     use type_operator,          only: operator_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
@@ -79,7 +80,8 @@ contains
 
         real(rk),   dimension(:), allocatable   ::  &
             norm_1,  norm_2,  norm_3,               &
-            unorm_1, unorm_2, unorm_3
+            unorm_1, unorm_2, unorm_3, r
+
 
 
         !
@@ -123,6 +125,14 @@ contains
         u_p = mom1_p*invdensity_p
         v_p = mom2_p*invdensity_p
         w_p = mom3_p*invdensity_p
+
+        
+        !
+        ! Compute transport velocities
+        !
+        r = worker%coordinate('1','boundary') 
+        v_m = v_m - omega*r
+        v_p = v_p - omega*r
 
 
         !

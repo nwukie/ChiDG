@@ -1,5 +1,6 @@
 module euler_bc_operator
     use mod_kinds,          only: ik, rk
+    use mod_fluid,          only: omega
     use type_operator,      only: operator_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
@@ -90,11 +91,11 @@ contains
         ! data at quadrature nodes
         type(AD_D), allocatable, dimension(:)   ::              &
             density_bc, mom1_bc, mom2_bc, mom3_bc, energy_bc,   &
-            u_bc, v_bc, w_bc, H_bc, p_bc,                       &
+            u_bc, v_bc, w_bc, H_bc, p_bc, u_t, v_t, w_t,        &
             flux_1, flux_2, flux_3, integrand
 
         real(rk),   allocatable, dimension(:)   ::  &
-            norm_1, norm_2, norm_3
+            norm_1, norm_2, norm_3, r
             
         real(rk) :: gam_bc
 
@@ -151,13 +152,21 @@ contains
 
 
 
+        !
+        ! Compute transport velocity
+        !
+        r = worker%coordinate('1','boundary') 
+        u_t = u_bc
+        v_t = v_bc - omega*r
+        w_t = w_bc
+
 
         !=================================================
         ! mass flux
         !=================================================
-        flux_1 = (density_bc * u_bc)
-        flux_2 = (density_bc * v_bc)
-        flux_3 = (density_bc * w_bc)
+        flux_1 = (density_bc * u_t )
+        flux_2 = (density_bc * v_t )
+        flux_3 = (density_bc * w_t )
 
         integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
 
@@ -167,9 +176,9 @@ contains
         !=================================================
         ! momentum-1 flux
         !=================================================
-        flux_1 = (density_bc * u_bc * u_bc) + p_bc
-        flux_2 = (density_bc * u_bc * v_bc)
-        flux_3 = (density_bc * u_bc * w_bc)
+        flux_1 = (density_bc * u_bc * u_t) + p_bc
+        flux_2 = (density_bc * u_bc * v_t)
+        flux_3 = (density_bc * u_bc * w_t)
 
         integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
 
@@ -178,9 +187,9 @@ contains
         !=================================================
         ! momentum-2 flux
         !=================================================
-        flux_1 = (density_bc * v_bc * u_bc)
-        flux_2 = (density_bc * v_bc * v_bc) + p_bc
-        flux_3 = (density_bc * v_bc * w_bc)
+        flux_1 = (density_bc * v_bc * u_t)
+        flux_2 = (density_bc * v_bc * v_t) + p_bc
+        flux_3 = (density_bc * v_bc * w_t)
 
         integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
 
@@ -196,9 +205,9 @@ contains
         !=================================================
         ! momentum-3 flux
         !=================================================
-        flux_1 = (density_bc * w_bc * u_bc)
-        flux_2 = (density_bc * w_bc * v_bc)
-        flux_3 = (density_bc * w_bc * w_bc) + p_bc
+        flux_1 = (density_bc * w_bc * u_t)
+        flux_2 = (density_bc * w_bc * v_t)
+        flux_3 = (density_bc * w_bc * w_t) + p_bc
 
         integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
 
@@ -208,9 +217,9 @@ contains
         !=================================================
         ! energy flux
         !=================================================
-        flux_1 = (density_bc * u_bc * H_bc)
-        flux_2 = (density_bc * v_bc * H_bc)
-        flux_3 = (density_bc * w_bc * H_bc)
+        flux_1 = (density_bc * H_bc * u_t)
+        flux_2 = (density_bc * H_bc * v_t)  +  r*omega*p_bc
+        flux_3 = (density_bc * H_bc * w_t)
 
         integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
 

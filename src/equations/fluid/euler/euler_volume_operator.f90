@@ -1,6 +1,7 @@
 module euler_volume_operator
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ONE,TWO,HALF
+    use mod_fluid,              only: omega
 
     use type_operator,          only: operator_t
     use type_properties,        only: properties_t
@@ -78,9 +79,11 @@ contains
 
         type(AD_D), allocatable, dimension(:) ::    &
             density, mom1, mom2, mom3, energy,      &
+            u, v, w, u_t, v_t, w_t,                 &
             invdensity, enthalpy, p,                &
             flux_1, flux_2, flux_3
 
+        real(rk),   allocatable, dimension(:)   :: r
 
 
         !
@@ -103,8 +106,23 @@ contains
 
 
 
-        invdensity = ONE/density
 
+        !
+        ! Compute velocity
+        !
+        invdensity = ONE/density
+        u = mom1*invdensity
+        v = mom2*invdensity
+        w = mom3*invdensity
+
+
+        !
+        ! Compute transport velocity
+        !
+        r = worker%coordinate('1','volume')
+        u_t = u
+        v_t = v - omega*r
+        w_t = w
 
 
         !
@@ -117,9 +135,13 @@ contains
         !=================================================
         ! mass flux
         !=================================================
-        flux_1 = mom1
-        flux_2 = mom2
-        flux_3 = mom3
+!        flux_1 = mom1
+!        flux_2 = mom2
+!        flux_3 = mom3
+
+        flux_1 = (density * u_t)
+        flux_2 = (density * v_t)
+        flux_3 = (density * w_t)
 
         call worker%integrate_volume('Density',flux_1,flux_2,flux_3)
 
@@ -127,9 +149,13 @@ contains
         !=================================================
         ! momentum-1 flux
         !=================================================
-        flux_1 = (mom1 * mom1) * invdensity  +  p
-        flux_2 = (mom1 * mom2) * invdensity
-        flux_3 = (mom1 * mom3) * invdensity
+!        flux_1 = (mom1 * mom1) * invdensity  +  p
+!        flux_2 = (mom1 * mom2) * invdensity
+!        flux_3 = (mom1 * mom3) * invdensity
+
+        flux_1 = (density * u * u_t)  +  p
+        flux_2 = (density * u * v_t)
+        flux_3 = (density * u * w_t)
 
         call worker%integrate_volume('Momentum-1',flux_1,flux_2,flux_3)
 
@@ -137,9 +163,13 @@ contains
         !=================================================
         ! momentum-2 flux
         !=================================================
-        flux_1 = (mom2 * mom1) * invdensity
-        flux_2 = (mom2 * mom2) * invdensity  +  p
-        flux_3 = (mom2 * mom3) * invdensity
+!        flux_1 = (mom2 * mom1) * invdensity
+!        flux_2 = (mom2 * mom2) * invdensity  +  p
+!        flux_3 = (mom2 * mom3) * invdensity
+
+        flux_1 = (density * v * u_t)
+        flux_2 = (density * v * v_t)  +  p
+        flux_3 = (density * v * w_t)
 
         !
         ! Convert to tangential to angular momentum flux
@@ -156,9 +186,13 @@ contains
         !=================================================
         ! momentum-3 flux
         !=================================================
-        flux_1 = (mom3 * mom1) * invdensity
-        flux_2 = (mom3 * mom2) * invdensity
-        flux_3 = (mom3 * mom3) * invdensity  +  p
+!        flux_1 = (mom3 * mom1) * invdensity
+!        flux_2 = (mom3 * mom2) * invdensity
+!        flux_3 = (mom3 * mom3) * invdensity  +  p
+
+        flux_1 = (density * w * u_t)
+        flux_2 = (density * w * v_t)
+        flux_3 = (density * w * w_t)  +  p
 
         call worker%integrate_volume('Momentum-3',flux_1,flux_2,flux_3)
 
@@ -166,9 +200,13 @@ contains
         !=================================================
         ! energy flux
         !=================================================
-        flux_1 = enthalpy * mom1
-        flux_2 = enthalpy * mom2
-        flux_3 = enthalpy * mom3
+!        flux_1 = enthalpy * mom1
+!        flux_2 = enthalpy * mom2
+!        flux_3 = enthalpy * mom3
+
+        flux_1 = (density * enthalpy * u_t)
+        flux_2 = (density * enthalpy * v_t)  +  r*omega*p
+        flux_3 = (density * enthalpy * w_t)
 
         call worker%integrate_volume('Energy',flux_1,flux_2,flux_3)
 

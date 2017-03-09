@@ -8,6 +8,7 @@ add_lib_sources(
                 eqn_navier_stokes.f90
                 eqn_navier_stokes_av.f90
                 eqn_laminar_navier_stokes.f90
+                mod_fluid.f90
                 type_fluid_pseudo_timestep.f90
                 type_ideal_gas.f90
                 type_shear_stress.f90

@@ -1,6 +1,7 @@
 module euler_roe_operator
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO,ONE,TWO,HALF
+    use mod_fluid,              only: omega
     use type_operator,          only: operator_t
     use type_properties,        only: properties_t
     use type_chidg_worker,      only: chidg_worker_t
@@ -103,7 +104,7 @@ contains
             sqrt_rhom, sqrt_rhop, sqrt_rhom_plus_rhop, ctil2
 
         real(rk), allocatable, dimension(:) :: &
-            norm_1, norm_2, norm_3, unorm_1, unorm_2, unorm_3
+            norm_1, norm_2, norm_3, unorm_1, unorm_2, unorm_3, r
 
         real(rk) :: eps, gam_m, gam_p
 
@@ -176,11 +177,22 @@ contains
         u_m = mom1_m*invdensity_m
         v_m = mom2_m*invdensity_m
         w_m = mom3_m*invdensity_m
-        vmag_m = u_m*unorm_1 + v_m*unorm_2 + w_m*unorm_3
 
         u_p = mom1_p*invdensity_p
         v_p = mom2_p*invdensity_p
         w_p = mom3_p*invdensity_p
+
+
+        !
+        ! Compute transport velocities 
+        !
+        r = worker%coordinate('1','boundary') 
+        v_m = v_m - omega*r
+        v_p = v_p - omega*r
+
+
+
+        vmag_m = u_m*unorm_1 + v_m*unorm_2 + w_m*unorm_3
         vmag_p = u_p*unorm_1 + v_p*unorm_2 + w_p*unorm_3
 
 

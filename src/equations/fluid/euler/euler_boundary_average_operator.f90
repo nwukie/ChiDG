@@ -1,6 +1,7 @@
 module euler_boundary_average_operator
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ONE, TWO, HALF
+    use mod_fluid,              only: omega
     use type_operator,          only: operator_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
@@ -94,6 +95,10 @@ contains
             mom1_m,     mom1_p,                     &
             mom2_m,     mom2_p,                     &
             mom3_m,     mom3_p,                     &
+            u_m, v_m, w_m,                          &
+            u_p, v_p, w_p,                          &
+            u_t_m, v_t_m, w_t_m,                    &
+            u_t_p, v_t_p, w_t_p,                    &
             energy_m,   energy_p,                   &
             enthalpy_m, enthalpy_p,                 &
             p_m,        p_p,                        &
@@ -104,7 +109,8 @@ contains
             integrand
 
         real(rk), allocatable, dimension(:) ::      &
-            norm_1, norm_2, norm_3
+            norm_1, norm_2, norm_3, r
+
 
 
 
@@ -142,6 +148,35 @@ contains
 
 
 
+        !
+        ! Compute velocities
+        !
+        u_m = mom1_m/density_m
+        v_m = mom2_m/density_m
+        w_m = mom3_m/density_m
+
+        u_p = mom1_p/density_p
+        v_p = mom2_p/density_p
+        w_p = mom3_p/density_p
+
+
+        !
+        ! Compute transport velocities
+        !
+        r = worker%coordinate('1','boundary') 
+
+        u_t_m = u_m
+        v_t_m = v_m - omega*r
+        w_t_m = w_m
+
+        u_t_p = u_p
+        v_t_p = v_p - omega*r
+        w_t_p = w_p
+
+
+        !
+        ! Get normal vectors
+        !
         norm_1 = worker%normal(1)
         norm_2 = worker%normal(2)
         norm_3 = worker%normal(3)
@@ -162,13 +197,21 @@ contains
         !=================================================
         ! mass flux
         !=================================================
-        flux_1_m = mom1_m
-        flux_2_m = mom2_m
-        flux_3_m = mom3_m
+!        flux_1_m = mom1_m
+!        flux_2_m = mom2_m
+!        flux_3_m = mom3_m
+!
+!        flux_1_p = mom1_p
+!        flux_2_p = mom2_p
+!        flux_3_p = mom3_p
 
-        flux_1_p = mom1_p
-        flux_2_p = mom2_p
-        flux_3_p = mom3_p
+        flux_1_m = density_m * u_t_m
+        flux_2_m = density_m * v_t_m
+        flux_3_m = density_m * w_t_m
+
+        flux_1_p = density_p * u_t_p
+        flux_2_p = density_p * v_t_p
+        flux_3_p = density_p * w_t_p
 
         flux_1 = (flux_1_m + flux_1_p)
         flux_2 = (flux_2_m + flux_2_p)
@@ -183,13 +226,21 @@ contains
         !=================================================
         ! momentum-1 flux
         !=================================================
-        flux_1_m = (mom1_m*mom1_m)*invdensity_m + p_m
-        flux_2_m = (mom1_m*mom2_m)*invdensity_m
-        flux_3_m = (mom1_m*mom3_m)*invdensity_m
+!        flux_1_m = (mom1_m*mom1_m)*invdensity_m + p_m
+!        flux_2_m = (mom1_m*mom2_m)*invdensity_m
+!        flux_3_m = (mom1_m*mom3_m)*invdensity_m
+!
+!        flux_1_p = (mom1_p*mom1_p)*invdensity_p + p_p
+!        flux_2_p = (mom1_p*mom2_p)*invdensity_p
+!        flux_3_p = (mom1_p*mom3_p)*invdensity_p
 
-        flux_1_p = (mom1_p*mom1_p)*invdensity_p + p_p
-        flux_2_p = (mom1_p*mom2_p)*invdensity_p
-        flux_3_p = (mom1_p*mom3_p)*invdensity_p
+        flux_1_m = (density_m * u_m * u_t_m) + p_m
+        flux_2_m = (density_m * u_m * v_t_m)
+        flux_3_m = (density_m * u_m * w_t_m)
+
+        flux_1_p = (density_p * u_p * u_t_p) + p_p
+        flux_2_p = (density_p * u_p * v_t_p)
+        flux_3_p = (density_p * u_p * w_t_p)
 
         flux_1 = (flux_1_m + flux_1_p)
         flux_2 = (flux_2_m + flux_2_p)
@@ -205,13 +256,23 @@ contains
         !=================================================
         ! momentum-2 flux
         !=================================================
-        flux_1_m = (mom2_m*mom1_m)*invdensity_m
-        flux_2_m = (mom2_m*mom2_m)*invdensity_m + p_m
-        flux_3_m = (mom2_m*mom3_m)*invdensity_m
+!        flux_1_m = (mom2_m*mom1_m)*invdensity_m
+!        flux_2_m = (mom2_m*mom2_m)*invdensity_m + p_m
+!        flux_3_m = (mom2_m*mom3_m)*invdensity_m
+!
+!        flux_1_p = (mom2_p*mom1_p)*invdensity_p
+!        flux_2_p = (mom2_p*mom2_p)*invdensity_p + p_p
+!        flux_3_p = (mom2_p*mom3_p)*invdensity_p
 
-        flux_1_p = (mom2_p*mom1_p)*invdensity_p
-        flux_2_p = (mom2_p*mom2_p)*invdensity_p + p_p
-        flux_3_p = (mom2_p*mom3_p)*invdensity_p
+        flux_1_m = (density_m * v_m * u_t_m)
+        flux_2_m = (density_m * v_m * v_t_m) + p_m
+        flux_3_m = (density_m * v_m * w_t_m)
+
+        flux_1_p = (density_p * v_p * u_t_p)
+        flux_2_p = (density_p * v_p * v_t_p) + p_p
+        flux_3_p = (density_p * v_p * w_t_p)
+
+
 
         flux_1 = (flux_1_m + flux_1_p)
         flux_2 = (flux_2_m + flux_2_p)
@@ -237,13 +298,22 @@ contains
         !=================================================
         ! momentum-3 flux
         !=================================================
-        flux_1_m = (mom3_m*mom1_m)*invdensity_m
-        flux_2_m = (mom3_m*mom2_m)*invdensity_m
-        flux_3_m = (mom3_m*mom3_m)*invdensity_m + p_m
+!        flux_1_m = (mom3_m*mom1_m)*invdensity_m
+!        flux_2_m = (mom3_m*mom2_m)*invdensity_m
+!        flux_3_m = (mom3_m*mom3_m)*invdensity_m + p_m
+!
+!        flux_1_p = (mom3_p*mom1_p)*invdensity_p
+!        flux_2_p = (mom3_p*mom2_p)*invdensity_p
+!        flux_3_p = (mom3_p*mom3_p)*invdensity_p + p_p
 
-        flux_1_p = (mom3_p*mom1_p)*invdensity_p
-        flux_2_p = (mom3_p*mom2_p)*invdensity_p
-        flux_3_p = (mom3_p*mom3_p)*invdensity_p + p_p
+        flux_1_m = (density_m * w_m * u_t_m)
+        flux_2_m = (density_m * w_m * v_t_m)
+        flux_3_m = (density_m * w_m * w_t_m) + p_m
+
+        flux_1_p = (density_p * w_p * u_t_p)
+        flux_2_p = (density_p * w_p * v_t_p)
+        flux_3_p = (density_p * w_p * w_t_p) + p_p
+
 
         flux_1 = (flux_1_m + flux_1_p)
         flux_2 = (flux_2_m + flux_2_p)
@@ -259,13 +329,23 @@ contains
         !=================================================
         ! energy flux
         !=================================================
-        flux_1_m = enthalpy_m * mom1_m
-        flux_2_m = enthalpy_m * mom2_m
-        flux_3_m = enthalpy_m * mom3_m
+!        flux_1_m = enthalpy_m * mom1_m
+!        flux_2_m = enthalpy_m * mom2_m
+!        flux_3_m = enthalpy_m * mom3_m
+!
+!        flux_1_p = enthalpy_p * mom1_p
+!        flux_2_p = enthalpy_p * mom2_p
+!        flux_3_p = enthalpy_p * mom3_p
 
-        flux_1_p = enthalpy_p * mom1_p
-        flux_2_p = enthalpy_p * mom2_p
-        flux_3_p = enthalpy_p * mom3_p
+        flux_1_m = (density_m * enthalpy_m * u_t_m)
+        flux_2_m = (density_m * enthalpy_m * v_t_m)  +  r*omega*p_m
+        flux_3_m = (density_m * enthalpy_m * w_t_m)
+
+        flux_1_p = (density_p * enthalpy_p * u_t_p)
+        flux_2_p = (density_p * enthalpy_p * v_t_p)  +  r*omega*p_p
+        flux_3_p = (density_p * enthalpy_p * w_t_p)
+        
+
 
         flux_1 = (flux_1_m + flux_1_p)
         flux_2 = (flux_2_m + flux_2_p)

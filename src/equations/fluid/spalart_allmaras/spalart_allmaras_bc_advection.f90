@@ -2,6 +2,7 @@ module spalart_allmaras_bc_advection
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO,ONE,TWO,HALF
+    use mod_fluid,              only: omega
     use type_operator,          only: operator_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
@@ -74,7 +75,8 @@ contains
             invdensity, u, v, w, flux_1, flux_2, flux_3, integrand
 
         real(rk),   dimension(:), allocatable   ::  &
-            norm_1, norm_2, norm_3, unorm_1, unorm_2, unorm_3
+            norm_1, norm_2, norm_3, unorm_1, unorm_2, unorm_3, r
+
 
 
         !
@@ -103,6 +105,12 @@ contains
         v = mom2*invdensity
         w = mom3*invdensity
 
+
+        !
+        ! Compute transport velocity
+        !
+        r = worker%coordinate('1','boundary') 
+        v = v - omega*r
 
         !
         ! Get normal vector

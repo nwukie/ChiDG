@@ -7,7 +7,6 @@ module type_chidg
     use mod_bc,                     only: register_bcs
     use mod_function,               only: register_functions
     use mod_grid,                   only: initialize_grid
-    !use mod_io,                     only: read_input
     use mod_string,                 only: get_file_extension, string_t, get_file_prefix
 
     use type_chidg_data,            only: chidg_data_t

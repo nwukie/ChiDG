@@ -1183,9 +1183,7 @@ contains
 
         real(rk), dimension(:), allocatable :: norm_gq
 
-
         norm_gq = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%norm(:,direction)
-
 
     end function normal
     !***************************************************************************************

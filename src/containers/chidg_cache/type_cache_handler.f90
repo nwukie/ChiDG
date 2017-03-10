@@ -88,7 +88,16 @@ contains
         logical,                    intent(in)      :: differentiate
 
         integer(ik) :: idomain_l, ielement_l
+        logical     :: valid_indices
 
+        !
+        ! Check for valid indices
+        !
+        valid_indices = (worker%element_info%idomain_l /= 0) .and. &
+                        (worker%element_info%ielement_l /= 0) .and. &
+                        (worker%itime /= 0)
+
+        if (.not. valid_indices) call chidg_signal(FATAL,"cache_handler%update: Bad domain/element/time indices were detected during update.")
 
         !
         ! Resize cache
@@ -557,6 +566,7 @@ contains
             grad1_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad1',ME)
             grad2_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad2',ME)
             grad3_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad3',ME)
+
 
             ! Store gq data in cache
             field = worker%prop(idomain_l)%get_primary_field_name(ieqn)

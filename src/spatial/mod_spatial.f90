@@ -12,7 +12,6 @@ module mod_spatial
     use type_chidg_cache,       only: chidg_cache_t
     use type_cache_handler,     only: cache_handler_t
     use type_element_info,      only: element_info_t
-    use type_face_info,         only: face_info_t
     use type_timer,             only: timer_t
     implicit none
 
@@ -43,11 +42,9 @@ contains
         integer(ik)                 :: idom, ielem, iface, idiff, itime, ierr, &
                                        diff_min, diff_max
         type(timer_t)               :: timer, comm_timer, loop_timer
+        type(element_info_t)        :: elem_info
 
         type(chidg_worker_t)        :: worker
-        type(element_info_t)        :: elem_info
-        type(face_info_t)           :: face_info
-
         type(chidg_cache_t)         :: cache
         type(cache_handler_t)       :: cache_handler
 

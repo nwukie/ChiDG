@@ -505,6 +505,7 @@ contains
         ! Loop through each local element and call initialization for each face
         !
         do ielem = 1,self%nelem
+
             do iface = 1,NFACES
 
                 !
@@ -894,22 +895,31 @@ contains
 
         neighbor_status = NO_NEIGHBOR_FOUND
 
-        ! Get the indices of the corner nodes that correspond to the current face in an element connectivity list
+        !
+        ! Get the element-local node indices of the corner nodes that correspond 
+        ! to the current face in an element connectivity list
+        !
         mapping = self%elems(ielem_l)%connectivity%get_element_mapping()
         corner_one   = FACE_CORNERS(iface,1,mapping)
         corner_two   = FACE_CORNERS(iface,2,mapping)
         corner_three = FACE_CORNERS(iface,3,mapping)
         corner_four  = FACE_CORNERS(iface,4,mapping)
 
-
-        ! For the current face, get the indices of the coordinate nodes for the corners
+        
+        !
+        ! For the current face, get the global-indices of the coordinate nodes 
+        ! for the corners
+        !
         corner_indices(1) = self%elems(ielem_l)%connectivity%get_element_node(corner_one)
         corner_indices(2) = self%elems(ielem_l)%connectivity%get_element_node(corner_two)
         corner_indices(3) = self%elems(ielem_l)%connectivity%get_element_node(corner_three)
         corner_indices(4) = self%elems(ielem_l)%connectivity%get_element_node(corner_four)
 
         
-        ! Test the face nodes against other elements, if all face nodes are also contained in another element, then they are neighbors.
+        !
+        ! Test the global face node indices against other elements. If all face nodes 
+        ! are also contained in another element, then they are neighbors.
+        !
         neighbor_element = .false.
         do ielem_neighbor = 1,self%nelem
             if (ielem_neighbor /= ielem_l ) then

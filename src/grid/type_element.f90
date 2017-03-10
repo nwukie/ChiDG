@@ -1508,7 +1508,8 @@ contains
 
 
         !
-        ! Test corner positions against known face configurations
+        ! Test corner positions against known face configurations 
+        ! to determine face index:
         !
         do iface_test = 1,NFACES
             corner_one_in_face   = any(face_corners(iface_test,:,nterms_1d - 1) == corner_position(1))

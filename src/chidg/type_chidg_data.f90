@@ -46,7 +46,6 @@ module type_chidg_data
     type, public  :: chidg_data_t
 
         logical                                     :: solverInitialized = .false.
-        integer(ik),        private                 :: ndomains_ = 0
         integer(ik),        private                 :: spacedim_ = 3
 
         
@@ -85,6 +84,7 @@ module type_chidg_data
         ! Accessors
         procedure   :: get_domain_index             ! Given a domain name, return domain index
         procedure   :: ndomains                     ! Return number of domains in chidg instance
+        procedure   :: nbcs                         ! Return number of boundary conditions
         procedure   :: ntime
         procedure   :: get_dimensionality
         procedure   :: get_auxiliary_field_names    ! Return required auxiliary fields
@@ -201,27 +201,25 @@ contains
         !
         ! Increment number of domains by one
         !
-        self%ndomains_ = self%ndomains_ + 1
-        idomain_l      = self%ndomains_
+        idomain_l = self%ndomains() + 1
 
 
         !
         ! Resize array storage
         !
-        allocate( &
-                 temp_info(self%ndomains_),   &
-                 temp_mesh(self%ndomains_),   &
-                 temp_eqnset(self%ndomains_), stat=ierr)
+        allocate( temp_info(  self%ndomains()+1),   &
+                  temp_mesh(  self%ndomains()+1),   &
+                  temp_eqnset(self%ndomains()+1), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
         ! Copy previously initialized instances to new array. Be careful about pointers 
         ! components here. For example, a pointer from a face to an element would no 
         ! longer be valid in the new array.
-        if (self%ndomains_ > 1) then
-            temp_info(   1:size(self%info))    = self%info(1:size(self%mesh))
+        if (self%ndomains() > 0) then
+            temp_info(   1:size(self%info))    = self%info(1:size(self%info))
             temp_mesh(   1:size(self%mesh))    = self%mesh(1:size(self%mesh))
-            temp_eqnset( 1:size(self%eqnset))  = self%eqnset(1:size(self%mesh))
+            temp_eqnset( 1:size(self%eqnset))  = self%eqnset(1:size(self%eqnset))
         end if
 
 
@@ -244,7 +242,7 @@ contains
         !
         user_msg = "chidg_data%add_domain: Two domains have the same global index. MPI &
                     communication assumes this does not happen."
-        if (self%ndomains_ > 1) then
+        if (self%ndomains() > 1) then
             do idom = 1,size(self%mesh)
                 if (self%mesh(idom)%idomain_g == temp_mesh(idomain_l)%idomain_g) call chidg_signal(FATAL,user_msg)
             end do !idom
@@ -546,7 +544,8 @@ contains
         integer(ik) :: ibc
 
 
-        do ibc = 1,size(self%bc)
+        !do ibc = 1,size(self%bc)
+        do ibc = 1,self%nbcs()
 
             !
             ! Prepare boundary condition parallel communication
@@ -604,7 +603,7 @@ contains
         
         domain_index = 0
 
-        do idom = 1,self%ndomains_
+        do idom = 1,self%ndomains()
             if ( trim(domain_name) == trim(self%info(idom)%name) ) then
                 domain_index = idom
                 exit
@@ -629,15 +628,46 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------
-    function ndomains(self) result(ndom)
+    function ndomains(self) result(ndomains_)
         class(chidg_data_t),    intent(in)      :: self
 
-        integer :: ndom
+        integer :: ndomains_
 
-        ndom = self%ndomains_
+        if (allocated(self%mesh)) then
+            ndomains_ = size(self%mesh)
+        else
+            ndomains_ = 0
+        end if
 
     end function ndomains
     !*******************************************************************************************
+
+
+
+
+
+    !> Return the number of boundary conditions in the chidg_data_t instance.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/10/2017
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    function nbcs(self) result(nbcs_)
+        class(chidg_data_t),    intent(in)      :: self
+
+        integer :: nbcs_
+
+        if (allocated(self%bc)) then
+            nbcs_ = size(self%bc)
+        else
+            nbcs_ = 0
+        end if
+
+    end function nbcs
+    !*******************************************************************************************
+
+
 
 
 

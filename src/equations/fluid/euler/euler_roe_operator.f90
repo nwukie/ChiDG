@@ -189,6 +189,8 @@ contains
         r = worker%coordinate('1','boundary') 
         v_m = v_m - omega*r
         v_p = v_p - omega*r
+        !v_m = v_m
+        !v_p = v_p
 
 
 

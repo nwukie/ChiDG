@@ -109,9 +109,6 @@ contains
         p = worker%get_model_field_element('Pressure','value')
 
 
-        !
-        ! Rotation
-        !
 
         !=================================================
         ! mass flux
@@ -131,7 +128,7 @@ contains
             !
             ! Source term due to non-inertial frame
             !
-            source = source - density*omega*v
+            source = source + density*omega*v
 
             call worker%integrate_volume('Momentum-1',source)
 
@@ -142,10 +139,12 @@ contains
         ! momentum-2 flux
         !=================================================
 
-        source = 0._rk
         if (worker%coordinate_system() == 'Cylindrical') then
 
-            source = density*omega*u*worker%coordinate('1','volume')
+            !
+            ! Source term due to non-inertial frame
+            !
+            source = -density*omega*u*worker%coordinate('1','volume')
 
             call worker%integrate_volume('Momentum-2',source)
 

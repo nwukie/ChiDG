@@ -59,8 +59,8 @@ program driver
         ! Initialize ChiDG environment
         !
         call chidg%start_up('mpi')
-        call chidg%start_up('core')
         call chidg%start_up('namelist')
+        call chidg%start_up('core')
 
 
 

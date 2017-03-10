@@ -1,8 +1,9 @@
 module type_cache_handler
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
-    use mod_constants,      only: NFACES, INTERIOR, CHIMERA, BOUNDARY, DIAG, ME, NEIGHBOR, HALF, ONE, &
-                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NO_PROC
+    use mod_constants,      only: NFACES, INTERIOR, CHIMERA, BOUNDARY, DIAG, NO_PROC,   &
+                                  ME, NEIGHBOR, HALF, ONE,                              &
+                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use mod_DNAD_tools,     only: face_compute_seed, element_compute_seed
     use mod_interpolate,    only: interpolate_face_autodiff, interpolate_element_autodiff
     use mod_chidg_mpi,      only: IRANK
@@ -52,12 +53,19 @@ module type_cache_handler
 
         procedure   :: update_auxiliary_interior
         procedure   :: update_auxiliary_exterior
+        procedure   :: update_auxiliary_element
         procedure   :: update_auxiliary_bc
+
         procedure   :: update_primary_interior
         procedure   :: update_primary_exterior
+        procedure   :: update_primary_element
         procedure   :: update_primary_bc
+        procedure   :: update_primary_lift
+
         procedure   :: update_model_interior
         procedure   :: update_model_exterior
+        procedure   :: update_model_element
+        procedure   :: update_model_bc
 
         procedure, private :: update_lift_faces_internal
         procedure, private :: update_lift_faces_external
@@ -96,14 +104,15 @@ contains
         idomain_l  = worker%element_info%idomain_l 
         ielement_l = worker%element_info%ielement_l 
 
-
         call worker%cache%resize(worker%mesh,worker%prop,idomain_l,ielement_l,differentiate)
 
 
+        !
+        ! Update fields
+        !
         call self%update_auxiliary_fields(worker,equation_set,bc,differentiate)
         call self%update_primary_fields(  worker,equation_set,bc,differentiate)
         call self%update_model_fields(    worker,equation_set,bc,differentiate)
-
 
     end subroutine update
     !****************************************************************************************
@@ -142,7 +151,7 @@ contains
 
 
         !
-        ! Loop through faces and cache internal, external interpolated states
+        ! Loop through faces and cache 'internal', 'external' interpolated states
         !
         do iface = 1,NFACES
 
@@ -160,54 +169,16 @@ contains
 
 
 
+        !
+        ! Update 'element' cache
+        !
+        call self%update_primary_element(worker,equation_set,bc,differentiate)
 
 
         !
-        ! Element primary fields volume 'value' cache. Only depends on interior element
+        ! Update lift
         !
-        if (differentiate) then
-            idiff = DIAG
-        else
-            idiff = 0
-        end if
-
-        idepend = 1
-        do ieqn = 1,worker%mesh(idomain_l)%neqns
-
-                worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
-                worker%function_info%idepend = idepend
-
-                value_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'value')
-                grad1_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad1')
-                grad2_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad2')
-                grad3_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad3')
-
-                field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
-                call worker%cache%set_data(field,'element',value_gq,'value',   0,worker%function_info%seed)
-                call worker%cache%set_data(field,'element',grad1_gq,'gradient',1,worker%function_info%seed)
-                call worker%cache%set_data(field,'element',grad2_gq,'gradient',2,worker%function_info%seed)
-                call worker%cache%set_data(field,'element',grad3_gq,'gradient',3,worker%function_info%seed)
-
-        end do !ieqn
-
-
-
-
-        !
-        ! Update lifting terms for gradients if diffusive operators are present
-        !
-        idomain_l = worker%element_info%idomain_l
-        if (allocated(equation_set(idomain_l)%volume_diffusive_operator) .or. &
-            allocated(equation_set(idomain_l)%boundary_diffusive_operator)) then
-
-            call self%update_lift_faces_internal(worker,equation_set,bc,differentiate)
-            call self%update_lift_faces_external(worker,equation_set,bc,differentiate)
-
-        end if
-
-
-
-
+        call self%update_primary_lift(worker,equation_set,bc,differentiate)
 
     end subroutine update_primary_fields
     !****************************************************************************************
@@ -271,44 +242,9 @@ contains
 
 
         !
-        ! Element primary fields volume 'value' cache. Only depends on interior element
+        ! Update cache 'element' data
         !
-        if (differentiate) then
-            idiff = DIAG
-        else
-            idiff = 0
-        end if
-
-        idepend = 0 ! no linearization
-        do ifield = 1,worker%prop(idomain_l)%nauxiliary_fields()
-
-            !
-            ! Try to find the auxiliary field in the solverdata_t container; where they are stored.
-            !
-            field      = worker%prop(idomain_l)%get_auxiliary_field_name(ifield)
-            iaux_field = worker%solverdata%get_auxiliary_field_index(field)
-
-            ! Set seed
-            worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
-            worker%function_info%idepend = idepend
-            worker%function_info%idiff   = idiff
-
-            ! Interpolate modes to nodes
-            ieqn = 1    !implicitly assuming only 1 equation in the auxiliary field chidgVector
-            value_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,worker%itime,'value')
-            grad1_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,worker%itime,'grad1')
-            grad2_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,worker%itime,'grad2')
-            grad3_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,worker%itime,'grad3')
-
-            ! Store gq data in cache
-            call worker%cache%set_data(field,'element',value_gq,'value',     0,worker%function_info%seed)
-            call worker%cache%set_data(field,'element',grad1_gq,'gradient',1,worker%function_info%seed)
-            call worker%cache%set_data(field,'element',grad2_gq,'gradient',2,worker%function_info%seed)
-            call worker%cache%set_data(field,'element',grad3_gq,'gradient',3,worker%function_info%seed)
-
-        end do !ieqn
-
-
+        call self%update_auxiliary_element(worker,equation_set,bc,differentiate)
 
 
 
@@ -364,137 +300,89 @@ contains
             ! Update model 'face interior' 'face exterior' cache entries for 'value'
             call self%update_model_interior(worker,equation_set,bc,differentiate)
             call self%update_model_exterior(worker,equation_set,bc,differentiate)
+            call self%update_model_bc(      worker,equation_set,bc,differentiate)
 
         end do !iface
 
 
-
-
-
-
-
+        
         !
-        ! Compute element model field. Potentially differentiated wrt exterior elements.
+        ! Update 'element' cache entries
         !
-        worker%interpolation_source = 'element'
-        do imodel = 1,equation_set(idomain_l)%nmodels()
+        call self%update_model_element(worker,equation_set,bc,differentiate)
 
 
-            !
-            ! Get model dependency
-            !
-            dependency = equation_set(idomain_l)%models(imodel)%model%get_dependency()
-
-            !
-            ! Determine pattern to compute functions. Depends on if we are differentiating 
-            ! or not. These will be used to set idiff, indicating the differentiation
-            ! direction.
-            !
-            if (differentiate) then
-                ! compute function, wrt (all exterior)/interior states
-                if (dependency == 'Q-') then
-                    compute_pattern = [DIAG]
-                else if ( (dependency == 'Q-,Q+') .or. &
-                          (dependency == 'Grad(Q)') ) then
-                    compute_pattern = [1,2,3,4,5,6,DIAG]
-                else
-                    call chidg_signal(FATAL,"cache_handler%update_model_fields: Invalid model dependency string.")
-                end if
-            else
-                ! compute function, but do not differentiate
-                compute_pattern = [0]
-            end if
-
-
-
-
-            !
-            ! Execute compute pattern
-            !
-            do ipattern = 1,size(compute_pattern)
-
-            
-                !
-                ! get differentiation indicator
-                !
-                idiff = compute_pattern(ipattern)
-
-                diff_none = (idiff == 0)
-                diff_interior = (idiff == DIAG)
-                diff_exterior = ( (idiff == 1) .or. (idiff == 2) .or. &
-                                  (idiff == 3) .or. (idiff == 4) .or. &
-                                  (idiff == 5) .or. (idiff == 6) )
-
-
-
-                if (diff_interior .or. diff_none) then
-                    compute_model = .true.
-                else if (diff_exterior) then
-                    compute_model = ( (worker%mesh(idomain_l)%faces(ielement_l,idiff)%ftype == INTERIOR) .or. &
-                                      (worker%mesh(idomain_l)%faces(ielement_l,idiff)%ftype == CHIMERA) )
-                end if
-
-
-
-                if (compute_model) then
-
-                    if (diff_none .or. diff_interior) then
-                        ndepend = 1
-                    else
-                        call worker%set_face(idiff)
-                        ndepend = get_ndepend_exterior(worker,equation_set,bc,differentiate)
-                    end if
-
-                    do idepend = 1,ndepend
-                        worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
-                        worker%function_info%idepend = idepend
-
-                        call equation_set(idomain_l)%models(imodel)%model%compute(worker)
-                    end do !idepend
-                end if !compute
-
-
-            end do !ipattern
-        end do !imodel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-!        !
-!        ! Element volume cache. Models only depend on interior element
-!        !
-!        if (differentiate) then
-!            idiff = DIAG
-!        else
-!            idiff = 0
-!        end if
-!
-!        idepend = 1
-!        worker%interpolation_source = 'element'
-!        do imodel = 1,equation_set(idomain_l)%nmodels()
-!
-!            worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
-!            worker%function_info%idepend = idepend
-!
-!            call equation_set(idomain_l)%models(imodel)%model%compute(worker)
-!
-!        end do !imodel
 
 
     end subroutine update_model_fields
     !****************************************************************************************
 
+
+
+
+
+
+
+
+
+    !>  Update the primary field 'element' cache entries.
+    !!
+    !!  Computes the 'value' and 'gradient' entries.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/9/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine update_primary_element(self,worker,equation_set,bc,differentiate)
+        class(cache_handler_t),     intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(equation_set_t),       intent(inout)   :: equation_set(:)
+        type(bc_t),                 intent(inout)   :: bc(:)
+        logical,                    intent(in)      :: differentiate
+
+        integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, iface, idiff
+        character(:),   allocatable                 :: field
+        type(AD_D),     allocatable, dimension(:)   :: value_gq, grad1_gq, grad2_gq, grad3_gq
+
+
+        idomain_l  = worker%element_info%idomain_l 
+        ielement_l = worker%element_info%ielement_l 
+        iface      = worker%iface
+
+
+        !
+        ! Element primary fields volume 'value' cache. Only depends on interior element
+        !
+        if (differentiate) then
+            idiff = DIAG
+        else
+            idiff = 0
+        end if
+
+        idepend = 1
+        do ieqn = 1,worker%mesh(idomain_l)%neqns
+
+                worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
+                worker%function_info%idepend = idepend
+
+                value_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'value')
+                grad1_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad1')
+                grad2_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad2')
+                grad3_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad3')
+
+                field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
+                call worker%cache%set_data(field,'element',value_gq,'value',   0,worker%function_info%seed)
+                call worker%cache%set_data(field,'element',grad1_gq,'gradient',1,worker%function_info%seed)
+                call worker%cache%set_data(field,'element',grad2_gq,'gradient',2,worker%function_info%seed)
+                call worker%cache%set_data(field,'element',grad3_gq,'gradient',3,worker%function_info%seed)
+
+        end do !ieqn
+
+
+
+    end subroutine update_primary_element
+    !*****************************************************************************************
 
 
 
@@ -598,7 +486,7 @@ contains
         logical,                    intent(in)      :: differentiate
 
         integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, iface, &
-                                                       ChiID, BC_ID, BC_face, ndepend, idiff
+                                                       BC_ID, BC_face, ndepend, idiff
         character(:),   allocatable                 :: field
         type(AD_D),     allocatable, dimension(:)   :: value_gq, grad1_gq, grad2_gq, grad3_gq
 
@@ -685,7 +573,6 @@ contains
         integer(ik)                 :: idepend, ieqn, idomain_l, ielement_l, iface, ndepend, &
                                        istate, bc_ID, patch_ID, patch_face
         character(:),   allocatable :: field
-        type(AD_D),     allocatable :: grad1_gq(:), grad2_gq(:), grad3_gq(:)
 
 
         idomain_l  = worker%element_info%idomain_l 
@@ -737,6 +624,126 @@ contains
 
 
 
+
+
+
+
+
+
+
+    !>  Update the primary field lift functions for diffusion.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/9/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine update_primary_lift(self,worker,equation_set,bc,differentiate)
+        class(cache_handler_t),     intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(equation_set_t),       intent(inout)   :: equation_set(:)
+        type(bc_t),                 intent(inout)   :: bc(:)
+        logical,                    intent(in)      :: differentiate
+
+        integer(ik) :: idomain_l
+
+
+        idomain_l  = worker%element_info%idomain_l 
+
+        !
+        ! Update lifting terms for gradients if diffusive operators are present
+        !
+        if (allocated(equation_set(idomain_l)%volume_diffusive_operator) .or. &
+            allocated(equation_set(idomain_l)%boundary_diffusive_operator)) then
+
+            call self%update_lift_faces_internal(worker,equation_set,bc,differentiate)
+            call self%update_lift_faces_external(worker,equation_set,bc,differentiate)
+
+        end if
+
+    end subroutine update_primary_lift
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Update the auxiliary field 'element' cache entries.
+    !!
+    !!  Computes the 'value' and 'gradient' entries.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/9/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine update_auxiliary_element(self,worker,equation_set,bc,differentiate)
+        class(cache_handler_t),     intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(equation_set_t),       intent(inout)   :: equation_set(:)
+        type(bc_t),                 intent(inout)   :: bc(:)
+        logical,                    intent(in)      :: differentiate
+
+        integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, iface, &
+                                                       idiff, iaux_field, ifield
+        character(:),   allocatable                 :: field
+        type(AD_D),     allocatable, dimension(:)   :: value_gq, grad1_gq, grad2_gq, grad3_gq
+
+
+        idomain_l  = worker%element_info%idomain_l 
+        ielement_l = worker%element_info%ielement_l 
+        iface      = worker%iface
+
+
+        !
+        ! Element primary fields volume 'value' cache. Only depends on interior element
+        !
+        if (differentiate) then
+            idiff = DIAG
+        else
+            idiff = 0
+        end if
+
+        idepend = 0 ! no linearization
+        do ifield = 1,worker%prop(idomain_l)%nauxiliary_fields()
+
+            !
+            ! Try to find the auxiliary field in the solverdata_t container; where they are stored.
+            !
+            field      = worker%prop(idomain_l)%get_auxiliary_field_name(ifield)
+            iaux_field = worker%solverdata%get_auxiliary_field_index(field)
+
+            ! Set seed
+            worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
+            worker%function_info%idepend = idepend
+            worker%function_info%idiff   = idiff
+
+            ! Interpolate modes to nodes
+            ieqn = 1    !implicitly assuming only 1 equation in the auxiliary field chidgVector
+            value_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,worker%itime,'value')
+            grad1_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,worker%itime,'grad1')
+            grad2_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,worker%itime,'grad2')
+            grad3_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%auxiliary_field(iaux_field),worker%element_info,worker%function_info,ieqn,worker%itime,'grad3')
+
+            ! Store gq data in cache
+            call worker%cache%set_data(field,'element',value_gq,'value',     0,worker%function_info%seed)
+            call worker%cache%set_data(field,'element',grad1_gq,'gradient',1,worker%function_info%seed)
+            call worker%cache%set_data(field,'element',grad2_gq,'gradient',2,worker%function_info%seed)
+            call worker%cache%set_data(field,'element',grad3_gq,'gradient',3,worker%function_info%seed)
+
+        end do !ieqn
+
+
+
+
+    end subroutine update_auxiliary_element
+    !*****************************************************************************************
 
 
 
@@ -1012,6 +1019,124 @@ contains
 
 
 
+    !>  Update the model field 'element' cache entries.
+    !!
+    !!  Computes the 'value' and 'gradient' entries.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/9/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine update_model_element(self,worker,equation_set,bc,differentiate)
+        class(cache_handler_t),     intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(equation_set_t),       intent(inout)   :: equation_set(:)
+        type(bc_t),                 intent(inout)   :: bc(:)
+        logical,                    intent(in)      :: differentiate
+
+        logical                     :: diff_none, diff_interior, diff_exterior, compute_model
+        integer(ik)                 :: imodel, idomain_l, ielement_l, idepend, idiff, &
+                                       ipattern, ndepend
+        integer(ik),    allocatable :: compute_pattern(:)
+        character(:),   allocatable :: dependency
+
+        idomain_l  = worker%element_info%idomain_l 
+        ielement_l = worker%element_info%ielement_l 
+
+
+        !
+        ! Compute element model field. Potentially differentiated wrt exterior elements.
+        !
+        worker%interpolation_source = 'element'
+        do imodel = 1,equation_set(idomain_l)%nmodels()
+
+
+            !
+            ! Get model dependency
+            !
+            dependency = equation_set(idomain_l)%models(imodel)%model%get_dependency()
+
+            !
+            ! Determine pattern to compute functions. Depends on if we are differentiating 
+            ! or not. These will be used to set idiff, indicating the differentiation
+            ! direction.
+            !
+            if (differentiate) then
+                ! compute function, wrt (all exterior)/interior states
+                if (dependency == 'Q-') then
+                    compute_pattern = [DIAG]
+                else if ( (dependency == 'Q-,Q+') .or. &
+                          (dependency == 'Grad(Q)') ) then
+                    compute_pattern = [1,2,3,4,5,6,DIAG]
+                else
+                    call chidg_signal(FATAL,"cache_handler%update_model_element: Invalid model dependency string.")
+                end if
+            else
+                ! compute function, but do not differentiate
+                compute_pattern = [0]
+            end if
+
+
+
+
+            !
+            ! Execute compute pattern
+            !
+            do ipattern = 1,size(compute_pattern)
+
+            
+                !
+                ! get differentiation indicator
+                !
+                idiff = compute_pattern(ipattern)
+
+                diff_none = (idiff == 0)
+                diff_interior = (idiff == DIAG)
+                diff_exterior = ( (idiff == 1) .or. (idiff == 2) .or. &
+                                  (idiff == 3) .or. (idiff == 4) .or. &
+                                  (idiff == 5) .or. (idiff == 6) )
+
+
+
+                if (diff_interior .or. diff_none) then
+                    compute_model = .true.
+                else if (diff_exterior) then
+                    compute_model = ( (worker%mesh(idomain_l)%faces(ielement_l,idiff)%ftype == INTERIOR) .or. &
+                                      (worker%mesh(idomain_l)%faces(ielement_l,idiff)%ftype == CHIMERA) )
+                end if
+
+
+
+                if (compute_model) then
+
+                    if (diff_none .or. diff_interior) then
+                        ndepend = 1
+                    else
+                        call worker%set_face(idiff)
+                        ndepend = get_ndepend_exterior(worker,equation_set,bc,differentiate)
+                    end if
+
+                    do idepend = 1,ndepend
+                        worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
+                        worker%function_info%idepend = idepend
+
+                        call equation_set(idomain_l)%models(imodel)%model%compute(worker)
+                    end do !idepend
+                end if !compute
+
+
+            end do !ipattern
+        end do !imodel
+
+
+    end subroutine update_model_element
+    !*****************************************************************************************
+
+
+
+
+
 
 
 
@@ -1151,19 +1276,14 @@ contains
         type(bc_t),                 intent(inout)   :: bc(:)
         logical,                    intent(in)      :: differentiate
 
-        integer(ik)                 :: idepend, imodel, idomain_l, ielement_l, iface, ChiID, &
+        integer(ik)                 :: idepend, imodel, idomain_l, ielement_l, iface, &
                                        bc_ID, patch_ID, patch_face, ndepend, idiff
         character(:),   allocatable :: field
-        type(AD_D),     allocatable :: value_gq(:)
 
 
         idomain_l  = worker%element_info%idomain_l 
         ielement_l = worker%element_info%ielement_l 
         iface      = worker%iface
-
-
-
-
 
 
 
@@ -1224,12 +1344,40 @@ contains
             end if
 
 
+        end if ! worker%face_type()
+
+    end subroutine update_model_exterior
+    !*****************************************************************************************
 
 
 
 
 
 
+
+    !>  Update the model field BOUNDARY state functions. These are placed in the 
+    !!  'face exterior' cache entry.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/9/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine update_model_bc(self,worker,equation_set,bc,differentiate)
+        class(cache_handler_t),     intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(equation_set_t),       intent(inout)   :: equation_set(:)
+        type(bc_t),                 intent(inout)   :: bc(:)
+        logical,                    intent(in)      :: differentiate
+
+        integer(ik)                 :: idepend, ieqn, idomain_l, ielement_l, iface, ndepend, &
+                                       istate, bc_ID, patch_ID, patch_face, imodel
+        character(:),   allocatable :: field
+
+
+        idomain_l  = worker%element_info%idomain_l 
+        ielement_l = worker%element_info%ielement_l 
+        iface      = worker%iface
 
 
 
@@ -1237,7 +1385,7 @@ contains
         ! Face exterior state: boundaries
         !
         worker%interpolation_source = 'face exterior'
-        else if ( (worker%face_type() == BOUNDARY) ) then
+        if ( (worker%face_type() == BOUNDARY) ) then
 
             ! 
             ! Compute the number of exterior element dependencies for face exterior state
@@ -1280,8 +1428,11 @@ contains
 
 
 
-    end subroutine update_model_exterior
+    end subroutine update_model_bc
     !*****************************************************************************************
+
+
+
 
 
 
@@ -1311,7 +1462,7 @@ contains
 
         character(:),   allocatable :: field
         integer(ik)                 :: idomain_l, ielement_l, iface, idepend, &
-                                       ndepend, BC_ID, BC_face, ChiID, ieqn, idiff
+                                       ndepend, BC_ID, BC_face, ieqn, idiff
 
         type(AD_D), allocatable, dimension(:), save   ::    &
             var_m, var_p, var_diff, var_diff_weighted,      &
@@ -1576,7 +1727,7 @@ contains
         type(bc_t),                 intent(inout)   :: bc(:)
         logical,                    intent(in)      :: differentiate
 
-        integer(ik) :: idomain_l, ielement_l, iface, idepend, ieqn, ndepend, BC_ID, BC_face, ChiID, idiff
+        integer(ik) :: idomain_l, ielement_l, iface, idepend, ieqn, ndepend, BC_ID, BC_face, idiff
         logical     :: boundary_face, interior_face, chimera_face
 
 

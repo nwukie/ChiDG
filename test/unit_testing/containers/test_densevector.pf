@@ -104,19 +104,13 @@ subroutine test_densevector_INIT_2()
 
 
     !
-    ! Test reinitialization
+    ! Test reinitialization by changing ntime
     !
-    nterms    = 27
-    neqns     = 1
     ntime     = 7
     vsize     = nterms*neqns*ntime
     nentries  = vsize
-    dparent_g = 3
-    dparent_l = 2
-    eparent_g = 22 
-    eparent_l = 12
 
-    call vec%init(nterms,neqns,ntime,dparent_g,dparent_l,eparent_g,eparent_l)
+    call vec%set_ntime(ntime)
 
     @assertEqual(nentries,vec%nentries())
     @assertEqual(dparent_g,vec%dparent_g())

@@ -78,8 +78,8 @@ contains
         pvd_filename = 'chidg_results.pvd'
 
 
-        ntime = 1   ! No. of time steps in the solution file (1 for steady cases)
-
+        ntime = data%time_manager%ntime   ! No. of time steps in the solution file (1 for steady cases)
+        print *, 'ntime - ', data%time_manager%ntime
 
         !
         ! Allocate array for storing individual .vtu file names for each block over 
@@ -137,7 +137,7 @@ contains
                 !
                 call get_piece_coord(data,idom,nelem,num_pts,X,Y,Z)
                 call write_piece_coord(file_arr(d + idom),num_pts,X,Y,Z)
-                call get_piece_data(data,idom,nelem,num_pts,noeq,cons_var_val)
+                call get_piece_data(data,idom,itime,nelem,num_pts,noeq,cons_var_val)
                 call write_piece_data(file_arr(d + idom),noeq,num_pts,cons_var,cons_var_val)
 
                 !

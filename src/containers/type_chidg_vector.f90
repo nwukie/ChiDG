@@ -56,7 +56,10 @@ module type_chidg_vector
         procedure,  public  :: comm_wait                        ! Wait to finish send data
 
         procedure,  public  :: release                          ! Release allocated resources
-
+        procedure,  public  :: get_ntime                        ! Return ntime associated with
+                                                                ! densevctors
+        procedure,  public  :: set_ntime                        ! Set ntime in the associated
+                                                                ! densevectors
 !        generic :: assignment(=) => 
 
     end type chidg_vector_t
@@ -662,6 +665,61 @@ contains
         if (allocated(self%dom)) deallocate(self%dom)
 
     end subroutine release
+    !****************************************************************************************
+
+
+
+
+
+
+
+    !>  Return ntime using the ntime attribute in the densevectors
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/9/2017
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_ntime(self,idom,ielem) result(ntime)
+        class(chidg_vector_t),  intent(inout)   :: self
+        integer(ik),            intent(in)      :: idom
+        integer(ik),            intent(in)      :: ielem
+
+        integer(ik)     :: ntime
+
+        !
+        ! Get ntime 
+        !
+        ntime = self%dom(idom)%vecs(ielem)%ntime()
+
+
+    end function get_ntime
+    !****************************************************************************************
+
+
+
+
+
+
+
+    !>  Set ntime in the densevectors
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/9/2017
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_ntime(self,idom,ielem,ntime)
+        class(chidg_vector_t),  intent(inout)   :: self
+        integer(ik),            intent(in)      :: idom
+        integer(ik),            intent(in)      :: ielem
+        integer(ik),            intent(in)      :: ntime
+
+        ! 
+        ! Set ntime
+        !
+        call self%dom(idom)%vecs(ielem)%set_ntime(ntime)
+
+
+    end subroutine set_ntime
     !****************************************************************************************
 
 

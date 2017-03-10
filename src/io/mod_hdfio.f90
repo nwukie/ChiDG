@@ -243,6 +243,7 @@ contains
         !
         ndomains = data%ndomains()
 
+
         !
         ! Open file
         !
@@ -264,6 +265,7 @@ contains
         ! Read solution for each time step
         !
         ntime = get_ntimes_hdf(fid)
+
 
         do itime = 1, ntime
 

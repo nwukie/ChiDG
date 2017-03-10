@@ -266,6 +266,8 @@ contains
         !
         ntime = get_ntimes_hdf(fid)
 
+        call data%sdata%q_in%init(data%mesh,ntime)
+        print *, 'q_in - ', data%sdata%q_in%get_ntime()
 
         do itime = 1, ntime
 

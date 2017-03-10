@@ -124,12 +124,12 @@ contains
 
 
         ! Initialize and allocate storage
-        call self%q%init(  mesh)
-        call self%dq%init( mesh)
-        call self%rhs%init(mesh)
+        call self%q%init(  mesh,mesh(1)%ntime)
+        call self%dq%init( mesh,mesh(1)%ntime)
+        call self%rhs%init(mesh,mesh(1)%ntime)
 !        call self%lhs%init(mesh,bcset_coupling,'full')
         call self%lhs%init(mesh,'full')
-        call self%q_in%init(mesh)
+        call self%q_in%init(mesh,mesh(1)%ntime)
 
         ! Initialize matrix parallel recv data
         call self%lhs%init_recv(self%rhs)

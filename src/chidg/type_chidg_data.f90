@@ -121,6 +121,7 @@ contains
         type(bcset_coupling_t),             allocatable :: bcset_coupling(:)
 
 
+        call write_line("Matrices/Vectors: allocating...", io_proc=GLOBAL_MASTER)
         !
         ! Assemble array of function_data from the eqnset array to pass to the solver data 
         ! structure for initialization
@@ -513,9 +514,8 @@ contains
 
         integer(ik) :: idomain, neqns
 
-        !self%ntime_ = ntime    !we do not need to pass ntime in, since ntime is contained in data%time_manager%ntime
-
         ! Initialize mesh numerics based on equation set and polynomial expansion order
+        call write_line("Domains: initializing mesh equation space...", io_proc=GLOBAL_MASTER)
         do idomain = 1,self%ndomains()
             neqns = self%eqnset(idomain)%prop%nprimary_fields()
             call self%mesh(idomain)%init_sol(neqns,nterms_s,self%time_manager%ntime)
@@ -544,7 +544,7 @@ contains
         integer(ik) :: ibc
 
 
-        !do ibc = 1,size(self%bc)
+        call write_line("BC: initializing communication...", io_proc=GLOBAL_MASTER)
         do ibc = 1,self%nbcs()
 
             !

@@ -48,39 +48,40 @@ module type_element
     type, public :: element_t
 
         ! Element info
-        integer(ik)     :: idomain_g                        !< Global index of parent domain
-        integer(ik)     :: idomain_l                        !< Proc-local index of parent domain
-        integer(ik)     :: ielement_g                       !< Domain-global index of element
-        integer(ik)     :: ielement_l                       !< Proc-local index of the element
+        integer(ik)     :: idomain_g                        ! Global index of parent domain
+        integer(ik)     :: idomain_l                        ! Proc-local index of parent domain
+        integer(ik)     :: ielement_g                       ! Domain-global index of element
+        integer(ik)     :: ielement_l                       ! Proc-local index of the element
 
-        integer(ik)     :: spacedim                         !< Number of spatial dimensions for the element
-        integer(ik)     :: neqns                            !< Number of equations being solved
-        integer(ik)     :: nterms_s                         !< Number of terms in solution expansion.  
-        integer(ik)     :: nterms_c                         !< Number of terms in coordinate expansion. 
-        integer(ik)     :: ntime                            !< Number of time levels in solution
+        integer(ik)     :: spacedim                         ! Number of spatial dimensions for the element
+        integer(ik)     :: neqns                            ! Number of equations being solved
+        integer(ik)     :: nterms_s                         ! Number of terms in solution expansion.  
+        integer(ik)     :: nterms_c                         ! Number of terms in coordinate expansion. 
+        integer(ik)     :: nterms_c_1d                      ! N-terms in 1d coordinate expansion.
+        integer(ik)     :: ntime                            ! Number of time levels in solution
 
         ! Element quadrature points, mesh points and modes
-        type(element_connectivity_t)    :: connectivity         !< Integer indices of the associated nodes in block node list
-        type(point_t),  allocatable     :: quad_pts(:)          !< Coordinates of discrete quadrature points
-        type(point_t),  allocatable     :: elem_pts(:)          !< Coordinates of discrete points defining element
-        type(densevector_t)             :: coords               !< Modal expansion of coordinates (nterms_var,(x,y,z))
-        character(:),   allocatable     :: coordinate_system    !< 'Cartesian', 'Cylindrical'
+        type(element_connectivity_t)    :: connectivity         ! Integer indices of the associated nodes in block node list
+        type(point_t),  allocatable     :: quad_pts(:)          ! Coordinates of discrete quadrature points
+        type(point_t),  allocatable     :: elem_pts(:)          ! Coordinates of discrete points defining element
+        type(densevector_t)             :: coords               ! Modal expansion of coordinates (nterms_var,(x,y,z))
+        character(:),   allocatable     :: coordinate_system    ! 'Cartesian', 'Cylindrical'
 
         ! Element metric terms
-        real(rk), allocatable           :: metric(:,:,:)        !< metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
-        real(rk), allocatable           :: jinv(:)              !< volume jacobian at quadrature nodes
+        real(rk), allocatable           :: metric(:,:,:)        ! metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
+        real(rk), allocatable           :: jinv(:)              ! volume jacobian at quadrature nodes
 
         ! Matrices of cartesian gradients of basis/test functions
-        real(rk), allocatable           :: grad1(:,:)           !< Grad of basis functions in at quadrature nodes
-        real(rk), allocatable           :: grad2(:,:)           !< Grad of basis functions in at quadrature nodes
-        real(rk), allocatable           :: grad3(:,:)           !< Grad of basis functions in at quadrature nodes
-        real(rk), allocatable           :: grad1_trans(:,:)     !< transpose grad1
-        real(rk), allocatable           :: grad2_trans(:,:)     !< transpose grad2
-        real(rk), allocatable           :: grad3_trans(:,:)     !< transpose grad3
+        real(rk), allocatable           :: grad1(:,:)           ! Grad of basis functions in at quadrature nodes
+        real(rk), allocatable           :: grad2(:,:)           ! Grad of basis functions in at quadrature nodes
+        real(rk), allocatable           :: grad3(:,:)           ! Grad of basis functions in at quadrature nodes
+        real(rk), allocatable           :: grad1_trans(:,:)     ! transpose grad1
+        real(rk), allocatable           :: grad2_trans(:,:)     ! transpose grad2
+        real(rk), allocatable           :: grad3_trans(:,:)     ! transpose grad3
 
         ! Quadrature matrices
-        type(quadrature_t), pointer     :: gq     => null()     !< Pointer to instance for solution expansion
-        type(quadrature_t), pointer     :: gqmesh => null()     !< Pointer to instance for coordinate expansion
+        type(quadrature_t), pointer     :: gq     => null()     ! Pointer to instance for solution expansion
+        type(quadrature_t), pointer     :: gqmesh => null()     ! Pointer to instance for coordinate expansion
 
         ! Element-local mass, inverse mass matrices
         real(rk), allocatable           :: mass(:,:)        
@@ -133,8 +134,6 @@ module type_element
         procedure           :: compute_quadrature_metrics
         procedure           :: compute_quadrature_coords
         procedure           :: assign_quadrature
-
-
 
         final               :: destructor
 
@@ -206,8 +205,9 @@ contains
         !
         ! Accumulate coordinates for current element from node list.
         !
-        npts_1d = mapping+1
-        npts    = npts_1d * npts_1d * npts_1d
+        npts_1d          = mapping+1
+        npts             = npts_1d * npts_1d * npts_1d
+        self%nterms_c_1d = npts_1d
         allocate(points(npts), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -1470,17 +1470,17 @@ contains
 
         integer(ik), dimension(size(corner_indices))   :: corner_position
 
-        integer(ik), allocatable    :: element_indices(:)
-
-        integer(ik)                 :: nterms_1d, face_index, cindex, eindex, iface_test
+        character(:),   allocatable :: user_msg
+        integer(ik),    allocatable :: element_indices(:), face_indices(:)
+        integer(ik)                 :: face_index, cindex, eindex, iface_test
         logical                     :: node_matches, face_match, &
-                                       corner_one_in_face, corner_two_in_face, corner_three_in_face, corner_four_in_face
+                                       corner_one_in_face, corner_two_in_face, &
+                                       corner_three_in_face, corner_four_in_face
 
         !
         ! Get nodes from connectivity
         !
         element_indices = self%connectivity%get_element_nodes()
-
 
         do cindex = 1,size(corner_indices)
             do eindex = 1,size(element_indices)
@@ -1498,26 +1498,23 @@ contains
         end do
 
 
-        !
-        ! Determine element mapping index
-        !
-        nterms_1d = 0
-        do while (nterms_1d*nterms_1d*nterms_1d < self%nterms_c)
-            nterms_1d = nterms_1d + 1
-        end do
-
 
         !
         ! Test corner positions against known face configurations 
         ! to determine face index:
         !
         do iface_test = 1,NFACES
-            corner_one_in_face   = any(face_corners(iface_test,:,nterms_1d - 1) == corner_position(1))
-            corner_two_in_face   = any(face_corners(iface_test,:,nterms_1d - 1) == corner_position(2))
-            corner_three_in_face = any(face_corners(iface_test,:,nterms_1d - 1) == corner_position(3))
-            corner_four_in_face  = any(face_corners(iface_test,:,nterms_1d - 1) == corner_position(4))
 
-            face_match = (corner_one_in_face .and. corner_two_in_face .and. corner_three_in_face .and. corner_four_in_face )
+            face_indices = face_corners(iface_test,:,self%nterms_c_1d - 1)
+            corner_one_in_face   = any(face_indices == corner_position(1))
+            corner_two_in_face   = any(face_indices == corner_position(2))
+            corner_three_in_face = any(face_indices == corner_position(3))
+            corner_four_in_face  = any(face_indices == corner_position(4))
+
+            face_match = (corner_one_in_face   .and. &
+                          corner_two_in_face   .and. &
+                          corner_three_in_face .and. &
+                          corner_four_in_face )
 
             if (face_match) then
                 face_index = iface_test
@@ -1527,7 +1524,9 @@ contains
         end do
 
 
-        if (.not. face_match) call chidg_signal(FATAL,"element%get_face_from_corners: couldn't find a face index that matched the provided corners")
+        user_msg = "element%get_face_from_cornders: Couldn't find a face index that matched &
+                    the provided corner indices."
+        if (.not. face_match) call chidg_signal(FATAL,user_msg)
 
 
     end function get_face_from_corners

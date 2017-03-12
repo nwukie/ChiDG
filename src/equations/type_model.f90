@@ -45,9 +45,9 @@ module type_model
     !!  The model initialization routine shall set the dependency string for the model
     !!  being implemented:
     !!      Options:
-    !!          call self%set_dependency('Q-')
-    !!          call self%set_dependency('Q-,Q+')
-    !!          call self%set_dependency('Grad(Q)')  implicitly 'Q-,Q+'
+    !!          call self%set_dependency('f(Q-)')
+    !!          call self%set_dependency('f(Q-,Q+)')
+    !!          call self%set_dependency('f(Grad(Q))')
     !!  
     !!
     !!  @author Nathan A. Wukie
@@ -171,13 +171,13 @@ contains
 
         character(:),   allocatable :: user_msg
 
-        if ( (trim(string) == 'Q-')     .or.    &
-             (trim(string) == 'Q-,Q+')  .or.    &
-             (trim(string) == 'Grad(Q)') ) then
+        if ( (trim(string) == 'f(Q-)')     .or.    &
+             (trim(string) == 'f(Q-,Q+)')  .or.    &
+             (trim(string) == 'f(Grad(Q))') ) then
             self%dependency = string
         else
             user_msg = "model%set_dependency: Invalid model dependency string. Valid &
-                        options are 'Q-', 'Q-,Q+', and 'Grad(Q)'."
+                        options are 'f(Q-)', 'f(Q-,Q+)', and 'f(Grad(Q))'."
             call chidg_signal_one(FATAL,user_msg,self%get_name())
         end if
 

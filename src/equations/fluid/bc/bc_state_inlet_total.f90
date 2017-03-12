@@ -108,29 +108,26 @@ contains
             T_bc,   vmag2_m, vmag, H_bc
 
 
-        real(rk)                                    :: gam_m, cp_m, M, time
-        type(point_t),  allocatable, dimension(:)   :: coords
+        integer(ik)                                 :: ierr
+        real(rk)                                    :: gam_m, cp_m, M
         real(rk),       allocatable, dimension(:)   ::  &
             TT, n1, n2, n3, nmag, alpha, r, PT
-        integer(ik) :: ierr
             
 
 
         !
         ! Get boundary condition Total Temperature, Total Pressure, and normal vector
         !
-        coords = worker%coords()
-        time   = worker%time()
-        PT = self%bcproperties%compute('Total Pressure',     time, coords)
-        TT = self%bcproperties%compute('Total Temperature',  time, coords)
+        PT = self%bcproperties%compute('Total Pressure',     worker%time(), worker%coords())
+        TT = self%bcproperties%compute('Total Temperature',  worker%time(), worker%coords())
 
 
         !
         ! Get user-input normal vector and normalize
         !
-        n1 = self%bcproperties%compute('Normal-1', time, coords)
-        n2 = self%bcproperties%compute('Normal-2', time, coords)
-        n3 = self%bcproperties%compute('Normal-3', time, coords)
+        n1 = self%bcproperties%compute('Normal-1', worker%time(), worker%coords())
+        n2 = self%bcproperties%compute('Normal-2', worker%time(), worker%coords())
+        n3 = self%bcproperties%compute('Normal-3', worker%time(), worker%coords())
 
 
         !   Explicit allocation to handle GCC bug:

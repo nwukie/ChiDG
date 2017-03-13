@@ -273,12 +273,33 @@ contains
         integer(ik),        intent(in)      :: ielement_l
         integer(ik),        intent(in)      :: proc
 
+        integer(ik) :: idomain_g_coupled, ielement_g_coupled, ielem_coupled
+        logical     :: already_added
 
-        call self%idomain_g_coupled(iface_bc)%push_back(idomain_g)
-        call self%idomain_l_coupled(iface_bc)%push_back(idomain_l)
-        call self%ielement_g_coupled(iface_bc)%push_back(ielement_g)
-        call self%ielement_l_coupled(iface_bc)%push_back(ielement_l)
-        call self%proc_coupled(iface_bc)%push_back(proc)
+        !
+        ! Check if element has already been added to coupling list
+        ! for the specified face
+        !
+        already_added = .false.
+        do ielem_coupled = 1,self%ncoupled_elements(iface_bc)
+            idomain_g_coupled  = self%idomain_g_coupled(iface_bc)%at(ielem_coupled)
+            ielement_g_coupled = self%ielement_g_coupled(iface_bc)%at(ielem_coupled)
+
+            if ( (idomain_g_coupled == idomain_g) .and. &
+                 (ielement_g_coupled == ielement_g) ) already_added = .true.
+
+        end do
+
+        !
+        ! If coupled element wasn't already added to the list, add all indices here
+        !
+        if (.not. already_added) then
+            call self%idomain_g_coupled(iface_bc)%push_back(idomain_g)
+            call self%idomain_l_coupled(iface_bc)%push_back(idomain_l)
+            call self%ielement_g_coupled(iface_bc)%push_back(ielement_g)
+            call self%ielement_l_coupled(iface_bc)%push_back(ielement_l)
+            call self%proc_coupled(iface_bc)%push_back(proc)
+        end if
 
     end subroutine add_coupled_element
     !*******************************************************************************************

@@ -49,7 +49,7 @@ contains
         class(stokes_hypothesis_t), intent(inout)   :: self
 
         call self%set_name('Stokes Hypothesis')
-        call self%set_dependency('Q-')
+        call self%set_dependency('f(Q-)')
 
         call self%add_model_field('Second Coefficient of Laminar Viscosity')
 

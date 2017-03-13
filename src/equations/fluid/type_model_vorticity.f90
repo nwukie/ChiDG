@@ -54,7 +54,7 @@ contains
         class(model_vorticity_t), intent(inout)   :: self
 
         call self%set_name('Vorticity')
-        call self%set_dependency('Grad(Q)')
+        call self%set_dependency('f(Grad(Q))')
 
         call self%add_model_field('Vorticity-1')
         call self%add_model_field('Vorticity-2')

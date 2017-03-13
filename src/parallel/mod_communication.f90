@@ -1,19 +1,13 @@
 module mod_communication
+#include <messenger.h>
     use mod_kinds,      only: rk, ik
     use type_mesh,      only: mesh_t
-    use mod_chidg_mpi,  only: IRANK, NRANK
+    use mod_chidg_mpi,  only: IRANK, NRANK, GLOBAL_MASTER
     use mod_chimera,    only: detect_chimera_faces,  &
                               detect_chimera_donors, &
                               compute_chimera_interpolators
     use mpi_f08
     implicit none
-
-
-
-
-
-
-
 
 contains
 
@@ -53,6 +47,7 @@ contains
         !
         ! All ranks initialize local communication
         !
+        call write_line("Comm: initializing proc-local neighbor communication...", io_proc=GLOBAL_MASTER)
         do imesh = 1,size(mesh)
             call mesh(imesh)%init_comm_local()
         end do
@@ -65,6 +60,7 @@ contains
         !
         ! Loop through mesh types
         !
+        call write_line("Comm: initializing proc-global neighbor communication...", io_proc=GLOBAL_MASTER)
         do iproc = 0,NRANK-1
 
 
@@ -204,6 +200,7 @@ contains
         ! procedure. Calling clear on chimera%send, chimera%recv to wipe out previous data 
         ! and redetect all chimera faces, donors and reinitialize donor data.
         !
+        call write_line("Comm: initializing chimera communication...", io_proc=GLOBAL_MASTER)
         do idom = 1,size(mesh)
             call mesh(idom)%chimera%send%clear()
             call mesh(idom)%chimera%recv%clear()

@@ -69,7 +69,6 @@ program driver
         !
         ! Set ChiDG Algorithms
         !
-!        call chidg%set('Time Integrator' , algorithm=time_integrator,  options=toptions)
         call chidg%set('Time Integrator' , algorithm=time_integrator)
         call chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
         call chidg%set('Linear Solver'   , algorithm=linear_solver,    options=loptions)

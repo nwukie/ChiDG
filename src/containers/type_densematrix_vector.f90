@@ -4,6 +4,7 @@ module type_densematrix_vector
     use mod_constants,      only: ZERO
     use type_densematrix,   only: densematrix_t
     use type_element,       only: element_t
+    use mod_chidg_mpi,      only: IRANK
     use DNAD_D
     implicit none
 
@@ -32,13 +33,13 @@ module type_densematrix_vector
 
     contains
         ! Initializers
-        procedure, public   :: init                 !< initialize with size and capacity = 0
+        procedure, public   :: init                 ! initialize with size and capacity = 0
 
 
-        procedure, public   :: capacity             !< return the current allocated capacity
-        procedure, public   :: loc                  !< return the location of a stored value
-        procedure, public   :: size => data_size    !< return the number of stored elements.
-                                                    !! Associate to avoid clash with intrinsic.
+        procedure, public   :: capacity             ! return the current allocated capacity
+        procedure, public   :: loc                  ! return the location of a stored value
+        procedure, public   :: size => data_size    ! return the number of stored elements.
+                                                    ! Associate to avoid clash with intrinsic.
 
 
         ! Data modifiers
@@ -354,7 +355,7 @@ contains
 
         else 
 
-           call chidg_signal(FATAL,"densematrix_vector_t%push_back: attempt to push the same densematrix twice,operation not allowed") 
+           call chidg_signal_two(FATAL,"densematrix_vector_t%push_back: attempt to push the same densematrix twice,operation not allowed.", element%dparent_g(), element%eparent_g())
 
         end if
 

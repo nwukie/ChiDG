@@ -89,6 +89,7 @@ module mod_constants
     !
     ! Indexing for faces directions and jacobian blocks
     !
+    integer(ik), parameter :: NO_FACE   = 0
     integer(ik), parameter :: XI_MIN    = 1
     integer(ik), parameter :: XI_MAX    = 2
     integer(ik), parameter :: ETA_MIN   = 3
@@ -112,6 +113,7 @@ module mod_constants
 
     !
     ! Face types. These should be distinct from the above 'face directions'
+    ! Correspond to face_t%face_type
     !
     integer(ik), parameter :: INTERIOR  =  0     ! interior face
     integer(ik), parameter :: BOUNDARY  = -1     ! boundary condition type

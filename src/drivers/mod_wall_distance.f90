@@ -83,6 +83,8 @@ contains
         call wall_distance%set('Linear Solver'   , algorithm='fgmres_cgs',   options=loptions)
         call wall_distance%set('Preconditioner'  , algorithm='RASILU0'                       )
 
+        order = chidg%nterms_s_1d
+        call wall_distance%set('Solution Order', integer_input=order)
 
 
         !
@@ -122,8 +124,6 @@ contains
         !
         ! Initialize wall_distance with chidg order in case we are going to read in a solution.
         !
-        order = chidg%nterms_s_1d
-        call wall_distance%set('Solution Order', integer_input=order)
         call wall_distance%init('all')
 
 
@@ -157,6 +157,7 @@ contains
         if (wd_file_exists .and. have_wd_field) then
 
             call wall_distance%read_solution('wall_distance.h5')
+            wall_distance%data%sdata%q = wall_distance%data%sdata%q_in
 
         !
         ! If we don't have an accurate wall distance field in file, solve for a new one.

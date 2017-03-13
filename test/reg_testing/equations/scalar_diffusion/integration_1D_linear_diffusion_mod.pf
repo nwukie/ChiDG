@@ -291,7 +291,7 @@ contains
         class(testing_1D_linear_diffusion_model_t),    intent(inout)   :: self
 
         call self%set_name('Testing 1D Linear Diffusion :: Coefficient Model')
-        call self%set_dependency('Q-')
+        call self%set_dependency('f(Q-)')
 
         call self%add_model_field('Scalar Diffusion Coefficient')
 

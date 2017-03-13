@@ -52,7 +52,7 @@ contains
         class(reynolds_analogy_t), intent(inout)   :: self
 
         call self%set_name('Reynolds Analogy')
-        call self%set_dependency('Q-')
+        call self%set_dependency('f(Q-)')
 
         call self%add_model_field('Laminar Thermal Conductivity')
 

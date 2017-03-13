@@ -54,7 +54,7 @@ contains
         class(shear_stress_t), intent(inout)   :: self
 
         call self%set_name('Shear Stress')
-        call self%set_dependency('Grad(Q)')
+        call self%set_dependency('f(Grad(Q))')
 
         call self%add_model_field('Shear-11')
         call self%add_model_field('Shear-22')

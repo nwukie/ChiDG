@@ -236,12 +236,13 @@ contains
         !
         ! Append extension if we need to
         !
-        loc = index(filename,".h5")
-        if (loc == 0) then
-            filename_init = trim(filename)//".h5"
-        else
-            filename_init = trim(filename)
-        end if
+        !loc = index(filename,".h5")
+        !if (loc == 0) then
+        !    filename_init = trim(filename)//".h5"
+        !else
+        !    filename_init = trim(filename)
+        !end if
+        filename_init = trim(filename)
         
 
         !
@@ -360,33 +361,37 @@ contains
         character(:),   allocatable :: filename_open, user_msg
         integer(HID_T)  :: fid
         integer         :: ierr, loc
-        logical         :: file_exists
+        logical         :: file_exists, file_is_hdf5
 
         !
         ! Append extension if we need to
         !
-        loc = index(filename,".h5")
-        if (loc == 0) then
-            filename_open = trim(filename)//".h5"
-        else
-            filename_open = trim(filename)
-        end if
+        !loc = index(filename,".h5")
+        !if (loc == 0) then
+        !    filename_open = trim(filename)//".h5"
+        !else
+        !    filename_open = trim(filename)
+        !end if
+        filename_open = trim(filename)
 
-        !  Check file exists
+        ! Check file exists
         inquire(file=filename_open, exist=file_exists)
         if (.not. file_exists) then
-            call chidg_signal(FATAL,"open_file_hdf: Could not find file: "//trim(filename_open))
+            call chidg_signal_one(FATAL,"open_file_hdf: Could not find file.",trim(filename_open))
         end if
 
-
+        ! Check file is HDF5/ChiDG
+        call h5fis_hdf5_f(filename_open,file_is_hdf5,ierr)
+        user_msg = "open_file_hdf: Specified file is not an HDF5 file."
+        if (.not. file_is_hdf5) call chidg_signal_one(FATAL,user_msg,trim(filename_open))
 
         !
         !  Open input file using default properties.
         !
         call open_hdf()
         call h5fopen_f(filename_open, H5F_ACC_RDWR_F, fid, ierr)
-        user_msg = "open_file_hdf: h5fopen_f, There was an error opening the file: "//trim(filename_open)
-        if (ierr /= 0) call chidg_signal(FATAL,user_msg)
+        user_msg = "open_file_hdf: There was an error opening the file."
+        if (ierr /= 0) call chidg_signal_one(FATAL,user_msg,trim(filename_open))
 
 
         !

@@ -1,9 +1,10 @@
 module type_mesh
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik
-    use mod_constants,              only: NFACES,XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, &
-                                          ORPHAN, INTERIOR, BOUNDARY, CHIMERA, TWO_DIM, THREE_DIM, NO_NEIGHBOR_FOUND, NEIGHBOR_FOUND, &
-                                          NO_PROC
+    use mod_constants,              only: XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, &
+                                          ORPHAN, INTERIOR, BOUNDARY, CHIMERA, TWO_DIM, &
+                                          THREE_DIM, NO_NEIGHBOR_FOUND, NEIGHBOR_FOUND, &
+                                          NO_PROC, NFACES
     use mod_grid,                   only: FACE_CORNERS
     use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
     use mpi_f08
@@ -29,7 +30,7 @@ module type_mesh
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/27/2016
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     type, public :: mesh_t
 
         !
@@ -38,70 +39,67 @@ module type_mesh
         integer(ik)                     :: idomain_g
         integer(ik)                     :: idomain_l
 
-        integer(ik)                     :: spacedim   = 0               !< Number of spatial dimensions
-        integer(ik)                     :: neqns      = 0               !< Number of equations being solved
-        integer(ik)                     :: nterms_s   = 0               !< Number of terms in the solution expansion
-        integer(ik)                     :: nterms_c   = 0               !< Number of terms in the grid coordinate expansion
-        integer(ik)                     :: nelem      = 0               !< Number of total elements
-        integer(ik)                     :: ntime      = 0               !< Number of time instances
-        character(:),   allocatable     :: coordinate_system            !< 'Cartesian' or 'Cylindrical'
+        integer(ik)                     :: spacedim   = 0     ! N-spatial dimensions
+        integer(ik)                     :: neqns      = 0     ! N-equations being solved
+        integer(ik)                     :: nterms_s   = 0     ! N-terms in solution expansion
+        integer(ik)                     :: nterms_c   = 0     ! N-terms in coordinate expansion
+        integer(ik)                     :: nelem      = 0     ! Number of total elements
+        integer(ik)                     :: ntime      = 0     ! Number of time instances
+        character(:),   allocatable     :: coordinate_system  ! 'Cartesian' or 'Cylindrical'
 
         
         !
-        ! Primary mesh data
+        ! mesh geometry data
         !
-        type(point_t),    allocatable   :: nodes(:)                     !< Original node points for the domain, Global.
-        type(element_t),  allocatable   :: elems(:)                     !< Element storage (1:nelem)
-        type(face_t),     allocatable   :: faces(:,:)                   !< Face storage    (1:nelem,1:nfaces)
-        type(chimera_t)                 :: chimera                      !< Chimera interface data
+        type(point_t),    allocatable   :: nodes(:)       ! Nodes of the domain - unpartitioned.
+        type(element_t),  allocatable   :: elems(:)       ! Element storage (1:nelem)
+        type(face_t),     allocatable   :: faces(:,:)     ! Face storage (1:nelem,1:nfaces)
+        type(chimera_t)                 :: chimera        ! Chimera interface data
 
 
         !
         ! Initialization flags
         !
-        logical                         :: geomInitialized          = .false.   !< Status of geometry initialization
-        logical                         :: solInitialized           = .false.   !< Status of numerics initialization
-        logical                         :: local_comm_initialized   = .false.   !< Status of processor-local communication initialization
-        logical                         :: global_comm_initialized  = .false.   !< Status of processor-global communication initialization
+        logical   :: geomInitialized          = .false.   ! Status of geometry initialization
+        logical   :: solInitialized           = .false.   ! Status of numerics initialization
+        logical   :: local_comm_initialized   = .false.   ! Status of processor-local comm init
+        logical   :: global_comm_initialized  = .false.   ! Status of processor-global comm init
 
     contains
 
-        procedure           :: init_geom                !< Call geometry initialization for elements and faces 
-        procedure           :: init_sol                 !< Call initialization for data depending on solution order for elements and faces
+        procedure           :: init_geom                ! geometry init for elements and faces 
+        procedure           :: init_sol                 ! init data depending on solution order for elements and faces
 
-        procedure, private  :: init_elems_geom          !< Loop through elements and initialize geometry
-        procedure, private  :: init_elems_sol           !< Loop through elements and initialize data depending on the solution order
-        procedure, private  :: init_faces_geom          !< Loop through faces and initialize geometry
-        procedure, private  :: init_faces_sol           !< Loop through faces and initialize data depending on the solution order
+        procedure, private  :: init_elems_geom          ! Loop through elements init geometry
+        procedure, private  :: init_elems_sol           ! Loop through elements init data depending on the solution order
+        procedure, private  :: init_faces_geom          ! Loop through faces init geometry
+        procedure, private  :: init_faces_sol           ! Loop through faces init data depending on the solution order
 
-        procedure           :: init_comm_local          !< For faces, find processor-local neighbors and initialize face neighbor indices 
-        procedure           :: init_comm_global         !< For faces, find neighbors across processors and initialize face neighbor indices
+        procedure           :: init_comm_local          ! For faces, find proc-local neighbors, initialize face neighbor indices 
+        procedure           :: init_comm_global         ! For faces, find neighbors across procs, initialize face neighbor indices
 
         ! Utilities
-        procedure, private  :: find_neighbor_local      !< Try to find a neighbor for a particular face on the local processor
-        procedure, private  :: find_neighbor_global     !< Try to find a neighbor for a particular face across processors
-        procedure           :: handle_neighbor_request  !< When a neighbor request from another processor comes in, 
-                                                        !! check if current processor contains neighbor
+        procedure, private  :: find_neighbor_local      ! Try to find a neighbor for a particular face on the local processor
+        procedure, private  :: find_neighbor_global     ! Try to find a neighbor for a particular face across processors
+        procedure           :: handle_neighbor_request  ! When a neighbor request from another processor comes in, 
+                                                        ! check if current processor contains neighbor
 
 
-        procedure,  public  :: get_recv_procs           !< Return the processor ranks that the mesh is receiving from (neighbor+chimera)
-        procedure,  public  :: get_recv_procs_local     !< Return the processor ranks that the mesh is receiving neighbor data from
-        procedure,  public  :: get_recv_procs_chimera   !< Return the processor ranks that the mesh is receiving chimera data from 
+        procedure,  public  :: get_recv_procs           ! Return proc ranks mesh receiving from (neighbor+chimera)
+        procedure,  public  :: get_recv_procs_local     ! Return proc ranks mesh receiving neighbor data from
+        procedure,  public  :: get_recv_procs_chimera   ! Return proc ranks mesh receiving chimera data from 
 
-        procedure,  public  :: get_send_procs           !< Return the processor ranks that the mesh is sending to (neighbor+chimera)
-        procedure,  public  :: get_send_procs_local     !< Return the processor ranks that the mesh is sending neighbor data to
-        procedure,  public  :: get_send_procs_chimera   !< Return the processor ranks that the mesh is sending chimera data to
+        procedure,  public  :: get_send_procs           ! Return proc ranks mesh sending to (neighbor+chimera)
+        procedure,  public  :: get_send_procs_local     ! Return proc ranks mesh sending neighbor data to
+        procedure,  public  :: get_send_procs_chimera   ! Return proc ranks mesh sending chimera data to
 
         procedure,  public  :: get_nelements_global
         procedure,  public  :: get_nelements_local
 
-!       TODO: Implement this so it can be used throughout.
-!        procedure,  public  :: get_face_exterior_ndepend    !< For a particular face, return the number of exterior dependent elements
-
         final               :: destructor
 
     end type mesh_t
-    !************************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -127,7 +125,7 @@ contains
     !!  @param[in]  nterms_c    Number of terms in the coordinate expansion
     !!  @param[in]  points_g    Rank-3 matrix of coordinate points defining a block mesh
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine init_geom(self,idomain_l,spacedim,nterms_c,nodes,connectivity,coord_system)
         class(mesh_t),                  intent(inout), target   :: self
         integer(ik),                    intent(in)              :: idomain_l
@@ -163,7 +161,7 @@ contains
 
 
     end subroutine init_geom
-    !************************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -191,7 +189,7 @@ contains
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/9/2016
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine init_sol(self,neqns,nterms_s,ntime)
         class(mesh_t),  intent(inout)   :: self
         integer(ik),    intent(in)      :: neqns
@@ -208,8 +206,7 @@ contains
         !
         ! Call numerics initialization for elements and faces
         !
-        call self%init_elems_sol(neqns,nterms_s,ntime)    ! TODO: Add ntime to the subroutine call after adding it to
-                                                    !       the list of input parameters in element_t
+        call self%init_elems_sol(neqns,nterms_s,ntime)
         call self%init_faces_sol()               
 
         
@@ -220,7 +217,7 @@ contains
 
 
     end subroutine init_sol
-    !************************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -238,8 +235,6 @@ contains
     !!  Computes the number of elements based on the element mapping selected and
     !!  calls the element initialization procedure on individual elements.
     !!
-    !!  TODO: Generalize for non-block structured ness. Eliminate dependence on, xi, eta, zeta directions.
-    !!
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -247,7 +242,7 @@ contains
     !!
     !!  @param[in]  points_g    Rank-3 matrix of coordinate points defining a block mesh
     !!
-    !------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine init_elems_geom(self,spacedim,nodes,connectivity,coord_system)
         class(mesh_t),                  intent(inout)   :: self
         integer(ik),                    intent(in)      :: spacedim
@@ -256,16 +251,10 @@ contains
         character(*),                   intent(in)      :: coord_system
 
 
-        type(point_t),  allocatable     :: points_l(:)
         type(element_connectivity_t)    :: element_connectivity
 
-        integer(ik)                ::   ierr,     ipt,       ielem_l,           &
-                                        ipt_xi,   ipt_eta,   ipt_zeta,          &
-                                        ixi,      ieta,      izeta,             &
-                                        xi_start, eta_start, zeta_start,        &
-                                        nelem_xi, nelem_eta, nelem_zeta, nelem, &
-                                        neqns,    nterms_s,  nnodes, nterms_c,  &
-                                        npts_1d, mapping, idomain_l, inode
+        integer(ik) :: ierr, ielem_l, nelem, nterms_s, &
+                       nnodes, nterms_c, npts_1d, mapping, idomain_l
 
 
         !
@@ -286,14 +275,14 @@ contains
         !
         nelem           = connectivity%get_nelements()
         self%nelem      = nelem
-        mapping         = (npts_1d - 1)     !> 1 - linear, 2 - quadratic, 3 - cubic, etc.
+        mapping         = (npts_1d - 1)     ! 1-linear, 2-quadratic, 3-cubic, etc.
 
 
         !
         ! Allocate element storage
         !
-        allocate(self%elems(nelem), points_l(self%nterms_c), stat=ierr)
-        if(ierr /= 0) stop "Memory allocation error: init_elements"
+        allocate(self%elems(nelem), stat=ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"mesh%init_elems_geom: Memory allocation error: init_elements")
 
 
         !
@@ -309,14 +298,7 @@ contains
 
 
     end subroutine init_elems_geom
-    !**************************************************************************************************************
-
-
-
-
-
-
-
+    !*****************************************************************************************
 
 
 
@@ -336,7 +318,7 @@ contains
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/5/2016
     !!
-    !--------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine init_elems_sol(self,neqns,nterms_s,ntime)
         class(mesh_t),  intent(inout)   :: self
         integer(ik),    intent(in)      :: neqns
@@ -357,20 +339,13 @@ contains
         !
         do ielem = 1,self%nelem
 
-            call self%elems(ielem)%init_sol(self%neqns,self%nterms_s,ntime)       ! TODO: Add ntime to the subroutine call
-                                                                            !       after adding as input parameter
-                                                                            !       element_t routine
+            call self%elems(ielem)%init_sol(self%neqns,self%nterms_s,ntime) 
 
         end do
 
 
     end subroutine init_elems_sol
-    !***************************************************************************************************************
-
-
-
-
-
+    !*****************************************************************************************
 
 
 
@@ -387,7 +362,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine init_faces_geom(self,spacedim,nodes,connectivity)
         class(mesh_t),                  intent(inout)   :: self
         integer(ik),                    intent(in)      :: spacedim
@@ -416,14 +391,7 @@ contains
 
 
     end subroutine init_faces_geom
-    !**************************************************************************************************************
-
-
-
-
-
-
-
+    !*****************************************************************************************
 
 
 
@@ -441,14 +409,15 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine init_faces_sol(self)
         class(mesh_t), intent(inout)  :: self
 
         integer(ik) :: ielem, iface
 
         !
-        ! Loop through elements, faces and call initialization that depends on the solution basis.
+        ! Loop through elements, faces and call initialization that depends on 
+        ! the solution basis.
         !
         do ielem = 1,self%nelem
             do iface = 1,NFACES
@@ -460,7 +429,7 @@ contains
 
 
     end subroutine init_faces_sol
-    !***************************************************************************************************************
+    !******************************************************************************************
 
 
 
@@ -478,62 +447,85 @@ contains
 
     !>  Initialize processor-local, interior neighbor communication.
     !!
-    !!  For each face without an interior neighbor, search the current mesh for a potential neighbor element/face
-    !!  by trying to match the corner indices of the elements.
+    !!  For each face without an interior neighbor, search the current mesh for a 
+    !!  potential neighbor element/face by trying to match the corner indices of the elements.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/10/2016
     !!
     !!
-    !--------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine init_comm_local(self)
         class(mesh_t),                  intent(inout)   :: self
 
 
-        integer(ik)             :: ixi,ieta,izeta,iface,ftype,ielem,ierr, ielem_neighbor
-        integer(ik)             :: corner_one, corner_two, corner_three, corner_four
-        integer(ik)             :: node_indices(4)
-        logical                 :: boundary_face = .false.
-        logical                 :: includes_node_one, includes_node_two, includes_node_three, includes_node_four
-        logical                 :: neighbor_element
+        integer(ik)             :: iface,ftype,ielem,ierr, ielem_neighbor,              &
+                                   corner_one, corner_two, corner_three, corner_four,   &
+                                   node_indices(4),                                     &
+                                   ineighbor_domain_g,  ineighbor_domain_l,             &
+                                   ineighbor_element_g, ineighbor_element_l,            &
+                                   ineighbor_face,      ineighbor_proc,                 &
+                                   ineighbor_neqns,     ineighbor_nterms_s,             &
+                                   neighbor_status, idomain_g, idomain_l, ielement_g,   &
+                                   ielement_l, nterms_s, neqns
 
-        integer(ik)             :: ineighbor_domain_g,  ineighbor_domain_l, ineighbor_element_g,    &
-                                   ineighbor_element_l, ineighbor_face,     ineighbor_proc,         &
-                                   ineighbor_neqns,     ineighbor_nterms_s, neighbor_status
+        logical                 :: boundary_face = .false.
+        logical                 :: includes_node_one, includes_node_two,    &
+                                   includes_node_three, includes_node_four, &
+                                   neighbor_element
 
         !
         ! Loop through each local element and call initialization for each face
         !
         do ielem = 1,self%nelem
+
             do iface = 1,NFACES
 
                 !
                 ! Check if face has neighbor on local partition.
                 !   - ORPHAN means the exterior state is empty and we want to try and find a connection
-                !   - INTERIOR means the exterior state is already connected, but we want to reinitialize
-                !     the info, for example nterms_s if the order has been increased.
                 !
-                if ( (self%faces(ielem,iface)%ftype == ORPHAN  ) .or. &
-                     (self%faces(ielem,iface)%ftype == INTERIOR) ) then
+                if ( self%faces(ielem,iface)%ftype == ORPHAN ) then
                     call self%find_neighbor_local(ielem,iface,              &
                                                   ineighbor_domain_g,       &
                                                   ineighbor_domain_l,       &
                                                   ineighbor_element_g,      &
                                                   ineighbor_element_l,      &
                                                   ineighbor_face,           &
-                                                  ineighbor_neqns,          &
-                                                  ineighbor_nterms_s,       &
                                                   ineighbor_proc,           &
                                                   neighbor_status)
 
+                !
+                !   - INTERIOR means the neighbor is already connected, but maybe we want to reinitialize
+                !     the info, for example nterms_s if the order has been increased. So here,
+                !     we just access the location that is already initialized.
+                !
+                else if ( self%faces(ielem,iface)%ftype == INTERIOR )  then
+                    
+                    ineighbor_domain_g  = self%faces(ielem,iface)%ineighbor_domain_g
+                    ineighbor_domain_l  = self%faces(ielem,iface)%ineighbor_domain_l
+                    ineighbor_element_g = self%faces(ielem,iface)%ineighbor_element_g
+                    ineighbor_element_l = self%faces(ielem,iface)%ineighbor_element_l
+                    ineighbor_face      = self%faces(ielem,iface)%ineighbor_face
+                    ineighbor_proc      = self%faces(ielem,iface)%ineighbor_proc
+                    neighbor_status     = NEIGHBOR_FOUND
+
+                end if
+
 
                     
-                    !
-                    ! If no neighbor found, either boundary condition face or chimera face
-                    !
+                !
+                ! If no neighbor found, either boundary condition face or chimera face
+                !
+                if ( (self%faces(ielem,iface)%ftype == ORPHAN) .or. &
+                     (self%faces(ielem,iface)%ftype == INTERIOR) ) then
+
                     if ( neighbor_status == NEIGHBOR_FOUND ) then
-                        ! Neighbor data should already be set, from previous routines. Set face type.
-                        ftype = INTERIOR
+
+                        ftype               = INTERIOR
+                        ineighbor_neqns     = self%elems(ineighbor_element_l)%neqns
+                        ineighbor_nterms_s  = self%elems(ineighbor_element_l)%nterms_s
+
 
                     else
                         ! Default ftype to ORPHAN face and clear neighbor index data.
@@ -558,10 +550,28 @@ contains
                     call self%faces(ielem,iface)%init_neighbor(ftype,ineighbor_domain_g, ineighbor_domain_l,    &
                                                                      ineighbor_element_g,ineighbor_element_l,   &
                                                                      ineighbor_face,     ineighbor_neqns,       &
-                                                                     ineighbor_nterms_S, ineighbor_proc)
+                                                                     ineighbor_nterms_s, ineighbor_proc)
+
+                    !
+                    ! Also, initialize neighbor face at the same time so we don't
+                    ! have to do the search again. 
+                    !
+                    ! Only can initialize opposite neighbor if opposite element is on-proc.
+                    !
+                    if ( (neighbor_status == NEIGHBOR_FOUND) .and. (ineighbor_proc == IRANK) ) then
+                        idomain_g  = self%elems(ielem)%idomain_g
+                        idomain_l  = self%elems(ielem)%idomain_l
+                        ielement_g = self%elems(ielem)%ielement_g
+                        ielement_l = self%elems(ielem)%ielement_l
+                        neqns      = self%elems(ielem)%neqns
+                        nterms_s   = self%elems(ielem)%nterms_s
+                        call self%faces(ineighbor_element_l,ineighbor_face)%init_neighbor(ftype,idomain_g,  idomain_l,  &
+                                                                                                ielement_g, ielement_l, &
+                                                                                                iface,      neqns,      &
+                                                                                                nterms_s,   IRANK)
+                    end if
 
                 end if
-
 
             end do !iface
         end do !ielem
@@ -571,7 +581,7 @@ contains
         self%local_comm_initialized = .true.
 
     end subroutine init_comm_local
-    !**************************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -593,28 +603,29 @@ contains
     !!
     !!
     !!
-    !--------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine init_comm_global(self,ChiDG_COMM)
         class(mesh_t),                  intent(inout)   :: self
         type(mpi_comm),                 intent(in)      :: ChiDG_COMM
 
 
-        integer(ik)             :: ixi,ieta,izeta,iface,ftype,ielem,ierr, ielem_neighbor
-        integer(ik)             :: corner_one, corner_two, corner_three, corner_four
-        integer(ik)             :: node_indices(4)
+        integer(ik)             :: iface,ftype,ielem,ierr, ielem_neighbor,              &
+                                   corner_one, corner_two, corner_three, corner_four,   &
+                                   node_indices(4),                                     &
+                                   ineighbor_domain_g,  ineighbor_domain_l,             &
+                                   ineighbor_element_g, ineighbor_element_l,            &
+                                   ineighbor_face,      ineighbor_proc,                 &
+                                   ineighbor_neqns,     ineighbor_nterms_s, neighbor_status
+
         logical                 :: includes_node_one, includes_node_two,    &
                                    includes_node_three, includes_node_four, &
                                    neighbor_element, searching
 
-        integer(ik)             :: ineighbor_domain_g,  ineighbor_domain_l,     &
-                                   ineighbor_element_g, ineighbor_element_l,    &
-                                   ineighbor_face,      ineighbor_proc,         &
-                                   ineighbor_neqns,     ineighbor_nterms_s, neighbor_status
 
         real(rk)                                :: neighbor_h(3)
-        real(rk), allocatable, dimension(:,:)   :: neighbor_grad1, neighbor_grad2, neighbor_grad3,  &
-                                                   neighbor_br2_face, neighbor_br2_vol,             &
-                                                   neighbor_invmass
+        real(rk), allocatable, dimension(:,:)   :: neighbor_grad1,   neighbor_grad2,    &
+                                                   neighbor_grad3,   neighbor_br2_face, &
+                                                   neighbor_br2_vol, neighbor_invmass
 
 
 
@@ -663,7 +674,8 @@ contains
                     ! If no neighbor found, either boundary condition face or chimera face
                     !
                     if ( neighbor_status == NEIGHBOR_FOUND ) then
-                        ! Neighbor data should already be set, from previous routines. Set face type.
+                        ! Neighbor data should already be set, from previous routines. 
+                        ! Set face type.
                         ftype = INTERIOR
 
                         !
@@ -679,7 +691,10 @@ contains
 
                     else
                         ! Default ftype to ORPHAN face and clear neighbor index data.
-                        ftype = ORPHAN      ! This should be processed later; either by a boundary condition(ftype=1), or a chimera boundary(ftype=2)
+                        ! ftype should be processed later; either by a boundary 
+                        ! condition(ftype=1), or a chimera boundary(ftype=2)
+                        ! 
+                        ftype = ORPHAN
                         ineighbor_domain_g  = 0
                         ineighbor_domain_l  = 0
                         ineighbor_element_g = 0
@@ -718,7 +733,7 @@ contains
 
 
     end subroutine init_comm_global
-    !**************************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -727,38 +742,29 @@ contains
 
 
 
-
-
-
-
-
-
-
-    !>  Outside of this subroutine, it should have already been determined that a neighbor request was initiated
-    !!  from another processor and the current processor contains part of the domain of interest. This routine
-    !!  receives corner indices from the requesting processor and tries to find a match in the current mesh.
-    !!  The status of the element match is sent back. If a match was 
+    !>  Outside of this subroutine, it should have already been determined that a 
+    !!  neighbor request was initiated from another processor and the current processor 
+    !!  contains part of the domain of interest. This routine receives corner indices from 
+    !!  the requesting processor and tries to find a match in the current mesh. The status 
+    !!  of the element match is sent back. If a match was 
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/21/2016
     !!
-    !!
-    !!
-    !!
-    !--------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine handle_neighbor_request(self,iproc,ChiDG_COMM)
         class(mesh_t),  intent(inout)   :: self
         integer(ik),    intent(in)      :: iproc
         type(mpi_comm), intent(in)      :: ChiDG_COMM
 
-        integer(ik) :: ielem_l, iface
-        integer(ik) :: ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l, &
-                       ineighbor_face, ineighbor_neqns, ineighbor_nterms_s
-        integer(ik) :: data(7), corner_indices(4), grad_size(2), invmass_size(2), br2_face_size(2), br2_vol_size(2)
-        integer     :: ierr
-        logical     :: includes_corner_one, includes_corner_two, includes_corner_three, includes_corner_four
-        logical     :: neighbor_element
-
+        integer(ik) :: ielem_l, iface, ierr,                                &
+                       ineighbor_domain_g, ineighbor_domain_l,              &
+                       ineighbor_element_g, ineighbor_element_l,            &
+                       ineighbor_face, ineighbor_neqns, ineighbor_nterms_s, &
+                       data(7), corner_indices(4), grad_size(2),            &
+                       invmass_size(2), br2_face_size(2), br2_vol_size(2)
+        logical     :: includes_corner_one, includes_corner_two, &
+                       includes_corner_three, includes_corner_four, neighbor_element
 
 
         ! Receive corner indices of face to be matched
@@ -766,14 +772,18 @@ contains
 
 
         ! Loop through local domain and try to find a match
-        ! Test the incoming face nodes against local elements, if all face nodes are also contained in an element, then they are neighbors.
+        ! Test the incoming face nodes against local elements, if all face nodes are 
+        ! also contained in an element, then they are neighbors.
         neighbor_element = .false.
         do ielem_l = 1,self%nelem
             includes_corner_one   = any( self%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(1) )
             includes_corner_two   = any( self%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(2) )
             includes_corner_three = any( self%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(3) )
             includes_corner_four  = any( self%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(4) )
-            neighbor_element = ( includes_corner_one .and. includes_corner_two .and. includes_corner_three .and. includes_corner_four )
+            neighbor_element = ( includes_corner_one   .and. &
+                                 includes_corner_two   .and. &
+                                 includes_corner_three .and. &
+                                 includes_corner_four )
 
             if ( neighbor_element ) then
                 !
@@ -842,7 +852,7 @@ contains
 
 
     end subroutine handle_neighbor_request
-    !**************************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -853,26 +863,18 @@ contains
 
 
 
-
-
-
-
-
-
-
-    !>  For given element/face indices, try to find a potential interior neighbor. That is, a matching
-    !!  element within the current domain and on the current processor(local).
+    !>  For given element/face indices, try to find a potential interior neighbor. That is, 
+    !!  a matching element within the current domain and on the current processor(local).
     !!
     !!  If found, return neighbor info.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/16/2016
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine find_neighbor_local(self,ielem_l,iface,ineighbor_domain_g, ineighbor_domain_l,   &
                                                       ineighbor_element_g,ineighbor_element_l,  &
-                                                      ineighbor_face,     ineighbor_neqns,      &
-                                                      ineighbor_nterms_s, ineighbor_proc,       &
+                                                      ineighbor_face,     ineighbor_proc,       &
                                                       neighbor_status)
         class(mesh_t),                  intent(inout)   :: self
         integer(ik),                    intent(in)      :: ielem_l
@@ -882,43 +884,56 @@ contains
         integer(ik),                    intent(inout)   :: ineighbor_element_g
         integer(ik),                    intent(inout)   :: ineighbor_element_l
         integer(ik),                    intent(inout)   :: ineighbor_face
-        integer(ik),                    intent(inout)   :: ineighbor_neqns
-        integer(ik),                    intent(inout)   :: ineighbor_nterms_s
         integer(ik),                    intent(inout)   :: ineighbor_proc
         integer(ik),                    intent(inout)   :: neighbor_status
 
-        integer(ik) :: corner_one, corner_two, corner_three, corner_four
-        integer(ik) :: corner_indices(4), ielem_neighbor, mapping
-        logical     :: includes_corner_one, includes_corner_two, includes_corner_three, includes_corner_four
-        logical     :: neighbor_element
+        integer(ik),    allocatable :: element_nodes(:)
+        integer(ik) :: corner_one, corner_two, corner_three, corner_four,   &
+                       corner_indices(4), ielem_neighbor, mapping
+        logical     :: includes_corner_one, includes_corner_two, &
+                       includes_corner_three, includes_corner_four, neighbor_element
 
         neighbor_status = NO_NEIGHBOR_FOUND
 
-        ! Get the indices of the corner nodes that correspond to the current face in an element connectivity list
+        !
+        ! Get the element-local node indices of the corner nodes that correspond 
+        ! to the current face in an element connectivity list
+        !
         mapping = self%elems(ielem_l)%connectivity%get_element_mapping()
         corner_one   = FACE_CORNERS(iface,1,mapping)
         corner_two   = FACE_CORNERS(iface,2,mapping)
         corner_three = FACE_CORNERS(iface,3,mapping)
         corner_four  = FACE_CORNERS(iface,4,mapping)
 
-
-        ! For the current face, get the indices of the coordinate nodes for the corners
+        
+        !
+        ! For the current face, get the global-indices of the coordinate nodes 
+        ! for the corners
+        !
         corner_indices(1) = self%elems(ielem_l)%connectivity%get_element_node(corner_one)
         corner_indices(2) = self%elems(ielem_l)%connectivity%get_element_node(corner_two)
         corner_indices(3) = self%elems(ielem_l)%connectivity%get_element_node(corner_three)
         corner_indices(4) = self%elems(ielem_l)%connectivity%get_element_node(corner_four)
 
         
-        ! Test the face nodes against other elements, if all face nodes are also contained in another element, then they are neighbors.
+        !
+        ! Test the global face node indices against other elements. If all face nodes 
+        ! are also contained in another element, then they are neighbors.
+        !
         neighbor_element = .false.
         do ielem_neighbor = 1,self%nelem
-            if (ielem_neighbor /= ielem_l ) then
-                includes_corner_one   = any( self%elems(ielem_neighbor)%connectivity%get_element_nodes() == corner_indices(1) )
-                includes_corner_two   = any( self%elems(ielem_neighbor)%connectivity%get_element_nodes() == corner_indices(2) )
-                includes_corner_three = any( self%elems(ielem_neighbor)%connectivity%get_element_nodes() == corner_indices(3) )
-                includes_corner_four  = any( self%elems(ielem_neighbor)%connectivity%get_element_nodes() == corner_indices(4) )
+            if (ielem_neighbor /= ielem_l) then
 
-                neighbor_element = ( includes_corner_one .and. includes_corner_two .and. includes_corner_three .and. includes_corner_four )
+                element_nodes = self%elems(ielem_neighbor)%connectivity%get_element_nodes()
+                includes_corner_one   = any( element_nodes == corner_indices(1) )
+                includes_corner_two   = any( element_nodes == corner_indices(2) )
+                includes_corner_three = any( element_nodes == corner_indices(3) )
+                includes_corner_four  = any( element_nodes == corner_indices(4) )
+
+                neighbor_element = ( includes_corner_one   .and. &
+                                     includes_corner_two   .and. &
+                                     includes_corner_three .and. &
+                                     includes_corner_four )
 
                 if ( neighbor_element ) then
                     ineighbor_domain_g  = self%elems(ielem_neighbor)%connectivity%get_domain_index()
@@ -927,8 +942,6 @@ contains
                     ineighbor_element_l = ielem_neighbor
                     ineighbor_face      = self%elems(ielem_neighbor)%get_face_from_corners(corner_indices)
                     ineighbor_proc      = self%elems(ielem_neighbor)%connectivity%get_element_partition()
-                    ineighbor_neqns     = self%elems(ielem_neighbor)%neqns
-                    ineighbor_nterms_s  = self%elems(ielem_neighbor)%nterms_s
                     neighbor_status     = NEIGHBOR_FOUND
                     exit
                 end if
@@ -938,10 +951,7 @@ contains
 
 
     end subroutine find_neighbor_local
-    !***************************************************************************************************************
-
-
-
+    !*****************************************************************************************
 
 
 
@@ -952,17 +962,18 @@ contains
 
     !>  Search for an interior neighbor element across all processors.
     !!
-    !!  Pass the corner indices for matching on a potential neighbor element so they can be checked by elements
-    !!  on another processor. If element is found,
-    !!  get the grad1, grad2, grad3, invmass etc. information that is element specific to that neighbor, which is
-    !!  located on another processor. This allows us to compute cartesian derivatives as they would be 
-    !!  computed in the neighbor element, without sending the entire element representation across.
+    !!  Pass the corner indices for matching on a potential neighbor element so they can 
+    !!  be checked by elements on another processor. If element is found, get the grad1, 
+    !!  grad2, grad3, invmass etc. information that is element specific to that neighbor, 
+    !!  which is located on another processor. This allows us to compute cartesian 
+    !!  derivatives as they would be computed in the neighbor element, without sending 
+    !!  the entire element representation across.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/16/2016
     !!
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine find_neighbor_global(self,ielem_l,iface,ineighbor_domain_g,  ineighbor_domain_l,  &
                                                        ineighbor_element_g, ineighbor_element_l, &
                                                        ineighbor_face,      ineighbor_neqns,     &
@@ -994,15 +1005,16 @@ contains
         integer(ik),                    intent(inout)   :: neighbor_status
         type(mpi_comm),                 intent(in)      :: ChiDG_COMM
 
-        integer(ik) :: corner_one, corner_two, corner_three, corner_four
-        integer(ik) :: corner_indices(4), data(7), mapping, iproc, idomain_g, ierr
-        integer(ik) :: grad_size(2), invmass_size(2), br2_face_size(2), br2_vol_size(2)
+        integer(ik) :: corner_one, corner_two, corner_three, corner_four,           &
+                       corner_indices(4), data(7), mapping, iproc, idomain_g, ierr, &
+                       grad_size(2), invmass_size(2), br2_face_size(2), br2_vol_size(2)
         logical     :: neighbor_element, has_domain
 
 
         neighbor_status = NO_NEIGHBOR_FOUND
 
-        ! Get the indices of the corner nodes that correspond to the current face in an element connectivity list
+        ! Get the indices of the corner nodes that correspond to the current face 
+        ! in an element connectivity list.
         mapping      = self%elems(ielem_l)%connectivity%get_element_mapping()
         corner_one   = FACE_CORNERS(iface,1,mapping)
         corner_two   = FACE_CORNERS(iface,2,mapping)
@@ -1010,16 +1022,17 @@ contains
         corner_four  = FACE_CORNERS(iface,4,mapping)
 
 
-        ! For the current face, get the indices of the coordinate nodes for the corners defining a face
+        ! For the current face, get the indices of the coordinate nodes for 
+        ! the corners defining a face
         corner_indices(1) = self%elems(ielem_l)%connectivity%get_element_node(corner_one)
         corner_indices(2) = self%elems(ielem_l)%connectivity%get_element_node(corner_two)
         corner_indices(3) = self%elems(ielem_l)%connectivity%get_element_node(corner_three)
         corner_indices(4) = self%elems(ielem_l)%connectivity%get_element_node(corner_four)
 
         
-        ! Test the face nodes against other elements, if all face nodes are also contained in another element, then they are neighbors.
+        ! Test the face nodes against other elements, if all face nodes are also 
+        ! contained in another element, then they are neighbors.
         neighbor_element = .false.
-
 
 
 
@@ -1090,7 +1103,7 @@ contains
 
 
     end subroutine find_neighbor_global
-    !***************************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -1106,7 +1119,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/30/2016
     !!
-    !---------------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function get_recv_procs(self) result(comm_procs)
         class(mesh_t),   intent(in)  :: self
 
@@ -1172,7 +1185,7 @@ contains
 
 
     end function get_recv_procs
-    !***************************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -1184,19 +1197,15 @@ contains
 
 
 
-
-
-
-    !>  Return the processor ranks that the current mesh is receiving interior neighbor elements from.
+    !>  Return the processor ranks that the current mesh is receiving interior 
+    !!  neighbor elements from.
     !!
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/30/2016
     !!
     !!
-    !!
-    !!
-    !--------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function get_recv_procs_local(self) result(comm_procs)
         class(mesh_t),   intent(in)  :: self
 
@@ -1259,7 +1268,7 @@ contains
         comm_procs = comm_procs_vector%data()
 
     end function get_recv_procs_local
-    !********************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -1271,24 +1280,23 @@ contains
 
 
 
-    !>  Return the processor ranks that the current mesh is receiving chimera donor elements from.
+    !>  Return the processor ranks that the current mesh is receiving chimera donor 
+    !!  elements from.
     !!
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/30/2016
     !!
     !!
-    !!
-    !!
-    !--------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function get_recv_procs_chimera(self) result(comm_procs)
         class(mesh_t),   intent(in)  :: self
 
-        type(ivector_t)             :: comm_procs_vector
+        character(:),   allocatable :: user_msg
         integer(ik),    allocatable :: comm_procs(:)
         integer(ik)                 :: myrank, ielem, iface, loc, ChiID, idonor, donor_rank
         logical                     :: already_added, is_chimera, comm_donor
-        character(:),   allocatable :: user_msg
+        type(ivector_t)             :: comm_procs_vector
 
         !
         ! Test if global communication has been initialized
@@ -1322,7 +1330,8 @@ contains
                         ! If off-processor, add to list, if not already added.
                         !
                         if ( comm_donor ) then
-                            ! Check if proc was already added to list from another donor or neighbor
+                            ! Check if proc was already added to list from another 
+                            ! donor or neighbor.
                             loc = comm_procs_vector%loc(donor_rank)
                             already_added = ( loc /= 0 )
 
@@ -1344,7 +1353,7 @@ contains
         comm_procs = comm_procs_vector%data()
 
     end function get_recv_procs_chimera
-    !********************************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -1357,16 +1366,14 @@ contains
 
     !>  Return the processor ranks that the current mesh is sending to.
     !!
-    !!  This includes processors that are being sent interior neighbor elements and also chimera
-    !!  donor elements.
+    !!  This includes processors that are being sent interior neighbor elements and also 
+    !!  chimera donor elements.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/30/2016
     !!
     !!
-    !!
-    !!
-    !--------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function get_send_procs(self) result(comm_procs)
         class(mesh_t),   intent(in)  :: self
 
@@ -1437,10 +1444,7 @@ contains
 
 
     end function get_send_procs
-    !********************************************************************************************************
-
-
-
+    !*****************************************************************************************
 
 
 
@@ -1458,9 +1462,7 @@ contains
     !!  @date   6/30/2016
     !!
     !!
-    !!
-    !!
-    !--------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function get_send_procs_local(self) result(comm_procs)
         class(mesh_t),   intent(in)  :: self
 
@@ -1525,13 +1527,7 @@ contains
         comm_procs = comm_procs_vector%data()
 
     end function get_send_procs_local
-    !********************************************************************************************************
-
-
-
-
-
-
+    !*****************************************************************************************
 
 
 
@@ -1551,9 +1547,7 @@ contains
     !!  @date   6/30/2016
     !!
     !!
-    !!
-    !!
-    !--------------------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     function get_send_procs_chimera(self) result(comm_procs)
         class(mesh_t),   intent(in)  :: self
 
@@ -1606,7 +1600,7 @@ contains
         comm_procs = comm_procs_vector%data()
 
     end function get_send_procs_chimera
-    !**************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -1620,7 +1614,7 @@ contains
     !!  @date   11/30/2016
     !!
     !!
-    !--------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_nelements_global(self) result(nelements)
         class(mesh_t),   intent(in)  :: self
 
@@ -1629,7 +1623,7 @@ contains
         nelements = size(self%nodes)
 
     end function get_nelements_global
-    !**************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -1642,7 +1636,7 @@ contains
     !!  @date   11/30/2016
     !!
     !!
-    !--------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_nelements_local(self) result(nelements)
         class(mesh_t),   intent(in)  :: self
 
@@ -1651,64 +1645,7 @@ contains
         nelements = self%nelem
 
     end function get_nelements_local
-    !**************************************************************************************
-
-
-
-
-
-
-
-
-!    !>  For a given element/face location, return the number of exterior elements that
-!    !!  the face depends on.
-!    !!
-!    !!  Interior conforming faces: 1
-!    !!  Chimerea faces: >= 1
-!    !!  BC faces: >= 1
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   12/7/2016
-!    !!
-!    !!
-!    !--------------------------------------------------------------------------------------
-!    function get_face_exterior_ndepend(self,ielement_l,iface) result(ndepend)
-!        class(mesh_t),  intent(in)  :: self
-!        integer(ik),    intent(in)  :: ielement_l
-!        integer(ik),    intent(in)  :: iface
-!        
-!
-!
-!
-!        ! 
-!        ! Compute the number of exterior element dependencies for face exterior state
-!        !
-!        if ( self%faces(ielement_l,iface)%ftype == INTERIOR ) then
-!            ndepend = 1
-!            
-!        else if ( self%faces(ielement_l,iface)%ftype == CHIMERA ) then
-!            ChiID   = self%faces(ielement_l,iface)%ChiID
-!            ndepend = self%chimera%recv%data(ChiID)%ndonors()
-!
-!        else if ( self%faces(ielement_l,iface)%ftype == BOUNDARY ) then
-!            BC_ID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_ID
-!            BC_face = worker%mesh(idomain_l)%faces(ielement_l,iface)%BC_face
-!            ndepend = bc_set(idomain_l)%bcs(BC_ID)%get_ncoupled_elems(BC_face)
-!
-!        end if
-!
-!
-!
-!
-!
-!
-!    end function get_face_exterior_ndepend
-!    !**************************************************************************************
-
-
-
-
-
+    !****************************************************************************************
 
 
 

@@ -1,7 +1,6 @@
 module messenger
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: IO_DESTINATION
-    !use mod_version,    only: GIT_SHA1
     use mod_version,    only: get_git_hash
     use mod_chidg_mpi,  only: IRANK, GLOBAL_MASTER, ChiDG_COMM
     implicit none

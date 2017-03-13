@@ -83,6 +83,8 @@ contains
         call wall_distance%set('Linear Solver'   , algorithm='fgmres_cgs',   options=loptions)
         call wall_distance%set('Preconditioner'  , algorithm='RASILU0'                       )
 
+        order = chidg%nterms_s_1d
+        call wall_distance%set('Solution Order', integer_input=order)
 
 
         !
@@ -122,8 +124,6 @@ contains
         !
         ! Initialize wall_distance with chidg order in case we are going to read in a solution.
         !
-        order = chidg%nterms_s_1d
-        call wall_distance%set('Solution Order', integer_input=order)
         call wall_distance%init('all')
 
 

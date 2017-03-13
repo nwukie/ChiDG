@@ -7,7 +7,6 @@ module type_chidg
     use mod_bc,                     only: register_bcs
     use mod_function,               only: register_functions
     use mod_grid,                   only: initialize_grid
-    !use mod_io,                     only: read_input
     use mod_string,                 only: get_file_extension, string_t, get_file_prefix
 
     use type_chidg_data,            only: chidg_data_t
@@ -305,7 +304,6 @@ contains
             ! Initialize domain data that depend on the solution expansion
             !
             case ('domains')
-                call write_line("Initializing domains...", io_proc=GLOBAL_MASTER)
 
                 user_msg = "chidg%init('domains'): It appears the 'Solution Order' was &
                             not set for the current ChiDG instance. Try calling &
@@ -313,11 +311,9 @@ contains
                             where my_order=1-7 indicates the solution order-of-accuracy."
                 if (self%nterms_s == 0) call chidg_signal(FATAL,user_msg)
 
-                !call self%data%initialize_solution_domains(self%nterms_s, self%ntime)
                 call self%data%initialize_solution_domains(self%nterms_s)
 
             case ('bc')
-                call write_line("Initializing boundary condition coupling...", io_proc=GLOBAL_MASTER)
                 call self%data%initialize_solution_bc()
 
 
@@ -325,7 +321,6 @@ contains
             ! Initialize communication. Local face communication. Global parallel communication.
             !
             case ('communication')
-                call write_line("Initializing neighbor communication...", io_proc=GLOBAL_MASTER)
                 call establish_neighbor_communication(self%data%mesh,ChiDG_COMM)
 
 
@@ -333,7 +328,6 @@ contains
             ! Initialize chimera
             !
             case ('chimera')
-                call write_line("Initializing chimera communication...", io_proc=GLOBAL_MASTER)
                 call establish_chimera_communication(self%data%mesh,ChiDG_COMM)
 
 
@@ -341,7 +335,6 @@ contains
             ! Initialize solver storage initialization: vectors, matrices, etc.
             !
             case ('solvers')
-                call write_line("Initializing solver storage...", io_proc=GLOBAL_MASTER)
                 call self%data%initialize_solution_solver()
 
 
@@ -361,13 +354,13 @@ contains
                 !
                 ! Initialize preconditioner
                 !
-                call write_line("Initializing preconditioner...", io_proc=GLOBAL_MASTER)
+                call write_line("Preconditioner: calling initialization...", io_proc=GLOBAL_MASTER)
                 call self%preconditioner%init(self%data)
                 
                 !
                 ! Initialize time_integrator
                 !
-                call write_line("Initializing time_integrator...", io_proc=GLOBAL_MASTER)
+                call write_line("Time integrator: calling initialization...", io_proc=GLOBAL_MASTER)
                 call self%time_integrator%init(self%data)
 
 
@@ -567,12 +560,12 @@ contains
                                                domain_dimensionality, ielem
 
 
-        if ( IRANK == GLOBAL_MASTER ) call write_line("Reading grid")
 
 
         !
         ! Master rank: Read connectivity, partition connectivity, distribute partitions
         !
+        call write_line("Grid: partitioning...", io_proc=GLOBAL_MASTER)
         if ( IRANK == GLOBAL_MASTER ) then
 
             call read_connectivity_hdf(gridfile,connectivities)
@@ -605,6 +598,7 @@ contains
         !
         ! Call grid reader based on file extension
         !
+        call write_line("Grid: reading...", io_proc=GLOBAL_MASTER)
         do iread = 0,NRANK-1
             if ( iread == IRANK ) then
 
@@ -625,6 +619,7 @@ contains
         !
         ! Add domains to ChiDG%data
         !
+        call write_line("Grid: processing...", io_proc=GLOBAL_MASTER)
         ndomains = size(meshdata)
         do idom = 1,ndomains
 
@@ -698,7 +693,6 @@ contains
         type(string_t)                          :: group_name
         integer                                 :: idom, ndomains, iface, ibc, ierr, iread
 
-        if (IRANK == GLOBAL_MASTER) call write_line('Reading boundary conditions')
 
         !
         ! Get filename extension
@@ -710,6 +704,7 @@ contains
         !
         ! Call boundary condition reader based on file extension
         !
+        call write_line('Boundary Conditions: reading...', io_proc=GLOBAL_MASTER)
         do iread = 0,NRANK-1
             if ( iread == IRANK ) then
 
@@ -729,6 +724,7 @@ contains
 
 
 
+        call write_line('Boundary Conditions: processing...', io_proc=GLOBAL_MASTER)
         !
         ! Add all boundary condition groups
         !
@@ -792,7 +788,6 @@ contains
         type(meshdata_t),   allocatable     :: solutiondata(:)
         integer                             :: iext, extloc, idom, ndomains, iread, ierr
 
-        call write_line("Reading solution...", io_proc=GLOBAL_MASTER)
 
         !
         ! Get filename extension
@@ -804,6 +799,7 @@ contains
         !
         ! Call grid reader based on file extension
         !
+        call write_line("Reading solution...", io_proc=GLOBAL_MASTER)
         do iread = 0,NRANK-1
             if ( iread == IRANK ) then
 
@@ -928,12 +924,14 @@ contains
         !
         ! Call grid reader based on file extension
         !
+        call write_line("Writing solution...", io_proc=GLOBAL_MASTER)
         if ( extension == '.h5' ) then
             call write_solution_hdf(self%data,solutionfile)
         else
             call chidg_signal(FATAL,"chidg%write_solution: grid file extension not recognized")
         end if
 
+        call write_line("Done writing solution...", io_proc=GLOBAL_MASTER)
 
     end subroutine write_solution
     !*****************************************************************************************

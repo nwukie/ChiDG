@@ -114,13 +114,10 @@ contains
             u_bc_norm, v_bc_norm, w_bc_norm, u_bc_tang, v_bc_tang, w_bc_tang, entropy_bc, &
             c_bc, c_m, p_m, T_m, u_m, v_m, w_m
 
-        real(rk)    :: time
-
         real(rk), allocatable, dimension(:) ::              &
             unorm_1, unorm_2, unorm_3,                         &
             rho_input, p_input, u_input, v_input, w_input, T_input, c_input
 
-        type(point_t),  allocatable, dimension(:)   :: coords
 
         logical, allocatable, dimension(:)  :: inflow, outflow
 
@@ -128,13 +125,11 @@ contains
         !
         ! Get boundary condition input parameters
         !
-        coords = worker%coords()
-        time   = worker%time()
-        rho_input = self%bcproperties%compute('Density',    time, coords)
-        p_input   = self%bcproperties%compute('Pressure',   time, coords)
-        u_input   = self%bcproperties%compute('Velocity-1', time, coords)
-        v_input   = self%bcproperties%compute('Velocity-2', time, coords)
-        w_input   = self%bcproperties%compute('Velocity-3', time, coords)
+        rho_input = self%bcproperties%compute('Density',    worker%time(), worker%coords())
+        p_input   = self%bcproperties%compute('Pressure',   worker%time(), worker%coords())
+        u_input   = self%bcproperties%compute('Velocity-1', worker%time(), worker%coords())
+        v_input   = self%bcproperties%compute('Velocity-2', worker%time(), worker%coords())
+        w_input   = self%bcproperties%compute('Velocity-3', worker%time(), worker%coords())
 
         T_input = p_input/(rho_input*287.15_rk)
         c_input = sqrt(1.4_rk*287.15_rk*T_input)
@@ -144,11 +139,11 @@ contains
         !
         ! Interpolate interior solution to quadrature nodes
         !
-        density_m  = worker%get_primary_field_face('Density'   , 'value', 'face interior')
-        mom1_m = worker%get_primary_field_face('Momentum-1', 'value', 'face interior')
-        mom2_m = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
-        mom3_m = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
-        energy_m = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
+        density_m = worker%get_primary_field_face('Density'   , 'value', 'face interior')
+        mom1_m    = worker%get_primary_field_face('Momentum-1', 'value', 'face interior')
+        mom2_m    = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
+        mom3_m    = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
+        energy_m  = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
 
 
 
@@ -161,20 +156,16 @@ contains
 
 
 
-
-
-
-        
-        !p_m = prop%fluid%compute_pressure(density_m,mom1_m,mom2_m,mom3_m,energy_m)
+        !
+        ! Get Pressure, Temperature from interior
+        !
+        !p_m = (1.4_rk - ONE)*(energy_m - HALF*(mom1_m*mom1_m + mom2_m*mom2_m + mom3_m*mom3_m)/density_m)
         !T_m = p_m/(density_m*287.15_rk)
-        !p_m = worker%get_model_field_face('Pressure',    'value', 'face interior')
-        !T_m = worker%get_model_field_face('Temperature', 'value', 'face interior')
-        p_m = (1.4_rk - ONE)*(energy_m - HALF*(mom1_m*mom1_m + mom2_m*mom2_m + mom3_m*mom3_m)/density_m)
-        T_m = p_m/(density_m*287.15_rk)
+        p_m = worker%get_model_field_face('Pressure',    'value', 'face interior')
+        T_m = worker%get_model_field_face('Temperature', 'value', 'face interior')
 
 
         c_m = sqrt(1.4_rk*287.15_rk*T_m)
-!        T_m = prop%fluid%compute_temperature(density_m,mom1_m,mom2_m,mom3_m,energy_m)
 
 
 

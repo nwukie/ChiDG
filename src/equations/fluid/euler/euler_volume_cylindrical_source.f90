@@ -80,6 +80,8 @@ contains
         type(AD_D), allocatable, dimension(:)   ::    &
             density, mom1, mom2, u, v, p, source 
 
+        real(rk),   allocatable, dimension(:)   :: r
+
 
 
         !
@@ -120,15 +122,9 @@ contains
         !=================================================
         if (worker%coordinate_system() == 'Cylindrical') then
 
-            !
             ! Source term due to transformation to cylindrical coordinates
-            !
-            source = (density*v*v + p) / worker%coordinate('1','volume')
-
-            !
-            ! Source term due to non-inertial frame
-            !
-            source = source + density*omega*v
+            r = worker%coordinate('1','volume')
+            source = (density*v*v)/r  +  p/r
 
             call worker%integrate_volume('Momentum-1',source)
 
@@ -139,16 +135,6 @@ contains
         ! momentum-2 flux
         !=================================================
 
-        if (worker%coordinate_system() == 'Cylindrical') then
-
-            !
-            ! Source term due to non-inertial frame
-            !
-            source = -density*omega*u*worker%coordinate('1','volume')
-
-            call worker%integrate_volume('Momentum-2',source)
-
-        end if
 
         !=================================================
         ! momentum-3 flux

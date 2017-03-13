@@ -75,7 +75,8 @@ contains
 
                 call euler_eqns%add_operator('Euler Volume Flux')
                 call euler_eqns%add_operator('Euler Boundary Average Flux')
-                call euler_eqns%add_operator('Euler Roe Flux')
+                !call euler_eqns%add_operator('Euler Roe Flux')
+                call euler_eqns%add_operator('Euler LaxFriedrichs Flux')
                 call euler_eqns%add_operator('Euler BC Flux')
                 call euler_eqns%add_operator('Euler Volume Cylindrical Source')
 

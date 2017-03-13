@@ -72,7 +72,8 @@ contains
             case('default')
                 call laminar_navier_stokes_eqns%add_operator('Euler Volume Flux')
                 call laminar_navier_stokes_eqns%add_operator('Euler Boundary Average Flux')
-                call laminar_navier_stokes_eqns%add_operator('Euler Roe Flux')
+                !call laminar_navier_stokes_eqns%add_operator('Euler Roe Flux')
+                call laminar_navier_stokes_eqns%add_operator('Euler LaxFriedrichs Flux')
                 call laminar_navier_stokes_eqns%add_operator('Euler BC Flux')
                 call laminar_navier_stokes_eqns%add_operator('Euler Volume Cylindrical Source')
 

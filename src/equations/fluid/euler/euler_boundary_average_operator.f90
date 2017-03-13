@@ -197,14 +197,6 @@ contains
         !=================================================
         ! mass flux
         !=================================================
-!        flux_1_m = mom1_m
-!        flux_2_m = mom2_m
-!        flux_3_m = mom3_m
-!
-!        flux_1_p = mom1_p
-!        flux_2_p = mom2_p
-!        flux_3_p = mom3_p
-
         flux_1_m = density_m * u_t_m
         flux_2_m = density_m * v_t_m
         flux_3_m = density_m * w_t_m
@@ -226,14 +218,6 @@ contains
         !=================================================
         ! momentum-1 flux
         !=================================================
-!        flux_1_m = (mom1_m*mom1_m)*invdensity_m + p_m
-!        flux_2_m = (mom1_m*mom2_m)*invdensity_m
-!        flux_3_m = (mom1_m*mom3_m)*invdensity_m
-!
-!        flux_1_p = (mom1_p*mom1_p)*invdensity_p + p_p
-!        flux_2_p = (mom1_p*mom2_p)*invdensity_p
-!        flux_3_p = (mom1_p*mom3_p)*invdensity_p
-
         flux_1_m = (density_m * u_m * u_t_m) + p_m
         flux_2_m = (density_m * u_m * v_t_m)
         flux_3_m = (density_m * u_m * w_t_m)
@@ -256,14 +240,6 @@ contains
         !=================================================
         ! momentum-2 flux
         !=================================================
-!        flux_1_m = (mom2_m*mom1_m)*invdensity_m
-!        flux_2_m = (mom2_m*mom2_m)*invdensity_m + p_m
-!        flux_3_m = (mom2_m*mom3_m)*invdensity_m
-!
-!        flux_1_p = (mom2_p*mom1_p)*invdensity_p
-!        flux_2_p = (mom2_p*mom2_p)*invdensity_p + p_p
-!        flux_3_p = (mom2_p*mom3_p)*invdensity_p
-
         flux_1_m = (density_m * v_m * u_t_m)
         flux_2_m = (density_m * v_m * v_t_m) + p_m
         flux_3_m = (density_m * v_m * w_t_m)
@@ -298,14 +274,6 @@ contains
         !=================================================
         ! momentum-3 flux
         !=================================================
-!        flux_1_m = (mom3_m*mom1_m)*invdensity_m
-!        flux_2_m = (mom3_m*mom2_m)*invdensity_m
-!        flux_3_m = (mom3_m*mom3_m)*invdensity_m + p_m
-!
-!        flux_1_p = (mom3_p*mom1_p)*invdensity_p
-!        flux_2_p = (mom3_p*mom2_p)*invdensity_p
-!        flux_3_p = (mom3_p*mom3_p)*invdensity_p + p_p
-
         flux_1_m = (density_m * w_m * u_t_m)
         flux_2_m = (density_m * w_m * v_t_m)
         flux_3_m = (density_m * w_m * w_t_m) + p_m
@@ -329,14 +297,6 @@ contains
         !=================================================
         ! energy flux
         !=================================================
-!        flux_1_m = enthalpy_m * mom1_m
-!        flux_2_m = enthalpy_m * mom2_m
-!        flux_3_m = enthalpy_m * mom3_m
-!
-!        flux_1_p = enthalpy_p * mom1_p
-!        flux_2_p = enthalpy_p * mom2_p
-!        flux_3_p = enthalpy_p * mom3_p
-
         flux_1_m = (density_m * enthalpy_m * u_t_m)
         flux_2_m = (density_m * enthalpy_m * v_t_m)  +  r*omega*p_m
         flux_3_m = (density_m * enthalpy_m * w_t_m)

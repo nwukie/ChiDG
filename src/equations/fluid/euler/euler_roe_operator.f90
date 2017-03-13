@@ -94,6 +94,7 @@ contains
             un_m,           un_p,                                   &
             a_m,            a_p,                                    &
             rtil, util, vtil, wtil, vmagtil, Htil, ctil, qtil2,     &
+            vtil_t, v_m_t, v_p_t, vmagtil_t,                        &
             integrand,  upwind,     wave,                           &
             C1,  C2_a, C2_b,  C3,                                   &
             u_m, v_m, w_m,                                          &
@@ -187,11 +188,8 @@ contains
         ! Compute transport velocities 
         !
         r = worker%coordinate('1','boundary') 
-        v_m = v_m - omega*r
-        v_p = v_p - omega*r
-        !v_m = v_m
-        !v_p = v_p
-
+        v_m_t = v_m - omega*r
+        v_p_t = v_p - omega*r
 
 
         vmag_m = u_m*unorm_1 + v_m*unorm_2 + w_m*unorm_3
@@ -208,11 +206,13 @@ contains
         util = (sqrt_rhom*u_m + sqrt_rhop*u_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged u-velocity
         vtil = (sqrt_rhom*v_m + sqrt_rhop*v_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged v-velocity
         wtil = (sqrt_rhom*w_m + sqrt_rhop*w_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged w-velocity
+        vtil_t = (sqrt_rhom*v_m_t + sqrt_rhop*v_p_t) / (sqrt_rhom_plus_rhop)    ! Roe-averaged v-velocity
         Htil = (sqrt_rhom*enthalpy_m + sqrt_rhop*enthalpy_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged Enthalpy
 
         ! Magnitude of Roe-averaged velocity in the face-normal direction
-        vmagtil = util*unorm_1 + vtil*unorm_2 + wtil*unorm_3
-        qtil2   = util**TWO + vtil**TWO + wtil**TWO
+        vmagtil   = util*unorm_1 + vtil*unorm_2 + wtil*unorm_3
+        vmagtil_t = util*unorm_1 + vtil_t*unorm_2 + wtil*unorm_3
+        qtil2     = util**TWO + vtil**TWO + wtil**TWO
 
         !& HARDCODED GAMMA
         ctil = sqrt((1.4_rk - ONE)*(Htil - HALF*qtil2))                   ! Roe-averaged speed of sound
@@ -234,9 +234,9 @@ contains
         !
         ! Limit wave speeds for entropy fix
         !
-        lamda1 = abs(vmagtil - ctil)
-        lamda2 = abs(vmagtil)
-        lamda3 = abs(vmagtil + ctil)
+        lamda1 = abs(vmagtil_t - ctil)
+        lamda2 = abs(vmagtil_t)
+        lamda3 = abs(vmagtil_t + ctil)
 
         eps = 0.01_rk
         where ( (-eps*ctil < lamda1) .and. (lamda1 < eps*ctil) )

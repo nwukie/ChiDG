@@ -500,7 +500,7 @@ contains
                 !     the info, for example nterms_s if the order has been increased. So here,
                 !     we just access the location that is already initialized.
                 !
-                else if (self%faces(ielem,iface)%ftype == INTERIOR )  then
+                else if ( self%faces(ielem,iface)%ftype == INTERIOR )  then
                     
                     ineighbor_domain_g  = self%faces(ielem,iface)%ineighbor_domain_g
                     ineighbor_domain_l  = self%faces(ielem,iface)%ineighbor_domain_l
@@ -554,9 +554,11 @@ contains
 
                     !
                     ! Also, initialize neighbor face at the same time so we don't
-                    ! have to do the search again.
+                    ! have to do the search again. 
                     !
-                    if (neighbor_status == NEIGHBOR_FOUND) then
+                    ! Only can initialize opposite neighbor if opposite element is on-proc.
+                    !
+                    if ( (neighbor_status == NEIGHBOR_FOUND) .and. (ineighbor_proc == IRANK) ) then
                         idomain_g  = self%elems(ielem)%idomain_g
                         idomain_l  = self%elems(ielem)%idomain_l
                         ielement_g = self%elems(ielem)%ielement_g
@@ -884,8 +886,6 @@ contains
         integer(ik),                    intent(inout)   :: ineighbor_face
         integer(ik),                    intent(inout)   :: ineighbor_proc
         integer(ik),                    intent(inout)   :: neighbor_status
-!        integer(ik),                    intent(inout)   :: ineighbor_neqns
-!        integer(ik),                    intent(inout)   :: ineighbor_nterms_s
 
         integer(ik),    allocatable :: element_nodes(:)
         integer(ik) :: corner_one, corner_two, corner_three, corner_four,   &
@@ -943,8 +943,6 @@ contains
                     ineighbor_face      = self%elems(ielem_neighbor)%get_face_from_corners(corner_indices)
                     ineighbor_proc      = self%elems(ielem_neighbor)%connectivity%get_element_partition()
                     neighbor_status     = NEIGHBOR_FOUND
-!                    ineighbor_neqns     = self%elems(ielem_neighbor)%neqns
-!                    ineighbor_nterms_s  = self%elems(ielem_neighbor)%nterms_s
                     exit
                 end if
 

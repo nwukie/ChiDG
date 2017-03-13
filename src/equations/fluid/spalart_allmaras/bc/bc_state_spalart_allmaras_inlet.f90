@@ -112,7 +112,7 @@ contains
         !
         ! Get viscosity from interior
         !
-        mu_m = worker%get_model_field_face('Viscosity', 'value', 'face interior')
+        mu_m = worker%get_model_field_face('Laminar Viscosity', 'value', 'face interior')
         nu_m = mu_m/density_m
 
 

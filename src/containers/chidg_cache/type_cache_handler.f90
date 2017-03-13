@@ -44,31 +44,32 @@ module type_cache_handler
 
     contains
 
-        procedure   :: update
 
-        procedure   :: update_auxiliary_fields
-        procedure   :: update_primary_fields
-        procedure   :: update_model_fields
+        procedure   :: update   ! Resize/Update the cache fields
 
 
-        procedure   :: update_auxiliary_interior
-        procedure   :: update_auxiliary_exterior
-        procedure   :: update_auxiliary_element
-        procedure   :: update_auxiliary_bc
+        procedure, private  :: update_auxiliary_fields
+        procedure, private  :: update_primary_fields
 
-        procedure   :: update_primary_interior
-        procedure   :: update_primary_exterior
-        procedure   :: update_primary_element
-        procedure   :: update_primary_bc
-        procedure   :: update_primary_lift
 
-        procedure   :: update_model_interior
-        procedure   :: update_model_exterior
-        procedure   :: update_model_element
-        procedure   :: update_model_bc
+        procedure, private  :: update_auxiliary_interior
+        procedure, private  :: update_auxiliary_exterior
+        procedure, private  :: update_auxiliary_element
+        procedure, private  :: update_auxiliary_bc
 
-        procedure, private :: update_lift_faces_internal
-        procedure, private :: update_lift_faces_external
+        procedure, private  :: update_primary_interior
+        procedure, private  :: update_primary_exterior
+        procedure, private  :: update_primary_element
+        procedure, private  :: update_primary_bc
+        procedure, private  :: update_primary_lift
+
+        procedure, private  :: update_model_interior
+        procedure, private  :: update_model_exterior
+        procedure, private  :: update_model_element
+        procedure, private  :: update_model_bc
+
+        procedure, private  :: update_lift_faces_internal
+        procedure, private  :: update_lift_faces_external
 
     end type cache_handler_t
     !****************************************************************************************
@@ -95,6 +96,7 @@ contains
         logical,                    intent(in)      :: differentiate
 
         integer(ik) :: idomain_l, ielement_l, iface
+        logical     :: compute_gradients
 
 
         !
@@ -105,16 +107,25 @@ contains
         call worker%cache%resize(worker%mesh,worker%prop,idomain_l,ielement_l,differentiate)
 
 
+
+        !
+        ! Determine if we want to update gradient terms in the cache
+        !
+        compute_gradients = (allocated(equation_set(idomain_l)%volume_diffusive_operator) .or. &
+                             allocated(equation_set(idomain_l)%boundary_diffusive_operator) )
+
+
+
         !
         ! Update fields
         !
         call self%update_auxiliary_fields(worker,equation_set,bc,differentiate)
-        call self%update_primary_fields(  worker,equation_set,bc,differentiate)
+        call self%update_primary_fields(  worker,equation_set,bc,differentiate,compute_gradients)
 
 
 
         !
-        ! Loop through faces and cache 'internal', 'external' interpolated states
+        ! Compute f(Q-) models. Interior, Exterior, BC, Element
         !
         do iface = 1,NFACES
 
@@ -124,47 +135,59 @@ contains
             ! Update face interior/exterior/bc states.
             call self%update_model_interior(worker,equation_set,bc,differentiate,model_type='f(Q-)')
             call self%update_model_exterior(worker,equation_set,bc,differentiate,model_type='f(Q-)')
+
+
             call self%update_primary_bc(worker,equation_set,bc,differentiate)
-
-        end do !iface
-
-
-        !
-        ! Update lifting operators for second-order pde's
-        !
-        call self%update_primary_lift(worker,equation_set,bc,differentiate)
-
-
-        !
-        ! Loop through faces and cache 'internal', 'external' interpolated states
-        !
-        do iface = 1,NFACES
-
-            ! Update worker face index
-            call worker%set_face(iface)
-
-            ! Update face interior/exterior/bc states.
-            call self%update_model_interior(worker,equation_set,bc,differentiate,model_type='f(Q-,Q+)')
-            call self%update_model_interior(worker,equation_set,bc,differentiate,model_type='f(Grad(Q))')
-
-            call self%update_model_exterior(worker,equation_set,bc,differentiate,model_type='f(Q-,Q+)')
-            call self%update_model_exterior(worker,equation_set,bc,differentiate,model_type='f(Grad(Q))')
-
             call self%update_model_bc(  worker,equation_set,bc,differentiate,model_type='f(Q-)')
-            call self%update_model_bc(  worker,equation_set,bc,differentiate,model_type='f(Q-,Q+)')
-            call self%update_model_bc(  worker,equation_set,bc,differentiate,model_type='f(Grad(Q))')
+
+
+            call self%update_model_interior(worker,equation_set,bc,differentiate,model_type='f(Q-,Q+)')
+            call self%update_model_exterior(worker,equation_set,bc,differentiate,model_type='f(Q-,Q+)')
+            call self%update_model_bc(      worker,equation_set,bc,differentiate,model_type='f(Q-,Q+)')
 
         end do !iface
 
-
-        
-        !
-        ! Update model 'element' cache entries
-        !
         call self%update_model_element(worker,equation_set,bc,differentiate,model_type='f(Q-)')
         call self%update_model_element(worker,equation_set,bc,differentiate,model_type='f(Q-,Q+)')
-        call self%update_model_element(worker,equation_set,bc,differentiate,model_type='f(Grad(Q))')
 
+
+
+
+
+        !
+        ! Compute f(Q-,Q+), f(Grad(Q) models. Interior, Exterior, BC, Element
+        !
+        if (compute_gradients) then
+
+            !
+            ! Update lifting operators for second-order pde's
+            !
+            call self%update_primary_lift(worker,equation_set,bc,differentiate)
+
+
+            !
+            ! Loop through faces and cache 'internal', 'external' interpolated states
+            !
+            do iface = 1,NFACES
+
+                ! Update worker face index
+                call worker%set_face(iface)
+
+                ! Update face interior/exterior/bc states.
+                call self%update_model_interior(worker,equation_set,bc,differentiate,model_type='f(Grad(Q))')
+                call self%update_model_exterior(worker,equation_set,bc,differentiate,model_type='f(Grad(Q))')
+                call self%update_model_bc(      worker,equation_set,bc,differentiate,model_type='f(Grad(Q))')
+
+            end do !iface
+
+            
+            !
+            ! Update model 'element' cache entries
+            !
+            call self%update_model_element(worker,equation_set,bc,differentiate,model_type='f(Grad(Q))')
+
+
+        end if ! compute_gradients
 
     end subroutine update
     !****************************************************************************************
@@ -190,12 +213,13 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine update_primary_fields(self,worker,equation_set,bc,differentiate)
+    subroutine update_primary_fields(self,worker,equation_set,bc,differentiate,compute_gradients)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
         type(bc_t),                 intent(inout)   :: bc(:)
         logical,                    intent(in)      :: differentiate
+        logical,                    intent(in)      :: compute_gradients
 
         integer(ik)                                 :: idomain_l, ielement_l, iface, &
                                                        idepend, ieqn, idiff
@@ -217,8 +241,8 @@ contains
 
 
             ! Update face interior/exterior/bc states.
-            call self%update_primary_interior(worker,equation_set,bc,differentiate)
-            call self%update_primary_exterior(worker,equation_set,bc,differentiate)
+            call self%update_primary_interior(worker,equation_set,bc,differentiate,compute_gradients)
+            call self%update_primary_exterior(worker,equation_set,bc,differentiate,compute_gradients)
 
 
         end do !iface
@@ -227,7 +251,7 @@ contains
         !
         ! Update 'element' cache
         !
-        call self%update_primary_element(worker,equation_set,bc,differentiate)
+        call self%update_primary_element(worker,equation_set,bc,differentiate,compute_gradients)
 
 
     end subroutine update_primary_fields
@@ -308,63 +332,63 @@ contains
 
 
 
-    !>  Update the cache entries for model fields.
-    !!
-    !!  Executes the model functions directly from the equation set. This allows
-    !!  the model to handle what it wants to cache.
-    !!
-    !!  NOTE: This only provides model 'value' cache entries. Model gradients are not
-    !!  currently implemented.
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   9/7/2016
-    !!
-    !----------------------------------------------------------------------------------------
-    subroutine update_model_fields(self,worker,equation_set,bc,differentiate,model_type)
-        class(cache_handler_t),     intent(inout)   :: self
-        type(chidg_worker_t),       intent(inout)   :: worker
-        type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_t),                 intent(inout)   :: bc(:)
-        logical,                    intent(in)      :: differentiate
-        character(*),               intent(in)      :: model_type
-
-        logical                     :: diff_none, diff_interior, diff_exterior, compute_model
-        integer(ik)                 :: iface, imodel, idomain_l, ielement_l, idepend, idiff, &
-                                       ipattern, ndepend
-        integer(ik),    allocatable :: compute_pattern(:)
-        character(:),   allocatable :: dependency
-
-
-        idomain_l  = worker%element_info%idomain_l 
-        ielement_l = worker%element_info%ielement_l 
-
-
-
-        !
-        ! Loop through faces and cache internal, external interpolated states
-        !
-        do iface = 1,NFACES
-
-            ! Update worker face index
-            call worker%set_face(iface)
-
-            ! Update model 'face interior' 'face exterior' cache entries for 'value'
-            call self%update_model_interior(worker,equation_set,bc,differentiate,model_type)
-            call self%update_model_exterior(worker,equation_set,bc,differentiate,model_type)
-
-        end do !iface
-
-
-        
-        !
-        ! Update 'element' cache entries
-        !
-        call self%update_model_element(worker,equation_set,bc,differentiate,model_type)
-
-
-
-    end subroutine update_model_fields
-    !****************************************************************************************
+!    !>  Update the cache entries for model fields.
+!    !!
+!    !!  Executes the model functions directly from the equation set. This allows
+!    !!  the model to handle what it wants to cache.
+!    !!
+!    !!  NOTE: This only provides model 'value' cache entries. Model gradients are not
+!    !!  currently implemented.
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   9/7/2016
+!    !!
+!    !----------------------------------------------------------------------------------------
+!    subroutine update_model_fields(self,worker,equation_set,bc,differentiate,model_type)
+!        class(cache_handler_t),     intent(inout)   :: self
+!        type(chidg_worker_t),       intent(inout)   :: worker
+!        type(equation_set_t),       intent(inout)   :: equation_set(:)
+!        type(bc_t),                 intent(inout)   :: bc(:)
+!        logical,                    intent(in)      :: differentiate
+!        character(*),               intent(in)      :: model_type
+!
+!        logical                     :: diff_none, diff_interior, diff_exterior, compute_model
+!        integer(ik)                 :: iface, imodel, idomain_l, ielement_l, idepend, idiff, &
+!                                       ipattern, ndepend
+!        integer(ik),    allocatable :: compute_pattern(:)
+!        character(:),   allocatable :: dependency
+!
+!
+!        idomain_l  = worker%element_info%idomain_l 
+!        ielement_l = worker%element_info%ielement_l 
+!
+!
+!
+!        !
+!        ! Loop through faces and cache internal, external interpolated states
+!        !
+!        do iface = 1,NFACES
+!
+!            ! Update worker face index
+!            call worker%set_face(iface)
+!
+!            ! Update model 'face interior' 'face exterior' cache entries for 'value'
+!            call self%update_model_interior(worker,equation_set,bc,differentiate,model_type)
+!            call self%update_model_exterior(worker,equation_set,bc,differentiate,model_type)
+!
+!        end do !iface
+!
+!
+!        
+!        !
+!        ! Update 'element' cache entries
+!        !
+!        call self%update_model_element(worker,equation_set,bc,differentiate,model_type)
+!
+!
+!
+!    end subroutine update_model_fields
+!    !****************************************************************************************
 
 
 
@@ -383,12 +407,13 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine update_primary_element(self,worker,equation_set,bc,differentiate)
+    subroutine update_primary_element(self,worker,equation_set,bc,differentiate,compute_gradients)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
         type(bc_t),                 intent(inout)   :: bc(:)
         logical,                    intent(in)      :: differentiate
+        logical,                    intent(in)      :: compute_gradients
 
         integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, &
                                                        iface, idiff
@@ -410,22 +435,26 @@ contains
             idiff = 0
         end if
 
+
+        !
+        ! Compute Value/Gradients
+        !
         idepend = 1
         do ieqn = 1,worker%mesh(idomain_l)%neqns
 
-                worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
-                worker%function_info%idepend = idepend
+            worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
+            worker%function_info%idepend = idepend
 
-                value_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'value')
-                grad1_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad1')
-                grad2_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad2')
-                grad3_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad3')
+            value_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'value')
+            grad1_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad1')
+            grad2_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad2')
+            grad3_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad3')
 
-                field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
-                call worker%cache%set_data(field,'element',value_gq,'value',   0,worker%function_info%seed)
-                call worker%cache%set_data(field,'element',grad1_gq,'gradient',1,worker%function_info%seed)
-                call worker%cache%set_data(field,'element',grad2_gq,'gradient',2,worker%function_info%seed)
-                call worker%cache%set_data(field,'element',grad3_gq,'gradient',3,worker%function_info%seed)
+            field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
+            call worker%cache%set_data(field,'element',value_gq,'value',0,worker%function_info%seed)
+            call worker%cache%set_data(field,'element',grad1_gq,'gradient',1,worker%function_info%seed)
+            call worker%cache%set_data(field,'element',grad2_gq,'gradient',2,worker%function_info%seed)
+            call worker%cache%set_data(field,'element',grad3_gq,'gradient',3,worker%function_info%seed)
 
         end do !ieqn
 
@@ -452,12 +481,13 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine update_primary_interior(self,worker,equation_set,bc,differentiate)
+    subroutine update_primary_interior(self,worker,equation_set,bc,differentiate,compute_gradients)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
         type(bc_t),                 intent(inout)   :: bc(:)
         logical,                    intent(in)      :: differentiate
+        logical,                    intent(in)      :: compute_gradients
 
         integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, &
                                                        iface, idiff
@@ -485,6 +515,9 @@ contains
         end if
 
 
+        !
+        ! Compute Values
+        !
         do ieqn = 1,worker%mesh(idomain_l)%neqns
 
             worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
@@ -499,12 +532,13 @@ contains
 
             ! Store gq data in cache
             field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
-            call worker%cache%set_data(field,'face interior',value_gq,'value',     0,worker%function_info%seed,iface)
+            call worker%cache%set_data(field,'face interior',value_gq,'value',   0,worker%function_info%seed,iface)
             call worker%cache%set_data(field,'face interior',grad1_gq,'gradient',1,worker%function_info%seed,iface)
             call worker%cache%set_data(field,'face interior',grad2_gq,'gradient',2,worker%function_info%seed,iface)
             call worker%cache%set_data(field,'face interior',grad3_gq,'gradient',3,worker%function_info%seed,iface)
 
         end do !ieqn
+
 
 
 
@@ -529,12 +563,13 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine update_primary_exterior(self,worker,equation_set,bc,differentiate)
+    subroutine update_primary_exterior(self,worker,equation_set,bc,differentiate,compute_gradients)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
         type(bc_t),                 intent(inout)   :: bc(:)
         logical,                    intent(in)      :: differentiate
+        logical,                    intent(in)      :: compute_gradients
 
         integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, &
                                                        iface, BC_ID, BC_face, ndepend, idiff
@@ -565,7 +600,7 @@ contains
 
 
         !
-        ! Face exterior state
+        ! Face exterior state. Value
         !
         if ( (worker%face_type() == INTERIOR) .or. (worker%face_type() == CHIMERA) ) then
             
@@ -581,7 +616,7 @@ contains
                     grad2_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad2',NEIGHBOR)
                     grad3_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad3',NEIGHBOR)
 
-                    call worker%cache%set_data(field,'face exterior',value_gq,'value',     0,worker%function_info%seed,iface)
+                    call worker%cache%set_data(field,'face exterior',value_gq,'value',   0,worker%function_info%seed,iface)
                     call worker%cache%set_data(field,'face exterior',grad1_gq,'gradient',1,worker%function_info%seed,iface)
                     call worker%cache%set_data(field,'face exterior',grad2_gq,'gradient',2,worker%function_info%seed,iface)
                     call worker%cache%set_data(field,'face exterior',grad3_gq,'gradient',3,worker%function_info%seed,iface)
@@ -592,7 +627,6 @@ contains
             end do !ieqn
 
         end if
-
 
 
 

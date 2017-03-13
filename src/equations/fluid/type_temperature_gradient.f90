@@ -54,7 +54,7 @@ contains
         class(temperature_gradient_t), intent(inout)   :: self
 
         call self%set_name('Temperature Gradient')
-        call self%set_dependency('Grad(Q)')
+        call self%set_dependency('f(Grad(Q))')
 
         call self%add_model_field('Temperature Gradient - 1')
         call self%add_model_field('Temperature Gradient - 2')

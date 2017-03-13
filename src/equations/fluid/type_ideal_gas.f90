@@ -53,7 +53,7 @@ contains
         class(ideal_gas_t), intent(inout)   :: self
 
         call self%set_name('Ideal Gas')
-        call self%set_dependency('Q-')
+        call self%set_dependency('f(Q-)')
 
         call self%add_model_field('Pressure')
         call self%add_model_field('Temperature')

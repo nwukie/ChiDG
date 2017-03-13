@@ -1022,7 +1022,7 @@ contains
 
 
     !>  Read the boundary condition patch connectivity data from file and store in
-    !!  bcdata.
+    !!  bc_patch_data.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/31/2016

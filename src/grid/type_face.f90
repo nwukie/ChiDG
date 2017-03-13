@@ -126,8 +126,9 @@ module type_face
     contains
 
         procedure           :: init_geom
-        procedure           :: init_neighbor
         procedure           :: init_sol
+
+        procedure           :: init_neighbor
 
         procedure           :: compute_quadrature_metrics       !< Compute metric terms at quadrature nodes
         procedure           :: compute_quadrature_normals       !< Compute normals at quadrature nodes
@@ -242,9 +243,9 @@ contains
         integer(ik),    intent(in)      :: ineighbor_element_g
         integer(ik),    intent(in)      :: ineighbor_element_l
         integer(ik),    intent(in)      :: ineighbor_face
+        integer(ik),    intent(in)      :: ineighbor_proc
         integer(ik),    intent(in)      :: ineighbor_neqns
         integer(ik),    intent(in)      :: ineighbor_nterms_s
-        integer(ik),    intent(in)      :: ineighbor_proc
 
 
         self%ftype               = ftype

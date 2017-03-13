@@ -179,7 +179,6 @@ contains
                     ! For each actual element, create a sub-sampling of elements to resolve solution variation
                     do ielem = 1,nelem
                         
-
                         ! Write sampling for current element
                         do ipt_zeta = 1,zetalim
                             zeta = (((real(ipt_zeta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO

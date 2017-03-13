@@ -3,7 +3,6 @@ module eqn_multi_navier_stokes_laminar
     use type_equation_set,          only: equation_set_t
     use type_equation_builder,      only: equation_builder_t
     use type_fluid_pseudo_timestep, only: fluid_pseudo_timestep_t
-    use perfect_gas,                only: perfect_gas_t
     implicit none
 
 

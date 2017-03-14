@@ -243,12 +243,10 @@ contains
         !
         ndomains = data%ndomains()
 
-
         !
         ! Open file
         !
         fid = open_file_hdf(filename)
-
 
         !
         ! Check file contains solution
@@ -260,14 +258,13 @@ contains
         if (.not. contains_solution) call chidg_signal(FATAL,user_msg)
 
 
-
         !
         ! Read solution for each time step
         !
         ntime = get_ntimes_hdf(fid)
 
         call data%sdata%q_in%init(data%mesh,ntime)
-        print *, 'q_in - ', data%sdata%q_in%get_ntime()
+        call data%sdata%q_in%set_ntime(ntime)
 
         do itime = 1, ntime
 
@@ -279,7 +276,6 @@ contains
 
                 ! Get domain name and number of primary fields
                 domain_name = data%info(idom)%name
-
 
 
                 ! For each primary field in the domain, get the field name and read from file.
@@ -544,6 +540,7 @@ contains
         logical                             :: ElementsEqual, variables_exists
 
 
+
         !
         ! Check valid field_type input
         !
@@ -715,9 +712,7 @@ contains
             end if
 
 
-
         end do
-
 
 
 

@@ -78,8 +78,7 @@ contains
         pvd_filename = 'chidg_results.pvd'
 
 
-        ntime = data%time_manager%ntime   ! No. of time steps in the solution file (1 for steady cases)
-        print *, 'ntime - ', data%time_manager%ntime
+        ntime = data%sdata%q_in%get_ntime()   ! No. of time steps in the solution file (1 for steady cases)
 
         !
         ! Allocate array for storing individual .vtu file names for each block over 

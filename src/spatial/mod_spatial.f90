@@ -52,7 +52,7 @@ contains
         type(cache_handler_t)       :: cache_handler
 
         logical                     :: differentiate_function, io_spatial
-
+        character(:),   allocatable :: time_string
 
         
         !
@@ -127,6 +127,15 @@ contains
             call data%sdata%function_status%clear()
 
 
+            time_string = data%time_manager%get_name()
+
+            if (time_string == 'Harmonic Balance' .or. time_string == 'Harmonic_Balance' .or. time_string == 'harmonic balance' &
+                .or. time_string == 'harmonic_balance' .or. time_string == 'HB') then
+
+                data%sdata%t = data%time_manager%time_lev%at(itime)
+
+            end if
+
             call loop_timer%start()
             do idom = 1,data%ndomains()
                 associate ( mesh => data%mesh(idom), eqnset => data%eqnset(idom) )
@@ -142,7 +151,14 @@ contains
                     call worker%set_element(elem_info)
 
                     worker%itime = itime
+                    time_string = data%time_manager%get_name()
 
+                    if (time_string == 'Harmonic Balance' .or. time_string == 'Harmonic_Balance' .or. time_string == 'harmonic balance' &
+                        .or. time_string == 'harmonic_balance' .or. time_string == 'HB') then
+
+                        worker%t = data%time_manager%time_lev%at(itime)
+
+                    end if
 
                     ! Update the element cache
                     call cache_handler%update(worker,data%eqnset,data%bc, differentiate_function)

@@ -48,9 +48,8 @@ contains
         !
         ! Initialize ChiDG environment
         !
-        call chidg%start_up('core')
         call chidg%start_up('mpi')
-
+        call chidg%start_up('core')
 
         !
         ! Get nterms_s and eqnset
@@ -77,11 +76,9 @@ contains
         ! Initialize solution data storage
         !
         call chidg%set('Solution Order', integer_input=solution_order)
-        !call chidg%initialize_solution_domains()
         call chidg%init('domains')
         call chidg%init('communication')
         call chidg%init('solvers')
-        !call chidg%initialize_solution_solver()
 
 
         !

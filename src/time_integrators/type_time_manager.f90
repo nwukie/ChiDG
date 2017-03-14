@@ -71,7 +71,8 @@ contains
         character(len=:),   allocatable  :: user_msg, dev_msg
         integer(ik)                      :: i
         integer(ik)                      :: n_times
-        real(rk)                         :: tmp
+        
+        
         !
         ! Check if the time scheme typed in belongs to the options available
         ! if so, initialize the time-Manager with appropriate attributes
@@ -154,8 +155,7 @@ contains
                 
                 do i = 1, n_times
                     
-                   tmp = i
-                   call  self%time_lev%push_back( (TWO*PI)/minval(self%freq_data%data()) * (tmp/n_times) )
+                   call  self%time_lev%push_back( (TWO*PI)/minval(self%freq_data%data()) * (real(i)/real(n_times))) 
 
                 end do
 

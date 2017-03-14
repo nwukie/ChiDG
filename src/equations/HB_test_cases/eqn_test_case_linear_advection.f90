@@ -67,7 +67,7 @@ contains
         class(test_case_linear_advection_model), intent(inout)  :: self
 
         call self%set_name('Test Case Linear Advection Model')
-        call self%set_dependency('Q-')
+        call self%set_dependency('f(Q-)')
 
 
         call self%add_model_field('Scalar Advection Velocity-1')

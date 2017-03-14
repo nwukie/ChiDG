@@ -95,7 +95,7 @@ contains
         !
         !   TODO: get 'ntime' here from q_in
         !
-        do itime = 1,2
+        do itime = 1,data%sdata%q_in%get_ntime()
 
 
 

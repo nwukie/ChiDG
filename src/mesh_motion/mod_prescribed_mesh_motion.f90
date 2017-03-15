@@ -8,6 +8,7 @@ module mod_prescribed_mesh_motion
     ! Import prescribed_mesh_motions
     !
     use pmm_static,                       only: static_pmm
+    use pmm_sinusoidal,                       only: sinusoidal_pmm
     implicit none
 
 
@@ -38,6 +39,7 @@ contains
         ! Instantiate prescribed_mesh_motions
         !
         type(static_pmm)                        :: static
+        type(sinusoidal_pmm)                        :: sinusoidal
         
 
         if ( .not. initialized ) then
@@ -45,6 +47,7 @@ contains
             ! Register in global vector
             !
             call registered_pmms%push_back(static)
+            call registered_pmms%push_back(sinusoidal)
        
             !
             ! Initialize each boundary condition in set. Doesn't need modified.

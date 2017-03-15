@@ -15,6 +15,7 @@ add_lib_sources(
                 type_pvector.f90
                 type_evector.f90
                 type_bcvector.f90
+                type_pmmvector.f90
                 type_ovector.f90
                 type_fcnvector.f90
                 type_mpi_request_vector.f90

@@ -19,6 +19,7 @@ add_subdirectory(chimera)
 add_subdirectory(parallel)
 add_subdirectory(actions)
 add_subdirectory(drivers)
+add_subdirectory(mesh_motion)
 
 # Propagate lib_srcs list to parent directory
 add_lib_sources() 

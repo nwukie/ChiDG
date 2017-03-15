@@ -6,6 +6,7 @@ module type_chidg
     use mod_models,                 only: register_models
     use mod_bc,                     only: register_bcs
     use mod_function,               only: register_functions
+    use mod_prescribed_mesh_motion, only: register_prescribed_mesh_motions
     use mod_grid,                   only: initialize_grid
     use mod_string,                 only: get_file_extension, string_t, get_file_prefix
 
@@ -177,6 +178,7 @@ contains
                     ! Order matters here. Functions need to come first. Used by 
                     ! equations and bcs.
                     call register_functions()
+                    call register_prescribed_mesh_motions()
                     call register_models()
                     call register_equation_builders()
                     call register_operators()

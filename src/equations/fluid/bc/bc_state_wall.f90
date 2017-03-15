@@ -1,6 +1,6 @@
 module bc_state_wall
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: TWO, HALF, ZERO
+    use mod_constants,          only: TWO, HALF, ZERO, ONE
     use type_bc_state,          only: bc_state_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
@@ -90,14 +90,16 @@ contains
 
 
         ! Storage at quadrature nodes
-        type(AD_D), allocatable, dimension(:)   ::      &
-            density_m,  mom1_m,  mom2_m,  mom3_m,  energy_m,  &
-            density_bc, mom1_bc, mom2_bc, mom3_bc, energy_bc, &
+        type(AD_D), allocatable, dimension(:)   ::                      &
+            density_m,  mom1_m,  mom2_m,  mom3_m,  energy_m,            &
+            density_bc, mom1_bc, mom2_bc, mom3_bc, energy_bc,           &
             drho_dx_m, drhou_dx_m, drhov_dx_m, drhow_dx_m, drhoE_dx_m,  &
             drho_dy_m, drhou_dy_m, drhov_dy_m, drhow_dy_m, drhoE_dy_m,  &
             drho_dz_m, drhou_dz_m, drhov_dz_m, drhow_dz_m, drhoE_dz_m,  &
-            u_m, v_m, w_m, VMag2
+            u_m, v_m, w_m, p_m
 
+        real(rk)    :: gam = 1.4_rk
+    
 
 
         !
@@ -165,12 +167,13 @@ contains
         v_m = mom2_m/density_m
         w_m = mom3_m/density_m
 
-        VMag2 = u_m*u_m + v_m*v_m + w_m*w_m
 
         !
         ! Energy subtract momentum
         !
-        energy_bc = energy_m - (density_m*HALF)*VMag2
+        energy_bc = energy_m - (density_m*HALF)*(u_m*u_m  +  v_m*v_m  +  w_m*w_m)
+        !p_m = worker%get_model_field_face('Pressure', 'value', 'face interior')
+        !energy_bc = p_m/(gam-ONE)
 
 
         !

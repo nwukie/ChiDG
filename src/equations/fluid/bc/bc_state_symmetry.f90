@@ -82,9 +82,9 @@ contains
         class(properties_t),    intent(inout)   :: prop
 
         ! Storage at quadrature nodes
-        type(AD_D), allocatable, dimension(:)   ::      &
-            density_m,  mom1_m,  mom2_m,  mom3_m,  energy_m,  &
-            density_bc, mom1_bc, mom2_bc, mom3_bc, energy_bc, &
+        type(AD_D), allocatable, dimension(:)   ::                      &
+            density_m,  mom1_m,  mom2_m,  mom3_m,  energy_m,            &
+            density_bc, mom1_bc, mom2_bc, mom3_bc, energy_bc,           &
             drho_dx_m, drhou_dx_m, drhov_dx_m, drhow_dx_m, drhoE_dx_m,  &
             drho_dy_m, drhou_dy_m, drhov_dy_m, drhow_dy_m, drhoE_dy_m,  &
             drho_dz_m, drhou_dz_m, drhov_dz_m, drhow_dz_m, drhoE_dz_m,  &

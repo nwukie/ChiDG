@@ -96,7 +96,7 @@ contains
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
         if (worker%coordinate_system() == 'Cylindrical') then
-            v = mom2/worker%coordinate('1','volume')
+            mom2 = mom2/worker%coordinate('1','volume')
         end if
 
 

@@ -217,7 +217,6 @@ contains
         !
         ! Compute boundary condition temperature and pressure
         !
-        !& HARDCODED GAMMA. HARDCODED CP
         gam_m = 1.4_rk
         cp_m  = 287.15_rk*(gam_m/(gam_m-ONE))
 

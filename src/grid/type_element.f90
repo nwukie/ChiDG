@@ -16,6 +16,7 @@ module type_element
     use type_quadrature,            only: quadrature_t
     use type_function,              only: function_t
     use type_element_connectivity,  only: element_connectivity_t
+    use ieee_arithmetic,            only: ieee_is_nan
     use DNAD_D
     implicit none
 
@@ -630,7 +631,9 @@ contains
     !------------------------------------------------------------------------------------------
     subroutine compute_quadrature_gradients(self)
         class(element_t),   intent(inout)   :: self
-        integer(ik)                         :: iterm,inode
+
+        character(:),   allocatable :: user_msg
+        integer(ik)                 :: iterm,inode
 
         do iterm = 1,self%nterms_s
             do inode = 1,self%gq%vol%nnodes
@@ -648,6 +651,16 @@ contains
             end do
         end do
 
+        !
+        ! Check for acceptable element
+        !
+        if (any(ieee_is_nan(self%grad1)) .or. &
+            any(ieee_is_nan(self%grad2)) .or. &
+            any(ieee_is_nan(self%grad3)) ) then
+            user_msg = "element%compute_quadrature_gradients: Element failed to produce valid gradient information. &
+                        Element quality is likely not reasonable."
+            call chidg_signal(FATAL,"element%compute_quadrature_gradients: Element failed to produce valid gradient information. Element quality is likely not reasonable.")
+        end if
 
         self%grad1_trans = transpose(self%grad1)
         self%grad2_trans = transpose(self%grad2)

@@ -865,6 +865,7 @@ contains
 
 
 
+
         elseif ( interpolation_source == NEIGHBOR ) then
 
             chimera_interpolation    = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )

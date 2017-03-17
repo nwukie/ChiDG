@@ -74,6 +74,7 @@ module eqn_wall_distance
     use mod_operators,          only: operator_factory
     use mod_models,             only: model_factory
     use DNAD_D
+    use ieee_arithmetic
     implicit none
 
 
@@ -264,6 +265,7 @@ contains
             mu = sumsqr
             mu = ONE
         end if
+
 
 
 

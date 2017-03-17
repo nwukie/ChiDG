@@ -22,6 +22,7 @@ module mod_equations
     use eqn_dual_linear_advection,      only: dual_linear_advection
     use eqn_euler,                      only: euler 
     use eqn_navier_stokes,              only: navier_stokes
+    use eqn_navier_stokes_multi,        only: navier_stokes_multi
     use eqn_multi_navier_stokes_laminar,    only: multi_navier_stokes_laminar
     use eqn_multi_navier_stokes_rans,       only: multi_navier_stokes_rans
     use eqn_navier_stokes_av,           only: navier_stokes_av
@@ -115,6 +116,7 @@ contains
         type(dual_linear_advection)      :: dual_linear_advection_builder
         type(euler)                      :: euler_builder
         type(navier_stokes)              :: navier_stokes_builder
+        type(navier_stokes_multi)        :: navier_stokes_multi_builder
         type(multi_navier_stokes_laminar):: multi_navier_stokes_laminar_builder
         type(multi_navier_stokes_rans)   :: multi_navier_stokes_rans_builder
         type(navier_stokes_av)           :: navier_stokes_av_builder
@@ -135,6 +137,7 @@ contains
             call equation_builder_factory%register(dual_linear_advection_builder)
             call equation_builder_factory%register(euler_builder)
             call equation_builder_factory%register(navier_stokes_builder)
+            call equation_builder_factory%register(navier_stokes_multi_builder)
             call equation_builder_factory%register(multi_navier_stokes_laminar_builder)
             call equation_builder_factory%register(multi_navier_stokes_rans_builder)
             call equation_builder_factory%register(navier_stokes_av_builder)

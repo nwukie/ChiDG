@@ -36,7 +36,7 @@ module type_time_manager
         ! HB time parameter
         type(rvector_t)         :: freq_data   !> we have a limit of 100 freq's based on the array size in the namelist file
         type(rvector_t)         :: time_lev
-        real(rk), allocatable   :: D(:,:)
+        real(rk), allocatable   :: D(:,:), E(:,:)
 
     contains
 
@@ -307,7 +307,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function get_name(self) result(res)
-        class(time_manager_t),  intent(inout)   :: self
+        class(time_manager_t),  intent(in)   :: self
         
         character(:),   allocatable :: res
 

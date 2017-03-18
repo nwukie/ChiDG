@@ -10,6 +10,7 @@ module mod_vtk_calc_func
     use type_blockvector,    only: blockvector_t
     use type_solverdata,     only: solverdata_t
     use type_chidg_data,     only: chidg_data_t
+    use type_chidg_vector,   only: chidg_vector_t
 
     implicit none
 
@@ -418,6 +419,72 @@ contains
     !*******************************************************************************************
 
 
+
+    !>  Compute coefficients of Fourier expansion of solution in time
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/16/2017
+    !!
+    !-------------------------------------------------------------------------------------------
+    subroutine get_Fourier_coeff(data,nterms_s,E,q_coeff)
+        type(chidg_data_t),     intent(inout)   :: data
+        integer(ik),            intent(in)      :: nterms_s
+        real(rk)                                :: E(:,:)
+        type(chidg_vector_t),   intent(inout)   :: q_coeff
+
+        real(rk),   allocatable     :: temp_1(:),temp_2(:)
+        integer(ik)                 :: otime, itime, ielem, idom, ierr, ivar
+
+        
+        associate ( q_in => data%sdata%q_in)
+
+         
+            !
+            ! Initialize Fourier coefficient chidg_vector
+            !
+            call q_coeff%init(data%mesh,q_in%get_ntime())
+            call q_coeff%clear()
+            call q_coeff%set_ntime(q_in%get_ntime())
+
+
+            !
+            ! Generate Fourier coefficients for solution expansion in time
+            ! Reference: Knapke, R.D., "High-Order Unsteady Heat Transfer with the Harmonic
+            !            Balance Method", Ph.D. Dissertation, University of Cincinnati, pg. 40-41
+            !
+            do otime = 1,q_in%get_ntime()
+                do idom = 1,data%ndomains()
+                    
+                    associate ( mesh  => data%mesh(idom),       &
+                                nelem => data%mesh(idom)%nelem, &
+                                nvars => data%eqnset(idom)%prop%nprimary_fields()) 
+                    
+                    if (allocated(temp_1) .and. allocated(temp_2)) deallocate(temp_1,temp_2)
+                    allocate(temp_1(nterms_s), temp_2(nterms_s), stat=ierr)
+                    if (ierr /= 0) call AllocationError
+
+                    do ielem = 1,nelem
+                        do itime = 1,q_in%get_ntime()
+                            do ivar = 1,nvars
+
+                            temp_1 = E(otime,itime)*q_in%dom(idom)%vecs(ielem)%getvar(ivar,itime)
+                            temp_2 = q_coeff%dom(idom)%vecs(ielem)%getvar(ivar,otime) + temp_1
+                            call q_coeff%dom(idom)%vecs(ielem)%setvar(ivar,otime,temp_2)
+
+                            end do
+                        end do
+                    end do
+
+                    end associate  
+
+                end do
+            end do
+
+        end associate
+
+
+    end subroutine get_Fourier_coeff
+    !*******************************************************************************************
 
 
 

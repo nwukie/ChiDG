@@ -140,6 +140,42 @@ contains
 
 
 
+    !>  Calculate the Fourier transform matrix
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/18/2017
+    !!
+    !------------------------------------------------------------------------------------
+    subroutine calc_E(nfreq,ntime,omega,t,E)
+        integer(ik),    intent(in)      :: nfreq, ntime
+        real(rk),       intent(in)      :: omega(:), t(:)
+        real(rk),       intent(inout)   :: E(:,:)
+
+        real(rk),   allocatable        :: inv_E(:,:)
+        integer(ik)                    :: ierr
+
+
+        !
+        ! Compute the inverse Fourier transform matrix
+        !
+        if (allocated(inv_E)) deallocate(inv_E)
+        allocate(inv_E(ntime,ntime), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        call calc_inv_E(nfreq,ntime,omega,t,inv_E)
+
+
+        !
+        ! E - Fourier transform matrix
+        !
+        E = inv(inv_E)
+
+
+    end subroutine calc_E
+    !************************************************************************************
+
+
+
     !> Calculate the pseudo spectral operator 
     !!
     !! @author Mayank Sharma
@@ -154,9 +190,9 @@ contains
     subroutine calc_pseudo_spectral_operator(nfreq,ntime,omega,t,D)
         integer(ik),                    intent(in)          :: nfreq,ntime
         real(rk),dimension(:),          intent(in)          :: omega,t
-        real(rk),allocatable,           intent(inout)       :: D(:,:) 
+        real(rk),allocatable,           intent(inout)       :: D(:,:)
 
-        real(rk),       allocatable              :: inv_E(:,:),diff_inv_E(:,:),E(:,:)
+        real(rk),       allocatable              :: inv_E(:,:),diff_inv_E(:,:), E(:,:)
         integer(ik)                              :: i,ierr
         character(:),   allocatable              :: user_msg, dev_msg
 

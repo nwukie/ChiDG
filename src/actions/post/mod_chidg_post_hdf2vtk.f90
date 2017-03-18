@@ -13,9 +13,12 @@ module mod_chidg_post_hdf2vtk
     use mod_kinds,              only: rk,ik
     use type_chidg,             only: chidg_t
     use type_dict,              only: dict_t
+    use mod_vtk_calc_func,      only: get_Fourier_coeff
     use mod_vtkio,              only: write_vtk_file
     use type_file_properties,   only: file_properties_t
     use mod_hdf_utilities,      only: get_properties_hdf
+    use type_chidg_vector,      only: chidg_vector_t
+    use mod_HB_matrices,        only: calc_E
 
     implicit none
 
@@ -42,8 +45,10 @@ contains
         type(chidg_t)                   ::  chidg
         type(file_properties_t)         ::  file_props
         character(:),allocatable        ::  eqnset
-        integer(ik)                     ::  nterms_s,spacedim,solution_order
-
+        integer(ik)                     ::  nterms_s,spacedim,solution_order,nfreq,ntime,ierr
+        real(rk),    allocatable        ::  E(:,:), freq(:), time_lev(:)
+        type(chidg_vector_t)            ::  q_coeff     ! Vector containing coefficients of solution &
+                                                        ! Fourier expansion in time
 
         !
         ! Initialize ChiDG environment
@@ -59,6 +64,8 @@ contains
         nterms_s   = file_props%nterms_s(1)     ! Global variable from mod_io 
         eqnset     = file_props%eqnset(1)       ! Global variable from mod_io
         spacedim   = file_props%spacedim(1)     ! Global variable from mod_io
+        freq       = file_props%HB_frequencies; nfreq = size(freq)
+        time_lev   = file_props%HB_time_lev;    ntime = size(time_lev)
 
 
         !
@@ -85,6 +92,22 @@ contains
         ! Read solution modes from HDF5
         !
         call chidg%read_solution(filename)
+
+        
+        !
+        ! Compute Fourier transform matrix
+        !
+        if (allocated(E)) deallocate(E)
+        allocate(E(ntime,ntime), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        
+        call calc_E(nfreq,ntime,freq,time_lev,E)
+
+
+        !
+        ! Compute coefficients of Fourier expansion of solution in time
+        !
+        call get_Fourier_coeff(chidg%data,nterms_s,E,q_coeff)
 
 
         !

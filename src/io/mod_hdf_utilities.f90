@@ -1,7 +1,7 @@
 module mod_hdf_utilities
 #include <messenger.h>
     use mod_kinds,              only: rk, ik, rdouble
-    use mod_constants,          only: NFACES, TWO_DIM, THREE_DIM
+    use mod_constants,          only: ZERO, NFACES, TWO_DIM, THREE_DIM
     use mod_file_utilities,     only: delete_file
     use mod_bc,                 only: check_bc_state_registered, create_bc
     use mod_string,             only: string_t
@@ -69,6 +69,13 @@ contains
     !!
     !!  set_ntimes_hdf
     !!  get_ntimes_hdf
+    !!
+    !!  set_HB_frequencies_hdf
+    !!  get_HB_frequencies_hdf
+    !!
+    !!  set_HB_time_lev_hdf
+    !!  get_HB_time_lev_hdf
+    !!
     !!
     !!  Domain-level routines:
     !!  ---------------------------
@@ -231,6 +238,8 @@ contains
         integer(HID_T)              :: fid
         integer(ik)                 :: ierr, loc
         logical                     :: file_exists
+        integer(HSIZE_T)            :: nfreq,ntime
+        real(rk)                    :: freq(1), time(1)
 
 
         !
@@ -285,6 +294,15 @@ contains
         ! Set "ndomains"
         !
         call set_ndomains_hdf(fid,0)
+
+        
+        !
+        ! Set "HB_frequencies" and "HB_time_lev"
+        !
+        nfreq = int(1, 8); freq = [0._rk]
+        ntime = int(1, 8); time = [0._rk]
+        call set_HB_frequencies_hdf(fid,nfreq,freq)
+        call set_HB_time_lev_hdf(fid,ntime,time)
 
 
         call h5fclose_f(fid,ierr)
@@ -794,6 +812,7 @@ contains
         integer(ik)                 :: ierr, idom
         integer(ik)                 :: nterms_1d
         logical                     :: fileexists = .false.
+        integer(HSIZE_T)            :: ntime, nfreq
 
         type(file_properties_t)     :: prop
 
@@ -842,6 +861,23 @@ contains
         !
         prop%domain_names = get_domain_names_hdf(fid)
 
+        
+        !
+        ! Get HB frequencies and time levels
+        !
+        ntime = int(get_ntimes_hdf(fid), 8)
+        if (ntime /= 1) then
+            
+            nfreq = (ntime - 1)/2
+            prop%HB_frequencies = get_HB_frequencies_hdf(fid,nfreq)
+            prop%HB_time_lev    = get_HB_time_lev_hdf(fid,ntime)
+
+        else
+
+            prop%HB_frequencies = get_HB_frequencies_hdf(fid,int(1,8))
+            prop%HB_time_lev    = get_HB_time_lev_hdf(fid,int(1,8))
+
+        end if
 
 
         !
@@ -896,8 +932,7 @@ contains
         !
         prop%eqnset = get_domain_equation_sets_hdf(fid, prop%domain_names)
 
-
-
+        
 
         !
         ! Close file
@@ -1235,6 +1270,134 @@ contains
     !****************************************************************************************
 
 
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, set the harmonic balance frequencies in a hdf5 file.
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/18/2017
+    !!
+    !!  @param[in]  fid             HDF file identifier
+    !!  @param[in]  size_arr        No. of HB frequencies
+    !!  @param[in]  HB_frequencies  Array of HB frequencies
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_HB_frequencies_hdf(fid,size_arr,HB_frequencies)
+        integer(HID_T),                     intent(in)  :: fid
+        integer(HSIZE_T),                   intent(in)  :: size_arr
+        real(rk),   dimension(size_arr),    intent(in)  :: HB_frequencies      
+
+        integer(ik)         :: ierr
+
+        call h5ltset_attribute_double_f(fid, "/", "HB_frequencies", HB_frequencies, size_arr, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_HB_frequencies_hdf: Error h5ltget_attribute_double_f")
+
+    end subroutine set_HB_frequencies_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, return the harmonic balance frequencies in a hdf5 file.
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/18/2017
+    !!
+    !!  @param[in]  fid         HDF file identifier
+    !!  @param[in]  size_arr    No. of HB frequencies
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_HB_frequencies_hdf(fid,size_arr) result(HB_frequencies)
+        integer(HID_T),     intent(in)  :: fid
+        integer(HSIZE_T),   intent(in)  :: size_arr
+
+        integer                         :: ierr
+        real(rk), dimension(size_arr)   :: HB_frequencies
+        real(rk), dimension(size_arr)   :: buf
+
+        call h5ltget_attribute_double_f(fid, "/", "HB_frequencies", buf, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_HB_frequencies_hdf: h5ltget_attribute_double_f had a problem & 
+                                                getting the harmonic balance frequencies")
+        HB_frequencies = buf
+
+    end function get_HB_frequencies_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, set the harmonic balance time levels in a hdf5 file.
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/18/2017
+    !!
+    !!  @param[in]  fid          HDF file identifier
+    !!  @param[in]  size_arr     No. of HB time levels
+    !!  @param[in]  HB_time_lev  Array of HB time levels
+    !----------------------------------------------------------------------------------------
+    subroutine set_HB_time_lev_hdf(fid,size_arr,HB_time_lev)
+        integer(HID_T),                     intent(in)  :: fid
+        integer(HSIZE_T),                   intent(in)  :: size_arr
+        real(rk),   dimension(size_arr),    intent(in)  :: HB_time_lev    
+
+        integer(ik)         :: ierr
+
+        call h5ltset_attribute_double_f(fid, "/", "HB_time_lev", HB_time_lev, size_arr, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_HB_time_lev_hdf: Error h5ltget_attribute_double_f")
+
+    end subroutine set_HB_time_lev_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, return the harmonic balance time levels in a hdf5 file.
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/18/2017
+    !!
+    !!  @param[in]  fid         HDF file identifier
+    !!  @param[in]  size_arr    No. of HB time levels
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_HB_time_lev_hdf(fid,size_arr) result(HB_time_lev)
+        integer(HID_T),     intent(in)  :: fid
+        integer(HSIZE_T),   intent(in)  :: size_arr
+
+        integer                         :: ierr
+        real(rk), dimension(size_arr)   :: HB_time_lev
+        real(rk), dimension(size_arr)   :: buf
+
+        call h5ltget_attribute_double_f(fid, "/", "HB_time_lev", buf, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_HB_time_lev_hdf: h5ltget_attribute_double_f had a problem & 
+                                                getting the harmonic balance time levels")
+        HB_time_lev = buf
+
+    end function get_HB_time_lev_hdf
+    !****************************************************************************************
 
 
 

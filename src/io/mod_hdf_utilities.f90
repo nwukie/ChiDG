@@ -70,6 +70,9 @@ contains
     !!  set_ntimes_hdf
     !!  get_ntimes_hdf
     !!
+    !!  set_time_integrator_hdf
+    !!  get_time_integrator_hdf
+    !!
     !!  set_HB_frequencies_hdf
     !!  get_HB_frequencies_hdf
     !!
@@ -240,6 +243,7 @@ contains
         logical                     :: file_exists
         integer(HSIZE_T)            :: nfreq,ntime
         real(rk)                    :: freq(1), time(1)
+        character(1024)             :: time_string
 
 
         !
@@ -294,6 +298,13 @@ contains
         ! Set "ndomains"
         !
         call set_ndomains_hdf(fid,0)
+
+
+        !
+        ! Set "time_integrator"
+        !
+        time_string = "Steady"
+        call set_time_integrator_hdf(fid,time_string)
 
         
         !
@@ -863,6 +874,12 @@ contains
 
         
         !
+        ! Get time_integrator name
+        !
+        prop%time_integrator = get_time_integrator_hdf(fid)
+
+        
+        !
         ! Get HB frequencies and time levels
         !
         ntime = int(get_ntimes_hdf(fid), 8)
@@ -1267,6 +1284,68 @@ contains
         time_lev = int(buf(1), kind=ik)
 
     end function get_ntimes_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, set the time integrator name in a hdf5 file.
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/18/2017
+    !!
+    !!  @param[in]  fid             HDF file identifier
+    !!  @param[in]  time_string     time_integrator name
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_time_integrator_hdf(fid,time_string)
+        integer(HID_T),  intent(in)  :: fid
+        character(*),    intent(in)  :: time_string      
+
+        integer(ik)         :: ierr
+
+        call h5ltset_attribute_string_f(fid, "/", "time_integrator", trim(time_string), ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_time_integrator_hdf: Error h5ltget_attribute_string_f")
+
+    end subroutine set_time_integrator_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, return the time integrator name in a hdf5 file.
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/18/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_time_integrator_hdf(fid) result(time_string)
+        integer(HID_T), intent(in)  :: fid
+        
+        character(1024)             :: temp_string
+        character(:),   allocatable :: time_string
+        integer(ik)                 :: ierr
+
+        call h5ltget_attribute_string_f(fid, "/", "time_integrator", temp_string, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_time_integrator_hdf: h5ltget_attribute_string_f & 
+                                         had a problem getting the time integrator name")
+        time_string = trim(temp_string)
+
+    end function get_time_integrator_hdf
     !****************************************************************************************
 
 

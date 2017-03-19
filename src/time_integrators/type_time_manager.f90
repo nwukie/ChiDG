@@ -307,7 +307,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function get_name(self) result(res)
-        class(time_manager_t),  intent(in)   :: self
+        class(time_manager_t),  intent(inout)   :: self
         
         character(:),   allocatable :: res
 

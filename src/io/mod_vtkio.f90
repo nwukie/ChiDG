@@ -37,8 +37,9 @@ contains
     !!	@date	11/17/2016
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine write_vtk_file(data)
-        type(chidg_data_t),intent(inout)                        ::  data
+    subroutine write_vtk_file(data,new_dir_path,pvd_filename)
+        type(chidg_data_t),     intent(inout)                   ::  data
+        character(len = 100),   intent(in)                      ::  new_dir_path, pvd_filename
 
 
         integer(ik),parameter                                   :: bo_type = 0_ik
@@ -50,9 +51,7 @@ contains
         integer(ik),            dimension(:,:), allocatable     :: connectivity,connectivity_A
         integer(ik),            dimension(:),   allocatable     :: offsets,types
         character(len = 100),   dimension(:),   allocatable     :: file_arr
-        character(len = 100)                                    :: new_dir_path
         character(len = 100)                                    :: make_directory,delete_directory
-        character(len = 100)                                    :: pvd_filename
 		logical                                                 :: dir_exists
 
 
@@ -61,8 +60,6 @@ contains
         ! the chidg result folder name to the path
         ! Check if directory already exists, if it does remove it and make it again
         !
-        new_dir_path = 'ChiDG_results'
-
         delete_directory = 'rm -rf '//trim(new_dir_path)
         make_directory   = 'mkdir '//trim(new_dir_path)
 
@@ -75,7 +72,7 @@ contains
         !
         ! Name of the final .pvd file
         !
-        pvd_filename = 'chidg_results.pvd'
+        !pvd_filename = 'chidg_results.pvd'
 
 
         ntime = data%sdata%q_in%get_ntime()   ! No. of time steps in the solution file (1 for steady cases)

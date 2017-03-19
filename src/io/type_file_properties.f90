@@ -19,6 +19,7 @@ module type_file_properties
         logical     :: contains_solution    = .false.
 
         integer(ik)                      :: ndomains = 0      !< Number of domains in the file
+        character(len = 1024)            :: time_integrator   !< Time integrator name
         real(rk),            allocatable :: HB_frequencies(:) !< HB frequency data
         real(rk),            allocatable :: HB_time_lev(:)    !< HB time level data
         character(len=1024), allocatable :: domain_names(:)

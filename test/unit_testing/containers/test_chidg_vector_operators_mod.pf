@@ -119,8 +119,8 @@ contains
         !
         ! Initialize solution data containers
         !
-        call this%vec_a%init(this%chidg%data%mesh)
-        call this%vec_b%init(this%chidg%data%mesh)
+        call this%vec_a%init(this%chidg%data%mesh,this%chidg%data%mesh(1)%ntime)
+        call this%vec_b%init(this%chidg%data%mesh,this%chidg%data%mesh(1)%ntime)
 
 
 

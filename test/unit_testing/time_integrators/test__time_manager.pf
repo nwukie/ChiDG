@@ -130,6 +130,11 @@ end subroutine
 !!
 !!
 !!  @author Matteo Ugolotti
+!!  
+!!  Added toelrance for comparison
+!!
+!!  @author Mayank Sharma
+!!  @date   3/20/2017
 !!
 !---------------------------------------------------------------------------------------------------
 
@@ -146,6 +151,7 @@ subroutine test_time_manager__init_HB1()
     type(time_manager_t)    :: t_manager
     
     real(rk)                :: t_lev_1, t_lev_2, t_lev_3
+    real(rk),   parameter   :: tol = 1.e-6_rk
 
     !-----------------------------------------------------------------------------------------------
     !
@@ -172,9 +178,9 @@ subroutine test_time_manager__init_HB1()
     ! Calculate expected HB time levels
     !
      
-    t_lev_1 = (TWO*PI)/10*ONE/THREE
-    t_lev_2 = (TWO*PI)/10*TWO/THREE
-    t_lev_3 = (TWO*PI)/10*THREE/THREE
+    t_lev_1 = (TWO*PI)/10._rk*(ONE/THREE)
+    t_lev_2 = (TWO*PI)/10._rk*(TWO/THREE)
+    t_lev_3 = (TWO*PI)/10._rk*(THREE/THREE)
     
 
     !
@@ -187,10 +193,10 @@ subroutine test_time_manager__init_HB1()
     @assertEqual(1,t_manager%nsteps)
     @assertEqual(0,t_manager%nwrite)
     @assertEqual(20,t_manager%time_lev%capacity())
-    @assertEqual(t_lev_1,t_manager%time_lev%data_(1))
-    @assertEqual(t_lev_2,t_manager%time_lev%data_(2))
-    @assertEqual(t_lev_3,t_manager%time_lev%data_(3))
-    @assertEqual([10],t_manager%freq_data%data())
+    @assertEqual(t_lev_1,t_manager%time_lev%data_(1),tol)
+    @assertEqual(t_lev_2,t_manager%time_lev%data_(2),tol)
+    @assertEqual(t_lev_3,t_manager%time_lev%data_(3),tol)
+    @assertEqual([10],t_manager%freq_data%data(),tol)
     @assertEqual(1,t_manager%freq_data%size())
     @assertEqual(20,t_manager%freq_data%capacity())
 
@@ -212,6 +218,11 @@ end subroutine
 !!
 !!  @author Matteo Ugolotti
 !!
+!!  Added tolerance for comparison
+!!
+!!  @author Mayank Sharma
+!!  @date 3/20/2017
+!!
 !---------------------------------------------------------------------------------------------------
 
 @Test
@@ -229,6 +240,7 @@ subroutine test_time_manager__init_HB5()
     real(rk)                :: t_lev(11)
     real(rk)                :: tmp
     integer(ik)             :: i
+    real(rk),   parameter   :: tol = 1.e-6_rk
 
     !-----------------------------------------------------------------------------------------------
     !
@@ -275,22 +287,22 @@ subroutine test_time_manager__init_HB5()
     @assertEqual(time_integrator,t_manager%time_scheme)
     @assertEqual(11,t_manager%time_lev%size())
     @assertEqual(20,t_manager%time_lev%capacity())
-    @assertEqual(t_lev(1),t_manager%time_lev%data_(1))
-    @assertEqual(t_lev(2),t_manager%time_lev%data_(2))
-    @assertEqual(t_lev(3),t_manager%time_lev%data_(3))
-    @assertEqual(t_lev(4),t_manager%time_lev%data_(4))
-    @assertEqual(t_lev(5),t_manager%time_lev%data_(5))
-    @assertEqual(t_lev(6),t_manager%time_lev%data_(6))
-    @assertEqual(t_lev(7),t_manager%time_lev%data_(7))
-    @assertEqual(t_lev(8),t_manager%time_lev%data_(8))
-    @assertEqual(t_lev(9),t_manager%time_lev%data_(9))
-    @assertEqual(t_lev(10),t_manager%time_lev%data_(10))
-    @assertEqual(t_lev(11),t_manager%time_lev%data_(11))
-    @assertEqual(1.1_rk,t_manager%freq_data%data_(1))
-    @assertEqual(15.0_rk,t_manager%freq_data%data_(2))
-    @assertEqual(13.05_rk,t_manager%freq_data%data_(3))
-    @assertEqual(25.0001_rk,t_manager%freq_data%data_(4))
-    @assertEqual(26.9_rk,t_manager%freq_data%data_(5))
+    @assertEqual(t_lev(1),t_manager%time_lev%data_(1),tol)
+    @assertEqual(t_lev(2),t_manager%time_lev%data_(2),tol)
+    @assertEqual(t_lev(3),t_manager%time_lev%data_(3),tol)
+    @assertEqual(t_lev(4),t_manager%time_lev%data_(4),tol)
+    @assertEqual(t_lev(5),t_manager%time_lev%data_(5),tol)
+    @assertEqual(t_lev(6),t_manager%time_lev%data_(6),tol)
+    @assertEqual(t_lev(7),t_manager%time_lev%data_(7),tol)
+    @assertEqual(t_lev(8),t_manager%time_lev%data_(8),tol)
+    @assertEqual(t_lev(9),t_manager%time_lev%data_(9),tol)
+    @assertEqual(t_lev(10),t_manager%time_lev%data_(10),tol)
+    @assertEqual(t_lev(11),t_manager%time_lev%data_(11),tol)
+    @assertEqual(1.1_rk,t_manager%freq_data%data_(1),tol)
+    @assertEqual(15.0_rk,t_manager%freq_data%data_(2),tol)
+    @assertEqual(13.05_rk,t_manager%freq_data%data_(3),tol)
+    @assertEqual(25.0001_rk,t_manager%freq_data%data_(4),tol)
+    @assertEqual(26.9_rk,t_manager%freq_data%data_(5),tol)
     @assertEqual(20,t_manager%freq_data%capacity())
     @assertEqual(5,t_manager%freq_data%size())
 
@@ -315,6 +327,11 @@ end subroutine
 !!
 !!  @author Matteo Ugolotti
 !!
+!!  Added tolerance for comparison
+!!
+!!  @author Mayank Sharma
+!!  @date   3/20/2017
+!!
 !---------------------------------------------------------------------------------------------------
 
 @Test
@@ -332,6 +349,7 @@ subroutine test_time_manager__init_HB25()
     real(rk)                :: t_lev(51)
     real(rk)                :: tmp
     integer(ik)             :: i
+    real(rk),   parameter   :: tol = 1.e-6_rk
 
     !-----------------------------------------------------------------------------------------------
     !
@@ -401,11 +419,11 @@ subroutine test_time_manager__init_HB25()
     @assertEqual(60,t_manager%time_lev%capacity())
     
     do i = 1,51
-        @assertEqual(t_lev(i),t_manager%time_lev%data_(i))
+        @assertEqual(t_lev(i),t_manager%time_lev%data_(i),tol)
     end do
     
     do i = 1,25
-        @assertEqual(frequencies(i),t_manager%freq_data%data_(i))
+        @assertEqual(frequencies(i),t_manager%freq_data%data_(i),tol)
     end do
 
     @assertEqual(40,t_manager%freq_data%capacity())
@@ -433,6 +451,11 @@ end subroutine
 !!
 !!  @author Matteo Ugolotti
 !!
+!!  Added tolerance for comparison
+!!
+!!  @author Mayank Sharma
+!!  @date   3/20/2017
+!!
 !---------------------------------------------------------------------------------------------------
 
 @Test
@@ -450,6 +473,7 @@ subroutine test_time_manager__init_HB5_0()
     real(rk)                :: t_lev(9)
     real(rk)                :: tmp
     integer(ik)             :: i
+    real(rk),   parameter   :: tol = 1.e-6_rk
 
     !-----------------------------------------------------------------------------------------------
     !
@@ -498,19 +522,19 @@ subroutine test_time_manager__init_HB5_0()
     @assertEqual(4,t_manager%freq_data%size())
     @assertEqual(9,t_manager%time_lev%size())
     @assertEqual(20,t_manager%time_lev%capacity())
-    @assertEqual(t_lev(1),t_manager%time_lev%data_(1))
-    @assertEqual(t_lev(2),t_manager%time_lev%data_(2))
-    @assertEqual(t_lev(3),t_manager%time_lev%data_(3))
-    @assertEqual(t_lev(4),t_manager%time_lev%data_(4))
-    @assertEqual(t_lev(5),t_manager%time_lev%data_(5))
-    @assertEqual(t_lev(6),t_manager%time_lev%data_(6))
-    @assertEqual(t_lev(7),t_manager%time_lev%data_(7))
-    @assertEqual(t_lev(8),t_manager%time_lev%data_(8))
-    @assertEqual(t_lev(9),t_manager%time_lev%data_(9))
-    @assertEqual(0.3_rk,t_manager%freq_data%data_(1))
-    @assertEqual(15.0_rk,t_manager%freq_data%data_(2))
-    @assertEqual(25.0001_rk,t_manager%freq_data%data_(3))
-    @assertEqual(26.9_rk,t_manager%freq_data%data_(4))
+    @assertEqual(t_lev(1),t_manager%time_lev%data_(1),tol)
+    @assertEqual(t_lev(2),t_manager%time_lev%data_(2),tol)
+    @assertEqual(t_lev(3),t_manager%time_lev%data_(3),tol)
+    @assertEqual(t_lev(4),t_manager%time_lev%data_(4),tol)
+    @assertEqual(t_lev(5),t_manager%time_lev%data_(5),tol)
+    @assertEqual(t_lev(6),t_manager%time_lev%data_(6),tol)
+    @assertEqual(t_lev(7),t_manager%time_lev%data_(7),tol)
+    @assertEqual(t_lev(8),t_manager%time_lev%data_(8),tol)
+    @assertEqual(t_lev(9),t_manager%time_lev%data_(9),tol)
+    @assertEqual(0.3_rk,t_manager%freq_data%data_(1),tol)
+    @assertEqual(15.0_rk,t_manager%freq_data%data_(2),tol)
+    @assertEqual(25.0001_rk,t_manager%freq_data%data_(3),tol)
+    @assertEqual(26.9_rk,t_manager%freq_data%data_(4),tol)
 
 
 end subroutine
@@ -536,6 +560,11 @@ end subroutine
 !!
 !!  @author Matteo Ugolotti
 !!
+!!  Added tolerance for comparison
+!!
+!!  @author Mayank Sharma
+!!  @date   3/20/2017
+!!
 !---------------------------------------------------------------------------------------------------
 
 @Test
@@ -554,6 +583,7 @@ subroutine test_time_manager__init_push_back()
     real(rk)                :: t_lev(7)
     real(rk)                :: tmp
     integer(ik)             :: i
+    real(rk),   parameter   :: tol = 1.e-6_rk
 
     !-----------------------------------------------------------------------------------------------
     !
@@ -602,16 +632,16 @@ subroutine test_time_manager__init_push_back()
     @assertEqual(3,t_manager%freq_data%size())
     @assertEqual(7,t_manager%time_lev%size())
     @assertEqual(20,t_manager%time_lev%capacity())
-    @assertEqual(t_lev(1),t_manager%time_lev%data_(1))
-    @assertEqual(t_lev(2),t_manager%time_lev%data_(2))
-    @assertEqual(t_lev(3),t_manager%time_lev%data_(3))
-    @assertEqual(t_lev(4),t_manager%time_lev%data_(4))
-    @assertEqual(t_lev(5),t_manager%time_lev%data_(5))
-    @assertEqual(t_lev(6),t_manager%time_lev%data_(6))
-    @assertEqual(t_lev(7),t_manager%time_lev%data_(7))
-    @assertEqual(0.3_rk,t_manager%freq_data%data_(1))
-    @assertEqual(5.0_rk,t_manager%freq_data%data_(2))
-    @assertEqual(25.0001_rk,t_manager%freq_data%data_(3))
+    @assertEqual(t_lev(1),t_manager%time_lev%data_(1),tol)
+    @assertEqual(t_lev(2),t_manager%time_lev%data_(2),tol)
+    @assertEqual(t_lev(3),t_manager%time_lev%data_(3),tol)
+    @assertEqual(t_lev(4),t_manager%time_lev%data_(4),tol)
+    @assertEqual(t_lev(5),t_manager%time_lev%data_(5),tol)
+    @assertEqual(t_lev(6),t_manager%time_lev%data_(6),tol)
+    @assertEqual(t_lev(7),t_manager%time_lev%data_(7),tol)
+    @assertEqual(0.3_rk,t_manager%freq_data%data_(1),tol)
+    @assertEqual(5.0_rk,t_manager%freq_data%data_(2),tol)
+    @assertEqual(25.0001_rk,t_manager%freq_data%data_(3),tol)
 
 
 end subroutine

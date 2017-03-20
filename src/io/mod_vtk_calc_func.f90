@@ -568,7 +568,7 @@ contains
         integer(ik)     :: itime_interp, ierr
         
 
-        ntime_interp = 10
+        ntime_interp = 21
 
         if (allocated(time_interp)) deallocate(time_interp)
         allocate(time_interp(ntime_interp), stat=ierr) 

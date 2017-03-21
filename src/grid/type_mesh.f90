@@ -4,7 +4,7 @@ module type_mesh
     use mod_constants,              only: XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, &
                                           ORPHAN, INTERIOR, BOUNDARY, CHIMERA, TWO_DIM, &
                                           THREE_DIM, NO_NEIGHBOR_FOUND, NEIGHBOR_FOUND, &
-                                          NO_PROC, NFACES
+                                          NO_PROC, NFACES, NO_EQUATION_SET
     use mod_grid,                   only: FACE_CORNERS
     use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
     use mpi_f08
@@ -45,6 +45,7 @@ module type_mesh
         integer(ik)                     :: nterms_c   = 0     ! N-terms in coordinate expansion
         integer(ik)                     :: nelem      = 0     ! Number of total elements
         integer(ik)                     :: ntime      = 0     ! Number of time instances
+        integer(ik)                     :: eqn_ID     = NO_EQUATION_SET
         character(:),   allocatable     :: coordinate_system  ! 'Cartesian' or 'Cylindrical'
 
         
@@ -69,6 +70,7 @@ module type_mesh
 
         procedure           :: init_geom                ! geometry init for elements and faces 
         procedure           :: init_sol                 ! init data depending on solution order for elements and faces
+        procedure           :: init_eqn                 ! initialize the equation set identifier on the mesh
 
         procedure, private  :: init_elems_geom          ! Loop through elements init geometry
         procedure, private  :: init_elems_sol           ! Loop through elements init data depending on the solution order
@@ -220,6 +222,33 @@ contains
     !*****************************************************************************************
 
 
+
+
+
+
+
+
+    !>  Initialize the equation set identifier on the mesh.
+    !!
+    !!  Sets the equation set identifier self%eqn_ID that can be used to acces
+    !!  the equation_set_t object on chidg_data as chidg_data%eqnset(eqn_ID)
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/20/2017
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine init_eqn(self,eqn_ID)
+        class(mesh_t),  intent(inout)   :: self
+        integer(ik),    intent(in)      :: eqn_ID
+
+        !
+        ! Store number of equations and number of terms in solution expansion
+        !
+        self%eqn_ID = eqn_ID
+
+
+    end subroutine init_eqn
+    !*****************************************************************************************
 
 
 

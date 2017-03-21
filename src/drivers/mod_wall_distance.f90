@@ -179,9 +179,9 @@ contains
             !       p = 2,4,6
             !
             iorder = 2
-            call noptions%set('tol',1.e-5_rk)   ! Set nonlinear solver options
-            call loptions%set('tol',1.e-8_rk)   ! Set linear solver options
-            call wall_distance%set('Nonlinear Solver', algorithm='Quasi-Newton', options=noptions)
+            call noptions%set('tol',1.e-4_rk)   ! Set nonlinear solver options
+            call loptions%set('tol',1.e-5_rk)   ! Set linear solver options
+            call wall_distance%set('Nonlinear Solver', algorithm='Newton', options=noptions)
             call wall_distance%set('Linear Solver'   , algorithm='fgmres_cgs',   options=loptions)
             do p = 2,6,2
                 call write_line('Wall Distance Driver : Loop 1 : p = ', p)

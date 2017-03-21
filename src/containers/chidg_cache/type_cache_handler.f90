@@ -95,7 +95,7 @@ contains
         type(bc_t),                 intent(inout)   :: bc(:)
         logical,                    intent(in)      :: differentiate
 
-        integer(ik) :: idomain_l, ielement_l, iface
+        integer(ik) :: idomain_l, ielement_l, iface, eqn_ID
         logical     :: compute_gradients, valid_indices
 
         !
@@ -119,8 +119,9 @@ contains
         !
         ! Determine if we want to update gradient terms in the cache
         !
-        compute_gradients = (allocated(equation_set(idomain_l)%volume_diffusive_operator) .or. &
-                             allocated(equation_set(idomain_l)%boundary_diffusive_operator) )
+        eqn_ID = worker%mesh(idomain_l)%eqn_ID
+        compute_gradients = (allocated(equation_set(eqn_ID)%volume_diffusive_operator) .or. &
+                             allocated(equation_set(eqn_ID)%boundary_diffusive_operator) )
 
 
 
@@ -424,7 +425,7 @@ contains
         logical,                    intent(in)      :: compute_gradients
 
         integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, &
-                                                       iface, idiff
+                                                       iface, idiff, eqn_ID
         character(:),   allocatable                 :: field
         type(AD_D),     allocatable, dimension(:)   :: value_gq, grad1_gq, grad2_gq, grad3_gq
 
@@ -458,7 +459,9 @@ contains
             grad2_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad2')
             grad3_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad3')
 
-            field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
+            !field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
+            eqn_ID = worker%mesh(idomain_l)%eqn_ID
+            field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
             call worker%cache%set_data(field,'element',value_gq,'value',0,worker%function_info%seed)
             call worker%cache%set_data(field,'element',grad1_gq,'gradient',1,worker%function_info%seed)
             call worker%cache%set_data(field,'element',grad2_gq,'gradient',2,worker%function_info%seed)
@@ -498,7 +501,7 @@ contains
         logical,                    intent(in)      :: compute_gradients
 
         integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, &
-                                                       iface, idiff
+                                                       iface, idiff, eqn_ID
         character(:),   allocatable                 :: field
         type(AD_D),     allocatable, dimension(:)   :: value_gq, grad1_gq, grad2_gq, grad3_gq
 
@@ -540,7 +543,9 @@ contains
 
 
             ! Store gq data in cache
-            field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
+            !field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
+            eqn_ID = worker%mesh(idomain_l)%eqn_ID
+            field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
             call worker%cache%set_data(field,'face interior',value_gq,'value',   0,worker%function_info%seed,iface)
             call worker%cache%set_data(field,'face interior',grad1_gq,'gradient',1,worker%function_info%seed,iface)
             call worker%cache%set_data(field,'face interior',grad2_gq,'gradient',2,worker%function_info%seed,iface)
@@ -581,7 +586,7 @@ contains
         logical,                    intent(in)      :: compute_gradients
 
         integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, &
-                                                       iface, BC_ID, BC_face, ndepend, idiff
+                                                       iface, BC_ID, BC_face, ndepend, idiff, eqn_ID
         character(:),   allocatable                 :: field
         type(AD_D),     allocatable, dimension(:)   :: value_gq, grad1_gq, grad2_gq, grad3_gq
 
@@ -614,7 +619,9 @@ contains
         if ( (worker%face_type() == INTERIOR) .or. (worker%face_type() == CHIMERA) ) then
             
             do ieqn = 1,worker%mesh(idomain_l)%neqns
-                field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
+                !field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
+                eqn_ID = worker%mesh(idomain_l)%eqn_ID
+                field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
                 do idepend = 1,ndepend
 
                     worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
@@ -665,7 +672,7 @@ contains
         logical,                    intent(in)      :: differentiate
 
         integer(ik)                 :: idepend, ieqn, idomain_l, ielement_l, iface, ndepend, &
-                                       istate, bc_ID, patch_ID, patch_face
+                                       istate, bc_ID, patch_ID, patch_face, eqn_ID
         character(:),   allocatable :: field
 
 
@@ -702,7 +709,9 @@ contains
                         worker%function_info%seed%iproc      = NO_PROC
                     end if
 
-                    call bc(bc_ID)%bc_state(istate)%state%compute_bc_state(worker,equation_set(idomain_l)%prop)
+                    eqn_ID = worker%mesh(idomain_l)%eqn_ID
+                    !call bc(bc_ID)%bc_state(istate)%state%compute_bc_state(worker,equation_set(idomain_l)%prop)
+                    call bc(bc_ID)%bc_state(istate)%state%compute_bc_state(worker,equation_set(eqn_ID)%prop)
 
                 end do !idepend
             end do !istate
@@ -743,7 +752,7 @@ contains
         type(bc_t),                 intent(inout)   :: bc(:)
         logical,                    intent(in)      :: differentiate
 
-        integer(ik) :: idomain_l
+        integer(ik) :: idomain_l, eqn_ID
 
 
         idomain_l  = worker%element_info%idomain_l 
@@ -751,8 +760,9 @@ contains
         !
         ! Update lifting terms for gradients if diffusive operators are present
         !
-        if (allocated(equation_set(idomain_l)%volume_diffusive_operator) .or. &
-            allocated(equation_set(idomain_l)%boundary_diffusive_operator)) then
+        eqn_ID = worker%mesh(idomain_l)%eqn_ID
+        if (allocated(equation_set(eqn_ID)%volume_diffusive_operator) .or. &
+            allocated(equation_set(eqn_ID)%boundary_diffusive_operator)) then
 
             call self%update_lift_faces_internal(worker,equation_set,bc,differentiate)
             call self%update_lift_faces_external(worker,equation_set,bc,differentiate)
@@ -789,7 +799,7 @@ contains
         logical,                    intent(in)      :: differentiate
 
         integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, iface, &
-                                                       idiff, iaux_field, ifield
+                                                       idiff, iaux_field, ifield, eqn_ID
         character(:),   allocatable                 :: field
         type(AD_D),     allocatable, dimension(:)   :: value_gq, grad1_gq, grad2_gq, grad3_gq
 
@@ -809,12 +819,15 @@ contains
         end if
 
         idepend = 0 ! no linearization
-        do ifield = 1,worker%prop(idomain_l)%nauxiliary_fields()
+        eqn_ID = worker%mesh(idomain_l)%eqn_ID
+        !do ifield = 1,worker%prop(idomain_l)%nauxiliary_fields()
+        do ifield = 1,worker%prop(eqn_ID)%nauxiliary_fields()
 
             !
             ! Try to find the auxiliary field in the solverdata_t container; where they are stored.
             !
-            field      = worker%prop(idomain_l)%get_auxiliary_field_name(ifield)
+            !field      = worker%prop(idomain_l)%get_auxiliary_field_name(ifield)
+            field      = worker%prop(eqn_ID)%get_auxiliary_field_name(ifield)
             iaux_field = worker%solverdata%get_auxiliary_field_index(field)
 
             ! Set seed
@@ -868,7 +881,7 @@ contains
         logical,                    intent(in)      :: differentiate
 
         integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, iface, &
-                                                       iaux_field, ifield, idiff
+                                                       iaux_field, ifield, idiff, eqn_ID
         character(:),   allocatable                 :: field
         type(AD_D),     allocatable, dimension(:)   :: value_gq, grad1_gq, grad2_gq, grad3_gq
 
@@ -892,13 +905,14 @@ contains
         !
         ! Face interior state. 
         !
+        eqn_ID = worker%mesh(idomain_l)%eqn_ID
         idepend = 0 ! no linearization
-        do ifield = 1,worker%prop(idomain_l)%nauxiliary_fields()
+        do ifield = 1,worker%prop(eqn_ID)%nauxiliary_fields()
 
             !
             ! Try to find the auxiliary field in the solverdata_t container; where they are stored.
             !
-            field      = worker%prop(idomain_l)%get_auxiliary_field_name(ifield)
+            field      = worker%prop(eqn_ID)%get_auxiliary_field_name(ifield)
             iaux_field = worker%solverdata%get_auxiliary_field_index(field)
 
             ! Set seed
@@ -956,7 +970,7 @@ contains
         logical,                    intent(in)      :: differentiate
 
         integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, iface, &
-                                                       iaux_field, ifield, idiff
+                                                       iaux_field, ifield, idiff, eqn_ID
         character(:),   allocatable                 :: field
         type(AD_D),     allocatable, dimension(:)   :: value_gq, grad1_gq, grad2_gq, grad3_gq
 
@@ -981,13 +995,14 @@ contains
         !
         if ( (worker%face_type() == INTERIOR) .or. (worker%face_type() == CHIMERA) ) then
 
+            eqn_ID = worker%mesh(idomain_l)%eqn_ID
             idepend = 0 ! no linearization
-            do ifield = 1,worker%prop(idomain_l)%nauxiliary_fields()
+            do ifield = 1,worker%prop(eqn_ID)%nauxiliary_fields()
 
                 !
                 ! Try to find the auxiliary field in the solverdata_t container; where they are stored.
                 !
-                field      = worker%prop(idomain_l)%get_auxiliary_field_name(ifield)
+                field      = worker%prop(eqn_ID)%get_auxiliary_field_name(ifield)
                 iaux_field = worker%solverdata%get_auxiliary_field_index(field)
 
                 ! Set seed
@@ -1047,7 +1062,7 @@ contains
         logical,                    intent(in)      :: differentiate
 
         integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, iface, &
-                                                       iaux_field, ifield, idiff
+                                                       iaux_field, ifield, idiff, eqn_ID
         character(:),   allocatable                 :: field
         type(AD_D),     allocatable, dimension(:)   :: value_gq, grad1_gq, grad2_gq, grad3_gq
 
@@ -1073,13 +1088,14 @@ contains
         !
         if ( (worker%face_type() == BOUNDARY) ) then
 
+            eqn_ID  = worker%mesh(idomain_l)%eqn_ID
             idepend = 0 ! no linearization
-            do ifield = 1,worker%prop(idomain_l)%nauxiliary_fields()
+            do ifield = 1,worker%prop(eqn_ID)%nauxiliary_fields()
 
                 !
                 ! Try to find the auxiliary field in the solverdata_t container; where they are stored.
                 !
-                field      = worker%prop(idomain_l)%get_auxiliary_field_name(ifield)
+                field      = worker%prop(eqn_ID)%get_auxiliary_field_name(ifield)
                 iaux_field = worker%solverdata%get_auxiliary_field_index(field)
 
                 ! Set seed
@@ -1136,7 +1152,7 @@ contains
 
         logical                     :: diff_none, diff_interior, diff_exterior, compute_model
         integer(ik)                 :: imodel, idomain_l, ielement_l, idepend, idiff, &
-                                       ipattern, ndepend
+                                       ipattern, ndepend, eqn_ID
         integer(ik),    allocatable :: compute_pattern(:)
         character(:),   allocatable :: dependency
 
@@ -1147,13 +1163,16 @@ contains
         !
         ! Compute element model field. Potentially differentiated wrt exterior elements.
         !
+        eqn_ID = worker%mesh(idomain_l)%eqn_ID
         worker%interpolation_source = 'element'
-        do imodel = 1,equation_set(idomain_l)%nmodels()
+        !do imodel = 1,equation_set(idomain_l)%nmodels()
+        do imodel = 1,equation_set(eqn_ID)%nmodels()
 
             !
             ! Get model dependency
             !
-            dependency = equation_set(idomain_l)%models(imodel)%model%get_dependency()
+            !dependency = equation_set(idomain_l)%models(imodel)%model%get_dependency()
+            dependency = equation_set(eqn_ID)%models(imodel)%model%get_dependency()
 
             !
             ! Only execute models specified in incoming model_type
@@ -1224,7 +1243,8 @@ contains
                             worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
                             worker%function_info%idepend = idepend
 
-                            call equation_set(idomain_l)%models(imodel)%model%compute(worker)
+                            !call equation_set(idomain_l)%models(imodel)%model%compute(worker)
+                            call equation_set(eqn_ID)%models(imodel)%model%compute(worker)
                         end do !idepend
                     end if !compute
 
@@ -1263,7 +1283,7 @@ contains
 
         logical                     :: exterior_coupling, selected_model
         integer(ik)                 :: idepend, imodel, idomain_l, ielement_l, &
-                                       iface, idiff, ndepend
+                                       iface, idiff, ndepend, eqn_ID
         integer(ik),    allocatable :: compute_pattern(:)
         character(:),   allocatable :: field, model_dependency, mode
         type(AD_D),     allocatable :: value_gq(:)
@@ -1278,14 +1298,17 @@ contains
         ! Update models for 'face interior'. Differentiated wrt interior.
         !
         idepend = 1
+        eqn_ID  = worker%mesh(idomain_l)%eqn_ID
         worker%interpolation_source = 'face interior'
-        do imodel = 1,equation_set(idomain_l)%nmodels()
+        !do imodel = 1,equation_set(idomain_l)%nmodels()
+        do imodel = 1,equation_set(eqn_ID)%nmodels()
 
             !
             ! Compute if model dependency matches specified model type in the 
             ! function interface.
             !
-            model_dependency = equation_set(idomain_l)%models(imodel)%model%get_dependency()
+            !model_dependency = equation_set(idomain_l)%models(imodel)%model%get_dependency()
+            model_dependency = equation_set(eqn_ID)%models(imodel)%model%get_dependency()
             selected_model = (trim(model_type) == trim(model_dependency))
 
             if (selected_model) then
@@ -1304,7 +1327,8 @@ contains
                 worker%function_info%idepend = idepend
                 worker%function_info%idiff   = idiff
 
-                call equation_set(idomain_l)%models(imodel)%model%compute(worker)
+                !call equation_set(idomain_l)%models(imodel)%model%compute(worker)
+                call equation_set(eqn_ID)%models(imodel)%model%compute(worker)
 
             end if !select model
 
@@ -1322,12 +1346,14 @@ contains
 
             if (differentiate) then
 
-                do imodel = 1,equation_set(idomain_l)%nmodels()
+                !do imodel = 1,equation_set(idomain_l)%nmodels()
+                do imodel = 1,equation_set(eqn_ID)%nmodels()
 
                     !
                     ! Get model dependency 
                     !
-                    model_dependency = equation_set(idomain_l)%models(imodel)%model%get_dependency()
+                    !model_dependency = equation_set(idomain_l)%models(imodel)%model%get_dependency()
+                    model_dependency = equation_set(eqn_ID)%models(imodel)%model%get_dependency()
 
                     selected_model    = (trim(model_type) == trim(model_dependency))
                     exterior_coupling = (model_dependency == 'f(Q-,Q+)') .or. (model_dependency == 'f(Grad(Q))')
@@ -1352,7 +1378,8 @@ contains
                             worker%function_info%idepend = idepend
                             worker%function_info%idiff   = idiff
 
-                            call equation_set(idomain_l)%models(imodel)%model%compute(worker)
+                            !call equation_set(idomain_l)%models(imodel)%model%compute(worker)
+                            call equation_set(eqn_ID)%models(imodel)%model%compute(worker)
                         end do !idepend
 
                     end if ! select model
@@ -1394,7 +1421,7 @@ contains
         character(*),               intent(in)      :: model_type
 
         integer(ik)                 :: idepend, imodel, idomain_l, ielement_l, iface, &
-                                       bc_ID, patch_ID, patch_face, ndepend, idiff
+                                       bc_ID, patch_ID, patch_face, ndepend, idiff, eqn_ID
         character(:),   allocatable :: field, model_dependency
         logical                     :: selected_model
 
@@ -1408,6 +1435,7 @@ contains
         !
         ! Face exterior state: interior neighbors and chimera
         !
+        eqn_ID = worker%mesh(idomain_l)%eqn_ID
         worker%interpolation_source = 'face exterior'
         if ( (worker%face_type() == INTERIOR) .or. (worker%face_type() == CHIMERA) ) then
 
@@ -1424,12 +1452,14 @@ contains
             ! Compute the number of exterior element dependencies for face exterior state
             !
             ndepend = get_ndepend_exterior(worker,equation_set,bc,differentiate)
-            do imodel = 1,equation_set(idomain_l)%nmodels()
+            !do imodel = 1,equation_set(idomain_l)%nmodels()
+            do imodel = 1,equation_set(eqn_ID)%nmodels()
 
                 !
                 ! Get model dependency 
                 !
-                model_dependency = equation_set(idomain_l)%models(imodel)%model%get_dependency()
+                !model_dependency = equation_set(idomain_l)%models(imodel)%model%get_dependency()
+                model_dependency = equation_set(eqn_ID)%models(imodel)%model%get_dependency()
                 selected_model   = (trim(model_type) == trim(model_dependency))
 
                 if (selected_model) then
@@ -1438,7 +1468,8 @@ contains
                         worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
                         worker%function_info%idepend = idepend
 
-                        call equation_set(idomain_l)%models(imodel)%model%compute(worker)
+                        !call equation_set(idomain_l)%models(imodel)%model%compute(worker)
+                        call equation_set(eqn_ID)%models(imodel)%model%compute(worker)
 
                     end do !idepend
                 end if !select model
@@ -1458,12 +1489,14 @@ contains
                 ! Compute the number of exterior element dependencies for face exterior state
                 !
                 ndepend = 1
-                do imodel = 1,equation_set(idomain_l)%nmodels()
+                !do imodel = 1,equation_set(idomain_l)%nmodels()
+                do imodel = 1,equation_set(eqn_ID)%nmodels()
 
                     !
                     ! Get model dependency 
                     !
-                    model_dependency = equation_set(idomain_l)%models(imodel)%model%get_dependency()
+                    !model_dependency = equation_set(idomain_l)%models(imodel)%model%get_dependency()
+                    model_dependency = equation_set(eqn_ID)%models(imodel)%model%get_dependency()
                     selected_model   = (trim(model_type) == trim(model_dependency))
 
                     if (selected_model) then
@@ -1472,7 +1505,8 @@ contains
                             worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
                             worker%function_info%idepend = idepend
 
-                            call equation_set(idomain_l)%models(imodel)%model%compute(worker)
+                            !call equation_set(idomain_l)%models(imodel)%model%compute(worker)
+                            call equation_set(eqn_ID)%models(imodel)%model%compute(worker)
 
                         end do !idepend
                     end if !select model
@@ -1510,7 +1544,7 @@ contains
         character(*),               intent(in)      :: model_type
 
         integer(ik)                 :: idepend, ieqn, idomain_l, ielement_l, iface, ndepend, &
-                                       istate, bc_ID, patch_ID, patch_face, imodel
+                                       istate, bc_ID, patch_ID, patch_face, imodel, eqn_ID
         character(:),   allocatable :: field, model_dependency
         logical                     :: selected_model
 
@@ -1524,6 +1558,7 @@ contains
         !
         ! Face exterior state: boundaries
         !
+        eqn_ID = worker%mesh(idomain_l)%eqn_ID
         worker%interpolation_source = 'face exterior'
         if ( (worker%face_type() == BOUNDARY) ) then
 
@@ -1536,12 +1571,14 @@ contains
             patch_ID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%patch_ID
             patch_face = worker%mesh(idomain_l)%faces(ielement_l,iface)%patch_face
 
-            do imodel = 1,equation_set(idomain_l)%nmodels()
+            !do imodel = 1,equation_set(idomain_l)%nmodels()
+            do imodel = 1,equation_set(eqn_ID)%nmodels()
 
                 !
                 ! Get model dependency 
                 !
-                model_dependency = equation_set(idomain_l)%models(imodel)%model%get_dependency()
+                !model_dependency = equation_set(idomain_l)%models(imodel)%model%get_dependency()
+                model_dependency = equation_set(eqn_ID)%models(imodel)%model%get_dependency()
                 selected_model   = (trim(model_type) == trim(model_dependency))
 
                 if (selected_model) then
@@ -1564,7 +1601,8 @@ contains
                             worker%function_info%seed%iproc      = NO_PROC
                         end if
 
-                        call equation_set(idomain_l)%models(imodel)%model%compute(worker)
+                        !call equation_set(idomain_l)%models(imodel)%model%compute(worker)
+                        call equation_set(eqn_ID)%models(imodel)%model%compute(worker)
 
                     end do !idepend
                 end if !select model
@@ -1612,7 +1650,7 @@ contains
 
         character(:),   allocatable :: field
         integer(ik)                 :: idomain_l, ielement_l, iface, idepend, &
-                                       ndepend, BC_ID, BC_face, ieqn, idiff
+                                       ndepend, BC_ID, BC_face, ieqn, idiff, eqn_ID
 
         type(AD_D), allocatable, dimension(:), save   ::    &
             var_m, var_p, var_diff, var_diff_weighted,      &
@@ -1662,7 +1700,9 @@ contains
                 !
                 ! Get field
                 !
-                field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
+                !field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
+                eqn_ID = worker%mesh(idomain_l)%eqn_ID
+                field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
 
 
 
@@ -2020,7 +2060,7 @@ contains
         type(bc_t),                 intent(inout)   :: bc(:)
         integer(ik),                intent(in)      :: ieqn
 
-        integer(ik) :: idomain_l, ielement_l, iface, idomain_l_n, ielement_l_n, iface_n, iproc_n
+        integer(ik) :: idomain_l, ielement_l, iface, idomain_l_n, ielement_l_n, iface_n, iproc_n, eqn_ID
         logical     :: boundary_face, interior_face, local_neighbor, remote_neighbor
 
         type(AD_D), allocatable, dimension(:)   ::          &
@@ -2060,7 +2100,9 @@ contains
         !
         ! Get field
         !
-        field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
+        !field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
+        eqn_ID = worker%mesh(idomain_l)%eqn_ID
+        field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
 
 
         if ( local_neighbor ) then
@@ -2179,7 +2221,7 @@ contains
         type(bc_t),                 intent(inout)   :: bc(:)
         integer(ik),                intent(in)      :: ieqn
 
-        integer(ik) :: idomain_l, ielement_l, iface, idomain_l_n, ielement_l_n, iface_n
+        integer(ik) :: idomain_l, ielement_l, iface, idomain_l_n, ielement_l_n, iface_n, eqn_ID
         logical     :: boundary_face, interior_face
 
         type(AD_D), allocatable, dimension(:)   ::          &
@@ -2219,7 +2261,9 @@ contains
         !
         ! Get field
         !
-        field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
+        !field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
+        eqn_ID = worker%mesh(idomain_l)%eqn_ID
+        field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
 
 
 
@@ -2326,7 +2370,7 @@ contains
         type(bc_t),                 intent(inout)   :: bc(:)
         integer(ik),                intent(in)      :: ieqn
 
-        integer(ik) :: idomain_l, ielement_l, iface, idomain_l_n, ielement_l_n, iface_n
+        integer(ik) :: idomain_l, ielement_l, iface, idomain_l_n, ielement_l_n, iface_n, eqn_ID
         logical     :: boundary_face, interior_face
 
         type(AD_D), allocatable, dimension(:)   ::          &
@@ -2352,7 +2396,9 @@ contains
         !
         ! Get field
         !
-        field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
+        !field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
+        eqn_ID = worker%mesh(idomain_l)%eqn_ID
+        field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
 
         !
         ! Use components from receiver element since no single element exists to act 

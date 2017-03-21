@@ -762,6 +762,16 @@ contains
         compute       = (interior_face .or. chimera_face)
 
 
+!        !
+!        ! Determine if multi-fidelity interface. Check that equation sets match
+!        !
+!        if (interior_face) then
+!            eqn_m = self%name
+!            eqn_p = 
+!
+!
+!
+!        end if
 
         if (compute) then
 

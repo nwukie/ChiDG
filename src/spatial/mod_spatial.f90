@@ -40,7 +40,7 @@ contains
         logical,            intent(in),     optional    :: differentiate
 
         integer(ik)                 :: idom, ielem, iface, idiff, itime, ierr, &
-                                       diff_min, diff_max
+                                       diff_min, diff_max, eqn_ID
         type(timer_t)               :: timer, comm_timer, loop_timer
         type(element_info_t)        :: elem_info
 
@@ -126,7 +126,8 @@ contains
 
             call loop_timer%start()
             do idom = 1,data%ndomains()
-                associate ( mesh => data%mesh(idom), eqnset => data%eqnset(idom) )
+                eqn_ID = worker%mesh(idom)%eqn_ID
+                associate ( mesh => data%mesh(idom), eqnset => data%eqnset(eqn_ID) )
 
                 ! Loop through elements in the current domain
                 do ielem = 1,mesh%nelem

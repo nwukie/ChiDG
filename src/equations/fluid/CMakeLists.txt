@@ -8,7 +8,8 @@ add_lib_sources(
                 eqn_navier_stokes.f90
                 eqn_navier_stokes_multi.f90
                 eqn_multi_navier_stokes_laminar.f90
-                eqn_multi_navier_stokes_rans.f90
+                eqn_joukowski_rans.f90
+                eqn_joukowski_zonal_rans.f90
                 eqn_navier_stokes_av.f90
                 eqn_laminar_navier_stokes.f90
                 type_fluid_pseudo_timestep.f90

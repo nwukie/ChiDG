@@ -53,6 +53,7 @@ contains
 
 
         real(rk)                    :: xi,eta,zeta,p, sumsqr, d_normalization, grad1_d, grad2_d, grad3_d
+        integer(ik)                 :: eqn_ID
         character(100)              :: varstring
         character(:),   allocatable :: zonestring
 
@@ -174,7 +175,9 @@ contains
 
 
                 ! For each variable in equation set, compute value pointwise and save
-                do ivar = 1,data%eqnset(idom)%prop%nprimary_fields()
+                !do ivar = 1,data%eqnset(idom)%prop%nprimary_fields()
+                eqn_ID = data%mesh(idom)%eqn_ID
+                do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
                     ! For each actual element, create a sub-sampling of elements to resolve solution variation
                     do ielem = 1,nelem

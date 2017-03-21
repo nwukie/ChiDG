@@ -311,7 +311,7 @@ contains
         integer(HID_T),     intent(in)  :: fid
         type(chidg_data_t), intent(in)  :: data
 
-        integer(ik)                 :: idom
+        integer(ik)                 :: idom, eqn_ID
         integer(HID_T)              :: domain_id
         character(:),   allocatable :: domain_name
 
@@ -323,9 +323,10 @@ contains
 
 
             ! Set additional attributes
+            eqn_ID    = data%mesh(idom)%eqn_ID
             domain_id = open_domain_hdf(fid,trim(domain_name))
             call set_domain_dimensionality_hdf(domain_id, data%get_dimensionality())
-            call set_domain_equation_set_hdf(domain_id,data%eqnset(idom)%get_name())
+            call set_domain_equation_set_hdf(domain_id,data%eqnset(eqn_ID)%get_name())
             call close_domain_hdf(domain_id)
 
         end do !idom

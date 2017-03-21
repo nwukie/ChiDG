@@ -843,16 +843,17 @@ contains
     function get_auxiliary_field_names(self) result(field_names)
         class(chidg_data_t),    intent(in)  :: self
 
-        integer(ik)                 :: idom, ifield
+        integer(ik)                 :: idom, ifield, eqn_ID
         type(svector_t)             :: field_names
         character(:),   allocatable :: field_name
 
 
 
         do idom = 1,self%ndomains()
-            do ifield = 1,self%eqnset(idom)%prop%nauxiliary_fields()
+            eqn_ID = self%mesh(idom)%eqn_ID
+            do ifield = 1,self%eqnset(eqn_ID)%prop%nauxiliary_fields()
 
-                field_name = self%eqnset(idom)%prop%get_auxiliary_field_name(ifield)
+                field_name = self%eqnset(eqn_ID)%prop%get_auxiliary_field_name(ifield)
                 call field_names%push_back_unique(string_t(field_name))
 
             end do !ifield

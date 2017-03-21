@@ -69,7 +69,7 @@ contains
         character(100)          :: filename
         integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex,  &
                                    niter, ieqn, idom, ierr,                     &
-                                   rstart, rend, cstart, cend, nterms, imat, iwrite, step
+                                   rstart, rend, cstart, cend, nterms, imat, iwrite, step, eqn_ID
 
         real(rk)                :: dtau, amp, cfl, timing, resid, resid0, resid_new,    &
                                    alpha, f0, fn, forcing_term
@@ -193,9 +193,11 @@ contains
                 ! Add mass/dt to sub-block diagonal in dR/dQ
                 !
                 do idom = 1,data%ndomains()
+                    eqn_ID = data%mesh(idom)%eqn_ID
                     do ielem = 1,data%mesh(idom)%nelem
                         do itime = 1,data%mesh(idom)%ntime
-                            do ieqn = 1,data%eqnset(idom)%prop%nprimary_fields()
+                            !do ieqn = 1,data%eqnset(idom)%prop%nprimary_fields()
+                            do ieqn = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
                                 ! get element-local timestep
                                 dtau = data%mesh(idom)%elems(ielem)%dtau(ieqn)
@@ -388,14 +390,15 @@ contains
         type(chidg_data_t),     intent(inout)   :: data
         real(rk),               intent(in)      :: cfln(:)
 
-        integer(ik) :: idom
+        integer(ik) :: idom, eqn_ID
 
         !
         ! Loop through elements and compute time-step function
         !
         do idom = 1,data%ndomains()
 
-            call data%eqnset(idom)%compute_pseudo_timestep(idom,data%mesh,data%sdata,cfln,itime = 1)
+            eqn_ID = data%mesh(idom)%eqn_ID
+            call data%eqnset(eqn_ID)%compute_pseudo_timestep(idom,data%mesh,data%sdata,cfln,itime = 1)
 
         end do !idom
 

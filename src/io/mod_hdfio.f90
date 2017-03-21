@@ -406,7 +406,7 @@ contains
                 time_string = data%time_manager%time_scheme
                 call set_time_integrator_hdf(fid,time_string)
 
-                if ( time_string == 'Harmonic Balance' .or. time_string == 'Harmonic_balance' .or. & 
+                if ( time_string == 'Harmonic Balance' .or. time_string == 'Harmonic_Balance' .or. & 
                      time_string == 'harmonic balance' .or. time_string == 'harmonic_balance' .or. &
                      time_string == 'HB') then
 

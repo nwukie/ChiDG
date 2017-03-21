@@ -13,8 +13,7 @@ module mod_chidg_post_hdf2vtk
     use mod_kinds,              only: rk,ik
     use type_chidg,             only: chidg_t
     use type_dict,              only: dict_t
-    use mod_vtk_calc_func,      only: get_Fourier_coeff_vector, get_Fourier_coeffs, get_interp_time_levels, &
-                                      get_interp_solution, get_interp_solution_vector
+    use mod_HB_post,            only: process_data_for_output
     use mod_vtkio,              only: write_vtk_file
     use type_file_properties,   only: file_properties_t
     use mod_hdf_utilities,      only: get_properties_hdf
@@ -50,13 +49,6 @@ contains
         real(rk),               allocatable ::  freq(:), time_lev(:)
         integer(ik)                         ::  nterms_s,spacedim,solution_order,nfreq,ntime,ierr
         type(chidg_vector_t)                ::  q_HB               ! Storage vector for original HB solution
-        real(rk),               allocatable ::  E(:,:)
-        type(chidg_vector_t)                ::  q_coeff_vector     ! Vector containing coefficients of solution &
-                                                                   ! Fourier expansion in time
-        type(chidg_vector_t),   allocatable ::  q_coeffs(:)
-        type(chidg_vector_t),   allocatable ::  q_interp(:)
-        integer(ik)                         ::  ntime_interp, itime_interp
-        real(rk),               allocatable ::  time_interp(:)
         character(:),           allocatable ::  flag
         character(len = 100)                ::  new_dir_path_1, new_dir_path_2, &
                                                 pvd_filename_1, pvd_filename_2
@@ -123,57 +115,11 @@ contains
             pvd_filename_1 = 'chidg_HB_results.pvd'
             call write_vtk_file(chidg%data,new_dir_path_1,pvd_filename_1)
 
-            
-            !
-            ! Store original solution in a separate vector
-            !
-            call q_HB%init(chidg%data%mesh,chidg%data%sdata%q_in%get_ntime())
-            call q_HB%clear()
-            q_HB = chidg%data%sdata%q_in
-
 
             !
-            ! Compute Fourier transform matrix
+            ! Generate interpolated data for HB post processing
             !
-            if (allocated(E)) deallocate(E)
-            allocate(E(ntime,ntime), stat=ierr)
-            if (ierr /= 0) call AllocationError
-            
-            call calc_E(nfreq,ntime,freq,time_lev,E)
-
-
-            !
-            ! Compute coefficients of Fourier expansion of solution in time
-            !
-            call get_Fourier_coeff_vector(chidg%data,nterms_s,E,q_coeff_vector)
-            call get_Fourier_coeffs(chidg%data,nterms_s,q_coeff_vector,q_coeffs)
-
-
-            !
-            ! Compute interpolation times
-            !
-            call get_interp_time_levels(ntime_interp,time_interp)
-            
-
-            !
-            ! Compute interpolated solutions
-            !
-            if (allocated(q_interp)) deallocate(q_interp)
-            allocate(q_interp(ntime_interp), stat=ierr)
-            if (ierr /= 0) call AllocationError
-
-            do itime_interp = 1,ntime_interp
-
-                call get_interp_solution(chidg%data,nterms_s,time_interp(itime_interp), &
-                                         freq,q_coeffs,q_interp(itime_interp))
-
-            end do
-           
-           
-            !
-            ! Store the interpolated solutions in resized vector, q_in
-            ! 
-            call get_interp_solution_vector(chidg%data,nterms_s,q_interp)
+            call process_data_for_output(chidg%data,q_HB,nterms_s,freq,time_lev)
 
 
             !

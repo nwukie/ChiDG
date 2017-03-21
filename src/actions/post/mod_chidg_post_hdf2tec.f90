@@ -18,9 +18,11 @@ module mod_chidg_post_hdf2tec
     use mod_kinds,              only: rk, ik
     use type_chidg,             only: chidg_t
     use type_dict,              only: dict_t
+    use mod_HB_post,            only: process_data_for_output
     use mod_tecio,              only: write_tecio_variables
     use type_file_properties,   only: file_properties_t
     use mod_hdf_utilities,      only: get_properties_hdf
+    use type_chidg_vector,      only: chidg_vector_t
     implicit none
 
 
@@ -47,7 +49,10 @@ contains
         type(chidg_t)                       :: chidg
         type(file_properties_t)             :: file_props
         character(:),           allocatable :: eqnset
-        integer(ik)                         :: nterms_s, spacedim, solution_order
+        integer(ik)                         :: nterms_s, spacedim, solution_order, nfreq, ntime, ierr
+        real(rk),               allocatable :: freq(:), time_lev(:)
+        type(chidg_vector_t)                :: q_HB
+        character(:),           allocatable :: time_string, flag
 
 
 
@@ -71,6 +76,9 @@ contains
         nterms_s    = file_props%nterms_s(1)
         eqnset      = file_props%eqnset(1)
         spacedim    = file_props%spacedim(1)
+        time_string = file_props%time_integrator
+        freq        = file_props%HB_frequencies; nfreq = size(freq)
+        time_lev    = file_props%HB_time_lev;    ntime = size(time_lev)
 
 
 
@@ -103,13 +111,33 @@ contains
         !
         call chidg%read_solution(filename)
 
+        
+        flag = trim(time_string)
 
+        if (flag == 'Harmonic Balance' .or. flag == 'Harmonic_Balance' .or. flag == 'harmonic balance' .or. &
+            flag == 'harmonic_balance' .or. flag == 'HB') then
 
+            !
+            ! Write original solution in .plt format
+            !
+            call write_tecio_variables(chidg%data,'0.plt')
 
-        !
-        ! Write solution in TecIO format
-        !
-        call write_tecio_variables(chidg%data,'0.plt')
+            !
+            ! Generate interpolated data for HB post processing
+            !
+            call process_data_for_output(chidg%data,q_HB,nterms_s,freq,time_lev)
+
+            !
+            ! Write interpolated solution in .plt format
+            !
+            call write_tecio_variables(chidg%data,'1.plt')
+
+        else
+
+            call write_tecio_variables(chidg%data,'0.plt')
+
+        end if
+
 
 
         

@@ -150,12 +150,7 @@ contains
 
 
         !
-        ! Get model fields:
-        !   Pressure
-        !   Temperature
-        !   Viscosity
-        !   Second Coefficient of Viscosity
-        !   Thermal Conductivity
+        ! Get Thermal Conductivity
         !
         k_l_m = worker%get_model_field_face('Laminar Thermal Conductivity',   'value', 'face interior')
         k_l_p = worker%get_model_field_face('Laminar Thermal Conductivity',   'value', 'face exterior')

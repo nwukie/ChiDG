@@ -1,7 +1,6 @@
 module euler_volume_cylindrical_source
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ONE,TWO,HALF
-    use mod_fluid,              only: omega
 
     use type_operator,          only: operator_t
     use type_properties,        only: properties_t
@@ -78,7 +77,7 @@ contains
 
 
         type(AD_D), allocatable, dimension(:)   ::    &
-            density, mom1, mom2, u, v, p, source 
+            density, mom2, v, p, source 
 
         real(rk),   allocatable, dimension(:)   :: r
 
@@ -88,19 +87,18 @@ contains
         ! Interpolate solution to quadrature nodes
         !
         density = worker%get_primary_field_element('Density'   ,'value')
-        mom1    = worker%get_primary_field_element('Momentum-1','value')
         mom2    = worker%get_primary_field_element('Momentum-2','value')
 
 
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
+        r = worker%coordinate('1','volume')
         if (worker%coordinate_system() == 'Cylindrical') then
-            mom2 = mom2/worker%coordinate('1','volume')
+            mom2 = mom2 / r
         end if
 
 
-        u = mom1/density
         v = mom2/density
 
 
@@ -123,7 +121,6 @@ contains
         if (worker%coordinate_system() == 'Cylindrical') then
 
             ! Source term due to transformation to cylindrical coordinates
-            r = worker%coordinate('1','volume')
             source = (density*v*v)/r  +  p/r
 
             call worker%integrate_volume('Momentum-1',source)

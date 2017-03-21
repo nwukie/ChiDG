@@ -71,46 +71,37 @@ contains
 
 
         type(AD_D), dimension(:), allocatable   ::  &
-            density, mom1, mom2, mom3, density_nutilde,     &
-            invdensity, u, v, w, flux_1, flux_2, flux_3, integrand
+            density_nutilde, u_a, v_a, w_a,         &
+            flux_1, flux_2, flux_3, integrand
 
         real(rk),   dimension(:), allocatable   ::  &
-            norm_1, norm_2, norm_3, unorm_1, unorm_2, unorm_3, r
+            norm_1, norm_2, norm_3
 
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        density         = worker%get_primary_field_face('Density',           'value', 'boundary')
-        mom1            = worker%get_primary_field_face('Momentum-1',        'value', 'boundary')
-        mom2            = worker%get_primary_field_face('Momentum-2',        'value', 'boundary')
-        mom3            = worker%get_primary_field_face('Momentum-3',        'value', 'boundary')
         density_nutilde = worker%get_primary_field_face('Density * NuTilde', 'value', 'boundary')
 
 
-        !
-        ! Account for cylindrical. Get tangential momentum from angular momentum.
-        !
-        if (worker%coordinate_system() == 'Cylindrical') then
-            mom2 = mom2 / worker%coordinate('1','boundary')
-        end if
+!        !
+!        ! Compute velocities
+!        !
+!        invdensity = ONE/density
+!        u = mom1*invdensity
+!        v = mom2*invdensity
+!        w = mom3*invdensity
 
 
         !
-        ! Compute velocities
+        ! Get fluid advection velocity
         !
-        invdensity = ONE/density
-        u = mom1*invdensity
-        v = mom2*invdensity
-        w = mom3*invdensity
-
-
-        !
-        ! Compute transport velocity
-        !
-        r = worker%coordinate('1','boundary') 
-        v = v - omega*r
+!        r = worker%coordinate('1','boundary') 
+!        v = v - omega*r
+        u_a = worker%get_model_field_face('Advection Velocity-1', 'value', 'boundary')
+        v_a = worker%get_model_field_face('Advection Velocity-2', 'value', 'boundary')
+        w_a = worker%get_model_field_face('Advection Velocity-3', 'value', 'boundary')
 
         !
         ! Get normal vector
@@ -123,9 +114,9 @@ contains
         !
         ! Compute advection of spalart-allmaras working variable 
         ! 
-        flux_1 = u*density_nutilde
-        flux_2 = v*density_nutilde
-        flux_3 = w*density_nutilde
+        flux_1 = density_nutilde * u_a
+        flux_2 = density_nutilde * v_a
+        flux_3 = density_nutilde * w_a
 
 
         !

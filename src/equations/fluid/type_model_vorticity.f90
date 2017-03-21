@@ -2,6 +2,7 @@ module type_model_vorticity
 #include <messenger.h>
     use mod_kinds,          only: rk
     use mod_constants,      only: HALF, ONE, TWO
+    use mod_fluid,          only: omega
     use type_model,         only: model_t
     use type_chidg_worker,  only: chidg_worker_t
     use DNAD_D
@@ -231,6 +232,11 @@ contains
             vorticity_1 =  (grad2_w - grad3_v)
             vorticity_2 =  (grad3_u - grad1_w)
             vorticity_3 =  (grad1_v - grad2_u + (v/r)) 
+
+            !
+            ! Account for rotation, convert to relative vorticity
+            !
+            vorticity_3 = vorticity_3 - TWO*omega
 
         end if
 

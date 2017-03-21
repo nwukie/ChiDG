@@ -17,11 +17,12 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------
-    subroutine chidg_post(filename)
-        character(*),   intent(in)  :: filename
+    subroutine chidg_post(grid_file,solution_file)
+        character(*),   intent(in)  :: grid_file
+        character(*),   intent(in)  :: solution_file
 
 
-        call chidg_post_hdf2tec(filename)
+        call chidg_post_hdf2tec(grid_file,solution_file)
 
 
     end subroutine chidg_post

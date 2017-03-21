@@ -6,6 +6,7 @@ module bc_state_outlet_constant_pressure
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use type_point,             only: point_t
+    use ieee_arithmetic
     use DNAD_D
     implicit none
 
@@ -89,6 +90,7 @@ contains
             H_bc
 
 
+        integer(ik)                                 :: igq
         real(rk)                                    :: time, gam_m
         type(point_t),  allocatable, dimension(:)   :: coords
         real(rk),       allocatable, dimension(:)   ::  &

@@ -6,6 +6,7 @@ module bc_state_inlet_total
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use type_point,             only: point_t
+    use ieee_arithmetic
     use DNAD_D
     implicit none
 
@@ -108,7 +109,7 @@ contains
             T_bc,   vmag2_m, vmag, H_bc
 
 
-        integer(ik)                                 :: ierr
+        integer(ik)                                 :: ierr, igq
         real(rk)                                    :: gam_m, cp_m, M
         real(rk),       allocatable, dimension(:)   ::  &
             TT, n1, n2, n3, nmag, alpha, r, PT
@@ -251,6 +252,9 @@ contains
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_bc = mom2_bc * worker%coordinate('1','boundary')
         end if
+
+
+
 
 
         !

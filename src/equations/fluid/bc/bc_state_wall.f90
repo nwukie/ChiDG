@@ -96,9 +96,10 @@ contains
             drho_dx_m, drhou_dx_m, drhov_dx_m, drhow_dx_m, drhoE_dx_m,  &
             drho_dy_m, drhou_dy_m, drhov_dy_m, drhow_dy_m, drhoE_dy_m,  &
             drho_dz_m, drhou_dz_m, drhov_dz_m, drhow_dz_m, drhoE_dz_m,  &
-            u_m, v_m, w_m, p_m
+            u_m, v_m, w_m, p_m, normal_velocity, normal_velocity_1, normal_velocity_2, normal_velocity_3
 
-        real(rk)    :: gam = 1.4_rk
+        real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3, r
+        real(rk)                                :: gam = 1.4_rk
     
 
 
@@ -146,6 +147,13 @@ contains
         drhoE_dz_m = worker%get_primary_field_face('Energy'    , 'grad3', 'face interior')
 
 
+        !
+        ! Get normal vectors
+        !
+        r       = worker%coordinate('1','boundary')
+        unorm_1 = worker%unit_normal(1)
+        unorm_2 = worker%unit_normal(2)
+        unorm_3 = worker%unit_normal(3)
 
 
 
@@ -163,17 +171,25 @@ contains
         mom3_bc = ZERO
 
 
+        !
+        ! We want:  W dot n = 0
+        !
         u_m = mom1_m/density_m
         v_m = mom2_m/density_m
         w_m = mom3_m/density_m
 
 
         !
-        ! Energy subtract momentum
+        ! Energy subtract normal kinetic energy
         !
         energy_bc = energy_m - (density_m*HALF)*(u_m*u_m  +  v_m*v_m  +  w_m*w_m)
-        !p_m = worker%get_model_field_face('Pressure', 'value', 'face interior')
-        !energy_bc = p_m/(gam-ONE)
+
+
+
+        if (worker%coordinate_system() == 'Cylindrical') then
+            mom2_bc = mom2_bc * r
+        end if
+
 
 
         !

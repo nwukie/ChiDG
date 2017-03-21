@@ -181,7 +181,6 @@ contains
 
 
 
-
         !
         ! Synchronize
         !

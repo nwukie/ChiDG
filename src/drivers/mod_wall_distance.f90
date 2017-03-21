@@ -86,6 +86,8 @@ contains
         order = chidg%nterms_s_1d
         call wall_distance%set('Solution Order', integer_input=order)
 
+        wall_distance%nonlinear_solver%search = .false.
+
 
         !
         ! Set up boudary condition states to impose.

@@ -35,7 +35,7 @@ program driver
 
 
     integer                                     :: narg, iorder, ierr
-    character(len=1024)                         :: chidg_action, filename
+    character(len=1024)                         :: chidg_action, filename, grid_file, solution_file
     class(function_t),              allocatable :: constant, monopole, fcn, polynomial
 
 
@@ -130,11 +130,11 @@ program driver
             call create_function(constant,'constant')
 
             ! rho
-            call constant%set_option('val',1.15_rk)
+            call constant%set_option('val',1.20_rk)
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,1)
 
             ! rho_u
-            call constant%set_option('val',0.0_rk)
+            call constant%set_option('val',10.0_rk)
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,2)
 
             ! rho_v
@@ -142,11 +142,11 @@ program driver
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,3)
 
             ! rho_w
-            call constant%set_option('val',50.0_rk)
+            call constant%set_option('val',0.0_rk)
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,4)
 
             ! rho_E
-            call constant%set_option('val',248000.0_rk)
+            call constant%set_option('val',270000.0_rk)
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,5)
 
 !            ! rho_nutilde
@@ -222,9 +222,9 @@ program driver
         else if ( trim(chidg_action) == 'convert' ) then
             call chidg_convert(trim(filename))
 
-        else if ( trim(chidg_action) == 'post' ) then
-            call chidg_post(trim(filename))
-            call chidg_post_vtk(trim(filename))
+!        else if ( trim(chidg_action) == 'post' ) then
+!            call chidg_post(trim(filename))
+!            call chidg_post_vtk(trim(filename))
 
         else
             call chidg_signal(FATAL,"chidg: unrecognized action '"//trim(chidg_action)//"'. Valid options are: 'edit', 'convert'")
@@ -236,6 +236,45 @@ program driver
         ! Close ChiDG interface
         !
         call chidg%shut_down('core')
+
+
+    !
+    ! ChiDG tool execution. 3 arguments.
+    !
+    else if ( narg == 3 ) then
+
+
+        call get_command_argument(1,chidg_action)
+        call get_command_argument(2,grid_file)
+        call get_command_argument(3,solution_file)
+        chidg_action = trim(chidg_action)
+        grid_file = trim(grid_file)
+        solution_file = trim(solution_file)
+        
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call chidg%start_up('core')
+
+
+        !
+        ! Select ChiDG action
+        !
+        if ( trim(chidg_action) == 'post' ) then
+            call chidg_post(trim(grid_file), trim(solution_file))
+
+        else
+            call chidg_signal(FATAL,"chidg: unrecognized action '"//trim(chidg_action)//"'. Valid options are: 'edit', 'convert'")
+
+        end if
+
+
+        !
+        ! Close ChiDG interface
+        !
+        call chidg%shut_down('core')
+
 
 
     else

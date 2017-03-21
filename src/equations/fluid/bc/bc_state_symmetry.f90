@@ -1,9 +1,11 @@
 module bc_state_symmetry
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: TWO, HALF, ZERO
+    use mod_fluid,              only: omega
     use type_bc_state,          only: bc_state_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
+    use ieee_arithmetic
     use DNAD_D
     implicit none
     
@@ -91,8 +93,9 @@ contains
             normal_momentum
 
         real(rk), allocatable, dimension(:) :: &
-            unorm_1, unorm_2, unorm_3
+            unorm_1, unorm_2, unorm_3, r
 
+        integer(ik) :: igq
 
         !
         ! Interpolate interior solution to quadrature nodes
@@ -145,10 +148,18 @@ contains
         !
         ! Get unit normal vector
         !
+        r       = worker%coordinate('1','boundary')
         unorm_1 = worker%unit_normal(1)
         unorm_2 = worker%unit_normal(2)
         unorm_3 = worker%unit_normal(3)
 
+
+        !
+        ! Convert to relative momentum
+        !
+        mom1_m = mom1_m
+        mom2_m = mom2_m  -  density_m*r*omega
+        mom3_m = mom3_m
 
 
         !
@@ -159,11 +170,21 @@ contains
 
 
         !
-        ! Reverse normal momentum
+        ! Subtract relative normal momentum from relative momentum
         !
         mom1_bc = mom1_m  -  TWO*normal_momentum*unorm_1
         mom2_bc = mom2_m  -  TWO*normal_momentum*unorm_2
         mom3_bc = mom3_m  -  TWO*normal_momentum*unorm_3
+
+
+
+        !
+        ! Convert to absolute momentum
+        !
+        mom1_bc = mom1_bc
+        mom2_bc = mom2_bc  +  density_bc*r*omega
+        mom3_bc = mom3_bc
+
 
 
         !

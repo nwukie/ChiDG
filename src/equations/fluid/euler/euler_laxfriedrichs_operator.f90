@@ -74,7 +74,7 @@ contains
 
     !>  Compute Lax-Friedrichs upwind flux
     !!
-    !!  Dissipation = -alpha(u_m - u_p)
+    !!  Dissipation = -alpha(u_a_m - u_a_p)
     !!
     !!  Alpha is the maximum wave speed
     !!
@@ -91,14 +91,12 @@ contains
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:) ::    &
             density_m,      density_p,              &
-            invdensity_m,   invdensity_p,           &
             mom1_m,         mom1_p,                 &
             mom2_m,         mom2_p,                 &
             mom3_m,         mom3_p,                 &
-            u_m,            u_p,                    &
-            v_m,            v_p,                    &
-            v_m_t,          v_p_t,                  &
-            w_m,            w_p,                    &
+            u_a_m,          u_a_p,                  &
+            v_a_m,          v_a_p,                  &
+            w_a_m,          w_a_p,                  &
             energy_m,       energy_p,               &
             p_m,            p_p,                    &
             un_m,           un_p,                   &
@@ -113,6 +111,7 @@ contains
             r
 
         real(rk) :: gam_m, gam_p
+
 
         !
         ! Interpolate solution to quadrature nodes
@@ -155,33 +154,39 @@ contains
 
 
 
+!        !
+!        ! Compute 1/rho
+!        !
+!        invdensity_m = ONE/density_m
+!        invdensity_p = ONE/density_p
+!
+!
+!        !
+!        ! Compute velocity components
+!        !
+!        u_a_m = mom1_m*invdensity_m
+!        v_m = mom2_m*invdensity_m
+!        w_a_m = mom3_m*invdensity_m
+!
+!        u_a_p = mom1_p*invdensity_p
+!        v_p = mom2_p*invdensity_p
+!        w_a_p = mom3_p*invdensity_p
+
+
+
         !
-        ! Compute 1/rho
+        ! Fluid advection velocity
         !
-        invdensity_m = ONE/density_m
-        invdensity_p = ONE/density_p
+        !r = worker%coordinate('1','boundary')
+        !v_a_m = v_m - omega*r
+        !v_a_p = v_p - omega*r
+        u_a_m = worker%get_model_field_face('Advection Velocity-1', 'value', 'face interior')
+        v_a_m = worker%get_model_field_face('Advection Velocity-2', 'value', 'face interior')
+        w_a_m = worker%get_model_field_face('Advection Velocity-3', 'value', 'face interior')
 
-
-        !
-        ! Compute velocity components
-        !
-        u_m = mom1_m*invdensity_m
-        v_m = mom2_m*invdensity_m
-        w_m = mom3_m*invdensity_m
-
-        u_p = mom1_p*invdensity_p
-        v_p = mom2_p*invdensity_p
-        w_p = mom3_p*invdensity_p
-
-
-
-        !
-        ! Relative velocity
-        !
-        r = worker%coordinate('1','boundary')
-        v_m_t = v_m - omega*r
-        v_p_t = v_p - omega*r
-
+        u_a_p = worker%get_model_field_face('Advection Velocity-1', 'value', 'face exterior')
+        v_a_p = worker%get_model_field_face('Advection Velocity-2', 'value', 'face exterior')
+        w_a_p = worker%get_model_field_face('Advection Velocity-3', 'value', 'face exterior')
 
 
 
@@ -198,8 +203,8 @@ contains
         !
         ! Compute normal velocities: dot-product vector projection along unit-normal direction
         !
-        un_m = unorm_1*(u_m) + unorm_2*(v_m_t) + unorm_3*(w_m)
-        un_p = unorm_1*(u_p) + unorm_2*(v_p_t) + unorm_3*(w_p)
+        un_m = unorm_1*(u_a_m) + unorm_2*(v_a_m) + unorm_3*(w_a_m)
+        un_p = unorm_1*(u_a_p) + unorm_2*(v_a_p) + unorm_3*(w_a_p)
 
         
         !

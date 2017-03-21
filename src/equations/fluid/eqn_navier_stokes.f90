@@ -82,6 +82,7 @@ contains
                 call navier_stokes_eqns%add_operator('Fluid Viscous Volume Cylindrical Source')
 
                 call navier_stokes_eqns%add_model('Ideal Gas')
+                call navier_stokes_eqns%add_model('Fluid Advection Velocity')
                 call navier_stokes_eqns%add_model('Sutherlands Law')
                 call navier_stokes_eqns%add_model('Stokes Hypothesis')
                 call navier_stokes_eqns%add_model('Reynolds Analogy')

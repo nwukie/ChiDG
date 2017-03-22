@@ -39,12 +39,13 @@ module type_mesh
         integer(ik)                     :: idomain_g
         integer(ik)                     :: idomain_l
 
-        integer(ik)                     :: spacedim   = 0     ! N-spatial dimensions
-        integer(ik)                     :: neqns      = 0     ! N-equations being solved
-        integer(ik)                     :: nterms_s   = 0     ! N-terms in solution expansion
-        integer(ik)                     :: nterms_c   = 0     ! N-terms in coordinate expansion
-        integer(ik)                     :: nelem      = 0     ! Number of total elements
-        integer(ik)                     :: ntime      = 0     ! Number of time instances
+        integer(ik)                     :: spacedim    = 0     ! N-spatial dimensions
+        integer(ik)                     :: neqns       = 0     ! N-equations being solved
+        integer(ik)                     :: nterms_s    = 0     ! N-terms in solution expansion
+        integer(ik)                     :: nterms_c    = 0     ! N-terms in coordinate expansion
+        integer(ik)                     :: nelements_g = 0     ! Number of elements in the global domain
+        integer(ik)                     :: nelem       = 0     ! Number of elements in the local domain
+        integer(ik)                     :: ntime       = 0     ! Number of time instances
         character(:),   allocatable     :: coordinate_system  ! 'Cartesian' or 'Cylindrical'
 
         
@@ -126,9 +127,10 @@ contains
     !!  @param[in]  points_g    Rank-3 matrix of coordinate points defining a block mesh
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine init_geom(self,idomain_l,spacedim,nterms_c,nodes,connectivity,coord_system)
+    subroutine init_geom(self,idomain_l,nelements_g,spacedim,nterms_c,nodes,connectivity,coord_system)
         class(mesh_t),                  intent(inout), target   :: self
         integer(ik),                    intent(in)              :: idomain_l
+        integer(ik),                    intent(in)              :: nelements_g
         integer(ik),                    intent(in)              :: spacedim
         integer(ik),                    intent(in)              :: nterms_c
         type(point_t),                  intent(in)              :: nodes(:)
@@ -139,11 +141,12 @@ contains
         !
         ! Store number of terms in coordinate expansion and domain index
         !
-        self%spacedim  = spacedim
-        self%nterms_c  = nterms_c
-        self%idomain_g = connectivity%get_domain_index()
-        self%idomain_l = idomain_l
-        self%nodes     = nodes
+        self%spacedim    = spacedim
+        self%nterms_c    = nterms_c
+        self%idomain_g   = connectivity%get_domain_index()
+        self%idomain_l   = idomain_l
+        self%nelements_g = nelements_g
+        self%nodes       = nodes
 
 
         !
@@ -1620,7 +1623,8 @@ contains
 
         integer(ik) :: nelements
 
-        nelements = size(self%nodes)
+        !nelements = size(self%nodes)
+        nelements = self%nelements_g
 
     end function get_nelements_global
     !****************************************************************************************

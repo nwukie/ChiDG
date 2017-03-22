@@ -21,6 +21,7 @@ module type_meshdata
         type(domain_connectivity_t) :: connectivity     !< Connectivity data for each element
         character(:),   allocatable :: eqnset           !< Equation set to allocate for the domain
         character(:),   allocatable :: coord_system     !< 'Cartesian' or 'Cylindrical'
+        integer(ik)                 :: nelements_g      !< Number of elements in the unpartitioned domain
         integer(ik)                 :: spacedim         !< Number of spatial dimensions
         integer(ik)                 :: nterms_c         !< number of terms in the coordinate expansion
         integer(ik)                 :: proc             !< Processor assignment

@@ -166,6 +166,11 @@ contains
         !
         else
 
+            !
+            ! Store grid to file
+            !
+            call wall_distance%write_grid(fileout)
+
             ! Get wall-distance approximation for p-Poisson equation using a low-order
             ! polynomial expansion. We are going in steps of 'p' here to make sure
             ! we get good convergence of the Newton solver by having a good initial

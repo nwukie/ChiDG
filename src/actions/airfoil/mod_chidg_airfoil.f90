@@ -204,6 +204,7 @@ contains
 
                 print*, 'airfoil: ', idomain_g, ielement_g, iface
 
+
                 !
                 ! Initialize element location object
                 ! 

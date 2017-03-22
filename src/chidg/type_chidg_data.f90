@@ -216,9 +216,9 @@ contains
         !
         already_added = .false.
         do ieqn = 1,self%nequation_sets()
-            already_added = (self%eqnset(ieqn)%name == eqnset) 
-            if (already_added) exit
+            already_added = (trim(self%eqnset(ieqn)%name) == trim(eqnset)) 
             if (already_added) eqn_ID = ieqn
+            if (already_added) exit
         end do
         
 
@@ -228,6 +228,7 @@ contains
         if (.not. already_added) then
             eqn_ID = self%new_equation_set()
             self%eqnset(eqn_ID) = equation_builder_factory%produce(eqnset, 'default')
+            self%eqnset(eqn_ID)%eqn_ID = eqn_ID
         end if
 
 
@@ -236,7 +237,6 @@ contains
         !
         allocate( temp_info(  self%ndomains()+1),   &
                   temp_mesh(  self%ndomains()+1), stat=ierr)
-!                  temp_eqnset(self%ndomains()+1), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
@@ -246,7 +246,6 @@ contains
         if (self%ndomains() > 0) then
             temp_info(   1:size(self%info))    = self%info(1:size(self%info))
             temp_mesh(   1:size(self%mesh))    = self%mesh(1:size(self%mesh))
-!            temp_eqnset( 1:size(self%eqnset))  = self%eqnset(1:size(self%eqnset))
         end if
 
 
@@ -276,12 +275,6 @@ contains
         end if
 
 
-!        !
-!        ! Allocate equation set
-!        !
-!        temp_eqnset(idomain_l) = equation_builder_factory%produce(eqnset,'default')
-
-
 
         !
         ! Move resized temp allocation back to chidg_data container. 
@@ -289,7 +282,6 @@ contains
         !
         call move_alloc(temp_info,self%info)
         call move_alloc(temp_mesh,self%mesh)
-!        call move_alloc(temp_eqnset,self%eqnset)
 
 
     end subroutine add_domain
@@ -794,7 +786,7 @@ contains
 
         integer :: nsets_
 
-        if (allocated(self%bc)) then
+        if (allocated(self%eqnset)) then
             nsets_ = size(self%eqnset)
         else
             nsets_ = 0

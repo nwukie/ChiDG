@@ -203,10 +203,10 @@ contains
                        ndonors, neqns, nterms_s,                                                &
                        idonor_domain_g, idonor_element_g, idonor_domain_l, idonor_element_l,    &
                        idomain_g_list, idomain_l_list, ielement_g_list, ielement_l_list,        &
-                       neqns_list, nterms_s_list, nterms_c_list, iproc_list,                    &
+                       neqns_list, nterms_s_list, nterms_c_list, iproc_list, eqn_ID_list,       &
                        local_domain_g, parallel_domain_g, donor_domain_g, donor_index
         integer(ik), allocatable    :: domains_g(:)
-        integer(ik)                 :: receiver_indices(5), parallel_indices(8)
+        integer(ik)                 :: receiver_indices(5), parallel_indices(9)
 
         real(rk)                :: gq_coords(3), parallel_coords(3), donor_vol, local_vol, parallel_vol
         real(rk), allocatable   :: donor_vols(:)
@@ -233,7 +233,8 @@ contains
         logical                     :: local_donor, parallel_donor
         logical                     :: use_local, use_parallel, get_donor
 
-        type(ivector_t)             :: ddomain_g, ddomain_l, delement_g, delement_l, dproc, dneqns, dnterms_s, dnterms_c, donor_procs
+        type(ivector_t)             :: ddomain_g, ddomain_l, delement_g, delement_l, dproc, &
+                                       dneqns, dnterms_s, dnterms_c, donor_procs, deqn_ID
         type(ivector_t)             :: donor_proc_indices, donor_proc_domains
         type(rvector_t)             :: donor_proc_vols
         type(pvector_t)             :: dcoordinate
@@ -411,15 +412,16 @@ contains
                                 ! Receive parallel donor index from processor indicated
                                 !
                                 idonor_proc = donor_proc_indices%at(donor_index)
-                                call MPI_Recv(parallel_indices,8,MPI_INTEGER4, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                                call MPI_Recv(parallel_indices,9,MPI_INTEGER4, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
                                 donor%idomain_g  = parallel_indices(1)
                                 donor%idomain_l  = parallel_indices(2)
                                 donor%ielement_g = parallel_indices(3)
                                 donor%ielement_l = parallel_indices(4)
                                 donor%iproc      = parallel_indices(5)
-                                donor%neqns      = parallel_indices(6)
-                                donor%nterms_s   = parallel_indices(7)
-                                donor%nterms_c   = parallel_indices(8)
+                                donor%eqn_ID     = parallel_indices(6)
+                                donor%neqns      = parallel_indices(7)
+                                donor%nterms_s   = parallel_indices(8)
+                                donor%nterms_c   = parallel_indices(9)
 
 
 
@@ -484,6 +486,7 @@ contains
                             call delement_g%push_back(donor%ielement_g)
                             call delement_l%push_back(donor%ielement_l)
                             call dproc%push_back(donor%iproc)
+                            call deqn_ID%push_back(donor%eqn_ID)
                             call dneqns%push_back(donor%neqns)
                             call dnterms_s%push_back(donor%nterms_s)
                             call dnterms_c%push_back(donor%nterms_c)
@@ -517,6 +520,7 @@ contains
                             ielement_g_list = delement_g%at(igq)
                             ielement_l_list = delement_l%at(igq)
                             iproc_list      = dproc%at(igq)
+                            eqn_ID_list     = deqn_ID%at(igq)
                             neqns_list      = dneqns%at(igq)
                             nterms_s_list   = dnterms_s%at(igq)
                             nterms_c_list   = dnterms_c%at(igq)
@@ -553,6 +557,7 @@ contains
                                 call mesh(idom)%chimera%recv%data(ichimera_face)%donor_element_l%push_back(ielement_l_list)
 
                                 call mesh(idom)%chimera%recv%data(ichimera_face)%donor_proc%push_back(iproc_list)
+                                call mesh(idom)%chimera%recv%data(ichimera_face)%donor_eqn_ID%push_back(eqn_ID_list)
                                 call mesh(idom)%chimera%recv%data(ichimera_face)%donor_neqns%push_back(neqns_list)
                                 call mesh(idom)%chimera%recv%data(ichimera_face)%donor_nterms_s%push_back(nterms_s_list)
 
@@ -636,6 +641,7 @@ contains
                         call dmetric%clear()
                         call djinv%clear()
                         call dproc%clear()
+                        call deqn_ID%clear()
                         call dneqns%clear()
                         call dnterms_s%clear()
                         call dnterms_c%clear()
@@ -722,10 +728,11 @@ contains
                             parallel_indices(3) = donor%ielement_g
                             parallel_indices(4) = donor%ielement_l
                             parallel_indices(5) = donor%iproc
-                            parallel_indices(6) = donor%neqns
-                            parallel_indices(7) = donor%nterms_s
-                            parallel_indices(8) = donor%nterms_c
-                            call MPI_Send(parallel_indices,8,MPI_INTEGER4,iproc,0,ChiDG_COMM,ierr)
+                            parallel_indices(6) = donor%eqn_ID
+                            parallel_indices(7) = donor%neqns
+                            parallel_indices(8) = donor%nterms_s
+                            parallel_indices(9) = donor%nterms_c
+                            call MPI_Send(parallel_indices,9,MPI_INTEGER4,iproc,0,ChiDG_COMM,ierr)
 
                             ! Send donor-local coordinate for the quadrature node
                             parallel_coords(1) = donor_coord%c1_
@@ -1118,6 +1125,7 @@ contains
             donor_element%ielement_g = candidate_elements_g%at(idonor)
             donor_element%ielement_l = candidate_elements_l%at(idonor)
             donor_element%iproc      = IRANK
+            donor_element%eqn_ID     = mesh(donor_element%idomain_l)%eqn_ID
             donor_element%neqns      = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%neqns
             donor_element%nterms_s   = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_s
             donor_element%nterms_c   = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_c
@@ -1154,6 +1162,7 @@ contains
             donor_element%ielement_g = candidate_elements_g%at(idonor)
             donor_element%ielement_l = candidate_elements_l%at(idonor)
             donor_element%iproc      = IRANK
+            donor_element%eqn_ID     = mesh(donor_element%idomain_l)%eqn_ID
             donor_element%neqns      = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%neqns
             donor_element%nterms_s   = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_s
             donor_element%nterms_c   = mesh(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_c

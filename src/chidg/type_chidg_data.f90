@@ -571,6 +571,7 @@ contains
         ! Set ID of new bc and store to array
         !
         eqn_ID = neqnset
+        temp_eqnset(eqn_ID)%eqn_ID = eqn_ID
 
 
         !

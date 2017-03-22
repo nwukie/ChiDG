@@ -69,7 +69,7 @@ contains
         character(100)          :: filename
         integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex,  &
                                    niter, ieqn, idom, ierr,                     &
-                                   rstart, rend, cstart, cend, nterms, imat, iwrite, step, eqn_ID
+                                   rstart, rend, cstart, cend, nterms, imat, iwrite, step, eqn_ID, icfl
 
         real(rk)                :: dtau, amp, cfl, timing, resid, resid0, resid_new,    &
                                    alpha, f0, fn, forcing_term
@@ -149,8 +149,11 @@ contains
                 if (niter == 1) then
                     resid0 = rhs%norm(ChiDG_COMM)
                     rnorm0 = rhs%norm_fields(ChiDG_COMM)
+                    rnorm0 = resid0 !override
                 end if
+
                 rnorm = rhs%norm_fields(ChiDG_COMM)
+                rnorm = resid !override
 
 
 
@@ -181,6 +184,15 @@ contains
                 else where
                     cfln = 0.1
                 end where
+
+                if (IRANK == GLOBAL_MASTER) then
+                    call add_to_line("  CFL: ")
+                    do icfl = 1,size(cfln)
+                        call add_to_line(cfln(icfl))
+                    end do
+                    call send_line()
+                end if
+
 
 
                 !
@@ -330,7 +342,7 @@ contains
                 !
                 !if (wcount == self%nwrite) then
                 !    if (data%eqnset(1)%get_name() == 'Euler') then
-                        call write_solution_hdf(data,'ref1_split1.h5')
+                        call write_solution_hdf(data,'ref1_split6.h5')
                 !        write(filename,'(I2)') niter
                 !        call write_tecio_variables(data,trim(filename)//'.dat',niter)
                 !        wcount = 0

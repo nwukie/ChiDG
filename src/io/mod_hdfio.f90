@@ -374,12 +374,9 @@ contains
 
             else
 
-                ! If it already exists, check if the the structure is correct 
-                !fid = open_file_hdf(file_name)
-                !call check_file_structure_hdf(fid,data)
-                !call close_file_hdf(fid)
 
         end if
+        call MPI_Barrier(ChiDG_COMM,ierr)
 
 
 
@@ -687,7 +684,9 @@ contains
             ! Select subset of dataspace - sid, read selected modes into cp_var 
             !
             call h5sselect_hyperslab_f(sid, H5S_SELECT_SET_F, start, count, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"read_domain_field_hdf: h5sselect_hyperslab_f.")
             call h5dread_f(vid, H5T_NATIVE_DOUBLE, cp_var, ierr, memspace, sid)
+            if (ierr /= 0) call chidg_signal(FATAL,"read_domain_field_hdf: h5d_read_f_f.")
 
 
 

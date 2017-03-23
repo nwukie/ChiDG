@@ -26,9 +26,7 @@ module mod_hdfio
                                           initialize_file_structure_hdf, open_bc_group_hdf,              &
                                           close_bc_group_hdf, get_domain_nelements_hdf,                  &
                                           get_domain_name_hdf, set_ntimes_hdf, get_ntimes_hdf,           &
-                                          set_HB_frequencies_hdf, get_HB_frequencies_hdf,                &
-                                          set_HB_time_lev_hdf, get_HB_time_lev_hdf,                      &
-                                          set_time_integrator_hdf, get_time_integrator_hdf
+                                          get_time_integrator_hdf
 
     use type_svector,               only: svector_t
     use mod_string,                 only: string_t
@@ -398,26 +396,6 @@ contains
                 !
                 call set_ntimes_hdf(fid,data%ntime())
 
-
-                !
-                ! Set time_integrator in the hdf file
-                ! Set HB_frequencies and time levels in the hdf file
-                !
-                time_string = data%time_manager%time_scheme
-                call set_time_integrator_hdf(fid,time_string)
-
-                if ( time_string == 'Harmonic Balance' .or. time_string == 'Harmonic_Balance' .or. & 
-                     time_string == 'harmonic balance' .or. time_string == 'harmonic_balance' .or. &
-                     time_string == 'HB') then
-
-                    nfreq       = int(data%time_manager%freq_data%size(), 8)
-                    ntime       = int(data%time_manager%time_lev%size(), 8)
-                    freq        = data%time_manager%freq_data%data()
-                    time_lev    = data%time_manager%time_lev%data()
-                    call set_HB_frequencies_hdf(fid,nfreq,freq)
-                    call set_HB_time_lev_hdf(fid,ntime,time_lev)
-
-                end if
 
 
                 !

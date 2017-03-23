@@ -37,10 +37,8 @@ contains
     !!	@date	11/17/2016
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine write_vtk_file(data,new_dir_path,pvd_filename)
+    subroutine write_vtk_file(data)
         type(chidg_data_t),     intent(inout)                   ::  data
-        character(len = 100),   intent(in)                      ::  new_dir_path, pvd_filename
-
 
         integer(ik),parameter                                   :: bo_type = 0_ik
         integer(ik)                                             :: idom,ielem,nelem,noeq,s,num_pts,num_cells,ntime
@@ -51,9 +49,14 @@ contains
         integer(ik),            dimension(:,:), allocatable     :: connectivity,connectivity_A
         integer(ik),            dimension(:),   allocatable     :: offsets,types
         character(len = 100),   dimension(:),   allocatable     :: file_arr
-        character(len = 100)                                    :: make_directory,delete_directory
+        character(len = 100)                                    :: new_dir_path,pvd_filename,make_directory,delete_directory
 		logical                                                 :: dir_exists
 
+
+        !
+        ! Set new directory path in which output files are stored
+        !
+        new_dir_path = 'ChiDG_results'
 
         !
         ! Get the path of the current working directory and append 
@@ -72,10 +75,10 @@ contains
         !
         ! Name of the final .pvd file
         !
-        !pvd_filename = 'chidg_results.pvd'
+        pvd_filename = 'chidg_results.pvd'
 
 
-        ntime = data%sdata%q_in%get_ntime()   ! No. of time steps in the solution file (1 for steady cases)
+        ntime = data%sdata%q_out%get_ntime()   ! No. of time steps in the solution file (1 for steady cases)
 
         !
         ! Allocate array for storing individual .vtu file names for each block over 

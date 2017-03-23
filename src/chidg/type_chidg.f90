@@ -934,6 +934,7 @@ contains
         call write_line("Writing solution...", io_proc=GLOBAL_MASTER)
         if ( extension == '.h5' ) then
             call write_solution_hdf(self%data,solutionfile)
+            call self%time_integrator%write_time_options(self%data,solutionfile)
         else
             call chidg_signal(FATAL,"chidg%write_solution: grid file extension not recognized")
         end if

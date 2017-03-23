@@ -13,12 +13,9 @@ module mod_chidg_post_hdf2vtk
     use mod_kinds,              only: rk,ik
     use type_chidg,             only: chidg_t
     use type_dict,              only: dict_t
-    use mod_HB_post,            only: process_data_for_output
     use mod_vtkio,              only: write_vtk_file
     use type_file_properties,   only: file_properties_t
     use mod_hdf_utilities,      only: get_properties_hdf
-    use type_chidg_vector,      only: chidg_vector_t
-    use mod_HB_matrices,        only: calc_E
 
     implicit none
 
@@ -28,13 +25,15 @@ contains
 
 
 
-    !>  Post processing tool for writing a tecplot file of sampled modal data
+    !>  Post processing tool for writing a vtk file of sampled modal data
     !!
     !!  @author Mayank Sharma
     !!  @date 10/31/2016
     !!
+    !!  Functionality for unsteady IO
     !!
-    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/22/2017
     !!
     !------------------------------------------------------------------------------------------
     subroutine chidg_post_hdf2vtk(filename)
@@ -46,13 +45,7 @@ contains
         type(file_properties_t)             ::  file_props
         character(:),           allocatable ::  eqnset
         character(:),           allocatable ::  time_string
-        real(rk),               allocatable ::  freq(:), time_lev(:)
-        integer(ik)                         ::  nterms_s,spacedim,solution_order,nfreq,ntime,ierr
-        type(chidg_vector_t)                ::  q_HB               ! Storage vector for original HB solution
-        character(:),           allocatable ::  flag
-        character(len = 100)                ::  new_dir_path_1, new_dir_path_2, &
-                                                pvd_filename_1, pvd_filename_2
-
+        integer(ik)                         ::  nterms_s,spacedim,solution_order
 
 
         !
@@ -70,8 +63,6 @@ contains
         eqnset      = file_props%eqnset(1)       ! Global variable from mod_io
         spacedim    = file_props%spacedim(1)     ! Global variable from mod_io
         time_string = file_props%time_integrator
-        freq        = file_props%HB_frequencies; nfreq = size(freq)
-        time_lev    = file_props%HB_time_lev;    ntime = size(time_lev)
 
 
         !
@@ -85,57 +76,35 @@ contains
             solution_order = solution_order + 1
         end do
 
+
         !
         ! Initialize solution data storage
         !
         call chidg%set('Solution Order', integer_input=solution_order)
+        call chidg%set('Time Integrator', algorithm=trim(time_string))
+        call chidg%time_integrator%initialize_state(chidg%data)
         call chidg%init('domains')
         call chidg%init('communication')
         call chidg%init('solvers')
 
 
         !
-        ! Read solution modes from HDF5
+        ! Read solution modes and time integrator options from HDF5
         !
         call chidg%read_solution(filename)
+        call chidg%time_integrator%read_time_options(chidg%data,filename)
+        
+
+        !
+        ! Get post processing data (q_out)
+        !        
+        call chidg%time_integrator%process_data_for_output(chidg%data)
         
         
         !
-        ! If harmonic balance is being used, interpolate the solution at given times and write output
+        ! Write solution in vtk format
         !
-        flag = trim(time_string)
-
-        if (flag == 'Harmonic Balance' .or. flag == 'Harmonic_Balance' .or. flag == 'harmonic balance' .or. &
-            flag == 'harmonic_balance' .or. flag == 'HB') then 
-
-            !
-            ! Write original solution in vtk format
-            !
-            new_dir_path_1 = 'ChiDG_HB_results'
-            pvd_filename_1 = 'chidg_HB_results.pvd'
-            call write_vtk_file(chidg%data,new_dir_path_1,pvd_filename_1)
-
-
-            !
-            ! Generate interpolated data for HB post processing
-            !
-            call process_data_for_output(chidg%data,q_HB,nterms_s,freq,time_lev)
-
-
-            !
-            ! Write interpolated solution in vtk format
-            !
-            new_dir_path_2 = 'ChiDG_interpolated_results'
-            pvd_filename_2 = 'chidg_interp_results.pvd'
-            call write_vtk_file(chidg%data,new_dir_path_2,pvd_filename_2)
-        
-        else
-            
-            new_dir_path_1 = 'ChiDG_results'
-            pvd_filename_1 = 'chidg_results.pvd'
-            call write_vtk_file(chidg%data, new_dir_path_1,pvd_filename_1)
-
-        end if
+        call write_vtk_file(chidg%data)
 
 
         !

@@ -23,9 +23,8 @@ contains
     !!  @date   3/18/2017
     !!
     !-------------------------------------------------------------------------------------------
-    subroutine get_Fourier_coeff_vector(data,nterms_s,E,q_coeff_vector)
+    subroutine get_Fourier_coeff_vector(data,E,q_coeff_vector)
         type(chidg_data_t),     intent(inout)   :: data
-        integer(ik),            intent(in)      :: nterms_s
         real(rk)                                :: E(:,:)
         type(chidg_vector_t),   intent(inout)   :: q_coeff_vector
 
@@ -52,9 +51,10 @@ contains
             do otime = 1,q_in%get_ntime()
                 do idom = 1,data%ndomains()
                     
-                    associate ( mesh  => data%mesh(idom),       &
-                                nelem => data%mesh(idom)%nelem, &
-                                nvars => data%eqnset(idom)%prop%nprimary_fields()) 
+                    associate ( mesh     => data%mesh(idom),          &
+                                nelem    => data%mesh(idom)%nelem,    &
+                                nterms_s => data%mesh(idom)%nterms_s, &
+                                nvars    => data%eqnset(idom)%prop%nprimary_fields()) 
                     
                     if (allocated(temp_1) .and. allocated(temp_2)) deallocate(temp_1,temp_2)
                     allocate(temp_1(nterms_s), temp_2(nterms_s), stat=ierr)
@@ -91,9 +91,8 @@ contains
     !!  @date   3/18/2017
     !!
     !-------------------------------------------------------------------------------------------
-    subroutine get_Fourier_coeffs(data,nterms_s,q_coeff_vector,q_coeffs)
+    subroutine get_Fourier_coeffs(data,q_coeff_vector,q_coeffs)
         type(chidg_data_t),                     intent(inout)   :: data
-        integer(ik),                            intent(in)      :: nterms_s
         type(chidg_vector_t),                   intent(inout)   :: q_coeff_vector
         type(chidg_vector_t),   allocatable,    intent(inout)   :: q_coeffs(:)
 
@@ -121,8 +120,9 @@ contains
 
             do idom = 1,data%ndomains()
 
-                associate ( nelem => data%mesh(idom)%nelem, &
-                            nvars => data%eqnset(idom)%prop%nprimary_fields() )
+                associate ( nelem    => data%mesh(idom)%nelem,    &
+                            nterms_s => data%mesh(idom)%nterms_s, &
+                            nvars    => data%eqnset(idom)%prop%nprimary_fields() )
 
                 if (allocated(temp)) deallocate(temp)
                 allocate(temp(nterms_s), stat = ierr)
@@ -190,16 +190,14 @@ contains
     !!  @date   3/18/2017
     !!
     !-------------------------------------------------------------------------------------------
-    subroutine get_interp_solution(data,nterms_s,time,freq_data,q_coeffs,q_time)
+    subroutine get_interp_solution(data,time,q_coeffs,q_time)
         type(chidg_data_t),     intent(inout)   :: data
-        integer(ik),            intent(in)      :: nterms_s
         real(rk),               intent(in)      :: time
-        real(rk),               intent(in)      :: freq_data(:)
         type(chidg_vector_t),   intent(inout)   :: q_coeffs(:)
         type(chidg_vector_t),   intent(inout)   :: q_time
 
         integer(ik)                 :: ntime, nfreq, itime, idom, ielem, ivar, ierr
-        real(rk),   allocatable     :: temp_1(:), temp_2(:)
+        real(rk),   allocatable     :: temp_1(:), temp_2(:), freq_data(:)
         character(:),   allocatable :: user_msg, dev_msg
 
         
@@ -207,7 +205,17 @@ contains
         ! Get ntime and nfreq
         !
         ntime = size(q_coeffs)
-        nfreq = size(freq_data)
+        nfreq = data%time_manager%freq_data%size()
+        
+
+        !
+        ! Get frequency data
+        !
+        if (allocated(freq_data)) deallocate(freq_data)
+        allocate(freq_data(nfreq), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        freq_data = data%time_manager%freq_data%data()
 
         
         !
@@ -220,8 +228,9 @@ contains
         do itime = 1,ntime
             do idom = 1,data%ndomains()
 
-                associate ( nelem => data%mesh(idom)%nelem, &
-                            nvars => data%eqnset(idom)%prop%nprimary_fields() )
+                associate ( nelem    => data%mesh(idom)%nelem,    &
+                            nterms_s => data%mesh(idom)%nterms_s, &
+                            nvars    => data%eqnset(idom)%prop%nprimary_fields() )
                     
                     ! Allocate temporary arrays
                     if (allocated(temp_1) .and. allocated(temp_2)) deallocate(temp_1,temp_2)
@@ -284,9 +293,8 @@ contains
     !!  @date   3/18/2017
     !!
     !-------------------------------------------------------------------------------------------
-    subroutine get_interp_solution_vector(data,nterms_s,q_interp)
+    subroutine get_interp_solution_vector(data,q_interp)
         type(chidg_data_t),     intent(inout)   :: data
-        integer(ik),            intent(in)      :: nterms_s
         type(chidg_vector_t),   intent(in)      :: q_interp(:)
 
         real(rk),   allocatable:: temp(:)
@@ -301,11 +309,11 @@ contains
 
         
         !
-        ! Reinitialize q_in
+        ! Reinitialize q_out
         !
-        call data%sdata%q_in%init(data%mesh,ntime_interp)
-        call data%sdata%q_in%set_ntime(ntime_interp)
-        call data%sdata%q_in%clear()
+        call data%sdata%q_out%init(data%mesh,ntime_interp)
+        call data%sdata%q_out%set_ntime(ntime_interp)
+        call data%sdata%q_out%clear()
 
 
         !
@@ -314,8 +322,9 @@ contains
         do itime_interp = 1,ntime_interp
             do idom = 1,data%ndomains()
 
-                associate ( nelem => data%mesh(idom)%nelem, &
-                            nvars => data%eqnset(idom)%prop%nprimary_fields() )
+                associate ( nelem    => data%mesh(idom)%nelem,    &
+                            nterms_s => data%mesh(idom)%nterms_s, &
+                            nvars    => data%eqnset(idom)%prop%nprimary_fields() )
                 
                     if (allocated(temp)) deallocate(temp)
                     allocate(temp(nterms_s), stat=ierr)
@@ -325,7 +334,7 @@ contains
                         do ivar = 1,nvars
                             
                             temp = q_interp(itime_interp)%dom(idom)%vecs(ielem)%getvar(ivar,1)
-                            call data%sdata%q_in%dom(idom)%vecs(ielem)%setvar(ivar,itime_interp,temp)
+                            call data%sdata%q_out%dom(idom)%vecs(ielem)%setvar(ivar,itime_interp,temp)
 
                         end do
                     end do
@@ -348,14 +357,10 @@ contains
     !!  @date   3/20/2017
     !!
     !-------------------------------------------------------------------------------------------
-    subroutine process_data_for_output(data,q_HB,nterms_s,freq,time_lev)
+    subroutine get_post_processing_data(data)
         type(chidg_data_t),     intent(inout)   :: data
-        type(chidg_vector_t),   intent(inout)   :: q_HB
-        integer(ik),            intent(in)      :: nterms_s
-        real(rk),               intent(in)      :: freq(:)
-        real(rk),               intent(in)      :: time_lev(:) 
 
-        real(rk),   allocatable                 :: E(:,:)
+        real(rk),   allocatable                 :: E(:,:), freq(:), time_lev(:)
         type(chidg_vector_t)                    :: q_coeff_vector
         type(chidg_vector_t),   allocatable     :: q_coeffs(:), q_interp(:)
         real(rk),               allocatable     :: time_interp(:)
@@ -365,18 +370,12 @@ contains
         
         !
         ! Set no. of frequencies and no. of time levels
+        ! Also set frequency and time level data
         !
-        nfreq = size(freq)
-        ntime = size(time_lev)
-
-
-        !
-        ! Store original solution in a separate vector
-        !
-        call q_HB%init(data%mesh,data%sdata%q_in%get_ntime())
-        call q_HB%set_ntime(data%sdata%q_in%get_ntime())
-        call q_HB%clear()
-        q_HB = data%sdata%q_in
+        nfreq    = data%time_manager%freq_data%size()
+        ntime    = data%time_manager%time_lev%size()
+        freq     = data%time_manager%freq_data%data()
+        time_lev = data%time_manager%time_lev%data()
 
 
         !
@@ -392,8 +391,8 @@ contains
         !
         ! Compute coefficients of Fourier expansion of solution in time
         !
-        call get_Fourier_coeff_vector(data,nterms_s,E,q_coeff_vector)
-        call get_Fourier_coeffs(data,nterms_s,q_coeff_vector,q_coeffs)
+        call get_Fourier_coeff_vector(data,E,q_coeff_vector)
+        call get_Fourier_coeffs(data,q_coeff_vector,q_coeffs)
 
 
         !
@@ -411,8 +410,8 @@ contains
 
         do itime_interp = 1,ntime_interp
 
-            call get_interp_solution(data,nterms_s,time_interp(itime_interp), &
-                                     freq,q_coeffs,q_interp(itime_interp))
+            call get_interp_solution(data,time_interp(itime_interp), &
+                                     q_coeffs,q_interp(itime_interp))
 
         end do
 
@@ -420,10 +419,10 @@ contains
         !
         ! Store the interpolated solutions in resized vector, q_in
         !
-        call get_interp_solution_vector(data,nterms_s,q_interp)
+        call get_interp_solution_vector(data,q_interp)
 
 
-    end subroutine process_data_for_output
+    end subroutine get_post_processing_data
     !*******************************************************************************************
 
 

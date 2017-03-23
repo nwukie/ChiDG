@@ -95,7 +95,7 @@ contains
         !
         !   TODO: get 'ntime' here from q_in
         !
-        do itime = 1,data%sdata%q_in%get_ntime()
+        do itime = 1,data%sdata%q_out%get_ntime()
 
 
 
@@ -196,7 +196,7 @@ contains
                                     !
                                     time_index = 1
                                     !val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q_in%dom(idom)%vecs(ielem),ivar,itime,xi,eta,zeta),rdouble)
-                                    val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q_in%dom(idom)%vecs(ielem),ivar,time_index,xi,eta,zeta),rdouble)
+                                    val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q_out%dom(idom)%vecs(ielem),ivar,time_index,xi,eta,zeta),rdouble)
                                     tecstat = TECDAT142(1,valeq,1)
                                     if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_variables: Error in call to TECDAT142")
                                         

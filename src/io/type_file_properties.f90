@@ -19,9 +19,7 @@ module type_file_properties
         logical     :: contains_solution    = .false.
 
         integer(ik)                      :: ndomains = 0      !< Number of domains in the file
-        character(len = 1024)            :: time_integrator   !< Time integrator name
-        real(rk),            allocatable :: HB_frequencies(:) !< HB frequency data
-        real(rk),            allocatable :: HB_time_lev(:)    !< HB time level data
+        character(len=1024)              :: time_integrator   !< Time integrator name
         character(len=1024), allocatable :: domain_names(:)
         integer(ik),         allocatable :: order_c(:)        !< Coordinate order ( 1st, 2nd, 3rd, etc. )
         integer(ik),         allocatable :: order_s(:)        !< Solution order ( 1st, 2nd, 3rd, etc. )

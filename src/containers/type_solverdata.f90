@@ -38,6 +38,13 @@ module type_solverdata
         !
         type(chidg_vector_t)            :: q_in
 
+        
+        !
+        ! Container for storing data for post processing
+        !
+        type(chidg_vector_t)            :: q_out
+
+
         !
         ! Auxiliary fields
         !
@@ -130,6 +137,7 @@ contains
 !        call self%lhs%init(mesh,bcset_coupling,'full')
         call self%lhs%init(mesh,'full')
         call self%q_in%init(mesh,mesh(1)%ntime)
+        call self%q_out%init(mesh,mesh(1)%ntime)
 
         ! Initialize matrix parallel recv data
         call self%lhs%init_recv(self%rhs)

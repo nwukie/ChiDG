@@ -132,21 +132,21 @@ program driver
             call constant%set_option('val',1.15_rk)
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,1)
 
-!            ! rho_u
-!            call constant%set_option('val',50.0_rk)
-!            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,2)
-!
-!            ! rho_v
-!            call constant%set_option('val',0.0_rk)
-!            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,3)
-!
-!            ! rho_w
-!            call constant%set_option('val',0.0_rk)
-!            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,4)
-!
-!            ! rho_E
-!            call constant%set_option('val',248000.0_rk)
-!            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,5)
+            ! rho_u
+            call constant%set_option('val',50.0_rk)
+            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,2)
+
+            ! rho_v
+            call constant%set_option('val',0.0_rk)
+            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,3)
+
+            ! rho_w
+            call constant%set_option('val',0.0_rk)
+            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,4)
+
+            ! rho_E
+            call constant%set_option('val',248000.0_rk)
+            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,5)
 
 !            ! rho_nutilde
 !            call constant%set_option('val',0.00003_rk)
@@ -222,8 +222,8 @@ program driver
             call chidg_convert(trim(filename))
 
         else if ( trim(chidg_action) == 'post' ) then
-!            call chidg_post(trim(filename))
-!            call chidg_post_vtk(trim(filename))
+            call chidg_post(trim(filename))
+            call chidg_post_vtk(trim(filename))
             call chidg_post_matplotlib(trim(filename))
         else
             call chidg_signal(FATAL,"chidg: unrecognized action '"//trim(chidg_action)//"'. Valid options are: 'edit', 'convert'")

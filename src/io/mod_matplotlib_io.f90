@@ -11,6 +11,8 @@ module mod_matplotlib_io
     use mod_chimera,        only: find_gq_donor
     use type_face_info,     only: face_info_t
     use type_element_info,  only: element_info_t
+    use mod_HB_matrices,    only: calc_E
+    use mod_HB_post,        only: get_Fourier_coeff_vector
 
 
 
@@ -27,7 +29,7 @@ contains
     subroutine get_points(points)
         type(point_t),  allocatable,    intent(inout)     :: points(:)
 
-        integer(ik),    parameter       :: npts = 101
+        integer(ik),    parameter       :: npts = 81
         real(rk),       allocatable     :: xpt(:), ypt(:), zpt(:)
         integer(ik)                     :: ipt, ierr
 
@@ -110,7 +112,150 @@ contains
 
 
 
-    !>  Get solution values at donor points
+    !>  Get original solution values at donor points
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/27/2017
+    !!
+    !-----------------------------------------------------------------------------------
+    subroutine get_original_solution_at_donor_points(data,ieqn,solution_values)
+        type(chidg_data_t),         intent(inout)   :: data
+        integer(ik),                intent(in)      :: ieqn
+        real(rk),   allocatable,    intent(inout)   :: solution_values(:,:)
+
+        type(element_info_t),   allocatable     :: donors(:)
+        type(point_t),          allocatable     :: donor_coords(:)
+        real(rdouble)                           :: val(1)                     
+        integer(ik)                             :: ntime, npts, ipt, itime, ierr
+
+
+        !
+        ! Get donor points
+        !
+        call get_donors(data,donors,donor_coords)
+
+        
+        !
+        ! Compute no. of points and no. of time levels and allocate solution values array
+        !
+        npts  = size(donors)
+        ntime = data%sdata%q_in%get_ntime()
+
+        if (allocated(solution_values)) deallocate(solution_values)
+        allocate(solution_values(ntime,npts), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        
+        !
+        ! Compute solutions at donor points
+        ! 
+        do itime = 1,ntime
+            do ipt = 1,npts
+
+                associate( idom  => donors(ipt)%idomain_g,  &
+                           ielem => donors(ipt)%ielement_g, &
+                           xi    => donor_coords(ipt)%c1_,  &
+                           eta   => donor_coords(ipt)%c2_,  &
+                           zeta  => donor_coords(ipt)%c3_)
+
+                    val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q_in%dom(idom)%&
+                                   vecs(ielem),ieqn,itime,xi,eta,zeta),rdouble)
+                    solution_values(itime,ipt) = val(1)
+
+                end associate
+
+            end do  ! ipt
+        end do  ! itime
+
+
+    end subroutine get_original_solution_at_donor_points
+    !***********************************************************************************
+
+
+
+    !>  Get Fourier coefficient values at donor points
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/27/2017
+    !!
+    !-----------------------------------------------------------------------------------
+    subroutine get_Fourier_coeffs_at_donor_points(data,ieqn,solution_values)
+        type(chidg_data_t),         intent(inout)   :: data
+        integer(ik),                intent(in)      :: ieqn
+        real(rk),   allocatable,    intent(inout)   :: solution_values(:,:)
+
+        type(chidg_vector_t)                    :: q_coeff_vector
+        real(rk),               allocatable     :: E(:,:)
+        type(element_info_t),   allocatable     :: donors(:)
+        type(point_t),          allocatable     :: donor_coords(:)
+        real(rdouble)                           :: val(1)                     
+        integer(ik)                             :: ntime, npts, ipt, itime, icoeff, ierr
+
+
+        !
+        ! Get donor points
+        !
+        call get_donors(data,donors,donor_coords)
+
+
+        !
+        ! Compute Fourier coefficient modes
+        !
+        associate ( ntimes   => data%time_manager%time_lev%size(),    &
+                    nfreq    => data%time_manager%freq_data%size(),   &
+                    time_lev => data%time_manager%time_lev%data(),    &
+                    freq     => data%time_manager%freq_data%data())
+          
+            if (allocated(E)) deallocate(E)
+            allocate(E(ntimes,ntimes), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+            call calc_E(nfreq,ntimes,freq,time_lev,E)
+
+            call get_Fourier_coeff_vector(data,E,q_coeff_vector)
+        
+        end associate            
+
+
+        !
+        ! Compute no. of points and no. of time levels and allocate solution values array
+        !
+        npts  = size(donors)
+        ntime = q_coeff_vector%get_ntime()
+
+        if (allocated(solution_values)) deallocate(solution_values)
+        allocate(solution_values(ntime,npts), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        
+        !
+        ! Compute Fourier coefficients at donor points
+        ! 
+        do itime = 1,ntime
+            do ipt = 1,npts
+
+                associate( idom  => donors(ipt)%idomain_g,  &
+                           ielem => donors(ipt)%ielement_g, &
+                           xi    => donor_coords(ipt)%c1_,  &
+                           eta   => donor_coords(ipt)%c2_,  &
+                           zeta  => donor_coords(ipt)%c3_)
+
+                    val = real(data%mesh(idom)%elems(ielem)%solution_point(q_coeff_vector%dom(idom)%&
+                                   vecs(ielem),ieqn,itime,xi,eta,zeta),rdouble)
+                    solution_values(itime,ipt) = val(1)
+
+                end associate
+
+            end do  ! ipt
+        end do  ! itime
+
+
+    end subroutine get_Fourier_coeffs_at_donor_points
+    !***********************************************************************************
+
+
+
+    !>  Get post processed solution values at donor points
     !!
     !!  @author Mayank Sharma
     !!  @date   3/24/2017
@@ -182,14 +327,16 @@ contains
     !!  @param[in]  filename - output file name
     !!
     !-----------------------------------------------------------------------------------
-    subroutine write_matplotlib_file(data,ieqn,coord,filename)
-        type(chidg_data_t),             intent(inout)   :: data
-        integer(ik),                    intent(in)      :: ieqn
-        character(:),   allocatable,    intent(in)      :: coord
-        character(:),   allocatable,    intent(in)      :: filename
+    subroutine write_matplotlib_file(data,ieqn,coord,filename_1,filename_2,filename_3)
+        type(chidg_data_t),             intent(inout)           :: data
+        integer(ik),                    intent(in)              :: ieqn
+        character(:),   allocatable,    intent(in)              :: coord
+        character(:),   allocatable,    intent(in)              :: filename_1
+        character(:),   allocatable,    intent(in), optional    :: filename_2
+        character(:),   allocatable,    intent(in), optional    :: filename_3
 
         type(point_t),  allocatable     :: points(:)
-        real(rk),       allocatable     :: solution_values(:,:)
+        real(rk),       allocatable     :: solution_values(:,:), orig_sol_val(:,:), Fourier_coeffs(:,:)
         integer(ik)                     :: npts, ipt, funit = 10
         logical                         :: exist
 
@@ -199,6 +346,7 @@ contains
         !
         call get_points(points)
         call get_solution_at_donor_points(data,ieqn,solution_values)
+        if (present(filename_2)) call get_original_solution_at_donor_points(data,ieqn,orig_sol_val)
 
 
         !
@@ -208,13 +356,13 @@ contains
 
 
         !
-        ! Write output file
+        ! Write output file for post processed data
         !
-        inquire(file = trim(filename), exist=exist)
+        inquire(file = trim(filename_1), exist=exist)
         if (exist) then
-            open(funit, file = trim(filename), status = 'old', action = 'write')
+            open(funit, file = trim(filename_1), status = 'old', action = 'write')
         else
-            open(funit, file = trim(filename), status = 'new', action = 'write')
+            open(funit, file = trim(filename_1), status = 'new', action = 'write')
         end if
 
             select case(coord)
@@ -240,6 +388,87 @@ contains
 
         close(funit)
 
+
+        !
+        ! Write output file for original data
+        !
+        if ( present(filename_2) ) then
+
+            call get_original_solution_at_donor_points(data,ieqn,orig_sol_val)
+
+            inquire(file = trim(filename_2), exist=exist)
+            if (exist) then
+                open(funit, file = trim(filename_2), status = 'old', action = 'write')
+            else
+                open(funit, file = trim(filename_2), status = 'new', action = 'write')
+            end if
+
+                select case(coord)
+                    case('x')
+                        do ipt = 1,npts
+
+                            write(funit,*) points(ipt)%c1_, orig_sol_val(:,ipt)
+
+                        end do
+                    case('y')
+                        do ipt = 1,npts
+
+                            write(funit,*) points(ipt)%c2_, orig_sol_val(:,ipt)
+
+                        end do
+                    case('z')
+                        do ipt = 1,npts
+
+                            write(funit,*) points(ipt)%c3_, orig_sol_val(:,ipt)
+
+                        end do
+                end select
+
+            close(funit)  
+            
+        end if
+        
+
+        !
+        ! Write output file for Fourier coefficients
+        !
+        if ( present(filename_3) ) then
+    
+            call get_Fourier_coeffs_at_donor_points(data,ieqn,Fourier_coeffs)
+            
+
+            inquire(file = trim(filename_3), exist=exist)
+            if (exist) then
+                open(funit, file = trim(filename_3), status = 'old', action = 'write')
+            else
+                open(funit, file = trim(filename_3), status = 'new', action = 'write')
+            end if
+
+                select case(coord)
+                    case('x')
+                        do ipt = 1,npts
+
+                            write(funit,*) points(ipt)%c1_, Fourier_coeffs(:,ipt)
+
+                        end do
+                    case('y')
+                        do ipt = 1,npts
+
+                            write(funit,*) points(ipt)%c2_, Fourier_coeffs(:,ipt)
+
+                        end do
+                    case('z')
+                        do ipt = 1,npts
+
+                            write(funit,*) points(ipt)%c3_, Fourier_coeffs(:,ipt)
+
+                        end do
+                end select
+
+            close(funit)  
+            
+        end if
+          
 
     end subroutine write_matplotlib_file
     !***********************************************************************************

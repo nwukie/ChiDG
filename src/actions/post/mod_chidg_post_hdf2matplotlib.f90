@@ -35,7 +35,8 @@ contains
         type(chidg_t)               :: chidg
         type(file_properties_t)     :: file_props
         character(:),   allocatable :: eqnset
-        character(:),   allocatable :: time_string, coord, matplotlib_file
+        character(:),   allocatable :: time_string, coord, matplotlib_file, &
+                                       original_sol_file, Fourier_coeff_file
         integer(ik)                 :: nterms_s, spacedim, solution_order
 
 
@@ -96,9 +97,12 @@ contains
         !
         ! Write solution for matplotlib
         !
-        coord           = 'x'
-        matplotlib_file = 'chidg_results.dat'
-        call write_matplotlib_file(chidg%data,1,coord,matplotlib_file)
+        coord              = 'x'
+        matplotlib_file    = 'chidg_results.dat'
+        original_sol_file  = 'chidg_original_results.dat'
+        Fourier_coeff_file = 'chidg_coefficients.dat'
+        call write_matplotlib_file(chidg%data,1,coord,matplotlib_file,filename_2 = original_sol_file,&
+                                   filename_3 = Fourier_coeff_file)
 
 
         !

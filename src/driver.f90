@@ -222,8 +222,8 @@ program driver
             call chidg_convert(trim(filename))
 
         else if ( trim(chidg_action) == 'post' ) then
-            call chidg_post(trim(filename))
-            call chidg_post_vtk(trim(filename))
+!            call chidg_post(trim(filename))
+!            call chidg_post_vtk(trim(filename))
             call chidg_post_matplotlib(trim(filename))
         else
             call chidg_signal(FATAL,"chidg: unrecognized action '"//trim(chidg_action)//"'. Valid options are: 'edit', 'convert'")

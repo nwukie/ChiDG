@@ -272,10 +272,15 @@ contains
 
                 !
                 ! Compute \vector{n} dot \tensor{tau}
+                !   : These should produce the same result since the tensor is 
+                !   : symmetric. Not sure which is more correct.
                 !
-                stress_x = unorm_1*tau_11 + unorm_2*tau_21 + unorm_3*tau_31
-                stress_y = unorm_1*tau_12 + unorm_2*tau_22 + unorm_3*tau_32
-                stress_z = unorm_1*tau_13 + unorm_2*tau_23 + unorm_3*tau_33
+                !stress_x = unorm_1*tau_11 + unorm_2*tau_21 + unorm_3*tau_31
+                !stress_y = unorm_1*tau_12 + unorm_2*tau_22 + unorm_3*tau_32
+                !stress_z = unorm_1*tau_13 + unorm_2*tau_23 + unorm_3*tau_33
+                stress_x = tau_11*unorm_1 + tau_12*unorm_2 + tau_13*unorm_3
+                stress_y = tau_21*unorm_1 + tau_22*unorm_2 + tau_23*unorm_3
+                stress_z = tau_31*unorm_1 + tau_32*unorm_2 + tau_33*unorm_3
 
 
 

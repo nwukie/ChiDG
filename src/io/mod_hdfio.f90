@@ -353,7 +353,10 @@ contains
 
         !
         ! Create new file if necessary
+        !   Barrier makes sure everyone has called file_exists before
+        !   one potentially gets created by another processor
         !
+        call MPI_Barrier(ChiDG_COMM,ierr)
         if (.not. file_exists) then
 
                 ! Create a new file
@@ -371,13 +374,6 @@ contains
                     end if
                     call MPI_Barrier(ChiDG_COMM,ierr)
                 end do
-
-            else
-
-                ! If it already exists, check if the the structure is correct 
-                !fid = open_file_hdf(file_name)
-                !call check_file_structure_hdf(fid,data)
-                !call close_file_hdf(fid)
 
         end if
 

@@ -135,10 +135,8 @@ contains
         do iproc = 0,NRANK-1
             if (iproc == IRANK) then
 
-                !wd_file_exists = check_file_exists_hdf('wall_distance.h5')
                 wd_file_exists = check_file_exists_hdf(fileout)
                 if (wd_file_exists) then
-                    !wd_props = get_properties_hdf('wall_distance.h5')
                     wd_props = get_properties_hdf(fileout)
                     wd_nterms_s = wd_props%nterms_s(1)
 
@@ -158,7 +156,6 @@ contains
         !
         if (wd_file_exists .and. have_wd_field) then
 
-            !call wall_distance%read_solution('wall_distance.h5')
             call wall_distance%read_solution(fileout)
             wall_distance%data%sdata%q = wall_distance%data%sdata%q_in
 

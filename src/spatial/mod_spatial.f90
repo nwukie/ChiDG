@@ -41,7 +41,7 @@ contains
 
         integer(ik)                 :: idom, ielem, iface, idiff, itime, ierr, &
                                        diff_min, diff_max, eqn_ID
-        type(timer_t)               :: timer, comm_timer, loop_timer
+        type(timer_t)               :: timer, comm_timer, loop_timer, master
         type(element_info_t)        :: elem_info
 
         type(chidg_worker_t)        :: worker
@@ -132,6 +132,10 @@ contains
                 ! Loop through elements in the current domain
                 do ielem = 1,mesh%nelem
 
+                    if (ielem == 14) then
+                        call write_line('Element ', ielem, ' of ', mesh%nelem)
+                        call master%start()
+                    end if
 
                     elem_info%idomain_g  = mesh%elems(ielem)%idomain_g
                     elem_info%idomain_l  = mesh%elems(ielem)%idomain_l
@@ -167,6 +171,11 @@ contains
                     call eqnset%compute_volume_advective_operators(worker, differentiate_function)
                     call eqnset%compute_volume_diffusive_operators(worker, differentiate_function)
 
+                    if (ielem == 14) then
+                        call master%stop()
+                        call master%report(' Element compute time: ')
+                        call master%reset()
+                    end if
 
                 end do  ! ielem
                 end associate

@@ -390,6 +390,7 @@ contains
         !  Open input file using default properties.
         !
         call open_hdf()
+        call write_line('Opening file: ', filename_open)
         call h5fopen_f(filename_open, H5F_ACC_RDWR_F, fid, ierr)
         user_msg = "open_file_hdf: There was an error opening the file."
         if (ierr /= 0) call chidg_signal_one(FATAL,user_msg,trim(filename_open))
@@ -485,10 +486,11 @@ contains
                    You could try a few things here. 1: regenerate the with with the ChiDG &
                    library being used. 2: Use a different version of the ChiDG library &
                    that uses a storage format for the file being used. 3: Full-speed ahead! &
-                   Proceed anyways and try your luck!"//NEW_LINE('A')//"     &
+                   Proceed anyways and try your luck!"//NEW_LINE('A')//" &
                    Options: Exit(1), Continue(2)."
+                   
 
-            call chidg_signal(MSG,msg)
+            call chidg_signal_two(MSG,msg,file_minor_version,STORAGE_FORMAT_MINOR)
             !call write_line(msg)
 
             read_user_input = .true.

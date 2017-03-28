@@ -73,10 +73,12 @@ these sets of integers.
     end type bc_patch_t
 
 
-Boundary condition patches are currently created in the conversion process from 
-Plot3D-formatted grid files to ChiDG-formatted grid files. In the conversion
-process, the block boundaries in the Plot3D grid file are taken as boundary condition
-patches.
+.. note::
+
+    Boundary condition patches are currently created in the conversion process from 
+    Plot3D-formatted grid files to ChiDG-formatted grid files. In the conversion
+    process, the block boundaries in the Plot3D grid file are taken as boundary condition
+    patches.
 
 
 

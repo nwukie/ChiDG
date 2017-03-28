@@ -86,15 +86,48 @@ general information that could be useful to users. This includes:
 Metric terms
 ~~~~~~~~~~~~
 
-The metric terms are defined at each quadrature point in the ``metric(:,:,:)`` component 
-of a given ``element_t``. To access the matrix of metric components for a given quadrature 
-node 'igq', the component can be used as
+Metric terms are computed by considering the transformation of a differential
+volume in physical space to reference space as
 
-::
+.. math::
 
-    metric(:,:,igq)
+    \begin{pmatrix}
+        dx \\ dy \\ dz
+    \end{pmatrix}
+    =
+    \begin{pmatrix}
+      x_\xi  \quad  x_\eta  \quad  x_\zeta \\
+      y_\xi  \quad  y_\eta  \quad  y_\zeta \\
+      z_\xi  \quad  z_\eta  \quad  z_\zeta
+    \end{pmatrix} 
+    \begin{pmatrix}
+        d\xi \\ d\eta \\ d\zeta
+    \end{pmatrix}
+    \quad
+    \quad
+    \quad
+    \begin{pmatrix}
+        dr \\ rd\theta \\ dz
+    \end{pmatrix}
+    =
+    \begin{pmatrix}
+      r_\xi       \quad  r_\eta         \quad  r_\zeta \\
+      r\theta_\xi \quad  r\theta_\eta   \quad  r\theta_\zeta \\
+      z_\xi       \quad  z_\eta         \quad  z_\zeta
+    \end{pmatrix} 
+    \begin{pmatrix}
+        d\xi \\ d\eta \\ d\zeta
+    \end{pmatrix}
 
-This returns the metric components(``Cartesian`` or ``Cylindrical``) at the quadrature node in a 3x3 matrix as:
+The terms :math:`\partial \vec{x}/\partial \vec{\xi}` are computed from the polynomial
+expansion representing the element coordinates as
+
+.. math::
+
+    x = \sum \psi \hat{x}   \quad\rightarrow\quad  \frac{\partial x}{\partial \xi} = \sum \frac{\partial \psi}{\partial \xi} \hat{x}
+
+The metric terms are computed by inverting the matrices 
+:math:`\partial \vec{x}/\partial \vec{\xi}` to give
 
 .. math::
 
@@ -107,9 +140,35 @@ This returns the metric components(``Cartesian`` or ``Cylindrical``) at the quad
     \quad
     \quad
     \begin{pmatrix}
-      r \xi_r   \quad r \xi_\theta   \quad   r \xi_z  \\
-      \eta_r    \quad   \eta_\theta  \quad     \eta_z \\
-      r \zeta_r \quad r \zeta_\theta \quad   r \zeta_z
+       \xi_r   \quad   \xi_\theta   \quad   \xi_z  \\
+       \eta_r  \quad   \eta_\theta  \quad   \eta_z \\
+       \zeta_r \quad   \zeta_\theta \quad   \zeta_z
+    \end{pmatrix} 
+
+The metric terms are defined at each quadrature point in the ``metric(:,:,:)`` component 
+of a given ``element_t``. To access the matrix of metric components for a given quadrature 
+node ``igq``, the component can be used as
+
+::
+
+    metric(:,:,igq)
+
+This returns the metric components(``Cartesian`` or ``Cylindrical``) at the quadrature node in a 3x3 matrix as
+
+.. math::
+
+    \begin{pmatrix}
+      \xi_x   \quad \xi_y   \quad   \xi_z \\
+      \eta_x  \quad \eta_y  \quad   \eta_z \\
+      \zeta_x \quad \zeta_y \quad   \zeta_z
+    \end{pmatrix} 
+    \quad
+    \quad
+    \quad
+    \begin{pmatrix}
+       \xi_r   \quad   \xi_\theta   \quad   \xi_z  \\
+       \eta_r  \quad   \eta_\theta  \quad   \eta_z \\
+       \zeta_r \quad   \zeta_\theta \quad   \zeta_z
     \end{pmatrix} 
 
 Alternatively, a given metric term can be accessed for the set of quadrature nodes as
@@ -118,8 +177,8 @@ Alternatively, a given metric term can be accessed for the set of quadrature nod
 
     metric(1,1,:)
 
-which would return a 1D array of values for :math:`\xi_x` corresponding to each volume
-quadrature node.
+which would return a 1D array of values for (:math:`\xi_x` or :math:`\xi_r`) corresponding to each 
+quadrature node in the set.
 
 The inverse element jacobian terms(``Cartesian`` or ``Cylindrical``) ``jinv(:)`` are defined at each quadrature node as
 

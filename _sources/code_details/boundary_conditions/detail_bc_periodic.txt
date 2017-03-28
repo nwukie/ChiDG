@@ -22,7 +22,7 @@ faces to CHIMERA faces. Additionally, the offset parameters from the ``Periodic`
 ``bc_state_t`` object are stored in the ``face_t`` object to inform the Chimera
 infrastructure to search for a donor, not at the original location, but at a location
 defined by the offset coordinates. In this way, the ``Periodic`` boundary supports
-fully non-matching boundaries through the Chimera infrstructure.
+fully non-matching boundaries through the Chimera infrastructure.
 
 
 

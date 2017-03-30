@@ -47,7 +47,7 @@ contains
     subroutine setUp(this)
         class(test_blockmatrix),    intent(inout)   :: this
 
-        integer(ik)                                 :: nterms_c, ivar, ielem, iblk, spacedim
+        integer(ik)                                 :: nterms_c, ivar, ielem, iblk, spacedim, nelements_g
         type(point_t),  allocatable                 :: nodes(:)
         type(domain_connectivity_t)                 :: connectivity
         
@@ -68,9 +68,10 @@ contains
         !
         ! Initialize domains
         !
-        nterms_c = 8
-        spacedim = 3
-        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection','Cartesian')
+        nterms_c    = 8
+        spacedim    = 3
+        nelements_g = 9
+        call this%chidg%data%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Scalar Advection','Cartesian')
 
         call this%chidg%set('Solution Order', integer_input=2)
         call this%chidg%set('time', algorithm='steady')

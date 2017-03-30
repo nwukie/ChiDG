@@ -75,7 +75,7 @@ contains
                                    alpha, f0, fn, forcing_term
         real(rk), allocatable   :: vals(:), cfln(:), rnorm0(:), rnorm(:)
         type(chidg_vector_t)    :: b, qn, qold, qnew, dqdtau, q0
-!        logical                 :: search
+        logical                 :: searching
       
 
         wcount = 1
@@ -243,11 +243,11 @@ contains
                 !
                 q0 = qold
                 f0 = resid
-                !search = .true.
                 step = 0
                 if (self%search) then
 
-                    do while (self%search)
+                    searching = .true.
+                    do while (searching)
 
                         !
                         ! Set line increment via backtracking.
@@ -288,13 +288,13 @@ contains
                         ! 
                         !
                         if (ieee_is_nan(fn)) then
-                            self%search = .true.
+                            searching = .true.
                         else if ( (fn > 1.e-3_rk) .and. (fn > 2.0_rk*f0) ) then
-                            self%search = .true.
+                            searching = .true.
                         else if ( (fn < 1.e-3_rk) .and. (fn > f0) ) then
-                            self%search = .true.
+                            searching = .true.
                         else
-                            self%search = .false.
+                            searching = .false.
                         end if
 
                         call write_line("       Rn(Q) = ", fn, io_proc=GLOBAL_MASTER)
@@ -327,7 +327,7 @@ contains
                 !
                 !if (wcount == self%nwrite) then
                 !    if (data%eqnset(1)%get_name() == 'Euler') then
-                !        call write_solution_hdf(data,'aachen_turbine_rotor_reorient.h5')
+                        call write_solution_hdf(data,'aachen_turbine_rotor_reorient.h5')
                 !        write(filename,'(I2)') niter
                 !        call write_tecio_variables(data,trim(filename)//'.dat',niter)
                 !        wcount = 0

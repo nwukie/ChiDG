@@ -244,7 +244,7 @@ contains
         associate ( weights  => mesh(idomain_l)%faces(ielement_l,iface)%gq%face%weights(:,iface),   &
                     jinv     => mesh(idomain_l)%faces(ielement_l,iface)%jinv,                       &
                     val      => mesh(idomain_l)%faces(ielement_l,iface)%gq%face%val(:,:,iface),     &
-                    valtrans => mesh(idomain_l)%faces(ielement_l, iface)%gq%face%val_trans(:,:,iface) )
+                    valtrans => mesh(idomain_l)%faces(ielement_l,iface)%gq%face%val_trans(:,:,iface) )
 
 
             !
@@ -264,63 +264,63 @@ contains
 
 
 
-        !
-        ! Integrate and apply second time if there is a neighbor
-        !
-        if ( ineighbor_element_l /= NO_INTERIOR_NEIGHBOR ) then
-            if ( .not. parallel_neighbor ) then
-
-                face_n%idomain_g  = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g
-                face_n%idomain_l  = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
-                face_n%ielement_g = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g
-                face_n%ielement_l = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
-                face_n%iface      = mesh(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
-
-                !
-                ! Get linearization block for the neighbor element
-                !
-                diff_none     = (idiff == 0)
-                diff_interior = (idiff == DIAG)
-                diff_exterior = ( (idiff == 1) .or. (idiff == 2) .or. &
-                                  (idiff == 3) .or. (idiff == 4) .or. &
-                                  (idiff == 5) .or. (idiff == 6) )
-                if ( diff_exterior ) then
-                        idiff_n = DIAG
-                else if ( diff_interior ) then
-                        idiff_n = ineighbor_face
-                else if ( diff_none ) then
-                        idiff_n = 0
-                else
-                    call chidg_signal(FATAL,"store_boundary_integrals: unexpected value")
-                end if
-
-
-                function_n%type    = function_info%type
-                function_n%ifcn    = function_info%ifcn
-                function_n%idepend = function_info%idepend
-                function_n%seed    = function_info%seed
-                function_n%idiff   = idiff_n
-
-
-                associate ( weights_n  => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%weights(:,ineighbor_face),   &
-                            jinv_n     => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%jinv,                                & 
-                            val_n      => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%val(:,:,ineighbor_face),     &
-                            valtrans_n => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%val_trans(:,:,ineighbor_face) )
-
-                    integrand_n = integrand_n * weights_n
-
-                    !
-                    ! Integrate and negate for contribution to neighbor element
-                    !
-                    integral = -matmul(valtrans_n,integrand_n)
-
-                    call store_boundary_integral_residual(     mesh,sdata,face_n,function_n,ieqn,itime,integral)
-                    call store_boundary_integral_linearization(mesh,sdata,face_n,function_n,ieqn,itime,integral)
-
-                end associate
-
-            end if ! .not. parallel_neighbor
-        end if ! ielem_n
+!        !
+!        ! Integrate and apply second time if there is a neighbor
+!        !
+!        if ( ineighbor_element_l /= NO_INTERIOR_NEIGHBOR ) then
+!            if ( .not. parallel_neighbor ) then
+!
+!                face_n%idomain_g  = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g
+!                face_n%idomain_l  = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
+!                face_n%ielement_g = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g
+!                face_n%ielement_l = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
+!                face_n%iface      = mesh(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
+!
+!                !
+!                ! Get linearization block for the neighbor element
+!                !
+!                diff_none     = (idiff == 0)
+!                diff_interior = (idiff == DIAG)
+!                diff_exterior = ( (idiff == 1) .or. (idiff == 2) .or. &
+!                                  (idiff == 3) .or. (idiff == 4) .or. &
+!                                  (idiff == 5) .or. (idiff == 6) )
+!                if ( diff_exterior ) then
+!                        idiff_n = DIAG
+!                else if ( diff_interior ) then
+!                        idiff_n = ineighbor_face
+!                else if ( diff_none ) then
+!                        idiff_n = 0
+!                else
+!                    call chidg_signal(FATAL,"store_boundary_integrals: unexpected value")
+!                end if
+!
+!
+!                function_n%type    = function_info%type
+!                function_n%ifcn    = function_info%ifcn
+!                function_n%idepend = function_info%idepend
+!                function_n%seed    = function_info%seed
+!                function_n%idiff   = idiff_n
+!
+!
+!                associate ( weights_n  => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%weights(:,ineighbor_face),   &
+!                            jinv_n     => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%jinv,                                & 
+!                            val_n      => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%val(:,:,ineighbor_face),     &
+!                            valtrans_n => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%val_trans(:,:,ineighbor_face) )
+!
+!                    integrand_n = integrand_n * weights_n
+!
+!                    !
+!                    ! Integrate and negate for contribution to neighbor element
+!                    !
+!                    integral = -matmul(valtrans_n,integrand_n)
+!
+!                    call store_boundary_integral_residual(     mesh,sdata,face_n,function_n,ieqn,itime,integral)
+!                    call store_boundary_integral_linearization(mesh,sdata,face_n,function_n,ieqn,itime,integral)
+!
+!                end associate
+!
+!            end if ! .not. parallel_neighbor
+!        end if ! ielem_n
 
 
         end associate
@@ -504,7 +504,6 @@ contains
                 ! Only store rhs once. if idiff == DIAG. Also, since the integral could be computed more than once for chimera faces, only store for the first donor.
                 ! The integral should be the same for any value of idonor. Only the derivatives will change
                 !
-                !if ( boundary_face .and. ( ielement_l == function_info%seed%ielement_l ) ) then
                 if ( (boundary_face .and. diff_interior) .or. (boundary_face .and. diff_none) ) then
 
                     vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_

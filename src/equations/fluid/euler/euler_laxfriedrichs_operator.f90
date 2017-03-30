@@ -1,4 +1,5 @@
 module euler_laxfriedrichs_operator
+#include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ONE,TWO,HALF
     use mod_fluid,              only: omega
@@ -108,7 +109,7 @@ contains
         real(rk), allocatable, dimension(:)    ::   &
             norm_1,  norm_2,  norm_3,               &
             unorm_1, unorm_2, unorm_3,              &
-            r
+            r, area
 
         real(rk) :: gam_m, gam_p
 
@@ -135,9 +136,14 @@ contains
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
+        r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
-            mom2_m = mom2_m / worker%coordinate('1','boundary')
-            mom2_p = mom2_p / worker%coordinate('1','boundary')
+            mom2_m = mom2_m / r
+            mom2_p = mom2_p / r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 
@@ -154,32 +160,9 @@ contains
 
 
 
-!        !
-!        ! Compute 1/rho
-!        !
-!        invdensity_m = ONE/density_m
-!        invdensity_p = ONE/density_p
-!
-!
-!        !
-!        ! Compute velocity components
-!        !
-!        u_a_m = mom1_m*invdensity_m
-!        v_m = mom2_m*invdensity_m
-!        w_a_m = mom3_m*invdensity_m
-!
-!        u_a_p = mom1_p*invdensity_p
-!        v_p = mom2_p*invdensity_p
-!        w_a_p = mom3_p*invdensity_p
-
-
-
         !
         ! Fluid advection velocity
         !
-        !r = worker%coordinate('1','boundary')
-        !v_a_m = v_m - omega*r
-        !v_a_p = v_p - omega*r
         u_a_m = worker%get_model_field_face('Advection Velocity-1', 'value', 'face interior')
         v_a_m = worker%get_model_field_face('Advection Velocity-2', 'value', 'face interior')
         w_a_m = worker%get_model_field_face('Advection Velocity-3', 'value', 'face interior')
@@ -219,16 +202,19 @@ contains
         !
         wave_m = abs(un_m) + a_m
         wave_p = abs(un_p) + a_p
+
         wave   = max(wave_m,wave_p)
 
 
+        area = sqrt(norm_1**TWO + norm_2**TWO + norm_3**TWO)
 
         !===================================================
         ! mass flux
         !===================================================
         upwind = -wave*(density_p - density_m)
 
-        integrand = HALF*(upwind*norm_1*unorm_1  +  upwind*norm_2*unorm_2  +  upwind*norm_3*unorm_3)
+        !integrand = HALF*(upwind*norm_1*unorm_1  +  upwind*norm_2*unorm_2  +  upwind*norm_3*unorm_3)
+        integrand = HALF*upwind*area
 
         call worker%integrate_boundary('Density',integrand)
 
@@ -238,7 +224,9 @@ contains
         !===================================================
         upwind = -wave*(mom1_p - mom1_m)
 
-        integrand = HALF*(upwind*norm_1*unorm_1  +  upwind*norm_2*unorm_2  +  upwind*norm_3*unorm_3)
+        !integrand = HALF*(upwind*norm_1*unorm_1  +  upwind*norm_2*unorm_2  +  upwind*norm_3*unorm_3)
+        integrand = HALF*upwind*area
+
 
         call worker%integrate_boundary('Momentum-1',integrand)
 
@@ -248,13 +236,18 @@ contains
         !===================================================
         upwind = -wave*(mom2_p - mom2_m)
 
-        integrand = HALF*(upwind*norm_1*unorm_1  +  upwind*norm_2*unorm_2  +  upwind*norm_3*unorm_3)
+        !integrand = HALF*(upwind*norm_1*unorm_1  +  upwind*norm_2*unorm_2  +  upwind*norm_3*unorm_3)
+        integrand = HALF*upwind*area
 
         !
         ! Convert to tangential to angular momentum flux
         !
         if (worker%coordinate_system() == 'Cylindrical') then
-            integrand = integrand * worker%coordinate('1','boundary')
+            integrand = integrand * r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
         call worker%integrate_boundary('Momentum-2',integrand)
@@ -264,7 +257,8 @@ contains
         !===================================================
         upwind = -wave*(mom3_p - mom3_m)
 
-        integrand = HALF*(upwind*norm_1*unorm_1  +  upwind*norm_2*unorm_2  +  upwind*norm_3*unorm_3)
+        !integrand = HALF*(upwind*norm_1*unorm_1  +  upwind*norm_2*unorm_2  +  upwind*norm_3*unorm_3)
+        integrand = HALF*upwind*area
 
         call worker%integrate_boundary('Momentum-3',integrand)
 
@@ -273,7 +267,8 @@ contains
         !===================================================
         upwind = -wave*(energy_p - energy_m)
 
-        integrand = HALF*(upwind*norm_1*unorm_1  +  upwind*norm_2*unorm_2  +  upwind*norm_3*unorm_3)
+        !integrand = HALF*(upwind*norm_1*unorm_1  +  upwind*norm_2*unorm_2  +  upwind*norm_3*unorm_3)
+        integrand = HALF*upwind*area
 
         call worker%integrate_boundary('Energy',integrand)
 

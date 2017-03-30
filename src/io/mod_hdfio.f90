@@ -502,6 +502,7 @@ contains
         !
         ! Create new file if necessary
         !
+        call MPI_Barrier(ChiDG_COMM,ierr)
         if (.not. file_exists) then
 
                 ! Create a new file
@@ -528,6 +529,7 @@ contains
                 !call close_file_hdf(fid)
 
         end if
+        call MPI_Barrier(ChiDG_COMM,ierr)
 
 
 

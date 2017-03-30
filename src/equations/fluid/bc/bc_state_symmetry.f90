@@ -1,4 +1,5 @@
 module bc_state_symmetry
+#include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: TWO, HALF, ZERO
     use mod_fluid,              only: omega
@@ -131,8 +132,13 @@ contains
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
+        r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
-            mom2_m = mom2_m / worker%coordinate('1','boundary')
+            mom2_m = mom2_m / r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 
@@ -148,7 +154,6 @@ contains
         !
         ! Get unit normal vector
         !
-        r       = worker%coordinate('1','boundary')
         unorm_1 = worker%unit_normal(1)
         unorm_2 = worker%unit_normal(2)
         unorm_3 = worker%unit_normal(3)
@@ -191,7 +196,11 @@ contains
         ! Account for cylindrical. Convert tangential momentum back to angular momentum.
         !
         if (worker%coordinate_system() == 'Cylindrical') then
-            mom2_bc = mom2_bc * worker%coordinate('1','boundary')
+            mom2_bc = mom2_bc * r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 

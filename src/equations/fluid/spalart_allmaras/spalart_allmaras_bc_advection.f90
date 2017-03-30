@@ -85,23 +85,13 @@ contains
         density_nutilde = worker%get_primary_field_face('Density * NuTilde', 'value', 'boundary')
 
 
-!        !
-!        ! Compute velocities
-!        !
-!        invdensity = ONE/density
-!        u = mom1*invdensity
-!        v = mom2*invdensity
-!        w = mom3*invdensity
-
-
         !
         ! Get fluid advection velocity
         !
-!        r = worker%coordinate('1','boundary') 
-!        v = v - omega*r
         u_a = worker%get_model_field_face('Advection Velocity-1', 'value', 'boundary')
         v_a = worker%get_model_field_face('Advection Velocity-2', 'value', 'boundary')
         w_a = worker%get_model_field_face('Advection Velocity-3', 'value', 'boundary')
+
 
         !
         ! Get normal vector

@@ -1,4 +1,5 @@
 module euler_bc_operator
+#include <messenger.h>
     use mod_kinds,          only: ik, rk
     use mod_constants,      only: ZERO
     use mod_fluid,          only: omega
@@ -115,6 +116,10 @@ contains
         r = worker%coordinate('1','boundary') 
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_bc = mom2_bc / r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 
@@ -182,7 +187,11 @@ contains
         ! Convert to tangential to angular momentum flux
         !
         if (worker%coordinate_system() == 'Cylindrical') then
-            integrand = integrand * worker%coordinate('1','boundary')
+            integrand = integrand * r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
         call worker%integrate_boundary('Momentum-2',integrand)

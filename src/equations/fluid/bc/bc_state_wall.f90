@@ -1,4 +1,5 @@
 module bc_state_wall
+#include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: TWO, HALF, ZERO, ONE
     use type_bc_state,          only: bc_state_t
@@ -117,13 +118,15 @@ contains
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
+        r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
-            mom2_m = mom2_m / worker%coordinate('1','boundary')
+            mom2_m = mom2_m / r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
     
-
-
-
 
 
         drho_dx_m  = worker%get_primary_field_face('Density'   , 'grad1', 'face interior')
@@ -150,7 +153,6 @@ contains
         !
         ! Get normal vectors
         !
-        r       = worker%coordinate('1','boundary')
         unorm_1 = worker%unit_normal(1)
         unorm_2 = worker%unit_normal(2)
         unorm_3 = worker%unit_normal(3)
@@ -180,7 +182,7 @@ contains
 
 
         !
-        ! Energy subtract normal kinetic energy
+        ! Energy subtract change in kinetic energy
         !
         energy_bc = energy_m - (density_m*HALF)*(u_m*u_m  +  v_m*v_m  +  w_m*w_m)
 
@@ -188,6 +190,10 @@ contains
 
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_bc = mom2_bc * r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 

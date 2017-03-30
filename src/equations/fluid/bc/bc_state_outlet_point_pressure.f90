@@ -269,7 +269,7 @@ contains
         real(rk)                                    :: time, gam_m
         type(point_t),  allocatable, dimension(:)   :: coords
         real(rk),       allocatable, dimension(:)   ::  &
-            p_user, norm_1, norm_2, norm_3
+            p_user, norm_1, norm_2, norm_3, r
 
 
         !
@@ -318,8 +318,9 @@ contains
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
+        r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
-            mom2_m = mom2_m / worker%coordinate('1','boundary')
+            mom2_m = mom2_m / r
         end if
 
 
@@ -386,7 +387,7 @@ contains
         ! Account for cylindrical. Convert tangential momentum back to angular momentum.
         !
         if (worker%coordinate_system() == 'Cylindrical') then
-            mom2_bc = mom2_bc * worker%coordinate('1','boundary')
+            mom2_bc = mom2_bc * r
         end if
 
 

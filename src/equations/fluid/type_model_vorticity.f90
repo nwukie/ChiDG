@@ -139,10 +139,14 @@ contains
         !
         if (worker%coordinate_system() == 'Cylindrical') then
             r = worker%coordinate('1')
-            mom2       = mom2 / r
+            mom2       = mom2/r
             grad1_mom2 = (grad1_mom2/r) - mom2/r
             grad2_mom2 = (grad2_mom2/r)
             grad3_mom2 = (grad3_mom2/r)
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 
@@ -232,6 +236,7 @@ contains
             vorticity_1 =  (grad2_w - grad3_v)
             vorticity_2 =  (grad3_u - grad1_w)
             vorticity_3 =  (grad1_v - grad2_u + (v/r)) 
+
 
             !
             ! Account for rotation, convert to relative vorticity

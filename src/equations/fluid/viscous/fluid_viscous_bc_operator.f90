@@ -1,4 +1,5 @@
 module fluid_viscous_bc_operator
+#include <messenger.h>
     use mod_kinds,          only: ik, rk
     use mod_constants,      only: HALF, ONE, TWO
     use type_operator,      only: operator_t
@@ -100,7 +101,7 @@ contains
             flux_1, flux_2, flux_3, integrand
 
         real(rk),   allocatable, dimension(:)   ::  &
-            norm_1, norm_2, norm_3
+            norm_1, norm_2, norm_3, r
 
 
         !
@@ -116,8 +117,13 @@ contains
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
+        r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
-            mom2 = mom2 / worker%coordinate('1','boundary')
+            mom2 = mom2 / r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 
@@ -206,7 +212,11 @@ contains
         ! Convert to tangential to angular momentum flux
         !
         if (worker%coordinate_system() == 'Cylindrical') then
-            integrand = integrand * worker%coordinate('1','boundary')
+            integrand = integrand * r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 

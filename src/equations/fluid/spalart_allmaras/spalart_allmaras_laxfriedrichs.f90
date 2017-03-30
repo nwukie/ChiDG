@@ -79,7 +79,7 @@ contains
 
         real(rk),   dimension(:), allocatable   ::  &
             norm_1,  norm_2,  norm_3,               &
-            unorm_1, unorm_2, unorm_3
+            unorm_1, unorm_2, unorm_3, area
 
 
 
@@ -146,8 +146,6 @@ contains
         flux_2 = flux_avg_2 + max(abs(diss_m),abs(diss_p))*HALF*diff
         flux_3 = flux_avg_3 + max(abs(diss_m),abs(diss_p))*HALF*diff
 
-!        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-!        integrand = flux_1*norm_1*unorm_1 + flux_2*norm_2*unorm_2 + flux_3*norm_3*unorm_3
 
         integrand = flux_avg_1*norm_1 + flux_avg_2*norm_2 + flux_avg_3*norm_3
 
@@ -155,6 +153,14 @@ contains
         integrand = integrand + max(abs(diss_m),abs(diss_p))*HALF*diff*norm_2*unorm_2
         integrand = integrand + max(abs(diss_m),abs(diss_p))*HALF*diff*norm_3*unorm_3
 
+
+!        integrand = flux_avg_1*norm_1 + flux_avg_2*norm_2 + flux_avg_3*norm_3
+!
+!        diff   = (density_nutilde_p - density_nutilde_m)
+!        area = sqrt(norm_1**TWO + norm_2**TWO + norm_3**TWO)
+!        integrand = integrand + max(abs(diss_m),abs(diss_p))*HALF*diff*area
+!        integrand = integrand + max(abs(diss_m),abs(diss_p))*HALF*diff*area
+!        integrand = integrand + max(abs(diss_m),abs(diss_p))*HALF*diff*area
 
         !
         ! Integrate flux

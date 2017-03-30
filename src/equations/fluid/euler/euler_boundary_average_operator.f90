@@ -1,4 +1,5 @@
 module euler_boundary_average_operator
+#include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ONE, TWO, HALF
     use mod_fluid,              only: omega
@@ -135,6 +136,10 @@ contains
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_m = mom2_m / r
             mom2_p = mom2_p / r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 
@@ -232,12 +237,15 @@ contains
         ! dot with normal vector
         integrand = HALF*(flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3)
 
-
         !
         ! Convert to tangential to angular momentum flux
         !
         if (worker%coordinate_system() == 'Cylindrical') then
-            integrand = integrand * worker%coordinate('1','boundary')
+            integrand = integrand * r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
         call worker%integrate_boundary('Momentum-2',integrand)

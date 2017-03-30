@@ -26,7 +26,7 @@ subroutine test_fgmres_ref_solve()
     type(fgmres_t)              :: linear_solver
     
     real(rk)    :: tol
-    integer(ik) :: nterms_c, idomain, spacedim, imat, ielem, itime
+    integer(ik) :: nterms_c, idomain, spacedim, imat, ielem, itime, nelements_g
 
 
     tol             = 1.e-9_rk
@@ -60,7 +60,8 @@ subroutine test_fgmres_ref_solve()
     !
     ! Initialize domain
     !
-    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection','Cartesian')
+    nelements_g = 2
+    call chidg%data%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Scalar Advection','Cartesian')
 
     call chidg%set('Solution Order', integer_input=1)
     call chidg%init('domains')

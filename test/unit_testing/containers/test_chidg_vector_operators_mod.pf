@@ -88,7 +88,7 @@ contains
 
         type(point_t),  allocatable :: nodes(:)
         type(domain_connectivity_t) :: connectivity
-        integer(ik)                 :: nterms_c, spacedim
+        integer(ik)                 :: nterms_c, spacedim, nelements_g
 
         IO_DESTINATION = 'file'
 
@@ -107,9 +107,10 @@ contains
         !
         ! Add domain to ChiDG
         !
-        spacedim = 3
-        nterms_c = 8
-        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection','Cartesian')
+        spacedim    = 3
+        nterms_c    = 8
+        nelements_g = 8
+        call this%chidg%data%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Scalar Advection','Cartesian')
 
         call this%chidg%set('Solution Order', integer_input=this%solution_order)
         call this%chidg%init('domains')

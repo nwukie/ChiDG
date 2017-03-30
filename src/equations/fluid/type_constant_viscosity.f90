@@ -74,7 +74,7 @@ contains
         type(AD_D), dimension(:),   allocatable :: &
             viscosity, T
 
-        real(rk) :: mu0 = 0.1785_rk  ! [kg/(m*s)]
+        real(rk) :: mu0 = 2.0831e-5_rk  ! [kg/(m*s)]
 
         !
         ! Interpolate solution to quadrature nodes

@@ -4,7 +4,7 @@ module type_face
     use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX,                 &
                                       ZETA_MIN, ZETA_MAX, XI_DIR, ETA_DIR, ZETA_DIR,    &
                                       NO_INTERIOR_NEIGHBOR, NO_PROC,                    &
-                                      ONE, TWO, ORPHAN
+                                      ONE, TWO, ORPHAN, ZERO
 
     use type_point,             only: point_t
     use type_element,           only: element_t
@@ -376,8 +376,6 @@ contains
             invjac
 
 
-
-
         iface  = self%iface
         nnodes = self%gq%face%nnodes
 
@@ -406,7 +404,7 @@ contains
         !       12 = x-y  ;  13 = x-z  ;  23 = y-z
         !
         !   Cylindrical
-        !       12 = r-theta  ;  13 = r-z  ;  23 = theta-z
+        !       12 = r-theta  ;  13 = r-z      ;  23 = theta-z
         !
         select case (self%coordinate_system)
             case ('Cartesian')
@@ -423,36 +421,41 @@ contains
                 call chidg_signal(FATAL,"face%compute_quadrature_metrics: Invalid coordinate system. Choose 'Cartesian' or 'Cylindrical'.")
         end select
 
-
-
-        !
-        ! At each quadrature node, compute metric terms.
-        !
-        do inode = 1,nnodes
-            self%metric(1,1,inode) = scaling_23(inode)*d2deta(inode)*d3dzeta(inode) - scaling_23(inode)*d2dzeta(inode)*d3deta(inode)
-            self%metric(2,1,inode) = scaling_23(inode)*d2dzeta(inode)*d3dxi(inode)  - scaling_23(inode)*d2dxi(inode)*d3dzeta(inode)
-            self%metric(3,1,inode) = scaling_23(inode)*d2dxi(inode)*d3deta(inode)   - scaling_23(inode)*d2deta(inode)*d3dxi(inode)
-
-            self%metric(1,2,inode) = scaling_13(inode)*d1dzeta(inode)*d3deta(inode) - scaling_13(inode)*d1deta(inode)*d3dzeta(inode)
-            self%metric(2,2,inode) = scaling_13(inode)*d1dxi(inode)*d3dzeta(inode)  - scaling_13(inode)*d1dzeta(inode)*d3dxi(inode)
-            self%metric(3,2,inode) = scaling_13(inode)*d1deta(inode)*d3dxi(inode)   - scaling_13(inode)*d1dxi(inode)*d3deta(inode)
-
-            self%metric(1,3,inode) = scaling_12(inode)*d1deta(inode)*d2dzeta(inode) - scaling_12(inode)*d1dzeta(inode)*d2deta(inode)
-            self%metric(2,3,inode) = scaling_12(inode)*d1dzeta(inode)*d2dxi(inode)  - scaling_12(inode)*d1dxi(inode)*d2dzeta(inode)
-            self%metric(3,3,inode) = scaling_12(inode)*d1dxi(inode)*d2deta(inode)   - scaling_12(inode)*d1deta(inode)*d2dxi(inode)
-        end do
-
-        
         !
         ! compute inverse cell mapping jacobian terms
         !
         invjac = scaling_123 * (d1dxi*d2deta*d3dzeta - d1deta*d2dxi*d3dzeta - &
                                 d1dxi*d2dzeta*d3deta + d1dzeta*d2dxi*d3deta + &
                                 d1deta*d2dzeta*d3dxi - d1dzeta*d2deta*d3dxi)
-
-
-
         self%jinv = invjac
+
+
+
+        !
+        ! At each quadrature node, compute metric terms.
+        !
+        do inode = 1,nnodes
+            self%metric(1,1,inode) = ONE/self%jinv(inode) * scaling_23(inode) * (d2deta(inode)*d3dzeta(inode) - d2dzeta(inode)*d3deta(inode))
+            self%metric(2,1,inode) = ONE/self%jinv(inode) * scaling_23(inode) * (d2dzeta(inode)*d3dxi(inode)  - d2dxi(inode)*d3dzeta(inode) )
+            self%metric(3,1,inode) = ONE/self%jinv(inode) * scaling_23(inode) * (d2dxi(inode)*d3deta(inode)   - d2deta(inode)*d3dxi(inode)  )
+
+            self%metric(1,2,inode) = ONE/self%jinv(inode) * scaling_13(inode) * (d1dzeta(inode)*d3deta(inode) - d1deta(inode)*d3dzeta(inode))
+            self%metric(2,2,inode) = ONE/self%jinv(inode) * scaling_13(inode) * (d1dxi(inode)*d3dzeta(inode)  - d1dzeta(inode)*d3dxi(inode) )
+            self%metric(3,2,inode) = ONE/self%jinv(inode) * scaling_13(inode) * (d1deta(inode)*d3dxi(inode)   - d1dxi(inode)*d3deta(inode)  )
+
+            self%metric(1,3,inode) = ONE/self%jinv(inode) * scaling_12(inode) * (d1deta(inode)*d2dzeta(inode) - d1dzeta(inode)*d2deta(inode))
+            self%metric(2,3,inode) = ONE/self%jinv(inode) * scaling_12(inode) * (d1dzeta(inode)*d2dxi(inode)  - d1dxi(inode)*d2dzeta(inode) )
+            self%metric(3,3,inode) = ONE/self%jinv(inode) * scaling_12(inode) * (d1dxi(inode)*d2deta(inode)   - d1deta(inode)*d2dxi(inode)  )
+        end do
+
+        
+
+        !
+        ! Check for negative jacobians
+        !
+        if (any(self%jinv < ZERO)) call chidg_signal(FATAL,"face%compute_quadrature_metrics: Negative element jacobians detected. Check element quality and orientation.")
+
+
 
     end subroutine compute_quadrature_metrics
     !******************************************************************************************
@@ -475,7 +478,6 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !!  TODO: Generalize 2D physical coordinates. Currently assumes x-y.
     !!
     !!  @author Mayank Sharma + Matteo Ugolotti  
     !!  @date   11/5/2016
@@ -526,7 +528,7 @@ contains
         !       12 = x-y  ;  13 = x-z  ;  23 = y-z
         !
         !   Cylindrical
-        !       12 = r-theta  ;  13 = r-z  ;  23 = theta-z
+        !       12 = r-theta  ;  13 = r-z      ;  23 = theta-z
         !
         select case (self%coordinate_system)
             case ('Cartesian')
@@ -646,20 +648,35 @@ contains
 
         do iterm = 1,self%nterms_s
             do inode = 1,nnodes
+                !self%grad1(inode,iterm) = &
+                !    self%metric(1,1,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
+                !    self%metric(2,1,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
+                !    self%metric(3,1,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode)) 
+
+                !self%grad2(inode,iterm) = &
+                !    self%metric(1,2,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
+                !    self%metric(2,2,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
+                !    self%metric(3,2,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode)) 
+
+                !self%grad3(inode,iterm) = &
+                !    self%metric(1,3,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
+                !    self%metric(2,3,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
+                !    self%metric(3,3,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode))
+
                 self%grad1(inode,iterm) = &
-                    self%metric(1,1,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
-                    self%metric(2,1,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
-                    self%metric(3,1,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode)) 
+                    self%metric(1,1,inode) * self%gq%face%ddxi(inode,iterm,iface)   + &
+                    self%metric(2,1,inode) * self%gq%face%ddeta(inode,iterm,iface)  + &
+                    self%metric(3,1,inode) * self%gq%face%ddzeta(inode,iterm,iface) 
 
                 self%grad2(inode,iterm) = &
-                    self%metric(1,2,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
-                    self%metric(2,2,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
-                    self%metric(3,2,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode)) 
+                    self%metric(1,2,inode) * self%gq%face%ddxi(inode,iterm,iface)   + &
+                    self%metric(2,2,inode) * self%gq%face%ddeta(inode,iterm,iface)  + &
+                    self%metric(3,2,inode) * self%gq%face%ddzeta(inode,iterm,iface) 
 
                 self%grad3(inode,iterm) = &
-                    self%metric(1,3,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
-                    self%metric(2,3,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
-                    self%metric(3,3,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode))
+                    self%metric(1,3,inode) * self%gq%face%ddxi(inode,iterm,iface)   + &
+                    self%metric(2,3,inode) * self%gq%face%ddeta(inode,iterm,iface)  + &
+                    self%metric(3,3,inode) * self%gq%face%ddzeta(inode,iterm,iface) 
             end do
         end do
 
@@ -690,9 +707,9 @@ contains
     subroutine compute_quadrature_coords(self)
         class(face_t),  intent(inout)   :: self
         integer(ik)                     :: iface, inode
-        real(rk)                        :: x(self%gq%face%nnodes), &
-                                           y(self%gq%face%nnodes), &
-                                           z(self%gq%face%nnodes)
+        real(rk)                        :: c1(self%gq%face%nnodes), &
+                                           c2(self%gq%face%nnodes), &
+                                           c3(self%gq%face%nnodes)
 
         iface = self%iface
 
@@ -700,9 +717,9 @@ contains
         ! compute real coordinates associated with quadrature points
         !
         associate(gq_f => self%gqmesh%face)
-            x = matmul(gq_f%val(:,:,iface),self%coords%getvar(1,itime = 1))
-            y = matmul(gq_f%val(:,:,iface),self%coords%getvar(2,itime = 1))
-            z = matmul(gq_f%val(:,:,iface),self%coords%getvar(3,itime = 1))
+            c1 = matmul(gq_f%val(:,:,iface),self%coords%getvar(1,itime = 1))
+            c2 = matmul(gq_f%val(:,:,iface),self%coords%getvar(2,itime = 1))
+            c3 = matmul(gq_f%val(:,:,iface),self%coords%getvar(3,itime = 1))
         end associate
 
         
@@ -710,7 +727,7 @@ contains
         ! For each quadrature node, store real coordinates
         !
         do inode = 1,self%gq%face%nnodes
-            call self%quad_pts(inode)%set(x(inode),y(inode),z(inode))
+            call self%quad_pts(inode)%set(c1(inode),c2(inode),c3(inode))
         end do
 
     end subroutine compute_quadrature_coords
@@ -822,20 +839,6 @@ contains
 
     end function get_neighbor_face
     !******************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

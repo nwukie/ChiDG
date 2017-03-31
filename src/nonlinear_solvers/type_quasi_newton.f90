@@ -327,7 +327,7 @@ contains
                 !
                 !if (wcount == self%nwrite) then
                 !    if (data%eqnset(1)%get_name() == 'Euler') then
-                        call write_solution_hdf(data,'aachen_turbine_rotor_reorient.h5')
+                !        call write_solution_hdf(data,'aachen_turbine_rotor_reorient.h5')
                 !        write(filename,'(I2)') niter
                 !        call write_tecio_variables(data,trim(filename)//'.dat',niter)
                 !        wcount = 0

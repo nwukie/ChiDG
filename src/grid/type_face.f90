@@ -114,7 +114,8 @@ module type_face
         real(rk),           allocatable :: br2_vol(:,:)
 
         ! Face area
-        real(rk)                        :: area
+        real(rk)                        :: total_area
+        real(rk),           allocatable :: differential_areas(:)
 
         ! Logical tests
         logical :: geomInitialized     = .false.
@@ -492,7 +493,7 @@ contains
         real(rk)    :: d1dxi(self%gq%face%nnodes), d1deta(self%gq%face%nnodes), d1dzeta(self%gq%face%nnodes)
         real(rk)    :: d2dxi(self%gq%face%nnodes), d2deta(self%gq%face%nnodes), d2dzeta(self%gq%face%nnodes)
         real(rk)    :: d3dxi(self%gq%face%nnodes), d3deta(self%gq%face%nnodes), d3dzeta(self%gq%face%nnodes)
-        real(rk)    :: norm_mag(self%gq%face%nnodes), face_jinv(self%gq%face%nnodes)
+        real(rk)    :: norm_mag(self%gq%face%nnodes)
         real(rk)    :: scaling_12(self%gq%face%nnodes), scaling_13(self%gq%face%nnodes), &
                        scaling_23(self%gq%face%nnodes), scaling_123(self%gq%face%nnodes)
 
@@ -604,15 +605,17 @@ contains
 
         !
         ! The 'norm' component is really a normal vector scaled by the FACE inverse jacobian.
-        ! This is really an area scaling. We can compute the area scaling(jinv for the face),
-        ! by dividing taking the magnitude of the 'norm' vector.
+        ! This is really a differential area scaling. We can compute the area 
+        ! scaling(jinv for the face, different than jinv for the element),
+        ! by taking the magnitude of the 'norm' vector.
         !
-        face_jinv = norm_mag
+        self%differential_areas = norm_mag
+        !face_jinv = norm_mag
 
         !
-        ! Compute the face area by integrating the area scaling over the face
+        ! Compute the total face area by integrating the differential areas over the face
         !
-        self%area = sum(abs(face_jinv * self%gq%face%weights(:,iface)))
+        self%total_area = sum(abs(self%differential_areas * self%gq%face%weights(:,iface)))
 
 
     end subroutine compute_quadrature_normals

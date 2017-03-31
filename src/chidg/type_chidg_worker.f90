@@ -1673,7 +1673,7 @@ contains
 
         real(rk)    :: area
 
-        area = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%area
+        area = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%total_area
 
     end function face_area
     !**************************************************************************************

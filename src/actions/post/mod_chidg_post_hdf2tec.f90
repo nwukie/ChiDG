@@ -60,18 +60,10 @@ contains
 
 
 
-        !
-        ! Get grid, solution files
-        !
-
-
-
-
 
         !
         ! Get nterms_s and eqnset.
         !
-        !file_props = get_properties_hdf(filename)
         file_props = get_properties_hdf(solution_file)
 
         nterms_s    = file_props%nterms_s(1)
@@ -107,7 +99,6 @@ contains
         !
         ! Read solution modes from HDF5
         !
-        !call chidg%read_solution(filename)
         call chidg%read_solution(solution_file)
 
 

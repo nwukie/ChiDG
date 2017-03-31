@@ -430,27 +430,27 @@ contains
         
         ! XI_MIN
         test_area = ONE
-        @assertEqual(test_area,self%faces(XI_MIN)%area,tol)
+        @assertEqual(test_area,self%faces(XI_MIN)%total_area,tol)
         
         ! XI_MAX
         test_area = ONE
-        @assertEqual(test_area,self%faces(XI_MAX)%area,tol)
+        @assertEqual(test_area,self%faces(XI_MAX)%total_area,tol)
         
         ! ETA_MIN
         test_area = ONE
-        @assertEqual(test_area,self%faces(ETA_MIN)%area,tol)
+        @assertEqual(test_area,self%faces(ETA_MIN)%total_area,tol)
         
         ! ETA_MAX
         test_area = ONE
-        @assertEqual(test_area,self%faces(ETA_MAX)%area,tol)
+        @assertEqual(test_area,self%faces(ETA_MAX)%total_area,tol)
 
         ! ZETA_MIN
         test_area = ONE
-        @assertEqual(test_area,self%faces(ZETA_MIN)%area,tol)
+        @assertEqual(test_area,self%faces(ZETA_MIN)%total_area,tol)
         
         ! ZETA_MAX
         test_area = ONE
-        @assertEqual(test_area,self%faces(ZETA_MAX)%area,tol)
+        @assertEqual(test_area,self%faces(ZETA_MAX)%total_area,tol)
        
 
     end subroutine testElement_face_area

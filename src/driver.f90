@@ -134,7 +134,7 @@ program driver
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,1)
 
             ! rho_u
-            call constant%set_option('val',0.0_rk)
+            call constant%set_option('val',50.0_rk)
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,2)
 
             ! rho_v
@@ -142,7 +142,7 @@ program driver
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,3)
 
             ! rho_w
-            call constant%set_option('val',10.0_rk)
+            call constant%set_option('val',0.0_rk)
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,4)
 
             ! rho_E
@@ -262,6 +262,7 @@ program driver
         !
         if ( trim(chidg_action) == 'post' ) then
             call chidg_post(trim(grid_file), trim(solution_file))
+            call chidg_post_vtk(trim(grid_file), trim(solution_file))
 
         else
             call chidg_signal(FATAL,"chidg: unrecognized action '"//trim(chidg_action)//"'. Valid options are: 'edit', 'convert'")

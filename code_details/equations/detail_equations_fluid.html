@@ -298,7 +298,8 @@
             
   <div class="section" id="fluid-equations">
 <h1>Fluid Equations<a class="headerlink" href="#fluid-equations" title="Permalink to this headline">¶</a></h1>
-<p>Primary field variables for the fluid equations in ChiDG are <code class="docutils literal"><span class="pre">Density</span></code>, <code class="docutils literal"><span class="pre">Momentum</span></code>, and <code class="docutils literal"><span class="pre">Energy</span></code></p>
+<p>Primary field variables for the fluid equations in ChiDG are <code class="docutils literal"><span class="pre">Density</span></code>,
+<code class="docutils literal"><span class="pre">Momentum-1</span></code>, <code class="docutils literal"><span class="pre">Momentum-2</span></code>, <code class="docutils literal"><span class="pre">Momentum-3</span></code>, and <code class="docutils literal"><span class="pre">Energy</span></code></p>
 <div class="math">
 \[\begin{split}Q_{cart} =
 \begin{pmatrix}
@@ -313,7 +314,7 @@ Q_{cyl} =
 <p class="first admonition-title">Note</p>
 <p class="last">In <code class="docutils literal"><span class="pre">Cylindrical</span></code> coordinates, angular momentum, <span class="math">\(r \rho u_\theta\)</span>, is being conserved. Not tangential momentum, <span class="math">\(\rho u_\theta\)</span>.</p>
 </div>
-<p>The transformation of the <code class="docutils literal"><span class="pre">Momentum</span></code> vector between <code class="docutils literal"><span class="pre">Cartesian</span></code> and <code class="docutils literal"><span class="pre">Cylindrical</span></code> coordinates is</p>
+<p>The transformation of the momentum vector between <code class="docutils literal"><span class="pre">Cartesian</span></code> and <code class="docutils literal"><span class="pre">Cylindrical</span></code> coordinates is</p>
 <div class="math">
 \[\begin{split}\begin{bmatrix}
     \rho u_x \\ \rho u_y \\ \rho u_z
@@ -608,7 +609,7 @@ are computed.</p>
    \tau_{13} &amp;= \mu \bigg( \nabla_3 u + \nabla_1 w \bigg) \\
    \tau_{23} &amp;= \mu \bigg( \nabla_2 w + \nabla_3 v \bigg)\end{split}\]</div>
 <div class="math">
-\[\nabla \cdot \vec{u} = \bigg( \frac{\partial u}{\partial x} + \frac{\partial v}{\partial y} + \frac{\partial w}{\partial z} \bigg) = [\nabla_1 u + \nabla_2 v + \nabla_3 w]\]</div>
+\[\nabla \cdot \vec{u} = \bigg( \frac{\partial u}{\partial x} + \frac{\partial v}{\partial y} + \frac{\partial w}{\partial z} \bigg) = \bigg[ \nabla_1 u + \nabla_2 v + \nabla_3 w \bigg]\]</div>
 </div>
 <div class="section" id="id4">
 <h4>Cylindrical<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h4>
@@ -621,7 +622,7 @@ are computed.</p>
    \tau_{13} &amp;= \mu \bigg( \nabla_3 u + \nabla_1 w \quad\quad \bigg) \\
    \tau_{23} &amp;= \mu \bigg( \nabla_2 w + \nabla_3 v \quad\quad \bigg)\end{split}\]</div>
 <div class="math">
-\[\nabla \cdot \vec{u} = \bigg( \frac{1}{r}\frac{\partial r u}{\partial r} + \frac{1}{r}\frac{\partial v}{\partial \theta} + \frac{\partial w}{\partial z}\bigg)  =  \bigg( \frac{\partial u}{\partial r} + \frac{1}{r}\frac{\partial v}{\partial \theta} + \frac{\partial w}{\partial z}  +  \frac{u}{r} \bigg) = [\nabla_1 u + \nabla_2 v + \nabla_3 w + \frac{u}{r}]\]</div>
+\[\nabla \cdot \vec{u} = \bigg( \frac{1}{r}\frac{\partial r u}{\partial r} + \frac{1}{r}\frac{\partial v}{\partial \theta} + \frac{\partial w}{\partial z}\bigg)  =  \bigg( \frac{\partial u}{\partial r} + \frac{1}{r}\frac{\partial v}{\partial \theta} + \frac{\partial w}{\partial z}  +  \frac{u}{r} \bigg) = \bigg[\nabla_1 u + \nabla_2 v + \nabla_3 w + \frac{u}{r}\bigg]\]</div>
 </div>
 </div>
 <div class="section" id="temperature-gradient">

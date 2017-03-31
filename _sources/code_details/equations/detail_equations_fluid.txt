@@ -2,7 +2,8 @@
 Fluid Equations
 ===============
 
-Primary field variables for the fluid equations in ChiDG are ``Density``, ``Momentum``, and ``Energy``
+Primary field variables for the fluid equations in ChiDG are ``Density``, 
+``Momentum-1``, ``Momentum-2``, ``Momentum-3``, and ``Energy``
 
 
 .. math::
@@ -24,7 +25,7 @@ Primary field variables for the fluid equations in ChiDG are ``Density``, ``Mome
     In ``Cylindrical`` coordinates, angular momentum, :math:`r \rho u_\theta`, is being conserved. Not tangential momentum, :math:`\rho u_\theta`.
 
 
-The transformation of the ``Momentum`` vector between ``Cartesian`` and ``Cylindrical`` coordinates is
+The transformation of the momentum vector between ``Cartesian`` and ``Cylindrical`` coordinates is
 
 .. math::
 
@@ -390,7 +391,7 @@ Cartesian
 
 .. math::
 
-    \nabla \cdot \vec{u} = \bigg( \frac{\partial u}{\partial x} + \frac{\partial v}{\partial y} + \frac{\partial w}{\partial z} \bigg) = [\nabla_1 u + \nabla_2 v + \nabla_3 w]
+    \nabla \cdot \vec{u} = \bigg( \frac{\partial u}{\partial x} + \frac{\partial v}{\partial y} + \frac{\partial w}{\partial z} \bigg) = \bigg[ \nabla_1 u + \nabla_2 v + \nabla_3 w \bigg]
 
 Cylindrical
 ~~~~~~~~~~~
@@ -407,7 +408,7 @@ Cylindrical
 
 .. math::
 
-    \nabla \cdot \vec{u} = \bigg( \frac{1}{r}\frac{\partial r u}{\partial r} + \frac{1}{r}\frac{\partial v}{\partial \theta} + \frac{\partial w}{\partial z}\bigg)  =  \bigg( \frac{\partial u}{\partial r} + \frac{1}{r}\frac{\partial v}{\partial \theta} + \frac{\partial w}{\partial z}  +  \frac{u}{r} \bigg) = [\nabla_1 u + \nabla_2 v + \nabla_3 w + \frac{u}{r}]
+    \nabla \cdot \vec{u} = \bigg( \frac{1}{r}\frac{\partial r u}{\partial r} + \frac{1}{r}\frac{\partial v}{\partial \theta} + \frac{\partial w}{\partial z}\bigg)  =  \bigg( \frac{\partial u}{\partial r} + \frac{1}{r}\frac{\partial v}{\partial \theta} + \frac{\partial w}{\partial z}  +  \frac{u}{r} \bigg) = \bigg[\nabla_1 u + \nabla_2 v + \nabla_3 w + \frac{u}{r}\bigg]
 
 
 

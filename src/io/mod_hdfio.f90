@@ -25,7 +25,10 @@ module mod_hdfio
                                           open_domain_hdf, close_domain_hdf, initialize_file_hdf,        &
                                           initialize_file_structure_hdf, open_bc_group_hdf,              &
                                           close_bc_group_hdf, get_domain_nelements_hdf,                  &
-                                          get_domain_name_hdf, set_ntimes_hdf, get_ntimes_hdf
+                                          get_domain_name_hdf, set_ntimes_hdf, get_ntimes_hdf,           &
+                                          set_domain_connectivity_partition_hdf, set_domain_mapping_hdf, &
+                                          set_domain_dimensionality_hdf, set_domain_coordinates_hdf,     &
+                                          set_domain_coordinate_system_hdf, set_contains_grid_hdf
 
     use type_svector,               only: svector_t
     use mod_string,                 only: string_t
@@ -54,6 +57,7 @@ contains
     !!  -----------
     !!
     !!  read_grid_hdf
+    !!  write_grid_hdf
     !!
     !!  read_solution_hdf
     !!      read_domain_field_hdf
@@ -149,6 +153,12 @@ contains
 
 
             !
+            ! Get number of elements in the gobal domain
+            !
+            meshdata(iconn)%nelements_g = get_domain_nelements_hdf(domain_id)
+
+
+            !
             !  Get number of terms in coordinate expansion
             !
             mapping = get_domain_mapping_hdf(domain_id)
@@ -207,6 +217,147 @@ contains
     !****************************************************************************************
   
   
+
+
+
+
+
+
+
+
+
+
+
+    !>  Write grid to HDF file.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/21/2017
+    !!
+    !!  @param[inout]   data        chidg_data_t containing solution to be written
+    !!  @param[in]      filename    Character string of the file to be written to
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine write_grid_hdf(data,file_name)
+        type(chidg_data_t), intent(in)              :: data
+        character(*),       intent(in)              :: file_name
+
+
+        character(:),   allocatable     :: field_name, domain_name
+        integer(HID_T)                  :: fid, domain_id
+        integer(HSIZE_T)                :: adim
+        integer(ik)                     :: idom, ieqn, neqns, iwrite, spacedim, time, field_index, iproc, nelements_g, ielem
+        integer                         :: ierr, order_s
+        logical                         :: file_exists
+        integer(ik)                     :: itime, mapping, connectivity_size
+        integer(ik),    allocatable     :: elements(:,:)
+
+        !
+        ! Check for file existence
+        !
+        file_exists = check_file_exists_hdf(file_name)
+
+
+        !
+        ! Create new file if necessary
+        !
+        if (.not. file_exists) then
+
+                ! Create a new file
+                if (IRANK == GLOBAL_MASTER) then
+                    call initialize_file_hdf(file_name)
+                end if
+                call MPI_Barrier(ChiDG_COMM,ierr)
+
+                ! Initialize the file structure.
+                do iproc = 0,NRANK-1
+                    if (iproc == IRANK) then
+                        fid = open_file_hdf(file_name)
+                        call initialize_file_structure_hdf(fid,data)
+                        call close_file_hdf(fid)
+                    end if
+                    call MPI_Barrier(ChiDG_COMM,ierr)
+                end do
+
+            else
+
+        end if
+
+
+
+        !
+        ! Each process, write its own portion of the solution
+        !
+        do iwrite = 0,NRANK-1
+            if ( iwrite == IRANK ) then
+
+
+                fid = open_file_hdf(file_name)
+
+                !
+                ! Write solution for each domain
+                !
+                do idom = 1,data%ndomains()
+
+                    domain_name = data%info(idom)%name
+                    domain_id   = open_domain_hdf(fid,trim(domain_name))
+                    
+
+                    !
+                    ! Write domain attributes
+                    !
+                    mapping = data%mesh(idom)%nterms_s - 1
+                    spacedim = data%mesh(idom)%spacedim
+                    call set_domain_mapping_hdf(domain_id,mapping)
+                    call set_domain_dimensionality_hdf(domain_id, spacedim)
+
+
+                    !
+                    ! Write nodes
+                    !
+                    call set_domain_coordinates_hdf(domain_id,data%mesh(idom)%nodes)
+
+                    !
+                    ! Assemble element connectivities
+                    !
+                    connectivity_size = size(data%mesh(idom)%elems(1)%connectivity%data)
+                    
+                    if (allocated(elements)) deallocate(elements)
+                    allocate(elements(data%mesh(idom)%nelem, connectivity_size), stat=ierr)
+                    if (ierr /= 0) call AllocationError
+
+                    do ielem = 1,data%mesh(idom)%nelem
+                        elements(ielem,:) = data%mesh(idom)%elems(ielem)%connectivity%data
+                    end do
+
+
+                    ! Set elements
+                    nelements_g = data%mesh(idom)%get_nelements_global()
+                    call set_domain_connectivity_partition_hdf(domain_id,nelements_g,elements)
+
+                    ! Set coordinate system
+                    call set_domain_coordinate_system_hdf(domain_id,data%mesh(idom)%coordinate_system)
+
+                    ! Write equation set attribute
+                    call set_domain_equation_set_hdf(domain_id,trim(data%eqnset(idom)%name))
+
+
+
+                    call close_domain_hdf(domain_id)
+
+
+                end do ! idom
+
+
+                call set_contains_grid_hdf(fid,"True")
+                call close_file_hdf(fid)
+
+            end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do
+
+    end subroutine write_grid_hdf
+    !*****************************************************************************************
+
   
    
 
@@ -351,6 +502,7 @@ contains
         !
         ! Create new file if necessary
         !
+        call MPI_Barrier(ChiDG_COMM,ierr)
         if (.not. file_exists) then
 
                 ! Create a new file
@@ -377,6 +529,7 @@ contains
                 !call close_file_hdf(fid)
 
         end if
+        call MPI_Barrier(ChiDG_COMM,ierr)
 
 
 

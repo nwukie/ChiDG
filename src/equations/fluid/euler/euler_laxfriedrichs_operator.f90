@@ -1,6 +1,8 @@
 module euler_laxfriedrichs_operator
+#include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: TWO,HALF
+    use mod_constants,          only: ONE,TWO,HALF
+    use mod_fluid,              only: omega
     use type_operator,          only: operator_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
@@ -73,7 +75,7 @@ contains
 
     !>  Compute Lax-Friedrichs upwind flux
     !!
-    !!  Dissipation = -alpha(u_m - u_p)
+    !!  Dissipation = -alpha(u_a_m - u_a_p)
     !!
     !!  Alpha is the maximum wave speed
     !!
@@ -86,67 +88,88 @@ contains
         type(chidg_worker_t),                   intent(inout)   :: worker
         class(properties_t),                    intent(inout)   :: prop
 
-        ! Equation indices
-        integer(ik)     :: irho, irhou, irhov, irhow, irhoE
 
         ! Storage at quadrature nodes
-        type(AD_D), allocatable, dimension(:) :: &
-            rho_m,      rho_p,                   &
-            rhou_m,     rhou_p,                  &
-            rhov_m,     rhov_p,                  &
-            rhow_m,     rhow_p,                  &
-            rhoe_m,     rhoe_p,                  &
-            p_m,        p_p,                     &
-            un_m,       un_p,                    &
-            a_m,        a_p,                     &
-            wave_m,     wave_p,                  &
-            upwind,     wave,                    &
+        type(AD_D), allocatable, dimension(:) ::    &
+            density_m,      density_p,              &
+            mom1_m,         mom1_p,                 &
+            mom2_m,         mom2_p,                 &
+            mom3_m,         mom3_p,                 &
+            u_a_m,          u_a_p,                  &
+            v_a_m,          v_a_p,                  &
+            w_a_m,          w_a_p,                  &
+            energy_m,       energy_p,               &
+            p_m,            p_p,                    &
+            un_m,           un_p,                   &
+            a_m,            a_p,                    &
+            wave_m,         wave_p,                 &
+            upwind,         wave,                   &
             integrand
 
-        real(rk), allocatable, dimension(:)    :: &
-            norm_mag, normx, normy, normz, unormx, unormy, unormz
+        real(rk), allocatable, dimension(:)    ::   &
+            norm_1,  norm_2,  norm_3,               &
+            unorm_1, unorm_2, unorm_3,              &
+            r, area
 
         real(rk) :: gam_m, gam_p
-
-
-        irho  = prop%get_primary_field_index('Density'   )
-        irhou = prop%get_primary_field_index('Momentum-1')
-        irhov = prop%get_primary_field_index('Momentum-2')
-        irhow = prop%get_primary_field_index('Momentum-3')
-        irhoE = prop%get_primary_field_index('Energy'    )
-
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho_m  = worker%get_primary_field_face('Density'   , 'value', 'face interior')
-        rho_p  = worker%get_primary_field_face('Density'   , 'value', 'face exterior')
+        density_m = worker%get_primary_field_face('Density'   , 'value', 'face interior')
+        density_p = worker%get_primary_field_face('Density'   , 'value', 'face exterior')
 
-        rhou_m = worker%get_primary_field_face('Momentum-1', 'value', 'face interior')
-        rhou_p = worker%get_primary_field_face('Momentum-1', 'value', 'face exterior')
+        mom1_m    = worker%get_primary_field_face('Momentum-1', 'value', 'face interior')
+        mom1_p    = worker%get_primary_field_face('Momentum-1', 'value', 'face exterior')
 
-        rhov_m = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
-        rhov_p = worker%get_primary_field_face('Momentum-2', 'value', 'face exterior')
+        mom2_m    = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
+        mom2_p    = worker%get_primary_field_face('Momentum-2', 'value', 'face exterior')
 
-        rhow_m = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
-        rhow_p = worker%get_primary_field_face('Momentum-3', 'value', 'face exterior')
+        mom3_m    = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
+        mom3_p    = worker%get_primary_field_face('Momentum-3', 'value', 'face exterior')
 
-        rhoE_m = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
-        rhoE_p = worker%get_primary_field_face('Energy'    , 'value', 'face exterior')
-
-
+        energy_m  = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
+        energy_p  = worker%get_primary_field_face('Energy'    , 'value', 'face exterior')
 
 
+        !
+        ! Account for cylindrical. Get tangential momentum from angular momentum.
+        !
+        r = worker%coordinate('1','boundary')
+        if (worker%coordinate_system() == 'Cylindrical') then
+            mom2_m = mom2_m / r
+            mom2_p = mom2_p / r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
+        end if
 
 
-        normx  = worker%normal(1)
-        normy  = worker%normal(2)
-        normz  = worker%normal(3)
+        !
+        ! Get normal vectors
+        !
+        norm_1  = worker%normal(1)
+        norm_2  = worker%normal(2)
+        norm_3  = worker%normal(3)
 
-        unormx = worker%unit_normal(1)
-        unormy = worker%unit_normal(2)
-        unormz = worker%unit_normal(3)
+        unorm_1 = worker%unit_normal(1)
+        unorm_2 = worker%unit_normal(2)
+        unorm_3 = worker%unit_normal(3)
+
+
+
+        !
+        ! Fluid advection velocity
+        !
+        u_a_m = worker%get_model_field_face('Advection Velocity-1', 'value', 'face interior')
+        v_a_m = worker%get_model_field_face('Advection Velocity-2', 'value', 'face interior')
+        w_a_m = worker%get_model_field_face('Advection Velocity-3', 'value', 'face interior')
+
+        u_a_p = worker%get_model_field_face('Advection Velocity-1', 'value', 'face exterior')
+        v_a_p = worker%get_model_field_face('Advection Velocity-2', 'value', 'face exterior')
+        w_a_p = worker%get_model_field_face('Advection Velocity-3', 'value', 'face exterior')
 
 
 
@@ -154,10 +177,6 @@ contains
         !
         ! Compute pressure and gamma
         !
-        !p_m = prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
-        !p_p = prop%fluid%compute_pressure(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
-        !gam_m = prop%fluid%compute_gamma(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
-        !gam_p = prop%fluid%compute_gamma(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
         p_m = worker%get_model_field_face('Pressure','value','face interior')
         p_p = worker%get_model_field_face('Pressure','value','face exterior')
         gam_m = 1.4_rk
@@ -167,15 +186,15 @@ contains
         !
         ! Compute normal velocities: dot-product vector projection along unit-normal direction
         !
-        un_m = unormx*(rhou_m/rho_m) + unormy*(rhov_m/rho_m) + unormz*(rhow_m/rho_m)
-        un_p = unormx*(rhou_p/rho_p) + unormy*(rhov_p/rho_p) + unormz*(rhow_p/rho_p)
+        un_m = unorm_1*(u_a_m) + unorm_2*(v_a_m) + unorm_3*(w_a_m)
+        un_p = unorm_1*(u_a_p) + unorm_2*(v_a_p) + unorm_3*(w_a_p)
 
         
         !
         ! Compute speed of sound
         !
-        a_m = sqrt(abs(gam_m * p_m / rho_m))
-        a_p = sqrt(abs(gam_p * p_p / rho_p))
+        a_m = sqrt(abs(gam_m * p_m / density_m))
+        a_p = sqrt(abs(gam_p * p_p / density_p))
 
 
         !
@@ -183,55 +202,73 @@ contains
         !
         wave_m = abs(un_m) + a_m
         wave_p = abs(un_p) + a_p
+
         wave   = max(wave_m,wave_p)
 
 
-        norm_mag = sqrt(normx**TWO + normy**TWO + normz**TWO)
+        area = sqrt(norm_1**TWO + norm_2**TWO + norm_3**TWO)
 
-        !================================
-        !       MASS FLUX
-        !================================
-        upwind = -wave*(rho_p - rho_m)
+        !===================================================
+        ! mass flux
+        !===================================================
+        upwind = -wave*(density_p - density_m)
 
-        integrand = HALF * upwind * norm_mag
+        !integrand = HALF*(upwind*norm_1*unorm_1  +  upwind*norm_2*unorm_2  +  upwind*norm_3*unorm_3)
+        integrand = HALF*upwind*area
 
         call worker%integrate_boundary('Density',integrand)
 
 
-        !================================
-        !       X-MOMENTUM FLUX
-        !================================
-        upwind = -wave*(rhou_p - rhou_m)
+        !===================================================
+        ! momentum-1 flux
+        !===================================================
+        upwind = -wave*(mom1_p - mom1_m)
 
-        integrand = HALF * upwind * norm_mag
+        !integrand = HALF*(upwind*norm_1*unorm_1  +  upwind*norm_2*unorm_2  +  upwind*norm_3*unorm_3)
+        integrand = HALF*upwind*area
+
 
         call worker%integrate_boundary('Momentum-1',integrand)
 
 
-        !================================
-        !       Y-MOMENTUM FLUX
-        !================================
-        upwind = -wave*(rhov_p - rhov_m)
+        !===================================================
+        ! momentum-2 flux
+        !===================================================
+        upwind = -wave*(mom2_p - mom2_m)
 
-        integrand = HALF * upwind * norm_mag
+        !integrand = HALF*(upwind*norm_1*unorm_1  +  upwind*norm_2*unorm_2  +  upwind*norm_3*unorm_3)
+        integrand = HALF*upwind*area
+
+        !
+        ! Convert to tangential to angular momentum flux
+        !
+        if (worker%coordinate_system() == 'Cylindrical') then
+            integrand = integrand * r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
+        end if
 
         call worker%integrate_boundary('Momentum-2',integrand)
 
-        !================================
-        !       Z-MOMENTUM FLUX
-        !================================
-        upwind = -wave*(rhow_p - rhow_m)
+        !===================================================
+        ! momentum-3 flux
+        !===================================================
+        upwind = -wave*(mom3_p - mom3_m)
 
-        integrand = HALF * upwind * norm_mag
+        !integrand = HALF*(upwind*norm_1*unorm_1  +  upwind*norm_2*unorm_2  +  upwind*norm_3*unorm_3)
+        integrand = HALF*upwind*area
 
         call worker%integrate_boundary('Momentum-3',integrand)
 
-        !================================
-        !          ENERGY FLUX
-        !================================
-        upwind = -wave*(rhoE_p - rhoE_m)
+        !===================================================
+        ! energy flux
+        !===================================================
+        upwind = -wave*(energy_p - energy_m)
 
-        integrand = HALF * upwind * norm_mag
+        !integrand = HALF*(upwind*norm_1*unorm_1  +  upwind*norm_2*unorm_2  +  upwind*norm_3*unorm_3)
+        integrand = HALF*upwind*area
 
         call worker%integrate_boundary('Energy',integrand)
 

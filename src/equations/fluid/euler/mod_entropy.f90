@@ -95,6 +95,10 @@ contains
                     rhow = interpolate_element_standard(mesh,sdata%q,idom,ielem,irhow,1, 'value')
                     rhoE = interpolate_element_standard(mesh,sdata%q,idom,ielem,irhoE,1, 'value')
 
+                    if (mesh(idom)%elems(ielem)%coordinate_system == 'Cylindrical') then
+                        rhov = rhov / mesh(idom)%elems(ielem)%quad_pts(:)%c1_
+                    end if
+
 
                     !
                     ! Compute pressure

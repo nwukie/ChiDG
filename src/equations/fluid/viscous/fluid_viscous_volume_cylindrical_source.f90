@@ -1,4 +1,5 @@
 module fluid_viscous_volume_cylindrical_source
+#include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ONE,TWO,HALF
 
@@ -71,14 +72,15 @@ contains
     !!
     !!------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(fluid_viscous_volume_cylindrical_source_t), intent(inout)   :: self
-        type(chidg_worker_t),                       intent(inout)   :: worker
-        class(properties_t),                        intent(inout)   :: prop
+        class(fluid_viscous_volume_cylindrical_source_t),   intent(inout)   :: self
+        type(chidg_worker_t),                               intent(inout)   :: worker
+        class(properties_t),                                intent(inout)   :: prop
 
 
         type(AD_D), allocatable, dimension(:) ::    &
             tau_22, source 
 
+        real(rk),   allocatable, dimension(:) :: r
 
 
 
@@ -94,13 +96,25 @@ contains
         if (worker%coordinate_system() == 'Cylindrical') then
 
             !
+            ! Get radius
+            !
+            r = worker%coordinate('1','volume')
+
+            !
             ! get shear stress
             !
             tau_22 = worker%get_model_field_element('Shear-22','value')
 
-            source = -tau_22 / worker%coordinate('1','volume')
+            source = -tau_22 / r
 
             call worker%integrate_volume('Momentum-1',source)
+
+
+
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
 
         end if
 

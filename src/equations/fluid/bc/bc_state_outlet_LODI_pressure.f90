@@ -1,4 +1,4 @@
-module bc_state_outlet_point_pressure
+module bc_state_outlet_LODI_pressure
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, HALF, TWO, NO_PROC
@@ -39,7 +39,7 @@ module bc_state_outlet_point_pressure
     !!  @date   1/31/2016
     !!
     !----------------------------------------------------------------------------------------
-    type, public, extends(bc_state_t) :: outlet_point_pressure_t
+    type, public, extends(bc_state_t) :: outlet_LODI_pressure_t
 
         !
         ! Data initialized in init_bc_specialized that defines at which particular
@@ -50,13 +50,21 @@ module bc_state_outlet_point_pressure
         integer(ik) :: node_iface      = 0
         integer(ik) :: node_index      = 0
 
+
+        !
+        ! Average pressure
+        !
+        real(rk)    :: p_avg
+
     contains
 
         procedure   :: init                 ! Set-up bc state with options/name etc.
         procedure   :: init_bc_specialized  ! Implement specialized initialization procedure
         procedure   :: compute_bc_state     ! boundary condition function implementation
 
-    end type outlet_point_pressure_t
+        procedure   :: update_average_pressure
+
+    end type outlet_LODI_pressure_t
     !****************************************************************************************
 
 
@@ -73,7 +81,7 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(outlet_point_pressure_t),   intent(inout) :: self
+        class(outlet_LODI_pressure_t),   intent(inout) :: self
         
         !
         ! Set name, family
@@ -111,7 +119,7 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init_bc_specialized(self,mesh,bc_patch,bc_COMM)
-        class(outlet_point_pressure_t), intent(inout)   :: self
+        class(outlet_LODI_pressure_t), intent(inout)   :: self
         type(mesh_t),                   intent(in)      :: mesh(:)
         type(bc_patch_t),               intent(in)      :: bc_patch(:)
         type(mpi_comm),                 intent(in)      :: bc_comm
@@ -192,7 +200,7 @@ contains
         !
         ! Get rank of current proc in bc communicator and total number of ranks
         !
-        user_msg = "bc_state_outlet_point_pressure%init_bc_specialized: The mpi communicator passed &
+        user_msg = "bc_state_outlet_LODI_pressure%init_bc_specialized: The mpi communicator passed &
                     in was detected as a Null communicator and is invalid for use. Something must have &
                     gone wrong, possibly in bc_t or at a previous point during initialization."
         if (bc_COMM == MPI_COMM_NULL) call chidg_signal(FATAL,user_msg)
@@ -228,11 +236,111 @@ contains
 
 
     end subroutine init_bc_specialized
-    !********************************************************************************
+    !******************************************************************************************
 
 
 
 
+
+
+    !>  Update the area-averaged pressure for the boundary condition.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/31/2017
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    subroutine update_average_pressure(self,worker,prop,bc_patch,bc_COMM)
+        class(outlet_LODI_pressure_t),  intent(inout)   :: self
+        type(chidg_worker_t),           intent(inout)   :: worker
+        class(properties_t),            intent(inout)   :: prop
+        type(bc_patch_t),               intent(in)      :: bc_patch(:)
+        type(mpi_comm),                 intent(in)      :: bc_comm
+
+
+        real(rk),   allocatable, dimension(:)   :: &
+            density, mom_1, mom_2, mom_3, energy, p
+            weights, areas
+
+        integer(ik) :: ipatch, iface_bc, idomain_l, ielement_l, iface
+        real(rk)    :: face_area, bc_area, p_integral face_contribution
+
+        !
+        ! Zero integrated quantities
+        !
+        p_integral = ZERO
+        bc_area    = ZERO
+
+
+        !
+        ! Each processor, compute local portion of integral
+        !
+        do ipatch = 1,size(bc_patch)
+            do iface_bc = 1,bc_patch(ipatch)%nfaces()
+
+
+                !
+                ! get face location in local mesh
+                !
+                idomain_l  = bc_patch(ipatch)%idomain_l_%at(iface_bc)
+                ielement_l = bc_patch(ipatch)%ielement_l_%at(iface_bc)
+                iface      = bc_patch(ipatch)%iface_%at(iface_bc)
+
+
+
+                !
+                ! Get solution
+                !
+                density = interpolate_face_general()
+                mom_1   = interpolate_face_general()
+                mom_2   = interpolate_face_general()
+                mom_3   = interpolate_face_general()
+                energy  = interpolate_face_general()
+
+
+                !
+                ! Compute pressure over the face
+                !
+                p = (gam - ONE)*(energy - HALF*density*(u*u + v*v + w*w)
+
+                !
+                ! Get weights + areas
+                !
+                weights   = worker%mesh(idomain_l)%faces(ielement_l,iface)%gq%face%weights(:,iface)
+                areas     = worker%mesh(idomain_l)%faces(ielement_l,iface)%differential_areas
+                face_area = worker%mesh(idomain_l)%faces(ielement_l,iface)%total_area
+
+                !
+                ! Integrate and contribute to average
+                !
+                face_contribution = sum(p * areas * weights)
+
+                !
+                !
+                !
+                p_integral = integral + face_contribution
+                bc_area    = bc_area  + face_area
+
+
+            end do
+        end do
+
+
+
+        !
+        ! Reduce p_integral contributions and distribute
+        !
+        call MPI_AllReduce(p_integral, 1, MPI_REAL8, GLOBAL_MASTER, bc_COMM, ierr)
+
+        !
+        ! Reduct bc_area contributions and distribute
+        !
+        call MPI_AllReduce(bc_area, 1, MPI_REAL8, GLOBAL_MASTER, bc_COMM, ierr)
+
+
+
+    end subroutine update_average_pressure
+    !*******************************************************************************************
 
 
 
@@ -250,7 +358,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop)
-        class(outlet_point_pressure_t), intent(inout)   :: self
+        class(outlet_LODI_pressure_t),  intent(inout)   :: self
         type(chidg_worker_t),           intent(inout)   :: worker
         class(properties_t),            intent(inout)   :: prop
 
@@ -439,4 +547,4 @@ contains
 
 
 
-end module bc_state_outlet_point_pressure
+end module bc_state_outlet_LODI_pressure

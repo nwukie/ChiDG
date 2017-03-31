@@ -1,6 +1,7 @@
 module bc_state_wall
+#include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: TWO, HALF, ZERO
+    use mod_constants,          only: TWO, HALF, ZERO, ONE
     use type_bc_state,          only: bc_state_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
@@ -90,14 +91,17 @@ contains
 
 
         ! Storage at quadrature nodes
-        type(AD_D), allocatable, dimension(:)   ::      &
-            density_m,  mom1_m,  mom2_m,  mom3_m,  energy_m,  &
-            density_bc, mom1_bc, mom2_bc, mom3_bc, energy_bc, &
+        type(AD_D), allocatable, dimension(:)   ::                      &
+            density_m,  mom1_m,  mom2_m,  mom3_m,  energy_m,            &
+            density_bc, mom1_bc, mom2_bc, mom3_bc, energy_bc,           &
             drho_dx_m, drhou_dx_m, drhov_dx_m, drhow_dx_m, drhoE_dx_m,  &
             drho_dy_m, drhou_dy_m, drhov_dy_m, drhow_dy_m, drhoE_dy_m,  &
             drho_dz_m, drhou_dz_m, drhov_dz_m, drhow_dz_m, drhoE_dz_m,  &
-            u_m, v_m, w_m, VMag2
+            u_m, v_m, w_m, p_m, normal_velocity, normal_velocity_1, normal_velocity_2, normal_velocity_3
 
+        real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3, r
+        real(rk)                                :: gam = 1.4_rk
+    
 
 
         !
@@ -114,13 +118,15 @@ contains
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
+        r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
-            mom2_m = mom2_m / worker%coordinate('1','boundary')
+            mom2_m = mom2_m / r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
     
-
-
-
 
 
         drho_dx_m  = worker%get_primary_field_face('Density'   , 'grad1', 'face interior')
@@ -144,6 +150,12 @@ contains
         drhoE_dz_m = worker%get_primary_field_face('Energy'    , 'grad3', 'face interior')
 
 
+        !
+        ! Get normal vectors
+        !
+        unorm_1 = worker%unit_normal(1)
+        unorm_2 = worker%unit_normal(2)
+        unorm_3 = worker%unit_normal(3)
 
 
 
@@ -161,16 +173,29 @@ contains
         mom3_bc = ZERO
 
 
+        !
+        ! We want:  W dot n = 0
+        !
         u_m = mom1_m/density_m
         v_m = mom2_m/density_m
         w_m = mom3_m/density_m
 
-        VMag2 = u_m*u_m + v_m*v_m + w_m*w_m
 
         !
-        ! Energy subtract momentum
+        ! Energy subtract change in kinetic energy
         !
-        energy_bc = energy_m - (density_m*HALF)*VMag2
+        energy_bc = energy_m - (density_m*HALF)*(u_m*u_m  +  v_m*v_m  +  w_m*w_m)
+
+
+
+        if (worker%coordinate_system() == 'Cylindrical') then
+            mom2_bc = mom2_bc * r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
+        end if
+
 
 
         !

@@ -15,7 +15,7 @@ subroutine test_blockvector_distribute()
     type(point_t),  allocatable :: nodes(:)
     type(domain_connectivity_t) :: connectivity
     real(rk),       allocatable :: fullvec(:)
-    integer(ik)                 :: idomain, nterms_c, spacedim
+    integer(ik)                 :: idomain, nterms_c, spacedim, nelements_g
 
 
 
@@ -36,10 +36,11 @@ subroutine test_blockvector_distribute()
     !
     ! Call domain initialization
     !
-    idomain  = 1
-    spacedim = 3
-    nterms_c = 8
-    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection','Cartesian')
+    idomain     = 1
+    spacedim    = 3
+    nterms_c    = 8
+    nelements_g = 4
+    call chidg%data%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Scalar Advection','Cartesian')
 
     call chidg%set('Solution Order', integer_input=2)
     call chidg%init('domains')

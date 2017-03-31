@@ -66,20 +66,22 @@ contains
         call this%chidg%start_up('core')
         allocate(this%faces(6))
         
-        ! ( r = 1-2  ::  theta = 0-pi/2  ::  z = 0-1 )
+        ! !( r = 1-2  ::  theta = 0-pi/2  ::  z = 0-1 )
+        !
+        ! ( theta = 0-pi/2  ::  r = 1-2  ::  z = 0-1 )
         !           
         !                           theta
-        !                           *--_
-        !                               -
+        !                           ---_
+        !                               >
         !          _-------_ _------_
         !        _-         -_       -_
         !       -             -        -
-        !      *              *--------*     * r
+        !      *              *--------*     ^ r
         !       \   _----_   /        /     /  
         !        \ -      - /        /     /
         !         *        *--------*
         !
-        !                    ----* z
+        !                    ----> z
         !
         call nodes(1)%set(1._rk, 0._rk,  0._rk)
         call nodes(2)%set(2._rk, 0._rk,  0._rk)
@@ -89,6 +91,14 @@ contains
         call nodes(6)%set(2._rk, 0._rk,  1._rk)
         call nodes(7)%set(1._rk, PI/TWO, 1._rk)
         call nodes(8)%set(2._rk, PI/TWO, 1._rk)
+        !call nodes(1)%set(0._rk,  1._rk, 0._rk)
+        !call nodes(2)%set(PI/TWO, 1._rk, 0._rk)
+        !call nodes(3)%set(0._rk,  2._rk, 0._rk)
+        !call nodes(4)%set(PI/TWO, 2._rk, 0._rk)
+        !call nodes(5)%set(0._rk,  1._rk, 1._rk)
+        !call nodes(6)%set(PI/TWO, 1._rk, 1._rk)
+        !call nodes(7)%set(0._rk,  2._rk, 1._rk)
+        !call nodes(8)%set(PI/TWO, 2._rk, 1._rk)
         this%nodes = nodes
 
         mapping = 1
@@ -218,6 +228,10 @@ contains
     !!      2,2  =  [dr/dxi][dz/dzeta]      - [dr/dzeta][dz/dxi]       = [1/2][1/2]      - [0][0] = 1/4
     !!      3,3  =  [dr/dxi][dtheta/deta]   - [dr/deta][dtheta/dxi]    = [1/2][(pi/2)/2] - [0][0] = pi/8
     !!
+    !!      !1,1  =  [dr/deta][dz/dzeta]     - [dr/dzeta][dz/deta]       = [1/2][1/2]      - [0][0] = 1/4
+    !!      !2,2  =  [dtheta/dxi][dz/dzeta]  - [dtheta/dzeta][dz/dxi]    = [pi/2][1/2]     - [0][0] = pi/8
+    !!      !3,3  =  [dtheta/dxi][dr/deta]   - [dtheta/deta][dr/dxi]     = [1/2][(pi/2)/2] - [0][0] = pi/8
+    !!
     !!  Terms with theta influence get scaled by (r).
     !!
     !!-------------------------------------------------------------------------------------
@@ -226,18 +240,21 @@ contains
         class(test_element_linearD),    intent(inout)   :: self
 
         real(rk)    :: test_metric(3,3,self%elem%gq%vol%nnodes)
-        
-        test_metric(1,1,:) = (PI/8._rk) * self%elem%quad_pts(:)%c1_
-        test_metric(2,1,:) = ZERO       * self%elem%quad_pts(:)%c1_
-        test_metric(3,1,:) = ZERO       * self%elem%quad_pts(:)%c1_
-        test_metric(1,2,:) = ZERO
-        test_metric(2,2,:) = (ONE/FOUR)
-        test_metric(3,2,:) = ZERO
-        test_metric(1,3,:) = ZERO       * self%elem%quad_pts(:)%c1_
-        test_metric(2,3,:) = ZERO       * self%elem%quad_pts(:)%c1_
-        test_metric(3,3,:) = (PI/8._rk) * self%elem%quad_pts(:)%c1_
+        real(rk)    :: jinv(self%elem%gq%vol%nnodes)
 
-        @assertEqual(test_metric,self%elem%metric)
+        jinv = (PI/16._rk) * self%elem%quad_pts(:)%c1_
+        
+        test_metric(1,1,:) = (PI/8._rk) * self%elem%quad_pts(:)%c1_     / jinv
+        test_metric(2,1,:) = ZERO       * self%elem%quad_pts(:)%c1_     / jinv
+        test_metric(3,1,:) = ZERO       * self%elem%quad_pts(:)%c1_     / jinv
+        test_metric(1,2,:) = ZERO                                       / jinv
+        test_metric(2,2,:) = (ONE/FOUR)                                 / jinv
+        test_metric(3,2,:) = ZERO                                       / jinv
+        test_metric(1,3,:) = ZERO       * self%elem%quad_pts(:)%c1_     / jinv
+        test_metric(2,3,:) = ZERO       * self%elem%quad_pts(:)%c1_     / jinv
+        test_metric(3,3,:) = (PI/8._rk) * self%elem%quad_pts(:)%c1_     / jinv
+
+        @assertEqual(test_metric,self%elem%metric, 1.e-14_rk)
         
     end subroutine testElement_metric
     !***************************************************************************************
@@ -374,17 +391,17 @@ contains
 
     !>  Test physical gradient(component 1) of basis functions at quadrature nodes.
     !!
-    !!  grad1 = [ (dxi/dr)(df/dxi) + (deta/dr)(df/deta) + (dzeta/dr)(df/dzeta) ] * J
+    !!  grad1 = [ (dxi/dtheta)(df/dxi) + (deta/dtheta)(df/deta) + (dzeta/dtheta)(df/dzeta) ] * J
     !!
     !!  For this element configuration, the cross derivative coupling is zero so the 
     !!  formula simplifies to:
     !!
-    !!  grad1 = (dxi/dr)(df/dxi)(J)
+    !!  !!grad1 = (deta/dtheta)(df/deta)(J)
+    !!  grad1 = (dxi/dtheta)(df/dxi)(J)
     !!
     !!  Also note:
-    !!      - there is r-scaling in (dxi/dr). 
+    !!      - there is no r-scaling in (deta/dtheta). 
     !!      - there is r-scaling in Jinv leading to 1/r because of multiplication by J
-    !!      - these cancel, so no r scaling
     !!
     !------------------------------------------------------------------------------------------
     @Test
@@ -397,11 +414,10 @@ contains
         
         tol = 1.e-14_rk
         
+        
         xi   = self%elem%gq%vol%nodes(:)%c1_
         eta  = self%elem%gq%vol%nodes(:)%c2_
         zeta = self%elem%gq%vol%nodes(:)%c3_
-        
-        
         
         test(:,1) = ZERO                ! Mode 1
         test(:,2) = ZERO                ! Mode 2
@@ -411,7 +427,7 @@ contains
         test(:,6) = TWO * zeta          ! Mode 6
         test(:,7) = ZERO                ! Mode 7
         test(:,8) = TWO * eta * zeta    ! Mode 8
-
+        
         @assertEqual(test,self%elem%grad1,tol)
 
     end subroutine testElement_grad1
@@ -424,16 +440,17 @@ contains
 
     !>  Test physical gradients(component 2) of basis functions at quadrature nodes.
     !!
-    !!  grad2 = [ (dxi/dtheta)(df/dxi) + (deta/dtheta)(df/deta) + (dzeta/dtheta)(df/dzeta) ] * J
+    !!  grad2 = [ (dxi/dr)(df/dxi) + (deta/dr)(df/deta) + (dzeta/dr)(df/dzeta) ] * J
     !!
     !!  For this element configuration, the cross derivative coupling is zero so the 
     !!  formula simplifies to:
     !!
-    !!  grad2 = (deta/dtheta)(df/deta)(J)
+    !!  grad2 = (dxi/dr)(df/dxi)(J)
     !!
     !!  Also note:
-    !!      - there is no r-scaling in (deta/dtheta). 
+    !!      - there is r-scaling in (dxi/dr). 
     !!      - there is r-scaling in Jinv leading to 1/r because of multiplication by J
+    !!      - these cancel, so no r scaling
     !!
     !------------------------------------------------------------------------------------------
     @Test
@@ -452,7 +469,7 @@ contains
         zeta = self%elem%gq%vol%nodes(:)%c3_
         r    = self%elem%quad_pts(:)%c1_
         
-        
+
         test(:,1) = ZERO                                            ! Mode 1
         test(:,2) = (ONE/FOUR)*(16._rk/PI)*(ONE/r)                  ! Mode 2
         test(:,3) = ZERO                                            ! Mode 3
@@ -461,6 +478,7 @@ contains
         test(:,6) = ZERO                                            ! Mode 6
         test(:,7) = (ONE/FOUR)*(16._rk/PI)*(ONE/r) * zeta           ! Mode 7
         test(:,8) = (ONE/FOUR)*(16._rk/PI)*(ONE/r) * xi * zeta      ! Mode 8
+
 
         @assertEqual(test,self%elem%grad2,tol)
 
@@ -584,8 +602,8 @@ contains
         @assertEqual(test_norm_z,self%faces(ETA_MAX)%unorm(:,3),tol)
 
         ! ZETA_MIN
-        test_norm_r = ZERO
         test_norm_t = ZERO
+        test_norm_r = ZERO
         test_norm_z = -ONE
         
         @assertEqual(test_norm_r,self%faces(ZETA_MIN)%unorm(:,1),tol)
@@ -593,8 +611,8 @@ contains
         @assertEqual(test_norm_z,self%faces(ZETA_MIN)%unorm(:,3),tol)
         
         ! ZETA_MAX
-        test_norm_r = ZERO
         test_norm_t = ZERO
+        test_norm_r = ZERO
         test_norm_z = ONE
         
         @assertEqual(test_norm_r,self%faces(ZETA_MAX)%unorm(:,1),tol)
@@ -631,27 +649,27 @@ contains
         
         ! XI_MIN
         test_area = PI/TWO
-        @assertEqual(test_area,self%faces(XI_MIN)%area,tol)
+        @assertEqual(test_area,self%faces(XI_MIN)%total_area,tol)
         
         ! XI_MAX
         test_area = PI
-        @assertEqual(test_area,self%faces(XI_MAX)%area,tol)
+        @assertEqual(test_area,self%faces(XI_MAX)%total_area,tol)
         
         ! ETA_MIN
         test_area = ONE
-        @assertEqual(test_area,self%faces(ETA_MIN)%area,tol)
+        @assertEqual(test_area,self%faces(ETA_MIN)%total_area,tol)
         
         ! ETA_MAX
         test_area = ONE
-        @assertEqual(test_area,self%faces(ETA_MAX)%area,tol)
+        @assertEqual(test_area,self%faces(ETA_MAX)%total_area,tol)
 
         ! ZETA_MIN
         test_area = THREE*PI/FOUR
-        @assertEqual(test_area,self%faces(ZETA_MIN)%area,tol)
+        @assertEqual(test_area,self%faces(ZETA_MIN)%total_area,tol)
         
         ! ZETA_MAX
         test_area = THREE*PI/FOUR
-        @assertEqual(test_area,self%faces(ZETA_MAX)%area,tol)
+        @assertEqual(test_area,self%faces(ZETA_MAX)%total_area,tol)
        
 
     end subroutine testElement_face_area

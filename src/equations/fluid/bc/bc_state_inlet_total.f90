@@ -6,6 +6,7 @@ module bc_state_inlet_total
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use type_point,             only: point_t
+    use ieee_arithmetic
     use DNAD_D
     implicit none
 
@@ -108,7 +109,7 @@ contains
             T_bc,   vmag2_m, vmag, H_bc
 
 
-        integer(ik)                                 :: ierr
+        integer(ik)                                 :: ierr, igq
         real(rk)                                    :: gam_m, cp_m, M
         real(rk),       allocatable, dimension(:)   ::  &
             TT, n1, n2, n3, nmag, alpha, r, PT
@@ -182,8 +183,13 @@ contains
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
+        r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
-            mom2_m = mom2_m / worker%coordinate('1','boundary')
+            mom2_m = mom2_m / r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 
@@ -194,7 +200,6 @@ contains
         u_m = mom1_m/density_m
         v_m = mom2_m/density_m
         w_m = mom3_m/density_m
-
 
 
         !
@@ -217,7 +222,6 @@ contains
         !
         ! Compute boundary condition temperature and pressure
         !
-        !& HARDCODED GAMMA. HARDCODED CP
         gam_m = 1.4_rk
         cp_m  = 287.15_rk*(gam_m/(gam_m-ONE))
 
@@ -250,8 +254,9 @@ contains
         ! Account for cylindrical. Convert tangential momentum back to angular momentum.
         !
         if (worker%coordinate_system() == 'Cylindrical') then
-            mom2_bc = mom2_bc * worker%coordinate('1','boundary')
+            mom2_bc = mom2_bc * r
         end if
+
 
 
         !

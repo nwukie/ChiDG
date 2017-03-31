@@ -151,16 +151,11 @@ contains
             grad1_mom2 = (grad1_mom2/r) - mom2/r
             grad2_mom2 = (grad2_mom2/r)
             grad3_mom2 = (grad3_mom2/r)
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
-
-
-
-
-
-
-
-
-
 
 
 
@@ -169,7 +164,6 @@ contains
         !
         p = worker%get_model_field_general('Pressure', 'value')
         gam = 1.4_rk
-
 
 
 

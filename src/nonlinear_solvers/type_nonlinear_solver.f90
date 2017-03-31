@@ -25,6 +25,7 @@ module type_nonlinear_solver
         real(rk)        :: tol      = 1.e-13_rk     !< Convergence tolerance
         integer(ik)     :: nsteps   = 100           !< Max number of steps to take in the nonlinear solver
         integer(ik)     :: nwrite   = 100           !< Write data every 'nwrite' steps
+        logical         :: search   = .true.
 
 
         type(timer_t)   :: timer                    !< Timer data-type

@@ -32,6 +32,14 @@ as:
 
 
 
+The transformation between ``Cartesian`` and ``Cylindrical`` coordinates is given by
+
+.. math::
+
+    x &= r cos(\theta)       \quad\quad\quad r &= \sqrt{x^2 + y^2} \\
+    y &= r sin(\theta)       \quad\quad\quad \theta &= \text{atan2}(y,x) \\
+    z &= z                   \quad\quad\quad\quad\quad \: \: z &= z
+
 
 
 

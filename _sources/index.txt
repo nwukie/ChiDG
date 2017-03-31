@@ -40,7 +40,7 @@ equations using the discontinuous Galerkin method on Chimera-overset grids.
 
 .. image:: figures/icon_dg.png
     :width: 19 %
-    :target: ./code_details/equations/detail_equations.html
+    :target: ./code_details/equations/detail_equations_theory.html
 .. image:: figures/icon_curved.png
     :width: 19%
     :target: ./code_details/mesh/detail_mesh.html

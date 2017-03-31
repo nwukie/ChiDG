@@ -34,7 +34,7 @@
   
     <link rel="top" title="ChiDG 0.1 documentation" href="../../index.html"/>
         <link rel="up" title="Code details" href="../details_main.html"/>
-        <link rel="next" title="Boundary conditions" href="../boundary_conditions/detail_boundary_conditions.html"/>
+        <link rel="next" title="Theory + Abstractions" href="detail_equations_theory.html"/>
         <link rel="prev" title="Mesh" href="../mesh/detail_mesh.html"/> 
 
   
@@ -154,12 +154,18 @@
 </ul>
 </li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Equation Sets</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#mathematical-background">Mathematical background</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#chidg-operators">ChiDG Operators</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#registering-new-operators">Registering new operators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="detail_equations_theory.html">Theory + Abstractions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="detail_equations_theory.html#mathematical-background">Mathematical background</a></li>
+<li class="toctree-l4"><a class="reference internal" href="detail_equations_theory.html#chidg-operators">ChiDG Operators</a></li>
+<li class="toctree-l4"><a class="reference internal" href="detail_equations_theory.html#chidg-equation-sets">ChiDG Equation Sets</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#chidg-equation-sets">ChiDG Equation Sets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="detail_equations_fluid.html">Fluid Equations</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="detail_equations_fluid.html#fluid-advection">Fluid Advection</a></li>
+<li class="toctree-l4"><a class="reference internal" href="detail_equations_fluid.html#fluid-diffusion">Fluid Diffusion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="detail_equations_fluid.html#models">Models</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../boundary_conditions/detail_boundary_conditions.html">Boundary conditions</a><ul>
@@ -290,302 +296,11 @@
             
   <div class="section" id="equation-sets">
 <h1>Equation Sets<a class="headerlink" href="#equation-sets" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="mathematical-background">
-<h2>Mathematical background<a class="headerlink" href="#mathematical-background" title="Permalink to this headline">¶</a></h2>
-<p>The mathematical formulation used by ChiDG considers first a partial differential
-equation in conservation form</p>
-<div class="math">
-\[\frac{\partial Q}{\partial t} + \nabla \cdot \vec{F}(Q,\nabla Q) +
-S(Q,\nabla Q) = 0\]</div>
-<p>The solution(<span class="math">\(Q\)</span>) is expressed as an expansion in basis
-polynomials constructed as a tensor product of 1D Legendre polynomials as</p>
-<div class="math">
-\[Q(t,x,y,z) = \sum_{i=0}^N \sum_{j=0}^N \sum_{k=0}^N Q_{ijk}(t) \psi_i(x)
-\psi_j(y) \psi_k(z)\]</div>
-<div class="figure" id="id1">
-<img alt="../../_images/1d_dg.png" src="../../_images/1d_dg.png" />
-<p class="caption"><span class="caption-text"><strong>A representation of the discontinuous Galerkin method for 1D elements
-showing, in each element, a polynomial expansion that represents the
-solution in that element.</strong></span></p>
-</div>
-<p>Multiplying by a column of test functions <span class="math">\(\boldsymbol{\psi}\)</span> and applying
-Gauss&#8217; Divergence Theorem gives our working form of the discontinuous
-Galerkin method as</p>
-<div class="math">
-\[\int_{\Omega_e} \boldsymbol{\psi} \frac{\partial Q}{\partial t} d\Omega +
-\int_{\Gamma_e} \boldsymbol{\psi} \vec{F} \cdot \vec{n} d\Gamma -
-\int_{\Omega_e} \nabla \boldsymbol{\psi} \cdot \vec{F} d\Omega +
-\int_{\Omega_e} \boldsymbol{\psi} S d\Omega = 0\]</div>
-<table border="1" class="docutils">
-<colgroup>
-<col width="48%" />
-<col width="52%" />
-</colgroup>
-<tbody valign="top">
-<tr class="row-odd"><td colspan="2">A 1D DG Solution of a linear poisson equation</td>
-</tr>
-<tr class="row-even"><td><p class="first"><a class="reference internal" href="../../_images/1d_poisson_solution.png"><img alt="solution" src="../../_images/1d_poisson_solution.png" style="width: 370.8px; height: 139.2px;" /></a></p>
-<p class="last"><strong>Reconstructed solution</strong></p>
-</td>
-<td><blockquote class="first">
-<div><a class="reference internal" href="../../_images/1d_poisson_modes.png"><img alt="modes" src="../../_images/1d_poisson_modes.png" style="width: 372.0px; height: 140.0px;" /></a></div></blockquote>
-<p class="last"><strong>Polynomial modes that produce the solution</strong></p>
-</td>
-</tr>
-</tbody>
-</table>
-<p>There are three spatial integral operators in the equation above. These are the
-Boundary Integral, Volume Integral, and Source term Integral:</p>
-<table border="1" class="docutils">
-<colgroup>
-<col width="29%" />
-<col width="71%" />
-</colgroup>
-<tbody valign="top">
-<tr class="row-odd"><td><strong>Boundary Flux Integral</strong></td>
-<td><div class="first last math">
-\[\int_{\Gamma_e} \boldsymbol{\psi} \vec{F} \cdot \vec{n} d\Gamma\]</div>
-</td>
-</tr>
-<tr class="row-even"><td><strong>Volume Flux Integral</strong></td>
-<td><div class="first last math">
-\[\int_{\Omega_e} \nabla \boldsymbol{\psi} \cdot \vec{F} d\Omega\]</div>
-</td>
-</tr>
-<tr class="row-odd"><td><strong>Volume Source Integral</strong></td>
-<td><div class="first last math">
-\[\int_{\Omega_e} \boldsymbol{\psi} S d\Omega\]</div>
-</td>
-</tr>
-</tbody>
-</table>
-<p>In order to solve a set of equations in the discontinuous Galerkin framework, these
-integral functions must be implemented for the specific equation set being solved.
-It might not be, that each integral operator needs to be implemented, just the ones
-that represent the equation set being solved. So, for example, the Euler equations
-for nonlinear compressible flows do not have a source term, so there is no need
-to implement a volume source integral. In general, for conservation laws of the form</p>
-<div class="math">
-\[\nabla \cdot F(Q) = 0\]</div>
-<p>a <strong>Boundary Flux Integral</strong> and <strong>Volume Flux Integral</strong> will need to be implemented
-for the term <span class="math">\(F(Q)\)</span>. ChiDG represents each implemented integral operator as its
-own object, <code class="docutils literal"><span class="pre">operator_t</span></code>.</p>
-</div>
-<div class="section" id="chidg-operators">
-<h2>ChiDG Operators<a class="headerlink" href="#chidg-operators" title="Permalink to this headline">¶</a></h2>
-<p>The integral expressions in the discontinuous Galerkin formulation are
-represented in ChiDG as <code class="docutils literal"><span class="pre">operator_t</span></code> objects. Each new integral term
-that one wishes to implement is <em>extended</em> from the <code class="docutils literal"><span class="pre">operator_t</span></code>
-base class. These objects do not contain much data. Rather, they primarily
-hold a type-bound procedure <code class="docutils literal"><span class="pre">compute</span></code> that allows the function definition
-to be passed around, stored as an array of <code class="docutils literal"><span class="pre">operator_t</span></code>&#8216;s, etc.</p>
-<div class="highlight-Fortran"><div class="highlight"><pre><span></span><span class="k">type</span><span class="p">,</span> <span class="k">abstract</span> <span class="kd">::</span> <span class="n">operator_t</span>
-
-<span class="k">contains</span>
-
-<span class="k">    procedure</span><span class="p">,</span> <span class="k">deferred</span>   <span class="kd">::</span> <span class="n">init</span>
-    <span class="k">procedure</span><span class="p">,</span> <span class="k">deferred</span>   <span class="kd">::</span> <span class="n">compute</span>
-
-<span class="k">end type </span><span class="n">operator_t</span>
-</pre></div>
-</div>
-<p>When a new operator is defined, it is required that the class type-bound procedures
-<code class="docutils literal"><span class="pre">init</span></code> and <code class="docutils literal"><span class="pre">compute</span></code> also be implemented. These are not implemented for
-the abstract base class because they do not have any meaning until they
-are associated with a specific implementation.</p>
-<dl class="function">
-<dt id="init">
-<code class="descname">init</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#init" title="Permalink to this definition">¶</a></dt>
-<dd><p>The operator initializaton routine requires several bits of information to be implemented
-when defining a new operator.</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>#1 Set the name of the operator</dt>
-<dd><table border="1" class="first last docutils">
-<colgroup>
-<col width="19%" />
-<col width="81%" />
-</colgroup>
-<tbody valign="top">
-<tr class="row-odd"><td>Example</td>
-<td><div class="first last line-block">
-<div class="line"><code class="docutils literal"><span class="pre">call</span> <span class="pre">self%set_name(&quot;Roe</span> <span class="pre">Flux&quot;)</span></code></div>
-</div>
-</td>
-</tr>
-</tbody>
-</table>
-</dd>
-<dt>#2 Set the equations that the operator will be operating on:</dt>
-<dd><table border="1" class="first last docutils">
-<colgroup>
-<col width="17%" />
-<col width="83%" />
-</colgroup>
-<tbody valign="top">
-<tr class="row-odd"><td>Example</td>
-<td><div class="first last line-block">
-<div class="line"><code class="docutils literal"><span class="pre">call</span> <span class="pre">self%set_equation(&quot;Pressure&quot;)</span></code></div>
-</div>
-</td>
-</tr>
-<tr class="row-even"><td>Example</td>
-<td><div class="first last line-block">
-<div class="line"><code class="docutils literal"><span class="pre">call</span> <span class="pre">self%set_equation(&quot;Density&quot;)</span></code></div>
-<div class="line"><code class="docutils literal"><span class="pre">call</span> <span class="pre">self%set_equation(&quot;X-Momentum&quot;)</span></code></div>
-<div class="line"><code class="docutils literal"><span class="pre">call</span> <span class="pre">self%set_equation(&quot;Energy&quot;)</span></code></div>
-</div>
-</td>
-</tr>
-</tbody>
-</table>
-</dd>
-</dl>
-</div></blockquote>
-</dd></dl>
-
-<dl class="function">
-<dt id="compute">
-<code class="descname">compute</code><span class="sig-paren">(</span><em>worker</em>, <em>prop</em><span class="sig-paren">)</span><a class="headerlink" href="#compute" title="Permalink to this definition">¶</a></dt>
-<dd><p>Implement the function that is operating on the data. Compute the function values, and
-call an integration routine.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>worker</strong> (<em>chidg_worker_t</em>) &#8211; A chidg_worker_t instance that acts as an interface for providing data, integrating, etc.</li>
-<li><strong>prop</strong> (<em>properties_t</em>) &#8211; A properties_t instance</li>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="detail_equations_theory.html">Theory + Abstractions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="detail_equations_fluid.html">Fluid Equations</a></li>
 </ul>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<div class="section" id="registering-new-operators">
-<h3>Registering new operators<a class="headerlink" href="#registering-new-operators" title="Permalink to this headline">¶</a></h3>
-<p>Any time a new <code class="docutils literal"><span class="pre">operator_t</span></code> is defined, in order for it to be used, it must be registered
-in the <em>operator factory</em>. This is located in <code class="docutils literal"><span class="pre">mod_operators.f90</span></code>. This informs the framework
-that the operator exists, and allows the operator to be used by equation sets through the
-operator factory.</p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>Register new operators inside <code class="docutils literal"><span class="pre">mod_operators.f90</span></code></p>
-<dl class="docutils">
-<dt>#1: Import the operator definition</dt>
-<dd><ul class="first last">
-<li><div class="first line-block">
-<div class="line"><code class="docutils literal"><span class="pre">use</span> <span class="pre">type_new_operator.f90,</span> <span class="pre">only:</span> <span class="pre">new_operator_t</span></code></div>
-</div>
-</li>
-</ul>
-</dd>
-<dt>#2: In the module procedure <code class="docutils literal"><span class="pre">register_operators</span></code>, create an instance of the operator and add it to the operator factory</dt>
-<dd><ul class="first last">
-<li><div class="first line-block">
-<div class="line"><code class="docutils literal"><span class="pre">type(new_operator_t)</span>&nbsp; <span class="pre">::</span> <span class="pre">my_new_operator</span></code></div>
-<div class="line"><code class="docutils literal"><span class="pre">call</span> <span class="pre">operator_factory%register(my_new_operator)</span></code></div>
-</div>
-</li>
-</ul>
-</dd>
-</dl>
-<p class="last"><strong>Note:</strong> <code class="docutils literal"><span class="pre">register_operators</span></code> gets called on startup so any operators defined and registered
-there are created and added to the framework at startup.</p>
-</div>
-</div>
-</div>
-<div class="section" id="chidg-equation-sets">
-<h2>ChiDG Equation Sets<a class="headerlink" href="#chidg-equation-sets" title="Permalink to this headline">¶</a></h2>
-<p>ChiDG takes a composition approach to defining sets of equations, and this is represented
-in an <code class="docutils literal"><span class="pre">equation_set_t</span></code> object. <code class="docutils literal"><span class="pre">equation_set_t</span></code>&#8216;s contain arrays of <code class="docutils literal"><span class="pre">operator_t</span></code>
-instances. In this way, <code class="docutils literal"><span class="pre">operator_t</span></code>&#8216;s can be added to equation sets to represent
-additional equations or additional terms that represent another phenomenon.</p>
-<dl class="class">
-<dt id="equation_set_t">
-<em class="property">class </em><code class="descname">equation_set_t</code><a class="headerlink" href="#equation_set_t" title="Permalink to this definition">¶</a></dt>
-<dd><div class="highlight-Fortran"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="kd">::</span> <span class="n">equation_set_t</span>
-    <span class="k">type</span><span class="p">(</span><span class="n">operator_t</span><span class="p">)</span>    <span class="n">volume_advective_operator</span><span class="p">(:)</span>
-    <span class="k">type</span><span class="p">(</span><span class="n">operator_t</span><span class="p">)</span>    <span class="n">boundary_advective_operators</span><span class="p">(:)</span>
-    <span class="k">type</span><span class="p">(</span><span class="n">operator_t</span><span class="p">)</span>    <span class="n">volume_diffusive_operator</span><span class="p">(:)</span>
-    <span class="k">type</span><span class="p">(</span><span class="n">operator_t</span><span class="p">)</span>    <span class="n">boundary_diffusive_operators</span><span class="p">(:)</span>
-    <span class="p">...</span>
-<span class="k">contains</span>
-
-<span class="k">    procedure</span><span class="p">,</span> <span class="k">public</span> <span class="kd">::</span> <span class="n">add_operator</span>
-
-<span class="k">end type </span><span class="n">equation_set_t</span>
-</pre></div>
-</div>
-</dd></dl>
-
-<dl class="function">
-<dt id="add_operator">
-<code class="descname">add_operator</code><span class="sig-paren">(</span><em>string</em><span class="sig-paren">)</span><a class="headerlink" href="#add_operator" title="Permalink to this definition">¶</a></dt>
-<dd><p>Accepts a string indicating an operator to add. Internally, the string is used to
-create the operator from a factory.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>string</strong> (<em>str</em>) &#8211; The name of an operator to be added.</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<div class="admonition tip">
-<p class="first admonition-title">Tip</p>
-<p>An <code class="docutils literal"><span class="pre">equation_set_t</span></code> that represents the Euler equations for
-nonlinear compressible flows might be composed of the following <code class="docutils literal"><span class="pre">operator_t</span></code>&#8216;s:</p>
-<table border="1" class="docutils">
-<colgroup>
-<col width="48%" />
-<col width="52%" />
-</colgroup>
-<tbody valign="top">
-<tr class="row-odd"><td><strong>Boundary Flux Operators</strong></td>
-<td><ul class="first last simple">
-<li>Euler Boundary Average Flux</li>
-<li>Roe Upwind Flux</li>
-</ul>
-</td>
-</tr>
-<tr class="row-even"><td><strong>Volume Flux Operators</strong></td>
-<td><ul class="first last simple">
-<li>Euler Volume Flux</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-<p>Such an <code class="docutils literal"><span class="pre">equation_set_t</span></code> could be constructed using the following procedure:</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>#1: Create an instance of an <code class="docutils literal"><span class="pre">equation_set_t</span></code>:</dt>
-<dd><ul class="first last">
-<li><div class="first line-block">
-<div class="line"><code class="docutils literal"><span class="pre">type(equation_set_t)</span> <span class="pre">::</span> <span class="pre">euler_equations</span></code></div>
-</div>
-</li>
-</ul>
-</dd>
-<dt>#2: Add operators to the new equation set:</dt>
-<dd><ul class="first last">
-<li><div class="first line-block">
-<div class="line"><code class="docutils literal"><span class="pre">call</span> <span class="pre">euler_equations%add_operator(&quot;Euler</span> <span class="pre">Boundary</span> <span class="pre">Average</span> <span class="pre">Flux&quot;)</span></code></div>
-<div class="line"><code class="docutils literal"><span class="pre">call</span> <span class="pre">euler_equations%add_operator(&quot;Roe</span> <span class="pre">Upwind</span> <span class="pre">Flux&quot;)</span></code></div>
-<div class="line"><code class="docutils literal"><span class="pre">call</span> <span class="pre">euler_equations%add_operator(&quot;Euler</span> <span class="pre">Volume</span> <span class="pre">Flux&quot;)</span></code></div>
-</div>
-</li>
-</ul>
-</dd>
-</dl>
-</div></blockquote>
-<p class="last"><strong>Note:</strong> The operators being added should already be implemented as extensions of
-<code class="docutils literal"><span class="pre">operator_t</span></code> and be registered in <code class="docutils literal"><span class="pre">mod_operator.f90</span></code>.</p>
-</div>
 </div>
 </div>
 
@@ -596,7 +311,7 @@ nonlinear compressible flows might be composed of the following <code class="doc
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="../boundary_conditions/detail_boundary_conditions.html" class="btn btn-neutral float-right" title="Boundary conditions" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="detail_equations_theory.html" class="btn btn-neutral float-right" title="Theory + Abstractions" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="../mesh/detail_mesh.html" class="btn btn-neutral" title="Mesh" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

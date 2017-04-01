@@ -177,7 +177,9 @@ contains
             !
             iorder = 2
             call noptions%set('tol',1.e-4_rk)   ! Set nonlinear solver options
-            call loptions%set('tol',1.e-5_rk)   ! Set linear solver options
+            call loptions%set('tol',1.e-3_rk)   ! Set linear solver options
+            !call noptions%set('cfl0',0.1_rk)
+            !call wall_distance%set('Nonlinear Solver', algorithm='Quasi-Newton', options=noptions)
             call wall_distance%set('Nonlinear Solver', algorithm='Newton', options=noptions)
             call wall_distance%set('Linear Solver'   , algorithm='fgmres_cgs',   options=loptions)
             do p = 2,6,2
@@ -201,7 +203,7 @@ contains
                 !
                 if (p == 2) then
                     call create_function(constant,'constant')
-                    call constant%set_option('val',0.1_rk)
+                    call constant%set_option('val',0.001_rk)
                     call wall_distance%data%sdata%q_in%project(wall_distance%data%mesh,constant,1)
 
                 else

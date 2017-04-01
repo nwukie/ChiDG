@@ -13,6 +13,7 @@ module mod_models
     use type_constant_viscosity,                        only: constant_viscosity_t
     use type_constant_viscosity_laminar,                only: constant_viscosity_laminar_t
     use type_constant_viscosity_rans,                   only: constant_viscosity_rans_t
+    use type_constant_viscosity_flat_plate,             only: constant_viscosity_flat_plate_t
     use type_stokes_hypothesis,                         only: stokes_hypothesis_t
     use type_reynolds_analogy,                          only: reynolds_analogy_t
     use type_zero_turbulent_model_fields,               only: zero_turbulent_model_fields_t
@@ -261,6 +262,7 @@ contains
         type(constant_viscosity_t)                      :: CONSTANT_VISCOSITY
         type(constant_viscosity_laminar_t)              :: CONSTANT_VISCOSITY_LAMINAR
         type(constant_viscosity_rans_t)                 :: CONSTANT_VISCOSITY_RANS
+        type(constant_viscosity_flat_plate_t)           :: CONSTANT_VISCOSITY_FLAT_PLATE
         type(stokes_hypothesis_t)                       :: STOKES_HYPOTHESIS
         type(reynolds_analogy_t)                        :: REYNOLDS_ANALOGY
         type(zero_turbulent_model_fields_t)             :: ZERO_TURBULENT_MODEL_FIELDS
@@ -292,6 +294,7 @@ contains
             call model_factory%register(CONSTANT_VISCOSITY)
             call model_factory%register(CONSTANT_VISCOSITY_LAMINAR)
             call model_factory%register(CONSTANT_VISCOSITY_RANS)
+            call model_factory%register(CONSTANT_VISCOSITY_FLAT_PLATE)
             call model_factory%register(STOKES_HYPOTHESIS)
             call model_factory%register(REYNOLDS_ANALOGY)
             call model_factory%register(ZERO_TURBULENT_MODEL_FIELDS)

@@ -177,7 +177,7 @@ contains
             !
             iorder = 2
             call noptions%set('tol',1.e-4_rk)   ! Set nonlinear solver options
-            call loptions%set('tol',1.e-3_rk)   ! Set linear solver options
+            call loptions%set('tol',1.e-5_rk)   ! Set linear solver options
             !call noptions%set('cfl0',0.1_rk)
             !call wall_distance%set('Nonlinear Solver', algorithm='Quasi-Newton', options=noptions)
             call wall_distance%set('Nonlinear Solver', algorithm='Newton', options=noptions)

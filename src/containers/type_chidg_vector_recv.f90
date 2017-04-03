@@ -62,7 +62,7 @@ contains
 
 
         !
-        ! Get processor ranks that we are receiving from
+        ! Get processor ranks that we are receiving from: mesh
         !
         do idom = 1,size(mesh)
             comm_procs_dom = mesh(idom)%get_recv_procs()
@@ -77,6 +77,7 @@ contains
             end do ! iproc
 
         end do ! idom
+
 
 
         !

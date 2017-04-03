@@ -46,25 +46,28 @@ module type_mesh
         integer(ik)                     :: nelements_g = 0     ! Number of elements in the global domain
         integer(ik)                     :: nelem       = 0     ! Number of elements in the local domain
         integer(ik)                     :: ntime       = 0     ! Number of time instances
-        character(:),   allocatable     :: coordinate_system  ! 'Cartesian' or 'Cylindrical'
+        character(:),   allocatable     :: coordinate_system   ! 'Cartesian' or 'Cylindrical'
 
         
         !
         ! mesh geometry data
         !
-        type(point_t),    allocatable   :: nodes(:)       ! Nodes of the domain - unpartitioned.
-        type(element_t),  allocatable   :: elems(:)       ! Element storage (1:nelem)
-        type(face_t),     allocatable   :: faces(:,:)     ! Face storage (1:nelem,1:nfaces)
-        type(chimera_t)                 :: chimera        ! Chimera interface data
+        type(point_t),    allocatable   :: nodes(:)     ! Nodes of the domain - unpartitioned.
+        type(element_t),  allocatable   :: elems(:)     ! Element storage (1:nelem)
+        type(face_t),     allocatable   :: faces(:,:)   ! Face storage (1:nelem,1:nfaces)
+        
+
+        ! chimera interfaces container
+        type(chimera_t)                 :: chimera  
 
 
         !
         ! Initialization flags
         !
-        logical   :: geomInitialized          = .false.   ! Status of geometry initialization
-        logical   :: solInitialized           = .false.   ! Status of numerics initialization
-        logical   :: local_comm_initialized   = .false.   ! Status of processor-local comm init
-        logical   :: global_comm_initialized  = .false.   ! Status of processor-global comm init
+        logical   :: geomInitialized          = .false. ! Status of geometry initialization
+        logical   :: solInitialized           = .false. ! Status of numerics initialization
+        logical   :: local_comm_initialized   = .false. ! Status of processor-local comm init
+        logical   :: global_comm_initialized  = .false. ! Status of processor-global comm init
 
     contains
 

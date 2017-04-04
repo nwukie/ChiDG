@@ -202,6 +202,7 @@ contains
 
         call self%set_name('p-Laplace')
         call self%set_dependency('f(Q-)')
+        !call self%set_dependency('f(Grad(Q))')
 
         call self%add_model_field('Scalar Diffusion Coefficient')
 

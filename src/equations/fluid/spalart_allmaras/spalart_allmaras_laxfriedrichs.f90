@@ -2,6 +2,7 @@ module spalart_allmaras_laxfriedrichs
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO,ONE,TWO,HALF
+    use mod_fluid,              only: omega
     use type_operator,          only: operator_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
@@ -69,60 +70,37 @@ contains
         class(properties_t),                              intent(inout)   :: prop
 
 
-        type(AD_D), dimension(:), allocatable   ::                  &
-            density_m, mom1_m, mom2_m, mom3_m, density_nutilde_m,   &
-            density_p, mom1_p, mom2_p, mom3_p, density_nutilde_p,   &
-            invdensity_m, u_m, v_m, w_m, T_m, un_m, c_m, diss_m,    &
-            invdensity_p, u_p, v_p, w_p, T_p, un_p, c_p, diss_p,    &
-            flux_avg_1, flux_avg_2, flux_avg_3, diff,               &
+        type(AD_D), dimension(:), allocatable   ::          &
+            density_nutilde_m, density_nutilde_p,           &
+            u_a_m, v_a_m, w_a_m, T_m, un_m, c_m, diss_m,    &
+            u_a_p, v_a_p, w_a_p, T_p, un_p, c_p, diss_p,    &
+            flux_avg_1, flux_avg_2, flux_avg_3, diff,       &
             flux_1, flux_2, flux_3, integrand
 
         real(rk),   dimension(:), allocatable   ::  &
             norm_1,  norm_2,  norm_3,               &
-            unorm_1, unorm_2, unorm_3
+            unorm_1, unorm_2, unorm_3, area
+
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        density_m         = worker%get_primary_field_face('Density',           'value', 'face interior')
-        mom1_m            = worker%get_primary_field_face('Momentum-1',        'value', 'face interior')
-        mom2_m            = worker%get_primary_field_face('Momentum-2',        'value', 'face interior')
-        mom3_m            = worker%get_primary_field_face('Momentum-3',        'value', 'face interior')
         density_nutilde_m = worker%get_primary_field_face('Density * NuTilde', 'value', 'face interior')
-
-
-        density_p         = worker%get_primary_field_face('Density',           'value', 'face exterior')
-        mom1_p            = worker%get_primary_field_face('Momentum-1',        'value', 'face exterior')
-        mom2_p            = worker%get_primary_field_face('Momentum-2',        'value', 'face exterior')
-        mom3_p            = worker%get_primary_field_face('Momentum-3',        'value', 'face exterior')
         density_nutilde_p = worker%get_primary_field_face('Density * NuTilde', 'value', 'face exterior')
 
 
-
+        
         !
-        ! Account for cylindrical. Get tangential momentum from angular momentum.
+        ! Get fluid advection velocity
         !
-        if (worker%coordinate_system() == 'Cylindrical') then
-            mom2_m = mom2_m / worker%coordinate('1','boundary')
-            mom2_p = mom2_p / worker%coordinate('1','boundary')
-        end if
+        u_a_m = worker%get_model_field_face('Advection Velocity-1', 'value', 'face interior')
+        v_a_m = worker%get_model_field_face('Advection Velocity-2', 'value', 'face interior')
+        w_a_m = worker%get_model_field_face('Advection Velocity-3', 'value', 'face interior')
 
-
-
-        !
-        ! Compute velocities
-        !
-        invdensity_m = ONE/density_m
-        invdensity_p = ONE/density_p
-
-        u_m = mom1_m*invdensity_m
-        v_m = mom2_m*invdensity_m
-        w_m = mom3_m*invdensity_m
-
-        u_p = mom1_p*invdensity_p
-        v_p = mom2_p*invdensity_p
-        w_p = mom3_p*invdensity_p
+        u_a_p = worker%get_model_field_face('Advection Velocity-1', 'value', 'face exterior')
+        v_a_p = worker%get_model_field_face('Advection Velocity-2', 'value', 'face exterior')
+        w_a_p = worker%get_model_field_face('Advection Velocity-3', 'value', 'face exterior')
 
 
         !
@@ -137,16 +115,18 @@ contains
 
 
         !
-        ! Compute average flux and field difference.
+        ! Compute average flux
         ! 
-        flux_avg_1 = HALF*(u_m*density_nutilde_m  +  u_p*density_nutilde_p)
-        flux_avg_2 = HALF*(v_m*density_nutilde_m  +  v_p*density_nutilde_p)
-        flux_avg_3 = HALF*(w_m*density_nutilde_m  +  w_p*density_nutilde_p)
+        flux_avg_1 = HALF*(density_nutilde_m*u_a_m  +  density_nutilde_p*u_a_p)
+        flux_avg_2 = HALF*(density_nutilde_m*v_a_m  +  density_nutilde_p*v_a_p)
+        flux_avg_3 = HALF*(density_nutilde_m*w_a_m  +  density_nutilde_p*w_a_p)
 
 
-
-        un_m = u_m*unorm_1 + v_m*unorm_2 + w_m*unorm_3
-        un_p = u_p*unorm_1 + v_p*unorm_2 + w_p*unorm_3
+        !
+        ! Compute maximum wave speed
+        !
+        un_m = u_a_m*unorm_1 + v_a_m*unorm_2 + w_a_m*unorm_3
+        un_p = u_a_p*unorm_1 + v_a_p*unorm_2 + w_a_p*unorm_3
 
 
         T_m = worker%get_model_field_face('Temperature','value','face interior')
@@ -157,6 +137,7 @@ contains
         diss_m = abs(un_m) + c_m
         diss_p = abs(un_p) + c_p
 
+
         !
         ! Compute Lax-Friedrichs upwind flux
         !
@@ -165,8 +146,6 @@ contains
         flux_2 = flux_avg_2 + max(abs(diss_m),abs(diss_p))*HALF*diff
         flux_3 = flux_avg_3 + max(abs(diss_m),abs(diss_p))*HALF*diff
 
-!        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-!        integrand = flux_1*norm_1*unorm_1 + flux_2*norm_2*unorm_2 + flux_3*norm_3*unorm_3
 
         integrand = flux_avg_1*norm_1 + flux_avg_2*norm_2 + flux_avg_3*norm_3
 
@@ -174,6 +153,14 @@ contains
         integrand = integrand + max(abs(diss_m),abs(diss_p))*HALF*diff*norm_2*unorm_2
         integrand = integrand + max(abs(diss_m),abs(diss_p))*HALF*diff*norm_3*unorm_3
 
+
+!        integrand = flux_avg_1*norm_1 + flux_avg_2*norm_2 + flux_avg_3*norm_3
+!
+!        diff   = (density_nutilde_p - density_nutilde_m)
+!        area = sqrt(norm_1**TWO + norm_2**TWO + norm_3**TWO)
+!        integrand = integrand + max(abs(diss_m),abs(diss_p))*HALF*diff*area
+!        integrand = integrand + max(abs(diss_m),abs(diss_p))*HALF*diff*area
+!        integrand = integrand + max(abs(diss_m),abs(diss_p))*HALF*diff*area
 
         !
         ! Integrate flux

@@ -89,11 +89,15 @@ contains
                     !
                     ! Interpolate variables to GQ nodes
                     !
-                    rho  = interpolate_element_standard(mesh,sdata%q,idom,ielem,irho, 1,  'value')
+                    rho  = interpolate_element_standard(mesh,sdata%q,idom,ielem,irho, 1, 'value')
                     rhou = interpolate_element_standard(mesh,sdata%q,idom,ielem,irhou,1, 'value')
                     rhov = interpolate_element_standard(mesh,sdata%q,idom,ielem,irhov,1, 'value')
                     rhow = interpolate_element_standard(mesh,sdata%q,idom,ielem,irhow,1, 'value')
                     rhoE = interpolate_element_standard(mesh,sdata%q,idom,ielem,irhoE,1, 'value')
+
+                    if (mesh(idom)%elems(ielem)%coordinate_system == 'Cylindrical') then
+                        rhov = rhov / mesh(idom)%elems(ielem)%quad_pts(:)%c1_
+                    end if
 
 
                     !

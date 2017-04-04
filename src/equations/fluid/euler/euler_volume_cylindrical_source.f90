@@ -1,4 +1,5 @@
 module euler_volume_cylindrical_source
+#include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ONE,TWO,HALF
 
@@ -76,8 +77,10 @@ contains
         class(properties_t),                        intent(inout)   :: prop
 
 
-        type(AD_D), allocatable, dimension(:) ::    &
+        type(AD_D), allocatable, dimension(:)   ::    &
             density, mom2, v, p, source 
+
+        real(rk),   allocatable, dimension(:)   :: r
 
 
 
@@ -89,17 +92,19 @@ contains
 
 
         !
-        ! Account for cylindrical. Get tangential velocity from angular momentum.
+        ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
+        r = worker%coordinate('1','volume')
         if (worker%coordinate_system() == 'Cylindrical') then
-            v = (mom2/density) / worker%coordinate('1','volume')
+            mom2 = mom2 / r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 
-        !
-        ! Get pressure
-        !
-        p = worker%get_model_field_element('Pressure','value')
+
 
 
         !=================================================
@@ -112,17 +117,31 @@ contains
         !=================================================
         if (worker%coordinate_system() == 'Cylindrical') then
 
-            source = (density*v*v + p) / worker%coordinate('1','volume')
+
+            !
+            ! Compute V_theta, get pressure:
+            !
+            v = mom2/density
+            p = worker%get_model_field_element('Pressure','value')
+
+
+            !
+            ! Source term due to transformation to cylindrical coordinates
+            !
+            source = (density*v*v)/r  +  p/r
 
             call worker%integrate_volume('Momentum-1',source)
 
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 
         !=================================================
         ! momentum-2 flux
         !=================================================
-
 
         !=================================================
         ! momentum-3 flux

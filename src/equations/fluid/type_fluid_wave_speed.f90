@@ -81,8 +81,8 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho  = worker%get_primary_field_general('Density',    'value')
-        rhoE = worker%get_primary_field_general('Energy', 'value')
+        rho  = worker%get_primary_field_general('Density', 'value')
+        rhoE = worker%get_primary_field_general('Energy',  'value')
 
 
         !

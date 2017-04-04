@@ -75,7 +75,7 @@ contains
                                    alpha, f0, fn, forcing_term
         real(rk), allocatable   :: vals(:), cfln(:), rnorm0(:), rnorm(:)
         type(chidg_vector_t)    :: b, qn, qold, qnew, dqdtau, q0
-        logical                 :: search
+        logical                 :: searching
       
 
         wcount = 1
@@ -243,63 +243,69 @@ contains
                 !
                 q0 = qold
                 f0 = resid
-                search = .true.
                 step = 0
-                do while (search)
+                if (self%search) then
 
-                    !
-                    ! Set line increment via backtracking.
-                    !   Try: 1, 0.5, 0.25... 2^-i
-                    !
-                    alpha = TWO**(-real(step,rk)) 
-                    call write_line("       Testing newton direction with 'alpha' = ", alpha, io_proc=GLOBAL_MASTER)
+                    searching = .true.
+                    do while (searching)
 
-
-                    !
-                    ! Advance solution along newton direction
-                    !
-                    qn = q0 + alpha*dq
+                        !
+                        ! Set line increment via backtracking.
+                        !   Try: 1, 0.5, 0.25... 2^-i
+                        !
+                        alpha = TWO**(-real(step,rk)) 
+                        call write_line("       Testing newton direction with 'alpha' = ", alpha, io_proc=GLOBAL_MASTER)
 
 
-                    !
-                    ! Clear working vector
-                    !
-                    call rhs%clear()
+                        !
+                        ! Advance solution along newton direction
+                        !
+                        qn = q0 + alpha*dq
 
 
-                    !
-                    ! Set working solution. Test residual at (q). Do not differentiate
-                    !
-                    q = qn
-                    call system%assemble(data,timing=timing,differentiate=.false.)
-
-                    !
-                    ! Compute new function value
-                    !
-                    fn = rhs%norm(ChiDG_COMM)
+                        !
+                        ! Clear working vector
+                        !
+                        call rhs%clear()
 
 
-                    !
-                    ! Test for |R| increasing too much or NaN. 
-                    !   If residual is reasonably large, still allow some growth.
-                    !   If the residual is small enough, we don't want any growth.
-                    ! 
-                    !
-                    if (ieee_is_nan(fn)) then
-                        search = .true.
-                    else if ( (fn > 1.e-3_rk) .and. (fn > 2.0_rk*f0) ) then
-                        search = .true.
-                    else if ( (fn < 1.e-3_rk) .and. (fn > f0) ) then
-                        search = .true.
-                    else
-                        search = .false.
-                    end if
+                        !
+                        ! Set working solution. Test residual at (q). Do not differentiate
+                        !
+                        q = qn
+                        call system%assemble(data,timing=timing,differentiate=.false.)
 
-                    call write_line("       Rn(Q) = ", fn, io_proc=GLOBAL_MASTER)
+                        !
+                        ! Compute new function value
+                        !
+                        fn = rhs%norm(ChiDG_COMM)
 
-                    step = step + 1
 
-                end do
+                        !
+                        ! Test for |R| increasing too much or NaN. 
+                        !   If residual is reasonably large, still allow some growth.
+                        !   If the residual is small enough, we don't want any growth.
+                        ! 
+                        !
+                        if (ieee_is_nan(fn)) then
+                            searching = .true.
+                        else if ( (fn > 1.e-3_rk) .and. (fn > 2.0_rk*f0) ) then
+                            searching = .true.
+                        else if ( (fn < 1.e-3_rk) .and. (fn > f0) ) then
+                            searching = .true.
+                        else
+                            searching = .false.
+                        end if
+
+                        call write_line("       Rn(Q) = ", fn, io_proc=GLOBAL_MASTER)
+
+                        step = step + 1
+
+                    end do
+
+                else
+                    qn = q0 + dq
+                end if
 
 
                 !
@@ -321,7 +327,7 @@ contains
                 !
                 !if (wcount == self%nwrite) then
                 !    if (data%eqnset(1)%get_name() == 'Euler') then
-                !        call write_solution_hdf(data,'aachen_cascade_roundte.h5')
+                !        call write_solution_hdf(data,'flat_plate_quartic.h5')
                 !        write(filename,'(I2)') niter
                 !        call write_tecio_variables(data,trim(filename)//'.dat',niter)
                 !        wcount = 0

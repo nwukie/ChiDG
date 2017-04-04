@@ -53,7 +53,7 @@ contains
         type(domain_connectivity_t) :: connectivity
         integer(ik)                 :: ftype, ineighbor, mapping, ielem, &
                                        ipt_xi, ipt_eta, ipt_zeta, ipt
-        integer(ik)                 :: neqns, nterms_s, nterms_c, idomain, spacedim, ntime
+        integer(ik)                 :: neqns, nterms_s, nterms_c, idomain, spacedim, ntime, nelements_g
         real(rk), dimension(npt)    :: x,y,z
 
         !
@@ -89,13 +89,14 @@ contains
         !
         ! Initialize mesh
         !
-        idomain  = 1
-        spacedim = 3
-        nterms_c = 8
-        neqns    = 1
-        nterms_s = 8
-        ntime    = 1
-        call this%mesh%init_geom(idomain,spacedim,nterms_c,nodes,connectivity,'Cartesian')
+        idomain     = 1
+        spacedim    = 3
+        nterms_c    = 8
+        neqns       = 1
+        nterms_s    = 8
+        ntime       = 1
+        nelements_g = 27
+        call this%mesh%init_geom(idomain,nelements_g,spacedim,nterms_c,nodes,connectivity,'Cartesian')
         call this%mesh%init_sol(neqns,nterms_s,ntime)
         call this%mesh%init_comm_local()
 

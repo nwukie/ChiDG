@@ -337,6 +337,7 @@ contains
             call set_domain_dimensionality_hdf(domain_id, data%get_dimensionality())
             call set_domain_equation_set_hdf(domain_id,data%eqnset(idom)%get_name())
             call close_domain_hdf(domain_id)
+    
 
         end do !idom
 
@@ -1817,7 +1818,7 @@ contains
 
         integer(HID_T)      :: grid_id, xspace_id, yspace_id, zspace_id, xset_id, yset_id, zset_id
         integer(HSIZE_T)    :: dims_rank_one(1)
-        integer(ik)         :: ierr, ipt, npts
+        integer(ik)         :: ipt, npts, ierr
         logical             :: exists
         real(rk), allocatable, dimension(:) :: xcoords, ycoords, zcoords
 
@@ -1849,26 +1850,54 @@ contains
             zcoords(ipt) = nodes(ipt)%c3_
         end do
 
-        !
-        ! Create dataspaces for grid coordinates
-        !
-        call h5screate_simple_f(1, dims_rank_one, xspace_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5screate_simple_f")
-        call h5screate_simple_f(1, dims_rank_one, yspace_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5screate_simple_f")
-        call h5screate_simple_f(1, dims_rank_one, zspace_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5screate_simple_f")
+
+        call h5lexists_f(grid_id, "Coordinate1", exists, ierr)
+!        exists = check_link_exists_hdf(grid_id,"Coordinate1")
+        if (exists) then
+            !
+            ! Open 'Coordinate' data sets
+            !
+            call h5dopen_f(grid_id, "Coordinate1", xset_id, ierr, H5P_DEFAULT_F)
+            call h5dopen_f(grid_id, "Coordinate2", yset_id, ierr, H5P_DEFAULT_F)
+            call h5dopen_f(grid_id, "Coordinate3", zset_id, ierr, H5P_DEFAULT_F)
+
+        else
+
+            !
+            ! Create dataspaces for grid coordinates
+            !
+            call h5screate_simple_f(1, dims_rank_one, xspace_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5screate_simple_f")
+            call h5screate_simple_f(1, dims_rank_one, yspace_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5screate_simple_f")
+            call h5screate_simple_f(1, dims_rank_one, zspace_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5screate_simple_f")
 
 
-        !
-        ! Create datasets for grid coordinates
-        !
-        call h5dcreate_f(grid_id, "Coordinate1", H5T_NATIVE_DOUBLE, xspace_id, xset_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5dcreate_f")
-        call h5dcreate_f(grid_id, "Coordinate2", H5T_NATIVE_DOUBLE, yspace_id, yset_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5dcreate_f")
-        call h5dcreate_f(grid_id, "Coordinate3", H5T_NATIVE_DOUBLE, zspace_id, zset_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5dcreate_f")
+            !
+            ! Create datasets for grid coordinates
+            !
+            call h5dcreate_f(grid_id, "Coordinate1", H5T_NATIVE_DOUBLE, xspace_id, xset_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5dcreate_f")
+            call h5dcreate_f(grid_id, "Coordinate2", H5T_NATIVE_DOUBLE, yspace_id, yset_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5dcreate_f")
+            call h5dcreate_f(grid_id, "Coordinate3", H5T_NATIVE_DOUBLE, zspace_id, zset_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5dcreate_f")
+
+
+            !
+            ! Close dataspaces
+            !
+            call h5sclose_f(xspace_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5sclose_f")
+            call h5sclose_f(yspace_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5sclose_f")
+            call h5sclose_f(zspace_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5sclose_f")
+
+
+
+        end if
 
         !
         ! Write coordinates to datasets
@@ -1891,15 +1920,6 @@ contains
         call h5dclose_f(zset_id,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5dclose_f")
 
-        !
-        ! Close dataspaces
-        !
-        call h5sclose_f(xspace_id,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5sclose_f")
-        call h5sclose_f(yspace_id,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5sclose_f")
-        call h5sclose_f(zspace_id,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5sclose_f")
 
         !
         ! Close Grid group
@@ -2699,6 +2719,184 @@ contains
 
 
 
+    !>  Set the element connectivities for a block, from a partition.
+    !!
+    !!  Accepts array of element connectivities as
+    !!      nelements_g                         ! indicates the total number of elements 
+    !!                                          ! in the unpartitioned domain
+    !!  
+    !!      elements(nelem, size_connectivity)  ! element connectivities on the local partition
+    !!
+    !!  /D_domainname/Grid/Elements
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/15/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_domain_connectivity_partition_hdf(dom_id,nelements_g,elements)
+        integer(HID_T), intent(in)  :: dom_id
+        integer(ik),    intent(in)  :: nelements_g
+        integer(ik),    intent(in)  :: elements(:,:)
+
+        integer(ik)         :: ierr, connectivity_size, ndims, ielem, ielement_g
+        integer(HID_T)      :: element_set_id, element_space_id, grid_id, sid, memspace
+        integer(HSIZE_T)    :: dims_rank_two(2), start(2), count(2), dimsm(2)
+        logical             :: exists
+
+        integer(ik),  allocatable, target :: var(:,:)
+        type(c_ptr)                       :: cp_var
+
+
+        !
+        ! Get number of nodes in element connectivity
+        !
+        connectivity_size = size(elements,2)
+
+        !
+        ! Size element connectivities
+        !
+        dims_rank_two(1) = nelements_g
+        dims_rank_two(2) = connectivity_size
+
+
+        !
+        ! Create a grid-group within the current block domain
+        !
+        exists = check_link_exists_hdf(dom_id,"Grid")
+        if (exists) then
+            call h5gopen_f(dom_id, "Grid", grid_id, ierr)
+        else
+            call h5gcreate_f(dom_id,"Grid", grid_id, ierr)
+        end if
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_partition_hdf: h5gcreate_f/h5gopen_f")
+
+
+        !
+        ! Open/Create dataset for element connectivity: element_set_id
+        !
+        exists = check_link_exists_hdf(grid_id,"Elements")
+        if (exists) then
+            call h5dopen_f(grid_id,"Elements", element_set_id, ierr, H5P_DEFAULT_F)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_partition_hdf: h5dopen_f")
+
+        else
+            call h5screate_simple_f(2, dims_rank_two, element_space_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_partition_hdf: h5screate_simple_f")
+
+            call h5dcreate_f(grid_id, "Elements", H5T_NATIVE_INTEGER, element_space_id, element_set_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_partition_hdf: h5dcreate_f")
+
+            call h5sclose_f(element_space_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_partition_hdf: h5sclose_f")
+
+        end if
+
+
+        !
+        ! Get data space
+        !
+        call h5dget_space_f(element_set_id, element_space_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL, "set_domain_connectivity_partition_hdf: h5dget_space_f.")
+
+
+
+        !
+        ! Allocate buffer
+        !
+        allocate(var(1,connectivity_size), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        !
+        ! Write element connectivities:
+        !   - one at a time taking ielement_g from the connectivity since they might 
+        !     not be in order after partitioning
+        !
+        do ielem = 1,size(elements,1)
+
+
+            !
+            ! get domain-global element index
+            !
+            ielement_g = elements(ielem,2)
+            start = [ielement_g-1,1-1]   ! 0-based
+            count = [1, connectivity_size]
+
+
+            !
+            ! Select subset of dataspace - sid
+            !
+            call h5sselect_hyperslab_f(element_space_id, H5S_SELECT_SET_F, start, count, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'set_domain_connectivity_partition_hdf: h5sselect_hyperslab_f')
+
+            !
+            ! Create a memory dataspace
+            !
+            ndims = 2
+            dimsm(1) = 1
+            dimsm(2) = connectivity_size
+            call h5screate_simple_f(ndims,dimsm,memspace,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'set_domain_connectivity_partition_hdf: h5screate_simple_f')
+
+
+            !
+            ! Write modes
+            !
+            var(1,:) = elements(ielem,:)
+            cp_var = c_loc(var(1,1))
+            call h5dwrite_f(element_set_id, H5T_NATIVE_INTEGER, cp_var, ierr, memspace, element_space_id)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_partition_hdf: h5dwrite_f")
+
+
+            call h5sclose_f(memspace,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_partition_hdf: h5sclose_f")
+
+
+
+        end do
+
+
+        !
+        ! Close dataset, dataspace, Grid group
+        !
+        call h5dclose_f(element_set_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_partition_hdf: h5dclose_f")
+        call h5sclose_f(element_space_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_partition_hdf: h5sclose_f")
+        call h5gclose_f(grid_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_partition_hdf: h5gclose_f")
+
+
+
+    end subroutine set_domain_connectivity_partition_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2806,7 +3004,7 @@ contains
 
     !>  Given a domain identifier, return the number of elements in the domain.
     !!
-    !!  TODO: Switch this to read an attribute. That way we can use this is 
+    !!  TODO: Switch this to read an attribute. That way we can use this in 
     !!        solution files without grids.
     !!
     !!  @author Nathan A. Wukie

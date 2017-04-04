@@ -29,7 +29,7 @@
 module type_chidg_worker
 #include <messenger.h>
     use mod_kinds,          only: ik, rk
-    use mod_constants,      only: NFACES, ME, NEIGHBOR, BC, ZERO, CHIMERA, ONE, THIRD
+    use mod_constants,      only: NFACES, ME, NEIGHBOR, BC, ZERO, CHIMERA, ONE, THIRD, TWO
     use mod_interpolate,    only: interpolate_element_standard, &
                                   interpolate_element_autodiff, &
                                   interpolate_face_standard,    &
@@ -1674,7 +1674,7 @@ contains
 
         real(rk)    :: area
 
-        area = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%area
+        area = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%total_area
 
     end function face_area
     !**************************************************************************************

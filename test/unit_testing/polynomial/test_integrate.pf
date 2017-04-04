@@ -34,7 +34,7 @@ subroutine test_integrate_boundary_unit_constant()
     type(bc_group_t)                    :: bc_groups(1)
 
     integer(ik)                         :: nterms_c, iblk, idom, ngq, ielem, iface, ifcn, spacedim, mapping
-    integer(ik)                         :: idonor, ieqn, itime, igq
+    integer(ik)                         :: idonor, ieqn, itime, igq, nelements_g
     type(AD_D),         allocatable     :: integrand(:)
     class(function_t),  allocatable     :: constant
     real(rk)                            :: integral, ref_integral
@@ -62,10 +62,11 @@ subroutine test_integrate_boundary_unit_constant()
     iface    = 1
 
 
-    spacedim = 3
-    mapping  = 1
-    nterms_c = 8
-    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection','Cartesian')
+    spacedim    = 3
+    mapping     = 1
+    nterms_c    = 8
+    nelements_g = 1
+    call chidg%data%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Scalar Advection','Cartesian')
 
 
     !
@@ -247,7 +248,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     class(bc_state_t),   allocatable    :: bc
     type(bc_group_t)                    :: bc_groups(1)
     integer(ik)                         :: nterms_c, igq, ngq, ieqn, itime, ifcn, spacedim, mapping
-    integer(ik)                         :: idomain, iblk, idonor
+    integer(ik)                         :: idomain, iblk, idonor, nelements_g
     type(AD_D),         allocatable     :: integrand(:)
     class(function_t),  allocatable     :: constant
     real(rk)                            :: integral, ref_integral
@@ -270,12 +271,13 @@ subroutine test_integrate_boundary_nonunit_constant()
     call create_mesh('111',nodes,connectivity)
 
 
-    spacedim = 3
-    mapping  = 1
-    nterms_c = 8
+    spacedim    = 3
+    mapping     = 1
+    nterms_c    = 8
+    nelements_g = 1
 
 
-    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection','Cartesian')
+    call chidg%data%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Scalar Advection','Cartesian')
 
 
     !

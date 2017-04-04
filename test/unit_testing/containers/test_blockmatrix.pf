@@ -35,7 +35,7 @@ subroutine test_blockmatrix__store_1eq_8terms()
     type(face_info_t)           :: face_info
     type(seed_t)                :: seed
     integer(ik)                 :: ielement_l, ivar, nderiv, i, neqns, imat,  &
-                                   nterms_c, nterms_s, idomain, spacedim, itime, ntime
+                                   nterms_c, nterms_s, idomain, spacedim, itime, ntime, nelements_g
     real(rk),   allocatable     :: mat(:,:)
     
 
@@ -51,13 +51,14 @@ subroutine test_blockmatrix__store_1eq_8terms()
     !
     ! Initialize mesh_t instance.
     !
-    neqns    = 1
-    idomain  = 1
-    spacedim = 3
-    nterms_c = 8
-    nterms_s = 8
-    ntime    = 1
-    call mesh%init_geom(idomain,spacedim,nterms_c,nodes,connectivity,'Cartesian')
+    neqns       = 1
+    idomain     = 1
+    spacedim    = 3
+    nterms_c    = 8
+    nterms_s    = 8
+    ntime       = 1
+    nelements_g = 9
+    call mesh%init_geom(idomain,nelements_g,spacedim,nterms_c,nodes,connectivity,'Cartesian')
     call mesh%init_sol(neqns,nterms_s,ntime)
     call mesh%init_comm_local()
 
@@ -185,7 +186,7 @@ subroutine test_blockmatrix__store_2eq_8terms()
     type(seed_t)                :: seed
     type(AD_D)                  :: integral(8)
     integer(ik)                 :: ivar, nderiv, i, neqns, imat, idomain, ielem, &
-                                   nterms_c, nterms_s, spacedim, itime, ntime
+                                   nterms_c, nterms_s, spacedim, itime, ntime, nelements_g
     real(rk),   allocatable     :: mat(:,:)
     
     call chidg%start_up('core')
@@ -200,13 +201,14 @@ subroutine test_blockmatrix__store_2eq_8terms()
     !
     ! Initialize mesh_t instance.
     !
-    neqns    = 2
-    idomain  = 1
-    spacedim = 3
-    nterms_c = 8
-    nterms_s = 8
-    ntime    = 1
-    call mesh%init_geom(idomain,spacedim,nterms_c,nodes,connectivity,'Cartesian')
+    neqns       = 2
+    idomain     = 1
+    spacedim    = 3
+    nterms_c    = 8
+    nterms_s    = 8
+    ntime       = 1
+    nelements_g = 9
+    call mesh%init_geom(idomain,nelements_g,spacedim,nterms_c,nodes,connectivity,'Cartesian')
     call mesh%init_sol(neqns,nterms_s,ntime)
     call mesh%init_comm_local()
 
@@ -332,7 +334,7 @@ subroutine test_blockmatrix__clear_1eq_8terms()
     type(face_info_t)           :: face_info
     type(seed_t)                :: seed
     integer(ik)                 :: ielement_l, ivar, nderiv, i, neqns, imat, ielem, &
-                                   nterms_c, nterms_s, idomain, spacedim, ntime, itime
+                                   nterms_c, nterms_s, idomain, spacedim, ntime, itime, nelements_g
     real(rk)                    :: tol
     real(rk),   allocatable     :: mat(:,:)
 
@@ -352,13 +354,14 @@ subroutine test_blockmatrix__clear_1eq_8terms()
     !
     ! Initialize a mesh_t instance.
     !
-    neqns    = 1
-    idomain  = 1
-    spacedim = 3
-    nterms_c = 8
-    nterms_s = 8
-    ntime    = 1
-    call mesh%init_geom(idomain,spacedim,nterms_c,nodes,connectivity,'Cartesian')
+    neqns       = 1
+    idomain     = 1
+    spacedim    = 3
+    nterms_c    = 8
+    nterms_s    = 8
+    ntime       = 1
+    nelements_g = 9
+    call mesh%init_geom(idomain,nelements_g,spacedim,nterms_c,nodes,connectivity,'Cartesian')
     call mesh%init_sol(neqns,nterms_s,ntime)                              
     call mesh%init_comm_local()
 

@@ -431,11 +431,11 @@ contains
             case('value')
                 var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%gq%vol%val, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
             case('grad1')
-                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%grad1, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
+                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%grad1,      q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
             case('grad2')
-                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%grad2, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
+                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%grad2,      q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
             case('grad3')
-                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%grad3, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
+                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%grad3,      q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
             case default
                 call chidg_signal(FATAL,"interpolate_element_standard: invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
         end select

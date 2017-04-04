@@ -34,8 +34,8 @@ module type_element
     !!      Coordinates could be in either 'Cartesian' or 'Cylindrical' systems.
     !!      As such, coordinate indices are marked by (1,2,3):
     !! 
-    !!      'Cartesian'   system: 1 = x  ;  2 = y      ;  3 = z
-    !!      'Cylindrical' system: 1 = r  ;  2 = theta  ;  3 = z
+    !!      'Cartesian'   system: 1 = x      ;  2 = y   ;  3 = z
+    !!      'Cylindrical' system: 1 = theta  ;  2 = r   ;  3 = z
     !!
     !!
     !!  @author Nathan A. Wukie
@@ -222,9 +222,6 @@ contains
             !
             points(ipt) = nodes(inode)
         end do !ipt
-
-
-
 
 
         !
@@ -543,7 +540,7 @@ contains
         !       12 = x-y  ;  13 = x-z  ;  23 = y-z
         !
         !   Cylindrical
-        !       12 = r-theta  ;  13 = r-z  ;  23 = theta-z
+        !       12 = r-theta  ;  13 = r-z      ;  23 = theta-z
         !
         select case (self%coordinate_system)
             case ('Cartesian')
@@ -561,28 +558,6 @@ contains
         end select
 
 
-
-        !
-        ! Loop through quadrature nodes and compute metric terms
-        !
-        do inode = 1,nnodes
-            self%metric(1,1,inode) = scaling_23(inode)*d2deta(inode)*d3dzeta(inode) - scaling_23(inode)*d2dzeta(inode)*d3deta(inode)
-            self%metric(2,1,inode) = scaling_23(inode)*d2dzeta(inode)*d3dxi(inode)  - scaling_23(inode)*d2dxi(inode)*d3dzeta(inode)
-            self%metric(3,1,inode) = scaling_23(inode)*d2dxi(inode)*d3deta(inode)   - scaling_23(inode)*d2deta(inode)*d3dxi(inode)
-
-            self%metric(1,2,inode) = scaling_13(inode)*d1dzeta(inode)*d3deta(inode) - scaling_13(inode)*d1deta(inode)*d3dzeta(inode)
-            self%metric(2,2,inode) = scaling_13(inode)*d1dxi(inode)*d3dzeta(inode)  - scaling_13(inode)*d1dzeta(inode)*d3dxi(inode)
-            self%metric(3,2,inode) = scaling_13(inode)*d1deta(inode)*d3dxi(inode)   - scaling_13(inode)*d1dxi(inode)*d3deta(inode)
-
-            self%metric(1,3,inode) = scaling_12(inode)*d1deta(inode)*d2dzeta(inode) - scaling_12(inode)*d1dzeta(inode)*d2deta(inode)
-            self%metric(2,3,inode) = scaling_12(inode)*d1dzeta(inode)*d2dxi(inode)  - scaling_12(inode)*d1dxi(inode)*d2dzeta(inode)
-            self%metric(3,3,inode) = scaling_12(inode)*d1dxi(inode)*d2deta(inode)   - scaling_12(inode)*d1deta(inode)*d2dxi(inode)
-        end do
-
-
-
-
-
         !
         ! Compute inverse cell mapping jacobian
         !
@@ -590,6 +565,10 @@ contains
                                  d1dxi*d2dzeta*d3deta  +  d1dzeta*d2dxi*d3deta + &
                                  d1deta*d2dzeta*d3dxi  -  d1dzeta*d2deta*d3dxi)
 
+        !
+        ! Check for negative jacobians
+        !
+        if (any(self%jinv < ZERO)) call chidg_signal(FATAL,"element%compute_quadrature_metrics: Negative element jacobians. Check element quality and orientation.")
 
 
         !
@@ -597,18 +576,32 @@ contains
         !
         self%vol = abs(sum(self%jinv * self%gq%vol%weights))
 
+
+        !
+        ! Loop through quadrature nodes and compute metric terms. This is the explicit formula
+        ! for inverting a 3x3 matrix.
+        !
+        !   See: http://mathworld.wolfram.com/MatrixInverse.html 
+        !
+        do inode = 1,nnodes
+            self%metric(1,1,inode) = ONE/self%jinv(inode) * scaling_23(inode) * (d2deta(inode)*d3dzeta(inode) - d2dzeta(inode)*d3deta(inode))
+            self%metric(2,1,inode) = ONE/self%jinv(inode) * scaling_23(inode) * (d2dzeta(inode)*d3dxi(inode)  - d2dxi(inode)*d3dzeta(inode) )
+            self%metric(3,1,inode) = ONE/self%jinv(inode) * scaling_23(inode) * (d2dxi(inode)*d3deta(inode)   - d2deta(inode)*d3dxi(inode)  )
+
+            self%metric(1,2,inode) = ONE/self%jinv(inode) * scaling_13(inode) * (d1dzeta(inode)*d3deta(inode) - d1deta(inode)*d3dzeta(inode))
+            self%metric(2,2,inode) = ONE/self%jinv(inode) * scaling_13(inode) * (d1dxi(inode)*d3dzeta(inode)  - d1dzeta(inode)*d3dxi(inode) )
+            self%metric(3,2,inode) = ONE/self%jinv(inode) * scaling_13(inode) * (d1deta(inode)*d3dxi(inode)   - d1dxi(inode)*d3deta(inode)  )
+
+            self%metric(1,3,inode) = ONE/self%jinv(inode) * scaling_12(inode) * (d1deta(inode)*d2dzeta(inode) - d1dzeta(inode)*d2deta(inode))
+            self%metric(2,3,inode) = ONE/self%jinv(inode) * scaling_12(inode) * (d1dzeta(inode)*d2dxi(inode)  - d1dxi(inode)*d2dzeta(inode) )
+            self%metric(3,3,inode) = ONE/self%jinv(inode) * scaling_12(inode) * (d1dxi(inode)*d2deta(inode)   - d1deta(inode)*d2dxi(inode)  )
+        end do
+
+
+
+
     end subroutine compute_quadrature_metrics
     !******************************************************************************************
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -634,17 +627,29 @@ contains
 
         do iterm = 1,self%nterms_s
             do inode = 1,self%gq%vol%nnodes
-                self%grad1(inode,iterm) = self%metric(1,1,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
-                                          self%metric(2,1,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
-                                          self%metric(3,1,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode))
+                !self%grad1(inode,iterm) = self%metric(1,1,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
+                !                          self%metric(2,1,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
+                !                          self%metric(3,1,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode))
 
-                self%grad2(inode,iterm) = self%metric(1,2,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
-                                          self%metric(2,2,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
-                                          self%metric(3,2,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode))
+                !self%grad2(inode,iterm) = self%metric(1,2,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
+                !                          self%metric(2,2,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
+                !                          self%metric(3,2,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode))
 
-                self%grad3(inode,iterm) = self%metric(1,3,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
-                                          self%metric(2,3,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
-                                          self%metric(3,3,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode))
+                !self%grad3(inode,iterm) = self%metric(1,3,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
+                !                          self%metric(2,3,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
+                !                          self%metric(3,3,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode))
+
+                self%grad1(inode,iterm) = self%metric(1,1,inode) * self%gq%vol%ddxi(inode,iterm)   + &
+                                          self%metric(2,1,inode) * self%gq%vol%ddeta(inode,iterm)  + &
+                                          self%metric(3,1,inode) * self%gq%vol%ddzeta(inode,iterm) 
+
+                self%grad2(inode,iterm) = self%metric(1,2,inode) * self%gq%vol%ddxi(inode,iterm)   + &
+                                          self%metric(2,2,inode) * self%gq%vol%ddeta(inode,iterm)  + &
+                                          self%metric(3,2,inode) * self%gq%vol%ddzeta(inode,iterm) 
+
+                self%grad3(inode,iterm) = self%metric(1,3,inode) * self%gq%vol%ddxi(inode,iterm)   + &
+                                          self%metric(2,3,inode) * self%gq%vol%ddeta(inode,iterm)  + &
+                                          self%metric(3,3,inode) * self%gq%vol%ddzeta(inode,iterm) 
             end do
         end do
 
@@ -730,6 +735,7 @@ contains
         self%mass    = ZERO
         temp = transpose(self%gq%vol%val)
 
+        !print*, 'jinv: ', self%jinv
 
 
         !
@@ -1083,7 +1089,7 @@ contains
 
                 else if (self%coordinate_system == 'Cylindrical') then
                     if (phys_dir == DIR_THETA) then
-                        r = self%grid_point(2,xi,eta,zeta)
+                        r = self%grid_point(1,xi,eta,zeta)
                         val = val * r
                     end if
                 end if

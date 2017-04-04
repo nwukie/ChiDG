@@ -41,7 +41,7 @@ contains
         logical,            intent(in),     optional    :: differentiate
 
         integer(ik)                 :: idom, ielem, iface, idiff, itime, ierr, &
-                                       diff_min, diff_max
+                                       diff_min, diff_max, imat
         type(timer_t)               :: timer, comm_timer, loop_timer
 
         type(chidg_worker_t)        :: worker
@@ -193,7 +193,6 @@ contains
             end do  ! idom
         end do ! itime
         call loop_timer%stop()
-
 
 
 

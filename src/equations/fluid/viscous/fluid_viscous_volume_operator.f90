@@ -1,4 +1,5 @@
 module fluid_viscous_volume_operator
+#include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ONE,TWO,HALF
 
@@ -89,6 +90,7 @@ contains
             tau_12, tau_13, tau_23,                 &
             flux_1, flux_2, flux_3
 
+        real(rk),   allocatable, dimension(:)   :: r
 
 
         !
@@ -104,8 +106,13 @@ contains
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
+        r = worker%coordinate('1','volume')
         if (worker%coordinate_system() == 'Cylindrical') then
-            mom2 = mom2 / worker%coordinate('1','volume')
+            mom2 = mom2 / r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 
@@ -181,9 +188,13 @@ contains
         ! Convert to tangential to angular momentum flux
         !
         if (worker%coordinate_system() == 'Cylindrical') then
-            flux_1 = flux_1 * worker%coordinate('1','volume')
-            flux_2 = flux_2 * worker%coordinate('1','volume')
-            flux_3 = flux_3 * worker%coordinate('1','volume')
+            flux_1 = flux_1 * r
+            flux_2 = flux_2 * r
+            flux_3 = flux_3 * r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
         call worker%integrate_volume('Momentum-2',flux_1,flux_2,flux_3)

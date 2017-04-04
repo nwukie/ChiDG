@@ -23,7 +23,7 @@ module mod_hdf_utilities
     ! HDF5 storage format
     !
     integer, parameter :: STORAGE_FORMAT_MAJOR = 1
-    integer, parameter :: STORAGE_FORMAT_MINOR = 4
+    integer, parameter :: STORAGE_FORMAT_MINOR = 5
 
 
     ! Attribute sizes

@@ -5,7 +5,9 @@ module type_time_integrator_steady
     use type_time_integrator,   only: time_integrator_t
     use hdf5
     use h5lt
-    use mod_hdf_utilities,      only: open_file_hdf, close_file_hdf, get_ntimes_hdf
+    use mod_hdf_utilities,      only: open_file_hdf, close_file_hdf, &
+                                      get_ntimes_hdf, set_time_integrator_hdf,  &
+                                      get_time_integrator_hdf
     use mpi_f08
     implicit none
 
@@ -87,11 +89,12 @@ contains
                 fid = open_file_hdf(filename)
 
 
-                !
-                ! Write time_integrator name to hdf file
-                !
-                call h5ltset_attribute_string_f(fid,"/","time_integrator",trim(data%time_manager%get_name()), ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltset_attribute_string_f")
+!                !
+!                ! Write time_integrator name to hdf file
+!                !
+!                call h5ltset_attribute_string_f(fid,"/","time_integrator",trim(data%time_manager%get_name()), ierr)
+!                if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltset_attribute_string_f")
+                call set_time_integrator_hdf(fid,trim(data%time_manager%get_name()))
 
                 
                 call close_file_hdf(fid)
@@ -117,9 +120,9 @@ contains
         type(chidg_data_t),                 intent(inout)   :: data
         character(*),                       intent(in)      :: filename
 
-        integer(kind = 8)   :: fid
-        character(1024)     :: temp_string
-        integer(ik)         :: ierr, ntime
+        integer(HID_T)              :: fid
+        character(:),   allocatable :: temp_string
+        integer(ik)                 :: ierr, ntime
 
         
         !
@@ -131,8 +134,9 @@ contains
         !
         ! Read time_integrator name
         !
-        call h5ltget_attribute_string_f(fid,"/","time_integrator",temp_string,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltget_attribute_string_f")
+        !call h5ltget_attribute_string_f(fid,"/","time_integrator",temp_string,ierr)
+        !if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltget_attribute_string_f")
+        temp_string = get_time_integrator_hdf(fid)
 
 
         !

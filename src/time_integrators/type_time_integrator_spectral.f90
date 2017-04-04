@@ -6,7 +6,8 @@ module type_time_integrator_spectral
     use type_time_integrator,   only: time_integrator_t
     use hdf5
     use h5lt
-    use mod_hdf_utilities,      only: open_file_hdf, close_file_hdf, get_ntimes_hdf
+    use mod_hdf_utilities,      only: open_file_hdf, close_file_hdf, get_ntimes_hdf, &
+                                      set_time_integrator_hdf, get_time_integrator_hdf
     use mod_HB_post,            only: get_post_processing_data
     use mpi_f08
     implicit none
@@ -76,7 +77,8 @@ contains
         type(chidg_data_t),                 intent(inout)   :: data
         character(*),                       intent(in)      :: filename
 
-        integer(kind = 8)       :: fid, nfreq, ntime
+        integer(HID_T)          :: fid
+        integer(kind = 8)       :: nfreq, ntime
         real(rk),   allocatable :: freq(:), time_lev(:)
         integer                 :: ierr, iwrite
 
@@ -108,8 +110,10 @@ contains
                 !
                 ! Write time_integrator name to hdf file
                 !
-                call h5ltset_attribute_string_f(fid,"/","time_integrator",trim(data%time_manager%get_name()), ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltset_attribute_string_f")
+                !call h5ltset_attribute_string_f(fid,"/","time_integrator",trim(data%time_manager%get_name()), ierr)
+                !if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltset_attribute_string_f")
+                call set_time_integrator_hdf(fid,trim(data%time_manager%get_name()))
+
 
                 !
                 ! Write frequencies and time levels to hdf file
@@ -144,10 +148,11 @@ contains
         type(chidg_data_t),                 intent(inout)   :: data
         character(*),                       intent(in)      :: filename
 
-        integer(kind = 8)       :: fid, nfreq, ntime
-        character(1024)         :: temp_string
-        real(rk),   allocatable :: freq(:), time_lev(:)
-        integer(ik)             :: ierr, ifreq, itime 
+        integer(HID_T)              :: fid
+        integer(kind = 8)           :: nfreq, ntime
+        character(:),   allocatable :: temp_string
+        real(rk),       allocatable :: freq(:), time_lev(:)
+        integer(ik)                 :: ierr, ifreq, itime 
         
         
         !
@@ -174,8 +179,9 @@ contains
         !
         ! Read time integrator name
         !
-        call h5ltget_attribute_string_f(fid,"/","time_integrator",temp_string,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltget_attribute_string_f")
+        !call h5ltget_attribute_string_f(fid,"/","time_integrator",temp_string,ierr)
+        !if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltget_attribute_string_f")
+        temp_string = get_time_integrator_hdf(fid)
 
 
         !

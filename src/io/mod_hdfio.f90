@@ -338,12 +338,14 @@ contains
         character(:),   allocatable     :: field_name, domain_name, time_string
         integer(HID_T)                  :: fid, domain_id
         integer(HSIZE_T)                :: adim, nfreq, ntime
-        integer(ik)                     :: idom, ieqn, neqns, iwrite, spacedim, time, field_index, iproc
+        integer(ik)                     :: idom, ieqn, neqns, iwrite, spacedim, &
+                                           time, field_index, iproc
         integer                         :: ierr, order_s
         logical                         :: file_exists
         integer(ik)                     :: itime
         real(rk),       allocatable     :: freq(:), time_lev(:)
 
+        print*, 'write - 1'
 
         !
         ! Check for file existence
@@ -382,6 +384,7 @@ contains
         end if
 
 
+        print*, 'write - 2'
 
         !
         ! Each process, write its own portion of the solution
@@ -397,6 +400,7 @@ contains
                 call set_ntimes_hdf(fid,data%ntime())
 
 
+        print*, 'write - 3'
 
                 !
                 ! Write solution for each domain
@@ -406,6 +410,7 @@ contains
                     domain_name = data%info(idom)%name
                     domain_id   = open_domain_hdf(fid,trim(domain_name))
                     
+        print*, 'write - 4'
 
                     !
                     ! Write domain attributes: solution order, equation set
@@ -429,6 +434,7 @@ contains
                     end if
 
 
+        print*, 'write - 5'
 
                     !
                     ! Set some data about the block: solution order + equation set
@@ -473,17 +479,21 @@ contains
 
                     call close_domain_hdf(domain_id)
 
+        print*, 'write - 6'
 
                 end do ! idom
 
+        print*, 'write - 7'
 
                 call set_contains_solution_hdf(fid,"True")
                 call close_file_hdf(fid)
 
+        print*, 'write - 8'
             end if
             call MPI_Barrier(ChiDG_COMM,ierr)
         end do
 
+        print*, 'write - 9'
     end subroutine write_solution_hdf
     !*****************************************************************************************
 

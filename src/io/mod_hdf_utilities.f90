@@ -46,6 +46,7 @@ contains
     !!  open_hdf
     !!  close_hdf
     !!
+    !!
     !!  File:
     !!  ---------------------------
     !!  initialize_file_hdf
@@ -67,10 +68,7 @@ contains
     !!  set_contains_solution_hdf
     !!  get_contains_solution_hdf
     !!
-    !!  set_ntimes_hdf
-    !!  get_ntimes_hdf
     !!
-    !!  get_time_integrator_hdf
     !!
     !!  Domain-level routines:
     !!  ---------------------------
@@ -141,10 +139,20 @@ contains
     !!
     !!  get_bcnames_hdf
     !!
-    !!  Utilities:
-    !!  ----------------------------
     !!  check_bc_state_exists_hdf
     !!  check_bc_property_exists_hdf
+    !!
+    !!
+    !!  Time Integrators:
+    !!  ----------------------------
+    !!  set_time_integrator_hdf
+    !!  get_time_integrator_hdf
+    !!
+    !!  set_ntimes_hdf
+    !!  get_ntimes_hdf
+    !!
+    !!  Utilities:
+    !!  ----------------------------
     !!  delete_group_attributes_hdf
     !!  check_attribute_exists_hdf
     !!  check_link_exists_hdf
@@ -1190,25 +1198,6 @@ contains
 
 
 
-    !>  Given a file identifier, set the number of time levels in an hdf5 file.
-    !!
-    !!  @author Matteo Ugolotti
-    !!  @date   02/20/2017
-    !!
-    !!  @param[in]  fid     HDF file identifier
-    !!
-    !----------------------------------------------------------------------------------------
-    subroutine set_ntimes_hdf(fid,ntimes)
-        integer(HID_T), intent(in)  :: fid
-        integer(ik),    intent(in)  :: ntimes
-
-        integer(ik)         :: ierr
-
-        call h5ltset_attribute_int_f(fid, "/", "ntimes", [ntimes], SIZE_ONE, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_ntimes_hdf: Error h5ltget_attribute_int_f")
-
-    end subroutine set_ntimes_hdf
-    !****************************************************************************************
 
 
 
@@ -1219,59 +1208,28 @@ contains
 
 
 
-    !>  Given a file identifier, return the number of time levels in an hdf5 file.
-    !!
-    !!  @author Matteo Ugolotti
-    !!  @date   02/20/2017
-    !!
-    !!  @param[in]  fid     HDF file identifier
-    !!
-    !----------------------------------------------------------------------------------------
-    function get_ntimes_hdf(fid) result(time_lev)
-        integer(HID_T), intent(in)  :: fid
-        
-        integer                 :: ierr
-        integer(ik)             :: time_lev
-        integer, dimension(1)   :: buf
-
-        call h5ltget_attribute_int_f(fid, "/", "ntimes", buf, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"get_ntimess_hdf: h5ltget_attribute_int_f had a problem getting the number of time levels")
-        time_lev = int(buf(1), kind=ik)
-
-    end function get_ntimes_hdf
-    !****************************************************************************************
-
-
-
-
-
-
-
-
-
-
-    !>  Given a file identifier, return the time integrator name in a hdf5 file.
-    !!
-    !!  @author Mayank Sharma
-    !!  @date   3/18/2017
-    !!
-    !!  @param[in]  fid     HDF file identifier
-    !!
-    !----------------------------------------------------------------------------------------
-    function get_time_integrator_hdf(fid) result(time_string)
-        integer(HID_T), intent(in)  :: fid
-        
-        character(1024)             :: temp_string
-        character(:),   allocatable :: time_string
-        integer(ik)                 :: ierr
-
-        call h5ltget_attribute_string_f(fid, "/", "time_integrator", temp_string, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"get_time_integrator_hdf: h5ltget_attribute_string_f & 
-                                         had a problem getting the time integrator name")
-        time_string = trim(temp_string)
-
-    end function get_time_integrator_hdf
-    !****************************************************************************************
+!    !>  Given a file identifier, return the time integrator name in a hdf5 file.
+!    !!
+!    !!  @author Mayank Sharma
+!    !!  @date   3/18/2017
+!    !!
+!    !!  @param[in]  fid     HDF file identifier
+!    !!
+!    !----------------------------------------------------------------------------------------
+!    function get_time_integrator_hdf(fid) result(time_string)
+!        integer(HID_T), intent(in)  :: fid
+!        
+!        character(1024)             :: temp_string
+!        character(:),   allocatable :: time_string
+!        integer(ik)                 :: ierr
+!
+!        call h5ltget_attribute_string_f(fid, "/", "time_integrator", temp_string, ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,"get_time_integrator_hdf: h5ltget_attribute_string_f & 
+!                                         had a problem getting the time integrator name")
+!        time_string = trim(temp_string)
+!
+!    end function get_time_integrator_hdf
+!    !****************************************************************************************
 
 
 
@@ -4229,6 +4187,142 @@ contains
 
     end function check_domain_exists_hdf
     !*********************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Set file attribute "/Time Integrator".
+    !!
+    !!
+    !!  @author Mayank Sharma
+    !!  @author Nathan A. Wukie
+    !!  @date   4/4/2017
+    !!
+    !!  @param[in]  fid     HDF5 file identifier.
+    !!  @param[in]  string  String indicating the time integrator
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_time_integrator_hdf(fid,string)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: string
+
+        integer(ik) :: ierr
+
+        call h5ltset_attribute_string_f(fid,"/","Time Integrator",trim(string), ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_time_integrator_hdf: h5ltset_attribute_string_f")
+
+    end subroutine set_time_integrator_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Return file attribute "/Time Integrator".
+    !!
+    !!
+    !!  @author Mayank Sharma
+    !!  @author Nathan A. Wukie
+    !!  @date   4/4/2017
+    !!
+    !!  @param[in]  fid     HDF5 file identifier.
+    !!  @result     string  String indicating the time integrator
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_time_integrator_hdf(fid) result(string)
+        integer(HID_T), intent(in)  :: fid
+
+        character(:),   allocatable :: string
+        character(100)              :: string_buffer
+
+        integer(ik) :: ierr
+
+        call check_attribute_exists_hdf(fid,"Time Integrator")
+
+        call h5ltget_attribute_string_f(fid,"/","Time Integrator",string_buffer, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_time_integrator_hdf: h5ltget_attribute_string_f")
+
+        ! Trim buffer for result
+        string = trim(string_buffer)
+
+    end function get_time_integrator_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, set the number of time levels in an hdf5 file.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   02/20/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_ntimes_hdf(fid,ntimes)
+        integer(HID_T), intent(in)  :: fid
+        integer(ik),    intent(in)  :: ntimes
+
+        integer(ik)         :: ierr
+
+        call h5ltset_attribute_int_f(fid, "/", "ntimes", [ntimes], SIZE_ONE, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_ntimes_hdf: Error h5ltget_attribute_int_f")
+
+    end subroutine set_ntimes_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, return the number of time levels in an hdf5 file.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   02/20/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_ntimes_hdf(fid) result(time_lev)
+        integer(HID_T), intent(in)  :: fid
+        
+        integer                 :: ierr
+        integer(ik)             :: time_lev
+        integer, dimension(1)   :: buf
+
+        call h5ltget_attribute_int_f(fid, "/", "ntimes", buf, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_ntimess_hdf: h5ltget_attribute_int_f had a problem getting the number of time levels")
+        time_lev = int(buf(1), kind=ik)
+
+    end function get_ntimes_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
 
 
 

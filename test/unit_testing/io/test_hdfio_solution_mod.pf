@@ -60,6 +60,8 @@ contains
 
         IO_DESTINATION = 'file'
 
+
+
         !
         ! Initialize ChiDG environment
         !
@@ -77,6 +79,7 @@ contains
         spacedim = 3
         call this%chidgO1%read_grid(this%fileorig,spacedim)
         call this%chidgO1%set('Solution Order', integer_input=1)
+        call this%chidgO1%set('Time Integrator', algorithm='Steady')
         call this%chidgO1%init('domains')
         call this%chidgO1%init('communication')
         call this%chidgO1%init('solvers')
@@ -84,6 +87,7 @@ contains
         spacedim = 3
         call this%chidgO2%read_grid(this%fileorig,spacedim)
         call this%chidgO2%set('Solution Order', integer_input=2)
+        call this%chidgO2%set('Time Integrator', algorithm='Steady')
         call this%chidgO2%init('domains')
         call this%chidgO2%init('communication')
         call this%chidgO2%init('solvers')
@@ -155,8 +159,8 @@ contains
 
         idom = 1
 
-        associate ( q => this%chidgO1%data%sdata%q%dom(1)%vecs, &
-                    q_in => this%chidgO1%data%sdata%q_in%dom(1)%vecs )
+        associate ( q => this%chidgO1%data%sdata%q, &
+                    q_in => this%chidgO1%data%sdata%q_in )
 
             !
             ! Set reference solution values
@@ -168,7 +172,7 @@ contains
             ! Assign reference solution
             !
             do ielem = 1,this%chidgO1%data%mesh(1)%nelem
-                q(ielem)%vec = ref + real(ielem,rk)
+                q%dom(1)%vecs(ielem)%vec = ref + real(ielem,rk)
             end do
 
 
@@ -181,7 +185,7 @@ contains
             ! Reset variable
             !
             do ielem = 1,this%chidgO1%data%mesh(1)%nelem
-                q(ielem)%vec = -1._rk
+                q%dom(1)%vecs(ielem)%vec = -1._rk
             end do
 
 
@@ -195,9 +199,8 @@ contains
             ! Test that the read solution values equal the reference values
             !
             do ielem = 1,this%chidgO1%data%mesh(1)%nelem
-                @assertEqual(ref+real(ielem,rk), q_in(ielem)%vec,  tol)
+                @assertEqual(ref+real(ielem,rk), q_in%dom(1)%vecs(ielem)%vec,  tol)
             end do
-
 
 
         end associate
@@ -231,8 +234,8 @@ contains
 
         idom = 1
 
-        associate ( q => this%chidgO1%data%sdata%q%dom(1)%vecs, &
-                    q_in => this%chidgO1%data%sdata%q_in%dom(1)%vecs )
+        associate ( q    => this%chidgO1%data%sdata%q, &
+                    q_in => this%chidgO1%data%sdata%q_in)
 
             !
             ! Set reference solution values
@@ -244,7 +247,7 @@ contains
             ! Assign reference solution
             !
             do ielem = 1,this%chidgO1%data%mesh(1)%nelem
-                q(ielem)%vec = ref + real(ielem,rk)
+                q%dom(1)%vecs(ielem)%vec = ref + real(ielem,rk)
             end do
 
 
@@ -257,7 +260,7 @@ contains
             ! Reset variable
             !
             do ielem = 1,this%chidgO1%data%mesh(1)%nelem
-                q(ielem)%vec = -1._rk
+                q%dom(1)%vecs(ielem)%vec = -1._rk
             end do
 
 
@@ -271,7 +274,7 @@ contains
             ! Test that the read solution values equal the reference values
             !
             do ielem = 1,this%chidgO1%data%mesh(1)%nelem
-                @assertEqual(ref+real(ielem,rk), q_in(ielem)%vec,  tol)
+                @assertEqual(ref+real(ielem,rk), q_in%dom(1)%vecs(ielem)%vec,  tol)
             end do
 
 
@@ -309,8 +312,8 @@ contains
         
         idom = 1
         
-        associate ( q => this%chidgO2%data%sdata%q%dom(1)%vecs, &
-                    q_in => this%chidgO2%data%sdata%q_in%dom(1)%vecs )
+        associate ( q => this%chidgO2%data%sdata%q, &
+                    q_in => this%chidgO2%data%sdata%q_in )
             
             !
             ! Set reference solution values
@@ -322,8 +325,9 @@ contains
             ! Assign reference solution
             !
             do ielem = 1,this%chidgO2%data%mesh(1)%nelem
-                q(ielem)%vec = ref + real(ielem,rk)
+                q%dom(1)%vecs(ielem)%vec = ref + real(ielem,rk)
             end do
+            
             
 
             !
@@ -336,7 +340,7 @@ contains
             ! Reset variable
             !
             do ielem = 1,this%chidgO2%data%mesh(1)%nelem
-                q(ielem)%vec = -1._rk
+                q%dom(1)%vecs(ielem)%vec = -1._rk
             end do
             
 
@@ -350,7 +354,7 @@ contains
             ! Test that the read solution values equal the reference values
             !
             do ielem = 1,this%chidgO2%data%mesh(1)%nelem
-                @assertEqual(ref+real(ielem,rk), q_in(ielem)%vec,  tol)
+                @assertEqual(ref+real(ielem,rk), q_in%dom(1)%vecs(ielem)%vec,  tol)
             end do
 
        end associate
@@ -388,8 +392,8 @@ contains
         
         idom = 1
         
-        associate ( q => this%chidgO2%data%sdata%q%dom(1)%vecs, &
-                    q_in => this%chidgO2%data%sdata%q_in%dom(1)%vecs )
+        associate ( q    => this%chidgO2%data%sdata%q, &
+                    q_in => this%chidgO2%data%sdata%q_in )
             
             !
             ! Set reference solution values
@@ -401,7 +405,7 @@ contains
             ! Assign reference solution
             !
             do ielem = 1,this%chidgO2%data%mesh(1)%nelem
-                q(ielem)%vec = ref + real(ielem,rk)
+                q%dom(1)%vecs(ielem)%vec = ref + real(ielem,rk)
             end do
             
 
@@ -415,7 +419,7 @@ contains
             ! Reset variable
             !
             do ielem = 1,this%chidgO2%data%mesh(1)%nelem
-                q(ielem)%vec = -1._rk
+                q%dom(1)%vecs(ielem)%vec = -1._rk
             end do
             
 
@@ -429,7 +433,7 @@ contains
             ! Test that the read solution values equal the reference values
             !
             do ielem = 1,this%chidgO2%data%mesh(1)%nelem
-                @assertEqual(ref+real(ielem,rk), q_in(ielem)%vec,  tol)
+                @assertEqual(ref+real(ielem,rk), q_in%dom(1)%vecs(ielem)%vec,  tol)
             end do
 
        end associate
@@ -468,9 +472,9 @@ contains
         
         idom = 1
         
-        associate ( q1 => this%chidgO1%data%sdata%q%dom(1)%vecs,    &
-                    q2 => this%chidgO2%data%sdata%q%dom(1)%vecs,    &
-                    q2_in => this%chidgO2%data%sdata%q_in%dom(1)%vecs )
+        associate ( q1    => this%chidgO1%data%sdata%q,    &
+                    q2    => this%chidgO2%data%sdata%q,    &
+                    q2_in => this%chidgO2%data%sdata%q_in )
             
             !
             ! Set q1 reference solution values
@@ -482,7 +486,7 @@ contains
             ! Assign reference solution
             !
             do ielem = 1,this%chidgO1%data%mesh(1)%nelem
-                q1(ielem)%vec = ref_q1 + real(ielem,rk)
+                q1%dom(1)%vecs(ielem)%vec = ref_q1 + real(ielem,rk)
             end do
             
 
@@ -496,7 +500,7 @@ contains
             ! Reset O2 variable
             !
             do ielem = 1,this%chidgO2%data%mesh(1)%nelem
-                q2(ielem)%vec = -1._rk
+                q2%dom(1)%vecs(ielem)%vec = -1._rk
             end do
             
 
@@ -514,8 +518,8 @@ contains
             ! Test that the read solution values equal the expected values
             !
             do ielem = 1,this%chidgO2%data%mesh(1)%nelem
-                @assertEqual(ref_q2(1)+real(ielem,rk), q2_in(ielem)%vec(1),  tol)
-                @assertEqual(ZERO, q2_in(ielem)%vec(2:),  tol)
+                @assertEqual(ref_q2(1)+real(ielem,rk), q2_in%dom(1)%vecs(ielem)%vec(1),  tol)
+                @assertEqual(ZERO, q2_in%dom(1)%vecs(ielem)%vec(2:),  tol)
             end do
 
        end associate
@@ -554,9 +558,9 @@ contains
         
         idom = 1
         
-        associate ( q1 => this%chidgO1%data%sdata%q%dom(1)%vecs,    &
-                    q2 => this%chidgO2%data%sdata%q%dom(1)%vecs,    &
-                    q2_in => this%chidgO2%data%sdata%q_in%dom(1)%vecs )
+        associate ( q1    => this%chidgO1%data%sdata%q,    &
+                    q2    => this%chidgO2%data%sdata%q,    &
+                    q2_in => this%chidgO2%data%sdata%q_in )
             
             !
             ! Set q1 reference solution values
@@ -568,7 +572,7 @@ contains
             ! Assign reference solution
             !
             do ielem = 1,this%chidgO1%data%mesh(1)%nelem
-                q1(ielem)%vec = ref_q1 + real(ielem,rk)
+                q1%dom(1)%vecs(ielem)%vec = ref_q1 + real(ielem,rk)
             end do
             
 
@@ -582,7 +586,7 @@ contains
             ! Reset O2 variable
             !
             do ielem = 1,this%chidgO2%data%mesh(1)%nelem
-                q2(ielem)%vec = -1._rk
+                q2%dom(1)%vecs(ielem)%vec = -1._rk
             end do
             
 
@@ -600,8 +604,8 @@ contains
             ! Test that the read solution values equal the expected values
             !
             do ielem = 1,this%chidgO2%data%mesh(1)%nelem
-                @assertEqual(ref_q2(1)+real(ielem,rk), q2_in(ielem)%vec(1),  tol)
-                @assertEqual(ZERO, q2_in(ielem)%vec(2:),  tol)
+                @assertEqual(ref_q2(1)+real(ielem,rk), q2_in%dom(1)%vecs(ielem)%vec(1),  tol)
+                @assertEqual(ZERO, q2_in%dom(1)%vecs(ielem)%vec(2:),  tol)
             end do
 
        end associate
@@ -641,9 +645,9 @@ contains
         
         idom = 1
         
-        associate ( q1    => this%chidgO1%data%sdata%q%dom(1)%vecs,     &
-                    q1_in => this%chidgO1%data%sdata%q_in%dom(1)%vecs,  &
-                    q2    => this%chidgO2%data%sdata%q%dom(1)%vecs )
+        associate ( q1    => this%chidgO1%data%sdata%q,     &
+                    q2    => this%chidgO2%data%sdata%q,     &
+                    q1_in => this%chidgO1%data%sdata%q_in )
             
             !
             ! Set q2 reference solution values
@@ -655,7 +659,7 @@ contains
             ! Assign reference solution
             !
             do ielem = 1,this%chidgO2%data%mesh(1)%nelem
-                q2(ielem)%vec = ref_q2 + real(ielem,rk)
+                q2%dom(1)%vecs(ielem)%vec = ref_q2 + real(ielem,rk)
             end do
             
 
@@ -669,7 +673,7 @@ contains
             ! Reset O1 variable
             !
             do ielem = 1,this%chidgO1%data%mesh(1)%nelem
-                q1(ielem)%vec = -1._rk
+                q1%dom(1)%vecs(ielem)%vec = -1._rk
             end do
             
 
@@ -687,7 +691,7 @@ contains
             ! Test that the read solution values equal the expected values
             !
             do ielem = 1,this%chidgO1%data%mesh(1)%nelem
-                @assertEqual(ref_q1(1)+real(ielem,rk), q1_in(ielem)%vec(1),  tol)
+                @assertEqual(ref_q1(1)+real(ielem,rk), q1_in%dom(1)%vecs(ielem)%vec(1),  tol)
             end do
 
        end associate
@@ -720,9 +724,9 @@ contains
         
         idom = 1
         
-        associate ( q1    => this%chidgO1%data%sdata%q%dom(1)%vecs,     &
-                    q1_in => this%chidgO1%data%sdata%q_in%dom(1)%vecs,  &
-                    q2    => this%chidgO2%data%sdata%q%dom(1)%vecs )
+        associate ( q1    => this%chidgO1%data%sdata%q,     &
+                    q2    => this%chidgO2%data%sdata%q,     &
+                    q1_in => this%chidgO1%data%sdata%q_in )
             
             !
             ! Set q2 reference solution values
@@ -734,7 +738,7 @@ contains
             ! Assign reference solution
             !
             do ielem = 1,this%chidgO2%data%mesh(1)%nelem
-                q2(ielem)%vec = ref_q2 + real(ielem,rk)
+                q2%dom(1)%vecs(ielem)%vec = ref_q2 + real(ielem,rk)
             end do
             
 
@@ -748,7 +752,7 @@ contains
             ! Reset O1 variable
             !
             do ielem = 1,this%chidgO1%data%mesh(1)%nelem
-                q1(ielem)%vec = -1._rk
+                q1%dom(1)%vecs(ielem)%vec = -1._rk
             end do
             
 
@@ -766,8 +770,9 @@ contains
             ! Test that the read solution values equal the expected values
             !
             do ielem = 1,this%chidgO1%data%mesh(1)%nelem
-                @assertEqual(ref_q1(1)+real(ielem,rk), q1_in(ielem)%vec(1),  tol)
+                @assertEqual(ref_q1(1)+real(ielem,rk), q1_in%dom(1)%vecs(ielem)%vec(1), tol)
             end do
+
 
        end associate
             

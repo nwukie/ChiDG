@@ -244,7 +244,7 @@ contains
         associate ( weights  => mesh(idomain_l)%faces(ielement_l,iface)%gq%face%weights(:,iface),   &
                     jinv     => mesh(idomain_l)%faces(ielement_l,iface)%jinv,                       &
                     val      => mesh(idomain_l)%faces(ielement_l,iface)%gq%face%val(:,:,iface),     &
-                    valtrans => mesh(idomain_l)%faces(ielement_l, iface)%gq%face%val_trans(:,:,iface) )
+                    valtrans => mesh(idomain_l)%faces(ielement_l,iface)%gq%face%val_trans(:,:,iface) )
 
 
             !
@@ -504,7 +504,6 @@ contains
                 ! Only store rhs once. if idiff == DIAG. Also, since the integral could be computed more than once for chimera faces, only store for the first donor.
                 ! The integral should be the same for any value of idonor. Only the derivatives will change
                 !
-                !if ( boundary_face .and. ( ielement_l == function_info%seed%ielement_l ) ) then
                 if ( (boundary_face .and. diff_interior) .or. (boundary_face .and. diff_none) ) then
 
                     vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_

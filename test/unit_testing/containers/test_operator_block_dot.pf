@@ -22,7 +22,7 @@ subroutine test_operator_block_dot()
     type(blockvector_t)         :: a, b
 
     real(rk)                    :: tol
-    integer(ik)                 :: nterms_c, idomain, spacedim
+    integer(ik)                 :: nterms_c, idomain, spacedim, nelements_g
     real(rk),   dimension(8)    :: vec_a1, vec_a2, vec_a3, vec_b1, vec_b2, vec_b3
     real(rk)                    :: dot_ref, dot_test
 
@@ -41,12 +41,14 @@ subroutine test_operator_block_dot()
 
     ! Get grid points
     call create_mesh('311',nodes,connectivity)
+    nelements_g = 3
 
     
     ! Initialize domain
     call chidg%data%add_domain('D_01',              &
                                nodes,               &
                                connectivity,        &
+                               nelements_g,         &
                                spacedim,            &
                                nterms_c,            &
                                'Scalar Advection',  &

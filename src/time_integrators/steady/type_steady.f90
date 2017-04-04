@@ -2,6 +2,7 @@ module type_steady
 #include <messenger.h>
     use mod_kinds,                      only: rk,ik
     use mod_spatial,                    only: update_space
+    use mod_chidg_mpi,                  only: GLOBAL_MASTER
 
     use type_time_integrator_steady,    only: time_integrator_steady_t
     use type_system_assembler,          only: system_assembler_t
@@ -12,6 +13,7 @@ module type_steady
     use type_preconditioner,            only: preconditioner_t
     use type_chidg_vector
 
+    use mod_entropy,                    only: compute_entropy_error
     implicit none
     private
 
@@ -121,6 +123,9 @@ contains
         ! Store end residual from nonlinear solver.
         !
         call self%residual_norm%push_back(nonlinear_solver%residual_norm%at(nonlinear_solver%residual_norm%size()))
+
+
+        !call write_line("Entropy Error: ", compute_entropy_error(data), io_proc=GLOBAL_MASTER)
 
 
     end subroutine step

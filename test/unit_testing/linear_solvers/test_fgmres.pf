@@ -23,7 +23,7 @@ subroutine test_fgmres_solve()
     type(domain_connectivity_t) :: connectivity
 
     real(rk)    :: tol
-    integer(ik) :: nterms_c, idomain, spacedim, ixi_min, ixi_max, idiag
+    integer(ik) :: nterms_c, idomain, spacedim, ixi_min, ixi_max, idiag, nelements_g
 
 
     tol      = 1.e-9_rk
@@ -58,7 +58,8 @@ subroutine test_fgmres_solve()
     !
     ! Initialize domain
     !
-    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection','Cartesian')
+    nelements_g = 3
+    call chidg%data%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Scalar Advection','Cartesian')
 
     call chidg%set('Solution Order', integer_input=1)
     call chidg%init('domains')

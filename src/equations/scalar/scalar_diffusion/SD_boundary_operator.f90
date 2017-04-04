@@ -117,6 +117,8 @@ contains
         grad3_u_p = worker%get_primary_field_face('u', 'grad3 + lift', 'face exterior')
 
 
+
+
         !
         ! Compute scalar coefficient
         !
@@ -141,11 +143,6 @@ contains
         ! Compute boundary average flux
         !
         integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-
-
-        if (any(ieee_is_nan(integrand(:)%x_ad_))) then
-            print*, 'SD Boundary average: ', integrand(:)%x_ad_
-        end if
 
 
         !

@@ -35,7 +35,7 @@ module type_chidg
     use mod_tecio,                  only: write_tecio_variables
     use mod_hdfio,                  only: read_grid_hdf, read_boundaryconditions_hdf,   &
                                           read_solution_hdf, write_solution_hdf,        &
-                                          read_connectivity_hdf, read_weights_hdf
+                                          read_connectivity_hdf, read_weights_hdf, write_grid_hdf
     use mod_hdf_utilities,          only: close_hdf
     use mod_partitioners,           only: partition_connectivity, send_partitions, &
                                           recv_partition
@@ -106,6 +106,7 @@ module type_chidg
         procedure   :: read_grid
         procedure   :: read_boundaryconditions
         procedure   :: read_solution
+        procedure   :: write_grid
         procedure   :: write_solution
 
         ! Initialization
@@ -641,11 +642,11 @@ contains
             end if
 
 
-
             call self%data%add_domain(                              &
                                       trim(meshdata(idom)%name),    &
                                       meshdata(idom)%points,        &
                                       meshdata(idom)%connectivity,  &
+                                      meshdata(idom)%nelements_g,   &
                                       domain_dimensionality,        &
                                       meshdata(idom)%nterms_c,      &
                                       domain_equation_set,          &
@@ -779,13 +780,12 @@ contains
     !!  @param[in]  solutionfile    String containing a solution file name, including extension.
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine read_solution(self,solutionfile)
+    subroutine read_solution(self,file_name)
         class(chidg_t),     intent(inout)           :: self
-        character(*),       intent(in)              :: solutionfile
+        character(*),       intent(in)              :: file_name
 
         character(len=5),   dimension(1)    :: extensions
         character(len=:),   allocatable     :: extension
-        type(meshdata_t),   allocatable     :: solutiondata(:)
         integer                             :: iext, extloc, idom, ndomains, iread, ierr
 
 
@@ -793,18 +793,18 @@ contains
         ! Get filename extension
         !
         extensions = ['.h5']
-        extension = get_file_extension(solutionfile, extensions)
+        extension = get_file_extension(file_name, extensions)
 
 
         !
         ! Call grid reader based on file extension
         !
-        call write_line("Reading solution...", io_proc=GLOBAL_MASTER)
+        call write_line("Reading solution from: ", file_name, io_proc=GLOBAL_MASTER)
         do iread = 0,NRANK-1
             if ( iread == IRANK ) then
 
                 if ( extension == '.h5' ) then
-                    call read_solution_hdf(solutionfile,self%data)
+                    call read_solution_hdf(file_name,self%data)
                 else
                     call chidg_signal(FATAL,"chidg%read_solution: grid file extension not recognized")
                 end if
@@ -893,6 +893,52 @@ contains
 
 
 
+    !>  Write grid to file.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/21/2016
+    !!
+    !!  @param[in]  file    String containing a solution file name, including extension.
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine write_grid(self,file_name)
+        class(chidg_t),     intent(inout)           :: self
+        character(*),       intent(in)              :: file_name
+
+        character(len=5),   dimension(1)    :: extensions
+        character(:),       allocatable     :: extension
+        integer                             :: iext, extloc, idom, ndomains, iwrite, ierr
+
+
+        !
+        ! Get filename extension
+        !
+        extensions = ['.h5']
+        extension = get_file_extension(file_name, extensions)
+
+
+        !
+        ! Call grid reader based on file extension
+        !
+        call write_line("Writing grid to: ", file_name, io_proc=GLOBAL_MASTER)
+        if ( extension == '.h5' ) then
+            call write_grid_hdf(self%data,file_name)
+        else
+            call chidg_signal(FATAL,"chidg%write_grid: grid file extension not recognized")
+        end if
+
+        call write_line("Done writing grid...", io_proc=GLOBAL_MASTER)
+
+    end subroutine write_grid
+    !*****************************************************************************************
+
+
+
+
+
+
+
 
 
     !>  Write solution to file.
@@ -904,13 +950,12 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine write_solution(self,solutionfile)
+    subroutine write_solution(self,file_name)
         class(chidg_t),     intent(inout)           :: self
-        character(*),       intent(in)              :: solutionfile
+        character(*),       intent(in)              :: file_name
 
         character(len=5),   dimension(1)    :: extensions
         character(:),       allocatable     :: extension
-        type(meshdata_t),   allocatable     :: solutiondata(:)
         integer                             :: iext, extloc, idom, ndomains, iwrite, ierr
 
 
@@ -918,15 +963,15 @@ contains
         ! Get filename extension
         !
         extensions = ['.h5']
-        extension = get_file_extension(solutionfile, extensions)
+        extension = get_file_extension(file_name, extensions)
 
 
         !
         ! Call grid reader based on file extension
         !
-        call write_line("Writing solution...", io_proc=GLOBAL_MASTER)
+        call write_line("Writing solution to:", file_name, io_proc=GLOBAL_MASTER)
         if ( extension == '.h5' ) then
-            call write_solution_hdf(self%data,solutionfile)
+            call write_solution_hdf(self%data,file_name)
         else
             call chidg_signal(FATAL,"chidg%write_solution: grid file extension not recognized")
         end if

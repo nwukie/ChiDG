@@ -285,7 +285,7 @@ contains
             idomain_g_coupled  = self%idomain_g_coupled(iface_bc)%at(ielem_coupled)
             ielement_g_coupled = self%ielement_g_coupled(iface_bc)%at(ielem_coupled)
 
-            if ( (idomain_g_coupled == idomain_g) .and. &
+            if ( (idomain_g_coupled  == idomain_g ) .and. &
                  (ielement_g_coupled == ielement_g) ) already_added = .true.
 
         end do

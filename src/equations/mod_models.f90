@@ -6,6 +6,7 @@ module mod_models
     use type_model,             only: model_t
 
     use type_ideal_gas,                                 only: ideal_gas_t
+    use type_fluid_advection_velocity,                  only: fluid_advection_velocity_t
     use type_shear_stress,                              only: shear_stress_t
     use type_model_vorticity,                           only: model_vorticity_t
     use type_temperature_gradient,                      only: temperature_gradient_t
@@ -255,6 +256,7 @@ contains
         ! Fluid models
         !
         type(ideal_gas_t)                               :: IDEAL_GAS
+        type(fluid_advection_velocity_t)                :: FLUID_ADVECTION_VELOCITY
         type(shear_stress_t)                            :: SHEAR_STRESS
         type(model_vorticity_t)                         :: VORTICITY
         type(temperature_gradient_t)                    :: TEMPERATURE_GRADIENT
@@ -287,6 +289,7 @@ contains
         if (.not. models_initialized) then
 
             call model_factory%register(IDEAL_GAS)
+            call model_factory%register(FLUID_ADVECTION_VELOCITY)
             call model_factory%register(SHEAR_STRESS)
             call model_factory%register(VORTICITY)
             call model_factory%register(TEMPERATURE_GRADIENT)

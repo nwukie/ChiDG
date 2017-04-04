@@ -34,9 +34,9 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine chidg_post_hdf2vtk(filename)
-
-        character(*)                    ::  filename
+    subroutine chidg_post_hdf2vtk(grid_file,solution_file)
+        character(*)                    ::  grid_file
+        character(*)                    ::  solution_file
 
 
         type(chidg_t)                   ::  chidg
@@ -52,20 +52,24 @@ contains
         call chidg%start_up('mpi')
 
 
+
+
         !
         ! Get nterms_s and eqnset
         !
-        file_props = get_properties_hdf(filename)
+        file_props = get_properties_hdf(solution_file)
 
         nterms_s   = file_props%nterms_s(1)     ! Global variable from mod_io 
         eqnset     = file_props%eqnset(1)       ! Global variable from mod_io
         spacedim   = file_props%spacedim(1)     ! Global variable from mod_io
 
 
+
+
         !
         ! Read grid data from file
         !
-        call chidg%read_grid(filename,spacedim)
+        call chidg%read_grid(grid_file,spacedim)
 
 
         solution_order = 0
@@ -77,17 +81,15 @@ contains
         ! Initialize solution data storage
         !
         call chidg%set('Solution Order', integer_input=solution_order)
-        !call chidg%initialize_solution_domains()
         call chidg%init('domains')
         call chidg%init('communication')
         call chidg%init('solvers')
-        !call chidg%initialize_solution_solver()
 
 
         !
         ! Read solution modes from HDF5
         !
-        call chidg%read_solution(filename)
+        call chidg%read_solution(solution_file)
 
 
         !

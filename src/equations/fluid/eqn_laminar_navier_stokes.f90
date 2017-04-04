@@ -73,6 +73,7 @@ contains
                 call laminar_navier_stokes_eqns%add_operator('Euler Volume Flux')
                 call laminar_navier_stokes_eqns%add_operator('Euler Boundary Average Flux')
                 call laminar_navier_stokes_eqns%add_operator('Euler Roe Flux')
+                !call laminar_navier_stokes_eqns%add_operator('Euler LaxFriedrichs Flux')
                 call laminar_navier_stokes_eqns%add_operator('Euler BC Flux')
                 call laminar_navier_stokes_eqns%add_operator('Euler Volume Cylindrical Source')
 
@@ -82,8 +83,9 @@ contains
                 call laminar_navier_stokes_eqns%add_operator('Fluid Viscous Volume Cylindrical Source')
 
                 call laminar_navier_stokes_eqns%add_model('Ideal Gas')
-                !call laminar_navier_stokes_eqns%add_model('Sutherlands Law')
-                call laminar_navier_stokes_eqns%add_model('Constant Viscosity')
+                call laminar_navier_stokes_eqns%add_model('Fluid Advection Velocity')
+                call laminar_navier_stokes_eqns%add_model('Sutherlands Law')
+                !call laminar_navier_stokes_eqns%add_model('Constant Viscosity')
                 call laminar_navier_stokes_eqns%add_model('Stokes Hypothesis')
                 call laminar_navier_stokes_eqns%add_model('Reynolds Analogy')
                 call laminar_navier_stokes_eqns%add_model('Zero Turbulent Model Fields')

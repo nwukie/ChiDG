@@ -211,7 +211,7 @@ contains
         real(rk)                :: gq_coords(3), parallel_coords(3), donor_vol, local_vol, parallel_vol
         real(rk), allocatable   :: donor_vols(:)
         real(rk)                :: offset_1, offset_2, offset_3,                                            &
-                                   dxdxi, dxdeta, dxdzeta, dydxi, dydeta, dydzeta, dzdxi, dzdeta, dzdzeta,  &
+                                   d1dxi, d1deta, d1dzeta, d2dxi, d2deta, d2dzeta, d3dxi, d3deta, d3dzeta,  &
                                    donor_jinv, parallel_jinv
         real(rk)        :: donor_metric(3,3), parallel_metric(3,3)
 
@@ -447,29 +447,35 @@ contains
                                 end do
 
                                 ! Compute local metric
-                                dxdxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
-                                dydxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
-                                dzdxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
-                                dxdeta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
-                                dydeta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
-                                dzdeta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
-                                dxdzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
-                                dydzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
-                                dzdzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                                d1dxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                                d2dxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                                d3dxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                                d1deta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                                d2deta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                                d3deta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                                d1dzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                                d2dzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                                d3dzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
 
-                                donor_metric(1,1) = dydeta*dzdzeta - dydzeta*dzdeta
-                                donor_metric(2,1) = dydzeta*dzdxi  - dydxi*dzdzeta
-                                donor_metric(3,1) = dydxi*dzdeta   - dydeta*dzdxi
-                                donor_metric(1,2) = dxdzeta*dzdeta - dxdeta*dzdzeta
-                                donor_metric(2,2) = dxdxi*dzdzeta  - dxdzeta*dzdxi
-                                donor_metric(3,2) = dxdeta*dzdxi   - dxdxi*dzdeta
-                                donor_metric(1,3) = dxdeta*dydzeta - dxdzeta*dydeta
-                                donor_metric(2,3) = dxdzeta*dydxi  - dxdxi*dydzeta
-                                donor_metric(3,3) = dxdxi*dydeta   - dxdeta*dydxi
+                                donor_jinv = (d1dxi*d2deta*d3dzeta - d1deta*d2dxi*d3dzeta - &
+                                              d1dxi*d2dzeta*d3deta + d1dzeta*d2dxi*d3deta + &
+                                              d1deta*d2dzeta*d3dxi - d1dzeta*d2deta*d3dxi)
 
-                                donor_jinv = dxdxi*dydeta*dzdzeta - dxdeta*dydxi*dzdzeta - &
-                                             dxdxi*dydzeta*dzdeta + dxdzeta*dydxi*dzdeta + &
-                                             dxdeta*dydzeta*dzdxi - dxdzeta*dydeta*dzdxi
+
+                                donor_metric(1,1) = (d2deta*d3dzeta - d2dzeta*d3deta)
+                                donor_metric(2,1) = (d2dzeta*d3dxi  - d2dxi*d3dzeta)
+                                donor_metric(3,1) = (d2dxi*d3deta   - d2deta*d3dxi)
+                                donor_metric(1,2) = (d1dzeta*d3deta - d1deta*d3dzeta)
+                                donor_metric(2,2) = (d1dxi*d3dzeta  - d1dzeta*d3dxi)
+                                donor_metric(3,2) = (d1deta*d3dxi   - d1dxi*d3deta)
+                                donor_metric(1,3) = (d1deta*d2dzeta - d1dzeta*d2deta)
+                                donor_metric(2,3) = (d1dzeta*d2dxi  - d1dxi*d2dzeta)
+                                donor_metric(3,3) = (d1dxi*d2deta   - d1deta*d2dxi)
+
+                                ! Complete definition of metric term by scaling by J
+                                donor_metric = donor_metric/donor_jinv
+
+
                             else 
                                 call chidg_signal(FATAL,"detect_chimera_donors: no local or parallel donor found")
 
@@ -742,31 +748,38 @@ contains
 
 
                             ! Compute metric terms for the point in the donor element
-                            dxdxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
-                            dydxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
-                            dzdxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
-                            dxdeta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
-                            dydeta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
-                            dzdeta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
-                            dxdzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
-                            dydzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
-                            dzdzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                            d1dxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                            d2dxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                            d3dxi   = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,1,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                            d1deta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                            d2deta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                            d3deta  = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,2,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                            d1dzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                            d2dzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
+                            d3dzeta = mesh(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,3,donor_coord%c1_,donor_coord%c2_,donor_coord%c3_,scale=.true.)
 
-                            parallel_metric(1,1) = dydeta*dzdzeta - dydzeta*dzdeta
-                            parallel_metric(2,1) = dydzeta*dzdxi  - dydxi*dzdzeta
-                            parallel_metric(3,1) = dydxi*dzdeta   - dydeta*dzdxi
-                            parallel_metric(1,2) = dxdzeta*dzdeta - dxdeta*dzdzeta
-                            parallel_metric(2,2) = dxdxi*dzdzeta  - dxdzeta*dzdxi
-                            parallel_metric(3,2) = dxdeta*dzdxi   - dxdxi*dzdeta
-                            parallel_metric(1,3) = dxdeta*dydzeta - dxdzeta*dydeta
-                            parallel_metric(2,3) = dxdzeta*dydxi  - dxdxi*dydzeta
-                            parallel_metric(3,3) = dxdxi*dydeta   - dxdeta*dydxi
-                            call MPI_Send(parallel_metric,9,MPI_REAL8,iproc,0,ChiDG_COMM,ierr)
 
                             ! Compute inverse element jacobian
-                            parallel_jinv = dxdxi*dydeta*dzdzeta - dxdeta*dydxi*dzdzeta - &
-                                            dxdxi*dydzeta*dzdeta + dxdzeta*dydxi*dzdeta + &
-                                            dxdeta*dydzeta*dzdxi - dxdzeta*dydeta*dzdxi
+                            parallel_jinv = (d1dxi*d2deta*d3dzeta - d1deta*d2dxi*d3dzeta - &
+                                             d1dxi*d2dzeta*d3deta + d1dzeta*d2dxi*d3deta + &
+                                             d1deta*d2dzeta*d3dxi - d1dzeta*d2deta*d3dxi)
+
+
+                            parallel_metric(1,1) = (d2deta*d3dzeta - d2dzeta*d3deta)
+                            parallel_metric(2,1) = (d2dzeta*d3dxi  - d2dxi*d3dzeta)
+                            parallel_metric(3,1) = (d2dxi*d3deta   - d2deta*d3dxi)
+                            parallel_metric(1,2) = (d1dzeta*d3deta - d1deta*d3dzeta)
+                            parallel_metric(2,2) = (d1dxi*d3dzeta  - d1dzeta*d3dxi)
+                            parallel_metric(3,2) = (d1deta*d3dxi   - d1dxi*d3deta)
+                            parallel_metric(1,3) = (d1deta*d2dzeta - d1dzeta*d2deta)
+                            parallel_metric(2,3) = (d1dzeta*d2dxi  - d1dxi*d2dzeta)
+                            parallel_metric(3,3) = (d1dxi*d2deta   - d1deta*d2dxi)
+
+                            ! Complete definition of metric by scaling by J
+                            parallel_metric = parallel_metric/parallel_jinv
+
+                            ! Communicate metric and jacobian 
+                            call MPI_Send(parallel_metric,9,MPI_REAL8,iproc,0,ChiDG_COMM,ierr)
                             call MPI_Send(parallel_jinv,1,MPI_REAL8,iproc,0,ChiDG_COMM,ierr)
 
                         end if
@@ -897,15 +910,25 @@ contains
                             jinv   = mesh(idom)%chimera%recv%data(ChiID)%donor_jinv(idonor)%at(ipt)
 
                             ! Compute cartesian derivative interpolator for gq node
-                            interpolator_grad1(ipt,iterm) = metric(1,1) * ddxi   * (ONE/jinv) + &
-                                                            metric(2,1) * ddeta  * (ONE/jinv) + &
-                                                            metric(3,1) * ddzeta * (ONE/jinv)
-                            interpolator_grad2(ipt,iterm) = metric(1,2) * ddxi   * (ONE/jinv) + &
-                                                            metric(2,2) * ddeta  * (ONE/jinv) + &
-                                                            metric(3,2) * ddzeta * (ONE/jinv)
-                            interpolator_grad3(ipt,iterm) = metric(1,3) * ddxi   * (ONE/jinv) + &
-                                                            metric(2,3) * ddeta  * (ONE/jinv) + &
-                                                            metric(3,3) * ddzeta * (ONE/jinv)
+                            !interpolator_grad1(ipt,iterm) = metric(1,1) * ddxi   * (ONE/jinv) + &
+                            !                                metric(2,1) * ddeta  * (ONE/jinv) + &
+                            !                                metric(3,1) * ddzeta * (ONE/jinv)
+                            !interpolator_grad2(ipt,iterm) = metric(1,2) * ddxi   * (ONE/jinv) + &
+                            !                                metric(2,2) * ddeta  * (ONE/jinv) + &
+                            !                                metric(3,2) * ddzeta * (ONE/jinv)
+                            !interpolator_grad3(ipt,iterm) = metric(1,3) * ddxi   * (ONE/jinv) + &
+                            !                                metric(2,3) * ddeta  * (ONE/jinv) + &
+                            !                                metric(3,3) * ddzeta * (ONE/jinv)
+
+                            interpolator_grad1(ipt,iterm) = metric(1,1) * ddxi   + &
+                                                            metric(2,1) * ddeta  + &
+                                                            metric(3,1) * ddzeta 
+                            interpolator_grad2(ipt,iterm) = metric(1,2) * ddxi   + &
+                                                            metric(2,2) * ddeta  + &
+                                                            metric(3,2) * ddzeta 
+                            interpolator_grad3(ipt,iterm) = metric(1,3) * ddxi   + &
+                                                            metric(2,3) * ddeta  + &
+                                                            metric(3,3) * ddzeta 
 
                         end do ! ipt
                     end do ! iterm
@@ -1140,9 +1163,9 @@ contains
 
 
         elseif (ndonors > 1) then
-            !!
-            !! Handle multiple potential donors: Choose donor with minimum volume - should be best resolved
-            !!
+            !
+            ! Handle multiple potential donors: Choose donor with minimum volume - should be best resolved
+            !
             if (allocated(donor_vols) ) deallocate(donor_vols)
             allocate(donor_vols(donors%size()))
             

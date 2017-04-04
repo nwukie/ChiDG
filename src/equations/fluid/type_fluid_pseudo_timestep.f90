@@ -1,6 +1,7 @@
 module type_fluid_pseudo_timestep
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: THIRD, ONE, HALF
+    use mod_fluid,              only: omega
     use type_pseudo_timestep,   only: pseudo_timestep_t
     use type_mesh,              only: mesh_t
     use type_properties,        only: properties_t
@@ -57,7 +58,7 @@ contains
 
         real(rk), allocatable, dimension(:) ::  &
                 rho, rhou, rhov, rhow, rhoE,    &
-                p, vmag, c
+                p, vmag, c, r
 
 
         real(rk)    ::  h, lam, gam
@@ -97,15 +98,8 @@ contains
             !
             ! Compute pressure
             !
-            !p = prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE)
             gam = 1.4_rk
             p = (gam - ONE)*(rhoE - HALF*(rhou*rhou + rhov*rhov + rhow*rhow)/rho )
-
-            !
-            ! Compute cell sound speed
-            !
-            !gam = prop%fluid%compute_gamma(rho,rhou,rhov,rhow,rhoE)
-
 
             
 
@@ -132,7 +126,9 @@ contains
             !
             ! Compute velocity magnitude
             !
+            r = mesh(idomain)%elems(ielem)%quad_pts(:)%c1_
             vmag = sqrt((rhou*rhou + rhov*rhov + rhow*rhow)/(rho*rho))
+            !vmag = sqrt((rhou*rhou + (rhov-rho*omega*r)*(rhov-rho*omega*r) + rhow*rhow)/(rho*rho))
 
 
             !

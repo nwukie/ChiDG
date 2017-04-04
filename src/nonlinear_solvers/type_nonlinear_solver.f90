@@ -26,6 +26,7 @@ module type_nonlinear_solver
         integer(ik)     :: nsteps   = 100           ! Max number of steps to take in the nonlinear solver
         integer(ik)     :: nwrite   = 100           ! Write data every 'nwrite' steps
         integer(ik)     :: norders_reduction = 10   ! Number of orders of magnitude residual is to be reduced by
+        logical         :: search   = .true.
 
 
         type(timer_t)   :: timer                    ! Timer data-type

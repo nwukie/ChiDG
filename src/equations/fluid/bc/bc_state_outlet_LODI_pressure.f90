@@ -1,4 +1,4 @@
-module bc_state_outlet_point_pressure
+module bc_state_outlet_LODI_pressure
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, HALF, TWO, NO_PROC
@@ -10,21 +10,21 @@ module bc_state_outlet_point_pressure
     use type_properties,        only: properties_t
     use type_point,             only: point_t
     use mod_chidg_mpi,          only: IRANK
-    !use mpi_f08,                only: mpi_comm, MPI_REAL8, MPI_Allgather, MPI_Comm_rank, MPI_Comm_size, MPI_COMM_NULL, MPI_Comm_compare
-    use mpi_f08
+    use mod_interpolate,        only: interpolate_face_standard
+    use mpi_f08,                only: MPI_REAL8, MPI_SUM, MPI_AllReduce, mpi_comm
     use DNAD_D
     implicit none
 
 
-    !>  Name: Outlet - Point Pressure
-    !!      : Set static pressure at a single point
-    !!      : Extrapolate everything at all other points. Essentially, d/dxi = 0
+
+
+
+    !>  Name: Outlet - LODI Pressure
+    !!      : Update average pressure using LODI with transverse terms
+    !!      : Extrapolate other characteristics
     !!
     !!  Options:
-    !!      : Static Pressure
-    !!      : Coordinate-1
-    !!      : Coordinate-2
-    !!      : Coordinate-3
+    !!      : Average Pressure
     !!
     !!  Behavior:
     !!      : Boundary conditions only compute things at quadrature nodes. 
@@ -39,16 +39,18 @@ module bc_state_outlet_point_pressure
     !!  @date   1/31/2016
     !!
     !----------------------------------------------------------------------------------------
-    type, public, extends(bc_state_t) :: outlet_point_pressure_t
+    type, public, extends(bc_state_t) :: outlet_LODI_pressure_t
 
         !
-        ! Data initialized in init_bc_specialized that defines at which particular
-        ! quadrature node the user-specified static pressure will be set.
+        ! A p_avg value, differentiated wrt every element across the boundary
         !
-        integer(ik) :: node_idomain_g  = 0
-        integer(ik) :: node_ielement_g = 0
-        integer(ik) :: node_iface      = 0
-        integer(ik) :: node_index      = 0
+        !type(AD_D), allocatable :: p_avg(:)
+
+
+        !
+        ! Average pressure
+        !
+        real(rk)    :: p_avg
 
     contains
 
@@ -56,7 +58,9 @@ module bc_state_outlet_point_pressure
         procedure   :: init_bc_specialized  ! Implement specialized initialization procedure
         procedure   :: compute_bc_state     ! boundary condition function implementation
 
-    end type outlet_point_pressure_t
+        procedure   :: update_average_pressure
+
+    end type outlet_LODI_pressure_t
     !****************************************************************************************
 
 
@@ -73,22 +77,19 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(outlet_point_pressure_t),   intent(inout) :: self
+        class(outlet_LODI_pressure_t),   intent(inout) :: self
         
         !
         ! Set name, family
         !
-        call self%set_name('Outlet - Point Pressure')
+        call self%set_name('Outlet - LODI Pressure')
         call self%set_family('Outlet')
 
 
         !
         ! Add functions
         !
-        call self%bcproperties%add('Static Pressure','Required')
-        call self%bcproperties%add('Coordinate-1',   'Required')
-        call self%bcproperties%add('Coordinate-2',   'Required')
-        call self%bcproperties%add('Coordinate-3',   'Required')
+        call self%bcproperties%add('Average Pressure','Required')
 
 
     end subroutine init
@@ -111,7 +112,7 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init_bc_specialized(self,mesh,bc_patch,bc_COMM)
-        class(outlet_point_pressure_t), intent(inout)   :: self
+        class(outlet_LODI_pressure_t), intent(inout)   :: self
         type(mesh_t),                   intent(in)      :: mesh(:)
         type(bc_patch_t),               intent(in)      :: bc_patch(:)
         type(mpi_comm),                 intent(in)      :: bc_comm
@@ -128,28 +129,153 @@ contains
         
         
 
-        !
-        ! Get user-specified node. Need coord,time here because thats the
-        ! function interface. They aren't really doing anything.
-        !
-        point%c1_ = 0._rk
-        point%c2_ = 0._rk
-        point%c3_ = 0._rk
-        coords = [point]
-        time   = 0._rk
-        node1  = self%bcproperties%compute('Coordinate-1',time,coords)
-        node2  = self%bcproperties%compute('Coordinate-2',time,coords)
-        node3  = self%bcproperties%compute('Coordinate-3',time,coords)
+!        !
+!        ! Get user-specified node. Need coord,time here because thats the
+!        ! function interface. They aren't really doing anything.
+!        !
+!        point%c1_ = 0._rk
+!        point%c2_ = 0._rk
+!        point%c3_ = 0._rk
+!        coords = [point]
+!        time   = 0._rk
+!        node1  = self%bcproperties%compute('Coordinate-1',time,coords)
+!        node2  = self%bcproperties%compute('Coordinate-2',time,coords)
+!        node3  = self%bcproperties%compute('Coordinate-3',time,coords)
+!
+!
+!
+!
+!        !
+!        ! Loop through proc-local patches, find quadrature node closest to user-specified node.
+!        !
+!        dist_bc = huge(ONE)  !initialize closest distance on the proc-local bc
+!        do ipatch = 1,size(bc_patch)
+!            do iface_bc = 1,bc_patch(ipatch)%nfaces()
+!
+!                !
+!                ! get face location in local mesh
+!                !
+!                idomain_l  = bc_patch(ipatch)%idomain_l_%at(iface_bc)
+!                ielement_l = bc_patch(ipatch)%ielement_l_%at(iface_bc)
+!                iface      = bc_patch(ipatch)%iface_%at(iface_bc)
+!                
+!
+!                ! get points at quadrature nodes for current face
+!                quad_pts = mesh(idomain_l)%faces(ielement_l,iface)%quad_pts
+!
+!                ! compute distance from quadrature nodes to user-specified node
+!                dist_face = sqrt( (quad_pts(:)%c1_ - node1(1))**TWO + &
+!                                  (quad_pts(:)%c2_ - node2(1))**TWO + &
+!                                  (quad_pts(:)%c3_ - node3(1))**TWO ) 
+!
+!                ! Get index location of node with minimum distance to user-specified node
+!                minloc_dist_face = minloc(dist_face,1)
+!            
+!
+!                ! If new minimum is found, record location, update local dist_bc
+!                if (dist_face(minloc_dist_face) < dist_bc) then
+!                    node_idomain_g  = mesh(idomain_l)%elems(ielement_l)%idomain_g
+!                    node_ielement_g = mesh(idomain_l)%elems(ielement_l)%ielement_g
+!                    node_iface      = iface
+!                    node_index      = minloc_dist_face
+!
+!                    dist_bc = dist_face(minloc_dist_face)
+!                end if
+!                
+!                ! compute distance from quadrature nodes to user node
+!            
+!            end do !iface_bc
+!        end do !ipatch
+!
+!
+!
+!
+!        !
+!        ! Get rank of current proc in bc communicator and total number of ranks
+!        !
+!        user_msg = "bc_state_outlet_LODI_pressure%init_bc_specialized: The mpi communicator passed &
+!                    in was detected as a Null communicator and is invalid for use. Something must have &
+!                    gone wrong, possibly in bc_t or at a previous point during initialization."
+!        if (bc_COMM == MPI_COMM_NULL) call chidg_signal(FATAL,user_msg)
+!        call MPI_Comm_rank(bc_COMM,bc_IRANK)
+!        call MPI_Comm_size(bc_COMM,bc_NRANK)
+!
+!
+!        !
+!        ! Have gather minimum values from all member processors
+!        !
+!        allocate(dist_bc_global(bc_NRANK), stat=ierr)
+!        if (ierr /= 0) call AllocationError
+!        call MPI_Allgather(dist_bc, 1, MPI_REAL8, dist_bc_global, 1, MPI_REAL8, bc_COMM)
+!
+!
+!        !
+!        ! Determine which processor has the minimum distance.
+!        ! Minus 1 because ranks are 0-based.
+!        !
+!        rank_min = minloc(dist_bc_global,1) - 1
+!
+!
+!        !
+!        ! If minimum distance is on current proc, store node values
+!        !
+!        if (rank_min == bc_IRANK) then
+!            self%node_idomain_g  = node_idomain_g
+!            self%node_ielement_g = node_ielement_g
+!            self%node_iface      = node_iface
+!            self%node_index      = node_index
+!        end if
+
+
+
+    end subroutine init_bc_specialized
+    !******************************************************************************************
 
 
 
 
+
+
+    !>  Update the area-averaged pressure for the boundary condition.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/31/2017
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    subroutine update_average_pressure(self,worker,prop,bc_patch,bc_COMM)
+        class(outlet_LODI_pressure_t),  intent(inout)   :: self
+        type(chidg_worker_t),           intent(inout)   :: worker
+        class(properties_t),            intent(inout)   :: prop
+        type(bc_patch_t),               intent(in)      :: bc_patch(:)
+        type(mpi_comm),                 intent(in)      :: bc_comm
+
+
+        real(rk),   allocatable, dimension(:)   ::      &
+            density, mom_1, mom_2, mom_3, energy, p,    &
+            weights, areas, u, v, w, r
+
+        integer(ik) :: ipatch, iface_bc, idomain_l, ielement_l, iface, ierr, itime, &
+                       idensity, imom1, imom2, imom3, ienergy
+        real(rk)    :: face_area, bc_area, bc_area_red, p_integral, p_integral_red, &
+                       face_contribution, gam
+
+
+        gam = 1.4_rk
+
         !
-        ! Loop through proc-local patches, find quadrature node closest to user-specified node.
+        ! Zero integrated quantities
         !
-        dist_bc = huge(ONE)  !initialize closest distance on the proc-local bc
+        p_integral = ZERO
+        bc_area    = ZERO
+
+
+        !
+        ! Each processor, compute local portion of integral
+        !
         do ipatch = 1,size(bc_patch)
             do iface_bc = 1,bc_patch(ipatch)%nfaces()
+
 
                 !
                 ! get face location in local mesh
@@ -157,82 +283,109 @@ contains
                 idomain_l  = bc_patch(ipatch)%idomain_l_%at(iface_bc)
                 ielement_l = bc_patch(ipatch)%ielement_l_%at(iface_bc)
                 iface      = bc_patch(ipatch)%iface_%at(iface_bc)
-                
 
-                ! get points at quadrature nodes for current face
-                quad_pts = mesh(idomain_l)%faces(ielement_l,iface)%quad_pts
 
-                ! compute distance from quadrature nodes to user-specified node
-                dist_face = sqrt( (quad_pts(:)%c1_ - node1(1))**TWO + &
-                                  (quad_pts(:)%c2_ - node2(1))**TWO + &
-                                  (quad_pts(:)%c3_ - node3(1))**TWO ) 
 
-                ! Get index location of node with minimum distance to user-specified node
-                minloc_dist_face = minloc(dist_face,1)
-            
+                !
+                ! Get solution
+                !
+!                density = interpolate_face_general()
+!                mom_1   = interpolate_face_general()
+!                mom_2   = interpolate_face_general()
+!                mom_3   = interpolate_face_general()
+!                energy  = interpolate_face_general()
+!
+!                
+!                if (worker%coordinate_system() == 'Cylindrical') then
+!                    r = worker%mesh(idomain_l)%elems(ielement_l)%quad_pts(:)%c1_
+!                    mom_1 = mom_1 / r
+!                end if
 
-                ! If new minimum is found, record location, update local dist_bc
-                if (dist_face(minloc_dist_face) < dist_bc) then
-                    node_idomain_g  = mesh(idomain_l)%elems(ielement_l)%idomain_g
-                    node_ielement_g = mesh(idomain_l)%elems(ielement_l)%ielement_g
-                    node_iface      = iface
-                    node_index      = minloc_dist_face
+                idensity = 1
+                imom1    = 2
+                imom2    = 3
+                imom3    = 4
+                ienergy  = 5
+                itime    = 1
 
-                    dist_bc = dist_face(minloc_dist_face)
+
+                density = interpolate_face_standard(worker%mesh,worker%solverdata%q,idomain_l,ielement_l,iface, idensity, itime)
+                mom_1   = interpolate_face_standard(worker%mesh,worker%solverdata%q,idomain_l,ielement_l,iface, imom1,    itime)
+                mom_2   = interpolate_face_standard(worker%mesh,worker%solverdata%q,idomain_l,ielement_l,iface, imom2,    itime)
+                mom_3   = interpolate_face_standard(worker%mesh,worker%solverdata%q,idomain_l,ielement_l,iface, imom3,    itime)
+                energy  = interpolate_face_standard(worker%mesh,worker%solverdata%q,idomain_l,ielement_l,iface, ienergy,  itime)
+
+                if (worker%mesh(idomain_l)%elems(ielement_l)%coordinate_system == 'Cylindrical') then
+                    mom_2 = mom_2 / worker%mesh(idomain_l)%elems(ielement_l)%quad_pts(:)%c1_
                 end if
+
+
+
+
                 
-                ! compute distance from quadrature nodes to user node
-            
-            end do !iface_bc
-        end do !ipatch
+                !
+                ! Compute velocity
+                !
+                u = mom_1 / density
+                v = mom_2 / density
+                w = mom_3 / density
 
+
+                !
+                ! Compute pressure over the face
+                !
+                p = (gam - ONE)*(energy - HALF*density*(u*u + v*v + w*w))
+
+
+                !
+                ! Get weights + areas
+                !
+                weights   = worker%mesh(idomain_l)%faces(ielement_l,iface)%gq%face%weights(:,iface)
+                areas     = worker%mesh(idomain_l)%faces(ielement_l,iface)%differential_areas
+                face_area = worker%mesh(idomain_l)%faces(ielement_l,iface)%total_area
+
+
+                !
+                ! Integrate and contribute to average
+                !
+                face_contribution = sum(p * areas * weights)
+
+
+                !
+                !
+                !
+                p_integral = p_integral + face_contribution
+                bc_area    = bc_area    + face_area
+
+
+            end do
+        end do
 
 
 
         !
-        ! Get rank of current proc in bc communicator and total number of ranks
+        ! Reduce p_integral contributions and distribute
         !
-        user_msg = "bc_state_outlet_point_pressure%init_bc_specialized: The mpi communicator passed &
-                    in was detected as a Null communicator and is invalid for use. Something must have &
-                    gone wrong, possibly in bc_t or at a previous point during initialization."
-        if (bc_COMM == MPI_COMM_NULL) call chidg_signal(FATAL,user_msg)
-        call MPI_Comm_rank(bc_COMM,bc_IRANK)
-        call MPI_Comm_size(bc_COMM,bc_NRANK)
-
+        call MPI_AllReduce(p_integral, p_integral_red, 1, MPI_REAL8, MPI_SUM, bc_COMM, ierr)
 
         !
-        ! Have gather minimum values from all member processors
+        ! Reduct bc_area contributions and distribute
         !
-        allocate(dist_bc_global(bc_NRANK), stat=ierr)
-        if (ierr /= 0) call AllocationError
-        call MPI_Allgather(dist_bc, 1, MPI_REAL8, dist_bc_global, 1, MPI_REAL8, bc_COMM)
+        call MPI_AllReduce(bc_area, bc_area_red, 1, MPI_REAL8, MPI_SUM, bc_COMM, ierr)
 
 
         !
-        ! Determine which processor has the minimum distance.
-        ! Minus 1 because ranks are 0-based.
+        ! Compute average pressure:
+        !   integrated pressure over the area - reduced across processors
+        !   integrated area - reduced across processors
+        !   
         !
-        rank_min = minloc(dist_bc_global,1) - 1
-
-
-        !
-        ! If minimum distance is on current proc, store node values
-        !
-        if (rank_min == bc_IRANK) then
-            self%node_idomain_g  = node_idomain_g
-            self%node_ielement_g = node_ielement_g
-            self%node_iface      = node_iface
-            self%node_index      = node_index
-        end if
+        self%p_avg = p_integral_red / bc_area_red
 
 
 
-    end subroutine init_bc_specialized
-    !********************************************************************************
-
-
-
-
+    end subroutine update_average_pressure
+    !*******************************************************************************************
 
 
 
@@ -250,7 +403,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop)
-        class(outlet_point_pressure_t), intent(inout)   :: self
+        class(outlet_LODI_pressure_t),  intent(inout)   :: self
         type(chidg_worker_t),           intent(inout)   :: worker
         class(properties_t),            intent(inout)   :: prop
 
@@ -313,6 +466,7 @@ contains
         drhoE_dz_m = worker%get_primary_field_face('Energy'    , 'grad3', 'face interior')
 
 
+        
 
 
         !
@@ -322,6 +476,18 @@ contains
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_m = mom2_m / r
         end if
+
+
+
+        !
+        ! Update average pressure
+        !
+        !call self%update_average_pressure()
+
+
+
+
+
 
 
         !
@@ -358,21 +524,6 @@ contains
         ! By default, the boundary condition state for pressure is extrapolated
         !
         p_bc = p_m
-
-
-        !
-        ! For the particular node closest to that specified by the user, set
-        ! the boundary condition state for pressure to the user-specified value
-        !
-        ! The information regarding the closest node is computed in init_bc_specialized
-        ! during initialization.
-        !
-        face_has_node = (worker%element_info%idomain_g  == self%node_idomain_g)  .and. &
-                        (worker%element_info%ielement_g == self%node_ielement_g) .and. &
-                        (worker%iface                   == self%node_iface)
-        if (face_has_node) then
-            p_bc(self%node_index) = p_user(1)
-        end if !face_has_node
 
 
         !
@@ -439,4 +590,4 @@ contains
 
 
 
-end module bc_state_outlet_point_pressure
+end module bc_state_outlet_LODI_pressure

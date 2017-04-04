@@ -501,6 +501,7 @@ contains
         character(:),   allocatable :: user_msg
 
 
+
         !
         ! Check if current processor contains geometry associated with the bc_t
         !
@@ -528,6 +529,7 @@ contains
         else
             color = MPI_UNDEFINED
         end if
+
 
         call MPI_Comm_split(ChiDG_COMM, color, IRANK, self%bc_COMM, ierr)
         user_msg = "bc%init_bc_comm: Error in collective MPI_Comm_split when trying &

@@ -138,9 +138,9 @@ contains
         do iproc = 0,NRANK-1
             if (iproc == IRANK) then
 
-                wd_file_exists = check_file_exists_hdf('wall_distance.h5')
+                wd_file_exists = check_file_exists_hdf(fileout)
                 if (wd_file_exists) then
-                    wd_props = get_properties_hdf('wall_distance.h5')
+                    wd_props = get_properties_hdf(fileout)
                     wd_nterms_s = wd_props%nterms_s(1)
 
                     have_wd_field = (wd_nterms_s >= chidg%nterms_s)
@@ -159,7 +159,7 @@ contains
         !
         if (wd_file_exists .and. have_wd_field) then
 
-            call wall_distance%read_solution('wall_distance.h5')
+            call wall_distance%read_solution(fileout)
             wall_distance%data%sdata%q = wall_distance%data%sdata%q_in
 
         !
@@ -184,6 +184,10 @@ contains
             !       p = 2,4,6
             !
             iorder = 2
+            call noptions%set('tol',1.e-4_rk)   ! Set nonlinear solver options
+            call loptions%set('tol',1.e-5_rk)   ! Set linear solver options
+            call wall_distance%set('Nonlinear Solver', algorithm='Newton', options=noptions)
+            call wall_distance%set('Linear Solver'   , algorithm='fgmres_cgs',   options=loptions)
             do p = 2,6,2
                 call write_line('Wall Distance Driver : Loop 1 : p = ', p)
                 
@@ -205,7 +209,7 @@ contains
                 !
                 if (p == 2) then
                     call create_function(constant,'constant')
-                    call constant%set_option('val',0.1_rk)
+                    call constant%set_option('val',0.001_rk)
                     call wall_distance%data%sdata%q_in%project(wall_distance%data%mesh,constant,1)
 
                 else
@@ -217,7 +221,7 @@ contains
                 ! Run ChiDG simulation
                 !
                 call wall_distance%report('before')
-                call wall_distance%run()
+                call wall_distance%run(write_initial=.false., write_final=.false.)
                 call wall_distance%report('after')
 
 
@@ -250,6 +254,10 @@ contains
             !
             p = 6
             call set_p_poisson_parameter(real(p,rk))
+            call noptions%set('tol',1.e-5_rk)   ! Set nonlinear solver options
+            call loptions%set('tol',1.e-8_rk)   ! Set linear solver options
+            call wall_distance%set('Nonlinear Solver', algorithm='Quasi-Newton', options=noptions)
+            call wall_distance%set('Linear Solver'   , algorithm='fgmres_cgs',   options=loptions)
 
             order = chidg%nterms_s_1d
             do iorder = 3,order
@@ -286,7 +294,7 @@ contains
                 ! Run ChiDG simulation
                 !
                 call wall_distance%report('before')
-                call wall_distance%run()
+                call wall_distance%run(write_initial=.false., write_final=.false.)
                 call wall_distance%report('after')
 
 

@@ -48,6 +48,7 @@ contains
         type(chidg_t)                       :: chidg
         type(file_properties_t)             :: file_props
         character(:),           allocatable :: eqnset
+        character(:),           allocatable :: time_string
         integer(ik)                         :: nterms_s, spacedim, solution_order
 
 
@@ -69,6 +70,7 @@ contains
         nterms_s    = file_props%nterms_s(1)
         eqnset      = file_props%eqnset(1)
         spacedim    = file_props%spacedim(1)
+        time_string = file_props%time_integrator
 
 
 
@@ -89,6 +91,8 @@ contains
         ! Initialize solution data storage
         !
         call chidg%set('Solution Order', integer_input=solution_order)
+        call chidg%set('Time Integrator', algorithm=trim(time_string))
+        call chidg%time_integrator%initialize_state(chidg%data)
         call chidg%init('domains')
         call chidg%init('communication')
         call chidg%init('solvers')
@@ -97,19 +101,22 @@ contains
 
 
         !
-        ! Read solution modes from HDF5
+        ! Read solution modes and time integrator options from HDF5
         !
         call chidg%read_solution(solution_file)
-
-
+        call chidg%time_integrator%read_time_options(chidg%data,solution_file)
 
 
         !
-        ! Write solution in TecIO format
+        ! Get post processing data (q_out)
+        !
+        call chidg%time_integrator%process_data_for_output(chidg%data)
+
+        
+        !
+        ! Write solution
         !
         call write_tecio_variables(chidg%data,'0.plt')
-
-
         
 
         !

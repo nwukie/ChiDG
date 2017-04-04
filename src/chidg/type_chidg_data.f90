@@ -52,11 +52,11 @@ module type_chidg_data
         ! For each domain: info, a mesh, and an equation set
         type(domain_info_t),            allocatable :: info(:)     
         type(mesh_t),                   allocatable :: mesh(:)     
-        type(equation_set_t),           allocatable :: eqnset(:)   
 
         ! Boundary conditions are not specified per-domain. 
         ! A boundary condition for each bc_group in the file.
         type(bc_t),                     allocatable :: bc(:)    
+        type(equation_set_t),           allocatable :: eqnset(:)
 
         ! An object containing matrix and vector storage
         type(solverdata_t)                          :: sdata
@@ -72,6 +72,7 @@ module type_chidg_data
         procedure   :: add_bc_group
         procedure   :: add_bc_patch
         procedure   :: new_bc
+        procedure   :: new_equation_set
 
         ! Initialization procedure for solution data. Execute after all domains are added.
         procedure   :: initialize_solution_domains
@@ -83,8 +84,9 @@ module type_chidg_data
 
         ! Accessors
         procedure   :: get_domain_index             ! Given a domain name, return domain index
-        procedure   :: ndomains                     ! Return number of domains in chidg instance
-        procedure   :: nbcs                         ! Return number of boundary conditions
+        procedure   :: ndomains                     ! Return number of allocated domains
+        procedure   :: nbcs                         ! Return number of allocated boundary conditions
+        procedure   :: nequation_sets               ! Return number of allocated equation sets
         procedure   :: ntime
         procedure   :: get_dimensionality
         procedure   :: get_auxiliary_field_names    ! Return required auxiliary fields
@@ -115,7 +117,7 @@ contains
     subroutine initialize_solution_solver(self)
         class(chidg_data_t),     intent(inout)   :: self
 
-        integer(ik) :: idom, ndom, ierr
+        integer(ik) :: idom, ndom, ierr, eqn_ID
 
         type(equationset_function_data_t),  allocatable :: function_data(:)
         type(bcset_coupling_t),             allocatable :: bcset_coupling(:)
@@ -131,7 +133,8 @@ contains
         if ( ierr /= 0 ) call AllocationError
 
         do idom = 1,self%ndomains()
-            function_data(idom) = self%eqnset(idom)%function_data
+            eqn_ID = self%mesh(idom)%eqn_ID
+            function_data(idom) = self%eqnset(eqn_ID)%function_data
         end do
 
 
@@ -190,7 +193,8 @@ contains
         character(*),                   intent(in)      :: eqnset
         character(*),                   intent(in)      :: coord_system
 
-        integer(ik)                 :: idomain_l, ierr, idom
+        integer(ik)                 :: idomain_l, ierr, idom, ieqn, eqn_ID
+        logical                     :: already_added
         character(:),   allocatable :: user_msg
 
 
@@ -199,19 +203,40 @@ contains
         type(equation_set_t),           allocatable :: temp_eqnset(:)
 
 
-
         !
-        ! Increment number of domains by one
+        ! Increment location of new domain by one
         !
         idomain_l = self%ndomains() + 1
+
+
+
+
+        !
+        ! Check if equation set has already been added. If so, get identifier index eqn_ID
+        !
+        already_added = .false.
+        do ieqn = 1,self%nequation_sets()
+            already_added = (trim(self%eqnset(ieqn)%name) == trim(eqnset)) 
+            if (already_added) eqn_ID = ieqn
+            if (already_added) exit
+        end do
+        
+
+        !
+        ! Add new equation set if it doesn't already exist and get new eqn_ID
+        !
+        if (.not. already_added) then
+            eqn_ID = self%new_equation_set()
+            self%eqnset(eqn_ID) = equation_builder_factory%produce(eqnset, 'default')
+            self%eqnset(eqn_ID)%eqn_ID = eqn_ID
+        end if
 
 
         !
         ! Resize array storage
         !
         allocate( temp_info(  self%ndomains()+1),   &
-                  temp_mesh(  self%ndomains()+1),   &
-                  temp_eqnset(self%ndomains()+1), stat=ierr)
+                  temp_mesh(  self%ndomains()+1), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
@@ -221,7 +246,6 @@ contains
         if (self%ndomains() > 0) then
             temp_info(   1:size(self%info))    = self%info(1:size(self%info))
             temp_mesh(   1:size(self%mesh))    = self%mesh(1:size(self%mesh))
-            temp_eqnset( 1:size(self%eqnset))  = self%eqnset(1:size(self%eqnset))
         end if
 
 
@@ -232,10 +256,10 @@ contains
 
 
         !
-        ! Initialize new mesh
+        ! Initialize new mesh: geometry and equation set identifier
         !
         call temp_mesh(idomain_l)%init_geom(idomain_l,nelements_g,spacedim,nterms_c,nodes,connectivity,coord_system)
-
+        call temp_mesh(idomain_l)%init_eqn(eqn_ID)
 
         !
         ! Check that a domain with the same global index wasn't already added. For example, if 
@@ -251,12 +275,6 @@ contains
         end if
 
 
-        !
-        ! Allocate equation set
-        !
-        temp_eqnset(idomain_l) = equation_builder_factory%produce(eqnset,'default')
-
-
 
         !
         ! Move resized temp allocation back to chidg_data container. 
@@ -264,7 +282,6 @@ contains
         !
         call move_alloc(temp_info,self%info)
         call move_alloc(temp_mesh,self%mesh)
-        call move_alloc(temp_eqnset,self%eqnset)
 
 
     end subroutine add_domain
@@ -500,6 +517,91 @@ contains
 
 
 
+    !>  Extend the self%eqnset array to include another instance. Return the ID of the new
+    !!  equation set where it can be found in the array as self%eqnset(eqn_ID)
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/20/2017
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    function new_equation_set(self) result(eqn_ID)
+        class(chidg_data_t),    intent(inout)   :: self
+
+        type(equation_set_t), allocatable   :: temp_eqnset(:)
+        integer(ik)                         :: eqn_ID, ierr, neqnset
+
+
+        !
+        ! Get number of boundary conditions
+        !
+        neqnset = self%nequation_sets()
+
+
+        !
+        ! Increment number of boundary conditions
+        !
+        neqnset = neqnset + 1
+
+
+        !
+        ! Allocate number of boundary conditions
+        !
+        allocate(temp_eqnset(neqnset), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        !
+        ! Copy any previously allocated boundary conditions to new array
+        !
+        if ( neqnset > 1) then
+            temp_eqnset(1:size(self%eqnset)) = self%eqnset(1:size(self%eqnset))
+        end if
+
+
+        !
+        ! Set ID of new bc and store to array
+        !
+        eqn_ID = neqnset
+        temp_eqnset(eqn_ID)%eqn_ID = eqn_ID
+
+
+        !
+        ! Attach extended allocation to chidg_data%eqnset
+        !
+        call move_alloc(temp_eqnset,self%eqnset)
+
+
+
+    end function new_equation_set
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     !>  For each domain, call solution initialization
     !!
     !!  @author Nathan A. Wukie
@@ -513,15 +615,18 @@ contains
         class(chidg_data_t),    intent(inout)   :: self
         integer(ik),            intent(in)      :: nterms_s
 
-        integer(ik) :: idomain, neqns
+        integer(ik) :: idomain, nfields, eqn_ID
 
         ! Initialize mesh numerics based on equation set and polynomial expansion order
-        call write_line("Domains: initializing mesh equation space...", io_proc=GLOBAL_MASTER)
+        call write_line(" ", ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line("Initialize: domain equation space...", io_proc=GLOBAL_MASTER)
         do idomain = 1,self%ndomains()
-            neqns = self%eqnset(idomain)%prop%nprimary_fields()
-            call self%mesh(idomain)%init_sol(neqns,nterms_s,self%time_manager%ntime)
+            eqn_ID = self%mesh(idomain)%eqn_ID
+            nfields = self%eqnset(eqn_ID)%prop%nprimary_fields()
+            call self%mesh(idomain)%init_sol(nfields,nterms_s,self%time_manager%ntime)
         end do
 
+        call write_line(" ", ltrim=.false., io_proc=GLOBAL_MASTER)
 
     end subroutine initialize_solution_domains
     !******************************************************************************************
@@ -671,6 +776,26 @@ contains
 
 
 
+    !> Return the number of equation sets in the chidg_data_t instance.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/20/2017
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    function nequation_sets(self) result(nsets_)
+        class(chidg_data_t),    intent(in)      :: self
+
+        integer :: nsets_
+
+        if (allocated(self%eqnset)) then
+            nsets_ = size(self%eqnset)
+        else
+            nsets_ = 0
+        end if
+
+    end function nequation_sets
+    !*******************************************************************************************
 
 
 
@@ -713,16 +838,17 @@ contains
     function get_auxiliary_field_names(self) result(field_names)
         class(chidg_data_t),    intent(in)  :: self
 
-        integer(ik)                 :: idom, ifield
+        integer(ik)                 :: idom, ifield, eqn_ID
         type(svector_t)             :: field_names
         character(:),   allocatable :: field_name
 
 
 
         do idom = 1,self%ndomains()
-            do ifield = 1,self%eqnset(idom)%prop%nauxiliary_fields()
+            eqn_ID = self%mesh(idom)%eqn_ID
+            do ifield = 1,self%eqnset(eqn_ID)%prop%nauxiliary_fields()
 
-                field_name = self%eqnset(idom)%prop%get_auxiliary_field_name(ifield)
+                field_name = self%eqnset(eqn_ID)%prop%get_auxiliary_field_name(ifield)
                 call field_names%push_back_unique(string_t(field_name))
 
             end do !ifield

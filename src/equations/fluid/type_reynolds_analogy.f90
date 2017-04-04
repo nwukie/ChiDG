@@ -23,7 +23,8 @@ module type_reynolds_analogy
     type, extends(model_t)  :: reynolds_analogy_t
 
         real(rk)    :: Cp = 1003.0_rk
-        real(rk)    :: Pr = 0.8_rk
+        !real(rk)    :: Pr = 0.8_rk
+        real(rk)    :: Pr = 0.72_rk
 
     contains
 

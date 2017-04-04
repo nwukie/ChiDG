@@ -75,6 +75,7 @@ module type_chidg_worker
         type(function_info_t)       :: function_info
     
         character(:),   allocatable :: interpolation_source
+        real(rk)                    :: t        !< Physical time
 
     contains 
     
@@ -485,7 +486,7 @@ contains
 
         type(face_info_t)               :: face_info
         character(:),   allocatable     :: cache_component, cache_type, user_msg
-        integer(ik)                     :: idirection, igq, iface, ifield, idomain_l
+        integer(ik)                     :: idirection, igq, iface, ifield, idomain_l, eqn_ID
 
 
         !
@@ -534,7 +535,8 @@ contains
 
             if (cache_type == 'value') then
                 idomain_l = self%element_info%idomain_l
-                ifield    = self%prop(idomain_l)%get_primary_field_index(field)
+                eqn_ID    = self%mesh(idomain_l)%eqn_ID
+                ifield    = self%prop(eqn_ID)%get_primary_field_index(field)
 
                 var_gq = interpolate_element_autodiff(self%mesh, self%solverdata%q, self%element_info, self%function_info, ifield, self%itime, interp_type, Pmin, Pmax)
 
@@ -1090,10 +1092,11 @@ contains
         character(*),           intent(in)      :: primary_field
         type(AD_D),             intent(inout)   :: integrand(:)
 
-        integer(ik) :: ifield, idomain_l
+        integer(ik) :: ifield, idomain_l, eqn_ID
 
         idomain_l = self%element_info%idomain_l
-        ifield    = self%prop(idomain_l)%get_primary_field_index(primary_field)
+        eqn_ID    = self%mesh(idomain_l)%eqn_ID
+        ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
 
         call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ifield,self%itime,integrand)
 
@@ -1121,11 +1124,12 @@ contains
         type(AD_D),             intent(inout)   :: integrand_y(:)
         type(AD_D),             intent(inout)   :: integrand_z(:)
 
-        integer(ik) :: ifield, idomain_l
+        integer(ik) :: ifield, idomain_l, eqn_ID
 
 
         idomain_l = self%element_info%idomain_l
-        ifield    = self%prop(idomain_l)%get_primary_field_index(primary_field)
+        eqn_ID    = self%mesh(idomain_l)%eqn_ID
+        ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
 
         call integrate_volume_vector_flux(self%mesh,self%solverdata,self%element_info,self%function_info,ifield,self%itime,integrand_x,integrand_y,integrand_z)
 
@@ -1151,11 +1155,12 @@ contains
         character(*),           intent(in)      :: primary_field
         type(AD_D),             intent(inout)   :: integrand(:)
 
-        integer(ik) :: ifield, idomain_l
+        integer(ik) :: ifield, idomain_l, eqn_ID
 
 
         idomain_l = self%element_info%idomain_l
-        ifield    = self%prop(idomain_l)%get_primary_field_index(primary_field)
+        eqn_ID    = self%mesh(idomain_l)%eqn_ID
+        ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
 
         call integrate_volume_scalar_source(self%mesh,self%solverdata,self%element_info,self%function_info,ifield,self%itime,integrand)
 
@@ -1183,9 +1188,7 @@ contains
 
         real(rk), dimension(:), allocatable :: norm_gq
 
-
         norm_gq = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%norm(:,direction)
-
 
     end function normal
     !***************************************************************************************
@@ -1749,7 +1752,7 @@ contains
 
         real(rk) :: solution_time
 
-        solution_time = self%solverdata%t
+        solution_time = self%t
 
     end function time
     !**************************************************************************************

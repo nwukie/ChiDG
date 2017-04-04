@@ -263,19 +263,82 @@ contains
         integer(ik) :: iface, icorner, imap, base_corners(4)
         integer(ik) :: corner_one, corner_two, corner_three, corner_four, corner_five, corner_six, corner_seven, corner_eight
 
+!        do iface = 1,NFACES
+!            do icorner = 1,NFACE_CORNERS
+!                do imap = 1,NMAP
+!
+!                    corner_one   = 1
+!                    corner_two   = corner_one + imap
+!                    corner_three = (imap+1)*(imap+1) - (imap+1) + 1
+!                    corner_four  = corner_three + imap
+!                    corner_five  = (imap+1)*(imap+1)*(imap+1) - (imap+1)*(imap+1) + 1
+!                    corner_six   = corner_five + imap
+!                    corner_seven = (imap+1)*(imap+1)*(imap+1) - (imap+1) + 1
+!                    corner_eight = corner_seven + imap
+!
+!
+!
+!                select case ( iface )
+!                    case ( XI_MIN )
+!                        face_corners(iface,1,imap) = corner_one
+!                        face_corners(iface,2,imap) = corner_three
+!                        face_corners(iface,3,imap) = corner_five
+!                        face_corners(iface,4,imap) = corner_seven
+!                    case ( XI_MAX )
+!                        face_corners(iface,1,imap) = corner_two
+!                        face_corners(iface,2,imap) = corner_four
+!                        face_corners(iface,3,imap) = corner_six
+!                        face_corners(iface,4,imap) = corner_eight
+!                    case ( ETA_MIN )
+!                        face_corners(iface,1,imap) = corner_one
+!                        face_corners(iface,2,imap) = corner_two
+!                        face_corners(iface,3,imap) = corner_five
+!                        face_corners(iface,4,imap) = corner_six
+!                    case ( ETA_MAX )
+!                        face_corners(iface,1,imap) = corner_three
+!                        face_corners(iface,2,imap) = corner_four
+!                        face_corners(iface,3,imap) = corner_seven
+!                        face_corners(iface,4,imap) = corner_eight
+!                    case ( ZETA_MIN )
+!                        face_corners(iface,1,imap) = corner_one
+!                        face_corners(iface,2,imap) = corner_two
+!                        face_corners(iface,3,imap) = corner_three
+!                        face_corners(iface,4,imap) = corner_four
+!                    case ( ZETA_MAX )
+!                        face_corners(iface,1,imap) = corner_five
+!                        face_corners(iface,2,imap) = corner_six
+!                        face_corners(iface,3,imap) = corner_seven
+!                        face_corners(iface,4,imap) = corner_eight
+!                    case default
+!                        call chidg_signal(FATAL,"compute_face_corner_indices")
+!                end select
+!
+!
+!
+!                end do !imap
+!
+!
+!
+!            end do !icorner
+!        end do !iface
+
+
+
+
+
+
+
         do iface = 1,NFACES
-            do icorner = 1,NFACE_CORNERS
-                do imap = 1,NMAP
+            do imap = 1,NMAP
 
-                    corner_one   = 1
-                    corner_two   = corner_one + imap
-                    corner_three = (imap+1)*(imap+1) - (imap+1) + 1
-                    corner_four  = corner_three + imap
-                    corner_five  = (imap+1)*(imap+1)*(imap+1) - (imap+1)*(imap+1) + 1
-                    corner_six   = corner_five + imap
-                    corner_seven = (imap+1)*(imap+1)*(imap+1) - (imap+1) + 1
-                    corner_eight = corner_seven + imap
-
+                corner_one   = 1
+                corner_two   = corner_one + imap
+                corner_three = (imap+1)*(imap+1) - (imap+1) + 1
+                corner_four  = corner_three + imap
+                corner_five  = (imap+1)*(imap+1)*(imap+1) - (imap+1)*(imap+1) + 1
+                corner_six   = corner_five + imap
+                corner_seven = (imap+1)*(imap+1)*(imap+1) - (imap+1) + 1
+                corner_eight = corner_seven + imap
 
 
                 select case ( iface )
@@ -315,12 +378,23 @@ contains
 
 
 
-                end do !imap
-
-
-
-            end do !icorner
+            end do !imap
         end do !iface
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
     end subroutine compute_face_corner_indices

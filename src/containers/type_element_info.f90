@@ -18,6 +18,7 @@ module type_element_info
         integer(ik) :: ielement_l
         integer(ik) :: iproc
 
+        integer(ik) :: eqn_ID
         integer(ik) :: neqns
         integer(ik) :: nterms_s
         integer(ik) :: nterms_c

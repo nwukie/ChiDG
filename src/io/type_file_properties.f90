@@ -18,15 +18,15 @@ module type_file_properties
         logical     :: contains_grid        = .false.
         logical     :: contains_solution    = .false.
 
-        integer(ik)                      :: ndomains = 0     !< Number of domains in the file
+        integer(ik)                      :: ndomains = 0      !< Number of domains in the file
+        character(len=1024)              :: time_integrator   !< Time integrator name
         character(len=1024), allocatable :: domain_names(:)
-        integer(ik),         allocatable :: order_c(:)       !< Coordinate order ( 1st, 2nd, 3rd, etc. )
-        integer(ik),         allocatable :: order_s(:)       !< Solution order ( 1st, 2nd, 3rd, etc. )
-        integer(ik),         allocatable :: nterms_c(:)      !< Number of terms in the coordinate expansion
-        integer(ik),         allocatable :: nterms_s(:)      !< Number of terms in the solution expansion
-        integer(ik),         allocatable :: spacedim(:)      !< Number of spatial dimensions
-        character(len=1024), allocatable :: eqnset(:)        !< Equation set specified in the file.
-
+        integer(ik),         allocatable :: order_c(:)        !< Coordinate order ( 1st, 2nd, 3rd, etc. )
+        integer(ik),         allocatable :: order_s(:)        !< Solution order ( 1st, 2nd, 3rd, etc. )
+        integer(ik),         allocatable :: nterms_c(:)       !< Number of terms in the coordinate expansion
+        integer(ik),         allocatable :: nterms_s(:)       !< Number of terms in the solution expansion
+        integer(ik),         allocatable :: spacedim(:)       !< Number of spatial dimensions
+        character(len=1024), allocatable :: eqnset(:)         !< Equation set specified in the file.
 
     contains
 
@@ -68,19 +68,19 @@ contains
         !
         ! Allocate storage for other data
         !
-        if ( allocated(self%order_c)  ) deallocate( self%order_c  )
-        if ( allocated(self%order_s)  ) deallocate( self%order_s  )
-        if ( allocated(self%nterms_c) ) deallocate( self%nterms_c )
-        if ( allocated(self%nterms_s) ) deallocate( self%nterms_s )
-        if ( allocated(self%spacedim) ) deallocate( self%spacedim )
-        if ( allocated(self%eqnset)   ) deallocate( self%eqnset   )
+        if ( allocated(self%order_c)     ) deallocate( self%order_c     )
+        if ( allocated(self%order_s)     ) deallocate( self%order_s     )
+        if ( allocated(self%nterms_c)    ) deallocate( self%nterms_c    )
+        if ( allocated(self%nterms_s)    ) deallocate( self%nterms_s    )
+        if ( allocated(self%spacedim)    ) deallocate( self%spacedim    )
+        if ( allocated(self%eqnset)      ) deallocate( self%eqnset      )
 
 
-        allocate( self%order_c(ndomains),   &
-                  self%order_s(ndomains),   &
-                  self%nterms_c(ndomains),  &
-                  self%nterms_s(ndomains),  &
-                  self%spacedim(ndomains),  &
+        allocate( self%order_c(ndomains),     &
+                  self%order_s(ndomains),     &
+                  self%nterms_c(ndomains),    &
+                  self%nterms_s(ndomains),    &
+                  self%spacedim(ndomains),    &
                   self%eqnset(ndomains), stat=ierr )
 
         if (ierr /= 0) call AllocationError

@@ -10,6 +10,7 @@ module mod_vtk_calc_func
     use type_blockvector,    only: blockvector_t
     use type_solverdata,     only: solverdata_t
     use type_chidg_data,     only: chidg_data_t
+    use type_chidg_vector,   only: chidg_vector_t
 
     implicit none
 
@@ -219,10 +220,11 @@ contains
     ! Get point data for conservative variables at all points for a structured grid piece
     ! In an individual .vts file, these are the conservative variable values for a block, which consists of only piece
     !-------------------------------------------------------------------------------------------
-    subroutine get_piece_data(data,idom,nelem,num_pts,noeq,cons_var_val)
+    subroutine get_piece_data(data,idom,itime,nelem,num_pts,noeq,cons_var_val)
 
         type(chidg_data_t),                 intent(inout)       :: data
         integer(ik),                        intent(in)          :: idom
+        integer(ik),                        intent(in)          :: itime
         integer(ik),                        intent(in)          :: nelem
         integer(ik),                        intent(in)          :: num_pts
         integer(ik),                        intent(in)          :: noeq
@@ -235,7 +237,7 @@ contains
         integer(ik)                                             :: npts
         real(rdouble)                                           :: val(1)
         real(rk)                                                :: xi, eta, zeta
-        integer(ik)                                             :: ieq, ivar, ival,ielem, itime, ierr
+        integer(ik)                                             :: ieq, ivar, ival, ielem, ierr, eqn_ID
 
 
 
@@ -260,7 +262,9 @@ contains
         !
         ! For each conservative variable in equation set, compute values pointwise and save in the conservative variable array
         !
-        do ivar = 1,data%eqnset(idom)%prop%nprimary_fields()
+        !do ivar = 1,data%eqnset(idom)%prop%nprimary_fields()
+        eqn_ID = data%mesh(idom)%eqn_ID
+        do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
             !
             ! For each actual element, create a sub-sampling of elements to resolve solution variation
@@ -275,8 +279,7 @@ contains
                             xi = (((real(ipt_xi,rk) - ONE)/(real(npts,rk) - ONE)) - HALF)*TWO
 
                             ! Get solution value at a point 
-                            itime = 1
-                            val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q_in%dom(idom)%vecs(ielem),ivar,itime,xi,eta,zeta),rdouble)
+                            val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q_out%dom(idom)%vecs(ielem),ivar,itime,xi,eta,zeta),rdouble)
                             ival = ival + 1                   ! Counter for conservative variable array
                             cons_var_val(ivar,ival) = val(1)  ! Store values in the array
                                                               ! Each row of the array contains the values for one conservative variable

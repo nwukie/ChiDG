@@ -4,6 +4,7 @@ module SD_bc_operator
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
     use DNAD_D
+    use ieee_arithmetic
     implicit none
 
 
@@ -124,6 +125,12 @@ contains
         flux_3 = -mu*grad3_u
 
         integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
+
+
+        if (any(ieee_is_nan(integrand(:)%x_ad_))) then
+            print*, 'BC OP: ', integrand(:)%x_ad_
+        end if
+
 
         call worker%integrate_boundary('u',integrand)
 

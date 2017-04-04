@@ -35,6 +35,8 @@ module type_chidg_vector
         type(chidg_vector_send_t)           :: send         !< What to send to other processors
         type(chidg_vector_recv_t)           :: recv         !< Receive data from other processors
 
+        integer(ik),            private     :: ntime_       !< No. of time instances stored
+
     contains
 
         generic,    public  :: init => initialize
@@ -56,7 +58,10 @@ module type_chidg_vector
         procedure,  public  :: comm_wait                        ! Wait to finish send data
 
         procedure,  public  :: release                          ! Release allocated resources
-
+        procedure,  public  :: get_ntime                        ! Return ntime associated with
+                                                                ! densevctors
+        procedure,  public  :: set_ntime                        ! Set ntime in the associated
+                                                                ! densevectors
 !        generic :: assignment(=) => 
 
     end type chidg_vector_t
@@ -127,11 +132,18 @@ contains
     !!                      blockvector_t subcomponent.
     !!
     !------------------------------------------------------------------------------------------
-    subroutine initialize(self,mesh)
+    subroutine initialize(self,mesh,ntime)
         class(chidg_vector_t),   intent(inout)   :: self
-        type(mesh_t),           intent(inout)   :: mesh(:)
+        type(mesh_t),            intent(inout)   :: mesh(:)
+        integer(ik),             intent(in)      :: ntime
 
         integer(ik) :: ierr, ndomains, idom
+
+
+        !
+        ! Set ntime_ for the chidg_vector
+        !
+        self%ntime_ = ntime
 
         !
         ! Deallocate storage if necessary in case this is being called as a 
@@ -662,6 +674,65 @@ contains
         if (allocated(self%dom)) deallocate(self%dom)
 
     end subroutine release
+    !****************************************************************************************
+
+
+
+
+
+
+
+    !>  Return ntime
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/9/2017
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_ntime(self) result(ntime_out)
+        class(chidg_vector_t),  intent(inout)   :: self
+
+        integer(ik)     :: ntime_out
+
+        !
+        ! Get ntime 
+        !
+        ntime_out = self%ntime_
+
+
+    end function get_ntime
+    !****************************************************************************************
+
+
+
+
+
+
+
+    !>  Set ntime in the densevectors
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/9/2017
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_ntime(self,ntime)
+        class(chidg_vector_t),  intent(inout)   :: self
+        integer(ik),            intent(in)      :: ntime
+
+        integer(ik)     :: idom, ielem
+
+
+        ! 
+        ! Set ntime
+        !
+        do idom = 1,size(self%dom)
+            do ielem = 1,size(self%dom(idom)%vecs)
+                
+                call self%dom(idom)%vecs(ielem)%set_ntime(ntime)
+
+            end do
+        end do
+
+    end subroutine set_ntime
     !****************************************************************************************
 
 

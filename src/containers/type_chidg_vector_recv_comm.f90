@@ -70,7 +70,7 @@ contains
 
         
         !
-        ! Get number of domains being received from proc
+        ! Get number of domains being received from proc. This is sent from chidg_vector_send_comm
         !
         call MPI_Recv(ndom_recv,1,MPI_INTEGER4,self%proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 

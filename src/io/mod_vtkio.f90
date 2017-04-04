@@ -38,8 +38,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine write_vtk_file(data)
-        type(chidg_data_t),intent(inout)                        ::  data
-
+        type(chidg_data_t),     intent(inout)                   ::  data
 
         integer(ik),parameter                                   :: bo_type = 0_ik
         integer(ik)                                             :: idom,ielem,nelem,noeq,s,num_pts,num_cells,ntime
@@ -50,19 +49,20 @@ contains
         integer(ik),            dimension(:,:), allocatable     :: connectivity,connectivity_A
         integer(ik),            dimension(:),   allocatable     :: offsets,types
         character(len = 100),   dimension(:),   allocatable     :: file_arr
-        character(len = 100)                                    :: new_dir_path
-        character(len = 100)                                    :: make_directory,delete_directory
-        character(len = 100)                                    :: pvd_filename
+        character(len = 100)                                    :: new_dir_path,pvd_filename,make_directory,delete_directory
 		logical                                                 :: dir_exists
 
+
+        !
+        ! Set new directory path in which output files are stored
+        !
+        new_dir_path = 'ChiDG_results'
 
         !
         ! Get the path of the current working directory and append 
         ! the chidg result folder name to the path
         ! Check if directory already exists, if it does remove it and make it again
         !
-        new_dir_path = 'ChiDG_results'
-
         delete_directory = 'rm -rf '//trim(new_dir_path)
         make_directory   = 'mkdir '//trim(new_dir_path)
 
@@ -78,8 +78,7 @@ contains
         pvd_filename = 'chidg_results.pvd'
 
 
-        ntime = 1   ! No. of time steps in the solution file (1 for steady cases)
-
+        ntime = data%sdata%q_out%get_ntime()   ! No. of time steps in the solution file (1 for steady cases)
 
         !
         ! Allocate array for storing individual .vtu file names for each block over 
@@ -137,7 +136,7 @@ contains
                 !
                 call get_piece_coord(data,idom,nelem,num_pts,X,Y,Z)
                 call write_piece_coord(file_arr(d + idom),num_pts,X,Y,Z)
-                call get_piece_data(data,idom,nelem,num_pts,noeq,cons_var_val)
+                call get_piece_data(data,idom,itime,nelem,num_pts,noeq,cons_var_val)
                 call write_piece_data(file_arr(d + idom),noeq,num_pts,cons_var,cons_var_val)
 
                 !

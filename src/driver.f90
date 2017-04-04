@@ -17,13 +17,15 @@ program driver
     use type_chidg_manager,         only: chidg_manager_t
     use type_function,              only: function_t
     use mod_function,               only: create_function
-    use mod_chidg_mpi,              only: GLOBAL_MASTER, ChiDG_COMM
+    use mod_chidg_mpi,              only: GLOBAL_MASTER, ChiDG_COMM, IRANK
+    use eqn_wall_distance,          only: set_p_poisson_parameter
     use mod_io
 
     ! Actions
     use mod_chidg_edit,         only: chidg_edit
     use mod_chidg_convert,      only: chidg_convert
-    use mod_chidg_post,         only: chidg_post,chidg_post_vtk
+    use mod_chidg_post,         only: chidg_post,chidg_post_vtk, chidg_post_matplotlib
+    use mod_chidg_airfoil,      only: chidg_airfoil
 
     
     !
@@ -63,7 +65,6 @@ program driver
         call chidg%start_up('core')
 
 
-
         !
         ! Set ChiDG Algorithms
         !
@@ -89,7 +90,9 @@ program driver
         call chidg%read_grid(gridfile)
         call chidg%read_boundaryconditions(gridfile)
 
+        
 
+!        call set_p_poisson_parameter(4._rk)
 
         !
         ! Initialize communication, storage, auxiliary fields
@@ -120,17 +123,19 @@ program driver
 
 !            call polynomial%set_option('f',3.5_rk)
 !            call create_function(polynomial,'polynomial')
-!
+
+
 !            ! d
-!            call create_function(constant,'constant')
-!            call constant%set_option('val',0.001_rk)
+!            !call create_function(constant,'constant')
+!            !call constant%set_option('val',10000.0_rk)
+!            call create_function(constant,'Radius')
 !            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,1)
 
 
             call create_function(constant,'constant')
 
             ! rho
-            call constant%set_option('val',1.15_rk)
+            call constant%set_option('val',1.14_rk)
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,1)
 
             ! rho_u
@@ -192,88 +197,62 @@ program driver
 
 
 
-
-
     !
-    ! ChiDG tool execution. 2 arguments.
+    ! Check if executing 'action'
     !
-    else if ( narg == 2 ) then
+    else if ( narg > 1 ) then
 
-
+        ! Get 'action'
         call get_command_argument(1,chidg_action)
-        call get_command_argument(2,filename)
-        chidg_action = trim(chidg_action)
-        filename = trim(filename)
-        
-
-        !
-        ! Initialize ChiDG environment
-        !
         call chidg%start_up('core')
 
-
         !
-        ! Select ChiDG action
-        !
-        if ( trim(chidg_action) == 'edit' ) then
-            call chidg_edit(trim(filename))
+        ! Select 'action'
+        ! 
+        select case (trim(chidg_action))
+            case ('edit')
+                if (narg /= 2) call chidg_signal(FATAL,"The 'edit' action expects: chidg edit filename.h5")
+                call get_command_argument(2,filename)
+                call chidg_edit(trim(filename))
 
-        else if ( trim(chidg_action) == 'convert' ) then
-            call chidg_convert(trim(filename))
+            case ('convert')
+                if (narg /= 2) call chidg_signal(FATAL,"The 'convert' action expects: chidg convert filename.x")
+                call get_command_argument(2,filename)
+                call chidg_convert(trim(filename))
 
+            case ('post')
+                if (narg /= 3) call chidg_signal(FATAL,"The 'post' action expects: chidg post gridfile.h5 solutionfile.h5")
+                call get_command_argument(2,grid_file)
+                call get_command_argument(3,solution_file)
+                call chidg_post(trim(grid_file), trim(solution_file))
+                call chidg_post_vtk(trim(grid_file), trim(solution_file))
+
+            case ('matplotlib')
+                if (narg /= 2) call chidg_signal(FATAL,"The 'matplotlib' action expects: chidg matplotlib solutionfile.h5")
+                call get_command_argument(2,filename)
+                call chidg_post_matplotlib(trim(filename))
+
+            case ('airfoil')
+                if (narg /= 2) call chidg_signal(FATAL,"The 'airfoil' action expects: chidg airfoil solutionfile.h5")
+                call get_command_argument(2,solution_file)
+                call chidg_airfoil(trim(solution_file))
+
+            case default
+                call chidg_signal(FATAL,"We didn't understand the way chidg was called. Available chidg 'actions' are: 'edit' 'convert' 'post' 'matplotlib' and 'airfoil'.")
+        end select
+
+!<<<<<<< HEAD
 !        else if ( trim(chidg_action) == 'post' ) then
 !            call chidg_post(trim(filename))
 !            call chidg_post_vtk(trim(filename))
+!            call chidg_post_matplotlib(trim(filename))
+!        else
+!            call chidg_signal(FATAL,"chidg: unrecognized action '"//trim(chidg_action)//"'. Valid options are: 'edit', 'convert'")
+!=======
 
-        else
-            call chidg_signal(FATAL,"chidg: unrecognized action '"//trim(chidg_action)//"'. Valid options are: 'edit', 'convert'")
-
-        end if
-
-
-        !
-        ! Close ChiDG interface
-        !
         call chidg%shut_down('core')
 
 
-    !
-    ! ChiDG tool execution. 3 arguments.
-    !
-    else if ( narg == 3 ) then
-
-
-        call get_command_argument(1,chidg_action)
-        call get_command_argument(2,grid_file)
-        call get_command_argument(3,solution_file)
-        chidg_action = trim(chidg_action)
-        grid_file = trim(grid_file)
-        solution_file = trim(solution_file)
-        
-
-        !
-        ! Initialize ChiDG environment
-        !
-        call chidg%start_up('core')
-
-
-        !
-        ! Select ChiDG action
-        !
-        if ( trim(chidg_action) == 'post' ) then
-            call chidg_post(trim(grid_file), trim(solution_file))
-            call chidg_post_vtk(trim(grid_file), trim(solution_file))
-
-        else
-            call chidg_signal(FATAL,"chidg: unrecognized action '"//trim(chidg_action)//"'. Valid options are: 'edit', 'convert'")
-
-        end if
-
-
-        !
-        ! Close ChiDG interface
-        !
-        call chidg%shut_down('core')
 
 
 

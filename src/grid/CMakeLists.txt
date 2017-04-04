@@ -2,7 +2,9 @@ add_lib_sources(
                 type_point.f90 
                 type_element.f90 
                 type_face.f90 
+                type_domain.f90
                 type_mesh.f90 
+                type_mesh_new.f90 
                 type_meshdata.f90
                 type_seed.f90
                 type_domain_info.f90

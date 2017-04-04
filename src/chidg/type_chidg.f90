@@ -567,13 +567,14 @@ contains
         integer                             :: iext, extloc, idom, ndomains, iread, ierr, &
                                                domain_dimensionality, ielem
 
-
+        call write_line(' ', ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('Reading grid... ', io_proc=GLOBAL_MASTER)
 
 
         !
         ! Master rank: Read connectivity, partition connectivity, distribute partitions
         !
-        call write_line("Grid: partitioning...", io_proc=GLOBAL_MASTER)
+        call write_line("   partitioning...", ltrim=.false., io_proc=GLOBAL_MASTER)
         if ( IRANK == GLOBAL_MASTER ) then
 
             call read_connectivity_hdf(gridfile,connectivities)
@@ -588,6 +589,7 @@ contains
         !
         ! All ranks: Receive partition from GLOBAL_MASTER
         !
+        call write_line("   distributing partitions...", ltrim=.false., io_proc=GLOBAL_MASTER)
         call recv_partition(self%partition,MPI_COMM_WORLD)
 
 
@@ -606,7 +608,7 @@ contains
         !
         ! Call grid reader based on file extension
         !
-        call write_line("Grid: reading...", io_proc=GLOBAL_MASTER)
+        call write_line("   reading...", ltrim=.false., io_proc=GLOBAL_MASTER)
         do iread = 0,NRANK-1
             if ( iread == IRANK ) then
 
@@ -627,7 +629,7 @@ contains
         !
         ! Add domains to ChiDG%data
         !
-        call write_line("Grid: processing...", io_proc=GLOBAL_MASTER)
+        call write_line("   processing...", ltrim=.false., io_proc=GLOBAL_MASTER)
         ndomains = size(meshdata)
         do idom = 1,ndomains
 
@@ -661,6 +663,10 @@ contains
 
         end do
 
+
+
+        call write_line('Done reading grid.', io_proc=GLOBAL_MASTER)
+        call write_line(' ', ltrim=.false.,   io_proc=GLOBAL_MASTER)
 
     end subroutine read_grid
     !******************************************************************************************
@@ -702,6 +708,10 @@ contains
         integer                                 :: idom, ndomains, iface, ibc, ierr, iread
 
 
+        call write_line(' ', ltrim=.false.,                io_proc=GLOBAL_MASTER)
+        call write_line('Reading boundary conditions... ', io_proc=GLOBAL_MASTER)
+
+
         !
         ! Get filename extension
         !
@@ -712,7 +722,7 @@ contains
         !
         ! Call boundary condition reader based on file extension
         !
-        call write_line('Boundary Conditions: reading...', io_proc=GLOBAL_MASTER)
+        call write_line('   reading...', ltrim=.false., io_proc=GLOBAL_MASTER)
         do iread = 0,NRANK-1
             if ( iread == IRANK ) then
 
@@ -732,7 +742,7 @@ contains
 
 
 
-        call write_line('Boundary Conditions: processing...', io_proc=GLOBAL_MASTER)
+        call write_line('   processing groups...', ltrim=.false., io_proc=GLOBAL_MASTER)
         !
         ! Add all boundary condition groups
         !
@@ -751,6 +761,7 @@ contains
         !
         ! Add boundary condition patches
         !
+        call write_line('   processing patches...', ltrim=.false., io_proc=GLOBAL_MASTER)
         ndomains = size(bc_patch_data)
         do idom = 1,ndomains
             do iface = 1,NFACES
@@ -764,6 +775,9 @@ contains
         end do !ipatch
 
 
+
+        call write_line('Done reading boundary conditions.', io_proc=GLOBAL_MASTER)
+        call write_line(' ', ltrim=.false.,                  io_proc=GLOBAL_MASTER)
 
 
     end subroutine read_boundaryconditions
@@ -795,6 +809,8 @@ contains
         character(len=:),   allocatable     :: extension
         integer                             :: iext, extloc, idom, ndomains, iread, ierr
 
+        call write_line(' ', ltrim=.false.,      io_proc=GLOBAL_MASTER)
+        call write_line(' Reading solution... ', io_proc=GLOBAL_MASTER)
 
         !
         ! Get filename extension
@@ -806,7 +822,7 @@ contains
         !
         ! Call grid reader based on file extension
         !
-        call write_line("Reading solution from: ", file_name, io_proc=GLOBAL_MASTER)
+        call write_line("   reading from: ", file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
         do iread = 0,NRANK-1
             if ( iread == IRANK ) then
 
@@ -821,7 +837,8 @@ contains
         end do ! iread
 
 
-        call write_line("Done reading solution...", io_proc=GLOBAL_MASTER)
+        call write_line('Done reading solution.', io_proc=GLOBAL_MASTER)
+        call write_line(' ', ltrim=.false.,       io_proc=GLOBAL_MASTER)
 
     end subroutine read_solution
     !*****************************************************************************************
@@ -918,6 +935,10 @@ contains
         integer                             :: iext, extloc, idom, ndomains, iwrite, ierr
 
 
+        call write_line(' ', ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('Writing grid... ', io_proc=GLOBAL_MASTER)
+
+
         !
         ! Get filename extension
         !
@@ -928,14 +949,15 @@ contains
         !
         ! Call grid reader based on file extension
         !
-        call write_line("Writing grid to: ", file_name, io_proc=GLOBAL_MASTER)
+        call write_line("   writing to: ", file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
         if ( extension == '.h5' ) then
             call write_grid_hdf(self%data,file_name)
         else
             call chidg_signal(FATAL,"chidg%write_grid: grid file extension not recognized")
         end if
 
-        call write_line("Done writing grid...", io_proc=GLOBAL_MASTER)
+        call write_line("Done writing grid.", io_proc=GLOBAL_MASTER)
+        call write_line(' ', ltrim=.false.,   io_proc=GLOBAL_MASTER)
 
     end subroutine write_grid
     !*****************************************************************************************
@@ -965,6 +987,8 @@ contains
         character(:),       allocatable     :: extension
         integer                             :: iext, extloc, idom, ndomains, iwrite, ierr
 
+        call write_line(' ', ltrim=.false.,     io_proc=GLOBAL_MASTER)
+        call write_line('Writing solution... ', io_proc=GLOBAL_MASTER)
 
         !
         ! Get filename extension
@@ -976,7 +1000,7 @@ contains
         !
         ! Call grid reader based on file extension
         !
-        call write_line("Writing solution to:", file_name, io_proc=GLOBAL_MASTER)
+        call write_line("   writing to:", file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
         if ( extension == '.h5' ) then
             call write_solution_hdf(self%data,file_name)
             call self%time_integrator%write_time_options(self%data,file_name)
@@ -984,7 +1008,8 @@ contains
             call chidg_signal(FATAL,"chidg%write_solution: grid file extension not recognized")
         end if
 
-        call write_line("Done writing solution...", io_proc=GLOBAL_MASTER)
+        call write_line("Done writing solution.", io_proc=GLOBAL_MASTER)
+        call write_line(' ', ltrim=.false.,       io_proc=GLOBAL_MASTER)
 
     end subroutine write_solution
     !*****************************************************************************************

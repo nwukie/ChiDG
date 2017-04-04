@@ -56,7 +56,6 @@ module type_chidg_data
         ! Boundary conditions are not specified per-domain. 
         ! A boundary condition for each bc_group in the file.
         type(bc_t),                     allocatable :: bc(:)    
-
         type(equation_set_t),           allocatable :: eqnset(:)
 
         ! An object containing matrix and vector storage
@@ -619,13 +618,15 @@ contains
         integer(ik) :: idomain, nfields, eqn_ID
 
         ! Initialize mesh numerics based on equation set and polynomial expansion order
-        call write_line("Domains: initializing mesh equation space...", io_proc=GLOBAL_MASTER)
+        call write_line(" ", ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line("Initialize: domain equation space...", io_proc=GLOBAL_MASTER)
         do idomain = 1,self%ndomains()
             eqn_ID = self%mesh(idomain)%eqn_ID
             nfields = self%eqnset(eqn_ID)%prop%nprimary_fields()
             call self%mesh(idomain)%init_sol(nfields,nterms_s,self%time_manager%ntime)
         end do
 
+        call write_line(" ", ltrim=.false., io_proc=GLOBAL_MASTER)
 
     end subroutine initialize_solution_domains
     !******************************************************************************************

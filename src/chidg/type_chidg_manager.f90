@@ -74,7 +74,7 @@ contains
         end do !iproc
 
 
-        call MPI_Reduce(has_wall_distance, all_have_wall_distance, 1, MPI_LOGICAL, MPI_LOR, GLOBAL_MASTER, ChiDG_COMM, ierr)
+        call MPI_AllReduce(has_wall_distance, all_have_wall_distance, 1, MPI_LOGICAL, MPI_LOR, ChiDG_COMM, ierr)
 
 
         if (all_have_wall_distance) then

@@ -401,7 +401,7 @@ contains
         !  Open input file using default properties.
         !
         call open_hdf()
-        call write_line('Opening file: ', filename_open)
+        call write_line('   Opening file: ', filename_open, io_proc=GLOBAL_MASTER, ltrim=.false.)
         call h5fopen_f(filename_open, H5F_ACC_RDWR_F, fid, ierr)
         user_msg = "open_file_hdf: There was an error opening the file."
         if (ierr /= 0) call chidg_signal_one(FATAL,user_msg,trim(filename_open))

@@ -17,7 +17,7 @@ program driver
     use type_chidg_manager,         only: chidg_manager_t
     use type_function,              only: function_t
     use mod_function,               only: create_function
-    use mod_chidg_mpi,              only: GLOBAL_MASTER, ChiDG_COMM
+    use mod_chidg_mpi,              only: GLOBAL_MASTER, ChiDG_COMM, IRANK
     use eqn_wall_distance,          only: set_p_poisson_parameter
     use mod_io
 
@@ -90,6 +90,7 @@ program driver
         call chidg%read_grid(gridfile)
         call chidg%read_boundaryconditions(gridfile)
 
+        
 
 !        call set_p_poisson_parameter(4._rk)
 
@@ -138,7 +139,7 @@ program driver
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,1)
 
             ! rho_u
-            call constant%set_option('val',150.0_rk)
+            call constant%set_option('val',50.0_rk)
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,2)
 
             ! rho_v
@@ -146,7 +147,7 @@ program driver
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,3)
 
             ! rho_w
-            call constant%set_option('val',50.0_rk)
+            call constant%set_option('val',0.0_rk)
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,4)
 
             ! rho_E

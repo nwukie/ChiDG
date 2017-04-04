@@ -98,12 +98,11 @@ contains
         ! Initialize chidg solution data storage
         !
         call this%chidg%set('Solution Order', integer_input=2)
-        !call this%chidg%initialize_solution_domains()
         call this%chidg%init('domains')
+        call this%chidg%init('bc')
         call this%chidg%init('communication')
         call this%chidg%init('chimera')
         call this%chidg%init('solvers')
-        !call this%chidg%initialize_solution_solver()
 
         !
         ! Initialized solution to constant values

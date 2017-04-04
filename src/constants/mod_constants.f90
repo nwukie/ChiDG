@@ -211,5 +211,6 @@ module mod_constants
     !
     real(rk),   parameter :: RKTOL = 20._rk * epsilon(1._rk)    ! Real-Kind Tolerance. Floating-point tolerance, one order of magnitude larger than machine precision.
     
+    integer(ik),    parameter   :: NO_EQUATION_SET = 0
 
 end module mod_constants

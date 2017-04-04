@@ -12,7 +12,6 @@ module mod_spatial
     use type_chidg_cache,       only: chidg_cache_t
     use type_cache_handler,     only: cache_handler_t
     use type_element_info,      only: element_info_t
-    use type_face_info,         only: face_info_t
     use type_timer,             only: timer_t
     implicit none
 
@@ -41,13 +40,12 @@ contains
         logical,            intent(in),     optional    :: differentiate
 
         integer(ik)                 :: idom, ielem, iface, idiff, itime, ierr, &
-                                       diff_min, diff_max, imat
+                                       diff_min, diff_max, eqn_ID
         type(timer_t)               :: timer, comm_timer, loop_timer
 
-        type(chidg_worker_t)        :: worker
         type(element_info_t)        :: elem_info
-        type(face_info_t)           :: face_info
 
+        type(chidg_worker_t)        :: worker
         type(chidg_cache_t)         :: cache
         type(cache_handler_t)       :: cache_handler
 
@@ -138,7 +136,8 @@ contains
 
             call loop_timer%start()
             do idom = 1,data%ndomains()
-                associate ( mesh => data%mesh(idom), eqnset => data%eqnset(idom) )
+                eqn_ID = worker%mesh(idom)%eqn_ID
+                associate ( mesh => data%mesh(idom), eqnset => data%eqnset(eqn_ID) )
 
                 ! Loop through elements in the current domain
                 do ielem = 1,mesh%nelem
@@ -184,8 +183,6 @@ contains
                     !
                     call eqnset%compute_volume_advective_operators(worker, differentiate_function)
                     call eqnset%compute_volume_diffusive_operators(worker, differentiate_function)
-
-
 
 
                 end do  ! ielem

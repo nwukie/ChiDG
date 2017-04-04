@@ -5,6 +5,7 @@ module bc_state_scalar_derivative
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
     use DNAD_D
+    use ieee_arithmetic
     implicit none
 
 
@@ -110,15 +111,25 @@ contains
         !
         ! Initialize derivative arrays
         !
-        dudx_bc = ZERO * worker%get_primary_field_face('u', 'grad1','face interior')
-        dudy_bc = ZERO * dudx_bc
-        dudz_bc = ZERO * dudx_bc
+        dudx_bc = ZERO*worker%get_primary_field_face('u', 'grad1','face interior')
+        dudy_bc = ZERO*dudx_bc
+        dudz_bc = ZERO*dudx_bc
+
+
+
+
+
 
 
         !
         ! Get derivative value
         !
         dudx_bc = self%bcproperties%compute("Derivative",worker%time(),worker%coords())
+
+
+
+
+
 
 
 

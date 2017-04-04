@@ -69,13 +69,13 @@ contains
         character(100)          :: filename
         integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex,  &
                                    niter, ieqn, idom, ierr,                     &
-                                   rstart, rend, cstart, cend, nterms, imat, iwrite, step
+                                   rstart, rend, cstart, cend, nterms, imat, iwrite, step, eqn_ID, icfl
 
-        real(rk)                :: dtau, amp, cfl, timing, resid, resid_new,    &
+        real(rk)                :: dtau, amp, cfl, timing, resid, resid0, resid_new,    &
                                    alpha, f0, fn, forcing_term
         real(rk), allocatable   :: vals(:), cfln(:), rnorm0(:), rnorm(:)
         type(chidg_vector_t)    :: b, qn, qold, qnew, dqdtau, q0
-        logical                 :: searching
+        logical                 :: searching, absolute_convergence, relative_convergence
       
 
         wcount = 1
@@ -105,7 +105,9 @@ contains
             niter = 0      ! Initialize inner loop counter
 
 
-            do while ( resid > self%tol )
+            absolute_convergence = .true.
+            relative_convergence = .true.
+            do while ( absolute_convergence .and. relative_convergence )
                 niter = niter + 1
                 call write_line("   niter: ", niter, delimiter='', columns=.True., column_width=20, io_proc=GLOBAL_MASTER)
 
@@ -142,9 +144,13 @@ contains
                 ! Compute and store residual norm for each field
                 !
                 if (niter == 1) then
+                    resid0 = rhs%norm(ChiDG_COMM)
                     rnorm0 = rhs%norm_fields(ChiDG_COMM)
+                    rnorm0 = resid0 !override
                 end if
+
                 rnorm = rhs%norm_fields(ChiDG_COMM)
+                rnorm = resid !override
 
 
 
@@ -176,6 +182,15 @@ contains
                     cfln = 0.1
                 end where
 
+                if (IRANK == GLOBAL_MASTER) then
+                    call add_to_line("  CFL: ")
+                    do icfl = 1,size(cfln)
+                        call add_to_line(cfln(icfl))
+                    end do
+                    call send_line()
+                end if
+
+
 
                 !
                 ! Compute element-local pseudo-timestep
@@ -187,9 +202,11 @@ contains
                 ! Add mass/dt to sub-block diagonal in dR/dQ
                 !
                 do idom = 1,data%ndomains()
+                    eqn_ID = data%mesh(idom)%eqn_ID
                     do ielem = 1,data%mesh(idom)%nelem
                         do itime = 1,data%mesh(idom)%ntime
-                            do ieqn = 1,data%eqnset(idom)%prop%nprimary_fields()
+                            !do ieqn = 1,data%eqnset(idom)%prop%nprimary_fields()
+                            do ieqn = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
                                 ! get element-local timestep
                                 dtau = data%mesh(idom)%elems(ielem)%dtau(ieqn)
@@ -337,6 +354,14 @@ contains
 
                 call MPI_Barrier(ChiDG_COMM,ierr)
 
+
+
+
+                absolute_convergence = (resid > self%tol)
+                relative_convergence = ( (log10(resid0) - log10(resid)) < real(self%norders_reduction,rk) )
+
+
+
             end do ! niter
 
 
@@ -379,14 +404,15 @@ contains
         type(chidg_data_t),     intent(inout)   :: data
         real(rk),               intent(in)      :: cfln(:)
 
-        integer(ik) :: idom
+        integer(ik) :: idom, eqn_ID
 
         !
         ! Loop through elements and compute time-step function
         !
         do idom = 1,data%ndomains()
 
-            call data%eqnset(idom)%compute_pseudo_timestep(idom,data%mesh,data%sdata,cfln,itime = 1)
+            eqn_ID = data%mesh(idom)%eqn_ID
+            call data%eqnset(eqn_ID)%compute_pseudo_timestep(idom,data%mesh,data%sdata,cfln,itime = 1)
 
         end do !idom
 

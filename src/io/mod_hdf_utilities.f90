@@ -321,7 +321,7 @@ contains
         integer(HID_T),     intent(in)  :: fid
         type(chidg_data_t), intent(in)  :: data
 
-        integer(ik)                 :: idom
+        integer(ik)                 :: idom, eqn_ID
         integer(HID_T)              :: domain_id
         character(:),   allocatable :: domain_name
 
@@ -333,9 +333,10 @@ contains
 
 
             ! Set additional attributes
+            eqn_ID    = data%mesh(idom)%eqn_ID
             domain_id = open_domain_hdf(fid,trim(domain_name))
             call set_domain_dimensionality_hdf(domain_id, data%get_dimensionality())
-            call set_domain_equation_set_hdf(domain_id,data%eqnset(idom)%get_name())
+            call set_domain_equation_set_hdf(domain_id,data%eqnset(eqn_ID)%get_name())
             call close_domain_hdf(domain_id)
     
 
@@ -400,6 +401,7 @@ contains
         !  Open input file using default properties.
         !
         call open_hdf()
+        call write_line('Opening file: ', filename_open)
         call h5fopen_f(filename_open, H5F_ACC_RDWR_F, fid, ierr)
         user_msg = "open_file_hdf: There was an error opening the file."
         if (ierr /= 0) call chidg_signal_one(FATAL,user_msg,trim(filename_open))
@@ -495,10 +497,11 @@ contains
                    You could try a few things here. 1: regenerate the with with the ChiDG &
                    library being used. 2: Use a different version of the ChiDG library &
                    that uses a storage format for the file being used. 3: Full-speed ahead! &
-                   Proceed anyways and try your luck!"//NEW_LINE('A')//"     &
+                   Proceed anyways and try your luck!"//NEW_LINE('A')//" &
                    Options: Exit(1), Continue(2)."
+                   
 
-            call chidg_signal(MSG,msg)
+            call chidg_signal_two(MSG,msg,file_minor_version,STORAGE_FORMAT_MINOR)
             !call write_line(msg)
 
             read_user_input = .true.

@@ -385,7 +385,7 @@ contains
         integer(HID_T)                  :: fid, domain_id
         integer                         :: ierr
 
-        integer(ik)                     :: idom, ndomains, ieqn, neqns, itime, ntime
+        integer(ik)                     :: idom, ndomains, ieqn, neqns, itime, ntime, eqn_ID
         character(:),       allocatable :: field_name, user_msg, domain_name
         logical                         :: file_exists, contains_solution
 
@@ -433,13 +433,16 @@ contains
                 ! For each primary field in the domain, get the field name and read from file.
                 domain_id = open_domain_hdf(fid,domain_name)
 
-                do ieqn = 1,data%eqnset(idom)%prop%nprimary_fields()
-                    field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
-                            call read_domain_field_hdf(data,domain_id,field_name,itime,'Primary')
+                eqn_ID = data%mesh(idom)%eqn_ID
+                !do ieqn = 1,data%eqnset(idom)%prop%nprimary_fields()
+                do ieqn = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
+                    !field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
+                    field_name = trim(data%eqnset(eqn_ID)%prop%get_primary_field_name(ieqn))
+                    call read_domain_field_hdf(data,domain_id,field_name,itime,'Primary')
                 end do ! ieqn
 
-    !            do ieqn = 1,data%eqnset(idom)%prop%nauxiliary_fields()
-    !                field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
+    !            do ieqn = 1,data%eqnset(eqn_ID)%prop%nauxiliary_fields()
+    !                field_name = trim(data%eqnset(eqn_ID)%prop%get_primary_field_name(ieqn))
     !                call read_field_domain_hdf(data,domain_id,field_name,itime,'Auxiliary')
     !            end do ! ieqn
 
@@ -490,13 +493,12 @@ contains
         integer(HID_T)                  :: fid, domain_id
         integer(HSIZE_T)                :: adim, nfreq, ntime
         integer(ik)                     :: idom, ieqn, neqns, iwrite, spacedim, &
-                                           time, field_index, iproc
+                                           time, field_index, iproc, eqn_ID
         integer                         :: ierr, order_s
         logical                         :: file_exists
         integer(ik)                     :: itime
         real(rk),       allocatable     :: freq(:), time_lev(:)
 
-        print*, 'write - 1'
 
         !
         ! Check for file existence
@@ -506,6 +508,8 @@ contains
 
         !
         ! Create new file if necessary
+        !   Barrier makes sure everyone has called file_exists before
+        !   one potentially gets created by another processor
         !
         call MPI_Barrier(ChiDG_COMM,ierr)
         if (.not. file_exists) then
@@ -526,18 +530,10 @@ contains
                     call MPI_Barrier(ChiDG_COMM,ierr)
                 end do
 
-            else
-
-                ! If it already exists, check if the the structure is correct 
-                !fid = open_file_hdf(file_name)
-                !call check_file_structure_hdf(fid,data)
-                !call close_file_hdf(fid)
-
         end if
         call MPI_Barrier(ChiDG_COMM,ierr)
 
 
-        print*, 'write - 2'
 
         !
         ! Each process, write its own portion of the solution
@@ -553,7 +549,6 @@ contains
                 call set_ntimes_hdf(fid,data%ntime())
 
 
-        print*, 'write - 3'
 
                 !
                 ! Write solution for each domain
@@ -562,8 +557,8 @@ contains
 
                     domain_name = data%info(idom)%name
                     domain_id   = open_domain_hdf(fid,trim(domain_name))
+                    eqn_ID      = data%mesh(idom)%eqn_ID
                     
-        print*, 'write - 4'
 
                     !
                     ! Write domain attributes: solution order, equation set
@@ -587,7 +582,6 @@ contains
                     end if
 
 
-        print*, 'write - 5'
 
                     !
                     ! Set some data about the block: solution order + equation set
@@ -605,7 +599,8 @@ contains
                         !
                         if (present(field)) then
 
-                            field_index = data%eqnset(idom)%prop%get_primary_field_index(trim(field))
+                            !field_index = data%eqnset(idom)%prop%get_primary_field_index(trim(field))
+                            field_index = data%eqnset(eqn_ID)%prop%get_primary_field_index(trim(field))
 
                             if (field_index /= 0) then
                                 call write_domain_field_hdf(domain_id,data,field,itime)
@@ -620,9 +615,11 @@ contains
                             !
                             ! For each field: get the name, write to file
                             ! 
-                            neqns = data%eqnset(idom)%prop%nprimary_fields()
+                            !neqns = data%eqnset(idom)%prop%nprimary_fields()
+                            neqns = data%eqnset(eqn_ID)%prop%nprimary_fields()
                             do ieqn = 1,neqns
-                                field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
+                                !field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
+                                field_name = trim(data%eqnset(eqn_ID)%prop%get_primary_field_name(ieqn))
                                 call write_domain_field_hdf(domain_id,data,field_name,itime)
                             end do ! ieqn
 
@@ -632,21 +629,17 @@ contains
 
                     call close_domain_hdf(domain_id)
 
-        print*, 'write - 6'
 
                 end do ! idom
 
-        print*, 'write - 7'
 
                 call set_contains_solution_hdf(fid,"True")
                 call close_file_hdf(fid)
 
-        print*, 'write - 8'
             end if
             call MPI_Barrier(ChiDG_COMM,ierr)
         end do
 
-        print*, 'write - 9'
     end subroutine write_solution_hdf
     !*****************************************************************************************
 
@@ -702,7 +695,7 @@ contains
         real(rdouble),  allocatable         :: bufferterms(:)
         type(c_ptr)                         :: cp_var
 
-        integer(ik)                         :: spacedim, ielem_g, aux_vector_index
+        integer(ik)                         :: spacedim, ielem_g, aux_vector_index, eqn_ID
         integer                             :: type, ierr, nterms_1d, nterms_s, order,  &
                                                ivar, ielem, nterms_ielem, idom, ndims
         logical                             :: ElementsEqual, variables_exists
@@ -795,6 +788,7 @@ contains
         !
         !  Loop through elements and set 'variable' values
         !
+        eqn_ID = data%mesh(idom)%eqn_ID
         do ielem = 1,data%mesh(idom)%nelem
 
 
@@ -848,7 +842,9 @@ contains
             ! Select subset of dataspace - sid, read selected modes into cp_var 
             !
             call h5sselect_hyperslab_f(sid, H5S_SELECT_SET_F, start, count, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"read_domain_field_hdf: h5sselect_hyperslab_f.")
             call h5dread_f(vid, H5T_NATIVE_DOUBLE, cp_var, ierr, memspace, sid)
+            if (ierr /= 0) call chidg_signal(FATAL,"read_domain_field_hdf: h5d_read_f_f.")
 
 
 
@@ -870,8 +866,9 @@ contains
 
             ! Store modes in ChiDG Vector
             if (field_type == 'Primary') then
-                ivar = data%eqnset(idom)%prop%get_primary_field_index(trim(field_name))
+                !ivar = data%eqnset(idom)%prop%get_primary_field_index(trim(field_name))
                 !call data%sdata%q%dom(idom)%vecs(ielem)%setvar(ivar,itime,real(bufferterms,rk))
+                ivar = data%eqnset(eqn_ID)%prop%get_primary_field_index(trim(field_name))
                 call data%sdata%q_in%dom(idom)%vecs(ielem)%setvar(ivar,itime,real(bufferterms,rk))
             else if (field_type == 'Auxiliary') then
                 ! Implicitly assuming that an auxiliary field chidgVector contains only one field.
@@ -960,7 +957,7 @@ contains
         logical     :: DataExists, ElementsEqual, exists
         integer(ik) :: type, ierr, ndomains,    &
                        order, ivar, ielem, idom, nelem_g, &
-                       ielement_g, nterms_s, ntime
+                       ielement_g, nterms_s, ntime, eqn_ID
 
 
         !
@@ -1042,7 +1039,8 @@ contains
         !
         ! Get variable integer index from variable character string
         !
-        ivar = data%eqnset(idom)%prop%get_primary_field_index(field_name)
+        eqn_ID = data%mesh(idom)%eqn_ID
+        ivar = data%eqnset(eqn_ID)%prop%get_primary_field_index(field_name)
 
 
 

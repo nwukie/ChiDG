@@ -7,6 +7,7 @@ module SD_volume_operator
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use DNAD_D
+    use ieee_arithmetic
     implicit none
     private
 

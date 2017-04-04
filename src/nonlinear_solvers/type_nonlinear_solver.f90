@@ -21,14 +21,15 @@ module type_nonlinear_solver
         logical         :: solverInitialized = .false.
 
         ! OPTIONS
-        real(rk)        :: cfl0     = 1.0_rk        !< Initial CFL number
-        real(rk)        :: tol      = 1.e-13_rk     !< Convergence tolerance
-        integer(ik)     :: nsteps   = 100           !< Max number of steps to take in the nonlinear solver
-        integer(ik)     :: nwrite   = 100           !< Write data every 'nwrite' steps
+        real(rk)        :: cfl0     = 1.0_rk        ! Initial CFL number
+        real(rk)        :: tol      = 1.e-13_rk     ! Convergence tolerance
+        integer(ik)     :: nsteps   = 100           ! Max number of steps to take in the nonlinear solver
+        integer(ik)     :: nwrite   = 100           ! Write data every 'nwrite' steps
+        integer(ik)     :: norders_reduction = 10   ! Number of orders of magnitude residual is to be reduced by
         logical         :: search   = .true.
 
 
-        type(timer_t)   :: timer                    !< Timer data-type
+        type(timer_t)   :: timer                    ! Timer data-type
 
 
         ! Data logs
@@ -167,6 +168,7 @@ contains
         if (options%contains('cfl0'  )) call options%get('cfl0',  self%cfl0  )
         if (options%contains('nsteps')) call options%get('nsteps',self%nsteps)
         if (options%contains('nwrite')) call options%get('nwrite',self%nwrite)
+        if (options%contains('norders_reduction')) call options%get('norders_reduction',self%norders_reduction)
 
     end subroutine set
     !****************************************************************************************

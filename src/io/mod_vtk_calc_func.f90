@@ -237,7 +237,7 @@ contains
         integer(ik)                                             :: npts
         real(rdouble)                                           :: val(1)
         real(rk)                                                :: xi, eta, zeta
-        integer(ik)                                             :: ieq, ivar, ival,ielem, ierr
+        integer(ik)                                             :: ieq, ivar, ival,ielem, itime, ierr, eqn_ID
 
 
 
@@ -262,7 +262,9 @@ contains
         !
         ! For each conservative variable in equation set, compute values pointwise and save in the conservative variable array
         !
-        do ivar = 1,data%eqnset(idom)%prop%nprimary_fields()
+        !do ivar = 1,data%eqnset(idom)%prop%nprimary_fields()
+        eqn_ID = data%mesh(idom)%eqn_ID
+        do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
             !
             ! For each actual element, create a sub-sampling of elements to resolve solution variation

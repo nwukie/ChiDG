@@ -37,10 +37,11 @@ module mod_io
 !    type(dict_t),           save    :: toptions
    
     ! Nonlinear solver
-    character(len=100),     save    :: nonlinear_solver = 'newton'
-    integer(ik),            save    :: nonlinear_steps  = 100
-    real(rk),               save    :: ntol             = 1.e-8
-    real(rk),               save    :: cfl0             = 1._rk
+    character(len=100),     save    :: nonlinear_solver  = 'newton'
+    integer(ik),            save    :: nonlinear_steps   = 100
+    real(rk),               save    :: ntol              = 1.e-8
+    integer(ik),            save    :: norders_reduction = 10
+    real(rk),               save    :: cfl0              = 1._rk
     type(dict_t),           save    :: noptions
     
     ! Linear solver
@@ -100,6 +101,7 @@ contains
 
         namelist /nonlinear_solve/          nonlinear_solver,      &
                                             nonlinear_steps,       &
+                                            norders_reduction,     &
                                             cfl0,                  &
                                             ntol
 
@@ -148,6 +150,7 @@ contains
 
         ! Set nonlinear solver options
         call noptions%set('tol',ntol)
+        call noptions%set('norders_reduction',norders_reduction)
         call noptions%set('cfl0',cfl0)
         call noptions%set('nsteps',nonlinear_steps)
 

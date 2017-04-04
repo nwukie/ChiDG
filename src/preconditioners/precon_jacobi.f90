@@ -10,6 +10,8 @@ module precon_jacobi
 
     use mod_inv,                only: inv
 
+    use mod_fgmres_standard,    only: fgmres_standard
+
 
     !> Block-Jacobi preconditioner
     !!

@@ -1,4 +1,4 @@
-module type_reynolds_analogy
+module type_constant_viscosity_flat_plate
 #include <messenger.h>
     use mod_kinds,          only: rk
     use mod_constants,      only: THREE, TWO
@@ -11,27 +11,23 @@ module type_reynolds_analogy
     
 
 
-    !>  Reynolds' Analogy used to compute thermal conductivity.
+    !>  Constant Viscosity for Laminary Viscosity.
     !!
     !!  Model Fields:
-    !!      - Thermal Conductivity
+    !!      - Viscosity
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   12/9/2016
+    !!  @date   01/26/2017
     !!
     !---------------------------------------------------------------------------------------
-    type, extends(model_t)  :: reynolds_analogy_t
-
-        real(rk)    :: Cp = 1003.0_rk
-        !real(rk)    :: Pr = 0.8_rk
-        real(rk)    :: Pr = 0.72_rk
+    type, extends(model_t)  :: constant_viscosity_flat_plate_t
 
     contains
 
         procedure   :: init
         procedure   :: compute
 
-    end type reynolds_analogy_t
+    end type constant_viscosity_flat_plate_t
     !***************************************************************************************
 
 
@@ -46,17 +42,16 @@ contains
     !>  Initialize the model with a name and the model fields it is contributing to.
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   12/1/2016
+    !!  @date   01/26/2017
     !!
     !---------------------------------------------------------------------------------------
     subroutine init(self)   
-        class(reynolds_analogy_t), intent(inout)   :: self
+        class(constant_viscosity_flat_plate_t), intent(inout)   :: self
 
-        call self%set_name('Reynolds Analogy')
+        call self%set_name('Constant Viscosity Flat Plate')
         call self%set_dependency('f(Q-)')
 
-        call self%add_model_field('Laminar Thermal Conductivity')
-
+        call self%add_model_field('Laminar Viscosity')
 
     end subroutine init
     !***************************************************************************************
@@ -73,28 +68,32 @@ contains
     !!
     !--------------------------------------------------------------------------------------
     subroutine compute(self,worker)
-        class(reynolds_analogy_t),  intent(in)      :: self
-        type(chidg_worker_t),       intent(inout)   :: worker
+        class(constant_viscosity_flat_plate_t),    intent(in)      :: self
+        type(chidg_worker_t),           intent(inout)   :: worker
 
-        type(AD_D), dimension(:),   allocatable :: viscosity, thermal_conductivity
+        type(AD_D), dimension(:),   allocatable :: &
+            viscosity, T
 
+        real(rk) :: mu0 = 0.000016343_rk  ! [kg/(m*s)]
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        viscosity = worker%get_model_field_general('Laminar Viscosity','value')
+        T = worker%get_model_field_general('Temperature','value')
+    
+
+        !
+        ! Constant Viscosity for Laminar Viscosity
+        !   - initialize derivatives first...
+        !
+        viscosity = T
+        viscosity = mu0
 
 
         !
-        ! Stokes' Hypothesis for the second coefficient of viscosity
+        ! Contribute laminar viscosity
         !
-        thermal_conductivity = self%Cp * viscosity / self%Pr
-
-
-        !
-        ! Contribute second coefficient of viscosity
-        !
-        call worker%store_model_field('Laminar Thermal Conductivity', 'value', thermal_conductivity)
+        call worker%store_model_field('Laminar Viscosity', 'value', viscosity)
 
 
     end subroutine compute
@@ -103,4 +102,4 @@ contains
 
 
 
-end module type_reynolds_analogy
+end module type_constant_viscosity_flat_plate

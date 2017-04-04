@@ -6,6 +6,7 @@ module bc_state_scalar_value
     use type_properties,    only: properties_t
     use type_point,         only: point_t
     use DNAD_D
+    use ieee_arithmetic
     implicit none
 
 
@@ -117,6 +118,7 @@ contains
         coords = worker%coords()
         time   = worker%time()
         u_bc   = self%bcproperties%compute("Value",time,coords)
+
 
 
 

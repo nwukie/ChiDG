@@ -53,7 +53,7 @@ contains
         !
         ! Add turbulent inlet parameter and default value.
         !
-        call self%bcproperties%add('Turbulent Viscosity Ratio',   'Required')
+        call self%bcproperties%add('Turbulent Viscosity Ratio', 'Required')
         call self%set_fcn_option('Turbulent Viscosity Ratio', 'val', 3._rk)
 
 

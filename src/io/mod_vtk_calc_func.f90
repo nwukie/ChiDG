@@ -237,7 +237,7 @@ contains
         integer(ik)                                             :: npts
         real(rdouble)                                           :: val(1)
         real(rk)                                                :: xi, eta, zeta
-        integer(ik)                                             :: ieq, ivar, ival,ielem, itime, ierr, eqn_ID
+        integer(ik)                                             :: ieq, ivar, ival, ielem, ierr, eqn_ID
 
 
 

@@ -1,0 +1,165 @@
+module test_mesh_mod
+    use pfunit_mod
+    use mod_kinds,          only: rk,ik
+    use mod_test_utilities, only: create_mesh
+
+    use type_chidg,                 only: chidg_t
+    use type_mesh_new,              only: mesh_new_t
+    implicit none
+
+    public  :: test_mesh
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------
+    @TestCase
+    type, extends(TestCase) ::  test_mesh
+
+        type(chidg_t)       :: chidg
+        type(mesh_new_t)    :: mesh
+
+    contains
+
+        procedure   ::  setUp
+        procedure   ::  tearDown
+
+    end type test_mesh
+    !**************************************************************************************
+
+
+contains
+
+    !>  NOTE: make sure to use 'this' instead of 'self' since these are over-writting 
+    !!  a derived type procedure. The argument names have to match.
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(test_mesh),    intent(inout)   :: this
+        
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call this%chidg%start_up('core')
+        
+
+
+    end subroutine setUp
+    !****************************************************************************************
+    
+
+
+    !>
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(test_mesh),    intent(inout)   :: this
+
+        call this%chidg%shut_down('core')
+
+    end subroutine tearDown
+    !***************************************************************************************
+
+
+
+
+
+
+    !>  Test the "new_domain" procedure.
+    !!
+    !!
+    !!  Call mesh%new_domain() twice to test reallocated and extension.
+    !!      - test allocated
+    !!      - test size
+    !!
+    !---------------------------------------------------------------------------------------
+    @Test
+    subroutine test_mesh__new_domain(self)
+        class(test_mesh),   intent(inout)   :: self
+
+        integer(ik) :: dom_ID1, dom_ID2
+
+
+        !
+        ! Call mesh%new_domain() twice.
+        !
+        dom_ID1 = self%mesh%new_domain()
+        dom_ID2 = self%mesh%new_domain()
+
+        
+        !
+        ! Check allocation
+        !
+        @assertTrue(allocated(self%mesh%domain))
+
+
+        !
+        ! Check size
+        !
+        @assertEqual(2, self%mesh%ndomains() )
+
+
+    end subroutine test_mesh__new_domain
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Test the "add_domain" procedure.
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    @Test
+    subroutine test_mesh__add_domain(self)
+        class(test_mesh),   intent(inout)   :: self
+
+        integer(ik) :: dom_ID1, dom_ID2
+
+
+        !
+        ! Call mesh%new_domain() twice.
+        !
+        !call self%mesh%add_domain()
+
+
+
+    end subroutine test_mesh__add_domain
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+end module test_mesh_mod

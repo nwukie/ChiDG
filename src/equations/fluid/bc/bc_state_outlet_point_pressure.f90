@@ -4,6 +4,7 @@ module bc_state_outlet_point_pressure
     use mod_constants,          only: ZERO, ONE, HALF, TWO, NO_PROC
 
     use type_mesh,              only: mesh_t
+    use type_mesh_new,          only: mesh_new_t
     use type_bc_state,          only: bc_state_t
     use type_bc_patch,          only: bc_patch_t
     use type_chidg_worker,      only: chidg_worker_t
@@ -112,7 +113,8 @@ contains
     !--------------------------------------------------------------------------------
     subroutine init_bc_specialized(self,mesh,bc_patch,bc_COMM)
         class(outlet_point_pressure_t), intent(inout)   :: self
-        type(mesh_t),                   intent(in)      :: mesh(:)
+        !type(mesh_t),                   intent(in)      :: mesh(:)
+        type(mesh_new_t),               intent(in)      :: mesh
         type(bc_patch_t),               intent(in)      :: bc_patch(:)
         type(mpi_comm),                 intent(in)      :: bc_comm
 
@@ -160,7 +162,7 @@ contains
                 
 
                 ! get points at quadrature nodes for current face
-                quad_pts = mesh(idomain_l)%faces(ielement_l,iface)%quad_pts
+                quad_pts = mesh%domain(idomain_l)%faces(ielement_l,iface)%quad_pts
 
                 ! compute distance from quadrature nodes to user-specified node
                 dist_face = sqrt( (quad_pts(:)%c1_ - node1(1))**TWO + &
@@ -173,8 +175,8 @@ contains
 
                 ! If new minimum is found, record location, update local dist_bc
                 if (dist_face(minloc_dist_face) < dist_bc) then
-                    node_idomain_g  = mesh(idomain_l)%elems(ielement_l)%idomain_g
-                    node_ielement_g = mesh(idomain_l)%elems(ielement_l)%ielement_g
+                    node_idomain_g  = mesh%domain(idomain_l)%elems(ielement_l)%idomain_g
+                    node_ielement_g = mesh%domain(idomain_l)%elems(ielement_l)%ielement_g
                     node_iface      = iface
                     node_index      = minloc_dist_face
 

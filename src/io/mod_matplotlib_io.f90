@@ -158,7 +158,7 @@ contains
                            eta   => donor_coords(ipt)%c2_,  &
                            zeta  => donor_coords(ipt)%c3_)
 
-                    val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q_in%dom(idom)%&
+                    val = real(data%mesh%domain(idom)%elems(ielem)%solution_point(data%sdata%q_in%dom(idom)%&
                                    vecs(ielem),ieqn,itime,xi,eta,zeta),rdouble)
                     solution_values(itime,ipt) = val(1)
 
@@ -240,7 +240,7 @@ contains
                            eta   => donor_coords(ipt)%c2_,  &
                            zeta  => donor_coords(ipt)%c3_)
 
-                    val = real(data%mesh(idom)%elems(ielem)%solution_point(q_coeff_vector%dom(idom)%&
+                    val = real(data%mesh%domain(idom)%elems(ielem)%solution_point(q_coeff_vector%dom(idom)%&
                                    vecs(ielem),ieqn,itime,xi,eta,zeta),rdouble)
                     solution_values(itime,ipt) = val(1)
 
@@ -301,7 +301,7 @@ contains
                            eta   => donor_coords(ipt)%c2_,  &
                            zeta  => donor_coords(ipt)%c3_)
 
-                    val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q_out%dom(idom)%&
+                    val = real(data%mesh%domain(idom)%elems(ielem)%solution_point(data%sdata%q_out%dom(idom)%&
                                    vecs(ielem),ieqn,itime,xi,eta,zeta),rdouble)
                     solution_values(itime,ipt) = val(1)
 

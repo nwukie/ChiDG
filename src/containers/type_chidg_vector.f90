@@ -4,6 +4,7 @@ module type_chidg_vector
     use mod_constants,              only: ZERO, TWO
     use mod_chidg_mpi,              only: GROUP_MASTER, ChiDG_COMM, IRANK
     use type_mesh,                  only: mesh_t
+    use type_mesh_new,              only: mesh_new_t
     use type_function,              only: function_t
     use type_chidg_vector_send,     only: chidg_vector_send_t
     use type_chidg_vector_recv,     only: chidg_vector_recv_t
@@ -134,7 +135,8 @@ contains
     !------------------------------------------------------------------------------------------
     subroutine initialize(self,mesh,ntime)
         class(chidg_vector_t),   intent(inout)   :: self
-        type(mesh_t),            intent(inout)   :: mesh(:)
+        !type(mesh_t),            intent(inout)   :: mesh(:)
+        type(mesh_new_t),        intent(inout)   :: mesh
         integer(ik),             intent(in)      :: ntime
 
         integer(ik) :: ierr, ndomains, idom
@@ -153,7 +155,7 @@ contains
 
 
         ! Allocate blockvector_t for each mesh
-        ndomains = size(mesh)
+        ndomains = mesh%ndomains()
         allocate(self%dom(ndomains), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -161,7 +163,7 @@ contains
 
         ! Call initialization procedure for each blockvector_t
         do idom = 1,ndomains
-            call self%dom(idom)%init(mesh(idom))
+            call self%dom(idom)%init(mesh%domain(idom))
         end do
 
 
@@ -196,8 +198,9 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine project(self,mesh,fcn,ivar)
-        class(chidg_vector_t),   intent(inout)   :: self
-        type(mesh_t),           intent(in)      :: mesh(:)
+        class(chidg_vector_t),  intent(inout)   :: self
+        !type(mesh_t),           intent(in)      :: mesh(:)
+        type(mesh_new_t),       intent(in)      :: mesh
         class(function_t),      intent(inout)   :: fcn
         integer(ik),            intent(in)      :: ivar
 
@@ -210,18 +213,18 @@ contains
         !
         ! Loop through elements in mesh and call function projection
         !
-        do idom = 1,size(mesh)
+        do idom = 1,mesh%ndomains()
 
             ! Check that variable index 'ivar' is valid
             user_msg = 'project: variable index ivar exceeds the number of equations.'
-            if (ivar > mesh(idom)%neqns ) call chidg_signal(FATAL,user_msg)
+            if (ivar > mesh%domain(idom)%neqns ) call chidg_signal(FATAL,user_msg)
 
-            do ielem = 1,mesh(idom)%nelem
-                do itime = 1,mesh(idom)%ntime
+            do ielem = 1,mesh%domain(idom)%nelem
+                do itime = 1,mesh%domain(idom)%ntime
                     !
                     ! Call function projection
                     !
-                    fmodes = mesh(idom)%elems(ielem)%project(fcn)
+                    fmodes = mesh%domain(idom)%elems(ielem)%project(fcn)
 
 
                     !

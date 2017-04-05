@@ -4,8 +4,8 @@ module type_RASILU0_send
     use mod_chidg_mpi,          only: IRANK
 
     use type_RASILU0_send_comm, only: RASILU0_send_comm_t
-    use type_mesh,              only: mesh_t
-    use type_chidg_matrix,       only: chidg_matrix_t
+    use type_mesh_new,          only: mesh_new_t
+    use type_chidg_matrix,      only: chidg_matrix_t
     use type_ivector,           only: ivector_t
     implicit none
 
@@ -52,9 +52,9 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine init(self,mesh,A)
-        class(RASILU0_send_t),   intent(inout)   :: self
-        type(mesh_t),            intent(in)      :: mesh(:)
-        type(chidg_matrix_t),    intent(in)      :: A
+        class(RASILU0_send_t),  intent(inout)   :: self
+        type(mesh_new_t),       intent(in)      :: mesh
+        type(chidg_matrix_t),   intent(in)      :: A
 
         type(ivector_t)             :: send_procs
         integer(ik),    allocatable :: send_procs_dom(:)
@@ -66,8 +66,8 @@ contains
         ! Loop through each mesh and accumulate the total number of 
         ! processors we are sending to.
         !
-        do idom = 1,size(mesh)
-            send_procs_dom = mesh(idom)%get_send_procs_local()
+        do idom = 1,mesh%ndomains()
+            send_procs_dom = mesh%domain(idom)%get_send_procs_local()
 
             if ( allocated(send_procs_dom) ) then
                 do iproc = 1,size(send_procs_dom)

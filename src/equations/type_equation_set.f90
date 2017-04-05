@@ -18,7 +18,7 @@ module type_equation_set
     use type_properties,                only: properties_t
     use type_equationset_function_data, only: equationset_function_data_t
     use type_chidg_worker,              only: chidg_worker_t
-    use type_mesh,                      only: mesh_t
+    use type_mesh_new,                  only: mesh_new_t
     use type_bc,                        only: bc_t
     use type_solverdata,                only: solverdata_t
     use type_element_info,              only: element_info_t
@@ -564,8 +564,8 @@ contains
         !   - INTERIOR
         !   - CHIMERA
         !
-        interior_face = ( mesh(idom)%faces(ielem,iface)%ftype == INTERIOR )
-        chimera_face  = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )
+        interior_face = ( mesh%domain(idom)%faces(ielem,iface)%ftype == INTERIOR )
+        chimera_face  = ( mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA )
         compute       = (interior_face .or. chimera_face)
 
 
@@ -685,8 +685,8 @@ contains
         !   - INTERIOR
         !   - CHIMERA
         !
-        interior_face = ( mesh(idom)%faces(ielem,iface)%ftype == INTERIOR )
-        chimera_face  = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA  )
+        interior_face = ( mesh%domain(idom)%faces(ielem,iface)%ftype == INTERIOR )
+        chimera_face  = ( mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA  )
         compute       = (interior_face .or. chimera_face)
 
 
@@ -701,9 +701,9 @@ contains
 
         else if (chimera_face) then
 
-            ChiID = mesh(idom)%faces(ielem,iface)%ChiID
+            ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
             eqn_m = self%eqn_ID
-            eqn_p = mesh(idom)%chimera%recv%data(ChiID)%donor_eqn_ID%at(1)
+            eqn_p = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_eqn_ID%at(1)
             skip = (eqn_m /= eqn_p)
 
         end if
@@ -955,8 +955,8 @@ contains
             else if (diff_interior) then
                 compute_function = .true.
             else if (diff_exterior) then
-                compute_function = ( (mesh(elem_info%idomain_l)%faces(elem_info%ielement_l,idiff)%ftype == INTERIOR) .or. &
-                                     (mesh(elem_info%idomain_l)%faces(elem_info%ielement_l,idiff)%ftype == CHIMERA) )
+                compute_function = ( (mesh%domain(elem_info%idomain_l)%faces(elem_info%ielement_l,idiff)%ftype == INTERIOR) .or. &
+                                     (mesh%domain(elem_info%idomain_l)%faces(elem_info%ielement_l,idiff)%ftype == CHIMERA) )
             end if
 
 
@@ -1041,7 +1041,7 @@ contains
         ! neighbor of iface or for the current element(DIAG). This saves a lot of 
         ! unnecessary compute_boundary calls.
         !
-        boundary_face = (mesh(idom)%faces(ielem,iface)%ftype == BOUNDARY)
+        boundary_face = (mesh%domain(idom)%faces(ielem,iface)%ftype == BOUNDARY)
         compute       = (boundary_face)
 
         if (compute) then
@@ -1076,9 +1076,9 @@ contains
                 !
                 ! Get index of boundary condition, patch, patch face. 
                 !
-                bc_ID      = mesh(idom)%faces(ielem,iface)%bc_ID
-                patch_ID   = mesh(idom)%faces(ielem,iface)%patch_ID
-                patch_face = mesh(idom)%faces(ielem,iface)%patch_face
+                bc_ID      = mesh%domain(idom)%faces(ielem,iface)%bc_ID
+                patch_ID   = mesh%domain(idom)%faces(ielem,iface)%patch_ID
+                patch_face = mesh%domain(idom)%faces(ielem,iface)%patch_face
 
 
                 if (allocated(self%bc_operator)) then
@@ -1156,7 +1156,7 @@ contains
     !--------------------------------------------------------------------------------------
     function get_face_ncompute(self,mesh,face_info,idiff) result(ncompute)
         class(equation_set_t),  intent(in)   :: self
-        type(mesh_t),           intent(in)   :: mesh(:)
+        type(mesh_new_t),       intent(in)   :: mesh
         type(face_info_t),      intent(in)   :: face_info
         integer(ik),            intent(in)   :: idiff
 
@@ -1183,15 +1183,15 @@ contains
 
         else if (compute_wrt_exterior) then
 
-            chimera_face  = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )
-            bc_face       = ( mesh(idom)%faces(ielem,iface)%ftype == BOUNDARY)
+            chimera_face  = ( mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA )
+            bc_face       = ( mesh%domain(idom)%faces(ielem,iface)%ftype == BOUNDARY)
 
             if ( chimera_face ) then
-                ChiID    = mesh(idom)%faces(ielem,iface)%ChiID
-                ncompute = mesh(idom)%chimera%recv%data(ChiID)%ndonors()
+                ChiID    = mesh%domain(idom)%faces(ielem,iface)%ChiID
+                ncompute = mesh%domain(idom)%chimera%recv%data(ChiID)%ndonors()
 
             else if ( bc_face ) then
-                ncompute = mesh(idom)%faces(ielem,iface)%bc_ndepend
+                ncompute = mesh%domain(idom)%faces(ielem,iface)%bc_ndepend
 
             else
                 ! Standard conforming neighbor, only one dependent element.
@@ -1225,7 +1225,7 @@ contains
     !--------------------------------------------------------------------------------------
     function get_element_ncompute(self,mesh,elem_info,idiff) result(ncompute)
         class(equation_set_t),  intent(in)   :: self
-        type(mesh_t),           intent(in)   :: mesh(:)
+        type(mesh_new_t),       intent(in)   :: mesh
         type(element_info_t),   intent(in)   :: elem_info
         integer(ik),            intent(in)   :: idiff
 
@@ -1252,13 +1252,13 @@ contains
             ! Search iface in the direction of linearization
             iface = idiff
 
-            chimera_face  = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )
+            chimera_face  = ( mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA )
 
             if ( chimera_face ) then
                 ! only need to compute multiple times when we need the linearization of 
                 ! the chimera neighbors
-                ChiID  = mesh(idom)%faces(ielem,iface)%ChiID
-                ncompute = mesh(idom)%chimera%recv%data(ChiID)%ndonors()
+                ChiID  = mesh%domain(idom)%faces(ielem,iface)%ChiID
+                ncompute = mesh%domain(idom)%chimera%recv%data(ChiID)%ndonors()
             else
                 ! Standard conforming neighbor, only one dependent element.
                 ncompute = 1
@@ -1292,7 +1292,7 @@ contains
     subroutine compute_pseudo_timestep(self,idomain,mesh,sdata,cfln,itime)
         class(equation_set_t),  intent(in)      :: self
         integer(ik),            intent(in)      :: idomain
-        type(mesh_t),           intent(inout)   :: mesh(:)
+        type(mesh_new_t),       intent(inout)   :: mesh
         type(solverdata_t),     intent(inout)   :: sdata
         real(rk),               intent(in)      :: cfln(:)
         integer(ik),            intent(in)      :: itime

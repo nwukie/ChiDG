@@ -96,11 +96,11 @@ contains
             ! Multiply RHS by mass matrix 
             !
             itime = 1
-            do idom = 1,data%ndomains()
-                do ielem = 1,data%mesh(idom)%nelem
+            do idom = 1,data%mesh%ndomains()
+                do ielem = 1,data%mesh%domain(idom)%nelem
                     do ieqn = 1,data%eqnset(idom)%prop%nprimary_fields()
 
-                        vals = matmul(data%mesh(idom)%elems(ielem)%invmass, rhs%dom(idom)%vecs(ielem)%getvar(ieqn,itime))
+                        vals = matmul(data%mesh%domain(idom)%elems(ielem)%invmass, rhs%dom(idom)%vecs(ielem)%getvar(ieqn,itime))
                         call rhs%dom(idom)%vecs(ielem)%setvar(ieqn,itime,vals)
 
                     end do !ieqn

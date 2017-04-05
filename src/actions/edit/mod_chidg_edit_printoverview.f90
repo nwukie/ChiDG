@@ -57,7 +57,8 @@ contains
         !
         ndom     = get_ndomains_hdf(fid)
         dnames   = get_domain_names_hdf(fid)
-        eqnset   = get_domain_equation_sets_hdf(fid,dnames)
+        !eqnset   = get_domain_equation_sets_hdf(fid,dnames)
+        eqnset   = get_domain_equation_sets_hdf(fid)
 
 
 
@@ -155,18 +156,6 @@ contains
     !!
     !------------------------------------------------------------------------------------------------------
     subroutine print_chidg_edit_header()
-
-
-!        call write_line(" ____________________________________________________________________________________________________________________", color='blue', ltrim=.false.)
-!        call write_line("        ______               ____     _____                                                                          ", color='blue', ltrim=.false.)
-!        call write_line("       |        |           |    \   |     |                                                                         ", color='blue', ltrim=.false.)
-!        call write_line("       |        |        .  |     |  |                                                                               ", color='blue', ltrim=.false.)
-!        call write_line("       |        |_____      |     |  |   __                              chidg edit                                  ", color='blue', ltrim=.false.)
-!        call write_line("       |        |     |  |  |     |  |     |                                                                         ", color='blue', ltrim=.false.)
-!        call write_line("       |        |     |  |  |     |  |     |                                                                         ", color='blue', ltrim=.false.)
-!        call write_line("       |______  |     |  |  |____/   |_____|                                                                         ", color='blue', ltrim=.false.)
-!        call write_line(" ____________________________________________________________________________________________________________________", color='blue', ltrim=.false.)
-!        call write_line(" ")
 
 
 

@@ -84,7 +84,7 @@ contains
         !
         ! Initialize blockmatrix
         !
-        call this%bmat%init(this%chidg%data%mesh(1),mtype='full')
+        call this%bmat%init(this%chidg%data%mesh%domain(1),mtype='full')
 
     
     end subroutine setUp
@@ -127,7 +127,7 @@ contains
         
         integer(ik) :: nelem
 
-        nelem = self%chidg%data%mesh(1)%nelem
+        nelem = self%chidg%data%mesh%domain(1)%nelem
         @assertEqual(nelem,size(self%bmat%lblks,1))  
         @assertEqual(nelem,size(self%bmat%chi_blks,1))  
 
@@ -151,7 +151,7 @@ contains
 
         integer(ik) :: ntime
 
-        ntime = self%chidg%data%mesh(1)%ntime
+        ntime = self%chidg%data%mesh%domain(1)%ntime
         @assertEqual(ntime,size(self%bmat%lblks,2))  
         @assertEqual(ntime,size(self%bmat%chi_blks,2))  
         
@@ -178,7 +178,7 @@ contains
         integer(ik), allocatable    :: idomain_g_known(:), ielement_g_known(:)
         real(rk),    allocatable    :: mat(:,:)
         
-        associate ( mesh => self%chidg%data%mesh(1), lblks => self%bmat%lblks)
+        associate ( domain => self%chidg%data%mesh%domain(1), lblks => self%bmat%lblks)
         
             
             
@@ -212,7 +212,7 @@ contains
             end do
             
             ! Test first element, linearization block sizes
-            size1d = mesh%nterms_s * mesh%neqns
+            size1d = domain%nterms_s * domain%neqns
             do imat = 1,lblks(ielem,itime)%size()
                 mat = lblks(ielem,itime)%dmat(imat)
 
@@ -260,7 +260,7 @@ contains
 
             
             ! Test  linearization block sizes
-            size1d = mesh%nterms_s * mesh%neqns
+            size1d = domain%nterms_s * domain%neqns
             do imat = 1,lblks(ielem,itime)%size()
                 mat = lblks(ielem,itime)%dmat(imat)
 

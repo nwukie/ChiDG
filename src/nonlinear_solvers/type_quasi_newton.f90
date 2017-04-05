@@ -201,19 +201,19 @@ contains
                 !
                 ! Add mass/dt to sub-block diagonal in dR/dQ
                 !
-                do idom = 1,data%ndomains()
-                    eqn_ID = data%mesh(idom)%eqn_ID
-                    do ielem = 1,data%mesh(idom)%nelem
-                        do itime = 1,data%mesh(idom)%ntime
+                do idom = 1,data%mesh%ndomains()
+                    eqn_ID = data%mesh%domain(idom)%eqn_ID
+                    do ielem = 1,data%mesh%domain(idom)%nelem
+                        do itime = 1,data%mesh%domain(idom)%ntime
                             !do ieqn = 1,data%eqnset(idom)%prop%nprimary_fields()
                             do ieqn = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
                                 ! get element-local timestep
-                                dtau = data%mesh(idom)%elems(ielem)%dtau(ieqn)
+                                dtau = data%mesh%domain(idom)%elems(ielem)%dtau(ieqn)
 
                                 ! Need to compute row and column extends in diagonal so we can
                                 ! selectively apply the mass matrix to the sub-block diagonal
-                                nterms = data%mesh(idom)%elems(ielem)%nterms_s
+                                nterms = data%mesh%domain(idom)%elems(ielem)%nterms_s
                                 rstart = 1 + (ieqn-1) * nterms
                                 rend   = (rstart-1) + nterms
                                 cstart = rstart                 ! since it is square
@@ -221,7 +221,7 @@ contains
 
                                 ! Add mass matrix divided by dt to the block diagonal
                                 imat = lhs%dom(idom)%lblks(ielem,itime)%get_diagonal()
-                                lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(rstart:rend,cstart:cend)  =  lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(rstart:rend,cstart:cend)  +  data%mesh(idom)%elems(ielem)%mass*(ONE/dtau)
+                                lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(rstart:rend,cstart:cend)  =  lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(rstart:rend,cstart:cend)  +  data%mesh%domain(idom)%elems(ielem)%mass*(ONE/dtau)
 
                             end do !ieqn
                         end do !itime
@@ -409,9 +409,9 @@ contains
         !
         ! Loop through elements and compute time-step function
         !
-        do idom = 1,data%ndomains()
+        do idom = 1,data%mesh%ndomains()
 
-            eqn_ID = data%mesh(idom)%eqn_ID
+            eqn_ID = data%mesh%domain(idom)%eqn_ID
             call data%eqnset(eqn_ID)%compute_pseudo_timestep(idom,data%mesh,data%sdata,cfln,itime = 1)
 
         end do !idom

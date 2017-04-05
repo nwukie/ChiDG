@@ -34,7 +34,7 @@ subroutine test_integrate_boundary_unit_constant()
     type(bc_group_t)                    :: bc_groups(1)
 
     integer(ik)                         :: nterms_c, iblk, idom, ngq, ielem, iface, ifcn, spacedim, mapping
-    integer(ik)                         :: idonor, ieqn, itime, igq, nelements_g
+    integer(ik)                         :: idonor, ieqn, itime, igq, nelements_g, eqn_ID
     type(AD_D),         allocatable     :: integrand(:)
     class(function_t),  allocatable     :: constant
     real(rk)                            :: integral, ref_integral
@@ -62,11 +62,15 @@ subroutine test_integrate_boundary_unit_constant()
     iface    = 1
 
 
+
+    call chidg%data%add_equation_set('Scalar Advection')
+    eqn_ID = chidg%data%get_equation_set_id('Scalar Advection')
+
     spacedim    = 3
     mapping     = 1
     nterms_c    = 8
     nelements_g = 1
-    call chidg%data%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Scalar Advection','Cartesian')
+    call chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Cartesian',eqn_ID)
 
 
     !
@@ -129,7 +133,7 @@ subroutine test_integrate_boundary_unit_constant()
     !
     ! Allocate flux array
     !
-    associate ( faces => chidg%data%mesh(idom)%faces, sdata => chidg%data%sdata )
+    associate ( faces => chidg%data%mesh%domain(idom)%faces, sdata => chidg%data%sdata )
     ngq = faces(ielem,iface)%gq%face%nnodes
     allocate(integrand(ngq))
     
@@ -248,7 +252,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     class(bc_state_t),   allocatable    :: bc
     type(bc_group_t)                    :: bc_groups(1)
     integer(ik)                         :: nterms_c, igq, ngq, ieqn, itime, ifcn, spacedim, mapping
-    integer(ik)                         :: idomain, iblk, idonor, nelements_g
+    integer(ik)                         :: idomain, iblk, idonor, nelements_g, eqn_ID
     type(AD_D),         allocatable     :: integrand(:)
     class(function_t),  allocatable     :: constant
     real(rk)                            :: integral, ref_integral
@@ -277,7 +281,11 @@ subroutine test_integrate_boundary_nonunit_constant()
     nelements_g = 1
 
 
-    call chidg%data%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Scalar Advection','Cartesian')
+    call chidg%data%add_equation_set('Scalar Advection')
+    eqn_ID = chidg%data%get_equation_set_id('Scalar Advection')
+
+
+    call chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Cartesian',eqn_ID)
 
 
     !
@@ -337,7 +345,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     !
     ! Allocate flux array
     !
-    associate ( faces => chidg%data%mesh(1)%faces, sdata => chidg%data%sdata )
+    associate ( faces => chidg%data%mesh%domain(1)%faces, sdata => chidg%data%sdata )
     ngq = faces(1,1)%gq%face%nnodes
     allocate(integrand(ngq))
     

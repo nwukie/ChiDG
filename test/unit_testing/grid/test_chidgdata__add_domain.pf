@@ -13,7 +13,7 @@ subroutine test_chidgdata__add_domain__onedomain()
     type(chidg_t)               :: chidg
     type(point_t),  allocatable :: nodes(:)
     type(domain_connectivity_t) :: connectivity
-    integer(ik)                 :: nterms_c, nterms_s, spacedim, nelements_g
+    integer(ik)                 :: nterms_c, nterms_s, spacedim, nelements_g, eqn_ID
     
 
     IO_DESTINATION = 'file'
@@ -42,13 +42,16 @@ subroutine test_chidgdata__add_domain__onedomain()
     !
     ! call chidg%data%add_domain. THIS IS BEING TESTED
     !
-    call chidg%data%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Scalar Advection','Cartesian')
+    call chidg%data%add_equation_set('Scalar Advection')
+    eqn_ID = chidg%data%get_equation_set_id('Scalar Advection')
+
+    call chidg%data%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Cartesian',eqn_ID)
 
 
 
     ! test chidg%data%ndomains
-    @assertEqual(1,chidg%data%ndomains())
-    @assertEqual(1,size(chidg%data%mesh))
+    @assertEqual(1,chidg%data%mesh%ndomains())
+    @assertEqual(1,size(chidg%data%mesh%domain))
     @assertEqual(1,size(chidg%data%eqnset))
 
 

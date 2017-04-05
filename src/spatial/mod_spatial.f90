@@ -135,18 +135,18 @@ contains
             end if
 
             call loop_timer%start()
-            do idom = 1,data%ndomains()
-                eqn_ID = worker%mesh(idom)%eqn_ID
-                associate ( mesh => data%mesh(idom), eqnset => data%eqnset(eqn_ID) )
+            do idom = 1,data%mesh%ndomains()
+                eqn_ID = worker%mesh%domain(idom)%eqn_ID
+                associate ( domain => data%mesh%domain(idom), eqnset => data%eqnset(eqn_ID) )
 
                 ! Loop through elements in the current domain
-                do ielem = 1,mesh%nelem
+                do ielem = 1,domain%nelem
 
 
-                    elem_info%idomain_g  = mesh%elems(ielem)%idomain_g
-                    elem_info%idomain_l  = mesh%elems(ielem)%idomain_l
-                    elem_info%ielement_g = mesh%elems(ielem)%ielement_g
-                    elem_info%ielement_l = mesh%elems(ielem)%ielement_l
+                    elem_info%idomain_g  = domain%elems(ielem)%idomain_g
+                    elem_info%idomain_l  = domain%elems(ielem)%idomain_l
+                    elem_info%ielement_g = domain%elems(ielem)%ielement_g
+                    elem_info%ielement_l = domain%elems(ielem)%ielement_l
                     call worker%set_element(elem_info)
 
                     worker%itime = itime

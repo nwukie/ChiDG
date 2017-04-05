@@ -36,15 +36,19 @@ subroutine test_blockvector_distribute()
     !
     ! Call domain initialization
     !
+    call chidg%data%add_equation_set('Scalar Advection')
+    eqn_ID = chidg%data%get_equation_set_id('Scalar Advection')
+
+
+
     idomain     = 1
     spacedim    = 3
     nterms_c    = 8
     nelements_g = 4
-    call chidg%data%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Scalar Advection','Cartesian')
+    call chidg%data%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Cartesian',eqn_ID)
 
     call chidg%set('Solution Order', integer_input=2)
     call chidg%init('domains')
-!    call chidg%initialize_solution_domains()
 
 
     !
@@ -95,4 +99,4 @@ subroutine test_blockvector_distribute()
     call chidg%shut_down('core')
 
 
-end subroutine
+end subroutine test_blockvector_distribute

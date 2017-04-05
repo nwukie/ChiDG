@@ -121,7 +121,7 @@ contains
     !!
     !!  Boundary Conditions:
     !!  ---------------------------
-    !!  create_bc_state_group_hdf
+    !!  create_bc_group_hdf
     !!  get_nbc_state_groups_hdf
     !!  get_bc_state_group_names_hdf
     !!
@@ -141,6 +141,16 @@ contains
     !!
     !!  check_bc_state_exists_hdf
     !!  check_bc_property_exists_hdf
+    !!
+    !!
+    !!
+    !!  Equations:
+    !!  ----------------------------
+    !!
+    !!  create_eqn_group_hdf
+    !!  remove_eqn_group_hdf
+    !!  check_eqn_group_exists_hdf
+    !!  prune_eqn_groups_hdf
     !!
     !!
     !!  Time Integrators:
@@ -325,15 +335,15 @@ contains
         integer(HID_T)              :: domain_id
         character(:),   allocatable :: domain_name
 
-        do idom = 1,data%ndomains()
+        do idom = 1,data%mesh%ndomains()
 
             ! Create domain group
-            domain_name = data%info(idom)%name
+            domain_name = data%mesh%domain(idom)%name
             call create_domain_hdf(fid,domain_name)
 
 
             ! Set additional attributes
-            eqn_ID    = data%mesh(idom)%eqn_ID
+            eqn_ID    = data%mesh%domain(idom)%eqn_ID
             domain_id = open_domain_hdf(fid,trim(domain_name))
             call set_domain_dimensionality_hdf(domain_id, data%get_dimensionality())
             call set_domain_equation_set_hdf(domain_id,data%eqnset(eqn_ID)%get_name())
@@ -914,7 +924,8 @@ contains
         !
         ! Get equation set for each domain
         !
-        prop%eqnset = get_domain_equation_sets_hdf(fid, prop%domain_names)
+        !prop%eqnset = get_domain_equation_sets_hdf(fid, prop%domain_names)
+        prop%eqnset = get_domain_equation_sets_hdf(fid)
 
         
 
@@ -2558,14 +2569,21 @@ contains
     !!  @param[in]  dnames  List of domain names to be interrogated.
     !!
     !----------------------------------------------------------------------------------------
-    function get_domain_equation_sets_hdf(fid, dnames) result(eqnsets)
+    !function get_domain_equation_sets_hdf(fid, dnames) result(eqnsets)
+    function get_domain_equation_sets_hdf(fid) result(eqnsets)
         integer(HID_T),         intent(in)  :: fid
-        character(len=1024),    intent(in)  :: dnames(:)
 
+        character(len=1024), allocatable    :: dnames(:)
         integer(HID_T)                      :: did
         logical                             :: eqnset_exists
         character(len=1024), allocatable    :: eqnsets(:)
         integer                             :: ierr, idom
+
+
+        !
+        ! Get domain names
+        !
+        dnames = get_domain_names_hdf(fid)
 
 
         !
@@ -3404,7 +3422,7 @@ contains
         ! Check if bc_state group exists
         group_exists = check_link_exists_hdf(fid,"BCSG_"//trim(group_name))
 
-        user_msg = "create_bc_state_group_hdf: Boundary condition state group already exists. &
+        user_msg = "create_bc_group_hdf: Boundary condition state group already exists. &
                     Cannot have two groups with the same name"
         if (group_exists) call chidg_signal_one(FATAL,user_msg,trim(group_name))
 
@@ -3413,12 +3431,12 @@ contains
         ! Create a new group for the bc_state_t
         !
         call h5gcreate_f(fid, "BCSG_"//trim(group_name), bcgroup_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,'create_bc_state_group_hdf: error creating new group for bc_state.')
+        if (ierr /= 0) call chidg_signal(FATAL,'create_bc_group_hdf: error creating new group for bc_state.')
 
 
         ! Set 'Family'
         call h5ltset_attribute_string_f(bcgroup_id, '.', 'Family', 'none', ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"create_bc_state_group_hdf: error setting the attribute 'Family'")
+        if (ierr /= 0) call chidg_signal(FATAL,"create_bc_group_hdf: error setting the attribute 'Family'")
 
 
         call h5gclose_f(bcgroup_id,ierr)
@@ -4514,13 +4532,244 @@ contains
         time_lev = int(buf(1), kind=ik)
 
     end function get_ntimes_hdf
-    !****************************************************************************************
+    !***************************************************************************************
 
 
 
 
 
 
+
+
+
+
+
+    !>  Create an equation group on the ChiDG HDF file root.
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/4/2017
+    !!
+    !!  @param[in]  fid             HDF file identifier
+    !!  @param[in]  group_name      Unique name for the new boundary condition state group.
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine create_eqn_group_hdf(fid,group_name)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: group_name
+
+        character(:),   allocatable :: user_msg
+        integer(HID_T)              :: eqn_id
+        integer(ik)                 :: ierr
+        logical                     :: group_exists
+
+
+        ! Check if bc_state group exists
+        group_exists = check_link_exists_hdf(fid,"EQN_"//trim(group_name))
+
+        user_msg = "create_eqn_group_hdf: Equation group already exists. &
+                    Cannot have two groups with the same name"
+        if (group_exists) call chidg_signal_one(FATAL,user_msg,trim(group_name))
+
+
+        !
+        ! Create a new group for the bc_state_t
+        !
+        call h5gcreate_f(fid, "EQN_"//trim(group_name), eqn_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'create_eqn_group_hdf: error creating new group for bc_state.')
+
+
+        call h5gclose_f(eqn_id,ierr)
+
+    end subroutine create_eqn_group_hdf
+    !**************************************************************************************
+
+
+
+
+
+
+
+    !>  Remove a equation group from the HDF file.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/5/2017
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------------
+    subroutine remove_eqn_group_hdf(fid,group_name)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: group_name
+
+        integer(HID_T)  :: eqn_id
+        integer(ik)     :: ierr
+        logical         :: group_exists
+
+        group_exists = check_eqn_group_exists_hdf(fid,trim(group_name))
+
+        if (group_exists) then
+
+            ! Unlink the bc_state group
+            call h5gunlink_f(fid,"EQN_"//trim(group_name),ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"remove_eqn_group_hdf: error unlinking eqn group")
+
+        end if
+
+    end subroutine remove_eqn_group_hdf
+    !***********************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Return a vector of the names for each equation group.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/5/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_eqn_group_names_hdf(fid) result(eqn_group_names)
+        integer(HID_T), intent(in)  :: fid
+
+        integer(ik)     :: nmembers, ierr, igrp, type
+        character(1024) :: gname
+        type(svector_t) :: eqn_group_names
+
+
+        !
+        !  Get number of groups linked to the file root:
+        !
+        call h5gn_members_f(fid, ".", nmembers, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_eqn_group_names_hdf: error h5gn_members_f")
+
+
+        !
+        ! Loop through groups and detect "EQN_" groups:
+        !
+        if ( nmembers > 0 ) then
+            do igrp = 0,nmembers-1
+                ! Get group name
+                call h5gget_obj_info_idx_f(fid, ".", igrp, gname, type, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"get_eqn_group_names_hdf: error h5gget_obj_info_idx_f")
+
+                ! Test if group is an equation group. 'EQN_'
+                if (gname(1:4) == 'EQN_') then
+                    call eqn_group_names%push_back(string_t(trim(gname(5:))))
+                end if
+            end do  ! igrp
+        end if
+
+
+    end function get_eqn_group_names_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Check if an equation set group exists on the file root. 
+    !!
+    !!  Checks: "/EQ_name"
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/4/2017
+    !!
+    !--------------------------------------------------------------------------------------
+    function check_eqn_group_exists_hdf(fid,group_name) result(exist_status)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: group_name
+
+        integer(ik) :: ierr
+        logical     :: exist_status
+
+        ! Check if face contains the bc_state
+        call h5lexists_f(fid, "EQN_"//trim(group_name), exist_status, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"check_eqn_group_exists_hdf: Error in call to h5lexists_f")
+
+
+    end function check_eqn_group_exists_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Remove any equation groups that do not have an associated domain.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/5/2017
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine prune_eqn_groups_hdf(fid)
+        integer(HID_T),     intent(in)  :: fid
+
+        character(1024),    allocatable :: domain_eqns(:)
+        type(svector_t)                 :: eqn_groups
+        type(string_t)                  :: group_string
+        logical                         :: has_domain
+        integer(ik)                     :: igroup, idom
+
+
+        !
+        ! Get domain equation sets
+        !
+        domain_eqns = get_domain_equation_sets_hdf(fid)
+
+
+
+        !
+        ! Get equation groups
+        !
+        eqn_groups = get_eqn_group_names_hdf(fid)
+        
+
+
+        !
+        ! Loop through equation groups in the file, if they 
+        !
+        do igroup = 1,eqn_groups%size()
+            
+
+            ! Get group name
+            group_string = eqn_groups%at(igroup)
+
+
+            ! Check if any domain is associated with the group
+            has_domain = .false.
+            do idom = 1,size(domain_eqns)
+                has_domain = group_string%get() == trim(domain_eqns(idom))
+                if (has_domain) exit
+            end do
+
+
+            ! If group not associated with any domain, remove
+            if (.not. has_domain) call remove_eqn_group_hdf(fid,group_string%get())
+
+
+        end do
+
+
+
+
+    end subroutine prune_eqn_groups_hdf
+    !***************************************************************************************
 
 
 
@@ -4686,7 +4935,7 @@ contains
 
         ! Check if group exists
         call h5lexists_f(id, trim(linkname), exist_status, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"check_link_exists_hdf: Error in call to h5lexists_f")
+        if (ierr /= 0) call chidg_signal_one(FATAL,"check_link_exists_hdf: Error in call to h5lexists_f", trim(linkname) )
 
 
     end function check_link_exists_hdf

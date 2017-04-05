@@ -3,6 +3,7 @@ module type_chidg_vector_recv_comm
     use mod_kinds,          only: ik
     use mod_constants,      only: INTERIOR, CHIMERA
     use type_mesh,          only: mesh_t
+    use type_mesh_new,      only: mesh_new_t
     use type_ivector,       only: ivector_t
     use type_blockvector,   only: blockvector_t
     use mod_chidg_mpi,      only: ChiDG_COMM
@@ -52,9 +53,10 @@ contains
     !---------------------------------------------------------------------------------
     subroutine init(self,mesh,iproc,icomm)
         class(chidg_vector_recv_comm_t), intent(inout)   :: self
-        type(mesh_t),                   intent(inout)   :: mesh(:)
-        integer(ik),                    intent(in)      :: iproc
-        integer(ik),                    intent(in)      :: icomm
+        !type(mesh_t),                   intent(inout)   :: mesh(:)
+        type(mesh_new_t),                intent(inout)   :: mesh
+        integer(ik),                     intent(in)      :: iproc
+        integer(ik),                     intent(in)      :: icomm
 
         integer(ik)                 :: idom, idom_recv, ndom_recv, ierr, ielem, iface, ChiID, donor_domain_g, donor_element_g
         integer(ik)                 :: idomain_g, ielement_g, dom_store, idom_loop, ielem_loop, ielem_recv, nelem_recv
@@ -99,12 +101,12 @@ contains
         !
         ! Loop through mesh and initialize recv indices
         !
-        do idom = 1,size(mesh)
-            do ielem = 1,mesh(idom)%nelem
-                do iface = 1,size(mesh(idom)%faces,2)
+        do idom = 1,mesh%ndomains()
+            do ielem = 1,mesh%domain(idom)%nelem
+                do iface = 1,size(mesh%domain(idom)%faces,2)
 
-                    has_neighbor = ( mesh(idom)%faces(ielem,iface)%ftype == INTERIOR )
-                    is_chimera   = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA  )
+                    has_neighbor = ( mesh%domain(idom)%faces(ielem,iface)%ftype == INTERIOR )
+                    is_chimera   = ( mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA  )
 
 
                     !
@@ -112,12 +114,12 @@ contains
                     !
                     if (has_neighbor) then
 
-                        comm_neighbor = (iproc == mesh(idom)%faces(ielem,iface)%ineighbor_proc)
+                        comm_neighbor = (iproc == mesh%domain(idom)%faces(ielem,iface)%ineighbor_proc)
 
                         ! If neighbor is being communicated, find it in the recv domains
                         if (comm_neighbor) then
-                            neighbor_domain_g = mesh(idom)%faces(ielem,iface)%ineighbor_domain_g
-                            neighbor_element_g = mesh(idom)%faces(ielem,iface)%ineighbor_element_g
+                            neighbor_domain_g = mesh%domain(idom)%faces(ielem,iface)%ineighbor_domain_g
+                            neighbor_element_g = mesh%domain(idom)%faces(ielem,iface)%ineighbor_element_g
 
                             ! Loop through domains being received to find the right domain
                             do idom_recv = 1,ndom_recv
@@ -133,9 +135,9 @@ contains
 
                                         ! Set the location where a face can find its off-processor neighbor 
                                         if (recv_element == neighbor_element_g) then
-                                            mesh(idom)%faces(ielem,iface)%recv_comm    = icomm
-                                            mesh(idom)%faces(ielem,iface)%recv_domain  = idom_recv
-                                            mesh(idom)%faces(ielem,iface)%recv_element = ielem_recv
+                                            mesh%domain(idom)%faces(ielem,iface)%recv_comm    = icomm
+                                            mesh%domain(idom)%faces(ielem,iface)%recv_domain  = idom_recv
+                                            mesh%domain(idom)%faces(ielem,iface)%recv_element = ielem_recv
                                         end if
 
                                     end do !ielem_recv
@@ -155,15 +157,15 @@ contains
                     !
                     else if (is_chimera) then
                         
-                        ChiID = mesh(idom)%faces(ielem,iface)%ChiID
-                        do idonor = 1,mesh(idom)%chimera%recv%data(ChiID)%ndonors()
+                        ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
+                        do idonor = 1,mesh%domain(idom)%chimera%recv%data(ChiID)%ndonors()
 
-                            comm_donor = (iproc == mesh(idom)%chimera%recv%data(ChiID)%donor_proc%at(idonor) )
+                            comm_donor = (iproc == mesh%domain(idom)%chimera%recv%data(ChiID)%donor_proc%at(idonor) )
 
                             donor_recv_found = .false.
                             if (comm_donor) then
-                                donor_domain_g  = mesh(idom)%chimera%recv%data(ChiID)%donor_domain_g%at(idonor)
-                                donor_element_g = mesh(idom)%chimera%recv%data(ChiID)%donor_element_g%at(idonor)
+                                donor_domain_g  = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_domain_g%at(idonor)
+                                donor_element_g = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_element_g%at(idonor)
 
 
                                 ! Loop through domains being received to find the right domain
@@ -179,9 +181,9 @@ contains
 
                                             ! Set the location where a face can find its off-processor neighbor 
                                             if (recv_element == donor_element_g) then
-                                                mesh(idom)%chimera%recv%data(ChiID)%donor_recv_comm%data_(idonor)    = icomm
-                                                mesh(idom)%chimera%recv%data(ChiID)%donor_recv_domain%data_(idonor)  = idom_recv
-                                                mesh(idom)%chimera%recv%data(ChiID)%donor_recv_element%data_(idonor) = ielem_recv
+                                                mesh%domain(idom)%chimera%recv%data(ChiID)%donor_recv_comm%data_(idonor)    = icomm
+                                                mesh%domain(idom)%chimera%recv%data(ChiID)%donor_recv_domain%data_(idonor)  = idom_recv
+                                                mesh%domain(idom)%chimera%recv%data(ChiID)%donor_recv_element%data_(idonor) = ielem_recv
                                                 donor_recv_found = .true.
                                                 exit
                                             end if

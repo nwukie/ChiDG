@@ -3,7 +3,7 @@ module bc_state_outlet_LODI_pressure
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, HALF, TWO, NO_PROC
 
-    use type_mesh,              only: mesh_t
+    use type_mesh_new,          only: mesh_new_t
     use type_bc_state,          only: bc_state_t
     use type_bc_patch,          only: bc_patch_t
     use type_chidg_worker,      only: chidg_worker_t
@@ -113,9 +113,9 @@ contains
     !--------------------------------------------------------------------------------
     subroutine init_bc_specialized(self,mesh,bc_patch,bc_COMM)
         class(outlet_LODI_pressure_t), intent(inout)   :: self
-        type(mesh_t),                   intent(in)      :: mesh(:)
-        type(bc_patch_t),               intent(in)      :: bc_patch(:)
-        type(mpi_comm),                 intent(in)      :: bc_comm
+        type(mesh_new_t),              intent(in)      :: mesh
+        type(bc_patch_t),              intent(in)      :: bc_patch(:)
+        type(mpi_comm),                intent(in)      :: bc_comm
 
         character(:),   allocatable                 :: user_msg
         type(point_t)                               :: point
@@ -315,8 +315,8 @@ contains
                 mom_3   = interpolate_face_standard(worker%mesh,worker%solverdata%q,idomain_l,ielement_l,iface, imom3,    itime)
                 energy  = interpolate_face_standard(worker%mesh,worker%solverdata%q,idomain_l,ielement_l,iface, ienergy,  itime)
 
-                if (worker%mesh(idomain_l)%elems(ielement_l)%coordinate_system == 'Cylindrical') then
-                    mom_2 = mom_2 / worker%mesh(idomain_l)%elems(ielement_l)%quad_pts(:)%c1_
+                if (worker%mesh%domain(idomain_l)%elems(ielement_l)%coordinate_system == 'Cylindrical') then
+                    mom_2 = mom_2 / worker%mesh%domain(idomain_l)%elems(ielement_l)%quad_pts(:)%c1_
                 end if
 
 
@@ -340,9 +340,9 @@ contains
                 !
                 ! Get weights + areas
                 !
-                weights   = worker%mesh(idomain_l)%faces(ielement_l,iface)%gq%face%weights(:,iface)
-                areas     = worker%mesh(idomain_l)%faces(ielement_l,iface)%differential_areas
-                face_area = worker%mesh(idomain_l)%faces(ielement_l,iface)%total_area
+                weights   = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%gq%face%weights(:,iface)
+                areas     = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%differential_areas
+                face_area = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%total_area
 
 
                 !

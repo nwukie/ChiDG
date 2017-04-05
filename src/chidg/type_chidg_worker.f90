@@ -40,7 +40,7 @@ module type_chidg_worker
                                   integrate_volume_scalar_source
 
     use type_point,         only: point_t
-    use type_mesh,          only: mesh_t
+    use type_mesh_new,      only: mesh_new_t
     use type_solverdata,    only: solverdata_t
     use type_element_info,  only: element_info_t
     use type_face_info,     only: face_info_t
@@ -63,7 +63,7 @@ module type_chidg_worker
     !------------------------------------------------------------------------------
     type, public :: chidg_worker_t
     
-        type(mesh_t),           pointer :: mesh(:)
+        type(mesh_new_t),       pointer :: mesh
         type(properties_t), allocatable :: prop(:)
         !type(properties_t),     pointer :: prop(:)
         type(solverdata_t),     pointer :: solverdata
@@ -152,7 +152,7 @@ contains
     !---------------------------------------------------------------------------------
     subroutine init(self,mesh,prop,solverdata,cache)
         class(chidg_worker_t),  intent(inout)       :: self
-        type(mesh_t),           intent(in), target  :: mesh(:)
+        type(mesh_new_t),       intent(in), target  :: mesh
         type(properties_t),     intent(in), target  :: prop(:)
         type(solverdata_t),     intent(in), target  :: solverdata
         type(chidg_cache_t),    intent(in), target  :: cache
@@ -535,7 +535,7 @@ contains
 
             if (cache_type == 'value') then
                 idomain_l = self%element_info%idomain_l
-                eqn_ID    = self%mesh(idomain_l)%eqn_ID
+                eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
                 ifield    = self%prop(eqn_ID)%get_primary_field_index(field)
 
                 var_gq = interpolate_element_autodiff(self%mesh, self%solverdata%q, self%element_info, self%function_info, ifield, self%itime, interp_type, Pmin, Pmax)
@@ -1095,7 +1095,7 @@ contains
         integer(ik) :: ifield, idomain_l, eqn_ID
 
         idomain_l = self%element_info%idomain_l
-        eqn_ID    = self%mesh(idomain_l)%eqn_ID
+        eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
         ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
 
         call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ifield,self%itime,integrand)
@@ -1128,7 +1128,7 @@ contains
 
 
         idomain_l = self%element_info%idomain_l
-        eqn_ID    = self%mesh(idomain_l)%eqn_ID
+        eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
         ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
 
         call integrate_volume_vector_flux(self%mesh,self%solverdata,self%element_info,self%function_info,ifield,self%itime,integrand_x,integrand_y,integrand_z)
@@ -1159,7 +1159,7 @@ contains
 
 
         idomain_l = self%element_info%idomain_l
-        eqn_ID    = self%mesh(idomain_l)%eqn_ID
+        eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
         ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
 
         call integrate_volume_scalar_source(self%mesh,self%solverdata,self%element_info,self%function_info,ifield,self%itime,integrand)
@@ -1188,7 +1188,7 @@ contains
 
         real(rk), dimension(:), allocatable :: norm_gq
 
-        norm_gq = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%norm(:,direction)
+        norm_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%norm(:,direction)
 
     end function normal
     !***************************************************************************************
@@ -1216,7 +1216,7 @@ contains
         real(rk), dimension(:), allocatable :: unorm_gq
 
 
-        unorm_gq = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%unorm(:,direction)
+        unorm_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%unorm(:,direction)
 
 
     end function unit_normal
@@ -1240,7 +1240,7 @@ contains
 
         type(point_t), allocatable, dimension(:) :: coords_gq
 
-        coords_gq = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:)
+        coords_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:)
 
     end function coords
     !***************************************************************************************
@@ -1267,9 +1267,9 @@ contains
         real(rk), dimension(:), allocatable :: x_gq
 
         if (source == 'boundary') then
-            x_gq = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:)%c1_
+            x_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:)%c1_
         else if (source == 'volume') then
-            x_gq = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:)%c1_
+            x_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:)%c1_
         else
             call chidg_signal(FATAL,"chidg_worker%x(source): Invalid value for 'source'. Options are 'boundary', 'volume'")
         end if
@@ -1297,9 +1297,9 @@ contains
 
 
         if (source == 'boundary') then
-            y_gq = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:)%c2_
+            y_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:)%c2_
         else if (source == 'volume') then
-            y_gq = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:)%c2_
+            y_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:)%c2_
         else
             call chidg_signal(FATAL,"chidg_worker%y(source): Invalid value for 'source'. Options are 'boundary', 'volume'")
         end if
@@ -1327,9 +1327,9 @@ contains
 
 
         if (source == 'boundary') then
-            z_gq = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:)%c3_
+            z_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:)%c3_
         else if (source == 'volume') then
-            z_gq = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:)%c3_
+            z_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:)%c3_
         else
             call chidg_signal(FATAL,"chidg_worker%z(source): Invalid value for 'source'. Options are 'boundary', 'volume'")
         end if
@@ -1376,13 +1376,13 @@ contains
         ! Get coordinates
         !
         if ( (source == 'boundary') .or. (source == 'face interior') .or. (source == 'face exterior') ) then
-            gq_1 = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:)%c1_
-            gq_2 = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:)%c2_
-            gq_3 = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:)%c3_
+            gq_1 = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:)%c1_
+            gq_2 = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:)%c2_
+            gq_3 = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:)%c3_
         else if ( (source == 'volume') .or. (source == 'element') ) then
-            gq_1 = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:)%c1_
-            gq_2 = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:)%c2_
-            gq_3 = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:)%c3_
+            gq_1 = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:)%c1_
+            gq_2 = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:)%c2_
+            gq_3 = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:)%c3_
         else
             user_msg = "chidg_worker%coordinate: Invalid source for returning coordinate. Options are 'boundary' and 'volume'."
             call chidg_signal_one(FATAL,user_msg,source)
@@ -1446,7 +1446,7 @@ contains
 
         if (source == 'interior') then
 
-            h = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%h
+            h = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%h
 
         else if (source == 'exterior') then
 
@@ -1456,23 +1456,23 @@ contains
             chimera_face = (self%face_type() == CHIMERA)
             if (chimera_face) then
 
-                h = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%h
+                h = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%h
 
             !
             ! If conforming face, check for processor status of neighbor.
             !
             else
 
-                proc_local = (self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ineighbor_proc  ==  IRANK)
+                proc_local = (self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ineighbor_proc  ==  IRANK)
                 if (proc_local) then
 
-                    ineighbor_domain_l  = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ineighbor_domain_l
-                    ineighbor_element_l = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ineighbor_element_l
-                    h = self%mesh(ineighbor_domain_l)%elems(ineighbor_element_l)%h
+                    ineighbor_domain_l  = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ineighbor_domain_l
+                    ineighbor_element_l = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ineighbor_element_l
+                    h = self%mesh%domain(ineighbor_domain_l)%elems(ineighbor_element_l)%h
 
                 else
 
-                    h = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%neighbor_h
+                    h = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%neighbor_h
 
                 end if
 
@@ -1513,7 +1513,7 @@ contains
 
         if (source == 'interior') then
 
-            nterms_s = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%nterms_s
+            nterms_s = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%nterms_s
 
 
         else if (source == 'exterior') then
@@ -1524,23 +1524,23 @@ contains
             chimera_face = (self%face_type() == CHIMERA)
             if (chimera_face) then
 
-                nterms_s = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%nterms_s
+                nterms_s = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%nterms_s
 
             !
             ! If conforming face, check for processor status of neighbor.
             !
             else
 
-                proc_local = (self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ineighbor_proc  ==  IRANK)
+                proc_local = (self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ineighbor_proc  ==  IRANK)
                 if (proc_local) then
 
-                    ineighbor_domain_l  = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ineighbor_domain_l
-                    ineighbor_element_l = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ineighbor_element_l
-                    nterms_s = self%mesh(ineighbor_domain_l)%elems(ineighbor_element_l)%nterms_s
+                    ineighbor_domain_l  = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ineighbor_domain_l
+                    ineighbor_element_l = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ineighbor_element_l
+                    nterms_s = self%mesh%domain(ineighbor_domain_l)%elems(ineighbor_element_l)%nterms_s
 
                 else
 
-                    nterms_s = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ineighbor_nterms_s
+                    nterms_s = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ineighbor_nterms_s
 
                 end if
 
@@ -1601,11 +1601,11 @@ contains
 
         if (source == 'face') then
 
-            weights = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%gq%face%weights(:,self%iface)
+            weights = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%gq%face%weights(:,self%iface)
 
         else if (source == 'element') then
 
-            weights = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%gq%vol%weights
+            weights = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%gq%vol%weights
 
         else
             call chidg_signal(FATAL,"chidg_worker%quadrature_weights(source): Invalid value for 'source'. Options are 'face', 'element'")
@@ -1641,11 +1641,11 @@ contains
 
         if (source == 'face') then
 
-            jinv = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%jinv
+            jinv = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%jinv
 
         else if (source == 'element') then
 
-            jinv = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%jinv
+            jinv = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%jinv
 
         else
             call chidg_signal(FATAL,"chidg_worker%inverse_jacobian(source): Invalid value for 'source'. Options are 'face', 'element'")
@@ -1676,7 +1676,7 @@ contains
 
         real(rk)    :: area
 
-        area = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%total_area
+        area = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%total_area
 
     end function face_area
     !**************************************************************************************
@@ -1701,7 +1701,7 @@ contains
 
         character(:),   allocatable :: system
 
-        system = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%coordinate_system
+        system = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%coordinate_system
 
     end function coordinate_system
     !**************************************************************************************
@@ -1727,7 +1727,7 @@ contains
         iface = self%iface
 
 
-        face_type_ = self%mesh(idom)%faces(ielem,iface)%ftype
+        face_type_ = self%mesh%domain(idom)%faces(ielem,iface)%ftype
 
 
     end function face_type

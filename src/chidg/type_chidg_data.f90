@@ -9,6 +9,7 @@ module type_chidg_data
     ! Primary chidg_data_t components
     use type_domain_info,               only: domain_info_t
     use type_mesh,                      only: mesh_t
+    use type_mesh_new,                  only: mesh_new_t
     use type_bc,                        only: bc_t
     use type_bc_state,                  only: bc_state_t
     use type_bc_group,                  only: bc_group_t
@@ -42,7 +43,7 @@ module type_chidg_data
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     type, public  :: chidg_data_t
 
         logical                                     :: solverInitialized = .false.
@@ -50,8 +51,9 @@ module type_chidg_data
 
         
         ! For each domain: info, a mesh, and an equation set
-        type(domain_info_t),            allocatable :: info(:)     
-        type(mesh_t),                   allocatable :: mesh(:)     
+!        type(domain_info_t),            allocatable :: info(:)     
+!        type(mesh_t),                   allocatable :: mesh(:)     
+        type(mesh_new_t)                            :: mesh
 
         ! Boundary conditions are not specified per-domain. 
         ! A boundary condition for each bc_group in the file.
@@ -68,25 +70,32 @@ module type_chidg_data
     contains
 
         ! Modifiers for adding domains and boundary conditions
-        procedure   :: add_domain
+!        procedure   :: add_domain
+!        procedure   :: ndomains             ! Return number of allocated domains
+
+
         procedure   :: add_bc_group
         procedure   :: add_bc_patch
         procedure   :: new_bc
+        procedure   :: nbcs                 ! Return number of allocated bndry conds
+
+
+        procedure   :: add_equation_set
         procedure   :: new_equation_set
+        procedure   :: get_equation_set_id
+        procedure   :: nequation_sets       ! Return number of allocated eqn sets
 
         ! Initialization procedure for solution data. Execute after all domains are added.
         procedure   :: initialize_solution_domains
         procedure   :: initialize_solution_bc
         procedure   :: initialize_solution_solver
 
+
         ! Release allocated memory
         procedure   :: release
 
         ! Accessors
-        procedure   :: get_domain_index             ! Given a domain name, return domain index
-        procedure   :: ndomains                     ! Return number of allocated domains
-        procedure   :: nbcs                         ! Return number of allocated boundary conditions
-        procedure   :: nequation_sets               ! Return number of allocated equation sets
+        procedure   :: get_domain_index             ! Given domain name, return domain index
         procedure   :: ntime
         procedure   :: get_dimensionality
         procedure   :: get_auxiliary_field_names    ! Return required auxiliary fields
@@ -94,7 +103,7 @@ module type_chidg_data
         procedure   :: report
 
     end type chidg_data_t
-    !*******************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -113,7 +122,7 @@ contains
     !!
     !!
     !!
-    !------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     subroutine initialize_solution_solver(self)
         class(chidg_data_t),     intent(inout)   :: self
 
@@ -128,12 +137,14 @@ contains
         ! Assemble array of function_data from the eqnset array to pass to the solver data 
         ! structure for initialization
         !
-        ndom = self%ndomains()
+        !ndom = self%ndomains()
+        ndom = self%mesh%ndomains()
         allocate(function_data(ndom), stat=ierr)
         if ( ierr /= 0 ) call AllocationError
 
-        do idom = 1,self%ndomains()
-            eqn_ID = self%mesh(idom)%eqn_ID
+        !do idom = 1,self%ndomains()
+        do idom = 1,self%mesh%ndomains()
+            eqn_ID = self%mesh%domain(idom)%eqn_ID
             function_data(idom) = self%eqnset(eqn_ID)%function_data
         end do
 
@@ -159,7 +170,7 @@ contains
         call self%sdata%init(self%mesh, function_data)
 
     end subroutine initialize_solution_solver
-    !******************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -168,124 +179,107 @@ contains
 
 
 
-    !> Add a domain to ChiDG. Calls initialization routines for components which define a 
-    !! domain. That is, a mesh_t, an equationset_t, and the number of terms in their 
-    !! polynomial expansions.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/1/2016
-    !!
-    !!  @param[in]  points      point_t matrix defining the mesh
-    !!  @param[in]  nterms_c    Integer defining the number of terms in the element coordinate 
-    !!                          expansion
-    !!  @param[in]  eqnset      Character string defining the equationset_t for the domain
-    !!  @param[in]  nterms_s    Integer defining the number of terms in the solution expansion
-    !!
-    !------------------------------------------------------------------------------------------
-    subroutine add_domain(self,name,nodes,connectivity,nelements_g,spacedim,nterms_c,eqnset,coord_system)
-        class(chidg_data_t),            intent(inout)   :: self
-        character(*),                   intent(in)      :: name
-        type(point_t),                  intent(in)      :: nodes(:)
-        type(domain_connectivity_t),    intent(in)      :: connectivity
-        integer(ik),                    intent(in)      :: nelements_g
-        integer(ik),                    intent(in)      :: spacedim
-        integer(ik),                    intent(in)      :: nterms_c
-        character(*),                   intent(in)      :: eqnset
-        character(*),                   intent(in)      :: coord_system
-
-        integer(ik)                 :: idomain_l, ierr, idom, ieqn, eqn_ID
-        logical                     :: already_added
-        character(:),   allocatable :: user_msg
-
-
-        type(domain_info_t),            allocatable :: temp_info(:)
-        type(mesh_t),                   allocatable :: temp_mesh(:)
-        type(equation_set_t),           allocatable :: temp_eqnset(:)
-
-
-        !
-        ! Increment location of new domain by one
-        !
-        idomain_l = self%ndomains() + 1
-
-
-
-
-        !
-        ! Check if equation set has already been added. If so, get identifier index eqn_ID
-        !
-        already_added = .false.
-        do ieqn = 1,self%nequation_sets()
-            already_added = (trim(self%eqnset(ieqn)%name) == trim(eqnset)) 
-            if (already_added) eqn_ID = ieqn
-            if (already_added) exit
-        end do
-        
-
-        !
-        ! Add new equation set if it doesn't already exist and get new eqn_ID
-        !
-        if (.not. already_added) then
-            eqn_ID = self%new_equation_set()
-            self%eqnset(eqn_ID) = equation_builder_factory%produce(eqnset, 'default')
-            self%eqnset(eqn_ID)%eqn_ID = eqn_ID
-        end if
-
-
-        !
-        ! Resize array storage
-        !
-        allocate( temp_info(  self%ndomains()+1),   &
-                  temp_mesh(  self%ndomains()+1), stat=ierr)
-        if (ierr /= 0) call AllocationError
-
-
-        ! Copy previously initialized instances to new array. Be careful about pointers 
-        ! components here. For example, a pointer from a face to an element would no 
-        ! longer be valid in the new array.
-        if (self%ndomains() > 0) then
-            temp_info(   1:size(self%info))    = self%info(1:size(self%info))
-            temp_mesh(   1:size(self%mesh))    = self%mesh(1:size(self%mesh))
-        end if
-
-
-        !
-        ! Set domain info
-        !
-        temp_info(idomain_l)%name = name
-
-
-        !
-        ! Initialize new mesh: geometry and equation set identifier
-        !
-        call temp_mesh(idomain_l)%init_geom(idomain_l,nelements_g,spacedim,nterms_c,nodes,connectivity,coord_system)
-        call temp_mesh(idomain_l)%init_eqn(eqn_ID)
-
-        !
-        ! Check that a domain with the same global index wasn't already added. For example, if 
-        ! a block got split and put on the same processor. Some of the MPI communication assumes 
-        ! one unique global domain index for each domain on the processor.
-        !
-        user_msg = "chidg_data%add_domain: Two domains have the same global index. MPI &
-                    communication assumes this does not happen."
-        if (self%ndomains() > 1) then
-            do idom = 1,size(self%mesh)
-                if (self%mesh(idom)%idomain_g == temp_mesh(idomain_l)%idomain_g) call chidg_signal(FATAL,user_msg)
-            end do !idom
-        end if
-
-
-
-        !
-        ! Move resized temp allocation back to chidg_data container. 
-        ! Be careful about pointer components here! Their location in memory has changed.
-        !
-        call move_alloc(temp_info,self%info)
-        call move_alloc(temp_mesh,self%mesh)
-
-
-    end subroutine add_domain
-    !*******************************************************************************************
+!    !> Add a domain to ChiDG. Calls initialization routines for components which define a 
+!    !! domain. That is, a mesh_t, an equationset_t, and the number of terms in their 
+!    !! polynomial expansions.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   2/1/2016
+!    !!
+!    !!  @param[in]  points      point_t matrix defining the mesh
+!    !!  @param[in]  nterms_c    Integer defining number of terms in the coordinate expansion
+!    !!  @param[in]  eqnset      Character string defining the equationset_t for the domain
+!    !!  @param[in]  nterms_s    Integer defining number of terms in the solution expansion
+!    !!
+!    !---------------------------------------------------------------------------------------
+!    subroutine add_domain(self,name,nodes,connectivity,nelements_g,spacedim,nterms_c,eqnset,coord_system)
+!        class(chidg_data_t),            intent(inout)   :: self
+!        character(*),                   intent(in)      :: name
+!        type(point_t),                  intent(in)      :: nodes(:)
+!        type(domain_connectivity_t),    intent(in)      :: connectivity
+!        integer(ik),                    intent(in)      :: nelements_g
+!        integer(ik),                    intent(in)      :: spacedim
+!        integer(ik),                    intent(in)      :: nterms_c
+!        character(*),                   intent(in)      :: eqnset
+!        character(*),                   intent(in)      :: coord_system
+!
+!        integer(ik)                 :: idomain_l, ierr, idom, ieqn, eqn_ID
+!        logical                     :: already_added
+!        character(:),   allocatable :: user_msg
+!
+!
+!        type(domain_info_t),            allocatable :: temp_info(:)
+!        type(mesh_t),                   allocatable :: temp_mesh(:)
+!
+!
+!        !
+!        ! Increment location of new domain by one
+!        !
+!        idomain_l = self%ndomains() + 1
+!
+!
+!        !
+!        ! Get equation set identifier
+!        !
+!        eqn_ID = self%get_equation_set_id(trim(eqnset))
+!
+!
+!        !
+!        ! Resize array storage
+!        !
+!        allocate( temp_info(  self%ndomains()+1),   &
+!                  temp_mesh(  self%ndomains()+1), stat=ierr)
+!        if (ierr /= 0) call AllocationError
+!
+!
+!        ! Copy previously initialized instances to new array. Be careful about pointers 
+!        ! components here. For example, a pointer from a face to an element would no 
+!        ! longer be valid in the new array.
+!        if (self%ndomains() > 0) then
+!            temp_info(   1:size(self%info))    = self%info(1:size(self%info))
+!            temp_mesh(   1:size(self%mesh))    = self%mesh(1:size(self%mesh))
+!        end if
+!
+!
+!        !
+!        ! Set domain info
+!        !
+!        temp_info(idomain_l)%name = name
+!
+!
+!        !
+!        ! Initialize new mesh: geometry and equation set identifier
+!        !
+!        call temp_mesh(idomain_l)%init_geom(idomain_l,nelements_g,spacedim,nterms_c,nodes,connectivity,coord_system)
+!        call temp_mesh(idomain_l)%init_eqn(eqn_ID)
+!
+!
+!        !
+!        ! Check that a domain with the same global index wasn't already added. 
+!        ! For example, if a block got split and put on the same processor. Some 
+!        ! of the MPI communication assumes one unique global domain index for each 
+!        ! domain on the processor.
+!        !
+!        user_msg = "chidg_data%add_domain: Two domains have the same global index. MPI &
+!                    communication assumes this does not happen."
+!        if (self%ndomains() > 1) then
+!            do idom = 1,size(self%mesh)
+!                if (self%mesh(idom)%idomain_g == temp_mesh(idomain_l)%idomain_g) call chidg_signal(FATAL,user_msg)
+!            end do !idom
+!        end if
+!
+!
+!
+!        !
+!        ! Move resized temp allocation back to chidg_data container. 
+!        ! Be careful about pointer components here! Their location in memory has changed.
+!        !
+!        call move_alloc(temp_info,self%info)
+!        call move_alloc(temp_mesh,self%mesh)
+!
+!
+!    end subroutine add_domain
+!    !***************************************************************************************
 
 
 
@@ -311,16 +305,17 @@ contains
     !!  @date   2/1/2016
     !!
     !!  @param[in]  domain          Character string of the selected domain.
-    !!  @param[in]  bc_connectivity Face connectivities defining the boundary condition patch.
-    !!  @param[in]  bc_group        Name of the boundary condition group to associate with the 
-    !!                              patch.
+    !!  @param[in]  bc_connectivity Face connectivities defining the boundary 
+    !!                              condition patch.
+    !!  @param[in]  bc_group        Name of the boundary condition group to associate 
+    !!                              with the patch.
     !!  @param[in]  bc_groups       bc_group_t's for the global problem that can be searched 
     !!                              through and used to initialize.
     !!
     !!  To force a particular bc_state on a boundary condition, one can pass a bc_state_t in 
     !!  as an option for bc_wall, bc_inlet, bc_outlet, bc_symmetry
     !!
-    !------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     subroutine add_bc_group(self,bc_group,bc_wall,bc_inlet,bc_outlet,bc_symmetry,bc_farfield,bc_periodic)
         class(chidg_data_t),            intent(inout)           :: self
         type(bc_group_t),               intent(in)              :: bc_group
@@ -355,7 +350,7 @@ contains
 
 
     end subroutine add_bc_group
-    !******************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -381,7 +376,7 @@ contains
     !!  @date   2/27/2017
     !!
     !!
-    !------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     subroutine add_bc_patch(self, domain_name, patch_bc_name, bc_connectivity)
         class(chidg_data_t),            intent(inout)   :: self
         character(*),                   intent(in)      :: domain_name
@@ -419,7 +414,7 @@ contains
             !
             idom = self%get_domain_index(domain_name)
 
-            call self%bc(bc_ID)%init_bc_patch(self%mesh(idom), bc_connectivity)
+            call self%bc(bc_ID)%init_bc_patch(self%mesh%domain(idom), bc_connectivity)
 
         else
 
@@ -437,7 +432,7 @@ contains
 
 
     end subroutine add_bc_patch
-    !*******************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -455,7 +450,7 @@ contains
     !!  @date   2/27/2017
     !!
     !!
-    !------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     function new_bc(self) result(bc_ID)
         class(chidg_data_t),    intent(inout)   :: self
 
@@ -509,7 +504,62 @@ contains
 
 
     end function new_bc
-    !******************************************************************************************
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Add a new equation set to the data instance.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/5/2017
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine add_equation_set(self, eqn_name)
+        class(chidg_data_t),    intent(inout)   :: self
+        character(*),           intent(in)      :: eqn_name
+
+        logical     :: already_added
+        integer(ik) :: ieqn, eqn_ID
+
+
+        !
+        ! Check if equation set has already been added.
+        !
+        already_added = .false.
+        do ieqn = 1,self%nequation_sets()
+            already_added = (trim(self%eqnset(ieqn)%name) == trim(eqn_name)) 
+            if (already_added) exit
+        end do
+        
+
+        !
+        ! Add new equation set if it doesn't already exist and get new eqn_ID
+        !
+        if (.not. already_added) then
+            eqn_ID = self%new_equation_set()
+            self%eqnset(eqn_ID) = equation_builder_factory%produce(eqn_name, 'default')
+            self%eqnset(eqn_ID)%eqn_ID = eqn_ID
+        end if
+
+
+    end subroutine add_equation_set
+    !***************************************************************************************
+
+
+
+
+
+
+
+
 
 
 
@@ -524,7 +574,7 @@ contains
     !!  @date   3/20/2017
     !!
     !!
-    !------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     function new_equation_set(self) result(eqn_ID)
         class(chidg_data_t),    intent(inout)   :: self
 
@@ -574,7 +624,7 @@ contains
 
 
     end function new_equation_set
-    !******************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -583,13 +633,42 @@ contains
 
 
 
+    !>  Given an equation set name, return its index identifier in chidg_data.
+    !!
+    !!  Returns eqn_ID such that data%eqnset(eqn_ID) is valid and corresponds to the
+    !!  equation set with name eqn_name that was given.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/5/2017
+    !!
+    !-------------------------------------------------------------------------------------
+    function get_equation_set_id(self, eqn_name) result(eqn_ID)
+        class(chidg_data_t),    intent(in)  :: self
+        character(*),           intent(in)  :: eqn_name
+
+        integer(ik)                 :: ieqn, eqn_ID
+        character(:),   allocatable :: user_msg
+        logical                     :: names_match
 
 
+        eqn_ID = 0
+        do ieqn = 1,self%nequation_sets()
+
+            names_match = trim(self%eqnset(ieqn)%name) == trim(eqn_name)
+
+            if (names_match) eqn_ID = ieqn
+            if (names_match) exit
+
+        end do
 
 
+        user_msg = "chidg_data%get_equation_set_id: No equation set was found that had a name &
+                    matching the incoming string"
+        if (eqn_ID == 0) call chidg_signal_one(FATAL,user_msg,eqn_name)
 
 
-
+    end function get_equation_set_id
+    !**************************************************************************************
 
 
 
@@ -610,7 +689,7 @@ contains
     !!
     !!
     !!
-    !------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     subroutine initialize_solution_domains(self,nterms_s)
         class(chidg_data_t),    intent(inout)   :: self
         integer(ik),            intent(in)      :: nterms_s
@@ -620,16 +699,17 @@ contains
         ! Initialize mesh numerics based on equation set and polynomial expansion order
         call write_line(" ", ltrim=.false., io_proc=GLOBAL_MASTER)
         call write_line("Initialize: domain equation space...", io_proc=GLOBAL_MASTER)
-        do idomain = 1,self%ndomains()
-            eqn_ID = self%mesh(idomain)%eqn_ID
+
+        do idomain = 1,self%mesh%ndomains()
+            eqn_ID = self%mesh%domain(idomain)%eqn_ID
             nfields = self%eqnset(eqn_ID)%prop%nprimary_fields()
-            call self%mesh(idomain)%init_sol(nfields,nterms_s,self%time_manager%ntime)
+            call self%mesh%domain(idomain)%init_sol(nfields,nterms_s,self%time_manager%ntime)
         end do
 
         call write_line(" ", ltrim=.false., io_proc=GLOBAL_MASTER)
 
     end subroutine initialize_solution_domains
-    !******************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -643,7 +723,7 @@ contains
     !!  @date   2/28/2017
     !!
     !!
-    !------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     subroutine initialize_solution_bc(self)
         class(chidg_data_t),    intent(inout)   :: self
 
@@ -678,7 +758,7 @@ contains
 
 
     end subroutine initialize_solution_bc
-    !******************************************************************************************
+    !***************************************************************************************
 
 
 
@@ -698,7 +778,7 @@ contains
     !!  @param[in]  domain_name     String associated with a given domain
     !!  @return     domain_index    Integer index of the associated domain
     !!
-    !-------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_domain_index(self,domain_name) result(domain_index)
         class(chidg_data_t),    intent(in)      :: self
         character(*),           intent(in)      :: domain_name
@@ -709,8 +789,9 @@ contains
         
         domain_index = 0
 
-        do idom = 1,self%ndomains()
-            if ( trim(domain_name) == trim(self%info(idom)%name) ) then
+        do idom = 1,self%mesh%ndomains()
+            !if ( trim(domain_name) == trim(self%info(idom)%name) ) then
+            if ( trim(domain_name) == trim(self%mesh%domain(idom)%name) ) then
                 domain_index = idom
                 exit
             end if
@@ -722,31 +803,31 @@ contains
         if (domain_index == 0) call chidg_signal_one(FATAL,user_msg,domain_name)
 
     end function get_domain_index
-    !*******************************************************************************************
+    !****************************************************************************************
 
 
 
 
-    !> Return the number of domains in the chidg_data_t instance.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/1/2016
-    !!
-    !!
-    !-------------------------------------------------------------------------------------------
-    function ndomains(self) result(ndomains_)
-        class(chidg_data_t),    intent(in)      :: self
-
-        integer :: ndomains_
-
-        if (allocated(self%mesh)) then
-            ndomains_ = size(self%mesh)
-        else
-            ndomains_ = 0
-        end if
-
-    end function ndomains
-    !*******************************************************************************************
+!    !> Return the number of domains in the chidg_data_t instance.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   2/1/2016
+!    !!
+!    !!
+!    !----------------------------------------------------------------------------------------
+!    function ndomains(self) result(ndomains_)
+!        class(chidg_data_t),    intent(in)      :: self
+!
+!        integer :: ndomains_
+!
+!        if (allocated(self%mesh)) then
+!            ndomains_ = size(self%mesh)
+!        else
+!            ndomains_ = 0
+!        end if
+!
+!    end function ndomains
+!    !****************************************************************************************
 
 
 
@@ -758,7 +839,7 @@ contains
     !!  @date   3/10/2017
     !!
     !!
-    !-------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function nbcs(self) result(nbcs_)
         class(chidg_data_t),    intent(in)      :: self
 
@@ -771,7 +852,7 @@ contains
         end if
 
     end function nbcs
-    !*******************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -782,7 +863,7 @@ contains
     !!  @date   3/20/2017
     !!
     !!
-    !-------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function nequation_sets(self) result(nsets_)
         class(chidg_data_t),    intent(in)      :: self
 
@@ -795,7 +876,7 @@ contains
         end if
 
     end function nequation_sets
-    !*******************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -806,7 +887,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   11/30/2016
     !!
-    !-------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_dimensionality(self) result(dimensionality)
         class(chidg_data_t),    intent(in)      :: self
 
@@ -815,7 +896,7 @@ contains
         dimensionality = self%spacedim_
 
     end function get_dimensionality
-    !*******************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -834,7 +915,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   11/23/2016
     !!
-    !-------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function get_auxiliary_field_names(self) result(field_names)
         class(chidg_data_t),    intent(in)  :: self
 
@@ -844,8 +925,8 @@ contains
 
 
 
-        do idom = 1,self%ndomains()
-            eqn_ID = self%mesh(idom)%eqn_ID
+        do idom = 1,self%mesh%ndomains()
+            eqn_ID = self%mesh%domain(idom)%eqn_ID
             do ifield = 1,self%eqnset(eqn_ID)%prop%nauxiliary_fields()
 
                 field_name = self%eqnset(eqn_ID)%prop%get_auxiliary_field_name(ifield)
@@ -857,7 +938,7 @@ contains
 
 
     end function get_auxiliary_field_names
-    !*******************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -869,7 +950,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !-------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     function ntime(self) result(ndom)
         class(chidg_data_t),    intent(in)      :: self
 
@@ -878,7 +959,7 @@ contains
         ndom = self%time_manager%ntime
 
     end function ntime
-    !*******************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -892,18 +973,19 @@ contains
     !!  @date   3/3/2017
     !!
     !!
-    !------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------
     subroutine release(self)
         class(chidg_data_t),    intent(inout)   :: self
 
-        if (allocated(self%mesh))   deallocate(self%mesh)
+        !if (allocated(self%mesh))   deallocate(self%mesh)
         if (allocated(self%eqnset)) deallocate(self%eqnset)
         if (allocated(self%bc))     deallocate(self%bc)
 
+        call self%mesh%release()
         call self%sdata%release()
 
     end subroutine release
-    !*******************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -915,7 +997,7 @@ contains
     !!
     !!
     !!
-    !-------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine report(self,selection)
         class(chidg_data_t),    intent(in)  :: self
         character(*),           intent(in)  :: selection
@@ -925,8 +1007,8 @@ contains
 
         if ( trim(selection) == 'grid' ) then
 
-            do idom = 1,self%ndomains()
-                call write_line('Domain ', idom, '  :  ', self%mesh(idom)%nelem, ' Elements', io_proc=IRANK)
+            do idom = 1,self%mesh%ndomains()
+                call write_line('Domain ', idom, '  :  ', self%mesh%domain(idom)%nelem, ' Elements', io_proc=IRANK)
             end do
 
 
@@ -938,7 +1020,7 @@ contains
 
 
     end subroutine report
-    !*******************************************************************************************
+    !****************************************************************************************
 
 
 

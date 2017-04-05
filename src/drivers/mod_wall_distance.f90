@@ -115,12 +115,19 @@ contains
         ! Solid walls get dirichlet zero bc.
         ! All other families get neumann zero bc.
         !
-        call wall_distance%read_grid(gridfile, equation_set='Wall Distance : p-Poisson')
-        call wall_distance%read_boundaryconditions(gridfile, bc_wall     = dirichlet_zero, &
-                                                             bc_inlet    = neumann_zero,   &
-                                                             bc_outlet   = neumann_zero,   &
-                                                             bc_symmetry = neumann_zero,   &
-                                                             bc_farfield = neumann_zero)
+!        call wall_distance%read_grid(gridfile, equation_set='Wall Distance : p-Poisson')
+!        call wall_distance%read_boundaryconditions(gridfile, bc_wall     = dirichlet_zero, &
+!                                                             bc_inlet    = neumann_zero,   &
+!                                                             bc_outlet   = neumann_zero,   &
+!                                                             bc_symmetry = neumann_zero,   &
+!                                                             bc_farfield = neumann_zero)
+
+        call wall_distance%read_grid(gridfile, equation_set = 'Wall Distance : p-Poisson',  &
+                                               bc_wall      = dirichlet_zero,               &
+                                               bc_inlet     = neumann_zero,                 &
+                                               bc_outlet    = neumann_zero,                 &
+                                               bc_symmetry  = neumann_zero,                 &
+                                               bc_farfield  = neumann_zero )
 
 
 

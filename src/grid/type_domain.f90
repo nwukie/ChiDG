@@ -50,6 +50,8 @@ module type_domain
     !-----------------------------------------------------------------------------------------
     type, public :: domain_t
 
+        character(:),   allocatable     :: name
+
         !
         ! Integer parameters
         !
@@ -150,14 +152,14 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine init_geom(self,idomain_l,nelements_g,spacedim,nterms_c,nodes,connectivity,coord_system)
-        class(domain_t),                  intent(inout), target   :: self
-        integer(ik),                    intent(in)              :: idomain_l
-        integer(ik),                    intent(in)              :: nelements_g
-        integer(ik),                    intent(in)              :: spacedim
-        integer(ik),                    intent(in)              :: nterms_c
-        type(point_t),                  intent(in)              :: nodes(:)
-        type(domain_connectivity_t),    intent(in)              :: connectivity
-        character(*),                   intent(in)              :: coord_system
+        class(domain_t),                intent(inout)   :: self
+        integer(ik),                    intent(in)      :: idomain_l
+        integer(ik),                    intent(in)      :: nelements_g
+        integer(ik),                    intent(in)      :: spacedim
+        integer(ik),                    intent(in)      :: nterms_c
+        type(point_t),                  intent(in)      :: nodes(:)
+        type(domain_connectivity_t),    intent(in)      :: connectivity
+        character(*),                   intent(in)      :: coord_system
 
 
         !
@@ -216,10 +218,10 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine init_sol(self,neqns,nterms_s,ntime)
-        class(domain_t),  intent(inout)   :: self
-        integer(ik),    intent(in)      :: neqns
-        integer(ik),    intent(in)      :: nterms_s
-        integer(ik),    intent(in)      :: ntime
+        class(domain_t),    intent(inout)   :: self
+        integer(ik),        intent(in)      :: neqns
+        integer(ik),        intent(in)      :: nterms_s
+        integer(ik),        intent(in)      :: ntime
 
         !
         ! Store number of equations and number of terms in solution expansion

@@ -119,7 +119,7 @@ contains
         !
         ! Determine if we want to update gradient terms in the cache
         !
-        eqn_ID = worker%mesh(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
         compute_gradients = (allocated(equation_set(eqn_ID)%volume_diffusive_operator) .or. &
                              allocated(equation_set(eqn_ID)%boundary_diffusive_operator) )
 
@@ -449,7 +449,7 @@ contains
         ! Compute Value/Gradients
         !
         idepend = 1
-        do ieqn = 1,worker%mesh(idomain_l)%neqns
+        do ieqn = 1,worker%mesh%domain(idomain_l)%neqns
 
             worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
             worker%function_info%idepend = idepend
@@ -460,7 +460,7 @@ contains
             grad3_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad3')
 
             !field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
-            eqn_ID = worker%mesh(idomain_l)%eqn_ID
+            eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
             field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
             call worker%cache%set_data(field,'element',value_gq,'value',0,worker%function_info%seed)
             call worker%cache%set_data(field,'element',grad1_gq,'gradient',1,worker%function_info%seed)
@@ -529,7 +529,7 @@ contains
         !
         ! Compute Values
         !
-        do ieqn = 1,worker%mesh(idomain_l)%neqns
+        do ieqn = 1,worker%mesh%domain(idomain_l)%neqns
 
             worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
             worker%function_info%idepend = idepend
@@ -543,8 +543,7 @@ contains
 
 
             ! Store gq data in cache
-            !field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
-            eqn_ID = worker%mesh(idomain_l)%eqn_ID
+            eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
             field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
             call worker%cache%set_data(field,'face interior',value_gq,'value',   0,worker%function_info%seed,iface)
             call worker%cache%set_data(field,'face interior',grad1_gq,'gradient',1,worker%function_info%seed,iface)
@@ -618,9 +617,8 @@ contains
         !
         if ( (worker%face_type() == INTERIOR) .or. (worker%face_type() == CHIMERA) ) then
             
-            do ieqn = 1,worker%mesh(idomain_l)%neqns
-                !field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
-                eqn_ID = worker%mesh(idomain_l)%eqn_ID
+            do ieqn = 1,worker%mesh%domain(idomain_l)%neqns
+                eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
                 field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
                 do idepend = 1,ndepend
 
@@ -686,9 +684,9 @@ contains
         !
         if ( (worker%face_type() == BOUNDARY)  ) then
             
-            bc_ID      = worker%mesh(idomain_l)%faces(ielement_l,iface)%bc_ID
-            patch_ID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%patch_ID
-            patch_face = worker%mesh(idomain_l)%faces(ielement_l,iface)%patch_face
+            bc_ID      = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%bc_ID
+            patch_ID   = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_ID
+            patch_face = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_face
 
             ndepend = get_ndepend_exterior(worker,equation_set,bc,differentiate)
             do istate = 1,size(bc(bc_ID)%bc_state)
@@ -709,8 +707,7 @@ contains
                         worker%function_info%seed%iproc      = NO_PROC
                     end if
 
-                    eqn_ID = worker%mesh(idomain_l)%eqn_ID
-                    !call bc(bc_ID)%bc_state(istate)%state%compute_bc_state(worker,equation_set(idomain_l)%prop)
+                    eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
                     call bc(bc_ID)%bc_state(istate)%state%compute_bc_state(worker,equation_set(eqn_ID)%prop)
 
                 end do !idepend
@@ -760,7 +757,7 @@ contains
         !
         ! Update lifting terms for gradients if diffusive operators are present
         !
-        eqn_ID = worker%mesh(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
         if (allocated(equation_set(eqn_ID)%volume_diffusive_operator) .or. &
             allocated(equation_set(eqn_ID)%boundary_diffusive_operator)) then
 
@@ -819,14 +816,12 @@ contains
         end if
 
         idepend = 0 ! no linearization
-        eqn_ID = worker%mesh(idomain_l)%eqn_ID
-        !do ifield = 1,worker%prop(idomain_l)%nauxiliary_fields()
+        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
         do ifield = 1,worker%prop(eqn_ID)%nauxiliary_fields()
 
             !
             ! Try to find the auxiliary field in the solverdata_t container; where they are stored.
             !
-            !field      = worker%prop(idomain_l)%get_auxiliary_field_name(ifield)
             field      = worker%prop(eqn_ID)%get_auxiliary_field_name(ifield)
             iaux_field = worker%solverdata%get_auxiliary_field_index(field)
 
@@ -905,7 +900,7 @@ contains
         !
         ! Face interior state. 
         !
-        eqn_ID = worker%mesh(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
         idepend = 0 ! no linearization
         do ifield = 1,worker%prop(eqn_ID)%nauxiliary_fields()
 
@@ -995,7 +990,7 @@ contains
         !
         if ( (worker%face_type() == INTERIOR) .or. (worker%face_type() == CHIMERA) ) then
 
-            eqn_ID = worker%mesh(idomain_l)%eqn_ID
+            eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
             idepend = 0 ! no linearization
             do ifield = 1,worker%prop(eqn_ID)%nauxiliary_fields()
 
@@ -1088,7 +1083,7 @@ contains
         !
         if ( (worker%face_type() == BOUNDARY) ) then
 
-            eqn_ID  = worker%mesh(idomain_l)%eqn_ID
+            eqn_ID  = worker%mesh%domain(idomain_l)%eqn_ID
             idepend = 0 ! no linearization
             do ifield = 1,worker%prop(eqn_ID)%nauxiliary_fields()
 
@@ -1163,15 +1158,13 @@ contains
         !
         ! Compute element model field. Potentially differentiated wrt exterior elements.
         !
-        eqn_ID = worker%mesh(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
         worker%interpolation_source = 'element'
-        !do imodel = 1,equation_set(idomain_l)%nmodels()
         do imodel = 1,equation_set(eqn_ID)%nmodels()
 
             !
             ! Get model dependency
             !
-            !dependency = equation_set(idomain_l)%models(imodel)%model%get_dependency()
             dependency = equation_set(eqn_ID)%models(imodel)%model%get_dependency()
 
             !
@@ -1224,8 +1217,8 @@ contains
                     if (diff_interior .or. diff_none) then
                         compute_model = .true.
                     else if (diff_exterior) then
-                        compute_model = ( (worker%mesh(idomain_l)%faces(ielement_l,idiff)%ftype == INTERIOR) .or. &
-                                          (worker%mesh(idomain_l)%faces(ielement_l,idiff)%ftype == CHIMERA) )
+                        compute_model = ( (worker%mesh%domain(idomain_l)%faces(ielement_l,idiff)%ftype == INTERIOR) .or. &
+                                          (worker%mesh%domain(idomain_l)%faces(ielement_l,idiff)%ftype == CHIMERA) )
                     end if
 
 
@@ -1243,7 +1236,6 @@ contains
                             worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
                             worker%function_info%idepend = idepend
 
-                            !call equation_set(idomain_l)%models(imodel)%model%compute(worker)
                             call equation_set(eqn_ID)%models(imodel)%model%compute(worker)
                         end do !idepend
                     end if !compute
@@ -1298,9 +1290,8 @@ contains
         ! Update models for 'face interior'. Differentiated wrt interior.
         !
         idepend = 1
-        eqn_ID  = worker%mesh(idomain_l)%eqn_ID
+        eqn_ID  = worker%mesh%domain(idomain_l)%eqn_ID
         worker%interpolation_source = 'face interior'
-        !do imodel = 1,equation_set(idomain_l)%nmodels()
         do imodel = 1,equation_set(eqn_ID)%nmodels()
 
             !
@@ -1352,7 +1343,6 @@ contains
                     !
                     ! Get model dependency 
                     !
-                    !model_dependency = equation_set(idomain_l)%models(imodel)%model%get_dependency()
                     model_dependency = equation_set(eqn_ID)%models(imodel)%model%get_dependency()
 
                     selected_model    = (trim(model_type) == trim(model_dependency))
@@ -1378,7 +1368,6 @@ contains
                             worker%function_info%idepend = idepend
                             worker%function_info%idiff   = idiff
 
-                            !call equation_set(idomain_l)%models(imodel)%model%compute(worker)
                             call equation_set(eqn_ID)%models(imodel)%model%compute(worker)
                         end do !idepend
 
@@ -1435,7 +1424,7 @@ contains
         !
         ! Face exterior state: interior neighbors and chimera
         !
-        eqn_ID = worker%mesh(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
         worker%interpolation_source = 'face exterior'
         if ( (worker%face_type() == INTERIOR) .or. (worker%face_type() == CHIMERA) ) then
 
@@ -1452,13 +1441,11 @@ contains
             ! Compute the number of exterior element dependencies for face exterior state
             !
             ndepend = get_ndepend_exterior(worker,equation_set,bc,differentiate)
-            !do imodel = 1,equation_set(idomain_l)%nmodels()
             do imodel = 1,equation_set(eqn_ID)%nmodels()
 
                 !
                 ! Get model dependency 
                 !
-                !model_dependency = equation_set(idomain_l)%models(imodel)%model%get_dependency()
                 model_dependency = equation_set(eqn_ID)%models(imodel)%model%get_dependency()
                 selected_model   = (trim(model_type) == trim(model_dependency))
 
@@ -1468,7 +1455,6 @@ contains
                         worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
                         worker%function_info%idepend = idepend
 
-                        !call equation_set(idomain_l)%models(imodel)%model%compute(worker)
                         call equation_set(eqn_ID)%models(imodel)%model%compute(worker)
 
                     end do !idepend
@@ -1489,13 +1475,11 @@ contains
                 ! Compute the number of exterior element dependencies for face exterior state
                 !
                 ndepend = 1
-                !do imodel = 1,equation_set(idomain_l)%nmodels()
                 do imodel = 1,equation_set(eqn_ID)%nmodels()
 
                     !
                     ! Get model dependency 
                     !
-                    !model_dependency = equation_set(idomain_l)%models(imodel)%model%get_dependency()
                     model_dependency = equation_set(eqn_ID)%models(imodel)%model%get_dependency()
                     selected_model   = (trim(model_type) == trim(model_dependency))
 
@@ -1505,7 +1489,6 @@ contains
                             worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
                             worker%function_info%idepend = idepend
 
-                            !call equation_set(idomain_l)%models(imodel)%model%compute(worker)
                             call equation_set(eqn_ID)%models(imodel)%model%compute(worker)
 
                         end do !idepend
@@ -1558,7 +1541,7 @@ contains
         !
         ! Face exterior state: boundaries
         !
-        eqn_ID = worker%mesh(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
         worker%interpolation_source = 'face exterior'
         if ( (worker%face_type() == BOUNDARY) ) then
 
@@ -1567,9 +1550,9 @@ contains
             !
             ndepend = get_ndepend_exterior(worker,equation_set,bc,differentiate)
 
-            bc_ID      = worker%mesh(idomain_l)%faces(ielement_l,iface)%bc_ID
-            patch_ID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%patch_ID
-            patch_face = worker%mesh(idomain_l)%faces(ielement_l,iface)%patch_face
+            bc_ID      = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%bc_ID
+            patch_ID   = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_ID
+            patch_face = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_face
 
             !do imodel = 1,equation_set(idomain_l)%nmodels()
             do imodel = 1,equation_set(eqn_ID)%nmodels()
@@ -1683,25 +1666,24 @@ contains
 
 
 
-            associate ( weights          => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%weights(:,iface),      &
-                        val_face_trans   => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%val_trans(:,:,iface),  &
-                        val_face         => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%val(:,:,iface),        &
-                        val_vol          => worker%mesh(idomain_l)%elems(ielement_l)%gq%vol%val,                    &
-                        invmass          => worker%mesh(idomain_l)%elems(ielement_l)%invmass,                       &
-                        br2_face         => worker%mesh(idomain_l)%faces(ielement_l,iface)%br2_face,                &
-                        br2_vol          => worker%mesh(idomain_l)%faces(ielement_l,iface)%br2_vol)
+            associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%face%weights(:,iface),      &
+                        val_face_trans   => worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%face%val_trans(:,:,iface),  &
+                        val_face         => worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%face%val(:,:,iface),        &
+                        val_vol          => worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%vol%val,                    &
+                        invmass          => worker%mesh%domain(idomain_l)%elems(ielement_l)%invmass,                       &
+                        br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face,                &
+                        br2_vol          => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_vol)
 
 
 
 
 
-            do ieqn = 1,worker%mesh(idomain_l)%neqns
+            do ieqn = 1,worker%mesh%domain(idomain_l)%neqns
 
                 !
                 ! Get field
                 !
-                !field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
-                eqn_ID = worker%mesh(idomain_l)%eqn_ID
+                eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
                 field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
 
 
@@ -1949,7 +1931,7 @@ contains
             !
             ! Compute lift for each equation
             !
-            do ieqn = 1,worker%mesh(idomain_l)%neqns
+            do ieqn = 1,worker%mesh%domain(idomain_l)%neqns
 
 
                 !
@@ -2087,10 +2069,10 @@ contains
         !
         ! Neighbor element
         !
-        idomain_l_n  = worker%mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
-        ielement_l_n = worker%mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
-        iface_n      = worker%mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_face
-        iproc_n      = worker%mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_proc
+        idomain_l_n  = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
+        ielement_l_n = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
+        iface_n      = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_face
+        iproc_n      = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_proc
 
         local_neighbor  = (iproc_n == IRANK)
         remote_neighbor = (iproc_n /= IRANK)
@@ -2099,28 +2081,27 @@ contains
         !
         ! Get field
         !
-        !field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
-        eqn_ID = worker%mesh(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
         field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
 
 
         if ( local_neighbor ) then
-            weights          = worker%mesh(idomain_l_n)%elems(ielement_l_n)%gq%face%weights(:,iface_n)
-            val_face_trans   = worker%mesh(idomain_l_n)%elems(ielement_l_n)%gq%face%val_trans(:,:,iface_n)
-            val_face         = worker%mesh(idomain_l_n)%elems(ielement_l_n)%gq%face%val(:,:,iface_n)
-            val_vol          = worker%mesh(idomain_l_n)%elems(ielement_l_n)%gq%vol%val
-            invmass          = worker%mesh(idomain_l_n)%elems(ielement_l_n)%invmass
-            br2_face         = worker%mesh(idomain_l_n)%faces(ielement_l_n,iface_n)%br2_face
+            weights          = worker%mesh%domain(idomain_l_n)%elems(ielement_l_n)%gq%face%weights(:,iface_n)
+            val_face_trans   = worker%mesh%domain(idomain_l_n)%elems(ielement_l_n)%gq%face%val_trans(:,:,iface_n)
+            val_face         = worker%mesh%domain(idomain_l_n)%elems(ielement_l_n)%gq%face%val(:,:,iface_n)
+            val_vol          = worker%mesh%domain(idomain_l_n)%elems(ielement_l_n)%gq%vol%val
+            invmass          = worker%mesh%domain(idomain_l_n)%elems(ielement_l_n)%invmass
+            br2_face         = worker%mesh%domain(idomain_l_n)%faces(ielement_l_n,iface_n)%br2_face
 
 
         else if ( remote_neighbor ) then
             ! User local element gq instance. Assumes same order of accuracy.
-            weights          = worker%mesh(idomain_l)%elems(ielement_l)%gq%face%weights(:,iface_n)
-            val_face_trans   = worker%mesh(idomain_l)%elems(ielement_l)%gq%face%val_trans(:,:,iface_n)
-            val_face         = worker%mesh(idomain_l)%elems(ielement_l)%gq%face%val(:,:,iface_n)
-            val_vol          = worker%mesh(idomain_l)%elems(ielement_l)%gq%vol%val
-            invmass          = worker%mesh(idomain_l)%faces(ielement_l,iface)%neighbor_invmass
-            br2_face         = worker%mesh(idomain_l)%faces(ielement_l,iface)%neighbor_br2_face
+            weights          = worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%face%weights(:,iface_n)
+            val_face_trans   = worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%face%val_trans(:,:,iface_n)
+            val_face         = worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%face%val(:,:,iface_n)
+            val_vol          = worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%vol%val
+            invmass          = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%neighbor_invmass
+            br2_face         = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%neighbor_br2_face
 
 
         end if
@@ -2128,9 +2109,9 @@ contains
 
 
             ! Use reverse of interior element's normal vector
-            normx = -worker%mesh(idomain_l)%faces(ielement_l,iface)%norm(:,1)
-            normy = -worker%mesh(idomain_l)%faces(ielement_l,iface)%norm(:,2)
-            normz = -worker%mesh(idomain_l)%faces(ielement_l,iface)%norm(:,3)
+            normx = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,1)
+            normy = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,2)
+            normz = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,3)
 
             ! Get interior/exterior state
             var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
@@ -2252,8 +2233,7 @@ contains
         !
         ! Get field
         !
-        !field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
-        eqn_ID = worker%mesh(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
         field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
 
 
@@ -2261,20 +2241,20 @@ contains
         !
         ! Neighbor element
         !
-        idomain_l_n  = worker%mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
-        ielement_l_n = worker%mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
+        idomain_l_n  = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
+        ielement_l_n = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
 
 
-        associate ( weights          => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%weights(:,iface_n),        &
-                    val_face_trans   => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%val_trans(:,:,iface_n),    &
-                    val_face         => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%val(:,:,iface_n),          &
-                    invmass          => worker%mesh(idomain_l)%elems(ielement_l)%invmass,                           &
-                    br2_face         => worker%mesh(idomain_l)%faces(ielement_l,iface)%br2_face)
+        associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%face%weights(:,iface_n),        &
+                    val_face_trans   => worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%face%val_trans(:,:,iface_n),    &
+                    val_face         => worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%face%val(:,:,iface_n),          &
+                    invmass          => worker%mesh%domain(idomain_l)%elems(ielement_l)%invmass,                           &
+                    br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face)
 
             ! Get normal vector. Use reverse of the normal vector from the interior element since no exterior element exists.
-            normx = -worker%mesh(idomain_l)%faces(ielement_l,iface)%norm(:,1)
-            normy = -worker%mesh(idomain_l)%faces(ielement_l,iface)%norm(:,2)
-            normz = -worker%mesh(idomain_l)%faces(ielement_l,iface)%norm(:,3)
+            normx = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,1)
+            normy = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,2)
+            normz = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,3)
 
             ! Get interior/exterior state
             var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
@@ -2393,8 +2373,7 @@ contains
         !
         ! Get field
         !
-        !field = worker%prop(idomain_l)%get_primary_field_name(ieqn)
-        eqn_ID = worker%mesh(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
         field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
 
         !
@@ -2403,18 +2382,18 @@ contains
         ! there were a reflected element like the receiver element that was acting as 
         ! the donor.
         !
-        associate ( weights          => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%weights(:,iface),        &
-                    val_face_trans   => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%val_trans(:,:,iface),    &
-                    val_face         => worker%mesh(idomain_l)%elems(ielement_l)%gq%face%val(:,:,iface),          &
-                    val_vol          => worker%mesh(idomain_l)%elems(ielement_l)%gq%vol%val,                      &
-                    invmass          => worker%mesh(idomain_l)%elems(ielement_l)%invmass,                         &
-                    br2_face         => worker%mesh(idomain_l)%faces(ielement_l,iface)%br2_face)
+        associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%face%weights(:,iface),        &
+                    val_face_trans   => worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%face%val_trans(:,:,iface),    &
+                    val_face         => worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%face%val(:,:,iface),          &
+                    val_vol          => worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%vol%val,                      &
+                    invmass          => worker%mesh%domain(idomain_l)%elems(ielement_l)%invmass,                         &
+                    br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face)
 
 
             ! Use reversed normal vectors of receiver element
-            normx = -worker%mesh(idomain_l)%faces(ielement_l,iface)%norm(:,1)
-            normy = -worker%mesh(idomain_l)%faces(ielement_l,iface)%norm(:,2)
-            normz = -worker%mesh(idomain_l)%faces(ielement_l,iface)%norm(:,3)
+            normx = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,1)
+            normy = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,2)
+            normz = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,3)
 
             ! Get interior/exterior state
             var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
@@ -2510,13 +2489,13 @@ contains
                 ndepend = 1
                 
             else if ( worker%face_type() == CHIMERA ) then
-                ChiID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%ChiID
-                ndepend = worker%mesh(idomain_l)%chimera%recv%data(ChiID)%ndonors()
+                ChiID   = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ChiID
+                ndepend = worker%mesh%domain(idomain_l)%chimera%recv%data(ChiID)%ndonors()
 
             else if ( worker%face_type() == BOUNDARY ) then
-                bc_ID      = worker%mesh(idomain_l)%faces(ielement_l,iface)%bc_ID
-                patch_ID   = worker%mesh(idomain_l)%faces(ielement_l,iface)%patch_ID
-                patch_face = worker%mesh(idomain_l)%faces(ielement_l,iface)%patch_face
+                bc_ID      = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%bc_ID
+                patch_ID   = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_ID
+                patch_face = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_face
                 ndepend    = bc(bc_ID)%bc_patch(patch_ID)%ncoupled_elements(patch_face)
 
             end if

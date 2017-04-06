@@ -6,7 +6,7 @@ add_test_sources(grid
                 test_element_linearB_mod.pf
                 test_element_linearC_mod.pf
                 test_element_linearD_cylindrical_mod.pf
-                test_mesh_linear_mod.pf
+                test_domain_linear_mod.pf
                 test_mesh_mod.pf
                 test_chidgdata__add_domain.pf
 #                test__grid_operators__mod.pf

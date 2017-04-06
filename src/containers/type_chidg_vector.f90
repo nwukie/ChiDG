@@ -3,7 +3,6 @@ module type_chidg_vector
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: ZERO, TWO
     use mod_chidg_mpi,              only: GROUP_MASTER, ChiDG_COMM, IRANK
-    use type_mesh,                  only: mesh_t
     use type_mesh_new,              only: mesh_new_t
     use type_function,              only: function_t
     use type_chidg_vector_send,     only: chidg_vector_send_t
@@ -135,7 +134,6 @@ contains
     !------------------------------------------------------------------------------------------
     subroutine initialize(self,mesh,ntime)
         class(chidg_vector_t),   intent(inout)   :: self
-        !type(mesh_t),            intent(inout)   :: mesh(:)
         type(mesh_new_t),        intent(inout)   :: mesh
         integer(ik),             intent(in)      :: ntime
 
@@ -199,7 +197,6 @@ contains
     !------------------------------------------------------------------------------------------
     subroutine project(self,mesh,fcn,ivar)
         class(chidg_vector_t),  intent(inout)   :: self
-        !type(mesh_t),           intent(in)      :: mesh(:)
         type(mesh_new_t),       intent(in)      :: mesh
         class(function_t),      intent(inout)   :: fcn
         integer(ik),            intent(in)      :: ivar

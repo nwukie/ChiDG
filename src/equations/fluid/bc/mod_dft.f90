@@ -3,7 +3,7 @@ module mod_dft
     use mod_kinds,      only: ik, rk
     use mod_constants,  only: PI, ZERO, ONE, TWO, DIR_2, &
                               XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
-    use type_mesh,      only: mesh_t
+    use type_domain,    only: domain_t
     use type_point,     only: point_t
     use DNAD_D
     implicit none
@@ -27,9 +27,8 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------
-    !function compute_dft_points(mesh,elems,iface,periodicity) result(points)
-    function compute_dft_points(mesh,elems,faces,periodicity) result(points)
-        type(mesh_t),   intent(in)   :: mesh
+    function compute_dft_points(domain,elems,faces,periodicity) result(points)
+        type(domain_t), intent(in)   :: domain
         integer(ik),    intent(in)   :: elems(:)
         integer(ik),    intent(in)   :: faces(:)
         real(rk),       intent(in)   :: periodicity
@@ -89,7 +88,7 @@ contains
         do ielem_bc = 1,size(elems)
 
             !
-            ! Get element index in block mesh
+            ! Get element index in block domain
             !
             ielem = elems(ielem_bc)
 
@@ -99,7 +98,7 @@ contains
             ! 
             var  = DIR_2    ! y-coordinate index
             mode = 1        ! Coordinate average
-            mean_y_coordinates(ielem_bc) = mesh%elems(ielem)%coords%getterm(var,mode,itime)
+            mean_y_coordinates(ielem_bc) = domain%elems(ielem)%coords%getterm(var,mode,itime)
             mean_y_elements(ielem_bc)    = ielem
 
         end do ! ielem
@@ -120,20 +119,20 @@ contains
 !        !xi   = -ONE ! INLET
 !        xi   = -ONE  ! OUTLET
 !        eta  = -ONE
-!        zeta = mesh%elems(elem_min)%coords%getterm(3,1) ! get mean z-coordinate
+!        zeta = domain%elems(elem_min)%coords%getterm(3,1) ! get mean z-coordinate
 !
-!        min_y = mesh%elems(elem_min)%y(xi,eta,zeta) + 0.0000001_rk
+!        min_y = domain%elems(elem_min)%y(xi,eta,zeta) + 0.0000001_rk
 
 
         if ( (iface == XI_MIN) ) then
-            ylocs(1) = mesh%elems(elem_min)%y(-ONE, ONE,ZERO)
-            ylocs(2) = mesh%elems(elem_min)%y(-ONE,-ONE,ZERO)
+            ylocs(1) = domain%elems(elem_min)%y(-ONE, ONE,ZERO)
+            ylocs(2) = domain%elems(elem_min)%y(-ONE,-ONE,ZERO)
 
-            xlocs(1) = mesh%elems(elem_min)%x(-ONE, ONE,ZERO)
-            xlocs(2) = mesh%elems(elem_min)%x(-ONE,-ONE,ZERO)
+            xlocs(1) = domain%elems(elem_min)%x(-ONE, ONE,ZERO)
+            xlocs(2) = domain%elems(elem_min)%x(-ONE,-ONE,ZERO)
 
-            zlocs(1) = mesh%elems(elem_min)%z(-ONE, ONE,ZERO)
-            zlocs(2) = mesh%elems(elem_min)%z(-ONE,-ONE,ZERO)
+            zlocs(1) = domain%elems(elem_min)%z(-ONE, ONE,ZERO)
+            zlocs(2) = domain%elems(elem_min)%z(-ONE,-ONE,ZERO)
 
             min_y_loc = minloc(ylocs,1)
             min_y     = ylocs(min_y_loc) + 0.000001_rk
@@ -141,14 +140,14 @@ contains
             zloc      = zlocs(min_y_loc)
 
         else if ( (iface == XI_MAX) ) then
-            ylocs(1) = mesh%elems(elem_min)%y(ONE, ONE,ZERO)
-            ylocs(2) = mesh%elems(elem_min)%y(ONE,-ONE,ZERO)
+            ylocs(1) = domain%elems(elem_min)%y(ONE, ONE,ZERO)
+            ylocs(2) = domain%elems(elem_min)%y(ONE,-ONE,ZERO)
 
-            xlocs(1) = mesh%elems(elem_min)%x(ONE, ONE,ZERO)
-            xlocs(2) = mesh%elems(elem_min)%x(ONE,-ONE,ZERO)
+            xlocs(1) = domain%elems(elem_min)%x(ONE, ONE,ZERO)
+            xlocs(2) = domain%elems(elem_min)%x(ONE,-ONE,ZERO)
 
-            zlocs(1) = mesh%elems(elem_min)%z(ONE, ONE,ZERO)
-            zlocs(2) = mesh%elems(elem_min)%z(ONE,-ONE,ZERO)
+            zlocs(1) = domain%elems(elem_min)%z(ONE, ONE,ZERO)
+            zlocs(2) = domain%elems(elem_min)%z(ONE,-ONE,ZERO)
 
 
             min_y_loc = minloc(ylocs,1)
@@ -157,14 +156,14 @@ contains
             zloc      = zlocs(min_y_loc)
 
         else if ( (iface == ETA_MIN) ) then
-            ylocs(1) = mesh%elems(elem_min)%y( ONE,-ONE,ZERO)
-            ylocs(2) = mesh%elems(elem_min)%y(-ONE,-ONE,ZERO)
+            ylocs(1) = domain%elems(elem_min)%y( ONE,-ONE,ZERO)
+            ylocs(2) = domain%elems(elem_min)%y(-ONE,-ONE,ZERO)
 
-            xlocs(1) = mesh%elems(elem_min)%x( ONE,-ONE,ZERO)
-            xlocs(2) = mesh%elems(elem_min)%x(-ONE,-ONE,ZERO)
+            xlocs(1) = domain%elems(elem_min)%x( ONE,-ONE,ZERO)
+            xlocs(2) = domain%elems(elem_min)%x(-ONE,-ONE,ZERO)
 
-            zlocs(1) = mesh%elems(elem_min)%z( ONE,-ONE,ZERO)
-            zlocs(2) = mesh%elems(elem_min)%z(-ONE,-ONE,ZERO)
+            zlocs(1) = domain%elems(elem_min)%z( ONE,-ONE,ZERO)
+            zlocs(2) = domain%elems(elem_min)%z(-ONE,-ONE,ZERO)
 
             min_y_loc = minloc(ylocs,1)
             min_y     = ylocs(min_y_loc) + 0.000001_rk
@@ -172,14 +171,14 @@ contains
             zloc      = zlocs(min_y_loc)
 
         else if ( (iface == ETA_MAX) ) then
-            ylocs(1) = mesh%elems(elem_min)%y( ONE,ONE,ZERO)
-            ylocs(2) = mesh%elems(elem_min)%y(-ONE,ONE,ZERO)
+            ylocs(1) = domain%elems(elem_min)%y( ONE,ONE,ZERO)
+            ylocs(2) = domain%elems(elem_min)%y(-ONE,ONE,ZERO)
 
-            xlocs(1) = mesh%elems(elem_min)%x( ONE,ONE,ZERO)
-            xlocs(2) = mesh%elems(elem_min)%x(-ONE,ONE,ZERO)
+            xlocs(1) = domain%elems(elem_min)%x( ONE,ONE,ZERO)
+            xlocs(2) = domain%elems(elem_min)%x(-ONE,ONE,ZERO)
 
-            zlocs(1) = mesh%elems(elem_min)%z( ONE,ONE,ZERO)
-            zlocs(2) = mesh%elems(elem_min)%z(-ONE,ONE,ZERO)
+            zlocs(1) = domain%elems(elem_min)%z( ONE,ONE,ZERO)
+            zlocs(2) = domain%elems(elem_min)%z(-ONE,ONE,ZERO)
 
             min_y_loc = minloc(ylocs,1)
             min_y     = ylocs(min_y_loc) + 0.000001_rk

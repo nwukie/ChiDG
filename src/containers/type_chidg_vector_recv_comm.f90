@@ -2,7 +2,6 @@ module type_chidg_vector_recv_comm
 #include <messenger.h>
     use mod_kinds,          only: ik
     use mod_constants,      only: INTERIOR, CHIMERA
-    use type_mesh,          only: mesh_t
     use type_mesh_new,      only: mesh_new_t
     use type_ivector,       only: ivector_t
     use type_blockvector,   only: blockvector_t

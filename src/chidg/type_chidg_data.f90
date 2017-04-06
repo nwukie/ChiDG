@@ -8,7 +8,6 @@ module type_chidg_data
 
     ! Primary chidg_data_t components
     use type_domain_info,               only: domain_info_t
-    use type_mesh,                      only: mesh_t
     use type_mesh_new,                  only: mesh_new_t
     use type_bc,                        only: bc_t
     use type_bc_state,                  only: bc_state_t
@@ -51,8 +50,6 @@ module type_chidg_data
 
         
         ! For each domain: info, a mesh, and an equation set
-!        type(domain_info_t),            allocatable :: info(:)     
-!        type(mesh_t),                   allocatable :: mesh(:)     
         type(mesh_new_t)                            :: mesh
 
         ! Boundary conditions are not specified per-domain. 

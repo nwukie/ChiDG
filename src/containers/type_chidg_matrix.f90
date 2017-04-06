@@ -3,7 +3,6 @@ module type_chidg_matrix
     use mod_kinds,              only: rk, ik
     use mod_chidg_mpi,          only: IRANK
     use type_blockmatrix,       only: blockmatrix_t
-    use type_mesh,              only: mesh_t
     use type_mesh_new,          only: mesh_new_t
     use type_face_info,         only: face_info_t
     use type_seed,              only: seed_t
@@ -73,7 +72,6 @@ contains
         class(chidg_matrix_t),   intent(inout)          :: self
         type(mesh_new_t),        intent(in)             :: mesh
         character(*),           intent(in)              :: mtype
-        !type(mesh_t),           intent(in)              :: mesh(:)
         !type(bc_t),             intent(in), optional    :: bc(:)
         !type(bcset_coupling_t), intent(in), optional    :: bcset_coupling(:)
 

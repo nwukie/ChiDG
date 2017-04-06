@@ -670,7 +670,7 @@ contains
         logical,                    intent(in)      :: differentiate
 
         integer(ik)                 :: idepend, ieqn, idomain_l, ielement_l, iface, ndepend, &
-                                       istate, bc_ID, patch_ID, patch_face, eqn_ID
+                                       istate, bc_ID, patch_ID, face_ID, eqn_ID
         character(:),   allocatable :: field
 
 
@@ -684,9 +684,9 @@ contains
         !
         if ( (worker%face_type() == BOUNDARY)  ) then
             
-            bc_ID      = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%bc_ID
-            patch_ID   = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_ID
-            patch_face = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_face
+            bc_ID    = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%bc_ID
+            patch_ID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_ID
+            face_ID  = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%face_ID
 
             ndepend = get_ndepend_exterior(worker,equation_set,bc,differentiate)
             do istate = 1,size(bc(bc_ID)%bc_state)
@@ -694,11 +694,11 @@ contains
 
                     ! Get coupled bc element to linearize against.
                     if (differentiate) then
-                        worker%function_info%seed%idomain_g  = bc(bc_ID)%bc_patch(patch_ID)%idomain_g_coupled(patch_face)%at(idepend)
-                        worker%function_info%seed%idomain_l  = bc(bc_ID)%bc_patch(patch_ID)%idomain_l_coupled(patch_face)%at(idepend)
-                        worker%function_info%seed%ielement_g = bc(bc_ID)%bc_patch(patch_ID)%ielement_g_coupled(patch_face)%at(idepend)
-                        worker%function_info%seed%ielement_l = bc(bc_ID)%bc_patch(patch_ID)%ielement_l_coupled(patch_face)%at(idepend)
-                        worker%function_info%seed%iproc      = bc(bc_ID)%bc_patch(patch_ID)%proc_coupled(patch_face)%at(idepend)
+                        worker%function_info%seed%idomain_g  = bc(bc_ID)%bc_patch(patch_ID)%idomain_g_coupled(face_ID)%at(idepend)
+                        worker%function_info%seed%idomain_l  = bc(bc_ID)%bc_patch(patch_ID)%idomain_l_coupled(face_ID)%at(idepend)
+                        worker%function_info%seed%ielement_g = bc(bc_ID)%bc_patch(patch_ID)%ielement_g_coupled(face_ID)%at(idepend)
+                        worker%function_info%seed%ielement_l = bc(bc_ID)%bc_patch(patch_ID)%ielement_l_coupled(face_ID)%at(idepend)
+                        worker%function_info%seed%iproc      = bc(bc_ID)%bc_patch(patch_ID)%proc_coupled(face_ID)%at(idepend)
                     else
                         worker%function_info%seed%idomain_g  = 0
                         worker%function_info%seed%idomain_l  = 0
@@ -1410,7 +1410,7 @@ contains
         character(*),               intent(in)      :: model_type
 
         integer(ik)                 :: idepend, imodel, idomain_l, ielement_l, iface, &
-                                       bc_ID, patch_ID, patch_face, ndepend, idiff, eqn_ID
+                                       bc_ID, patch_ID, face_ID, ndepend, idiff, eqn_ID
         character(:),   allocatable :: field, model_dependency
         logical                     :: selected_model
 
@@ -1527,7 +1527,7 @@ contains
         character(*),               intent(in)      :: model_type
 
         integer(ik)                 :: idepend, ieqn, idomain_l, ielement_l, iface, ndepend, &
-                                       istate, bc_ID, patch_ID, patch_face, imodel, eqn_ID
+                                       istate, bc_ID, patch_ID, face_ID, imodel, eqn_ID
         character(:),   allocatable :: field, model_dependency
         logical                     :: selected_model
 
@@ -1550,9 +1550,9 @@ contains
             !
             ndepend = get_ndepend_exterior(worker,equation_set,bc,differentiate)
 
-            bc_ID      = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%bc_ID
-            patch_ID   = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_ID
-            patch_face = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_face
+            bc_ID    = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%bc_ID
+            patch_ID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_ID
+            face_ID  = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%face_ID
 
             !do imodel = 1,equation_set(idomain_l)%nmodels()
             do imodel = 1,equation_set(eqn_ID)%nmodels()
@@ -1569,11 +1569,11 @@ contains
 
                         if (differentiate) then
                             ! Get coupled bc element to differentiate wrt
-                            worker%function_info%seed%idomain_g  = bc(bc_ID)%bc_patch(patch_ID)%idomain_g_coupled(patch_face)%at(idepend)
-                            worker%function_info%seed%idomain_l  = bc(bc_ID)%bc_patch(patch_ID)%idomain_l_coupled(patch_face)%at(idepend)
-                            worker%function_info%seed%ielement_g = bc(bc_ID)%bc_patch(patch_ID)%ielement_g_coupled(patch_face)%at(idepend)
-                            worker%function_info%seed%ielement_l = bc(bc_ID)%bc_patch(patch_ID)%ielement_l_coupled(patch_face)%at(idepend)
-                            worker%function_info%seed%iproc      = bc(bc_ID)%bc_patch(patch_ID)%proc_coupled(patch_face)%at(idepend)
+                            worker%function_info%seed%idomain_g  = bc(bc_ID)%bc_patch(patch_ID)%idomain_g_coupled(face_ID)%at(idepend)
+                            worker%function_info%seed%idomain_l  = bc(bc_ID)%bc_patch(patch_ID)%idomain_l_coupled(face_ID)%at(idepend)
+                            worker%function_info%seed%ielement_g = bc(bc_ID)%bc_patch(patch_ID)%ielement_g_coupled(face_ID)%at(idepend)
+                            worker%function_info%seed%ielement_l = bc(bc_ID)%bc_patch(patch_ID)%ielement_l_coupled(face_ID)%at(idepend)
+                            worker%function_info%seed%iproc      = bc(bc_ID)%bc_patch(patch_ID)%proc_coupled(face_ID)%at(idepend)
 
                         else
                             ! Set no differentiation
@@ -2473,7 +2473,7 @@ contains
         logical,                    intent(in)      :: differentiate
 
         integer(ik) :: ndepend, idomain_l, ielement_l, iface, &
-                       ChiID, BC_ID, patch_ID, patch_face
+                       ChiID, BC_ID, patch_ID, face_ID
 
 
         if (differentiate) then
@@ -2493,10 +2493,10 @@ contains
                 ndepend = worker%mesh%domain(idomain_l)%chimera%recv%data(ChiID)%ndonors()
 
             else if ( worker%face_type() == BOUNDARY ) then
-                bc_ID      = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%bc_ID
-                patch_ID   = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_ID
-                patch_face = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_face
-                ndepend    = bc(bc_ID)%bc_patch(patch_ID)%ncoupled_elements(patch_face)
+                bc_ID    = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%bc_ID
+                patch_ID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_ID
+                face_ID  = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%face_ID
+                ndepend  = bc(bc_ID)%bc_patch(patch_ID)%ncoupled_elements(face_ID)
 
             end if
 

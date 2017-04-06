@@ -33,6 +33,8 @@ module type_bc_state
         character(:),   allocatable :: name
         character(:),   allocatable :: family
 
+        integer(ik) :: patch_ID
+
         ! Boundary condition options
         type(bcproperty_set_t)      :: bcproperties
 

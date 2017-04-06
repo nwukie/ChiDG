@@ -1026,7 +1026,7 @@ contains
 
         integer(ik),    allocatable :: compute_pattern(:)
         integer(ik)                 :: nfcn, ifcn, icompute, ncompute, bc_ID, patch_ID, &
-                                       patch_face, idiff, ipattern
+                                       face_ID, idiff, ipattern
         logical                     :: boundary_face, compute
 
         associate( mesh  => worker%mesh,                    &
@@ -1076,9 +1076,9 @@ contains
                 !
                 ! Get index of boundary condition, patch, patch face. 
                 !
-                bc_ID      = mesh%domain(idom)%faces(ielem,iface)%bc_ID
-                patch_ID   = mesh%domain(idom)%faces(ielem,iface)%patch_ID
-                patch_face = mesh%domain(idom)%faces(ielem,iface)%patch_face
+                bc_ID    = mesh%domain(idom)%faces(ielem,iface)%bc_ID
+                patch_ID = mesh%domain(idom)%faces(ielem,iface)%patch_ID
+                face_ID  = mesh%domain(idom)%faces(ielem,iface)%face_ID
 
 
                 if (allocated(self%bc_operator)) then
@@ -1101,12 +1101,11 @@ contains
                             !
                             ! Get coupled element to linearize against.
                             !
-                            !ielement_c = bc(idom)%bcs(BC_ID)%bc_patch%coupled_elements(BC_face)%at(icompute)
-                            worker%function_info%seed%idomain_g  = bc(bc_ID)%bc_patch(patch_ID)%idomain_g_coupled(patch_face)%at(icompute)
-                            worker%function_info%seed%idomain_l  = bc(bc_ID)%bc_patch(patch_ID)%idomain_l_coupled(patch_face)%at(icompute)
-                            worker%function_info%seed%ielement_g = bc(bc_ID)%bc_patch(patch_ID)%ielement_g_coupled(patch_face)%at(icompute)
-                            worker%function_info%seed%ielement_l = bc(bc_ID)%bc_patch(patch_ID)%ielement_l_coupled(patch_face)%at(icompute)
-                            worker%function_info%seed%iproc      = bc(bc_ID)%bc_patch(patch_ID)%proc_coupled(patch_face)%at(icompute)
+                            worker%function_info%seed%idomain_g  = bc(bc_ID)%bc_patch(patch_ID)%idomain_g_coupled(face_ID)%at(icompute)
+                            worker%function_info%seed%idomain_l  = bc(bc_ID)%bc_patch(patch_ID)%idomain_l_coupled(face_ID)%at(icompute)
+                            worker%function_info%seed%ielement_g = bc(bc_ID)%bc_patch(patch_ID)%ielement_g_coupled(face_ID)%at(icompute)
+                            worker%function_info%seed%ielement_l = bc(bc_ID)%bc_patch(patch_ID)%ielement_l_coupled(face_ID)%at(icompute)
+                            worker%function_info%seed%iproc      = bc(bc_ID)%bc_patch(patch_ID)%proc_coupled(face_ID)%at(icompute)
                             worker%function_info%idepend         = icompute
 
                             call self%bc_operator(ifcn)%op%compute(worker,prop)

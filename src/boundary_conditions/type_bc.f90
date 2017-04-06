@@ -230,7 +230,7 @@ contains
         integer(ik)                 :: nelem_xi, nelem_eta, nelem_zeta, nelem_bc, ielem_bc,         & 
                                        xi_begin, eta_begin, zeta_begin, xi_end, eta_end, zeta_end,  & 
                                        ixi, ieta, izeta, ierr, ielem, ielem_test, nface_nodes,      &
-                                       iface, inode, i, nfaces_bc, iface_bc, patch_face, patch_ID,  &
+                                       iface, inode, i, nfaces_bc, iface_bc, face_ID, patch_ID,     &
                                        ncoupled_elements, try_face, nterms_1d, mapping
 
         logical,        allocatable :: node_matched(:), xi_face, eta_face, zeta_face
@@ -383,9 +383,9 @@ contains
 
 
                     !
-                    ! Add domain, element, face index. Get patch_face, index of where the face exists in the bc_patch
+                    ! Add domain, element, face index. Get face_ID, index of where the face exists in the bc_patch
                     !
-                    patch_face = self%bc_patch(patch_ID)%add_face(domain%elems(ielem)%idomain_g,     &
+                    face_ID = self%bc_patch(patch_ID)%add_face(domain%elems(ielem)%idomain_g,     &
                                                                   domain%elems(ielem)%idomain_l,     &
                                                                   domain%elems(ielem)%ielement_g,    &
                                                                   domain%elems(ielem)%ielement_l,    &
@@ -393,11 +393,11 @@ contains
 
 
                     !
-                    ! Inform domain face about bc_ID it is associated with, patch_ID it belongs to, and the location, patch_face, in the bc_patch.
+                    ! Inform domain face about bc_ID it is associated with, patch_ID it belongs to, and the location, face_ID, in the bc_patch.
                     !
-                    domain%faces(ielem,iface)%bc_ID      = self%bc_ID
-                    domain%faces(ielem,iface)%patch_ID   = patch_ID
-                    domain%faces(ielem,iface)%patch_face = patch_face
+                    domain%faces(ielem,iface)%bc_ID    = self%bc_ID
+                    domain%faces(ielem,iface)%patch_ID = patch_ID
+                    domain%faces(ielem,iface)%face_ID  = face_ID
 
 
 

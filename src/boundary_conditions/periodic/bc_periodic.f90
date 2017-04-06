@@ -3,6 +3,8 @@ module bc_periodic
     use type_bc_state,      only: bc_state_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
+    use type_mesh,          only: mesh_t
+    use type_point,         only: point_t
     implicit none
 
 
@@ -67,6 +69,68 @@ contains
 
     end subroutine init
     !********************************************************************************
+
+
+
+
+
+
+
+
+    !>  Set periodic offset data on the mesh.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/6/2017
+    !!
+    !---------------------------------------------------------------------------------
+    subroutine init_bc_specialized(self,mesh)
+        class(periodic_t),  intent(in)  :: self
+        type(mesh_t),       intent(in)  :: mesh
+
+        integer(ik)     :: ipatch, ipatch_face, idom, ielem, iface
+        real(rk)        :: time
+        type(point_t)   :: pnt
+
+!        !
+!        ! Loop over patches and set periodic offset parameters.
+!        !
+!        do ipatch = 1,mesh%bc_patch_group(self%group_ID)%npatches()
+!            do ipatch_face = 1,mesh%bc_patch_group(self%group_ID)%patch(ipatch)%nfaces()
+!
+!                !
+!                ! Get geometry locator
+!                !
+!                idom  = mesh%bc_patch_group(self%group_ID)%patch(ipatch)%idomain_l(ipatch_face)
+!                ielem = mesh%bc_patch_group(self%group_ID)%patch(ipatch)%ielement_l(ipatch_face)
+!                iface = mesh%bc_patch_group(self%group_ID)%patch(ipatch)%iface(ipatch_face)
+!
+!
+!                !
+!                ! Set face type to ORPHAN face so it will be recognized as chimera
+!                !
+!                mesh%domain(idom)%faces(ielem,iface)%ftype = ORPHAN
+!
+!
+!                !
+!                ! time, pnt do nothing here, but interface for function requires them.
+!                !
+!                mesh%domain(idom)%faces(ielem,iface)%periodic_offset  = .true.
+!                mesh%domain(idom)%faces(ielem,iface)%chimera_offset_1 = self%state%bcproperties%compute('Offset-1',time,pnt)
+!                mesh%domain(idom)%faces(ielem,iface)%chimera_offset_2 = self%state%bcproperties%compute('Offset-2',time,pnt)
+!                mesh%domain(idom)%faces(ielem,iface)%chimera_offset_3 = self%state%bcproperties%compute('Offset-3',time,pnt)
+!
+!
+!            end do !ipatch_face
+!        end do !ipatch
+
+
+
+    end subroutine init_bc_specialized
+    !**********************************************************************************
+
+
+
+
 
 
 

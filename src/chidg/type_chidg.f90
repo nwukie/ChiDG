@@ -301,10 +301,15 @@ contains
             ! Call all initialization routines.
             !
             case ('all')
+                ! geometry
                 call self%init('domains')
                 call self%init('bc')
+
+                ! communication
                 call self%init('communication')
                 call self%init('chimera')
+
+                ! matrix/vector
                 call self%init('solvers')
                 call self%init('finalize')
 
@@ -544,10 +549,22 @@ contains
     !!  @date   2/1/2016
     !!
     !!  @param[in]  gridfile        String containing a grid file name, including extension.
-    !!  @param[in]  spacedim        Number of spatial dimensions
-    !!  @param[in]  equation_set    Optionally, specify the equation set to be initialized 
-    !!                              instead of
     !!
+    !!  @param[in]  equation_set    Optionally, override the equation set for all domains
+    !!  @param[in]  spacedim        Optionally, set number of spatial dimensions
+    !!  
+    !!  @param[in]  bc_wall         Optionally, override wall boundary functions
+    !!  @param[in]  bc_inlet        Optionally, override inlet boundary functions
+    !!  @param[in]  bc_outlet       Optionally, override outlet boundary functions
+    !!  @param[in]  bc_symmetry     Optionally, override symmetry boundary functions
+    !!  @param[in]  bc_farfield     Optionally, override farfield boundary functions
+    !!  @param[in]  bc_periodic     Optionally, override periodic boundary functions
+    !!
+    !!  An example where overriding boundary condition is useful is computing wall distance
+    !!  for a RANS calculation. First a PDE is solved using a poisson-like equation for 
+    !!  wall distance and the boundary functions on walls get overridden from RANS
+    !!  boundary functions to be scalar dirichlet boundary conditions. All other 
+    !!  boundar functions are overridden with neumann boundary conditions.
     !!
     !------------------------------------------------------------------------------------------
     subroutine read_grid(self,gridfile,spacedim,equation_set, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield, bc_periodic)
@@ -778,7 +795,7 @@ contains
 
 
         !
-        ! Add all boundary condition groups
+        ! Add all boundary condition state groups
         !
         call write_line('   processing groups...', ltrim=.false., io_proc=GLOBAL_MASTER)
         do ibc = 1,size(bc_groups)
@@ -793,8 +810,9 @@ contains
         end do !ibc
 
 
+
         !
-        ! Add boundary condition patches
+        ! Add boundary condition patch groups
         !
         call write_line('   processing patches...', ltrim=.false., io_proc=GLOBAL_MASTER)
         ndomains = size(bc_patch_data)
@@ -805,6 +823,10 @@ contains
                 call self%data%add_bc_patch(bc_patch_data(idom)%domain_name,            &
                                             bc_group_name%get(),                        &
                                             bc_patch_data(idom)%bc_connectivity(iface))
+
+                call self%data%mesh%add_bc_patch(bc_patch_data(idom)%domain_name,       &
+                                                 bc_group_name%get(),                        &
+                                                 bc_patch_data(idom)%bc_connectivity(iface))
 
             end do !iface
         end do !ipatch

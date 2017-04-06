@@ -2,7 +2,6 @@ module type_chidg_data
 #include <messenger.h>
     use mod_kinds,                      only: rk,ik
     use type_point,                     only: point_t
-    use type_dict,                      only: dict_t
     use type_domain_connectivity,       only: domain_connectivity_t
     use type_boundary_connectivity,     only: boundary_connectivity_t
 
@@ -10,8 +9,8 @@ module type_chidg_data
     use type_mesh,                      only: mesh_t
     use type_bc,                        only: bc_t
     use type_bc_state,                  only: bc_state_t
+    use type_bc_state_group,            only: bc_state_group_t
     use type_bc_group,                  only: bc_group_t
-    use type_bcvector,                  only: bcvector_t
     use type_svector,                   only: svector_t
     use mod_string,                     only: string_t
     use type_equation_set,              only: equation_set_t
@@ -52,6 +51,7 @@ module type_chidg_data
 
         ! bc's and equation set's
         type(bc_t),                     allocatable :: bc(:)    
+        type(bc_state_group_t),         allocatable :: bc_state_group(:)
         type(equation_set_t),           allocatable :: eqnset(:)
 
         ! An object containing chidg matrices/vectors
@@ -285,19 +285,18 @@ contains
         end do
 
 
-
-
         !
         ! Once bc is found, initialize bc_patch on bc
         !
         if (found_bc) then
             
             !
-            ! Find domain index in mesh(:) from domain_name
+            ! Find domain index in mesh from domain_name
             !
             idom = self%get_domain_index(domain_name)
 
             call self%bc(bc_ID)%init_bc_patch(self%mesh%domain(idom), bc_connectivity)
+
 
         else
 
@@ -665,24 +664,25 @@ contains
         class(chidg_data_t),    intent(in)      :: self
         character(*),           intent(in)      :: domain_name
 
-        character(:),   allocatable :: user_msg
-        integer(ik)  :: idom
+!        character(:),   allocatable :: user_msg
+!        integer(ik)  :: idom
         integer(ik)  :: domain_index
         
-        domain_index = 0
-
-        do idom = 1,self%mesh%ndomains()
-            !if ( trim(domain_name) == trim(self%info(idom)%name) ) then
-            if ( trim(domain_name) == trim(self%mesh%domain(idom)%name) ) then
-                domain_index = idom
-                exit
-            end if
-        end do
-
-
-        user_msg = "chidg_data%get_domain_index: No domain was found that had a name &
-                    that matched the incoming string"
-        if (domain_index == 0) call chidg_signal_one(FATAL,user_msg,domain_name)
+!        domain_index = 0
+!
+!        do idom = 1,self%mesh%ndomains()
+!            !if ( trim(domain_name) == trim(self%info(idom)%name) ) then
+!            if ( trim(domain_name) == trim(self%mesh%domain(idom)%name) ) then
+!                domain_index = idom
+!                exit
+!            end if
+!        end do
+!
+!
+!        user_msg = "chidg_data%get_domain_index: No domain was found that had a name &
+!                    that matched the incoming string"
+!        if (domain_index == 0) call chidg_signal_one(FATAL,user_msg,domain_name)
+        domain_index = self%mesh%get_domain_id(domain_name)
 
     end function get_domain_index
     !****************************************************************************************

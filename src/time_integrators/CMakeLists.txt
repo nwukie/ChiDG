@@ -1,6 +1,6 @@
 add_subdirectory(steady)
 add_subdirectory(forward_euler)                
-#add_subdirectory(backward_euler)
+add_subdirectory(backward_euler)
 add_subdirectory(runge_kutta_methods)
 add_subdirectory(harmonic_balance)
 

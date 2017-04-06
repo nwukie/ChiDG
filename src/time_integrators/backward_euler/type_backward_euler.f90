@@ -1,42 +1,61 @@
 module type_backward_euler
-    use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE, TWO, DIAG, XI_MIN, XI_MAX
-    use type_time_integrator,   only: time_integrator_t
-    use type_chidg_data,        only: chidg_data_t
-    use type_nonlinear_solver,  only: nonlinear_solver_t
-    use type_linear_solver,     only: linear_solver_t
-    use type_preconditioner,    only: preconditioner_t
-    use type_chidg_vector
+#include <messenger.h>
+    use messenger,                      only: write_line
+    use mod_kinds,                      only: rk,ik
+    use mod_constants,                  only: ONE
+    use mod_spatial,                    only: update_space
 
-    use mod_spatial,            only: update_space
+    use type_time_integrator_marching,  only: time_integrator_marching_t
+    use type_system_assembler,          only: system_assembler_t
 
-    use mod_tecio,              only: write_tecio_variables_unstructured
+    use type_chidg_data,                only: chidg_data_t
+    use type_nonlinear_solver,          only: nonlinear_solver_t
+    use type_linear_solver,             only: linear_solver_t
+    use type_preconditioner,            only: preconditioner_t
+    use type_chidg_vector,              only: chidg_vector_t, sub_chidg_vector_chidg_vector
+
     implicit none
     private
 
 
 
-    !>  Solution advancement via the backward-euler method
+    !>  Object implementing the backward Euler time integrator
     !!
-    !!  @author Nathan A. Wukie
+    !!  @author Mayank Sharma
+    !!  @date   3/31/2017
     !!
-    !----------------------------------------------------------------------------------
-    type, extends(time_integrator_t), public :: backward_euler_t
+    !------------------------------------------------------------------------------------------------
+    type, extends(time_integrator_marching_t),  public  :: backward_euler_t
+
 
     contains
-    
-        procedure   :: iterate
-        final       :: destructor
+
+        procedure   :: init
+        procedure   :: step
+
 
     end type backward_euler_t
-    !----------------------------------------------------------------------------------
+    !************************************************************************************************
 
 
 
+    !>  Object for assembling the implicit system
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/31/2017
+    !!
+    !------------------------------------------------------------------------------------------------
+    type, extends(system_assembler_t),  public  :: assemble_backward_euler_t
+
+        type(chidg_vector_t)    :: q_n
+
+    contains
+
+        procedure   :: assemble
 
 
-
-
+    end type assemble_backward_euler_t
+    !************************************************************************************************
 
 
 
@@ -44,292 +63,214 @@ contains
 
 
 
+    !>  Initialize the backward_euler_t time integrator
+    !!
+    !!  Create the assembler and attach it to the time_integrator object so it can
+    !!  be passed to the nonlinear solver
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/31/2017
+    !!
+    !------------------------------------------------------------------------------------------------
+    subroutine init(self,data)
+        class(backward_euler_t),    intent(inout)   :: self
+        type(chidg_data_t),         intent(in)      :: data
+
+        integer(ik)                     :: ierr
+        type(assemble_backward_euler_t) :: assemble_backward_euler
 
 
-    !> Solve for update 'dq'
+        if (allocated(self%system)) deallocate(self%system)
+        allocate(self%system, source=assemble_backward_euler, stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+    end subroutine init
+    !************************************************************************************************
+
+
+
+    !>  Solution advancement via the backward Euler method
     !!
+    !!  Given the system of partial differential equations consisting of the time-derivative of the
+    !!  the solution vector and a spatial residual as
     !!
+    !!  \f$ M \frac{\partial Q}{\partial t} + R(Q) = 0 \f$
     !!
+    !!  the time derivative is discretized with a bacward difference 
     !!
+    !!  \f$ M \frac{Q^{n + 1} - Q^{n}}{\Delta t} + R(Q^{n + 1}) = 0 \f$
     !!
-    !-----------------------------------------------------------------------------------------
-    subroutine iterate(self,data,nonlinear_solver,linear_solver,preconditioner)
+    !!  which yields a nonlinear equation
+    !!
+    !!  \f$  \frac{\Delta Q}{\Delta t}M + R(Q^{n + 1}) = 0 \f$
+    !!
+    !!  which results in the Newton iteration
+    !!
+    !!  \f$ \left(\frac{M}{\Delta t} + \frac{\partial R(Q^{m})}{\partial Q}\right) \delta Q^{m} = 
+    !!      -\frac{M}{\Delta t}\Delta Q^{m} - R(Q^{m}) \f$
+    !!  \f$ Q^{m} = Q^{n} + \Delta Q^{m} \f$
+    !!
+    !!  where \f$ \delta Q^{m} = \Delta Q^{m + 1} -  \Delta Q^{m} \f$ for the mth Newton iteration
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/31/2017
+    !!
+    !------------------------------------------------------------------------------------------------
+    subroutine step(self,data,nonlinear_solver,linear_solver,preconditioner)
         class(backward_euler_t),                intent(inout)   :: self
         type(chidg_data_t),                     intent(inout)   :: data
         class(nonlinear_solver_t),  optional,   intent(inout)   :: nonlinear_solver
-        class(linear_solver_t),     optional,   intent(inout)   :: linear_solver 
+        class(linear_solver_t),     optional,   intent(inout)   :: linear_solver
         class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
 
-        character(100)          :: filename
-        integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex, &
-                                   ninner, iinner, ieqn, idom
-        integer(ik)             :: rstart, rend, cstart, cend, nterms
-        real(rk)                :: resid, rnorm_0, rnorm_n
-        real                    :: tstart, tstop, telapsed
-        real(rk), allocatable   :: vals(:)
-        type(chidg_vector_t)     :: b, qn, qold, qnew, dtau
-      
+        class(*),   allocatable     :: assemble_type
 
 
-        tstart = 0.
-        tstop = 0.
-        telapsed = 0.
+        select type(associate_name => self%system)
+            type is (assemble_backward_euler_t)
 
-        print*, 'hi - 1'
+                !
+                ! Store solution at nth time step to a separate vector
+                !
+                associate_name%q_n = data%sdata%q
+                
 
-        wcount = 1
-        ninner = 10
-        associate ( q => data%sdata%q, dq => data%sdata%dq, rhs => data%sdata%rhs, lhs => data%sdata%lhs, dt => data%time_manager%dt)
+        end select
+
 
         !
-        ! TIME STEP LOOP
+        ! Solve assembled nonlinear system, the nonlinear update is the step in time
+        ! System assembled in subroutine assemble
         !
-        print*, 'hi - 2'
-        do itime = 1,data%ntime()
-            print*, "Step: ", itime
+        call nonlinear_solver%solve(data,self%system,linear_solver,preconditioner)
 
-        print*, 'hi - 3'
-            if (itime == 1) then
-                write(filename, "(I7,A4)") 1000000, '.plt'
-                call write_tecio_variables_unstructured(data,trim(filename),1)
-            end if
-
-        print*, 'hi - 4'
-            !
-            ! Store the value of the current inner iteration solution (k) for the solution update (n+1), q_(n+1)_k
-            !
-            qold = q
+        !
+        ! Store end residual from nonlinear solver
+        !
+        call self%residual_norm%push_back(nonlinear_solver%residual_norm%at(nonlinear_solver%residual_norm%size()))
 
 
-        print*, 'hi - 5'
-            !
-            ! Write lhs and rhs to file
-            !
-            open(unit=16, file="Q0.txt")
-
-        print*, 'hi - 6'
-            write(16,*) "double Q0(100) = { "
-            do idom = 1,data%ndomains()
-                do ielem = 1,data%mesh(idom)%nelem
-                    write(16,*) q%dom(idom)%vecs(ielem)%vec(1)
-                end do
-            end do
-
-            write(16,*) " } "
-            close(16)
+    end subroutine step
+    !************************************************************************************************
 
 
 
+    !>  Assemble the system for the backward Euler equations with temporal contributions
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/31/2017
+    !!
+    !!  \f$ lhs = \frac{\partial R(Q)}{\partial Q} \f$
+    !!  \f$ rhs = R(Q) \f$
+    !!  \f$ M   = element mass matrix \f$
+    !!
+    !!  For system assembly with temporal contributions
+    !!
+    !!  \f$ lhs = \frac{M}{dt} + lhs \f$
+    !!  \f$ rhs = \frac{M}{dt}*dq + rhs \f$
+    !!
+    !------------------------------------------------------------------------------------------------
+    subroutine assemble(self,data,timing,differentiate)
+        class(assemble_backward_euler_t),   intent(inout)               :: self
+        type(chidg_data_t),                 intent(inout)               :: data
+        real(rk),                           intent(inout),  optional    :: timing
+        logical,                            intent(in),     optional    :: differentiate
 
-        print*, 'hi - 7'
+        integer(ik)                 :: ntime, itime, idom, ielem, ivar, imat, ierr, &
+                                       nterms, rstart, rend, cstart, cend
+        real(rk)                    :: dt
+        type(chidg_vector_t)        :: delta_q
+        real(rk),   allocatable     :: temp_1(:), temp_2(:)
 
 
+        !
+        ! Get spatial update
+        !
+        call update_space(data,timing,differentiate)
 
 
-
-
-
-
-            !
-            ! Update Spatial Residual and Linearization (rhs, lin)
-            !
-            call update_space(data)
-
-
-        print*, 'hi - 8'
+        associate ( q   => data%sdata%q,   &
+                    dq  => data%sdata%dq,  &
+                    lhs => data%sdata%lhs, &
+                    rhs => data%sdata%rhs)
 
             !
-            ! Compute residual of nonlinear iteration
+            ! Get no. of time levels ( = 1 for time marching) and time step
             !
-            resid = rhs%norm()
-
-            print*, "||R||: ", resid
-
-
-        print*, 'hi - 9'
-
-            !
-            ! Add mass/dt to sub-block diagonal in dR/dQ
-            !
-            do idom = 1,data%ndomains()
-                do ielem = 1,data%mesh(idom)%nelem
-                    nterms = data%mesh(idom)%nterms_s
-                    do ieqn = 1,data%eqnset(idom)%prop%nprimary_fields()
-                        iblk = DIAG
-                        ! Need to compute row and column extends in diagonal so we can
-                        ! selectively apply the mass matrix to the sub-block diagonal
-                        rstart = 1 + (ieqn-1) * nterms
-                        rend   = (rstart-1) + nterms
-                        cstart = rstart                 ! since it is square
-                        cend   = rend                   ! since it is square
-                   
-                        if (allocated(lhs%dom(idom)%lblks(ielem,iblk)%mat)) then
-                            ! Add mass matrix divided by dt to the block diagonal
-                            lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  =  lhs%dom(idom)%lblks(ielem,iblk)%mat(rstart:rend,cstart:cend)  +   data%mesh(idom)%elems(ielem)%mass/data%time_manager%dt
-                        end if
-
-                    end do
-                end do
-            end do
-
-        print*, 'hi - 10'
-            !
-            ! Assign rhs to b, which should allocate storage
-            !
-            b = (-ONE)*rhs
-
-            !
-            ! Write lhs and rhs to file
-            !
-            open(unit=11, file="LHS_diagonal.txt")
-            open(unit=12, file="LHS_lower.txt")
-            open(unit=13, file="LHS_upper.txt")
-            open(unit=14, file="RHS.txt")
-
-            write(11,*) "double LHS_diagonal(100) = { "
-            write(12,*) "double LHS_lower(99) = { "
-            write(13,*) "double LHS_upper(99) = { "
-            write(14,*) "double RHS(100) = { "
-            do idom = 1,data%ndomains()
-                do ielem = 1,data%mesh(idom)%nelem
-                   
-                    if (allocated(lhs%dom(idom)%lblks(ielem,DIAG)%mat)) then
-                        write(11,*) lhs%dom(idom)%lblks(ielem,DIAG)%mat(1,1)
-                    end if
-
-                    if (allocated(lhs%dom(idom)%lblks(ielem,XI_MIN)%mat)) then
-                        write(12,*) lhs%dom(idom)%lblks(ielem,XI_MIN)%mat(1,1)
-                    end if
-
-                    if (allocated(lhs%dom(idom)%lblks(ielem,XI_MAX)%mat)) then
-                        write(13,*) lhs%dom(idom)%lblks(ielem,XI_MAX)%mat(1,1)
-                    end if
-
-                    write(14,*) b%dom(idom)%vecs(ielem)%vec(1)
-
-                end do
-            end do
-
-            write(11,*) " } "
-            write(12,*) " } "
-            write(13,*) " } "
-            write(14,*) " } "
-            close(11)
-            close(12)
-            close(13)
-            close(14)
-
-
-
-        print*, 'hi - 11'
-
-
-
-            !
-            ! Solve the matrix system Ax=b for the update vector x (dq)
-            !
-            call linear_solver%solve(lhs,dq,b,preconditioner)
-
-
-
-
-
-            !
-            ! Write lhs and rhs to file
-            !
-            open(unit=15, file="DQ.txt")
-
-            write(15,*) "double DQ(100) = { "
-            do idom = 1,data%ndomains()
-                do ielem = 1,data%mesh(idom)%nelem
-                   
-                    write(15,*) dq%dom(idom)%vecs(ielem)%vec(1)
-
-                end do
-            end do
-
-            write(15,*) " } "
-            close(15)
-
-
-
-        print*, 'hi - 12'
-
-
-
-
-
-
-
-
-
-
-
-            !
-            ! Advance solution with update vector
-            !
-            qnew = qold + dq
-
-
-            !
-            ! Compute residual of nonlinear iteration
-            !
-            resid = dq%norm()
-
-        print*, 'hi - 13'
-
-            ! Clear working storage
-            call rhs%clear()
-            call dq%clear()
-            call lhs%clear()
+            ntime = data%time_manager%ntime
+            dt    = data%time_manager%dt
 
             
+            !
+            ! Compute \f$ q^{m} - q^{n} \f$
+            ! Used to assemble rhs
+            !
+            delta_q = sub_chidg_vector_chidg_vector(q,self%q_n)
 
 
-            ! Store updated solution vector (qnew) to working solution vector (q)
-            q = qnew
+            do itime = 1,ntime
+                do idom = 1,data%mesh%ndomains()
 
+                    !
+                    ! Allocate temporary arrays 
+                    !
+                    if (allocated(temp_1) .and. allocated(temp_2)) deallocate(temp_1,temp_2)
+                    allocate(temp_1(data%mesh%domain(idom)%nterms_s), temp_2(data%mesh%domain(idom)%nterms_s), stat=ierr)
+                    if (ierr /= 0) call AllocationError
 
-        print*, 'hi - 14'
-            call cpu_time(tstop)
-            telapsed = tstop - tstart
-            print*, "   Iteration time (s): ", telapsed
-            print*, "   DQ - Norm: ", resid
+                    do ielem = 1,data%mesh%domain(idom)%nelem
+                        do ivar = 1,data%eqnset(idom)%prop%nprimary_fields()
 
+                            !
+                            ! Assemble lhs 
+                            !
+                            nterms = data%mesh%domain(idom)%elems(ielem)%nterms_s
+                            rstart = 1 + (ivar - 1)*nterms
+                            rend   = (rstart - 1) + nterms
+                            cstart = rstart
+                            cend   = rend
 
+                            ! Add mass matrix divided by dt to the block diagonal
+                            imat   = lhs%dom(idom)%lblks(ielem,itime)%get_diagonal()
+                            lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(rstart:rend,cstart:cend) = lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(rstart:rend,cstart:cend) + &
+                            data%mesh%domain(idom)%elems(ielem)%mass*(ONE/dt)
 
-        print*, 'hi - 15'
+    
+                            !
+                            ! Assemble rhs
+                            !
+                            temp_1 = (ONE/dt)*matmul(data%mesh%domain(idom)%elems(ielem)%mass, delta_q%dom(idom)%vecs(ielem)%getvar(ivar,itime))
+                            temp_2 = rhs%dom(idom)%vecs(ielem)%getvar(ivar,itime) + temp_1
+                            call rhs%dom(idom)%vecs(ielem)%setvar(ivar,itime,temp_2)
+                                   
+                        end do  ! ivar
+                    end do  ! ielem
 
-            if (wcount == data%time_manager%nwrite) then
-                write(filename, "(I7,A4)") 1000000+itime, '.plt'
-                call write_tecio_variables_unstructured(data,trim(filename),itime+1)
-                wcount = 0
-            end if
-            wcount = wcount + 1
-
-
-        end do  ! itime
+                end do  ! idom
+            end do  ! itime
 
         end associate
 
 
-
-
-
-    end subroutine iterate
-    !*****************************************************************************************
-
+    end subroutine assemble
+    !************************************************************************************************
 
 
 
 
 
 
-    
-    subroutine destructor(self)
-        type(backward_euler_t),      intent(in) :: self
 
-    end subroutine
+
+
+
+
+
+
+
+
+
 
 
 

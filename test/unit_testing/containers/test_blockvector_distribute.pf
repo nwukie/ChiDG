@@ -15,7 +15,7 @@ subroutine test_blockvector_distribute()
     type(point_t),  allocatable :: nodes(:)
     type(domain_connectivity_t) :: connectivity
     real(rk),       allocatable :: fullvec(:)
-    integer(ik)                 :: idomain, nterms_c, spacedim, nelements_g
+    integer(ik)                 :: idomain, nterms_c, spacedim, nelements_g, eqn_ID
 
 
 
@@ -45,7 +45,7 @@ subroutine test_blockvector_distribute()
     spacedim    = 3
     nterms_c    = 8
     nelements_g = 4
-    call chidg%data%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Cartesian',eqn_ID)
+    call chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Cartesian',eqn_ID)
 
     call chidg%set('Solution Order', integer_input=2)
     call chidg%init('domains')
@@ -54,7 +54,7 @@ subroutine test_blockvector_distribute()
     !
     ! Call initailization on blockvector
     !
-    call bvec%init(chidg%data%mesh(1))
+    call bvec%init(chidg%data%mesh%domain(1))
 
 
 

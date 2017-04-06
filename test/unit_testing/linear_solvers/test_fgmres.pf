@@ -23,7 +23,7 @@ subroutine test_fgmres_solve()
     type(domain_connectivity_t) :: connectivity
 
     real(rk)    :: tol
-    integer(ik) :: nterms_c, idomain, spacedim, ixi_min, ixi_max, idiag, nelements_g
+    integer(ik) :: nterms_c, idomain, spacedim, ixi_min, ixi_max, idiag, nelements_g, eqn_ID
 
 
     tol      = 1.e-9_rk
@@ -55,11 +55,20 @@ subroutine test_fgmres_solve()
     call create_mesh('311',nodes,connectivity)
 
 
+
+    !
+    ! Initialize equation set
+    !
+    call chidg%data%add_equation_set('Scalar Advection')
+    eqn_ID = chidg%data%get_equation_set_id('Scalar Advection')
+
+
+
     !
     ! Initialize domain
     !
     nelements_g = 3
-    call chidg%data%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Scalar Advection','Cartesian')
+    call chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Cartesian',eqn_ID)
 
     call chidg%set('Solution Order', integer_input=1)
     call chidg%init('domains')

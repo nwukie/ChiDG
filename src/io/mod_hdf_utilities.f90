@@ -998,6 +998,8 @@ contains
         ! Set coordinate system
         call set_domain_coordinate_system_hdf(dom_id,coord_system)
 
+
+
         ! Write equation set attribute
         call set_domain_equation_set_hdf(dom_id,trim(equation_set))
 
@@ -1006,6 +1008,12 @@ contains
         ! Close groups
         !
         call close_domain_hdf(dom_id)
+
+
+
+
+        ! Write equation set group to file root
+        call create_eqn_group_hdf(fid, trim(equation_set))
 
 
     end subroutine add_domain_hdf
@@ -4546,6 +4554,9 @@ contains
 
     !>  Create an equation group on the ChiDG HDF file root.
     !!
+    !!  
+    !!  If group already exists, no need to do anything, exit routine.
+    !!
     !!
     !!  @author Nathan A. Wukie
     !!  @date   4/4/2017
@@ -4563,23 +4574,23 @@ contains
         integer(ik)                 :: ierr
         logical                     :: group_exists
 
-
+        !
         ! Check if bc_state group exists
+        !
         group_exists = check_link_exists_hdf(fid,"EQN_"//trim(group_name))
 
-        user_msg = "create_eqn_group_hdf: Equation group already exists. &
-                    Cannot have two groups with the same name"
-        if (group_exists) call chidg_signal_one(FATAL,user_msg,trim(group_name))
-
 
         !
-        ! Create a new group for the bc_state_t
+        ! Create a new group for the equation set
+        !   - if already exists, do nothing.
         !
-        call h5gcreate_f(fid, "EQN_"//trim(group_name), eqn_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,'create_eqn_group_hdf: error creating new group for bc_state.')
+        if (.not. group_exists) then
 
+            call h5gcreate_f(fid, "EQN_"//trim(group_name), eqn_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'create_eqn_group_hdf: error creating new group for equation set.')
+            call h5gclose_f(eqn_id,ierr)
 
-        call h5gclose_f(eqn_id,ierr)
+        end if
 
     end subroutine create_eqn_group_hdf
     !**************************************************************************************

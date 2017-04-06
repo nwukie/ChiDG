@@ -45,7 +45,7 @@ subroutine test_chidgdata__add_domain__onedomain()
     call chidg%data%add_equation_set('Scalar Advection')
     eqn_ID = chidg%data%get_equation_set_id('Scalar Advection')
 
-    call chidg%data%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Cartesian',eqn_ID)
+    call chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Cartesian',eqn_ID)
 
 
 

@@ -85,7 +85,7 @@ subroutine test_chidg_matrix_operator_chimera_mv()
     ielem = 19
     itime = 1
     iface = XI_MIN
-    ChiID   = chidg%data%mesh(idom)%faces(ielem,iface)%ChiID
+    ChiID   = chidg%data%mesh%domain(idom)%faces(ielem,iface)%ChiID
 
 
 
@@ -93,8 +93,8 @@ subroutine test_chidg_matrix_operator_chimera_mv()
     ! Donor 1, Set some chimera matrix and vector values
     !
     idonor = 1
-    idom_d  = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
-    ielem_d = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
+    idom_d  = chidg%data%mesh%domain(idom)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
+    ielem_d = chidg%data%mesh%domain(idom)%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
 
     ! Set matrix values corresponding to first donor
     imat = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,itime)%loc(idom_d,ielem_d)
@@ -110,8 +110,8 @@ subroutine test_chidg_matrix_operator_chimera_mv()
     ! Donor 2, Set some chimera matrix and vector values
     !
     idonor = 2
-    idom_d = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
-    ielem_d = chidg%data%mesh(idom)%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
+    idom_d = chidg%data%mesh%domain(idom)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
+    ielem_d = chidg%data%mesh%domain(idom)%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
 
     ! Set matrix values corresponding to first donor
     imat = chidg%data%sdata%lhs%dom(idom)%chi_blks(ielem,itime)%loc(idom_d,ielem_d)

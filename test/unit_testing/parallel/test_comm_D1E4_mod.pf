@@ -103,7 +103,7 @@ contains
         initial_vals = 1.2_rk
         ivar = 1
         itime = 1
-        do ielem = 1,this%chidg%data%mesh(1)%nelem
+        do ielem = 1,this%chidg%data%mesh%domain(1)%nelem
             call this%chidg%data%sdata%q%dom(1)%vecs(ielem)%setvar(ivar,itime,initial_vals)
         end do
 

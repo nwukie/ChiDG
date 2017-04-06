@@ -47,7 +47,7 @@ contains
     subroutine setUp(this)
         class(test_blockmatrix),    intent(inout)   :: this
 
-        integer(ik)                                 :: nterms_c, ivar, ielem, iblk, spacedim, nelements_g
+        integer(ik)                                 :: nterms_c, ivar, ielem, iblk, spacedim, nelements_g, eqn_ID
         type(point_t),  allocatable                 :: nodes(:)
         type(domain_connectivity_t)                 :: connectivity
         
@@ -71,7 +71,12 @@ contains
         nterms_c    = 8
         spacedim    = 3
         nelements_g = 9
-        call this%chidg%data%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Scalar Advection','Cartesian')
+
+
+        call this%chidg%data%add_equation_set('Scalar Advection')
+        eqn_ID = this%chidg%data%get_equation_set_id('Scalar Advection')
+
+        call this%chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Cartesian',eqn_ID)
 
         call this%chidg%set('Solution Order', integer_input=2)
         call this%chidg%set('time', algorithm='steady')

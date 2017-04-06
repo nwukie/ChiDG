@@ -22,7 +22,7 @@ module mod_chimera
                                       ONE, ZERO, TWO, TWO_DIM, THREE_DIM, &
                                       INVALID_POINT, VALID_POINT, NO_PROC
 
-    use type_mesh_new,          only: mesh_new_t
+    use type_mesh,          only: mesh_t
     use type_point,             only: point_t
     use type_element_info,      only: element_info_t
     use type_face_info,         only: face_info_t
@@ -61,7 +61,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------------------------------------
     subroutine detect_chimera_faces(mesh)
-        type(mesh_new_t),   intent(inout)   :: mesh
+        type(mesh_t),   intent(inout)   :: mesh
 
         integer(ik) :: idom, ndom, ielem, iface, ierr, nchimera_faces, ChiID
         logical     :: orphan_face = .false.
@@ -196,7 +196,7 @@ contains
     !!
     !---------------------------------------------------------------------------------------------------------------------
     subroutine detect_chimera_donors(mesh)
-        type(mesh_new_t),   intent(inout)   :: mesh
+        type(mesh_t),   intent(inout)   :: mesh
 
         integer(ik) :: idom, igq, ichimera_face, idonor, ierr, iproc,                           &
                        idonor_proc, iproc_loop,                                                 &
@@ -829,7 +829,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------------------------------
     subroutine compute_chimera_interpolators(mesh)
-        type(mesh_new_t),   intent(inout)   :: mesh
+        type(mesh_t),   intent(inout)   :: mesh
 
         integer(ik)     :: idom, ChiID, idonor, ierr, ipt, iterm,   &
                            donor_idomain_g, donor_idomain_l, donor_ielement_g, donor_ielement_l, &
@@ -969,7 +969,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------------------------------------
     subroutine find_gq_donor(mesh,gq_node,receiver_face,donor_element,donor_coordinate,donor_volume)
-        type(mesh_new_t),           intent(in)              :: mesh
+        type(mesh_t),           intent(in)              :: mesh
         type(point_t),              intent(in)              :: gq_node
         type(face_info_t),          intent(in)              :: receiver_face
         type(element_info_t),       intent(inout)           :: donor_element

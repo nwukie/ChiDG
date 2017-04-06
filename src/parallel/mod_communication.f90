@@ -1,7 +1,7 @@
 module mod_communication
 #include <messenger.h>
     use mod_kinds,      only: rk, ik
-    use type_mesh_new,  only: mesh_new_t
+    use type_mesh,  only: mesh_t
     use mod_chidg_mpi,  only: IRANK, NRANK, GLOBAL_MASTER
     use mod_chimera,    only: detect_chimera_faces,  &
                               detect_chimera_donors, &
@@ -32,7 +32,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine establish_neighbor_communication(mesh,ChiDG_COMM)
-        type(mesh_new_t),   intent(inout)   :: mesh
+        type(mesh_t),   intent(inout)   :: mesh
         type(mpi_comm),     intent(in)      :: ChiDG_COMM
 
         integer(ik) :: idom, iproc, idomain_g, idomain_l, ielem_l, ierr
@@ -189,7 +189,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine establish_chimera_communication(mesh, ChiDG_COMM)
-        type(mesh_new_t),   intent(inout)   :: mesh
+        type(mesh_t),   intent(inout)   :: mesh
         type(mpi_comm)                      :: ChiDG_COMM
 
         integer :: idom, ierr

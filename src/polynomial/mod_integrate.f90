@@ -5,7 +5,7 @@ module mod_integrate
                                       NO_INTERIOR_NEIGHBOR, BOUNDARY, INTERIOR, ZERO
     use mod_chidg_mpi,          only: IRANK
 
-    use type_mesh_new,          only: mesh_new_t
+    use type_mesh,          only: mesh_t
     use type_element,           only: element_t
     use type_face,              only: face_t
     use type_element_info,      only: element_info_t
@@ -41,7 +41,7 @@ contains
     !!
     !--------------------------------------------------------------------------------------------------------
     subroutine integrate_volume_vector_flux(mesh,sdata,elem_info,fcn_info,ieqn,itime,flux1,flux2,flux3)
-        type(mesh_new_t),       intent(in)      :: mesh
+        type(mesh_t),       intent(in)      :: mesh
         type(solverdata_t),     intent(inout)   :: sdata
         type(element_info_t),   intent(in)      :: elem_info
         type(function_info_t),  intent(in)      :: fcn_info
@@ -132,7 +132,7 @@ contains
     !!
     !--------------------------------------------------------------------------------------------------------
     subroutine integrate_volume_scalar_source(mesh,sdata,elem_info,fcn_info,ieqn,itime,source)
-        type(mesh_new_t),       intent(in)      :: mesh
+        type(mesh_t),       intent(in)      :: mesh
         type(solverdata_t),     intent(inout)   :: sdata
         type(element_info_t),   intent(in)      :: elem_info
         type(function_info_t),  intent(in)      :: fcn_info
@@ -196,7 +196,7 @@ contains
     !!
     !--------------------------------------------------------------------------------------------------------
     subroutine integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,ieqn,itime,integrand)
-        type(mesh_new_t),       intent(in)      :: mesh
+        type(mesh_t),       intent(in)      :: mesh
         type(solverdata_t),     intent(inout)   :: sdata
         type(face_info_t),      intent(in)      :: face_info
         type(function_info_t),  intent(in)      :: function_info
@@ -354,7 +354,7 @@ contains
     !!
     !---------------------------------------------------------------------------------------------------------
     subroutine store_volume_integrals(mesh,sdata,elem_info,fcn_info,ieqn,itime,integral)
-        type(mesh_new_t),       intent(in)      :: mesh
+        type(mesh_t),       intent(in)      :: mesh
         type(solverdata_t),     intent(inout)   :: sdata
         type(element_info_t),   intent(in)      :: elem_info
         type(function_info_t),  intent(in)      :: fcn_info
@@ -474,7 +474,7 @@ contains
     !!
     !--------------------------------------------------------------------------------------------------------
     subroutine store_boundary_integral_residual(mesh,sdata,face_info,function_info,ieqn,itime,integral)
-        type(mesh_new_t),       intent(in)      :: mesh
+        type(mesh_t),       intent(in)      :: mesh
         type(solverdata_t),     intent(inout)   :: sdata
         type(face_info_t),      intent(in)      :: face_info
         type(function_info_t),  intent(in)      :: function_info
@@ -567,7 +567,7 @@ contains
     !!
     !--------------------------------------------------------------------------------------------------------
     subroutine store_boundary_integral_linearization(mesh,sdata,face_info,function_info,ieqn,itime,integral)
-        type(mesh_new_t),       intent(in)      :: mesh
+        type(mesh_t),       intent(in)      :: mesh
         type(solverdata_t),     intent(inout)   :: sdata
         type(face_info_t),      intent(in)      :: face_info
         type(function_info_t),  intent(in)      :: function_info

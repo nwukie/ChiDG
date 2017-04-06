@@ -3,7 +3,7 @@ module bc_state_outlet_LODI_pressure
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, HALF, TWO, NO_PROC
 
-    use type_mesh_new,          only: mesh_new_t
+    use type_mesh,          only: mesh_t
     use type_bc_state,          only: bc_state_t
     use type_bc_patch,          only: bc_patch_t
     use type_chidg_worker,      only: chidg_worker_t
@@ -113,7 +113,7 @@ contains
     !--------------------------------------------------------------------------------
     subroutine init_bc_specialized(self,mesh,bc_patch,bc_COMM)
         class(outlet_LODI_pressure_t), intent(inout)   :: self
-        type(mesh_new_t),              intent(in)      :: mesh
+        type(mesh_t),              intent(in)      :: mesh
         type(bc_patch_t),              intent(in)      :: bc_patch(:)
         type(mpi_comm),                intent(in)      :: bc_comm
 

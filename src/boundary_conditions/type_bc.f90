@@ -9,7 +9,7 @@ module type_bc
     use type_bc_group,              only: bc_group_t
     use type_bc_state,              only: bc_state_t
     use type_bc_state_wrapper,      only: bc_state_wrapper_t
-    use type_mesh_new,              only: mesh_new_t
+    use type_mesh,              only: mesh_t
     use type_domain,                only: domain_t
     use type_point,                 only: point_t
     use type_boundary_connectivity, only: boundary_connectivity_t
@@ -496,7 +496,7 @@ contains
     !------------------------------------------------------------------------------------------
     subroutine init_bc_comm(self,mesh)
         class(bc_t),    intent(inout)   :: self
-        type(mesh_new_t),   intent(inout)   :: mesh
+        type(mesh_t),   intent(inout)   :: mesh
 
         logical                     :: irank_has_geometry, ranks_have_geometry(NRANK)
         integer(ik)                 :: ierr, color
@@ -563,7 +563,7 @@ contains
     !------------------------------------------------------------------------------------------
     subroutine init_bc_specialized(self,mesh)
         class(bc_t),    intent(inout)   :: self
-        type(mesh_new_t),   intent(inout)   :: mesh
+        type(mesh_t),   intent(inout)   :: mesh
 
         integer(ik) :: iop
 
@@ -607,7 +607,7 @@ contains
     !------------------------------------------------------------------------------------------
     subroutine init_bc_coupling(self,mesh)
         class(bc_t),        intent(inout)   :: self
-        type(mesh_new_t),   intent(in)      :: mesh
+        type(mesh_t),   intent(in)      :: mesh
 
         integer(ik) :: iop
 
@@ -643,7 +643,7 @@ contains
     !-----------------------------------------------------------------------------------------
     subroutine propagate_bc_coupling(self,mesh)
         class(bc_t),        intent(in)      :: self
-        type(mesh_new_t),   intent(inout)   :: mesh
+        type(mesh_t),   intent(inout)   :: mesh
 
         integer(ik) :: ipatch, iface_bc, idom, ielem, iface
 

@@ -2,7 +2,7 @@ module type_chidg_vector_send
 #include <messenger.h>
     use mod_kinds,                      only: ik
     use type_ivector,                   only: ivector_t
-    use type_mesh_new,                  only: mesh_new_t
+    use type_mesh,                  only: mesh_t
     use type_chidg_vector_send_comm,    only: chidg_vector_send_comm_t
     use mpi_f08,                        only: MPI_Request, MPI_STATUSES_IGNORE, MPI_Waitall
     implicit none
@@ -58,7 +58,7 @@ contains
     !----------------------------------------------------------------------------------------
     subroutine init(self,mesh)
         class(chidg_vector_send_t),  intent(inout)   :: self
-        type(mesh_new_t),            intent(in)      :: mesh
+        type(mesh_t),            intent(in)      :: mesh
 
         integer(ik) :: idom, iproc, nprocs_send, ierr, loc, nsends
         integer(ik), allocatable    :: comm_procs_dom(:)

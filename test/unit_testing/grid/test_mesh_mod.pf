@@ -4,7 +4,7 @@ module test_mesh_mod
     use mod_test_utilities, only: create_mesh
 
     use type_chidg,                 only: chidg_t
-    use type_mesh_new,              only: mesh_new_t
+    use type_mesh,              only: mesh_t
     implicit none
 
     public  :: test_mesh
@@ -20,7 +20,7 @@ module test_mesh_mod
     type, extends(TestCase) ::  test_mesh
 
         type(chidg_t)       :: chidg
-        type(mesh_new_t)    :: mesh
+        type(mesh_t)    :: mesh
 
     contains
 

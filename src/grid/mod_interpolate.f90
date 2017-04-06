@@ -38,7 +38,7 @@ module mod_interpolate
     use mod_DNAD_tools,     only: compute_neighbor_face
     use DNAD_D
 
-    use type_mesh_new,      only: mesh_new_t
+    use type_mesh,      only: mesh_t
     use type_element_info,  only: element_info_t
     use type_face_info,     only: face_info_t
     use type_function_info, only: function_info_t
@@ -80,7 +80,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function interpolate_element_autodiff(mesh,q,elem_info,fcn_info,ieqn,itime,interpolation_type,Pmin,Pmax) result(var_gq)
-        type(mesh_new_t),       intent(in)              :: mesh
+        type(mesh_t),       intent(in)              :: mesh
         type(chidg_vector_t),   intent(in)              :: q
         type(element_info_t),   intent(in)              :: elem_info
         type(function_info_t),  intent(in)              :: fcn_info
@@ -228,7 +228,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     function interpolate_face_autodiff(mesh,q,face_info,fcn_info, ieqn, itime, interpolation_type, interpolation_source) result(var_gq)
-        type(mesh_new_t),       intent(in)              :: mesh
+        type(mesh_t),       intent(in)              :: mesh
         type(chidg_vector_t),   intent(in)              :: q
         type(face_info_t),      intent(in)              :: face_info
         type(function_info_t),  intent(in)              :: fcn_info
@@ -411,7 +411,7 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     function interpolate_element_standard(mesh,q,idomain_l,ielement_l,ieqn,itime,interpolation_type) result(var_gq)
-        type(mesh_new_t),       intent(in)      :: mesh
+        type(mesh_t),       intent(in)      :: mesh
         type(chidg_vector_t),   intent(in)      :: q
         integer(ik),            intent(in)      :: idomain_l
         integer(ik),            intent(in)      :: ielement_l
@@ -461,7 +461,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function interpolate_face_standard(mesh,q,idomain_l,ielement_l,iface,ieqn,itime) result(var_gq)
-        type(mesh_new_t),       intent(in)      :: mesh
+        type(mesh_t),       intent(in)      :: mesh
         type(chidg_vector_t),   intent(in)      :: q
         integer(ik),            intent(in)      :: idomain_l, ielement_l, iface, ieqn
         integer(ik),            intent(in)      :: itime
@@ -738,7 +738,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function get_face_interpolation_info(mesh,face_info,interpolation_source,idonor) result(iface_info)
-        type(mesh_new_t),   intent(in)                  :: mesh
+        type(mesh_t),   intent(in)                  :: mesh
         type(face_info_t),  intent(in)                  :: face_info
         integer(ik),        intent(in)                  :: interpolation_source
         integer(ik),        intent(in)                  :: idonor
@@ -831,7 +831,7 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     function get_face_interpolation_interpolator(mesh,source_face,interpolation_source,idonor,interpolation_type,donor_face) result(interpolator)
-        type(mesh_new_t),   intent(in)  :: mesh
+        type(mesh_t),   intent(in)  :: mesh
         type(face_info_t),  intent(in)  :: source_face
         integer(ik),        intent(in)  :: interpolation_source
         integer(ik),        intent(in)  :: idonor
@@ -964,7 +964,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function get_face_interpolation_mask(mesh,face_info,interpolation_source,idonor) result(mask)
-        type(mesh_new_t),   intent(in)                  :: mesh
+        type(mesh_t),   intent(in)                  :: mesh
         type(face_info_t),  intent(in)                  :: face_info
         integer(ik),        intent(in)                  :: interpolation_source
         integer(ik),        intent(in)                  :: idonor
@@ -1044,7 +1044,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function get_face_interpolation_comm(mesh,face_info,interpolation_source,idonor) result(recv_info)
-        type(mesh_new_t),   intent(in)                  :: mesh
+        type(mesh_t),   intent(in)                  :: mesh
         type(face_info_t),  intent(in)                  :: face_info
         integer(ik),        intent(in)                  :: interpolation_source
         integer(ik),        intent(in)                  :: idonor
@@ -1132,7 +1132,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function get_face_interpolation_ndonors(mesh,face_info,interpolation_source) result(ndonors)
-        type(mesh_new_t),   intent(in)  :: mesh
+        type(mesh_t),   intent(in)  :: mesh
         type(face_info_t),  intent(in)  :: face_info
         integer(ik),        intent(in)  :: interpolation_source
 
@@ -1200,7 +1200,7 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     function get_face_interpolation_style(mesh,face_info,interpolation_source) result(interpolation_style)
-        type(mesh_new_t),   intent(in)  :: mesh
+        type(mesh_t),   intent(in)  :: mesh
         type(face_info_t),  intent(in)  :: face_info
         integer(ik),        intent(in)  :: interpolation_source
 
@@ -1250,7 +1250,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function get_interpolation_nderiv(mesh,function_info) result(nderiv)
-        type(mesh_new_t),       intent(in)  :: mesh
+        type(mesh_t),       intent(in)  :: mesh
         type(function_info_t),  intent(in)  :: function_info
 
         integer(ik) :: nderiv, neqns_seed, nterms_s_seed

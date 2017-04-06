@@ -18,7 +18,7 @@ module type_equation_set
     use type_properties,                only: properties_t
     use type_equationset_function_data, only: equationset_function_data_t
     use type_chidg_worker,              only: chidg_worker_t
-    use type_mesh_new,                  only: mesh_new_t
+    use type_mesh,                  only: mesh_t
     use type_bc,                        only: bc_t
     use type_solverdata,                only: solverdata_t
     use type_element_info,              only: element_info_t
@@ -1156,7 +1156,7 @@ contains
     !--------------------------------------------------------------------------------------
     function get_face_ncompute(self,mesh,face_info,idiff) result(ncompute)
         class(equation_set_t),  intent(in)   :: self
-        type(mesh_new_t),       intent(in)   :: mesh
+        type(mesh_t),       intent(in)   :: mesh
         type(face_info_t),      intent(in)   :: face_info
         integer(ik),            intent(in)   :: idiff
 
@@ -1225,7 +1225,7 @@ contains
     !--------------------------------------------------------------------------------------
     function get_element_ncompute(self,mesh,elem_info,idiff) result(ncompute)
         class(equation_set_t),  intent(in)   :: self
-        type(mesh_new_t),       intent(in)   :: mesh
+        type(mesh_t),       intent(in)   :: mesh
         type(element_info_t),   intent(in)   :: elem_info
         integer(ik),            intent(in)   :: idiff
 
@@ -1292,7 +1292,7 @@ contains
     subroutine compute_pseudo_timestep(self,idomain,mesh,sdata,cfln,itime)
         class(equation_set_t),  intent(in)      :: self
         integer(ik),            intent(in)      :: idomain
-        type(mesh_new_t),       intent(inout)   :: mesh
+        type(mesh_t),       intent(inout)   :: mesh
         type(solverdata_t),     intent(inout)   :: sdata
         real(rk),               intent(in)      :: cfln(:)
         integer(ik),            intent(in)      :: itime

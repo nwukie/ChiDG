@@ -1,0 +1,49 @@
+The ChiDG grid is organized hierarchically:
+
+    : mesh_t
+        :: domain_t
+            ::: element_t
+            ::: face_t
+
+
+
+There are also some data types that represent connectivity information
+for these objects:
+    
+    type_domain_connectivity
+    type_element_connectivity
+    type_face_connectivity
+    type_boundary_connectivity
+
+
+
+In a ChiDG environment, there is one instance of mesh_t. The mesh
+contains domain_t's and domain_t's contain element_t's and face_t's.
+
+
+
+
+There are some other utility type modules organized here.
+
+    mod_interpolate
+    ---------------
+    provides the interpolation infrastructure for ChiDG. This interpolates modal quantities
+    to discrete nodal locations. It also contains a lot of the automatic differentiation infrastructure.
+
+
+    mod_DNAD_tools
+    --------------
+    this contains some helper routines that return information about the element that is
+    being differentiated with respect to.
+
+
+    mod_grid
+    --------
+    this generates the mapping data used for reference elements. It also provides information
+    about element structures, such as which nodes are corners.
+
+
+
+
+
+

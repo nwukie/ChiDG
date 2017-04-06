@@ -4,7 +4,7 @@ module mod_DNAD_tools
     use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG, CHIMERA, INTERIOR, BOUNDARY
     use mod_chidg_mpi,          only: IRANK
     
-    use type_mesh_new,          only: mesh_new_t
+    use type_mesh,          only: mesh_t
     use type_seed,              only: seed_t
     implicit none
 
@@ -34,7 +34,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------------
     function compute_neighbor_domain_l(mesh,idom,ielem,iface,idonor) result(idom_n)
-        type(mesh_new_t),   intent(in)  :: mesh
+        type(mesh_t),   intent(in)  :: mesh
         integer(ik),        intent(in)  :: idom
         integer(ik),        intent(in)  :: ielem
         integer(ik),        intent(in)  :: iface
@@ -83,7 +83,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------------
     function compute_neighbor_domain_g(mesh,idom,ielem,iface,idonor) result(idom_n)
-        type(mesh_new_t),   intent(in)  :: mesh
+        type(mesh_t),   intent(in)  :: mesh
         integer(ik),        intent(in)  :: idom
         integer(ik),        intent(in)  :: ielem
         integer(ik),        intent(in)  :: iface
@@ -132,7 +132,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------------
     function compute_neighbor_element_l(mesh,idom,ielem,iface,idonor) result(ielem_n)
-        type(mesh_new_t),   intent(in)  :: mesh
+        type(mesh_t),   intent(in)  :: mesh
         integer(ik),        intent(in)  :: idom
         integer(ik),        intent(in)  :: ielem
         integer(ik),        intent(in)  :: iface
@@ -176,7 +176,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------------
     function compute_neighbor_element_g(mesh,idom,ielem,iface,idonor) result(ielem_n)
-        type(mesh_new_t),   intent(in)  :: mesh
+        type(mesh_t),   intent(in)  :: mesh
         integer(ik),        intent(in)  :: idom
         integer(ik),        intent(in)  :: ielem
         integer(ik),        intent(in)  :: iface
@@ -223,7 +223,7 @@ contains
     !!
     !---------------------------------------------------------------------------------------------------------
     function compute_neighbor_face(mesh,idom,ielem,iface,idonor) result(iface_n)
-        type(mesh_new_t),   intent(in)  :: mesh
+        type(mesh_t),   intent(in)  :: mesh
         integer(ik),        intent(in)  :: idom
         integer(ik),        intent(in)  :: ielem
         integer(ik),        intent(in)  :: iface
@@ -287,7 +287,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------------------------------------
     function face_compute_seed(mesh,idomain_l,ielement_l,iface,idepend,idiff) result(seed)
-        type(mesh_new_t),   intent(in)  :: mesh
+        type(mesh_t),   intent(in)  :: mesh
         integer(ik),        intent(in)  :: idomain_l
         integer(ik),        intent(in)  :: ielement_l
         integer(ik),        intent(in)  :: iface
@@ -461,7 +461,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------------------------
     function element_compute_seed(mesh,idomain_l,ielement_l,idepend,idiff) result(seed)
-        type(mesh_new_t),   intent(in)  :: mesh
+        type(mesh_t),   intent(in)  :: mesh
         integer(ik),        intent(in)  :: idomain_l
         integer(ik),        intent(in)  :: ielement_l
         integer(ik),        intent(in)  :: idepend

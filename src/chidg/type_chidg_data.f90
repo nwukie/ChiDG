@@ -7,8 +7,7 @@ module type_chidg_data
     use type_boundary_connectivity,     only: boundary_connectivity_t
 
     ! Primary chidg_data_t components
-    use type_domain_info,               only: domain_info_t
-    use type_mesh_new,                  only: mesh_new_t
+    use type_mesh,                      only: mesh_t
     use type_bc,                        only: bc_t
     use type_bc_state,                  only: bc_state_t
     use type_bc_group,                  only: bc_group_t
@@ -48,9 +47,8 @@ module type_chidg_data
         logical                                     :: solverInitialized = .false.
         integer(ik),        private                 :: spacedim_ = 3
 
-        
-        ! For each domain: info, a mesh, and an equation set
-        type(mesh_new_t)                            :: mesh
+        ! mesh
+        type(mesh_t)                                :: mesh
 
         ! Boundary conditions are not specified per-domain. 
         ! A boundary condition for each bc_group in the file.

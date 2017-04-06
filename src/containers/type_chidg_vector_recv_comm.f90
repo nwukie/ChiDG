@@ -2,7 +2,7 @@ module type_chidg_vector_recv_comm
 #include <messenger.h>
     use mod_kinds,          only: ik
     use mod_constants,      only: INTERIOR, CHIMERA
-    use type_mesh_new,      only: mesh_new_t
+    use type_mesh,      only: mesh_t
     use type_ivector,       only: ivector_t
     use type_blockvector,   only: blockvector_t
     use mod_chidg_mpi,      only: ChiDG_COMM
@@ -53,7 +53,7 @@ contains
     subroutine init(self,mesh,iproc,icomm)
         class(chidg_vector_recv_comm_t), intent(inout)   :: self
         !type(mesh_t),                   intent(inout)   :: mesh(:)
-        type(mesh_new_t),                intent(inout)   :: mesh
+        type(mesh_t),                intent(inout)   :: mesh
         integer(ik),                     intent(in)      :: iproc
         integer(ik),                     intent(in)      :: icomm
 

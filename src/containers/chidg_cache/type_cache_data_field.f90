@@ -2,7 +2,7 @@ module type_cache_data_field
 #include <messenger.h>
     use mod_kinds,          only: ik
     use mod_constants,      only: INTERIOR, BOUNDARY, CHIMERA, NFACES, ZERO
-    use type_mesh_new,      only: mesh_new_t
+    use type_mesh,      only: mesh_t
     use type_properties,    only: properties_t
     use type_seed,          only: seed_t
     use DNAD_D
@@ -72,7 +72,7 @@ contains
         class(cache_data_field_t),  intent(inout)           :: self
         character(*),               intent(in)              :: field
         character(*),               intent(in)              :: cache_component
-        type(mesh_new_t),           intent(in)              :: mesh
+        type(mesh_t),           intent(in)              :: mesh
         type(properties_t),         intent(in)              :: prop(:)
         integer(ik),                intent(in)              :: idomain_l
         integer(ik),                intent(in)              :: ielement_l
@@ -447,7 +447,7 @@ contains
     !------------------------------------------------------------------------------------
     function get_ndepend_face_exterior(self,mesh,idomain_l,ielement_l,iface) result(ndepend)
         class(cache_data_field_t),  intent(in)  :: self
-        type(mesh_new_t),           intent(in)  :: mesh
+        type(mesh_t),           intent(in)  :: mesh
         integer(ik),                intent(in)  :: idomain_l
         integer(ik),                intent(in)  :: ielement_l
         integer(ik),                intent(in)  :: iface

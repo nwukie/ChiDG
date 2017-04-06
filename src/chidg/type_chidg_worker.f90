@@ -40,7 +40,7 @@ module type_chidg_worker
                                   integrate_volume_scalar_source
 
     use type_point,         only: point_t
-    use type_mesh_new,      only: mesh_new_t
+    use type_mesh,      only: mesh_t
     use type_solverdata,    only: solverdata_t
     use type_element_info,  only: element_info_t
     use type_face_info,     only: face_info_t
@@ -63,11 +63,11 @@ module type_chidg_worker
     !------------------------------------------------------------------------------
     type, public :: chidg_worker_t
     
-        type(mesh_new_t),       pointer :: mesh
-        type(properties_t), allocatable :: prop(:)
-        !type(properties_t),     pointer :: prop(:)
+        type(mesh_t),           pointer :: mesh
         type(solverdata_t),     pointer :: solverdata
         type(chidg_cache_t),    pointer :: cache
+        !type(properties_t),     pointer :: prop(:)
+        type(properties_t), allocatable :: prop(:)
 
         integer(ik)                 :: iface
         integer(ik)                 :: itime
@@ -152,7 +152,7 @@ contains
     !---------------------------------------------------------------------------------
     subroutine init(self,mesh,prop,solverdata,cache)
         class(chidg_worker_t),  intent(inout)       :: self
-        type(mesh_new_t),       intent(in), target  :: mesh
+        type(mesh_t),       intent(in), target  :: mesh
         type(properties_t),     intent(in), target  :: prop(:)
         type(solverdata_t),     intent(in), target  :: solverdata
         type(chidg_cache_t),    intent(in), target  :: cache

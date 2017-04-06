@@ -2,7 +2,7 @@ module type_chidg_vector_send_comm
 #include <messenger.h>
     use mod_kinds,                  only: ik
     use mod_constants,              only: INTERIOR, CHIMERA
-    use type_mesh_new,              only: mesh_new_t
+    use type_mesh,              only: mesh_t
     use type_ivector,               only: ivector_t
     use mod_chidg_mpi,              only: ChiDG_COMM
     use type_mpi_request_vector,    only: mpi_request_vector_t
@@ -67,7 +67,7 @@ contains
     subroutine init(self,mesh,proc)
         class(chidg_vector_send_comm_t), intent(inout)   :: self
         !type(mesh_t),                    intent(in)      :: mesh(:)
-        type(mesh_new_t),                intent(in)      :: mesh
+        type(mesh_t),                intent(in)      :: mesh
         integer(ik),                     intent(in)      :: proc
 
         integer(ik)                 :: idom, ielem, iface, idom_send, ndom_send, ierr, &

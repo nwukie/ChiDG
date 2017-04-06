@@ -3,7 +3,7 @@ module type_cache_data
     use mod_kinds,                  only: ik, rk
     use mod_constants,              only: INTERIOR, BOUNDARY, CHIMERA, ZERO
     use type_cache_data_field,      only: cache_data_field_t
-    use type_mesh_new,              only: mesh_new_t
+    use type_mesh,              only: mesh_t
     use type_properties,            only: properties_t
     use type_seed,                  only: seed_t
     use DNAD_D
@@ -52,7 +52,7 @@ contains
     subroutine resize(self,cache_component,mesh,prop,idomain_l,ielement_l,iface,differentiate)
         class(cache_data_t),    intent(inout)           :: self
         character(*),           intent(in)              :: cache_component
-        type(mesh_new_t),       intent(in)              :: mesh
+        type(mesh_t),       intent(in)              :: mesh
         type(properties_t),     intent(in)              :: prop(:)
         integer(ik),            intent(in)              :: idomain_l
         integer(ik),            intent(in)              :: ielement_l

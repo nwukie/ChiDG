@@ -3,7 +3,7 @@ module type_fluid_pseudo_timestep
     use mod_constants,          only: THIRD, ONE, HALF
     use mod_fluid,              only: omega
     use type_pseudo_timestep,   only: pseudo_timestep_t
-    use type_mesh_new,          only: mesh_new_t
+    use type_mesh,          only: mesh_t
     use type_properties,        only: properties_t
     use type_solverdata,        only: solverdata_t
     use mod_interpolate,        only: interpolate_element_standard
@@ -45,7 +45,7 @@ contains
     subroutine compute(self,idomain,mesh,prop,sdata,cfl,itime)
         class(fluid_pseudo_timestep_t), intent(in)      :: self
         integer(ik),                    intent(in)      :: idomain
-        type(mesh_new_t),               intent(inout)   :: mesh
+        type(mesh_t),               intent(inout)   :: mesh
         type(properties_t),             intent(in)      :: prop
         type(solverdata_t),             intent(inout)   :: sdata
         real(rk),                       intent(in)      :: cfl(:)

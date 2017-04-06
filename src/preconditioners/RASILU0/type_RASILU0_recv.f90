@@ -2,7 +2,7 @@ module type_RASILU0_recv
 #include <messenger.h>
     use mod_kinds,              only: ik, rk
 
-    use type_mesh_new,          only: mesh_new_t
+    use type_mesh,          only: mesh_t
     use type_chidg_matrix,      only: chidg_matrix_t
     use type_chidg_vector,      only: chidg_vector_t
     use type_RASILU0_recv_dom,  only: RASILU0_recv_dom_t
@@ -51,7 +51,7 @@ contains
     !------------------------------------------------------------------------------------------
     subroutine init(self,mesh,A,b)
         class(RASILU0_recv_t),  intent(inout)   :: self
-        type(mesh_new_t),       intent(in)      :: mesh
+        type(mesh_t),       intent(in)      :: mesh
         type(chidg_matrix_t),   intent(in)      :: A
         type(chidg_vector_t),   intent(in)      :: b
 

@@ -1,14 +1,10 @@
 module type_mesh
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik
-    use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
-    use mpi_f08
 
     use type_point,                 only: point_t
     use type_domain,                only: domain_t
-    use type_ivector,               only: ivector_t
     use type_domain_connectivity,   only: domain_connectivity_t
-    use type_element_connectivity,  only: element_connectivity_t
     implicit none
     private
 
@@ -20,22 +16,37 @@ module type_mesh
     !!      - calls initialization procedure for elements and faces
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   2/1/2016
+    !!  @date   4/6/2017
     !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   6/27/2016
     !!
     !----------------------------------------------------------------------------------------
     type, public :: mesh_t
 
-        type(domain_t), allocatable :: domain(:)
+        type(domain_t),         allocatable :: domain(:)
+
+!        type(bc_patch_group_t), allocatable :: bc_patch_group(:)
 
     contains
 
-        procedure   :: add_domain
-        procedure   :: new_domain
-        procedure   :: ndomains
+        ! Domain procedures
+        procedure           :: add_domain
+        procedure           :: ndomains
+        procedure, private  :: new_domain
+
+
+!        ! Boundary patch procedures
+!        procedure           :: add_bc_patch_group
+!        procedure           :: nbc_patch_groups
+!        procedure, private  :: new_bc_patch_group
+
+
+        ! Resouce management
         procedure   :: release
+
+
+
+        ! Extra routines for testing private procedures
+        procedure   :: stub_new_domain
 
     end type mesh_t
     !****************************************************************************************
@@ -224,6 +235,24 @@ contains
 
 
 
+
+    !>  A public interface for calling 'new_domain'. 
+    !!
+    !!  Used for tests.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/6/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    function stub_new_domain(self) result(idomain)
+        class(mesh_t),  intent(inout)   :: self
+
+        integer(ik) :: idomain
+
+        idomain = self%new_domain()
+
+    end function stub_new_domain
+    !***************************************************************************************
 
 
 

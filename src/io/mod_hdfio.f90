@@ -58,8 +58,8 @@ contains
     !!  Procedures:
     !!  -----------
     !!
-    !!  read_grid_hdf
-    !!  write_grid_hdf
+    !!  read_domains_hdf
+    !!  write_domains_hdf
     !!
     !!  read_solution_hdf
     !!      read_domain_field_hdf
@@ -104,7 +104,7 @@ contains
     !!  @param[inout]   domains     Allocatable array of domains. Allocated in this routine.
     !!
     !----------------------------------------------------------------------------------------
-    subroutine read_grid_hdf(filename, partition, meshdata)
+    subroutine read_domains_hdf(filename, partition, meshdata)
         character(*),                   intent(in)      :: filename
         type(partition_t),              intent(in)      :: partition
         type(meshdata_t), allocatable,  intent(inout)   :: meshdata(:)
@@ -217,7 +217,7 @@ contains
         !  Close file and Fortran interface
         call close_file_hdf(fid)
 
-    end subroutine read_grid_hdf
+    end subroutine read_domains_hdf
     !****************************************************************************************
   
   
@@ -241,7 +241,7 @@ contains
     !!  @param[in]      filename    Character string of the file to be written to
     !!
     !----------------------------------------------------------------------------------------
-    subroutine write_grid_hdf(data,file_name)
+    subroutine write_domains_hdf(data,file_name)
         type(chidg_data_t), intent(in)              :: data
         character(*),       intent(in)              :: file_name
 
@@ -359,7 +359,7 @@ contains
             call MPI_Barrier(ChiDG_COMM,ierr)
         end do
 
-    end subroutine write_grid_hdf
+    end subroutine write_domains_hdf
     !*****************************************************************************************
 
   

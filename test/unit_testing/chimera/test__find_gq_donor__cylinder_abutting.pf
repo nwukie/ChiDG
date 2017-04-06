@@ -55,7 +55,6 @@ subroutine test_find_gq_donor_cylinder_abutting()
     ! Read grid
     !
     call chidgA%read_grid(trim(filename),spacedim)
-    call chidgA%read_boundaryconditions(trim(filename))
 
 
     !

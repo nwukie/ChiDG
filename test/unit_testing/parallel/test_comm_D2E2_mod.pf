@@ -83,7 +83,6 @@ contains
         ! Read partition data: grid, boundary conditions
         !
         call this%chidg%read_grid(this%gridfile, spacedim)
-        call this%chidg%read_boundaryconditions(this%gridfile)
 
 
         !

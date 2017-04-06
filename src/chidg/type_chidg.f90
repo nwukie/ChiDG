@@ -34,10 +34,10 @@ module type_chidg
                                           IRANK, NRANK, ChiDG_COMM
 
     use mod_tecio,                  only: write_tecio_variables
-    use mod_hdfio,                  only: read_grid_hdf, read_boundaryconditions_hdf,   &
+    use mod_hdfio,                  only: read_domains_hdf, read_boundaryconditions_hdf,   &
                                           read_solution_hdf, write_solution_hdf,        &
                                           read_connectivity_hdf, read_weights_hdf,      &
-                                          write_grid_hdf, read_equations_hdf
+                                          write_domains_hdf, read_equations_hdf
     use mod_hdf_utilities,          only: close_hdf
     use mod_partitioners,           only: partition_connectivity, send_partitions, &
                                           recv_partition
@@ -105,11 +105,12 @@ module type_chidg
         procedure   :: report
 
         ! IO procedures
-        procedure   :: read_grid
-        procedure   :: read_boundaryconditions
-        procedure   :: read_solution
-        procedure   :: write_grid
-        procedure   :: write_solution
+        procedure            :: read_grid
+        procedure, private   :: read_domains
+        procedure, private   :: read_boundary_conditions
+        procedure            :: read_solution
+        procedure            :: write_grid
+        procedure            :: write_solution
 
         ! Initialization
         procedure   :: set
@@ -363,13 +364,13 @@ contains
                 !
                 ! Initialize preconditioner
                 !
-                call write_line("Preconditioner: calling initialization...", io_proc=GLOBAL_MASTER)
+                call write_line("Initialize: preconditioner...", io_proc=GLOBAL_MASTER)
                 call self%preconditioner%init(self%data)
                 
                 !
                 ! Initialize time_integrator
                 !
-                call write_line("Time integrator: calling initialization...", io_proc=GLOBAL_MASTER)
+                call write_line("Initialize: time integrator...", io_proc=GLOBAL_MASTER)
                 call self%time_integrator%init(self%data)
 
 
@@ -547,7 +548,6 @@ contains
     !!  @param[in]  equation_set    Optionally, specify the equation set to be initialized 
     !!                              instead of
     !!
-    !!  TODO: Generalize spacedim
     !!
     !------------------------------------------------------------------------------------------
     subroutine read_grid(self,gridfile,spacedim,equation_set, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield, bc_periodic)
@@ -563,6 +563,63 @@ contains
         class(bc_state_t),  intent(in),     optional    :: bc_periodic
 
 
+        call write_line(' ', ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('Reading grid... ', io_proc=GLOBAL_MASTER)
+
+
+        !
+        ! Read domain geometry. Also performs partitioning.
+        !
+        call self%read_domains(gridfile,spacedim,equation_set)
+
+
+
+
+
+        !
+        ! Read boundary conditions.
+        !
+        call self%read_boundary_conditions(gridfile, bc_wall,        &
+                                                     bc_inlet,       &
+                                                     bc_outlet,      &
+                                                     bc_symmetry,    &
+                                                     bc_farfield,    &
+                                                     bc_periodic )
+
+
+        call write_line('Done reading grid.', io_proc=GLOBAL_MASTER)
+        call write_line(' ', ltrim=.false.,   io_proc=GLOBAL_MASTER)
+
+
+    end subroutine read_grid
+    !*******************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Read grid from file.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!  @param[in]  gridfile        String containing a grid file name, including extension.
+    !!  @param[in]  spacedim        Number of spatial dimensions
+    !!  @param[in]  equation_set    Optionally, specify the equation set to be initialized 
+    !!                              instead of
+    !!
+    !!  TODO: Generalize spacedim
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine read_domains(self,gridfile,spacedim,equation_set)
+        class(chidg_t),     intent(inout)               :: self
+        character(*),       intent(in)                  :: gridfile
+        integer(ik),        intent(in),     optional    :: spacedim
+        character(*),       intent(in),     optional    :: equation_set
+
 
         type(domain_connectivity_t),    allocatable                 :: connectivities(:)
         real(rk),                       allocatable                 :: weights(:)
@@ -573,9 +630,9 @@ contains
         integer(ik)                         :: idom, iread, ierr, &
                                                domain_dimensionality, ielem, eqn_ID
 
-        call write_line(' ', ltrim=.false., io_proc=GLOBAL_MASTER)
-        call write_line('Reading grid... ', io_proc=GLOBAL_MASTER)
 
+        call write_line(' ',                      ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('   Reading domains... ', ltrim=.false., io_proc=GLOBAL_MASTER)
 
         !
         ! Master rank: Read connectivity, partition connectivity, distribute partitions
@@ -604,12 +661,11 @@ contains
         !
         ! Read data from hdf file
         !
-        call write_line("   reading...", ltrim=.false., io_proc=GLOBAL_MASTER)
         do iread = 0,NRANK-1
             if ( iread == IRANK ) then
 
                 call read_equations_hdf(gridfile, self%data)
-                call read_grid_hdf(gridfile,self%partition,meshdata)
+                call read_domains_hdf(gridfile,self%partition,meshdata)
 
             end if
             call MPI_Barrier(ChiDG_COMM,ierr)
@@ -622,7 +678,6 @@ contains
         !
         call write_line("   processing...", ltrim=.false., io_proc=GLOBAL_MASTER)
         do idom = 1,size(meshdata)
-
 
 
             ! Use spacedim if specified, else default to 3D
@@ -643,20 +698,9 @@ contains
 
 
 
-!            call self%data%add_domain( trim(meshdata(idom)%name),    &
-!                                       meshdata(idom)%points,        &
-!                                       meshdata(idom)%connectivity,  &
-!                                       meshdata(idom)%nelements_g,   &
-!                                       domain_dimensionality,        &
-!                                       meshdata(idom)%nterms_c,      &
-!                                       domain_equation_set,          &
-!                                       meshdata(idom)%coord_system )
-
-
             ! Get the equation set identifier
             eqn_ID = self%data%get_equation_set_id(domain_equation_set)
 
-            
             call self%data%mesh%add_domain( trim(meshdata(idom)%name),    &
                                             meshdata(idom)%points,        &
                                             meshdata(idom)%connectivity,  &
@@ -668,35 +712,14 @@ contains
 
 
 
-        end do
+        end do !idom
 
 
 
+        call write_line('   Done reading domains... ', ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line(' ',                           ltrim=.false., io_proc=GLOBAL_MASTER)
 
-
-
-        !
-        ! Read boundary conditions
-        !
-        call self%read_boundaryconditions(gridfile, bc_wall,        &
-                                                    bc_inlet,       &
-                                                    bc_outlet,      &
-                                                    bc_symmetry,    &
-                                                    bc_farfield,    &
-                                                    bc_periodic )
-
-
-
-
-
-
-
-
-
-        call write_line('Done reading grid.', io_proc=GLOBAL_MASTER)
-        call write_line(' ', ltrim=.false.,   io_proc=GLOBAL_MASTER)
-
-    end subroutine read_grid
+    end subroutine read_domains
     !******************************************************************************************
 
 
@@ -717,7 +740,7 @@ contains
     !!  @param[in]  gridfile    String specifying a gridfile, including extension.
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine read_boundaryconditions(self, gridfile, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield, bc_periodic)
+    subroutine read_boundary_conditions(self, gridfile, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield, bc_periodic)
         class(chidg_t),     intent(inout)               :: self
         character(*),       intent(in)                  :: gridfile
         class(bc_state_t),  intent(in),     optional    :: bc_wall
@@ -734,14 +757,13 @@ contains
         integer                                 :: idom, ndomains, iface, ibc, ierr, iread
 
 
-        call write_line(' ', ltrim=.false.,                io_proc=GLOBAL_MASTER)
-        call write_line('Reading boundary conditions... ', io_proc=GLOBAL_MASTER)
+        call write_line(' ',                                  ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('   Reading boundary conditions... ', ltrim=.false., io_proc=GLOBAL_MASTER)
 
 
         !
         ! Call boundary condition reader based on file extension
         !
-        call write_line('   reading...', ltrim=.false., io_proc=GLOBAL_MASTER)
         do iread = 0,NRANK-1
             if ( iread == IRANK ) then
 
@@ -755,10 +777,10 @@ contains
 
 
 
-        call write_line('   processing groups...', ltrim=.false., io_proc=GLOBAL_MASTER)
         !
         ! Add all boundary condition groups
         !
+        call write_line('   processing groups...', ltrim=.false., io_proc=GLOBAL_MASTER)
         do ibc = 1,size(bc_groups)
 
             call self%data%add_bc_group(bc_groups(ibc), bc_wall     = bc_wall,      &
@@ -789,11 +811,11 @@ contains
 
 
 
-        call write_line('Done reading boundary conditions.', io_proc=GLOBAL_MASTER)
-        call write_line(' ', ltrim=.false.,                  io_proc=GLOBAL_MASTER)
+        call write_line('   Done reading boundary conditions.', ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line(' ',                                    ltrim=.false., io_proc=GLOBAL_MASTER)
 
 
-    end subroutine read_boundaryconditions
+    end subroutine read_boundary_conditions
     !*****************************************************************************************
 
 
@@ -935,7 +957,7 @@ contains
         ! Call grid reader based on file extension
         !
         call write_line("   writing to: ", file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
-        call write_grid_hdf(self%data,file_name)
+        call write_domains_hdf(self%data,file_name)
 
 
         call write_line("Done writing grid.", io_proc=GLOBAL_MASTER)

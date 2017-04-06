@@ -79,8 +79,6 @@ subroutine test_update_space_linearadvection()
     call chidgA%read_grid(chidgAfile,spacedim)
     call chidgB%read_grid(chidgBfile,spacedim)
 
-    call chidgA%read_boundaryconditions(chidgAfile)
-    call chidgB%read_boundaryconditions(chidgBfile)
     
 
 

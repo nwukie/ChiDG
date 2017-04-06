@@ -83,7 +83,6 @@ subroutine test_chidg_matrix_operator_HB_mv()
     ! Get grid points
     !
     call chidg%read_grid(filename,spacedim)
-    call chidg%read_boundaryconditions(filename)
 
 
     !

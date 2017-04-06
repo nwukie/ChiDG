@@ -47,7 +47,7 @@ contains
         !
         ! All ranks initialize local communication
         !
-        call write_line("Comm: initializing proc-local neighbor communication...", io_proc=GLOBAL_MASTER)
+        call write_line("Initialize: proc-local neighbor communication...", io_proc=GLOBAL_MASTER)
         do idom = 1,mesh%ndomains()
             call mesh%domain(idom)%init_comm_local()
         end do
@@ -60,7 +60,7 @@ contains
         !
         ! Loop through mesh types
         !
-        call write_line("Comm: initializing proc-global neighbor communication...", io_proc=GLOBAL_MASTER)
+        call write_line("Initialize: proc-global neighbor communication...", io_proc=GLOBAL_MASTER)
         do iproc = 0,NRANK-1
 
 
@@ -200,7 +200,7 @@ contains
         ! procedure. Calling clear on chimera%send, chimera%recv to wipe out previous data 
         ! and redetect all chimera faces, donors and reinitialize donor data.
         !
-        call write_line("Comm: initializing chimera communication...", io_proc=GLOBAL_MASTER)
+        call write_line("Initialize: chimera communication...", io_proc=GLOBAL_MASTER)
         do idom = 1,mesh%ndomains()
             call mesh%domain(idom)%chimera%send%clear()
             call mesh%domain(idom)%chimera%recv%clear()

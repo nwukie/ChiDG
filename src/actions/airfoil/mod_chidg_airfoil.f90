@@ -19,7 +19,7 @@ module mod_chidg_airfoil
     use type_element_info,      only: element_info_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_chidg_cache,       only: chidg_cache_t
-    use type_chidg_manager,         only: chidg_manager_t
+    use type_chidg_manager,     only: chidg_manager_t
     use type_cache_handler,     only: cache_handler_t
     use mod_io
     use DNAD_D
@@ -127,7 +127,6 @@ contains
         !
         gridfile = filename
         call chidg%read_grid(filename,spacedim)
-        call chidg%read_boundaryconditions(filename)
 
         call manager%process(chidg)
 

@@ -260,7 +260,7 @@ contains
 
                 do idom = 1,mesh%ndomains()
 
-                    call write_line('Detecting chimera donors for domain: ', idom, delimiter='  ')
+                    call write_line('   Detecting chimera donors for domain: ', idom, delimiter='  ', ltrim=.false.)
 
 
                     !

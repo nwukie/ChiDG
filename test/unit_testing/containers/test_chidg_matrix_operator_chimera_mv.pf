@@ -62,7 +62,6 @@ subroutine test_chidg_matrix_operator_chimera_mv()
     ! Read grid
     !
     call chidg%read_grid(filename,spacedim)
-    call chidg%read_boundaryconditions(filename)
 
 
 

@@ -50,12 +50,11 @@ module type_chidg_data
         ! mesh
         type(mesh_t)                                :: mesh
 
-        ! Boundary conditions are not specified per-domain. 
-        ! A boundary condition for each bc_group in the file.
+        ! bc's and equation set's
         type(bc_t),                     allocatable :: bc(:)    
         type(equation_set_t),           allocatable :: eqnset(:)
 
-        ! An object containing matrix and vector storage
+        ! An object containing chidg matrices/vectors
         type(solverdata_t)                          :: sdata
 
         ! An object containing time information
@@ -64,21 +63,19 @@ module type_chidg_data
 
     contains
 
-        ! Modifiers for adding domains and boundary conditions
-!        procedure   :: add_domain
-!        procedure   :: ndomains             ! Return number of allocated domains
-
-
+        ! Boundary conditions
         procedure   :: add_bc_group
         procedure   :: add_bc_patch
         procedure   :: new_bc
-        procedure   :: nbcs                 ! Return number of allocated bndry conds
+        procedure   :: nbcs
 
 
+        ! Equations
         procedure   :: add_equation_set
         procedure   :: new_equation_set
         procedure   :: get_equation_set_id
-        procedure   :: nequation_sets       ! Return number of allocated eqn sets
+        procedure   :: nequation_sets
+
 
         ! Initialization procedure for solution data. Execute after all domains are added.
         procedure   :: initialize_solution_domains
@@ -88,6 +85,7 @@ module type_chidg_data
 
         ! Release allocated memory
         procedure   :: release
+
 
         ! Accessors
         procedure   :: get_domain_index             ! Given domain name, return domain index
@@ -127,7 +125,7 @@ contains
         type(bcset_coupling_t),             allocatable :: bcset_coupling(:)
 
 
-        call write_line("Matrices/Vectors: allocating...", io_proc=GLOBAL_MASTER)
+        call write_line("Initialize: matrix/vector allocation...", io_proc=GLOBAL_MASTER)
         !
         ! Assemble array of function_data from the eqnset array to pass to the solver data 
         ! structure for initialization
@@ -166,116 +164,6 @@ contains
 
     end subroutine initialize_solution_solver
     !***************************************************************************************
-
-
-
-
-
-
-
-
-!    !> Add a domain to ChiDG. Calls initialization routines for components which define a 
-!    !! domain. That is, a mesh_t, an equationset_t, and the number of terms in their 
-!    !! polynomial expansions.
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   2/1/2016
-!    !!
-!    !!  @param[in]  points      point_t matrix defining the mesh
-!    !!  @param[in]  nterms_c    Integer defining number of terms in the coordinate expansion
-!    !!  @param[in]  eqnset      Character string defining the equationset_t for the domain
-!    !!  @param[in]  nterms_s    Integer defining number of terms in the solution expansion
-!    !!
-!    !---------------------------------------------------------------------------------------
-!    subroutine add_domain(self,name,nodes,connectivity,nelements_g,spacedim,nterms_c,eqnset,coord_system)
-!        class(chidg_data_t),            intent(inout)   :: self
-!        character(*),                   intent(in)      :: name
-!        type(point_t),                  intent(in)      :: nodes(:)
-!        type(domain_connectivity_t),    intent(in)      :: connectivity
-!        integer(ik),                    intent(in)      :: nelements_g
-!        integer(ik),                    intent(in)      :: spacedim
-!        integer(ik),                    intent(in)      :: nterms_c
-!        character(*),                   intent(in)      :: eqnset
-!        character(*),                   intent(in)      :: coord_system
-!
-!        integer(ik)                 :: idomain_l, ierr, idom, ieqn, eqn_ID
-!        logical                     :: already_added
-!        character(:),   allocatable :: user_msg
-!
-!
-!        type(domain_info_t),            allocatable :: temp_info(:)
-!        type(mesh_t),                   allocatable :: temp_mesh(:)
-!
-!
-!        !
-!        ! Increment location of new domain by one
-!        !
-!        idomain_l = self%ndomains() + 1
-!
-!
-!        !
-!        ! Get equation set identifier
-!        !
-!        eqn_ID = self%get_equation_set_id(trim(eqnset))
-!
-!
-!        !
-!        ! Resize array storage
-!        !
-!        allocate( temp_info(  self%ndomains()+1),   &
-!                  temp_mesh(  self%ndomains()+1), stat=ierr)
-!        if (ierr /= 0) call AllocationError
-!
-!
-!        ! Copy previously initialized instances to new array. Be careful about pointers 
-!        ! components here. For example, a pointer from a face to an element would no 
-!        ! longer be valid in the new array.
-!        if (self%ndomains() > 0) then
-!            temp_info(   1:size(self%info))    = self%info(1:size(self%info))
-!            temp_mesh(   1:size(self%mesh))    = self%mesh(1:size(self%mesh))
-!        end if
-!
-!
-!        !
-!        ! Set domain info
-!        !
-!        temp_info(idomain_l)%name = name
-!
-!
-!        !
-!        ! Initialize new mesh: geometry and equation set identifier
-!        !
-!        call temp_mesh(idomain_l)%init_geom(idomain_l,nelements_g,spacedim,nterms_c,nodes,connectivity,coord_system)
-!        call temp_mesh(idomain_l)%init_eqn(eqn_ID)
-!
-!
-!        !
-!        ! Check that a domain with the same global index wasn't already added. 
-!        ! For example, if a block got split and put on the same processor. Some 
-!        ! of the MPI communication assumes one unique global domain index for each 
-!        ! domain on the processor.
-!        !
-!        user_msg = "chidg_data%add_domain: Two domains have the same global index. MPI &
-!                    communication assumes this does not happen."
-!        if (self%ndomains() > 1) then
-!            do idom = 1,size(self%mesh)
-!                if (self%mesh(idom)%idomain_g == temp_mesh(idomain_l)%idomain_g) call chidg_signal(FATAL,user_msg)
-!            end do !idom
-!        end if
-!
-!
-!
-!        !
-!        ! Move resized temp allocation back to chidg_data container. 
-!        ! Be careful about pointer components here! Their location in memory has changed.
-!        !
-!        call move_alloc(temp_info,self%info)
-!        call move_alloc(temp_mesh,self%mesh)
-!
-!
-!    end subroutine add_domain
-!    !***************************************************************************************
-
 
 
 
@@ -701,7 +589,6 @@ contains
             call self%mesh%domain(idomain)%init_sol(nfields,nterms_s,self%time_manager%ntime)
         end do
 
-        call write_line(" ", ltrim=.false., io_proc=GLOBAL_MASTER)
 
     end subroutine initialize_solution_domains
     !***************************************************************************************
@@ -725,7 +612,7 @@ contains
         integer(ik) :: ibc
 
 
-        call write_line("BC: initializing communication...", io_proc=GLOBAL_MASTER)
+        call write_line("Initialize: bc communication...", io_proc=GLOBAL_MASTER)
         do ibc = 1,self%nbcs()
 
             !
@@ -803,28 +690,6 @@ contains
 
 
 
-!    !> Return the number of domains in the chidg_data_t instance.
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   2/1/2016
-!    !!
-!    !!
-!    !----------------------------------------------------------------------------------------
-!    function ndomains(self) result(ndomains_)
-!        class(chidg_data_t),    intent(in)      :: self
-!
-!        integer :: ndomains_
-!
-!        if (allocated(self%mesh)) then
-!            ndomains_ = size(self%mesh)
-!        else
-!            ndomains_ = 0
-!        end if
-!
-!    end function ndomains
-!    !****************************************************************************************
-
-
 
 
 
@@ -848,6 +713,9 @@ contains
 
     end function nbcs
     !****************************************************************************************
+
+
+
 
 
 
@@ -972,7 +840,6 @@ contains
     subroutine release(self)
         class(chidg_data_t),    intent(inout)   :: self
 
-        !if (allocated(self%mesh))   deallocate(self%mesh)
         if (allocated(self%eqnset)) deallocate(self%eqnset)
         if (allocated(self%bc))     deallocate(self%bc)
 

@@ -90,7 +90,6 @@ contains
         !
         spacedim = 3
         call this%chidg%read_grid(this%filename, spacedim)
-        call this%chidg%read_boundaryconditions(this%filename)
 
 
 

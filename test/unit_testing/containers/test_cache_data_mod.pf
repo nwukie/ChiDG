@@ -65,7 +65,6 @@ contains
         ! Read grid + bcs
         !
         call this%chidg%read_grid(this%filename,3)
-        call this%chidg%read_boundaryconditions(this%filename)
 
         ! Initialize
         call this%chidg%set('Solution Order', integer_input=this%solution_order)

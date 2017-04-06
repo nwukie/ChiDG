@@ -1,13 +1,15 @@
 module test_mesh_mod
     use pfunit_mod
-    use mod_kinds,          only: rk,ik
-    use mod_test_utilities, only: create_mesh
+    use mod_kinds,              only: rk,ik
+    use mod_test_utilities,     only: create_mesh
 
-    use type_chidg,                 only: chidg_t
+    use type_chidg,             only: chidg_t
     use type_mesh,              only: mesh_t
     implicit none
 
     public  :: test_mesh
+
+
 
     !>
     !!
@@ -20,7 +22,7 @@ module test_mesh_mod
     type, extends(TestCase) ::  test_mesh
 
         type(chidg_t)       :: chidg
-        type(mesh_t)    :: mesh
+        type(mesh_t)        :: mesh
 
     contains
 
@@ -32,6 +34,9 @@ module test_mesh_mod
 
 
 contains
+
+
+
 
     !>  NOTE: make sure to use 'this' instead of 'self' since these are over-writting 
     !!  a derived type procedure. The argument names have to match.
@@ -91,8 +96,8 @@ contains
         !
         ! Call mesh%new_domain() twice.
         !
-        dom_ID1 = self%mesh%new_domain()
-        dom_ID2 = self%mesh%new_domain()
+        dom_ID1 = self%mesh%stub_new_domain()
+        dom_ID2 = self%mesh%stub_new_domain()
 
         
         !

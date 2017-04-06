@@ -1,4 +1,4 @@
-module test_mesh_linear_mod
+module test_domain_linear_mod
     use pfunit_mod
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
@@ -7,13 +7,13 @@ module test_mesh_linear_mod
 
     use type_chidg,                 only: chidg_t
     use type_point,                 only: point_t
-    use type_mesh,                  only: mesh_t
+    use type_domain,                only: domain_t
     use type_element,               only: element_t
     use type_face,                  only: face_t
     use type_domain_connectivity,   only: domain_connectivity_t
     implicit none
 
-    public  :: test_mesh_linear
+    public  :: test_domain_linear
 
     !>
     !!
@@ -23,17 +23,17 @@ module test_mesh_linear_mod
     !!
     !-------------------------------------------------------------------------------------
     @TestCase
-    type, extends(TestCase) ::  test_mesh_linear
+    type, extends(TestCase) ::  test_domain_linear
 
         type(chidg_t)   :: chidg
-        type(mesh_t)    :: mesh
+        type(domain_t)  :: domain
 
     contains
 
         procedure   ::  setUp
         procedure   ::  tearDown
 
-    end type test_mesh_linear
+    end type test_domain_linear
     !**************************************************************************************
 
 
@@ -46,7 +46,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------
     subroutine setUp(this)
-        class(test_mesh_linear),    intent(inout)   :: this
+        class(test_domain_linear),    intent(inout)   :: this
         
         integer(ik), parameter      :: npt = 64
         type(point_t),  allocatable :: nodes(:)
@@ -96,9 +96,9 @@ contains
         nterms_s    = 8
         ntime       = 1
         nelements_g = 27
-        call this%mesh%init_geom(idomain,nelements_g,spacedim,nterms_c,nodes,connectivity,'Cartesian')
-        call this%mesh%init_sol(neqns,nterms_s,ntime)
-        call this%mesh%init_comm_local()
+        call this%domain%init_geom(idomain,nelements_g,spacedim,nterms_c,nodes,connectivity,'Cartesian')
+        call this%domain%init_sol(neqns,nterms_s,ntime)
+        call this%domain%init_comm_local()
 
     end subroutine setUp
     !****************************************************************************************
@@ -111,7 +111,7 @@ contains
     !!
     !---------------------------------------------------------------------------------------
     subroutine tearDown(this)
-        class(test_mesh_linear),    intent(inout)   :: this
+        class(test_domain_linear),    intent(inout)   :: this
 
 
     end subroutine
@@ -131,8 +131,8 @@ contains
     !!
     !--------------------------------------------------------------------------------------
     @Test
-    subroutine testMesh_integers(self)
-        class(test_mesh_linear),    intent(inout)   :: self
+    subroutine test_domain_integers(self)
+        class(test_domain_linear),    intent(inout)   :: self
 
         integer(ik) :: neqns, nterms_s, nterms_c, nelem_xi, nelem_eta, &
                        nelem_zeta, nelem, idomain, ntime
@@ -144,14 +144,14 @@ contains
         nterms_c = 8
         nelem    = 27
 
-        @assertEqual(neqns,self%mesh%neqns)
-        @assertEqual(ntime,self%mesh%ntime)
-        @assertEqual(nterms_s,self%mesh%nterms_s)
-        @assertEqual(nterms_c,self%mesh%nterms_c)
-        @assertEqual(nelem,self%mesh%nelem)
-        @assertEqual(idomain,self%mesh%idomain_g)
+        @assertEqual(neqns,self%domain%neqns)
+        @assertEqual(ntime,self%domain%ntime)
+        @assertEqual(nterms_s,self%domain%nterms_s)
+        @assertEqual(nterms_c,self%domain%nterms_c)
+        @assertEqual(nelem,self%domain%nelem)
+        @assertEqual(idomain,self%domain%idomain_g)
 
-    end subroutine testMesh_integers
+    end subroutine test_domain_integers
     !***************************************************************************************
     
     
@@ -164,16 +164,16 @@ contains
     !!
     !---------------------------------------------------------------------------------------
     @Test
-    subroutine testMesh_elements_initialized(self)
-        class(test_mesh_linear),    intent(inout)   :: self
+    subroutine test_domain_elements_initialized(self)
+        class(test_domain_linear),    intent(inout)   :: self
         integer(ik) :: ielem
         
-        do ielem = 1,self%mesh%nelem
-            @assertTrue(self%mesh%elems(ielem)%geomInitialized)
-            @assertTrue(self%mesh%elems(ielem)%numInitialized)
+        do ielem = 1,self%domain%nelem
+            @assertTrue(self%domain%elems(ielem)%geomInitialized)
+            @assertTrue(self%domain%elems(ielem)%numInitialized)
         end do
         
-    end subroutine testMesh_elements_initialized
+    end subroutine test_domain_elements_initialized
     !****************************************************************************************
         
         
@@ -186,18 +186,18 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     @Test
-    subroutine testMesh_faces_initialized(self)
-        class(test_mesh_linear),    intent(inout)   :: self
+    subroutine test_domain_faces_initialized(self)
+        class(test_domain_linear),    intent(inout)   :: self
         integer(ik) :: ielem, iface
         
-        do ielem = 1,self%mesh%nelem
+        do ielem = 1,self%domain%nelem
             do iface = 1,NFACES
-                @assertTrue(self%mesh%faces(ielem,iface)%geomInitialized)
-                @assertTrue(self%mesh%faces(ielem,iface)%numInitialized)
+                @assertTrue(self%domain%faces(ielem,iface)%geomInitialized)
+                @assertTrue(self%domain%faces(ielem,iface)%numInitialized)
             end do
         end do
 
-    end subroutine testMesh_faces_initialized
+    end subroutine test_domain_faces_initialized
     !****************************************************************************************
         
     
@@ -211,10 +211,10 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     @Test
-    subroutine testMesh_indices_interior(self)
-        class(test_mesh_linear),    intent(inout)   :: self
+    subroutine test_domain_indices_interior(self)
+        class(test_domain_linear),    intent(inout)   :: self
         
-        associate (faces => self%mesh%faces)
+        associate (faces => self%domain%faces)
             ! Test parent element
             @assertEqual(14,faces(14,XI_MIN)%iparent_g)
             @assertEqual(14,faces(14,XI_MAX)%iparent_g)
@@ -232,7 +232,7 @@ contains
             @assertEqual(23,faces(14,ZETA_MAX)%get_neighbor_element_l())
         end associate
 
-    end subroutine testMesh_indices_interior
+    end subroutine test_domain_indices_interior
     !****************************************************************************************
     
     
@@ -245,10 +245,10 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     @Test
-    subroutine testMesh_indices_boundary(self)
-        class(test_mesh_linear),    intent(inout)   :: self
+    subroutine test_domain_indices_boundary(self)
+        class(test_domain_linear),    intent(inout)   :: self
         
-        associate (faces => self%mesh%faces)
+        associate (faces => self%domain%faces)
             !> Test neighbor elements
             @assertEqual(0,faces(1,XI_MIN)%get_neighbor_element_l())
             @assertEqual(2,faces(1,XI_MAX)%get_neighbor_element_l())
@@ -258,7 +258,7 @@ contains
             @assertEqual(10,faces(1,ZETA_MAX)%get_neighbor_element_l())
         end associate
         
-    end subroutine testMesh_indices_boundary
+    end subroutine test_domain_indices_boundary
     !****************************************************************************************
     
     
@@ -277,14 +277,14 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     @Test
-    subroutine testMesh_E1_faces_ftype(self)
-        class(test_mesh_linear),    intent(inout)   :: self
+    subroutine test_domain_E1_faces_ftype(self)
+        class(test_domain_linear),    intent(inout)   :: self
         
         integer(ik) :: ielem
         logical     :: isInterior
         
         
-        associate ( faces => self%mesh%faces )
+        associate ( faces => self%domain%faces )
         
         ielem = 1
 
@@ -315,7 +315,7 @@ contains
         
         
         end associate
-    end subroutine testMesh_E1_faces_ftype
+    end subroutine test_domain_E1_faces_ftype
     !****************************************************************************************
 
 
@@ -330,14 +330,14 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     @Test
-    subroutine testMesh_E2_faces_ftype(self)
-        class(test_mesh_linear),    intent(inout)   :: self
+    subroutine test_domain_E2_faces_ftype(self)
+        class(test_domain_linear),    intent(inout)   :: self
         
         integer(ik) :: ielem
         logical     :: isInterior
         
         
-        associate ( faces => self%mesh%faces )
+        associate ( faces => self%domain%faces )
         
         ielem = 2
 
@@ -368,7 +368,7 @@ contains
         
         
         end associate
-    end subroutine testMesh_E2_faces_ftype
+    end subroutine test_domain_E2_faces_ftype
     !***************************************************************************************
     
     
@@ -381,14 +381,14 @@ contains
     !!
     !--------------------------------------------------------------------------------------
     @Test
-    subroutine testMesh_E14_faces_ftype(self)
-        class(test_mesh_linear),    intent(inout)   :: self
+    subroutine test_domain_E14_faces_ftype(self)
+        class(test_domain_linear),    intent(inout)   :: self
         
         integer(ik) :: ielem
         logical     :: isInterior
         
         
-        associate ( faces => self%mesh%faces )
+        associate ( faces => self%domain%faces )
         
         ielem = 14
 
@@ -419,7 +419,7 @@ contains
         
         
         end associate
-    end subroutine testMesh_E14_faces_ftype
+    end subroutine test_domain_E14_faces_ftype
     !***************************************************************************************
 
 
@@ -427,7 +427,7 @@ contains
 
 
 
-    !>  Test that the routine mesh%get_comm_procs is returning all the correct processor 
+    !>  Test that the routine domain%get_comm_procs is returning all the correct processor 
     !!  ranks that have been set in self%ineighbor_proc
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -436,8 +436,8 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     @Test
-    subroutine testMesh__get_comm_procs(self)
-        class(test_mesh_linear),    intent(inout)   :: self
+    subroutine test_domain__get_comm_procs(self)
+        class(test_domain_linear),    intent(inout)   :: self
 
         integer(ik),    allocatable :: comm_procs(:)
 
@@ -446,23 +446,23 @@ contains
         ! So, we will manually set a few neighbor ranks to make sure they are getting 
         ! detected and returned correctly.
         !
-        self%mesh%faces(14,XI_MIN)%ineighbor_proc   = 2
-        self%mesh%faces(14,XI_MAX)%ineighbor_proc   = 3
-        self%mesh%faces(14,ETA_MIN)%ineighbor_proc  = 4
-        self%mesh%faces(14,ETA_MAX)%ineighbor_proc  = 5
-        self%mesh%faces(14,ZETA_MIN)%ineighbor_proc = 6
-        self%mesh%faces(14,ZETA_MAX)%ineighbor_proc = 0 ! Should not be added because this would indicate on-processor neighbor
+        self%domain%faces(14,XI_MIN)%ineighbor_proc   = 2
+        self%domain%faces(14,XI_MAX)%ineighbor_proc   = 3
+        self%domain%faces(14,ETA_MIN)%ineighbor_proc  = 4
+        self%domain%faces(14,ETA_MAX)%ineighbor_proc  = 5
+        self%domain%faces(14,ZETA_MIN)%ineighbor_proc = 6
+        self%domain%faces(14,ZETA_MAX)%ineighbor_proc = 0 ! Should not be added because this would indicate on-processor neighbor
 
         !
-        ! set artificial global communication intialization so mesh%get_comm_procs will run.
+        ! set artificial global communication intialization so domain%get_comm_procs will run.
         !
-        self%mesh%global_comm_initialized = .true.
+        self%domain%global_comm_initialized = .true.
 
 
         !
         ! Call get_comm_procs. THIS IS BEING TESTED.
         !
-        comm_procs = self%mesh%get_send_procs()
+        comm_procs = self%domain%get_send_procs()
 
 
         !
@@ -470,7 +470,7 @@ contains
         !
         @assertEqual([2,3,4,5,6],comm_procs)
 
-    end subroutine testMesh__get_comm_procs
+    end subroutine test_domain__get_comm_procs
     !****************************************************************************************
 
 
@@ -488,4 +488,4 @@ contains
 
 
 
-end module test_mesh_linear_mod
+end module test_domain_linear_mod

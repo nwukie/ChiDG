@@ -85,7 +85,7 @@ contains
         ! all time steps.
         ! Each block corresponds to a ChiDG domain
         !
-        allocate(file_arr(data%ndomains()*ntime))
+        allocate(file_arr(data%mesh%ndomains()*ntime))
 
 
         !
@@ -94,12 +94,12 @@ contains
         do itime = 1,ntime
 
 
-            d = (itime - 1)*data%ndomains()
+            d = (itime - 1)*data%mesh%ndomains()
 
             !
             ! Loop through all domains to get data
             !
-            do idom = 1,data%ndomains()
+            do idom = 1,data%mesh%ndomains()
 
                 !
                 ! Get the file names for the individual vtk files for individual domains
@@ -110,7 +110,7 @@ contains
                 ! Get number of elements in the current block
                 ! Get number of equations in the equation set
                 !
-                nelem = data%mesh(idom)%nelem
+                nelem = data%mesh%domain(idom)%nelem
                 noeq = data%eqnset(1)%prop%nprimary_fields()
 
                 !

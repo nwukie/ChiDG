@@ -3,7 +3,7 @@ module type_RASILU0_recv_dom
     use mod_kinds,                  only: rk, ik
     use mod_chidg_mpi,              only: IRANK
 
-    use type_mesh,                  only: mesh_t
+    use type_domain,                only: domain_t
     use type_blockmatrix,           only: blockmatrix_t
     use type_RASILU0_recv_dom_comm, only: RASILU0_recv_dom_comm_t
     implicit none
@@ -55,9 +55,9 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine init(self,mesh,a)
+    subroutine init(self,domain,a)
         class(RASILU0_recv_dom_t),  intent(inout)   :: self
-        type(mesh_t),               intent(in)      :: mesh
+        type(domain_t),             intent(in)      :: domain
         type(blockmatrix_t),        intent(in)      :: a
 
         integer(ik),    allocatable :: recv_procs(:)
@@ -68,7 +68,7 @@ contains
         ! Compute the number of processors we are receiving conforming neighbor data from. 
         ! NOT chimera
         ! 
-        recv_procs  = mesh%get_recv_procs_local()
+        recv_procs  = domain%get_recv_procs_local()
         nrecv_procs = size(recv_procs)
 
 
@@ -81,7 +81,7 @@ contains
         !
         do icomm = 1,nrecv_procs
             proc = recv_procs(icomm)
-            call self%comm(icomm)%init(mesh,a,proc)
+            call self%comm(icomm)%init(domain,a,proc)
         end do !icomm
 
 

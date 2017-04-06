@@ -4,7 +4,7 @@ module type_blockvector
     use mod_constants,      only: ZERO, TWO
     use mod_chidg_mpi,      only: ChiDG_COMM
     use mpi_f08,            only: MPI_Recv, MPI_ANY_TAG, MPI_STATUS_IGNORE, MPI_INTEGER4
-    use type_mesh,          only: mesh_t
+    use type_domain,        only: domain_t
     use type_ivector,       only: ivector_t
     use type_densevector
     use DNAD_D
@@ -109,16 +109,16 @@ contains
     !!  @date   11/5/2016
     !!
     !------------------------------------------------------------------------------------------
-    subroutine init_local(self,mesh)
+    subroutine init_local(self,domain)
         class(blockvector_t),   intent(inout) :: self
-        type(mesh_t),           intent(in)    :: mesh
+        type(domain_t),         intent(in)    :: domain
 
         integer(ik) :: nelem, ierr, ielem, nterms, neqns, ntime
         integer(ik) :: dparent_g, dparent_l, eparent_g, eparent_l
         logical     :: new_elements
 
 
-        nelem = mesh%nelem  ! Number of elements in the local block
+        nelem = domain%nelem  ! Number of elements in the local block
 
         !
         ! ALLOCATE SIZE FOR 'vecs'
@@ -131,7 +131,7 @@ contains
             ! If so (new_elements), then reallocate matrix size.
             ! If not, do nothing
             !
-            new_elements = (mesh%nelem /= size(self%vecs))
+            new_elements = (domain%nelem /= size(self%vecs))
             if (new_elements) then
                 deallocate(self%vecs)
                 allocate(self%vecs(nelem), stat=ierr)
@@ -150,14 +150,14 @@ contains
         !
         ! Loop through elements and call initialization for densevectors
         !
-        do ielem = 1,mesh%nelem
-            dparent_g = mesh%elems(ielem)%idomain_g
-            dparent_l = mesh%elems(ielem)%idomain_l
-            eparent_g = mesh%elems(ielem)%ielement_g
-            eparent_l = mesh%elems(ielem)%ielement_l
-            nterms    = mesh%elems(ielem)%nterms_s
-            neqns     = mesh%elems(ielem)%neqns
-            ntime     = mesh%elems(ielem)%ntime
+        do ielem = 1,domain%nelem
+            dparent_g = domain%elems(ielem)%idomain_g
+            dparent_l = domain%elems(ielem)%idomain_l
+            eparent_g = domain%elems(ielem)%ielement_g
+            eparent_l = domain%elems(ielem)%ielement_l
+            nterms    = domain%elems(ielem)%nterms_s
+            neqns     = domain%elems(ielem)%neqns
+            ntime     = domain%elems(ielem)%ntime
 
             ! Call densevector initialization routine
             call self%vecs(ielem)%init(nterms,neqns,ntime,dparent_g,dparent_l,eparent_g,eparent_l)
@@ -188,7 +188,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/30/2016
     !!
-    !!  @param[in]  mesh    mesh_t instance containing initialized elements and faces
+    !!  @param[in]  domain    domain_t instance containing initialized elements and faces
     !!
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/5/2016

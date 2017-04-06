@@ -2,7 +2,7 @@ module type_chidg_vector_recv
 #include <messenger.h>
     use mod_kinds,                   only: ik
     use type_ivector,                only: ivector_t
-    use type_mesh,                   only: mesh_t
+    use type_mesh,               only: mesh_t
     use type_chidg_vector_recv_comm, only: chidg_vector_recv_comm_t
     implicit none
 
@@ -46,7 +46,8 @@ contains
     !------------------------------------------------------------------------------------------
     subroutine init(self,mesh)
         class(chidg_vector_recv_t), intent(inout)   :: self
-        type(mesh_t),               intent(inout)   :: mesh(:)
+        !type(mesh_t),               intent(inout)   :: mesh(:)
+        type(mesh_t),           intent(inout)   :: mesh
 
         integer(ik)                 :: idom, iproc, icomm, ncomm, ndom_recv, ierr, loc
         integer(ik),    allocatable :: comm_procs_dom(:)
@@ -64,8 +65,8 @@ contains
         !
         ! Get processor ranks that we are receiving from: mesh
         !
-        do idom = 1,size(mesh)
-            comm_procs_dom = mesh(idom)%get_recv_procs()
+        do idom = 1,mesh%ndomains()
+            comm_procs_dom = mesh%domain(idom)%get_recv_procs()
 
             do iproc = 1,size(comm_procs_dom)
                 ! See if proc is already in list

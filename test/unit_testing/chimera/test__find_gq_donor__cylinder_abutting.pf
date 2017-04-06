@@ -55,7 +55,6 @@ subroutine test_find_gq_donor_cylinder_abutting()
     ! Read grid
     !
     call chidgA%read_grid(trim(filename),spacedim)
-    call chidgA%read_boundaryconditions(trim(filename))
 
 
     !
@@ -76,22 +75,22 @@ subroutine test_find_gq_donor_cylinder_abutting()
     ielem = 25
     iface = XI_MIN
 
-    ChiID   = chidgA%data%mesh(4)%faces(ielem,iface)%ChiID
-    idom_d  = chidgA%data%mesh(4)%chimera%recv%data(ChiID)%donor_domain_l%at(1)
-    ielem_d = chidgA%data%mesh(4)%chimera%recv%data(ChiID)%donor_element_l%at(1)
-    ngq     = chidgA%data%mesh(idom)%chimera%recv%data(ChiID)%donor_gq_indices(1)%size()
+    ChiID   = chidgA%data%mesh%domain(idom)%faces(ielem,iface)%ChiID
+    idom_d  = chidgA%data%mesh%domain(idom)%chimera%recv%data(ChiID)%donor_domain_l%at(1)
+    ielem_d = chidgA%data%mesh%domain(idom)%chimera%recv%data(ChiID)%donor_element_l%at(1)
+    ngq     = chidgA%data%mesh%domain(idom)%chimera%recv%data(ChiID)%donor_gq_indices(1)%size()
 
     do igq = 1,ngq
 
-        gq_index = chidgA%data%mesh(idom)%chimera%recv%data(ChiID)%donor_gq_indices(1)%at(igq)
-        chimera_node  = chidgA%data%mesh(idom)%chimera%recv%data(ChiID)%donor_coords(1)%at(igq)
+        gq_index = chidgA%data%mesh%domain(idom)%chimera%recv%data(ChiID)%donor_gq_indices(1)%at(igq)
+        chimera_node  = chidgA%data%mesh%domain(idom)%chimera%recv%data(ChiID)%donor_coords(1)%at(igq)
         chi_xi   = chimera_node%c1_
         chi_eta  = chimera_node%c2_
         chi_zeta = chimera_node%c3_
 
-        ref_xi   = chidgA%data%mesh(idom_d)%faces(ielem_d,XI_MAX)%gq%face%nodes(gq_index,XI_MAX)%c1_
-        ref_eta  = chidgA%data%mesh(idom_d)%faces(ielem_d,XI_MAX)%gq%face%nodes(gq_index,XI_MAX)%c2_
-        ref_zeta = chidgA%data%mesh(idom_d)%faces(ielem_d,XI_MAX)%gq%face%nodes(gq_index,XI_MAX)%c3_
+        ref_xi   = chidgA%data%mesh%domain(idom_d)%faces(ielem_d,XI_MAX)%gq%face%nodes(gq_index,XI_MAX)%c1_
+        ref_eta  = chidgA%data%mesh%domain(idom_d)%faces(ielem_d,XI_MAX)%gq%face%nodes(gq_index,XI_MAX)%c2_
+        ref_zeta = chidgA%data%mesh%domain(idom_d)%faces(ielem_d,XI_MAX)%gq%face%nodes(gq_index,XI_MAX)%c3_
 
 
 

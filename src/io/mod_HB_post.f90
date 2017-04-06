@@ -49,11 +49,11 @@ contains
             !            Balance Method", Ph.D. Dissertation, University of Cincinnati, pg. 40-41
             !
             do otime = 1,q_in%get_ntime()
-                do idom = 1,data%ndomains()
+                do idom = 1,data%mesh%ndomains()
                     
-                    associate ( mesh     => data%mesh(idom),          &
-                                nelem    => data%mesh(idom)%nelem,    &
-                                nterms_s => data%mesh(idom)%nterms_s, &
+                    associate ( domain   => data%mesh%domain(idom),          &
+                                nelem    => data%mesh%domain(idom)%nelem,    &
+                                nterms_s => data%mesh%domain(idom)%nterms_s, &
                                 nvars    => data%eqnset(idom)%prop%nprimary_fields()) 
                     
                     if (allocated(temp_1) .and. allocated(temp_2)) deallocate(temp_1,temp_2)
@@ -118,10 +118,10 @@ contains
             call q_coeffs(itime)%init(data%mesh,1)
             call q_coeffs(itime)%clear()
 
-            do idom = 1,data%ndomains()
+            do idom = 1,data%mesh%ndomains()
 
-                associate ( nelem    => data%mesh(idom)%nelem,    &
-                            nterms_s => data%mesh(idom)%nterms_s, &
+                associate ( nelem    => data%mesh%domain(idom)%nelem,    &
+                            nterms_s => data%mesh%domain(idom)%nterms_s, &
                             nvars    => data%eqnset(idom)%prop%nprimary_fields() )
 
                 if (allocated(temp)) deallocate(temp)
@@ -226,10 +226,10 @@ contains
 
 
         do itime = 1,ntime
-            do idom = 1,data%ndomains()
+            do idom = 1,data%mesh%ndomains()
 
-                associate ( nelem    => data%mesh(idom)%nelem,    &
-                            nterms_s => data%mesh(idom)%nterms_s, &
+                associate ( nelem    => data%mesh%domain(idom)%nelem,    &
+                            nterms_s => data%mesh%domain(idom)%nterms_s, &
                             nvars    => data%eqnset(idom)%prop%nprimary_fields() )
                     
                     ! Allocate temporary arrays
@@ -320,10 +320,10 @@ contains
         ! Generate new q_in where itime component of q_in = q_interp(itime)
         !
         do itime_interp = 1,ntime_interp
-            do idom = 1,data%ndomains()
+            do idom = 1,data%mesh%ndomains()
 
-                associate ( nelem    => data%mesh(idom)%nelem,    &
-                            nterms_s => data%mesh(idom)%nterms_s, &
+                associate ( nelem    => data%mesh%domain(idom)%nelem,    &
+                            nterms_s => data%mesh%domain(idom)%nterms_s, &
                             nvars    => data%eqnset(idom)%prop%nprimary_fields() )
                 
                     if (allocated(temp)) deallocate(temp)

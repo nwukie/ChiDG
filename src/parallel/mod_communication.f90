@@ -1,7 +1,7 @@
 module mod_communication
 #include <messenger.h>
     use mod_kinds,      only: rk, ik
-    use type_mesh,      only: mesh_t
+    use type_mesh,  only: mesh_t
     use mod_chidg_mpi,  only: IRANK, NRANK, GLOBAL_MASTER
     use mod_chimera,    only: detect_chimera_faces,  &
                               detect_chimera_donors, &
@@ -32,10 +32,10 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine establish_neighbor_communication(mesh,ChiDG_COMM)
-        type(mesh_t),   intent(inout)   :: mesh(:)
-        type(mpi_comm), intent(in)      :: ChiDG_COMM
+        type(mesh_t),   intent(inout)   :: mesh
+        type(mpi_comm),     intent(in)      :: ChiDG_COMM
 
-        integer(ik) :: imesh, iproc, idomain_g, idomain_l, ielem_l, ierr
+        integer(ik) :: idom, iproc, idomain_g, idomain_l, ielem_l, ierr
         integer(ik) :: ineighbor_domain_g, ineighbor_domain_l, &
                        ineighbor_element_g, ineighbor_element_l
         integer(ik) :: data(4), corner_indices(4)
@@ -47,9 +47,9 @@ contains
         !
         ! All ranks initialize local communication
         !
-        call write_line("Comm: initializing proc-local neighbor communication...", io_proc=GLOBAL_MASTER)
-        do imesh = 1,size(mesh)
-            call mesh(imesh)%init_comm_local()
+        call write_line("Initialize: proc-local neighbor communication...", io_proc=GLOBAL_MASTER)
+        do idom = 1,mesh%ndomains()
+            call mesh%domain(idom)%init_comm_local()
         end do
 
 
@@ -60,7 +60,7 @@ contains
         !
         ! Loop through mesh types
         !
-        call write_line("Comm: initializing proc-global neighbor communication...", io_proc=GLOBAL_MASTER)
+        call write_line("Initialize: proc-global neighbor communication...", io_proc=GLOBAL_MASTER)
         do iproc = 0,NRANK-1
 
 
@@ -70,15 +70,15 @@ contains
             !
             if ( iproc == IRANK ) then
 
-                do imesh = 1,size(mesh)
+                do idom = 1,mesh%ndomains()
                     ! Broadcast that a mesh from iproc is searching for face neighbors
                     searching_mesh=.true.
                     call MPI_BCast(searching_mesh,1,MPI_LOGICAL,iproc,ChiDG_COMM,ierr)
 
                     ! Initiate search for communication across processors
-                    call mesh(imesh)%init_comm_global(ChiDG_COMM)
+                    call mesh%domain(idom)%init_comm_global(ChiDG_COMM)
 
-                end do !imesh
+                end do !idom
 
 
                 ! Broadcast that no more mesh instances are searching for face neighbors
@@ -109,8 +109,8 @@ contains
 
 
                         ! Search through local domains and check indices
-                        do imesh = 1,size(mesh)
-                            has_domain = ( idomain_g == mesh(imesh)%idomain_g )
+                        do idom = 1,mesh%ndomains()
+                            has_domain = ( idomain_g == mesh%domain(idom)%idomain_g )
                             if ( has_domain ) then
                                 exit
                             end if
@@ -122,7 +122,7 @@ contains
                         call MPI_Send(has_domain,1,MPI_LOGICAL,iproc,1,ChiDG_COMM,ierr)
 
                         if ( has_domain ) then
-                            call mesh(imesh)%handle_neighbor_request(iproc,ChiDG_COMM)
+                            call mesh%domain(idom)%handle_neighbor_request(iproc,ChiDG_COMM)
                         end if
 
 
@@ -189,8 +189,8 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine establish_chimera_communication(mesh, ChiDG_COMM)
-        type(mesh_t),   intent(inout)   :: mesh(:)
-        type(mpi_comm)                  :: ChiDG_COMM
+        type(mesh_t),   intent(inout)   :: mesh
+        type(mpi_comm)                      :: ChiDG_COMM
 
         integer :: idom, ierr
 
@@ -200,10 +200,10 @@ contains
         ! procedure. Calling clear on chimera%send, chimera%recv to wipe out previous data 
         ! and redetect all chimera faces, donors and reinitialize donor data.
         !
-        call write_line("Comm: initializing chimera communication...", io_proc=GLOBAL_MASTER)
-        do idom = 1,size(mesh)
-            call mesh(idom)%chimera%send%clear()
-            call mesh(idom)%chimera%recv%clear()
+        call write_line("Initialize: chimera communication...", io_proc=GLOBAL_MASTER)
+        do idom = 1,mesh%ndomains()
+            call mesh%domain(idom)%chimera%send%clear()
+            call mesh%domain(idom)%chimera%recv%clear()
         end do !idom
         call MPI_Barrier(ChiDG_COMM,ierr)   ! not sure if this is needed.
 

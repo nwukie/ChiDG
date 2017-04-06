@@ -88,7 +88,7 @@ contains
 
         type(point_t),  allocatable :: nodes(:)
         type(domain_connectivity_t) :: connectivity
-        integer(ik)                 :: nterms_c, spacedim, nelements_g
+        integer(ik)                 :: nterms_c, spacedim, nelements_g, eqn_ID
 
         IO_DESTINATION = 'file'
 
@@ -110,7 +110,13 @@ contains
         spacedim    = 3
         nterms_c    = 8
         nelements_g = 8
-        call this%chidg%data%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Scalar Advection','Cartesian')
+
+
+
+        call this%chidg%data%add_equation_set('Scalar Advection')
+        eqn_ID = this%chidg%data%get_equation_set_id('Scalar Advection')
+
+        call this%chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Cartesian',eqn_ID)
 
         call this%chidg%set('Solution Order', integer_input=this%solution_order)
         call this%chidg%init('domains')
@@ -120,8 +126,8 @@ contains
         !
         ! Initialize solution data containers
         !
-        call this%vec_a%init(this%chidg%data%mesh,this%chidg%data%mesh(1)%ntime)
-        call this%vec_b%init(this%chidg%data%mesh,this%chidg%data%mesh(1)%ntime)
+        call this%vec_a%init(this%chidg%data%mesh,this%chidg%data%mesh%domain(1)%ntime)
+        call this%vec_b%init(this%chidg%data%mesh,this%chidg%data%mesh%domain(1)%ntime)
 
 
 

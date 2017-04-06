@@ -165,15 +165,15 @@ contains
 
         do itime_outer = 1,ntime
 
-            do idom = 1,data%ndomains()
+            do idom = 1,data%mesh%ndomains()
 
                 !associate ( mesh => data%mesh(idom), eqnset => data%eqnset(idom) )
 
                 if (allocated(temp_1) .and. allocated(temp_2)) deallocate(temp_1,temp_2)
-                allocate(temp_1(data%mesh(idom)%nterms_s),temp_2(data%mesh(idom)%nterms_s), stat=ierr)
+                allocate(temp_1(data%mesh%domain(idom)%nterms_s),temp_2(data%mesh%domain(idom)%nterms_s), stat=ierr)
                 if (ierr /= 0) call AllocationError
 
-                do ielem = 1,data%mesh(idom)%nelem
+                do ielem = 1,data%mesh%domain(idom)%nelem
 
                     do itime_inner = 1,ntime
 
@@ -182,7 +182,7 @@ contains
                             !
                             ! Temporary variables for computing the temporal rhs contributions
                             !
-                            temp_1 = D(itime_outer,itime_inner)*matmul(data%mesh(idom)%elems(ielem)%mass, &
+                            temp_1 = D(itime_outer,itime_inner)*matmul(data%mesh%domain(idom)%elems(ielem)%mass, &
                                                             q%dom(idom)%vecs(ielem)%getvar(ivar,itime_inner))
 
                             temp_2 = rhs%dom(idom)%vecs(ielem)%getvar(ivar,itime_outer) + temp_1

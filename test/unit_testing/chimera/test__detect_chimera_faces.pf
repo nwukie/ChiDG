@@ -56,7 +56,6 @@ subroutine test__detect_chimera_faces()
     ! Read 2-Domain overlapping grid
     !
     call chidg%read_grid(filename,spacedim)
-    call chidg%read_boundaryconditions(filename)
 
 
 
@@ -81,29 +80,29 @@ subroutine test__detect_chimera_faces()
     !
     associate (mesh => chidg%data%mesh)
     ! XI_MAX faces of domain-1 should be chimera faces
-    @assertEqual(CHIMERA, mesh(1)%faces(2,XI_MAX)%ftype)
-    @assertEqual(CHIMERA, mesh(1)%faces(4,XI_MAX)%ftype)
-    @assertEqual(CHIMERA, mesh(1)%faces(6,XI_MAX)%ftype)
-    @assertEqual(CHIMERA, mesh(1)%faces(8,XI_MAX)%ftype)
+    @assertEqual(CHIMERA, mesh%domain(1)%faces(2,XI_MAX)%ftype)
+    @assertEqual(CHIMERA, mesh%domain(1)%faces(4,XI_MAX)%ftype)
+    @assertEqual(CHIMERA, mesh%domain(1)%faces(6,XI_MAX)%ftype)
+    @assertEqual(CHIMERA, mesh%domain(1)%faces(8,XI_MAX)%ftype)
 
     ! XI_MIN faces of domain-2 should be chimera faces
-    @assertEqual(CHIMERA, mesh(2)%faces(1,XI_MIN)%ftype)
-    @assertEqual(CHIMERA, mesh(2)%faces(3,XI_MIN)%ftype)
-    @assertEqual(CHIMERA, mesh(2)%faces(5,XI_MIN)%ftype)
-    @assertEqual(CHIMERA, mesh(2)%faces(7,XI_MIN)%ftype)
+    @assertEqual(CHIMERA, mesh%domain(2)%faces(1,XI_MIN)%ftype)
+    @assertEqual(CHIMERA, mesh%domain(2)%faces(3,XI_MIN)%ftype)
+    @assertEqual(CHIMERA, mesh%domain(2)%faces(5,XI_MIN)%ftype)
+    @assertEqual(CHIMERA, mesh%domain(2)%faces(7,XI_MIN)%ftype)
 
 
 
     ! THESE SHOULD BE BOUNDARY FACES
-    @assertEqual(INTERIOR, mesh(1)%faces(2,XI_MIN)%ftype)
-    @assertEqual(INTERIOR, mesh(1)%faces(4,XI_MIN)%ftype)
-    @assertEqual(INTERIOR, mesh(1)%faces(6,XI_MIN)%ftype)
-    @assertEqual(INTERIOR, mesh(1)%faces(8,XI_MIN)%ftype)
+    @assertEqual(INTERIOR, mesh%domain(1)%faces(2,XI_MIN)%ftype)
+    @assertEqual(INTERIOR, mesh%domain(1)%faces(4,XI_MIN)%ftype)
+    @assertEqual(INTERIOR, mesh%domain(1)%faces(6,XI_MIN)%ftype)
+    @assertEqual(INTERIOR, mesh%domain(1)%faces(8,XI_MIN)%ftype)
 
-    @assertEqual(INTERIOR, mesh(2)%faces(1,XI_MAX)%ftype)
-    @assertEqual(INTERIOR, mesh(2)%faces(3,XI_MAX)%ftype)
-    @assertEqual(INTERIOR, mesh(2)%faces(5,XI_MAX)%ftype)
-    @assertEqual(INTERIOR, mesh(2)%faces(7,XI_MAX)%ftype)
+    @assertEqual(INTERIOR, mesh%domain(2)%faces(1,XI_MAX)%ftype)
+    @assertEqual(INTERIOR, mesh%domain(2)%faces(3,XI_MAX)%ftype)
+    @assertEqual(INTERIOR, mesh%domain(2)%faces(5,XI_MAX)%ftype)
+    @assertEqual(INTERIOR, mesh%domain(2)%faces(7,XI_MAX)%ftype)
 
 
     end associate

@@ -24,7 +24,7 @@ module test_comm_D2E2_mod
 
         type(chidg_t)   :: chidg
 
-        character(len=:), allocatable   :: gridfile
+        character(:),   allocatable     :: gridfile
         integer(ik)                     :: nterms_s = 27
         integer(ik)                     :: solution_order = 3
         type(mpi_comm)                  :: ChiDG_COMM
@@ -83,7 +83,6 @@ contains
         ! Read partition data: grid, boundary conditions
         !
         call this%chidg%read_grid(this%gridfile, spacedim)
-        call this%chidg%read_boundaryconditions(this%gridfile)
 
 
         !
@@ -101,8 +100,8 @@ contains
         initial_vals = 1.2_rk
         ivar  = 1
         itime = 1
-        do idom = 1,size(this%chidg%data%mesh)
-            do ielem = 1,this%chidg%data%mesh(idom)%nelem
+        do idom = 1,this%chidg%data%mesh%ndomains()
+            do ielem = 1,this%chidg%data%mesh%domain(idom)%nelem
                 call this%chidg%data%sdata%q%dom(idom)%vecs(ielem)%setvar(ivar,itime,initial_vals)
             end do
         end do

@@ -339,7 +339,6 @@ contains
         ! Read grid
         !
         call this%chidg%read_grid(this%gridfile,spacedim)
-        call this%chidg%read_boundaryconditions(this%gridfile)
 
 
 
@@ -488,11 +487,11 @@ contains
             dom_search = doms_top(ielem_search)
             elem_search = elems_top(ielem_search)
 
-            do idom = 1,self%chidg%data%ndomains()
-                if (self%chidg%data%mesh(idom)%idomain_g == dom_search) then
+            do idom = 1,self%chidg%data%mesh%ndomains()
+                if (self%chidg%data%mesh%domain(idom)%idomain_g == dom_search) then
 
-                    do ielem = 1,size(self%chidg%data%mesh(idom)%elems)
-                        if (self%chidg%data%mesh(idom)%elems(ielem)%ielement_g == elem_search) then
+                    do ielem = 1,size(self%chidg%data%mesh%domain(idom)%elems)
+                        if (self%chidg%data%mesh%domain(idom)%elems(ielem)%ielement_g == elem_search) then
 
                             call MPI_ISend(self%chidg%data%sdata%q%dom(idom)%vecs(ielem)%vec, send_size, MPI_REAL8, GLOBAL_MASTER, 0, ChiDG_COMM, tmp_request, ierr)
 
@@ -505,11 +504,11 @@ contains
             dom_search = doms_bot(ielem_search)
             elem_search = elems_bot(ielem_search)
 
-            do idom = 1,self%chidg%data%ndomains()
-                if (self%chidg%data%mesh(idom)%idomain_g == dom_search) then
+            do idom = 1,self%chidg%data%mesh%ndomains()
+                if (self%chidg%data%mesh%domain(idom)%idomain_g == dom_search) then
 
-                    do ielem = 1,size(self%chidg%data%mesh(idom)%elems)
-                        if (self%chidg%data%mesh(idom)%elems(ielem)%ielement_g == elem_search) then
+                    do ielem = 1,size(self%chidg%data%mesh%domain(idom)%elems)
+                        if (self%chidg%data%mesh%domain(idom)%elems(ielem)%ielement_g == elem_search) then
 
                             call MPI_ISend(self%chidg%data%sdata%q%dom(idom)%vecs(ielem)%vec, send_size, MPI_REAL8, GLOBAL_MASTER, 1, ChiDG_COMM, tmp_request, ierr)
 

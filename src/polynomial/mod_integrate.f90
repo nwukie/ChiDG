@@ -5,7 +5,7 @@ module mod_integrate
                                       NO_INTERIOR_NEIGHBOR, BOUNDARY, INTERIOR, ZERO
     use mod_chidg_mpi,          only: IRANK
 
-    use type_mesh,              only: mesh_t
+    use type_mesh,          only: mesh_t
     use type_element,           only: element_t
     use type_face,              only: face_t
     use type_element_info,      only: element_info_t
@@ -41,7 +41,7 @@ contains
     !!
     !--------------------------------------------------------------------------------------------------------
     subroutine integrate_volume_vector_flux(mesh,sdata,elem_info,fcn_info,ieqn,itime,flux1,flux2,flux3)
-        type(mesh_t),           intent(in)      :: mesh(:)
+        type(mesh_t),       intent(in)      :: mesh
         type(solverdata_t),     intent(inout)   :: sdata
         type(element_info_t),   intent(in)      :: elem_info
         type(function_info_t),  intent(in)      :: fcn_info
@@ -50,16 +50,16 @@ contains
         type(AD_D),             intent(inout)   :: flux1(:), flux2(:), flux3(:)
 
 
-        type(AD_D), dimension(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%nterms_s)    :: &
+        type(AD_D), dimension(mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%nterms_s)    :: &
             integral, integral1, integral2, integral3
 
 
         associate( idom => elem_info%idomain_l, ielem => elem_info%ielement_l, idiff => fcn_info%idiff, &
-                   weights     => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%weights, &
-                   jinv        => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%jinv,           &
-                   grad1_trans => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%grad1_trans,    &
-                   grad2_trans => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%grad2_trans,    &
-                   grad3_trans => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%grad3_trans )
+                   weights     => mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%weights, &
+                   jinv        => mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%jinv,           &
+                   grad1_trans => mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%grad1_trans,    &
+                   grad2_trans => mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%grad2_trans,    &
+                   grad3_trans => mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%grad3_trans )
 
 
         !
@@ -132,7 +132,7 @@ contains
     !!
     !--------------------------------------------------------------------------------------------------------
     subroutine integrate_volume_scalar_source(mesh,sdata,elem_info,fcn_info,ieqn,itime,source)
-        type(mesh_t),           intent(in)      :: mesh(:)
+        type(mesh_t),       intent(in)      :: mesh
         type(solverdata_t),     intent(inout)   :: sdata
         type(element_info_t),   intent(in)      :: elem_info
         type(function_info_t),  intent(in)      :: fcn_info
@@ -140,12 +140,12 @@ contains
         integer(ik),            intent(in)      :: itime
         type(AD_D),             intent(inout)   :: source(:)
 
-        type(AD_D), dimension(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%nterms_s)    :: integral, integral_x, integral_y, integral_z
+        type(AD_D), dimension(mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%nterms_s)    :: integral, integral_x, integral_y, integral_z
 
         associate( idom => elem_info%idomain_l, ielem => elem_info%ielement_l, idiff => fcn_info%idiff, &
-                   weights => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%weights,     &
-                   val     => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%val,         &
-                   jinv    => mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%jinv )
+                   weights => mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%weights,     &
+                   val     => mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%val,         &
+                   jinv    => mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%jinv )
 
         !
         ! Multiply each component by quadrature weights and element jacobians
@@ -196,7 +196,7 @@ contains
     !!
     !--------------------------------------------------------------------------------------------------------
     subroutine integrate_boundary_scalar_flux(mesh,sdata,face_info,function_info,ieqn,itime,integrand)
-        type(mesh_t),           intent(in)      :: mesh(:)
+        type(mesh_t),       intent(in)      :: mesh
         type(solverdata_t),     intent(inout)   :: sdata
         type(face_info_t),      intent(in)      :: face_info
         type(function_info_t),  intent(in)      :: function_info
@@ -224,9 +224,9 @@ contains
 
 
         ! Neighbor indices
-        ineighbor_proc      = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_proc
-        ineighbor_element_l = mesh(idomain_l)%faces(ielement_l,iface)%get_neighbor_element_l()
-        ineighbor_face      = mesh(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
+        ineighbor_proc      = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_proc
+        ineighbor_element_l = mesh%domain(idomain_l)%faces(ielement_l,iface)%get_neighbor_element_l()
+        ineighbor_face      = mesh%domain(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
 
         parallel_neighbor = ( IRANK /= ineighbor_proc )
 
@@ -241,10 +241,10 @@ contains
         !
         ! Integrate and apply once
         !
-        associate ( weights  => mesh(idomain_l)%faces(ielement_l,iface)%gq%face%weights(:,iface),   &
-                    jinv     => mesh(idomain_l)%faces(ielement_l,iface)%jinv,                       &
-                    val      => mesh(idomain_l)%faces(ielement_l,iface)%gq%face%val(:,:,iface),     &
-                    valtrans => mesh(idomain_l)%faces(ielement_l,iface)%gq%face%val_trans(:,:,iface) )
+        associate ( weights  => mesh%domain(idomain_l)%faces(ielement_l,iface)%gq%face%weights(:,iface),   &
+                    jinv     => mesh%domain(idomain_l)%faces(ielement_l,iface)%jinv,                       &
+                    val      => mesh%domain(idomain_l)%faces(ielement_l,iface)%gq%face%val(:,:,iface),     &
+                    valtrans => mesh%domain(idomain_l)%faces(ielement_l,iface)%gq%face%val_trans(:,:,iface) )
 
 
             !
@@ -270,11 +270,11 @@ contains
         if ( ineighbor_element_l /= NO_INTERIOR_NEIGHBOR ) then
             if ( .not. parallel_neighbor ) then
 
-                face_n%idomain_g  = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g
-                face_n%idomain_l  = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
-                face_n%ielement_g = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g
-                face_n%ielement_l = mesh(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
-                face_n%iface      = mesh(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
+                face_n%idomain_g  = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_g
+                face_n%idomain_l  = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
+                face_n%ielement_g = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_g
+                face_n%ielement_l = mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
+                face_n%iface      = mesh%domain(idomain_l)%faces(ielement_l,iface)%get_neighbor_face()
 
                 !
                 ! Get linearization block for the neighbor element
@@ -302,10 +302,10 @@ contains
                 function_n%idiff   = idiff_n
 
 
-                associate ( weights_n  => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%weights(:,ineighbor_face),   &
-                            jinv_n     => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%jinv,                                & 
-                            val_n      => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%val(:,:,ineighbor_face),     &
-                            valtrans_n => mesh(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%val_trans(:,:,ineighbor_face) )
+                associate ( weights_n  => mesh%domain(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%weights(:,ineighbor_face),   &
+                            jinv_n     => mesh%domain(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%jinv,                                & 
+                            val_n      => mesh%domain(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%val(:,:,ineighbor_face),     &
+                            valtrans_n => mesh%domain(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%gq%face%val_trans(:,:,ineighbor_face) )
 
                     integrand_n = integrand_n * weights_n
 
@@ -354,7 +354,7 @@ contains
     !!
     !---------------------------------------------------------------------------------------------------------
     subroutine store_volume_integrals(mesh,sdata,elem_info,fcn_info,ieqn,itime,integral)
-        type(mesh_t),           intent(in)      :: mesh(:)
+        type(mesh_t),       intent(in)      :: mesh
         type(solverdata_t),     intent(inout)   :: sdata
         type(element_info_t),   intent(in)      :: elem_info
         type(function_info_t),  intent(in)      :: fcn_info
@@ -407,9 +407,9 @@ contains
         ! diff_interior or diff_none.
         !
         if ( diff_exterior ) then
-            conforming_face = (mesh(idom)%faces(ielem,idiff)%ftype == INTERIOR)
-            boundary_face   = (mesh(idom)%faces(ielem,idiff)%ftype == BOUNDARY)
-            chimera_face    = (mesh(idom)%faces(ielem,idiff)%ftype == CHIMERA )
+            conforming_face = (mesh%domain(idom)%faces(ielem,idiff)%ftype == INTERIOR)
+            boundary_face   = (mesh%domain(idom)%faces(ielem,idiff)%ftype == BOUNDARY)
+            chimera_face    = (mesh%domain(idom)%faces(ielem,idiff)%ftype == CHIMERA )
         end if
 
 
@@ -474,7 +474,7 @@ contains
     !!
     !--------------------------------------------------------------------------------------------------------
     subroutine store_boundary_integral_residual(mesh,sdata,face_info,function_info,ieqn,itime,integral)
-        type(mesh_t),           intent(in)      :: mesh(:)
+        type(mesh_t),       intent(in)      :: mesh
         type(solverdata_t),     intent(inout)   :: sdata
         type(face_info_t),      intent(in)      :: face_info
         type(function_info_t),  intent(in)      :: function_info
@@ -491,9 +491,9 @@ contains
         associate ( idomain_l  => face_info%idomain_l, ielement_l  => face_info%ielement_l, iface => face_info%iface, &
                     ifcn  => function_info%ifcn,       idonor => function_info%idepend,     idiff => function_info%idiff )
 
-            conforming_face = (mesh(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR)
-            boundary_face   = (mesh(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY)
-            chimera_face    = (mesh(idomain_l)%faces(ielement_l,iface)%ftype == CHIMERA )
+            conforming_face = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR)
+            boundary_face   = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY)
+            chimera_face    = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == CHIMERA )
 
             diff_none     = (idiff == 0)
             diff_interior = (idiff == DIAG)
@@ -567,7 +567,7 @@ contains
     !!
     !--------------------------------------------------------------------------------------------------------
     subroutine store_boundary_integral_linearization(mesh,sdata,face_info,function_info,ieqn,itime,integral)
-        type(mesh_t),           intent(in)      :: mesh(:)
+        type(mesh_t),       intent(in)      :: mesh
         type(solverdata_t),     intent(inout)   :: sdata
         type(face_info_t),      intent(in)      :: face_info
         type(function_info_t),  intent(in)      :: function_info
@@ -586,9 +586,9 @@ contains
                     ifcn      => function_info%ifcn,  idonor     => function_info%idepend, idiff => function_info%idiff, seed => function_info%seed )
 
         
-        conforming_face = (mesh(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR)
-        boundary_face   = (mesh(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY)
-        chimera_face    = (mesh(idomain_l)%faces(ielement_l,iface)%ftype == CHIMERA )
+        conforming_face = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR)
+        boundary_face   = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY)
+        chimera_face    = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == CHIMERA )
 
         diff_none     = ( idiff == 0 )
         diff_interior = ( idiff == DIAG )

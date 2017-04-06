@@ -55,7 +55,7 @@ contains
 
         type(point_t),  allocatable                     :: nodes(:)
         type(domain_connectivity_t)                     :: connectivity
-        integer(ik)                                     :: nterms_c, spacedim, nelements_g
+        integer(ik)                                     :: nterms_c, spacedim, nelements_g, eqn_ID
         class(bc_t),    allocatable                     :: bc
 
         IO_DESTINATION = 'file'
@@ -78,7 +78,13 @@ contains
         spacedim    = 3
         nterms_c    = 8
         nelements_g = 27
-        call this%chidg%data%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'duallinearadvection','Cartesian')
+
+
+
+        call this%chidg%data%add_equation_set('Dual Linear Advection')
+        eqn_ID = this%chidg%data%get_equation_set_id('Dual Linear Advection')
+
+        call this%chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Cartesian',eqn_ID)
 
         call this%chidg%set('Solution Order', integer_input=2)
         call this%chidg%init('domains')
@@ -142,7 +148,7 @@ subroutine test_function_status__init(this)
     !
     ! Assemble function_data from eqnset instances.
     !
-    ndom = this%chidg%data%ndomains()
+    ndom = this%chidg%data%mesh%ndomains()
     allocate(function_data(ndom))
     function_data(1) = this%chidg%data%eqnset(1)%function_data
 
@@ -232,7 +238,7 @@ subroutine test_function_status__clear(this)
     !
     ! Assemble function_data from eqnset instances.
     !
-    ndom = this%chidg%data%ndomains()
+    ndom = this%chidg%data%mesh%ndomains()
     allocate(function_data(ndom))
     function_data(1) = this%chidg%data%eqnset(1)%function_data
 
@@ -320,7 +326,7 @@ subroutine test_function_status__compute(this)
     !
     ! Assemble function_data from eqnset instances.
     !
-    ndom = this%chidg%data%ndomains()
+    ndom = this%chidg%data%mesh%ndomains()
     allocate(function_data(ndom))
     function_data(1) = this%chidg%data%eqnset(1)%function_data
 
@@ -435,7 +441,7 @@ subroutine test_function_status__linearize(this)
     !
     ! Assemble function_data from eqnset instances.
     !
-    ndom = this%chidg%data%ndomains()
+    ndom = this%chidg%data%mesh%ndomains()
     allocate(function_data(ndom))
     function_data(1) = this%chidg%data%eqnset(1)%function_data
 

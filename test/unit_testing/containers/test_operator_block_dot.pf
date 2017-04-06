@@ -22,7 +22,7 @@ subroutine test_operator_block_dot()
     type(blockvector_t)         :: a, b
 
     real(rk)                    :: tol
-    integer(ik)                 :: nterms_c, idomain, spacedim, nelements_g
+    integer(ik)                 :: nterms_c, idomain, spacedim, nelements_g, eqn_ID
     real(rk),   dimension(8)    :: vec_a1, vec_a2, vec_a3, vec_b1, vec_b2, vec_b3
     real(rk)                    :: dot_ref, dot_test
 
@@ -43,16 +43,20 @@ subroutine test_operator_block_dot()
     call create_mesh('311',nodes,connectivity)
     nelements_g = 3
 
+
+    ! Initialize equation set
+    call chidg%data%add_equation_set('Scalar Advection')
+    eqn_ID = chidg%data%get_equation_set_id('Scalar Advection')
     
     ! Initialize domain
-    call chidg%data%add_domain('D_01',              &
-                               nodes,               &
-                               connectivity,        &
-                               nelements_g,         &
-                               spacedim,            &
-                               nterms_c,            &
-                               'Scalar Advection',  &
-                               'Cartesian')
+    call chidg%data%mesh%add_domain('D_01',              &
+                                    nodes,               &
+                                    connectivity,        &
+                                    nelements_g,         &
+                                    spacedim,            &
+                                    nterms_c,            &
+                                    'Cartesian',         &
+                                    eqn_ID )
 
     call chidg%set('Solution Order', integer_input=2)
     call chidg%init('domains')
@@ -63,8 +67,8 @@ subroutine test_operator_block_dot()
     !
     ! Initialize data containers
     !
-    call a%init(chidg%data%mesh(1))
-    call b%init(chidg%data%mesh(1))
+    call a%init(chidg%data%mesh%domain(1))
+    call b%init(chidg%data%mesh%domain(1))
 
 
     !

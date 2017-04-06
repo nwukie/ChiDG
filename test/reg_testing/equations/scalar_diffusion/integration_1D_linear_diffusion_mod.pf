@@ -695,7 +695,6 @@ contains
         ! Read grid
         !
         call this%chidg%read_grid(this%gridfile,spacedim)
-        call this%chidg%read_boundaryconditions(this%gridfile)
 
 
         !
@@ -1056,14 +1055,14 @@ contains
             ! Loop over elements and accumulate error
             !
             itime = 1
-            do idom = 1,data%ndomains()
-                do ielem = 1,data%mesh(idom)%nelem
+            do idom = 1,data%mesh%ndomains()
+                do ielem = 1,data%mesh%domain(idom)%nelem
 
 
                     !
                     ! Compute the analytical solution at the quadrature nodes
                     !
-                    x_gq = mesh(idom)%elems(ielem)%quad_pts(:)%c1_
+                    x_gq = mesh%domain(idom)%elems(ielem)%quad_pts(:)%c1_
                     u_analytical = dsin(TWO*PI*x_gq) + ONE - x_gq
 
                     !
@@ -1081,7 +1080,7 @@ contains
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh(idom)%elems(ielem)%jinv * mesh(idom)%elems(ielem)%gq%vol%weights)
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%gq%vol%weights)
 
 
                     !

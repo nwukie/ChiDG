@@ -272,7 +272,6 @@ contains
         ! Get grid points
         !
         call chidg%read_grid(filename,spacedim)
-        call chidg%read_boundaryconditions(filename)
 
 
         !
@@ -333,33 +332,33 @@ contains
             !
             ! Compute reference values
             !
-            associate ( D => chidg%data%time_manager%D, &
-                        mesh => chidg%data%mesh(1) )
+            associate ( D      => chidg%data%time_manager%D, &
+                        domain => chidg%data%mesh%domain(1) )
                 
                 vref_a = 0.7_rk
-                ref_1 = D(1,2)*matmul(mesh%elems(1)%mass,vref_a)
+                ref_1 = D(1,2)*matmul(domain%elems(1)%mass,vref_a)
                 vref_a = 0.1_rk; vref_b = 0.7_rk
-                ref_2 = vref_a + D(2,2)*matmul(mesh%elems(1)%mass,vref_b) 
+                ref_2 = vref_a + D(2,2)*matmul(domain%elems(1)%mass,vref_b) 
                 vref_a = 0.7_rk
-                ref_3 = D(3,2)*matmul(mesh%elems(1)%mass,vref_a)
+                ref_3 = D(3,2)*matmul(domain%elems(1)%mass,vref_a)
                 vref_a = 0.8_rk 
-                ref_4 = D(1,1)*matmul(mesh%elems(2)%mass,vref_a)
-                ref_5 = D(2,1)*matmul(mesh%elems(2)%mass,vref_a)
-                ref_6 = D(3,1)*matmul(mesh%elems(2)%mass,vref_a)
+                ref_4 = D(1,1)*matmul(domain%elems(2)%mass,vref_a)
+                ref_5 = D(2,1)*matmul(domain%elems(2)%mass,vref_a)
+                ref_6 = D(3,1)*matmul(domain%elems(2)%mass,vref_a)
                 vref_a = 0.3_rk
                 ref_7 = vref_a
                 vref_a = 0.9_rk 
-                ref_8 = D(1,3)*matmul(mesh%elems(5)%mass,vref_a)
-                ref_9 = D(2,3)*matmul(mesh%elems(5)%mass,vref_a) 
-                ref_10 = D(3,3)*matmul(mesh%elems(5)%mass,vref_a)
+                ref_8 = D(1,3)*matmul(domain%elems(5)%mass,vref_a)
+                ref_9 = D(2,3)*matmul(domain%elems(5)%mass,vref_a) 
+                ref_10 = D(3,3)*matmul(domain%elems(5)%mass,vref_a)
                 vref_a = 0.4_rk
                 ref_11 = vref_a
                 vref_a = 0.2_rk
                 ref_12 = vref_a
                 vref_a = 0.6_rk 
-                ref_13 = D(1,1)*matmul(mesh%elems(8)%mass,vref_a)
-                ref_14 = D(2,1)*matmul(mesh%elems(8)%mass,vref_a) 
-                ref_15 = D(3,1)*matmul(mesh%elems(8)%mass,vref_a)
+                ref_13 = D(1,1)*matmul(domain%elems(8)%mass,vref_a)
+                ref_14 = D(2,1)*matmul(domain%elems(8)%mass,vref_a) 
+                ref_15 = D(3,1)*matmul(domain%elems(8)%mass,vref_a)
 
 
             end associate

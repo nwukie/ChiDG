@@ -18,13 +18,12 @@ program driver
     use type_function,              only: function_t
     use mod_function,               only: create_function
     use mod_chidg_mpi,              only: GLOBAL_MASTER, ChiDG_COMM, IRANK
-    use eqn_wall_distance,          only: set_p_poisson_parameter
     use mod_io
 
     ! Actions
     use mod_chidg_edit,         only: chidg_edit
     use mod_chidg_convert,      only: chidg_convert
-    use mod_chidg_post,         only: chidg_post,chidg_post_vtk, chidg_post_matplotlib
+    use mod_chidg_post,         only: chidg_post, chidg_post_vtk, chidg_post_matplotlib
     use mod_chidg_airfoil,      only: chidg_airfoil
 
     
@@ -88,11 +87,7 @@ program driver
         ! Read grid and boundary condition data
         !
         call chidg%read_grid(gridfile)
-        call chidg%read_boundaryconditions(gridfile)
 
-        
-
-!        call set_p_poisson_parameter(4._rk)
 
         !
         ! Initialize communication, storage, auxiliary fields

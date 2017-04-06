@@ -26,7 +26,7 @@ subroutine test_fgmres_ref_solve()
     type(fgmres_t)              :: linear_solver
     
     real(rk)    :: tol
-    integer(ik) :: nterms_c, idomain, spacedim, imat, ielem, itime, nelements_g
+    integer(ik) :: nterms_c, idomain, spacedim, imat, ielem, itime, nelements_g, eqn_ID
 
 
     tol             = 1.e-9_rk
@@ -58,10 +58,17 @@ subroutine test_fgmres_ref_solve()
 
 
     !
+    ! Initialize equation set
+    !
+    call chidg%data%add_equation_set('Scalar Advection')
+    eqn_ID = chidg%data%get_equation_set_id('Scalar Advection')
+
+
+    !
     ! Initialize domain
     !
     nelements_g = 2
-    call chidg%data%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Scalar Advection','Cartesian')
+    call chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Cartesian',eqn_ID)
 
     call chidg%set('Solution Order', integer_input=1)
     call chidg%init('domains')
@@ -73,8 +80,8 @@ subroutine test_fgmres_ref_solve()
     ! Initialize data containers
     !
     call A%init(chidg%data%mesh,mtype='full')
-    call x%init(chidg%data%mesh,chidg%data%mesh(1)%ntime)
-    call b%init(chidg%data%mesh,chidg%data%mesh(1)%ntime)
+    call x%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
+    call b%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
 
 
 

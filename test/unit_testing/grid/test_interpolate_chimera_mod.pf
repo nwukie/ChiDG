@@ -90,7 +90,6 @@ contains
         !
         spacedim = 3
         call this%chidg%read_grid(this%filename, spacedim)
-        call this%chidg%read_boundaryconditions(this%filename)
 
 
 
@@ -169,7 +168,7 @@ contains
 
 
         
-        associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q)        
             idomain = 1         ! domain index
             ielem   = 2         ! given element
             itime   = 1
@@ -256,7 +255,7 @@ contains
         type(function_info_t)       :: fcn
         
         
-        associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q)        
             idomain = 1         ! domain index
             ielem   = 2         ! given element
             iface   = XI_MAX    ! given face
@@ -345,7 +344,7 @@ contains
         type(function_info_t)       :: fcn
         
         
-        associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q )
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q )
             idomain = 1         ! domain index
             ielem   = 2         ! given element
             iface   = XI_MAX    ! given face
@@ -438,14 +437,14 @@ contains
         integer(ik)                 :: ielem_n, iface_n, idonor, ChiID, ndonor_nodes
         
         
-        associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q)        
             idomain = 1         ! domain index
             ielem   = 2         ! given element
             iface   = XI_MAX    ! given face
             itime   = 1
             idonor  = 1
 
-            ChiID = self%chidg%data%mesh(idomain)%faces(ielem,iface)%ChiID
+            ChiID = self%chidg%data%mesh%domain(idomain)%faces(ielem,iface)%ChiID
 
             !
             ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so 
@@ -498,8 +497,8 @@ contains
             iface_n = compute_neighbor_face(   self%chidg%data%mesh,idomain,ielem,iface,idonor)
 
 
-            mat = self%chidg%data%mesh(idomain)%chimera%recv%data(ChiID)%donor_interpolator%at(idonor)
-            ndonor_nodes = self%chidg%data%mesh(idomain)%chimera%recv%data(ChiID)%donor_gq_indices(idonor)%size()
+            mat = self%chidg%data%mesh%domain(idomain)%chimera%recv%data(ChiID)%donor_interpolator%at(idonor)
+            ndonor_nodes = self%chidg%data%mesh%domain(idomain)%chimera%recv%data(ChiID)%donor_gq_indices(idonor)%size()
 
             do igq = 1,ndonor_nodes
                 ! Set expected derivatives

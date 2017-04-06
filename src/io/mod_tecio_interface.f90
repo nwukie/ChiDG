@@ -3,7 +3,7 @@ module mod_tecio_interface
     use iso_c_binding
     use mod_kinds,      only: rk,ik,rdouble,TEC
     use mod_constants,  only: OUTPUT_RES
-    use type_mesh,      only: mesh_t
+    use type_domain,    only: domain_t
 
 
     implicit none
@@ -74,9 +74,9 @@ contains
     !!  @param[in]  timeindex   Integer index of time strand.
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine init_tecio_zone(zonetitle,mesh,timeindex)
+    subroutine init_tecio_zone(zonetitle,domain,timeindex)
             character(*),   intent(in)  :: zonetitle
-            type(mesh_t),   intent(in)  :: mesh
+            type(domain_t), intent(in)  :: domain
             integer(ik),    intent(in)  :: timeindex
 
             integer(TEC)   :: zonetype                  = 5    ! 0 - ordered, 5 - FEBRICK
@@ -107,8 +107,8 @@ contains
             solutiontime = real(timeindex,rk)
             strandid = timeindex
 
-            numpts      = (OUTPUT_RES+1)*(OUTPUT_RES+1)*(OUTPUT_RES+1) * mesh%nelem
-            numelements = (OUTPUT_RES*OUTPUT_RES*OUTPUT_RES) * mesh%nelem
+            numpts      = (OUTPUT_RES+1)*(OUTPUT_RES+1)*(OUTPUT_RES+1) * domain%nelem
+            numelements = (OUTPUT_RES*OUTPUT_RES*OUTPUT_RES) * domain%nelem
 
 
 

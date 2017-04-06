@@ -83,7 +83,6 @@ subroutine test_chidg_matrix_operator_HB_mv()
     ! Get grid points
     !
     call chidg%read_grid(filename,spacedim)
-    call chidg%read_boundaryconditions(filename)
 
 
     !
@@ -96,8 +95,8 @@ subroutine test_chidg_matrix_operator_HB_mv()
     ! Initialize data containers
     !
     call A%init(chidg%data%mesh, mtype = 'full')
-    call x%init(chidg%data%mesh,chidg%data%mesh(1)%ntime)
-    call b%init(chidg%data%mesh,chidg%data%mesh(1)%ntime)
+    call x%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
+    call b%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
 
 
     !

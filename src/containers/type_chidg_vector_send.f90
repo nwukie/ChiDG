@@ -2,7 +2,7 @@ module type_chidg_vector_send
 #include <messenger.h>
     use mod_kinds,                      only: ik
     use type_ivector,                   only: ivector_t
-    use type_mesh,                      only: mesh_t
+    use type_mesh,                  only: mesh_t
     use type_chidg_vector_send_comm,    only: chidg_vector_send_comm_t
     use mpi_f08,                        only: MPI_Request, MPI_STATUSES_IGNORE, MPI_Waitall
     implicit none
@@ -58,7 +58,7 @@ contains
     !----------------------------------------------------------------------------------------
     subroutine init(self,mesh)
         class(chidg_vector_send_t),  intent(inout)   :: self
-        type(mesh_t),               intent(in)      :: mesh(:)
+        type(mesh_t),            intent(in)      :: mesh
 
         integer(ik) :: idom, iproc, nprocs_send, ierr, loc, nsends
         integer(ik), allocatable    :: comm_procs_dom(:)
@@ -77,10 +77,10 @@ contains
         !
         ! Detect processors that we need to send to, from all mesh instances.
         !
-        do idom = 1,size(mesh)
+        do idom = 1,mesh%ndomains()
 
             ! Get comm_procs from current domain
-            comm_procs_dom = mesh(idom)%get_send_procs() 
+            comm_procs_dom = mesh%domain(idom)%get_send_procs() 
             
             ! Loop through and add them to list if not already added
             do iproc = 1,size(comm_procs_dom)

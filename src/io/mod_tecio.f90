@@ -100,18 +100,18 @@ contains
 
 
 
-            do idom = 1,data%ndomains()
+            do idom = 1,data%mesh%ndomains()
                 !
                 ! Get number of elements
                 !
-                nelem = data%mesh(idom)%nelem
+                nelem = data%mesh%domain(idom)%nelem
 
 
                 !
                 ! Initialize new zone in the TecIO file for the current domain
                 !
-                zonestring = 'Domain '//data%info(idom)%name
-                call init_tecio_zone(zonestring,data%mesh(idom),itime)
+                zonestring = 'Domain '//data%mesh%domain(idom)%name
+                call init_tecio_zone(zonestring,data%mesh%domain(idom),itime)
 
 
                 xilim   = npts
@@ -134,11 +134,11 @@ contains
                                     xi = (((real(ipt_xi,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
 
                                     ! Get coordinate value at point
-                                    if ( data%mesh(idom)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
+                                    if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
 
-                                        r     = real(data%mesh(idom)%elems(ielem)%grid_point(1,xi,eta,zeta),rdouble)
-                                        theta = real(data%mesh(idom)%elems(ielem)%grid_point(2,xi,eta,zeta),rdouble)
-                                        z     = real(data%mesh(idom)%elems(ielem)%grid_point(3,xi,eta,zeta),rdouble)
+                                        r     = real(data%mesh%domain(idom)%elems(ielem)%grid_point(1,xi,eta,zeta),rdouble)
+                                        theta = real(data%mesh%domain(idom)%elems(ielem)%grid_point(2,xi,eta,zeta),rdouble)
+                                        z     = real(data%mesh%domain(idom)%elems(ielem)%grid_point(3,xi,eta,zeta),rdouble)
 
                                         if (icoord == 1) then
                                             val = r*cos(theta)
@@ -150,7 +150,7 @@ contains
 
                                     else
 
-                                        val = real(data%mesh(idom)%elems(ielem)%grid_point(icoord,xi,eta,zeta),rdouble)
+                                        val = real(data%mesh%domain(idom)%elems(ielem)%grid_point(icoord,xi,eta,zeta),rdouble)
 
                                     end if
 
@@ -176,7 +176,7 @@ contains
 
                 ! For each variable in equation set, compute value pointwise and save
                 !do ivar = 1,data%eqnset(idom)%prop%nprimary_fields()
-                eqn_ID = data%mesh(idom)%eqn_ID
+                eqn_ID = data%mesh%domain(idom)%eqn_ID
                 do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
                     ! For each actual element, create a sub-sampling of elements to resolve solution variation
@@ -197,8 +197,8 @@ contains
                                     !   TODO: swap time_index here with 'itime' once itime gets plugged in to 'ntime' from q_in
                                     !
                                     time_index = 1
-                                    !val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q_in%dom(idom)%vecs(ielem),ivar,itime,xi,eta,zeta),rdouble)
-                                    val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q_out%dom(idom)%vecs(ielem),ivar,time_index,xi,eta,zeta),rdouble)
+                                    !val = real(data%mesh%domain(idom)%elems(ielem)%solution_point(data%sdata%q_in%dom(idom)%vecs(ielem),ivar,itime,xi,eta,zeta),rdouble)
+                                    val = real(data%mesh%domain(idom)%elems(ielem)%solution_point(data%sdata%q_out%dom(idom)%vecs(ielem),ivar,time_index,xi,eta,zeta),rdouble)
                                     tecstat = TECDAT142(1,valeq,1)
                                     if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_variables: Error in call to TECDAT142")
                                         

@@ -3,7 +3,7 @@ module type_blockmatrix
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: DIAG, ZERO, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, ETA_MAX, ZETA_MAX, &
                                       NFACES, CHIMERA, NO_INTERIOR_NEIGHBOR
-    use type_mesh,              only: mesh_t
+    use type_domain,            only: domain_t
     use type_densematrix,       only: densematrix_t
     use type_densematrix_vector,only: densematrix_vector_t
     use type_face_info,         only: face_info_t
@@ -87,11 +87,11 @@ contains
     !!  @date   11/10/2016
     !!
     !-------------------------------------------------------------------------------------------
-    subroutine initialize_linearization(self,mesh,bcset_coupling,mtype)
-        class(blockmatrix_t),   intent(inout)             :: self
-        class(mesh_t),          intent(in)                :: mesh
-        type(bcset_coupling_t), intent(in), optional      :: bcset_coupling
-        character(*),           intent(in)                :: mtype
+    subroutine initialize_linearization(self,domain,bcset_coupling,mtype)
+        class(blockmatrix_t),   intent(inout)           :: self
+        class(domain_t),        intent(in)              :: domain
+        type(bcset_coupling_t), intent(in), optional    :: bcset_coupling
+        character(*),           intent(in)              :: mtype
 
         character(:),   allocatable :: user_msg
         integer(ik),    allocatable :: blocks(:)
@@ -152,15 +152,15 @@ contains
 
 
 
-        ! Check to make sure the mesh numerics were initialized
-        user_msg = "blockmatrix%initialize_linearization: Incoming mesh_t was not &
-                    initialized. Make sure to call mesh%init_sol"
-        if (.not. mesh%solInitialized) call chidg_signal(FATAL,user_msg)
+        ! Check to make sure the domain numerics were initialized
+        user_msg = "blockmatrix%initialize_linearization: Incoming domain_t was not &
+                    initialized. Make sure to call domain%init_sol"
+        if (.not. domain%solInitialized) call chidg_signal(FATAL,user_msg)
 
 
 
-        nelem = mesh%nelem      ! Number of elements in the local block
-        ntime = mesh%ntime      ! Number of time levels
+        nelem = domain%nelem      ! Number of elements in the local block
+        ntime = domain%ntime      ! Number of time levels
         !
         ! Allocation for 'local blocks'
         !
@@ -239,16 +239,16 @@ contains
         ! Loop through elements and call initialization for 'local', 'chimera', and 
         ! 'boundary condition' denseblock matrices.
         !
-        do ielem = 1,mesh%nelem
-            do itime = 1,mesh%ntime 
+        do ielem = 1,domain%nelem
+            do itime = 1,domain%ntime 
                 imat = 1
                 
                 ! Set the element indices that the densematrix_vector is associated with.
-                self%lblks(ielem,itime)%idomain_g  = mesh%elems(ielem)%idomain_g
-                self%lblks(ielem,itime)%idomain_l  = mesh%elems(ielem)%idomain_l
-                self%lblks(ielem,itime)%ielement_g = mesh%elems(ielem)%ielement_g
-                self%lblks(ielem,itime)%ielement_l = mesh%elems(ielem)%ielement_l
-                self%lblks(ielem,itime)%mass       = mesh%elems(ielem)%mass
+                self%lblks(ielem,itime)%idomain_g  = domain%elems(ielem)%idomain_g
+                self%lblks(ielem,itime)%idomain_l  = domain%elems(ielem)%idomain_l
+                self%lblks(ielem,itime)%ielement_g = domain%elems(ielem)%ielement_g
+                self%lblks(ielem,itime)%ielement_l = domain%elems(ielem)%ielement_l
+                self%lblks(ielem,itime)%mass       = domain%elems(ielem)%mass
 
 
                 !--------------------------------------------
@@ -258,24 +258,24 @@ contains
                 !--------------------------------------------
                 do block_index = 1,size(blocks)
                     iblk = blocks(block_index)
-                    size1d = mesh%elems(ielem)%neqns  *  mesh%elems(ielem)%nterms_s
+                    size1d = domain%elems(ielem)%neqns  *  domain%elems(ielem)%nterms_s
 
                     !
                     ! Parent is the element with respect to which the linearization is computed
                     !
-                    dparent_l = mesh%idomain_l
+                    dparent_l = domain%idomain_l
                     if (iblk == DIAG) then
-                        dparent_g   = mesh%elems(ielem)%idomain_g
-                        dparent_l   = mesh%elems(ielem)%idomain_l
-                        eparent_g   = mesh%elems(ielem)%ielement_g
-                        eparent_l   = mesh%elems(ielem)%ielement_l
+                        dparent_g   = domain%elems(ielem)%idomain_g
+                        dparent_l   = domain%elems(ielem)%idomain_l
+                        eparent_g   = domain%elems(ielem)%ielement_g
+                        eparent_l   = domain%elems(ielem)%ielement_l
                         parent_proc = IRANK
                     else
-                        dparent_g   = mesh%faces(ielem,iblk)%ineighbor_domain_g
-                        dparent_l   = mesh%faces(ielem,iblk)%ineighbor_domain_l
-                        eparent_g   = mesh%faces(ielem,iblk)%ineighbor_element_g
-                        eparent_l   = mesh%faces(ielem,iblk)%ineighbor_element_l
-                        parent_proc = mesh%faces(ielem,iblk)%ineighbor_proc
+                        dparent_g   = domain%faces(ielem,iblk)%ineighbor_domain_g
+                        dparent_l   = domain%faces(ielem,iblk)%ineighbor_domain_l
+                        eparent_g   = domain%faces(ielem,iblk)%ineighbor_element_g
+                        eparent_l   = domain%faces(ielem,iblk)%ineighbor_element_l
+                        parent_proc = domain%faces(ielem,iblk)%ineighbor_proc
                     end if
 
 
@@ -290,9 +290,9 @@ contains
                         call self%lblks(ielem,itime)%push_back(temp_blk)
 
                         ! Store data about number of equations and number of terms in solution expansion
-                        self%ldata(ielem,1) = mesh%elems(ielem)%neqns
-                        self%ldata(ielem,2) = mesh%elems(ielem)%nterms_s
-                        self%ldata(ielem,3) = mesh%elems(ielem)%ntime
+                        self%ldata(ielem,1) = domain%elems(ielem)%neqns
+                        self%ldata(ielem,2) = domain%elems(ielem)%nterms_s
+                        self%ldata(ielem,3) = domain%elems(ielem)%ntime
 
 
                         !
@@ -326,36 +326,36 @@ contains
                 !--------------------------------------------
                 if (init_chimera) then
                     ! Set the element indices that the densematrix_vector is associated with.
-                    self%chi_blks(ielem,itime)%idomain_g  = mesh%elems(ielem)%idomain_g
-                    self%chi_blks(ielem,itime)%idomain_l  = mesh%elems(ielem)%idomain_l
-                    self%chi_blks(ielem,itime)%ielement_g = mesh%elems(ielem)%ielement_g
-                    self%chi_blks(ielem,itime)%ielement_l = mesh%elems(ielem)%ielement_l
+                    self%chi_blks(ielem,itime)%idomain_g  = domain%elems(ielem)%idomain_g
+                    self%chi_blks(ielem,itime)%idomain_l  = domain%elems(ielem)%idomain_l
+                    self%chi_blks(ielem,itime)%ielement_g = domain%elems(ielem)%ielement_g
+                    self%chi_blks(ielem,itime)%ielement_l = domain%elems(ielem)%ielement_l
 
                     do iface = 1,NFACES
 
                         !
                         ! If facetype is CHIMERA
                         !
-                        chimera_face = ( mesh%faces(ielem,iface)%ftype == CHIMERA )
+                        chimera_face = ( domain%faces(ielem,iface)%ftype == CHIMERA )
                         if (chimera_face) then
 
                             !
                             ! Get ChiID and number of donor elements
                             !
-                            ChiID   = mesh%faces(ielem,iface)%ChiID
-                            ndonors = mesh%chimera%recv%data(ChiID)%ndonors()
+                            ChiID   = domain%faces(ielem,iface)%ChiID
+                            ndonors = domain%chimera%recv%data(ChiID)%ndonors()
 
                             !
                             ! Call block initialization for each Chimera donor
                             !
                             do idonor = 1,ndonors
-                                neqns       = mesh%chimera%recv%data(ChiID)%donor_neqns%at(idonor)
-                                nterms_s    = mesh%chimera%recv%data(ChiID)%donor_nterms_s%at(idonor)
-                                dparent_g   = mesh%chimera%recv%data(ChiID)%donor_domain_g%at(idonor)
-                                dparent_l   = mesh%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
-                                eparent_g   = mesh%chimera%recv%data(ChiID)%donor_element_g%at(idonor)
-                                eparent_l   = mesh%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
-                                parent_proc = mesh%chimera%recv%data(ChiID)%donor_proc%at(idonor)
+                                neqns       = domain%chimera%recv%data(ChiID)%donor_neqns%at(idonor)
+                                nterms_s    = domain%chimera%recv%data(ChiID)%donor_nterms_s%at(idonor)
+                                dparent_g   = domain%chimera%recv%data(ChiID)%donor_domain_g%at(idonor)
+                                dparent_l   = domain%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
+                                eparent_g   = domain%chimera%recv%data(ChiID)%donor_element_g%at(idonor)
+                                eparent_l   = domain%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
+                                parent_proc = domain%chimera%recv%data(ChiID)%donor_proc%at(idonor)
 
                                 size1d = neqns * nterms_s
 
@@ -450,12 +450,12 @@ contains
 !                            !
 !                            ! Compute block size
 !                            !
-!                            size1d = mesh%elems(ielem)%neqns  *  mesh%elems(ielem)%nterms_s
+!                            size1d = domain%elems(ielem)%neqns  *  domain%elems(ielem)%nterms_s
 !
 !                            !
 !                            ! Call boundary condition block initialization
 !                            !
-!                            dparent_l = mesh%idomain_l
+!                            dparent_l = domain%idomain_l
 !                            eparent_l = icoupled_elem
 !                            call self%bc_blks(ielem,icoupled_elem_bc)%init(size1d,dparent_l,eparent_l)
 !                        end if
@@ -481,8 +481,8 @@ contains
         select case (trim(mtype))
             case ('full','Full','FULL')
 
-                do ielem = 1,mesh%nelem
-                    do itime = 1,mesh%ntime
+                do ielem = 1,domain%nelem
+                    do itime = 1,domain%ntime
                         do imat = 1,self%lblks(ielem,itime)%size()
 
                             if ( self%lblks(ielem,itime)%parent_proc(imat) == IRANK ) then

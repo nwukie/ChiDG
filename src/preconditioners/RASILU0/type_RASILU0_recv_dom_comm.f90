@@ -5,7 +5,7 @@ module type_RASILU0_recv_dom_comm
     use mod_chidg_mpi,                      only: ChiDG_COMM, IRANK
 
     use type_RASILU0_recv_dom_comm_elem,    only: RASILU0_recv_dom_comm_elem_t
-    use type_mesh,                          only: mesh_t
+    use type_domain,                        only: domain_t
     use type_blockmatrix,                   only: blockmatrix_t
 
     use mpi_f08,    only: MPI_Recv, MPI_INTEGER4, MPI_STATUS_IGNORE, MPI_ANY_TAG
@@ -56,9 +56,9 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine init(self,mesh,a,proc)
+    subroutine init(self,domain,a,proc)
         class(RASILU0_recv_dom_comm_t), intent(inout)   :: self
-        type(mesh_t),                   intent(in)      :: mesh
+        type(domain_t),                 intent(in)      :: domain
         type(blockmatrix_t),            intent(in)      :: a
         integer(ik),                    intent(in)      :: proc
 
@@ -80,7 +80,7 @@ contains
         !
         ! Get global index of the local domain
         !
-        idomain_g = mesh%idomain_g
+        idomain_g = domain%idomain_g
 
 
         !

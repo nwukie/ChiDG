@@ -3,7 +3,7 @@ module type_chidg_matrix
     use mod_kinds,              only: rk, ik
     use mod_chidg_mpi,          only: IRANK
     use type_blockmatrix,       only: blockmatrix_t
-    use type_mesh,              only: mesh_t
+    use type_mesh,          only: mesh_t
     use type_face_info,         only: face_info_t
     use type_seed,              only: seed_t
     use type_chidg_vector,       only: chidg_vector_t
@@ -69,11 +69,11 @@ contains
     !subroutine initialize(self,mesh,bcset_coupling,mtype)
     !subroutine initialize(self,mesh,bc,mtype)
     subroutine initialize(self,mesh,mtype)
-        class(chidg_matrix_t),   intent(inout)           :: self
-        type(mesh_t),           intent(in)              :: mesh(:)
+        class(chidg_matrix_t),   intent(inout)          :: self
+        type(mesh_t),        intent(in)             :: mesh
+        character(*),           intent(in)              :: mtype
         !type(bc_t),             intent(in), optional    :: bc(:)
         !type(bcset_coupling_t), intent(in), optional    :: bcset_coupling(:)
-        character(*),           intent(in)              :: mtype
 
         integer(ik) :: ierr, ndomains, idom
 
@@ -88,7 +88,7 @@ contains
         !
         ! Allocate blockmatrix_t for each domain
         !
-        ndomains = size(mesh)
+        ndomains = mesh%ndomains()
         allocate(self%dom(ndomains), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -107,7 +107,7 @@ contains
 !            end if
 
 ! WITHOUT BC COUPLING
-             call self%dom(idom)%init(mesh(idom),mtype=mtype)
+             call self%dom(idom)%init(mesh%domain(idom),mtype=mtype)
 
         end do
 
@@ -494,7 +494,7 @@ contains
 
 
 
-    !> ChiDGMatrix destructor.
+    !>  chidg_matrix destructor.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -504,7 +504,8 @@ contains
     subroutine destructor(self)
         type(chidg_matrix_t),    intent(inout)   :: self
 
-    end subroutine
+    end subroutine destructor
+    !******************************************************************************************
 
 
 

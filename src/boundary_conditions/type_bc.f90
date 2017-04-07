@@ -568,18 +568,18 @@ contains
         integer(ik) :: iop
 
 
-        !
-        ! Have bc_operators initialize the boundary condition coupling
-        !
-        if (allocated(self%bc_state)) then
-            if (allocated(self%bc_patch)) then
-
-                do iop = 1,size(self%bc_state)
-                    call self%bc_state(iop)%state%init_bc_specialized(mesh,self%bc_patch, self%bc_COMM)
-                end do !iop
-
-            end if !bc_patch
-        end if !bc_state
+!        !
+!        ! Have bc_operators initialize the boundary condition coupling
+!        !
+!        if (allocated(self%bc_state)) then
+!            if (allocated(self%bc_patch)) then
+!
+!                do iop = 1,size(self%bc_state)
+!                    call self%bc_state(iop)%state%init_bc_specialized(mesh,self%bc_patch, self%bc_COMM)
+!                end do !iop
+!
+!            end if !bc_patch
+!        end if !bc_state
 
 
     end subroutine init_bc_specialized
@@ -611,18 +611,18 @@ contains
 
         integer(ik) :: iop
 
-        !
-        ! Have bc_operators initialize the boundary condition coupling
-        !
-        if (allocated(self%bc_state)) then
-            if (allocated(self%bc_patch)) then
-
-                do iop = 1,size(self%bc_state)
-                    call self%bc_state(iop)%state%init_bc_coupling(mesh,self%bc_patch)
-                end do !iop
-
-            end if !bc_patch
-        end if !bc_state
+!        !
+!        ! Have bc_operators initialize the boundary condition coupling
+!        !
+!        if (allocated(self%bc_state)) then
+!            if (allocated(self%bc_patch)) then
+!
+!                do iop = 1,size(self%bc_state)
+!                    call self%bc_state(iop)%state%init_bc_coupling(mesh,self%bc_patch)
+!                end do !iop
+!
+!            end if !bc_patch
+!        end if !bc_state
 
     end subroutine init_bc_coupling
     !******************************************************************************************
@@ -642,30 +642,30 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine propagate_bc_coupling(self,mesh)
-        class(bc_t),        intent(in)      :: self
+        class(bc_t),    intent(in)      :: self
         type(mesh_t),   intent(inout)   :: mesh
 
         integer(ik) :: ipatch, iface_bc, idom, ielem, iface
 
 
-        !
-        ! set ncoupled elements back to mesh face
-        !
-        if (allocated(self%bc_patch)) then
-
-            do ipatch = 1,size(self%bc_patch)
-                do iface_bc = 1,self%bc_patch(ipatch)%nfaces()
-
-                    idom  = self%bc_patch(ipatch)%idomain_l(iface_bc)
-                    ielem = self%bc_patch(ipatch)%ielement_l(iface_bc)
-                    iface = self%bc_patch(ipatch)%iface(iface_bc)
-
-                    mesh%domain(idom)%faces(ielem,iface)%bc_ndepend = self%bc_patch(ipatch)%ncoupled_elements(iface_bc)
-
-                end do !iface_bc
-            end do !ipatch
-
-        end if !bc_patch
+!        !
+!        ! set ncoupled elements back to mesh face
+!        !
+!        if (allocated(self%bc_patch)) then
+!
+!            do ipatch = 1,size(self%bc_patch)
+!                do iface_bc = 1,self%bc_patch(ipatch)%nfaces()
+!
+!                    idom  = self%bc_patch(ipatch)%idomain_l(iface_bc)
+!                    ielem = self%bc_patch(ipatch)%ielement_l(iface_bc)
+!                    iface = self%bc_patch(ipatch)%iface(iface_bc)
+!
+!                    mesh%domain(idom)%faces(ielem,iface)%bc_ndepend = self%bc_patch(ipatch)%ncoupled_elements(iface_bc)
+!
+!                end do !iface_bc
+!            end do !ipatch
+!
+!        end if !bc_patch
 
 
 

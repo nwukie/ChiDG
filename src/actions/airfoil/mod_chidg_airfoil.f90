@@ -49,8 +49,8 @@ contains
     type(chidg_manager_t)                       :: manager
         type(chidg_t)               :: chidg
         type(file_properties_t)     :: file_props
-        integer(ik)                 :: nterms_s, spacedim, solution_order, iairfoil, &
-                                       ibc, ipatch, iface_patch, idomain_g, &
+        integer(ik)                 :: nterms_s, spacedim, solution_order, group_ID, &
+                                       ibc, patch_ID, face_ID, idomain_g, &
                                        ielement_g, iface, itime
         logical                     :: found_airfoil
 
@@ -160,23 +160,24 @@ contains
         !
         ! Loop through boundary conditions and look for an 'Airfoil' boundary
         !
-        iairfoil = 0
-        do ibc = 1,size(chidg%data%bc)
-
-            found_airfoil = (chidg%data%bc(ibc)%get_name() == 'Airfoil')
-
-            if (found_airfoil) then
-                iairfoil = ibc
-                exit
-            end if
-
-        end do
+!        iairfoil = 0
+!        do ibc = 1,size(chidg%data%bc)
+!
+!            found_airfoil = (chidg%data%bc(ibc)%get_name() == 'Airfoil')
+!
+!            if (found_airfoil) then
+!                iairfoil = ibc
+!                exit
+!            end if
+!
+!        end do
+        group_ID = chidg%data%mesh%get_bc_patch_group_id('Airfoil')
 
 
         !
         ! Check if an 'Airfoil' boundary was found
         !
-        if (iairfoil == 0) call chidg_signal(FATAL,"chidg airfoil: No airfoil boundary was found.")
+        if (group_ID == 0) call chidg_signal(FATAL,"chidg airfoil: No airfoil boundary was found.")
 
 
 
@@ -189,19 +190,19 @@ contains
 
         lift = ZERO
         drag = ZERO
-        do ipatch = 1,size(chidg%data%bc(iairfoil)%bc_patch)
+        do patch_ID = 1,size(chidg%data%mesh%bc_patch_group(group_ID)%patch)
 
             !
             ! Loop over faces in the patch
             !
-            do iface_patch = 1,chidg%data%bc(iairfoil)%bc_patch(ipatch)%nfaces()
+            do face_ID = 1,chidg%data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
 
-                idomain_g  = chidg%data%bc(iairfoil)%bc_patch(ipatch)%idomain_g(iface_patch)
-                ielement_g = chidg%data%bc(iairfoil)%bc_patch(ipatch)%ielement_g(iface_patch)
-                iface      = chidg%data%bc(iairfoil)%bc_patch(ipatch)%iface(iface_patch)
+                idomain_g  = chidg%data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g(face_ID)
+                ielement_g = chidg%data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID)
+                iface      = chidg%data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
 
 
-                print*, 'airfoil: ', idomain_g, ielement_g, iface
+                call write_line('Airfoil: ', idomain_g, ielement_g, iface)
 
 
                 !
@@ -218,7 +219,7 @@ contains
                 !
                 ! Update the element cache and all models so they are available
                 !
-                call cache_handler%update(worker,chidg%data%eqnset,chidg%data%bc, differentiate=.false.)
+                call cache_handler%update(worker,chidg%data%eqnset,chidg%data%bc_state_group, differentiate=.false.)
 
 
 
@@ -303,9 +304,8 @@ contains
 
 
 
-        !print*, 'Lift: ', lift%x_ad_
-        print*, 'Lift: ', lift%x_ad_
-        print*, 'Drag: ', drag%x_ad_
+        call write_line('Lift: ', lift%x_ad_)
+        call write_line('Drag: ', drag%x_ad_)
 
 
 

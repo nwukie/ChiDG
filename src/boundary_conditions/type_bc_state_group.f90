@@ -1,5 +1,6 @@
 module type_bc_state_group
 #include <messenger.h>
+    use mod_constants,          only: NO_ID
     use type_bcvector,          only: bcvector_t
     use type_bc_state,          only: bc_state_t
     use type_bc_state_wrapper,  only: bc_state_wrapper_t
@@ -17,7 +18,7 @@ module type_bc_state_group
     !!  @author Nathan A. Wukie
     !!  @date   11/9/2016
     !!
-    !-------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     type, public :: bc_state_group_t
         
         character(:),               allocatable :: name         ! boundary state group name
@@ -25,7 +26,8 @@ module type_bc_state_group
 
         class(bc_state_wrapper_t),  allocatable :: bc_state(:)  ! boundary state functions
 
-        type(mpi_comm)                          :: bc_COMM
+        type(mpi_comm)                          :: bc_COMM      ! MPI communicator for bc procs
+        integer(ik)                             :: bc_ID        ! bc state group identifier
 
     contains
 
@@ -34,14 +36,22 @@ module type_bc_state_group
         procedure   :: set_family
         procedure   :: get_family
 
+
         procedure   :: add_bc_state
         procedure   :: new_bc_state
+        procedure   :: remove_states
         procedure   :: nbc_states
 
+
         procedure   :: init_comm
+        procedure   :: init_coupling
+        procedure   :: init_specialized
+        procedure   :: propagate_coupling
+
+
 
     end type bc_state_group_t
-    !*************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -176,8 +186,6 @@ contains
 
 
 
-
-
     !>  Add a bc_state object to the bc_group.
     !!
     !!
@@ -210,7 +218,6 @@ contains
             state_ID = self%new_bc_state()
             allocate(self%bc_state(state_ID)%state, source=bc_state, stat=ierr)
             if (ierr /= 0) call AllocationError
-            !call self%bc_states%push_back(bc_state)
         else
             user_msg = "bc_state_group%add_bc_state: An attempt was made to add a bc_state &
                         object to a bc_state_group with dissimilar family. As a rule, &
@@ -278,6 +285,32 @@ contains
 
     end function new_bc_state
     !**************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Remove bc_states that have been allocated.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/7/2017
+    !!
+    !!
+    !-------------------------------------------------------------------------------------
+    subroutine remove_states(self)  
+        class(bc_state_group_t),    intent(inout)   :: self
+
+
+        if (allocated(self%bc_state)) deallocate(self%bc_state)
+
+
+    end subroutine remove_states
+    !**************************************************************************************
+
+
 
 
 
@@ -364,6 +397,153 @@ contains
 
     end subroutine init_comm
     !***************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Implementation specific routine for bc_state objects.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/6/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine init_specialized(self,mesh)
+        class(bc_state_group_t),    intent(inout)   :: self
+        type(mesh_t),               intent(inout)   :: mesh
+
+        integer(ik)                 :: iop, group_ID
+
+
+        !
+        ! Have bc_operators initialize the boundary condition coupling
+        !
+        if (allocated(self%bc_state)) then
+
+            group_ID = mesh%get_bc_patch_group_id(self%name)
+            if (group_ID /= NO_ID) then
+                if (mesh%bc_patch_group(group_ID)%npatches() > 0) then
+
+                    do iop = 1,size(self%bc_state)
+                        call self%bc_state(iop)%state%init_bc_specialized(mesh, group_ID, self%bc_COMM)
+                    end do !iop
+
+                end if !bc_patch
+            end if
+
+        end if !bc_state
+
+
+
+
+    end subroutine init_specialized
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Initialize boundary condition coupling.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/6/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine init_coupling(self,mesh)
+        class(bc_state_group_t),    intent(inout)  :: self
+        type(mesh_t),               intent(inout)  :: mesh
+
+
+        integer(ik) :: iop, group_ID
+
+        !
+        ! Have bc_operators initialize the boundary condition coupling
+        !
+        if (allocated(self%bc_state)) then
+
+            group_ID = mesh%get_bc_patch_group_id(self%name)
+            if (group_ID /= NO_ID) then
+                if (mesh%bc_patch_group(group_ID)%npatches() > 0) then
+
+                    do iop = 1,size(self%bc_state)
+                        call self%bc_state(iop)%state%init_bc_coupling(mesh,group_ID)
+                    end do !iop
+
+                end if !bc_patch
+            end if !NO_ID
+
+        end if !bc_state
+
+
+
+
+    end subroutine init_coupling
+    !****************************************************************************************
+
+
+
+
+
+
+
+    !>  Propagate boundary condition coupling to mesh data.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/6/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine propagate_coupling(self,mesh)
+        class(bc_state_group_t),    intent(in)      :: self
+        type(mesh_t),               intent(inout)   :: mesh
+
+        integer(ik) :: group_ID, patch_ID, face_ID, idom, ielem, iface
+
+
+        !
+        ! set ncoupled elements back to mesh face
+        !
+        if (allocated(self%bc_state)) then
+
+            group_ID = mesh%get_bc_patch_group_id(self%name)
+            if (group_ID /= NO_ID) then
+                if (mesh%bc_patch_group(group_ID)%npatches() > 0) then
+
+                    do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
+                        do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
+
+                            idom  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l(face_ID)
+                            ielem = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
+                            iface = mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
+
+                            mesh%domain(idom)%faces(ielem,iface)%bc_ndepend = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ncoupled_elements(face_ID)
+
+                        end do !face_ID
+                    end do !patch_ID
+
+                end if !bc_patch
+            end if !NO_ID
+
+        end if !bc_state
+
+
+    end subroutine propagate_coupling
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
 
 
 

@@ -9,10 +9,10 @@ module type_cache_handler
     use mod_chidg_mpi,      only: IRANK
     use DNAD_D
 
-    use type_chidg_cache,   only: chidg_cache_t
-    use type_chidg_worker,  only: chidg_worker_t
-    use type_equation_set,  only: equation_set_t
-    use type_bc,            only: bc_t
+    use type_chidg_cache,       only: chidg_cache_t
+    use type_chidg_worker,      only: chidg_worker_t
+    use type_equation_set,      only: equation_set_t
+    use type_bc_state_group,    only: bc_state_group_t
 
     implicit none
 
@@ -88,15 +88,16 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine update(self,worker,equation_set,bc,differentiate)
+    subroutine update(self,worker,equation_set,bc_state_group,differentiate)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_t),                 intent(inout)   :: bc(:)
+        type(bc_state_group_t),     intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
 
         integer(ik) :: idomain_l, ielement_l, iface, eqn_ID
         logical     :: compute_gradients, valid_indices
+
 
         !
         ! Check for valid indices
@@ -128,8 +129,8 @@ contains
         !
         ! Update fields
         !
-        call self%update_auxiliary_fields(worker,equation_set,bc,differentiate)
-        call self%update_primary_fields(  worker,equation_set,bc,differentiate,compute_gradients)
+        call self%update_auxiliary_fields(worker,equation_set,bc_state_group,differentiate)
+        call self%update_primary_fields(  worker,equation_set,bc_state_group,differentiate,compute_gradients)
 
 
 
@@ -142,22 +143,22 @@ contains
             call worker%set_face(iface)
 
             ! Update face interior/exterior/bc states.
-            call self%update_model_interior(worker,equation_set,bc,differentiate,model_type='f(Q-)')
-            call self%update_model_exterior(worker,equation_set,bc,differentiate,model_type='f(Q-)')
+            call self%update_model_interior(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-)')
+            call self%update_model_exterior(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-)')
 
 
-            call self%update_primary_bc(worker,equation_set,bc,differentiate)
-            call self%update_model_bc(  worker,equation_set,bc,differentiate,model_type='f(Q-)')
+            call self%update_primary_bc(worker,equation_set,bc_state_group,differentiate)
+            call self%update_model_bc(  worker,equation_set,bc_state_group,differentiate,model_type='f(Q-)')
 
 
-            call self%update_model_interior(worker,equation_set,bc,differentiate,model_type='f(Q-,Q+)')
-            call self%update_model_exterior(worker,equation_set,bc,differentiate,model_type='f(Q-,Q+)')
-            call self%update_model_bc(      worker,equation_set,bc,differentiate,model_type='f(Q-,Q+)')
+            call self%update_model_interior(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-,Q+)')
+            call self%update_model_exterior(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-,Q+)')
+            call self%update_model_bc(      worker,equation_set,bc_state_group,differentiate,model_type='f(Q-,Q+)')
 
         end do !iface
 
-        call self%update_model_element(worker,equation_set,bc,differentiate,model_type='f(Q-)')
-        call self%update_model_element(worker,equation_set,bc,differentiate,model_type='f(Q-,Q+)')
+        call self%update_model_element(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-)')
+        call self%update_model_element(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-,Q+)')
 
 
 
@@ -171,7 +172,7 @@ contains
             !
             ! Update lifting operators for second-order pde's
             !
-            call self%update_primary_lift(worker,equation_set,bc,differentiate)
+            call self%update_primary_lift(worker,equation_set,bc_state_group,differentiate)
 
 
             !
@@ -183,9 +184,9 @@ contains
                 call worker%set_face(iface)
 
                 ! Update face interior/exterior/bc states.
-                call self%update_model_interior(worker,equation_set,bc,differentiate,model_type='f(Grad(Q))')
-                call self%update_model_exterior(worker,equation_set,bc,differentiate,model_type='f(Grad(Q))')
-                call self%update_model_bc(      worker,equation_set,bc,differentiate,model_type='f(Grad(Q))')
+                call self%update_model_interior(worker,equation_set,bc_state_group,differentiate,model_type='f(Grad(Q))')
+                call self%update_model_exterior(worker,equation_set,bc_state_group,differentiate,model_type='f(Grad(Q))')
+                call self%update_model_bc(      worker,equation_set,bc_state_group,differentiate,model_type='f(Grad(Q))')
 
             end do !iface
 
@@ -193,10 +194,13 @@ contains
             !
             ! Update model 'element' cache entries
             !
-            call self%update_model_element(worker,equation_set,bc,differentiate,model_type='f(Grad(Q))')
+            call self%update_model_element(worker,equation_set,bc_state_group,differentiate,model_type='f(Grad(Q))')
 
 
         end if ! compute_gradients
+
+
+
 
     end subroutine update
     !****************************************************************************************
@@ -222,11 +226,11 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine update_primary_fields(self,worker,equation_set,bc,differentiate,compute_gradients)
+    subroutine update_primary_fields(self,worker,equation_set,bc_state_group,differentiate,compute_gradients)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_t),                 intent(inout)   :: bc(:)
+        type(bc_state_group_t),     intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
         logical,                    intent(in)      :: compute_gradients
 
@@ -250,8 +254,8 @@ contains
 
 
             ! Update face interior/exterior/bc states.
-            call self%update_primary_interior(worker,equation_set,bc,differentiate,compute_gradients)
-            call self%update_primary_exterior(worker,equation_set,bc,differentiate,compute_gradients)
+            call self%update_primary_interior(worker,equation_set,bc_state_group,differentiate,compute_gradients)
+            call self%update_primary_exterior(worker,equation_set,bc_state_group,differentiate,compute_gradients)
 
 
         end do !iface
@@ -260,7 +264,7 @@ contains
         !
         ! Update 'element' cache
         !
-        call self%update_primary_element(worker,equation_set,bc,differentiate,compute_gradients)
+        call self%update_primary_element(worker,equation_set,bc_state_group,differentiate,compute_gradients)
 
 
     end subroutine update_primary_fields
@@ -288,11 +292,11 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine update_auxiliary_fields(self,worker,equation_set,bc,differentiate)
+    subroutine update_auxiliary_fields(self,worker,equation_set,bc_state_group,differentiate)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_t),                 intent(inout)   :: bc(:)
+        type(bc_state_group_t),     intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
 
         integer(ik)                                 :: idomain_l, ielement_l, iface, idepend, &
@@ -315,9 +319,9 @@ contains
 
 
             ! Update face interior/exterior states.
-            call self%update_auxiliary_interior(worker,equation_set,bc,differentiate)
-            call self%update_auxiliary_exterior(worker,equation_set,bc,differentiate)
-            call self%update_auxiliary_bc(      worker,equation_set,bc,differentiate)
+            call self%update_auxiliary_interior(worker,equation_set,bc_state_group,differentiate)
+            call self%update_auxiliary_exterior(worker,equation_set,bc_state_group,differentiate)
+            call self%update_auxiliary_bc(      worker,equation_set,bc_state_group,differentiate)
 
 
         end do !iface
@@ -327,7 +331,7 @@ contains
         !
         ! Update cache 'element' data
         !
-        call self%update_auxiliary_element(worker,equation_set,bc,differentiate)
+        call self%update_auxiliary_element(worker,equation_set,bc_state_group,differentiate)
 
 
 
@@ -416,11 +420,11 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine update_primary_element(self,worker,equation_set,bc,differentiate,compute_gradients)
+    subroutine update_primary_element(self,worker,equation_set,bc_state_group,differentiate,compute_gradients)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_t),                 intent(inout)   :: bc(:)
+        type(bc_state_group_t),     intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
         logical,                    intent(in)      :: compute_gradients
 
@@ -492,11 +496,11 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine update_primary_interior(self,worker,equation_set,bc,differentiate,compute_gradients)
+    subroutine update_primary_interior(self,worker,equation_set,bc_state_group,differentiate,compute_gradients)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_t),                 intent(inout)   :: bc(:)
+        type(bc_state_group_t),     intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
         logical,                    intent(in)      :: compute_gradients
 
@@ -576,11 +580,11 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine update_primary_exterior(self,worker,equation_set,bc,differentiate,compute_gradients)
+    subroutine update_primary_exterior(self,worker,equation_set,bc_state_group,differentiate,compute_gradients)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_t),                 intent(inout)   :: bc(:)
+        type(bc_state_group_t),     intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
         logical,                    intent(in)      :: compute_gradients
 
@@ -608,7 +612,7 @@ contains
         ! 
         ! Compute the number of exterior element dependencies for face exterior state
         !
-        ndepend = get_ndepend_exterior(worker,equation_set,bc,differentiate)
+        ndepend = get_ndepend_exterior(worker,equation_set,bc_state_group,differentiate)
 
 
 
@@ -662,15 +666,15 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine update_primary_bc(self,worker,equation_set,bc,differentiate)
+    subroutine update_primary_bc(self,worker,equation_set,bc_state_group,differentiate)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_t),                 intent(inout)   :: bc(:)
+        type(bc_state_group_t),     intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
 
         integer(ik)                 :: idepend, ieqn, idomain_l, ielement_l, iface, ndepend, &
-                                       istate, bc_ID, patch_ID, face_ID, eqn_ID
+                                       istate, bc_ID, group_ID, patch_ID, face_ID, eqn_ID
         character(:),   allocatable :: field
 
 
@@ -685,20 +689,35 @@ contains
         if ( (worker%face_type() == BOUNDARY)  ) then
             
             bc_ID    = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%bc_ID
+            group_ID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%group_ID
             patch_ID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_ID
             face_ID  = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%face_ID
 
-            ndepend = get_ndepend_exterior(worker,equation_set,bc,differentiate)
-            do istate = 1,size(bc(bc_ID)%bc_state)
+            ndepend = get_ndepend_exterior(worker,equation_set,bc_state_group,differentiate)
+            !do istate = 1,size(bc(bc_ID)%bc_state)
+            do istate = 1,size(bc_state_group(bc_ID)%bc_state)
                 do idepend = 1,ndepend
 
                     ! Get coupled bc element to linearize against.
+                    !if (differentiate) then
+                    !    worker%function_info%seed%idomain_g  = bc(bc_ID)%bc_patch(patch_ID)%idomain_g_coupled(face_ID)%at(idepend)
+                    !    worker%function_info%seed%idomain_l  = bc(bc_ID)%bc_patch(patch_ID)%idomain_l_coupled(face_ID)%at(idepend)
+                    !    worker%function_info%seed%ielement_g = bc(bc_ID)%bc_patch(patch_ID)%ielement_g_coupled(face_ID)%at(idepend)
+                    !    worker%function_info%seed%ielement_l = bc(bc_ID)%bc_patch(patch_ID)%ielement_l_coupled(face_ID)%at(idepend)
+                    !    worker%function_info%seed%iproc      = bc(bc_ID)%bc_patch(patch_ID)%proc_coupled(face_ID)%at(idepend)
+                    !else
+                    !    worker%function_info%seed%idomain_g  = 0
+                    !    worker%function_info%seed%idomain_l  = 0
+                    !    worker%function_info%seed%ielement_g = 0
+                    !    worker%function_info%seed%ielement_l = 0
+                    !    worker%function_info%seed%iproc      = NO_PROC
+                    !end if
                     if (differentiate) then
-                        worker%function_info%seed%idomain_g  = bc(bc_ID)%bc_patch(patch_ID)%idomain_g_coupled(face_ID)%at(idepend)
-                        worker%function_info%seed%idomain_l  = bc(bc_ID)%bc_patch(patch_ID)%idomain_l_coupled(face_ID)%at(idepend)
-                        worker%function_info%seed%ielement_g = bc(bc_ID)%bc_patch(patch_ID)%ielement_g_coupled(face_ID)%at(idepend)
-                        worker%function_info%seed%ielement_l = bc(bc_ID)%bc_patch(patch_ID)%ielement_l_coupled(face_ID)%at(idepend)
-                        worker%function_info%seed%iproc      = bc(bc_ID)%bc_patch(patch_ID)%proc_coupled(face_ID)%at(idepend)
+                        worker%function_info%seed%idomain_g  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g_coupled(face_ID)%at(idepend)
+                        worker%function_info%seed%idomain_l  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l_coupled(face_ID)%at(idepend)
+                        worker%function_info%seed%ielement_g = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g_coupled(face_ID)%at(idepend)
+                        worker%function_info%seed%ielement_l = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l_coupled(face_ID)%at(idepend)
+                        worker%function_info%seed%iproc      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%proc_coupled(face_ID)%at(idepend)
                     else
                         worker%function_info%seed%idomain_g  = 0
                         worker%function_info%seed%idomain_l  = 0
@@ -708,7 +727,8 @@ contains
                     end if
 
                     eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
-                    call bc(bc_ID)%bc_state(istate)%state%compute_bc_state(worker,equation_set(eqn_ID)%prop)
+                    !call bc(bc_ID)%bc_state(istate)%state%compute_bc_state(worker,equation_set(eqn_ID)%prop)
+                    call bc_state_group(bc_ID)%bc_state(istate)%state%compute_bc_state(worker,equation_set(eqn_ID)%prop)
 
                 end do !idepend
             end do !istate
@@ -742,11 +762,11 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine update_primary_lift(self,worker,equation_set,bc,differentiate)
+    subroutine update_primary_lift(self,worker,equation_set,bc_state_group,differentiate)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_t),                 intent(inout)   :: bc(:)
+        type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
 
         integer(ik) :: idomain_l, eqn_ID
@@ -761,8 +781,8 @@ contains
         if (allocated(equation_set(eqn_ID)%volume_diffusive_operator) .or. &
             allocated(equation_set(eqn_ID)%boundary_diffusive_operator)) then
 
-            call self%update_lift_faces_internal(worker,equation_set,bc,differentiate)
-            call self%update_lift_faces_external(worker,equation_set,bc,differentiate)
+            call self%update_lift_faces_internal(worker,equation_set,bc_state_group,differentiate)
+            call self%update_lift_faces_external(worker,equation_set,bc_state_group,differentiate)
 
         end if
 
@@ -788,11 +808,11 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine update_auxiliary_element(self,worker,equation_set,bc,differentiate)
+    subroutine update_auxiliary_element(self,worker,equation_set,bc_state_group,differentiate)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_t),                 intent(inout)   :: bc(:)
+        type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
 
         integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, iface, &
@@ -868,11 +888,11 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine update_auxiliary_interior(self,worker,equation_set,bc,differentiate)
+    subroutine update_auxiliary_interior(self,worker,equation_set,bc_state_group,differentiate)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_t),                 intent(inout)   :: bc(:)
+        type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
 
         integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, iface, &
@@ -957,11 +977,11 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine update_auxiliary_exterior(self,worker,equation_set,bc,differentiate)
+    subroutine update_auxiliary_exterior(self,worker,equation_set,bc_state_group,differentiate)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_t),                 intent(inout)   :: bc(:)
+        type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
 
         integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, iface, &
@@ -1049,11 +1069,11 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine update_auxiliary_bc(self,worker,equation_set,bc,differentiate)
+    subroutine update_auxiliary_bc(self,worker,equation_set,bc_state_group,differentiate)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_t),                 intent(inout)   :: bc(:)
+        type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
 
         integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, iface, &
@@ -1137,11 +1157,11 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine update_model_element(self,worker,equation_set,bc,differentiate,model_type)
+    subroutine update_model_element(self,worker,equation_set,bc_state_group,differentiate,model_type)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_t),                 intent(inout)   :: bc(:)
+        type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
         character(*),               intent(in)      :: model_type
 
@@ -1229,7 +1249,7 @@ contains
                             ndepend = 1
                         else
                             call worker%set_face(idiff)
-                            ndepend = get_ndepend_exterior(worker,equation_set,bc,differentiate)
+                            ndepend = get_ndepend_exterior(worker,equation_set,bc_state_group,differentiate)
                         end if
 
                         do idepend = 1,ndepend
@@ -1265,11 +1285,11 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine update_model_interior(self,worker,equation_set,bc,differentiate,model_type)
+    subroutine update_model_interior(self,worker,equation_set,bc_state_group,differentiate,model_type)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_t),                 intent(inout)   :: bc(:)
+        type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
         character(*),               intent(in)      :: model_type
 
@@ -1358,7 +1378,7 @@ contains
                         ! 
                         ! Compute the number of exterior element dependencies
                         !
-                        ndepend = get_ndepend_exterior(worker,equation_set,bc,differentiate)
+                        ndepend = get_ndepend_exterior(worker,equation_set,bc_state_group,differentiate)
 
                         !
                         ! Loop through external dependencies and compute model
@@ -1401,11 +1421,11 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine update_model_exterior(self,worker,equation_set,bc,differentiate,model_type)
+    subroutine update_model_exterior(self,worker,equation_set,bc_state_group,differentiate,model_type)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_t),                 intent(inout)   :: bc(:)
+        type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
         character(*),               intent(in)      :: model_type
 
@@ -1440,7 +1460,7 @@ contains
             ! 
             ! Compute the number of exterior element dependencies for face exterior state
             !
-            ndepend = get_ndepend_exterior(worker,equation_set,bc,differentiate)
+            ndepend = get_ndepend_exterior(worker,equation_set,bc_state_group,differentiate)
             do imodel = 1,equation_set(eqn_ID)%nmodels()
 
                 !
@@ -1518,16 +1538,16 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine update_model_bc(self,worker,equation_set,bc,differentiate,model_type)
+    subroutine update_model_bc(self,worker,equation_set,bc_state_group,differentiate,model_type)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_t),                 intent(inout)   :: bc(:)
+        type(bc_state_group_t),     intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
         character(*),               intent(in)      :: model_type
 
         integer(ik)                 :: idepend, ieqn, idomain_l, ielement_l, iface, ndepend, &
-                                       istate, bc_ID, patch_ID, face_ID, imodel, eqn_ID
+                                       istate, bc_ID, group_ID, patch_ID, face_ID, imodel, eqn_ID
         character(:),   allocatable :: field, model_dependency
         logical                     :: selected_model
 
@@ -1548,32 +1568,48 @@ contains
             ! 
             ! Compute the number of exterior element dependencies for face exterior state
             !
-            ndepend = get_ndepend_exterior(worker,equation_set,bc,differentiate)
+            ndepend = get_ndepend_exterior(worker,equation_set,bc_state_group,differentiate)
 
             bc_ID    = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%bc_ID
+            group_ID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%group_ID
             patch_ID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_ID
             face_ID  = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%face_ID
 
-            !do imodel = 1,equation_set(idomain_l)%nmodels()
             do imodel = 1,equation_set(eqn_ID)%nmodels()
 
                 !
                 ! Get model dependency 
                 !
-                !model_dependency = equation_set(idomain_l)%models(imodel)%model%get_dependency()
                 model_dependency = equation_set(eqn_ID)%models(imodel)%model%get_dependency()
                 selected_model   = (trim(model_type) == trim(model_dependency))
 
                 if (selected_model) then
                     do idepend = 1,ndepend
 
+                        !if (differentiate) then
+                        !    ! Get coupled bc element to differentiate wrt
+                        !    worker%function_info%seed%idomain_g  = bc(bc_ID)%bc_patch(patch_ID)%idomain_g_coupled(face_ID)%at(idepend)
+                        !    worker%function_info%seed%idomain_l  = bc(bc_ID)%bc_patch(patch_ID)%idomain_l_coupled(face_ID)%at(idepend)
+                        !    worker%function_info%seed%ielement_g = bc(bc_ID)%bc_patch(patch_ID)%ielement_g_coupled(face_ID)%at(idepend)
+                        !    worker%function_info%seed%ielement_l = bc(bc_ID)%bc_patch(patch_ID)%ielement_l_coupled(face_ID)%at(idepend)
+                        !    worker%function_info%seed%iproc      = bc(bc_ID)%bc_patch(patch_ID)%proc_coupled(face_ID)%at(idepend)
+
+                        !else
+                        !    ! Set no differentiation
+                        !    worker%function_info%seed%idomain_g  = 0
+                        !    worker%function_info%seed%idomain_l  = 0
+                        !    worker%function_info%seed%ielement_g = 0
+                        !    worker%function_info%seed%ielement_l = 0
+                        !    worker%function_info%seed%iproc      = NO_PROC
+                        !end if
+
                         if (differentiate) then
                             ! Get coupled bc element to differentiate wrt
-                            worker%function_info%seed%idomain_g  = bc(bc_ID)%bc_patch(patch_ID)%idomain_g_coupled(face_ID)%at(idepend)
-                            worker%function_info%seed%idomain_l  = bc(bc_ID)%bc_patch(patch_ID)%idomain_l_coupled(face_ID)%at(idepend)
-                            worker%function_info%seed%ielement_g = bc(bc_ID)%bc_patch(patch_ID)%ielement_g_coupled(face_ID)%at(idepend)
-                            worker%function_info%seed%ielement_l = bc(bc_ID)%bc_patch(patch_ID)%ielement_l_coupled(face_ID)%at(idepend)
-                            worker%function_info%seed%iproc      = bc(bc_ID)%bc_patch(patch_ID)%proc_coupled(face_ID)%at(idepend)
+                            worker%function_info%seed%idomain_g  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g_coupled(face_ID)%at(idepend)
+                            worker%function_info%seed%idomain_l  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l_coupled(face_ID)%at(idepend)
+                            worker%function_info%seed%ielement_g = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g_coupled(face_ID)%at(idepend)
+                            worker%function_info%seed%ielement_l = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l_coupled(face_ID)%at(idepend)
+                            worker%function_info%seed%iproc      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%proc_coupled(face_ID)%at(idepend)
 
                         else
                             ! Set no differentiation
@@ -1584,7 +1620,8 @@ contains
                             worker%function_info%seed%iproc      = NO_PROC
                         end if
 
-                        !call equation_set(idomain_l)%models(imodel)%model%compute(worker)
+
+
                         call equation_set(eqn_ID)%models(imodel)%model%compute(worker)
 
                     end do !idepend
@@ -1624,11 +1661,11 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine update_lift_faces_internal(self,worker,equation_set,bc,differentiate)
+    subroutine update_lift_faces_internal(self,worker,equation_set,bc_state_group,differentiate)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_t),                 intent(inout)   :: bc(:)
+        type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
 
         character(:),   allocatable :: field
@@ -1797,7 +1834,7 @@ contains
                 else
                     idiff = 0
                 end if
-                ndepend = get_ndepend_exterior(worker,equation_set,bc,differentiate)
+                ndepend = get_ndepend_exterior(worker,equation_set,bc_state_group,differentiate)
                 do idepend = 1,ndepend
 
                     ! Get Seed
@@ -1891,11 +1928,11 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine update_lift_faces_external(self,worker,equation_set,bc,differentiate)
+    subroutine update_lift_faces_external(self,worker,equation_set,bc_state_group,differentiate)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_t),                 intent(inout)   :: bc(:)
+        type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
 
         integer(ik) :: idomain_l, ielement_l, iface, idepend, ieqn, &
@@ -1953,11 +1990,11 @@ contains
 
 
                     if (interior_face) then
-                        call handle_external_lift__interior_face(worker,equation_set,bc,ieqn)
+                        call handle_external_lift__interior_face(worker,equation_set,bc_state_group,ieqn)
                     else if (boundary_face) then
-                        call handle_external_lift__boundary_face(worker,equation_set,bc,ieqn)
+                        call handle_external_lift__boundary_face(worker,equation_set,bc_state_group,ieqn)
                     else if (chimera_face) then
-                        call handle_external_lift__chimera_face( worker,equation_set,bc,ieqn)
+                        call handle_external_lift__chimera_face( worker,equation_set,bc_state_group,ieqn)
                     else
                         call chidg_signal(FATAL,"update_lift_faces_external: unsupported face type")
                     end if
@@ -1978,7 +2015,7 @@ contains
                 else
                     idiff = 0
                 end if
-                ndepend = get_ndepend_exterior(worker,equation_set,bc,differentiate)
+                ndepend = get_ndepend_exterior(worker,equation_set,bc_state_group,differentiate)
                 do idepend = 1,ndepend
 
                     ! Get Seed
@@ -1986,11 +2023,11 @@ contains
                     worker%function_info%idepend = idepend
 
                     if (interior_face) then
-                        call handle_external_lift__interior_face(worker,equation_set,bc,ieqn)
+                        call handle_external_lift__interior_face(worker,equation_set,bc_state_group,ieqn)
                     else if (boundary_face) then
-                        call handle_external_lift__boundary_face(worker,equation_set,bc,ieqn)
+                        call handle_external_lift__boundary_face(worker,equation_set,bc_state_group,ieqn)
                     else if (chimera_face) then
-                        call handle_external_lift__chimera_face( worker,equation_set,bc,ieqn)
+                        call handle_external_lift__chimera_face( worker,equation_set,bc_state_group,ieqn)
                     else
                         call chidg_signal(FATAL,"update_lift_faces_external: unsupported face type")
                     end if
@@ -2035,10 +2072,10 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine handle_external_lift__interior_face(worker,equation_set,bc,ieqn)
+    subroutine handle_external_lift__interior_face(worker,equation_set,bc_state_group,ieqn)
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_t),                 intent(inout)   :: bc(:)
+        type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
         integer(ik),                intent(in)      :: ieqn
 
         integer(ik) :: idomain_l, ielement_l, iface, idomain_l_n, ielement_l_n, iface_n, iproc_n, eqn_ID
@@ -2187,10 +2224,10 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine handle_external_lift__boundary_face(worker,equation_set,bc,ieqn)
+    subroutine handle_external_lift__boundary_face(worker,equation_set,bc_state_group,ieqn)
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_t),                 intent(inout)   :: bc(:)
+        type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
         integer(ik),                intent(in)      :: ieqn
 
         integer(ik) :: idomain_l, ielement_l, iface, idomain_l_n, ielement_l_n, iface_n, eqn_ID
@@ -2340,10 +2377,10 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine handle_external_lift__chimera_face(worker,equation_set,bc,ieqn)
+    subroutine handle_external_lift__chimera_face(worker,equation_set,bc_state_group,ieqn)
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_t),                 intent(inout)   :: bc(:)
+        type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
         integer(ik),                intent(in)      :: ieqn
 
         integer(ik) :: idomain_l, ielement_l, iface, idomain_l_n, ielement_l_n, iface_n, eqn_ID
@@ -2466,14 +2503,14 @@ contains
     !!  @date   12/7/2016
     !!
     !----------------------------------------------------------------------------------------
-    function get_ndepend_exterior(worker,equation_set,bc,differentiate) result(ndepend)
+    function get_ndepend_exterior(worker,equation_set,bc_state_group,differentiate) result(ndepend)
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_t),                 intent(inout)   :: bc(:)
+        type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
 
         integer(ik) :: ndepend, idomain_l, ielement_l, iface, &
-                       ChiID, BC_ID, patch_ID, face_ID
+                       ChiID, group_ID, patch_ID, face_ID
 
 
         if (differentiate) then
@@ -2493,10 +2530,10 @@ contains
                 ndepend = worker%mesh%domain(idomain_l)%chimera%recv%data(ChiID)%ndonors()
 
             else if ( worker%face_type() == BOUNDARY ) then
-                bc_ID    = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%bc_ID
+                group_ID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%group_ID
                 patch_ID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_ID
                 face_ID  = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%face_ID
-                ndepend  = bc(bc_ID)%bc_patch(patch_ID)%ncoupled_elements(face_ID)
+                ndepend  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ncoupled_elements(face_ID)
 
             end if
 

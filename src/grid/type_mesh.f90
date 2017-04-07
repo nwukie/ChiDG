@@ -26,7 +26,6 @@ module type_mesh
     type, public :: mesh_t
 
         type(domain_t),         allocatable :: domain(:)
-
         type(bc_patch_group_t), allocatable :: bc_patch_group(:)
 
     contains
@@ -258,43 +257,58 @@ contains
     !!        geometry is found on the local processor, the patch will be created.
     !!        If geometry is not found, the patch will not be created.
     !!
+    !!
+    !!  @param[in]  domain_name     Name of the domain associated with the patch
+    !!  @param[in]  group_name      Name of the boundary condition group
+    !!  @param[in]  bc_connectivity Boundary condition face connectivity to initialize
+    !!  @param[in]  bc_ID           Identifier for the associated bc_state_group
+    !!
+    !!
     !!  @author Nathan A. Wukie
     !!  @date   4/6/2017
     !!
     !!
     !--------------------------------------------------------------------------------
-    subroutine add_bc_patch(self,domain_name, group_name, bc_connectivity)
+    subroutine add_bc_patch(self,domain_name, group_name, bc_connectivity, bc_ID)
         class(mesh_t),                  intent(inout)   :: self
         character(*),                   intent(in)      :: domain_name
         character(*),                   intent(in)      :: group_name
         type(boundary_connectivity_t),  intent(in)      :: bc_connectivity
+        integer(ik),                    intent(in)      :: bc_ID
 
         integer(ik) :: group_ID, idomain
 
         !
-        ! Find patch group identifier. If none, call new
+        ! Find patch group identifier. If none, call new_bc_patch_group.
+        !   - don't create patches for 'Empty' groups. These should be left ORPHAN
+        !     so that they get picked up by Chimera.
         !
-        group_ID = self%get_bc_patch_group_id(group_name)
+        if ( (trim(group_name) /= 'Empty') .and. &
+             (trim(group_name) /= 'empty') ) then
 
-        if (group_ID == NO_ID) then
-            group_ID = self%new_bc_patch_group()
-            self%bc_patch_group(group_ID)%name     = trim(group_name)
-            self%bc_patch_group(group_ID)%group_ID = group_ID
+
+            group_ID = self%get_bc_patch_group_id(group_name)
+
+            if (group_ID == NO_ID) then
+                group_ID = self%new_bc_patch_group()
+                self%bc_patch_group(group_ID)%name     = trim(group_name)
+                self%bc_patch_group(group_ID)%group_ID = group_ID
+            end if
+
+
+            !
+            ! Find domain identifier
+            !
+            idomain = self%get_domain_id(domain_name)
+
+
+            !
+            ! Add bc_patch
+            !
+            call self%bc_patch_group(group_ID)%add_bc_patch(self%domain(idomain), bc_connectivity, bc_ID)
+
+
         end if
-
-
-
-        !
-        ! Find domain identifier
-        !
-        idomain = self%get_domain_id(domain_name)
-
-
-
-        !
-        ! Add bc_patch
-        !
-        call self%bc_patch_group(group_ID)%add_bc_patch(self%domain(idomain), bc_connectivity)
 
 
 

@@ -2,10 +2,8 @@ add_subdirectory(periodic)
 
 add_lib_sources(
                 mod_bc.f90 
-                type_bc.f90
                 type_bc_state.f90
                 type_bc_state_group.f90
-                type_bc_group.f90
                 type_bc_state_wrapper.f90
                 type_bc_patch.f90
                 type_bc_patch_group.f90

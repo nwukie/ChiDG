@@ -17,7 +17,7 @@ module type_chidg
     use type_preconditioner,        only: preconditioner_t
     use type_meshdata,              only: meshdata_t
     use type_bc_patch_data,         only: bc_patch_data_t
-    use type_bc_group,              only: bc_group_t
+    use type_bc_state_group,        only: bc_state_group_t
     use type_bc_state,              only: bc_state_t
     use type_dict,                  only: dict_t
     use type_domain_connectivity,   only: domain_connectivity_t
@@ -97,14 +97,19 @@ module type_chidg
 
     contains
 
-
+        ! Open/Close
         procedure   :: start_up
         procedure   :: shut_down
 
+        ! Initialization
+        procedure   :: set
+        procedure   :: init
+
+        ! Run
         procedure   :: run
         procedure   :: report
 
-        ! IO procedures
+        ! IO
         procedure            :: read_grid
         procedure, private   :: read_domains
         procedure, private   :: read_boundary_conditions
@@ -112,9 +117,6 @@ module type_chidg
         procedure            :: write_grid
         procedure            :: write_solution
 
-        ! Initialization
-        procedure   :: set
-        procedure   :: init
 
     end type chidg_t
     !*******************************************************************************************
@@ -769,9 +771,9 @@ contains
 
         type(bc_patch_data_t),  allocatable     :: bc_patch_data(:)
         type(string_t)                          :: bc_group_name
-        type(bc_group_t),       allocatable     :: bc_groups(:)
+        type(bc_state_group_t), allocatable     :: bc_state_groups(:)
         type(string_t)                          :: group_name
-        integer                                 :: idom, ndomains, iface, ibc, ierr, iread
+        integer(ik)                             :: idom, ndomains, iface, ibc, ierr, iread, bc_ID
 
 
         call write_line(' ',                                  ltrim=.false., io_proc=GLOBAL_MASTER)
@@ -784,7 +786,7 @@ contains
         do iread = 0,NRANK-1
             if ( iread == IRANK ) then
 
-                call read_boundaryconditions_hdf(gridfile,bc_patch_data,bc_groups,self%partition)
+                call read_boundaryconditions_hdf(gridfile,bc_patch_data,bc_state_groups,self%partition)
 
             end if
             call MPI_Barrier(ChiDG_COMM,ierr)
@@ -798,15 +800,15 @@ contains
         ! Add all boundary condition state groups
         !
         call write_line('   processing groups...', ltrim=.false., io_proc=GLOBAL_MASTER)
-        do ibc = 1,size(bc_groups)
+        do ibc = 1,size(bc_state_groups)
 
-            call self%data%add_bc_group(bc_groups(ibc), bc_wall     = bc_wall,      &
-                                                        bc_inlet    = bc_inlet,     &
-                                                        bc_outlet   = bc_outlet,    &
-                                                        bc_symmetry = bc_symmetry,  &
-                                                        bc_farfield = bc_farfield,  &
-                                                        bc_periodic = bc_periodic )
-
+            call self%data%add_bc_state_group(bc_state_groups(ibc), bc_wall     = bc_wall,      &
+                                                                    bc_inlet    = bc_inlet,     &
+                                                                    bc_outlet   = bc_outlet,    &
+                                                                    bc_symmetry = bc_symmetry,  &
+                                                                    bc_farfield = bc_farfield,  &
+                                                                    bc_periodic = bc_periodic )
+      
         end do !ibc
 
 
@@ -818,15 +820,14 @@ contains
         ndomains = size(bc_patch_data)
         do idom = 1,ndomains
             do iface = 1,NFACES
-            
-                bc_group_name = bc_patch_data(idom)%bc_group_name%at(iface)
-                call self%data%add_bc_patch(bc_patch_data(idom)%domain_name,            &
-                                            bc_group_name%get(),                        &
-                                            bc_patch_data(idom)%bc_connectivity(iface))
 
-                call self%data%mesh%add_bc_patch(bc_patch_data(idom)%domain_name,       &
-                                                 bc_group_name%get(),                        &
-                                                 bc_patch_data(idom)%bc_connectivity(iface))
+                bc_group_name = bc_patch_data(idom)%bc_group_name%at(iface)
+                bc_ID         = self%data%get_bc_state_group_id(bc_group_name%get())
+
+                call self%data%mesh%add_bc_patch(bc_patch_data(idom)%domain_name,               &
+                                                 bc_group_name%get(),                           &
+                                                 bc_patch_data(idom)%bc_connectivity(iface),    &
+                                                 bc_ID)
 
             end do !iface
         end do !ipatch

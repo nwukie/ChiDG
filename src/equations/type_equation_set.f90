@@ -18,8 +18,8 @@ module type_equation_set
     use type_properties,                only: properties_t
     use type_equationset_function_data, only: equationset_function_data_t
     use type_chidg_worker,              only: chidg_worker_t
-    use type_mesh,                  only: mesh_t
-    use type_bc,                        only: bc_t
+    use type_mesh,                      only: mesh_t
+    use type_bc_state_group,            only: bc_state_group_t
     use type_solverdata,                only: solverdata_t
     use type_element_info,              only: element_info_t
     use type_face_info,                 only: face_info_t
@@ -93,8 +93,6 @@ module type_equation_set
 
         procedure   :: compute_pseudo_timestep
 
-        !procedure   :: get_boundary_ndependent_elements    
-        !procedure   :: get_volume_ndependent_elements       
         procedure   :: get_face_ncompute
         procedure   :: get_element_ncompute
 
@@ -1018,14 +1016,14 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------
-    subroutine compute_bc_operators(self,worker,bc,differentiate)
+    subroutine compute_bc_operators(self,worker,bc_state_group,differentiate)
         class(equation_set_t),      intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
-        type(bc_t),                 intent(inout)   :: bc(:)
+        type(bc_state_group_t),     intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
 
         integer(ik),    allocatable :: compute_pattern(:)
-        integer(ik)                 :: nfcn, ifcn, icompute, ncompute, bc_ID, patch_ID, &
+        integer(ik)                 :: nfcn, ifcn, icompute, ncompute, group_ID, patch_ID, &
                                        face_ID, idiff, ipattern
         logical                     :: boundary_face, compute
 
@@ -1076,7 +1074,8 @@ contains
                 !
                 ! Get index of boundary condition, patch, patch face. 
                 !
-                bc_ID    = mesh%domain(idom)%faces(ielem,iface)%bc_ID
+                !bc_ID    = mesh%domain(idom)%faces(ielem,iface)%bc_ID
+                group_ID = mesh%domain(idom)%faces(ielem,iface)%group_ID
                 patch_ID = mesh%domain(idom)%faces(ielem,iface)%patch_ID
                 face_ID  = mesh%domain(idom)%faces(ielem,iface)%face_ID
 
@@ -1101,12 +1100,21 @@ contains
                             !
                             ! Get coupled element to linearize against.
                             !
-                            worker%function_info%seed%idomain_g  = bc(bc_ID)%bc_patch(patch_ID)%idomain_g_coupled(face_ID)%at(icompute)
-                            worker%function_info%seed%idomain_l  = bc(bc_ID)%bc_patch(patch_ID)%idomain_l_coupled(face_ID)%at(icompute)
-                            worker%function_info%seed%ielement_g = bc(bc_ID)%bc_patch(patch_ID)%ielement_g_coupled(face_ID)%at(icompute)
-                            worker%function_info%seed%ielement_l = bc(bc_ID)%bc_patch(patch_ID)%ielement_l_coupled(face_ID)%at(icompute)
-                            worker%function_info%seed%iproc      = bc(bc_ID)%bc_patch(patch_ID)%proc_coupled(face_ID)%at(icompute)
+                            !worker%function_info%seed%idomain_g  = bc(bc_ID)%bc_patch(patch_ID)%idomain_g_coupled(face_ID)%at(icompute)
+                            !worker%function_info%seed%idomain_l  = bc(bc_ID)%bc_patch(patch_ID)%idomain_l_coupled(face_ID)%at(icompute)
+                            !worker%function_info%seed%ielement_g = bc(bc_ID)%bc_patch(patch_ID)%ielement_g_coupled(face_ID)%at(icompute)
+                            !worker%function_info%seed%ielement_l = bc(bc_ID)%bc_patch(patch_ID)%ielement_l_coupled(face_ID)%at(icompute)
+                            !worker%function_info%seed%iproc      = bc(bc_ID)%bc_patch(patch_ID)%proc_coupled(face_ID)%at(icompute)
+                            !worker%function_info%idepend         = icompute
+
+                            worker%function_info%seed%idomain_g  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g_coupled(face_ID)%at(icompute)
+                            worker%function_info%seed%idomain_l  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l_coupled(face_ID)%at(icompute)
+                            worker%function_info%seed%ielement_g = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g_coupled(face_ID)%at(icompute)
+                            worker%function_info%seed%ielement_l = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l_coupled(face_ID)%at(icompute)
+                            worker%function_info%seed%iproc      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%proc_coupled(face_ID)%at(icompute)
                             worker%function_info%idepend         = icompute
+
+
 
                             call self%bc_operator(ifcn)%op%compute(worker,prop)
 

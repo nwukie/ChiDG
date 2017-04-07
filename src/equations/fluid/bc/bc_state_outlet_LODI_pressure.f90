@@ -55,7 +55,7 @@ module bc_state_outlet_LODI_pressure
     contains
 
         procedure   :: init                 ! Set-up bc state with options/name etc.
-        procedure   :: init_bc_specialized  ! Implement specialized initialization procedure
+!        procedure   :: init_bc_specialized  ! Implement specialized initialization procedure
         procedure   :: compute_bc_state     ! boundary condition function implementation
 
         procedure   :: update_average_pressure
@@ -101,135 +101,135 @@ contains
 
 
 
-    !>  Specialized initialization routine.
-    !!
-    !!  Find the quadrature node across the boundary condition patch that is 
-    !!  closest to the user-specified value that we would like to set a pressure
-    !!  at.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/21/2017
-    !!
-    !--------------------------------------------------------------------------------
-    subroutine init_bc_specialized(self,mesh,bc_patch,bc_COMM)
-        class(outlet_LODI_pressure_t), intent(inout)   :: self
-        type(mesh_t),              intent(in)      :: mesh
-        type(bc_patch_t),              intent(in)      :: bc_patch(:)
-        type(mpi_comm),                intent(in)      :: bc_comm
-
-        character(:),   allocatable                 :: user_msg
-        type(point_t)                               :: point
-        type(point_t),  allocatable, dimension(:)   :: coords, quad_pts
-        real(rk),       allocatable, dimension(:)   :: node1, node2, node3, dist_face, dist_bc_global
-        real(rk)                                    :: time, dist_bc
-        integer(ik)                                 :: iface_bc, iface, ielement, ipatch, &
-                                                       node_idomain_g, node_ielement_g, node_iface, &
-                                                       node_index, minloc_dist_face,     &
-                                                       idomain_l, ielement_l, rank_min, bc_IRANK, bc_NRANK, ierr
-        
-        
-
-!        !
-!        ! Get user-specified node. Need coord,time here because thats the
-!        ! function interface. They aren't really doing anything.
-!        !
-!        point%c1_ = 0._rk
-!        point%c2_ = 0._rk
-!        point%c3_ = 0._rk
-!        coords = [point]
-!        time   = 0._rk
-!        node1  = self%bcproperties%compute('Coordinate-1',time,coords)
-!        node2  = self%bcproperties%compute('Coordinate-2',time,coords)
-!        node3  = self%bcproperties%compute('Coordinate-3',time,coords)
+!    !>  Specialized initialization routine.
+!    !!
+!    !!  Find the quadrature node across the boundary condition patch that is 
+!    !!  closest to the user-specified value that we would like to set a pressure
+!    !!  at.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   2/21/2017
+!    !!
+!    !--------------------------------------------------------------------------------
+!    subroutine init_bc_specialized(self,mesh,bc_patch,bc_COMM)
+!        class(outlet_LODI_pressure_t), intent(inout)   :: self
+!        type(mesh_t),              intent(in)      :: mesh
+!        type(bc_patch_t),              intent(in)      :: bc_patch(:)
+!        type(mpi_comm),                intent(in)      :: bc_comm
+!
+!        character(:),   allocatable                 :: user_msg
+!        type(point_t)                               :: point
+!        type(point_t),  allocatable, dimension(:)   :: coords, quad_pts
+!        real(rk),       allocatable, dimension(:)   :: node1, node2, node3, dist_face, dist_bc_global
+!        real(rk)                                    :: time, dist_bc
+!        integer(ik)                                 :: iface_bc, iface, ielement, ipatch, &
+!                                                       node_idomain_g, node_ielement_g, node_iface, &
+!                                                       node_index, minloc_dist_face,     &
+!                                                       idomain_l, ielement_l, rank_min, bc_IRANK, bc_NRANK, ierr
+!        
+!        
+!
+!!        !
+!!        ! Get user-specified node. Need coord,time here because thats the
+!!        ! function interface. They aren't really doing anything.
+!!        !
+!!        point%c1_ = 0._rk
+!!        point%c2_ = 0._rk
+!!        point%c3_ = 0._rk
+!!        coords = [point]
+!!        time   = 0._rk
+!!        node1  = self%bcproperties%compute('Coordinate-1',time,coords)
+!!        node2  = self%bcproperties%compute('Coordinate-2',time,coords)
+!!        node3  = self%bcproperties%compute('Coordinate-3',time,coords)
+!!
+!!
+!!
+!!
+!!        !
+!!        ! Loop through proc-local patches, find quadrature node closest to user-specified node.
+!!        !
+!!        dist_bc = huge(ONE)  !initialize closest distance on the proc-local bc
+!!        do ipatch = 1,size(bc_patch)
+!!            do iface_bc = 1,bc_patch(ipatch)%nfaces()
+!!
+!!                !
+!!                ! get face location in local mesh
+!!                !
+!!                idomain_l  = bc_patch(ipatch)%idomain_l_%at(iface_bc)
+!!                ielement_l = bc_patch(ipatch)%ielement_l_%at(iface_bc)
+!!                iface      = bc_patch(ipatch)%iface_%at(iface_bc)
+!!                
+!!
+!!                ! get points at quadrature nodes for current face
+!!                quad_pts = mesh(idomain_l)%faces(ielement_l,iface)%quad_pts
+!!
+!!                ! compute distance from quadrature nodes to user-specified node
+!!                dist_face = sqrt( (quad_pts(:)%c1_ - node1(1))**TWO + &
+!!                                  (quad_pts(:)%c2_ - node2(1))**TWO + &
+!!                                  (quad_pts(:)%c3_ - node3(1))**TWO ) 
+!!
+!!                ! Get index location of node with minimum distance to user-specified node
+!!                minloc_dist_face = minloc(dist_face,1)
+!!            
+!!
+!!                ! If new minimum is found, record location, update local dist_bc
+!!                if (dist_face(minloc_dist_face) < dist_bc) then
+!!                    node_idomain_g  = mesh(idomain_l)%elems(ielement_l)%idomain_g
+!!                    node_ielement_g = mesh(idomain_l)%elems(ielement_l)%ielement_g
+!!                    node_iface      = iface
+!!                    node_index      = minloc_dist_face
+!!
+!!                    dist_bc = dist_face(minloc_dist_face)
+!!                end if
+!!                
+!!                ! compute distance from quadrature nodes to user node
+!!            
+!!            end do !iface_bc
+!!        end do !ipatch
+!!
+!!
+!!
+!!
+!!        !
+!!        ! Get rank of current proc in bc communicator and total number of ranks
+!!        !
+!!        user_msg = "bc_state_outlet_LODI_pressure%init_bc_specialized: The mpi communicator passed &
+!!                    in was detected as a Null communicator and is invalid for use. Something must have &
+!!                    gone wrong, possibly in bc_t or at a previous point during initialization."
+!!        if (bc_COMM == MPI_COMM_NULL) call chidg_signal(FATAL,user_msg)
+!!        call MPI_Comm_rank(bc_COMM,bc_IRANK)
+!!        call MPI_Comm_size(bc_COMM,bc_NRANK)
+!!
+!!
+!!        !
+!!        ! Have gather minimum values from all member processors
+!!        !
+!!        allocate(dist_bc_global(bc_NRANK), stat=ierr)
+!!        if (ierr /= 0) call AllocationError
+!!        call MPI_Allgather(dist_bc, 1, MPI_REAL8, dist_bc_global, 1, MPI_REAL8, bc_COMM)
+!!
+!!
+!!        !
+!!        ! Determine which processor has the minimum distance.
+!!        ! Minus 1 because ranks are 0-based.
+!!        !
+!!        rank_min = minloc(dist_bc_global,1) - 1
+!!
+!!
+!!        !
+!!        ! If minimum distance is on current proc, store node values
+!!        !
+!!        if (rank_min == bc_IRANK) then
+!!            self%node_idomain_g  = node_idomain_g
+!!            self%node_ielement_g = node_ielement_g
+!!            self%node_iface      = node_iface
+!!            self%node_index      = node_index
+!!        end if
 !
 !
 !
-!
-!        !
-!        ! Loop through proc-local patches, find quadrature node closest to user-specified node.
-!        !
-!        dist_bc = huge(ONE)  !initialize closest distance on the proc-local bc
-!        do ipatch = 1,size(bc_patch)
-!            do iface_bc = 1,bc_patch(ipatch)%nfaces()
-!
-!                !
-!                ! get face location in local mesh
-!                !
-!                idomain_l  = bc_patch(ipatch)%idomain_l_%at(iface_bc)
-!                ielement_l = bc_patch(ipatch)%ielement_l_%at(iface_bc)
-!                iface      = bc_patch(ipatch)%iface_%at(iface_bc)
-!                
-!
-!                ! get points at quadrature nodes for current face
-!                quad_pts = mesh(idomain_l)%faces(ielement_l,iface)%quad_pts
-!
-!                ! compute distance from quadrature nodes to user-specified node
-!                dist_face = sqrt( (quad_pts(:)%c1_ - node1(1))**TWO + &
-!                                  (quad_pts(:)%c2_ - node2(1))**TWO + &
-!                                  (quad_pts(:)%c3_ - node3(1))**TWO ) 
-!
-!                ! Get index location of node with minimum distance to user-specified node
-!                minloc_dist_face = minloc(dist_face,1)
-!            
-!
-!                ! If new minimum is found, record location, update local dist_bc
-!                if (dist_face(minloc_dist_face) < dist_bc) then
-!                    node_idomain_g  = mesh(idomain_l)%elems(ielement_l)%idomain_g
-!                    node_ielement_g = mesh(idomain_l)%elems(ielement_l)%ielement_g
-!                    node_iface      = iface
-!                    node_index      = minloc_dist_face
-!
-!                    dist_bc = dist_face(minloc_dist_face)
-!                end if
-!                
-!                ! compute distance from quadrature nodes to user node
-!            
-!            end do !iface_bc
-!        end do !ipatch
-!
-!
-!
-!
-!        !
-!        ! Get rank of current proc in bc communicator and total number of ranks
-!        !
-!        user_msg = "bc_state_outlet_LODI_pressure%init_bc_specialized: The mpi communicator passed &
-!                    in was detected as a Null communicator and is invalid for use. Something must have &
-!                    gone wrong, possibly in bc_t or at a previous point during initialization."
-!        if (bc_COMM == MPI_COMM_NULL) call chidg_signal(FATAL,user_msg)
-!        call MPI_Comm_rank(bc_COMM,bc_IRANK)
-!        call MPI_Comm_size(bc_COMM,bc_NRANK)
-!
-!
-!        !
-!        ! Have gather minimum values from all member processors
-!        !
-!        allocate(dist_bc_global(bc_NRANK), stat=ierr)
-!        if (ierr /= 0) call AllocationError
-!        call MPI_Allgather(dist_bc, 1, MPI_REAL8, dist_bc_global, 1, MPI_REAL8, bc_COMM)
-!
-!
-!        !
-!        ! Determine which processor has the minimum distance.
-!        ! Minus 1 because ranks are 0-based.
-!        !
-!        rank_min = minloc(dist_bc_global,1) - 1
-!
-!
-!        !
-!        ! If minimum distance is on current proc, store node values
-!        !
-!        if (rank_min == bc_IRANK) then
-!            self%node_idomain_g  = node_idomain_g
-!            self%node_ielement_g = node_ielement_g
-!            self%node_iface      = node_iface
-!            self%node_index      = node_index
-!        end if
-
-
-
-    end subroutine init_bc_specialized
-    !******************************************************************************************
+!    end subroutine init_bc_specialized
+!    !******************************************************************************************
 
 
 

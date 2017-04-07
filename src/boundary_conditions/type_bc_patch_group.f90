@@ -1,7 +1,7 @@
 module type_bc_patch_group
 #include <messenger.h>
     use mod_kinds,                  only: rk, ik
-    use mod_constants,              only: NO_ID, BOUNDARY, ORPHAN
+    use mod_constants,              only: NO_ID, BOUNDARY, ORPHAN, NFACES, NO_FACE
     use mod_grid,                   only: FACE_CORNERS
     use type_point,                 only: point_t
     use type_bc_patch,              only: bc_patch_t
@@ -18,7 +18,7 @@ module type_bc_patch_group
     !!  @author Nathan A. Wukie
     !!  @date   4/6/2017
     !!
-    !--------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     type, public :: bc_patch_group_t
 
         character(:),       allocatable :: name
@@ -34,7 +34,7 @@ module type_bc_patch_group
         procedure,  private :: new_bc_patch
 
     end type bc_patch_group_t
-    !********************************************************************
+    !*****************************************************************************************
 
 
 
@@ -51,10 +51,11 @@ contains
     !!  @date   11/19/2016
     !!
     !------------------------------------------------------------------------------------------
-    subroutine add_bc_patch(self,domain,bc_connectivity)
+    subroutine add_bc_patch(self,domain,bc_connectivity,bc_ID)
         class(bc_patch_group_t),        intent(inout)           :: self
         type(domain_t),                 intent(inout)           :: domain
         type(boundary_connectivity_t),  intent(in)              :: bc_connectivity
+        integer(ik),                    intent(in)              :: bc_ID
 
 
         type(point_t)               :: pnt, point_one, point_two, point_three
@@ -78,170 +79,178 @@ contains
 
 
 
-!        !
-!        ! Get number of elements/faces associated with boundary condition.
-!        !
-!        nelem_bc = bc_connectivity%get_nfaces()
-!
-!
-!        !
-!        ! Loop through each face in bc connectivity:
-!        !
-!        !   - Find owner element, determine iface
-!        !
-!        iface_bc = 0
-!        patch_ID = NO_ID
-!        do ielem_bc = 1,nelem_bc
-!
-!            !
-!            ! Get nodes from face
-!            !
-!            face_nodes = bc_connectivity%data(ielem_bc)%get_face_nodes()
-!
-!
-!            nface_nodes = size(face_nodes)
-!            if ( allocated(node_matched) ) deallocate(node_matched)
-!            allocate(node_matched(nface_nodes), stat=ierr)
-!            if (ierr /= 0) call AllocationError
-!
-!            
-!            !
-!            ! Search for local element with common nodes
-!            !
-!            do ielem = 1,domain%nelem
-!
-!                
-!                !
-!                ! Get nodes from element being tested
-!                !
-!                element_nodes = domain%elems(ielem)%connectivity%get_element_nodes()
-!
-!
-!                !
-!                ! Loop through bc nodes and see if current element has them all
-!                !
-!                node_matched = .false.
-!                do inode = 1,nface_nodes
-!                    if ( any(element_nodes == face_nodes(inode) ) ) then
-!                        node_matched(inode) = .true.
-!                    end if
-!                end do
-!
-!
-!                !
-!                ! Determine element mapping index
-!                !
-!                nterms_1d = 0
-!                do while (nterms_1d*nterms_1d*nterms_1d < domain%elems(ielem)%nterms_c)
-!                    nterms_1d = nterms_1d + 1
-!                end do
-!                mapping = nterms_1d - 1
-!
-!
-!
-!        
-!                !
-!                ! If all match: 
-!                !   - determine face index, iface, corresponding to the element boundary
-!                !   - set element/face indices in boundary condition list.
-!                !
-!                if ( all(node_matched) ) then
-!                    iface_bc = iface_bc + 1
-!
-!                    !
-!                    ! Since a geometry region was detected on the current processor,
-!                    ! create a new bc_patch if one hasn't already been created.
-!                    ! We want this creation statement in the inner loop here so that
-!                    ! only those processor that contain faces on the boundary 
-!                    ! actually allocate a patch.
-!                    !
-!                    if (patch_ID == NO_ID) patch_ID = self%new_bc_patch()
-!
-!
-!                    !
-!                    ! Detect element face index associated with the boundary condition
-!                    !   Goal: determine iface
-!                    !
-!                    !   Loop through element faces until a match is found
-!                    !
-!                    iface = NO_FACE
-!                    do try_face = 1,NFACES 
-!
-!                        !
-!                        ! Get corner nodes for face, try_face
-!                        !
-!                        corner_one   = FACE_CORNERS(try_face,1,mapping)
-!                        corner_two   = FACE_CORNERS(try_face,2,mapping)
-!                        corner_three = FACE_CORNERS(try_face,3,mapping)
-!                        corner_four  = FACE_CORNERS(try_face,4,mapping)
-!
-!
-!                        !
-!                        ! For the element, get the global indices of the corner nodes for face, try_face
-!                        !
-!                        corner_indices(1) = domain%elems(ielem)%connectivity%get_element_node(corner_one)
-!                        corner_indices(2) = domain%elems(ielem)%connectivity%get_element_node(corner_two)
-!                        corner_indices(3) = domain%elems(ielem)%connectivity%get_element_node(corner_three)
-!                        corner_indices(4) = domain%elems(ielem)%connectivity%get_element_node(corner_four)
-!
-!
-!                        !
-!                        ! Test each corner from try_face for match with bc_connectivity
-!                        !
-!                        includes_corner_one   = any( face_nodes == corner_indices(1) )
-!                        includes_corner_two   = any( face_nodes == corner_indices(2) )
-!                        includes_corner_three = any( face_nodes == corner_indices(3) )
-!                        includes_corner_four  = any( face_nodes == corner_indices(4) )
-!
-!                        
-!                        !
-!                        ! If try_face corners are all in bc_connectivity:
-!                        !   - done
-!                        !   - set iface = try_face
-!                        !
-!                        face_matches_boundary = ( includes_corner_one   .and. &
-!                                                  includes_corner_two   .and. &
-!                                                  includes_corner_three .and. &
-!                                                  includes_corner_four )
-!
-!                        ! Early exit condition
-!                        if (face_matches_boundary) then
-!                            iface=try_face
-!                            exit
-!                        end if
-!
-!                    end do ! find iface
-!
-!
-!                    !
-!                    ! Check face was detected
-!                    !
-!                    user_msg = "bc%init: Could not determine element face associated with the boundary."
-!                    if (iface == NO_FACE) call chidg_signal(FATAL,user_msg)
-!
-!
-!                    !
-!                    ! Add domain, element, face index. Get face_ID, index of where the face exists in the bc_patch
-!                    !
-!                    face_ID = self%patch(patch_ID)%add_face(domain%elems(ielem)%idomain_g,  &
-!                                                            domain%elems(ielem)%idomain_l,  &
-!                                                            domain%elems(ielem)%ielement_g, &
-!                                                            domain%elems(ielem)%ielement_l, &
-!                                                            iface)
-!
-!
-!                    !
-!                    ! Inform domain face about bc_ID it is associated with, patch_ID it belongs to, and the location, face_ID, in the bc_patch.
-!                    !
-!                    domain%faces(ielem,iface)%bc_ID      = self%bc_ID
-!                    domain%faces(ielem,iface)%group_ID   = self%group_ID
-!                    domain%faces(ielem,iface)%patch_ID   = patch_ID
-!                    domain%faces(ielem,iface)%face_ID    = face_ID
-!                    !domain%faces(ielem,iface)%patch_face = patch_face
-!
-!
-!
-!
+        !
+        ! Get number of elements/faces associated with boundary condition.
+        !
+        nelem_bc = bc_connectivity%get_nfaces()
+
+
+        !
+        ! Loop through each face in bc connectivity:
+        !
+        !   - Find owner element, determine iface
+        !
+        iface_bc = 0
+        patch_ID = NO_ID
+        do ielem_bc = 1,nelem_bc
+
+            !
+            ! Get nodes from face
+            !
+            face_nodes = bc_connectivity%data(ielem_bc)%get_face_nodes()
+
+
+            nface_nodes = size(face_nodes)
+            if ( allocated(node_matched) ) deallocate(node_matched)
+            allocate(node_matched(nface_nodes), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+            
+            !
+            ! Search for local element with common nodes
+            !
+            do ielem = 1,domain%nelem
+
+                
+                !
+                ! Get nodes from element being tested
+                !
+                element_nodes = domain%elems(ielem)%connectivity%get_element_nodes()
+
+
+                !
+                ! Loop through bc nodes and see if current element has them all
+                !
+                node_matched = .false.
+                do inode = 1,nface_nodes
+                    if ( any(element_nodes == face_nodes(inode) ) ) then
+                        node_matched(inode) = .true.
+                    end if
+                end do
+
+
+                !
+                ! Determine element mapping index
+                !
+                nterms_1d = 0
+                do while (nterms_1d*nterms_1d*nterms_1d < domain%elems(ielem)%nterms_c)
+                    nterms_1d = nterms_1d + 1
+                end do
+                mapping = nterms_1d - 1
+
+
+
+        
+                !
+                ! If all match: 
+                !   - determine face index, iface, corresponding to the element boundary
+                !   - set element/face indices in boundary condition list.
+                !
+                if ( all(node_matched) ) then
+                    iface_bc = iface_bc + 1
+
+                    !
+                    ! Since a geometry region was detected on the current processor,
+                    ! create a new bc_patch if one hasn't already been created.
+                    ! We want this creation statement in the inner loop here so that
+                    ! only those processor that contain faces on the boundary 
+                    ! actually allocate a patch.
+                    !
+                    if (patch_ID == NO_ID) patch_ID = self%new_bc_patch()
+
+
+                    !
+                    ! Detect element face index associated with the boundary condition
+                    !   Goal: determine iface
+                    !
+                    !   Loop through element faces until a match is found
+                    !
+                    iface = NO_FACE
+                    do try_face = 1,NFACES 
+
+                        !
+                        ! Get corner nodes for face, try_face
+                        !
+                        corner_one   = FACE_CORNERS(try_face,1,mapping)
+                        corner_two   = FACE_CORNERS(try_face,2,mapping)
+                        corner_three = FACE_CORNERS(try_face,3,mapping)
+                        corner_four  = FACE_CORNERS(try_face,4,mapping)
+
+
+                        !
+                        ! For the element, get the global indices of the corner nodes for face, try_face
+                        !
+                        corner_indices(1) = domain%elems(ielem)%connectivity%get_element_node(corner_one)
+                        corner_indices(2) = domain%elems(ielem)%connectivity%get_element_node(corner_two)
+                        corner_indices(3) = domain%elems(ielem)%connectivity%get_element_node(corner_three)
+                        corner_indices(4) = domain%elems(ielem)%connectivity%get_element_node(corner_four)
+
+
+                        !
+                        ! Test each corner from try_face for match with bc_connectivity
+                        !
+                        includes_corner_one   = any( face_nodes == corner_indices(1) )
+                        includes_corner_two   = any( face_nodes == corner_indices(2) )
+                        includes_corner_three = any( face_nodes == corner_indices(3) )
+                        includes_corner_four  = any( face_nodes == corner_indices(4) )
+
+                        
+                        !
+                        ! If try_face corners are all in bc_connectivity:
+                        !   - done
+                        !   - set iface = try_face
+                        !
+                        face_matches_boundary = ( includes_corner_one   .and. &
+                                                  includes_corner_two   .and. &
+                                                  includes_corner_three .and. &
+                                                  includes_corner_four )
+
+                        ! Early exit condition
+                        if (face_matches_boundary) then
+                            iface=try_face
+                            exit
+                        end if
+
+                    end do ! find iface
+
+
+                    !
+                    ! Check face was detected
+                    !
+                    user_msg = "bc%init: Could not determine element face associated with the boundary."
+                    if (iface == NO_FACE) call chidg_signal(FATAL,user_msg)
+
+
+                    !
+                    ! Add domain, element, face index. Get face_ID, index of where the face exists in the bc_patch
+                    !
+                    face_ID = self%patch(patch_ID)%add_face(domain%elems(ielem)%idomain_g,  &
+                                                            domain%elems(ielem)%idomain_l,  &
+                                                            domain%elems(ielem)%ielement_g, &
+                                                            domain%elems(ielem)%ielement_l, &
+                                                            iface)
+
+
+                    !
+                    ! Inform domain face about:
+                    !   - bc_ID  the boundary state group it is associated with
+                    !   - group_ID the boundary patch group it is associated with
+                    !   - patch_ID the boundary patch is is associated with
+                    !   - face_ID the patch face it is associated with
+                    !
+                    domain%faces(ielem,iface)%bc_ID      = bc_ID
+                    domain%faces(ielem,iface)%group_ID   = self%group_ID
+                    domain%faces(ielem,iface)%patch_ID   = patch_ID
+                    domain%faces(ielem,iface)%face_ID    = face_ID
+
+                    domain%faces(ielem,iface)%ftype = BOUNDARY
+
+
+                    !if ( allocated(self%bc_state) ) then
+                    !    domain%faces(ielem,iface)%ftype = BOUNDARY
+                    !end if
+
+
 !                    !
 !                    ! Set face type - 'ftype'
 !                    !
@@ -263,18 +272,18 @@ contains
 !                        domain%faces(ielem,iface)%ftype = ORPHAN
 !
 !                    end if
-!
-!
-!
-!                    ! End search
-!                    exit
-!
-!
-!                end if
-!
-!            end do ! ielem
-!
-!        end do !ielem_bc
+
+
+
+                    ! End search
+                    exit
+
+
+                end if
+
+            end do ! ielem
+
+        end do !ielem_bc
 
 
 

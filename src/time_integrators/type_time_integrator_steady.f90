@@ -76,7 +76,7 @@ contains
         type(chidg_data_t),                 intent(inout)   :: data
         character(*),                       intent(in)      :: filename
 
-        integer(kind = 8)   :: fid
+        integer(kind = 8)   :: fid, SIZE_ONE = 1
         integer(ik)         :: ierr, iwrite
 
 
@@ -96,6 +96,11 @@ contains
 !                if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltset_attribute_string_f")
                 call set_time_integrator_hdf(fid,trim(data%time_manager%get_name()))
 
+                call h5ltset_attribute_int_f(fid,"/","nsteps",[data%time_manager%nsteps],SIZE_ONE,ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltset_attribute_int_f")
+
+                call h5ltset_attribute_int_f(fid,"/","nwrite",[data%time_manager%nwrite],SIZE_ONE,ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltset_attribute_int_f")
                 
                 call close_file_hdf(fid)
 
@@ -120,9 +125,10 @@ contains
         type(chidg_data_t),                 intent(inout)   :: data
         character(*),                       intent(in)      :: filename
 
-        integer(HID_T)              :: fid
-        character(:),   allocatable :: temp_string
-        integer(ik)                 :: ierr, ntime
+        integer(HID_T)                  :: fid
+        character(:),   allocatable     :: temp_string
+        integer(ik),    dimension(1)    :: nsteps, nwrite
+        integer(ik)                     :: ierr, ntime
 
         
         !
@@ -139,6 +145,13 @@ contains
         temp_string = get_time_integrator_hdf(fid)
 
 
+        call h5ltget_attribute_int_f(fid,"/","nsteps",nsteps,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltget_attribute_int_f")
+
+        call h5ltget_attribute_int_f(fid,"/","nwrite",nwrite,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltget_attribute_int_f")
+
+
         !
         ! Get ntime
         !
@@ -152,6 +165,8 @@ contains
         !
         data%time_manager%time_scheme = trim(temp_string)
         data%time_manager%ntime       = ntime
+        data%time_manager%nsteps      = nsteps(1)
+        data%time_manager%nwrite      = nwrite(1)
 
 
     end subroutine read_time_options

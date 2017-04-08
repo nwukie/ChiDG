@@ -16,6 +16,7 @@ module mod_chidg_post_hdf2vtk
     use mod_vtkio,              only: write_vtk_file
     use type_file_properties,   only: file_properties_t
     use mod_hdf_utilities,      only: get_properties_hdf
+    use mod_string,             only: get_file_prefix
 
     implicit none
 
@@ -44,8 +45,8 @@ contains
         type(chidg_t)                       ::  chidg
         type(file_properties_t)             ::  file_props
         character(:),           allocatable ::  eqnset
-        character(:),           allocatable ::  time_string
-        integer(ik)                         ::  nterms_s,spacedim,solution_order
+        character(:),           allocatable ::  time_string, grid_file_prefix, solution_file_prefix, step_str
+        integer(ik)                         ::  nterms_s,spacedim,solution_order,istep
 
 
         !
@@ -91,12 +92,20 @@ contains
         call chidg%init('communication')
         call chidg%init('solvers')
 
+        
+        grid_file_prefix     = get_file_prefix(grid_file,'.h5')
+        solution_file_prefix = get_file_prefix(solution_file,'.h5')
+        step_str = solution_file_prefix(len(grid_file_prefix) + 2:)
+        read(step_str,*) istep
+
 
         !
         ! Read solution modes and time integrator options from HDF5
         !
         call chidg%read_solution(solution_file)
         call chidg%time_integrator%read_time_options(chidg%data,solution_file)
+
+        print *, istep/chidg%data%time_manager%nwrite
         
 
         !

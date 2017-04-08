@@ -10,7 +10,7 @@ module type_chidg_data
     use type_mesh,                      only: mesh_t
     use type_bc_state,                  only: bc_state_t
     use type_bc_state_group,            only: bc_state_group_t
-    use type_bc_group,                  only: bc_group_t
+!    use type_bc_group,                  only: bc_group_t
     use type_svector,                   only: svector_t
     use mod_string,                     only: string_t
     use type_equation_set,              only: equation_set_t

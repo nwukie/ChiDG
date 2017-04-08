@@ -44,7 +44,7 @@ module integration_1D_nonlinear_diffusion_mod
     use mod_bc,                 only: create_bc
     use mod_string,             only: string_t
     use type_bc_state,          only: bc_state_t
-    use type_bc_group,          only: bc_group_t
+    use type_bc_state_group,          only: bc_state_group_t
     use type_chidg,             only: chidg_t
     use type_chidg_data,        only: chidg_data_t
     use type_function,          only: function_t
@@ -454,7 +454,7 @@ contains
         integer(ik)                     :: ierr
         class(function_t),  allocatable :: fcn
         class(bc_state_t),  allocatable :: bc_state
-        type(bc_group_t)                :: bc_groups(3)
+        type(bc_state_group_t)          :: bc_state_groups(3)
         type(string_t)                  :: group_names(2,6)
 
         
@@ -532,21 +532,21 @@ contains
         ! Create mesh
         !
         if (IRANK == GLOBAL_MASTER) then
-            bc_groups(1)%name = "Left Boundary"
-            bc_groups(2)%name = "Right Boundary"
-            bc_groups(3)%name = "YZ Boundaries"
+            bc_state_groups(1)%name = "Left Boundary"
+            bc_state_groups(2)%name = "Right Boundary"
+            bc_state_groups(3)%name = "YZ Boundaries"
 
 
             call create_bc("Scalar Value", bc_state)
             call bc_state%set_fcn_option("Value","val", ZERO )
-            call bc_groups(1)%bc_states%push_back(bc_state)
+            call bc_state_groups(1)%add_bc_state(bc_state)
 
             call create_bc("Scalar Value", bc_state)
             call bc_state%set_fcn_option("Value","val", log(ONE + 50._rk*ONE) )
-            call bc_groups(2)%bc_states%push_back(bc_state)
+            call bc_state_groups(2)%add_bc_state(bc_state)
 
             call create_bc("Scalar Extrapolate", bc_state)
-            call bc_groups(3)%bc_states%push_back(bc_state)
+            call bc_state_groups(3)%add_bc_state(bc_state)
 
 
             if (this%gridtype == 'singleblock') then
@@ -560,14 +560,14 @@ contains
 
 
 
-                call create_mesh_file('D1 NxNxN',this%gridfile,                                  &
-                                        equation_sets=[string_t("Test 1D Nonlinear Diffusion")], &
-                                        group_names = group_names,                               &
-                                        bc_groups   = bc_groups,                                 &
-                                        nelem_xi    = this%nelem_xi,                             &
-                                        nelem_eta   = 1,                                         &
-                                        nelem_zeta  = 1,                                         &
-                                        clusterx    = -1)
+                call create_mesh_file('D1 NxNxN',this%gridfile,                                                 &
+                                                 equation_sets   = [string_t("Test 1D Nonlinear Diffusion")],   &
+                                                 group_names     = group_names,                                 &
+                                                 bc_state_groups = bc_state_groups,                             &
+                                                 nelem_xi        = this%nelem_xi,                               &
+                                                 nelem_eta       = 1,                                           &
+                                                 nelem_zeta      = 1,                                           &
+                                                 clusterx        = -1)
 
             else if (this%gridtype == 'chimera') then
 
@@ -587,15 +587,15 @@ contains
                                     string_t("YZ Boundaries") ]
 
 
-                call create_mesh_file('D2 NxNxN M1',this%gridfile,                               &
-                                        equation_sets=[string_t("Test 1D Nonlinear Diffusion"),  &
-                                                       string_t("Test 1D Nonlinear Diffusion")], &
-                                        group_names = group_names,                               &
-                                        bc_groups   = bc_groups,                                 &
-                                        nelem_xi    = this%nelem_xi,                             &
-                                        nelem_eta   = 1,                                         &
-                                        nelem_zeta  = 1,                                         &
-                                        clusterx    = -1)
+                call create_mesh_file('D2 NxNxN M1',this%gridfile,                                              &
+                                                    equation_sets   =[string_t("Test 1D Nonlinear Diffusion"),  &
+                                                                      string_t("Test 1D Nonlinear Diffusion")], &
+                                                    group_names     = group_names,                              &
+                                                    bc_state_groups = bc_state_groups,                          &
+                                                    nelem_xi        = this%nelem_xi,                            &
+                                                    nelem_eta       = 1,                                        &
+                                                    nelem_zeta      = 1,                                        &
+                                                    clusterx        = -1)
 
             end if
 

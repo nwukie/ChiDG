@@ -1,11 +1,10 @@
 module test_bc_mod
     use pfunit_mod
-    use mod_kinds,          only: rk,ik
-    use mod_bc,             only: create_bc
-    use type_chidg,         only: chidg_t
-    use type_bc_state,      only: bc_state_t
-    use type_bc_group,      only: bc_group_t
-    use type_bc,            only: bc_t
+    use mod_kinds,              only: rk,ik
+    use mod_bc,                 only: create_bc
+    use type_chidg,             only: chidg_t
+    use type_bc_state,          only: bc_state_t
+    use type_bc_state_group,    only: bc_state_group_t
     implicit none
 
     public  :: test_bc
@@ -13,11 +12,11 @@ module test_bc_mod
 
     !>  Test bc_t procedures.
     !!
-    !!  Test init_bc_group:
+    !!  Test init_bc_state_group:
     !!      - Standard initialization with multiple bc_state objects in the
     !!        group.
     !!      - Also overriding initialization with an incoming bc_state object
-    !!        to override the bc_group initialization.
+    !!        to override the bc_state_group initialization.
     !!
     !!  Test init_bc_patch:
     !!
@@ -87,9 +86,9 @@ contains
 
 
 
-    !>  Test calling bc%init_bc_group.
+    !>  Test bc_state_group.
     !!
-    !!  1: Initialize one bc_group object with multiple state functions. 
+    !!  1: Initialize one bc_state_group object with multiple state functions. 
     !!  2: Pass the bc_group to a bc_t object using init_bc_group
     !!  3: Check number of allocated state functions and names
     !!
@@ -98,41 +97,34 @@ contains
     !!
     !!-------------------------------------------------------------------------------------
     @Test
-    subroutine test_bc__init_bc_group(self)
+    subroutine test_bc__init_bc_state_group(self)
         class(test_bc), intent(inout)   :: self
 
         class(bc_state_t),  allocatable :: bc_state
-        type(bc_group_t)                :: bc_group
-        type(bc_t)                      :: bc
+        type(bc_state_group_t)          :: bc_state_group
 
         
         !
-        ! Initialize bc_group with some data
+        ! Initialize bc_state_group with some data
         !
-        ! Create a boundary condition state function, add it to the bc_group
+        ! Create a boundary condition state function, add it to the bc_state_group
         !
-        call bc_group%set_name('Group One')
+        call bc_state_group%set_name('Group One')
 
         call create_bc('Scalar Value', bc_state)
-        call bc_group%add_bc_state(bc_state)
+        call bc_state_group%add_bc_state(bc_state)
         call create_bc('Scalar Derivative', bc_state)
-        call bc_group%add_bc_state(bc_state)
-
-
-        !
-        ! Call init_bc_group. THIS IS BEING TESTED.
-        !
-        call bc%init_bc_group(bc_group)
+        call bc_state_group%add_bc_state(bc_state)
 
 
 
-        @assertEqual(size(bc%bc_state), 2)
-        @assertEqual(bc%bc_family, 'Scalar')
-        @assertEqual(bc%bc_state(1)%state%get_name(), 'Scalar Value')
-        @assertEqual(bc%bc_state(2)%state%get_name(), 'Scalar Derivative')
+        @assertEqual(bc_state_group%nbc_states(), 2)
+        @assertEqual(bc_state_group%get_family(), 'Scalar')
+        @assertEqual(bc_state_group%bc_state(1)%state%get_name(), 'Scalar Value')
+        @assertEqual(bc_state_group%bc_state(2)%state%get_name(), 'Scalar Derivative')
 
 
-    end subroutine test_bc__init_bc_group
+    end subroutine test_bc__init_bc_state_group
     !**************************************************************************************
 
 
@@ -142,88 +134,64 @@ contains
 
 
 
-    !>  Test calling bc%init_bc_group and passing in an overriding bc_state.
-    !!
-    !!  1: Initialize one bc_group object. 
-    !!  2: Initialize a bc_state object that will be passed in to override the bc_group.
-    !!  2: Pass the bc_group and bc_state to a bc_t object using init_bc_group
-    !!  3: Check number of allocated state functions and names
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   3/1/2017
-    !!
-    !!-------------------------------------------------------------------------------------
-    @Test
-    subroutine test_bc__init_bc_group__override(self)
-        class(test_bc), intent(inout)   :: self
-
-        class(bc_state_t),  allocatable :: bc_state
-        type(bc_group_t)                :: bc_group
-        type(bc_t)                      :: bc
-
-        
-        !
-        ! Initialize bc_group with some data
-        !
-        ! Create a boundary condition state function, add it to the bc_group
-        !
-        call bc_group%set_name('Group One')
-        call create_bc('Scalar Value', bc_state)
-        call bc_group%add_bc_state(bc_state)
-        call create_bc('Scalar Derivative', bc_state)
-        call bc_group%add_bc_state(bc_state)
-
-
-        !
-        ! Reallocate bc_state to the object we will override with.
-        !
-        call create_bc('Scalar Derivative', bc_state)
-
-
-        !
-        ! Call init_bc_group. THIS IS BEING TESTED.
-        !
-        ! Here we are passing in bc_group, but overriding it with bc_state, if bc_group 
-        ! is a 'Scalar' family.
-        !
-        call bc%init_bc_group(bc_group,bc_scalar=bc_state)
-
-
-
-        !
-        ! We expect bc_group to have been overridden
-        !
-        @assertEqual(size(bc%bc_state), 1)
-        @assertEqual(bc%bc_family, 'Scalar')
-        @assertEqual(bc%bc_state(1)%state%get_name(), 'Scalar Derivative')
-
-
-    end subroutine test_bc__init_bc_group__override
-    !**************************************************************************************
-
-
-
-
-
-
-
-
-    !>  Test calling bc%init_bc_group and passing in an overriding bc_state.
-    !!
-    !!  1: Initialize one bc_group object. 
-    !!  2: Initialize a bc_state object that will be passed in to override the bc_group.
-    !!  2: Pass the bc_group and bc_state to a bc_t object using init_bc_group
-    !!  3: Check number of allocated state functions and names
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   3/1/2017
-    !!
-    !!-------------------------------------------------------------------------------------
-    @Test
-    subroutine test_bc__init_bc_patch(self)
-        class(test_bc), intent(inout)   :: self
-
-        type(bc_t)                      :: bc
+!    !>  Test calling bc%init_bc_group and passing in an overriding bc_state.
+!    !!
+!    !!  1: Initialize one bc_group object. 
+!    !!  2: Initialize a bc_state object that will be passed in to override the bc_group.
+!    !!  2: Pass the bc_group and bc_state to a bc_t object using init_bc_group
+!    !!  3: Check number of allocated state functions and names
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   3/1/2017
+!    !!
+!    !!-------------------------------------------------------------------------------------
+!    @Test
+!    subroutine test_bc__init_bc_group__override(self)
+!        class(test_bc), intent(inout)   :: self
+!
+!        class(bc_state_t),  allocatable :: bc_state
+!        type(bc_group_t)                :: bc_group
+!        type(bc_t)                      :: bc
+!
+!        
+!        !
+!        ! Initialize bc_group with some data
+!        !
+!        ! Create a boundary condition state function, add it to the bc_group
+!        !
+!        call bc_group%set_name('Group One')
+!        call create_bc('Scalar Value', bc_state)
+!        call bc_group%add_bc_state(bc_state)
+!        call create_bc('Scalar Derivative', bc_state)
+!        call bc_group%add_bc_state(bc_state)
+!
+!
+!        !
+!        ! Reallocate bc_state to the object we will override with.
+!        !
+!        call create_bc('Scalar Derivative', bc_state)
+!
+!
+!        !
+!        ! Call init_bc_group. THIS IS BEING TESTED.
+!        !
+!        ! Here we are passing in bc_group, but overriding it with bc_state, if bc_group 
+!        ! is a 'Scalar' family.
+!        !
+!        call bc%init_bc_group(bc_group,bc_scalar=bc_state)
+!
+!
+!
+!        !
+!        ! We expect bc_group to have been overridden
+!        !
+!        @assertEqual(size(bc%bc_state), 1)
+!        @assertEqual(bc%bc_family, 'Scalar')
+!        @assertEqual(bc%bc_state(1)%state%get_name(), 'Scalar Derivative')
+!
+!
+!    end subroutine test_bc__init_bc_group__override
+!    !**************************************************************************************
 
 
 
@@ -231,8 +199,32 @@ contains
 
 
 
-    end subroutine test_bc__init_bc_patch
-    !**************************************************************************************
+
+!    !>  Test calling bc%init_bc_group and passing in an overriding bc_state.
+!    !!
+!    !!  1: Initialize one bc_group object. 
+!    !!  2: Initialize a bc_state object that will be passed in to override the bc_group.
+!    !!  2: Pass the bc_group and bc_state to a bc_t object using init_bc_group
+!    !!  3: Check number of allocated state functions and names
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   3/1/2017
+!    !!
+!    !!-------------------------------------------------------------------------------------
+!    @Test
+!    subroutine test_bc__init_bc_patch(self)
+!        class(test_bc), intent(inout)   :: self
+!
+!        type(bc_t)                      :: bc
+!
+!
+!
+!
+!
+!
+!
+!    end subroutine test_bc__init_bc_patch
+!    !**************************************************************************************
 
 
 

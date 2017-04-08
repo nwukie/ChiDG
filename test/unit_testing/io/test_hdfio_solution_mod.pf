@@ -124,6 +124,7 @@ contains
         call delete_file(this%fileorig)
         call delete_file(this%fileO1)
         call delete_file(this%fileO2)
+        call delete_file(this%fileNew)
 
     end subroutine
     !******************************************************************************************

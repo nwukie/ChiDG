@@ -106,10 +106,10 @@ contains
     !!  @date   2/21/2017
     !!
     !----------------------------------------------------------------------------------------------
-    subroutine init_bc_specialized(self,mesh,bc_patch,bc_COMM)
+    subroutine init_bc_specialized(self,mesh,group_ID,bc_COMM)
         class(bc_state_t),  intent(inout)   :: self
-        type(mesh_t),   intent(in)      :: mesh
-        type(bc_patch_t),   intent(in)      :: bc_patch(:)
+        type(mesh_t),       intent(inout)   :: mesh
+        integer(ik),        intent(in)      :: group_ID
         type(mpi_comm),     intent(in)      :: bc_COMM
 
 
@@ -134,12 +134,12 @@ contains
     !!  @date   2/27/2017   updated for multiple patches
     !!
     !----------------------------------------------------------------------------------------------
-    subroutine init_bc_coupling(self,mesh,bc_patch)
+    subroutine init_bc_coupling(self,mesh,group_ID)
         class(bc_state_t),  intent(inout)   :: self
-        type(mesh_t),   intent(in)      :: mesh
-        type(bc_patch_t),   intent(inout)   :: bc_patch(:)
+        type(mesh_t),       intent(inout)   :: mesh
+        integer(ik),        intent(in)      :: group_ID
 
-        integer(ik) :: ipatch, iface_bc, idomain_g, idomain_l, ielement_g, ielement_l
+        integer(ik) :: patch_ID, face_ID, idomain_g, idomain_l, ielement_g, ielement_l
 
 
 
@@ -148,31 +148,30 @@ contains
         ! Default is that each face is coupled only with its owner element.
         ! So, strictly local coupling.
         !
-        do ipatch = 1,size(bc_patch)
-            do iface_bc = 1,bc_patch(ipatch)%nfaces()
+        do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
+            do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
 
 
                 !
                 ! Get block-element index of current iface_bc
                 !
-                idomain_g  = bc_patch(ipatch)%idomain_g(iface_bc)
-                idomain_l  = bc_patch(ipatch)%idomain_l(iface_bc)
-                ielement_g = bc_patch(ipatch)%ielement_g(iface_bc)
-                ielement_l = bc_patch(ipatch)%ielement_l(iface_bc)
+                idomain_g  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g(face_ID)
+                idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l(face_ID)
+                ielement_g = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID)
+                ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
 
                 
                 !
                 ! Add the element index as the only dependency.
                 !
-                call bc_patch(ipatch)%add_coupled_element(iface_bc, idomain_g,  &
-                                                                    idomain_l,  &
-                                                                    ielement_g, &
-                                                                    ielement_l, &
-                                                                    IRANK)
+                call mesh%bc_patch_group(group_ID)%patch(patch_ID)%add_coupled_element(face_ID, idomain_g,  &
+                                                                                                idomain_l,  &
+                                                                                                ielement_g, &
+                                                                                                ielement_l, &
+                                                                                                IRANK)
 
-
-            end do ! iface_bc
-        end do !ipatch
+            end do ! face_ID
+        end do ! patch_ID
 
 
     end subroutine init_bc_coupling

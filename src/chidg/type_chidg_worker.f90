@@ -75,7 +75,7 @@ module type_chidg_worker
         type(function_info_t)       :: function_info
     
         character(:),   allocatable :: interpolation_source
-        real(rk)                    :: t        !< Physical time
+        real(rk)                    :: t    ! Physical time
 
     contains 
     

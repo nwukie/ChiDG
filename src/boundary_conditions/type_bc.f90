@@ -230,7 +230,7 @@ contains
         integer(ik)                 :: nelem_xi, nelem_eta, nelem_zeta, nelem_bc, ielem_bc,         & 
                                        xi_begin, eta_begin, zeta_begin, xi_end, eta_end, zeta_end,  & 
                                        ixi, ieta, izeta, ierr, ielem, ielem_test, nface_nodes,      &
-                                       iface, inode, i, nfaces_bc, iface_bc, patch_face, patch_ID,  &
+                                       iface, inode, i, nfaces_bc, iface_bc, face_ID, patch_ID,     &
                                        ncoupled_elements, try_face, nterms_1d, mapping
 
         logical,        allocatable :: node_matched(:), xi_face, eta_face, zeta_face
@@ -383,9 +383,9 @@ contains
 
 
                     !
-                    ! Add domain, element, face index. Get patch_face, index of where the face exists in the bc_patch
+                    ! Add domain, element, face index. Get face_ID, index of where the face exists in the bc_patch
                     !
-                    patch_face = self%bc_patch(patch_ID)%add_face(domain%elems(ielem)%idomain_g,     &
+                    face_ID = self%bc_patch(patch_ID)%add_face(domain%elems(ielem)%idomain_g,     &
                                                                   domain%elems(ielem)%idomain_l,     &
                                                                   domain%elems(ielem)%ielement_g,    &
                                                                   domain%elems(ielem)%ielement_l,    &
@@ -393,11 +393,11 @@ contains
 
 
                     !
-                    ! Inform domain face about bc_ID it is associated with, patch_ID it belongs to, and the location, patch_face, in the bc_patch.
+                    ! Inform domain face about bc_ID it is associated with, patch_ID it belongs to, and the location, face_ID, in the bc_patch.
                     !
-                    domain%faces(ielem,iface)%bc_ID      = self%bc_ID
-                    domain%faces(ielem,iface)%patch_ID   = patch_ID
-                    domain%faces(ielem,iface)%patch_face = patch_face
+                    domain%faces(ielem,iface)%bc_ID    = self%bc_ID
+                    domain%faces(ielem,iface)%patch_ID = patch_ID
+                    domain%faces(ielem,iface)%face_ID  = face_ID
 
 
 
@@ -568,18 +568,18 @@ contains
         integer(ik) :: iop
 
 
-        !
-        ! Have bc_operators initialize the boundary condition coupling
-        !
-        if (allocated(self%bc_state)) then
-            if (allocated(self%bc_patch)) then
-
-                do iop = 1,size(self%bc_state)
-                    call self%bc_state(iop)%state%init_bc_specialized(mesh,self%bc_patch, self%bc_COMM)
-                end do !iop
-
-            end if !bc_patch
-        end if !bc_state
+!        !
+!        ! Have bc_operators initialize the boundary condition coupling
+!        !
+!        if (allocated(self%bc_state)) then
+!            if (allocated(self%bc_patch)) then
+!
+!                do iop = 1,size(self%bc_state)
+!                    call self%bc_state(iop)%state%init_bc_specialized(mesh,self%bc_patch, self%bc_COMM)
+!                end do !iop
+!
+!            end if !bc_patch
+!        end if !bc_state
 
 
     end subroutine init_bc_specialized
@@ -611,18 +611,18 @@ contains
 
         integer(ik) :: iop
 
-        !
-        ! Have bc_operators initialize the boundary condition coupling
-        !
-        if (allocated(self%bc_state)) then
-            if (allocated(self%bc_patch)) then
-
-                do iop = 1,size(self%bc_state)
-                    call self%bc_state(iop)%state%init_bc_coupling(mesh,self%bc_patch)
-                end do !iop
-
-            end if !bc_patch
-        end if !bc_state
+!        !
+!        ! Have bc_operators initialize the boundary condition coupling
+!        !
+!        if (allocated(self%bc_state)) then
+!            if (allocated(self%bc_patch)) then
+!
+!                do iop = 1,size(self%bc_state)
+!                    call self%bc_state(iop)%state%init_bc_coupling(mesh,self%bc_patch)
+!                end do !iop
+!
+!            end if !bc_patch
+!        end if !bc_state
 
     end subroutine init_bc_coupling
     !******************************************************************************************
@@ -642,30 +642,30 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine propagate_bc_coupling(self,mesh)
-        class(bc_t),        intent(in)      :: self
+        class(bc_t),    intent(in)      :: self
         type(mesh_t),   intent(inout)   :: mesh
 
         integer(ik) :: ipatch, iface_bc, idom, ielem, iface
 
 
-        !
-        ! set ncoupled elements back to mesh face
-        !
-        if (allocated(self%bc_patch)) then
-
-            do ipatch = 1,size(self%bc_patch)
-                do iface_bc = 1,self%bc_patch(ipatch)%nfaces()
-
-                    idom  = self%bc_patch(ipatch)%idomain_l(iface_bc)
-                    ielem = self%bc_patch(ipatch)%ielement_l(iface_bc)
-                    iface = self%bc_patch(ipatch)%iface(iface_bc)
-
-                    mesh%domain(idom)%faces(ielem,iface)%bc_ndepend = self%bc_patch(ipatch)%ncoupled_elements(iface_bc)
-
-                end do !iface_bc
-            end do !ipatch
-
-        end if !bc_patch
+!        !
+!        ! set ncoupled elements back to mesh face
+!        !
+!        if (allocated(self%bc_patch)) then
+!
+!            do ipatch = 1,size(self%bc_patch)
+!                do iface_bc = 1,self%bc_patch(ipatch)%nfaces()
+!
+!                    idom  = self%bc_patch(ipatch)%idomain_l(iface_bc)
+!                    ielem = self%bc_patch(ipatch)%ielement_l(iface_bc)
+!                    iface = self%bc_patch(ipatch)%iface(iface_bc)
+!
+!                    mesh%domain(idom)%faces(ielem,iface)%bc_ndepend = self%bc_patch(ipatch)%ncoupled_elements(iface_bc)
+!
+!                end do !iface_bc
+!            end do !ipatch
+!
+!        end if !bc_patch
 
 
 

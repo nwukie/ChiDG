@@ -37,7 +37,7 @@ module mod_hdfio
     use type_chidg_data,            only: chidg_data_t
     use type_meshdata,              only: meshdata_t
     use type_bc_patch_data,         only: bc_patch_data_t
-    use type_bc_group,              only: bc_group_t
+    use type_bc_state_group,        only: bc_state_group_t
     use type_bc_state,              only: bc_state_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use type_partition,             only: partition_t
@@ -1174,10 +1174,10 @@ contains
     !!                              for the domains in the partition
     !!
     !----------------------------------------------------------------------------------------
-    subroutine read_boundaryconditions_hdf(filename, bc_patch_data, bc_groups, partition)
+    subroutine read_boundaryconditions_hdf(filename, bc_patch_data, bc_state_groups, partition)
         character(*),           intent(in)                  :: filename
         type(bc_patch_data_t),  intent(inout), allocatable  :: bc_patch_data(:)
-        type(bc_group_t),       intent(inout), allocatable  :: bc_groups(:)
+        type(bc_state_group_t), intent(inout), allocatable  :: bc_state_groups(:)
         type(partition_t),      intent(in)                  :: partition
 
         character(len=10)       :: faces(NFACES)
@@ -1208,7 +1208,7 @@ contains
         !
         ! Read boundary condition state groups
         !
-        call read_bc_state_groups_hdf(fid,bc_groups,partition)
+        call read_bc_state_groups_hdf(fid,bc_state_groups,partition)
 
 
 
@@ -1341,10 +1341,10 @@ contains
     !!  @date   8/31/2016
     !!
     !---------------------------------------------------------------------------------------
-    subroutine read_bc_state_groups_hdf(fid, bc_groups, partition)
-        integer(HID_T),         intent(in)                  :: fid
-        type(bc_group_t),       intent(inout), allocatable  :: bc_groups(:)
-        type(partition_t),      intent(in)                  :: partition
+    subroutine read_bc_state_groups_hdf(fid, bc_state_groups, partition)
+        integer(HID_T),             intent(in)                  :: fid
+        type(bc_state_group_t),     intent(inout), allocatable  :: bc_state_groups(:)
+        type(partition_t),          intent(in)                  :: partition
 
         type(svector_t)                     :: bc_group_names, bc_state_names
         type(string_t)                      :: group_name, state_name
@@ -1358,8 +1358,8 @@ contains
         bc_group_names = get_bc_state_group_names_hdf(fid)
 
 
-        if (allocated(bc_groups)) deallocate(bc_groups)
-        allocate(bc_groups(ngroups), stat=ierr)
+        if (allocated(bc_state_groups)) deallocate(bc_state_groups)
+        allocate(bc_state_groups(ngroups), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
@@ -1375,7 +1375,7 @@ contains
             !
             ! Get bc_group Family attribute.
             !
-            bc_groups(igroup)%family = get_bc_state_group_family_hdf(group_id)
+            bc_state_groups(igroup)%family = get_bc_state_group_family_hdf(group_id)
 
             !
             ! Loop through and read states + their properties
@@ -1388,9 +1388,10 @@ contains
                 if (allocated(bc)) deallocate(bc)
                 allocate(bc, source = get_bc_state_hdf(group_id,state_name%get()))
 
-                ! Save to bc_group_data_t
-                bc_groups(igroup)%name = group_name%get()
-                call bc_groups(igroup)%bc_states%push_back(bc)
+                ! Save to bc_state_group_data_t
+                bc_state_groups(igroup)%name = group_name%get()
+                !call bc_groups(igroup)%bc_states%push_back(bc)
+                call bc_state_groups(igroup)%add_bc_state(bc)
 
             end do !istate
 

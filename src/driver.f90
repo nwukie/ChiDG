@@ -223,9 +223,10 @@ program driver
                 call chidg_post_vtk(trim(grid_file), trim(solution_file))
 
             case ('matplotlib')
-                if (narg /= 2) call chidg_signal(FATAL,"The 'matplotlib' action expects: chidg matplotlib solutionfile.h5")
-                call get_command_argument(2,filename)
-                call chidg_post_matplotlib(trim(filename))
+                if (narg /= 3) call chidg_signal(FATAL,"The 'matplotlib' action expects: chidg matplotlib gridfile.h5solutionfile.h5")
+                call get_command_argument(2,grid_file)
+                call get_command_argument(3,solution_file)
+                call chidg_post_matplotlib(trim(grid_file),trim(solution_file))
 
             case ('airfoil')
                 if (narg /= 2) call chidg_signal(FATAL,"The 'airfoil' action expects: chidg airfoil solutionfile.h5")

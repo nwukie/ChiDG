@@ -530,6 +530,190 @@ contains
 
 
 
+    !>  Write ending part of a .pvd file
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   8/4/2017
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine end_pvd_marching(data,pvd_file,funit)
+        type(chidg_data_t),     intent(inout)   :: data
+        character(*),           intent(in)      :: pvd_file
+        integer(ik)                             :: funit
+
+        character(:),   allocatable     :: type_name
+
+
+        !
+        ! .pvd filen type
+        !
+        type_name = 'Collection'
+        
+
+        !
+        ! Open file and write ending part
+        !
+        write(funit,'(3A)') '   </',trim(type_name),'>'
+        write(funit,'(A)') '</VTKFile>'
+        close(funit)
+
+
+    end subroutine end_pvd_marching
+    !******************************************************************************************
+
+
+
+    !>  Write initial .pvd file for time marching schemes
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   8/4/2017
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine write_pvd_initial_marching(data,pvd_file,file_arr,time_lev,itimestep)
+        type(chidg_data_t),             intent(inout)   :: data
+        character(*),                   intent(in)      :: pvd_file
+        character(100), dimension(:),   intent(in)      :: file_arr
+        integer(ik),                    intent(in)      :: time_lev
+        integer(ik),                    intent(in)      :: itimestep
+
+        integer(ik)                     :: funit = 10, ifile, itime, d
+        character(:),   allocatable     :: type_name, compressor
+        logical                         :: exist
+
+
+        !
+        ! Set .pvd file type and compressor type
+        !
+        type_name  = 'Collection'
+        compressor = 'vtkZLibDataCompressor'
+
+
+        inquire(file = trim(pvd_file), exist=exist)
+        if (exist) then
+            open(funit, file = trim(pvd_file), status = 'old', action = 'write')
+        else
+            open(funit, file = trim(pvd_file), status = 'new', action = 'write')
+        end if
+            write(funit,'(A)') '<?xml version="1.0"?>'
+            write(funit,'(5A)') '<VTKFile type="',trim(type_name),'" version="0.1" byte_order="LittleEndian" Compressor="',trim(compressor),'">'
+            write(funit,'(3A)') '   <',trim(type_name),'>'
+
+            do itime = 1,time_lev
+
+                d = (itime - 1)*data%mesh%ndomains()
+
+                do ifile = 1, data%mesh%ndomains()
+
+                    write(funit,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itimestep - 1,'" part="',ifile - 1,'" file="',trim(file_arr(d + ifile)),'"/>'
+
+                end do
+
+            end do
+            call end_pvd_marching(data,trim(pvd_file),funit)
+
+
+    end subroutine write_pvd_initial_marching
+    !******************************************************************************************
+
+
+
+
+    !>  Overwrite .pvd file for time marching with a new solution_file
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   8/4/2017
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine write_pvd_marching(data,pvd_file,file_arr,time_lev,itimestep)
+        type(chidg_data_t),             intent(inout)   :: data
+        character(*),                   intent(in)      :: pvd_file
+        character(100), dimension(:),   intent(in)      :: file_arr
+        integer(ik),                    intent(in)      :: time_lev
+        integer(ik),                    intent(in)      :: itimestep
+
+        integer(ik)                     :: funit = 10, funit_1 = 11, ifile, itime, d, ierr
+        character(:),   allocatable     :: type_name, compressor, temp_file, search_string
+        character(200)                  :: text
+        logical                         :: exist
+
+
+        !
+        ! Set .pvd file type and compressor type
+        ! Set temporary file name and string to terminate copying to temporary file
+        !
+        type_name     = 'Collection'
+        compressor    = 'vtkZLibDataCompressor'
+        temp_file     = 'temp.pvd'
+        search_string = '   </'//trim(type_name)//'>'
+
+
+        !
+        ! Remove temporary file if it already exists
+        !
+        inquire(file = trim(temp_file), exist=exist)
+        if (exist) call system('rm '//trim(temp_file))
+
+        
+        !
+        ! Copy data from previous .pvd file to temporary file till termination point
+        ! Copying terminated after reading in previous file names
+        !
+        inquire(file = trim(pvd_file), exist=exist)
+        if (exist) then
+
+            open(funit,  file = trim(pvd_file),  status = 'old', action = 'read')
+            open(funit_1,file = trim(temp_file), status = 'new', action = 'write')
+
+            do
+
+                !
+                ! Read data from previous .pvd file and copy to temporary file
+                !
+                read(funit,'(A)',iostat=ierr) text
+                if (is_iostat_end(ierr)) exit
+                if (trim(text) == search_string) exit
+                write(funit_1,'(A)') text
+                
+            end do
+            
+            do itime = 1,time_lev
+
+                d = (itime - 1)*data%mesh%ndomains()
+
+                do ifile = 1,data%mesh%ndomains()
+
+                    !
+                    ! Add new file data to the temporary file
+                    !
+                    write(funit_1,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itimestep - 1,'" part="',ifile - 1,'" file="',trim(file_arr(d + ifile)),'"/>'
+
+                end do
+
+            end do
+
+            call end_pvd_marching(data,trim(temp_file),funit_1) 
+            close(funit_1)
+            close(funit)
+
+
+            !
+            ! Remove previous .pvd file and rename temporary file
+            !
+            call system('rm '//trim(pvd_file))
+            call system('mv '//trim(temp_file)//' '//trim(pvd_file))
+
+        else
+
+            call write_pvd_initial_marching(data,pvd_file,file_arr,time_lev,itimestep)
+
+        end if
+            
+
+    end subroutine write_pvd_marching
+    !******************************************************************************************
+
+
+
 
 
 
@@ -538,4 +722,13 @@ contains
 
 
      
+
+
+
+
+
+
+
+
+
 end module mod_vtk_file_unstr

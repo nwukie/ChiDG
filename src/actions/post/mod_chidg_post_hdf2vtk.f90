@@ -45,8 +45,9 @@ contains
         type(chidg_t)                       ::  chidg
         type(file_properties_t)             ::  file_props
         character(:),           allocatable ::  eqnset
-        character(:),           allocatable ::  time_string, grid_file_prefix, solution_file_prefix, step_str
-        integer(ik)                         ::  nterms_s,spacedim,solution_order,istep
+        character(:),           allocatable ::  time_string, grid_file_prefix, solution_file_prefix, step_str, &
+                                                pvd_filename
+        integer(ik)                         ::  nterms_s,spacedim,solution_order,istep,itimestep
 
 
         !
@@ -105,19 +106,26 @@ contains
         call chidg%read_solution(solution_file)
         call chidg%time_integrator%read_time_options(chidg%data,solution_file)
 
-        print *, istep/chidg%data%time_manager%nwrite
         
-
         !
         ! Get post processing data (q_out)
         !        
         call chidg%time_integrator%process_data_for_output(chidg%data)
+       
         
+        grid_file_prefix     = get_file_prefix(grid_file,'.h5')
+        solution_file_prefix = get_file_prefix(solution_file,'.h5')
+        step_str = solution_file_prefix(len(grid_file_prefix) + 2:)
+        read(step_str,*) istep
+        itimestep = istep/chidg%data%time_manager%nwrite
+       
+        pvd_filename = 'chidg_results.pvd'
         
+
         !
         ! Write solution in vtk format
         !
-        call write_vtk_file(chidg%data)
+        call write_vtk_file(chidg%data,itimestep,pvd_filename)
 
 
         !

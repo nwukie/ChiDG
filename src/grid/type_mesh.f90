@@ -8,6 +8,7 @@ module type_mesh
     use type_boundary_connectivity, only: boundary_connectivity_t
     use type_bc_patch,              only: bc_patch_t
     use type_bc_patch_group,        only: bc_patch_group_t
+    use type_ivector,               only: ivector_t
     implicit none
     private
 
@@ -47,6 +48,10 @@ module type_mesh
         ! Resouce management
         procedure   :: release
 
+
+        ! Parallel communication pattern
+        procedure   :: get_recv_procs
+        procedure   :: get_send_procs
 
 
         ! Extra routines for testing private procedures
@@ -456,6 +461,114 @@ contains
 
     end subroutine release
     !*********************************************************************************
+
+
+
+
+
+    !>  Return the MPI ranks that the current rank is receiving information from.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/10/2017
+    !!
+    !!
+    !---------------------------------------------------------------------------------
+    function get_recv_procs(self) result(recv_procs_array)
+        class(mesh_t),  intent(in)  :: self
+
+        integer(ik)                 :: idom, iproc, loc
+        integer(ik),    allocatable :: recv_procs_dom(:), recv_procs_array(:)
+        type(ivector_t)             :: recv_procs
+        logical                     :: not_in_list
+
+
+        !
+        ! Accumulate processor ranks that we are receiving from: domains
+        !
+        do idom = 1,self%ndomains()
+            recv_procs_dom = self%domain(idom)%get_recv_procs()
+
+            do iproc = 1,size(recv_procs_dom)
+                ! See if proc is already in list
+                loc = recv_procs%loc(recv_procs_dom(iproc))
+                not_in_list = ( loc == 0 )
+
+                ! If not, add to list
+                if ( not_in_list ) call recv_procs%push_back(recv_procs_dom(iproc))
+            end do ! iproc
+
+        end do ! idom
+
+
+
+        !
+        ! Return as integer array
+        !
+        recv_procs_array = recv_procs%data()
+
+
+    end function get_recv_procs
+    !*********************************************************************************
+
+
+
+
+
+
+
+    !>  Return the MPI ranks that the current rank is sending information to.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/10/2017
+    !!
+    !!
+    !---------------------------------------------------------------------------------
+    function get_send_procs(self) result(send_procs_array)
+        class(mesh_t),  intent(in)  :: self
+
+        integer(ik)                 :: idom, iproc, loc
+        integer(ik),    allocatable :: send_procs_dom(:), send_procs_array(:)
+        type(ivector_t)             :: send_procs
+        logical                     :: not_in_list
+
+
+        !
+        ! Accumulate processor ranks that we are receiving from: domains
+        !
+        do idom = 1,self%ndomains()
+            send_procs_dom = self%domain(idom)%get_send_procs()
+
+            do iproc = 1,size(send_procs_dom)
+                ! See if proc is already in list
+                loc = send_procs%loc(send_procs_dom(iproc))
+                not_in_list = ( loc == 0 )
+
+                ! If not, add to list
+                if ( not_in_list ) call send_procs%push_back(send_procs_dom(iproc))
+            end do ! iproc
+
+        end do ! idom
+
+
+
+        !
+        ! Return as integer array
+        !
+        send_procs_array = send_procs%data()
+
+
+    end function get_send_procs
+    !*********************************************************************************
+
+
+
+
+
+
+
+
+
+
 
 
 

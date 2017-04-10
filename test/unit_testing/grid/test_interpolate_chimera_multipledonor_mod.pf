@@ -5,7 +5,6 @@ module test_interpolate_chimera_multipledonor_mod
     use type_meshdata,      only: meshdata_t
     use type_face_info,     only: face_info_t
     use type_function_info, only: function_info_t
-    use type_bc,            only: bc_t
     use mod_bc,             only: create_bc
 
 
@@ -60,7 +59,6 @@ contains
 
         integer(ik)                     :: ieqn, idom, spacedim
         type(meshdata_t),   allocatable :: meshdata(:) 
-        class(bc_t),        allocatable :: bc
         
         !
         ! Send log to file

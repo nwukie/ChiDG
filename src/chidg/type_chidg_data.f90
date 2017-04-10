@@ -2,23 +2,20 @@ module type_chidg_data
 #include <messenger.h>
     use mod_kinds,                      only: rk,ik
     use mod_constants,                  only: NO_ID
-    use type_point,                     only: point_t
     use type_domain_connectivity,       only: domain_connectivity_t
     use type_boundary_connectivity,     only: boundary_connectivity_t
 
     ! Primary chidg_data_t components
+    use type_point,                     only: point_t
     use type_mesh,                      only: mesh_t
     use type_bc_state,                  only: bc_state_t
     use type_bc_state_group,            only: bc_state_group_t
-    use type_bc_group,                  only: bc_group_t
-    use type_svector,                   only: svector_t
-    use mod_string,                     only: string_t
     use type_equation_set,              only: equation_set_t
     use type_solverdata,                only: solverdata_t
     use type_time_manager,              only: time_manager_t
-
     use type_equationset_function_data, only: equationset_function_data_t
-    use type_bcset_coupling,            only: bcset_coupling_t
+    use type_svector,                   only: svector_t
+    use mod_string,                     only: string_t
 
     ! Factory methods
     use mod_equations,                  only: equation_builder_factory

@@ -14,7 +14,6 @@ module test__harmonic_balance_mod
     use mod_io                 
     use type_chidg,             only: chidg_t
     use type_meshdata,          only: meshdata_t
-    use type_bc,                only: bc_t
     use mod_bc,                 only: create_bc
     use mod_test_utilities,     only: create_mesh_file
     use mod_file_utilities,     only: delete_file
@@ -187,7 +186,6 @@ contains
         type(assemble_harmonic_balance_t)       :: assemble_HB
         type(chidg_t)                           :: chidg
         type(meshdata_t),   allocatable         :: meshdata(:)
-        class(bc_t),        allocatable         :: bc
         type(chidg_vector_t)                    :: q_temp, rhs_temp
         type(string_t)                          :: eqnset(1)
         integer(ik)                             :: spacedim, nterms_s, ielem, itime, ierr

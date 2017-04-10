@@ -42,7 +42,6 @@ subroutine test_chidg_matrix_operator_mv()
     use type_chidg_matrix,   only: chidg_matrix_t
     use type_chidg_vector,   only: chidg_vector_t
     use type_meshdata,      only: meshdata_t
-    use type_bc,            only: bc_t
     use mod_bc,             only: create_bc
     use mod_test_utilities, only: create_mesh_file
     use mod_file_utilities, only: delete_file
@@ -53,7 +52,6 @@ subroutine test_chidg_matrix_operator_mv()
 
     type(chidg_t)                   :: chidg
     type(meshdata_t),   allocatable :: meshdata(:)
-    class(bc_t),        allocatable :: bc
     integer(ik)                     :: idom, spacedim, nterms_s, idiag, idom_d, ielem_d, itime, ielem
     real(rk), dimension(8)          :: bref_1, bref_2
     real(rk)                        :: tol

@@ -1038,7 +1038,7 @@ contains
                                                        neighbor_h,          &
                                                        neighbor_status,     &
                                                        ChiDG_COMM)
-        class(domain_t),                  intent(inout)   :: self
+        class(domain_t),                intent(inout)   :: self
         integer(ik),                    intent(in)      :: ielem_l
         integer(ik),                    intent(in)      :: iface
         integer(ik),                    intent(inout)   :: ineighbor_domain_g
@@ -1674,7 +1674,6 @@ contains
 
         integer(ik) :: nelements
 
-        !nelements = size(self%nodes)
         nelements = self%nelements_g
 
     end function get_nelements_global

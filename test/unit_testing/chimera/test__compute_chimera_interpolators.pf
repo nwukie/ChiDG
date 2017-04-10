@@ -23,7 +23,6 @@ subroutine test__compute_chimera_interpolators()
     use type_chidg,         only: chidg_t
     use type_meshdata,      only: meshdata_t
     use type_point,         only: point_t
-    use type_bc,            only: bc_t
     use mod_bc,             only: create_bc
 
     use mod_chimera,        only: detect_chimera_faces, detect_chimera_donors, &
@@ -32,7 +31,6 @@ subroutine test__compute_chimera_interpolators()
 
 
     type(chidg_t)                   :: chidg
-    class(bc_t),        allocatable :: bc
     type(meshdata_t),   allocatable :: meshdata(:)
     type(point_t)                   :: coord
     character(:),       allocatable :: filename

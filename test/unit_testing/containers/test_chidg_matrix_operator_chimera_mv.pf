@@ -10,7 +10,6 @@ subroutine test_chidg_matrix_operator_chimera_mv()
     use type_meshdata,      only: meshdata_t
     use type_function,      only: function_t
     use type_point,         only: point_t
-    use type_bc,            only: bc_t
     use mod_bc,             only: create_bc
 
 
@@ -26,7 +25,6 @@ subroutine test_chidg_matrix_operator_chimera_mv()
     type(chidg_t)                   :: chidg
     type(meshdata_t),   allocatable :: meshdata(:)
     character(:),       allocatable :: filename
-    class(bc_t),        allocatable :: wall, inlet, outlet
     class(function_t),  allocatable :: constant, gaussian
     real(rk),           allocatable :: density_residual_D4_E31(:), density_residual_D4_E36(:)
     integer(ik)                     :: ChiID, iface, ndonors, gq_index, igq, ngq, neqns, &

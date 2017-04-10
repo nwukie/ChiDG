@@ -8,6 +8,7 @@ add_lib_sources(
                 type_bc_patch.f90
                 type_bc_patch_group.f90
                 type_bc_patch_data.f90
+                type_bc_coupled_element.f90
                 type_bcproperty.f90
                 type_bcproperty_set.f90
                 bc_empty.f90

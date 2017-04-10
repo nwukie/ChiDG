@@ -513,9 +513,9 @@ contains
             ! Loop through domains/elements to send
             do idom_send = 1,self%send%comm(icomm)%dom_send%size()
                 idom = self%send%comm(icomm)%dom_send%at(idom_send)
-
                 do ielem_send = 1,self%send%comm(icomm)%elems_send(idom_send)%size()
                     ielem = self%send%comm(icomm)%elems_send(idom_send)%at(ielem_send)
+
 
                     ! Post non-blocking send message for the vector data
                     data_size = size(self%dom(idom)%vecs(ielem)%vec)
@@ -526,6 +526,7 @@ contains
 
                     ! Increment send counter
                     isend = isend + 1
+
             
                 end do !ielem_send
             end do !idom_send

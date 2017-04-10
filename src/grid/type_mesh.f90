@@ -33,9 +33,9 @@ module type_mesh
 
         ! Domain procedures
         procedure           :: add_domain
-        procedure           :: ndomains
-        procedure, private  :: new_domain
         procedure           :: get_domain_id
+        procedure, private  :: new_domain
+        procedure           :: ndomains
 
 
         ! Boundary patch procedures
@@ -46,16 +46,16 @@ module type_mesh
 
 
         ! Resouce management
-        procedure   :: release
+        procedure           :: release
 
 
         ! Parallel communication pattern
-        procedure   :: get_recv_procs
-        procedure   :: get_send_procs
+        procedure           :: get_recv_procs
+        procedure           :: get_send_procs
 
 
         ! Extra routines for testing private procedures
-        procedure   :: stub_new_domain
+        procedure           :: stub_new_domain
 
     end type mesh_t
     !**********************************************************************************
@@ -476,10 +476,9 @@ contains
     function get_recv_procs(self) result(recv_procs_array)
         class(mesh_t),  intent(in)  :: self
 
-        integer(ik)                 :: idom, iproc, loc
-        integer(ik),    allocatable :: recv_procs_dom(:), recv_procs_array(:)
+        integer(ik)                 :: idom, igroup, iproc
+        integer(ik),    allocatable :: recv_procs_dom(:), recv_procs_bc(:), recv_procs_array(:)
         type(ivector_t)             :: recv_procs
-        logical                     :: not_in_list
 
 
         !
@@ -489,15 +488,24 @@ contains
             recv_procs_dom = self%domain(idom)%get_recv_procs()
 
             do iproc = 1,size(recv_procs_dom)
-                ! See if proc is already in list
-                loc = recv_procs%loc(recv_procs_dom(iproc))
-                not_in_list = ( loc == 0 )
-
-                ! If not, add to list
-                if ( not_in_list ) call recv_procs%push_back(recv_procs_dom(iproc))
+                call recv_procs%push_back_unique(recv_procs_dom(iproc))
             end do ! iproc
 
         end do ! idom
+
+
+
+        !
+        ! Accumulate processor ranks that we are receiving from: bc_patch_groups
+        !
+        do igroup = 1,self%nbc_patch_groups()
+            recv_procs_bc = self%bc_patch_group(igroup)%get_recv_procs()
+
+            do iproc = 1,size(recv_procs_dom)
+                call recv_procs%push_back_unique(recv_procs_bc(iproc))
+            end do ! iproc
+
+        end do ! igroup
 
 
 
@@ -526,10 +534,9 @@ contains
     function get_send_procs(self) result(send_procs_array)
         class(mesh_t),  intent(in)  :: self
 
-        integer(ik)                 :: idom, iproc, loc
+        integer(ik)                 :: idom, iproc
         integer(ik),    allocatable :: send_procs_dom(:), send_procs_array(:)
         type(ivector_t)             :: send_procs
-        logical                     :: not_in_list
 
 
         !
@@ -539,15 +546,11 @@ contains
             send_procs_dom = self%domain(idom)%get_send_procs()
 
             do iproc = 1,size(send_procs_dom)
-                ! See if proc is already in list
-                loc = send_procs%loc(send_procs_dom(iproc))
-                not_in_list = ( loc == 0 )
-
-                ! If not, add to list
-                if ( not_in_list ) call send_procs%push_back(send_procs_dom(iproc))
+                call send_procs%push_back_unique(send_procs_dom(iproc))
             end do ! iproc
 
         end do ! idom
+
 
 
 

@@ -1179,8 +1179,7 @@ contains
 
         type(ivector_t)             :: comm_procs_vector
         integer(ik),    allocatable :: comm_procs(:), comm_procs_local(:), comm_procs_chimera(:)
-        integer(ik)                 :: loc, iproc, proc
-        logical                     :: already_added
+        integer(ik)                 :: iproc, proc
 
         !
         ! Test if global communication has been initialized
@@ -1192,20 +1191,10 @@ contains
         !
         ! Get procs we are receiving neighbor data from
         !
-        comm_procs_local   = self%get_recv_procs_local()
-
+        comm_procs_local = self%get_recv_procs_local()
         do iproc = 1,size(comm_procs_local)
-            
-            ! Get proc
             proc = comm_procs_local(iproc)
-
-            ! Check if proc was already added to list from another neighbor
-            loc = comm_procs_vector%loc(proc)
-            already_added = ( loc /= 0 )
-
-            ! Add to list if not already added
-            if (.not. already_added ) call comm_procs_vector%push_back(proc)
-
+            call comm_procs_vector%push_back_unique(proc)
         end do !iproc
 
 
@@ -1214,19 +1203,9 @@ contains
         ! Get procs we are receiving chimera donors from
         !
         comm_procs_chimera = self%get_recv_procs_chimera()
-
         do iproc = 1,size(comm_procs_chimera)
-            
-            ! Get proc
             proc = comm_procs_chimera(iproc)
-
-            ! Check if proc was already added to list from another neighbor
-            loc = comm_procs_vector%loc(proc)
-            already_added = ( loc /= 0 )
-
-            ! Add to list if not already added
-            if (.not. already_added ) call comm_procs_vector%push_back(proc)
-
+            call comm_procs_vector%push_back_unique(proc)
         end do !iproc
 
 
@@ -1265,8 +1244,8 @@ contains
 
         type(ivector_t)             :: comm_procs_vector
         integer(ik),    allocatable :: comm_procs(:)
-        integer(ik)                 :: myrank, neighbor_rank, ielem, iface, loc
-        logical                     :: has_neighbor, already_added, comm_neighbor
+        integer(ik)                 :: myrank, neighbor_rank, ielem, iface
+        logical                     :: has_neighbor, comm_neighbor
         character(:),   allocatable :: user_msg
 
         !
@@ -1284,31 +1263,16 @@ contains
         do ielem = 1,self%nelem
             do iface = 1,size(self%faces,2)
 
-                !
                 ! Get face properties
-                !
                 has_neighbor = ( self%faces(ielem,iface)%ftype == INTERIOR )
 
-                !
                 ! For interior neighbor
-                !
                 if ( has_neighbor ) then
-                    !
-                    ! Get neighbor processor rank
-                    !
+
+                    ! Get neighbor processor rank. If off-processor, add to list uniquely
                     neighbor_rank = self%faces(ielem,iface)%ineighbor_proc
                     comm_neighbor = ( myrank /= neighbor_rank )
-
-                    !
-                    ! If off-processor, add to list, if not already added.
-                    !
-                    if ( comm_neighbor ) then
-                        ! Check if proc was already added to list from another neighbor
-                        loc = comm_procs_vector%loc(neighbor_rank)
-                        already_added = ( loc /= 0 )
-
-                        if (.not. already_added ) call comm_procs_vector%push_back(neighbor_rank)
-                    end if
+                    if ( comm_neighbor ) call comm_procs_vector%push_back_unique(neighbor_rank)
 
                 end if
 
@@ -1348,8 +1312,8 @@ contains
 
         character(:),   allocatable :: user_msg
         integer(ik),    allocatable :: comm_procs(:)
-        integer(ik)                 :: myrank, ielem, iface, loc, ChiID, idonor, donor_rank
-        logical                     :: already_added, is_chimera, comm_donor
+        integer(ik)                 :: myrank, ielem, iface, ChiID, idonor, donor_rank
+        logical                     :: is_chimera, comm_donor
         type(ivector_t)             :: comm_procs_vector
 
         !
@@ -1370,28 +1334,14 @@ contains
                 ! Get face properties
                 is_chimera   = ( self%faces(ielem,iface)%ftype == CHIMERA  )
 
-
                 if ( is_chimera ) then
-                    !
-                    ! Loop through donor elements
-                    !
+
+                    ! Loop through donor elements. If off-processor, add to list uniquely
                     ChiID = self%faces(ielem,iface)%ChiID
                     do idonor = 1,self%chimera%recv%data(ChiID)%ndonors()
                         donor_rank = self%chimera%recv%data(ChiID)%donor_proc%at(idonor)
                         comm_donor = ( myrank /= donor_rank )
-
-                        !
-                        ! If off-processor, add to list, if not already added.
-                        !
-                        if ( comm_donor ) then
-                            ! Check if proc was already added to list from another 
-                            ! donor or neighbor.
-                            loc = comm_procs_vector%loc(donor_rank)
-                            already_added = ( loc /= 0 )
-
-                            if (.not. already_added) call comm_procs_vector%push_back(donor_rank)
-                        end if
-
+                        if ( comm_donor ) call comm_procs_vector%push_back_unique(donor_rank)
                     end do !idonor
 
                 end if !is_chimera
@@ -1433,8 +1383,7 @@ contains
 
         type(ivector_t)             :: comm_procs_vector
         integer(ik),    allocatable :: comm_procs(:), comm_procs_local(:), comm_procs_chimera(:)
-        integer(ik)                 :: iproc, proc, loc
-        logical                     :: already_added
+        integer(ik)                 :: iproc, proc
         character(:),   allocatable :: user_msg
 
 
@@ -1450,20 +1399,10 @@ contains
         !
         ! Get procs we are receiving neighbor data from
         !
-        comm_procs_local   = self%get_send_procs_local()
-
+        comm_procs_local = self%get_send_procs_local()
         do iproc = 1,size(comm_procs_local)
-            
-            ! Get proc
             proc = comm_procs_local(iproc)
-
-            ! Check if proc was already added to list from another neighbor
-            loc = comm_procs_vector%loc(proc)
-            already_added = ( loc /= 0 )
-
-            ! Add to list if not already added
-            if (.not. already_added ) call comm_procs_vector%push_back(proc)
-
+            call comm_procs_vector%push_back_unique(proc)
         end do !iproc
 
 
@@ -1472,19 +1411,9 @@ contains
         ! Get procs we are receiving chimera donors from
         !
         comm_procs_chimera = self%get_send_procs_chimera()
-
         do iproc = 1,size(comm_procs_chimera)
-            
-            ! Get proc
             proc = comm_procs_chimera(iproc)
-
-            ! Check if proc was already added to list from another neighbor
-            loc = comm_procs_vector%loc(proc)
-            already_added = ( loc /= 0 )
-
-            ! Add to list if not already added
-            if (.not. already_added ) call comm_procs_vector%push_back(proc)
-
+            call comm_procs_vector%push_back_unique(proc)
         end do !iproc
 
 
@@ -1522,8 +1451,8 @@ contains
 
         type(ivector_t)             :: comm_procs_vector
         integer(ik),    allocatable :: comm_procs(:)
-        integer(ik)                 :: myrank, neighbor_rank, ielem, iface, loc
-        logical                     :: has_neighbor, already_added, comm_neighbor
+        integer(ik)                 :: myrank, neighbor_rank, ielem, iface
+        logical                     :: has_neighbor, comm_neighbor
         character(:),   allocatable :: user_msg
 
         !
@@ -1541,33 +1470,15 @@ contains
         do ielem = 1,self%nelem
             do iface = 1,size(self%faces,2)
 
-                !
                 ! Get face properties
-                !
                 has_neighbor = ( self%faces(ielem,iface)%ftype == INTERIOR )
 
-                
-                !
                 ! For interior neighbor
-                !
                 if ( has_neighbor ) then
-                    !
-                    ! Get neighbor processor rank
-                    !
+                    ! Get neighbor processor rank. If off-processor add to list uniquely
                     neighbor_rank = self%faces(ielem,iface)%ineighbor_proc
                     comm_neighbor = ( myrank /= neighbor_rank )
-
-                    !
-                    ! If off-processor, add to list, if not already added.
-                    !
-                    if ( comm_neighbor ) then
-                        ! Check if proc was already added to list from another neighbor
-                        loc = comm_procs_vector%loc(neighbor_rank)
-                        already_added = ( loc /= 0 )
-
-                        if (.not. already_added ) call comm_procs_vector%push_back(neighbor_rank)
-                    end if
-
+                    if ( comm_neighbor ) call comm_procs_vector%push_back_unique(neighbor_rank)
                 end if
                 
 
@@ -1607,8 +1518,8 @@ contains
 
         type(ivector_t)             :: comm_procs_vector
         integer(ik),    allocatable :: comm_procs(:)
-        integer(ik)                 :: myrank, loc, idonor, donor_rank
-        logical                     :: already_added, comm_donor
+        integer(ik)                 :: myrank, idonor, donor_rank
+        logical                     :: comm_donor
         character(:),   allocatable :: user_msg
 
         !
@@ -1629,21 +1540,10 @@ contains
         !
         do idonor = 1,self%chimera%send%ndonors()
 
+            ! Get donor rank. If off-processor, add to list uniquely.
             donor_rank = self%chimera%send%receiver_proc%at(idonor)
             comm_donor = (myrank /= donor_rank)
-
-
-            !
-            ! If off-processor, add to list, if not already added.
-            !
-            if ( comm_donor ) then
-                ! Check if proc was already added to list from another donor or neighbor
-                loc = comm_procs_vector%loc(donor_rank)
-                already_added = ( loc /= 0 )
-
-                if (.not. already_added) call comm_procs_vector%push_back(donor_rank)
-            end if
-
+            if ( comm_donor ) call comm_procs_vector%push_back_unique(donor_rank)
 
         end do !idonor
 

@@ -23,7 +23,7 @@ subroutine test_ivector__push_back__onevalue()
     @assertEqual(1,vec%size())
 
     ! Test capacity
-    @assertEqual(20,vec%capacity())
+    @assertEqual(5,vec%capacity())
 
 end subroutine
 
@@ -63,7 +63,7 @@ subroutine test_ivector__push_back__twovalues()
     @assertEqual(2,vec%size())
 
     ! Test capacity
-    @assertEqual(20,vec%capacity())
+    @assertEqual(5,vec%capacity())
 
 end subroutine
 
@@ -114,7 +114,7 @@ subroutine test_ivector__push_back__thirtyvalues()
     @assertEqual(30,vec%size())
 
     ! Test capacity
-    @assertEqual(40,vec%capacity())
+    @assertEqual(30,vec%capacity())
 
 end subroutine
 

@@ -25,16 +25,16 @@ module type_chidg_vector_send_comm
     type, public :: chidg_vector_send_comm_t
 
         integer(ik)                     :: proc
-        type(ivector_t)                 :: dom_send         !< Vector of domain indices in the mesh that have elems to be sent.
-        type(ivector_t),    allocatable :: elems_send(:)    !< For each domain with info to be sent, a 
-                                                            !< vector that contains the indices of elements to be sent.
+        type(ivector_t)                 :: dom_send         ! Vector of domain indices in the mesh that have elems to be sent.
+        type(ivector_t),    allocatable :: elems_send(:)    ! For each domain with info to be sent, a 
+                                                            ! vector that contains the indices of elements to be sent.
 
         type(mpi_request_vector_t)      :: initialization_requests
 
     contains
 
-        procedure,  public  :: init     !< Initialize the send info going to a particular process
-        procedure,  public  :: nsends   !< Return the number of sends going to the process
+        procedure,  public  :: init     ! Initialize the send info going to a particular process
+        procedure,  public  :: nsends   ! Return the number of sends going to the process
 
     end type chidg_vector_send_comm_t
     !************************************************************************************
@@ -65,10 +65,9 @@ contains
     !!
     !-------------------------------------------------------------------------------------
     subroutine init(self,mesh,proc)
-        class(chidg_vector_send_comm_t), intent(inout)   :: self
-        !type(mesh_t),                    intent(in)      :: mesh(:)
-        type(mesh_t),                intent(in)      :: mesh
-        integer(ik),                     intent(in)      :: proc
+        class(chidg_vector_send_comm_t),    intent(inout)   :: self
+        type(mesh_t),                       intent(in)      :: mesh
+        integer(ik),                        intent(in)      :: proc
 
         integer(ik)                 :: idom, ielem, iface, idom_send, ndom_send, ierr, &
                                        loc, neighbor_proc, ielem_send, ChiID, idonor, receiver_proc

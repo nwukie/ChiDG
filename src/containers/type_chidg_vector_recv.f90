@@ -50,7 +50,6 @@ contains
 
         integer(ik)                 :: idom, iproc, icomm, ncomm, ierr
         integer(ik),    allocatable :: comm_procs_array(:)
-        logical                     :: not_in_list
 
 
         !

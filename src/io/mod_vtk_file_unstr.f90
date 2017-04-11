@@ -458,75 +458,75 @@ contains
 
 
 
-    !>  Write final multi block .pvd file for the entire simulation
-    !!  The .pvd file calls upon separate blockwise .vtu files
-    !!
-    !!
-    !!  @author Mayank Sharma
-    !!  @date 10/28/2016
-    !!
-    !!
-    !------------------------------------------------------------------------------------------
-    subroutine write_pvd_final(data,pvd_file,file_arr,timestep)
-        type(chidg_data_t),               intent(inout)         ::  data
-        character(len = *),               intent(in)            ::  pvd_file
-        character(len = 100),dimension(:),intent(in)            ::  file_arr
-        integer(ik),                      intent(in)            ::  timestep ! No. of timesteps in the solution
-
-
-        character(len = 100)                                    ::  type_name, compressor
-        integer(ik)                                             ::  funit = 10, ifile, itime, d
-        logical                                                 ::  exist
-
-
-        !
-        ! .pvd file type, collection of blockwise .vtu files
-        !
-        type_name = 'Collection'
-
-
-        !
-        ! Compressor to be used for any compressed data
-        !
-        compressor = 'vtkZLibDataCompressor'
-
-
-        !
-        ! Open new .pvd file or overwrite an exisiting file
-        ! Write all blockwise .vtu filenames in the .pvd format
-        ! Close .pvd file after writing output
-        !
-        inquire(file = trim(pvd_file), exist=exist)
-        if (exist) then
-            open(funit, file = trim(pvd_file), status = 'old', action = 'write')
-        else
-            open(funit, file = trim(pvd_file), status = 'new', action = 'write')
-        end if
-
-        write(funit,'(A)') '<?xml version="1.0"?>'
-        write(funit,'(5A)') '<VTKFile type="',trim(type_name),'" version="0.1" byte_order="LittleEndian" Compressor="',trim(compressor),'">'
-        write(funit,'(3A)') '   <',trim(type_name),'>'
-        !
-        ! Write individual .vtu file names to the .pvd file
-        !
-        do itime = 1,timestep
-
-            d = (itime - 1)*data%mesh%ndomains()
-
-            do ifile = 1,data%mesh%ndomains()
-
-                write(funit,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itime - 1,'" part="',ifile - 1,'" file="',trim(file_arr(d + ifile)),'"/>'
-                
-            end do
-            
-        end do
-        write(funit,'(3A)') '   </',trim(type_name),'>'
-        write(funit,'(A)') '</VTKFile>'
-        close(funit)
-            
-            
-    end subroutine write_pvd_final
-    !******************************************************************************************
+!    !>  Write final multi block .pvd file for the entire simulation
+!    !!  The .pvd file calls upon separate blockwise .vtu files
+!    !!
+!    !!
+!    !!  @author Mayank Sharma
+!    !!  @date 10/28/2016
+!    !!
+!    !!
+!    !------------------------------------------------------------------------------------------
+!    subroutine write_pvd_final(data,pvd_file,file_arr,timestep)
+!        type(chidg_data_t),               intent(inout)         ::  data
+!        character(len = *),               intent(in)            ::  pvd_file
+!        character(len = 100),dimension(:),intent(in)            ::  file_arr
+!        integer(ik),                      intent(in)            ::  timestep ! No. of timesteps in the solution
+!
+!
+!        character(len = 100)                                    ::  type_name, compressor
+!        integer(ik)                                             ::  funit = 10, ifile, itime, d
+!        logical                                                 ::  exist
+!
+!
+!        !
+!        ! .pvd file type, collection of blockwise .vtu files
+!        !
+!        type_name = 'Collection'
+!
+!
+!        !
+!        ! Compressor to be used for any compressed data
+!        !
+!        compressor = 'vtkZLibDataCompressor'
+!
+!
+!        !
+!        ! Open new .pvd file or overwrite an exisiting file
+!        ! Write all blockwise .vtu filenames in the .pvd format
+!        ! Close .pvd file after writing output
+!        !
+!        inquire(file = trim(pvd_file), exist=exist)
+!        if (exist) then
+!            open(funit, file = trim(pvd_file), status = 'old', action = 'write')
+!        else
+!            open(funit, file = trim(pvd_file), status = 'new', action = 'write')
+!        end if
+!
+!        write(funit,'(A)') '<?xml version="1.0"?>'
+!        write(funit,'(5A)') '<VTKFile type="',trim(type_name),'" version="0.1" byte_order="LittleEndian" Compressor="',trim(compressor),'">'
+!        write(funit,'(3A)') '   <',trim(type_name),'>'
+!        !
+!        ! Write individual .vtu file names to the .pvd file
+!        !
+!        do itime = 1,timestep
+!
+!            d = (itime - 1)*data%mesh%ndomains()
+!
+!            do ifile = 1,data%mesh%ndomains()
+!
+!                write(funit,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itime - 1,'" part="',ifile - 1,'" file="',trim(file_arr(d + ifile)),'"/>'
+!                
+!            end do
+!            
+!        end do
+!        write(funit,'(3A)') '   </',trim(type_name),'>'
+!        write(funit,'(A)') '</VTKFile>'
+!        close(funit)
+!            
+!            
+!    end subroutine write_pvd_final
+!    !******************************************************************************************
 
 
 
@@ -536,7 +536,7 @@ contains
     !!  @date   8/4/2017
     !!
     !------------------------------------------------------------------------------------------
-    subroutine end_pvd_marching(data,pvd_file,funit)
+    subroutine end_pvd(data,pvd_file,funit)
         type(chidg_data_t),     intent(inout)   :: data
         character(*),           intent(in)      :: pvd_file
         integer(ik)                             :: funit
@@ -558,7 +558,7 @@ contains
         close(funit)
 
 
-    end subroutine end_pvd_marching
+    end subroutine end_pvd
     !******************************************************************************************
 
 
@@ -569,7 +569,7 @@ contains
     !!  @date   8/4/2017
     !!
     !------------------------------------------------------------------------------------------
-    subroutine write_pvd_initial_marching(data,pvd_file,file_arr,time_lev,itimestep)
+    subroutine write_pvd_initial(data,pvd_file,file_arr,time_lev,itimestep)
         type(chidg_data_t),             intent(inout)   :: data
         character(*),                   intent(in)      :: pvd_file
         character(100), dimension(:),   intent(in)      :: file_arr
@@ -577,7 +577,7 @@ contains
         integer(ik),                    intent(in)      :: itimestep
 
         integer(ik)                     :: funit = 10, ifile, itime, d
-        character(:),   allocatable     :: type_name, compressor
+        character(:),   allocatable     :: type_name, compressor, time_str
         logical                         :: exist
 
 
@@ -586,6 +586,7 @@ contains
         !
         type_name  = 'Collection'
         compressor = 'vtkZLibDataCompressor'
+        time_str   = data%time_manager%time_scheme
 
 
         inquire(file = trim(pvd_file), exist=exist)
@@ -603,28 +604,42 @@ contains
                 d = (itime - 1)*data%mesh%ndomains()
 
                 do ifile = 1, data%mesh%ndomains()
+                    select case (trim(time_str))
+                        
+                        case ('steady', 'Steady', 'STEADY')
+                            write(funit,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itimestep - 1,'" part="',ifile - 1,'" file="',&
+                                                            trim(file_arr(d + ifile)),'"/>'
+                        case ('forward_euler','Forward_Euler','FORWARD_EULER','forward euler','Forward Euler')
+                            write(funit,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itimestep - 1,'" part="',ifile - 1,'" file="',&
+                                                            trim(file_arr(d + ifile)),'"/>'
+                        case ('backward_euler','Backward_Euler','BACKWARD_EULER','backward euler','Backward Euler','BACKWARD EULER')
+                            write(funit,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itimestep - 1,'" part="',ifile - 1,'" file="',&
+                                                            trim(file_arr(d + ifile)),'"/>'
+                        case ('Harmonic Balance','Harmonic_Balance','harmonic balance','harmonic_balance','HB')
+                            write(funit,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itime - 1,'" part="',ifile - 1,'" file="',&
+                                                            trim(file_arr(d + ifile)),'"/>'
 
-                    write(funit,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itimestep - 1,'" part="',ifile - 1,'" file="',trim(file_arr(d + ifile)),'"/>'
+                    end select
 
                 end do
 
             end do
-            call end_pvd_marching(data,trim(pvd_file),funit)
+            call end_pvd(data,trim(pvd_file),funit)
 
 
-    end subroutine write_pvd_initial_marching
+    end subroutine write_pvd_initial
     !******************************************************************************************
 
 
 
 
-    !>  Overwrite .pvd file for time marching with a new solution_file
+    !>  Write final .pvd file 
     !!
     !!  @author Mayank Sharma
     !!  @date   8/4/2017
     !!
     !------------------------------------------------------------------------------------------
-    subroutine write_pvd_marching(data,pvd_file,file_arr,time_lev,itimestep)
+    subroutine write_pvd_final(data,pvd_file,file_arr,time_lev,itimestep)
         type(chidg_data_t),             intent(inout)   :: data
         character(*),                   intent(in)      :: pvd_file
         character(100), dimension(:),   intent(in)      :: file_arr
@@ -632,7 +647,7 @@ contains
         integer(ik),                    intent(in)      :: itimestep
 
         integer(ik)                     :: funit = 10, funit_1 = 11, ifile, itime, d, ierr
-        character(:),   allocatable     :: type_name, compressor, temp_file, search_string
+        character(:),   allocatable     :: type_name, compressor, temp_file, search_string, time_str
         character(200)                  :: text
         logical                         :: exist
 
@@ -645,6 +660,7 @@ contains
         compressor    = 'vtkZLibDataCompressor'
         temp_file     = 'temp.pvd'
         search_string = '   </'//trim(type_name)//'>'
+        time_str      = data%time_manager%time_scheme
 
 
         !
@@ -685,13 +701,29 @@ contains
                     !
                     ! Add new file data to the temporary file
                     !
-                    write(funit_1,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itimestep - 1,'" part="',ifile - 1,'" file="',trim(file_arr(d + ifile)),'"/>'
+                    !write(funit_1,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itimestep - 1,'" part="',ifile - 1,'" file="',trim(file_arr(d + ifile)),'"/>'
+                    select case (trim(time_str))
+                        
+                        case ('steady', 'Steady', 'STEADY')
+                            write(funit_1,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itimestep - 1,'" part="',ifile - 1,'" file="',&
+                                                            trim(file_arr(d + ifile)),'"/>'
+                        case ('forward_euler','Forward_Euler','FORWARD_EULER','forward euler','Forward Euler')
+                            write(funit_1,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itimestep - 1,'" part="',ifile - 1,'" file="',&
+                                                            trim(file_arr(d + ifile)),'"/>'
+                        case ('backward_euler','Backward_Euler','BACKWARD_EULER','backward euler','Backward Euler','BACKWARD EULER')
+                            write(funit_1,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itimestep - 1,'" part="',ifile - 1,'" file="',&
+                                                            trim(file_arr(d + ifile)),'"/>'
+                        case ('Harmonic Balance','Harmonic_Balance','harmonic balance','harmonic_balance','HB')
+                            write(funit_1,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itime - 1,'" part="',ifile - 1,'" file="',&
+                                                            trim(file_arr(d + ifile)),'"/>'
+
+                    end select
 
                 end do
 
             end do
 
-            call end_pvd_marching(data,trim(temp_file),funit_1) 
+            call end_pvd(data,trim(temp_file),funit_1) 
             close(funit_1)
             close(funit)
 
@@ -704,12 +736,12 @@ contains
 
         else
 
-            call write_pvd_initial_marching(data,pvd_file,file_arr,time_lev,itimestep)
+            call write_pvd_initial(data,pvd_file,file_arr,time_lev,itimestep)
 
         end if
             
 
-    end subroutine write_pvd_marching
+    end subroutine write_pvd_final
     !******************************************************************************************
 
 

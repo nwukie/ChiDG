@@ -46,7 +46,7 @@ contains
         type(file_properties_t)             ::  file_props
         character(:),           allocatable ::  eqnset
         character(:),           allocatable ::  time_string, grid_file_prefix, solution_file_prefix, step_str, &
-                                                pvd_filename
+                                                pvd_filename, time_integrator_string
         integer(ik)                         ::  nterms_s,spacedim,solution_order,istep,itimestep
 
 

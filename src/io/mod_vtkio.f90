@@ -8,7 +8,7 @@ module mod_vtkio
     use mod_vtk_file_unstr,     only: open_vtk_unstr,close_vtk_unstr,init_piece_unstr,      &
                                       end_piece_unstr,write_piece_coord, write_piece_data,  &
                                       init_cell,end_cell,write_piece_connectivity_data,     &
-                                      write_pvd_final, write_pvd_marching
+                                      write_pvd_final
     use mod_vtk_calc_func,      only: get_cons_var,get_piece_nums,get_piece_coord,     &
                                       get_piece_data,get_piece_connectivity_data
 
@@ -174,11 +174,7 @@ contains
         ! Write the final Paraview data file (.pvd)
         ! This file is a multi block collection file for entire geometry
         !
-        if (data%time_manager%time_scheme == 'Backward_Euler') then
-            call write_pvd_marching(data,pvd_filename,file_arr,ntime,itimestep)
-        else
-            call write_pvd_final(data,pvd_filename,file_arr,ntime)
-        end if
+        call write_pvd_final(data,pvd_filename,file_arr,ntime,itimestep)
 
 
     end subroutine write_vtk_file

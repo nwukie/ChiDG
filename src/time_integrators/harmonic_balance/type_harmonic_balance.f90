@@ -147,12 +147,6 @@ contains
         integer(ik)             :: ierr,i,j
         real(rk),allocatable    :: D(:,:)
 
-
-        !
-        ! Spatial update needed
-        !
-        call update_space(data,timing,differentiate)
-
         
         associate ( rhs => data%sdata%rhs, q => data%sdata%q )
     
@@ -164,6 +158,12 @@ contains
         D = data%time_manager%D
 
         do itime_outer = 1,ntime
+
+            !
+            ! Spatial update needed
+            ! 
+            data%sdata%t = data%time_manager%time_lev%at(itime_outer)
+            call update_space(data,timing,differentiate)
 
             do idom = 1,data%mesh%ndomains()
 

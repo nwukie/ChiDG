@@ -125,15 +125,6 @@ contains
             call data%sdata%function_status%clear()
 
 
-            time_string = data%time_manager%get_name()
-
-            if (time_string == 'Harmonic Balance' .or. time_string == 'Harmonic_Balance' .or. time_string == 'harmonic balance' &
-                .or. time_string == 'harmonic_balance' .or. time_string == 'HB') then
-
-                data%sdata%t = data%time_manager%time_lev%at(itime)
-
-            end if
-
             call loop_timer%start()
             do idom = 1,data%mesh%ndomains()
                 eqn_ID = worker%mesh%domain(idom)%eqn_ID
@@ -153,7 +144,6 @@ contains
                     time_string = data%time_manager%get_name()
 
                     worker%t = data%sdata%t
-
 
                     ! Update the element cache
                     call cache_handler%update(worker,data%eqnset, data%bc_state_group, differentiate_function)

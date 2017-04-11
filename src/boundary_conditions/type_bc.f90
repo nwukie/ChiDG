@@ -499,7 +499,8 @@ contains
         type(mesh_t),   intent(inout)   :: mesh
 
         logical                     :: irank_has_geometry, ranks_have_geometry(NRANK)
-        integer(ik)                 :: ierr, color
+        !integer(ik)                 :: ierr, color
+        integer                 :: ierr, color
         character(:),   allocatable :: user_msg
 
 

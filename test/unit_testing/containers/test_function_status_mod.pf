@@ -9,7 +9,6 @@ module test_function_status_mod
     use type_domain_connectivity,       only: domain_connectivity_t
     use type_equationset_function_data, only: equationset_function_data_t
     use mod_test_utilities,             only: create_mesh
-    use type_bc,                        only: bc_t
     use mod_bc,                         only: create_bc
 
     use type_face_info,                 only: face_info_t
@@ -56,7 +55,6 @@ contains
         type(point_t),  allocatable                     :: nodes(:)
         type(domain_connectivity_t)                     :: connectivity
         integer(ik)                                     :: nterms_c, spacedim, nelements_g, eqn_ID
-        class(bc_t),    allocatable                     :: bc
 
         IO_DESTINATION = 'file'
 

@@ -48,6 +48,9 @@ module type_bc_state_group
         procedure   :: init_specialized
         procedure   :: propagate_coupling
 
+        
+        procedure   :: get_recv_procs_bc
+        procedure   :: get_send_procs_bc
 
 
     end type bc_state_group_t
@@ -350,49 +353,59 @@ contains
     !!
     !---------------------------------------------------------------------------------------
     subroutine init_comm(self,mesh)
-        class(bc_state_group_t),    intent(in)  :: self
-        type(mesh_t),               intent(in)  :: mesh
+        class(bc_state_group_t),    intent(inout)   :: self
+        type(mesh_t),               intent(in)      :: mesh
 
         logical                     :: irank_has_geometry, ranks_have_geometry(NRANK)
-        integer(ik)                 :: ierr, color
+        integer(ik)                 :: ierr, color, group_ID
         character(:),   allocatable :: user_msg
 
 
+        !
+        ! Check if current processor contains geometry associated with the bc_t
+        !
+        irank_has_geometry = .false.
+        if (allocated(self%bc_state)) then
 
-!        !
-!        ! Check if current processor contains geometry associated with the bc_t
-!        !
-!        irank_has_geometry = allocated(self%bc_patch)
-!
-!
-!
-!        !
-!        ! Send this single information to all and receive back ordered information from all
-!        !
-!        call MPI_Allgather(irank_has_geometry,1,MPI_LOGICAL,ranks_have_geometry,1,MPI_LOGICAL,ChiDG_COMM,ierr)
-!        user_msg = "bc%init_bc_comm: Error in collective MPI_Allgather for determining which &
-!                    MPI ranks contain portions of a boundary condition bc_patch."
-!        if (ierr /= 0) call chidg_signal(FATAL,user_msg)
-!
-!
-!        !
-!        ! Create a new MPI communicator for the current boundary condition 
-!        ! that includes only those processors with bc_patch data that
-!        ! has been allocated; indicating they contain a portion of the 
-!        ! bc geometry.
-!        !
-!        if (irank_has_geometry) then
-!            color = 1
-!        else
-!            color = MPI_UNDEFINED
-!        end if
-!
-!
-!        call MPI_Comm_split(ChiDG_COMM, color, IRANK, self%bc_COMM, ierr)
-!        user_msg = "bc%init_bc_comm: Error in collective MPI_Comm_split when trying &
-!                    to create a communicator for exchanging boundary condition data &
-!                    between processors."
-!        if (ierr /= 0) call chidg_signal(FATAL,user_msg)
+            group_ID = mesh%get_bc_patch_group_id(self%name)
+            if (group_ID /= NO_ID) then
+
+                irank_has_geometry = (mesh%bc_patch_group(group_ID)%npatches() > 0)
+
+            end if
+
+        end if
+
+
+
+        !
+        ! Send this single information to all and receive back ordered information from all
+        !
+        call MPI_Allgather(irank_has_geometry,1,MPI_LOGICAL,ranks_have_geometry,1,MPI_LOGICAL,ChiDG_COMM,ierr)
+        user_msg = "bc%init_bc_comm: Error in collective MPI_Allgather for determining which &
+                    MPI ranks contain portions of a boundary condition bc_patch."
+        if (ierr /= 0) call chidg_signal(FATAL,user_msg)
+
+
+
+        !
+        ! Create a new MPI communicator for the current boundary condition 
+        ! that includes only those processors with a bc_patch_group 
+        ! containing valid patch dadta; indicating they contain a portion 
+        ! of the bc geometry.
+        !
+        if (irank_has_geometry) then
+            color = 1
+        else
+            color = MPI_UNDEFINED
+        end if
+
+
+        call MPI_Comm_split(ChiDG_COMM, color, IRANK, self%bc_COMM, ierr)
+        user_msg = "bc_state_group%init_bc_comm: Error in collective MPI_Comm_split when &
+                    trying to create a communicator for exchanging boundary condition data &
+                    between processors."
+        if (ierr /= 0) call chidg_signal(FATAL,user_msg)
 
 
     end subroutine init_comm
@@ -537,6 +550,67 @@ contains
     !****************************************************************************************
 
 
+
+
+
+
+
+
+
+
+
+
+
+    !>  Return the processor ranks that the current boundary condition is receiving 
+    !!  information from.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/10/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_recv_procs_bc(self) result(recv_procs_array)
+        class(bc_state_group_t),    intent(in)  :: self
+
+
+        integer(ik),    allocatable :: recv_procs_array(:)
+
+
+
+
+
+
+
+    end function get_recv_procs_bc
+    !****************************************************************************************
+
+
+
+
+
+
+    !>  Return the processor ranks that the current boundary condition is sending
+    !!  information to.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/10/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_send_procs_bc(self) result(send_procs_array)
+        class(bc_state_group_t),    intent(in)  :: self
+
+
+        integer(ik),    allocatable :: send_procs_array(:)
+
+
+
+
+
+
+
+    end function get_send_procs_bc
+    !****************************************************************************************
 
 
 

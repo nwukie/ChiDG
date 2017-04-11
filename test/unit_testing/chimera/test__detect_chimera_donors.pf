@@ -21,7 +21,6 @@ subroutine test__detect_chimera_donors()
     use type_chidg,     only: chidg_t
     use type_meshdata,  only: meshdata_t
     use type_point,     only: point_t
-    use type_bc,        only: bc_t
     use mod_bc,         only: create_bc
     use mod_test_utilities, only: create_mesh_file
     use mod_file_utilities, only: delete_file
@@ -31,7 +30,6 @@ subroutine test__detect_chimera_donors()
 
 
     type(chidg_t)                   :: chidg
-    class(bc_t),        allocatable :: bc
     type(meshdata_t),   allocatable :: meshdata(:)
     type(point_t)                   :: coord
     character(len=100)              :: filename = "D2E8M1_overlapping_matching.h5"

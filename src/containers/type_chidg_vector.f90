@@ -3,7 +3,7 @@ module type_chidg_vector
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: ZERO, TWO
     use mod_chidg_mpi,              only: GROUP_MASTER, ChiDG_COMM, IRANK
-    use type_mesh,              only: mesh_t
+    use type_mesh,                  only: mesh_t
     use type_function,              only: function_t
     use type_chidg_vector_send,     only: chidg_vector_send_t
     use type_chidg_vector_recv,     only: chidg_vector_recv_t
@@ -30,12 +30,12 @@ module type_chidg_vector
     !------------------------------------------------------------------------------------------
     type, public :: chidg_vector_t
 
-        type(blockvector_t),    allocatable :: dom(:)       !< Local block vector storage
+        type(blockvector_t),    allocatable :: dom(:)       ! Local block vector storage
 
-        type(chidg_vector_send_t)           :: send         !< What to send to other processors
-        type(chidg_vector_recv_t)           :: recv         !< Receive data from other processors
+        type(chidg_vector_send_t)           :: send         ! What to send to other processors
+        type(chidg_vector_recv_t)           :: recv         ! Receive data from other processors
 
-        integer(ik),            private     :: ntime_       !< No. of time instances stored
+        integer(ik),            private     :: ntime_       ! No. of time instances stored
 
     contains
 
@@ -44,11 +44,13 @@ module type_chidg_vector
 
         procedure,  public  :: project                          ! Project function to basis
         procedure,  public  :: clear                            ! Zero the densevector data
+
         generic,    public  :: norm => norm_local, norm_comm    ! Compute L2 vector norm
         procedure,  public  :: norm_local                       ! proc-local L2 vector norm
         procedure,  public  :: norm_comm                        ! MPI group L2 vector norm
         generic,    public  :: norm_fields => norm_fields_comm  ! L2 norm of independent fields
         procedure,  public  :: norm_fields_comm                 ! MPI group L2 field norms
+
         procedure,  public  :: sumsqr                           ! Sum squared proc-local entries 
         procedure,  public  :: sumsqr_fields
         procedure,  public  :: dump

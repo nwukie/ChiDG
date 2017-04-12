@@ -1,4 +1,4 @@
-module type_blockmatrix
+module type_domain_matrix
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: DIAG, ZERO, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, ETA_MAX, ZETA_MAX, &
@@ -8,7 +8,6 @@ module type_blockmatrix
     use type_densematrix_vector,only: densematrix_vector_t
     use type_face_info,         only: face_info_t
     use type_seed,              only: seed_t
-    use type_bcset_coupling,    only: bcset_coupling_t
     use type_ivector,           only: ivector_t
     use mod_chidg_mpi,          only: IRANK
     use DNAD_D
@@ -30,7 +29,7 @@ module type_blockmatrix
     !!    .
     !!    .
     !-------------------------------------------------------------------------------------------
-    type, public :: blockmatrix_t
+    type, public :: domain_matrix_t
 
         !
         ! Primary storage, (nelem,ntime)
@@ -42,29 +41,29 @@ module type_blockmatrix
         !
         ! Supporting data
         !
-        integer(ik),            allocatable :: ldata(:,:)               !< Block-local data, (nelem,3) nvars, nterms, ntime.
-        !integer(ik),            allocatable :: local_transpose(:,:)     !< Block index of the transposed location (nelem,6)
+        integer(ik),            allocatable :: ldata(:,:)               ! Block-local data, (nelem,3) nvars, nterms, ntime.
+        !integer(ik),            allocatable :: local_transpose(:,:)    ! Block index of the transposed location (nelem,6)
         !type(ivector_t),        allocatable :: local_transpose(:)
-        type(ivector_t),        allocatable :: local_lower_blocks(:)    !< For each element, which blocks (1-6) are lower blocks
-        type(ivector_t),        allocatable :: local_upper_blocks(:)    !< For each element, which blocks (1-6) are upper blocks
+        type(ivector_t),        allocatable :: local_lower_blocks(:)    ! For each element, which blocks (1-6) are lower blocks
+        type(ivector_t),        allocatable :: local_upper_blocks(:)    ! For each element, which blocks (1-6) are upper blocks
 
 
     contains
 
         ! Initializers
-        generic,   public  :: init => initialize_linearization          !< Initialize full linearization matrix
+        generic,   public  :: init => initialize_linearization          ! Initialize full linearization matrix
         procedure, private :: initialize_linearization
 
 
         ! Setters
-        procedure :: store                                              !< Store linearization data for local blocks
-        procedure :: store_chimera                                      !< Store linearization data for chimera blocks
-        procedure :: store_bc                                           !< Store linearization data for boundary condition blocks
-        procedure :: clear                                              !< Zero all data storage
+        procedure :: store                                              ! Store linearization data for local blocks
+        procedure :: store_chimera                                      ! Store linearization data for chimera blocks
+        procedure :: store_bc                                           ! Store linearization data for boundary condition blocks
+        procedure :: clear                                              ! Zero all data storage
 
         final :: destructor
 
-    end type blockmatrix_t
+    end type domain_matrix_t
     !*******************************************************************************************
 
 
@@ -87,10 +86,9 @@ contains
     !!  @date   11/10/2016
     !!
     !-------------------------------------------------------------------------------------------
-    subroutine initialize_linearization(self,domain,bcset_coupling,mtype)
-        class(blockmatrix_t),   intent(inout)           :: self
+    subroutine initialize_linearization(self,domain,mtype)
+        class(domain_matrix_t),   intent(inout)           :: self
         class(domain_t),        intent(in)              :: domain
-        type(bcset_coupling_t), intent(in), optional    :: bcset_coupling
         character(*),           intent(in)              :: mtype
 
         character(:),   allocatable :: user_msg
@@ -556,7 +554,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine store(self,integral,face_info,seed,ivar,itime)
-        class(blockmatrix_t),   intent(inout)   :: self
+        class(domain_matrix_t),   intent(inout)   :: self
         type(AD_D),             intent(in)      :: integral(:)
         type(face_info_t),      intent(in)      :: face_info
         type(seed_t),           intent(in)      :: seed
@@ -610,7 +608,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine store_chimera(self,integral,face_info,seed,ivar,itime)
-        class(blockmatrix_t),       intent(inout)   :: self
+        class(domain_matrix_t),       intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
         type(face_info_t),          intent(in)      :: face_info
         type(seed_t),               intent(in)      :: seed
@@ -670,7 +668,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine store_bc(self,integral,face,seed,ivar,itime)
-        class(blockmatrix_t),       intent(inout)   :: self
+        class(domain_matrix_t),       intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
         type(face_info_t),          intent(in)      :: face
         type(seed_t),               intent(in)      :: seed
@@ -741,7 +739,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine clear(self)
-        class(blockmatrix_t),   intent(inout)   :: self
+        class(domain_matrix_t),   intent(inout)   :: self
 
         integer(ik)             :: ielem, itime
 
@@ -786,9 +784,9 @@ contains
     !!
     !!---------------------------------------------
     subroutine destructor(self)
-        type(blockmatrix_t), intent(inout) :: self
+        type(domain_matrix_t), intent(inout) :: self
 
     end subroutine
     !**********************************************
 
-end module type_blockmatrix
+end module type_domain_matrix

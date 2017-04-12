@@ -12,9 +12,6 @@ module mod_vtkio
     use mod_vtk_calc_func,      only: get_cons_var,get_piece_nums,get_piece_coord,     &
                                       get_piece_data,get_piece_connectivity_data
 
-    use type_element,           only: element_t
-    use type_blockvector,       only: blockvector_t
-    use type_solverdata,        only: solverdata_t
     use type_chidg_data,        only: chidg_data_t
 
     implicit none

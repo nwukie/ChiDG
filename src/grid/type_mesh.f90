@@ -501,7 +501,7 @@ contains
         do igroup = 1,self%nbc_patch_groups()
             recv_procs_bc = self%bc_patch_group(igroup)%get_recv_procs()
 
-            do iproc = 1,size(recv_procs_dom)
+            do iproc = 1,size(recv_procs_bc)
                 call recv_procs%push_back_unique(recv_procs_bc(iproc))
             end do ! iproc
 
@@ -534,8 +534,8 @@ contains
     function get_send_procs(self) result(send_procs_array)
         class(mesh_t),  intent(in)  :: self
 
-        integer(ik)                 :: idom, iproc
-        integer(ik),    allocatable :: send_procs_dom(:), send_procs_array(:)
+        integer(ik)                 :: idom, iproc, igroup
+        integer(ik),    allocatable :: send_procs_dom(:), send_procs_bc(:), send_procs_array(:)
         type(ivector_t)             :: send_procs
 
 
@@ -553,6 +553,19 @@ contains
 
 
 
+        !
+        ! Accumulate processor ranks that we are receiving from: bc_patch_groups
+        !
+        do igroup = 1,self%nbc_patch_groups()
+            send_procs_bc = self%bc_patch_group(igroup)%get_send_procs()
+
+            do iproc = 1,size(send_procs_bc)
+                call send_procs%push_back_unique(send_procs_bc(iproc))
+            end do ! iproc
+
+        end do ! igroup
+
+
 
         !
         ! Return as integer array
@@ -562,13 +575,6 @@ contains
 
     end function get_send_procs
     !*********************************************************************************
-
-
-
-
-
-
-
 
 
 

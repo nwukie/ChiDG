@@ -272,7 +272,6 @@ contains
             !
             ! Search for local element with common nodes
             !
-            !do ielem = 1,mesh%nelem
             do ielem = 1,domain%nelem
 
                 

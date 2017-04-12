@@ -6,7 +6,7 @@ module type_RASILU0_recv_dom_comm
 
     use type_RASILU0_recv_dom_comm_elem,    only: RASILU0_recv_dom_comm_elem_t
     use type_domain,                        only: domain_t
-    use type_blockmatrix,                   only: blockmatrix_t
+    use type_domain_matrix,                 only: domain_matrix_t
 
     use mpi_f08,    only: MPI_Recv, MPI_INTEGER4, MPI_STATUS_IGNORE, MPI_ANY_TAG
     implicit none
@@ -27,7 +27,7 @@ module type_RASILU0_recv_dom_comm
         integer(ik)                                     :: proc
         type(RASILU0_recv_dom_comm_elem_t), allocatable :: elem(:)  ! For each overlapping element coming 
                                                                     ! from a processor, a container storing 
-                                                                    ! the linearization blocks being communicated
+                                                                    ! the coupling data being communicated
 
     contains
         
@@ -59,7 +59,7 @@ contains
     subroutine init(self,domain,a,proc)
         class(RASILU0_recv_dom_comm_t), intent(inout)   :: self
         type(domain_t),                 intent(in)      :: domain
-        type(blockmatrix_t),            intent(in)      :: a
+        type(domain_matrix_t),          intent(in)      :: a
         integer(ik),                    intent(in)      :: proc
 
         integer(ik)                 :: ielem_recv, nelem_recv, nblk_recv, idomain_g, iblk,  &
@@ -150,35 +150,6 @@ contains
             if (self%elem(ielem_recv)%diag%size() /= 1) call chidg_signal(FATAL,"RASILU0%recv_dom_comm: Error detecting diagonal block sent from overlapping process.")
 
         end do ! ielem_recv
-
-
-
-
-
-
-
-
-
-!        !
-!        ! Find diagonal block
-!        !
-!        do ielem_recv = 1,size(self%elem)
-!
-!            nblk_recv = size(self%elem(ielem_recv)%blks)
-!
-!            do iblk_recv = 1,size(self%elem(ielem_recv)%blks)
-!                iblk = self%elem(ielem_recv)%blk_indices(iblk_recv)
-!
-!                dparent_g   = self%elem(ielem_recv)%blks(iblk_recv)%dparent_g()
-!                eparent_g   = self%elem(ielem_recv)%blks(iblk_recv)%eparent_g()
-!
-!                diagonal = (dparent_g
-!                if (iblk == DIAG) call self%elem(ielem_recv)%diag%push_back(iblk_recv)
-!
-!            end do !iblk
-!            if (self%elem(ielem_recv)%diag%size() /= 1) call chidg_signal(FATAL,"RASILU0_recv_dom_comm%init: Number of diagonal blocks is not equal to one")
-!
-!        end do !ielem_recv
 
 
 

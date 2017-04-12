@@ -1,4 +1,4 @@
-module test_bc_mod
+module test_bc_state_mod
     use pfunit_mod
     use mod_kinds,              only: rk,ik
     use mod_bc,                 only: create_bc
@@ -236,4 +236,4 @@ contains
 
 
 
-end module test_bc_mod
+end module test_bc_state_mod

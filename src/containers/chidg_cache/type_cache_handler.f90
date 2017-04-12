@@ -699,25 +699,12 @@ contains
                 do idepend = 1,ndepend
 
                     ! Get coupled bc element to linearize against.
-                    !if (differentiate) then
-                    !    worker%function_info%seed%idomain_g  = bc(bc_ID)%bc_patch(patch_ID)%idomain_g_coupled(face_ID)%at(idepend)
-                    !    worker%function_info%seed%idomain_l  = bc(bc_ID)%bc_patch(patch_ID)%idomain_l_coupled(face_ID)%at(idepend)
-                    !    worker%function_info%seed%ielement_g = bc(bc_ID)%bc_patch(patch_ID)%ielement_g_coupled(face_ID)%at(idepend)
-                    !    worker%function_info%seed%ielement_l = bc(bc_ID)%bc_patch(patch_ID)%ielement_l_coupled(face_ID)%at(idepend)
-                    !    worker%function_info%seed%iproc      = bc(bc_ID)%bc_patch(patch_ID)%proc_coupled(face_ID)%at(idepend)
-                    !else
-                    !    worker%function_info%seed%idomain_g  = 0
-                    !    worker%function_info%seed%idomain_l  = 0
-                    !    worker%function_info%seed%ielement_g = 0
-                    !    worker%function_info%seed%ielement_l = 0
-                    !    worker%function_info%seed%iproc      = NO_PROC
-                    !end if
                     if (differentiate) then
-                        worker%function_info%seed%idomain_g  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g_coupled(face_ID)%at(idepend)
-                        worker%function_info%seed%idomain_l  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l_coupled(face_ID)%at(idepend)
-                        worker%function_info%seed%ielement_g = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g_coupled(face_ID)%at(idepend)
-                        worker%function_info%seed%ielement_l = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l_coupled(face_ID)%at(idepend)
-                        worker%function_info%seed%iproc      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%proc_coupled(face_ID)%at(idepend)
+                        worker%function_info%seed%idomain_g  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(idepend)
+                        worker%function_info%seed%idomain_l  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(idepend)
+                        worker%function_info%seed%ielement_g = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(idepend)
+                        worker%function_info%seed%ielement_l = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(idepend)
+                        worker%function_info%seed%iproc      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(idepend)
                     else
                         worker%function_info%seed%idomain_g  = 0
                         worker%function_info%seed%idomain_l  = 0
@@ -727,7 +714,6 @@ contains
                     end if
 
                     eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
-                    !call bc(bc_ID)%bc_state(istate)%state%compute_bc_state(worker,equation_set(eqn_ID)%prop)
                     call bc_state_group(bc_ID)%bc_state(istate)%state%compute_bc_state(worker,equation_set(eqn_ID)%prop)
 
                 end do !idepend
@@ -1586,30 +1572,14 @@ contains
                 if (selected_model) then
                     do idepend = 1,ndepend
 
-                        !if (differentiate) then
-                        !    ! Get coupled bc element to differentiate wrt
-                        !    worker%function_info%seed%idomain_g  = bc(bc_ID)%bc_patch(patch_ID)%idomain_g_coupled(face_ID)%at(idepend)
-                        !    worker%function_info%seed%idomain_l  = bc(bc_ID)%bc_patch(patch_ID)%idomain_l_coupled(face_ID)%at(idepend)
-                        !    worker%function_info%seed%ielement_g = bc(bc_ID)%bc_patch(patch_ID)%ielement_g_coupled(face_ID)%at(idepend)
-                        !    worker%function_info%seed%ielement_l = bc(bc_ID)%bc_patch(patch_ID)%ielement_l_coupled(face_ID)%at(idepend)
-                        !    worker%function_info%seed%iproc      = bc(bc_ID)%bc_patch(patch_ID)%proc_coupled(face_ID)%at(idepend)
-
-                        !else
-                        !    ! Set no differentiation
-                        !    worker%function_info%seed%idomain_g  = 0
-                        !    worker%function_info%seed%idomain_l  = 0
-                        !    worker%function_info%seed%ielement_g = 0
-                        !    worker%function_info%seed%ielement_l = 0
-                        !    worker%function_info%seed%iproc      = NO_PROC
-                        !end if
 
                         if (differentiate) then
                             ! Get coupled bc element to differentiate wrt
-                            worker%function_info%seed%idomain_g  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g_coupled(face_ID)%at(idepend)
-                            worker%function_info%seed%idomain_l  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l_coupled(face_ID)%at(idepend)
-                            worker%function_info%seed%ielement_g = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g_coupled(face_ID)%at(idepend)
-                            worker%function_info%seed%ielement_l = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l_coupled(face_ID)%at(idepend)
-                            worker%function_info%seed%iproc      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%proc_coupled(face_ID)%at(idepend)
+                            worker%function_info%seed%idomain_g  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(idepend)
+                            worker%function_info%seed%idomain_l  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(idepend)
+                            worker%function_info%seed%ielement_g = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(idepend)
+                            worker%function_info%seed%ielement_l = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(idepend)
+                            worker%function_info%seed%iproc      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(idepend)
 
                         else
                             ! Set no differentiation

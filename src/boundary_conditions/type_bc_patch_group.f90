@@ -16,6 +16,14 @@ module type_bc_patch_group
     !>  An object containing all the bc_patch_t instances for a single
     !!  boundary condition.
     !!
+    !!  The bc_patch_group can contain patches from multiple domains. The individual 
+    !!  patches are on self%patch(:).
+    !!
+    !!  The self%group_ID component is used externally to access the correct group
+    !!  as mesh%bc_patch_group(group_ID). When a new bc_patch is initialized on the
+    !!  group, the bc_patch_group sets the group_ID on the appropriate domain faces
+    !!  so they know where to access the patch group.
+    !!
     !!  @author Nathan A. Wukie
     !!  @date   4/6/2017
     !!
@@ -299,6 +307,7 @@ contains
         ! Resize array storage
         !
         allocate(temp_patches(self%npatches() + 1), stat=ierr)
+        if (ierr /= 0) call AllocationError
 
 
 
@@ -312,8 +321,9 @@ contains
 
 
         !
-        ! Move resized temp allocation back to mesh container. 
-        ! Be careful about pointer components here! Their location in memory has changed.
+        ! Move resized temp allocation back to bc_patch_group container. 
+        ! Be careful about pointer components here! Their location in 
+        ! memory has changed.
         !
         call move_alloc(temp_patches,self%patch)
         

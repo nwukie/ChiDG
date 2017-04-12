@@ -2,9 +2,9 @@ module type_chidg_vector_recv_comm
 #include <messenger.h>
     use mod_kinds,          only: ik
     use mod_constants,      only: INTERIOR, CHIMERA
-    use type_mesh,      only: mesh_t
+    use type_mesh,          only: mesh_t
     use type_ivector,       only: ivector_t
-    use type_blockvector,   only: blockvector_t
+    use type_domain_vector, only: domain_vector_t
     use mod_chidg_mpi,      only: ChiDG_COMM
     use mpi_f08,            only: MPI_Recv, MPI_INTEGER4, MPI_STATUS_IGNORE, MPI_ANY_TAG
     implicit none
@@ -20,7 +20,7 @@ module type_chidg_vector_recv_comm
     type, public :: chidg_vector_recv_comm_t
 
         integer(ik)                         :: proc
-        type(blockvector_t),    allocatable :: dom(:)
+        type(domain_vector_t),  allocatable :: dom(:)
 
     contains
 

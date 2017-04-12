@@ -2,18 +2,18 @@ module type_chidg_matrix
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
     use mod_chidg_mpi,          only: IRANK
-    use type_blockmatrix,       only: blockmatrix_t
-    use type_mesh,          only: mesh_t
+    use type_domain_matrix,     only: domain_matrix_t
+    use type_mesh,              only: mesh_t
     use type_face_info,         only: face_info_t
     use type_seed,              only: seed_t
-    use type_chidg_vector,       only: chidg_vector_t
+    use type_chidg_vector,      only: chidg_vector_t
     use DNAD_D
     implicit none
 
 
 
 
-    !>  ChiDG matrix type. Contains an array of blockmatrix_t types, each corresponding to a 
+    !>  ChiDG matrix type. Contains an array of domain_matrix_t types, each corresponding to a 
     !!  domain.
     !!
     !!
@@ -24,23 +24,23 @@ module type_chidg_matrix
     !------------------------------------------------------------------------------------------
     type, public :: chidg_matrix_t
 
-        type(blockmatrix_t), allocatable    :: dom(:)                       !< Array of block-matrices. One for each domain
+        type(domain_matrix_t), allocatable    :: dom(:)                     ! Array of domain-matrices. One for each domain
 
-        logical                             :: local_initialized = .false.  !< Has the matrix processor-local data been initialized
-        logical                             :: recv_initialized  = .false.  !< Has matrix been initialized with information about chidgVector%recv
+        logical                             :: local_initialized = .false.  ! Has the matrix processor-local data been initialized
+        logical                             :: recv_initialized  = .false.  ! Has matrix been initialized with information about chidgVector%recv
 
     contains
         ! Initializers
         generic,    public  :: init => initialize
-        procedure,  private :: initialize                   !< ChiDGMatrix initialization
+        procedure,  private :: initialize                   ! ChiDGMatrix initialization
 
-        procedure, public   :: init_recv                    !< Initialize with information about chidgVector%recv for mv multiply
+        procedure, public   :: init_recv                    ! Initialize with information about chidgVector%recv for mv multiply
 
         ! Setters
-        procedure   :: store                                !< Store linearization data for local blocks
-        procedure   :: store_chimera                        !< Store linearization data for chimera blocks
-        procedure   :: store_bc                             !< Store linearization data for boundary condition blocks
-        procedure   :: clear                                !< Zero matrix-values
+        procedure   :: store                                ! Store interior coupling
+        procedure   :: store_chimera                        ! Store chimera coupling
+        procedure   :: store_bc                             ! Store boundary condition coupling
+        procedure   :: clear                                ! Zero matrix-values
 
 
         procedure   :: release
@@ -86,7 +86,7 @@ contains
 
 
         !
-        ! Allocate blockmatrix_t for each domain
+        ! Allocate domain_matrix_t for each domain
         !
         ndomains = mesh%ndomains()
         allocate(self%dom(ndomains), stat=ierr)
@@ -95,7 +95,7 @@ contains
 
 
         !
-        ! Call initialization procedure for each blockmatrix_t
+        ! Call initialization procedure for each domain_matrix_t
         !
         do idom = 1,ndomains
 
@@ -147,7 +147,7 @@ contains
 
         
         !
-        ! Loop through LOCAL blocks and look for parallel multiply
+        ! Loop through INTERIOR coupling and look for parallel multiply
         !
         do idom = 1,size(self%dom)
             do ielem = 1,size(self%dom(idom)%lblks,1)
@@ -187,7 +187,7 @@ contains
                                             drecv_g = x%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%dparent_g()
                                             erecv_g = x%recv%comm(icomm)%dom(idom_recv)%vecs(ielem_recv)%eparent_g()
 
-                                            ! If they match the blockmatrix, set the recv indices so chidg_mv knows how to compute matrix-vector product
+                                            ! If they match the domain_matrix, set the recv indices so chidg_mv knows how to compute matrix-vector product
                                             if ( (drecv_g == dparent_g) .and. (erecv_g == eparent_g) ) then
                                                 call self%dom(idom)%lblks(ielem,itime)%set_recv_comm(imat,icomm)
                                                 call self%dom(idom)%lblks(ielem,itime)%set_recv_domain(imat,idom_recv)
@@ -223,7 +223,7 @@ contains
 
 
         !
-        ! Loop through CHIMERA blocks and look for parallel multiply
+        ! Loop through CHIMERA coupling and look for parallel multiply
         !
         do idom = 1,size(self%dom)
 
@@ -270,7 +270,7 @@ contains
 
                                     
 
-                                                ! If they match the blockmatrix, set the recv indices so chidg_mv knows how to compute matrix-vector product
+                                                ! If they match the domain_matrix, set the recv indices so chidg_mv knows how to compute matrix-vector product
                                                 if ( recv_elem == eparent_g )  then
                                                     call self%dom(idom)%chi_blks(ielem,itime)%set_recv_comm(imat,icomm)
                                                     call self%dom(idom)%chi_blks(ielem,itime)%set_recv_domain(imat,idom_recv)
@@ -328,11 +328,10 @@ contains
     !!
     !!
     !!  @param[in]  integral    Array of modes from the spatial scheme, with embedded partial 
-    !!                          derivatives for the linearization matrix
-    !!  @param[in]  idom        Domain index for storing the linearization
-    !!  @param[in]  ielem       Element index for which the linearization was computed
-    !!  @param[in]  iblk        Index of the block for the linearization of the given elemen
-    !!  @param[in]  ivar        Index of the variable, for which the linearization was computed
+    !!                          derivatives for the linearization matrix.
+    !!  @param[in]  face_info   Information about where the coupling was computed and whom it
+    !!                          was computed with respect to.
+    !!  @param[in]  ivar        Index of the variable, for which the linearization was computed.
     !!
     !------------------------------------------------------------------------------------------
     subroutine store(self,integral,face_info,seed,ivar,itime)
@@ -348,7 +347,7 @@ contains
         idomain_l = face_info%idomain_l
 
         !
-        ! Store linearization in associated domain blockmatrix_t
+        ! Store linearization in associated domain domain_matrix_t
         !
         call self%dom(idomain_l)%store(integral,face_info,seed,ivar,itime)
 
@@ -390,7 +389,7 @@ contains
         idomain_l = face_info%idomain_l
 
         !
-        ! Store linearization in associated domain blockmatrix_t
+        ! Store linearization in associated domain domain_matrix_t
         !
         call self%dom(idomain_l)%store_chimera(integral,face_info,seed,ivar,itime)
 
@@ -432,7 +431,7 @@ contains
         idomain_l = face_info%idomain_l
 
         !
-        ! Store linearization in associated domain blockmatrix_t
+        ! Store linearization in associated domain domain_matrix_t
         !
         call self%dom(idomain_l)%store_bc(integral,face_info,seed,ivar,itime)
 
@@ -460,7 +459,7 @@ contains
     
 
         !
-        ! Call blockmatrix_t%clear() on all matrices
+        ! Call domain_matrix_t%clear() on all matrices
         !
         do idom = 1,size(self%dom)
            call self%dom(idom)%clear() 

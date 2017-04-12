@@ -81,10 +81,12 @@ contains
         end if
         call MPI_Barrier(this%ChiDG_COMM,ierr)
 
+
         !
         ! Read partition data: grid, boundary conditions
         !
         call this%chidg%read_grid(this%gridfile, spacedim)
+
 
 
         !
@@ -94,6 +96,7 @@ contains
         call this%chidg%init('domains')
         call this%chidg%init('communication')
         call this%chidg%init('solvers')
+
 
 
         !
@@ -159,6 +162,7 @@ contains
         ! Compute vector norm across processors. THIS IS BEING TESTED
         !
         computed_norm = self%chidg%data%sdata%q%norm(self%ChiDG_COMM)
+
 
         nelem = 4
         expected_norm = (1.2_rk**TWO) * self%nterms_s * nelem

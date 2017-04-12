@@ -7,7 +7,7 @@ module type_chidg_vector
     use type_function,              only: function_t
     use type_chidg_vector_send,     only: chidg_vector_send_t
     use type_chidg_vector_recv,     only: chidg_vector_recv_t
-    use type_blockvector
+    use type_domain_vector
     use mpi_f08,                    only: MPI_AllReduce, MPI_Reduce, MPI_COMM, MPI_REAL8,    &
                                           MPI_SUM, MPI_STATUS_IGNORE, MPI_Recv, MPI_Request, &
                                           MPI_STATUSES_IGNORE, MPI_INTEGER4
@@ -19,7 +19,7 @@ module type_chidg_vector
 
     !>  High-level ChiDG vector container.
     !! 
-    !!  Container stores a blockvector_t for each domain_t
+    !!  Container stores a domain_vector_t for each domain_t
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -30,7 +30,7 @@ module type_chidg_vector
     !------------------------------------------------------------------------------------------
     type, public :: chidg_vector_t
 
-        type(blockvector_t),    allocatable :: dom(:)       ! Local block vector storage
+        type(domain_vector_t),    allocatable :: dom(:)       ! Local block vector storage
 
         type(chidg_vector_send_t)           :: send         ! What to send to other processors
         type(chidg_vector_recv_t)           :: recv         ! Receive data from other processors
@@ -131,7 +131,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!  @param[in]  mesh    Array of mesh_t instances used to initialize each 
-    !!                      blockvector_t subcomponent.
+    !!                      domain_vector_t subcomponent.
     !!
     !------------------------------------------------------------------------------------------
     subroutine initialize(self,mesh,ntime)
@@ -154,14 +154,14 @@ contains
         if (allocated(self%dom)) deallocate(self%dom)
 
 
-        ! Allocate blockvector_t for each mesh
+        ! Allocate domain_vector_t for each mesh
         ndomains = mesh%ndomains()
         allocate(self%dom(ndomains), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
 
-        ! Call initialization procedure for each blockvector_t
+        ! Call initialization procedure for each domain_vector_t
         do idom = 1,ndomains
             call self%dom(idom)%init(mesh%domain(idom))
         end do
@@ -257,7 +257,7 @@ contains
         integer :: idom
 
 
-        ! Call clear procedure for each blockvector_t
+        ! Call clear procedure for each domain_vector_t
         do idom = 1,size(self%dom)
             call self%dom(idom)%clear()
         end do

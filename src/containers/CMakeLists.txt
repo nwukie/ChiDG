@@ -4,11 +4,10 @@ add_lib_sources(
                 type_densematrix.f90
                 type_densematrix_vector.f90 
                 type_densevector.f90 
-                type_blockmatrix.f90 
-                type_blockvector.f90 
+                type_domain_matrix.f90 
+                type_domain_vector.f90 
                 type_dict.f90
-                operator_block_mv.f90
-                operator_block_dot.f90
+                operator_domain_dot.f90
                 type_rvector.f90
                 type_ivector.f90
                 type_mvector.f90

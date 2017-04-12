@@ -9,16 +9,16 @@
 !--------------------------------------------------------------------------------
 !       Test STORE procedure for storing derivative information
 !--------------------------------------------------------------------------------
-! Test storage of derivatives in blockmatrix when using one equation
+! Test storage of derivatives in domain_matrix when using one equation
 @Test
-subroutine test_blockmatrix__store_1eq_8terms()
+subroutine test_domain_matrix__store_1eq_8terms()
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
     use type_chidg,                 only: chidg_t
     use type_domain,                only: domain_t
     use type_point,                 only: point_t
-    use type_blockmatrix,           only: blockmatrix_t
+    use type_domain_matrix,           only: domain_matrix_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use type_face_info,             only: face_info_t
     use type_seed,                  only: seed_t
@@ -30,7 +30,7 @@ subroutine test_blockmatrix__store_1eq_8terms()
     type(domain_t)              :: domain
     type(point_t),  allocatable :: nodes(:)
     type(domain_connectivity_t) :: connectivity
-    type(blockmatrix_t)         :: bmat
+    type(domain_matrix_t)         :: bmat
     type(AD_D)                  :: integral(8)
     type(face_info_t)           :: face_info
     type(seed_t)                :: seed
@@ -66,7 +66,7 @@ subroutine test_blockmatrix__store_1eq_8terms()
 
 
     !
-    ! Call initialization on block matrix
+    ! Call initialization on domain matrix
     !
     call bmat%init(domain,mtype='full')
 
@@ -130,8 +130,8 @@ subroutine test_blockmatrix__store_1eq_8terms()
 
 
     !
-    ! Check that the derivatives were assigned to their correct locations in the block matrix.
-    ! The xp_ad_ arrays should be stored as rows of the block matrix.
+    ! Check that the derivatives were assigned to their correct locations in the domain matrix.
+    ! The xp_ad_ arrays should be stored as rows of the domain matrix.
     !
     imat = bmat%lblks(ielement_l,itime)%loc(idomain_g=1,ielem_g=13)
     mat  = bmat%lblks(ielement_l,itime)%dmat(imat)
@@ -151,7 +151,7 @@ subroutine test_blockmatrix__store_1eq_8terms()
     !
     call chidg%shut_down('core')
 
-end subroutine test_blockmatrix__store_1eq_8terms
+end subroutine test_domain_matrix__store_1eq_8terms
 
 
 
@@ -160,16 +160,16 @@ end subroutine test_blockmatrix__store_1eq_8terms
 
 
 
-! Test storage of derivatives to blockmatrix when using 2 equations
+! Test storage of derivatives to domain_matrix when using 2 equations
 @Test
-subroutine test_blockmatrix__store_2eq_8terms()
+subroutine test_domain_matrix__store_2eq_8terms()
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
     use type_chidg,                 only: chidg_t
     use type_domain,                only: domain_t
     use type_point,                 only: point_t
-    use type_blockmatrix,           only: blockmatrix_t
+    use type_domain_matrix,           only: domain_matrix_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use type_face_info,             only: face_info_t
     use type_seed,                  only: seed_t
@@ -181,7 +181,7 @@ subroutine test_blockmatrix__store_2eq_8terms()
     type(domain_t)              :: domain
     type(point_t),  allocatable :: nodes(:)
     type(domain_connectivity_t) :: connectivity
-    type(blockmatrix_t)         :: bmat
+    type(domain_matrix_t)         :: bmat
     type(face_info_t)           :: face_info
     type(seed_t)                :: seed
     type(AD_D)                  :: integral(8)
@@ -214,7 +214,7 @@ subroutine test_blockmatrix__store_2eq_8terms()
 
 
     !
-    ! Call initialization on block matrix
+    ! Call initialization on domain matrix
     !
     call bmat%init(domain,mtype='full')
 
@@ -274,8 +274,8 @@ subroutine test_blockmatrix__store_2eq_8terms()
 
 
     !
-    ! Check that the derivatives were assigned to their correct locations in the block matrix.
-    ! The xp_ad_ arrays should be stored as rows of the block matrix.
+    ! Check that the derivatives were assigned to their correct locations in the domain matrix.
+    ! The xp_ad_ arrays should be stored as rows of the domain matrix.
     !
     imat = bmat%lblks(ielem,itime)%loc(idomain_g=1,ielem_g=13)
     mat  = bmat%lblks(ielem,itime)%dmat(imat)
@@ -295,7 +295,7 @@ subroutine test_blockmatrix__store_2eq_8terms()
     call chidg%shut_down('core')
 
 
-end subroutine test_blockmatrix__store_2eq_8terms
+end subroutine test_domain_matrix__store_2eq_8terms
 
 
 
@@ -307,17 +307,17 @@ end subroutine test_blockmatrix__store_2eq_8terms
 
 
 !
-! Test that blockmatrix data is getting zeroed
+! Test that domain_matrix data is getting zeroed
 !
 @Test
-subroutine test_blockmatrix__clear_1eq_8terms()
+subroutine test_domain_matrix__clear_1eq_8terms()
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
     use type_chidg,                 only: chidg_t
     use type_domain,                only: domain_t
     use type_point,                 only: point_t
-    use type_blockmatrix,           only: blockmatrix_t
+    use type_domain_matrix,           only: domain_matrix_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use type_face_info,             only: face_info_t
     use type_seed,                  only: seed_t
@@ -329,7 +329,7 @@ subroutine test_blockmatrix__clear_1eq_8terms()
     type(domain_t)              :: domain
     type(point_t),  allocatable :: nodes(:)
     type(domain_connectivity_t) :: connectivity
-    type(blockmatrix_t)         :: bmat
+    type(domain_matrix_t)         :: bmat
     type(AD_D)                  :: integral(8)
     type(face_info_t)           :: face_info
     type(seed_t)                :: seed
@@ -368,7 +368,7 @@ subroutine test_blockmatrix__clear_1eq_8terms()
 
 
     !
-    ! Call initialization on block matrix
+    ! Call initialization on domain matrix
     !
     call bmat%init(domain,mtype='full')
 
@@ -433,7 +433,7 @@ subroutine test_blockmatrix__clear_1eq_8terms()
 
     
     !
-    ! Loop through all blocks and assert ZERO
+    ! Loop through all domains and assert ZERO
     !
     do ielem = 1,27
         do imat = 1,bmat%lblks(ielem,itime)%size()
@@ -448,7 +448,7 @@ subroutine test_blockmatrix__clear_1eq_8terms()
     !
     call chidg%shut_down('core')
     
-end subroutine test_blockmatrix__clear_1eq_8terms
+end subroutine test_domain_matrix__clear_1eq_8terms
 
 
 

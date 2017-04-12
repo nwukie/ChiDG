@@ -4,7 +4,7 @@ module type_RASILU0_recv_dom
     use mod_chidg_mpi,              only: IRANK
 
     use type_domain,                only: domain_t
-    use type_blockmatrix,           only: blockmatrix_t
+    use type_domain_matrix,         only: domain_matrix_t
     use type_RASILU0_recv_dom_comm, only: RASILU0_recv_dom_comm_t
     implicit none
 
@@ -15,7 +15,7 @@ module type_RASILU0_recv_dom
     !>  In the Restricted Additive Schwarz-type preconditioner, each local domain
     !!  needs to receive overlapping data from other processors. A single local domain
     !!  could potentially be receiving overlapping data from multiple different processors.
-    !!  This data type stores the data being received by a single local block from all processors
+    !!  This data type stores the data being received by a single local domain from all processors
     !!  that are sending overlapping data.
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -58,7 +58,7 @@ contains
     subroutine init(self,domain,a)
         class(RASILU0_recv_dom_t),  intent(inout)   :: self
         type(domain_t),             intent(in)      :: domain
-        type(blockmatrix_t),        intent(in)      :: a
+        type(domain_matrix_t),      intent(in)      :: a
 
         integer(ik),    allocatable :: recv_procs(:)
         integer(ik)                 :: icomm, nrecv_procs, proc, ierr

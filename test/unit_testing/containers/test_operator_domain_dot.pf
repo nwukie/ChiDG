@@ -1,25 +1,25 @@
 @Test
-subroutine test_operator_block_dot()
+subroutine test_operator_domain_dot()
     use pfunit_mod
 
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, &
                                           SEVEN, EIGHT, NINE, TEN, IO_DESTINATION
-    use type_blockvector,           only: blockvector_t
+    use type_domain_vector,           only: domain_vector_t
     use type_chidg,                 only: chidg_t
     use type_point,                 only: point_t
     use type_domain_connectivity,   only: domain_connectivity_t
 
     use mod_test_utilities,         only: create_mesh
 
-    use operator_block_dot
+    use operator_domain_dot
     implicit none
 
 
     type(chidg_t)               :: chidg
     type(point_t),  allocatable :: nodes(:)
     type(domain_connectivity_t) :: connectivity
-    type(blockvector_t)         :: a, b
+    type(domain_vector_t)         :: a, b
 
     real(rk)                    :: tol
     integer(ik)                 :: nterms_c, idomain, spacedim, nelements_g, eqn_ID
@@ -72,7 +72,7 @@ subroutine test_operator_block_dot()
 
 
     !
-    ! Initialize blockvector data (a)
+    ! Initialize domain_vector data (a)
     !
     vec_a1 = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
     vec_a2 = [TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, ONE]
@@ -84,7 +84,7 @@ subroutine test_operator_block_dot()
 
 
     !
-    ! Initialize blockvector data (b)
+    ! Initialize domain_vector data (b)
     !
     vec_b1 = [THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, ONE, TWO]
     vec_b2 = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
@@ -105,7 +105,7 @@ subroutine test_operator_block_dot()
     !
     ! Compute dot product implementation. THIS IS BEING TESTED
     !
-    dot_test = block_dot(a,b)
+    dot_test = domain_dot(a,b)
 
 
 
@@ -123,6 +123,6 @@ subroutine test_operator_block_dot()
     call chidg%shut_down('core')
 
 
-end subroutine test_operator_block_dot
+end subroutine test_operator_domain_dot
 
 

@@ -7,7 +7,10 @@ module type_time_integrator_marching
     use hdf5
     use h5lt
     use mod_hdf_utilities,      only: open_file_hdf, close_file_hdf, get_ntimes_hdf, &
-                                      set_time_integrator_hdf,  get_time_integrator_hdf
+                                      set_time_integrator_hdf,  get_time_integrator_hdf, &
+                                      set_time_step_hdf, get_time_step_hdf, &
+                                      set_nsteps_hdf, get_nsteps_hdf, &
+                                      set_nwrite_hdf, get_nwrite_hdf
     use mpi_f08
     implicit none
 
@@ -77,7 +80,7 @@ contains
         type(chidg_data_t),                 intent(inout)   :: data
         character(*),                       intent(in)      :: filename
 
-        integer(kind = 8),   parameter  :: SIZE_ONE = 1
+        !integer(kind = 8),   parameter  :: SIZE_ONE = 1
         integer(HID_T)                  :: fid
         integer(ik)                     :: ierr, iwrite
         
@@ -94,22 +97,15 @@ contains
                 !
                 ! Write time integrator name to hdf file
                 !
-                !call h5ltset_attribute_string_f(fid,"/","time_integrator",trim(data%time_manager%get_name()), ierr)
-                !if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltset_attirbute_string_f")
                 call set_time_integrator_hdf(fid, trim(data%time_manager%get_name()))
 
 
                 !
                 ! Write dt, no. of time steps and nwrite to hdf file
                 !
-                call h5ltset_attribute_double_f(fid,"/","dt",[data%time_manager%dt],SIZE_ONE,ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltset_attribute_double_f")
-
-                call h5ltset_attribute_int_f(fid,"/","nsteps",[data%time_manager%nsteps],SIZE_ONE,ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltset_attribute_int_f")
-
-                call h5ltset_attribute_int_f(fid,"/","nwrite",[data%time_manager%nwrite],SIZE_ONE,ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltset_attribute_int_f")
+                call set_time_step_hdf(fid,data%time_manager%dt)
+                call set_nsteps_hdf(fid,data%time_manager%nsteps)
+                call set_nwrite_hdf(fid,data%time_manager%nwrite)
 
                 
                 call close_file_hdf(fid)
@@ -151,24 +147,17 @@ contains
         !
         ! Read time integrator name
         !
-        !call h5ltget_attribute_string_f(fid,"/","time_integrator",temp_string,ierr)
-        !if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltget_attribute_string_f")
         temp_string = get_time_integrator_hdf(fid)
 
 
         !
         ! Read dt, no. of time steps and nwrite
         !
-        call h5ltget_attribute_double_f(fid,"/","dt",dt,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltget_attribute_double_f")
-
-        call h5ltget_attribute_int_f(fid,"/","nsteps",nsteps,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltget_attribute_double_f")
-
-        call h5ltget_attribute_int_f(fid,"/","nwrite",nwrite,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltget_attribute_double_f")
-
+        dt     = get_time_step_hdf(fid)
+        nsteps = get_nsteps_hdf(fid)
+        nwrite = get_nwrite_hdf(fid)
         
+
         !
         ! Read ntime
         !

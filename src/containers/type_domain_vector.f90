@@ -135,14 +135,15 @@ contains
             if (new_elements) then
                 deallocate(self%vecs)
                 allocate(self%vecs(nelem), stat=ierr)
+                if (ierr /= 0) call AllocationError
             end if
 
         else
 
             allocate(self%vecs(nelem), stat=ierr)
+            if (ierr /= 0) call AllocationError
 
         end if
-        if (ierr /= 0) call AllocationError
 
 
 
@@ -194,13 +195,14 @@ contains
     !!  @date   11/5/2016
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine init_recv(self,iproc)
-        class(domain_vector_t),   intent(inout)   :: self
-        integer(ik),            intent(in)      :: iproc
+    subroutine init_recv(self,proc)
+        class(domain_vector_t), intent(inout)   :: self
+        integer(ik),            intent(in)      :: proc
 
         type(ivector_t) :: recv_elems
-        integer(ik)     :: nelem_recv, ielem_recv, ierr, ielem, iface, nterms, neqns, loc, recv_element
-        integer(ik)     :: idomain_g, idomain_l, ielement_g, ielement_l, ntime
+        integer(ik)     :: nelem_recv, ielem_recv, ierr, ielem, iface, nterms,  &
+                           neqns, loc, recv_element, idomain_g, idomain_l,      &
+                           ielement_g, ielement_l, ntime
         logical         :: new_elements, proc_element, already_added, comm_element
 
 
@@ -208,14 +210,14 @@ contains
         !
         ! Get the domain index we are receiving
         !
-        call MPI_Recv(idomain_g, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-        call MPI_Recv(idomain_l, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+        call MPI_Recv(idomain_g, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+        call MPI_Recv(idomain_l, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
 
         !
         ! Get the number of elements being received from domain
         !
-        call MPI_Recv(nelem_recv, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+        call MPI_Recv(nelem_recv, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
         
 
 
@@ -234,14 +236,15 @@ contains
             if (new_elements) then
                 deallocate(self%vecs)
                 allocate(self%vecs(nelem_recv), stat=ierr)
+                if (ierr /= 0) call AllocationError
             end if
 
         else
 
             allocate(self%vecs(nelem_recv), stat=ierr)
+            if (ierr /= 0) call AllocationError
 
         end if
-        if (ierr /= 0) call AllocationError
 
 
 
@@ -252,11 +255,11 @@ contains
         do ielem_recv = 1,nelem_recv
 
 
-            call MPI_Recv(ielement_g, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-            call MPI_Recv(ielement_l, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-            call MPI_Recv(nterms,     1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-            call MPI_Recv(neqns,      1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-            call MPI_Recv(ntime,      1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(ielement_g, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(ielement_l, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(nterms,     1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(neqns,      1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(ntime,      1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
             !
             ! Call densevector initialization routine

@@ -15,14 +15,16 @@ subroutine test_domain_matrix__store_1eq_8terms()
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
+    use mod_string,                 only: string_t
     use type_chidg,                 only: chidg_t
     use type_domain,                only: domain_t
     use type_point,                 only: point_t
-    use type_domain_matrix,           only: domain_matrix_t
+    use type_domain_matrix,         only: domain_matrix_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use type_face_info,             only: face_info_t
     use type_seed,                  only: seed_t
-    use mod_test_utilities,         only: create_mesh
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: delete_file
     use DNAD_D
     
     implicit none
@@ -30,12 +32,13 @@ subroutine test_domain_matrix__store_1eq_8terms()
     type(domain_t)              :: domain
     type(point_t),  allocatable :: nodes(:)
     type(domain_connectivity_t) :: connectivity
-    type(domain_matrix_t)         :: bmat
+    type(domain_matrix_t)       :: bmat
     type(AD_D)                  :: integral(8)
     type(face_info_t)           :: face_info
     type(seed_t)                :: seed
     integer(ik)                 :: ielement_l, ivar, nderiv, i, neqns, imat,  &
-                                   nterms_c, nterms_s, idomain, spacedim, itime, ntime, nelements_g
+                                   nterms_c, idomain, spacedim, itime, ntime, &
+                                   nelements_g, nterms_s
     real(rk),   allocatable     :: mat(:,:)
     
 
@@ -45,22 +48,43 @@ subroutine test_domain_matrix__store_1eq_8terms()
     !
     ! Create (3x3x3) mesh
     !
-    call create_mesh('3x3x3',nodes,connectivity)
+    !call create_mesh('3x3x3',nodes,connectivity)
+    !call create_mesh_file("D1 NxNxN", 'file.h5', 'Scalar Advection',    &
+    !                                             nelem_xi   = 3,        &
+    !                                             nelem_eta  = 3,        &
+    !                                             nelem_zeta = 3 )
+    call create_mesh_file("D1 NxNxN", filename = 'file.h5',                             &
+                                      equation_sets = [string_t('Scalar Advection')],   &
+                                      nelem_xi   = 3,                                   &
+                                      nelem_eta  = 3,                                   &
+                                      nelem_zeta = 3 )
+
+    neqns    = 1
+    nterms_s = 8
+    call chidg%set('Solution Order', integer_input=2)
+    call chidg%set('Time Integrator' , algorithm='Steady')
+    call chidg%set('Nonlinear Solver', algorithm='Newton')
+    call chidg%set('Linear Solver'   , algorithm='FGMRES')
+    call chidg%set('Preconditioner'  , algorithm='ILU0')
+    call chidg%read_grid('file.h5')
+    call chidg%init('all')
+
+
 
     
-    !
-    ! Initialize domain_t instance.
-    !
-    neqns       = 1
-    idomain     = 1
-    spacedim    = 3
-    nterms_c    = 8
-    nterms_s    = 8
-    ntime       = 1
-    nelements_g = 9
-    call domain%init_geom(idomain,nelements_g,spacedim,nterms_c,nodes,connectivity,'Cartesian')
-    call domain%init_sol(neqns,nterms_s,ntime)
-    call domain%init_comm_local()
+!    !
+!    ! Initialize domain_t instance.
+!    !
+!    neqns       = 1
+!    idomain     = 1
+!    spacedim    = 3
+!    nterms_c    = 8
+!    nterms_s    = 8
+!    ntime       = 1
+!    nelements_g = 9
+!    call domain%init_geom(idomain,nelements_g,spacedim,nterms_c,nodes,connectivity,'Cartesian')
+!    call domain%init_sol(neqns,nterms_s,ntime)
+!    call domain%init_comm_local()
 
 
 
@@ -68,14 +92,15 @@ subroutine test_domain_matrix__store_1eq_8terms()
     !
     ! Call initialization on domain matrix
     !
-    call bmat%init(domain,mtype='full')
+    !call bmat%init(domain,mtype='full')
+    call bmat%init(chidg%data%mesh,idom=1,mtype='full')
 
 
 
-    nderiv = neqns*nterms_s
     !
     ! Initialize AD variables with allocated derivative arrays
     !
+    nderiv = neqns*nterms_s
     do i = 1,8
         integral(i) = AD_D(nderiv)
     end do
@@ -125,7 +150,6 @@ subroutine test_domain_matrix__store_1eq_8terms()
     call face_info%init(idomain_g=1,idomain_l=1,ielement_g=14,ielement_l=14,iface=0)
     call seed%init(     idomain_g=1,idomain_l=1,ielement_g=13,ielement_l=13, &
                         neqns=neqns,nterms_s=nterms_s,iproc=0,recv_comm=0,recv_domain=0,recv_element=0)
-
     call bmat%store(integral,face_info,seed,ivar,itime)
 
 
@@ -135,6 +159,7 @@ subroutine test_domain_matrix__store_1eq_8terms()
     !
     imat = bmat%lblks(ielement_l,itime)%loc(idomain_g=1,ielem_g=13)
     mat  = bmat%lblks(ielement_l,itime)%dmat(imat)
+
     @assertEqual(integral(1)%xp_ad_, mat(1,:) )
     @assertEqual(integral(2)%xp_ad_, mat(2,:) )
     @assertEqual(integral(3)%xp_ad_, mat(3,:) )
@@ -151,6 +176,8 @@ subroutine test_domain_matrix__store_1eq_8terms()
     !
     call chidg%shut_down('core')
 
+    call delete_file('file.h5')
+
 end subroutine test_domain_matrix__store_1eq_8terms
 
 
@@ -166,14 +193,16 @@ subroutine test_domain_matrix__store_2eq_8terms()
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
+    use mod_string,                 only: string_t
     use type_chidg,                 only: chidg_t
     use type_domain,                only: domain_t
     use type_point,                 only: point_t
-    use type_domain_matrix,           only: domain_matrix_t
+    use type_domain_matrix,         only: domain_matrix_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use type_face_info,             only: face_info_t
     use type_seed,                  only: seed_t
-    use mod_test_utilities,         only: create_mesh
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: delete_file
     use DNAD_D
     
     implicit none
@@ -186,7 +215,7 @@ subroutine test_domain_matrix__store_2eq_8terms()
     type(seed_t)                :: seed
     type(AD_D)                  :: integral(8)
     integer(ik)                 :: ivar, nderiv, i, neqns, imat, idomain, ielem, &
-                                   nterms_c, nterms_s, spacedim, itime, ntime, nelements_g
+                                   nterms_c, spacedim, itime, ntime, nelements_g, nterms_s
     real(rk),   allocatable     :: mat(:,:)
     
     call chidg%start_up('core')
@@ -195,28 +224,48 @@ subroutine test_domain_matrix__store_2eq_8terms()
     !
     ! Create 3x3x3 mesh
     !
-    call create_mesh('3x3x3',nodes,connectivity)
+    !call create_mesh('3x3x3',nodes,connectivity)
+    !call create_mesh_file("D1 NxNxN", 'file.h5', 'Dual Linear Advection',   &
+    !                                             nelem_xi   = 3,            &
+    !                                             nelem_eta  = 3,            &
+    !                                             nelem_zeta = 3 )
+    call create_mesh_file("D1 NxNxN", filename = 'file.h5',                                 &
+                                      equation_sets = [string_t('Dual Linear Advection')],  &
+                                      nelem_xi   = 3,                                       &
+                                      nelem_eta  = 3,                                       &
+                                      nelem_zeta = 3 )
 
 
-    !
-    ! Initialize domain_t instance.
-    !
-    neqns       = 2
-    idomain     = 1
-    spacedim    = 3
-    nterms_c    = 8
-    nterms_s    = 8
-    ntime       = 1
-    nelements_g = 9
-    call domain%init_geom(idomain,nelements_g,spacedim,nterms_c,nodes,connectivity,'Cartesian')
-    call domain%init_sol(neqns,nterms_s,ntime)
-    call domain%init_comm_local()
+    neqns    = 2
+    nterms_s = 8
+    call chidg%set('Solution Order', integer_input=2)
+    call chidg%set('Time Integrator' , algorithm='Steady')
+    call chidg%set('Nonlinear Solver', algorithm='Newton')
+    call chidg%set('Linear Solver'   , algorithm='FGMRES')
+    call chidg%set('Preconditioner'  , algorithm='ILU0')
+    call chidg%read_grid('file.h5')
+    call chidg%init('all')
+
+!    !
+!    ! Initialize domain_t instance.
+!    !
+!    neqns       = 2
+!    idomain     = 1
+!    spacedim    = 3
+!    nterms_c    = 8
+!    nterms_s    = 8
+!    ntime       = 1
+!    nelements_g = 9
+!    call domain%init_geom(idomain,nelements_g,spacedim,nterms_c,nodes,connectivity,'Cartesian')
+!    call domain%init_sol(neqns,nterms_s,ntime)
+!    call domain%init_comm_local()
 
 
     !
     ! Call initialization on domain matrix
     !
-    call bmat%init(domain,mtype='full')
+    !call bmat%init(domain,mtype='full')
+    call bmat%init(chidg%data%mesh,idom=1,mtype='full')
 
 
     !
@@ -314,14 +363,16 @@ subroutine test_domain_matrix__clear_1eq_8terms()
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT
+    use mod_string,                 only: string_t
     use type_chidg,                 only: chidg_t
     use type_domain,                only: domain_t
     use type_point,                 only: point_t
-    use type_domain_matrix,           only: domain_matrix_t
+    use type_domain_matrix,         only: domain_matrix_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use type_face_info,             only: face_info_t
     use type_seed,                  only: seed_t
-    use mod_test_utilities,         only: create_mesh
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: delete_file
     use DNAD_D
     
     implicit none
@@ -329,12 +380,12 @@ subroutine test_domain_matrix__clear_1eq_8terms()
     type(domain_t)              :: domain
     type(point_t),  allocatable :: nodes(:)
     type(domain_connectivity_t) :: connectivity
-    type(domain_matrix_t)         :: bmat
+    type(domain_matrix_t)       :: bmat
     type(AD_D)                  :: integral(8)
     type(face_info_t)           :: face_info
     type(seed_t)                :: seed
     integer(ik)                 :: ielement_l, ivar, nderiv, i, neqns, imat, ielem, &
-                                   nterms_c, nterms_s, idomain, spacedim, ntime, itime, nelements_g
+                                   nterms_c, idomain, spacedim, ntime, itime, nelements_g, nterms_s
     real(rk)                    :: tol
     real(rk),   allocatable     :: mat(:,:)
 
@@ -347,30 +398,49 @@ subroutine test_domain_matrix__clear_1eq_8terms()
     !
     ! Create a 3x3x3 mesh
     !
-    call create_mesh('3x3x3',nodes,connectivity)
+    !call create_mesh('3x3x3',nodes,connectivity)
+    !call create_mesh_file("D1 NxNxN", 'file.h5', 'Dual Linear Advection',   &
+    !                                             nelem_xi   = 3,            &
+    !                                             nelem_eta  = 3,            &
+    !                                             nelem_zeta = 3 )
+    call create_mesh_file("D1 NxNxN", filename = 'file.h5',                             &
+                                      equation_sets = [string_t('Scalar Advection')],   &
+                                      nelem_xi   = 3,                                   &
+                                      nelem_eta  = 3,                                   &
+                                      nelem_zeta = 3 )
 
 
+    neqns    = 1
+    nterms_s = 8
+    call chidg%set('Solution Order', integer_input=2)
+    call chidg%set('Time Integrator' , algorithm='Steady')
+    call chidg%set('Nonlinear Solver', algorithm='Newton')
+    call chidg%set('Linear Solver'   , algorithm='FGMRES')
+    call chidg%set('Preconditioner'  , algorithm='ILU0')
+    call chidg%read_grid('file.h5')
+    call chidg%init('all')
 
-    !
-    ! Initialize a domain_t instance.
-    !
-    neqns       = 1
-    idomain     = 1
-    spacedim    = 3
-    nterms_c    = 8
-    nterms_s    = 8
-    ntime       = 1
-    nelements_g = 9
-    call domain%init_geom(idomain,nelements_g,spacedim,nterms_c,nodes,connectivity,'Cartesian')
-    call domain%init_sol(neqns,nterms_s,ntime)                              
-    call domain%init_comm_local()
+
+!    !
+!    ! Initialize a domain_t instance.
+!    !
+!    neqns       = 1
+!    idomain     = 1
+!    spacedim    = 3
+!    nterms_c    = 8
+!    nterms_s    = 8
+!    ntime       = 1
+!    nelements_g = 9
+!    call domain%init_geom(idomain,nelements_g,spacedim,nterms_c,nodes,connectivity,'Cartesian')
+!    call domain%init_sol(neqns,nterms_s,ntime)                              
+!    call domain%init_comm_local()
 
 
 
     !
     ! Call initialization on domain matrix
     !
-    call bmat%init(domain,mtype='full')
+    call bmat%init(chidg%data%mesh,idom=1,mtype='full')
 
 
 

@@ -42,19 +42,21 @@ contains
 
 
 
-    !>
+    !>  Receive information from 'proc' about what it is sending, so we can prepare
+    !!  here about what to receive.
+    !!
+    !!  Communication here is initiated from 'type_chidg_vector_send_comm'.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/30/2016
     !!
     !!
-    !!
     !---------------------------------------------------------------------------------
-    subroutine init(self,mesh,iproc,icomm)
+    subroutine init(self,mesh,proc,comm)
         class(chidg_vector_recv_comm_t), intent(inout)   :: self
         type(mesh_t),                    intent(inout)   :: mesh
-        integer(ik),                     intent(in)      :: iproc
-        integer(ik),                     intent(in)      :: icomm
+        integer(ik),                     intent(in)      :: proc
+        integer(ik),                     intent(in)      :: comm
 
         character(:),   allocatable :: user_msg
         integer(ik)                 :: idom, idom_recv, ndom_recv, ierr, ielem, iface,  &
@@ -65,13 +67,13 @@ contains
                                        recv_element, recv_domain, idonor
         integer(ik),    allocatable :: comm_procs_dom(:)
         logical                     :: proc_has_domain, domain_found, element_found,    &
-                                       comm_neighbor, has_neighbor, is_chimera,         &
+                                       comm_neighbor, is_interior, is_chimera,         &
                                        comm_donor, donor_recv_found
 
         !
         ! Set processor being received from
         !
-        self%proc = iproc
+        self%proc = proc
 
 
         
@@ -95,7 +97,7 @@ contains
         ! Call initialization for each domain to be received
         !
         do idom_recv = 1,ndom_recv
-            call self%dom(idom_recv)%init(iproc)
+            call self%dom(idom_recv)%init(proc)
         end do ! idom
 
 
@@ -109,16 +111,16 @@ contains
             do ielem = 1,mesh%domain(idom)%nelem
                 do iface = 1,size(mesh%domain(idom)%faces,2)
 
-                    has_neighbor = ( mesh%domain(idom)%faces(ielem,iface)%ftype == INTERIOR )
-                    is_chimera   = ( mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA  )
+                    is_interior = ( mesh%domain(idom)%faces(ielem,iface)%ftype == INTERIOR )
+                    is_chimera  = ( mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA  )
 
 
                     !
                     ! Initialize recv for comm interior neighbors
                     !
-                    if (has_neighbor) then
+                    if (is_interior) then
 
-                        comm_neighbor = (iproc == mesh%domain(idom)%faces(ielem,iface)%ineighbor_proc)
+                        comm_neighbor = (proc == mesh%domain(idom)%faces(ielem,iface)%ineighbor_proc)
 
                         ! If neighbor is being communicated, find it in the recv domains
                         if (comm_neighbor) then
@@ -139,7 +141,7 @@ contains
 
                                         ! Set the location where a face can find its off-processor neighbor 
                                         if (recv_element == neighbor_element_g) then
-                                            mesh%domain(idom)%faces(ielem,iface)%recv_comm    = icomm
+                                            mesh%domain(idom)%faces(ielem,iface)%recv_comm    = comm
                                             mesh%domain(idom)%faces(ielem,iface)%recv_domain  = idom_recv
                                             mesh%domain(idom)%faces(ielem,iface)%recv_element = ielem_recv
                                         end if
@@ -164,7 +166,7 @@ contains
                         ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
                         do idonor = 1,mesh%domain(idom)%chimera%recv%data(ChiID)%ndonors()
 
-                            comm_donor = (iproc == mesh%domain(idom)%chimera%recv%data(ChiID)%donor_proc%at(idonor) )
+                            comm_donor = (proc == mesh%domain(idom)%chimera%recv%data(ChiID)%donor_proc%at(idonor) )
 
                             donor_recv_found = .false.
                             if (comm_donor) then
@@ -185,7 +187,7 @@ contains
 
                                             ! Set the location where a face can find its off-processor neighbor 
                                             if (recv_element == donor_element_g) then
-                                                mesh%domain(idom)%chimera%recv%data(ChiID)%donor_recv_comm%data_(idonor)    = icomm
+                                                mesh%domain(idom)%chimera%recv%data(ChiID)%donor_recv_comm%data_(idonor)    = comm
                                                 mesh%domain(idom)%chimera%recv%data(ChiID)%donor_recv_domain%data_(idonor)  = idom_recv
                                                 mesh%domain(idom)%chimera%recv%data(ChiID)%donor_recv_element%data_(idonor) = ielem_recv
                                                 donor_recv_found = .true.

@@ -24,23 +24,23 @@ module type_chidg_matrix
     !------------------------------------------------------------------------------------------
     type, public :: chidg_matrix_t
 
-        type(domain_matrix_t), allocatable    :: dom(:)                     ! Array of domain-matrices. One for each domain
+        type(domain_matrix_t), allocatable    :: dom(:) ! Array of domain-matrices. One for each domain
 
-        logical                             :: local_initialized = .false.  ! Has the matrix processor-local data been initialized
-        logical                             :: recv_initialized  = .false.  ! Has matrix been initialized with information about chidgVector%recv
+        logical     :: local_initialized = .false.      ! Has the matrix processor-local data been initialized
+        logical     :: recv_initialized  = .false.      ! Has matrix been initialized with information about chidg_vector%recv
 
     contains
         ! Initializers
         generic,    public  :: init => initialize
-        procedure,  private :: initialize                   ! ChiDGMatrix initialization
+        procedure,  private :: initialize               ! chidg_matrix initialization
 
-        procedure, public   :: init_recv                    ! Initialize with information about chidgVector%recv for mv multiply
+        procedure, public   :: init_recv                ! Initialize with information about chidg_vector%recv for mv multiply
 
         ! Setters
-        procedure   :: store                                ! Store interior coupling
-        procedure   :: store_chimera                        ! Store chimera coupling
-        procedure   :: store_bc                             ! Store boundary condition coupling
-        procedure   :: clear                                ! Zero matrix-values
+        procedure   :: store                            ! Store interior coupling
+        procedure   :: store_chimera                    ! Store chimera coupling
+        procedure   :: store_bc                         ! Store boundary condition coupling
+        procedure   :: clear                            ! Zero matrix-values
 
 
         procedure   :: release
@@ -66,14 +66,10 @@ contains
     !!  
     !!
     !------------------------------------------------------------------------------------------
-    !subroutine initialize(self,mesh,bcset_coupling,mtype)
-    !subroutine initialize(self,mesh,bc,mtype)
     subroutine initialize(self,mesh,mtype)
         class(chidg_matrix_t),   intent(inout)          :: self
         type(mesh_t),        intent(in)             :: mesh
         character(*),           intent(in)              :: mtype
-        !type(bc_t),             intent(in), optional    :: bc(:)
-        !type(bcset_coupling_t), intent(in), optional    :: bcset_coupling(:)
 
         integer(ik) :: ierr, ndomains, idom
 
@@ -98,17 +94,7 @@ contains
         ! Call initialization procedure for each domain_matrix_t
         !
         do idom = 1,ndomains
-
-! WITH BC COUPLING
-!            if ( present(bcset_coupling) ) then
-!                call self%dom(idom)%init(mesh(idom),bcset_coupling(idom),mtype)
-!            else
-!                call self%dom(idom)%init(mesh(idom),mtype=mtype)
-!            end if
-
-! WITHOUT BC COUPLING
-             call self%dom(idom)%init(mesh%domain(idom),mtype=mtype)
-
+             call self%dom(idom)%init(mesh,idom,mtype=mtype)
         end do
 
 
@@ -172,7 +158,7 @@ contains
 
 
                             !
-                            ! Loop through chidgVector%recv to find match
+                            ! Loop through chidg_vector%recv to find match
                             !
                             match_found = .false.
                             do icomm = 1,size(x%recv%comm)
@@ -250,7 +236,7 @@ contains
 
 
                                 !
-                                ! Loop through chidgVector%recv to find match
+                                ! Loop through chidg_vector%recv to find match
                                 !
                                 match_found = .false.
                                 do icomm = 1,size(x%recv%comm)
@@ -445,7 +431,7 @@ contains
 
 
 
-    !> Set all ChiDGMatrix matrix-values to zero
+    !> Set all chidg_matrix matrix-values to zero
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016

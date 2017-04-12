@@ -25,9 +25,9 @@ module type_chidg_vector_send_comm
     type, public :: chidg_vector_send_comm_t
 
         integer(ik)                     :: proc
-        type(ivector_t)                 :: dom_send         ! Vector of domain indices in the mesh that have elems to be sent.
+        type(ivector_t)                 :: dom_send         ! domain indices in mesh that have elems to be sent.
         type(ivector_t),    allocatable :: elems_send(:)    ! For each domain with info to be sent, a 
-                                                            ! vector that contains the indices of elements to be sent.
+                                                            ! vector that contains indices of elements to be sent.
 
         type(mpi_request_vector_t)      :: initialization_requests
 
@@ -56,11 +56,15 @@ contains
 
 
 
-    !>
+    !>  Initialize elements that get sent to 'proc'.
     !!
-    !!  @author Nathan A. Wukie (AFRL)
+    !!  1: Accumulate domains that contain coupling with 'proc'.
+    !!  2: For those domains, accumulate the elements that are coupled with 'proc'.
+    !!  3: Send domain/element coupling data to 'proc' so it knows what to expect.
+    !!
+    !!  @author Nathan A. Wukie UC/(AFRL)
     !!  @date   7/1/2016
-    !!
+    !!  @date   4/12/2017   Added parallel BOUNDARY coupling
     !!
     !!
     !-------------------------------------------------------------------------------------
@@ -69,11 +73,13 @@ contains
         type(mesh_t),                       intent(in)      :: mesh
         integer(ik),                        intent(in)      :: proc
 
-        integer(ik)                 :: idom, ielem, iface, idom_send, ndom_send, ierr, &
-                                       loc, neighbor_proc, ielem_send, ChiID, idonor, receiver_proc
-        integer(ik),    allocatable :: comm_procs_dom(:)
-        logical                     :: already_added, proc_has_domain, send_element, &
-                                       has_neighbor, is_chimera
+        integer(ik)                 :: idom, ielem, iface, idom_send, ndom_send, ierr,  &
+                                       loc, neighbor_proc, ielem_send, ChiID, idonor,   &
+                                       receiver_proc, proc_coupled, idom_coupled,       &
+                                       ielem_coupled, group_ID, patch_ID, face_ID, elem_ID
+        integer(ik),    allocatable :: comm_procs_dom(:), comm_procs_bc(:)
+        logical                     :: already_added, proc_has_domain, proc_has_group,  &
+                                       send_element, has_neighbor, is_chimera
         type(mpi_request)           :: request, request1, request2, request3, request4, request5
 
 
@@ -84,7 +90,7 @@ contains
 
 
         !
-        ! For the current proc that we are sending stuff to, detect how many domains are being sent
+        ! For 'proc', register domains we are sending due to INTERIOR, CHIMERA coupling
         !
         do idom = 1,mesh%ndomains()
 
@@ -96,10 +102,48 @@ contains
 
             ! If so, add domain to list of domains being sent to proc
             if (proc_has_domain) then
-                call self%dom_send%push_back(idom)
+                call self%dom_send%push_back_unique(idom)
             end if
 
         end do ! idom
+
+
+        !
+        ! For 'proc', register domains we are sending due to BOUNDARY coupling
+        !
+        do group_ID = 1,mesh%nbc_patch_groups()
+
+            ! Get send procs for bc_patch_group
+            comm_procs_bc = mesh%bc_patch_group(group_ID)%get_send_procs()
+
+            ! Is current group sending to 'proc'
+            proc_has_group = any( proc == comm_procs_bc )
+
+            ! If so, add domain to list of domains being sent to proc
+            if (proc_has_group) then
+
+                !loop through patches/faces/coupling and detect BC-coupled domains on 'proc' 
+                do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
+                    do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
+                        do elem_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%ncoupled_elements(face_ID)
+
+                            ! Get 'proc' for coupled element. Test if if matches 'proc' here
+                            proc_coupled = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(elem_ID)
+
+                            if (proc == proc_coupled) then
+                                idom = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(elem_ID)
+                                call self%dom_send%push_back_unique(idom)
+                            end if
+
+                        end do! elem_ID, coupling
+                    end do !face_ID
+                end do !patch_ID
+
+            end if
+
+        end do !group_ID
+
+
 
 
 
@@ -107,11 +151,11 @@ contains
         ! Allocate number of domains to send to proc
         !
         ndom_send = self%dom_send%size()
-        if (allocated(self%elems_send)) then
-            deallocate(self%elems_send)
-        end if
+        if (allocated(self%elems_send)) deallocate(self%elems_send)
         allocate(self%elems_send(ndom_send), stat=ierr)
         if (ierr /= 0) call AllocationError
+
+
 
 
 
@@ -125,7 +169,7 @@ contains
 
 
             !
-            ! Register elements to send to off-processor neighbors
+            ! Register elements to send to off-processor INTERIOR neighbors
             !
             do ielem = 1,mesh%domain(idom)%nelem
                 do iface = 1,size(mesh%domain(idom)%faces,2)
@@ -141,14 +185,7 @@ contains
                         !
                         ! If element should be sent, add to list
                         !
-                        if (send_element) then
-                            ! Check if element was already added to send
-                            loc = self%elems_send(idom_send)%loc(ielem)
-                            already_added = (loc /= 0)
-
-                            ! Add to send list if not already there
-                            if ( .not. already_added ) call self%elems_send(idom_send)%push_back(ielem)
-                        end if
+                        if (send_element) call self%elems_send(idom_send)%push_back_unique(ielem)
 
                     end if
 
@@ -159,33 +196,68 @@ contains
 
 
             !
-            ! Register elements to send to off-processor chimera receivers 
+            ! Register elements to send to off-processor CHIMERA receivers 
             !
             do idonor = 1,mesh%domain(idom)%chimera%send%ndonors()
 
                 ! Get proc of receiver
                 receiver_proc = mesh%domain(idom)%chimera%send%receiver_proc%at(idonor)
                 send_element  = (proc == receiver_proc)
+                ielem = mesh%domain(idom)%chimera%send%donor_element_l%at(idonor)
 
                 !
                 ! If element should be sent, add to list
                 !
-                if (send_element) then
-                    ielem = mesh%domain(idom)%chimera%send%donor_element_l%at(idonor)
-                    ! Check if element was already added to send
-                    loc = self%elems_send(idom_send)%loc(ielem)
-                    already_added = (loc /= 0)
-
-                    ! Add to send list if not already there
-                    if ( .not. already_added ) call self%elems_send(idom_send)%push_back(ielem)
-                end if
+                if (send_element) call self%elems_send(idom_send)%push_back_unique(ielem)
 
 
             end do !idonor
 
 
-        end do ! idom
 
+            !
+            ! Register elements to send to off-processor BOUNDARY patches
+            !
+            do group_ID = 1,mesh%nbc_patch_groups()
+
+                ! Get send procs for bc_patch_group
+                comm_procs_bc = mesh%bc_patch_group(group_ID)%get_send_procs()
+
+                ! Is current group sending to 'proc'
+                proc_has_group = any( proc == comm_procs_bc )
+
+                ! If so, add domain to list of domains being sent to proc
+                if (proc_has_group) then
+
+                    !loop through patches/faces/coupling and detect BC-coupled domains on 'proc' 
+                    do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
+                        do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
+                            do elem_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%ncoupled_elements(face_ID)
+
+                                ! Get 'proc' for coupled element. Test if if matches 'proc' here
+                                proc_coupled = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(elem_ID)
+                                idom_coupled = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(elem_ID)
+
+                                !
+                                ! If element should be sent, add to list
+                                !
+                                if ( (proc == proc_coupled) .and. &
+                                     (idom == idom_coupled) ) then
+                                    ielem_coupled = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(elem_ID)
+                                    call self%elems_send(idom_send)%push_back_unique(ielem_coupled)
+                                end if
+
+                            end do! elem_ID, coupling
+                        end do !face_ID
+                    end do !patch_ID
+
+                end if
+
+            end do !group_ID
+
+
+
+        end do ! idom_send
 
 
 

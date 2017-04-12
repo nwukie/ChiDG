@@ -68,7 +68,22 @@ contains
     !!  set_contains_solution_hdf
     !!  get_contains_solution_hdf
     !!
+    !!  set_time_step_hdf
+    !!  get_time_step_hdf
     !!
+    !!  set_nsteps_hdf
+    !!  get_nsteps_hdf
+    !!
+    !!  set_nwrite_hdf
+    !!  get_nwrite_hdf
+    !!
+    !!  set_frequencies_hdf
+    !!  get_frequencies_hdf
+    !!
+    !!  set_time_levels_hdf
+    !!  get_time_levels_hdf
+    !!
+    !!  
     !!
     !!  Domain-level routines:
     !!  ---------------------------
@@ -4540,6 +4555,339 @@ contains
         time_lev = int(buf(1), kind=ik)
 
     end function get_ntimes_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, set time step in a hdf5 file
+    !!  Used in type_time_integrator_marching
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/12/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!  @param[in]  dt      Time step
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_time_step_hdf(fid,dt)
+        integer(HID_T),     intent(in)  :: fid
+        real(rk),           intent(in)  :: dt
+
+        integer(ik)         :: ierr
+
+        call h5ltset_attribute_double_f(fid, "/", "dt", [dt], SIZE_ONE, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_time_step_hdf: Error h5ltget_attribute_double_f")
+
+
+    end subroutine set_time_step_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, return time step from a hdf5 file
+    !!  Used in type_time_integrator_marching
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/12/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_time_step_hdf(fid) result(dt)
+        integer(HID_T),     intent(in)  :: fid
+        
+        integer                     :: ierr
+        real(rk),   dimension(1)    :: dt
+
+        call h5ltget_attribute_double_f(fid, "/", "dt", dt, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_time_step_hdf: h5ltget_attribute_double_f had a &
+                                        problem getting time step")
+
+
+    end function get_time_step_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, set number of time steps in a hdf5 file
+    !!  Used in type_time_integrator_marching
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/12/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!  @param[in]  nsteps  Number of time steps
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_nsteps_hdf(fid,nsteps)
+        integer(HID_T),     intent(in)  :: fid
+        integer(ik),        intent(in)  :: nsteps
+
+        integer(ik)         :: ierr
+
+        call h5ltset_attribute_int_f(fid, "/", "nsteps", [nsteps], SIZE_ONE, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_nsteps_hdf: Error h5ltget_attribute_int_f")
+
+
+    end subroutine set_nsteps_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, return number of time steps from a hdf5 file
+    !!  Used in type_time_integrator_marching
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/12/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_nsteps_hdf(fid) result(nsteps)
+        integer(HID_T),     intent(in)  :: fid
+        
+        integer                         :: ierr
+        integer(ik),    dimension(1)    :: nsteps
+
+        call h5ltget_attribute_int_f(fid, "/", "nsteps", nsteps, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_nsteps_hdf: h5ltget_attribute_double_f had a &
+                                        problem getting nsteps")
+
+
+    end function get_nsteps_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, set nwrite in a hdf5 file
+    !!  Used in type_time_integrator_marching
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/12/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!  @param[in]  nwrite  Number of steps after which a .h5 file is written
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_nwrite_hdf(fid,nwrite)
+        integer(HID_T),     intent(in)  :: fid
+        integer(ik),        intent(in)  :: nwrite
+
+        integer(ik)         :: ierr
+
+        call h5ltset_attribute_int_f(fid, "/", "nwrite", [nwrite], SIZE_ONE, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_nwrite_hdf: Error h5ltget_attribute_int_f")
+
+
+    end subroutine set_nwrite_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, return nwrite from a hdf5 file
+    !!  Used in type_time_integrator_marching
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/12/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_nwrite_hdf(fid) result(nwrite)
+        integer(HID_T),     intent(in)  :: fid
+        
+        integer                         :: ierr
+        integer(ik),    dimension(1)    :: nwrite
+
+        call h5ltget_attribute_int_f(fid, "/", "nwrite", nwrite, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_nwrite_hdf: h5ltget_attribute_double_f had a &
+                                        problem getting nwrite")
+
+
+    end function get_nwrite_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, set frequency data in a hdf5 file
+    !!  Used in type_time_integrator_spectral
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/12/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!  @param[in]  freq    Frequency data
+    !!  @param[in]  nfreq   Number of frequencies
+    !1
+    !----------------------------------------------------------------------------------------
+    subroutine set_frequencies_hdf(fid,freq,nfreq)
+        integer(HID_T),     intent(in)  :: fid
+        real(rk),           intent(in)  :: freq(:)
+        integer(HSIZE_T),   intent(in)  :: nfreq
+
+        integer(ik)         :: ierr
+
+        call h5ltset_attribute_double_f(fid, "/", "frequencies", freq, nfreq, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_frequencies_hdf: Error h5ltget_attribute_double_f")
+
+
+    end subroutine set_frequencies_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, return frequency data from a hdf5 file
+    !!  Used in type_time_integrator_spectral
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/12/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!  @param[in]  nfreq   Number of frequencies
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_frequencies_hdf(fid,nfreq) result(freq)
+        integer(HID_T),     intent(in)  :: fid
+        integer(HSIZE_T),   intent(in)  :: nfreq
+        
+        integer                 :: ierr
+        real(rk)                :: freq(nfreq)
+
+        call h5ltget_attribute_double_f(fid, "/", "frequencies", freq, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_frequencies_hdf: h5ltget_attribute_double_f had a &
+                                        problem getting frequencies")
+
+
+    end function get_frequencies_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, set time level data in a hdf5 file
+    !!  Used in type_time_integrator_spectral
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/12/2017
+    !!
+    !!  @param[in]  fid         HDF file identifier
+    !!  @param[in]  time_lev    Time level data
+    !!  @param[in]  ntime       Number of time levels
+    !1
+    !----------------------------------------------------------------------------------------
+    subroutine set_time_levels_hdf(fid,time_lev,ntime)
+        integer(HID_T),     intent(in)  :: fid
+        real(rk),           intent(in)  :: time_lev(:)
+        integer(HSIZE_T),   intent(in)  :: ntime
+
+        integer(ik)         :: ierr
+
+        call h5ltset_attribute_double_f(fid, "/", "time_levels", time_lev, ntime, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_time_levels_hdf: Error h5ltget_attribute_double_f")
+
+
+    end subroutine set_time_levels_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, return time level data from a hdf5 file
+    !!  Used in type_time_integrator_spectral
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/12/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!  @param[in]  ntime   Number of time levels
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_time_levels_hdf(fid,ntime) result(time_lev)
+        integer(HID_T),     intent(in)  :: fid
+        integer(HSIZE_T),   intent(in)  :: ntime
+        
+        integer                 :: ierr
+        real(rk)                :: time_lev(ntime)
+
+        call h5ltget_attribute_double_f(fid, "/", "time_levels", time_lev, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_time_levels_hdf: h5ltget_attribute_double_f had a &
+                                        problem getting time levels")
+
+
+    end function get_time_levels_hdf
     !***************************************************************************************
 
 

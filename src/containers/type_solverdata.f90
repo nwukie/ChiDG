@@ -54,7 +54,7 @@ module type_solverdata
         !
         ! Time information
         !
-        real(rk)                        :: t               ! Global time
+        !real(rk)                        :: t               ! Global time
         real(rk),   allocatable         :: dt(:,:)         ! Element-local time-step, (ndomains,maxelems)
 
         !

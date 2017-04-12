@@ -2,9 +2,9 @@ module type_chidg_vector_recv_comm
 #include <messenger.h>
     use mod_kinds,          only: ik
     use mod_constants,      only: INTERIOR, CHIMERA
-    use type_mesh,      only: mesh_t
+    use type_mesh,          only: mesh_t
     use type_ivector,       only: ivector_t
-    use type_blockvector,   only: blockvector_t
+    use type_domain_vector, only: domain_vector_t
     use mod_chidg_mpi,      only: ChiDG_COMM
     use mpi_f08,            only: MPI_Recv, MPI_INTEGER4, MPI_STATUS_IGNORE, MPI_ANY_TAG
     implicit none
@@ -20,7 +20,7 @@ module type_chidg_vector_recv_comm
     type, public :: chidg_vector_recv_comm_t
 
         integer(ik)                         :: proc
-        type(blockvector_t),    allocatable :: dom(:)
+        type(domain_vector_t),  allocatable :: dom(:)
 
     contains
 
@@ -52,16 +52,21 @@ contains
     !---------------------------------------------------------------------------------
     subroutine init(self,mesh,iproc,icomm)
         class(chidg_vector_recv_comm_t), intent(inout)   :: self
-        !type(mesh_t),                   intent(inout)   :: mesh(:)
-        type(mesh_t),                intent(inout)   :: mesh
+        type(mesh_t),                    intent(inout)   :: mesh
         integer(ik),                     intent(in)      :: iproc
         integer(ik),                     intent(in)      :: icomm
 
-        integer(ik)                 :: idom, idom_recv, ndom_recv, ierr, ielem, iface, ChiID, donor_domain_g, donor_element_g
-        integer(ik)                 :: idomain_g, ielement_g, dom_store, idom_loop, ielem_loop, ielem_recv, nelem_recv
-        integer(ik)                 :: neighbor_domain_g, neighbor_element_g, recv_element, recv_domain, idonor
+        character(:),   allocatable :: user_msg
+        integer(ik)                 :: idom, idom_recv, ndom_recv, ierr, ielem, iface,  &
+                                       ChiID, donor_domain_g, donor_element_g,          &
+                                       idomain_g, ielement_g, dom_store, idom_loop,     &
+                                       ielem_loop, ielem_recv, nelem_recv,              &
+                                       neighbor_domain_g, neighbor_element_g,           &
+                                       recv_element, recv_domain, idonor
         integer(ik),    allocatable :: comm_procs_dom(:)
-        logical                     :: proc_has_domain, domain_found, element_found, comm_neighbor, has_neighbor, is_chimera, comm_donor, donor_recv_found
+        logical                     :: proc_has_domain, domain_found, element_found,    &
+                                       comm_neighbor, has_neighbor, is_chimera,         &
+                                       comm_donor, donor_recv_found
 
         !
         ! Set processor being received from
@@ -117,7 +122,7 @@ contains
 
                         ! If neighbor is being communicated, find it in the recv domains
                         if (comm_neighbor) then
-                            neighbor_domain_g = mesh%domain(idom)%faces(ielem,iface)%ineighbor_domain_g
+                            neighbor_domain_g  = mesh%domain(idom)%faces(ielem,iface)%ineighbor_domain_g
                             neighbor_element_g = mesh%domain(idom)%faces(ielem,iface)%ineighbor_element_g
 
                             ! Loop through domains being received to find the right domain
@@ -194,7 +199,9 @@ contains
                                     if (donor_recv_found) exit
                                 end do !idom_recv
 
-                                if (.not. donor_recv_found) call chidg_signal_three(FATAL,"chidg_vector_recv_comm%init: chimera receiver did not find parallel donor.",IRANK,donor_domain_g,donor_element_g)
+                                user_msg = "chidg_vector_recv_comm%init: chimera receiver did not &
+                                            find parallel donor."
+                                if (.not. donor_recv_found) call chidg_signal_three(FATAL,user_msg,IRANK,donor_domain_g,donor_element_g)
                             end if !comm_donor
 
 

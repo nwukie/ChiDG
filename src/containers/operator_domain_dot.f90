@@ -1,7 +1,7 @@
-module operator_block_dot
+module operator_domain_dot
     use mod_kinds,          only: rk, rdouble, ik
     use mod_constants,      only: ZERO
-    use type_blockvector,   only: blockvector_t
+    use type_domain_vector, only: domain_vector_t
 
     implicit none
 
@@ -19,7 +19,7 @@ contains
 
 
 
-    !> Compute vector-vector dot product from two blockvector_t types.
+    !> Compute vector-vector dot product from two domain_vector_t types.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -27,9 +27,9 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------
-    function block_dot(a,b) result(res)
-        type(blockvector_t),    intent(in)  :: a
-        type(blockvector_t),    intent(in)  :: b
+    function domain_dot(a,b) result(res)
+        type(domain_vector_t),    intent(in)  :: a
+        type(domain_vector_t),    intent(in)  :: b
 
         real(rk)                :: res
         integer(ik)             :: ielem
@@ -50,7 +50,7 @@ contains
         end do  ! ielem
         
 
-    end function block_dot
+    end function domain_dot
     !*****************************************************************************
 
 
@@ -62,5 +62,5 @@ contains
 
 
 
-end module operator_block_dot
+end module operator_domain_dot
 

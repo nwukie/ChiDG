@@ -21,20 +21,20 @@ module type_time_manager
     type, public        :: time_manager_t
         
         !Time scheme
-        character(len=100)      :: time_scheme != 'steady'
+        character(len=100)      :: time_scheme  ! 'steady'
 
         ! Unsteady time parameter
-        real(rk)                :: dt          != 0.001_rk
-        !integer(ik)             :: time_steps  != 100       ! TODO: time_steps .ne. ntime for time marching
-                                                            !       (ntime = 1) but for HB time_steps .eq. ntime
-        integer(ik)             :: ntime       != 1         !< Number of time levels in HB (=1 for steady)
-        integer(ik)             :: nsteps      != 100       !< Number of time steps in time_marching solution
-        integer(ik)             :: nwrite      != 10
-        !integer(ik)             :: ntime = 1   ! ntime is 1 for all present time-marching schemes 
-                                               ! and updated for HB according to no. of frequencies (=2K + 1) 
+        real(rk)                :: t            ! Current time
+        real(rk)                :: dt           ! Time interval
+        !integer(ik)             :: time_steps  ! TODO: time_steps .ne. ntime for time marching
+                                                !       (ntime = 1) but for HB time_steps .eq. ntime
+        integer(ik)             :: itime = 1    ! Current time level index
+        integer(ik)             :: ntime = 1    ! Number of time levels in HB (=1 for steady)
+        integer(ik)             :: nsteps       ! Number of time steps in time_marching solution
+        integer(ik)             :: nwrite       
         
         ! HB time parameter
-        type(rvector_t)         :: freq_data   !> we have a limit of 100 freq's based on the array size in the namelist file
+        type(rvector_t)         :: freq_data    ! we have a limit of 100 freq's based on the array size in the namelist file
         type(rvector_t)         :: time_lev
         real(rk), allocatable   :: D(:,:), E(:,:)
 

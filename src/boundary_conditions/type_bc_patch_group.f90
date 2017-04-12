@@ -7,6 +7,7 @@ module type_bc_patch_group
     use type_bc_patch,              only: bc_patch_t
     use type_domain,                only: domain_t
     use type_boundary_connectivity, only: boundary_connectivity_t
+    use type_ivector,               only: ivector_t
     implicit none
 
 
@@ -14,6 +15,14 @@ module type_bc_patch_group
 
     !>  An object containing all the bc_patch_t instances for a single
     !!  boundary condition.
+    !!
+    !!  The bc_patch_group can contain patches from multiple domains. The individual 
+    !!  patches are on self%patch(:).
+    !!
+    !!  The self%group_ID component is used externally to access the correct group
+    !!  as mesh%bc_patch_group(group_ID). When a new bc_patch is initialized on the
+    !!  group, the bc_patch_group sets the group_ID on the appropriate domain faces
+    !!  so they know where to access the patch group.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   4/6/2017
@@ -29,9 +38,14 @@ module type_bc_patch_group
 
     contains
 
+        ! Patch routines
         procedure           :: add_bc_patch
         procedure           :: npatches
         procedure,  private :: new_bc_patch
+
+        ! Parallel communication patterns
+        procedure           :: get_recv_procs
+        procedure           :: get_send_procs
 
     end type bc_patch_group_t
     !*****************************************************************************************
@@ -233,49 +247,20 @@ contains
 
                     !
                     ! Inform domain face about:
-                    !   - bc_ID  the boundary state group it is associated with
+                    !   - bc_ID    the boundary state group it is associated with
                     !   - group_ID the boundary patch group it is associated with
                     !   - patch_ID the boundary patch is is associated with
-                    !   - face_ID the patch face it is associated with
+                    !   - face_ID  the patch face it is associated with
+                    !   - ftype    the face type set to BOUNDARY
                     !
-                    domain%faces(ielem,iface)%bc_ID      = bc_ID
-                    domain%faces(ielem,iface)%group_ID   = self%group_ID
-                    domain%faces(ielem,iface)%patch_ID   = patch_ID
-                    domain%faces(ielem,iface)%face_ID    = face_ID
-
-                    domain%faces(ielem,iface)%ftype = BOUNDARY
-
-
-                    !if ( allocated(self%bc_state) ) then
-                    !    domain%faces(ielem,iface)%ftype = BOUNDARY
-                    !end if
+                    domain%faces(ielem,iface)%bc_ID    = bc_ID
+                    domain%faces(ielem,iface)%group_ID = self%group_ID
+                    domain%faces(ielem,iface)%patch_ID = patch_ID
+                    domain%faces(ielem,iface)%face_ID  = face_ID
+                    domain%faces(ielem,iface)%ftype    = BOUNDARY
 
 
-!                    !
-!                    ! Set face type - 'ftype'
-!                    !
-!                    if ( self%get_family() == 'Periodic' ) then
-!
-!                        ! Set to ORPHAN face so it will be recognized as chimera in the detection process.
-!                        domain%faces(ielem,iface)%ftype = ORPHAN
-!
-!                        ! time, pnt do nothing here, but interface for function requires them.
-!                        domain%faces(ielem,iface)%periodic_offset  = .true.
-!                        domain%faces(ielem,iface)%chimera_offset_1 = self%bc_state(1)%state%bcproperties%compute('Offset-1',time,pnt)
-!                        domain%faces(ielem,iface)%chimera_offset_2 = self%bc_state(1)%state%bcproperties%compute('Offset-2',time,pnt)
-!                        domain%faces(ielem,iface)%chimera_offset_3 = self%bc_state(1)%state%bcproperties%compute('Offset-3',time,pnt)
-!
-!                    else if ( allocated(self%bc_state) .and. (.not. self%get_family() == 'Periodic') ) then
-!                        domain%faces(ielem,iface)%ftype = BOUNDARY
-!
-!                    else
-!                        domain%faces(ielem,iface)%ftype = ORPHAN
-!
-!                    end if
-
-
-
-                    ! End search
+                    ! End ielem search
                     exit
 
 
@@ -322,6 +307,7 @@ contains
         ! Resize array storage
         !
         allocate(temp_patches(self%npatches() + 1), stat=ierr)
+        if (ierr /= 0) call AllocationError
 
 
 
@@ -335,8 +321,9 @@ contains
 
 
         !
-        ! Move resized temp allocation back to mesh container. 
-        ! Be careful about pointer components here! Their location in memory has changed.
+        ! Move resized temp allocation back to bc_patch_group container. 
+        ! Be careful about pointer components here! Their location in 
+        ! memory has changed.
         !
         call move_alloc(temp_patches,self%patch)
         
@@ -378,6 +365,90 @@ contains
 
     end function npatches
     !**********************************************************************
+
+
+
+
+
+
+
+
+    !>  Return the processors that the boundary patch group is receiving
+    !!  information from.
+    !!
+    !!  Accumulate from individual patches.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/10/2017
+    !!
+    !-----------------------------------------------------------------------
+    function get_recv_procs(self) result(recv_procs_array)
+        class(bc_patch_group_t),    intent(in)  :: self
+
+        type(ivector_t)             :: recv_procs
+        integer(ik),    allocatable :: recv_procs_patch(:), recv_procs_array(:)
+        integer(ik)                 :: ipatch, iproc
+
+
+        !
+        ! Accumulate recv procs from each patch. Add uniquely
+        !
+        do ipatch = 1,self%npatches()
+            recv_procs_patch = self%patch(ipatch)%get_recv_procs()
+
+            do iproc = 1,size(recv_procs_patch)
+                call recv_procs%push_back_unique(recv_procs_patch(iproc))
+            end do
+
+        end do !ipatch
+
+
+        !
+        ! Return as integer array
+        !
+        recv_procs_array = recv_procs%data()
+
+
+    end function get_recv_procs
+    !************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Return the processors that the boundary patch group is sending
+    !!  information to.
+    !!
+    !!  Currently, this pattern is the same as the receive pattern, so
+    !!  we just call get_recv_procs.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/10/2017
+    !!
+    !-----------------------------------------------------------------------
+    function get_send_procs(self) result(send_procs_array)
+        class(bc_patch_group_t),    intent(in)  :: self
+
+        integer(ik),    allocatable :: send_procs_array(:)
+
+        !
+        ! Return as integer array
+        !
+        send_procs_array = self%get_recv_procs()
+
+
+    end function get_send_procs
+    !************************************************************************
+
+
+
+
+
 
 
 

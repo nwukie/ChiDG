@@ -1135,7 +1135,8 @@ contains
             ! 1: Update time t
             ! 2: Call time integrator to take a step
             !
-            self%data%sdata%t = self%data%time_manager%dt*istep
+            !self%data%sdata%t = self%data%time_manager%dt*istep
+            self%data%time_manager%t = self%data%time_manager%dt*istep
             call self%time_integrator%step(self%data,self%nonlinear_solver, &
                                                      self%linear_solver,    &
                                                      self%preconditioner)

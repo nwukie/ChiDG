@@ -1100,20 +1100,19 @@ contains
                             !
                             ! Get coupled element to linearize against.
                             !
-                            !worker%function_info%seed%idomain_g  = bc(bc_ID)%bc_patch(patch_ID)%idomain_g_coupled(face_ID)%at(icompute)
-                            !worker%function_info%seed%idomain_l  = bc(bc_ID)%bc_patch(patch_ID)%idomain_l_coupled(face_ID)%at(icompute)
-                            !worker%function_info%seed%ielement_g = bc(bc_ID)%bc_patch(patch_ID)%ielement_g_coupled(face_ID)%at(icompute)
-                            !worker%function_info%seed%ielement_l = bc(bc_ID)%bc_patch(patch_ID)%ielement_l_coupled(face_ID)%at(icompute)
-                            !worker%function_info%seed%iproc      = bc(bc_ID)%bc_patch(patch_ID)%proc_coupled(face_ID)%at(icompute)
+                            !worker%function_info%seed%idomain_g  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g_coupled(face_ID)%at(icompute)
+                            !worker%function_info%seed%idomain_l  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l_coupled(face_ID)%at(icompute)
+                            !worker%function_info%seed%ielement_g = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g_coupled(face_ID)%at(icompute)
+                            !worker%function_info%seed%ielement_l = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l_coupled(face_ID)%at(icompute)
+                            !worker%function_info%seed%iproc      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%proc_coupled(face_ID)%at(icompute)
                             !worker%function_info%idepend         = icompute
 
-                            worker%function_info%seed%idomain_g  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g_coupled(face_ID)%at(icompute)
-                            worker%function_info%seed%idomain_l  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l_coupled(face_ID)%at(icompute)
-                            worker%function_info%seed%ielement_g = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g_coupled(face_ID)%at(icompute)
-                            worker%function_info%seed%ielement_l = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l_coupled(face_ID)%at(icompute)
-                            worker%function_info%seed%iproc      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%proc_coupled(face_ID)%at(icompute)
+                            worker%function_info%seed%idomain_g  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(icompute)
+                            worker%function_info%seed%idomain_l  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(icompute)
+                            worker%function_info%seed%ielement_g = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(icompute)
+                            worker%function_info%seed%ielement_l = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(icompute)
+                            worker%function_info%seed%iproc      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(icompute)
                             worker%function_info%idepend         = icompute
-
 
 
                             call self%bc_operator(ifcn)%op%compute(worker,prop)

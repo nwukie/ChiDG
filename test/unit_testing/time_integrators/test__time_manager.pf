@@ -198,7 +198,6 @@ subroutine test_time_manager__init_HB1()
     @assertEqual(t_lev_3,t_manager%time_lev%data_(3),tol)
     @assertEqual([10],t_manager%freq_data%data(),tol)
     @assertEqual(1,t_manager%freq_data%size())
-    @assertEqual(20,t_manager%freq_data%capacity())
 
 end subroutine
 
@@ -286,7 +285,6 @@ subroutine test_time_manager__init_HB5()
     
     @assertEqual(time_integrator,t_manager%time_scheme)
     @assertEqual(11,t_manager%time_lev%size())
-    @assertEqual(20,t_manager%time_lev%capacity())
     @assertEqual(t_lev(1),t_manager%time_lev%data_(1),tol)
     @assertEqual(t_lev(2),t_manager%time_lev%data_(2),tol)
     @assertEqual(t_lev(3),t_manager%time_lev%data_(3),tol)
@@ -303,7 +301,6 @@ subroutine test_time_manager__init_HB5()
     @assertEqual(13.05_rk,t_manager%freq_data%data_(3),tol)
     @assertEqual(25.0001_rk,t_manager%freq_data%data_(4),tol)
     @assertEqual(26.9_rk,t_manager%freq_data%data_(5),tol)
-    @assertEqual(20,t_manager%freq_data%capacity())
     @assertEqual(5,t_manager%freq_data%size())
 
 
@@ -416,7 +413,6 @@ subroutine test_time_manager__init_HB25()
     
     @assertEqual(time_integrator,t_manager%time_scheme)
     @assertEqual(51,t_manager%time_lev%size())
-    @assertEqual(60,t_manager%time_lev%capacity())
     
     do i = 1,51
         @assertEqual(t_lev(i),t_manager%time_lev%data_(i),tol)
@@ -426,7 +422,6 @@ subroutine test_time_manager__init_HB25()
         @assertEqual(frequencies(i),t_manager%freq_data%data_(i),tol)
     end do
 
-    @assertEqual(40,t_manager%freq_data%capacity())
     @assertEqual(25,t_manager%freq_data%size())
 
 
@@ -518,10 +513,8 @@ subroutine test_time_manager__init_HB5_0()
     !
     
     @assertEqual(time_integrator,t_manager%time_scheme)
-    @assertEqual(20,t_manager%freq_data%capacity())
     @assertEqual(4,t_manager%freq_data%size())
     @assertEqual(9,t_manager%time_lev%size())
-    @assertEqual(20,t_manager%time_lev%capacity())
     @assertEqual(t_lev(1),t_manager%time_lev%data_(1),tol)
     @assertEqual(t_lev(2),t_manager%time_lev%data_(2),tol)
     @assertEqual(t_lev(3),t_manager%time_lev%data_(3),tol)
@@ -628,10 +621,8 @@ subroutine test_time_manager__init_push_back()
     !
     
     @assertEqual(time_integrator,t_manager%time_scheme)
-    @assertEqual(20,t_manager%freq_data%capacity())
     @assertEqual(3,t_manager%freq_data%size())
     @assertEqual(7,t_manager%time_lev%size())
-    @assertEqual(20,t_manager%time_lev%capacity())
     @assertEqual(t_lev(1),t_manager%time_lev%data_(1),tol)
     @assertEqual(t_lev(2),t_manager%time_lev%data_(2),tol)
     @assertEqual(t_lev(3),t_manager%time_lev%data_(3),tol)

@@ -1,13 +1,13 @@
 module type_bc_state
 #include <messenger.h>
-    use mod_kinds,                  only: rk, ik
+    use mod_kinds,              only: rk, ik
 
-    use type_bcproperty_set,        only: bcproperty_set_t
-    use type_chidg_worker,          only: chidg_worker_t
-    use type_properties,            only: properties_t
+    use type_bcproperty_set,    only: bcproperty_set_t
+    use type_chidg_worker,      only: chidg_worker_t
+    use type_properties,        only: properties_t
     use type_mesh,              only: mesh_t
-    use type_bc_patch,              only: bc_patch_t
-    use mpi_f08,                    only: mpi_comm
+    use type_bc_patch,          only: bc_patch_t
+    use mpi_f08,                only: mpi_comm
     implicit none
 
 
@@ -176,11 +176,6 @@ contains
 
     end subroutine init_bc_coupling
     !**********************************************************************************************
-
-
-
-
-
 
 
 

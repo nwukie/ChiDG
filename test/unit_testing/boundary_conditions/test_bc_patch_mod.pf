@@ -312,14 +312,15 @@ contains
         !
         @assertEqual(bc_patch%ncoupled_elements(patch_face), 1)
 
+
         !
         ! Test components were set correctly
         !
-        @assertEqual(bc_patch%idomain_g_coupled(patch_face)%at(1),  idomain_g)
-        @assertEqual(bc_patch%idomain_l_coupled(patch_face)%at(1),  idomain_l)
-        @assertEqual(bc_patch%ielement_g_coupled(patch_face)%at(1), ielement_g)
-        @assertEqual(bc_patch%ielement_l_coupled(patch_face)%at(1), ielement_l)
-        @assertEqual(bc_patch%proc_coupled(patch_face)%at(1),       proc)
+        @assertEqual(bc_patch%coupling(patch_face)%idomain_g(1),  idomain_g)
+        @assertEqual(bc_patch%coupling(patch_face)%idomain_l(1),  idomain_l)
+        @assertEqual(bc_patch%coupling(patch_face)%ielement_g(1), ielement_g)
+        @assertEqual(bc_patch%coupling(patch_face)%ielement_l(1), ielement_l)
+        @assertEqual(bc_patch%coupling(patch_face)%proc(1),       proc)
 
 
 
@@ -353,11 +354,11 @@ contains
         !
         ! Test components were set correctly
         !
-        @assertEqual(bc_patch%idomain_g_coupled(patch_face)%at(2),  idomain_g)
-        @assertEqual(bc_patch%idomain_l_coupled(patch_face)%at(2),  idomain_l)
-        @assertEqual(bc_patch%ielement_g_coupled(patch_face)%at(2), ielement_g)
-        @assertEqual(bc_patch%ielement_l_coupled(patch_face)%at(2), ielement_l)
-        @assertEqual(bc_patch%proc_coupled(patch_face)%at(2),       proc)
+        @assertEqual(bc_patch%coupling(patch_face)%idomain_g(2),  idomain_g)
+        @assertEqual(bc_patch%coupling(patch_face)%idomain_l(2),  idomain_l)
+        @assertEqual(bc_patch%coupling(patch_face)%ielement_g(2), ielement_g)
+        @assertEqual(bc_patch%coupling(patch_face)%ielement_l(2), ielement_l)
+        @assertEqual(bc_patch%coupling(patch_face)%proc(2),       proc)
 
 
 

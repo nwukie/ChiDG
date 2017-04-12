@@ -1,4 +1,4 @@
-module type_blockvector
+module type_domain_vector
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, TWO
@@ -19,7 +19,7 @@ module type_blockvector
     !!
     !!
     !----------------------------------------------------------------------------------------------
-    type, public :: blockvector_t
+    type, public :: domain_vector_t
 
         type(densevector_t), allocatable :: vecs(:)     !< Local element vectors
 
@@ -40,7 +40,7 @@ module type_blockvector
 
         final :: destructor
 
-    end type blockvector_t
+    end type domain_vector_t
     !*********************************************************************************************
 
 
@@ -110,7 +110,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine init_local(self,domain)
-        class(blockvector_t),   intent(inout) :: self
+        class(domain_vector_t),   intent(inout) :: self
         type(domain_t),         intent(in)    :: domain
 
         integer(ik) :: nelem, ierr, ielem, nterms, neqns, ntime
@@ -195,7 +195,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine init_recv(self,iproc)
-        class(blockvector_t),   intent(inout)   :: self
+        class(domain_vector_t),   intent(inout)   :: self
         integer(ik),            intent(in)      :: iproc
 
         type(ivector_t) :: recv_elems
@@ -293,7 +293,7 @@ contains
     !!
     !------------------------------------------------------------------------------------
     subroutine distribute(self,fullvec)
-        class(blockvector_t),    intent(inout)   :: self
+        class(domain_vector_t),    intent(inout)   :: self
         real(rk),                intent(in)      :: fullvec(:) 
 
         integer(ik)     :: ndof, ielem, nvars, nterms, fstart, fend, ndof_l
@@ -310,7 +310,7 @@ contains
         end do
 
         ! Test that the number of dof's match between the full and block format's
-        if (ndof /= size(fullvec) ) call chidg_signal(FATAL,"blockvector_t%distribute: Storage sizes of full-vector and block-vector are not equal.")
+        if (ndof /= size(fullvec) ) call chidg_signal(FATAL,"domain_vector_t%distribute: Storage sizes of full-vector and block-vector are not equal.")
 
 
 
@@ -360,7 +360,7 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     subroutine clear(self)
-        class(blockvector_t),   intent(inout)   :: self
+        class(domain_vector_t),   intent(inout)   :: self
 
         integer(ik) :: iblk
 
@@ -391,7 +391,7 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     function norm(self) result(res)
-        class(blockvector_t),   intent(in)  :: self
+        class(domain_vector_t),   intent(in)  :: self
 
         real(rk)    :: res
         integer(ik) :: ielem
@@ -428,7 +428,7 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     function sumsqr(self) result(res)
-        class(blockvector_t),   intent(in)  :: self
+        class(domain_vector_t),   intent(in)  :: self
 
         real(rk)    :: res
         integer(ik) :: ielem
@@ -464,7 +464,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function sumsqr_fields(self) result(res)
-        class(blockvector_t),   intent(in)  :: self
+        class(domain_vector_t),   intent(in)  :: self
 
         real(rk),   allocatable :: res(:)
         integer(ik)             :: ielem
@@ -498,7 +498,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function nentries(self) result(res)
-        class(blockvector_t),   intent(in)  :: self
+        class(domain_vector_t),   intent(in)  :: self
 
         integer(ik) :: res, ielem
 
@@ -527,7 +527,7 @@ contains
     !!
     !------------------------------------------------
     subroutine dump(self)
-        class(blockvector_t),   intent(in)  :: self
+        class(domain_vector_t),   intent(in)  :: self
         integer(ik) :: ielem, ientry
 
         do ielem = 1,size(self%vecs)
@@ -564,9 +564,9 @@ contains
     !------------------------------------------------------------------------
     function mult_real_bv(left,right) result(res)
         real(rk),               intent(in)  :: left
-        type(blockvector_t),    intent(in)  :: right
+        type(domain_vector_t),    intent(in)  :: right
 
-        type(blockvector_t) :: res
+        type(domain_vector_t) :: res
 
         res%vecs = left * right%vecs
 
@@ -583,10 +583,10 @@ contains
     !!
     !------------------------------------------------------------------------
     function mult_bv_real(left,right) result(res)
-        type(blockvector_t),    intent(in)  :: left
+        type(domain_vector_t),    intent(in)  :: left
         real(rk),               intent(in)  :: right
 
-        type(blockvector_t) :: res
+        type(domain_vector_t) :: res
 
         res%vecs = left%vecs * right
 
@@ -605,9 +605,9 @@ contains
     !------------------------------------------------------------------------
     function div_real_bv(left,right) result(res)
         real(rk),               intent(in)  :: left
-        type(blockvector_t),    intent(in)  :: right
+        type(domain_vector_t),    intent(in)  :: right
 
-        type(blockvector_t) :: res
+        type(domain_vector_t) :: res
 
         res%vecs = left / right%vecs
 
@@ -624,10 +624,10 @@ contains
     !!
     !------------------------------------------------------------------------
     function div_bv_real(left,right) result(res)
-        type(blockvector_t),    intent(in)  :: left
+        type(domain_vector_t),    intent(in)  :: left
         real(rk),               intent(in)  :: right
 
-        type(blockvector_t) :: res
+        type(domain_vector_t) :: res
 
         res%vecs = left%vecs / right
 
@@ -646,10 +646,10 @@ contains
     !!
     !------------------------------------------------------------------------
     function add_bv_bv(left,right) result(res)
-        type(blockvector_t),  intent(in)  :: left
-        type(blockvector_t),  intent(in)  :: right
+        type(domain_vector_t),  intent(in)  :: left
+        type(domain_vector_t),  intent(in)  :: right
 
-        type(blockvector_t) :: res
+        type(domain_vector_t) :: res
 
         res%vecs = left%vecs + right%vecs
 
@@ -667,10 +667,10 @@ contains
     !!
     !------------------------------------------------------------------------
     function sub_bv_bv(left,right) result(res)
-        type(blockvector_t),  intent(in)  :: left
-        type(blockvector_t),  intent(in)  :: right
+        type(domain_vector_t),  intent(in)  :: left
+        type(domain_vector_t),  intent(in)  :: right
 
-        type(blockvector_t) :: res
+        type(domain_vector_t) :: res
 
         res%vecs = left%vecs - right%vecs
 
@@ -682,8 +682,8 @@ contains
 
 
     subroutine destructor(self)
-        type(blockvector_t), intent(inout) :: self
+        type(domain_vector_t), intent(inout) :: self
 
     end subroutine
 
-end module type_blockvector
+end module type_domain_vector

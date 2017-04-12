@@ -162,7 +162,10 @@ contains
             !
             ! Spatial update needed
             ! 
-            data%sdata%t = data%time_manager%time_lev%at(itime_outer)
+!            data%sdata%itime = itime_outer
+!            data%sdata%t     = data%time_manager%time_lev%at(itime_outer)
+            data%time_manager%itime = itime_outer
+            data%time_manager%t     = data%time_manager%time_lev%at(itime_outer)
             call update_space(data,timing,differentiate)
 
             do idom = 1,data%mesh%ndomains()

@@ -49,10 +49,6 @@ module type_bc_state_group
         procedure   :: propagate_coupling
 
         
-        procedure   :: get_recv_procs_bc
-        procedure   :: get_send_procs_bc
-
-
     end type bc_state_group_t
     !*****************************************************************************************
 
@@ -391,7 +387,7 @@ contains
         !
         ! Create a new MPI communicator for the current boundary condition 
         ! that includes only those processors with a bc_patch_group 
-        ! containing valid patch dadta; indicating they contain a portion 
+        ! containing valid patch data; indicating they contain a portion 
         ! of the bc geometry.
         !
         if (irank_has_geometry) then
@@ -548,76 +544,6 @@ contains
 
     end subroutine propagate_coupling
     !****************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-    !>  Return the processor ranks that the current boundary condition is receiving 
-    !!  information from.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   4/10/2017
-    !!
-    !!
-    !----------------------------------------------------------------------------------------
-    function get_recv_procs_bc(self) result(recv_procs_array)
-        class(bc_state_group_t),    intent(in)  :: self
-
-
-        integer(ik),    allocatable :: recv_procs_array(:)
-
-
-
-
-
-
-
-    end function get_recv_procs_bc
-    !****************************************************************************************
-
-
-
-
-
-
-    !>  Return the processor ranks that the current boundary condition is sending
-    !!  information to.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   4/10/2017
-    !!
-    !!
-    !----------------------------------------------------------------------------------------
-    function get_send_procs_bc(self) result(send_procs_array)
-        class(bc_state_group_t),    intent(in)  :: self
-
-
-        integer(ik),    allocatable :: send_procs_array(:)
-
-
-
-
-
-
-
-    end function get_send_procs_bc
-    !****************************************************************************************
-
-
-
-
-
-
-
 
 
 

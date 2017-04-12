@@ -2,7 +2,7 @@ module type_chidg_vector_recv
 #include <messenger.h>
     use mod_kinds,                   only: ik
     use type_ivector,                only: ivector_t
-    use type_mesh,               only: mesh_t
+    use type_mesh,                   only: mesh_t
     use type_chidg_vector_recv_comm, only: chidg_vector_recv_comm_t
     implicit none
 
@@ -50,7 +50,6 @@ contains
 
         integer(ik)                 :: idom, iproc, icomm, ncomm, ierr
         integer(ik),    allocatable :: comm_procs_array(:)
-        logical                     :: not_in_list
 
 
         !

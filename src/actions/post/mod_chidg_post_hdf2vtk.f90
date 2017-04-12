@@ -93,12 +93,6 @@ contains
         call chidg%init('communication')
         call chidg%init('solvers')
 
-        
-        grid_file_prefix     = get_file_prefix(grid_file,'.h5')
-        solution_file_prefix = get_file_prefix(solution_file,'.h5')
-        step_str = solution_file_prefix(len(grid_file_prefix) + 2:)
-        read(step_str,*) istep
-
 
         !
         ! Read solution modes and time integrator options from HDF5

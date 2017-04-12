@@ -8,6 +8,8 @@ module type_time_integrator_spectral
     use h5lt
     use mod_hdf_utilities,      only: open_file_hdf, close_file_hdf, get_ntimes_hdf, &
                                       set_time_integrator_hdf, get_time_integrator_hdf, &
+                                      set_nsteps_hdf, get_nsteps_hdf, &
+                                      set_nwrite_hdf, get_nwrite_hdf, &
                                       set_frequencies_hdf, get_frequencies_hdf, &
                                       set_time_levels_hdf, get_time_levels_hdf
     use mod_HB_post,            only: get_post_processing_data
@@ -114,16 +116,12 @@ contains
                 !
                 call set_time_integrator_hdf(fid,trim(data%time_manager%get_name()))
 
-                call h5ltset_attribute_int_f(fid,"/","nsteps",[data%time_manager%nsteps],SIZE_ONE,ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltset_attribute_int_f")
-
-                call h5ltset_attribute_int_f(fid,"/","nwrite",[data%time_manager%nwrite],SIZE_ONE,ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltset_attribute_int_f")
-                    
-            
+                
                 !
-                ! Write frequencies and time levels to hdf file
+                ! Write nsteps, nwrite, frequencies and time levels to hdf file
                 !
+                call set_nsteps_hdf(fid,data%time_manager%nsteps)
+                call set_nwrite_hdf(fid,data%time_manager%nwrite)        
                 call set_frequencies_hdf(fid,freq,nfreq)
                 call set_time_levels_hdf(fid,time_lev,ntime)
 
@@ -185,16 +183,12 @@ contains
         !
         temp_string = get_time_integrator_hdf(fid)
 
-        call h5ltget_attribute_int_f(fid,"/","nsteps",nsteps,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltget_attribute_int_f")
-
-        call h5ltget_attribute_int_f(fid,"/","nwrite",nwrite,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltget_attribute_int_f")
-
 
         !
-        ! Read frequencies and time levels
+        ! Read nsteps, nwrite, frequencies and time levels
         !
+        nsteps   = get_nsteps_hdf(fid)
+        nwrite   = get_nwrite_hdf(fid)
         freq     = get_frequencies_hdf(fid,nfreq)
         time_lev = get_time_levels_hdf(fid,ntime)
 

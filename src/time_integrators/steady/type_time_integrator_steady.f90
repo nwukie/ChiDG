@@ -7,7 +7,9 @@ module type_time_integrator_steady
     use h5lt
     use mod_hdf_utilities,      only: open_file_hdf, close_file_hdf, &
                                       get_ntimes_hdf, set_time_integrator_hdf,  &
-                                      get_time_integrator_hdf
+                                      get_time_integrator_hdf, &
+                                      set_nsteps_hdf, get_nsteps_hdf, &
+                                      set_nwrite_hdf, get_nwrite_hdf
     use mpi_f08
     implicit none
 
@@ -76,7 +78,7 @@ contains
         type(chidg_data_t),                 intent(inout)   :: data
         character(*),                       intent(in)      :: filename
 
-        integer(kind = 8)   :: fid, SIZE_ONE = 1
+        integer(kind = 8)   :: fid
         integer(ik)         :: ierr, iwrite
 
 
@@ -94,12 +96,14 @@ contains
                 !
                 call set_time_integrator_hdf(fid,trim(data%time_manager%get_name()))
 
-                call h5ltset_attribute_int_f(fid,"/","nsteps",[data%time_manager%nsteps],SIZE_ONE,ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltset_attribute_int_f")
 
-                call h5ltset_attribute_int_f(fid,"/","nwrite",[data%time_manager%nwrite],SIZE_ONE,ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltset_attribute_int_f")
-                
+                !
+                ! Write nsteps and nwrite
+                ! 
+                call set_nsteps_hdf(fid,data%time_manager%nsteps)
+                call set_nwrite_hdf(fid,data%time_manager%nwrite)
+
+
                 call close_file_hdf(fid)
 
             end if
@@ -140,12 +144,12 @@ contains
         !
         temp_string = get_time_integrator_hdf(fid)
 
-
-        call h5ltget_attribute_int_f(fid,"/","nsteps",nsteps,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltget_attribute_int_f")
-
-        call h5ltget_attribute_int_f(fid,"/","nwrite",nwrite,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltget_attribute_int_f")
+        
+        !
+        ! Read nsteps and nwrite
+        !
+        nsteps = get_nsteps_hdf(fid)
+        nwrite = get_nwrite_hdf(fid)
 
 
         !

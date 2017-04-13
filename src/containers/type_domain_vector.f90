@@ -12,7 +12,23 @@ module type_domain_vector
 
 
 
-    !> Data type for storing the matrix of dense blocks which hold the linearization for an algorithm
+    !>  Domain-level vector container.
+    !!
+    !!  Contains vector information for a single domain. For each element on the domain,
+    !!  a densevector_t instance is created that contains data for the element.
+    !!
+    !!  Use in local problem:
+    !!  ---------------------
+    !!  For each domain in the processor-local data%mesh, an instance of domain_vector_t
+    !!  is allocated on chidg_vector%dom(:) 
+    !!
+    !!  Use in global problem:
+    !!  ----------------------
+    !!  This is also used to receive domain data from other processors. The container
+    !!  access chidg_vector%recv%comm(:)%dom(:) designates that for any processor
+    !!  being communicated with, for each domain that is being received, an instance
+    !!  of domain_vector_t is allocated to receive that data.
+    !!
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -21,20 +37,20 @@ module type_domain_vector
     !----------------------------------------------------------------------------------------------
     type, public :: domain_vector_t
 
-        type(densevector_t), allocatable :: vecs(:)     !< Local element vectors
+        type(densevector_t), allocatable :: vecs(:)     ! Local element vectors
 
     contains
 
-        generic,    public  :: init => init_local, init_recv    !< Initialize vector
-        procedure, private  :: init_local                       !< Initialize vector to store data for local domain
-        procedure, private  :: init_recv                        !< Initialize vector to store data for domains being received from another processor
+        generic,    public  :: init => init_local, init_recv    ! Initialize vector.
+        procedure, private  :: init_local                       ! Initialize vector for local domain.
+        procedure, private  :: init_recv                        ! Initialize vector for domain received from another proc.
 
-        procedure,  public  :: distribute               !< Given a full-vector representation, distribute it to the denseblock format
-        procedure,  public  :: clear                    !< Zero all vector storage elements
+        procedure,  public  :: distribute       ! Given a full-vector representation, distribute it to a dense array.
+        procedure,  public  :: clear            ! Zero all vector storage elements.
         
-        procedure,  public  :: norm             !< Return the L2 vector norm of the block-vector
-        procedure,  public  :: sumsqr           !< Return the sum of the squared block-vector entries
-        procedure,  public  :: sumsqr_fields    !< Return the sum of squared entries for fields independently
+        procedure,  public  :: norm             ! Return the L2 vector norm of the block-vector.
+        procedure,  public  :: sumsqr           ! Return the sum of the squared block-vector entries.
+        procedure,  public  :: sumsqr_fields    ! Return the sum of squared entries for fields independently.
         procedure,  public  :: nentries
         procedure,  public  :: dump
 

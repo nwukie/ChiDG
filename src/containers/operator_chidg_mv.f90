@@ -504,7 +504,6 @@ contains
 
 
 
-    !end function MULT_chidgMatrix_chidgVector
     end function chidg_mv
     !****************************************************************************************
 

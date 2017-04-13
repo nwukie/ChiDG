@@ -92,7 +92,6 @@ contains
 
 
 
-
         !
         ! Get number of elements/faces associated with boundary condition.
         !

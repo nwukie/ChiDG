@@ -41,17 +41,17 @@ module test_comm_chimera_mod
 
 contains
 
-    !>  This test reads two, 2x2x2 element domains that are overlapping to test the chimear communication
+    !>  This test reads two, 2x2x2 element domains that are overlapping to test the 
+    !!  chimera communication.
     !!
     !!  Overlapping cubes. Each cube is 2x2x2 elements. Only one element of overlap
     !!
+    !!
     !!    |--------|-|---------|
     !!    |        | |         |
     !!    |        | |         |
     !!    |        | |         |
     !!    |--------|-|---------|
-    !!
-    !!
     !!
     !!
     !!

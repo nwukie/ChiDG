@@ -482,7 +482,7 @@ contains
                 if (mesh%bc_patch_group(group_ID)%npatches() > 0) then
 
                     do iop = 1,size(self%bc_state)
-                        call self%bc_state(iop)%state%init_bc_coupling(mesh,group_ID)
+                        call self%bc_state(iop)%state%init_bc_coupling(mesh,group_ID,self%bc_COMM)
                     end do !iop
 
                 end if !bc_patch

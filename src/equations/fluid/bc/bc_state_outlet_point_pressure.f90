@@ -1,16 +1,16 @@
 module bc_state_outlet_point_pressure
 #include <messenger.h>
-    use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE, HALF, TWO, NO_PROC
+    use mod_kinds,          only: rk,ik
+    use mod_constants,      only: ZERO, ONE, HALF, TWO, NO_PROC
 
     use type_mesh,          only: mesh_t
-    use type_bc_state,          only: bc_state_t
-    use type_bc_patch,          only: bc_patch_t
-    use type_chidg_worker,      only: chidg_worker_t
-    use type_properties,        only: properties_t
-    use type_point,             only: point_t
-    use mod_chidg_mpi,          only: IRANK
-    !use mpi_f08,                only: mpi_comm, MPI_REAL8, MPI_Allgather, MPI_Comm_rank, MPI_Comm_size, MPI_COMM_NULL, MPI_Comm_compare
+    use type_bc_state,      only: bc_state_t
+    use type_bc_patch,      only: bc_patch_t
+    use type_chidg_worker,  only: chidg_worker_t
+    use type_properties,    only: properties_t
+    use type_point,         only: point_t
+    use mod_chidg_mpi,      only: IRANK
+    !use mpi_f08,            only: mpi_comm, MPI_REAL8, MPI_Allgather, MPI_Comm_rank, MPI_Comm_size, MPI_COMM_NULL, MPI_Comm_compare
     use mpi_f08
     use DNAD_D
     implicit none
@@ -68,7 +68,7 @@ contains
 
     !>
     !!
-    !!  @author Nathan A. Wukie (AFRL)
+    !!  @author Nathan A. Wukie
     !!  @date   8/29/2016
     !!
     !--------------------------------------------------------------------------------
@@ -243,7 +243,7 @@ contains
     !>  Compute routine for Pressure Outlet boundary condition state function.
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   2/3/2016
+    !!  @date   4/14/2017
     !!
     !!  @param[in]      worker  Interface for geometry, cache, integration, etc.
     !!  @param[inout]   prop    properties_t object containing equations and material_t objects

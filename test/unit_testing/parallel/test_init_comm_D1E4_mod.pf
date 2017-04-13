@@ -69,6 +69,7 @@ contains
         ! Read partition data: grid, boundary conditions
         !
         call chidg%read_grid(gridfile, spacedim)
+        call MPI_Barrier(ChiDG_COMM,ierr)
 
 
         !
@@ -310,7 +311,6 @@ contains
         if (IRANK == GLOBAL_MASTER) then
             call delete_file(gridfile)
         end if
-        call MPI_Barrier(ChiDG_COMM,ierr)
 
     end subroutine test_init_comm_D1E4
     !******************************************************************************************

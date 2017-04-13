@@ -45,11 +45,11 @@ contains
     subroutine test_init_comm_D2E2(this)
         class(MpiTestMethod), intent(inout) :: this
 
-        type(chidg_t)                               :: chidg
-        type(mpi_comm)                              :: ChiDG_COMM
+        type(chidg_t)               :: chidg
+        type(mpi_comm)              :: ChiDG_COMM
 
-        integer(ik)                     :: iread, spacedim, ierr
-        character(len=:), allocatable   :: gridfile
+        integer(ik)                 :: iread, spacedim, ierr
+        character(:), allocatable   :: gridfile
 
         
         IRANK              = this%getProcessRank()
@@ -76,6 +76,7 @@ contains
         ! Read partition data: grid, boundary conditions
         !
         call chidg%read_grid(gridfile, spacedim)
+        call MPI_Barrier(ChiDG_COMM,ierr)
 
 
         !
@@ -231,11 +232,9 @@ contains
 
         call chidg%shut_down('core')
 
-        call MPI_Barrier(ChiDG_COMM,ierr)
         if (IRANK == GLOBAL_MASTER) then
             call delete_file(gridfile)
         end if
-        call MPI_Barrier(ChiDG_COMM,ierr)
 
     end subroutine test_init_comm_D2E2
     !******************************************************************************************

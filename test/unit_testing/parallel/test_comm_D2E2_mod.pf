@@ -54,8 +54,8 @@ contains
     subroutine setUp(this)
         class(test_comm_D2E2), intent(inout) :: this
 
-        integer(ik)                     :: iread, spacedim, ierr, idom, ielem, ivar, itime
-        real(rk)                        :: initial_vals(this%nterms_s)
+        integer(ik) :: iread, spacedim, ierr, idom, ielem, ivar, itime
+        real(rk)    :: initial_vals(this%nterms_s)
 
         
         IRANK                   = this%getProcessRank()
@@ -137,15 +137,15 @@ contains
 
 
 
-    !>  Test the parallel computation of the chidgVector norm. 
-    !!  This tests the routine: chidgVector%norm_comm
+    !>  Test the parallel computation of the chidg_vector norm. 
+    !!  This tests the routine: chidg_vector%norm_comm
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/23/2016
     !!
     !---------------------------------------------------------------------------------------
-    @Test(npes=[1,2,4])
-    subroutine chidgvector__norm_comm(self)
+    @Test(npes=[1,2,3,4])
+    subroutine chidg_vector__norm_comm(self)
         class(test_comm_D2E2), intent(inout) :: self
 
         integer(ik)     :: nelem
@@ -166,7 +166,7 @@ contains
         
         @assertEqual(expected_norm,computed_norm)
 
-    end subroutine chidgvector__norm_comm
+    end subroutine chidg_vector__norm_comm
     !******************************************************************************************
 
 
@@ -176,15 +176,15 @@ contains
 
 
 
-    !>  Test the parallel computation of the chidgVector norm. 
-    !!  This tests the routine: chidgVector%norm_comm
+    !>  Test the parallel computation of the chidg_vector norm. 
+    !!  This tests the routine: chidg_vector%norm_comm
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/23/2016
     !!
     !---------------------------------------------------------------------------------------
-    @Test(npes=[1,2,4])
-    subroutine chidgvector__dot_comm(self)
+    @Test(npes=[1,2,3,4])
+    subroutine chidg_vector__dot_comm(self)
         class(test_comm_D2E2), intent(inout) :: self
 
         type(chidg_vector_t) :: a, b
@@ -210,7 +210,7 @@ contains
 
         @assertEqual(expected_dot,computed_dot,1.e-12_rk)
 
-    end subroutine chidgvector__dot_comm
+    end subroutine chidg_vector__dot_comm
     !******************************************************************************************
 
 

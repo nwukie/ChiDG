@@ -134,10 +134,11 @@ contains
     !!  @date   2/27/2017   updated for multiple patches
     !!
     !----------------------------------------------------------------------------------------------
-    subroutine init_bc_coupling(self,mesh,group_ID)
+    subroutine init_bc_coupling(self,mesh,group_ID,bc_COMM)
         class(bc_state_t),  intent(inout)   :: self
         type(mesh_t),       intent(inout)   :: mesh
         integer(ik),        intent(in)      :: group_ID
+        type(mpi_comm),     intent(in)      :: bc_COMM
 
         integer(ik) :: patch_ID, face_ID, idomain_g, idomain_l, ielement_g, ielement_l
 

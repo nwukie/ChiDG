@@ -64,7 +64,9 @@ module type_chidg_vector
                                                                 ! densevctors
         procedure,  public  :: set_ntime                        ! Set ntime in the associated
                                                                 ! densevectors
+
 !        generic :: assignment(=) => 
+        
 
     end type chidg_vector_t
     !*****************************************************************************************

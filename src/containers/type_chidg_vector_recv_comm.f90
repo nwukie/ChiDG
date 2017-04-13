@@ -295,7 +295,7 @@ contains
 
 
 
-    !>
+    !>  Zero all entries.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   7/7/2016
@@ -307,11 +307,9 @@ contains
 
         integer(ik) :: idom
 
-
         do idom = 1,size(self%dom)
             call self%dom(idom)%clear()
         end do
-
 
     end subroutine clear
     !**********************************************************************************

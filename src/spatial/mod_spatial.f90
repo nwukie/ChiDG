@@ -125,8 +125,6 @@ contains
         !
         ! Set time info on chidg_worker
         !
-!        worker%itime = itime
-!        worker%t     = data%sdata%t
         worker%itime = data%time_manager%itime
         worker%t     = data%time_manager%t
 

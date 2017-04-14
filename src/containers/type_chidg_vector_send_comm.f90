@@ -76,7 +76,7 @@ contains
         integer(ik)                 :: idom, ielem, iface, idom_send, ndom_send, ierr,  &
                                        loc, neighbor_proc, ielem_send, ChiID, idonor,   &
                                        receiver_proc, proc_coupled, idom_coupled,       &
-                                       ielem_coupled, group_ID, patch_ID, face_ID, elem_ID
+                                       group_ID, patch_ID, face_ID, elem_ID
         integer(ik),    allocatable :: comm_procs_dom(:), comm_procs_bc(:)
         logical                     :: already_added, proc_has_domain, proc_has_group,  &
                                        send_element, has_neighbor, is_chimera
@@ -106,6 +106,8 @@ contains
             end if
 
         end do ! idom
+
+
 
 
         !
@@ -235,17 +237,18 @@ contains
                             do elem_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%ncoupled_elements(face_ID)
 
                                 ! Get 'proc' for coupled element. Test if if matches 'proc' here
-                                proc_coupled = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(elem_ID)
-                                idom_coupled = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(elem_ID)
+                                proc_coupled  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(elem_ID)
+                                idom_coupled  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(elem_ID)
+
+                                send_element = (proc == proc_coupled) .and. (idom == idom_coupled)
+
 
                                 !
-                                ! If element should be sent, add to list
+                                ! If face_ID has coupling with proc, for the current domain idom, add 
+                                ! the element associated with face_ID
                                 !
-                                if ( (proc == proc_coupled) .and. &
-                                     (idom == idom_coupled) ) then
-                                    ielem_coupled = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(elem_ID)
-                                    call self%elems_send(idom_send)%push_back_unique(ielem_coupled)
-                                end if
+                                ielem = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
+                                if (send_element) call self%elems_send(idom_send)%push_back_unique(ielem)
 
                             end do! elem_ID, coupling
                         end do !face_ID

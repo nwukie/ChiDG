@@ -282,7 +282,6 @@ contains
             !
             call self%vecs(ielem_recv)%init(nterms,neqns,ntime,idomain_g,idomain_l,ielement_g,ielement_l)
 
-
         end do
 
 

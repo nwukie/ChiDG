@@ -157,7 +157,6 @@ contains
 
 
 
-
                     !
                     ! Initialize recv for comm CHIMERA receivers
                     !

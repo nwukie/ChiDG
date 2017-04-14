@@ -407,10 +407,10 @@ contains
                                     !
                                     ! Get indices for coupled element
                                     !
-                                    dparent_g = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(elem_ID)
-                                    dparent_l = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(elem_ID)
-                                    eparent_g = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(elem_ID)
-                                    eparent_l = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(elem_ID)
+                                    dparent_g   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(elem_ID)
+                                    dparent_l   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(elem_ID)
+                                    eparent_g   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(elem_ID)
+                                    eparent_l   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(elem_ID)
                                     parent_proc = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(elem_ID)
 
 
@@ -452,67 +452,6 @@ contains
             end do !itime
 
         end if !init_bc
-
-
-!        !
-!        ! Loop through boundary conditions and initialize blocks for coupling
-!        !
-!        if ( init_bc .and. present(bcset_coupling) ) then
-!            do ibc = 1,size(bcset_coupling%bc)
-!
-!                !
-!                ! For the current boundary condition, loop through bc elements.
-!                !
-!                do ielem_bc = 1,size(bcset_coupling%bc(ibc)%elems)
-!
-!                    ncoupled_elems = bcset_coupling%bc(ibc)%coupled_elems(ielem_bc)%size()
-!                    !
-!                    ! Initialize block storage for each coupled element
-!                    !
-!                    do icoupled_elem_bc = 1,ncoupled_elems
-!
-!                        !
-!                        ! Get block indices
-!                        !
-!                        ielem         = bcset_coupling%bc(ibc)%elems(ielem_bc)
-!                        icoupled_elem = bcset_coupling%bc(ibc)%coupled_elems(ielem_bc)%at(icoupled_elem_bc)
-!
-!
-!                        !
-!                        ! Check if block has already been initialized for the coupled element
-!                        !
-!                        block_initialized = .false.
-!                        do iblk = 1,size(self%bc_blks,2)
-!                            if ( self%bc_blks(ielem,iblk)%eparent() == icoupled_elem ) then
-!                                block_initialized = .true.
-!                                exit
-!                            end if
-!                        end do
-!
-!
-!                        if ( .not. block_initialized ) then
-!                            !
-!                            ! Compute block size
-!                            !
-!                            size1d = mesh%domain(idom)%elems(ielem)%neqns  *  mesh%domain(idom)%elems(ielem)%nterms_s
-!
-!                            !
-!                            ! Call boundary condition block initialization
-!                            !
-!                            dparent_l = mesh%domain(idom)%idomain_l
-!                            eparent_l = icoupled_elem
-!                            call self%bc_blks(ielem,icoupled_elem_bc)%init(size1d,dparent_l,eparent_l)
-!                        end if
-!
-!
-!                    end do ! icoupled_elem
-!
-!                end do ! ielem
-!
-!            end do ! ibc
-!
-!        end if ! init_bc
-
 
 
 

@@ -260,17 +260,18 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------
-    subroutine add_coupled_element(self,face_ID,idomain_g, idomain_l, ielement_g, ielement_l, proc)
+    subroutine add_coupled_element(self,face_ID,idomain_g, idomain_l, ielement_g, ielement_l, iface, proc)
         class(bc_patch_t),  intent(inout)   :: self
         integer(ik),        intent(in)      :: face_ID
         integer(ik),        intent(in)      :: idomain_g
         integer(ik),        intent(in)      :: idomain_l
         integer(ik),        intent(in)      :: ielement_g
         integer(ik),        intent(in)      :: ielement_l
+        integer(ik),        intent(in)      :: iface
         integer(ik),        intent(in)      :: proc
 
 
-        call self%coupling(face_ID)%add_coupled_element(idomain_g,idomain_l,ielement_g,ielement_l,proc)
+        call self%coupling(face_ID)%add_coupled_element(idomain_g,idomain_l,ielement_g,ielement_l,iface,proc)
 
 
     end subroutine add_coupled_element

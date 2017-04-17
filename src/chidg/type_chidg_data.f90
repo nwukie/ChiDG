@@ -595,11 +595,6 @@ contains
             !
             call self%bc_state_group(ibc)%init_coupling(self%mesh)
 
-            !
-            ! Propagate boundary condition coupling. 
-            !
-            call self%bc_state_group(ibc)%propagate_coupling(self%mesh)
-
         end do
 
 

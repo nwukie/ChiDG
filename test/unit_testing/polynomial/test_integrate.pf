@@ -163,13 +163,12 @@ subroutine test_integrate_boundary_unit_constant()
     face%ielement_g = ielem
     face%ielement_l = ielem
     face%iface      = iface
-!    face%seed       = seed
 
 
     
     ifcn    = 1
     idonor  = 1
-    iblk    = DIAG
+    iblk    = iface
 
     flux%type    = BOUNDARY_ADVECTIVE_FLUX
     flux%ifcn    = ifcn
@@ -376,7 +375,8 @@ subroutine test_integrate_boundary_nonunit_constant()
     idomain = 1
     ieqn    = 1
     itime   = 1
-    iblk    = 7
+    !iblk    = 7
+    iblk    = face%iface
     idonor  = 1
     ifcn    = 1
 
@@ -394,6 +394,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     ! Test Face XI_MIN
     !!!!!!!!!!!!!!!!!!!!!!!
     face%iface = XI_MIN
+    flux%idiff = XI_MIN
     !
     ! Integrate boundary. THIS IS BEING TESTED
     !
@@ -414,6 +415,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     ! Test Face XI_MAX
     !!!!!!!!!!!!!!!!!!!!!!!
     face%iface = XI_MAX
+    flux%idiff = XI_MAX
     !
     ! Integrate boundary. THIS IS BEING TESTED
     !
@@ -437,6 +439,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     ! Test Face ETA_MIN
     !!!!!!!!!!!!!!!!!!!!!!!
     face%iface = ETA_MIN
+    flux%idiff = ETA_MIN
     !
     ! Integrate boundary. THIS IS BEING TESTED
     !
@@ -462,6 +465,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     ! Test Face ETA_MAX
     !!!!!!!!!!!!!!!!!!!!!!!
     face%iface = ETA_MAX
+    flux%idiff = ETA_MAX
     !
     ! Integrate boundary. THIS IS BEING TESTED
     !
@@ -486,6 +490,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     ! Test Face ZETA_MIN
     !!!!!!!!!!!!!!!!!!!!!!!
     face%iface = ZETA_MIN
+    flux%idiff = ZETA_MIN
     !
     ! Integrate boundary. THIS IS BEING TESTED
     !
@@ -510,6 +515,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     ! Test Face ZETA_MAX
     !!!!!!!!!!!!!!!!!!!!!!!
     face%iface = ZETA_MAX
+    flux%idiff = ZETA_MAX
     !
     ! Integrate boundary. THIS IS BEING TESTED
     !

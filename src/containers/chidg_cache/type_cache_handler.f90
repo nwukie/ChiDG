@@ -619,7 +619,8 @@ contains
         !
         ! Face exterior state. Value
         !
-        if ( (worker%face_type() == INTERIOR) .or. (worker%face_type() == CHIMERA) ) then
+        if ( (worker%face_type() == INTERIOR) .or. &
+             (worker%face_type() == CHIMERA ) ) then
             
             do ieqn = 1,worker%mesh%domain(idomain_l)%neqns
                 eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
@@ -694,7 +695,7 @@ contains
             face_ID  = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%face_ID
 
             ndepend = get_ndepend_exterior(worker,equation_set,bc_state_group,differentiate)
-            !do istate = 1,size(bc(bc_ID)%bc_state)
+
             do istate = 1,size(bc_state_group(bc_ID)%bc_state)
                 do idepend = 1,ndepend
 

@@ -45,7 +45,6 @@ module type_face
         integer(ik)        :: group_ID   = 0  ! Index for bc patch group mesh%bc_patch_group(group_ID)
         integer(ik)        :: patch_ID   = 0  ! Index for bc patch 
         integer(ik)        :: face_ID    = 0  ! Index for bc patch face
-        integer(ik)        :: bc_ndepend = 0  ! Number of coupled element if bc face.
 
         ! Owner-element information
         integer(ik)        :: idomain_g       ! Global index of the parent domain

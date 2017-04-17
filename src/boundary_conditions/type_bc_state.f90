@@ -142,8 +142,9 @@ contains
         class(bc_state_t),  intent(inout)   :: self
         type(mesh_t),       intent(inout)   :: mesh
         integer(ik),        intent(in)      :: group_ID
+        type(mpi_comm),     intent(in)      :: bc_COMM
 
-        integer(ik) :: patch_ID, face_ID, idomain_g, idomain_l, ielement_g, ielement_l
+        integer(ik) :: patch_ID, face_ID, idomain_g, idomain_l, ielement_g, ielement_l, iface
 
 
 
@@ -163,6 +164,7 @@ contains
                 idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l(face_ID)
                 ielement_g = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID)
                 ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
+                iface      = mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
 
                 
                 !
@@ -172,6 +174,7 @@ contains
                                                                                                 idomain_l,  &
                                                                                                 ielement_g, &
                                                                                                 ielement_l, &
+                                                                                                iface,      &
                                                                                                 IRANK)
 
             end do ! face_ID

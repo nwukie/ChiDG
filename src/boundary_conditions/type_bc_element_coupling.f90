@@ -29,6 +29,7 @@ module type_bc_element_coupling
         procedure   :: idomain_l
         procedure   :: ielement_g
         procedure   :: ielement_l
+        procedure   :: iface
         procedure   :: proc
 
     end type bc_element_coupling_t
@@ -48,12 +49,13 @@ contains
     !!
     !!
     !---------------------------------------------------------------------
-    subroutine add_coupled_element(self,idomain_g, idomain_l, ielement_g, ielement_l, proc)
+    subroutine add_coupled_element(self,idomain_g, idomain_l, ielement_g, ielement_l, iface, proc)
         class(bc_element_coupling_t),   intent(inout)   :: self
         integer(ik),                    intent(in)      :: idomain_g
         integer(ik),                    intent(in)      :: idomain_l
         integer(ik),                    intent(in)      :: ielement_g
         integer(ik),                    intent(in)      :: ielement_l
+        integer(ik),                    intent(in)      :: iface
         integer(ik),                    intent(in)      :: proc
 
         logical     :: already_added
@@ -86,7 +88,7 @@ contains
         if (.not. already_added) then
 
             elem_ID = self%new_coupled_element()
-            call self%data(elem_ID)%set_coupling(idomain_g,idomain_l,ielement_g,ielement_l,proc)
+            call self%data(elem_ID)%set_coupling(idomain_g,idomain_l,ielement_g,ielement_l,iface,proc)
 
         end if
 
@@ -309,6 +311,33 @@ contains
 
     end function ielement_l
     !************************************************************************
+
+
+
+
+
+    !>  Return the identifier iface
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/17/2017
+    !!
+    !-----------------------------------------------------------------------
+    function iface(self,elem_ID) result(iface_)
+        class(bc_element_coupling_t),   intent(in)  :: self
+        integer(ik),                    intent(in)  :: elem_ID
+
+        integer(ik) :: iface_
+
+        iface_ = self%data(elem_ID)%iface
+
+    end function iface
+    !************************************************************************
+
+
+
+
+
+
 
 
 

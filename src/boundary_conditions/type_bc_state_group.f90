@@ -13,7 +13,19 @@ module type_bc_state_group
 
 
 
-    !>
+    !>  A group of bc_state_t objects that is used to define an exterior solution
+    !!  state on a boundary condition.
+    !!
+    !!  The reason for grouping bc_state_t objects together is to provide a mechanism
+    !!  for setting exterior solution states for different PDEs at the same time.
+    !!
+    !!  For example, the Navier Stokes equations require boundary conditions for the
+    !!  PDE's, [mass, momentum, energy]. A single bc_state_t for an inlet might provide
+    !!  a definition for those equations. The RANS equations require extra boundary 
+    !!  conditions for turbulence equations. In this case, the original bc_state_t 
+    !!  objects for the Navier Stokes can still be used. Extra bc_state_t objects
+    !!  are then defined and added that provide the exterior state for the 
+    !!  turbulence PDE/s. 
     !!
     !!  @author Nathan A. Wukie
     !!  @date   11/9/2016
@@ -46,7 +58,6 @@ module type_bc_state_group
         procedure   :: init_comm
         procedure   :: init_coupling
         procedure   :: init_specialized
-        procedure   :: propagate_coupling
 
         
     end type bc_state_group_t
@@ -497,53 +508,6 @@ contains
     !****************************************************************************************
 
 
-
-
-
-
-
-    !>  Propagate boundary condition coupling to mesh data.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   4/6/2017
-    !!
-    !---------------------------------------------------------------------------------------
-    subroutine propagate_coupling(self,mesh)
-        class(bc_state_group_t),    intent(in)      :: self
-        type(mesh_t),               intent(inout)   :: mesh
-
-        integer(ik) :: group_ID, patch_ID, face_ID, idom, ielem, iface
-
-
-        !
-        ! set ncoupled elements back to mesh face
-        !
-        if (allocated(self%bc_state)) then
-
-            group_ID = mesh%get_bc_patch_group_id(self%name)
-            if (group_ID /= NO_ID) then
-                if (mesh%bc_patch_group(group_ID)%npatches() > 0) then
-
-                    do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
-                        do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
-
-                            idom  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l(face_ID)
-                            ielem = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
-                            iface = mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
-
-                            mesh%domain(idom)%faces(ielem,iface)%bc_ndepend = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ncoupled_elements(face_ID)
-
-                        end do !face_ID
-                    end do !patch_ID
-
-                end if !bc_patch
-            end if !NO_ID
-
-        end if !bc_state
-
-
-    end subroutine propagate_coupling
-    !****************************************************************************************
 
 
 

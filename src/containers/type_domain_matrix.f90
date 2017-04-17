@@ -660,17 +660,17 @@ contains
         integer(ik),                intent(in)      :: ivar
         integer(ik),                intent(in)      :: itime
 
-        integer(ik) :: idomain_l, ielement_l
-        integer(ik) :: idonor_domain_l, idonor_element_l, imat
+        integer(ik) :: ielement_l
+        integer(ik) :: icoupled_domain_g, icoupled_element_g, icoupled_element_l, imat
         integer(ik) :: nterms, size_integral
         logical     :: local_coupling = .false.
 
 
-        idomain_l  = face%idomain_l
         ielement_l = face%ielement_l
 
-        idonor_domain_l  = seed%idomain_l
-        idonor_element_l = seed%ielement_l
+        icoupled_domain_g  = seed%idomain_g
+        icoupled_element_g = seed%ielement_g
+        icoupled_element_l = seed%ielement_l
 
 
         !
@@ -680,7 +680,7 @@ contains
         ! but the ILU preconditioner expects the full diagonal contribution to be in 
         ! lblks.
         !
-        local_coupling = (ielement_l == idonor_element_l)
+        local_coupling = (ielement_l == icoupled_element_l)
 
         if ( local_coupling ) then
 
@@ -693,13 +693,14 @@ contains
             nterms = self%ldata(ielement_l,2)
 
             ! Find coupled bc densematrix location 
-            imat = self%bc_blks(ielement_l,itime)%loc(idonor_domain_l,idonor_element_l)
+            imat = self%bc_blks(ielement_l,itime)%loc(icoupled_domain_g,icoupled_element_g)
 
             ! Store derivatives
             call self%bc_blks(ielement_l,itime)%store(imat,ivar,nterms,integral)
 
 
         end if ! check local block.
+
 
     end subroutine store_bc
     !******************************************************************************************

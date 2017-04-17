@@ -18,6 +18,7 @@ module type_element_coupling_data
         integer(ik) :: idomain_l
         integer(ik) :: ielement_g
         integer(ik) :: ielement_l
+        integer(ik) :: iface
         integer(ik) :: proc
 
         integer(ik) :: recv_comm
@@ -44,12 +45,13 @@ contains
     !!
     !!
     !---------------------------------------------------------------------
-    subroutine set_coupling(self,idomain_g,idomain_l,ielement_g,ielement_l,proc)
+    subroutine set_coupling(self,idomain_g,idomain_l,ielement_g,ielement_l,iface,proc)
         class(element_coupling_data_t), intent(inout)   :: self
         integer(ik),                    intent(in)      :: idomain_g
         integer(ik),                    intent(in)      :: idomain_l
         integer(ik),                    intent(in)      :: ielement_g
         integer(ik),                    intent(in)      :: ielement_l
+        integer(ik),                    intent(in)      :: iface
         integer(ik),                    intent(in)      :: proc
 
 
@@ -57,6 +59,7 @@ contains
         self%idomain_l  = idomain_l
         self%ielement_g = ielement_g
         self%ielement_l = ielement_l
+        self%iface      = iface
         self%proc       = proc
 
 

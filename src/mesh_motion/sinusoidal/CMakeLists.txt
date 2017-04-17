@@ -1,1 +1,1 @@
-add_lib_sources(pmm_sinusoidal.f90)
+add_lib_sources(pmmf_sinusoidal.f90)

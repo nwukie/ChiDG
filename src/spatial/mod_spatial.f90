@@ -161,6 +161,7 @@ contains
 
                     ! Update the element cache
                     call cache_handler%update(worker,data%eqnset,data%bc, differentiate_function)
+                    !call mesh_motion%update_element(ielem)
 
 
 
@@ -168,6 +169,7 @@ contains
                     ! contributions from boundary integrals.
                     do iface = 1,NFACES
 
+                        !call mesh_motion%update_face(ielem,iface)
                         call worker%set_face(iface)
  
                         call eqnset%compute_boundary_advective_operators(worker, differentiate_function)

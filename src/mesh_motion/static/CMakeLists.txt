@@ -1,1 +1,1 @@
-add_lib_sources(pmm_static.f90)
+add_lib_sources(pmmf_static.f90)

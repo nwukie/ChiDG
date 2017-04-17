@@ -6,7 +6,7 @@ module type_chidg
     use mod_models,                 only: register_models
     use mod_bc,                     only: register_bcs
     use mod_function,               only: register_functions
-    use mod_prescribed_mesh_motion, only: register_prescribed_mesh_motions
+    use mod_prescribed_mesh_motion_function, only: register_prescribed_mesh_motion_functions
     use mod_grid,                   only: initialize_grid
     use mod_string,                 only: get_file_extension, string_t, get_file_prefix
 
@@ -38,11 +38,16 @@ module type_chidg
     use mod_hdfio,                  only: read_grid_hdf, read_boundaryconditions_hdf,   &
                                           read_solution_hdf, write_solution_hdf,        &
                                           read_connectivity_hdf, read_weights_hdf, write_grid_hdf
+                                          read_prescribedmeshmotion_hdf
     use mod_hdf_utilities,          only: close_hdf
     use mod_partitioners,           only: partition_connectivity, send_partitions, &
                                           recv_partition
     use mpi_f08
     use mod_io
+
+
+    use type_prescribed_mesh_motion_domain_data,        only: prescribed_mesh_motion_domain_data_t
+    use type_prescribed_mesh_motion_group_wrapper,        only: prescribed_mesh_motion_group_wrapper_t
     implicit none
 
 
@@ -107,6 +112,7 @@ module type_chidg
         ! IO procedures
         procedure   :: read_grid
         procedure   :: read_boundaryconditions
+        !procedure  :: read_mesh_motion
         procedure   :: read_solution
         procedure   :: write_grid
         procedure   :: write_solution
@@ -178,7 +184,7 @@ contains
                     ! Order matters here. Functions need to come first. Used by 
                     ! equations and bcs.
                     call register_functions()
-                    call register_prescribed_mesh_motions()
+                    call register_prescribed_mesh_motion_functions()
                     call register_models()
                     call register_equation_builders()
                     call register_operators()
@@ -786,6 +792,91 @@ contains
     !*****************************************************************************************
 
 
+
+
+
+    !>  Read prescribed mesh motions from grid file.
+    !!
+    !!  @author Eric Wolf
+    !!  @date  3/30/2017 
+    !!
+    !!  @param[in]  gridfile    String specifying a gridfile, including extension.
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine read_prescribedmeshmotions(self, gridfile)
+        class(chidg_t),     intent(inout)               :: self
+        character(*),       intent(in)                  :: gridfile
+
+        character(5),           dimension(1)    :: extensions
+        character(:),           allocatable     :: extension
+        type(prescribed_mesh_motion_domain_data_t),  allocatable     :: pmm_domain_data(:)
+        type(string_t)                          :: pmm_group_name
+        type(prescribed_mesh_motion_group_wrapper_t)            :: pmm_group_wrapper
+        type(string_t)                          :: group_name
+        integer(ik)                                 :: idom, ndomains, iface, ibc, ierr, iread, npmm_groups
+
+
+        !
+        ! Get filename extension
+        !
+        extensions = ['.h5']
+        extension = get_file_extension(gridfile, extensions)
+
+
+        !
+        ! Call boundary condition reader based on file extension
+        !
+        call write_line('Prescribed Mesh Motions: reading...', io_proc=GLOBAL_MASTER)
+        do iread = 0,NRANK-1
+            if ( iread == IRANK ) then
+
+
+                if ( extension == '.h5' ) then
+                    call read_prescribedmeshmotion_hdf(gridfile,pmm_domain_data,pmm_group_wrapper,self%partition)
+                else
+                    call chidg_signal(FATAL,"chidg%read_boundaryconditions: grid file extension not recognized")
+                end if
+
+
+            end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do
+
+
+
+
+
+        call write_line('Prescribed Mesh Motions: processing...', io_proc=GLOBAL_MASTER)
+        !
+        ! Add all boundary condition groups
+        !
+        npmm_groups = pmm_group_wrapper%ngroups
+        if (npmm_groups>0) then
+        do ibc = 1,npmm_groups
+
+            call self%data%add_pmm_group(pmm_group_wrapper%pmm_groups(ibc))
+
+        end do !ibc
+        end if
+
+
+        !
+        ! Add boundary condition patches
+        !
+        ndomains = size(pmm_domain_data)
+        do idom = 1,ndomains
+            
+            call pmm_group_name%set(pmm_domain_data(idom)%pmm_group_name)
+            call self%data%add_pmm_domain(pmm_domain_data(idom)%domain_name,            &
+                                        pmm_group_name%get())
+
+        end do !ipatch
+
+
+
+
+    end subroutine read_prescribedmeshmotions
+    !*****************************************************************************************
 
 
 

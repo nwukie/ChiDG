@@ -25,11 +25,12 @@ module mod_hdfio
                                           open_domain_hdf, close_domain_hdf, initialize_file_hdf,        &
                                           initialize_file_structure_hdf, open_bc_group_hdf,              &
                                           close_bc_group_hdf, get_domain_nelements_hdf,                  &
-                                          get_domain_name_hdf, set_ntimes_hdf, get_ntimes_hdf,           &
                                           get_time_integrator_hdf,                                       &
                                           set_domain_connectivity_partition_hdf, set_domain_mapping_hdf, &
                                           set_domain_dimensionality_hdf, set_domain_coordinates_hdf,     &
                                           set_domain_coordinate_system_hdf, set_contains_grid_hdf
+                                          get_npmm_groups_hdf, get_pmm_group_names_hdf, get_pmm_hdf,    &
+                                          get_pmm_domain_group_hdf
 
     use type_svector,               only: svector_t
     use mod_string,                 only: string_t
@@ -44,6 +45,11 @@ module mod_hdfio
     use hdf5
     use h5lt
     use mpi_f08
+
+    use type_prescribed_mesh_motion,    only: prescribed_mesh_motion_t
+    use type_prescribed_mesh_motion_group,    only: prescribed_mesh_motion_group_t
+    use type_prescribed_mesh_motion_group_wrapper,    only: prescribed_mesh_motion_group_wrapper_t
+    use type_prescribed_mesh_motion_domain_data,    only: prescribed_mesh_motion_domain_data_t
     implicit none
 
 
@@ -1500,6 +1506,205 @@ contains
 
     end subroutine read_weights_hdf
     !*****************************************************************************************
+
+    ! Mesh Motion
+
+
+    !   Prescribed Mesh Motion
+
+    !>  Read mesh motion from HDF5 file in ChiDG format and return data in bcdata_t
+    !!  container. The calling procedure can then use the returned bcdata_t to initialize
+    !!  boundary conditions.
+    !!
+    !!  @author Eric Wolf
+    !!  @date   3/29/2017
+    !!
+    !!  @param[in]      filename    String of the HDF5 file to be read.
+    !!  @param[inout]   bcdata(:)   Array of bcdata_t instances, one for each domain. 
+    !!                              These will be returned with data about the boundary
+    !!                              conditions that can be used for initialization.
+    !!  @param[in]      partition   Partition information to only read boundary conditions 
+    !!                              for the domains in the partition
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine read_prescribedmeshmotion_hdf(filename, pmm_domain_data, pmm_group_wrapper, partition)
+        character(*),           intent(in)                      :: filename
+        type(prescribed_mesh_motion_domain_data_t),  intent(inout), allocatable    :: pmm_domain_data(:)
+        type(prescribed_mesh_motion_group_wrapper_t),  intent(inout)                        :: pmm_group_wrapper
+        type(partition_t),      intent(in)                      :: partition
+
+        integer(HID_T)          :: fid
+        integer                 :: ierr, nconn
+
+
+
+        fid = open_file_hdf(filename)
+
+
+        !
+        !  Allocate for number of domains in the partition
+        !
+        nconn = size(partition%connectivities)
+        allocate(pmm_domain_data(nconn), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        !
+        ! Read prescribed mesh motion
+        !
+
+        call read_pmm_domain_data_hdf(fid, pmm_domain_data, partition)
+
+
+        call read_pmm_groups_hdf(fid,pmm_group_wrapper,partition)
+
+
+        call close_file_hdf(fid)
+
+    end subroutine read_prescribedmeshmotion_hdf
+    !****************************************************************************************
+
+
+    !>  Read the boundary condition patch connectivity data from file and store in
+    !!  bc_patch_data.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/31/2016
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine read_pmm_domain_data_hdf(fid,pmm_domain_data, partition)
+        integer(HID_T),         intent(in)      :: fid
+        type(prescribed_mesh_motion_domain_data_t),  intent(inout)   :: pmm_domain_data(:)
+        type(partition_t),      intent(in)      :: partition
+
+        integer(HID_T)      :: domain_id
+        integer(ik)                 :: iconn, nconn, iface, ierr
+        character(len=:), allocatable              :: pmm_group
+        integer                     :: ibc_face, nbcfaces
+        character(1024)             :: domain
+
+        integer(HID_T)              :: patch_id
+
+
+
+
+        !
+        !  Loop through connectivities and read boundary conditions
+        !
+        nconn = size(partition%connectivities)
+        do iconn = 1,nconn
+
+
+            !
+            ! Get name of current domain
+            !
+            domain = partition%connectivities(iconn)%get_domain_name()
+            pmm_domain_data(iconn)%domain_name = domain
+
+
+            
+            ! Get the name of the PMM group for the current domain.
+            ! This is stored as an attribute.
+            call h5gopen_f(fid, "D_"//trim(domain), domain_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"read_pmm_domain_hdf: error opening boundary face group")
+            
+            ! Read Boundary State Group
+            pmm_group = get_pmm_domain_group_hdf(domain_id)
+            pmm_domain_data(iconn)%pmm_group_name = pmm_group
+
+
+            ! Close face boundary condition group
+            call h5gclose_f(patch_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"read_bc_patches_hdf: h5gclose")
+
+
+
+
+        end do  ! iconn
+
+
+
+    end subroutine read_pmm_domain_data_hdf
+    !****************************************************************************************
+
+
+
+    !>  Read boundary condition state groups from file and return.
+    !!
+    !!  Reads and returns all boundary condition state groups, regardless of if they
+    !!  are used on the current partition or not.
+    !!
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/31/2016
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine read_pmm_groups_hdf(fid, pmm_groups_wrapper, partition)
+        integer(HID_T),         intent(in)                  :: fid
+        type(prescribed_mesh_motion_group_wrapper_t),       intent(inout)  :: pmm_groups_wrapper
+        type(partition_t),      intent(in)                  :: partition
+
+        type(svector_t)                     :: pmm_group_names, pmm_names
+        type(string_t)                      :: group_name, pmm_name
+        class(prescribed_mesh_motion_t),  allocatable     :: pmm 
+
+        integer(HID_T)  :: group_id
+        integer(ik)     :: igroup, ngroups, istate, ierr
+
+
+        ngroups        = get_npmm_groups_hdf(fid)
+        pmm_group_names = get_pmm_group_names_hdf(fid)
+
+
+
+        !
+        ! Read each group of pmm's
+        !
+        if (ngroups>0) then
+        if (allocated(pmm_groups_wrapper%pmm_groups)) deallocate(pmm_groups_wrapper%pmm_groups)
+        allocate(pmm_groups_wrapper%pmm_groups(ngroups), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        do igroup = 1,ngroups
+
+            ! Open face boundary condition group
+            group_name = pmm_group_names%at(igroup)
+            !group_id = open_pmm_group_hdf(fid,group_name%get())
+            call h5gopen_f(fid, "PMM_"//trim(group_name%get()), group_id, ierr)
+            if (ierr /= 0) call chidg_signal_one(FATAL,"get_pmm_state_hdf: error opening bc_state group.",trim(pmm_name%get()))
+
+
+
+            if (allocated(pmm)) deallocate(pmm)
+            allocate(pmm, source = get_pmm_hdf(group_id, group_name%get()))
+
+            ! Save to pmm_group_t
+            pmm_groups_wrapper%ngroups = pmm_groups_wrapper%ngroups+1
+            pmm_groups_wrapper%pmm_groups(igroup)%name = group_name%get()
+            allocate(pmm_groups_wrapper%pmm_groups(igroup)%pmm, source = pmm)
+            !pmm_groups_wrapper%pmm_groups(igroup)%pmm = pmm
+
+
+
+            ! Close boundary condition state group
+            call h5gclose_f(group_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"get_bc_state_hdf: h5gclose")
+
+
+        end do !igroup
+        end if
+
+
+
+    end subroutine read_pmm_groups_hdf
+    !****************************************************************************************
+
+
+
+
 
 
 

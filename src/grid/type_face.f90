@@ -4,7 +4,7 @@ module type_face
     use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX,                 &
                                       ZETA_MIN, ZETA_MAX, XI_DIR, ETA_DIR, ZETA_DIR,    &
                                       NO_INTERIOR_NEIGHBOR, NO_PROC,                    &
-                                      ONE, TWO, ORPHAN, ZERO
+                                      ZERO, ONE, TWO, ORPHAN, NO_PMM_ASSIGNED
 
     use type_point,             only: point_t
     use type_element,           only: element_t
@@ -45,6 +45,9 @@ module type_face
         integer(ik)                 :: patch_ID   = 0       !< Identifier for boundary condition patch bc(bc_ID)%bc_patch(patch_ID)
         integer(ik)                 :: patch_face = 0       !< Index in bc_patch bcs(bc_ID)%bc_patch(patch_ID)%coupled_elements(patch_face)
         integer(ik)                 :: bc_ndepend = 0       !< Number of coupled element if bc face.
+
+
+        integer(ik)                 :: pmm_ID = NO_PMM_ASSIGNED
 
         ! Owner-element information
         integer(ik)                 :: idomain_g            !< Global index of the parent domain
@@ -139,6 +142,13 @@ module type_face
         procedure           :: get_neighbor_element_g           !< Return neighbor element index
         procedure           :: get_neighbor_element_l           !< Return neighbor element index
         procedure           :: get_neighbor_face                !< Return neighbor face index
+        
+        ! ALE procedures
+        procedure, public   :: update_face_ale
+        procedure           :: update_coords_ale
+        procedure           :: compute_quadrature_coords_ale
+        procedure           :: compute_quadrature_metrics_ale
+
 
         final               :: destructor
 
@@ -842,6 +852,190 @@ contains
 
     end function get_neighbor_face
     !******************************************************************************************
+
+
+    subroutine update_face_ale(self,elem)
+        class(face_t),       intent(inout)      :: self
+        type(element_t),        intent(in)         :: elem
+
+        call self%update_coords_ale(elem)
+        call self%compute_quadrature_coords_ale()
+        call self%compute_quadrature_metrics_ale()
+
+    end subroutine update_face_ale
+
+    subroutine update_coords_ale(self,elem)
+        class(face_t),      intent(inout)       :: self
+        type(element_t),       intent(in)          :: elem
+
+!        self%coords_ale = elem%coords_ale
+
+    end subroutine update_coords_ale
+
+    subroutine compute_quadrature_coords_ale(self)
+        class(face_t),   intent(inout)   :: self
+        integer(ik)                         :: nnodes
+        real(rk)                            :: x(self%gq%face%nnodes),y(self%gq%face%nnodes),z(self%gq%face%nnodes)
+        real(rk)                            :: vg1(self%gq%face%nnodes),vg2(self%gq%face%nnodes),vg3(self%gq%face%nnodes)
+        integer(ik)                         :: inode
+
+!        nnodes = self%gq%face%nnodes
+!
+!        !
+!        ! compute cartesian coordinates associated with quadrature points
+!        !
+!        x = matmul(self%gqmesh%face%val,self%coords_ale%getvar(1))
+!        y = matmul(self%gqmesh%face%val,self%coords_ale%getvar(2))
+!        z = matmul(self%gqmesh%face%val,self%coords_ale%getvar(3))
+!
+!
+!        !
+!        ! Initialize each point with cartesian coordinates
+!        !
+!        do inode = 1,nnodes
+!            call self%ale_quad_pts(inode)%set(x(inode),y(inode),z(inode))
+!        end do
+!!
+!
+!        ! Grid velocity
+!
+!        ! compute cartesian coordinates associated with quadrature points
+!        !
+!        vg1 = matmul(self%gqmesh%vol%val,self%vel_modes_ale%getvar(1))
+!        vg2 = matmul(self%gqmesh%vol%val,self%vel_modes_ale%getvar(2))
+!        vg3 = matmul(self%gqmesh%vol%val,self%vel_modes_ale%getvar(3))
+!
+!
+!        !
+!        ! Initialize each point with cartesian coordinates
+!        !
+!        do inode = 1,nnodes
+!            call self%grid_vel1(inode) = vg1(inode)
+!            call self%grid_vel2(inode) = vg2(inode)
+!            call self%grid_vel3(inode) = vg3(inode)
+!        end do
+
+
+    end subroutine compute_quadrature_coords_ale
+    !**************************************************************************************************************
+
+
+    !> Compute metric terms and cell jacobians at face quadrature nodes
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!  TODO: Generalize 2D physical coordinates. Currently assumes x-y.
+    !!
+    !---------------------------------------------------------------------------------------------------------
+    subroutine compute_quadrature_metrics_ale(self)
+        class(face_t),  intent(inout)   :: self
+
+        integer(ik) :: inode, iface
+        integer(ik) :: nnodes
+
+        real(rk)    :: dxdxi(self%gq%face%nnodes), dxdeta(self%gq%face%nnodes), dxdzeta(self%gq%face%nnodes)
+        real(rk)    :: dydxi(self%gq%face%nnodes), dydeta(self%gq%face%nnodes), dydzeta(self%gq%face%nnodes)
+        real(rk)    :: dzdxi(self%gq%face%nnodes), dzdeta(self%gq%face%nnodes), dzdzeta(self%gq%face%nnodes)
+        real(rk)    :: invjac_ale(self%gq%face%nnodes)
+
+!        iface  = self%iface
+!        nnodes = self%gq%face%nnodes
+!
+!        !
+!        ! Evaluate directional derivatives of coordinates at quadrature nodes.
+!        !
+!        associate (gq_f => self%gqmesh%face)
+!            dxdxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords_ale%getvar(1))
+!            dxdeta  = matmul(gq_f%ddeta( :,:,iface), self%coords_ale%getvar(1))
+!            dxdzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords_ale%getvar(1))
+!
+!            dydxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords_ale%getvar(2))
+!            dydeta  = matmul(gq_f%ddeta( :,:,iface), self%coords_ale%getvar(2))
+!            dydzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords_ale%getvar(2))
+!
+!            dzdxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords_ale%getvar(3))
+!            dzdeta  = matmul(gq_f%ddeta( :,:,iface), self%coords_ale%getvar(3))
+!            dzdzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords_ale%getvar(3))
+!        end associate
+!
+!        
+!
+!        !
+!        ! TODO: Generalize 2D physical coordinates. Currently assumes x-y.
+!        !
+!        if ( self%spacedim == TWO_DIM ) then
+!            dzdxi   = ZERO
+!            dzdeta  = ZERO
+!            dzdzeta = ONE
+!        end if
+!
+!
+!
+!        !
+!        ! At each quadrature node, compute metric terms.
+!        !
+!        do inode = 1,nnodes
+!            self%metric_ale(1,1,inode) = dydeta(inode)*dzdzeta(inode) - dydzeta(inode)*dzdeta(inode)
+!            self%metric_ale(2,1,inode) = dydzeta(inode)*dzdxi(inode)  - dydxi(inode)*dzdzeta(inode)
+!            self%metric_ale(3,1,inode) = dydxi(inode)*dzdeta(inode)   - dydeta(inode)*dzdxi(inode)
+!
+!            self%metric_ale(1,2,inode) = dxdzeta(inode)*dzdeta(inode) - dxdeta(inode)*dzdzeta(inode)
+!            self%metric_ale(2,2,inode) = dxdxi(inode)*dzdzeta(inode)  - dxdzeta(inode)*dzdxi(inode)
+!            self%metric_ale(3,2,inode) = dxdeta(inode)*dzdxi(inode)   - dxdxi(inode)*dzdeta(inode)
+!
+!            self%metric_ale(1,3,inode) = dxdeta(inode)*dydzeta(inode) - dxdzeta(inode)*dydeta(inode)
+!            self%metric_ale(2,3,inode) = dxdzeta(inode)*dydxi(inode)  - dxdxi(inode)*dydzeta(inode)
+!            self%metric_ale(3,3,inode) = dxdxi(inode)*dydeta(inode)   - dxdeta(inode)*dydxi(inode)
+!        end do
+!
+!        do inode = 1,nnodes
+!            self%jacobian_matrix_ale(inode,1,1) = dxdxi(inode)
+!            self%jacobian_matrix_ale(inode,1,2) = dxdeta(inode)
+!            self%jacobian_matrix_ale(inode,1,3) = dxdzeta(inode)
+!                                              
+!            self%jacobian_matrix_ale(inode,2,1) = dydxi(inode)
+!            self%jacobian_matrix_ale(inode,2,2) = dydeta(inode)
+!            self%jacobian_matrix_ale(inode,2,3) = dydzeta(inode)
+!                                              
+!            self%jacobian_matrix_ale(inode,3,1) = dzdxi(inode)
+!            self%jacobian_matrix_ale(inode,3,2) = dzdeta(inode)
+!            self%jacobian_matrix_ale(inode,3,3) = dzdzeta(inode)
+!
+!            !print *, '2'
+!            !self%inv_jacobian_matrix_ale(inode,:,:) = inv(self%jacobian_matrix_ale(inode,:,:))
+!        end do
+!
+!
+!
+!        do inode = 1, nnodes
+!            self%jacobian_grid(inode,:,:) = matmul(self%jacobian_matrix_ale(inode,:,:),self%inv_jacobian_matrix(inode,:,:))
+!!            self%jacobian_grid(inode,:,:) = matmul(self%inv_jacobian_matrix(inode,:,:),self%jacobian_matrix_ale(inode,:,:))
+!            self%inv_jacobian_grid(inode,:,:) = inv(self%jacobian_grid(inode,:,:))
+!        end do
+!
+!!        if (self%ineighbor_face == NO_INTERIOR_NEIGHBOR) then
+!!            print *, self%jacobian_grid(1,:,:)
+!!        end if
+!
+!        !
+!        ! compute inverse cell mapping jacobian terms
+!        !
+!        invjac_ale = dxdxi*dydeta*dzdzeta - dxdeta*dydxi*dzdzeta - &
+!                 dxdxi*dydzeta*dzdeta + dxdzeta*dydxi*dzdeta + &
+!                 dxdeta*dydzeta*dzdxi - dxdzeta*dydeta*dzdxi
+!
+!
+!
+!        self%jinv_ale = invjac_ale
+!
+!        self%det_jacobian_grid = self%jinv_ale/self%jinv
+!!        if ((self%ineighbor_face .eq. NO_INTERIOR_NEIGHBOR) ) then
+!!            print *, 'boundary face jinv'
+!!            print *, self%jacobian_grid(1,:,:)
+!!        end if
+    end subroutine compute_quadrature_metrics_ale
+    !*****************************************************************************************************
 
 
 

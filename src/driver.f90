@@ -93,7 +93,6 @@ program driver
         
 
 !        call set_p_poisson_parameter(4._rk)
-
         !
         ! Initialize communication, storage, auxiliary fields
         !
@@ -131,8 +130,11 @@ program driver
 !            call create_function(constant,'Radius')
 !            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,1)
 
+            
+
 
             call create_function(constant,'constant')
+
 
             ! rho
             call constant%set_option('val',1.14_rk)
@@ -241,14 +243,12 @@ program driver
                 call chidg_signal(FATAL,"We didn't understand the way chidg was called. Available chidg 'actions' are: 'edit' 'convert' 'post' 'matplotlib' and 'airfoil'.")
         end select
 
-!<<<<<<< HEAD
 !        else if ( trim(chidg_action) == 'post' ) then
 !            call chidg_post(trim(filename))
 !            call chidg_post_vtk(trim(filename))
 !            call chidg_post_matplotlib(trim(filename))
 !        else
 !            call chidg_signal(FATAL,"chidg: unrecognized action '"//trim(chidg_action)//"'. Valid options are: 'edit', 'convert'")
-!=======
 
         call chidg%shut_down('core')
 

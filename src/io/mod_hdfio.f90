@@ -9,7 +9,8 @@ module mod_hdfio
     use mod_constants,              only: ZERO, NFACES, TWO_DIM, THREE_DIM, NO_PROC
     use mod_bc,                     only: create_bc
     use mod_chidg_mpi,              only: IRANK, NRANK, ChiDG_COMM
-    use mod_hdf_utilities,          only: get_ndomains_hdf, get_domain_names_hdf,                        &
+    use mod_hdf_utilities,          only: get_ndomains_hdf, get_domain_names_hdf, get_domain_name_hdf,   &
+                                          get_ntimes_hdf, set_ntimes_hdf,                                &
                                           get_domain_equation_set_hdf, set_coordinate_order_hdf,         &
                                           set_solution_order_hdf, get_solution_order_hdf,                &
                                           get_domain_mapping_hdf, get_domain_dimensionality_hdf,         &
@@ -28,7 +29,7 @@ module mod_hdfio
                                           get_time_integrator_hdf,                                       &
                                           set_domain_connectivity_partition_hdf, set_domain_mapping_hdf, &
                                           set_domain_dimensionality_hdf, set_domain_coordinates_hdf,     &
-                                          set_domain_coordinate_system_hdf, set_contains_grid_hdf
+                                          set_domain_coordinate_system_hdf, set_contains_grid_hdf,      &
                                           get_npmm_groups_hdf, get_pmm_group_names_hdf, get_pmm_hdf,    &
                                           get_pmm_domain_group_hdf
 

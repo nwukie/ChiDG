@@ -50,10 +50,10 @@ module test_comm_bc_D1E8_mod
 
 
 
-    !>  
+    !>  A test object that holds the ChiDG instance and some paramters.
     !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   6/23/2016
+    !!  @author Nathan A. Wukie
+    !!  @date   4/14/2017
     !!
     !------------------------------------------------------------------------------------
     @TestCase

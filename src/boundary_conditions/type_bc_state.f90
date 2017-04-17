@@ -20,6 +20,10 @@ module type_bc_state
     !!      - bc_state_t also contains properties that can hold parameters and functions 
     !!        that have been set for the boundary.
     !!
+    !!  family may be:
+    !!      'Wall', 'Inlet', 'Outlet', 'Symmetry', 'Periodic', 'Farfield', 'Scalar'
+    !!
+    !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
     !!
@@ -138,7 +142,6 @@ contains
         class(bc_state_t),  intent(inout)   :: self
         type(mesh_t),       intent(inout)   :: mesh
         integer(ik),        intent(in)      :: group_ID
-        type(mpi_comm),     intent(in)      :: bc_COMM
 
         integer(ik) :: patch_ID, face_ID, idomain_g, idomain_l, ielement_g, ielement_l
 

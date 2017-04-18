@@ -2,6 +2,7 @@ module type_bc_element_coupling
 #include <messenger.h>
     use mod_kinds,                  only: rk, ik
     use type_element_coupling_data, only: element_coupling_data_t
+    use type_point,                 only: point_t
     implicit none
 
 
@@ -23,14 +24,24 @@ module type_bc_element_coupling
         procedure   :: add_coupled_element
         procedure   :: new_coupled_element
         procedure   :: set_coupled_element_recv
+        procedure   :: set_coupled_element_data
         procedure   :: ncoupled_elements
+        procedure   :: find_coupled_element
 
         procedure   :: idomain_g
         procedure   :: idomain_l
         procedure   :: ielement_g
         procedure   :: ielement_l
         procedure   :: iface
+
+        procedure   :: neqns
+        procedure   :: nterms_s
+
         procedure   :: proc
+
+        procedure   :: recv_comm
+        procedure   :: recv_domain
+        procedure   :: recv_element
 
     end type bc_element_coupling_t
     !********************************************************************
@@ -167,32 +178,57 @@ contains
         integer(ik),                    intent(in)      :: recv_domain
         integer(ik),                    intent(in)      :: recv_element
 
-        character(:),   allocatable :: user_msg
-        integer(ik)                 :: icoupled, elem_ID
-        logical                     :: element_found
-
-
+        integer(ik) :: elem_ID
 
         !
-        ! Find the index associated with the element (idomain_g,ielement_g)
+        ! Get location of coupled element
         !
-        do icoupled = 1,self%ncoupled_elements()
-
-            element_found = (idomain_g  == self%idomain_g(icoupled)  ) .and. &
-                            (ielement_g == self%ielement_g(icoupled) )
-            if (element_found) elem_ID = icoupled
-            if (element_found) exit
-
-        end do !icoupled
-
-        user_msg = "bc_patch%set_coupled_element_recv: did not find element coupling."
-        if (.not. element_found) call chidg_signal(FATAL,user_msg)
-
+        elem_ID = self%find_coupled_element(idomain_g,ielement_g)
 
         call self%data(elem_ID)%set_recv(recv_comm,recv_domain,recv_element)
 
     end subroutine set_coupled_element_recv
     !**********************************************************************
+
+
+
+
+
+
+
+
+    !>  Set auxiliary data for coupled element.
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/18/2017
+    !!
+    !!
+    !----------------------------------------------------------------------
+    subroutine set_coupled_element_data(self,idomain_g,ielement_g,neqns,nterms_s,total_area,areas,quad_pts)
+        class(bc_element_coupling_t),   intent(inout)   :: self
+        integer(ik),                    intent(in)      :: idomain_g
+        integer(ik),                    intent(in)      :: ielement_g
+        integer(ik),                    intent(in)      :: neqns
+        integer(ik),                    intent(in)      :: nterms_s
+        real(rk),                       intent(in)      :: total_area
+        real(rk),                       intent(in)      :: areas(:)
+        type(point_t),                  intent(in)      :: quad_pts(:)
+
+        integer(ik)                 :: elem_ID
+
+        !
+        ! Get location of coupled element
+        !
+        elem_ID = self%find_coupled_element(idomain_g,ielement_g)
+
+        call self%data(elem_ID)%set_data(neqns,nterms_s,total_area,areas,quad_pts)
+
+    end subroutine set_coupled_element_data
+    !**********************************************************************
+
+
+
 
 
 
@@ -337,6 +373,47 @@ contains
 
 
 
+    !>  Return the number of equations on the coupled element.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/17/2017
+    !!
+    !-----------------------------------------------------------------------
+    function neqns(self,elem_ID) result(neqns_)
+        class(bc_element_coupling_t),   intent(in)  :: self
+        integer(ik),                    intent(in)  :: elem_ID
+
+        integer(ik) :: neqns_
+
+        neqns_ = self%data(elem_ID)%neqns
+
+    end function neqns
+    !************************************************************************
+
+
+
+
+
+
+
+    !>  Return the number of solution terms on the coupled element.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/17/2017
+    !!
+    !-----------------------------------------------------------------------
+    function nterms_s(self,elem_ID) result(nterms_s_)
+        class(bc_element_coupling_t),   intent(in)  :: self
+        integer(ik),                    intent(in)  :: elem_ID
+
+        integer(ik) :: nterms_s_
+
+        nterms_s_ = self%data(elem_ID)%nterms_s
+
+    end function nterms_s
+    !************************************************************************
+
+
 
 
 
@@ -360,6 +437,122 @@ contains
     !************************************************************************
 
     
+
+
+
+    !>  Return the identifier recv_comm for the coupled element.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/18/2017
+    !!
+    !-----------------------------------------------------------------------
+    function recv_comm(self,elem_ID) result(recv_comm_)
+        class(bc_element_coupling_t),   intent(in)  :: self
+        integer(ik),                    intent(in)  :: elem_ID
+
+        integer(ik) :: recv_comm_
+
+        recv_comm_ = self%data(elem_ID)%recv_comm
+
+    end function recv_comm
+    !************************************************************************
+
+
+
+
+
+
+
+    !>  Return the identifier recv_domain for the coupled element.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/18/2017
+    !!
+    !-----------------------------------------------------------------------
+    function recv_domain(self,elem_ID) result(recv_domain_)
+        class(bc_element_coupling_t),   intent(in)  :: self
+        integer(ik),                    intent(in)  :: elem_ID
+
+        integer(ik) :: recv_domain_
+
+        recv_domain_ = self%data(elem_ID)%recv_domain
+
+    end function recv_domain
+    !************************************************************************
+
+
+
+
+
+
+
+
+    !>  Return the identifier recv_element for the coupled element.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/18/2017
+    !!
+    !-----------------------------------------------------------------------
+    function recv_element(self,elem_ID) result(recv_element_)
+        class(bc_element_coupling_t),   intent(in)  :: self
+        integer(ik),                    intent(in)  :: elem_ID
+
+        integer(ik) :: recv_element_
+
+        recv_element_ = self%data(elem_ID)%recv_element
+
+    end function recv_element
+    !************************************************************************
+
+
+
+
+
+
+
+    !>  Locate a coupled element based on its global indices.
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/18/2017
+    !!
+    !------------------------------------------------------------------------
+    function find_coupled_element(self,idomain_g,ielement_g) result(elem_ID)
+        class(bc_element_coupling_t),   intent(in)  :: self
+        integer(ik),                    intent(in)  :: idomain_g
+        integer(ik),                    intent(in)  :: ielement_g
+
+        character(:),   allocatable :: user_msg
+        integer(ik)                 :: icoupled, elem_ID
+        logical                     :: element_found
+
+
+
+        !
+        ! Find the index associated with the element (idomain_g,ielement_g)
+        !
+        element_found = .false.
+        do icoupled = 1,self%ncoupled_elements()
+
+            element_found = (idomain_g  == self%idomain_g(icoupled)  ) .and. &
+                            (ielement_g == self%ielement_g(icoupled) )
+            if (element_found) elem_ID = icoupled
+            if (element_found) exit
+
+        end do !icoupled
+
+        user_msg = "bc_element_coupling%find_coupled_element: did not find element coupling."
+        if (.not. element_found) call chidg_signal(FATAL,user_msg)
+
+
+    end function find_coupled_element
+    !************************************************************************
+
+
+
+
+
+
 
 
 

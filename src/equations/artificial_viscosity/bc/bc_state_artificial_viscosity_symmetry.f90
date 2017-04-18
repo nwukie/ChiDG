@@ -6,6 +6,7 @@ module bc_state_artificial_viscosity_symmetry
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use type_point,             only: point_t
+    use mpi_f08,                only: mpi_comm
     use DNAD_D
     implicit none
 
@@ -72,10 +73,11 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine compute_bc_state(self,worker,prop)
+    subroutine compute_bc_state(self,worker,prop,bc_COMM)
         class(artificial_viscosity_symmetry_t), intent(inout)   :: self
         type(chidg_worker_t),                   intent(inout)   :: worker
         class(properties_t),                    intent(inout)   :: prop
+        type(mpi_comm),                         intent(in)      :: bc_COMM
 
 
         ! Storage at quadrature nodes

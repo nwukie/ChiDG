@@ -1,6 +1,8 @@
 module type_element_coupling_data
 #include <messenger.h>
-    use mod_kinds,  only: rk, ik
+    use mod_kinds,      only: rk, ik
+    use mod_constants,  only: NO_PROC, NO_ID, ZERO
+    use type_point,     only: point_t
     implicit none
 
 
@@ -14,21 +16,33 @@ module type_element_coupling_data
     !---------------------------------------------------------------------
     type, public :: element_coupling_data_t
 
-        integer(ik) :: idomain_g
-        integer(ik) :: idomain_l
-        integer(ik) :: ielement_g
-        integer(ik) :: ielement_l
-        integer(ik) :: iface
-        integer(ik) :: proc
+        ! Element coupling
+        integer(ik) :: idomain_g    = NO_ID
+        integer(ik) :: idomain_l    = NO_ID
+        integer(ik) :: ielement_g   = NO_ID
+        integer(ik) :: ielement_l   = NO_ID
+        integer(ik) :: iface        = NO_ID
+        integer(ik) :: proc         = NO_PROC
 
-        integer(ik) :: recv_comm
-        integer(ik) :: recv_domain
-        integer(ik) :: recv_element
+
+        ! Element parallel recv access
+        integer(ik) :: recv_comm    = NO_ID
+        integer(ik) :: recv_domain  = NO_ID
+        integer(ik) :: recv_element = NO_ID
+
+        
+        ! Element data
+        integer(ik)                 :: neqns       = 0
+        integer(ik)                 :: nterms_s    = 0
+        real(rk)                    :: total_area  = ZERO
+        real(rk),       allocatable :: areas(:)
+        type(point_t),  allocatable :: quad_pts(:)
 
     contains
 
         procedure   :: set_coupling
         procedure   :: set_recv
+        procedure   :: set_data
 
     end type element_coupling_data_t
     !*********************************************************************
@@ -62,7 +76,6 @@ contains
         self%iface      = iface
         self%proc       = proc
 
-
     end subroutine set_coupling
     !**********************************************************************
 
@@ -89,6 +102,37 @@ contains
 
     end subroutine set_recv
     !**********************************************************************
+
+
+
+
+
+
+    !>  Set auxiliary data for coupled element.
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/18/2017
+    !!
+    !----------------------------------------------------------------------
+    subroutine set_data(self,neqns,nterms_s,total_area,areas,quad_pts)
+        class(element_coupling_data_t), intent(inout)   :: self
+        integer(ik),                    intent(in)      :: neqns
+        integer(ik),                    intent(in)      :: nterms_s
+        real(rk),                       intent(in)      :: total_area
+        real(rk),                       intent(in)      :: areas(:)
+        type(point_t),                  intent(in)      :: quad_pts(:)
+
+        self%neqns      = neqns
+        self%nterms_s   = nterms_s
+        self%total_area = total_area
+        self%areas      = areas
+        self%quad_pts   = quad_pts
+
+    end subroutine set_data
+    !**********************************************************************
+
+
 
 
 

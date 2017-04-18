@@ -42,7 +42,7 @@ module test_comm_bc_D1E8_mod
     use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
     use operator_chidg_dot,         only: dot
     use operator_chidg_mv,          only: chidg_mv
-    use mpi_f08,                    only: MPI_COMM, MPI_BCast, MPI_INTEGER
+    use mpi_f08,                    only: mpi_comm, MPI_BCast, MPI_INTEGER
 
     use mod_bc,                     only: registered_bcs, create_bc
     use pfunit_mod
@@ -145,6 +145,14 @@ contains
     !!
     !!  Initialize each face to be coupled with the local element AND every other face.
     !!
+    !!  Coupling initialization:
+    !!      1: each process loops through its local faces, initializes coupling
+    !!         of all local faces with all other local faces.
+    !!
+    !!      2: loop through ranks in bc_COMM
+    !!          a: iproc broadcasts information about its coupling to bc_COMM
+    !!          b: all other procs receive from iproc and initialize parallel coupling
+    !!
     !!
     !!  @author Nathan A. Wukie
     !!  @date   4/13/2017
@@ -156,14 +164,17 @@ contains
         integer(ik),                        intent(in)      :: group_ID
         type(mpi_comm),                     intent(in)      :: bc_COMM
 
-        integer(ik) :: data(5)
         integer(ik) :: patch_ID, face_ID, elem_ID, patch_ID_coupled, face_ID_coupled,   &
                        idomain_g, idomain_l, ielement_g, ielement_l, iface,             &
-                       bc_IRANK, bc_NRANK, ierr, iproc, proc_coupled, nbc_elements, ielem
+                       bc_IRANK, bc_NRANK, ierr, iproc, proc_coupled, nbc_elements,     &
+                       ielem, neqns, nterms_s
 
-        integer(ik), allocatable, dimension(:)  :: idomain_g_array,  idomain_l_array,  ielement_g_array,  ielement_l_array,  iface_array
-        type(ivector_t)                         :: idomain_g_vector, idomain_l_vector, ielement_g_vector, ielement_l_vector, iface_vector
-        
+        integer(ik), allocatable, dimension(:)  :: idomain_g_array,  idomain_l_array,   &
+                                                   ielement_g_array, ielement_l_array,  &
+                                                   iface_array, neqns_array, nterms_s_array
+        type(ivector_t)                         :: idomain_g_vector,  idomain_l_vector,  &
+                                                   ielement_g_vector, ielement_l_vector, &
+                                                   iface_vector, neqns_vector, nterms_s_vector
 
 
 
@@ -190,6 +201,10 @@ contains
                         ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%ielement_l(face_ID_coupled)
                         iface      = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%iface(face_ID_coupled)
 
+
+                        neqns      = mesh%domain(idomain_l)%elems(ielement_l)%neqns
+                        nterms_s   = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s
+
                         
                         !
                         ! For the face (patch_ID,face_ID) add the element on (patch_ID_coupled,face_ID_coupled)
@@ -200,6 +215,11 @@ contains
                                                                                                         ielement_l, &
                                                                                                         iface,      &
                                                                                                         IRANK)
+
+!                        call mesh%bc_patch_group(group_ID)%patch(patch_ID)%set_coupled_element_data(face_ID, idomain_g,     &
+!                                                                                                             ielement_g,    &
+!                                                                                                             neqns,         &
+!                                                                                                             nterms_s )
 
 
                     end do ! face_ID_couple
@@ -239,27 +259,34 @@ contains
                 do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
                     do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
 
+                        idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l( face_ID)
+                        ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
                         
                         !
                         ! Get block-element index of current face_ID_coupled
                         !
-                        call idomain_g_vector%push_back( mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g( face_ID) )
-                        call idomain_l_vector%push_back( mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l( face_ID) )
-                        call ielement_g_vector%push_back(mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID) )
-                        call ielement_l_vector%push_back(mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID) )
-                        call iface_vector%push_back(     mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(     face_ID) )
+                        call idomain_g_vector%push_back(  mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g( face_ID) )
+                        call idomain_l_vector%push_back(  mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l( face_ID) )
+                        call ielement_g_vector%push_back( mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID) )
+                        call ielement_l_vector%push_back( mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID) )
+                        call iface_vector%push_back(      mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(     face_ID) )
+
+                        call neqns_vector%push_back(      mesh%domain(idomain_l)%elems(ielement_l)%neqns    )
+                        call nterms_s_vector%push_back(   mesh%domain(idomain_l)%elems(ielement_l)%nterms_s )
 
                     end do ! face_ID
                 end do ! patch_ID
             
                 nbc_elements = ielement_g_vector%size()
-                call MPI_Bcast(nbc_elements, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
+                call MPI_Bcast(nbc_elements,                                  1,      MPI_INTEGER, iproc, bc_COMM, ierr)
                 call MPI_Bcast(idomain_g_vector%data_( 1:nbc_elements), nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
                 call MPI_Bcast(idomain_l_vector%data_( 1:nbc_elements), nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
                 call MPI_Bcast(ielement_g_vector%data_(1:nbc_elements), nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
                 call MPI_Bcast(ielement_l_vector%data_(1:nbc_elements), nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
                 call MPI_Bcast(iface_vector%data_(     1:nbc_elements), nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
-                call MPI_Bcast(IRANK, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
+                call MPI_Bcast(neqns_vector%data_(     1:nbc_elements), nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
+                call MPI_Bcast(nterms_s_vector%data_(  1:nbc_elements), nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
+                call MPI_Bcast(IRANK,                                         1,      MPI_INTEGER, iproc, bc_COMM, ierr)
 
 
 
@@ -273,12 +300,16 @@ contains
 
                 call MPI_Bcast(nbc_elements, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
 
-                if (allocated(idomain_g_array) ) deallocate(idomain_g_array, idomain_l_array, ielement_g_array, ielement_l_array, iface_array)
+                if (allocated(idomain_g_array) ) deallocate(idomain_g_array,  idomain_l_array,  &
+                                                            ielement_g_array, ielement_l_array, &
+                                                            iface_array, neqns_array, nterms_s_array)
                 allocate(idomain_g_array( nbc_elements), &
                          idomain_l_array( nbc_elements), &
                          ielement_g_array(nbc_elements), &
                          ielement_l_array(nbc_elements), &
-                         iface_array(     nbc_elements), stat=ierr)
+                         iface_array(     nbc_elements), &
+                         neqns_array(     nbc_elements), &
+                         nterms_s_array(  nbc_elements), stat=ierr)
                 if (ierr /= 0) call AllocationError
 
                 call MPI_Bcast(idomain_g_array,  nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
@@ -286,6 +317,8 @@ contains
                 call MPI_Bcast(ielement_g_array, nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
                 call MPI_Bcast(ielement_l_array, nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
                 call MPI_Bcast(iface_array,      nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
+                call MPI_Bcast(neqns_array,      nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
+                call MPI_Bcast(nterms_s_array,   nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
                 call MPI_Bcast(proc_coupled,     1,            MPI_INTEGER, iproc, bc_COMM, ierr)
 
 
@@ -307,6 +340,11 @@ contains
                                                                                                             ielement_l_array(ielem),    &
                                                                                                             iface_array(ielem),         &
                                                                                                             proc_coupled )
+
+!                            call mesh%bc_patch_group(group_ID)%patch(patch_ID)%set_coupled_element_data(face_ID, idomain_g_array(ielem),    &
+!                                                                                                                 ielement_g_array(ielem),   &
+!                                                                                                                 neqns_array(ielem),        &
+!                                                                                                                 nterms_s_array(ielem) )
                         end do !ielem
 
                     end do ! face_ID
@@ -350,10 +388,11 @@ contains
     !!  @param[inout]   prop    properties_t object containing equations and material_t objects
     !!
     !-------------------------------------------------------------------------------------
-    subroutine compute_bc_state(self,worker,prop)
+    subroutine compute_bc_state(self,worker,prop,bc_COMM)
         class(outlet_test_fully_coupled_t), intent(inout)   :: self
         type(chidg_worker_t),               intent(inout)   :: worker
         class(properties_t),                intent(inout)   :: prop
+        type(mpi_comm),                     intent(in)      :: bc_COMM
 
 
 

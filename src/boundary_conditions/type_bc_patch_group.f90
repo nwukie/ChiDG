@@ -41,6 +41,7 @@ module type_bc_patch_group
         ! Patch routines
         procedure           :: add_bc_patch
         procedure           :: npatches
+        procedure           :: nfaces => get_nfaces
         procedure,  private :: new_bc_patch
 
         ! Parallel communication patterns
@@ -367,6 +368,27 @@ contains
 
 
 
+
+
+
+    !>  Return the number of faces in the group contributed from all patches.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/18/2017
+    !!
+    !----------------------------------------------------------------------
+    function get_nfaces(self) result(n)
+        class(bc_patch_group_t),    intent(in)  :: self
+
+        integer(ik) :: n, patch_ID
+
+        n = 0
+        do patch_ID = 1,self%npatches()
+            n = n + self%patch(patch_ID)%nfaces()
+        end do
+
+    end function get_nfaces
+    !**********************************************************************
 
 
 

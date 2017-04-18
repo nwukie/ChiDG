@@ -59,6 +59,8 @@ module type_bc_state_group
         procedure   :: init_coupling
         procedure   :: init_specialized
 
+!        procedure   :: init_coupling_data
+
         
     end type bc_state_group_t
     !*****************************************************************************************
@@ -506,6 +508,46 @@ contains
 
     end subroutine init_coupling
     !****************************************************************************************
+
+
+
+
+
+
+
+
+
+!    !>  Initialize data for coupled elements.
+!    !!
+!    !!  For those elements that have been added as coupled elements, initialize 
+!    !!  their auxiliary data, such as areas, points at quadrature nodes, etc.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   4/18/2017
+!    !!
+!    !----------------------------------------------------------------------------------------
+!    subroutine init_coupling_data(self,mesh)
+!        class(bc_state_group_t),    intent(inout)  :: self
+!        type(mesh_t),               intent(inout)  :: mesh
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!    end subroutine init_coupling_data
+!    !****************************************************************************************
+
+
+
 
 
 

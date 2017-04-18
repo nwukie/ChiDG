@@ -270,8 +270,8 @@ contains
     function new_bc_state_group(self) result(bc_ID)
         class(chidg_data_t),    intent(inout)   :: self
 
-        type(bc_state_group_t), allocatable :: temp_bcs(:)
-        integer(ik)                         :: bc_ID, ierr
+        type(bc_state_group_t), allocatable     :: temp_bcs(:)
+        integer(ik)                             :: bc_ID, ierr
 
 
         !
@@ -594,6 +594,7 @@ contains
             ! Initialize boundary condition coupling. 
             !
             call self%bc_state_group(ibc)%init_coupling(self%mesh)
+
 
         end do
 

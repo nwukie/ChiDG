@@ -79,14 +79,16 @@ module type_bc_state
 
 
     abstract interface
-        subroutine bc_state_compute(self,worker,prop)
+        subroutine bc_state_compute(self,worker,prop,bc_COMM)
             import bc_state_t
             import chidg_worker_t
             import properties_t
+            import mpi_comm
 
             class(bc_state_t),      intent(inout)   :: self
             type(chidg_worker_t),   intent(inout)   :: worker
             class(properties_t),    intent(inout)   :: prop
+            type(mpi_comm),         intent(in)      :: bc_COMM
         end subroutine
     end interface
 
@@ -144,7 +146,7 @@ contains
         integer(ik),        intent(in)      :: group_ID
         type(mpi_comm),     intent(in)      :: bc_COMM
 
-        integer(ik) :: patch_ID, face_ID, idomain_g, idomain_l, ielement_g, ielement_l, iface
+        integer(ik) :: patch_ID, face_ID, idomain_g, idomain_l, ielement_g, ielement_l, iface, neqns, nterms_s
 
 
 

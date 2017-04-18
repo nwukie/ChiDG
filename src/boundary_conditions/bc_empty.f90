@@ -2,6 +2,7 @@ module bc_empty
     use type_bc_state,      only: bc_state_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
+    use mpi_f08,            only: mpi_comm
     implicit none
     
 
@@ -66,10 +67,11 @@ contains
     !!  @param[in]      iblk    Index of the linearization block being computed
     !!  @param[inout]   prop    properties_t object containing equations and material_t objects
     !-------------------------------------------------------------------------------------------
-    subroutine compute_bc_state(self,worker,prop)
+    subroutine compute_bc_state(self,worker,prop,bc_COMM)
         class(empty_t),                 intent(inout)   :: self
         type(chidg_worker_t),           intent(inout)   :: worker
         class(properties_t),            intent(inout)   :: prop
+        type(mpi_comm),                 intent(in)      :: bc_COMM
 
 
     end subroutine compute_bc_state

@@ -10,6 +10,7 @@ module bc_state_outlet_point_pressure
     use type_properties,    only: properties_t
     use type_point,         only: point_t
     use mod_chidg_mpi,      only: IRANK
+    use mpi_f08,            only: mpi_COMM
     !use mpi_f08,            only: mpi_comm, MPI_REAL8, MPI_Allgather, MPI_Comm_rank, MPI_Comm_size, MPI_COMM_NULL, MPI_Comm_compare
     use mpi_f08
     use DNAD_D
@@ -249,10 +250,11 @@ contains
     !!  @param[inout]   prop    properties_t object containing equations and material_t objects
     !!
     !-------------------------------------------------------------------------------------------
-    subroutine compute_bc_state(self,worker,prop)
+    subroutine compute_bc_state(self,worker,prop,bc_COMM)
         class(outlet_point_pressure_t), intent(inout)   :: self
         type(chidg_worker_t),           intent(inout)   :: worker
         class(properties_t),            intent(inout)   :: prop
+        type(mpi_comm),                 intent(in)      :: bc_COMM
 
 
         ! Storage at quadrature nodes

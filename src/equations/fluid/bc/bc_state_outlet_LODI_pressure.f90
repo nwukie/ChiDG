@@ -647,7 +647,6 @@ contains
         print*, 'Average pressure: ', p_avg%x_ad_
         print*, 'Average Mach: ', M_avg%x_ad_
 
-        print*, allocated(p_avg%xp_ad_), allocated(M_avg%xp_ad_)
 
         !
         ! Compute gamma
@@ -674,6 +673,12 @@ contains
 
         !
         ! LODI updates
+        !   1: compute grad(p)
+        !   2: compute grad(u)
+        !   3: compute L, T
+        !   4: compute update in primitive variables dU
+        !   5: compute new values U_new = U_old + dU
+        !   6: convert to conservative variables and store
         !
 
 
@@ -699,10 +704,10 @@ contains
         !
         ! compute velocity jacobians
         !
-        invdensity = ONE/density_m
-        du_ddensity  = -invdensity*invdensity*mom1_m
-        dv_ddensity  = -invdensity*invdensity*mom2_m
-        dw_ddensity  = -invdensity*invdensity*mom3_m
+        invdensity  = ONE/density_m
+        du_ddensity = -invdensity*invdensity*mom1_m
+        dv_ddensity = -invdensity*invdensity*mom2_m
+        dw_ddensity = -invdensity*invdensity*mom3_m
 
         du_dmom1 = invdensity
         dv_dmom2 = invdensity
@@ -742,40 +747,49 @@ contains
         !
         ! Compute amplitudes of axial waves
         !
-        L2 = lamda_234*(grad1_density_m - ONE/(c*c)*grad1_p)
-        L3 = lamda_234*(grad1_v)
-        L4 = lamda_234*(grad1_w)
+        L2 =      lamda_234*(grad1_density_m  -  grad1_p/(c*c))
+        L3 =      lamda_234*(grad1_v)
+        L4 =      lamda_234*(grad1_w)
         L5 = HALF*lamda_5*(grad1_p + density_m*c*grad1_u)
 
 
         !
-        ! Compute amplitudes of transferse waves
+        ! Compute amplitudes of transverse waves
         !
-        T1 = ( (v_m*grad2_p + w_m*grad3_p)   +  gam*p_m*(grad2_v + grad3_w)  -  density_m*c*(v_m*grad2_u  +  w_m*grad3_u) )/TWO
-        T2 = ( (grad2_mom2_m + grad3_mom3_m) - (gam*p_m*(grad2_v + grad3_w)  +              (v_m*grad2_p  +  w_m*grad3_p) )/(c*c) )
-        T3 = ( (v_m*grad2_v + w_m*grad3_v)   +  invdensity*grad2_p )
-        T4 = ( (v_m*grad2_w + w_m*grad3_w)   +  invdensity*grad3_p )
-        T5 = ( (v_m*grad2_p + w_m*grad3_p)   +  gam*p_m*(grad2_v + grad3_w)  +  density_m*c*(v_m*grad2_u  +  w_m*grad3_u) )/TWO
+        T1 = ( (v_m*grad2_p  + w_m*grad3_p )   +  gam*p_m*(grad2_v + grad3_w)  -  density_m*c*(v_m*grad2_u  +  w_m*grad3_u) )/TWO
+        T2 =   (grad2_mom2_m + grad3_mom3_m)   - (gam*p_m*(grad2_v + grad3_w)  +              (v_m*grad2_p  +  w_m*grad3_p) )/(c*c)
+        T3 = ( (v_m*grad2_v  + w_m*grad3_v )   +  invdensity*grad2_p )
+        T4 = ( (v_m*grad2_w  + w_m*grad3_w )   +  invdensity*grad3_p )
+        T5 = ( (v_m*grad2_p  + w_m*grad3_p )   +  gam*p_m*(grad2_v + grad3_w)  +  density_m*c*(v_m*grad2_u  +  w_m*grad3_u) )/TWO
+
+        T1 = ZERO
+        !T2 = ZERO
+        !T3 = ZERO
+        !T4 = ZERO
+        !T5 = ZERO
 
 
 
+                                           
+                                                                                               
 
         !
         ! Compute incoming axial wave
         !
-        k    = 100._rk
-        !beta = 0.2_rk   ! best investigation yet says this should be the mean Mach number across the face
+        k    = 10._rk
         beta = 0.2_rk   ! best investigation yet says this should be the mean Mach number across the face
 
         M_avg_array = density_m
         M_avg_array = M_avg
         !L1 = k*(p_avg - p_user) + (beta - ONE)*T1
-        L1 = k*(p_avg - p_user) + (M_avg_array - ONE)*T1
-        !L1 = k*(p_m - p_user) + (beta - ONE)*T1
-        !L1 = k*(p_m - p_user)
+        !L1 = k*(p_avg - p_user) + (M_avg_array - ONE)*T1
+        L1 = k*(p_avg - p_user)
 
-
-
+        !print*, 'L1: ', L1(1)%xp_ad_
+        !if (any(T5(1)%xp_ad_ > 0.1)) then
+        !    print*, 'L5: ', L5(1)%xp_ad_
+        !    print*, 'T5: ', T5(1)%xp_ad_
+        !end if
 
         !
         ! Compute perturbation in primitive variables due to the characteristics
@@ -802,6 +816,8 @@ contains
         w_bc       = w_m       + dw
         density_bc = density_m + ddensity
         p_bc       = p_m       + dp
+
+
 
         !
         ! Form conserved variables

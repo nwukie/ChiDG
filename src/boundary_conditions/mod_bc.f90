@@ -35,6 +35,7 @@ module mod_bc
     use bc_state_outlet_constant_pressure,      only: outlet_constant_pressure_t
     use bc_state_outlet_point_pressure,         only: outlet_point_pressure_t
     use bc_state_outlet_LODI_pressure,          only: outlet_LODI_pressure_t
+    use bc_state_outlet_LODI_z_pressure,        only: outlet_LODI_z_pressure_t
     use bc_state_fluid_extrapolate,             only: fluid_extrapolate_t
     use bc_state_momentum_inlet,                only: momentum_inlet_t
     use bc_state_symmetry,                      only: symmetry_t
@@ -99,6 +100,7 @@ contains
         type(outlet_constant_pressure_t)        :: OUTLET_CONSTANT_PRESSURE
         type(outlet_point_pressure_t)           :: OUTLET_POINT_PRESSURE
         type(outlet_LODI_pressure_t)            :: OUTLET_LODI_PRESSURE
+        type(outlet_LODI_z_pressure_t)          :: OUTLET_LODI_Z_PRESSURE
         type(fluid_extrapolate_t)               :: FLUID_EXTRAPOLATE
         type(momentum_inlet_t)                  :: MOMENTUM_INLET
         type(symmetry_t)                        :: SYMMETRY
@@ -135,6 +137,7 @@ contains
             call registered_bcs%push_back(OUTLET_CONSTANT_PRESSURE)
             call registered_bcs%push_back(OUTLET_POINT_PRESSURE)
             call registered_bcs%push_back(OUTLET_LODI_PRESSURE)
+            call registered_bcs%push_back(OUTLET_LODI_Z_PRESSURE)
             call registered_bcs%push_back(FLUID_EXTRAPOLATE)
             call registered_bcs%push_back(MOMENTUM_INLET)
             call registered_bcs%push_back(SYMMETRY)

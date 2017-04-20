@@ -1,4 +1,4 @@
-module bc_state_outlet_LODI_pressure
+module bc_state_outlet_LODI_z_pressure
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, HALF, TWO, NO_PROC, ME
@@ -49,7 +49,7 @@ module bc_state_outlet_LODI_pressure
     !!  @date   4/20/2017
     !!
     !----------------------------------------------------------------------------------------
-    type, public, extends(bc_state_t) :: outlet_LODI_pressure_t
+    type, public, extends(bc_state_t) :: outlet_LODI_z_pressure_t
 
 
     contains
@@ -60,7 +60,7 @@ module bc_state_outlet_LODI_pressure
 
         procedure   :: compute_averages
 
-    end type outlet_LODI_pressure_t
+    end type outlet_LODI_z_pressure_t
     !****************************************************************************************
 
 
@@ -77,12 +77,12 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(outlet_LODI_pressure_t),   intent(inout) :: self
+        class(outlet_LODI_z_pressure_t),   intent(inout) :: self
         
         !
         ! Set name, family
         !
-        call self%set_name('Outlet - LODI Pressure')
+        call self%set_name('Outlet - LODI Z Pressure')
         call self%set_family('Outlet')
 
 
@@ -122,10 +122,10 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init_bc_coupling(self,mesh,group_ID,bc_COMM)
-        class(outlet_LODI_pressure_t),  intent(inout)   :: self
-        type(mesh_t),                   intent(inout)   :: mesh
-        integer(ik),                    intent(in)      :: group_ID
-        type(mpi_comm),                 intent(in)      :: bc_COMM
+        class(outlet_LODI_z_pressure_t),  intent(inout)   :: self
+        type(mesh_t),                     intent(inout)   :: mesh
+        integer(ik),                      intent(in)      :: group_ID
+        type(mpi_comm),                   intent(in)      :: bc_COMM
 
         integer(ik) :: patch_ID, face_ID, elem_ID, patch_ID_coupled, face_ID_coupled,   &
                        idomain_g, idomain_l, ielement_g, ielement_l, iface,             &
@@ -376,11 +376,11 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute_averages(self,worker,bc_COMM, p_avg, M_avg)
-        class(outlet_LODI_pressure_t),  intent(inout)   :: self
-        type(chidg_worker_t),           intent(inout)   :: worker
-        type(mpi_comm),                 intent(in)      :: bc_COMM
-        type(AD_D),                     intent(inout)   :: p_avg
-        type(AD_D),                     intent(inout)   :: M_avg
+        class(outlet_LODI_z_pressure_t),  intent(inout)   :: self
+        type(chidg_worker_t),             intent(inout)   :: worker
+        type(mpi_comm),                   intent(in)      :: bc_COMM
+        type(AD_D),                       intent(inout)   :: p_avg
+        type(AD_D),                       intent(inout)   :: M_avg
 
         type(AD_D)          :: face_p, face_M, p_integral, M_integral
         type(face_info_t)   :: face_info
@@ -558,10 +558,10 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_COMM)
-        class(outlet_LODI_pressure_t),  intent(inout)   :: self
-        type(chidg_worker_t),           intent(inout)   :: worker
-        class(properties_t),            intent(inout)   :: prop
-        type(mpi_comm),                 intent(in)      :: bc_COMM
+        class(outlet_LODI_z_pressure_t),    intent(inout)   :: self
+        type(chidg_worker_t),               intent(inout)   :: worker
+        class(properties_t),                intent(inout)   :: prop
+        type(mpi_comm),                     intent(in)      :: bc_COMM
 
 
         ! Storage at quadrature nodes
@@ -635,12 +635,53 @@ contains
 
 
 
+
+
+        !
+        ! Store boundary gradient state. Grad(Q_bc). Do this here, before we
+        ! compute any transformations for cylindrical.
+        !
+        call worker%store_bc_state('Density'   , grad1_density_m, 'grad1')
+        call worker%store_bc_state('Density'   , grad2_density_m, 'grad2')
+        call worker%store_bc_state('Density'   , grad3_density_m, 'grad3')
+                                                
+        call worker%store_bc_state('Momentum-1', grad1_mom1_m,    'grad1')
+        call worker%store_bc_state('Momentum-1', grad2_mom1_m,    'grad2')
+        call worker%store_bc_state('Momentum-1', grad3_mom1_m,    'grad3')
+                                                
+        call worker%store_bc_state('Momentum-2', grad1_mom2_m,    'grad1')
+        call worker%store_bc_state('Momentum-2', grad2_mom2_m,    'grad2')
+        call worker%store_bc_state('Momentum-2', grad3_mom2_m,    'grad3')
+                                                
+        call worker%store_bc_state('Momentum-3', grad1_mom3_m,    'grad1')
+        call worker%store_bc_state('Momentum-3', grad2_mom3_m,    'grad2')
+        call worker%store_bc_state('Momentum-3', grad3_mom3_m,    'grad3')
+                                                
+        call worker%store_bc_state('Energy'    , grad1_energy_m,  'grad1')
+        call worker%store_bc_state('Energy'    , grad2_energy_m,  'grad2')
+        call worker%store_bc_state('Energy'    , grad3_energy_m,  'grad3')
+
+
+
+
+
+
+
+
+
+
+
+
+
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
         r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_m = mom2_m / r
+            grad1_mom2_m = (grad1_mom2_m/r) - mom2_m/r
+            grad2_mom2_m = (grad2_mom2_m/r)
+            grad3_mom2_m = (grad3_mom2_m/r)
         end if
 
 
@@ -648,10 +689,7 @@ contains
         !
         ! Update average pressure
         !
-        !p_avg = self%compute_average_pressure(worker,bc_COMM)
         call self%compute_averages(worker,bc_COMM,p_avg, M_avg)
-
-
         print*, 'Average pressure: ', p_avg%x_ad_
         print*, 'Average Mach: ', M_avg%x_ad_
 
@@ -748,29 +786,29 @@ contains
         ! Compute wave speeds. u_m because assumption is that boundary is normal to x-axis
         !
         c    = sqrt(gam * p_m / density_m)
-        lamda_1   = u_m - c
-        lamda_234 = u_m
-        lamda_5   = u_m + c
+        lamda_1   = w_m - c
+        lamda_234 = w_m
+        lamda_5   = w_m + c
 
         !
         ! Compute amplitudes of axial waves
         !
-        L2 =      lamda_234*(grad1_density_m  -  grad1_p/(c*c))
-        L3 =      lamda_234*(grad1_v)
-        L4 =      lamda_234*(grad1_w)
-        L5 = HALF*lamda_5*(grad1_p + density_m*c*grad1_u)
+        L2 =      lamda_234*(grad3_density_m  -  grad3_p/(c*c))
+        L3 =      lamda_234*(grad3_u)
+        L4 =      lamda_234*(grad3_v)
+        L5 = HALF*lamda_5*(grad3_p + density_m*c*grad3_w)
 
 
         !
         ! Compute amplitudes of transverse waves
         !
-        T1 = ( (v_m*grad2_p  + w_m*grad3_p )   +  gam*p_m*(grad2_v + grad3_w)  -  density_m*c*(v_m*grad2_u  +  w_m*grad3_u) )/TWO
-        T2 =   (grad2_mom2_m + grad3_mom3_m)   - (gam*p_m*(grad2_v + grad3_w)  +              (v_m*grad2_p  +  w_m*grad3_p) )/(c*c)
-        T3 = ( (v_m*grad2_v  + w_m*grad3_v )   +  invdensity*grad2_p )
-        T4 = ( (v_m*grad2_w  + w_m*grad3_w )   +  invdensity*grad3_p )
-        T5 = ( (v_m*grad2_p  + w_m*grad3_p )   +  gam*p_m*(grad2_v + grad3_w)  +  density_m*c*(v_m*grad2_u  +  w_m*grad3_u) )/TWO
+        T1 = ( (u_m*grad1_p  + v_m*grad2_p )   +  gam*p_m*(grad1_u + grad2_v)  -  density_m*c*(u_m*grad1_w  +  v_m*grad2_w) )/TWO
+        T2 =   (grad1_mom1_m + grad2_mom2_m)   - (gam*p_m*(grad1_u + grad2_v)  +              (u_m*grad1_p  +  v_m*grad2_p) )/(c*c)
+        T3 = ( (u_m*grad1_u  + v_m*grad2_u )   +  invdensity*grad1_p )
+        T4 = ( (u_m*grad1_v  + v_m*grad2_v )   +  invdensity*grad2_p )
+        T5 = ( (u_m*grad1_p  + v_m*grad2_p )   +  gam*p_m*(grad1_u + grad2_v)  +  density_m*c*(u_m*grad1_w  +  v_m*grad2_w) )/TWO
 
-        T1 = ZERO
+        !T1 = ZERO
         !T2 = ZERO
         !T3 = ZERO
         !T4 = ZERO
@@ -784,14 +822,14 @@ contains
         !
         ! Compute incoming axial wave
         !
-        k    = 10._rk
+        k    = 1000._rk
         beta = 0.2_rk   ! best investigation yet says this should be the mean Mach number across the face
 
         M_avg_array = density_m
         M_avg_array = M_avg
         !L1 = k*(p_avg - p_user) + (beta - ONE)*T1
-        !L1 = k*(p_avg - p_user) + (M_avg_array - ONE)*T1
-        L1 = k*(p_avg - p_user)
+        L1 = k*(p_avg - p_user) + (M_avg_array - ONE)*T1
+        !L1 = k*(p_avg - p_user)
 
         !print*, 'L1: ', L1(1)%xp_ad_
         !if (any(T5(1)%xp_ad_ > 0.1)) then
@@ -802,17 +840,12 @@ contains
         !
         ! Compute perturbation in primitive variables due to the characteristics
         !
-        du       = -(L5 - L1)/(density_m*c)  -  (T5 - T1)/(density_m*c)
-        dv       = -(L3)                     -  (T3)
-        dw       = -(L4)                     -  (T4)
+        dw       = -(L5 - L1)/(density_m*c)  -  (T5 - T1)/(density_m*c)
+        du       = -(L3)                     -  (T3)
+        dv       = -(L4)                     -  (T4)
         ddensity = -(L2 + (L5+L1)/(c*c))     -  (T2 + (T5+T1)/(c*c))
         dp       = -(L5 + L1)                -  (T5 + T1)
 
-        !du       = -(L5 - L1)/(density_m*c)  
-        !dv       = -(L3)                     
-        !dw       = -(L4)                     
-        !ddensity = -(L2 + (L5+L1)/(c*c))     
-        !dp       = -(L5 + L1)                
 
 
 
@@ -848,40 +881,15 @@ contains
 
 
 
+
         !
-        ! Store boundary condition state
+        ! Store boundary condition state. Q_bc
         !
         call worker%store_bc_state('Density'   , density_bc, 'value')
         call worker%store_bc_state('Momentum-1', mom1_bc,    'value')
         call worker%store_bc_state('Momentum-2', mom2_bc,    'value')
         call worker%store_bc_state('Momentum-3', mom3_bc,    'value')
         call worker%store_bc_state('Energy'    , energy_bc,  'value')
-
-
-
-
-
-        call worker%store_bc_state('Density'   , grad1_density_m, 'grad1')
-        call worker%store_bc_state('Density'   , grad2_density_m, 'grad2')
-        call worker%store_bc_state('Density'   , grad3_density_m, 'grad3')
-                                                
-        call worker%store_bc_state('Momentum-1', grad1_mom1_m,    'grad1')
-        call worker%store_bc_state('Momentum-1', grad2_mom1_m,    'grad2')
-        call worker%store_bc_state('Momentum-1', grad3_mom1_m,    'grad3')
-                                                
-        call worker%store_bc_state('Momentum-2', grad1_mom2_m,    'grad1')
-        call worker%store_bc_state('Momentum-2', grad2_mom2_m,    'grad2')
-        call worker%store_bc_state('Momentum-2', grad3_mom2_m,    'grad3')
-                                                
-        call worker%store_bc_state('Momentum-3', grad1_mom3_m,    'grad1')
-        call worker%store_bc_state('Momentum-3', grad2_mom3_m,    'grad2')
-        call worker%store_bc_state('Momentum-3', grad3_mom3_m,    'grad3')
-                                                
-        call worker%store_bc_state('Energy'    , grad1_energy_m,  'grad1')
-        call worker%store_bc_state('Energy'    , grad2_energy_m,  'grad2')
-        call worker%store_bc_state('Energy'    , grad3_energy_m,  'grad3')
-
-
 
 
 
@@ -895,4 +903,4 @@ contains
 
 
 
-end module bc_state_outlet_LODI_pressure
+end module bc_state_outlet_LODI_z_pressure

@@ -375,14 +375,17 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------
-    subroutine compute_averages(self,worker,bc_COMM, p_avg, M_avg)
+    subroutine compute_averages(self,worker,bc_COMM, u_avg, v_avg, w_avg, density_avg, p_avg)
         class(outlet_LODI_pressure_t),  intent(inout)   :: self
         type(chidg_worker_t),           intent(inout)   :: worker
         type(mpi_comm),                 intent(in)      :: bc_COMM
+        type(AD_D),                     intent(inout)   :: u_avg
+        type(AD_D),                     intent(inout)   :: v_avg
+        type(AD_D),                     intent(inout)   :: w_avg
+        type(AD_D),                     intent(inout)   :: density_avg
         type(AD_D),                     intent(inout)   :: p_avg
-        type(AD_D),                     intent(inout)   :: M_avg
 
-        type(AD_D)          :: face_p, face_M, p_integral, M_integral
+        type(AD_D)          :: face_p, face_u, face_v, face_w, face_density, p_integral, u_integral, v_integral, w_integral, density_integral
         type(face_info_t)   :: face_info
 
         type(AD_D), allocatable,    dimension(:)    ::  &
@@ -504,8 +507,11 @@ contains
             !
             ! Integrate and contribute to average
             !
-            face_p = sum(p * areas * weights)
-            face_M = sum(M * areas * weights)
+            face_u       = sum(u       * areas * weights)
+            face_v       = sum(v       * areas * weights)
+            face_w       = sum(w       * areas * weights)
+            face_density = sum(density * areas * weights)
+            face_p       = sum(p       * areas * weights)
 
             if (allocated(p_integral%xp_ad_)) then
                 p_integral = p_integral + face_p
@@ -514,13 +520,29 @@ contains
             end if
 
 
-            if (allocated(M_integral%xp_ad_)) then
-                M_integral = M_integral + face_M
+            if (allocated(u_integral%xp_ad_)) then
+                u_integral = u_integral + face_u
             else
-                M_integral = face_M
+                u_integral = face_u
             end if
 
+            if (allocated(v_integral%xp_ad_)) then
+                v_integral = v_integral + face_v
+            else
+                v_integral = face_v
+            end if
 
+            if (allocated(w_integral%xp_ad_)) then
+                w_integral = w_integral + face_w
+            else
+                w_integral = face_w
+            end if
+
+            if (allocated(density_integral%xp_ad_)) then
+                density_integral = density_integral + face_density
+            else
+                density_integral = face_density
+            end if
 
             total_area = total_area + face_area
 
@@ -534,8 +556,11 @@ contains
         !   area-weighted pressure integral over the total area
         !   
         !
-        p_avg = p_integral / total_area
-        M_avg = M_integral / total_area
+        u_avg       = u_integral       / total_area
+        v_avg       = v_integral       / total_area
+        w_avg       = w_integral       / total_area
+        density_avg = density_integral / total_area
+        p_avg       = p_integral       / total_area
 
 
 
@@ -584,9 +609,10 @@ contains
             grad1_w, grad2_w, grad3_w,                                                  &
             lamda_1, lamda_234, lamda_5,                                                &
             L1, L2, L3, L4, L5,                                                         &
-            T1, T2, T3, T4, T5, M_avg_array
+            T1, T2, T3, T4, T5, M_avg_array, c1_p, c2_p, c3_p, c4_p, c5_p, u_p, v_p, w_p, density_p, p_p, &
+            c_bar_gq, p_bar_gq, u_bar_gq, v_bar_gq, w_bar_gq, density_bar_gq
 
-        type(AD_D)  :: p_avg, M_avg
+        type(AD_D)  :: c_bar, p_bar, u_bar, v_bar, w_bar, density_bar, c1_bar, c2_bar, c3_bar, c4_bar, c5_bar
 
 
         logical                                     :: face_has_node
@@ -600,6 +626,10 @@ contains
         !
         p_user = self%bcproperties%compute('Average Pressure',worker%time(),worker%coords())
 
+        !
+        ! Compute gamma
+        !
+        gam = 1.4_rk
 
 
         !
@@ -648,18 +678,60 @@ contains
         !
         ! Update average pressure
         !
-        !p_avg = self%compute_average_pressure(worker,bc_COMM)
-        call self%compute_averages(worker,bc_COMM,p_avg, M_avg)
+        !p_bar = self%compute_average_pressure(worker,bc_COMM)
+        call self%compute_averages(worker,bc_COMM,u_bar, v_bar, w_bar, density_bar, p_bar)
 
 
-        print*, 'Average pressure: ', p_avg%x_ad_
-        print*, 'Average Mach: ', M_avg%x_ad_
+        print*, 'Average pressure: ', p_bar%x_ad_
+!        print*, 'Average Mach: ', M_bar%x_ad_
+
+        
+        !
+        ! Compute updates due to average 
+        !
+        !vmag_bar = sqrt(u_bar*u_bar + v_bar*v_bar + w_bar*w_bar)
+        c_bar = sqrt(gam * p_bar / density_bar)
+
 
 
         !
-        ! Compute gamma
+        ! Compute characteristics due to average quantities
         !
-        gam = 1.4_rk
+        c1_bar = -(c_bar*c_bar)*density_bar    +  p_bar
+        c2_bar =  (density_bar*c_bar) * u_bar  +  p_bar
+        c3_bar =  (density_bar*c_bar) * v_bar
+        c4_bar =  (density_bar*c_bar) * w_bar
+        c5_bar = -(density_bar*c_bar) * u_bar  +  p_bar
+
+
+        !
+        ! Recompute incoming average characteristic
+        !
+        c5_bar = -TWO*(p_bar - p_user(1))
+
+
+
+
+        !
+        ! Compute boundary primitive variables from modified average characteristics
+        !   1: initialize arrays at all quadrature nodes
+        !   2: set to average values
+        !
+        density_bc = density_m
+        u_bc       = density_m
+        v_bc       = density_m
+        w_bc       = density_m
+        p_bc       = density_m
+
+        density_bc = -(ONE/(c_bar*c_bar))*c1_bar  +  (ONE/(TWO*c_bar*c_bar))*c2_bar  +  (ONE/(TWO*c_bar*c_bar))*c5_bar
+        u_bc       = (ONE/(TWO*density_bar*c_bar))*c2_bar  -  (ONE/(TWO*density_bar*c_bar))*c5_bar
+        v_bc       = (ONE/(density_bar*c_bar))*c3_bar
+        w_bc       = (ONE/(density_bar*c_bar))*c4_bar
+        p_bc       = HALF*c2_bar  +  HALF*c5_bar
+
+
+
+
 
 
         !
@@ -675,6 +747,57 @@ contains
         !
         p_m = (gam-ONE)*(energy_m - HALF*( (mom1_m*mom1_m) + (mom2_m*mom2_m) + (mom3_m*mom3_m) )/density_m )
     
+
+
+
+
+        !
+        ! Compute perturbation from mean
+        !
+        u_p       = u_m       - u_bar
+        v_p       = v_m       - v_bar
+        w_p       = w_m       - w_bar
+        p_p       = p_m       - p_bar
+        density_p = density_m - density_bar
+
+
+        c_bar_gq       = density_m
+        u_bar_gq       = density_m
+        v_bar_gq       = density_m
+        w_bar_gq       = density_m
+        p_bar_gq       = density_m
+        density_bar_gq = density_m
+
+        c_bar_gq = c_bar
+        u_bar_gq = u_bar
+        v_bar_gq = v_bar
+        w_bar_gq = w_bar
+        p_bar_gq = p_bar
+        density_bar_gq = density_bar
+
+
+        !
+        ! Compute characteristics due to perturbation quantities
+        !
+        c1_p = -(c_bar_gq*c_bar_gq)*density_p  +  p_p
+        c2_p =  (density_bar_gq*c_bar_gq) * u_p        +  p_p
+        c3_p =  (density_bar_gq*c_bar_gq) * v_p
+        c4_p =  (density_bar_gq*c_bar_gq) * w_p
+        c5_p = -(density_bar_gq*c_bar_gq) * u_p        +  p_p
+
+
+        ! Cancel incoming perturbations
+        c5_p = ZERO
+
+
+        density_bc = density_bc + (-ONE/(c_bar_gq*c_bar_gq))*c1_p  +  (ONE/(TWO*c_bar_gq*c_bar_gq))*c2_p  +  (ONE/(TWO*c_bar_gq*c_bar_gq))*c5_p
+        u_bc       = u_bc       + (ONE/(TWO*density_bar_gq*c_bar_gq))*c2_p  -  (ONE/(TWO*density_bar_gq*c_bar_gq))*c5_p
+        v_bc       = v_bc       + (ONE/(density_bar_gq*c_bar_gq))*c3_p
+        w_bc       = w_bc       + (ONE/(density_bar_gq*c_bar_gq))*c4_p
+        p_bc       = p_bc       + HALF*c2_p  +  HALF*c5_p
+
+
+
 
 
 
@@ -744,86 +867,95 @@ contains
 
 
 
-        !
-        ! Compute wave speeds. u_m because assumption is that boundary is normal to x-axis
-        !
-        c    = sqrt(gam * p_m / density_m)
-        lamda_1   = u_m - c
-        lamda_234 = u_m
-        lamda_5   = u_m + c
-
-        !
-        ! Compute amplitudes of axial waves
-        !
-        L2 =      lamda_234*(grad1_density_m  -  grad1_p/(c*c))
-        L3 =      lamda_234*(grad1_v)
-        L4 =      lamda_234*(grad1_w)
-        L5 = HALF*lamda_5*(grad1_p + density_m*c*grad1_u)
-
-
-        !
-        ! Compute amplitudes of transverse waves
-        !
-        T1 = ( (v_m*grad2_p  + w_m*grad3_p )   +  gam*p_m*(grad2_v + grad3_w)  -  density_m*c*(v_m*grad2_u  +  w_m*grad3_u) )/TWO
-        T2 =   (grad2_mom2_m + grad3_mom3_m)   - (gam*p_m*(grad2_v + grad3_w)  +              (v_m*grad2_p  +  w_m*grad3_p) )/(c*c)
-        T3 = ( (v_m*grad2_v  + w_m*grad3_v )   +  invdensity*grad2_p )
-        T4 = ( (v_m*grad2_w  + w_m*grad3_w )   +  invdensity*grad3_p )
-        T5 = ( (v_m*grad2_p  + w_m*grad3_p )   +  gam*p_m*(grad2_v + grad3_w)  +  density_m*c*(v_m*grad2_u  +  w_m*grad3_u) )/TWO
-
-        T1 = ZERO
-        !T2 = ZERO
-        !T3 = ZERO
-        !T4 = ZERO
-        !T5 = ZERO
-
-
-
-                                           
-                                                                                               
-
-        !
-        ! Compute incoming axial wave
-        !
-        k    = 10._rk
-        beta = 0.2_rk   ! best investigation yet says this should be the mean Mach number across the face
-
-        M_avg_array = density_m
-        M_avg_array = M_avg
-        !L1 = k*(p_avg - p_user) + (beta - ONE)*T1
-        !L1 = k*(p_avg - p_user) + (M_avg_array - ONE)*T1
-        L1 = k*(p_avg - p_user)
-
-        !print*, 'L1: ', L1(1)%xp_ad_
-        !if (any(T5(1)%xp_ad_ > 0.1)) then
-        !    print*, 'L5: ', L5(1)%xp_ad_
-        !    print*, 'T5: ', T5(1)%xp_ad_
-        !end if
-
-        !
-        ! Compute perturbation in primitive variables due to the characteristics
-        !
-        du       = -(L5 - L1)/(density_m*c)  -  (T5 - T1)/(density_m*c)
-        dv       = -(L3)                     -  (T3)
-        dw       = -(L4)                     -  (T4)
-        ddensity = -(L2 + (L5+L1)/(c*c))     -  (T2 + (T5+T1)/(c*c))
-        dp       = -(L5 + L1)                -  (T5 + T1)
-
-        !du       = -(L5 - L1)/(density_m*c)  
-        !dv       = -(L3)                     
-        !dw       = -(L4)                     
-        !ddensity = -(L2 + (L5+L1)/(c*c))     
-        !dp       = -(L5 + L1)                
-
-
-
-        !
-        ! Update primitive variables and form conservative boundary values
-        !
-        u_bc       = u_m       + du
-        v_bc       = v_m       + dv
-        w_bc       = w_m       + dw
-        density_bc = density_m + ddensity
-        p_bc       = p_m       + dp
+!        !
+!        ! Compute wave speeds. u_m because assumption is that boundary is normal to x-axis
+!        !
+!        c = sqrt(gam * p_m / density_m)
+!        lamda_1   = u_bar - c_bar
+!        lamda_234 = u_bar
+!        lamda_5   = u_bar + c_bar
+!
+!
+!
+!        !
+!        ! Compute 
+!        !
+!
+!
+!
+!
+!        !
+!        ! Compute amplitudes of axial waves
+!        !
+!        L2 =      lamda_234*(grad1_density_m  -  grad1_p/(c_bar*c_bar))
+!        L3 =      lamda_234*(grad1_v)
+!        L4 =      lamda_234*(grad1_w)
+!        L5 = HALF*lamda_5*(grad1_p + density_m*c*grad1_u)
+!
+!
+!        !
+!        ! Compute amplitudes of transverse waves
+!        !
+!        T1 = ( (v_m*grad2_p  + w_m*grad3_p )   +  gam*p_m*(grad2_v + grad3_w)  -  density_m*c*(v_m*grad2_u  +  w_m*grad3_u) )/TWO
+!        T2 =   (grad2_mom2_m + grad3_mom3_m)   - (gam*p_m*(grad2_v + grad3_w)  +              (v_m*grad2_p  +  w_m*grad3_p) )/(c*c)
+!        T3 = ( (v_m*grad2_v  + w_m*grad3_v )   +  invdensity*grad2_p )
+!        T4 = ( (v_m*grad2_w  + w_m*grad3_w )   +  invdensity*grad3_p )
+!        T5 = ( (v_m*grad2_p  + w_m*grad3_p )   +  gam*p_m*(grad2_v + grad3_w)  +  density_m*c*(v_m*grad2_u  +  w_m*grad3_u) )/TWO
+!
+!        !T1 = ZERO
+!        !T2 = ZERO
+!        !T3 = ZERO
+!        !T4 = ZERO
+!        !T5 = ZERO
+!
+!
+!
+!                                           
+!                                                                                               
+!
+!        !
+!        ! Compute incoming axial wave
+!        !
+!        k    = 10._rk
+!        beta = 0.2_rk   ! best investigation yet says this should be the mean Mach number across the face
+!
+!        !M_avg_array = density_m
+!        !M_avg_array = M_avg
+!        !L1 = k*(p_avg - p_user) + (beta - ONE)*T1
+!        !L1 = k*(p_avg - p_user) + (M_avg_array - ONE)*T1
+!        L1 = k*(p_bar - p_user) - T1
+!
+!        !print*, 'L1: ', L1(1)%xp_ad_
+!        !if (any(T5(1)%xp_ad_ > 0.1)) then
+!        !    print*, 'L5: ', L5(1)%xp_ad_
+!        !    print*, 'T5: ', T5(1)%xp_ad_
+!        !end if
+!
+!        !
+!        ! Compute perturbation in primitive variables due to the characteristics
+!        !
+!        du       = -(L5 - L1)/(density_m*c)  -  (T5 - T1)/(density_m*c)
+!        dv       = -(L3)                     -  (T3)
+!        dw       = -(L4)                     -  (T4)
+!        ddensity = -(L2 + (L5+L1)/(c*c))     -  (T2 + (T5+T1)/(c*c))
+!        dp       = -(L5 + L1)                -  (T5 + T1)
+!
+!        !du       = -(L5 - L1)/(density_m*c)  
+!        !dv       = -(L3)                     
+!        !dw       = -(L4)                     
+!        !ddensity = -(L2 + (L5+L1)/(c*c))     
+!        !dp       = -(L5 + L1)                
+!
+!
+!
+!        !
+!        ! Update primitive variables and form conservative boundary values
+!        !
+!        u_bc       = u_m       + du
+!        v_bc       = v_m       + dv
+!        w_bc       = w_m       + dw
+!        density_bc = density_m + ddensity
+!        p_bc       = p_m       + dp
 
 
 

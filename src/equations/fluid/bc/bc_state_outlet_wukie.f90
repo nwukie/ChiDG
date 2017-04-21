@@ -1,4 +1,4 @@
-module bc_state_outlet_LODI_z_pressure
+module bc_state_outlet_wukie
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, HALF, TWO, NO_PROC, ME
@@ -49,7 +49,7 @@ module bc_state_outlet_LODI_z_pressure
     !!  @date   4/20/2017
     !!
     !----------------------------------------------------------------------------------------
-    type, public, extends(bc_state_t) :: outlet_LODI_z_pressure_t
+    type, public, extends(bc_state_t) :: outlet_wukie_t
 
 
     contains
@@ -60,7 +60,7 @@ module bc_state_outlet_LODI_z_pressure
 
         procedure   :: compute_averages
 
-    end type outlet_LODI_z_pressure_t
+    end type outlet_wukie_t
     !****************************************************************************************
 
 
@@ -77,12 +77,12 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(outlet_LODI_z_pressure_t),   intent(inout) :: self
+        class(outlet_wukie_t),   intent(inout) :: self
         
         !
         ! Set name, family
         !
-        call self%set_name('Outlet - LODI Z Pressure')
+        call self%set_name('Outlet - Wukie')
         call self%set_family('Outlet')
 
 
@@ -122,7 +122,7 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init_bc_coupling(self,mesh,group_ID,bc_COMM)
-        class(outlet_LODI_z_pressure_t),  intent(inout)   :: self
+        class(outlet_wukie_t),  intent(inout)   :: self
         type(mesh_t),                     intent(inout)   :: mesh
         integer(ik),                      intent(in)      :: group_ID
         type(mpi_comm),                   intent(in)      :: bc_COMM
@@ -375,14 +375,17 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------
-    subroutine compute_averages(self,worker,bc_COMM, p_avg, M_avg)
-        class(outlet_LODI_z_pressure_t),  intent(inout)   :: self
-        type(chidg_worker_t),             intent(inout)   :: worker
-        type(mpi_comm),                   intent(in)      :: bc_COMM
-        type(AD_D),                       intent(inout)   :: p_avg
-        type(AD_D),                       intent(inout)   :: M_avg
+    subroutine compute_averages(self,worker,bc_COMM, u_avg, v_avg, w_avg, density_avg, p_avg)
+        class(outlet_wukie_t),  intent(inout)   :: self
+        type(chidg_worker_t),   intent(inout)   :: worker
+        type(mpi_comm),         intent(in)      :: bc_COMM
+        type(AD_D),             intent(inout)   :: u_avg
+        type(AD_D),             intent(inout)   :: v_avg
+        type(AD_D),             intent(inout)   :: w_avg
+        type(AD_D),             intent(inout)   :: density_avg
+        type(AD_D),             intent(inout)   :: p_avg
 
-        type(AD_D)          :: face_p, face_M, p_integral, M_integral
+        type(AD_D)          :: face_p, face_M, p_integral, u_integral, v_integral, w_integral, density_integral, face_density, face_u, face_v, face_w
         type(face_info_t)   :: face_info
 
         type(AD_D), allocatable,    dimension(:)    ::  &
@@ -504,8 +507,31 @@ contains
             !
             ! Integrate and contribute to average
             !
-            face_p = sum(p * areas * weights)
-            face_M = sum(M * areas * weights)
+            face_u       = sum(u       * areas * weights)
+            face_v       = sum(v       * areas * weights)
+            face_w       = sum(w       * areas * weights)
+            face_density = sum(density * areas * weights)
+            face_p       = sum(p   * areas * weights)
+
+
+
+            if (allocated(u_integral%xp_ad_)) then
+                u_integral = u_integral + face_u
+            else
+                u_integral = face_u
+            end if
+
+            if (allocated(v_integral%xp_ad_)) then
+                v_integral = v_integral + face_v
+            else
+                v_integral = face_v
+            end if
+
+            if (allocated(w_integral%xp_ad_)) then
+                w_integral = w_integral + face_w
+            else
+                w_integral = face_w
+            end if
 
             if (allocated(p_integral%xp_ad_)) then
                 p_integral = p_integral + face_p
@@ -513,13 +539,11 @@ contains
                 p_integral = face_p
             end if
 
-
-            if (allocated(M_integral%xp_ad_)) then
-                M_integral = M_integral + face_M
+            if (allocated(density_integral%xp_ad_)) then
+                density_integral = density_integral + face_density
             else
-                M_integral = face_M
+                density_integral = face_density
             end if
-
 
 
             total_area = total_area + face_area
@@ -534,8 +558,11 @@ contains
         !   area-weighted pressure integral over the total area
         !   
         !
-        p_avg = p_integral / total_area
-        M_avg = M_integral / total_area
+        u_avg       = u_integral       / total_area
+        v_avg       = v_integral       / total_area
+        w_avg       = w_integral       / total_area
+        density_avg = density_integral / total_area
+        p_avg       = p_integral       / total_area
 
 
 
@@ -558,7 +585,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_COMM)
-        class(outlet_LODI_z_pressure_t),    intent(inout)   :: self
+        class(outlet_wukie_t),    intent(inout)   :: self
         type(chidg_worker_t),               intent(inout)   :: worker
         class(properties_t),                intent(inout)   :: prop
         type(mpi_comm),                     intent(in)      :: bc_COMM
@@ -586,7 +613,7 @@ contains
             L1, L2, L3, L4, L5,                                                         &
             T1, T2, T3, T4, T5, M_avg_array, div_velocity, div_momentum, M_m
 
-        type(AD_D)  :: p_avg, M_avg
+        type(AD_D)  :: p_avg, u_avg, v_avg, w_avg, rho_avg, M_avg
 
 
         logical                                     :: face_has_node
@@ -689,9 +716,8 @@ contains
         !
         ! Update average pressure
         !
-        call self%compute_averages(worker,bc_COMM,p_avg, M_avg)
+        call self%compute_averages(worker,bc_COMM,u_avg, v_avg, w_avg, rho_avg, p_avg)
         print*, 'Average pressure: ', p_avg%x_ad_
-        print*, 'Average Mach: ', M_avg%x_ad_
 
 
         !
@@ -930,4 +956,4 @@ contains
 
 
 
-end module bc_state_outlet_LODI_z_pressure
+end module bc_state_outlet_wukie

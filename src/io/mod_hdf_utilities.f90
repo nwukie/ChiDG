@@ -4841,6 +4841,8 @@ contains
 
         ! Create boundary condition state and get number of properties
 
+        allocate(pmm, stat=ierr)
+        if (ierr /=0) call AllocationError
         call pmm%set_name(pmmname)
        
 
@@ -4940,6 +4942,57 @@ contains
             
     end function get_pmm_domain_group_hdf
     !***************************************************************************************
+
+
+
+    !>  Add a pmm group to the ChiDG HDF file.
+    !!
+    !!  
+    !!      
+    !!
+    !!  @author Eric Wolf
+    !!  @date   4/21/2017 
+    !!
+    !!  @param[in]  fid             HDF file identifier
+    !!  @param[in]  group_name      Unique name for the new boundary condition state group.
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine create_pmm_group_hdf(fid,group_name)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: group_name
+
+        character(:),   allocatable :: user_msg
+        integer(HID_T)              :: pmmgroup_id
+        integer(ik)                 :: ierr
+        logical                     :: group_exists
+
+
+        ! Check if bc_state group exists
+        group_exists = check_link_exists_hdf(fid,"PMM_"//trim(group_name))
+
+        user_msg = "create_pmm_group_hdf: Boundary condition state group already exists. &
+                    Cannot have two groups with the same name"
+        if (group_exists) call chidg_signal_one(FATAL,user_msg,trim(group_name))
+
+
+        !
+        ! Create a new group for the bc_state_t
+        !
+        call h5gcreate_f(fid, "PMM_"//trim(group_name), pmmgroup_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'create_pmm_group_hdf: error creating new group for bc_state.')
+
+
+        ! Set 'Family'
+        call h5ltset_attribute_string_f(pmmgroup_id, ".", "Function", 'static', ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"create_pmm_group_hdf: error setting the attribute 'Family'")
+
+
+        call h5gclose_f(pmmgroup_id,ierr)
+
+    end subroutine create_pmm_group_hdf
+    !****************************************************************************************
+
+
 
 
 

@@ -288,9 +288,9 @@ contains
 
 
         !
-        ! Allocate equation set
+        ! Allocate equation set - causing segfault?
         !
-        temp_eqnset(idomain_l) = equation_builder_factory%produce(eqnset,'default')
+!        temp_eqnset(idomain_l) = equation_builder_factory%produce(eqnset,'default')
 
 
         !

@@ -1617,7 +1617,7 @@ contains
 
 
             ! Close face boundary condition group
-            call h5gclose_f(patch_id, ierr)
+            call h5gclose_f(domain_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"read_bc_patches_hdf: h5gclose")
 
 

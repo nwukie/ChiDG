@@ -112,7 +112,7 @@ module type_chidg
         ! IO procedures
         procedure   :: read_grid
         procedure   :: read_boundaryconditions
-        !procedure  :: read_mesh_motion
+        procedure   :: read_prescribedmeshmotions
         procedure   :: read_solution
         procedure   :: write_grid
         procedure   :: write_solution

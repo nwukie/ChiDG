@@ -122,11 +122,14 @@ contains
         class(prescribed_mesh_motion_t),               intent(inout)       :: pmm_in
 
 
+        integer(ik)     :: ierr
         
 
         call self%set_name(pmm_in%get_name())
         self%pmmf_name = pmm_in%pmmf_name
-        allocate(self%pmmf, source = pmm_in%pmmf)
+        if (allocated(self%pmmf)) deallocate(self%pmmf)
+        allocate(self%pmmf, source = pmm_in%pmmf, stat=ierr)
+        if (ierr /= 0) call AllocationError
 
     end subroutine init_pmm_group
     !********************************************************************************
@@ -197,9 +200,12 @@ contains
         character(*),                           intent(in)      :: pmmfstring
         class(prescribed_mesh_motion_function_t), allocatable                :: pmmf
             
+        integer(ik)     :: ierr
         call self%set_pmmf_name(pmmfstring)
         call create_prescribed_mesh_motion_function(pmmf, pmmfstring)
-        allocate(self%pmmf, source = pmmf)
+        if (allocated(self%pmmf)) deallocate(self%pmmf)
+        allocate(self%pmmf, source = pmmf, stat=ierr)
+        if (ierr /= 0) call AllocationError
 
     end subroutine
     !********************************************************************************

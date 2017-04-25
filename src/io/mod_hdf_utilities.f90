@@ -4794,7 +4794,39 @@ contains
     end function get_pmm_group_names_hdf
     !***************************************************************************************
 
+    !>  Open a PMM group and return HDF group identifier.
+    !!
+    !!  @author Eric Wolf 
+    !!  @date  4/25/2017 
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function open_pmm_hdf(fid,pmmname) result(pmmgroup_id)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: pmmname
 
+        integer(HID_T)  :: pmmgroup_id
+        integer(ik)     :: ierr
+        logical         :: exists
+
+
+        ! Check exists
+        exists = check_link_exists_hdf(fid,"PMM_"//trim(pmmname))
+        if (.not. exists) call chidg_signal_one(FATAL,"open_pmm_hdf: Couldn't find PMM in file.","PMM_"//trim(pmmname))
+
+
+        ! If so, open.
+        call h5gopen_f(fid,"PMM_"//trim(pmmname), pmmgroup_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"open_pmm_hdf: Error in h5gopen_f")
+
+
+    end function open_pmm_hdf
+    !****************************************************************************************
+
+
+
+
+    
 
     !>  Given the name of a bc_state on a face, return an initialized bc_state instance.
     !!
@@ -4819,6 +4851,7 @@ contains
         integer(ik)                     :: ierr, iprop, nprop, iopt, noptions
         real(rdouble), dimension(1)     :: buf
         real(rk)                        :: ovalue
+        logical                         :: group_exists
 
 
         !
@@ -4866,17 +4899,20 @@ contains
             oname = pmm%pmmf%get_option_key(iopt)
 
             ! Get option value from file
-            call h5gopen_f(pmmgroup_id, "PMMFO_"//trim(oname), pmmfo_id, ierr)
-            call h5ltget_attribute_double_f(pmmfo_id,".", "val", buf, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"get_pmm_hdf: error getting option value")
-            ovalue = real(buf(1),rk)
+            group_exists = check_link_exists_hdf(pmmgroup_id,"PMMFO_"//trim(oname))
+            if (group_exists) then
+                call h5gopen_f(pmmgroup_id, "PMMFO_"//trim(oname), pmmfo_id, ierr)
+                call h5ltget_attribute_double_f(pmmfo_id,".", "val", buf, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"get_pmm_hdf: error getting option value")
+                ovalue = real(buf(1),rk)
 
-            ! Set boundary condition option
-            call pmm%pmmf%set_option(trim(oname), ovalue)
+                ! Set boundary condition option
+                call pmm%pmmf%set_option(trim(oname), ovalue)
 
-            ! Close current property group
-            call h5gclose_f(pmmfo_id,ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"get_pmm_hdf: h5gclose")
+                ! Close current property group
+                call h5gclose_f(pmmfo_id,ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"get_pmm_hdf: h5gclose")
+            end if
         end do ! iopt
 
 
@@ -4957,9 +4993,10 @@ contains
     !!  @param[in]  group_name      Unique name for the new boundary condition state group.
     !!
     !----------------------------------------------------------------------------------------
-    subroutine create_pmm_group_hdf(fid,group_name)
+    subroutine create_pmm_group_hdf(fid,group_name,fname)
         integer(HID_T), intent(in)  :: fid
         character(*),   intent(in)  :: group_name
+        character(*),   intent(in),optional  :: fname
 
         character(:),   allocatable :: user_msg
         integer(HID_T)              :: pmmgroup_id
@@ -4983,8 +5020,10 @@ contains
 
 
         ! Set 'Family'
-        call h5ltset_attribute_string_f(pmmgroup_id, ".", "Function", 'static', ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"create_pmm_group_hdf: error setting the attribute 'Family'")
+        if (present(fname)) then
+            call h5ltset_attribute_string_f(pmmgroup_id, ".", "Function", fname, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"create_pmm_group_hdf: error setting the attribute 'Function'")
+        end if
 
 
         call h5gclose_f(pmmgroup_id,ierr)
@@ -4992,8 +5031,158 @@ contains
     end subroutine create_pmm_group_hdf
     !****************************************************************************************
 
+    !>  Sets pmmf name attribute to the ChiDG HDF file.
+    !!
+    !!  
+    !!      
+    !!
+    !!  @author Eric Wolf
+    !!  @date   4/25/2017 
+    !!
+    !!  @param[in]  fid             HDF file identifier
+    !!  @param[in]  pmmname         Unique name for the pmm group.
+    !!  @param[in]  fname           Unique name for the pmmf name - must be the name of a registered pmmf!.
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_pmmf_name_hdf(fid,pmmname,fname)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: pmmname 
+        character(*),   intent(in)  :: fname
+
+        character(:),   allocatable :: user_msg
+        integer(HID_T)              :: pmmgroup_id
+        integer(ik)                 :: ierr
+        real(rdouble), dimension(1)     :: buf
+        logical                     :: group_exists
+
+        group_exists = check_link_exists_hdf(fid,"PMM_"//trim(pmmname))
+
+        user_msg = "set_pmmf_name_hdf: PMM group does not exist. &
+                    Create the pmm before trying to set the function name."
+        if (.not. group_exists) call chidg_signal_one(FATAL,user_msg,trim(fname))
 
 
+
+        pmmgroup_id = open_pmm_hdf(fid, pmmname)
+
+        call h5ltset_attribute_string_f(pmmgroup_id, ".", "Function", fname, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_pmmf_name_hdf: error setting the attribute 'Function'")
+
+
+        call h5gclose_f(pmmgroup_id,ierr)
+
+    end subroutine set_pmmf_name_hdf
+    !****************************************************************************************
+
+
+
+
+    !>  Add a pmm group to the ChiDG HDF file.
+    !!
+    !!  
+    !!      
+    !!
+    !!  @author Eric Wolf
+    !!  @date   4/25/2017 
+    !!
+    !!  @param[in]  fid             HDF file identifier
+    !!  @param[in]  group_name      Unique name for the new boundary condition state group.
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine create_pmmfo_group_hdf(fid,pmmname,oname,val)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: pmmname 
+        character(*),   intent(in)  :: oname
+        real(rk),       intent(in),optional  :: val
+
+        character(:),   allocatable :: user_msg
+        integer(HSIZE_T)                :: adim
+        integer(HID_T)              :: pmmgroup_id, pmmfo_id
+        integer(ik)                 :: ierr
+        real(rdouble), dimension(1)     :: buf
+        logical                     :: group_exists
+
+
+        pmmgroup_id = open_pmm_hdf(fid, pmmname)
+
+        ! Check if bc_state group exists
+        group_exists = check_link_exists_hdf(pmmgroup_id,"PMMFO_"//trim(oname))
+
+        user_msg = "create_pmmfo_group_hdf: PMMF option group already exists. &
+                    Cannot have two groups with the same name"
+        if (group_exists) call chidg_signal_one(FATAL,user_msg,trim(oname))
+
+        !
+        ! Create a new group for the option
+        !
+        call h5gcreate_f(pmmgroup_id, "PMMFO_"//trim(oname), pmmfo_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'create_pmmfo_group_hdf: error creating new group for PMMF option.')
+        if (present(val)) then
+            adim = 1
+            call h5ltset_attribute_double_f(pmmfo_id, ".", "val", [real(val,rdouble)], adim, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"create_pmmfo_group_hdf: error setting option value")
+        end if
+
+        
+
+        call h5gclose_f(pmmfo_id,ierr)
+
+    end subroutine create_pmmfo_group_hdf
+    !****************************************************************************************
+
+
+    !>  Sets pmmf option value attribute to the ChiDG HDF file.
+    !!
+    !!  
+    !!      
+    !!
+    !!  @author Eric Wolf
+    !!  @date   4/25/2017 
+    !!
+    !!  @param[in]  fid             HDF file identifier
+    !!  @param[in]  pmmname         Unique name for the pmm group.
+    !!  @param[in]  oname           Unique name for the pmmfo group.
+    !!  @param[in]  val             Option value
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_pmmfo_val_hdf(fid,pmmname,oname,val)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: pmmname 
+        character(*),   intent(in)  :: oname
+        real(rk),       intent(in)  :: val
+
+        character(:),   allocatable :: user_msg
+        integer(HSIZE_T)                :: adim
+        integer(HID_T)              :: pmmgroup_id, pmmfo_id
+        integer(ik)                 :: ierr
+        real(rdouble), dimension(1)     :: buf
+        logical                     :: group_exists
+
+
+        pmmgroup_id = open_pmm_hdf(fid, pmmname)
+
+        ! Check if bc_state group exists
+        group_exists = check_link_exists_hdf(pmmgroup_id,"PMMFO_"//trim(oname))
+
+        user_msg = "set_pmmfo_val_hdf: PMMF option group does not exist. &
+                    Create the pmmfo group before trying to set the value."
+        if (.not. group_exists) call chidg_signal_one(FATAL,user_msg,trim(oname))
+
+        !
+        ! Create a new group for the option
+        !
+        call h5gopen_f(pmmgroup_id, "PMMFO_"//trim(oname), pmmfo_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'set_pmmfo_val_hdf: error opening group for PMMF option.')
+        adim = 1
+        call h5ltset_attribute_double_f(pmmfo_id, ".", "val", [real(val,rdouble)], adim, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_pmmfo_val_hdf: error setting option value")
+
+        
+
+        call h5gclose_f(pmmfo_id,ierr)
+
+    end subroutine set_pmmfo_val_hdf
+    !****************************************************************************************
 
 
 

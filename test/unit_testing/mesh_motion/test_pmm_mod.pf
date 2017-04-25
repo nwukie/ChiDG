@@ -121,15 +121,12 @@ contains
         ! Call init_pmm_group. THIS IS BEING TESTED.
         !
         allocate(pmm)
-        print *, 'pmmt4b'
         call pmm%init_pmm_group(pmm_group%pmm)
 
 
 
         !@assertEqual(size(pmm%pmmf), 1)
-        print *, 'pmmt5'
         @assertEqual(pmm_group%name, 'Group One')
-        print *, 'pmmt6'
         @assertEqual(pmm_group%pmm%pmmf%get_name(), 'sinusoidal')
         @assertEqual(pmm%pmmf%get_name(), 'sinusoidal')
 

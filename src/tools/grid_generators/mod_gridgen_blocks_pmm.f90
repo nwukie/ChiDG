@@ -14,7 +14,8 @@ module mod_gridgen_blocks_pmm
                                       set_contains_grid_hdf, close_hdf, open_hdf, &
                                       create_bc_group_hdf, open_bc_group_hdf, close_bc_group_hdf, &
                                       set_bc_patch_group_hdf,                       &
-                                      create_pmm_group_hdf, set_pmm_domain_group_hdf
+                                      create_pmm_group_hdf, set_pmm_domain_group_hdf, &
+                                      create_pmmfo_group_hdf, set_pmmf_name_hdf, set_pmmfo_val_hdf
 
     use type_point,             only: point_t
     use type_bc_group,          only: bc_group_t
@@ -200,7 +201,7 @@ contains
         !
 
         !Add pmm group
-        call create_pmm_group_hdf(file_id,'static')
+        call create_pmm_group_hdf(file_id,'static','static')
 
         !Assign pmm to domain
         call set_pmm_domain_group_hdf(dom_id,'static')
@@ -217,6 +218,162 @@ contains
     !*************************************************************************************
 
 
+
+    !>  Write a ChiDG-formatted grid file consisting of:
+    !!
+    !!      - one block domain, D1
+    !!      - Linear element mapping, M1
+    !!      - boundary conditions initialized to Scalar Extrapolate.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/17/2016
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine create_mesh_file__pmm__sinusoidal__singleblock(filename,equation_sets,group_names,bc_groups,nelem_xi,nelem_eta,nelem_zeta,clusterx)
+        character(*),               intent(in)              :: filename
+        type(string_t),             intent(in), optional    :: equation_sets(:)
+        type(string_t),             intent(in), optional    :: group_names(:,:)
+        type(bc_group_t),           intent(in), optional    :: bc_groups(:)
+        integer(ik),                intent(in)              :: nelem_xi
+        integer(ik),                intent(in)              :: nelem_eta
+        integer(ik),                intent(in)              :: nelem_zeta
+        integer(ik),                intent(in), optional    :: clusterx
+
+        character(:),                   allocatable :: user_msg
+        class(bc_state_t),              allocatable :: bc_state
+        character(len=10)                           :: patch_names(6)
+        integer(HID_T)                              :: file_id, dom_id, patch_id, bcgroup_id
+        integer(ik)                                 :: spacedim, mapping, bcface, ierr, igroup, istate
+        type(point_t),                  allocatable :: nodes(:)
+        integer(ik),                    allocatable :: elements(:,:) 
+        integer(ik),                    allocatable :: faces(:,:)
+        real(rk),   dimension(:,:,:),   allocatable :: xcoords, ycoords, zcoords
+
+
+        ! Create/initialize file
+        call initialize_file_hdf(filename)
+        file_id = open_file_hdf(filename)
+        
+
+
+        ! Generate coordinates for first block
+        call meshgen_NxNxN_linear(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords,clusterx)
+
+
+
+        !
+        ! Get nodes/elements
+        !
+        mapping = 1
+        nodes    = get_block_points_plot3d(xcoords,ycoords,zcoords)
+        elements = get_block_elements_plot3d(xcoords,ycoords,zcoords,mapping,idomain=1)
+
+
+        !
+        ! Add domains
+        !
+        spacedim = 3
+
+        if ( present(equation_sets) ) then
+            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian',equation_sets(1)%get(),spacedim)
+        else
+            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian','Scalar Advection',spacedim)
+        end if
+
+
+        !
+        ! Set boundary conditions patch connectivities
+        !
+        dom_id = open_domain_hdf(file_id,'01')
+
+        do bcface = 1,size(patch_names)
+            
+            ! Get face node indices for boundary 'bcface'
+            faces = get_block_boundary_faces_plot3d(xcoords,ycoords,zcoords,mapping,bcface)
+
+            ! Set bc patch face indices
+            call set_bc_patch_hdf(dom_id,faces,bcface)
+
+        end do !bcface
+
+
+        !
+        ! Create bc_state, 'Scalar Extrapolate'
+        !
+        call create_bc('Scalar Extrapolate', bc_state)
+
+
+        !
+        ! Add bc_group's
+        !
+        if (present(bc_groups)) then
+            do igroup = 1,size(bc_groups)
+                call create_bc_group_hdf(file_id,bc_groups(igroup)%name)
+
+                bcgroup_id = open_bc_group_hdf(file_id,bc_groups(igroup)%name)
+
+                do istate = 1,bc_groups(igroup)%bc_states%size()
+                    call add_bc_state_hdf(bcgroup_id, bc_groups(igroup)%bc_states%at(istate))
+                end do
+                call close_bc_group_hdf(bcgroup_id)
+            end do
+        else
+            call create_bc_group_hdf(file_id,'Default')
+
+            bcgroup_id = open_bc_group_hdf(file_id,'Default')
+            call add_bc_state_hdf(bcgroup_id,bc_state)
+            call close_bc_group_hdf(bcgroup_id)
+
+        end if
+
+
+
+        !
+        ! Set boundary condition groups for each patch
+        !
+        patch_names = ['XI_MIN  ','XI_MAX  ', 'ETA_MIN ', 'ETA_MAX ', 'ZETA_MIN', 'ZETA_MAX']
+        do bcface = 1,size(patch_names)
+
+            call h5gopen_f(dom_id,'BoundaryConditions/'//trim(adjustl(patch_names(bcface))),patch_id,ierr)
+
+
+            ! Set bc_group
+            if (present(group_names)) then
+                call set_bc_patch_group_hdf(patch_id,group_names(1,bcface)%get())
+            else
+                call set_bc_patch_group_hdf(patch_id,'Default')
+            end if
+
+
+            call h5gclose_f(patch_id,ierr)
+
+        end do
+
+        !
+        !   Add prescribed mesh motion
+        !
+
+        !Add pmm group
+        call create_pmm_group_hdf(file_id,'sin_pmm')
+        call set_pmmf_name_hdf(file_id, 'sin_pmm','sinusoidal')
+        call create_pmmfo_group_hdf(file_id,'sin_pmm','L_X')
+        call set_pmmfo_val_hdf(file_id,'sin_pmm','L_X',1.5_rk)
+
+        !Assign pmm to domain
+        call set_pmm_domain_group_hdf(dom_id,'sin_pmm')
+
+        ! Set 'Contains Grid'
+        call set_contains_grid_hdf(file_id,'True')
+
+        ! Close file
+        call close_domain_hdf(dom_id)
+        call close_file_hdf(file_id)
+        call close_hdf()
+
+    end subroutine create_mesh_file__pmm__sinusoidal__singleblock
+    !*************************************************************************************
 
 
 

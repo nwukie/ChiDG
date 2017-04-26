@@ -779,22 +779,22 @@ contains
         !
         ! Compute characteristics due to perturbation quantities
         !
-        c1_p = -(c_bar_gq*c_bar_gq)*density_p  +  p_p
-        c2_p =  (density_bar_gq*c_bar_gq) * u_p        +  p_p
+        c1_p = -(c_bar_gq*c_bar_gq)*density_p     +   p_p
+        c2_p =  (density_bar_gq*c_bar_gq) * u_p   +   p_p
         c3_p =  (density_bar_gq*c_bar_gq) * v_p
         c4_p =  (density_bar_gq*c_bar_gq) * w_p
-        c5_p = -(density_bar_gq*c_bar_gq) * u_p        +  p_p
+        c5_p = -(density_bar_gq*c_bar_gq) * u_p   +   p_p
 
 
-        ! Cancel incoming perturbations
-        c5_p = ZERO
-
-
-        density_bc = density_bc + (-ONE/(c_bar_gq*c_bar_gq))*c1_p  +  (ONE/(TWO*c_bar_gq*c_bar_gq))*c2_p  +  (ONE/(TWO*c_bar_gq*c_bar_gq))*c5_p
-        u_bc       = u_bc       + (ONE/(TWO*density_bar_gq*c_bar_gq))*c2_p  -  (ONE/(TWO*density_bar_gq*c_bar_gq))*c5_p
-        v_bc       = v_bc       + (ONE/(density_bar_gq*c_bar_gq))*c3_p
-        w_bc       = w_bc       + (ONE/(density_bar_gq*c_bar_gq))*c4_p
-        p_bc       = p_bc       + HALF*c2_p  +  HALF*c5_p
+!        ! Cancel incoming perturbations
+!        c5_p = ZERO
+!
+!
+!        density_bc = density_bc + (-ONE/(c_bar_gq*c_bar_gq))*c1_p  +  (ONE/(TWO*c_bar_gq*c_bar_gq))*c2_p  +  (ONE/(TWO*c_bar_gq*c_bar_gq))*c5_p
+!        u_bc       = u_bc       + (ONE/(TWO*density_bar_gq*c_bar_gq))*c2_p  -  (ONE/(TWO*density_bar_gq*c_bar_gq))*c5_p
+!        v_bc       = v_bc       + (ONE/(density_bar_gq*c_bar_gq))*c3_p
+!        w_bc       = w_bc       + (ONE/(density_bar_gq*c_bar_gq))*c4_p
+!        p_bc       = p_bc       + HALF*c2_p  +  HALF*c5_p
 
 
 

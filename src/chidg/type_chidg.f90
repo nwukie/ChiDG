@@ -11,6 +11,7 @@ module type_chidg
     use mod_string,                 only: get_file_extension, string_t, get_file_prefix
 
     use type_chidg_data,            only: chidg_data_t
+    use type_chidg_vector,          only: chidg_vector_t, sub_chidg_vector_chidg_vector
     use type_time_integrator,       only: time_integrator_t
     use mod_time,                   only: time_manager_global
     use type_linear_solver,         only: linear_solver_t
@@ -117,6 +118,7 @@ module type_chidg
         procedure   :: write_grid
         procedure   :: write_solution
 
+        procedure   :: compute_l2_state_error
         ! Initialization
         procedure   :: set
         procedure   :: init
@@ -1312,7 +1314,18 @@ contains
 
 
 
+    function compute_l2_state_error(self,q_ref) result(error_val)
+        class(chidg_t), intent(inout)       :: self
+        type(chidg_vector_t), intent(in)    :: q_ref
 
+        type(chidg_vector_t), allocatable    :: q_diff
+        real(rk)                            :: error_val, local_error_val
+
+        q_diff = q_ref
+        q_diff = sub_chidg_vector_chidg_vector(self%data%sdata%q,q_ref)
+        error_val = ZERO
+        error_val = q_diff%norm_local()
+    end function compute_l2_state_error
 
 
 

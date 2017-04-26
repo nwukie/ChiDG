@@ -3,6 +3,7 @@ add_subdirectory(gaussian)
 add_subdirectory(trigonometric)
 add_subdirectory(polynomial)
 add_subdirectory(acoustics)
+add_subdirectory(mesh_motion_solutions)
 
 add_lib_sources(
                 type_function.f90

@@ -10,6 +10,7 @@ module type_face
     use type_element,           only: element_t
     use type_quadrature,        only: quadrature_t
     use type_densevector,       only: densevector_t
+    use mod_inv,                only: inv
     implicit none
 
 
@@ -120,6 +121,28 @@ module type_face
         real(rk)                        :: total_area
         real(rk),           allocatable :: differential_areas(:)
 
+        ! ALE
+
+        real(rk), allocatable           :: jacobian_matrix(:,:,:)        !< metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
+        real(rk), allocatable           :: inv_jacobian_matrix(:,:,:)        !< metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
+        type(point_t), allocatable      :: ale_quad_pts(:)
+        type(point_t), allocatable      :: ale_elem_pts(:)
+        type(densevector_t)             :: ale_coords               !< Modal representation of cartesian coordinates (nterms_var,(x,y,z))
+        type(densevector_t)             :: ale_vel_coords               !< Modal representation of cartesian coordinates (nterms_var,(x,y,z))
+        real(rk), allocatable           :: grid_vel1(:)
+        real(rk), allocatable           :: grid_vel2(:)
+        real(rk), allocatable           :: grid_vel3(:)
+        real(rk), allocatable           :: jacobian_grid(:,:,:)
+        real(rk), allocatable           :: inv_jacobian_grid(:,:,:)
+        real(rk), allocatable           :: det_jacobian_grid(:)
+
+        real(rk), allocatable           :: metric_ale(:,:,:)        !< metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
+        real(rk), allocatable           :: jacobian_matrix_ale(:,:,:)        !< metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
+        real(rk), allocatable           :: inv_jacobian_matrix_ale(:,:,:)        !< metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
+        real(rk), allocatable           :: jinv_ale(:)              !< jacobian terms at quadrature nodes
+
+
+
         ! Logical tests
         logical :: geomInitialized     = .false.
         logical :: neighborInitialized = .false.
@@ -148,7 +171,6 @@ module type_face
         procedure           :: update_coords_ale
         procedure           :: compute_quadrature_coords_ale
         procedure           :: compute_quadrature_metrics_ale
-
 
         final               :: destructor
 
@@ -215,6 +237,8 @@ contains
         ! Set coordinates
         !
         self%coords = elem%coords
+        self%ale_coords = elem%ale_coords
+        self%ale_vel_coords = elem%ale_vel_coords
 
 
         !
@@ -326,6 +350,19 @@ contains
                  self%metric(3,3,nnodes),                   &
                  self%norm(nnodes,3),                       &
                  self%unorm(nnodes,3),                      &
+                 self%ale_quad_pts(nnodes),                     &
+                 self%jinv_ale(nnodes),                         &
+                 self%metric_ale(3,3,nnodes),                   &
+                 self%jacobian_matrix(nnodes,3,3),          &
+                 self%inv_jacobian_matrix(nnodes,3,3),          &
+                 self%jacobian_matrix_ale(nnodes,3,3),          &
+                 self%inv_jacobian_matrix_ale(nnodes,3,3),          &
+                 self%jacobian_grid(nnodes,3,3),          &
+                 self%inv_jacobian_grid(nnodes,3,3),          &
+                 self%det_jacobian_grid(nnodes),            &
+                 self%grid_vel1(nnodes),                       &
+                 self%grid_vel2(nnodes),                       &
+                 self%grid_vel3(nnodes),                       &
                  self%grad1(nnodes,self%nterms_s),          &
                  self%grad2(nnodes,self%nterms_s),          &
                  self%grad3(nnodes,self%nterms_s), stat=ierr) 
@@ -459,7 +496,25 @@ contains
             self%metric(3,3,inode) = ONE/self%jinv(inode) * scaling_12(inode) * (d1dxi(inode)*d2deta(inode)   - d1deta(inode)*d2dxi(inode)  )
         end do
 
-        
+        do inode = 1,nnodes
+            self%jacobian_matrix(inode,1,1) = d1dxi(inode)
+            self%jacobian_matrix(inode,1,2) = d1deta(inode)
+            self%jacobian_matrix(inode,1,3) = d1dzeta(inode)
+                                          
+            self%jacobian_matrix(inode,2,1) = d2dxi(inode)
+            self%jacobian_matrix(inode,2,2) = d2deta(inode)
+            self%jacobian_matrix(inode,2,3) = d2dzeta(inode)
+                                          
+            self%jacobian_matrix(inode,3,1) = d3dxi(inode)
+            self%jacobian_matrix(inode,3,2) = d3deta(inode)
+            self%jacobian_matrix(inode,3,3) = d3dzeta(inode)
+
+            self%inv_jacobian_matrix(inode,:,:) = inv(self%jacobian_matrix(inode,:,:))
+        end do
+
+
+
+
 
         !
         ! Check for negative jacobians
@@ -868,7 +923,8 @@ contains
         class(face_t),      intent(inout)       :: self
         type(element_t),       intent(in)          :: elem
 
-!        self%coords_ale = elem%coords_ale
+        self%ale_coords = elem%ale_coords
+        self%ale_vel_coords = elem%ale_vel_coords
 
     end subroutine update_coords_ale
 
@@ -879,7 +935,40 @@ contains
         real(rk)                            :: vg1(self%gq%face%nnodes),vg2(self%gq%face%nnodes),vg3(self%gq%face%nnodes)
         integer(ik)                         :: inode
 
-!        nnodes = self%gq%face%nnodes
+        nnodes = self%gq%face%nnodes
+        !
+        ! compute cartesian coordinates associated with quadrature points
+        !
+        x = matmul(self%gqmesh%face%val(:,:,self%iface),self%ale_coords%getvar(1,itime = 1))
+        y = matmul(self%gqmesh%face%val(:,:,self%iface),self%ale_coords%getvar(2,itime = 1))
+        z = matmul(self%gqmesh%face%val(:,:,self%iface),self%ale_coords%getvar(3,itime = 1))
+
+
+        !
+        ! Initialize each point with cartesian coordinates
+        !
+        do inode = 1,nnodes
+            call self%ale_quad_pts(inode)%set(x(inode),y(inode),z(inode))
+        end do
+!
+
+        ! Grid velocity
+
+        ! compute cartesian coordinates associated with quadrature points
+        !
+        vg1 = matmul(self%gqmesh%face%val(:,:,self%iface),self%ale_vel_coords%getvar(1,itime = 1))
+        vg2 = matmul(self%gqmesh%face%val(:,:,self%iface),self%ale_vel_coords%getvar(2,itime = 1))
+        vg3 = matmul(self%gqmesh%face%val(:,:,self%iface),self%ale_vel_coords%getvar(3,itime = 1))
+
+
+        !
+        ! Initialize each point with cartesian coordinates
+        !
+        do inode = 1,nnodes
+            self%grid_vel1(inode) = vg1(inode)
+            self%grid_vel2(inode) = vg2(inode)
+            self%grid_vel3(inode) = vg3(inode)
+        end do 
 !
 !        !
 !        ! compute cartesian coordinates associated with quadrature points

@@ -1,6 +1,6 @@
 module type_chidg
 #include <messenger.h>
-    use mod_constants,              only: NFACES
+    use mod_constants,              only: NFACES, ZERO, ONE, TWO
     use mod_equations,              only: register_equation_builders
     use mod_operators,              only: register_operators
     use mod_models,                 only: register_models
@@ -1321,10 +1321,31 @@ contains
         type(chidg_vector_t), allocatable    :: q_diff
         real(rk)                            :: error_val, local_error_val
 
+        integer(ik)                         :: ndom, nelems, neqns, nterms, idom, ielem, iterm, ieqn
+        real(rk), allocatable               :: temp(:)
         q_diff = q_ref
         q_diff = sub_chidg_vector_chidg_vector(self%data%sdata%q,q_ref)
         error_val = ZERO
-        error_val = q_diff%norm_local()
+        !error_val = q_diff%norm_local()
+
+        ndom = self%data%ndomains()
+        do idom = 1, ndom
+            nelems = self%data%mesh(idom)%nelem
+            neqns = self%data%mesh(idom)%neqns
+            nterms = self%data%mesh(idom)%nterms_s
+            do ielem = 1, nelems
+                local_error_val = ZERO
+                do ieqn = 1, neqns
+                    temp = &
+                    matmul(self%data%mesh(idom)%elems(ielem)%gq%vol%val,&
+                    q_diff%dom(idom)%vecs(ielem)%vec((ieqn-1)*nterms+1:ieqn*nterms))
+                    temp = temp**TWO*self%data%mesh(idom)%elems(ielem)%gq%vol%weights*self%data%mesh(idom)%elems(ielem)%jinv
+                    local_error_val = local_error_val + sum(temp)
+                end do
+                error_val = error_val + local_error_val
+            end do
+        end do
+        error_val = sqrt(error_val)
     end function compute_l2_state_error
 
 

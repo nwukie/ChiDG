@@ -50,8 +50,8 @@ using high-level routines that it provides. Things like
 .. toctree::
     :maxdepth: 1
 
-    architecture/detail_architecture
     chidg/detail_chidg
+    architecture/detail_architecture
     mesh/detail_mesh
     equations/detail_equations
     boundary_conditions/detail_boundary_conditions

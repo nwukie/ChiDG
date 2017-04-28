@@ -121,10 +121,19 @@
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Computational Grid</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#coordinate-systems">Coordinate Systems</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#mesh">Mesh</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#domain">Domain</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#elements">Elements</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#faces">Faces</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#chimera-interfaces">Chimera Interfaces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#domain">Domain</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#element">Element</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#metric-terms">Metric terms</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#gradients">Gradients</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#face">Face</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#face-metrics">Face metrics</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#face-normals">Face normals</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#chimera-interfaces">Chimera Interfaces</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#example">Example</a></li>
 </ul>
 </li>
 </ul>
@@ -339,8 +348,9 @@ and a <code class="docutils literal"><span class="pre">chimera_t</span></code> i
 domain. For a given <code class="docutils literal"><span class="pre">element_t</span></code>, a <code class="docutils literal"><span class="pre">face_t</span></code> instance exists for each face.</p>
 <a class="reference internal image-reference" href="../../_images/d_mesh_exploded.png"><img alt="../../_images/d_mesh_exploded.png" class="align-center" src="../../_images/d_mesh_exploded.png" style="width: 90%;" /></a>
 <a class="reference internal image-reference" href="../../_images/d_mesh_arrays.png"><img alt="../../_images/d_mesh_arrays.png" class="align-center" src="../../_images/d_mesh_arrays.png" style="width: 90%;" /></a>
-<div class="section" id="elements">
-<h3>Elements<a class="headerlink" href="#elements" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="element">
+<h2>Element<a class="headerlink" href="#element" title="Permalink to this headline">¶</a></h2>
 <p>An <code class="docutils literal"><span class="pre">element_t</span></code> instance contains information needed by the framework and also
 general information that could be useful to users. This includes:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">elem_pts</span><span class="p">(:)</span>     <span class="n">An</span> <span class="n">array</span> <span class="n">of</span> <span class="n">points</span> <span class="n">defining</span> <span class="n">the</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">real</span> <span class="n">space</span><span class="p">(</span><span class="n">cartesian</span><span class="p">,</span> <span class="n">cylindrical</span><span class="p">,</span> <span class="n">etc</span><span class="o">.</span><span class="p">)</span>
@@ -352,7 +362,7 @@ general information that could be useful to users. This includes:</p>
 </div>
 <a class="reference internal image-reference" href="../../_images/d__element.png"><img alt="../../_images/d__element.png" class="align-center" src="../../_images/d__element.png" style="width: 80%;" /></a>
 <div class="section" id="metric-terms">
-<h4>Metric terms<a class="headerlink" href="#metric-terms" title="Permalink to this headline">¶</a></h4>
+<h3>Metric terms<a class="headerlink" href="#metric-terms" title="Permalink to this headline">¶</a></h3>
 <p>Metric terms are computed by considering the transformation of a differential
 volume in physical space to reference space as</p>
 <div class="math">
@@ -439,7 +449,7 @@ quadrature node in the set.</p>
 \[ \begin{align}\begin{aligned}J^{-1} = ( x_\xi y_\eta z_\zeta  -  x_\eta y_\xi z_\zeta  -  x_\xi y_\zeta z_\eta  +  x_\zeta y_\xi z_\eta  +  x_\eta y_\zeta z_\xi  -  x_\zeta y_\eta z_\xi )\\J^{-1} = r ( r_\xi \theta_\eta z_\zeta  -  r_\eta \theta_\xi z_\zeta  -  r_\xi \theta_\zeta z_\eta  +  r_\zeta \theta_\xi z_\eta  +  r_\eta \theta_\zeta z_\xi  -  r_\zeta \theta_\eta z_\xi )\end{aligned}\end{align} \]</div>
 </div>
 <div class="section" id="gradients">
-<h4>Gradients<a class="headerlink" href="#gradients" title="Permalink to this headline">¶</a></h4>
+<h3>Gradients<a class="headerlink" href="#gradients" title="Permalink to this headline">¶</a></h3>
 <p>Gradients of basis functions with respect to the reference coordinates
 are not dependent on the physical coordinate system. So, any calculations
 of the terms <span class="math">\(\partial \psi/\partial \vec{\xi}\)</span> do not need to be modified
@@ -506,18 +516,18 @@ quadrature nodes as:</p>
     \end{pmatrix}\end{split}\]</div>
 </div>
 </div>
-<div class="section" id="faces">
-<h3>Faces<a class="headerlink" href="#faces" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="face">
+<h2>Face<a class="headerlink" href="#face" title="Permalink to this headline">¶</a></h2>
 <a class="reference internal image-reference" href="../../_images/d__face.png"><img alt="../../_images/d__face.png" class="align-center" src="../../_images/d__face.png" style="width: 90%;" /></a>
 <div class="section" id="face-metrics">
-<h4>Face metrics<a class="headerlink" href="#face-metrics" title="Permalink to this headline">¶</a></h4>
+<h3>Face metrics<a class="headerlink" href="#face-metrics" title="Permalink to this headline">¶</a></h3>
 <p>Metric terms for the <code class="docutils literal"><span class="pre">face_t</span></code> data structure are defined exactly the same as for the
 <code class="docutils literal"><span class="pre">element_t</span></code> data structure. The difference is that the <code class="docutils literal"><span class="pre">metric</span></code> and <code class="docutils literal"><span class="pre">jinv</span></code> components of
 <code class="docutils literal"><span class="pre">face_t</span></code> return values for boundary quadrature nodes. This contrasts the <code class="docutils literal"><span class="pre">element_t</span></code>
 structure, which returns values for volume quadrature nodes.</p>
 </div>
 <div class="section" id="face-normals">
-<h4>Face normals<a class="headerlink" href="#face-normals" title="Permalink to this headline">¶</a></h4>
+<h3>Face normals<a class="headerlink" href="#face-normals" title="Permalink to this headline">¶</a></h3>
 <div class="math">
 \[\vec{x} = [x, y, z]     \quad   \vec{\xi} = [\xi, \eta, \zeta]\]</div>
 <p>Face normal vectors are stored for each face quadrature node. The component <code class="docutils literal"><span class="pre">norm</span></code> is the
@@ -549,8 +559,8 @@ component are outward facing. This applied to <span class="math">\(\eta\)</span>
 </div>
 </div>
 <div class="section" id="chimera-interfaces">
-<h3>Chimera Interfaces<a class="headerlink" href="#chimera-interfaces" title="Permalink to this headline">¶</a></h3>
-<p>Each <code class="docutils literal"><span class="pre">domain_t</span></code> instance contains a <code class="docutils literal"><span class="pre">mesh%chimera</span></code> component that holds all information
+<h2>Chimera Interfaces<a class="headerlink" href="#chimera-interfaces" title="Permalink to this headline">¶</a></h2>
+<p>Each <code class="docutils literal"><span class="pre">domain_t</span></code> instance contains a <code class="docutils literal"><span class="pre">domain%chimera</span></code> component that holds all information
 regarding chimera communication for that particular mesh block. This takes the
 form of <code class="docutils literal"><span class="pre">chimera_receiver</span></code> and <code class="docutils literal"><span class="pre">chimera_donor</span></code> components. Currently, only
 the <code class="docutils literal"><span class="pre">chimera_receiver</span></code> is utilized. <code class="docutils literal"><span class="pre">chimera_donor</span></code> will be used to facilitate
@@ -558,23 +568,22 @@ communication between processors for parallel code execution.</p>
 <a class="reference internal image-reference" href="../../_images/d__chimera_receiver.png"><img alt="../../_images/d__chimera_receiver.png" class="align-center" src="../../_images/d__chimera_receiver.png" style="width: 90%;" /></a>
 <p>In a given <code class="docutils literal"><span class="pre">domain_t</span></code>, every face that gets information from a separate block is
 designated as a CHIMERA face, it is assigned an integer ID <code class="docutils literal"><span class="pre">face%ChiID</span></code>, and it gets an
-entry in the <code class="docutils literal"><span class="pre">mesh%chimera%recv%data</span></code> components. It can be accessed as</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">mesh</span><span class="o">%</span><span class="n">chimera</span><span class="o">%</span><span class="n">recv</span><span class="o">%</span><span class="n">data</span><span class="p">(</span><span class="n">ChiID</span><span class="p">)</span>
+entry in the <code class="docutils literal"><span class="pre">domain%chimera%recv%data</span></code> components. It can be accessed as</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">domain</span><span class="o">%</span><span class="n">chimera</span><span class="o">%</span><span class="n">recv</span><span class="o">%</span><span class="n">data</span><span class="p">(</span><span class="n">ChiID</span><span class="p">)</span>
 </pre></div>
 </div>
 <div class="section" id="example">
-<h4>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h4>
-<p>Consider an example with two mesh domains, as shown below.
-<code class="docutils literal"><span class="pre">mesh(1)</span></code> contains four elements. <code class="docutils literal"><span class="pre">mesh(2)</span></code> contains eight elements.
-<code class="docutils literal"><span class="pre">mesh(1)</span></code> overlaps with <code class="docutils literal"><span class="pre">mesh(2)</span></code>. In particular, the top faces of elements E3 and E4 lie
-inside <code class="docutils literal"><span class="pre">mesh(2)</span></code>. These faces are designated as CHIMERA faces and are given a mesh-global
+<h3>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h3>
+<p>Consider an example with two domains, as shown below.
+<code class="docutils literal"><span class="pre">domain(1)</span></code> contains four elements. <code class="docutils literal"><span class="pre">domain(2)</span></code> contains eight elements.
+<code class="docutils literal"><span class="pre">domain(1)</span></code> overlaps with <code class="docutils literal"><span class="pre">domain(2)</span></code>. In particular, the top faces of elements E3 and E4 lie
+inside <code class="docutils literal"><span class="pre">domain(2)</span></code>. These faces are designated as CHIMERA faces and are given a mesh-global
 chimera ID. The top face of E3 is given the ID ChiID=1 and the top face of E4 is given
 the ID ChiID=2.</p>
 <a class="reference internal image-reference" href="../../_images/d__chimera_demo_a.png"><img alt="../../_images/d__chimera_demo_a.png" class="align-center" src="../../_images/d__chimera_demo_a.png" style="width: 90%;" /></a>
 <p>Each CHIMERA face has its own set of chimera information, which can be accessed via
-<code class="docutils literal"><span class="pre">mesh%chimera%recv%data(ChiID)</span></code>. This is shown below for the two faces in this example.</p>
+<code class="docutils literal"><span class="pre">domain%chimera%recv%data(ChiID)</span></code>. This is shown below for the two faces in this example.</p>
 <a class="reference internal image-reference" href="../../_images/d__chimera_demo_b.png"><img alt="../../_images/d__chimera_demo_b.png" class="align-center" src="../../_images/d__chimera_demo_b.png" style="width: 90%;" /></a>
-</div>
 </div>
 </div>
 </div>

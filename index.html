@@ -119,10 +119,19 @@
 <li class="toctree-l2"><a class="reference internal" href="code_details/mesh/detail_mesh.html">Computational Grid</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="code_details/mesh/detail_mesh.html#coordinate-systems">Coordinate Systems</a></li>
 <li class="toctree-l3"><a class="reference internal" href="code_details/mesh/detail_mesh.html#mesh">Mesh</a></li>
-<li class="toctree-l3"><a class="reference internal" href="code_details/mesh/detail_mesh.html#domain">Domain</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="code_details/mesh/detail_mesh.html#elements">Elements</a></li>
-<li class="toctree-l4"><a class="reference internal" href="code_details/mesh/detail_mesh.html#faces">Faces</a></li>
-<li class="toctree-l4"><a class="reference internal" href="code_details/mesh/detail_mesh.html#chimera-interfaces">Chimera Interfaces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="code_details/mesh/detail_mesh.html#domain">Domain</a></li>
+<li class="toctree-l3"><a class="reference internal" href="code_details/mesh/detail_mesh.html#element">Element</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="code_details/mesh/detail_mesh.html#metric-terms">Metric terms</a></li>
+<li class="toctree-l4"><a class="reference internal" href="code_details/mesh/detail_mesh.html#gradients">Gradients</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="code_details/mesh/detail_mesh.html#face">Face</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="code_details/mesh/detail_mesh.html#face-metrics">Face metrics</a></li>
+<li class="toctree-l4"><a class="reference internal" href="code_details/mesh/detail_mesh.html#face-normals">Face normals</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="code_details/mesh/detail_mesh.html#chimera-interfaces">Chimera Interfaces</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="code_details/mesh/detail_mesh.html#example">Example</a></li>
 </ul>
 </li>
 </ul>
@@ -304,17 +313,18 @@ equations using the discontinuous Galerkin method on Chimera-overset grids.</p>
 <div class="line"><br /></div>
 </div>
 </div>
-<div class="section" id="the-chidg-api-is">
-<h2>The ChiDG API is:<a class="headerlink" href="#the-chidg-api-is" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="the-chidg-t-is">
+<h2>The <a class="reference internal" href="code_details/chidg/detail_chidg.html#chidg-t"><span class="std std-ref">ChiDG API</span></a> is:<a class="headerlink" href="#the-chidg-t-is" title="Permalink to this headline">¶</a></h2>
 <p>a Fortran Class that provides an interface to the simulation environment.</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="nb">type</span> <span class="p">::</span> <span class="n">chidg_t</span>
-    <span class="nb">type</span><span class="p">(</span><span class="n">chidg_data_t</span><span class="p">)</span>          <span class="n">data</span>
-    <span class="nb">type</span><span class="p">(</span><span class="n">time_integrator_t</span><span class="p">)</span>     <span class="n">time_integrator</span>
-    <span class="nb">type</span><span class="p">(</span><span class="n">nonlinear_solver_t</span><span class="p">)</span>    <span class="n">nonlinear_solver</span>
-    <span class="nb">type</span><span class="p">(</span><span class="n">linear_solver_t</span><span class="p">)</span>       <span class="n">linear_solver</span>
-    <span class="nb">type</span><span class="p">(</span><span class="n">preconditioner_t</span><span class="p">)</span>      <span class="n">preconditioner</span>
-    <span class="o">...</span>
-<span class="n">end</span> <span class="nb">type</span> <span class="n">chidg_t</span>
+<div class="highlight-fortran"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="kd">::</span> <span class="n">chidg_t</span>
+
+    <span class="k">type</span><span class="p">(</span><span class="n">chidg_data_t</span><span class="p">)</span>                      <span class="kd">::</span> <span class="k">data</span>
+<span class="k">    class</span><span class="p">(</span><span class="n">time_integrator_t</span><span class="p">),</span>   <span class="k">allocatable</span> <span class="kd">::</span> <span class="n">time_integrator</span>
+    <span class="k">class</span><span class="p">(</span><span class="n">nonlinear_solver_t</span><span class="p">),</span>  <span class="k">allocatable</span> <span class="kd">::</span> <span class="n">nonlinear_solver</span>
+    <span class="k">class</span><span class="p">(</span><span class="n">linear_solver_t</span><span class="p">),</span>     <span class="k">allocatable</span> <span class="kd">::</span> <span class="n">linear_solver</span>
+    <span class="k">class</span><span class="p">(</span><span class="n">preconditioner_t</span><span class="p">),</span>    <span class="k">allocatable</span> <span class="kd">::</span> <span class="n">preconditioner</span>
+    <span class="p">...</span>
+<span class="k">end type </span><span class="n">chidg_t</span>
 </pre></div>
 </div>
 <div class="line-block">
@@ -334,14 +344,6 @@ equations using the discontinuous Galerkin method on Chimera-overset grids.</p>
 <div class="line"><br /></div>
 </div>
 <div class="toctree-wrapper compound">
-</div>
-<div class="section" id="indices-and-tables">
-<h3>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h3>
-<ul class="simple">
-<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
-<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
-<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
-</ul>
 </div>
 </div>
 </div>

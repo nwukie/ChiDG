@@ -56,22 +56,33 @@ equations using the discontinuous Galerkin method on Chimera-overset grids.
 |
 |
 
-The ChiDG API is:
------------------
+The :ref:`chidg_t` is:
+----------------------
 
 a Fortran Class that provides an interface to the simulation environment.
 
-::
+..    .. ::
+..    .. 
+..    ..     type :: chidg_t
+..    ..         type(chidg_data_t)          data
+..    ..         type(time_integrator_t)     time_integrator
+..    ..         type(nonlinear_solver_t)    nonlinear_solver
+..    ..         type(linear_solver_t)       linear_solver
+..    ..         type(preconditioner_t)      preconditioner
+..    ..         ...
+..    ..     end type chidg_t
 
+.. code-block:: fortran
+    
     type :: chidg_t
-        type(chidg_data_t)          data
-        type(time_integrator_t)     time_integrator
-        type(nonlinear_solver_t)    nonlinear_solver
-        type(linear_solver_t)       linear_solver
-        type(preconditioner_t)      preconditioner
+
+        type(chidg_data_t)                      :: data
+        class(time_integrator_t),   allocatable :: time_integrator
+        class(nonlinear_solver_t),  allocatable :: nonlinear_solver
+        class(linear_solver_t),     allocatable :: linear_solver
+        class(preconditioner_t),    allocatable :: preconditioner
         ...
     end type chidg_t
-
 
 
 
@@ -113,10 +124,10 @@ Example applications:
 
 
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+.. Indices and tables
+.. ==================
+.. 
+.. * :ref:`genindex`
+.. * :ref:`modindex`
+.. * :ref:`search`
 

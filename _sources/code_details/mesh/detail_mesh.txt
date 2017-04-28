@@ -106,9 +106,9 @@ domain. For a given ``element_t``, a ``face_t`` instance exists for each face.
 
 
 
-
-Elements
--------------
+-------
+Element
+-------
 
 An ``element_t`` instance contains information needed by the framework and also
 general information that could be useful to users. This includes:
@@ -338,9 +338,9 @@ quadrature nodes as:
 
 
 
-
-Faces
--------------
+----
+Face
+----
 
 .. image:: d__face.png
     :width: 90%
@@ -413,11 +413,11 @@ Unit normal vectors can be accessed in the ``unorm`` component and are computed 
 
 
 
-
+------------------
 Chimera Interfaces
 ------------------
 
-Each ``domain_t`` instance contains a ``mesh%chimera`` component that holds all information
+Each ``domain_t`` instance contains a ``domain%chimera`` component that holds all information
 regarding chimera communication for that particular mesh block. This takes the
 form of ``chimera_receiver`` and ``chimera_donor`` components. Currently, only
 the ``chimera_receiver`` is utilized. ``chimera_donor`` will be used to facilitate 
@@ -432,19 +432,19 @@ communication between processors for parallel code execution.
 
 In a given ``domain_t``, every face that gets information from a separate block is 
 designated as a CHIMERA face, it is assigned an integer ID ``face%ChiID``, and it gets an 
-entry in the ``mesh%chimera%recv%data`` components. It can be accessed as
+entry in the ``domain%chimera%recv%data`` components. It can be accessed as
 
 ::
 
-    mesh%chimera%recv%data(ChiID)
+    domain%chimera%recv%data(ChiID)
 
 Example
 ~~~~~~~
 
-Consider an example with two mesh domains, as shown below.
-``mesh(1)`` contains four elements. ``mesh(2)`` contains eight elements.
-``mesh(1)`` overlaps with ``mesh(2)``. In particular, the top faces of elements E3 and E4 lie 
-inside ``mesh(2)``. These faces are designated as CHIMERA faces and are given a mesh-global
+Consider an example with two domains, as shown below.
+``domain(1)`` contains four elements. ``domain(2)`` contains eight elements.
+``domain(1)`` overlaps with ``domain(2)``. In particular, the top faces of elements E3 and E4 lie 
+inside ``domain(2)``. These faces are designated as CHIMERA faces and are given a mesh-global
 chimera ID. The top face of E3 is given the ID ChiID=1 and the top face of E4 is given
 the ID ChiID=2.
 
@@ -455,7 +455,7 @@ the ID ChiID=2.
 
 
 Each CHIMERA face has its own set of chimera information, which can be accessed via 
-``mesh%chimera%recv%data(ChiID)``. This is shown below for the two faces in this example.
+``domain%chimera%recv%data(ChiID)``. This is shown below for the two faces in this example.
 
 
 

@@ -1,0 +1,1016 @@
+!>  Test boundary condition coupling.
+!!
+!!  Layout:
+!!  ------------------------------------------------------
+!!  module
+!!
+!!      Test case object definition (test_comm_bc_D1E8)
+!!      Coupled boundary condition definition (outlet_test_fully_coupled)
+!!
+!!  contains
+!!
+!!      boundary condition implementation
+!!      
+!!      set-up procedure (initialize chidg, add bc to chidg, read grid, initialize data)
+!!      tear-down procedure
+!!
+!!      test matrix-vector product
+!!
+!!  end module
+!!
+!--------------------------------------------------------------------------------------------
+module test_comm_bc_D1E8_mod
+#include <messenger.h>
+    use mod_kinds,                  only: rk, ik
+    use mod_constants,              only: XI_MIN, XI_MAX, DIAG, BOUNDARY, IO_DESTINATION, &
+                                          ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, &
+                                          NINE, TEN
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: delete_file
+    use type_chidg,                 only: chidg_t
+    use type_chidg_matrix,          only: chidg_matrix_t
+    use type_chidg_vector,          only: chidg_vector_t
+    use type_chidg_worker,          only: chidg_worker_t
+    use type_properties,            only: properties_t
+    use type_bc_state,              only: bc_state_t
+    use type_bc_state_group,        only: bc_state_group_t
+    use type_mesh,                  only: mesh_t
+    use type_ivector,               only: ivector_t
+    use mod_string,                 only: string_t
+    use type_function,              only: function_t
+    use mod_function,               only: create_function
+    use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
+    use operator_chidg_dot,         only: dot
+    use operator_chidg_mv,          only: chidg_mv
+    use mpi_f08,                    only: mpi_comm, MPI_BCast, MPI_INTEGER
+
+    use mod_bc,                     only: registered_bcs, create_bc
+    use pfunit_mod
+    implicit none
+
+
+
+    !>  A test object that holds the ChiDG instance and some paramters.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/14/2017
+    !!
+    !------------------------------------------------------------------------------------
+    @TestCase
+    type, extends(MpiTestCase) :: test_comm_bc_D1E8
+
+        type(chidg_t)   :: chidg
+
+        character(:),   allocatable :: gridfile
+        integer(ik)                 :: nterms_s = 1
+        integer(ik)                 :: solution_order = 1
+        type(mpi_comm)              :: ChiDG_COMM
+
+    contains
+        procedure       :: setUp
+        procedure       :: tearDown
+    end type test_comm_bc_D1E8
+    !************************************************************************************
+
+
+
+
+
+    !>  Name: Outlet - Test Fully Coupled
+    !!      : Initialized each face coupled with every other face.
+    !!
+    !!  Behavior:
+    !!      : Each face is coupled with every other face.
+    !!      : No significance to compute procedure.
+    !!      : Strictly used for testing purposes.
+    !!      
+    !!  
+    !!  @author Nathan A. Wukie
+    !!  @date   4/13/2017
+    !!
+    !------------------------------------------------------------------------------------
+    type, public, extends(bc_state_t) :: outlet_test_fully_coupled_t
+
+
+    contains
+
+        procedure   :: init                 ! Set-up bc state with options/name etc.
+        procedure   :: init_bc_coupling     ! Implement bc coupling
+        procedure   :: compute_bc_state     ! boundary condition function implementation
+
+    end type outlet_test_fully_coupled_t
+    !************************************************************************************
+
+
+
+
+
+
+contains
+
+    !------------------------------------------------------------------------------------
+    !
+    !
+    !                        BEGIN BOUNDARY CONDITION DEFINITION
+    !------------------------------------------------------------------------------------
+
+    
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie 
+    !!  @date   4/14/2017
+    !!
+    !------------------------------------------------------------------------------------
+    subroutine init(self)
+        class(outlet_test_fully_coupled_t),   intent(inout) :: self
+        
+        !
+        ! Set name, family
+        !
+        call self%set_name('Outlet - Test Fully Coupled')
+        call self%set_family('Outlet')
+
+    end subroutine init
+    !*************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Initialized coupling.
+    !!
+    !!  Initialize each face to be coupled with the local element AND every other face.
+    !!
+    !!  Coupling initialization:
+    !!      1: each process loops through its local faces, initializes coupling
+    !!         of all local faces with all other local faces.
+    !!
+    !!      2: loop through ranks in bc_COMM
+    !!          a: iproc broadcasts information about its coupling to bc_COMM
+    !!          b: all other procs receive from iproc and initialize parallel coupling
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/13/2017
+    !!
+    !-------------------------------------------------------------------------------------
+    subroutine init_bc_coupling(self,mesh,group_ID,bc_COMM)
+        class(outlet_test_fully_coupled_t), intent(inout)   :: self
+        type(mesh_t),                       intent(inout)   :: mesh
+        integer(ik),                        intent(in)      :: group_ID
+        type(mpi_comm),                     intent(in)      :: bc_COMM
+
+        integer(ik) :: patch_ID, face_ID, elem_ID, patch_ID_coupled, face_ID_coupled,   &
+                       idomain_g, idomain_l, ielement_g, ielement_l, iface,             &
+                       bc_IRANK, bc_NRANK, ierr, iproc, proc_coupled, nbc_elements,     &
+                       ielem, neqns, nterms_s
+
+        integer(ik), allocatable, dimension(:)  :: idomain_g_array,  idomain_l_array,   &
+                                                   ielement_g_array, ielement_l_array,  &
+                                                   iface_array, neqns_array, nterms_s_array
+        type(ivector_t)                         :: idomain_g_vector,  idomain_l_vector,  &
+                                                   ielement_g_vector, ielement_l_vector, &
+                                                   iface_vector, neqns_vector, nterms_s_vector
+
+
+
+        !
+        ! For each face, initialize coupling with all faces on the current processor.
+        !
+        do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
+            do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
+
+                
+                !
+                ! Loop through, initialize coupling
+                !
+                do patch_ID_coupled = 1,mesh%bc_patch_group(group_ID)%npatches()
+                    do face_ID_coupled = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
+
+
+                        !
+                        ! Get block-element index of current face_ID_coupled
+                        !
+                        idomain_g  = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%idomain_g( face_ID_coupled)
+                        idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%idomain_l( face_ID_coupled)
+                        ielement_g = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%ielement_g(face_ID_coupled)
+                        ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%ielement_l(face_ID_coupled)
+                        iface      = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%iface(face_ID_coupled)
+
+
+                        neqns      = mesh%domain(idomain_l)%elems(ielement_l)%neqns
+                        nterms_s   = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s
+
+                        
+                        !
+                        ! For the face (patch_ID,face_ID) add the element on (patch_ID_coupled,face_ID_coupled)
+                        !
+                        call mesh%bc_patch_group(group_ID)%patch(patch_ID)%add_coupled_element(face_ID, idomain_g,  &
+                                                                                                        idomain_l,  &
+                                                                                                        ielement_g, &
+                                                                                                        ielement_l, &
+                                                                                                        iface,      &
+                                                                                                        IRANK)
+
+!                        call mesh%bc_patch_group(group_ID)%patch(patch_ID)%set_coupled_element_data(face_ID, idomain_g,     &
+!                                                                                                             ielement_g,    &
+!                                                                                                             neqns,         &
+!                                                                                                             nterms_s )
+
+
+                    end do ! face_ID_couple
+                end do ! patch_ID_couple
+
+            end do ! face_ID
+        end do ! patch_ID
+
+
+
+
+
+
+
+        !
+        ! Get bc_NRANK, bc_IRANK from bc_COMM
+        !
+        call MPI_Comm_Size(bc_COMM, bc_NRANK, ierr)
+        call MPI_Comm_Rank(bc_COMM, bc_IRANK, ierr)
+
+
+
+
+
+        !
+        ! Initialize coupling with faces on other processors
+        !
+        do iproc = 0,bc_NRANK-1
+
+
+
+            !
+            ! Send local elements out
+            !
+            if (iproc == bc_IRANK) then
+
+                do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
+                    do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
+
+                        idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l( face_ID)
+                        ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
+                        
+                        !
+                        ! Get block-element index of current face_ID_coupled
+                        !
+                        call idomain_g_vector%push_back(  mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g( face_ID) )
+                        call idomain_l_vector%push_back(  mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l( face_ID) )
+                        call ielement_g_vector%push_back( mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID) )
+                        call ielement_l_vector%push_back( mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID) )
+                        call iface_vector%push_back(      mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(     face_ID) )
+
+                        call neqns_vector%push_back(      mesh%domain(idomain_l)%elems(ielement_l)%neqns    )
+                        call nterms_s_vector%push_back(   mesh%domain(idomain_l)%elems(ielement_l)%nterms_s )
+
+                    end do ! face_ID
+                end do ! patch_ID
+            
+                nbc_elements = ielement_g_vector%size()
+                call MPI_Bcast(nbc_elements,                                  1,      MPI_INTEGER, iproc, bc_COMM, ierr)
+                call MPI_Bcast(idomain_g_vector%data_( 1:nbc_elements), nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
+                call MPI_Bcast(idomain_l_vector%data_( 1:nbc_elements), nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
+                call MPI_Bcast(ielement_g_vector%data_(1:nbc_elements), nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
+                call MPI_Bcast(ielement_l_vector%data_(1:nbc_elements), nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
+                call MPI_Bcast(iface_vector%data_(     1:nbc_elements), nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
+                call MPI_Bcast(neqns_vector%data_(     1:nbc_elements), nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
+                call MPI_Bcast(nterms_s_vector%data_(  1:nbc_elements), nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
+                call MPI_Bcast(IRANK,                                         1,      MPI_INTEGER, iproc, bc_COMM, ierr)
+
+
+
+
+
+            !
+            ! All other processors recieve
+            !
+            else
+
+
+                call MPI_Bcast(nbc_elements, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
+
+                if (allocated(idomain_g_array) ) deallocate(idomain_g_array,  idomain_l_array,  &
+                                                            ielement_g_array, ielement_l_array, &
+                                                            iface_array, neqns_array, nterms_s_array)
+                allocate(idomain_g_array( nbc_elements), &
+                         idomain_l_array( nbc_elements), &
+                         ielement_g_array(nbc_elements), &
+                         ielement_l_array(nbc_elements), &
+                         iface_array(     nbc_elements), &
+                         neqns_array(     nbc_elements), &
+                         nterms_s_array(  nbc_elements), stat=ierr)
+                if (ierr /= 0) call AllocationError
+
+                call MPI_Bcast(idomain_g_array,  nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
+                call MPI_Bcast(idomain_l_array,  nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
+                call MPI_Bcast(ielement_g_array, nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
+                call MPI_Bcast(ielement_l_array, nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
+                call MPI_Bcast(iface_array,      nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
+                call MPI_Bcast(neqns_array,      nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
+                call MPI_Bcast(nterms_s_array,   nbc_elements, MPI_INTEGER, iproc, bc_COMM, ierr)
+                call MPI_Bcast(proc_coupled,     1,            MPI_INTEGER, iproc, bc_COMM, ierr)
+
+
+
+                !
+                ! Each face on the current proc adds the off-processor element to their list 
+                ! of coupled elems
+                !
+                do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
+                    do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
+
+                        !
+                        ! For the face (patch_ID,face_ID) add each element from the sending proc
+                        !
+                        do ielem = 1,nbc_elements
+                            call mesh%bc_patch_group(group_ID)%patch(patch_ID)%add_coupled_element(face_ID, idomain_g_array(ielem),     &
+                                                                                                            idomain_l_array(ielem),     &
+                                                                                                            ielement_g_array(ielem),    &
+                                                                                                            ielement_l_array(ielem),    &
+                                                                                                            iface_array(ielem),         &
+                                                                                                            proc_coupled )
+
+!                            call mesh%bc_patch_group(group_ID)%patch(patch_ID)%set_coupled_element_data(face_ID, idomain_g_array(ielem),    &
+!                                                                                                                 ielement_g_array(ielem),   &
+!                                                                                                                 neqns_array(ielem),        &
+!                                                                                                                 nterms_s_array(ielem) )
+                        end do !ielem
+
+                    end do ! face_ID
+                end do ! patch_ID
+
+
+
+
+
+            end if
+
+
+
+
+            call MPI_Barrier(bc_COMM,ierr)
+        end do
+
+
+
+
+
+
+
+
+    end subroutine init_bc_coupling
+    !*************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Empty compute routine for test boundary condition.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/14/2017
+    !!
+    !!  @param[in]      worker  Interface for geometry, cache, integration, etc.
+    !!  @param[inout]   prop    properties_t object containing equations and material_t objects
+    !!
+    !-------------------------------------------------------------------------------------
+    subroutine compute_bc_state(self,worker,prop,bc_COMM)
+        class(outlet_test_fully_coupled_t), intent(inout)   :: self
+        type(chidg_worker_t),               intent(inout)   :: worker
+        class(properties_t),                intent(inout)   :: prop
+        type(mpi_comm),                     intent(in)      :: bc_COMM
+
+
+
+    end subroutine compute_bc_state
+    !*************************************************************************************
+
+
+
+
+
+    !-------------------------------------------------------------------------------------
+    !                          END BOUNDARY CONDITION DEFINITION
+    !
+    !                                 BEGIN TEST SETUP
+    !-------------------------------------------------------------------------------------
+
+
+
+
+
+
+    !>  This test reads a 2x2x2 element grid using 1, 2, 3, and 4 processors and tests 
+    !!  parallel matrix-vector multiply with global boundary coupling.
+    !!
+    !!  For reference, the partitions from METIS are as follows. NOTE: This could change
+    !!  if the settings for METIS partitioning were changed. In that case, the partitions
+    !!  here and corresponding tests would need updated with the correct indices.
+    !!
+    !!  Legend:
+    !!  --------------------------------------------------------------------
+    !!  Interior numbers = global indices
+    !!  Exterior numbers = local indices
+    !!
+    !!  Numbers in matrix diagram indicate what entry in the 
+    !!  vector they are multiplied with.
+    !!
+    !!  Cases:
+    !!  ---------------------------------------------------------------------
+    !!
+    !!      NRANK = 1            |               NRANK = 2
+    !!                           |
+    !!      .-----.-----.        |             .-----.-----.    
+    !!     /  7  /  8  /|        |            /  7  /  8  /|  IRANK = 0
+    !!    .-----.-----. |        |           .-----.-----. |
+    !!   /     /     /| .        |          /     /     /| .
+    !!  .-----.-----. |/|        |         .-----.-----. |/ 
+    !!  |  3  |  4  | . |        |         |  3  |  4  | .-.
+    !!  |     |     |/|6.        |         |     |     |/ /|  IRANK = 1
+    !!  .-----.-----. |/         |         .-----.-----.-. |
+    !!  |  1  |  2  | .          |          /     /     /|6.
+    !!  |     |     |/           |         .-----.-----. |/
+    !!  .-----.-----.            |         |  1  |  2  | .
+    !!                           |         |     |     |/
+    !!                           |         .-----.-----.
+    !!                           |
+    !!  ---------------------------------------------------------------------
+    !!
+    !!
+    !!      NRANK = 3
+    !!                                  IRANK = 2
+    !!                                 .-----.-----.
+    !!                                /     /     /|
+    !!     .-----.        .-----.    .-----.-----. |
+    !!    /     /|-.     /     /|    |  7  |  8  | .
+    !!   .-----. |/|    .-----. |    |     |     |/|
+    !!   |  3  | .5|    |  4  | .    .-----.-----. |
+    !!   |     |/| .    |     |/|          |  6  | .
+    !!   .-----. |/     .-----. |          |     |/
+    !!   |  1  | .      |  2  | .          .-----.
+    !!   |     |/       |     |/   
+    !!   .-----         .-----.    
+    !!
+    !!  IRANK = 1      IRANK = 0
+    !!
+    !!
+    !!
+    !!  ---------------------------------------------------------------------
+    !!
+    !!
+    !!      NRANK = 4
+    !!
+    !!           .-----.-----.
+    !!          /     /     /|
+    !!         .-----.-----. | IRANK = 1
+    !!         |  7  |  8  | .
+    !!      .-----.-----.  |/
+    !!     /     /     /|--.
+    !!    .-----.-----. |
+    !!    |  3  |  4  | . IRANK = 0
+    !!    |     |     |/ 
+    !!    .-----.-----.  
+    !!        .-----.   .-----.
+    !!       /  5  /|  /  6  /|
+    !!      .-----. | .-----. |
+    !!     /     /| //     /| .
+    !!    .-----. |/.-----. |/ 
+    !!    |  1  | . |  2  | .  
+    !!    |     |/  |     |/ 
+    !!    .-----.   .-----.    
+    !!
+    !!   IRANK = 3   IRANK = 4
+    !!
+    !!  ---------------------------------------------------------------------
+    !!
+    !!
+    !!  Using 1 processor, all communication(face neighbors) should be local. 
+    !!  Using 4 processors, all communication should occur globally, across 
+    !!  processors.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/21/2016
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(test_comm_bc_D1E8), intent(inout) :: this
+
+        class(bc_state_t),  allocatable :: bc_state
+        type(bc_state_group_t)          :: bc_state_groups(3)
+        type(string_t)                  :: group_names(1,6)
+        integer(ik)                     :: iread, ierr, ielem, ivar, itime, iproc
+        real(rk)                        :: initial_vals(this%nterms_s)
+        class(function_t),  allocatable :: constant
+
+
+
+
+        !
+        ! Register coupled outlet boundary condition with ChiDG
+        !
+        type(outlet_test_fully_coupled_t)   :: coupled_outlet_bc
+        call coupled_outlet_bc%init()
+        call registered_bcs%push_back(coupled_outlet_bc)
+
+
+
+
+        
+        IRANK                   = this%getProcessRank()
+        NRANK                   = this%getNumProcessesRequested()
+        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+
+
+        call this%chidg%start_up('core',this%ChiDG_COMM)
+
+
+        IO_DESTINATION = 'file'
+        this%gridfile  = 'D1E8M1.h5'
+
+
+
+
+
+
+        !
+        ! Create mesh
+        !
+        if (IRANK == GLOBAL_MASTER) then
+            bc_state_groups(1)%name = 'Inlet'
+            bc_state_groups(2)%name = 'Outlet'
+            bc_state_groups(3)%name = 'Walls'
+
+
+            call create_bc('Scalar Value', bc_state)
+            call bc_state_groups(1)%add_bc_state(bc_state)
+
+            call create_bc('Outlet - Test Fully Coupled', bc_state)
+            call bc_state_groups(2)%add_bc_state(bc_state)
+
+            call create_bc('Scalar Value', bc_state)
+            call bc_state_groups(3)%add_bc_state(bc_state)
+
+
+
+            ! Define patch group names
+            group_names(1,:) = [string_t('Inlet') , &
+                                string_t('Outlet'), &
+                                string_t('Walls') , &
+                                string_t('Walls') , &
+                                string_t('Walls') , &
+                                string_t('Walls') ]
+
+
+            call create_mesh_file("D1 NxNxN",this%gridfile,                                     &
+                                             equation_sets   = [string_t('Scalar Advection')],  &
+                                             group_names     = group_names,                     &
+                                             bc_state_groups = bc_state_groups,                 &
+                                             nelem_xi        = 2,                               &
+                                             nelem_eta       = 2,                               &
+                                             nelem_zeta      = 2 )
+
+        end if
+        call MPI_Barrier(this%ChiDG_COMM,ierr)
+
+
+        !
+        ! Set accuracy for the solution expansion
+        !
+        call this%chidg%set('Solution Order', integer_input=this%solution_order)
+
+
+        !
+        ! Read partition data: grid, boundary conditions
+        !
+        call this%chidg%read_grid(this%gridfile)
+
+        
+
+
+
+!        !
+!        ! Each processor report its partition, just to know how to write the tests
+!        !
+!        do iproc = 0,NRANK-1
+!            if (iproc == IRANK) then
+!                
+!                do ielem = 1,this%chidg%data%mesh%domain(1)%nelem
+!                    print*, 'Rank: ', IRANK
+!                    print*, '   ElemG: ', this%chidg%data%mesh%domain(1)%elems(ielem)%ielement_g
+!                    print*, '   ElemL: ', this%chidg%data%mesh%domain(1)%elems(ielem)%ielement_l
+!                end do !ielem
+!
+!            end if
+!            call MPI_Barrier(this%ChiDG_COMM, ierr)
+!        end do
+
+
+    end subroutine setUp
+    !******************************************************************************************
+
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(test_comm_bc_D1E8), intent(inout) :: this
+
+        call this%chidg%shut_down('core')
+
+        if (IRANK == GLOBAL_MASTER) then
+            call delete_file(this%gridfile)
+        end if
+
+    end subroutine tearDown
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Test the parallel computation of the chidg matrix-vector product, chidg_mv.
+    !!  This tests the routine: b = chidg_mv(A,x). That is,  b = A*x 
+    !!
+    !!
+    !!  Standard matrix with only locally coupled BC:
+    !!  --------------------------------------------------
+    !!  [ 1  2  3     5          ]   [ 1 ]
+    !!  [ 1  2     4     6       ]   [ 2 ]
+    !!  [ 1     3  4        7    ]   [ 3 ]
+    !!  [    2  3  4           8 ] * [ 4 ]
+    !!  [ 1           5  6  7    ]   [ 5 ]
+    !!  [    2        5  6     8 ]   [ 6 ]
+    !!  [       3     5     7  8 ]   [ 7 ]
+    !!  [          4     6  7  8 ]   [ 8 ]
+    !!
+    !!
+    !!
+    !!  Current matrix with globally coupled BC:
+    !!  This is the type of matrix we have in this test.
+    !!  --------------------------------------------------
+    !!  [ 1  2  3     5          ]   [ 1 ]
+    !!  [ 1  2     4     6     8 ]   [ 2 ]
+    !!  [ 1     3  4        7    ]   [ 3 ]
+    !!  [    2  3  4     6     8 ] * [ 4 ]
+    !!  [ 1           5  6  7    ]   [ 5 ]
+    !!  [    2     4  5  6     8 ]   [ 6 ]
+    !!  [       3     5     7  8 ]   [ 7 ]
+    !!  [    2     4     6  7  8 ]   [ 8 ]
+    !!
+    !!
+    !!  For this test, we are only setting values on
+    !!  the boundary coupling entries that wouldn't 
+    !!  normally be there. This includes coupling between
+    !!  elements (2,8) and  elements (4,6).
+    !!  --------------------------------------------------
+    !!
+    !!  NRANK = 1
+    !!1 [                           ]   [     ]     [      ]   |
+    !!2 [                       2.8 ]   [ 2.0 ]     [ 22.4 ]   |
+    !!3 [                           ]   [     ]     [      ]   |
+    !!4 [                4.6        ] * [ 4.0 ]  =  [ 27.6 ]   |   IRANK = 0
+    !!5 [                           ]   [     ]     [      ]   |
+    !!6 [         6.4               ]   [ 6.0 ]     [ 25.6 ]   |
+    !!7 [                           ]   [     ]     [      ]   |
+    !!8 [  8.2                      ]   [ 8.0 ]     [ 16.4 ]   |
+    !!
+    !!
+    !!
+    !!
+    !!
+    !!  NRANK = 2
+    !!3 [             |             ]   [     ]     [      ]   |
+    !!4 [    local    |         4.6 ] * [ 4.0 ]  =  [ 27.6 ]   |   IRANK = 0
+    !!7 [             |             ]   [     ]     [      ]   |
+    !!8 [             |    8.2      ]   [ 8.0 ]     [ 16.4 ]   |
+    !!  --------------------------------------------------------------------
+    !!1 [             |             ]   [     ]     [      ]   |
+    !!2 [        2.8  |    local    ]   [ 2.0 ]     [ 22.4 ]   |   IRANK = 1
+    !!5 [             |             ]   [     ]     [      ]   |
+    !!6 [   6.4       |             ]   [ 6.0 ]     [ 25.6 ]   |
+    !!
+    !!
+    !!
+    !!
+    !!
+    !!  NRANK = 3
+    !!2 [ local |               2.8 ]   [ 2.0 ]     [ 22.4 ]   |
+    !!4 [       |          4.6      ] * [ 4.0 ]  =  [ 27.6 ]   |   IRANK = 0
+    !!  --------------------------------------------------------------------
+    !!1 [       |         |         ]   [     ]     [      ]   |
+    !!3 [       |  local  |         ]   [     ]     [      ]   |   IRANK = 1
+    !!5 [       |         |         ]   [     ]     [      ]   |
+    !!  --------------------------------------------------------------------
+    !!6 [    6.4          |         ]   [ 6.0 ]     [ 25.6 ]   |
+    !!7 [                 |  local  ]   [     ]     [      ]   |   IRANK = 2
+    !!8 [8.2              |         ]   [ 8.0 ]     [ 16.4 ]   |
+    !!
+    !!
+    !!
+    !!
+    !!
+    !!  NRANK = 4
+    !!3 [local |                    ]   [     ]     [      ]   |
+    !!4 [      |          4.6       ] * [ 4.0 ]  =  [ 27.6 ]   |   IRANK = 0
+    !!  --------------------------------------------------------------------
+    !!7 [      |local |             ]   [     ]     [      ]   |
+    !!8 [      |      |8.2          ]   [ 8.0 ]     [ 16.4 ]   |   IRANK = 1
+    !!  --------------------------------------------------------------------
+    !!2 [          2.8|local |      ]   [ 2.0 ]     [ 22.4 ]   |
+    !!6 [   6.4       |      |      ]   [ 6.0 ]     [ 25.6 ]   |   IRANK = 2
+    !!  --------------------------------------------------------------------
+    !!1 [                    |local ]   [     ]     [      ]   |
+    !!5 [                    |      ]   [     ]     [      ]   |   IRANK = 3
+    !!
+    !!
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/13/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    @Test(npes=[1,2,3,4])
+    subroutine parallel_chidg_mv(self)
+        class(test_comm_bc_D1E8), intent(inout) :: self
+
+        type(chidg_matrix_t) :: A
+        type(chidg_vector_t) :: x, b
+        integer(ik)          :: nelem, imat, itime
+        real(rk)             :: computed_dot, expected_dot
+
+        IRANK = self%getProcessRank()
+
+        !
+        ! Create chidg_matrix and two chidg_vectors
+        !
+        A = self%chidg%data%sdata%lhs
+        x = self%chidg%data%sdata%q
+        b = self%chidg%data%sdata%q
+
+        call A%clear()
+        call x%clear()
+        call b%clear()
+
+        !
+        ! Initialize with some data
+        !
+        if (NRANK == 1) then
+
+            !
+            ! Set matrix components involved in boundary coupling
+            !
+
+            ! Coupling of element 2 with element 8 through BC
+            imat = A%dom(1)%bc_blks(2,1)%loc(1,8)
+            A%dom(1)%bc_blks(2,1)%data_(imat)%mat = 2.8_rk
+
+
+            ! Coupling of element 8 with element 2 through BC
+            imat = A%dom(1)%bc_blks(8,1)%loc(1,2)
+            A%dom(1)%bc_blks(8,1)%data_(imat)%mat = 8.2_rk
+
+
+            ! Coupling of element 4 with element 6 through BC
+            imat = A%dom(1)%bc_blks(4,1)%loc(1,6)
+            A%dom(1)%bc_blks(4,1)%data_(imat)%mat = 4.6_rk
+
+
+            ! Coupling of element 6 with element 4 through BC
+            imat = A%dom(1)%bc_blks(6,1)%loc(1,4)
+            A%dom(1)%bc_blks(6,1)%data_(imat)%mat = 6.4_rk
+
+            !
+            ! Initialize chidg_vector elements on the boundary.
+            !
+            x%dom(1)%vecs(2)%vec = TWO
+            x%dom(1)%vecs(4)%vec = FOUR
+            x%dom(1)%vecs(6)%vec = SIX
+            x%dom(1)%vecs(8)%vec = EIGHT
+            
+
+
+
+        else if (NRANK == 2) then
+
+            if (IRANK == 0) then
+
+                ! Coupling of element 4 with element 6 through BC
+                imat = A%dom(1)%bc_blks(2,1)%loc(1,6)
+                A%dom(1)%bc_blks(2,1)%data_(imat)%mat = 4.6_rk
+
+                ! Coupling of element 8 with element 2 through BC
+                imat = A%dom(1)%bc_blks(4,1)%loc(1,2)
+                A%dom(1)%bc_blks(4,1)%data_(imat)%mat = 8.2_rk
+
+                !
+                ! Initialize chidg_vector elements on the boundary.
+                !
+                x%dom(1)%vecs(2)%vec = FOUR
+                x%dom(1)%vecs(4)%vec = EIGHT
+
+            else if (IRANK == 1) then
+
+                ! Coupling of element 2 with element 8 through BC
+                imat = A%dom(1)%bc_blks(2,1)%loc(1,8)
+                A%dom(1)%bc_blks(2,1)%data_(imat)%mat = 2.8_rk
+
+                ! Coupling of element 6 with element 4 through BC
+                imat = A%dom(1)%bc_blks(4,1)%loc(1,4)
+                A%dom(1)%bc_blks(4,1)%data_(imat)%mat = 6.4_rk
+
+
+                !
+                ! Initialize chidg_vector elements on the boundary.
+                !
+                x%dom(1)%vecs(2)%vec = TWO
+                x%dom(1)%vecs(4)%vec = SIX
+
+            end if
+
+
+        else if (NRANK == 3) then
+
+            if (IRANK == 0) then
+
+                ! Coupling of element 2 with element 8 through BC
+                imat = A%dom(1)%bc_blks(1,1)%loc(1,8)
+                A%dom(1)%bc_blks(1,1)%data_(imat)%mat = 2.8_rk
+
+                ! Coupling of element 4 with element 6 through BC
+                imat = A%dom(1)%bc_blks(2,1)%loc(1,6)
+                A%dom(1)%bc_blks(2,1)%data_(imat)%mat = 4.6_rk
+
+
+                !
+                ! Initialize chidg_vector elements on the boundary.
+                !
+                x%dom(1)%vecs(1)%vec = TWO
+                x%dom(1)%vecs(2)%vec = FOUR
+
+            else if (IRANK == 1) then
+                
+            else if (IRANK == 2) then
+
+
+                ! Coupling of element 6 with element 4 through BC
+                imat = A%dom(1)%bc_blks(1,1)%loc(1,4)
+                A%dom(1)%bc_blks(1,1)%data_(imat)%mat = 6.4_rk
+
+                ! Coupling of element 8 with element 2 through BC
+                imat = A%dom(1)%bc_blks(3,1)%loc(1,2)
+                A%dom(1)%bc_blks(3,1)%data_(imat)%mat = 8.2_rk
+
+                ! Initialize chidg_vector elements on the boundary.
+                x%dom(1)%vecs(1)%vec = SIX
+                x%dom(1)%vecs(3)%vec = EIGHT
+            end if
+
+
+        else if (NRANK == 4) then
+
+            if (IRANK == 0) then
+
+                ! Coupling of element 4 with element 6 through BC
+                imat = A%dom(1)%bc_blks(2,1)%loc(1,6)
+                A%dom(1)%bc_blks(2,1)%data_(imat)%mat = 4.6_rk
+
+                ! Initialize chidg_vector elements on the boundary.
+                x%dom(1)%vecs(2)%vec = FOUR
+
+            else if (IRANK == 1) then
+
+                ! Coupling of element 8 with element 2 through BC
+                imat = A%dom(1)%bc_blks(2,1)%loc(1,2)
+                A%dom(1)%bc_blks(2,1)%data_(imat)%mat = 8.2_rk
+
+                ! Initialize chidg_vector elements on the boundary.
+                x%dom(1)%vecs(2)%vec = EIGHT
+
+            else if (IRANK == 2) then
+
+                ! Coupling of element 2 with element 8 through BC
+                imat = A%dom(1)%bc_blks(1,1)%loc(1,8)
+                A%dom(1)%bc_blks(1,1)%data_(imat)%mat = 2.8_rk
+
+                ! Coupling of element 6 with element 4 through BC
+                imat = A%dom(1)%bc_blks(2,1)%loc(1,4)
+                A%dom(1)%bc_blks(2,1)%data_(imat)%mat = 6.4_rk
+
+                ! Initialize chidg_vector elements on the boundary.
+                x%dom(1)%vecs(1)%vec = TWO
+                x%dom(1)%vecs(2)%vec = SIX
+
+            else if (IRANK == 3) then
+
+            end if
+
+
+        end if
+
+
+
+
+
+        !
+        ! Compute matrix-vector multiplication across processors. THIS IS BEING TESTED
+        !
+        b = chidg_mv(A,x)
+
+
+
+
+
+
+        if (NRANK == 1) then
+
+            @assertEqual(22.4_rk, b%dom(1)%vecs(2)%vec, 1.e-10_rk)
+            @assertEqual(27.6_rk, b%dom(1)%vecs(4)%vec, 1.e-10_rk)
+            @assertEqual(25.6_rk, b%dom(1)%vecs(6)%vec, 1.e-10_rk)
+            @assertEqual(16.4_rk, b%dom(1)%vecs(8)%vec, 1.e-10_rk)
+
+
+        else if (NRANK == 2) then
+
+            if (IRANK == 0) then
+                @assertEqual(27.6_rk, b%dom(1)%vecs(2)%vec, 1.e-10_rk)
+                @assertEqual(16.4_rk, b%dom(1)%vecs(4)%vec, 1.e-10_rk)
+
+            else if (IRANK == 1) then
+                @assertEqual(22.4_rk, b%dom(1)%vecs(2)%vec, 1.e-10_rk)
+                @assertEqual(25.6_rk, b%dom(1)%vecs(4)%vec, 1.e-10_rk)
+
+            end if
+
+
+        else if (NRANK == 3) then
+
+            if (IRANK == 0) then
+                @assertEqual(22.4_rk, b%dom(1)%vecs(1)%vec, 1.e-10_rk)
+                @assertEqual(27.6_rk, b%dom(1)%vecs(2)%vec, 1.e-10_rk)
+
+            else if (IRANK == 1) then
+
+            else if (IRANK == 2) then
+                @assertEqual(25.6_rk, b%dom(1)%vecs(1)%vec, 1.e-10_rk)
+                @assertEqual(16.4_rk, b%dom(1)%vecs(3)%vec, 1.e-10_rk)
+            end if
+
+
+        else if (NRANK == 4) then
+
+            if (IRANK == 0) then
+                @assertEqual(27.6_rk, b%dom(1)%vecs(2)%vec, 1.e-10_rk)
+
+            else if (IRANK == 1) then
+                @assertEqual(16.4_rk, b%dom(1)%vecs(2)%vec, 1.e-10_rk)
+
+            else if (IRANK == 2) then
+                @assertEqual(22.4_rk, b%dom(1)%vecs(1)%vec, 1.e-10_rk)
+                @assertEqual(25.6_rk, b%dom(1)%vecs(2)%vec, 1.e-10_rk)
+
+            else if (IRANK == 3) then
+
+            end if
+
+        end if
+
+
+
+    end subroutine parallel_chidg_mv
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+end module test_comm_bc_D1E8_mod

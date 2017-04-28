@@ -31,7 +31,7 @@ contains
         real(rk), allocatable, dimension(:) :: &
             rho, rhou, rhov, rhow, rhoE, p, entropy
 
-        real(rk), dimension(data%mesh(1)%elems(1)%gq%vol%nnodes)    :: entropy_rise
+        real(rk), dimension(data%mesh%domain(1)%elems(1)%gq%vol%nnodes)    :: entropy_rise
 
         integer(ik) :: irho, irhou, irhov, irhow, irhoE
         integer(ik) :: ielem, iface, nelem, iseed, idom, ierr
@@ -81,19 +81,23 @@ contains
             !
             ! Loop over elements and accumulate entropy error
             !
-            do idom = 1,data%ndomains()
+            do idom = 1,data%mesh%ndomains()
 
-                nelem = data%mesh(idom)%nelem
+                nelem = data%mesh%domain(idom)%nelem
                 do ielem = 1,nelem
 
                     !
                     ! Interpolate variables to GQ nodes
                     !
-                    rho  = interpolate_element_standard(mesh,sdata%q,idom,ielem,irho, 1,  'value')
+                    rho  = interpolate_element_standard(mesh,sdata%q,idom,ielem,irho, 1, 'value')
                     rhou = interpolate_element_standard(mesh,sdata%q,idom,ielem,irhou,1, 'value')
                     rhov = interpolate_element_standard(mesh,sdata%q,idom,ielem,irhov,1, 'value')
                     rhow = interpolate_element_standard(mesh,sdata%q,idom,ielem,irhow,1, 'value')
                     rhoE = interpolate_element_standard(mesh,sdata%q,idom,ielem,irhoE,1, 'value')
+
+                    if (mesh%domain(idom)%elems(ielem)%coordinate_system == 'Cylindrical') then
+                        rhov = rhov / mesh%domain(idom)%elems(ielem)%quad_pts(:)%c1_
+                    end if
 
 
                     !
@@ -113,13 +117,13 @@ contains
                     !
                     ! Integrate entropy error
                     !
-                    error = sum(entropy_rise * mesh(idom)%elems(ielem)%jinv * mesh(idom)%elems(ielem)%gq%vol%weights)
+                    error = sum(entropy_rise * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%gq%vol%weights)
 
 
                     !
                     ! Compute element volume
                     !
-                    vol = abs(sum(mesh(idom)%elems(ielem)%jinv * mesh(idom)%elems(ielem)%gq%vol%weights))
+                    vol = abs(sum(mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%gq%vol%weights))
 
 
                     error_sum = error_sum + error

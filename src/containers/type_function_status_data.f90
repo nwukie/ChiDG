@@ -2,7 +2,7 @@ module type_function_status_data
 #include <messenger.h>
     use mod_kinds,                      only: ik
     use mod_constants,                  only: NFUNCTION_TYPES, NFACES, NBLK
-    use type_mesh,                      only: mesh_t
+    use type_domain,                    only: domain_t
     use type_equationset_function_data, only: equationset_function_data_t
     implicit none
 
@@ -59,15 +59,15 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine init(self, mesh, function_data)
+    subroutine init(self, domain, function_data)
         class(function_status_data_t),      intent(inout)   :: self
-        type(mesh_t),                       intent(in)      :: mesh
+        type(domain_t),                     intent(in)      :: domain
         type(equationset_function_data_t),  intent(in)      :: function_data
 
         integer(ik) :: nelem, nfcn, neqn, ierr
 
-        nelem = mesh%nelem
-        neqn  = mesh%neqns
+        nelem = domain%nelem
+        neqn  = domain%neqns
 
 
         !

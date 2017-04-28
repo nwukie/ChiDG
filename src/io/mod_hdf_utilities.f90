@@ -1,7 +1,7 @@
 module mod_hdf_utilities
 #include <messenger.h>
     use mod_kinds,              only: rk, ik, rdouble
-    use mod_constants,          only: NFACES, TWO_DIM, THREE_DIM
+    use mod_constants,          only: ZERO, NFACES, TWO_DIM, THREE_DIM
     use mod_file_utilities,     only: delete_file
     use mod_bc,                 only: check_bc_state_registered, create_bc
     use mod_string,             only: string_t
@@ -23,7 +23,7 @@ module mod_hdf_utilities
     ! HDF5 storage format
     !
     integer, parameter :: STORAGE_FORMAT_MAJOR = 1
-    integer, parameter :: STORAGE_FORMAT_MINOR = 4
+    integer, parameter :: STORAGE_FORMAT_MINOR = 5
 
 
     ! Attribute sizes
@@ -46,6 +46,7 @@ contains
     !!  open_hdf
     !!  close_hdf
     !!
+    !!
     !!  File:
     !!  ---------------------------
     !!  initialize_file_hdf
@@ -67,8 +68,22 @@ contains
     !!  set_contains_solution_hdf
     !!  get_contains_solution_hdf
     !!
-    !!  set_ntimes_hdf
-    !!  get_ntimes_hdf
+    !!  set_time_step_hdf
+    !!  get_time_step_hdf
+    !!
+    !!  set_nsteps_hdf
+    !!  get_nsteps_hdf
+    !!
+    !!  set_nwrite_hdf
+    !!  get_nwrite_hdf
+    !!
+    !!  set_frequencies_hdf
+    !!  get_frequencies_hdf
+    !!
+    !!  set_time_levels_hdf
+    !!  get_time_levels_hdf
+    !!
+    !!  
     !!
     !!  Domain-level routines:
     !!  ---------------------------
@@ -121,7 +136,7 @@ contains
     !!
     !!  Boundary Conditions:
     !!  ---------------------------
-    !!  create_bc_state_group_hdf
+    !!  create_bc_group_hdf
     !!  get_nbc_state_groups_hdf
     !!  get_bc_state_group_names_hdf
     !!
@@ -139,10 +154,30 @@ contains
     !!
     !!  get_bcnames_hdf
     !!
-    !!  Utilities:
-    !!  ----------------------------
     !!  check_bc_state_exists_hdf
     !!  check_bc_property_exists_hdf
+    !!
+    !!
+    !!
+    !!  Equations:
+    !!  ----------------------------
+    !!
+    !!  create_eqn_group_hdf
+    !!  remove_eqn_group_hdf
+    !!  check_eqn_group_exists_hdf
+    !!  prune_eqn_groups_hdf
+    !!
+    !!
+    !!  Time Integrators:
+    !!  ----------------------------
+    !!  set_time_integrator_hdf
+    !!  get_time_integrator_hdf
+    !!
+    !!  set_ntimes_hdf
+    !!  get_ntimes_hdf
+    !!
+    !!  Utilities:
+    !!  ----------------------------
     !!  delete_group_attributes_hdf
     !!  check_attribute_exists_hdf
     !!  check_link_exists_hdf
@@ -311,22 +346,24 @@ contains
         integer(HID_T),     intent(in)  :: fid
         type(chidg_data_t), intent(in)  :: data
 
-        integer(ik)                 :: idom
+        integer(ik)                 :: idom, eqn_ID
         integer(HID_T)              :: domain_id
         character(:),   allocatable :: domain_name
 
-        do idom = 1,data%ndomains()
+        do idom = 1,data%mesh%ndomains()
 
             ! Create domain group
-            domain_name = data%info(idom)%name
+            domain_name = data%mesh%domain(idom)%name
             call create_domain_hdf(fid,domain_name)
 
 
             ! Set additional attributes
+            eqn_ID    = data%mesh%domain(idom)%eqn_ID
             domain_id = open_domain_hdf(fid,trim(domain_name))
             call set_domain_dimensionality_hdf(domain_id, data%get_dimensionality())
-            call set_domain_equation_set_hdf(domain_id,data%eqnset(idom)%get_name())
+            call set_domain_equation_set_hdf(domain_id,data%eqnset(eqn_ID)%get_name())
             call close_domain_hdf(domain_id)
+    
 
         end do !idom
 
@@ -389,6 +426,7 @@ contains
         !  Open input file using default properties.
         !
         call open_hdf()
+        call write_line('   Opening file: ', filename_open, io_proc=GLOBAL_MASTER, ltrim=.false.)
         call h5fopen_f(filename_open, H5F_ACC_RDWR_F, fid, ierr)
         user_msg = "open_file_hdf: There was an error opening the file."
         if (ierr /= 0) call chidg_signal_one(FATAL,user_msg,trim(filename_open))
@@ -484,10 +522,11 @@ contains
                    You could try a few things here. 1: regenerate the with with the ChiDG &
                    library being used. 2: Use a different version of the ChiDG library &
                    that uses a storage format for the file being used. 3: Full-speed ahead! &
-                   Proceed anyways and try your luck!"//NEW_LINE('A')//"     &
+                   Proceed anyways and try your luck!"//NEW_LINE('A')//" &
                    Options: Exit(1), Continue(2)."
+                   
 
-            call chidg_signal(MSG,msg)
+            call chidg_signal_two(MSG,msg,file_minor_version,STORAGE_FORMAT_MINOR)
             !call write_line(msg)
 
             read_user_input = .true.
@@ -794,6 +833,7 @@ contains
         integer(ik)                 :: ierr, idom
         integer(ik)                 :: nterms_1d
         logical                     :: fileexists = .false.
+        integer(HSIZE_T)            :: ntime, nfreq
 
         type(file_properties_t)     :: prop
 
@@ -842,6 +882,11 @@ contains
         !
         prop%domain_names = get_domain_names_hdf(fid)
 
+        
+        !
+        ! Get time_integrator name
+        !
+        prop%time_integrator = get_time_integrator_hdf(fid)
 
 
         !
@@ -894,10 +939,10 @@ contains
         !
         ! Get equation set for each domain
         !
-        prop%eqnset = get_domain_equation_sets_hdf(fid, prop%domain_names)
+        !prop%eqnset = get_domain_equation_sets_hdf(fid, prop%domain_names)
+        prop%eqnset = get_domain_equation_sets_hdf(fid)
 
-
-
+        
 
         !
         ! Close file
@@ -968,6 +1013,8 @@ contains
         ! Set coordinate system
         call set_domain_coordinate_system_hdf(dom_id,coord_system)
 
+
+
         ! Write equation set attribute
         call set_domain_equation_set_hdf(dom_id,trim(equation_set))
 
@@ -976,6 +1023,12 @@ contains
         ! Close groups
         !
         call close_domain_hdf(dom_id)
+
+
+
+
+        ! Write equation set group to file root
+        call create_eqn_group_hdf(fid, trim(equation_set))
 
 
     end subroutine add_domain_hdf
@@ -1183,25 +1236,6 @@ contains
 
 
 
-    !>  Given a file identifier, set the number of time levels in an hdf5 file.
-    !!
-    !!  @author Matteo Ugolotti
-    !!  @date   02/20/2017
-    !!
-    !!  @param[in]  fid     HDF file identifier
-    !!
-    !----------------------------------------------------------------------------------------
-    subroutine set_ntimes_hdf(fid,ntimes)
-        integer(HID_T), intent(in)  :: fid
-        integer(ik),    intent(in)  :: ntimes
-
-        integer(ik)         :: ierr
-
-        call h5ltset_attribute_int_f(fid, "/", "ntimes", [ntimes], SIZE_ONE, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_ntimes_hdf: Error h5ltget_attribute_int_f")
-
-    end subroutine set_ntimes_hdf
-    !****************************************************************************************
 
 
 
@@ -1212,29 +1246,28 @@ contains
 
 
 
-    !>  Given a file identifier, return the number of time levels in an hdf5 file.
-    !!
-    !!  @author Matteo Ugolotti
-    !!  @date   02/20/2017
-    !!
-    !!  @param[in]  fid     HDF file identifier
-    !!
-    !----------------------------------------------------------------------------------------
-    function get_ntimes_hdf(fid) result(time_lev)
-        integer(HID_T), intent(in)  :: fid
-        
-        integer                 :: ierr
-        integer(ik)             :: time_lev
-        integer, dimension(1)   :: buf
-
-        call h5ltget_attribute_int_f(fid, "/", "ntimes", buf, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"get_ntimess_hdf: h5ltget_attribute_int_f had a problem getting the number of time levels")
-        time_lev = int(buf(1), kind=ik)
-
-    end function get_ntimes_hdf
-    !****************************************************************************************
-
-
+!    !>  Given a file identifier, return the time integrator name in a hdf5 file.
+!    !!
+!    !!  @author Mayank Sharma
+!    !!  @date   3/18/2017
+!    !!
+!    !!  @param[in]  fid     HDF file identifier
+!    !!
+!    !----------------------------------------------------------------------------------------
+!    function get_time_integrator_hdf(fid) result(time_string)
+!        integer(HID_T), intent(in)  :: fid
+!        
+!        character(1024)             :: temp_string
+!        character(:),   allocatable :: time_string
+!        integer(ik)                 :: ierr
+!
+!        call h5ltget_attribute_string_f(fid, "/", "time_integrator", temp_string, ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,"get_time_integrator_hdf: h5ltget_attribute_string_f & 
+!                                         had a problem getting the time integrator name")
+!        time_string = trim(temp_string)
+!
+!    end function get_time_integrator_hdf
+!    !****************************************************************************************
 
 
 
@@ -1822,7 +1855,7 @@ contains
 
         integer(HID_T)      :: grid_id, xspace_id, yspace_id, zspace_id, xset_id, yset_id, zset_id
         integer(HSIZE_T)    :: dims_rank_one(1)
-        integer(ik)         :: ierr, ipt, npts
+        integer(ik)         :: ipt, npts, ierr
         logical             :: exists
         real(rk), allocatable, dimension(:) :: xcoords, ycoords, zcoords
 
@@ -1854,26 +1887,54 @@ contains
             zcoords(ipt) = nodes(ipt)%c3_
         end do
 
-        !
-        ! Create dataspaces for grid coordinates
-        !
-        call h5screate_simple_f(1, dims_rank_one, xspace_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5screate_simple_f")
-        call h5screate_simple_f(1, dims_rank_one, yspace_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5screate_simple_f")
-        call h5screate_simple_f(1, dims_rank_one, zspace_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5screate_simple_f")
+
+        call h5lexists_f(grid_id, "Coordinate1", exists, ierr)
+!        exists = check_link_exists_hdf(grid_id,"Coordinate1")
+        if (exists) then
+            !
+            ! Open 'Coordinate' data sets
+            !
+            call h5dopen_f(grid_id, "Coordinate1", xset_id, ierr, H5P_DEFAULT_F)
+            call h5dopen_f(grid_id, "Coordinate2", yset_id, ierr, H5P_DEFAULT_F)
+            call h5dopen_f(grid_id, "Coordinate3", zset_id, ierr, H5P_DEFAULT_F)
+
+        else
+
+            !
+            ! Create dataspaces for grid coordinates
+            !
+            call h5screate_simple_f(1, dims_rank_one, xspace_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5screate_simple_f")
+            call h5screate_simple_f(1, dims_rank_one, yspace_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5screate_simple_f")
+            call h5screate_simple_f(1, dims_rank_one, zspace_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5screate_simple_f")
 
 
-        !
-        ! Create datasets for grid coordinates
-        !
-        call h5dcreate_f(grid_id, "Coordinate1", H5T_NATIVE_DOUBLE, xspace_id, xset_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5dcreate_f")
-        call h5dcreate_f(grid_id, "Coordinate2", H5T_NATIVE_DOUBLE, yspace_id, yset_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5dcreate_f")
-        call h5dcreate_f(grid_id, "Coordinate3", H5T_NATIVE_DOUBLE, zspace_id, zset_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5dcreate_f")
+            !
+            ! Create datasets for grid coordinates
+            !
+            call h5dcreate_f(grid_id, "Coordinate1", H5T_NATIVE_DOUBLE, xspace_id, xset_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5dcreate_f")
+            call h5dcreate_f(grid_id, "Coordinate2", H5T_NATIVE_DOUBLE, yspace_id, yset_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5dcreate_f")
+            call h5dcreate_f(grid_id, "Coordinate3", H5T_NATIVE_DOUBLE, zspace_id, zset_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5dcreate_f")
+
+
+            !
+            ! Close dataspaces
+            !
+            call h5sclose_f(xspace_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5sclose_f")
+            call h5sclose_f(yspace_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5sclose_f")
+            call h5sclose_f(zspace_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5sclose_f")
+
+
+
+        end if
 
         !
         ! Write coordinates to datasets
@@ -1896,15 +1957,6 @@ contains
         call h5dclose_f(zset_id,ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5dclose_f")
 
-        !
-        ! Close dataspaces
-        !
-        call h5sclose_f(xspace_id,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5sclose_f")
-        call h5sclose_f(yspace_id,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5sclose_f")
-        call h5sclose_f(zspace_id,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5sclose_f")
 
         !
         ! Close Grid group
@@ -2540,14 +2592,21 @@ contains
     !!  @param[in]  dnames  List of domain names to be interrogated.
     !!
     !----------------------------------------------------------------------------------------
-    function get_domain_equation_sets_hdf(fid, dnames) result(eqnsets)
+    !function get_domain_equation_sets_hdf(fid, dnames) result(eqnsets)
+    function get_domain_equation_sets_hdf(fid) result(eqnsets)
         integer(HID_T),         intent(in)  :: fid
-        character(len=1024),    intent(in)  :: dnames(:)
 
+        character(len=1024), allocatable    :: dnames(:)
         integer(HID_T)                      :: did
         logical                             :: eqnset_exists
         character(len=1024), allocatable    :: eqnsets(:)
         integer                             :: ierr, idom
+
+
+        !
+        ! Get domain names
+        !
+        dnames = get_domain_names_hdf(fid)
 
 
         !
@@ -2704,6 +2763,184 @@ contains
 
 
 
+    !>  Set the element connectivities for a block, from a partition.
+    !!
+    !!  Accepts array of element connectivities as
+    !!      nelements_g                         ! indicates the total number of elements 
+    !!                                          ! in the unpartitioned domain
+    !!  
+    !!      elements(nelem, size_connectivity)  ! element connectivities on the local partition
+    !!
+    !!  /D_domainname/Grid/Elements
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   10/15/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_domain_connectivity_partition_hdf(dom_id,nelements_g,elements)
+        integer(HID_T), intent(in)  :: dom_id
+        integer(ik),    intent(in)  :: nelements_g
+        integer(ik),    intent(in)  :: elements(:,:)
+
+        integer(ik)         :: ierr, connectivity_size, ndims, ielem, ielement_g
+        integer(HID_T)      :: element_set_id, element_space_id, grid_id, sid, memspace
+        integer(HSIZE_T)    :: dims_rank_two(2), start(2), count(2), dimsm(2)
+        logical             :: exists
+
+        integer(ik),  allocatable, target :: var(:,:)
+        type(c_ptr)                       :: cp_var
+
+
+        !
+        ! Get number of nodes in element connectivity
+        !
+        connectivity_size = size(elements,2)
+
+        !
+        ! Size element connectivities
+        !
+        dims_rank_two(1) = nelements_g
+        dims_rank_two(2) = connectivity_size
+
+
+        !
+        ! Create a grid-group within the current block domain
+        !
+        exists = check_link_exists_hdf(dom_id,"Grid")
+        if (exists) then
+            call h5gopen_f(dom_id, "Grid", grid_id, ierr)
+        else
+            call h5gcreate_f(dom_id,"Grid", grid_id, ierr)
+        end if
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_partition_hdf: h5gcreate_f/h5gopen_f")
+
+
+        !
+        ! Open/Create dataset for element connectivity: element_set_id
+        !
+        exists = check_link_exists_hdf(grid_id,"Elements")
+        if (exists) then
+            call h5dopen_f(grid_id,"Elements", element_set_id, ierr, H5P_DEFAULT_F)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_partition_hdf: h5dopen_f")
+
+        else
+            call h5screate_simple_f(2, dims_rank_two, element_space_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_partition_hdf: h5screate_simple_f")
+
+            call h5dcreate_f(grid_id, "Elements", H5T_NATIVE_INTEGER, element_space_id, element_set_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_partition_hdf: h5dcreate_f")
+
+            call h5sclose_f(element_space_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_partition_hdf: h5sclose_f")
+
+        end if
+
+
+        !
+        ! Get data space
+        !
+        call h5dget_space_f(element_set_id, element_space_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL, "set_domain_connectivity_partition_hdf: h5dget_space_f.")
+
+
+
+        !
+        ! Allocate buffer
+        !
+        allocate(var(1,connectivity_size), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        !
+        ! Write element connectivities:
+        !   - one at a time taking ielement_g from the connectivity since they might 
+        !     not be in order after partitioning
+        !
+        do ielem = 1,size(elements,1)
+
+
+            !
+            ! get domain-global element index
+            !
+            ielement_g = elements(ielem,2)
+            start = [ielement_g-1,1-1]   ! 0-based
+            count = [1, connectivity_size]
+
+
+            !
+            ! Select subset of dataspace - sid
+            !
+            call h5sselect_hyperslab_f(element_space_id, H5S_SELECT_SET_F, start, count, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'set_domain_connectivity_partition_hdf: h5sselect_hyperslab_f')
+
+            !
+            ! Create a memory dataspace
+            !
+            ndims = 2
+            dimsm(1) = 1
+            dimsm(2) = connectivity_size
+            call h5screate_simple_f(ndims,dimsm,memspace,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'set_domain_connectivity_partition_hdf: h5screate_simple_f')
+
+
+            !
+            ! Write modes
+            !
+            var(1,:) = elements(ielem,:)
+            cp_var = c_loc(var(1,1))
+            call h5dwrite_f(element_set_id, H5T_NATIVE_INTEGER, cp_var, ierr, memspace, element_space_id)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_partition_hdf: h5dwrite_f")
+
+
+            call h5sclose_f(memspace,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_partition_hdf: h5sclose_f")
+
+
+
+        end do
+
+
+        !
+        ! Close dataset, dataspace, Grid group
+        !
+        call h5dclose_f(element_set_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_partition_hdf: h5dclose_f")
+        call h5sclose_f(element_space_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_partition_hdf: h5sclose_f")
+        call h5gclose_f(grid_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_connectivity_partition_hdf: h5gclose_f")
+
+
+
+    end subroutine set_domain_connectivity_partition_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2811,7 +3048,7 @@ contains
 
     !>  Given a domain identifier, return the number of elements in the domain.
     !!
-    !!  TODO: Switch this to read an attribute. That way we can use this is 
+    !!  TODO: Switch this to read an attribute. That way we can use this in 
     !!        solution files without grids.
     !!
     !!  @author Nathan A. Wukie
@@ -3208,7 +3445,7 @@ contains
         ! Check if bc_state group exists
         group_exists = check_link_exists_hdf(fid,"BCSG_"//trim(group_name))
 
-        user_msg = "create_bc_state_group_hdf: Boundary condition state group already exists. &
+        user_msg = "create_bc_group_hdf: Boundary condition state group already exists. &
                     Cannot have two groups with the same name"
         if (group_exists) call chidg_signal_one(FATAL,user_msg,trim(group_name))
 
@@ -3217,12 +3454,12 @@ contains
         ! Create a new group for the bc_state_t
         !
         call h5gcreate_f(fid, "BCSG_"//trim(group_name), bcgroup_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,'create_bc_state_group_hdf: error creating new group for bc_state.')
+        if (ierr /= 0) call chidg_signal(FATAL,'create_bc_group_hdf: error creating new group for bc_state.')
 
 
         ! Set 'Family'
         call h5ltset_attribute_string_f(bcgroup_id, '.', 'Family', 'none', ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"create_bc_state_group_hdf: error setting the attribute 'Family'")
+        if (ierr /= 0) call chidg_signal(FATAL,"create_bc_group_hdf: error setting the attribute 'Family'")
 
 
         call h5gclose_f(bcgroup_id,ierr)
@@ -4200,6 +4437,709 @@ contains
 
 
 
+
+    !>  Set file attribute "/Time Integrator".
+    !!
+    !!
+    !!  @author Mayank Sharma
+    !!  @author Nathan A. Wukie
+    !!  @date   4/4/2017
+    !!
+    !!  @param[in]  fid     HDF5 file identifier.
+    !!  @param[in]  string  String indicating the time integrator
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_time_integrator_hdf(fid,string)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: string
+
+        integer(ik) :: ierr
+
+        call h5ltset_attribute_string_f(fid,"/","Time Integrator",trim(string), ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_time_integrator_hdf: h5ltset_attribute_string_f")
+
+    end subroutine set_time_integrator_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Return file attribute "/Time Integrator".
+    !!
+    !!
+    !!  @author Mayank Sharma
+    !!  @author Nathan A. Wukie
+    !!  @date   4/4/2017
+    !!
+    !!  @param[in]  fid     HDF5 file identifier.
+    !!  @result     string  String indicating the time integrator
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_time_integrator_hdf(fid) result(string)
+        integer(HID_T), intent(in)  :: fid
+
+        character(:),   allocatable :: string
+        character(100)              :: string_buffer
+
+        integer(ik) :: ierr
+
+        call check_attribute_exists_hdf(fid,"Time Integrator")
+
+        call h5ltget_attribute_string_f(fid,"/","Time Integrator",string_buffer, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_time_integrator_hdf: h5ltget_attribute_string_f")
+
+        ! Trim buffer for result
+        string = trim(string_buffer)
+
+    end function get_time_integrator_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, set the number of time levels in an hdf5 file.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   02/20/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_ntimes_hdf(fid,ntimes)
+        integer(HID_T), intent(in)  :: fid
+        integer(ik),    intent(in)  :: ntimes
+
+        integer(ik)         :: ierr
+
+        call h5ltset_attribute_int_f(fid, "/", "ntimes", [ntimes], SIZE_ONE, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_ntimes_hdf: Error h5ltget_attribute_int_f")
+
+    end subroutine set_ntimes_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, return the number of time levels in an hdf5 file.
+    !!
+    !!  @author Matteo Ugolotti
+    !!  @date   02/20/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_ntimes_hdf(fid) result(time_lev)
+        integer(HID_T), intent(in)  :: fid
+        
+        integer                 :: ierr
+        integer(ik)             :: time_lev
+        integer, dimension(1)   :: buf
+
+        call h5ltget_attribute_int_f(fid, "/", "ntimes", buf, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_ntimess_hdf: h5ltget_attribute_int_f had a problem getting the number of time levels")
+        time_lev = int(buf(1), kind=ik)
+
+    end function get_ntimes_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, set time step in a hdf5 file
+    !!  Used in type_time_integrator_marching
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/12/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!  @param[in]  dt      Time step
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_time_step_hdf(fid,dt)
+        integer(HID_T),     intent(in)  :: fid
+        real(rk),           intent(in)  :: dt
+
+        integer(ik)         :: ierr
+
+        call h5ltset_attribute_double_f(fid, "/", "dt", [dt], SIZE_ONE, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_time_step_hdf: Error h5ltget_attribute_double_f")
+
+
+    end subroutine set_time_step_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, return time step from a hdf5 file
+    !!  Used in type_time_integrator_marching
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/12/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_time_step_hdf(fid) result(dt)
+        integer(HID_T),     intent(in)  :: fid
+        
+        integer                     :: ierr
+        real(rk),   dimension(1)    :: dt
+
+        call h5ltget_attribute_double_f(fid, "/", "dt", dt, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_time_step_hdf: h5ltget_attribute_double_f had a &
+                                        problem getting time step")
+
+
+    end function get_time_step_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, set number of time steps in a hdf5 file
+    !!  Used in type_time_integrator_marching
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/12/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!  @param[in]  nsteps  Number of time steps
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_nsteps_hdf(fid,nsteps)
+        integer(HID_T),     intent(in)  :: fid
+        integer(ik),        intent(in)  :: nsteps
+
+        integer(ik)         :: ierr
+
+        call h5ltset_attribute_int_f(fid, "/", "nsteps", [nsteps], SIZE_ONE, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_nsteps_hdf: Error h5ltget_attribute_int_f")
+
+
+    end subroutine set_nsteps_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, return number of time steps from a hdf5 file
+    !!  Used in type_time_integrator_marching
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/12/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_nsteps_hdf(fid) result(nsteps)
+        integer(HID_T),     intent(in)  :: fid
+        
+        integer                         :: ierr
+        integer(ik),    dimension(1)    :: nsteps
+
+        call h5ltget_attribute_int_f(fid, "/", "nsteps", nsteps, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_nsteps_hdf: h5ltget_attribute_double_f had a &
+                                        problem getting nsteps")
+
+
+    end function get_nsteps_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, set nwrite in a hdf5 file
+    !!  Used in type_time_integrator_marching
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/12/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!  @param[in]  nwrite  Number of steps after which a .h5 file is written
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_nwrite_hdf(fid,nwrite)
+        integer(HID_T),     intent(in)  :: fid
+        integer(ik),        intent(in)  :: nwrite
+
+        integer(ik)         :: ierr
+
+        call h5ltset_attribute_int_f(fid, "/", "nwrite", [nwrite], SIZE_ONE, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_nwrite_hdf: Error h5ltget_attribute_int_f")
+
+
+    end subroutine set_nwrite_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, return nwrite from a hdf5 file
+    !!  Used in type_time_integrator_marching
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/12/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_nwrite_hdf(fid) result(nwrite)
+        integer(HID_T),     intent(in)  :: fid
+        
+        integer                         :: ierr
+        integer(ik),    dimension(1)    :: nwrite
+
+        call h5ltget_attribute_int_f(fid, "/", "nwrite", nwrite, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_nwrite_hdf: h5ltget_attribute_double_f had a &
+                                        problem getting nwrite")
+
+
+    end function get_nwrite_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, set frequency data in a hdf5 file
+    !!  Used in type_time_integrator_spectral
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/12/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!  @param[in]  freq    Frequency data
+    !!  @param[in]  nfreq   Number of frequencies
+    !1
+    !----------------------------------------------------------------------------------------
+    subroutine set_frequencies_hdf(fid,freq,nfreq)
+        integer(HID_T),     intent(in)  :: fid
+        real(rk),           intent(in)  :: freq(:)
+        integer(HSIZE_T),   intent(in)  :: nfreq
+
+        integer(ik)         :: ierr
+
+        call h5ltset_attribute_double_f(fid, "/", "frequencies", freq, nfreq, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_frequencies_hdf: Error h5ltget_attribute_double_f")
+
+
+    end subroutine set_frequencies_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, return frequency data from a hdf5 file
+    !!  Used in type_time_integrator_spectral
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/12/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!  @param[in]  nfreq   Number of frequencies
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_frequencies_hdf(fid,nfreq) result(freq)
+        integer(HID_T),     intent(in)  :: fid
+        integer(HSIZE_T),   intent(in)  :: nfreq
+        
+        integer                 :: ierr
+        real(rk)                :: freq(nfreq)
+
+        call h5ltget_attribute_double_f(fid, "/", "frequencies", freq, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_frequencies_hdf: h5ltget_attribute_double_f had a &
+                                        problem getting frequencies")
+
+
+    end function get_frequencies_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, set time level data in a hdf5 file
+    !!  Used in type_time_integrator_spectral
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/12/2017
+    !!
+    !!  @param[in]  fid         HDF file identifier
+    !!  @param[in]  time_lev    Time level data
+    !!  @param[in]  ntime       Number of time levels
+    !1
+    !----------------------------------------------------------------------------------------
+    subroutine set_time_levels_hdf(fid,time_lev,ntime)
+        integer(HID_T),     intent(in)  :: fid
+        real(rk),           intent(in)  :: time_lev(:)
+        integer(HSIZE_T),   intent(in)  :: ntime
+
+        integer(ik)         :: ierr
+
+        call h5ltset_attribute_double_f(fid, "/", "time_levels", time_lev, ntime, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_time_levels_hdf: Error h5ltget_attribute_double_f")
+
+
+    end subroutine set_time_levels_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Given a file identifier, return time level data from a hdf5 file
+    !!  Used in type_time_integrator_spectral
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/12/2017
+    !!
+    !!  @param[in]  fid     HDF file identifier
+    !!  @param[in]  ntime   Number of time levels
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_time_levels_hdf(fid,ntime) result(time_lev)
+        integer(HID_T),     intent(in)  :: fid
+        integer(HSIZE_T),   intent(in)  :: ntime
+        
+        integer                 :: ierr
+        real(rk)                :: time_lev(ntime)
+
+        call h5ltget_attribute_double_f(fid, "/", "time_levels", time_lev, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_time_levels_hdf: h5ltget_attribute_double_f had a &
+                                        problem getting time levels")
+
+
+    end function get_time_levels_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Create an equation group on the ChiDG HDF file root.
+    !!
+    !!  
+    !!  If group already exists, no need to do anything, exit routine.
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/4/2017
+    !!
+    !!  @param[in]  fid             HDF file identifier
+    !!  @param[in]  group_name      Unique name for the new boundary condition state group.
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine create_eqn_group_hdf(fid,group_name)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: group_name
+
+        character(:),   allocatable :: user_msg
+        integer(HID_T)              :: eqn_id
+        integer(ik)                 :: ierr
+        logical                     :: group_exists
+
+        !
+        ! Check if bc_state group exists
+        !
+        group_exists = check_link_exists_hdf(fid,"EQN_"//trim(group_name))
+
+
+        !
+        ! Create a new group for the equation set
+        !   - if already exists, do nothing.
+        !
+        if (.not. group_exists) then
+
+            call h5gcreate_f(fid, "EQN_"//trim(group_name), eqn_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'create_eqn_group_hdf: error creating new group for equation set.')
+            call h5gclose_f(eqn_id,ierr)
+
+        end if
+
+    end subroutine create_eqn_group_hdf
+    !**************************************************************************************
+
+
+
+
+
+
+
+    !>  Remove a equation group from the HDF file.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/5/2017
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------------
+    subroutine remove_eqn_group_hdf(fid,group_name)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: group_name
+
+        integer(HID_T)  :: eqn_id
+        integer(ik)     :: ierr
+        logical         :: group_exists
+
+        group_exists = check_eqn_group_exists_hdf(fid,trim(group_name))
+
+        if (group_exists) then
+
+            ! Unlink the bc_state group
+            call h5gunlink_f(fid,"EQN_"//trim(group_name),ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"remove_eqn_group_hdf: error unlinking eqn group")
+
+        end if
+
+    end subroutine remove_eqn_group_hdf
+    !***********************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Return a vector of the names for each equation group.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/5/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_eqn_group_names_hdf(fid) result(eqn_group_names)
+        integer(HID_T), intent(in)  :: fid
+
+        integer(ik)     :: nmembers, ierr, igrp, type
+        character(1024) :: gname
+        type(svector_t) :: eqn_group_names
+
+
+        !
+        !  Get number of groups linked to the file root:
+        !
+        call h5gn_members_f(fid, ".", nmembers, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_eqn_group_names_hdf: error h5gn_members_f")
+
+
+        !
+        ! Loop through groups and detect "EQN_" groups:
+        !
+        if ( nmembers > 0 ) then
+            do igrp = 0,nmembers-1
+                ! Get group name
+                call h5gget_obj_info_idx_f(fid, ".", igrp, gname, type, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"get_eqn_group_names_hdf: error h5gget_obj_info_idx_f")
+
+                ! Test if group is an equation group. 'EQN_'
+                if (gname(1:4) == 'EQN_') then
+                    call eqn_group_names%push_back(string_t(trim(gname(5:))))
+                end if
+            end do  ! igrp
+        end if
+
+
+    end function get_eqn_group_names_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Check if an equation set group exists on the file root. 
+    !!
+    !!  Checks: "/EQ_name"
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/4/2017
+    !!
+    !--------------------------------------------------------------------------------------
+    function check_eqn_group_exists_hdf(fid,group_name) result(exist_status)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: group_name
+
+        integer(ik) :: ierr
+        logical     :: exist_status
+
+        ! Check if face contains the bc_state
+        call h5lexists_f(fid, "EQN_"//trim(group_name), exist_status, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"check_eqn_group_exists_hdf: Error in call to h5lexists_f")
+
+
+    end function check_eqn_group_exists_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Remove any equation groups that do not have an associated domain.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/5/2017
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine prune_eqn_groups_hdf(fid)
+        integer(HID_T),     intent(in)  :: fid
+
+        character(1024),    allocatable :: domain_eqns(:)
+        type(svector_t)                 :: eqn_groups
+        type(string_t)                  :: group_string
+        logical                         :: has_domain
+        integer(ik)                     :: igroup, idom
+
+
+        !
+        ! Get domain equation sets
+        !
+        domain_eqns = get_domain_equation_sets_hdf(fid)
+
+
+
+        !
+        ! Get equation groups
+        !
+        eqn_groups = get_eqn_group_names_hdf(fid)
+        
+
+
+        !
+        ! Loop through equation groups in the file, if they 
+        !
+        do igroup = 1,eqn_groups%size()
+            
+
+            ! Get group name
+            group_string = eqn_groups%at(igroup)
+
+
+            ! Check if any domain is associated with the group
+            has_domain = .false.
+            do idom = 1,size(domain_eqns)
+                has_domain = group_string%get() == trim(domain_eqns(idom))
+                if (has_domain) exit
+            end do
+
+
+            ! If group not associated with any domain, remove
+            if (.not. has_domain) call remove_eqn_group_hdf(fid,group_string%get())
+
+
+        end do
+
+
+
+
+    end subroutine prune_eqn_groups_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
     !>  Delete all the attributes attached to a specified group identifier.
     !!
     !!  @author Nathan A. Wukie
@@ -4354,7 +5294,7 @@ contains
 
         ! Check if group exists
         call h5lexists_f(id, trim(linkname), exist_status, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"check_link_exists_hdf: Error in call to h5lexists_f")
+        if (ierr /= 0) call chidg_signal_one(FATAL,"check_link_exists_hdf: Error in call to h5lexists_f", trim(linkname) )
 
 
     end function check_link_exists_hdf

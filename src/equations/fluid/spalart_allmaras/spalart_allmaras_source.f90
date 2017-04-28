@@ -136,9 +136,6 @@ contains
         ! Divide by density
         !
         invrho  = ONE/rho
-!        u       = rhou*invrho
-!        v       = rhov*invrho
-!        w       = rhow*invrho
         nutilde = rho_nutilde*invrho
 
 

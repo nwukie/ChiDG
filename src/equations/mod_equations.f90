@@ -17,16 +17,22 @@ module mod_equations
     !
     ! Import Equations
     !
-    use eqn_scalar_advection,           only: scalar_advection
-    use eqn_scalar_diffusion,           only: scalar_diffusion
-    use eqn_dual_linear_advection,      only: dual_linear_advection
-    use eqn_euler,                      only: euler 
-    use eqn_navier_stokes,              only: navier_stokes
-    use eqn_navier_stokes_av,           only: navier_stokes_av
-    use eqn_laminar_navier_stokes,      only: laminar_navier_stokes
-    use eqn_wall_distance,              only: wall_distance
-    use eqn_test_case_linear_advection, only: test_case_linear_advection
-    use eqn_test_case_poisson_equation, only: test_case_poisson_equation
+    use eqn_scalar_advection,               only: scalar_advection
+    use eqn_scalar_diffusion,               only: scalar_diffusion
+    use eqn_dual_linear_advection,          only: dual_linear_advection
+    use eqn_euler,                          only: euler 
+    use eqn_navier_stokes,                  only: navier_stokes
+    use eqn_navier_stokes_multi,            only: navier_stokes_multi
+    use eqn_multi_navier_stokes_laminar,    only: multi_navier_stokes_laminar
+    use eqn_joukowski_rans,                 only: joukowski_rans
+    use eqn_joukowski_zonal_rans,           only: joukowski_zonal_rans
+    use eqn_flat_plate_rans,                only: flat_plate_rans
+    use eqn_flat_plate_zonal_rans,          only: flat_plate_zonal_rans
+    use eqn_navier_stokes_av,               only: navier_stokes_av
+    use eqn_laminar_navier_stokes,          only: laminar_navier_stokes
+    use eqn_wall_distance,                  only: wall_distance
+    use eqn_test_case_linear_advection,     only: test_case_linear_advection
+    use eqn_test_case_poisson_equation,     only: test_case_poisson_equation
     implicit none
 
 
@@ -113,6 +119,12 @@ contains
         type(dual_linear_advection)      :: dual_linear_advection_builder
         type(euler)                      :: euler_builder
         type(navier_stokes)              :: navier_stokes_builder
+        type(navier_stokes_multi)        :: navier_stokes_multi_builder
+        type(multi_navier_stokes_laminar):: multi_navier_stokes_laminar_builder
+        type(joukowski_rans)             :: joukowski_rans_builder
+        type(joukowski_zonal_rans)       :: joukowski_zonal_rans_builder
+        type(flat_plate_rans)            :: flat_plate_rans_builder
+        type(flat_plate_zonal_rans)      :: flat_plate_zonal_rans_builder
         type(navier_stokes_av)           :: navier_stokes_av_builder
         type(laminar_navier_stokes)      :: laminar_navier_stokes_builder
         type(wall_distance)              :: wall_distance_builder
@@ -131,6 +143,12 @@ contains
             call equation_builder_factory%register(dual_linear_advection_builder)
             call equation_builder_factory%register(euler_builder)
             call equation_builder_factory%register(navier_stokes_builder)
+            call equation_builder_factory%register(navier_stokes_multi_builder)
+            call equation_builder_factory%register(multi_navier_stokes_laminar_builder)
+            call equation_builder_factory%register(joukowski_rans_builder)
+            call equation_builder_factory%register(joukowski_zonal_rans_builder)
+            call equation_builder_factory%register(flat_plate_rans_builder)
+            call equation_builder_factory%register(flat_plate_zonal_rans_builder)
             call equation_builder_factory%register(navier_stokes_av_builder)
             call equation_builder_factory%register(laminar_navier_stokes_builder)
             call equation_builder_factory%register(wall_distance_builder)

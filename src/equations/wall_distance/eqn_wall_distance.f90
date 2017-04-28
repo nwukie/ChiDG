@@ -74,6 +74,7 @@ module eqn_wall_distance
     use mod_operators,          only: operator_factory
     use mod_models,             only: model_factory
     use DNAD_D
+    use ieee_arithmetic
     implicit none
 
 
@@ -202,6 +203,7 @@ contains
 
         call self%set_name('p-Laplace')
         call self%set_dependency('f(Q-)')
+        !call self%set_dependency('f(Grad(Q))')
 
         call self%add_model_field('Scalar Diffusion Coefficient')
 
@@ -237,10 +239,13 @@ contains
         ! Interpolate solution to quadrature nodes
         !
         u       = worker%get_primary_field_general('u', 'value')
+        !grad1_u = worker%get_primary_field_general('u', 'grad1+lift')
+        !grad2_u = worker%get_primary_field_general('u', 'grad2+lift')
+        !grad3_u = worker%get_primary_field_general('u', 'grad3+lift')
+
         grad1_u = worker%get_primary_field_general('u', 'grad1')
         grad2_u = worker%get_primary_field_general('u', 'grad2')
         grad3_u = worker%get_primary_field_general('u', 'grad3')
-
 
 
         !
@@ -261,6 +266,7 @@ contains
             mu = sumsqr
             mu = ONE
         end if
+
 
 
 

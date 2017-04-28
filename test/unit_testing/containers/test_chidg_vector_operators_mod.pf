@@ -4,9 +4,9 @@ module test_chidg_vector_operators_mod
     use mod_constants,              only: ZERO, HALF, ONE, TWO, THREE, FOUR, FIVE, SIX, &
                                           SEVEN, EIGHT, IO_DESTINATION
     use type_chidg,                 only: chidg_t
-    use type_point,                 only: point_t
-    use type_domain_connectivity,   only: domain_connectivity_t
-    use mod_test_utilities,         only: create_mesh
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: delete_file
+    use mod_string,                 only: string_t
     use type_chidg_vector,          only: chidg_vector_t, mult_real_chidg_vector, &
                                           mult_chidg_vector_real, div_real_chidg_vector, &
                                           div_chidg_vector_real, sub_chidg_vector_chidg_vector, &
@@ -59,12 +59,14 @@ module test_chidg_vector_operators_mod
     !-------------------------------------------------------------------
     @TestCase
     type, extends(TestCase) :: test_chidg_vector
-        type(chidg_t)       :: chidg
 
-        integer(ik)         :: solution_order = 2
-        integer(ik)         :: nterms_s = 8
-        type(chidg_vector_t) :: vec_a
-        type(chidg_vector_t) :: vec_b
+        type(chidg_t)               :: chidg
+
+        integer(ik)                 :: solution_order = 2
+        integer(ik)                 :: nterms_s = 8
+        type(chidg_vector_t)        :: vec_a
+        type(chidg_vector_t)        :: vec_b
+        character(:),   allocatable :: file_name
 
     contains
         procedure   :: setUp
@@ -86,9 +88,6 @@ contains
     subroutine setUp(this)
         class(test_chidg_vector),    intent(inout)   :: this
 
-        type(point_t),  allocatable :: nodes(:)
-        type(domain_connectivity_t) :: connectivity
-        integer(ik)                 :: nterms_c, spacedim
 
         IO_DESTINATION = 'file'
 
@@ -99,28 +98,32 @@ contains
 
 
         !
-        ! Generate points for 2x2x2 element mesh
+        ! Set accuracy for the solution expansion
         !
-        call create_mesh('222',nodes,connectivity)
-
-
-        !
-        ! Add domain to ChiDG
-        !
-        spacedim = 3
-        nterms_c = 8
-        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection','Cartesian')
-
         call this%chidg%set('Solution Order', integer_input=this%solution_order)
-        call this%chidg%init('domains')
-        call this%chidg%init('communication')
+
+
+        !
+        ! Create grid file
+        !
+        !call create_mesh('222',nodes,connectivity)
+        this%file_name = 'file.h5'
+        call create_mesh_file('D1 NxNxN', this%file_name, equation_sets=[string_t('Scalar Advection')], &
+                                                     nelem_xi=2, nelem_eta=2, nelem_zeta=2)
+
+        
+        !
+        ! Read grid file
+        !
+        call this%chidg%read_grid(this%file_name)
+
 
 
         !
         ! Initialize solution data containers
         !
-        call this%vec_a%init(this%chidg%data%mesh)
-        call this%vec_b%init(this%chidg%data%mesh)
+        call this%vec_a%init(this%chidg%data%mesh,this%chidg%data%mesh%domain(1)%ntime)
+        call this%vec_b%init(this%chidg%data%mesh,this%chidg%data%mesh%domain(1)%ntime)
 
 
 
@@ -162,6 +165,9 @@ contains
 
         ! Close ChiDG interface
         call this%chidg%shut_down('core')
+
+        ! Clean up
+        call delete_file(this%file_name)
 
     end subroutine
     !*****************************************************************************************

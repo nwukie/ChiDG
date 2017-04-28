@@ -1,4 +1,5 @@
 module fluid_viscous_boundary_average_operator
+#include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ONE, TWO, HALF
 
@@ -105,38 +106,41 @@ contains
 
 
         real(rk), allocatable, dimension(:) ::      &
-            norm_1, norm_2, norm_3
+            norm_1, norm_2, norm_3, r
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        density_m  = worker%get_primary_field_face('Density'   , 'value', 'face interior')
-        density_p  = worker%get_primary_field_face('Density'   , 'value', 'face exterior')
+        density_m = worker%get_primary_field_face('Density'   , 'value', 'face interior')
+        density_p = worker%get_primary_field_face('Density'   , 'value', 'face exterior')
 
-        mom1_m = worker%get_primary_field_face('Momentum-1', 'value', 'face interior')
-        mom1_p = worker%get_primary_field_face('Momentum-1', 'value', 'face exterior')
+        mom1_m    = worker%get_primary_field_face('Momentum-1', 'value', 'face interior')
+        mom1_p    = worker%get_primary_field_face('Momentum-1', 'value', 'face exterior')
 
-        mom2_m = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
-        mom2_p = worker%get_primary_field_face('Momentum-2', 'value', 'face exterior')
+        mom2_m    = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
+        mom2_p    = worker%get_primary_field_face('Momentum-2', 'value', 'face exterior')
 
-        mom3_m = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
-        mom3_p = worker%get_primary_field_face('Momentum-3', 'value', 'face exterior')
+        mom3_m    = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
+        mom3_p    = worker%get_primary_field_face('Momentum-3', 'value', 'face exterior')
 
-        energy_m = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
-        energy_p = worker%get_primary_field_face('Energy'    , 'value', 'face exterior')
+        energy_m  = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
+        energy_p  = worker%get_primary_field_face('Energy'    , 'value', 'face exterior')
 
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
+        r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
-            mom2_m = mom2_m / worker%coordinate('1','boundary')
-            mom2_p = mom2_p / worker%coordinate('1','boundary')
+            mom2_m = mom2_m / r
+            mom2_p = mom2_p / r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 
-        invdensity_m = ONE/density_m
-        invdensity_p = ONE/density_p
 
 
         !
@@ -150,12 +154,7 @@ contains
 
 
         !
-        ! Get model fields:
-        !   Pressure
-        !   Temperature
-        !   Viscosity
-        !   Second Coefficient of Viscosity
-        !   Thermal Conductivity
+        ! Get Thermal Conductivity
         !
         k_l_m = worker%get_model_field_face('Laminar Thermal Conductivity',   'value', 'face interior')
         k_l_p = worker%get_model_field_face('Laminar Thermal Conductivity',   'value', 'face exterior')
@@ -176,14 +175,16 @@ contains
         !
         ! Compute velocities
         !
-        u_m = mom1_m/density_m
-        v_m = mom2_m/density_m
-        w_m = mom3_m/density_m
+        invdensity_m = ONE/density_m
+        invdensity_p = ONE/density_p
 
-        u_p = mom1_p/density_p
-        v_p = mom2_p/density_p
-        w_p = mom3_p/density_p
+        u_m = mom1_m * invdensity_m
+        v_m = mom2_m * invdensity_m
+        w_m = mom3_m * invdensity_m
 
+        u_p = mom1_p * invdensity_p
+        v_p = mom2_p * invdensity_p
+        w_p = mom3_p * invdensity_p
 
 
         !
@@ -272,8 +273,13 @@ contains
         ! Convert to tangential to angular momentum flux
         !
         if (worker%coordinate_system() == 'Cylindrical') then
-            integrand = integrand * worker%coordinate('1','boundary')
+            integrand = integrand * r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
+
 
         call worker%integrate_boundary('Momentum-2',integrand)
 

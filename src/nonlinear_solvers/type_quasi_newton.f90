@@ -69,13 +69,13 @@ contains
         character(100)          :: filename
         integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex,  &
                                    niter, ieqn, idom, ierr,                     &
-                                   rstart, rend, cstart, cend, nterms, imat, iwrite, step
+                                   rstart, rend, cstart, cend, nterms, imat, iwrite, step, eqn_ID, icfl
 
-        real(rk)                :: dtau, amp, cfl, timing, resid, resid_new,    &
+        real(rk)                :: dtau, amp, cfl, timing, resid, resid0, resid_new,    &
                                    alpha, f0, fn, forcing_term
         real(rk), allocatable   :: vals(:), cfln(:), rnorm0(:), rnorm(:)
         type(chidg_vector_t)    :: b, qn, qold, qnew, dqdtau, q0
-        logical                 :: search
+        logical                 :: searching, absolute_convergence, relative_convergence
       
 
         wcount = 1
@@ -105,7 +105,9 @@ contains
             niter = 0      ! Initialize inner loop counter
 
 
-            do while ( resid > self%tol )
+            absolute_convergence = .true.
+            relative_convergence = .true.
+            do while ( absolute_convergence .and. relative_convergence )
                 niter = niter + 1
                 call write_line("   niter: ", niter, delimiter='', columns=.True., column_width=20, io_proc=GLOBAL_MASTER)
 
@@ -142,9 +144,13 @@ contains
                 ! Compute and store residual norm for each field
                 !
                 if (niter == 1) then
+                    resid0 = rhs%norm(ChiDG_COMM)
                     rnorm0 = rhs%norm_fields(ChiDG_COMM)
+                    rnorm0 = resid0 !override
                 end if
+
                 rnorm = rhs%norm_fields(ChiDG_COMM)
+                rnorm = resid !override
 
 
 
@@ -176,6 +182,15 @@ contains
                     cfln = 0.1
                 end where
 
+                if (IRANK == GLOBAL_MASTER) then
+                    call add_to_line("  CFL: ")
+                    do icfl = 1,size(cfln)
+                        call add_to_line(cfln(icfl))
+                    end do
+                    call send_line()
+                end if
+
+
 
                 !
                 ! Compute element-local pseudo-timestep
@@ -186,17 +201,19 @@ contains
                 !
                 ! Add mass/dt to sub-block diagonal in dR/dQ
                 !
-                do idom = 1,data%ndomains()
-                    do ielem = 1,data%mesh(idom)%nelem
-                        do itime = 1,data%mesh(idom)%ntime
-                            do ieqn = 1,data%eqnset(idom)%prop%nprimary_fields()
+                do idom = 1,data%mesh%ndomains()
+                    eqn_ID = data%mesh%domain(idom)%eqn_ID
+                    do ielem = 1,data%mesh%domain(idom)%nelem
+                        do itime = 1,data%mesh%domain(idom)%ntime
+                            !do ieqn = 1,data%eqnset(idom)%prop%nprimary_fields()
+                            do ieqn = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
                                 ! get element-local timestep
-                                dtau = data%mesh(idom)%elems(ielem)%dtau(ieqn)
+                                dtau = data%mesh%domain(idom)%elems(ielem)%dtau(ieqn)
 
                                 ! Need to compute row and column extends in diagonal so we can
                                 ! selectively apply the mass matrix to the sub-block diagonal
-                                nterms = data%mesh(idom)%elems(ielem)%nterms_s
+                                nterms = data%mesh%domain(idom)%elems(ielem)%nterms_s
                                 rstart = 1 + (ieqn-1) * nterms
                                 rend   = (rstart-1) + nterms
                                 cstart = rstart                 ! since it is square
@@ -204,7 +221,7 @@ contains
 
                                 ! Add mass matrix divided by dt to the block diagonal
                                 imat = lhs%dom(idom)%lblks(ielem,itime)%get_diagonal()
-                                lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(rstart:rend,cstart:cend)  =  lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(rstart:rend,cstart:cend)  +  data%mesh(idom)%elems(ielem)%mass*(ONE/dtau)
+                                lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(rstart:rend,cstart:cend)  =  lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(rstart:rend,cstart:cend)  +  data%mesh%domain(idom)%elems(ielem)%mass*(ONE/dtau)
 
                             end do !ieqn
                         end do !itime
@@ -243,63 +260,69 @@ contains
                 !
                 q0 = qold
                 f0 = resid
-                search = .true.
                 step = 0
-                do while (search)
+                if (self%search) then
 
-                    !
-                    ! Set line increment via backtracking.
-                    !   Try: 1, 0.5, 0.25... 2^-i
-                    !
-                    alpha = TWO**(-real(step,rk)) 
-                    call write_line("       Testing newton direction with 'alpha' = ", alpha, io_proc=GLOBAL_MASTER)
+                    searching = .true.
+                    do while (searching)
 
-
-                    !
-                    ! Advance solution along newton direction
-                    !
-                    qn = q0 + alpha*dq
+                        !
+                        ! Set line increment via backtracking.
+                        !   Try: 1, 0.5, 0.25... 2^-i
+                        !
+                        alpha = TWO**(-real(step,rk)) 
+                        call write_line("       Testing newton direction with 'alpha' = ", alpha, io_proc=GLOBAL_MASTER)
 
 
-                    !
-                    ! Clear working vector
-                    !
-                    call rhs%clear()
+                        !
+                        ! Advance solution along newton direction
+                        !
+                        qn = q0 + alpha*dq
 
 
-                    !
-                    ! Set working solution. Test residual at (q). Do not differentiate
-                    !
-                    q = qn
-                    call system%assemble(data,timing=timing,differentiate=.false.)
-
-                    !
-                    ! Compute new function value
-                    !
-                    fn = rhs%norm(ChiDG_COMM)
+                        !
+                        ! Clear working vector
+                        !
+                        call rhs%clear()
 
 
-                    !
-                    ! Test for |R| increasing too much or NaN. 
-                    !   If residual is reasonably large, still allow some growth.
-                    !   If the residual is small enough, we don't want any growth.
-                    ! 
-                    !
-                    if (ieee_is_nan(fn)) then
-                        search = .true.
-                    else if ( (fn > 1.e-3_rk) .and. (fn > 2.0_rk*f0) ) then
-                        search = .true.
-                    else if ( (fn < 1.e-3_rk) .and. (fn > f0) ) then
-                        search = .true.
-                    else
-                        search = .false.
-                    end if
+                        !
+                        ! Set working solution. Test residual at (q). Do not differentiate
+                        !
+                        q = qn
+                        call system%assemble(data,timing=timing,differentiate=.false.)
 
-                    call write_line("       Rn(Q) = ", fn, io_proc=GLOBAL_MASTER)
+                        !
+                        ! Compute new function value
+                        !
+                        fn = rhs%norm(ChiDG_COMM)
 
-                    step = step + 1
 
-                end do
+                        !
+                        ! Test for |R| increasing too much or NaN. 
+                        !   If residual is reasonably large, still allow some growth.
+                        !   If the residual is small enough, we don't want any growth.
+                        ! 
+                        !
+                        if (ieee_is_nan(fn)) then
+                            searching = .true.
+                        else if ( (fn > 1.e-3_rk) .and. (fn > 2.0_rk*f0) ) then
+                            searching = .true.
+                        else if ( (fn < 1.e-3_rk) .and. (fn > f0) ) then
+                            searching = .true.
+                        else
+                            searching = .false.
+                        end if
+
+                        call write_line("       Rn(Q) = ", fn, io_proc=GLOBAL_MASTER)
+
+                        step = step + 1
+
+                    end do
+
+                else
+                    qn = q0 + dq
+                end if
 
 
                 !
@@ -321,7 +344,7 @@ contains
                 !
                 !if (wcount == self%nwrite) then
                 !    if (data%eqnset(1)%get_name() == 'Euler') then
-                !        call write_solution_hdf(data,'aachen_cascade_roundte.h5')
+                !        call write_solution_hdf(data,'flat_plate_quartic.h5')
                 !        write(filename,'(I2)') niter
                 !        call write_tecio_variables(data,trim(filename)//'.dat',niter)
                 !        wcount = 0
@@ -330,6 +353,14 @@ contains
                 wcount = wcount + 1
 
                 call MPI_Barrier(ChiDG_COMM,ierr)
+
+
+
+
+                absolute_convergence = (resid > self%tol)
+                relative_convergence = ( (log10(resid0) - log10(resid)) < real(self%norders_reduction,rk) )
+
+
 
             end do ! niter
 
@@ -373,14 +404,15 @@ contains
         type(chidg_data_t),     intent(inout)   :: data
         real(rk),               intent(in)      :: cfln(:)
 
-        integer(ik) :: idom
+        integer(ik) :: idom, eqn_ID
 
         !
         ! Loop through elements and compute time-step function
         !
-        do idom = 1,data%ndomains()
+        do idom = 1,data%mesh%ndomains()
 
-            call data%eqnset(idom)%compute_pseudo_timestep(idom,data%mesh,data%sdata,cfln,itime = 1)
+            eqn_ID = data%mesh%domain(idom)%eqn_ID
+            call data%eqnset(eqn_ID)%compute_pseudo_timestep(idom,data%mesh,data%sdata,cfln,itime = 1)
 
         end do !idom
 

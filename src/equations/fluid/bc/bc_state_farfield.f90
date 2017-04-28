@@ -6,6 +6,7 @@ module bc_state_farfield
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use type_point,             only: point_t
+    use mpi_f08,                only: mpi_comm
     use DNAD_D
     implicit none
     
@@ -52,12 +53,25 @@ contains
 
 
 
+        !
+        ! Add boundary condition parameters
+        !
         call self%bcproperties%add('Density',   'Required')
         call self%bcproperties%add('Pressure',  'Required')
         call self%bcproperties%add('Velocity-1','Required')
         call self%bcproperties%add('Velocity-2','Required')
         call self%bcproperties%add('Velocity-3','Required')
 
+
+
+        !
+        ! Set default parameter values
+        !
+        call self%set_fcn_option('Density',    'val', 1.2_rk)
+        call self%set_fcn_option('Pressure',   'val', 100000._rk)
+        call self%set_fcn_option('Velocity-1', 'val', 0._rk)
+        call self%set_fcn_option('Velocity-2', 'val', 0._rk)
+        call self%set_fcn_option('Velocity-3', 'val', 0._rk)
 
 
 
@@ -85,24 +99,25 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine compute_bc_state(self,worker,prop)
+    subroutine compute_bc_state(self,worker,prop,bc_COMM)
         class(farfield_t),      intent(inout)   :: self
         type(chidg_worker_t),   intent(inout)   :: worker
         class(properties_t),    intent(inout)   :: prop
+        type(mpi_comm),         intent(in)      :: bc_COMM
 
         ! Storage at quadrature nodes
-        type(AD_D), allocatable, dimension(:)   ::      &
-            density_m,  mom1_m,  mom2_m,  mom3_m,  energy_m,  &
-            density_bc, mom1_bc, mom2_bc, mom3_bc, energy_bc, p_bc, &
+        type(AD_D), allocatable, dimension(:)   ::                      &
+            density_m,  mom1_m,  mom2_m,  mom3_m,  energy_m,            &
+            density_bc, mom1_bc, mom2_bc, mom3_bc, energy_bc, p_bc,     &
             drho_dx_m, drhou_dx_m, drhov_dx_m, drhow_dx_m, drhoE_dx_m,  &
             drho_dy_m, drhou_dy_m, drhov_dy_m, drhow_dy_m, drhoE_dy_m,  &
             drho_dz_m, drhou_dz_m, drhov_dz_m, drhow_dz_m, drhoE_dz_m,  &
-            normal_momentum, normal_velocity, R_inf, R_extrapolated, &
+            normal_momentum, normal_velocity, R_inf, R_extrapolated,    &
             u_bc_norm, v_bc_norm, w_bc_norm, u_bc_tang, v_bc_tang, w_bc_tang, entropy_bc, &
             c_bc, c_m, p_m, T_m, u_m, v_m, w_m
 
         real(rk), allocatable, dimension(:) ::              &
-            unorm_1, unorm_2, unorm_3,                         &
+            unorm_1, unorm_2, unorm_3, r,                   &
             rho_input, p_input, u_input, v_input, w_input, T_input, c_input
 
 
@@ -137,8 +152,9 @@ contains
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
+        r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
-            mom2_m = mom2_m / worker%coordinate('1','boundary')
+            mom2_m = mom2_m / r
         end if
 
 
@@ -146,8 +162,6 @@ contains
         !
         ! Get Pressure, Temperature from interior
         !
-        !p_m = (1.4_rk - ONE)*(energy_m - HALF*(mom1_m*mom1_m + mom2_m*mom2_m + mom3_m*mom3_m)/density_m)
-        !T_m = p_m/(density_m*287.15_rk)
         p_m = worker%get_model_field_face('Pressure',    'value', 'face interior')
         T_m = worker%get_model_field_face('Temperature', 'value', 'face interior')
 
@@ -288,7 +302,7 @@ contains
         ! Account for cylindrical. Convert tangential momentum back to angular momentum.
         !
         if (worker%coordinate_system() == 'Cylindrical') then
-            mom2_bc = mom2_bc * worker%coordinate('1','boundary')
+            mom2_bc = mom2_bc * r
         end if
 
 

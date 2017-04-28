@@ -16,7 +16,9 @@ module test_interpolate_mod
     use mod_function,       only: create_function
     use mod_interpolate,    only: interpolate_face_standard, interpolate_face_autodiff, &
                                   interpolate_element_standard, interpolate_element_autodiff
-    use mod_test_utilities, only: create_mesh
+    use mod_test_utilities, only: create_mesh_file
+    use mod_file_utilities, only: delete_file
+    use mod_string,         only: string_t
     use mod_chidg_mpi,      only: IRANK
     use mod_DNAD_tools,     only: compute_neighbor_element_l, compute_neighbor_face
     use DNAD_D
@@ -40,7 +42,8 @@ module test_interpolate_mod
     type, extends(TestCase) ::  test_interpolate
 
         type(chidg_t)                   :: chidg
-        class(function_t), allocatable  :: fcn
+        character(:),       allocatable :: file_name
+        class(function_t),  allocatable :: fcn
 
     contains
         procedure   ::  setUp
@@ -64,8 +67,8 @@ contains
     !---------------------------------------------------------------------------------------------
     subroutine setUp(this)
         class(test_interpolate),    intent(inout)   :: this
-        integer(ik)                                 :: nterms_c, ivar, spacedim
 
+        integer(ik)                                 :: ivar
         type(point_t),  allocatable                 :: nodes(:)
         type(domain_connectivity_t)                 :: connectivity
         
@@ -84,26 +87,21 @@ contains
         !
         ! Read 3x3x3 element grid
         !
-        call create_mesh('333',nodes,connectivity)
-
-
-        !
-        ! Add domain to ChiDG
-        !
-        spacedim = 3
-        nterms_c = 8
-        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection','Cartesian')
+        this%file_name = "D1_3x3x3.h5"
+        call create_mesh_file("D1 NxNxN",this%file_name, equation_sets=[string_t('Scalar Advection')], &
+                                                         nelem_xi=3, nelem_eta=3, nelem_zeta=3)
 
 
         !
         ! Initialize chidg solution data storage
         !
         call this%chidg%set('Solution Order', integer_input=2)
-        !call this%chidg%initialize_solution_domains()
-        call this%chidg%init('domains')
-        call this%chidg%init('communication')
-        call this%chidg%init('solvers')
-        !call this%chidg%initialize_solution_solver()
+
+
+        !
+        ! Read grid
+        !
+        call this%chidg%read_grid(this%file_name)
 
 
         !
@@ -135,6 +133,9 @@ contains
         ! Close ChiDG interface
         call this%chidg%shut_down('core')
 
+        ! Clean-up test file
+        call delete_file(this%file_name)
+
         
     end subroutine tearDown
     !*******************************************************************************************
@@ -165,7 +166,7 @@ contains
         itime   = 1
 
 
-        ngq = self%chidg%data%mesh(1)%elems(ielem)%gq%nnodes_v
+        ngq = self%chidg%data%mesh%domain(1)%elems(ielem)%gq%nnodes_v
 
 
         allocate(u_gq(ngq), &
@@ -218,7 +219,7 @@ contains
         ieqn    = 1
         itime   = 1
 
-        ngq = self%chidg%data%mesh(1)%faces(ielem,iface)%gq%nnodes_f
+        ngq = self%chidg%data%mesh%domain(1)%faces(ielem,iface)%gq%nnodes_f
 
         allocate(u_gq(ngq))
         allocate(u_ref(ngq))
@@ -270,7 +271,7 @@ contains
         type(function_info_t)       :: function_info
         
         
-        associate ( elems => self%chidg%data%mesh(1)%elems, q => self%chidg%data%sdata%q, rhs => self%chidg%data%sdata%rhs )
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, q => self%chidg%data%sdata%q, rhs => self%chidg%data%sdata%rhs )
 
             idomain = 1
             ielem   = 14    ! given element
@@ -353,7 +354,7 @@ contains
         type(function_info_t)       :: function_info
         
         
-        associate ( elems => self%chidg%data%mesh(1)%elems, q => self%chidg%data%sdata%q, &
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, q => self%chidg%data%sdata%q, &
                     rhs => self%chidg%data%sdata%rhs )
 
             idomain = 1     ! domain index
@@ -440,7 +441,7 @@ contains
         type(function_info_t)       :: function_info
         
         
-        associate ( elems => self%chidg%data%mesh(1)%elems, q => self%chidg%data%sdata%q, &
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, q => self%chidg%data%sdata%q, &
                     rhs => self%chidg%data%sdata%rhs )
             idomain = 1     ! domain index
             ielem   = 14    ! given element
@@ -526,7 +527,7 @@ contains
         type(function_info_t)       :: function_info
         
         
-        associate ( elems => self%chidg%data%mesh(1)%elems, q => self%chidg%data%sdata%q, &
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, q => self%chidg%data%sdata%q, &
                     rhs => self%chidg%data%sdata%rhs )
             idomain = 1     ! domain index
             ielem   = 14    ! given element
@@ -627,8 +628,8 @@ contains
         type(function_info_t)       :: fcn
         
         
-        associate ( elems => self%chidg%data%mesh(1)%elems, &
-                    faces => self%chidg%data%mesh(1)%faces, &
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, &
+                    faces => self%chidg%data%mesh%domain(1)%faces, &
                     q     => self%chidg%data%sdata%q)        
             idomain = 1     ! domain index
             ielem   = 14    ! given element
@@ -716,7 +717,7 @@ contains
         type(function_info_t)       :: fcn
         
         
-        associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q)        
             idomain = 1     ! domain index
             ielem   = 14    ! given element
             iface   = 1     ! given face
@@ -808,7 +809,7 @@ contains
         type(function_info_t)       :: fcn
         
         
-        associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q )
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q )
             idomain = 1     ! domain index
             ielem   = 14    ! given element
             iface   = 1     ! given face
@@ -900,7 +901,7 @@ contains
         type(function_info_t)       :: fcn
         
         
-        associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q)        
             idomain = 1     ! domain index
             ielem   = 14    ! given element
             iface   = 1     ! given face
@@ -995,7 +996,7 @@ contains
         type(function_info_t)       :: fcn
         
         
-        associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q)        
             idomain = 1     ! domain index
             ielem   = 14    ! given element
             iface   = 1     ! given face
@@ -1083,8 +1084,8 @@ contains
         type(function_info_t)       :: fcn
         
         
-        associate ( elems => self%chidg%data%mesh(1)%elems, &
-                    faces => self%chidg%data%mesh(1)%faces, &
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, &
+                    faces => self%chidg%data%mesh%domain(1)%faces, &
                     q => self%chidg%data%sdata%q)        
             idomain = 1     ! domain index
             ielem   = 14    ! given element
@@ -1174,8 +1175,8 @@ contains
         type(function_info_t)       :: fcn
         
         
-        associate ( elems => self%chidg%data%mesh(1)%elems, &
-                    faces => self%chidg%data%mesh(1)%faces, &
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, &
+                    faces => self%chidg%data%mesh%domain(1)%faces, &
                     q => self%chidg%data%sdata%q )
             idomain = 1     ! domain index
             ielem   = 14    ! given element
@@ -1265,7 +1266,7 @@ contains
         integer(ik)                 :: ielem_n, iface_n, idonor
         
         
-        associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q)        
             idomain = 1     ! domain index
             ielem   = 14    ! given element
             iface   = 1     ! given face

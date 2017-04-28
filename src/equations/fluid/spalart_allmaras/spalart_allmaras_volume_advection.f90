@@ -2,6 +2,7 @@ module spalart_allmaras_volume_advection
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO,ONE,TWO,HALF
+    use mod_fluid,              only: omega
     use type_operator,          only: operator_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
@@ -69,61 +70,31 @@ contains
         class(properties_t),                                 intent(inout)   :: prop
 
 
-        type(AD_D), dimension(:), allocatable   ::      &
-            density, mom1, mom2, mom3, density_nutilde, &
-            invdensity, u, v, w, flux_1, flux_2, flux_3
-
-        real(rk),   dimension(:), allocatable   ::  &
-            norm_1, norm_2, norm_3, unorm_1, unorm_2, unorm_3
+        type(AD_D), dimension(:), allocatable   ::  &
+            density_nutilde, u_a, v_a, w_a,         &
+            flux_1, flux_2, flux_3
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        density         = worker%get_primary_field_element('Density',           'value')
-        mom1            = worker%get_primary_field_element('Momentum-1',        'value')
-        mom2            = worker%get_primary_field_element('Momentum-2',        'value')
-        mom3            = worker%get_primary_field_element('Momentum-3',        'value')
         density_nutilde = worker%get_primary_field_element('Density * NuTilde', 'value')
 
-
-
+        
         !
-        ! Account for cylindrical. Get tangential momentum from angular momentum.
-        !
-        if (worker%coordinate_system() == 'Cylindrical') then
-            mom2 = mom2 / worker%coordinate('1','element')
-        end if
-
-
-
-        !
-        ! Compute velocities
-        !
-        invdensity = ONE/density
-        u = mom1*invdensity
-        v = mom2*invdensity
-        w = mom3*invdensity
-
-
-        !
-        ! Get normal vector
-        !
-        norm_1  = worker%normal(1)
-        norm_2  = worker%normal(2)
-        norm_3  = worker%normal(3)
-
-        unorm_1 = worker%unit_normal(1)
-        unorm_2 = worker%unit_normal(2)
-        unorm_3 = worker%unit_normal(3)
+        ! Get fluid advection velocity
+        ! 
+        u_a = worker%get_model_field_element('Advection Velocity-1', 'value')
+        v_a = worker%get_model_field_element('Advection Velocity-2', 'value')
+        w_a = worker%get_model_field_element('Advection Velocity-3', 'value')
 
 
         !
         ! Compute average flux and field difference.
         ! 
-        flux_1 = u*density_nutilde
-        flux_2 = v*density_nutilde
-        flux_3 = w*density_nutilde
+        flux_1 = density_nutilde*u_a
+        flux_2 = density_nutilde*v_a
+        flux_3 = density_nutilde*w_a
 
 
         !

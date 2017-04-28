@@ -24,7 +24,7 @@ module test_comm_D2E2_mod
 
         type(chidg_t)   :: chidg
 
-        character(len=:), allocatable   :: gridfile
+        character(:),   allocatable     :: gridfile
         integer(ik)                     :: nterms_s = 27
         integer(ik)                     :: solution_order = 3
         type(mpi_comm)                  :: ChiDG_COMM
@@ -54,8 +54,8 @@ contains
     subroutine setUp(this)
         class(test_comm_D2E2), intent(inout) :: this
 
-        integer(ik)                     :: iread, spacedim, ierr, idom, ielem, ivar, itime
-        real(rk)                        :: initial_vals(this%nterms_s)
+        integer(ik) :: iread, ierr, idom, ielem, ivar, itime
+        real(rk)    :: initial_vals(this%nterms_s)
 
         
         IRANK                   = this%getProcessRank()
@@ -68,7 +68,6 @@ contains
 
         IO_DESTINATION = 'file'
         this%gridfile  = 'D2E2M1.h5'
-        spacedim       = 3
 
         !
         ! Create grid file
@@ -80,19 +79,15 @@ contains
 
 
         !
-        ! Read partition data: grid, boundary conditions
-        !
-        call this%chidg%read_grid(this%gridfile, spacedim)
-        call this%chidg%read_boundaryconditions(this%gridfile)
-
-
-        !
-        ! Initialization
+        ! Set accuracy for the solution expansion
         !
         call this%chidg%set('Solution Order', integer_input=this%solution_order)
-        call this%chidg%init('domains')
-        call this%chidg%init('communication')
-        call this%chidg%init('solvers')
+
+
+        !
+        ! Read partition data: grid, boundary conditions
+        !
+        call this%chidg%read_grid(this%gridfile)
 
 
         !
@@ -101,8 +96,8 @@ contains
         initial_vals = 1.2_rk
         ivar  = 1
         itime = 1
-        do idom = 1,size(this%chidg%data%mesh)
-            do ielem = 1,this%chidg%data%mesh(idom)%nelem
+        do idom = 1,this%chidg%data%mesh%ndomains()
+            do ielem = 1,this%chidg%data%mesh%domain(idom)%nelem
                 call this%chidg%data%sdata%q%dom(idom)%vecs(ielem)%setvar(ivar,itime,initial_vals)
             end do
         end do
@@ -138,15 +133,15 @@ contains
 
 
 
-    !>  Test the parallel computation of the chidgVector norm. 
-    !!  This tests the routine: chidgVector%norm_comm
+    !>  Test the parallel computation of the chidg_vector norm. 
+    !!  This tests the routine: chidg_vector%norm_comm
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/23/2016
     !!
     !---------------------------------------------------------------------------------------
-    @Test(npes=[1,2,4])
-    subroutine chidgvector__norm_comm(self)
+    @Test(npes=[1,2,3,4])
+    subroutine chidg_vector__norm_comm(self)
         class(test_comm_D2E2), intent(inout) :: self
 
         integer(ik)     :: nelem
@@ -167,7 +162,7 @@ contains
         
         @assertEqual(expected_norm,computed_norm)
 
-    end subroutine chidgvector__norm_comm
+    end subroutine chidg_vector__norm_comm
     !******************************************************************************************
 
 
@@ -177,15 +172,15 @@ contains
 
 
 
-    !>  Test the parallel computation of the chidgVector norm. 
-    !!  This tests the routine: chidgVector%norm_comm
+    !>  Test the parallel computation of the chidg_vector norm. 
+    !!  This tests the routine: chidg_vector%norm_comm
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/23/2016
     !!
     !---------------------------------------------------------------------------------------
-    @Test(npes=[1,2,4])
-    subroutine chidgvector__dot_comm(self)
+    @Test(npes=[1,2,3,4])
+    subroutine chidg_vector__dot_comm(self)
         class(test_comm_D2E2), intent(inout) :: self
 
         type(chidg_vector_t) :: a, b
@@ -211,7 +206,7 @@ contains
 
         @assertEqual(expected_dot,computed_dot,1.e-12_rk)
 
-    end subroutine chidgvector__dot_comm
+    end subroutine chidg_vector__dot_comm
     !******************************************************************************************
 
 

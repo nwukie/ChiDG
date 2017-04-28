@@ -1,6 +1,8 @@
 module euler_roe_operator
+#include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO,ONE,TWO,HALF
+    use mod_fluid,              only: omega
     use type_operator,          only: operator_t
     use type_properties,        only: properties_t
     use type_chidg_worker,      only: chidg_worker_t
@@ -93,6 +95,7 @@ contains
             un_m,           un_p,                                   &
             a_m,            a_p,                                    &
             rtil, util, vtil, wtil, vmagtil, Htil, ctil, qtil2,     &
+            vtil_t, v_m_t, v_p_t, vmagtil_t,                        &
             integrand,  upwind,     wave,                           &
             C1,  C2_a, C2_b,  C3,                                   &
             u_m, v_m, w_m,                                          &
@@ -103,7 +106,7 @@ contains
             sqrt_rhom, sqrt_rhop, sqrt_rhom_plus_rhop, ctil2
 
         real(rk), allocatable, dimension(:) :: &
-            norm_1, norm_2, norm_3, unorm_1, unorm_2, unorm_3
+            norm_1, norm_2, norm_3, unorm_1, unorm_2, unorm_3, r, area
 
         real(rk) :: eps, gam_m, gam_p
 
@@ -131,9 +134,14 @@ contains
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
+        r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
-            mom2_m = mom2_m / worker%coordinate('1','boundary')
-            mom2_p = mom2_p / worker%coordinate('1','boundary')
+            mom2_m = mom2_m / r
+            mom2_p = mom2_p / r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 
@@ -176,11 +184,20 @@ contains
         u_m = mom1_m*invdensity_m
         v_m = mom2_m*invdensity_m
         w_m = mom3_m*invdensity_m
-        vmag_m = u_m*unorm_1 + v_m*unorm_2 + w_m*unorm_3
 
         u_p = mom1_p*invdensity_p
         v_p = mom2_p*invdensity_p
         w_p = mom3_p*invdensity_p
+
+
+        !
+        ! Compute transport velocities 
+        !
+        v_m_t = v_m - omega*r
+        v_p_t = v_p - omega*r
+
+
+        vmag_m = u_m*unorm_1 + v_m*unorm_2 + w_m*unorm_3
         vmag_p = u_p*unorm_1 + v_p*unorm_2 + w_p*unorm_3
 
 
@@ -193,12 +210,14 @@ contains
         rtil =  sqrt(density_p * density_m)                               ! Roe-averaged density
         util = (sqrt_rhom*u_m + sqrt_rhop*u_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged u-velocity
         vtil = (sqrt_rhom*v_m + sqrt_rhop*v_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged v-velocity
+        vtil_t = (sqrt_rhom*v_m_t + sqrt_rhop*v_p_t) / (sqrt_rhom_plus_rhop)    ! Roe-averaged v-velocity
         wtil = (sqrt_rhom*w_m + sqrt_rhop*w_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged w-velocity
         Htil = (sqrt_rhom*enthalpy_m + sqrt_rhop*enthalpy_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged Enthalpy
 
         ! Magnitude of Roe-averaged velocity in the face-normal direction
-        vmagtil = util*unorm_1 + vtil*unorm_2 + wtil*unorm_3
-        qtil2   = util**TWO + vtil**TWO + wtil**TWO
+        vmagtil   = util*unorm_1 + vtil*unorm_2 + wtil*unorm_3
+        vmagtil_t = util*unorm_1 + vtil_t*unorm_2 + wtil*unorm_3
+        qtil2     = util**TWO + vtil**TWO + wtil**TWO
 
         !& HARDCODED GAMMA
         ctil = sqrt((1.4_rk - ONE)*(Htil - HALF*qtil2))                   ! Roe-averaged speed of sound
@@ -220,9 +239,9 @@ contains
         !
         ! Limit wave speeds for entropy fix
         !
-        lamda1 = abs(vmagtil - ctil)
-        lamda2 = abs(vmagtil)
-        lamda3 = abs(vmagtil + ctil)
+        lamda1 = abs(vmagtil_t - ctil)
+        lamda2 = abs(vmagtil_t)
+        lamda3 = abs(vmagtil_t + ctil)
 
         eps = 0.01_rk
         where ( (-eps*ctil < lamda1) .and. (lamda1 < eps*ctil) )
@@ -256,12 +275,19 @@ contains
         integrand = ZERO
 
 
+        !
+        ! Compute differential areas
+        !
+        area = sqrt(norm_1**TWO + norm_2**TWO + norm_3**TWO)
+
+
         !=================================================
         ! mass flux
         !=================================================
         upwind = C1 + C2_a + C3
 
-        integrand = HALF*(upwind*norm_1*unorm_1 + upwind*norm_2*unorm_2 + upwind*norm_3*unorm_3)
+        !integrand = HALF*(upwind*norm_1*unorm_1 + upwind*norm_2*unorm_2 + upwind*norm_3*unorm_3)
+        integrand = HALF*upwind*area
 
         call worker%integrate_boundary('Density',integrand)
 
@@ -271,7 +297,8 @@ contains
         !=================================================
         upwind = C1*(util - ctil*unorm_1)  +  C2_a*util  +  C2_b*(delu - delvmag*unorm_1)  +  C3*(util + ctil*unorm_1)
 
-        integrand = HALF*(upwind*norm_1*unorm_1 + upwind*norm_2*unorm_2 + upwind*norm_3*unorm_3)
+        !integrand = HALF*(upwind*norm_1*unorm_1 + upwind*norm_2*unorm_2 + upwind*norm_3*unorm_3)
+        integrand = HALF*upwind*area
 
         call worker%integrate_boundary('Momentum-1',integrand)
 
@@ -281,15 +308,19 @@ contains
         !=================================================
         upwind = C1*(vtil - ctil*unorm_2)  +  C2_a*vtil  +  C2_b*(delv - delvmag*unorm_2)  +  C3*(vtil + ctil*unorm_2)
 
-        integrand = HALF*(upwind*norm_1*unorm_1 + upwind*norm_2*unorm_2 + upwind*norm_3*unorm_3)
+        !integrand = HALF*(upwind*norm_1*unorm_1 + upwind*norm_2*unorm_2 + upwind*norm_3*unorm_3)
+        integrand = HALF*upwind*area
 
         !
         ! Convert to tangential to angular momentum flux
         !
         if (worker%coordinate_system() == 'Cylindrical') then
-            integrand = integrand * worker%coordinate('1','boundary')
-        end if
+            integrand = integrand * r
+        else if (worker%coordinate_system() == 'Cartesian') then
 
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
+        end if
 
         call worker%integrate_boundary('Momentum-2',integrand)
 
@@ -298,7 +329,8 @@ contains
         !=================================================
         upwind = C1*(wtil - ctil*unorm_3)  +  C2_a*wtil  +  C2_b*(delw - delvmag*unorm_3)  +  C3*(wtil + ctil*unorm_3)
 
-        integrand = HALF*(upwind*norm_1*unorm_1 + upwind*norm_2*unorm_2 + upwind*norm_3*unorm_3)
+        !integrand = HALF*(upwind*norm_1*unorm_1 + upwind*norm_2*unorm_2 + upwind*norm_3*unorm_3)
+        integrand = HALF*upwind*area
 
         call worker%integrate_boundary('Momentum-3',integrand)
 
@@ -307,7 +339,8 @@ contains
         !=================================================
         upwind = C1*(Htil - ctil*vmagtil)  +  C2_a*(qtil2/TWO)  +  C2_b*(util*delu + vtil*delv + wtil*delw - vmagtil*delvmag)  +  C3*(Htil + ctil*vmagtil)
 
-        integrand = HALF*(upwind*norm_1*unorm_1 + upwind*norm_2*unorm_2 + upwind*norm_3*unorm_3)
+        !integrand = HALF*(upwind*norm_1*unorm_1 + upwind*norm_2*unorm_2 + upwind*norm_3*unorm_3)
+        integrand = HALF*upwind*area
 
         call worker%integrate_boundary('Energy',integrand)
 

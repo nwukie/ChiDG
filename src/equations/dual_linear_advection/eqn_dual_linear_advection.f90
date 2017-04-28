@@ -47,7 +47,7 @@ contains
     subroutine init(self)
         class(dual_linear_advection),   intent(inout)   :: self
 
-        call self%set_name('DualLinearAdvection')
+        call self%set_name('Dual Linear Advection')
 
     end subroutine init
     !*********************************************************************************************
@@ -77,7 +77,7 @@ contains
         !
         ! Set equationset name.
         !
-        call dual_linear_advection_eqn%set_name("DualLinearAdvection")
+        call dual_linear_advection_eqn%set_name("Dual Linear Advection")
 
 
         !

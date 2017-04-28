@@ -4,6 +4,7 @@ module test_bc_patch_mod
     use mod_constants,      only: IO_DESTINATION
     use type_chidg,         only: chidg_t
     use type_bc_patch,      only: bc_patch_t
+    use type_point,         only: point_t
     implicit none
 
     public  :: test_bc_patch
@@ -270,10 +271,13 @@ contains
     subroutine test_bc_patch__add_coupled_element__two(self)
         class(test_bc_patch),    intent(inout)   :: self
 
-        type(bc_patch_t)    :: bc_patch
-        integer(ik)         :: idomain_g,   idomain_l,  &
-                               ielement_g,  ielement_l, &
-                               proc, patch_face
+        type(bc_patch_t)            :: bc_patch
+        integer(ik)                 :: idomain_g,   idomain_l,  &
+                                       ielement_g,  ielement_l, &
+                                       proc, patch_face, iface, neqns, nterms_s
+        real(rk)                    :: total_area
+        real(rk),       allocatable :: areas(:)
+        type(point_t),  allocatable :: quad_pts(:)
 
 
 
@@ -295,6 +299,15 @@ contains
         idomain_l  = 1
         ielement_g = 4
         ielement_l = 2
+        iface      = 1
+        neqns      = 1
+        nterms_s   = 8
+        total_area = 1._rk
+        areas      = [0.25_rk, 0.25_rk, 0.25_rk, 0.25_rk]
+        quad_pts   = [ point_t(0.1_rk,0.2_rk,0.3_rk), &
+                       point_t(0.1_rk,0.2_rk,0.3_rk), &
+                       point_t(0.1_rk,0.2_rk,0.3_rk), &
+                       point_t(0.1_rk,0.2_rk,0.3_rk) ]
         proc       = 5
 
         !
@@ -304,7 +317,16 @@ contains
                                                       idomain_l,    &
                                                       ielement_g,   &
                                                       ielement_l,   &
+                                                      iface,        &
                                                       proc)
+
+        call bc_patch%set_coupled_element_data(patch_face,idomain_g,    &
+                                                          ielement_g,   &
+                                                          neqns,        &
+                                                          nterms_s,     &
+                                                          total_area,   &
+                                                          areas,        &
+                                                          quad_pts)
 
 
         !
@@ -312,14 +334,18 @@ contains
         !
         @assertEqual(bc_patch%ncoupled_elements(patch_face), 1)
 
+
         !
         ! Test components were set correctly
         !
-        @assertEqual(bc_patch%idomain_g_coupled(patch_face)%at(1),  idomain_g)
-        @assertEqual(bc_patch%idomain_l_coupled(patch_face)%at(1),  idomain_l)
-        @assertEqual(bc_patch%ielement_g_coupled(patch_face)%at(1), ielement_g)
-        @assertEqual(bc_patch%ielement_l_coupled(patch_face)%at(1), ielement_l)
-        @assertEqual(bc_patch%proc_coupled(patch_face)%at(1),       proc)
+        @assertEqual(bc_patch%coupling(patch_face)%idomain_g(1),  idomain_g)
+        @assertEqual(bc_patch%coupling(patch_face)%idomain_l(1),  idomain_l)
+        @assertEqual(bc_patch%coupling(patch_face)%ielement_g(1), ielement_g)
+        @assertEqual(bc_patch%coupling(patch_face)%ielement_l(1), ielement_l)
+        @assertEqual(bc_patch%coupling(patch_face)%iface(1),      iface)
+        @assertEqual(bc_patch%coupling(patch_face)%neqns(1),      neqns)
+        @assertEqual(bc_patch%coupling(patch_face)%nterms_s(1),   nterms_s)
+        @assertEqual(bc_patch%coupling(patch_face)%proc(1),       proc)
 
 
 
@@ -333,6 +359,15 @@ contains
         idomain_l  = 2
         ielement_g = 5
         ielement_l = 3
+        iface      = 5
+        neqns      = 1
+        nterms_s   = 8
+        total_area = 1._rk
+        areas      = [0.25_rk, 0.25_rk, 0.25_rk, 0.25_rk]
+        quad_pts   = [ point_t(0.1_rk,0.2_rk,0.3_rk), &
+                       point_t(0.1_rk,0.2_rk,0.3_rk), &
+                       point_t(0.1_rk,0.2_rk,0.3_rk), &
+                       point_t(0.1_rk,0.2_rk,0.3_rk) ]
         proc       = 6
 
         !
@@ -342,8 +377,16 @@ contains
                                                       idomain_l,    &
                                                       ielement_g,   &
                                                       ielement_l,   &
+                                                      iface,        &
                                                       proc)
 
+        call bc_patch%set_coupled_element_data(patch_face,idomain_g,    &
+                                                          ielement_g,   &
+                                                          neqns,        &
+                                                          nterms_s,     &
+                                                          total_area,   &
+                                                          areas,        &
+                                                          quad_pts)
 
         !
         ! Test second face
@@ -353,11 +396,14 @@ contains
         !
         ! Test components were set correctly
         !
-        @assertEqual(bc_patch%idomain_g_coupled(patch_face)%at(2),  idomain_g)
-        @assertEqual(bc_patch%idomain_l_coupled(patch_face)%at(2),  idomain_l)
-        @assertEqual(bc_patch%ielement_g_coupled(patch_face)%at(2), ielement_g)
-        @assertEqual(bc_patch%ielement_l_coupled(patch_face)%at(2), ielement_l)
-        @assertEqual(bc_patch%proc_coupled(patch_face)%at(2),       proc)
+        @assertEqual(bc_patch%coupling(patch_face)%idomain_g(2),  idomain_g)
+        @assertEqual(bc_patch%coupling(patch_face)%idomain_l(2),  idomain_l)
+        @assertEqual(bc_patch%coupling(patch_face)%ielement_g(2), ielement_g)
+        @assertEqual(bc_patch%coupling(patch_face)%ielement_l(2), ielement_l)
+        @assertEqual(bc_patch%coupling(patch_face)%iface(2),      iface)
+        @assertEqual(bc_patch%coupling(patch_face)%neqns(2),      neqns)
+        @assertEqual(bc_patch%coupling(patch_face)%nterms_s(2),   nterms_s)
+        @assertEqual(bc_patch%coupling(patch_face)%proc(2),       proc)
 
 
 

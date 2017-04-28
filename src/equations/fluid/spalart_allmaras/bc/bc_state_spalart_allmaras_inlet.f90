@@ -5,6 +5,7 @@ module bc_state_spalart_allmaras_inlet
     use type_bc_state,          only: bc_state_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
+    use mpi_f08,                only: mpi_comm
     use DNAD_D
     implicit none
     
@@ -53,7 +54,7 @@ contains
         !
         ! Add turbulent inlet parameter and default value.
         !
-        call self%bcproperties%add('Turbulent Viscosity Ratio',   'Required')
+        call self%bcproperties%add('Turbulent Viscosity Ratio', 'Required')
         call self%set_fcn_option('Turbulent Viscosity Ratio', 'val', 3._rk)
 
 
@@ -74,10 +75,11 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine compute_bc_state(self,worker,prop)
-        class(spalart_allmaras_inlet_t),          intent(inout)   :: self
-        type(chidg_worker_t),   intent(inout)   :: worker
-        class(properties_t),    intent(inout)   :: prop
+    subroutine compute_bc_state(self,worker,prop,bc_COMM)
+        class(spalart_allmaras_inlet_t),    intent(inout)   :: self
+        type(chidg_worker_t),               intent(inout)   :: worker
+        class(properties_t),                intent(inout)   :: prop
+        type(mpi_comm),                     intent(in)      :: bc_COMM
 
 
         ! Storage at quadrature nodes

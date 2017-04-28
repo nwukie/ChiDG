@@ -559,7 +559,9 @@ contains
                 temp = write_internal
 
             type is(real(8))
-                if (abs(linedata) > 0.1) then
+                if (abs(linedata) < 0.1) then
+                    write(write_internal, '(E24.14)') linedata
+                else if ( (abs(linedata) > 0.1) .and. (abs(linedata) < 1.e16) ) then
                     write(write_internal, '(F24.14)') linedata
                 else
                     write(write_internal, '(E24.14)') linedata

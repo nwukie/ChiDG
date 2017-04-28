@@ -14,16 +14,16 @@ module mod_chidg_mpi
     implicit none
 
 
-    type(mpi_comm)      :: ChiDG_COMM          !< Communicator for ChiDG. of MPI_COMM_WORLD, 
-                                               !! but could be changed at run-time.
+    type(mpi_comm)      :: ChiDG_COMM          ! Communicator for ChiDG. of MPI_COMM_WORLD, 
+                                               ! but could be changed at run-time.
     
-    integer(ik)         :: IRANK = 0           !< Rank of current process
-    integer(ik)         :: NRANK = 1           !< Number of global ranks
+    integer(ik)         :: IRANK = 0           ! Rank of current process
+    integer(ik)         :: NRANK = 1           ! Number of global ranks
 
-    integer, parameter  :: GLOBAL_MASTER = 0   !< Master rank for all global processes. This 
-                                               !! shall not be modified during run-time.
-    integer             :: GROUP_MASTER  = 0   !< Master rank for group of processes. This 
-                                               !! could be modified during run-time for a group.
+    integer, parameter  :: GLOBAL_MASTER = 0   ! Master rank for all global processes. This 
+                                               ! shall not be modified during run-time.
+    integer             :: GROUP_MASTER  = 0   ! Master rank for group of processes. This 
+                                               ! could be modified during run-time for a group.
 
 
     logical :: chidg_mpi_initialized = .false.
@@ -38,13 +38,14 @@ contains
 
 
 
-    !>
+    !>  Initialize MPI library. Get NRANK, IRANK.
+    !!
+    !!      - If already initialized, skip call to MPI_Init
+    !!      - Query MPI library for NRANK, IRANK
+    !!
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/17/2016
-    !!
-    !!
-    !!
     !!
     !----------------------------------------------------------------------------------
     subroutine chidg_mpi_init()
@@ -76,13 +77,13 @@ contains
 
 
 
-    !>
+    !>  Finalize MPI library. 
+    !!
+    !!      - If already finalized, skip call to MPI_Finalize
+    !!
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/17/2016
-    !!
-    !!
-    !!
     !!
     !----------------------------------------------------------------------------------
     subroutine chidg_mpi_finalize()

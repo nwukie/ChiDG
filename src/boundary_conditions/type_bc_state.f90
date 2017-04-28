@@ -1,13 +1,13 @@
 module type_bc_state
 #include <messenger.h>
-    use mod_kinds,                  only: rk, ik
+    use mod_kinds,              only: rk, ik
 
-    use type_bcproperty_set,        only: bcproperty_set_t
-    use type_chidg_worker,          only: chidg_worker_t
-    use type_properties,            only: properties_t
-    use type_mesh,                  only: mesh_t
-    use type_bc_patch,              only: bc_patch_t
-    use mpi_f08,                    only: mpi_comm
+    use type_bcproperty_set,    only: bcproperty_set_t
+    use type_chidg_worker,      only: chidg_worker_t
+    use type_properties,        only: properties_t
+    use type_mesh,              only: mesh_t
+    use type_bc_patch,          only: bc_patch_t
+    use mpi_f08,                only: mpi_comm
     implicit none
 
 
@@ -19,6 +19,10 @@ module type_bc_state
     !!      - compute_bc_state is deferred and so must be implemented by any new bc_state_t
     !!      - bc_state_t also contains properties that can hold parameters and functions 
     !!        that have been set for the boundary.
+    !!
+    !!  family may be:
+    !!      'Wall', 'Inlet', 'Outlet', 'Symmetry', 'Periodic', 'Farfield', 'Scalar'
+    !!
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
@@ -75,14 +79,16 @@ module type_bc_state
 
 
     abstract interface
-        subroutine bc_state_compute(self,worker,prop)
+        subroutine bc_state_compute(self,worker,prop,bc_COMM)
             import bc_state_t
             import chidg_worker_t
             import properties_t
+            import mpi_comm
 
             class(bc_state_t),      intent(inout)   :: self
             type(chidg_worker_t),   intent(inout)   :: worker
             class(properties_t),    intent(inout)   :: prop
+            type(mpi_comm),         intent(in)      :: bc_COMM
         end subroutine
     end interface
 
@@ -106,10 +112,10 @@ contains
     !!  @date   2/21/2017
     !!
     !----------------------------------------------------------------------------------------------
-    subroutine init_bc_specialized(self,mesh,bc_patch,bc_COMM)
+    subroutine init_bc_specialized(self,mesh,group_ID,bc_COMM)
         class(bc_state_t),  intent(inout)   :: self
-        type(mesh_t),       intent(in)      :: mesh(:)
-        type(bc_patch_t),   intent(in)      :: bc_patch(:)
+        type(mesh_t),       intent(inout)   :: mesh
+        integer(ik),        intent(in)      :: group_ID
         type(mpi_comm),     intent(in)      :: bc_COMM
 
 
@@ -134,12 +140,13 @@ contains
     !!  @date   2/27/2017   updated for multiple patches
     !!
     !----------------------------------------------------------------------------------------------
-    subroutine init_bc_coupling(self,mesh,bc_patch)
+    subroutine init_bc_coupling(self,mesh,group_ID,bc_COMM)
         class(bc_state_t),  intent(inout)   :: self
-        type(mesh_t),       intent(in)      :: mesh(:)
-        type(bc_patch_t),   intent(inout)   :: bc_patch(:)
+        type(mesh_t),       intent(inout)   :: mesh
+        integer(ik),        intent(in)      :: group_ID
+        type(mpi_comm),     intent(in)      :: bc_COMM
 
-        integer(ik) :: ipatch, iface_bc, idomain_g, idomain_l, ielement_g, ielement_l
+        integer(ik) :: patch_ID, face_ID, idomain_g, idomain_l, ielement_g, ielement_l, iface, neqns, nterms_s
 
 
 
@@ -148,40 +155,36 @@ contains
         ! Default is that each face is coupled only with its owner element.
         ! So, strictly local coupling.
         !
-        do ipatch = 1,size(bc_patch)
-            do iface_bc = 1,bc_patch(ipatch)%nfaces()
+        do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
+            do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
 
 
                 !
                 ! Get block-element index of current iface_bc
                 !
-                idomain_g  = bc_patch(ipatch)%idomain_g(iface_bc)
-                idomain_l  = bc_patch(ipatch)%idomain_l(iface_bc)
-                ielement_g = bc_patch(ipatch)%ielement_g(iface_bc)
-                ielement_l = bc_patch(ipatch)%ielement_l(iface_bc)
+                idomain_g  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g(face_ID)
+                idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l(face_ID)
+                ielement_g = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID)
+                ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
+                iface      = mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
 
                 
                 !
                 ! Add the element index as the only dependency.
                 !
-                call bc_patch(ipatch)%add_coupled_element(iface_bc, idomain_g,  &
-                                                                    idomain_l,  &
-                                                                    ielement_g, &
-                                                                    ielement_l, &
-                                                                    IRANK)
+                call mesh%bc_patch_group(group_ID)%patch(patch_ID)%add_coupled_element(face_ID, idomain_g,  &
+                                                                                                idomain_l,  &
+                                                                                                ielement_g, &
+                                                                                                ielement_l, &
+                                                                                                iface,      &
+                                                                                                IRANK)
 
-
-            end do ! iface_bc
-        end do !ipatch
+            end do ! face_ID
+        end do ! patch_ID
 
 
     end subroutine init_bc_coupling
     !**********************************************************************************************
-
-
-
-
-
 
 
 

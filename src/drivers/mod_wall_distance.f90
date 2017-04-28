@@ -1,18 +1,18 @@
 module mod_wall_distance
 #include <messenger.h>
-    use mod_kinds,          only: rk, ik
-    use mod_constants,      only: ZERO
-    use eqn_wall_distance,  only: set_p_poisson_parameter
-    use mod_function,       only: create_function
-    use type_function,      only: function_t
-    use type_chidg,         only: chidg_t
-    use type_bc_state,      only: bc_state_t
-    use type_dict,          only: dict_t
-    use mod_chidg_post,     only: chidg_post,chidg_post_vtk
-    use mod_bc,             only: create_bc
-    use mod_io,             only: gridfile
-    use mod_hdf_utilities,  only: get_properties_hdf, check_file_exists_hdf
-    use mod_chidg_mpi,      only: IRANK, NRANK, ChiDG_COMM
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: ZERO
+    use eqn_wall_distance,      only: set_p_poisson_parameter
+    use mod_function,           only: create_function
+    use type_function,          only: function_t
+    use type_chidg,             only: chidg_t
+    use type_bc_state,          only: bc_state_t
+    use type_dict,              only: dict_t
+    use mod_chidg_post,         only: chidg_post,chidg_post_vtk
+    use mod_bc,                 only: create_bc
+    use mod_io,                 only: gridfile
+    use mod_hdf_utilities,      only: get_properties_hdf, check_file_exists_hdf
+    use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM
     use type_file_properties,   only: file_properties_t
     implicit none
 
@@ -68,10 +68,10 @@ contains
         !
         ! Initialize options dictionaries
         !
-        call noptions%set('tol',1.e-8_rk)   ! Set nonlinear solver options
-        call noptions%set('cfl0',10.0_rk)
+        call noptions%set('tol',1.e-4_rk)   ! Set nonlinear solver options
+        call noptions%set('cfl0',0.1_rk)
         call noptions%set('nsteps',50)
-        call loptions%set('tol',1.e-10_rk)  ! Set linear solver options
+        call loptions%set('tol',1.e-7_rk)  ! Set linear solver options
 
 
 
@@ -85,6 +85,9 @@ contains
 
         order = chidg%nterms_s_1d
         call wall_distance%set('Solution Order', integer_input=order)
+
+        !wall_distance%nonlinear_solver%search = .false.
+        wall_distance%nonlinear_solver%search = .true.
 
 
         !
@@ -112,12 +115,19 @@ contains
         ! Solid walls get dirichlet zero bc.
         ! All other families get neumann zero bc.
         !
-        call wall_distance%read_grid(gridfile, equation_set='Wall Distance : p-Poisson')
-        call wall_distance%read_boundaryconditions(gridfile, bc_wall     = dirichlet_zero, &
-                                                             bc_inlet    = neumann_zero,   &
-                                                             bc_outlet   = neumann_zero,   &
-                                                             bc_symmetry = neumann_zero,   &
-                                                             bc_farfield = neumann_zero)
+!        call wall_distance%read_grid(gridfile, equation_set='Wall Distance : p-Poisson')
+!        call wall_distance%read_boundaryconditions(gridfile, bc_wall     = dirichlet_zero, &
+!                                                             bc_inlet    = neumann_zero,   &
+!                                                             bc_outlet   = neumann_zero,   &
+!                                                             bc_symmetry = neumann_zero,   &
+!                                                             bc_farfield = neumann_zero)
+
+        call wall_distance%read_grid(gridfile, equation_set = 'Wall Distance : p-Poisson',  &
+                                               bc_wall      = dirichlet_zero,               &
+                                               bc_inlet     = neumann_zero,                 &
+                                               bc_outlet    = neumann_zero,                 &
+                                               bc_symmetry  = neumann_zero,                 &
+                                               bc_farfield  = neumann_zero )
 
 
 
@@ -135,9 +145,9 @@ contains
         do iproc = 0,NRANK-1
             if (iproc == IRANK) then
 
-                wd_file_exists = check_file_exists_hdf('wall_distance.h5')
+                wd_file_exists = check_file_exists_hdf(fileout)
                 if (wd_file_exists) then
-                    wd_props = get_properties_hdf('wall_distance.h5')
+                    wd_props = get_properties_hdf(fileout)
                     wd_nterms_s = wd_props%nterms_s(1)
 
                     have_wd_field = (wd_nterms_s >= chidg%nterms_s)
@@ -156,13 +166,18 @@ contains
         !
         if (wd_file_exists .and. have_wd_field) then
 
-            call wall_distance%read_solution('wall_distance.h5')
+            call wall_distance%read_solution(fileout)
             wall_distance%data%sdata%q = wall_distance%data%sdata%q_in
 
         !
         ! If we don't have an accurate wall distance field in file, solve for a new one.
         !
         else
+
+            !
+            ! Store grid to file
+            !
+            call wall_distance%write_grid(fileout)
 
             ! Get wall-distance approximation for p-Poisson equation using a low-order
             ! polynomial expansion. We are going in steps of 'p' here to make sure
@@ -176,6 +191,10 @@ contains
             !       p = 2,4,6
             !
             iorder = 2
+            call noptions%set('tol',1.e-4_rk)   ! Set nonlinear solver options
+            call loptions%set('tol',1.e-5_rk)   ! Set linear solver options
+            call wall_distance%set('Nonlinear Solver', algorithm='Newton', options=noptions)
+            call wall_distance%set('Linear Solver'   , algorithm='fgmres_cgs',   options=loptions)
             do p = 2,6,2
                 call write_line('Wall Distance Driver : Loop 1 : p = ', p)
                 
@@ -197,7 +216,7 @@ contains
                 !
                 if (p == 2) then
                     call create_function(constant,'constant')
-                    call constant%set_option('val',0.1_rk)
+                    call constant%set_option('val',0.001_rk)
                     call wall_distance%data%sdata%q_in%project(wall_distance%data%mesh,constant,1)
 
                 else
@@ -209,7 +228,7 @@ contains
                 ! Run ChiDG simulation
                 !
                 call wall_distance%report('before')
-                call wall_distance%run()
+                call wall_distance%run(write_initial=.false., write_final=.false.)
                 call wall_distance%report('after')
 
 
@@ -242,6 +261,10 @@ contains
             !
             p = 6
             call set_p_poisson_parameter(real(p,rk))
+            call noptions%set('tol',1.e-5_rk)   ! Set nonlinear solver options
+            call loptions%set('tol',1.e-8_rk)   ! Set linear solver options
+            call wall_distance%set('Nonlinear Solver', algorithm='Quasi-Newton', options=noptions)
+            call wall_distance%set('Linear Solver'   , algorithm='fgmres_cgs',   options=loptions)
 
             order = chidg%nterms_s_1d
             do iorder = 3,order
@@ -260,13 +283,25 @@ contains
                 !
                 call wall_distance%read_solution(fileout)
 
+!                !
+!                ! Read solution if it exists.
+!                !
+!                !if (p == 2) then
+!                if (iorder == 2) then
+!                    call create_function(constant,'constant')
+!                    call constant%set_option('val',0.1_rk)
+!                    call wall_distance%data%sdata%q_in%project(wall_distance%data%mesh,constant,1)
+!
+!                else
+!                    call wall_distance%read_solution(fileout)
+!                end if
 
 
                 !
                 ! Run ChiDG simulation
                 !
                 call wall_distance%report('before')
-                call wall_distance%run()
+                call wall_distance%run(write_initial=.false., write_final=.false.)
                 call wall_distance%report('after')
 
 

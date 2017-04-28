@@ -1,7 +1,7 @@
 module model_wall_distance
 #include <messenger.h>
     use mod_kinds,          only: rk
-    use mod_constants,      only: HALF, ONE, TWO
+    use mod_constants,      only: ZERO, HALF, ONE, TWO, RKTOL
     use type_model,         only: model_t
     use type_chidg_worker,  only: chidg_worker_t
 !    use eqn_wall_distance,  only: get_p_poisson_parameter
@@ -96,6 +96,7 @@ contains
         grad3_d = worker%get_auxiliary_field_general('Wall Distance : p-Poisson', 'grad3')
 
 
+
         !
         ! Compute wall distance normalization
         !
@@ -103,6 +104,15 @@ contains
         p = 6._rk
         sumsqr = grad1_d*grad1_d + grad2_d*grad2_d + grad3_d*grad3_d
         d_normalization = (((p/(p-ONE))*d) + sumsqr**(p/TWO))**((p-ONE)/p) - sumsqr**((p-ONE)/TWO)
+
+
+        !
+        ! Don't allow negative
+        !
+        where (d_normalization < RKTOL) 
+            d_normalization = ZERO
+        end where
+
 
 
         !

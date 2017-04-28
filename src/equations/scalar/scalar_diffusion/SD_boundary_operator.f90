@@ -6,6 +6,7 @@ module SD_boundary_operator
     use type_chidg_worker,          only: chidg_worker_t
     use type_properties,            only: properties_t
     use DNAD_D
+    use ieee_arithmetic
     implicit none
 
     private
@@ -116,6 +117,8 @@ contains
         grad3_u_p = worker%get_primary_field_face('u', 'grad3 + lift', 'face exterior')
 
 
+
+
         !
         ! Compute scalar coefficient
         !
@@ -140,6 +143,7 @@ contains
         ! Compute boundary average flux
         !
         integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
+
 
         !
         ! Integrate flux

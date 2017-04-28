@@ -1,220 +1,5 @@
 @Test
-subroutine test_integrate_boundary_unit_constant()
-    use pfunit_mod
-    use mod_kinds,          only: rk, ik
-    use mod_constants,      only: ONE, DIAG, BOUNDARY_ADVECTIVE_FLUX, &
-                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, IO_DESTINATION
-    use mod_integrate,      only: integrate_boundary_scalar_flux
-
-    use type_chidg,                 only: chidg_t
-    use type_point,                 only: point_t
-    use type_bc_state,              only: bc_state_t
-    use type_bc_group,              only: bc_group_t
-    use type_domain_connectivity,   only: domain_connectivity_t
-    use type_boundary_connectivity, only: boundary_connectivity_t
-    use mod_bc,                     only: create_bc
-    use type_face_info,             only: face_info_t
-    use type_function_info,         only: function_info_t
-    use type_seed,                  only: seed_t
-
-
-    use type_function,      only: function_t
-    use mod_function,       only: create_function
-    use mod_test_utilities, only: create_mesh
-    use DNAD_D
-    implicit none
-
-
-
-    type(point_t),      allocatable     :: nodes(:)
-    type(domain_connectivity_t)         :: connectivity
-    type(boundary_connectivity_t)       :: bc_connectivity
-    type(chidg_t)                       :: chidg
-    class(bc_state_t),  allocatable     :: bc
-    type(bc_group_t)                    :: bc_groups(1)
-
-    integer(ik)                         :: nterms_c, iblk, idom, ngq, ielem, iface, ifcn, spacedim, mapping
-    integer(ik)                         :: idonor, ieqn, itime, igq
-    type(AD_D),         allocatable     :: integrand(:)
-    class(function_t),  allocatable     :: constant
-    real(rk)                            :: integral, ref_integral
-    type(face_info_t)                   :: face
-    type(function_info_t)               :: flux
-    type(seed_t)                        :: seed
-
-
-    IO_DESTINATION = 'file'
-
-
-    !
-    ! Initialize chidg environment
-    !
-    call chidg%start_up('core')
-    
-    
-
-    !
-    ! Initialize mesh and scalar equation set
-    !
-    call create_mesh('111u',nodes,connectivity)
-    idom     = 1
-    ielem    = 1
-    iface    = 1
-
-
-    spacedim = 3
-    mapping  = 1
-    nterms_c = 8
-    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection','Cartesian')
-
-
-    !
-    ! Need boundary conditions or else faces are ORPHAN and won't store integral
-    !
-    !allocate(bc_connectivity%data(1,4))
-    call bc_connectivity%init(1)
-    call bc_connectivity%data(1)%init(mapping)
-    call create_bc('Scalar Extrapolate',bc)
-
-    bc_groups(1)%name = "Test Integrate"
-    bc_groups(1)%family = 'Inlet'
-    call bc_groups(1)%bc_states%push_back(bc)
-
-    !
-    ! Create a bc_group to chidg_data
-    !
-    call chidg%data%add_bc_group(bc_groups(1))
-
-
-    !
-    ! Add bc_patches
-    !
-    call bc_connectivity%data(1)%set_face_nodes([1, 3, 5, 7])
-    call chidg%data%add_bc_patch('D_01',"Test Integrate",bc_connectivity)
-    call bc_connectivity%data(1)%set_face_nodes([2, 4, 6, 8])
-    call chidg%data%add_bc_patch('D_01',"Test Integrate",bc_connectivity)
-    call bc_connectivity%data(1)%set_face_nodes([1, 2, 5, 6])
-    call chidg%data%add_bc_patch('D_01',"Test Integrate",bc_connectivity)
-    call bc_connectivity%data(1)%set_face_nodes([3, 4, 7, 8])
-    call chidg%data%add_bc_patch('D_01',"Test Integrate",bc_connectivity)
-    call bc_connectivity%data(1)%set_face_nodes([1, 2, 3, 4])
-    call chidg%data%add_bc_patch('D_01',"Test Integrate",bc_connectivity)
-    call bc_connectivity%data(1)%set_face_nodes([5, 6, 7, 8])
-    call chidg%data%add_bc_patch('D_01',"Test Integrate",bc_connectivity)
-
-
-
-    !
-    ! Initialize solver data
-    !
-    call chidg%set('Solution Order', integer_input=1)
-    call chidg%init('domains')
-    call chidg%init('bc')
-    call chidg%init('communication')
-    call chidg%init('chimera')
-    call chidg%init('solvers')
-
-
-
-    !
-    ! Initialize solution to constant value
-    !
-    call create_function(constant,'constant')
-    call constant%set_option('val',1._rk)
-    call chidg%data%sdata%q%project(chidg%data%mesh,constant,1)
-
-
-    
-    !
-    ! Allocate flux array
-    !
-    associate ( faces => chidg%data%mesh(idom)%faces, sdata => chidg%data%sdata )
-    ngq = faces(ielem,iface)%gq%face%nnodes
-    allocate(integrand(ngq))
-    
-    do igq = 1,size(integrand)
-        allocate(integrand(igq)%xp_ad_(1))
-    end do
-
-
-
-    !
-    ! Compute constant flux on the face and dot with face normals
-    !
-    integrand = ONE*faces(ielem,iface)%norm(:,1)
-
-
-
-    seed%idomain_g  = 1
-    seed%idomain_l  = 1
-    seed%ielement_g = 1   ! doesn't matter what this is. Only checking the values here
-    seed%ielement_l = 1   ! doesn't matter what this is. Only checking the values here
-
-
-
-    face%idomain_g  = idom
-    face%idomain_l  = idom
-    face%ielement_g = ielem
-    face%ielement_l = ielem
-    face%iface      = iface
-!    face%seed       = seed
-
-
-    
-    ifcn    = 1
-    idonor  = 1
-    iblk    = DIAG
-
-    flux%type    = BOUNDARY_ADVECTIVE_FLUX
-    flux%ifcn    = ifcn
-    flux%idepend = idonor
-    flux%idiff   = iblk
-    flux%seed    = seed
-
-
-
-    !
-    ! Integrate boundary. THIS IS BEING TESTED
-    !
-    ieqn  = 1
-    itime = 1
-    call integrate_boundary_scalar_flux(chidg%data%mesh,sdata,face,flux,ieqn,itime,integrand)
-
-
-    integral = sdata%rhs%dom(1)%vecs(1)%vec(1)
-
-    end associate
-
-    ref_integral = -4._rk
-    @assertEqual(ref_integral,integral)
-
-
-
-    !
-    ! Close ChiDG interface
-    !
-    call chidg%shut_down('core')
-
-
-
-
-end subroutine test_integrate_boundary_unit_constant
-!************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-@Test
-subroutine test_integrate_boundary_nonunit_constant()
+subroutine test_integrate_boundary_constant()
     use pfunit_mod
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: ONE, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
@@ -225,31 +10,24 @@ subroutine test_integrate_boundary_nonunit_constant()
     use type_point,                 only: point_t
     use type_face_info,             only: face_info_t
     use type_function_info,         only: function_info_t
-    use type_domain_connectivity,   only: domain_connectivity_t
-    use type_boundary_connectivity, only: boundary_connectivity_t
     use type_seed,                  only: seed_t
-    use type_bc_state,              only: bc_state_t
-    use type_bc_group,              only: bc_group_t
-    use mod_bc,                     only: create_bc
 
     use type_function,              only: function_t
     use mod_function,               only: create_function
-    use mod_test_utilities,         only: create_mesh
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: delete_file
+    use mod_string,                 only: string_t
     use DNAD_D
     implicit none
 
 
 
-    type(point_t),      allocatable     :: nodes(:)
-    type(domain_connectivity_t)         :: connectivity
-    type(boundary_connectivity_t)       :: bc_connectivity
     type(chidg_t)                       :: chidg
-    class(bc_state_t),   allocatable    :: bc
-    type(bc_group_t)                    :: bc_groups(1)
-    integer(ik)                         :: nterms_c, igq, ngq, ieqn, itime, ifcn, spacedim, mapping
+    integer(ik)                         :: igq, ngq, ieqn, itime, ifcn
     integer(ik)                         :: idomain, iblk, idonor
     type(AD_D),         allocatable     :: integrand(:)
     class(function_t),  allocatable     :: constant
+    character(:),       allocatable     :: file_name
     real(rk)                            :: integral, ref_integral
     type(face_info_t)                   :: face
     type(function_info_t)               :: flux
@@ -265,63 +43,24 @@ subroutine test_integrate_boundary_nonunit_constant()
     
 
     !
-    ! Initialize mesh and scalar equation set
+    ! Create a 1-element grid
     !
-    call create_mesh('111',nodes,connectivity)
-
-
-    spacedim = 3
-    mapping  = 1
-    nterms_c = 8
-
-
-    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection','Cartesian')
+    file_name = 'D1_1x1x1.h5'
+    call create_mesh_file('D1 NxNxN', file_name, equation_sets=[string_t('Scalar Advection')], &
+                                                 nelem_xi=1, nelem_eta=1, nelem_zeta=1)
 
 
     !
-    ! Need boundary conditions or else faces are ORPHAN and won't store integral
+    ! Set the accuracy for the solution expansion
     !
-    call bc_connectivity%init(1)
-    call bc_connectivity%data(1)%init(mapping)
-    call create_bc('Scalar Extrapolate',bc)
-
-    bc_groups(1)%name = "Test Integrate"
-    bc_groups(1)%family = 'Inlet'
-    call bc_groups(1)%bc_states%push_back(bc)
-
-    !
-    ! Add bc_group to chidg_data
-    !
-    call chidg%data%add_bc_group(bc_groups(1))
-
-
-    !
-    ! Add bc_patches to chidg_data
-    !
-    call bc_connectivity%data(1)%set_face_nodes([1, 3, 5, 7])
-    call chidg%data%add_bc_patch('D_01',"Test Integrate",bc_connectivity)
-    call bc_connectivity%data(1)%set_face_nodes([2, 4, 6, 8])
-    call chidg%data%add_bc_patch('D_01',"Test Integrate",bc_connectivity)
-    call bc_connectivity%data(1)%set_face_nodes([1, 2, 5, 6])
-    call chidg%data%add_bc_patch('D_01',"Test Integrate",bc_connectivity)
-    call bc_connectivity%data(1)%set_face_nodes([3, 4, 7, 8])
-    call chidg%data%add_bc_patch('D_01',"Test Integrate",bc_connectivity)
-    call bc_connectivity%data(1)%set_face_nodes([1, 2, 3, 4])
-    call chidg%data%add_bc_patch('D_01',"Test Integrate",bc_connectivity)
-    call bc_connectivity%data(1)%set_face_nodes([5, 6, 7, 8])
-    call chidg%data%add_bc_patch('D_01',"Test Integrate",bc_connectivity)
-
-
-    !
-    ! Initialize solver data 
-    !
-
     call chidg%set('Solution Order', integer_input=1)
-    call chidg%init('domains')
-    call chidg%init('bc')
-    call chidg%init('communication')
-    call chidg%init('chimera')
-    call chidg%init('solvers')
+
+
+    !
+    ! Read grid
+    !
+    call chidg%read_grid(file_name)
+
 
 
     !
@@ -335,7 +74,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     !
     ! Allocate flux array
     !
-    associate ( faces => chidg%data%mesh(1)%faces, sdata => chidg%data%sdata )
+    associate ( faces => chidg%data%mesh%domain(1)%faces, sdata => chidg%data%sdata )
     ngq = faces(1,1)%gq%face%nnodes
     allocate(integrand(ngq))
     
@@ -366,7 +105,8 @@ subroutine test_integrate_boundary_nonunit_constant()
     idomain = 1
     ieqn    = 1
     itime   = 1
-    iblk    = 7
+    !iblk    = 7
+    iblk    = face%iface
     idonor  = 1
     ifcn    = 1
 
@@ -384,6 +124,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     ! Test Face XI_MIN
     !!!!!!!!!!!!!!!!!!!!!!!
     face%iface = XI_MIN
+    flux%idiff = XI_MIN
     !
     ! Integrate boundary. THIS IS BEING TESTED
     !
@@ -404,6 +145,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     ! Test Face XI_MAX
     !!!!!!!!!!!!!!!!!!!!!!!
     face%iface = XI_MAX
+    flux%idiff = XI_MAX
     !
     ! Integrate boundary. THIS IS BEING TESTED
     !
@@ -427,6 +169,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     ! Test Face ETA_MIN
     !!!!!!!!!!!!!!!!!!!!!!!
     face%iface = ETA_MIN
+    flux%idiff = ETA_MIN
     !
     ! Integrate boundary. THIS IS BEING TESTED
     !
@@ -452,6 +195,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     ! Test Face ETA_MAX
     !!!!!!!!!!!!!!!!!!!!!!!
     face%iface = ETA_MAX
+    flux%idiff = ETA_MAX
     !
     ! Integrate boundary. THIS IS BEING TESTED
     !
@@ -476,6 +220,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     ! Test Face ZETA_MIN
     !!!!!!!!!!!!!!!!!!!!!!!
     face%iface = ZETA_MIN
+    flux%idiff = ZETA_MIN
     !
     ! Integrate boundary. THIS IS BEING TESTED
     !
@@ -500,6 +245,7 @@ subroutine test_integrate_boundary_nonunit_constant()
     ! Test Face ZETA_MAX
     !!!!!!!!!!!!!!!!!!!!!!!
     face%iface = ZETA_MAX
+    flux%idiff = ZETA_MAX
     !
     ! Integrate boundary. THIS IS BEING TESTED
     !
@@ -531,10 +277,14 @@ subroutine test_integrate_boundary_nonunit_constant()
     !
     call chidg%shut_down('core')
 
+    !
+    ! Clean up
+    !
+    call delete_file(file_name)
 
 
 
-end subroutine
+end subroutine test_integrate_boundary_constant
 
 
 

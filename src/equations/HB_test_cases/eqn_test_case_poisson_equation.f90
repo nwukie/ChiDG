@@ -67,6 +67,7 @@ contains
         class(test_case_poisson_equation_model), intent(inout)  :: self
 
         call self%set_name('Test Case Poisson Equation Model')
+        call self%set_dependency('f(Q-)')
 
         call self%add_model_field('Scalar Diffusion Coefficient')
 

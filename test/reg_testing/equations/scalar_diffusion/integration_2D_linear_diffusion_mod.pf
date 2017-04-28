@@ -41,7 +41,7 @@ module integration_2D_linear_diffusion_mod
     use mod_bc,                 only: create_bc
     use mod_string,             only: string_t
     use type_bc_state,          only: bc_state_t
-    use type_bc_group,          only: bc_group_t
+    use type_bc_state_group,          only: bc_state_group_t
     use type_function,          only: function_t
     use type_ivector,           only: ivector_t
     use mod_function,           only: create_function
@@ -518,7 +518,7 @@ contains
 
         class(function_t),  allocatable :: fcn
         class(bc_state_t),  allocatable :: bc_state
-        type(bc_group_t)                :: bc_groups(2)
+        type(bc_state_group_t)                :: bc_state_groups(2)
         type(string_t)                  :: group_names(1,6)
 
         
@@ -570,7 +570,6 @@ contains
         !
         !------------------------------------------------------------------------------
         basis            = "legendre"
-        spacedim         = 3
         gq_rule          = 1
         time_integrator  = "steady"
         nonlinear_solver = "newton"
@@ -611,17 +610,17 @@ contains
         ! Create mesh
         !
         if (IRANK == GLOBAL_MASTER) then
-            bc_groups(1)%name = "XY Boundaries"
-            bc_groups(2)%name = "Z Boundaries"
+            bc_state_groups(1)%name = "XY Boundaries"
+            bc_state_groups(2)%name = "Z Boundaries"
 
 
             call create_bc("Scalar Value", bc_state)
             call bc_state%set_fcn_option("Value","val",ZERO)
-            call bc_groups(1)%bc_states%push_back(bc_state)
+            call bc_state_groups(1)%add_bc_state(bc_state)
 
 
             call create_bc("Scalar Extrapolate", bc_state)
-            call bc_groups(2)%bc_states%push_back(bc_state)
+            call bc_state_groups(2)%add_bc_state(bc_state)
 
 
             group_names(1,:) = [ string_t("XY Boundaries"), &
@@ -632,21 +631,13 @@ contains
                                  string_t("Z Boundaries") ]
 
 
-            call create_mesh_file("D1 NxNxN",this%gridfile,equation_sets=[string_t("Test 2D Linear Diffusion")], &
-                                                           group_names = group_names,                   &
-                                                           bc_groups   = bc_groups,                     &
-                                                           nelem_xi    = this%nelem_xi,                 &
-                                                           nelem_eta   = this%nelem_eta,                &
-                                                           nelem_zeta  = 1)
+            call create_mesh_file("D1 NxNxN",this%gridfile,equation_sets   = [string_t("Test 2D Linear Diffusion")], &
+                                                           group_names     = group_names,                            &
+                                                           bc_state_groups = bc_state_groups,                        &
+                                                           nelem_xi        = this%nelem_xi,                          &
+                                                           nelem_eta       = this%nelem_eta,                         &
+                                                           nelem_zeta      = 1)
         end if
-
-
-
-        !
-        ! Read grid
-        !
-        call this%chidg%read_grid(this%gridfile,spacedim)
-        call this%chidg%read_boundaryconditions(this%gridfile)
 
 
         !
@@ -660,9 +651,9 @@ contains
 
 
         !
-        ! Wrap-up initialization activities
+        ! Read grid
         !
-        call this%chidg%init('all')
+        call this%chidg%read_grid(this%gridfile)
 
 
         !
@@ -902,15 +893,15 @@ contains
             ! Loop over elements and accumulate error
             !
             itime = 1
-            do idom = 1,data%ndomains()
-                do ielem = 1,data%mesh(idom)%nelem
+            do idom = 1,data%mesh%ndomains()
+                do ielem = 1,data%mesh%domain(idom)%nelem
 
 
                     !
                     ! Compute the analytical solution at the quadrature nodes
                     !
-                    x_gq = mesh(idom)%elems(ielem)%quad_pts(:)%c1_
-                    y_gq = mesh(idom)%elems(ielem)%quad_pts(:)%c2_
+                    x_gq = mesh%domain(idom)%elems(ielem)%quad_pts(:)%c1_
+                    y_gq = mesh%domain(idom)%elems(ielem)%quad_pts(:)%c2_
                     u_analytical = dsin(PI*x_gq)*dsin(PI*y_gq)
 
                     !
@@ -927,7 +918,7 @@ contains
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh(idom)%elems(ielem)%jinv * mesh(idom)%elems(ielem)%gq%vol%weights)
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%gq%vol%weights)
 
 
                     !

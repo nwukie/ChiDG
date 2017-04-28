@@ -46,6 +46,7 @@ module type_densevector
         procedure, public :: nterms         !< return nterms_
         procedure, public :: nvars          !< return nvars_
         procedure, public :: ntime          !< return ntime_
+        procedure, public :: set_ntime      !< procedure for changing ntime 
 
         procedure, public :: settime
         procedure, public :: gettime
@@ -326,7 +327,7 @@ contains
         class(densevector_t),   intent(in)      :: self
         integer(ik),            intent(in)      :: ivar, itime
 
-        real(rk)                                :: modes_out(self%ntime_*self%nterms_)
+        real(rk)                                :: modes_out(self%nterms_)
         integer(ik)                             :: istart, iend
         
         !
@@ -571,6 +572,41 @@ contains
     !***************************************************************************************
   
     
+
+
+
+
+
+
+    !>  Subroutine to change ntime in the densevector to a value passed in 
+    !!  Called in type_chidg_vector
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/9/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine set_ntime(self,ntime_in)
+        class(densevector_t),   intent(inout)   :: self
+        integer(ik),            intent(in)      :: ntime_in
+
+        !
+        ! Set ntime
+        !
+        self%ntime_ = ntime_in
+
+        !
+        ! Reinitialize the densevector
+        ! TODO: Move outside this subroutine?
+        !
+        call init(self,self%nterms_,self%nvars_,self%ntime_,self%dparent_g_, &
+                  self%dparent_l_, self%eparent_g_, self%eparent_l_)
+
+
+    end subroutine set_ntime
+    !***************************************************************************************
+  
+    
+
 
 
 

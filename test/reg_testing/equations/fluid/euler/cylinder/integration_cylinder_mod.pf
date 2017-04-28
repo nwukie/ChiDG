@@ -45,7 +45,7 @@ module integration_cylinder_mod
     use mod_string,             only: string_t
     use mod_bc,                 only: create_bc
     use type_bc_state,          only: bc_state_t
-    use type_bc_group,          only: bc_group_t
+    use type_bc_state_group,    only: bc_state_group_t
     use type_chidg,             only: chidg_t
     use type_function,          only: function_t
     use type_rvector,           only: rvector_t
@@ -202,7 +202,7 @@ contains
         class(cylinder),  intent(inout)   :: this
 
         class(bc_state_t),  allocatable :: bc_state
-        type(bc_group_t)                :: bc_groups(3)
+        type(bc_state_group_t)          :: bc_state_groups(3)
         type(string_t)                  :: group_names(4,6)
         class(function_t),  allocatable :: fcn
         real(rk)                        :: tol
@@ -219,7 +219,6 @@ contains
         !------------------------------------------------------------------------------
         this%gridfile    = 'cylinder.h5'
         basis            = 'legendre'
-        spacedim         = 3
         gq_rule          = 2
         time_integrator  = 'steady'
         nonlinear_solver = 'quasi_newton'
@@ -266,29 +265,29 @@ contains
         if (IRANK == GLOBAL_MASTER) then
 
             ! Set bc_group names
-            bc_groups(1)%name = 'Inlet'
-            bc_groups(2)%name = 'Outlet'
-            bc_groups(3)%name = 'Walls'
+            bc_state_groups(1)%name = 'Inlet'
+            bc_state_groups(2)%name = 'Outlet'
+            bc_state_groups(3)%name = 'Walls'
 
             ! Set bc_group families
-            bc_groups(1)%family = 'Inlet'
-            bc_groups(2)%family = 'Outlet'
-            bc_groups(3)%family = 'Wall'
+            bc_state_groups(1)%family = 'Inlet'
+            bc_state_groups(2)%family = 'Outlet'
+            bc_state_groups(3)%family = 'Wall'
 
             ! Add bc_state to Inlet group            
             call create_bc('Inlet - Total', bc_state)
             call bc_state%set_fcn_option('Total Pressure',    'val', 110000._rk)
             call bc_state%set_fcn_option('Total Temperature', 'val', 300._rk)
-            call bc_groups(1)%bc_states%push_back(bc_state)
+            call bc_state_groups(1)%add_bc_state(bc_state)
 
             ! Add bc_state to Outlet group
             call create_bc('Outlet - Constant Pressure', bc_state)
             call bc_state%set_fcn_option('Static Pressure', 'val', 100000._rk)
-            call bc_groups(2)%bc_states%push_back(bc_state)
+            call bc_state_groups(2)%add_bc_state(bc_state)
 
             ! Add bc_state to Walls group
             call create_bc('Wall', bc_state)
-            call bc_groups(3)%bc_states%push_back(bc_state)
+            call bc_state_groups(3)%add_bc_state(bc_state)
 
 
             ! Set bc_group name for each patch on each domain
@@ -326,21 +325,10 @@ contains
 
 
             call create_mesh_file('Cylinder : Diagonal : NonMatching MultipleDonor',this%gridfile,  &
-                                                            equation_sets=[string_t('Euler')],      &
-                                                            group_names  = group_names,             &
-                                                            bc_groups    = bc_groups)
+                                                            equation_sets   = [string_t('Euler')],  &
+                                                            group_names     = group_names,          &
+                                                            bc_state_groups = bc_state_groups)
         end if
-
-
-
-
-
-        !
-        ! Read grid
-        !
-        call this%chidg%read_grid(this%gridfile,spacedim)
-        call this%chidg%read_boundaryconditions(this%gridfile)
-
 
 
         !
@@ -355,9 +343,9 @@ contains
 
 
         !
-        ! Initialize solution data storage
+        ! Read grid
         !
-        call this%chidg%init('all')
+        call this%chidg%read_grid(this%gridfile)
 
 
 
@@ -488,11 +476,11 @@ contains
             dom_search = doms_top(ielem_search)
             elem_search = elems_top(ielem_search)
 
-            do idom = 1,self%chidg%data%ndomains()
-                if (self%chidg%data%mesh(idom)%idomain_g == dom_search) then
+            do idom = 1,self%chidg%data%mesh%ndomains()
+                if (self%chidg%data%mesh%domain(idom)%idomain_g == dom_search) then
 
-                    do ielem = 1,size(self%chidg%data%mesh(idom)%elems)
-                        if (self%chidg%data%mesh(idom)%elems(ielem)%ielement_g == elem_search) then
+                    do ielem = 1,size(self%chidg%data%mesh%domain(idom)%elems)
+                        if (self%chidg%data%mesh%domain(idom)%elems(ielem)%ielement_g == elem_search) then
 
                             call MPI_ISend(self%chidg%data%sdata%q%dom(idom)%vecs(ielem)%vec, send_size, MPI_REAL8, GLOBAL_MASTER, 0, ChiDG_COMM, tmp_request, ierr)
 
@@ -505,11 +493,11 @@ contains
             dom_search = doms_bot(ielem_search)
             elem_search = elems_bot(ielem_search)
 
-            do idom = 1,self%chidg%data%ndomains()
-                if (self%chidg%data%mesh(idom)%idomain_g == dom_search) then
+            do idom = 1,self%chidg%data%mesh%ndomains()
+                if (self%chidg%data%mesh%domain(idom)%idomain_g == dom_search) then
 
-                    do ielem = 1,size(self%chidg%data%mesh(idom)%elems)
-                        if (self%chidg%data%mesh(idom)%elems(ielem)%ielement_g == elem_search) then
+                    do ielem = 1,size(self%chidg%data%mesh%domain(idom)%elems)
+                        if (self%chidg%data%mesh%domain(idom)%elems(ielem)%ielement_g == elem_search) then
 
                             call MPI_ISend(self%chidg%data%sdata%q%dom(idom)%vecs(ielem)%vec, send_size, MPI_REAL8, GLOBAL_MASTER, 1, ChiDG_COMM, tmp_request, ierr)
 

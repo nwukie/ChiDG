@@ -31,7 +31,7 @@ module type_fgmres_cgs
     !---------------------------------------------------------------------------------------------
     type, public, extends(linear_solver_t) :: fgmres_cgs_t
 
-        integer(ik) :: m = 500
+        integer(ik) :: m = 2000
 
     contains
 
@@ -155,7 +155,8 @@ contains
         self%niter = 0
 
 
-        res = 1000000000000._rk
+        !res = 1000000000000._rk
+        res = huge(1._rk)
         do while (res > self%tol)
 
             !

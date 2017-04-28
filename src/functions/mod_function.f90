@@ -11,6 +11,7 @@ module mod_function
     use fcn_ysquared,                       only: ysquared_f
     use fcn_zsquared,                       only: zsquared_f
     use fcn_xyz,                            only: xyz_f
+    use fcn_radius,                         only: radius_f
     use fcn_gaussian,                       only: gaussian_f
     use fcn_constant,                       only: constant_f
     use fcn_sine,                           only: sine_f
@@ -50,6 +51,7 @@ contains
         type(ysquared_f)                        :: ysquared
         type(zsquared_f)                        :: zsquared
         type(xyz_f)                             :: xyz
+        type(radius_f)                          :: radius
         type(gaussian_f)                        :: gaussian
         type(constant_f)                        :: constant
         type(sine_f)                            :: sin_function
@@ -71,6 +73,7 @@ contains
             call registered_fcns%push_back(ysquared)
             call registered_fcns%push_back(zsquared)
             call registered_fcns%push_back(xyz)
+            call registered_fcns%push_back(radius)
             call registered_fcns%push_back(gaussian)
             call registered_fcns%push_back(constant)
             call registered_fcns%push_back(sin_function)

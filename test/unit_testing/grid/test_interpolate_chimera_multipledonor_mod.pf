@@ -5,7 +5,6 @@ module test_interpolate_chimera_multipledonor_mod
     use type_meshdata,      only: meshdata_t
     use type_face_info,     only: face_info_t
     use type_function_info, only: function_info_t
-    use type_bc,            only: bc_t
     use mod_bc,             only: create_bc
 
 
@@ -58,9 +57,8 @@ contains
     subroutine setUp(this)
         class(test_interpolate_chimera_multipledonor),    intent(inout)   :: this
 
-        integer(ik)                     :: ieqn, idom, spacedim
+        integer(ik)                     :: ieqn, idom
         type(meshdata_t),   allocatable :: meshdata(:) 
-        class(bc_t),        allocatable :: bc
         
         !
         ! Send log to file
@@ -79,24 +77,20 @@ contains
         this%filename = "D2E8M1_overlapping_multipledonor.h5"
         call create_mesh_file("D2 E8 M1 : Overlapping : NonMatching",this%filename)
 
-        !
-        ! Read D2_E8_M1. Two domains, 2x2x2 elements in each domain, linear mapping
-        !
-        spacedim = 3
-        call this%chidg%read_grid(this%filename,spacedim)
-        call this%chidg%read_boundaryconditions(this%filename)
-
 
 
         !
-        ! Initialize chidg solution data storage
+        ! Set the order of accuracy for the solution
         !
         call this%chidg%set('Solution Order', integer_input=2)
 
-        call this%chidg%init('domains')
-        call this%chidg%init('communication')
-        call this%chidg%init('chimera')
-        call this%chidg%init('solvers')
+
+
+        !
+        ! Read D2_E8_M1. Two domains, 2x2x2 elements in each domain, linear mapping
+        !
+        call this%chidg%read_grid(this%filename)
+
 
         !
         ! Initialized solution to constant values
@@ -165,7 +159,7 @@ contains
         type(function_info_t)       :: fcn
         
         
-        associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q)        
             idomain = 1         ! domain index
             ielem   = 2         ! given element
             iface   = XI_MAX    ! given face
@@ -253,7 +247,7 @@ contains
         type(function_info_t)       :: fcn
         
         
-        associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q)        
             idomain = 1         ! domain index
             ielem   = 2         ! given element
             iface   = XI_MAX    ! given face
@@ -342,7 +336,7 @@ contains
         type(function_info_t)       :: fcn
         
         
-        associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q )
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q )
             idomain = 1         ! domain index
             ielem   = 2         ! given element
             iface   = XI_MAX    ! given face
@@ -433,14 +427,14 @@ contains
         integer(ik)                 :: idonor, ChiID, ndonor_nodes, node_index
         
         
-        associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q)        
             idomain = 1         ! domain index
             ielem   = 2         ! given element
             iface   = XI_MAX    ! given face
             itime   = 1
             idonor  = 1
 
-            ChiID = self%chidg%data%mesh(idomain)%faces(ielem,iface)%ChiID
+            ChiID = self%chidg%data%mesh%domain(idomain)%faces(ielem,iface)%ChiID
 
             !
             ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so all 
@@ -491,11 +485,11 @@ contains
             !
             ! Test derivatives from first donor
             !
-            mat = self%chidg%data%mesh(idomain)%chimera%recv%data(ChiID)%donor_interpolator%at(idonor)
-            ndonor_nodes = self%chidg%data%mesh(idomain)%chimera%recv%data(ChiID)%donor_gq_indices(idonor)%size()
+            mat = self%chidg%data%mesh%domain(idomain)%chimera%recv%data(ChiID)%donor_interpolator%at(idonor)
+            ndonor_nodes = self%chidg%data%mesh%domain(idomain)%chimera%recv%data(ChiID)%donor_gq_indices(idonor)%size()
 
             do igq = 1,ndonor_nodes
-                node_index = self%chidg%data%mesh(idomain)%chimera%recv%data(ChiID)%donor_gq_indices(idonor)%at(igq)
+                node_index = self%chidg%data%mesh%domain(idomain)%chimera%recv%data(ChiID)%donor_gq_indices(idonor)%at(igq)
 
                 deriv_ref = mat(igq,:)     ! Set expected derivatives
                 
@@ -511,11 +505,11 @@ contains
             ! Test derivatives from second donor
             !
             idonor = 2
-            mat = self%chidg%data%mesh(idomain)%chimera%recv%data(ChiID)%donor_interpolator%at(idonor)
-            ndonor_nodes = self%chidg%data%mesh(idomain)%chimera%recv%data(ChiID)%donor_gq_indices(idonor)%size()
+            mat = self%chidg%data%mesh%domain(idomain)%chimera%recv%data(ChiID)%donor_interpolator%at(idonor)
+            ndonor_nodes = self%chidg%data%mesh%domain(idomain)%chimera%recv%data(ChiID)%donor_gq_indices(idonor)%size()
 
             do igq = 1,ndonor_nodes
-                node_index = self%chidg%data%mesh(idomain)%chimera%recv%data(ChiID)%donor_gq_indices(idonor)%at(igq)
+                node_index = self%chidg%data%mesh%domain(idomain)%chimera%recv%data(ChiID)%donor_gq_indices(idonor)%at(igq)
 
                 deriv_ref = mat(igq,:)      ! Set expected derivatives
                 deriv_ref = ZERO            ! should be zero since donor 1 was being differentiated and this is donor two

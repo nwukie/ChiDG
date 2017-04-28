@@ -107,25 +107,6 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../../examples/example_main.html">Examples</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html">Smooth bump</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#background">Background</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup">Setup</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup-from-scratch">Setup from scratch:</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#use-setup-provided">Use setup provided:</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#results">Results</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html">NACA 2412 Airfoil</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#background">Background</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#set-up">Set-up</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#results">Results</a></li>
-</ul>
-</li>
-</ul>
-</li>
 <li class="toctree-l1 current"><a class="reference internal" href="../details_main.html">Code details</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../architecture/detail_architecture.html">Finding your way around ChiDG</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../architecture/detail_architecture.html#source-layout-chidg-src">Source Layout <code class="docutils literal"><span class="pre">chidg/src</span></code></a><ul>
@@ -248,6 +229,25 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/example_main.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html">Smooth bump</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#background">Background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup">Setup</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup-from-scratch">Setup from scratch:</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#use-setup-provided">Use setup provided:</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#results">Results</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html">NACA 2412 Airfoil</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#background">Background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#set-up">Set-up</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#results">Results</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 
             
@@ -303,21 +303,23 @@
 <div class="math">
 \[\begin{split}Q_{cart} =
 \begin{pmatrix}
-  \rho \\ \rho u_x \\ \rho u_y \\ \rho u_z \\ \rho E
+  \rho \\ \rho v_x \\ \rho v_y \\ \rho v_z \\ \rho E
 \end{pmatrix}
 \quad\quad
 Q_{cyl} =
 \begin{pmatrix}
-  \rho \\ \rho u_r \\ r \rho u_\theta \\ \rho u_z \\ \rho E
+  \rho \\ \rho v_r \\ r \rho v_\theta \\ \rho v_z \\ \rho E
 \end{pmatrix}\end{split}\]</div>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">In <code class="docutils literal"><span class="pre">Cylindrical</span></code> coordinates, angular momentum, <span class="math">\(r \rho u_\theta\)</span>, is being conserved. Not tangential momentum, <span class="math">\(\rho u_\theta\)</span>.</p>
+<p class="last">In <code class="docutils literal"><span class="pre">Cylindrical</span></code> coordinates, angular momentum, <span class="math">\(r \rho v_\theta\)</span>,
+is being conserved. Not tangential momentum, <span class="math">\(\rho v_\theta\)</span>.</p>
 </div>
-<p>The transformation of the momentum vector between <code class="docutils literal"><span class="pre">Cartesian</span></code> and <code class="docutils literal"><span class="pre">Cylindrical</span></code> coordinates is</p>
+<p>The transformation of the momentum vector between <code class="docutils literal"><span class="pre">Cartesian</span></code> and
+<code class="docutils literal"><span class="pre">Cylindrical</span></code> coordinates is</p>
 <div class="math">
 \[\begin{split}\begin{bmatrix}
-    \rho u_x \\ \rho u_y \\ \rho u_z
+    \rho v_x \\ \rho v_y \\ \rho v_z
 \end{bmatrix}
 =
 \begin{bmatrix}
@@ -326,15 +328,35 @@ Q_{cyl} =
     0 &amp; 0 &amp; 1
 \end{bmatrix}
 \begin{bmatrix}
-    \rho u_r \\ \rho u_\theta \\ \rho u_z
+    \rho v_r \\ \rho v_\theta \\ \rho v_z
 \end{bmatrix}\end{split}\]</div>
 <p>The velocity vector in <code class="docutils literal"><span class="pre">Cartesian</span></code> and <code class="docutils literal"><span class="pre">Cylindrical</span></code> coordinates is</p>
 <div class="math">
-\[\vec{u} = [u_x, u_y, u_z]       \quad\quad  \vec{u} = [u_r, u_\theta, u_z]\]</div>
-<p>At times, when a formula is independent of the coordinate system, generic
-components of velocity will be used</p>
+\[\vec{u} = [v_x, v_y, v_z]       \quad\quad  \vec{v} = [v_r, v_\theta, v_z]\]</div>
+<p>Some distinctions are made here between absolute, relative, and frame velocities.
+The absolute velocity(<span class="math">\(v\)</span>) is that which is perceived in the inertial frame of
+reference. The relative(or advection)(<span class="math">\(w\)</span>) velocity is the velocity, which is perceived
+in the non-inertial frame of reference. The frame velocity(<span class="math">\(u\)</span>) is the velocity of
+the moving coordinate system. These are defined in the Cartesian and Cylindrical
+coordinate systems as</p>
 <div class="math">
-\[\vec{u} = [u,v,w]\]</div>
+\[\begin{split}\vec{v} &amp;= [v_x, v_y, v_z]   \quad\quad\:\:\:\:  \vec{v} = [v_r, v_\theta, v_y] \\
+\vec{w} &amp;= [w_x, w_y, w_z]   \quad\quad          \vec{w} = [w_r, w_\theta, w_y] \\
+\vec{u} &amp;= [u_x, u_y, u_z]   \quad\quad\:\:\:    \vec{u} = [u_r, u_\theta, u_y]\end{split}\]</div>
+<p>For calculations using an inertial frame, the frame velocity is zero.</p>
+<div class="math">
+\[\vec{u} = [0, 0, 0]\]</div>
+<p>For a rotating Cylindrical coordinate system, the frame velocity is</p>
+<div class="math">
+\[\vec{u}_{cyl} = [0, \omega r, 0]\]</div>
+<p>where <span class="math">\(\omega\)</span> is the rotational rate in <span class="math">\(rad/s\)</span>. The relation
+between absolute, relative, and frame velocities is</p>
+<div class="math">
+\[\vec{v} = \vec{w} + \vec{u}\]</div>
+<p>At times, components of the velocity vectors are represented in the same manner
+for both coordinate systems</p>
+<div class="math">
+\[\vec{v}  = [v_1,v_2,v_3]\]</div>
 <p>Within the framework, effort has been invested in representing quantities
 such that they are consistent with vector calculus. As such, representations
 of a gradient in <code class="docutils literal"><span class="pre">Cartesian</span></code> and <code class="docutils literal"><span class="pre">Cylindrical</span></code> coordinates as</p>
@@ -356,34 +378,57 @@ of a gradient in <code class="docutils literal"><span class="pre">Cartesian</spa
 </div>
 <div class="section" id="fluid-advection">
 <h2>Fluid Advection<a class="headerlink" href="#fluid-advection" title="Permalink to this headline">¶</a></h2>
-<p>The fluxes governing fluid advection are</p>
+<p>The fluxes representing advective transport for the fluid equations
+are given compactly as</p>
+<div class="math">
+\[\begin{split}\vec{F}_a(Q) =
+\begin{pmatrix}
+    \rho \vec{w} \\
+    \mathcal{S} (\rho \vec{v} \otimes \vec{w} + \overline{\overline{I}}p) \\
+    \rho H \vec{w} + \vec{u} p
+\end{pmatrix}
+\quad\quad
+\mathcal{S}_{cart} =
+\begin{pmatrix}
+    1   \\  1   \\  1
+\end{pmatrix}
+\quad\quad
+\mathcal{S}_{cyl} =
+\begin{pmatrix}
+    1   \\  r   \\  1
+\end{pmatrix}\end{split}\]</div>
+<p>where <span class="math">\(\mathcal{S}\)</span> is a scaling vector that is sued to provide the correct
+dimensional scaling for the angular momentum equation. Expanded forms for the
+fluxes in Cartesian and Cylindrical coordinates are given as follows.</p>
 <div class="section" id="cartesian">
 <h3>Cartesian<a class="headerlink" href="#cartesian" title="Permalink to this headline">¶</a></h3>
 <div class="math">
 \[\begin{split}\vec{F}_a(\vec{x},Q) =
+\begin{pmatrix}
 \begin{bmatrix}
-  \rho     u_x        \\
-  \rho u_x u_x  +  p  \\
-  \rho u_y u_x        \\
-  \rho u_z u_x        \\
-  \rho H   u_x
+    \rho     w_x       \\
+    \rho v_x w_x  +  p \\
+    \rho v_y w_x       \\
+    \rho v_z w_x       \\
+    \rho H   w_x  + u_x p
 \end{bmatrix}
 ,
 \begin{bmatrix}
-  \rho     u_y        \\
-  \rho u_x u_y        \\
-  \rho u_y u_y  +  p  \\
-  \rho u_z u_y        \\
-  \rho H   u_y
+    \rho     w_y        \\
+    \rho v_x w_y        \\
+    \rho v_y w_y  +  p  \\
+    \rho v_z w_y        \\
+    \rho H   w_y  + u_y p
 \end{bmatrix}
 ,
 \begin{bmatrix}
-  \rho     u_z       \\
-  \rho u_x u_z        \\
-  \rho u_y u_z        \\
-  \rho u_z u_z  +  p  \\
-  \rho H   u_z
+    \rho     w_z       \\
+    \rho v_x w_z        \\
+    \rho v_y w_z        \\
+    \rho v_z w_z  +  p  \\
+    \rho H   w_z  +  u_z p
 \end{bmatrix}
+\end{pmatrix}
 \quad\quad
 S_a(\vec{x},Q) =
 \begin{pmatrix}
@@ -394,33 +439,35 @@ S_a(\vec{x},Q) =
 <h3>Cylindrical<a class="headerlink" href="#cylindrical" title="Permalink to this headline">¶</a></h3>
 <div class="math">
 \[\begin{split}\vec{F}_a(\vec{r},Q) =
+\begin{pmatrix}
 \begin{bmatrix}
-    \rho          u_r        \\
-    \rho u_r      u_r  +  p  \\
-  r \rho u_\theta u_r        \\
-    \rho u_z      u_r        \\
-    \rho H        u_r
+    \rho          w_r              \\
+    \rho v_r      w_r  +  p        \\
+  r \rho v_\theta w_r              \\
+    \rho v_z      w_r              \\
+    \rho H        w_r  +  u_r p
 \end{bmatrix}
 ,
 \begin{bmatrix}
-    \rho          u_\theta        \\
-    \rho u_r      u_\theta        \\
-  r \rho u_\theta u_\theta  +  r p  \\
-    \rho u_z      u_\theta        \\
-    \rho H        u_\theta
+    \rho          w_\theta         \\
+    \rho v_r      w_\theta         \\
+  r \rho v_\theta w_\theta  +  r p \\
+    \rho v_z      w_\theta         \\
+    \rho H        w_\theta  + u_\theta p
 \end{bmatrix}
 ,
 \begin{bmatrix}
-    \rho          u_z         \\
-    \rho u_r      u_z         \\
-  r \rho u_\theta u_z         \\
-    \rho u_z      u_z  +   p  \\
-    \rho H        u_z
+    \rho          w_z              \\
+    \rho v_r      w_z              \\
+  r \rho v_\theta w_z              \\
+    \rho v_z      w_z  +   p       \\
+    \rho H        w_z  +  u_z p
 \end{bmatrix}
+\end{pmatrix}
 \quad\quad
 S_a(\vec{r},Q) =
 \begin{pmatrix}
-    0 \\ \frac{\rho u_\theta u_\theta - p}{r} \\ 0 \\ 0 \\ 0
+    0 \\ \frac{\rho v_\theta w_\theta - p}{r} \\ 0 \\ 0 \\ 0
 \end{pmatrix}\end{split}\]</div>
 <p><span class="math">\(H = \frac{\rho E + p}{\rho}\)</span> is the total enthalpy and <span class="math">\(p\)</span> is the static pressure.</p>
 <div class="line-block">
@@ -435,33 +482,96 @@ S_a(\vec{r},Q) =
 </div>
 <div class="section" id="fluid-diffusion">
 <h2>Fluid Diffusion<a class="headerlink" href="#fluid-diffusion" title="Permalink to this headline">¶</a></h2>
-<p>The fluxes governing fluid diffusion are</p>
-<div class="section" id="id1">
-<h3>Cartesian<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<p>The fluxes representing diffusive transport for the fluid equations are given compactly as</p>
 <div class="math">
 \[\begin{split}\vec{F}_d(Q,\nabla Q) =
 -
 \begin{pmatrix}
-  0 \\ \overline{\overline{\tau}} \\ k \nabla T  +  \overline{\overline{\tau}} \cdot \vec{u}
+  0 \\ \mathcal{S} \overline{\overline{\tau}} \\ k \nabla T  +  \overline{\overline{\tau}} \cdot \vec{v}
 \end{pmatrix}
 \quad\quad
+\mathcal{S}_{cart} =
+\begin{pmatrix}
+  1   \\  1   \\  1
+\end{pmatrix}
+\quad\quad
+\mathcal{S}_{cyl} =
+\begin{pmatrix}
+  1   \\  r   \\  1
+\end{pmatrix}\end{split}\]</div>
+<p>where <span class="math">\(\mathcal{S}\)</span> is a scaling vector that is used to provide the correct dimensional
+scaling for the angular momentum equation. Expanded forms for the fluxes in Cartesian
+and Cylindrical coordinates are given as follows.</p>
+<div class="section" id="id1">
+<h3>Cartesian<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<div class="math">
+\[\begin{split}\vec{F}_d(\vec{x},Q,\nabla Q) =
+-
+\begin{pmatrix}
+\begin{bmatrix}
+             0               \\
+            \tau_{11}        \\
+            \tau_{21}        \\
+            \tau_{31}        \\
+       k \nabla_1 T  + \overline{\overline{\tau}} \cdot \vec{v}
+\end{bmatrix}
+,
+\begin{bmatrix}
+             0                    \\
+            \tau_{12}             \\
+            \tau_{22}             \\
+            \tau_{32}             \\
+       k \nabla_2 T  + \overline{\overline{\tau}} \cdot \vec{v}
+\end{bmatrix}
+,
+\begin{bmatrix}
+             0                \\
+            \tau_{13}         \\
+            \tau_{23}         \\
+            \tau_{33}         \\
+       k \nabla_3 T  + \overline{\overline{\tau}} \cdot \vec{v}
+\end{bmatrix}
+\end{pmatrix}
+\quad
 S_d(\vec{x},Q) =
 \begin{pmatrix}
-    0 \\ 0 \\ 0 \\ 0 \\ 0
+  0 \\ 0 \\ 0 \\ 0 \\ 0
 \end{pmatrix}\end{split}\]</div>
 </div>
 <div class="section" id="id2">
 <h3>Cylindrical<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
 <div class="math">
-\[\begin{split}\vec{F}_d(Q,\nabla Q) =
+\[\begin{split}\vec{F}_d(\vec{r},Q,\nabla Q) =
 -
 \begin{pmatrix}
-  0 \\ \overline{\overline{\tau}} \\ k \nabla T  +  \overline{\overline{\tau}} \cdot \vec{u}
+\begin{bmatrix}
+             0               \\
+            \tau_{11}        \\
+           r\tau_{21}        \\
+            \tau_{31}        \\
+       k \nabla_1 T  + \overline{\overline{\tau}} \cdot \vec{v}
+\end{bmatrix}
+,
+\begin{bmatrix}
+             0                    \\
+            \tau_{12}             \\
+           r\tau_{22}             \\
+            \tau_{32}             \\
+       k \nabla_2 T  + \overline{\overline{\tau}} \cdot \vec{v}
+\end{bmatrix}
+,
+\begin{bmatrix}
+             0                \\
+            \tau_{13}         \\
+           r\tau_{23}         \\
+            \tau_{33}         \\
+       k \nabla_3 T  + \overline{\overline{\tau}} \cdot \vec{v}
+\end{bmatrix}
 \end{pmatrix}
-\quad\quad
+\quad
 S_d(\vec{r},Q) =
 \begin{pmatrix}
-    0 \\ -\frac{\tau_{\theta\theta}}{r} \\ 0 \\ 0 \\ 0
+  0 \\ -\frac{\tau_{22}}{r} \\ 0 \\ 0 \\ 0
 \end{pmatrix}\end{split}\]</div>
 <div class="line-block">
 <div class="line"><br /></div>
@@ -495,7 +605,7 @@ S_d(\vec{r},Q) =
 </table>
 <p>The ideal gas equation of state computes <code class="docutils literal"><span class="pre">Pressure</span></code> and <code class="docutils literal"><span class="pre">Temperature</span></code> as</p>
 <div class="math">
-\[\begin{split}p &amp;= (\gamma - 1)\bigg(\rho E - \frac{1}{2}\frac{\vec{\rho u} \cdot \vec{\rho u}}{\rho} \bigg)
+\[\begin{split}p &amp;= (\gamma - 1)\bigg(\rho E - \frac{1}{2}\frac{\vec{\rho v} \cdot \vec{\rho v}}{\rho} \bigg)
 \\
 \\
 T &amp;= \frac{p}{\rho R}\end{split}\]</div>
@@ -518,11 +628,11 @@ T &amp;= \frac{p}{\rho R}\end{split}\]</div>
 <td><code class="docutils literal"><span class="pre">Sutherlands</span> <span class="pre">Law</span></code></td>
 </tr>
 <tr class="row-even"><td><strong>Model fields:</strong></td>
-<td><code class="docutils literal"><span class="pre">Laminar</span> <span class="pre">Viscosity</span></code></td>
+<td><code class="docutils literal"><span class="pre">Dynamic</span> <span class="pre">Viscosity</span></code></td>
 </tr>
 </tbody>
 </table>
-<p>Sutherland&#8217;s Law computes <code class="docutils literal"><span class="pre">Laminar</span> <span class="pre">Viscosity</span></code> as a function of temperature
+<p>Sutherland&#8217;s Law computes <code class="docutils literal"><span class="pre">Dynamic</span> <span class="pre">Viscosity</span></code> as a function of temperature
 using</p>
 <div class="math">
 \[\mu = \mu_0 \bigg(\frac{T}{T_0}\bigg)^{3/2} \frac{T_0 + S}{T + S}\]</div>
@@ -540,28 +650,28 @@ S     &amp;= 110.56          \quad\quad  &amp;\big[K\big]\end{split}\]</div>
 <h3>Velocity Gradients<a class="headerlink" href="#velocity-gradients" title="Permalink to this headline">¶</a></h3>
 <p>Gradients of velocity are computed using the chain rule. From the ChiDG framework, we have gradients of the
 primary field variables. Here, we have gradients of the components of
-momentum: <span class="math">\((\nabla \rho u,\nabla \rho v, \nabla \rho w)\)</span>. Gradients
-of velocity, <span class="math">\((\nabla u, \nabla v, \nabla w)\)</span> are computed by recognizing that in general</p>
+momentum: <span class="math">\((\nabla \rho v_1,\nabla \rho v_2, \nabla \rho v_3)\)</span>. Gradients
+of velocity, <span class="math">\((\nabla v_1, \nabla v_2, \nabla v_3)\)</span> are computed by recognizing that in general</p>
 <div class="math">
 \[\nabla (\phi f) = \nabla(\phi) f  +  \phi \nabla (f)\]</div>
 <p>So the gradient of the velocity components can be computed as</p>
 <div class="math">
-\[\begin{split}\nabla (u) &amp;= \frac{\nabla(\rho u)}{\rho} - \frac{u \nabla(\rho)}{\rho}
+\[\begin{split}\nabla (v_1) &amp;= \frac{\nabla(\rho v_1)}{\rho} - \frac{u \nabla(\rho)}{\rho}
 \\
-\nabla (v) &amp;= \frac{\nabla(\rho v)}{\rho} - \frac{v \nabla(\rho)}{\rho}
+\nabla (v_2) &amp;= \frac{\nabla(\rho v_2)}{\rho} - \frac{v \nabla(\rho)}{\rho}
 \\
-\nabla (w) &amp;= \frac{\nabla(\rho w)}{\rho} - \frac{w \nabla(\rho)}{\rho}\end{split}\]</div>
+\nabla (v_3) &amp;= \frac{\nabla(\rho v_3)}{\rho} - \frac{w \nabla(\rho)}{\rho}\end{split}\]</div>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p>In <code class="docutils literal"><span class="pre">Cylindrical</span></code> coordinates, we have <span class="math">\(\nabla(r \rho u_\theta)\)</span> instead
-of <span class="math">\(\nabla(\rho u_\theta)\)</span>. The gradient of tangential momentum is
+<p>In <code class="docutils literal"><span class="pre">Cylindrical</span></code> coordinates, we have <span class="math">\(\nabla(r \rho v_\theta)\)</span> instead
+of <span class="math">\(\nabla(\rho v_\theta)\)</span>. The gradient of tangential momentum is
 computed from the angular momentum gradient as</p>
 <div class="last math">
-\[\nabla(\rho u_\theta) =
+\[\nabla(\rho v_\theta) =
 \begin{bmatrix}
-    \frac{\nabla_1(r \rho u_\theta)}{r} - \frac{u_\theta}{r}, &amp;
-    \frac{\nabla_2(r \rho u_\theta)}{r}, &amp;
-    \frac{\nabla_3(r \rho u_\theta)}{r}
+    \frac{\nabla_1(r \rho v_\theta)}{r} - \frac{v_\theta}{r}, &amp;
+    \frac{\nabla_2(r \rho v_\theta)}{r}, &amp;
+    \frac{\nabla_3(r \rho v_\theta)}{r}
 \end{bmatrix}\]</div>
 </div>
 </div>
@@ -583,7 +693,7 @@ computed from the angular momentum gradient as</p>
 </table>
 <p>The shear stress tensor is defined as</p>
 <div class="math">
-\[\overline{\overline{\tau}} = \mu(\nabla \vec{u} + \nabla \vec{u}^T) +  \lambda \overline{\overline{I}} \nabla \cdot \vec{u}\]</div>
+\[\overline{\overline{\tau}} = \mu(\nabla \vec{v} + \nabla \vec{v}^T) +  \lambda \overline{\overline{I}} \nabla \cdot \vec{v}\]</div>
 <p>The tensor compnents are</p>
 <div class="math">
 \[\begin{split}\overline{\overline{\tau}} =
@@ -601,28 +711,28 @@ are computed.</p>
 <div class="section" id="id3">
 <h4>Cartesian<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h4>
 <div class="math">
-\[\begin{split}   \tau_{11} &amp;= 2 \mu \bigg(\nabla_1 u \bigg)  + \lambda(\nabla \cdot \vec{u}) \\
-   \tau_{22} &amp;= 2 \mu \bigg(\nabla_2 v \bigg)  + \lambda(\nabla \cdot \vec{u}) \\
-   \tau_{33} &amp;= 2 \mu \bigg(\nabla_3 w\bigg)   + \lambda(\nabla \cdot \vec{u}) \\
+\[\begin{split}   \tau_{11} &amp;= 2 \mu \bigg(\nabla_1 v_x \bigg)  + \lambda(\nabla \cdot \vec{v}) \\
+   \tau_{22} &amp;= 2 \mu \bigg(\nabla_2 v_y \bigg)  + \lambda(\nabla \cdot \vec{v}) \\
+   \tau_{33} &amp;= 2 \mu \bigg(\nabla_3 v_z \bigg)  + \lambda(\nabla \cdot \vec{v}) \\
 \\
-   \tau_{12} &amp;= \mu \bigg( \nabla_2 u + \nabla_1 v \bigg) \\
-   \tau_{13} &amp;= \mu \bigg( \nabla_3 u + \nabla_1 w \bigg) \\
-   \tau_{23} &amp;= \mu \bigg( \nabla_2 w + \nabla_3 v \bigg)\end{split}\]</div>
+   \tau_{12} &amp;= \mu \bigg( \nabla_2 v_x + \nabla_1 v_y \bigg) \\
+   \tau_{13} &amp;= \mu \bigg( \nabla_3 v_x + \nabla_1 v_z \bigg) \\
+   \tau_{23} &amp;= \mu \bigg( \nabla_2 v_z + \nabla_3 v_y \bigg)\end{split}\]</div>
 <div class="math">
-\[\nabla \cdot \vec{u} = \bigg( \frac{\partial u}{\partial x} + \frac{\partial v}{\partial y} + \frac{\partial w}{\partial z} \bigg) = \bigg[ \nabla_1 u + \nabla_2 v + \nabla_3 w \bigg]\]</div>
+\[\nabla \cdot \vec{v} = \bigg( \frac{\partial v_x}{\partial x} + \frac{\partial v_y}{\partial y} + \frac{\partial v_z}{\partial z} \bigg) = \bigg[ \nabla_1 v_x + \nabla_2 v_y + \nabla_3 v_z \bigg]\]</div>
 </div>
 <div class="section" id="id4">
 <h4>Cylindrical<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h4>
 <div class="math">
-\[\begin{split}   \tau_{11} &amp;= 2 \mu \bigg(\nabla_1 u \quad\quad \bigg)     + \lambda(\nabla \cdot \vec{u}) \\
-   \tau_{22} &amp;= 2 \mu \bigg(\nabla_2 v + \frac{u}{r} \bigg)  + \lambda(\nabla \cdot \vec{u}) \\
-   \tau_{33} &amp;= 2 \mu \bigg(\nabla_3 w \quad\quad \bigg)     + \lambda(\nabla \cdot \vec{u}) \\
+\[\begin{split}   \tau_{11} &amp;= 2 \mu \bigg(\nabla_1 v_r \quad\quad \bigg)       + \lambda(\nabla \cdot \vec{v}) \\
+   \tau_{22} &amp;= 2 \mu \bigg(\nabla_2 v_\theta + \frac{v_r}{r} \bigg)  + \lambda(\nabla \cdot \vec{v}) \\
+   \tau_{33} &amp;= 2 \mu \bigg(\nabla_3 v_z \quad\quad \bigg)       + \lambda(\nabla \cdot \vec{v}) \\
 \\
-   \tau_{12} &amp;= \mu \bigg( \nabla_2 u + \nabla_1 v - \frac{v}{r} \bigg) \\
-   \tau_{13} &amp;= \mu \bigg( \nabla_3 u + \nabla_1 w \quad\quad \bigg) \\
-   \tau_{23} &amp;= \mu \bigg( \nabla_2 w + \nabla_3 v \quad\quad \bigg)\end{split}\]</div>
+   \tau_{12} &amp;= \mu \bigg( \nabla_2 v_r + \nabla_1 v_\theta - \frac{v_\theta}{r} \bigg) \\
+   \tau_{13} &amp;= \mu \bigg( \nabla_3 v_r + \nabla_1 v_z \quad\quad \bigg) \\
+   \tau_{23} &amp;= \mu \bigg( \nabla_2 v_z + \nabla_3 v_\theta \quad\quad \bigg)\end{split}\]</div>
 <div class="math">
-\[\nabla \cdot \vec{u} = \bigg( \frac{1}{r}\frac{\partial r u}{\partial r} + \frac{1}{r}\frac{\partial v}{\partial \theta} + \frac{\partial w}{\partial z}\bigg)  =  \bigg( \frac{\partial u}{\partial r} + \frac{1}{r}\frac{\partial v}{\partial \theta} + \frac{\partial w}{\partial z}  +  \frac{u}{r} \bigg) = \bigg[\nabla_1 u + \nabla_2 v + \nabla_3 w + \frac{u}{r}\bigg]\]</div>
+\[\nabla \cdot \vec{v} = \bigg( \frac{1}{r}\frac{\partial r v_r}{\partial r} + \frac{1}{r}\frac{\partial v_\theta}{\partial \theta} + \frac{\partial v_z}{\partial z}\bigg)  =  \bigg( \frac{\partial v_r}{\partial r} + \frac{1}{r}\frac{\partial v_\theta}{\partial \theta} + \frac{\partial v_z}{\partial z}  +  \frac{v_r}{r} \bigg) = \bigg[\nabla_1 v_r + \nabla_2 v_\theta + \nabla_3 v_z + \frac{v_r}{r}\bigg]\]</div>
 </div>
 </div>
 <div class="section" id="temperature-gradient">
@@ -648,25 +758,61 @@ temperature field <span class="math">\(\nabla T(Q)\)</span> can be computed by e
 \[\nabla T(Q) = \frac{\partial T}{\partial Q} \nabla Q\]</div>
 <p>as</p>
 <div class="math">
-\[\nabla T(\rho, \rho u, \rho v, \rho w, \rho E) =
-\frac{\partial T}{\partial \rho} \nabla \rho +
-\frac{\partial T}{\partial \rho u} \nabla \rho u +
-\frac{\partial T}{\partial \rho v} \nabla \rho v +
-\frac{\partial T}{\partial \rho w} \nabla \rho w +
-\frac{\partial T}{\partial \rho E} \nabla \rho E\]</div>
+\[\nabla T(\rho, \rho v_1, \rho v_2, \rho v_3, \rho E) =
+\frac{\partial T}{\partial \rho}     \nabla \rho +
+\frac{\partial T}{\partial \rho v_1} \nabla \rho v_1 +
+\frac{\partial T}{\partial \rho v_2} \nabla \rho v_2 +
+\frac{\partial T}{\partial \rho v_3} \nabla \rho v_3 +
+\frac{\partial T}{\partial \rho E}   \nabla \rho E\]</div>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p>In <code class="docutils literal"><span class="pre">Cylindrical</span></code> coordinates, we have <span class="math">\(\nabla(r \rho u_\theta)\)</span> instead
-of <span class="math">\(\nabla(\rho u_\theta)\)</span>. The gradient of tangential momentum is
+<p>In <code class="docutils literal"><span class="pre">Cylindrical</span></code> coordinates, we have <span class="math">\(\nabla(r \rho v_\theta)\)</span> instead
+of <span class="math">\(\nabla(\rho v_\theta)\)</span>. The gradient of tangential momentum is
 computed from the angular momentum gradient as</p>
 <div class="last math">
-\[\nabla(\rho u_\theta) =
+\[\nabla(\rho v_\theta) =
 \begin{bmatrix}
-    \frac{\nabla_1(r \rho u_\theta)}{r} - \frac{u_\theta}{r}, &amp;
-    \frac{\nabla_2(r \rho u_\theta)}{r}, &amp;
-    \frac{\nabla_3(r \rho u_\theta)}{r}
+    \frac{\nabla_1(r \rho v_\theta)}{r} - \frac{v_\theta}{r}, &amp;
+    \frac{\nabla_2(r \rho v_\theta)}{r}, &amp;
+    \frac{\nabla_3(r \rho v_\theta)}{r}
 \end{bmatrix}\]</div>
 </div>
+</div>
+<div class="section" id="vorticity">
+<h3>Vorticity<a class="headerlink" href="#vorticity" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="17%" />
+<col width="83%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><strong>Model name:</strong></td>
+<td><code class="docutils literal"><span class="pre">Vorticity</span></code></td>
+</tr>
+<tr class="row-even"><td><strong>Model fields:</strong></td>
+<td><code class="docutils literal"><span class="pre">Vorticity-1</span></code>  <code class="docutils literal"><span class="pre">Vorticity-2</span></code>  <code class="docutils literal"><span class="pre">Vorticity-3</span></code></td>
+</tr>
+</tbody>
+</table>
+<p>Vorticity, used in the Spalart-Allmaras turbulence model, is defined as the Curl of
+velocity as</p>
+<div class="math">
+\[\vec{\omega} = \nabla \times \vec{v}\]</div>
+<p>In Cartesian coordinates, this is computed as</p>
+<div class="math">
+\[\begin{split}\vec{\omega} = \nabla \times \vec{v} &amp;= \bigg(\frac{\partial v_z}{\partial x} - \frac{\partial v_y}{\partial z}\bigg) \hat{x}  +  \bigg(\frac{\partial v_x}{\partial z} - \frac{\partial v_z}{\partial x}\bigg) \hat{y}  +  \bigg( \frac{\partial v_y}{\partial x} - \frac{\partial v_x}{\partial y}\bigg) \hat{z} \\
+&amp;= \bigg[ \bigg(\nabla_2 v_3  -  \nabla_3 v_2\bigg), \bigg(\nabla_3 v_1 - \nabla_1 v_3\bigg), \bigg(\nabla_1 v_2 - \nabla_2 v_1\bigg)\bigg]\end{split}\]</div>
+<p>In Cylindrical coordinates, the Curl of a vector is given as</p>
+<div class="math">
+\[\begin{split}\vec{\omega} = \nabla \times \vec{v} &amp;= \bigg(\frac{1}{r}\frac{\partial v_z}{\partial \theta} - \frac{\partial v_\theta}{\partial z}\bigg) \hat{r}  +  \bigg(\frac{\partial v_r}{\partial z} - \frac{\partial v_z}{\partial r}\bigg) \hat{\theta}  +  \frac{1}{r}\bigg( \frac{\partial r v_\theta}{\partial r} - \frac{\partial v_r}{\partial \theta}\bigg) \hat{z} \\
+&amp;= \bigg(\frac{1}{r}\frac{\partial v_z}{\partial \theta} - \frac{\partial v_\theta}{\partial z}\bigg) \hat{r}  +  \bigg(\frac{\partial v_r}{\partial z} - \frac{\partial v_z}{\partial r}\bigg) \hat{\theta}  +  \bigg( \frac{\partial v_\theta}{\partial r} - \frac{1}{r}\frac{\partial v_r}{\partial \theta} + \frac{v_\theta}{r}\bigg) \hat{z} \\
+&amp;= \bigg[ \bigg(\nabla_2 v_3  -  \nabla_3 v_2\bigg), \bigg(\nabla_3 v_1 - \nabla_1 v_3\bigg), \bigg(\nabla_1 v_2 - \nabla_2 v_1 + \frac{v_2}{r}\bigg)\bigg]\end{split}\]</div>
+<p>In the non-inertial frame for Cylindrical coordinates, the relative
+vorticity is accounted for as</p>
+<div class="math">
+\[\omega_3 = \omega_3 - 2\omega\]</div>
+<p>Note, that here <span class="math">\(\omega_3\)</span> is the third component of the vorticity
+vector, while <span class="math">\(\omega\)</span> is the rate of rotation for the non-inertial frame.</p>
 </div>
 </div>
 </div>

@@ -4,7 +4,7 @@ Getting Started
 
 
 We need to get a copy of ChiDG up and running on your machine. Let's do it! The current option
-we have to do this is to build ChiDG from source:
+we have to do this is to build ChiDG from source on your machine:
 
     - :ref:`Build from source`
 
@@ -468,7 +468,7 @@ In the working directory, call the ``chidg`` executable:
     
     Once you get the hang of how the process works, you may consider playing around
     with the other entries in ``chidg.nml`` to understand how they affect the behavior
-    and performance of the ChiDG
+    and performance of ChiDG.
 
 
 

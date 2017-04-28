@@ -107,8 +107,8 @@ Example applications:
     :hidden:
  
     getting_started/getting_started
-    examples/example_main
     code_details/details_main
+    examples/example_main
 
 
 

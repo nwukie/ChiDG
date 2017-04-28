@@ -34,7 +34,7 @@
   
     <link rel="top" title="ChiDG 0.1 documentation" href="../index.html"/>
         <link rel="next" title="Finding your way around ChiDG" href="architecture/detail_architecture.html"/>
-        <link rel="prev" title="NACA 2412 Airfoil" href="../examples/naca2412/example_naca2412.html"/> 
+        <link rel="prev" title="Getting Started" href="../getting_started/getting_started.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -106,25 +106,6 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../examples/example_main.html">Examples</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../examples/smoothbump/example_smoothbump.html">Smooth bump</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../examples/smoothbump/example_smoothbump.html#background">Background</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../examples/smoothbump/example_smoothbump.html#setup">Setup</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../examples/smoothbump/example_smoothbump.html#setup-from-scratch">Setup from scratch:</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../examples/smoothbump/example_smoothbump.html#use-setup-provided">Use setup provided:</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="../examples/smoothbump/example_smoothbump.html#results">Results</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="../examples/naca2412/example_naca2412.html">NACA 2412 Airfoil</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../examples/naca2412/example_naca2412.html#background">Background</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../examples/naca2412/example_naca2412.html#set-up">Set-up</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../examples/naca2412/example_naca2412.html#results">Results</a></li>
-</ul>
-</li>
-</ul>
-</li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Code details</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="architecture/detail_architecture.html">Finding your way around ChiDG</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="architecture/detail_architecture.html#source-layout-chidg-src">Source Layout <code class="docutils literal"><span class="pre">chidg/src</span></code></a><ul>
@@ -135,13 +116,7 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="chidg/detail_chidg.html">ChiDG Instance</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="chidg/detail_chidg.html#components">Components</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="chidg/detail_chidg.html#data">Data</a></li>
-</ul>
-</li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="chidg/detail_chidg.html">ChiDG API</a></li>
 <li class="toctree-l2"><a class="reference internal" href="mesh/detail_mesh.html">Mesh</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="mesh/detail_mesh.html#coordinate-systems">Coordinate Systems</a></li>
 <li class="toctree-l3"><a class="reference internal" href="mesh/detail_mesh.html#id1">Mesh</a><ul>
@@ -247,6 +222,25 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/example_main.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../examples/smoothbump/example_smoothbump.html">Smooth bump</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../examples/smoothbump/example_smoothbump.html#background">Background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/smoothbump/example_smoothbump.html#setup">Setup</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../examples/smoothbump/example_smoothbump.html#setup-from-scratch">Setup from scratch:</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../examples/smoothbump/example_smoothbump.html#use-setup-provided">Use setup provided:</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/smoothbump/example_smoothbump.html#results">Results</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/naca2412/example_naca2412.html">NACA 2412 Airfoil</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../examples/naca2412/example_naca2412.html#background">Background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/naca2412/example_naca2412.html#set-up">Set-up</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../examples/naca2412/example_naca2412.html#results">Results</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 
             
@@ -295,6 +289,24 @@
 <h1>Code details<a class="headerlink" href="#code-details" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
 </div>
+<p class="rubric">Overview</p>
+<p>From a high-level perspective, ChiDG is a library. A ChiDG environment can
+be imported from the library and used by some driver. For example, the ChiDG
+executable is just a driver file that links with the ChiDG library and
+creates a ChiDG-object, which is then used to initialize the framework,
+read data, and run a simulation.</p>
+<a class="reference internal image-reference" href="../_images/chidg_overview.png"><img alt="../_images/chidg_overview.png" class="align-center" src="../_images/chidg_overview.png" style="width: 90%;" /></a>
+<p class="rubric">ChiDG Library: libchidg.a</p>
+<p>The ChiDG library contains the infrastructure(classes, datatypes, etc.)
+for representing concepts related to solving partial differential
+equations on discretizations of space and time. These are things like
+a computational grid, equation sets, time integrators, etc.
+The ChiDG library also contains a ChiDG API. This is provided through
+an object <code class="docutils literal"><span class="pre">chidg_t</span></code>. In this way, all of the capability of the ChiDG
+library can be accessed and driven by creating a <code class="docutils literal"><span class="pre">chidg</span></code> object, and
+using high-level routines that it provides. Things like
+<code class="docutils literal"><span class="pre">chidg%read_grid('mygrid.h5')</span></code> and <code class="docutils literal"><span class="pre">chidg%set('Time</span> <span class="pre">Integrator',</span> <span class="pre">'Quasi-Newton')</span></code>.</p>
+<a class="reference internal image-reference" href="../_images/chidg_library.png"><img alt="../_images/chidg_library.png" class="align-center" src="../_images/chidg_library.png" style="width: 90%;" /></a>
 </div>
 
 
@@ -307,7 +319,7 @@
         <a href="architecture/detail_architecture.html" class="btn btn-neutral float-right" title="Finding your way around ChiDG" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="../examples/naca2412/example_naca2412.html" class="btn btn-neutral" title="NACA 2412 Airfoil" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="../getting_started/getting_started.html" class="btn btn-neutral" title="Getting Started" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

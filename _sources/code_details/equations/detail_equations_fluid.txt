@@ -10,27 +10,29 @@ Primary field variables for the fluid equations in ChiDG are ``Density``,
 
       Q_{cart} = 
       \begin{pmatrix}
-        \rho \\ \rho u_x \\ \rho u_y \\ \rho u_z \\ \rho E 
+        \rho \\ \rho v_x \\ \rho v_y \\ \rho v_z \\ \rho E 
       \end{pmatrix}
       \quad\quad
       Q_{cyl} = 
       \begin{pmatrix}
-        \rho \\ \rho u_r \\ r \rho u_\theta \\ \rho u_z \\ \rho E 
+        \rho \\ \rho v_r \\ r \rho v_\theta \\ \rho v_z \\ \rho E 
       \end{pmatrix}
 
 
 
 .. note::
 
-    In ``Cylindrical`` coordinates, angular momentum, :math:`r \rho u_\theta`, is being conserved. Not tangential momentum, :math:`\rho u_\theta`.
+    In ``Cylindrical`` coordinates, angular momentum, :math:`r \rho v_\theta`, 
+    is being conserved. Not tangential momentum, :math:`\rho v_\theta`.
 
 
-The transformation of the momentum vector between ``Cartesian`` and ``Cylindrical`` coordinates is
+The transformation of the momentum vector between ``Cartesian`` and 
+``Cylindrical`` coordinates is
 
 .. math::
 
     \begin{bmatrix}
-        \rho u_x \\ \rho u_y \\ \rho u_z
+        \rho v_x \\ \rho v_y \\ \rho v_z
     \end{bmatrix}
     =
     \begin{bmatrix}
@@ -39,21 +41,53 @@ The transformation of the momentum vector between ``Cartesian`` and ``Cylindrica
         0 & 0 & 1
     \end{bmatrix}
     \begin{bmatrix}
-        \rho u_r \\ \rho u_\theta \\ \rho u_z
+        \rho v_r \\ \rho v_\theta \\ \rho v_z
     \end{bmatrix}
 
 The velocity vector in ``Cartesian`` and ``Cylindrical`` coordinates is
 
 .. math::
 
-    \vec{u} = [u_x, u_y, u_z]       \quad\quad  \vec{u} = [u_r, u_\theta, u_z]
+    \vec{u} = [v_x, v_y, v_z]       \quad\quad  \vec{v} = [v_r, v_\theta, v_z]
 
-At times, when a formula is independent of the coordinate system, generic 
-components of velocity will be used
+Some distinctions are made here between absolute, relative, and frame velocities.
+The absolute velocity(:math:`v`) is that which is perceived in the inertial frame of 
+reference. The relative(or advection)(:math:`w`) velocity is the velocity, which is perceived
+in the non-inertial frame of reference. The frame velocity(:math:`u`) is the velocity of 
+the moving coordinate system. These are defined in the Cartesian and Cylindrical
+coordinate systems as
 
 .. math::
 
-    \vec{u} = [u,v,w]
+    \vec{v} &= [v_x, v_y, v_z]   \quad\quad\:\:\:\:  \vec{v} = [v_r, v_\theta, v_y] \\
+    \vec{w} &= [w_x, w_y, w_z]   \quad\quad          \vec{w} = [w_r, w_\theta, w_y] \\
+    \vec{u} &= [u_x, u_y, u_z]   \quad\quad\:\:\:    \vec{u} = [u_r, u_\theta, u_y]
+
+For calculations using an inertial frame, the frame velocity is zero.
+
+.. math::
+
+    \vec{u} = [0, 0, 0]
+
+For a rotating Cylindrical coordinate system, the frame velocity is
+
+.. math::
+
+    \vec{u}_{cyl} = [0, \omega r, 0]
+
+where :math:`\omega` is the rotational rate in :math:`rad/s`. The relation
+between absolute, relative, and frame velocities is
+
+.. math::
+
+    \vec{v} = \vec{w} + \vec{u}
+
+At times, components of the velocity vectors are represented in the same manner 
+for both coordinate systems
+
+.. math::
+
+    \vec{v}  = [v_1,v_2,v_3] 
 
 
 Within the framework, effort has been invested in representing quantities
@@ -86,7 +120,31 @@ Fluid Advection
 ---------------
 
 
-The fluxes governing fluid advection are
+The fluxes representing advective transport for the fluid equations
+are given compactly as
+
+.. math::
+
+    \vec{F}_a(Q) = 
+    \begin{pmatrix}
+        \rho \vec{w} \\
+        \mathcal{S} (\rho \vec{v} \otimes \vec{w} + \overline{\overline{I}}p) \\
+        \rho H \vec{w} + \vec{u} p
+    \end{pmatrix}
+    \quad\quad
+    \mathcal{S}_{cart} = 
+    \begin{pmatrix}
+        1   \\  1   \\  1
+    \end{pmatrix}
+    \quad\quad
+    \mathcal{S}_{cyl} = 
+    \begin{pmatrix}
+        1   \\  r   \\  1
+    \end{pmatrix}
+
+where :math:`\mathcal{S}` is a scaling vector that is sued to provide the correct
+dimensional scaling for the angular momentum equation. Expanded forms for the 
+fluxes in Cartesian and Cylindrical coordinates are given as follows.
 
 
 Cartesian
@@ -94,35 +152,37 @@ Cartesian
 
 .. math:: 
 
-      \vec{F}_a(\vec{x},Q) =
-      \begin{bmatrix}
-        \rho     u_x        \\ 
-        \rho u_x u_x  +  p  \\
-        \rho u_y u_x        \\
-        \rho u_z u_x        \\
-        \rho H   u_x
-      \end{bmatrix}
-      ,
-      \begin{bmatrix}
-        \rho     u_y        \\ 
-        \rho u_x u_y        \\
-        \rho u_y u_y  +  p  \\
-        \rho u_z u_y        \\
-        \rho H   u_y 
-      \end{bmatrix}
-      ,
-      \begin{bmatrix}
-        \rho     u_z       \\ 
-        \rho u_x u_z        \\
-        \rho u_y u_z        \\
-        \rho u_z u_z  +  p  \\
-        \rho H   u_z
-      \end{bmatrix}
-      \quad\quad
-      S_a(\vec{x},Q) = 
-      \begin{pmatrix}
-          0 \\ 0 \\ 0 \\ 0 \\ 0
-      \end{pmatrix}
+    \vec{F}_a(\vec{x},Q) =
+    \begin{pmatrix}
+    \begin{bmatrix}
+        \rho     w_x       \\ 
+        \rho v_x w_x  +  p \\
+        \rho v_y w_x       \\
+        \rho v_z w_x       \\
+        \rho H   w_x  + u_x p
+    \end{bmatrix}
+    ,
+    \begin{bmatrix}
+        \rho     w_y        \\ 
+        \rho v_x w_y        \\
+        \rho v_y w_y  +  p  \\
+        \rho v_z w_y        \\
+        \rho H   w_y  + u_y p
+    \end{bmatrix}
+    ,
+    \begin{bmatrix}
+        \rho     w_z       \\ 
+        \rho v_x w_z        \\
+        \rho v_y w_z        \\
+        \rho v_z w_z  +  p  \\
+        \rho H   w_z  +  u_z p
+    \end{bmatrix}
+    \end{pmatrix}
+    \quad\quad
+    S_a(\vec{x},Q) = 
+    \begin{pmatrix}
+        0 \\ 0 \\ 0 \\ 0 \\ 0
+    \end{pmatrix}
 
 
 Cylindrical
@@ -131,33 +191,35 @@ Cylindrical
 .. math:: 
 
       \vec{F}_a(\vec{r},Q) =
+      \begin{pmatrix}
       \begin{bmatrix}
-          \rho          u_r        \\ 
-          \rho u_r      u_r  +  p  \\
-        r \rho u_\theta u_r        \\
-          \rho u_z      u_r        \\
-          \rho H        u_r
+          \rho          w_r              \\ 
+          \rho v_r      w_r  +  p        \\
+        r \rho v_\theta w_r              \\
+          \rho v_z      w_r              \\
+          \rho H        w_r  +  u_r p
       \end{bmatrix}
       ,
       \begin{bmatrix}
-          \rho          u_\theta        \\ 
-          \rho u_r      u_\theta        \\
-        r \rho u_\theta u_\theta  +  r p  \\
-          \rho u_z      u_\theta        \\
-          \rho H        u_\theta
+          \rho          w_\theta         \\ 
+          \rho v_r      w_\theta         \\
+        r \rho v_\theta w_\theta  +  r p \\
+          \rho v_z      w_\theta         \\
+          \rho H        w_\theta  + u_\theta p
       \end{bmatrix}
       ,
       \begin{bmatrix}
-          \rho          u_z         \\ 
-          \rho u_r      u_z         \\
-        r \rho u_\theta u_z         \\
-          \rho u_z      u_z  +   p  \\
-          \rho H        u_z
+          \rho          w_z              \\ 
+          \rho v_r      w_z              \\
+        r \rho v_\theta w_z              \\
+          \rho v_z      w_z  +   p       \\
+          \rho H        w_z  +  u_z p
       \end{bmatrix}
+      \end{pmatrix}
       \quad\quad
       S_a(\vec{r},Q) = 
       \begin{pmatrix}
-          0 \\ \frac{\rho u_\theta u_\theta - p}{r} \\ 0 \\ 0 \\ 0
+          0 \\ \frac{\rho v_\theta w_\theta - p}{r} \\ 0 \\ 0 \\ 0
       \end{pmatrix}
 
 
@@ -175,40 +237,111 @@ Fluid Diffusion
 ---------------
 
 
-The fluxes governing fluid diffusion are
+The fluxes representing diffusive transport for the fluid equations are given compactly as
+
+.. math::
+
+      \vec{F}_d(Q,\nabla Q) = 
+      -
+      \begin{pmatrix}
+        0 \\ \mathcal{S} \overline{\overline{\tau}} \\ k \nabla T  +  \overline{\overline{\tau}} \cdot \vec{v}
+      \end{pmatrix} 
+      \quad\quad
+      \mathcal{S}_{cart} = 
+      \begin{pmatrix}
+        1   \\  1   \\  1
+      \end{pmatrix}
+      \quad\quad
+      \mathcal{S}_{cyl} = 
+      \begin{pmatrix}
+        1   \\  r   \\  1
+      \end{pmatrix}
+
+where :math:`\mathcal{S}` is a scaling vector that is used to provide the correct dimensional
+scaling for the angular momentum equation. Expanded forms for the fluxes in Cartesian 
+and Cylindrical coordinates are given as follows.
+
 
 Cartesian
 ---------
 
 .. math::
 
-      \vec{F}_d(Q,\nabla Q) = 
+      \vec{F}_d(\vec{x},Q,\nabla Q) =
       -
       \begin{pmatrix}
-        0 \\ \overline{\overline{\tau}} \\ k \nabla T  +  \overline{\overline{\tau}} \cdot \vec{u}
-      \end{pmatrix} 
-      \quad\quad
+      \begin{bmatrix}
+                   0               \\ 
+                  \tau_{11}        \\
+                  \tau_{21}        \\
+                  \tau_{31}        \\
+             k \nabla_1 T  + \overline{\overline{\tau}} \cdot \vec{v}
+      \end{bmatrix}
+      ,
+      \begin{bmatrix}
+                   0                    \\ 
+                  \tau_{12}             \\
+                  \tau_{22}             \\
+                  \tau_{32}             \\
+             k \nabla_2 T  + \overline{\overline{\tau}} \cdot \vec{v}
+      \end{bmatrix}
+      ,
+      \begin{bmatrix}
+                   0                \\ 
+                  \tau_{13}         \\
+                  \tau_{23}         \\
+                  \tau_{33}         \\
+             k \nabla_3 T  + \overline{\overline{\tau}} \cdot \vec{v}
+      \end{bmatrix}
+      \end{pmatrix}
+      \quad
       S_d(\vec{x},Q) = 
       \begin{pmatrix}
-          0 \\ 0 \\ 0 \\ 0 \\ 0
+        0 \\ 0 \\ 0 \\ 0 \\ 0
       \end{pmatrix}
+
 
 
 Cylindrical
 -----------
 
-.. math::
 
-      \vec{F}_d(Q,\nabla Q) = 
+.. math:: 
+
+      \vec{F}_d(\vec{r},Q,\nabla Q) =
       -
       \begin{pmatrix}
-        0 \\ \overline{\overline{\tau}} \\ k \nabla T  +  \overline{\overline{\tau}} \cdot \vec{u}
-      \end{pmatrix} 
-      \quad\quad
+      \begin{bmatrix}
+                   0               \\ 
+                  \tau_{11}        \\
+                 r\tau_{21}        \\
+                  \tau_{31}        \\
+             k \nabla_1 T  + \overline{\overline{\tau}} \cdot \vec{v}
+      \end{bmatrix}
+      ,
+      \begin{bmatrix}
+                   0                    \\ 
+                  \tau_{12}             \\
+                 r\tau_{22}             \\
+                  \tau_{32}             \\
+             k \nabla_2 T  + \overline{\overline{\tau}} \cdot \vec{v}
+      \end{bmatrix}
+      ,
+      \begin{bmatrix}
+                   0                \\ 
+                  \tau_{13}         \\
+                 r\tau_{23}         \\
+                  \tau_{33}         \\
+             k \nabla_3 T  + \overline{\overline{\tau}} \cdot \vec{v}
+      \end{bmatrix}
+      \end{pmatrix}
+      \quad
       S_d(\vec{r},Q) = 
       \begin{pmatrix}
-          0 \\ -\frac{\tau_{\theta\theta}}{r} \\ 0 \\ 0 \\ 0
+        0 \\ -\frac{\tau_{22}}{r} \\ 0 \\ 0 \\ 0
       \end{pmatrix}
+
+
 
 
 |
@@ -244,7 +377,7 @@ The ideal gas equation of state computes ``Pressure`` and ``Temperature`` as
 
 .. math::
 
-    p &= (\gamma - 1)\bigg(\rho E - \frac{1}{2}\frac{\vec{\rho u} \cdot \vec{\rho u}}{\rho} \bigg)
+    p &= (\gamma - 1)\bigg(\rho E - \frac{1}{2}\frac{\vec{\rho v} \cdot \vec{\rho v}}{\rho} \bigg)
     \\
     \\
     T &= \frac{p}{\rho R}
@@ -272,10 +405,10 @@ Sutherland's Law
 +-------------------+-------------------------------------------------------------------------------------------+
 | **Model name:**   | ``Sutherlands Law``                                                                       |
 +-------------------+-------------------------------------------------------------------------------------------+
-| **Model fields:** | ``Laminar Viscosity``                                                                     |
+| **Model fields:** | ``Dynamic Viscosity``                                                                     |
 +-------------------+-------------------------------------------------------------------------------------------+
 
-Sutherland's Law computes ``Laminar Viscosity`` as a function of temperature
+Sutherland's Law computes ``Dynamic Viscosity`` as a function of temperature
 using
 
 .. math::
@@ -304,8 +437,8 @@ Velocity Gradients
 
 Gradients of velocity are computed using the chain rule. From the ChiDG framework, we have gradients of the 
 primary field variables. Here, we have gradients of the components of 
-momentum: :math:`(\nabla \rho u,\nabla \rho v, \nabla \rho w)`. Gradients
-of velocity, :math:`(\nabla u, \nabla v, \nabla w)` are computed by recognizing that in general
+momentum: :math:`(\nabla \rho v_1,\nabla \rho v_2, \nabla \rho v_3)`. Gradients
+of velocity, :math:`(\nabla v_1, \nabla v_2, \nabla v_3)` are computed by recognizing that in general
 
 .. math::
 
@@ -317,26 +450,26 @@ So the gradient of the velocity components can be computed as
 
 .. math::
 
-    \nabla (u) &= \frac{\nabla(\rho u)}{\rho} - \frac{u \nabla(\rho)}{\rho}
+    \nabla (v_1) &= \frac{\nabla(\rho v_1)}{\rho} - \frac{u \nabla(\rho)}{\rho}
     \\
-    \nabla (v) &= \frac{\nabla(\rho v)}{\rho} - \frac{v \nabla(\rho)}{\rho}
+    \nabla (v_2) &= \frac{\nabla(\rho v_2)}{\rho} - \frac{v \nabla(\rho)}{\rho}
     \\
-    \nabla (w) &= \frac{\nabla(\rho w)}{\rho} - \frac{w \nabla(\rho)}{\rho}
+    \nabla (v_3) &= \frac{\nabla(\rho v_3)}{\rho} - \frac{w \nabla(\rho)}{\rho}
 
 
 .. note::
 
-    In ``Cylindrical`` coordinates, we have :math:`\nabla(r \rho u_\theta)` instead 
-    of :math:`\nabla(\rho u_\theta)`. The gradient of tangential momentum is 
+    In ``Cylindrical`` coordinates, we have :math:`\nabla(r \rho v_\theta)` instead 
+    of :math:`\nabla(\rho v_\theta)`. The gradient of tangential momentum is 
     computed from the angular momentum gradient as
 
     .. math::
 
-        \nabla(\rho u_\theta) = 
+        \nabla(\rho v_\theta) = 
         \begin{bmatrix}
-            \frac{\nabla_1(r \rho u_\theta)}{r} - \frac{u_\theta}{r}, &
-            \frac{\nabla_2(r \rho u_\theta)}{r}, &
-            \frac{\nabla_3(r \rho u_\theta)}{r}
+            \frac{\nabla_1(r \rho v_\theta)}{r} - \frac{v_\theta}{r}, &
+            \frac{\nabla_2(r \rho v_\theta)}{r}, &
+            \frac{\nabla_3(r \rho v_\theta)}{r}
         \end{bmatrix}
 
 
@@ -355,7 +488,7 @@ The shear stress tensor is defined as
 
 .. math::
 
-    \overline{\overline{\tau}} = \mu(\nabla \vec{u} + \nabla \vec{u}^T) +  \lambda \overline{\overline{I}} \nabla \cdot \vec{u}
+    \overline{\overline{\tau}} = \mu(\nabla \vec{v} + \nabla \vec{v}^T) +  \lambda \overline{\overline{I}} \nabla \cdot \vec{v}
 
 The tensor compnents are
 
@@ -381,34 +514,34 @@ Cartesian
 
 .. math::
 
-    \tau_{11} &= 2 \mu \bigg(\nabla_1 u \bigg)  + \lambda(\nabla \cdot \vec{u}) \\
-    \tau_{22} &= 2 \mu \bigg(\nabla_2 v \bigg)  + \lambda(\nabla \cdot \vec{u}) \\
-    \tau_{33} &= 2 \mu \bigg(\nabla_3 w\bigg)   + \lambda(\nabla \cdot \vec{u}) \\
+    \tau_{11} &= 2 \mu \bigg(\nabla_1 v_x \bigg)  + \lambda(\nabla \cdot \vec{v}) \\
+    \tau_{22} &= 2 \mu \bigg(\nabla_2 v_y \bigg)  + \lambda(\nabla \cdot \vec{v}) \\
+    \tau_{33} &= 2 \mu \bigg(\nabla_3 v_z \bigg)  + \lambda(\nabla \cdot \vec{v}) \\
  \\
-    \tau_{12} &= \mu \bigg( \nabla_2 u + \nabla_1 v \bigg) \\
-    \tau_{13} &= \mu \bigg( \nabla_3 u + \nabla_1 w \bigg) \\
-    \tau_{23} &= \mu \bigg( \nabla_2 w + \nabla_3 v \bigg)
+    \tau_{12} &= \mu \bigg( \nabla_2 v_x + \nabla_1 v_y \bigg) \\
+    \tau_{13} &= \mu \bigg( \nabla_3 v_x + \nabla_1 v_z \bigg) \\
+    \tau_{23} &= \mu \bigg( \nabla_2 v_z + \nabla_3 v_y \bigg)
 
 .. math::
 
-    \nabla \cdot \vec{u} = \bigg( \frac{\partial u}{\partial x} + \frac{\partial v}{\partial y} + \frac{\partial w}{\partial z} \bigg) = \bigg[ \nabla_1 u + \nabla_2 v + \nabla_3 w \bigg]
+    \nabla \cdot \vec{v} = \bigg( \frac{\partial v_x}{\partial x} + \frac{\partial v_y}{\partial y} + \frac{\partial v_z}{\partial z} \bigg) = \bigg[ \nabla_1 v_x + \nabla_2 v_y + \nabla_3 v_z \bigg]
 
 Cylindrical
 ~~~~~~~~~~~
 
 .. math::
 
-    \tau_{11} &= 2 \mu \bigg(\nabla_1 u \quad\quad \bigg)     + \lambda(\nabla \cdot \vec{u}) \\
-    \tau_{22} &= 2 \mu \bigg(\nabla_2 v + \frac{u}{r} \bigg)  + \lambda(\nabla \cdot \vec{u}) \\
-    \tau_{33} &= 2 \mu \bigg(\nabla_3 w \quad\quad \bigg)     + \lambda(\nabla \cdot \vec{u}) \\
+    \tau_{11} &= 2 \mu \bigg(\nabla_1 v_r \quad\quad \bigg)       + \lambda(\nabla \cdot \vec{v}) \\
+    \tau_{22} &= 2 \mu \bigg(\nabla_2 v_\theta + \frac{v_r}{r} \bigg)  + \lambda(\nabla \cdot \vec{v}) \\
+    \tau_{33} &= 2 \mu \bigg(\nabla_3 v_z \quad\quad \bigg)       + \lambda(\nabla \cdot \vec{v}) \\
  \\
-    \tau_{12} &= \mu \bigg( \nabla_2 u + \nabla_1 v - \frac{v}{r} \bigg) \\
-    \tau_{13} &= \mu \bigg( \nabla_3 u + \nabla_1 w \quad\quad \bigg) \\
-    \tau_{23} &= \mu \bigg( \nabla_2 w + \nabla_3 v \quad\quad \bigg)
+    \tau_{12} &= \mu \bigg( \nabla_2 v_r + \nabla_1 v_\theta - \frac{v_\theta}{r} \bigg) \\
+    \tau_{13} &= \mu \bigg( \nabla_3 v_r + \nabla_1 v_z \quad\quad \bigg) \\
+    \tau_{23} &= \mu \bigg( \nabla_2 v_z + \nabla_3 v_\theta \quad\quad \bigg)
 
 .. math::
 
-    \nabla \cdot \vec{u} = \bigg( \frac{1}{r}\frac{\partial r u}{\partial r} + \frac{1}{r}\frac{\partial v}{\partial \theta} + \frac{\partial w}{\partial z}\bigg)  =  \bigg( \frac{\partial u}{\partial r} + \frac{1}{r}\frac{\partial v}{\partial \theta} + \frac{\partial w}{\partial z}  +  \frac{u}{r} \bigg) = \bigg[\nabla_1 u + \nabla_2 v + \nabla_3 w + \frac{u}{r}\bigg]
+    \nabla \cdot \vec{v} = \bigg( \frac{1}{r}\frac{\partial r v_r}{\partial r} + \frac{1}{r}\frac{\partial v_\theta}{\partial \theta} + \frac{\partial v_z}{\partial z}\bigg)  =  \bigg( \frac{\partial v_r}{\partial r} + \frac{1}{r}\frac{\partial v_\theta}{\partial \theta} + \frac{\partial v_z}{\partial z}  +  \frac{v_r}{r} \bigg) = \bigg[\nabla_1 v_r + \nabla_2 v_\theta + \nabla_3 v_z + \frac{v_r}{r}\bigg]
 
 
 
@@ -441,28 +574,86 @@ as
 
 .. math::
 
-    \nabla T(\rho, \rho u, \rho v, \rho w, \rho E) = 
-    \frac{\partial T}{\partial \rho} \nabla \rho + 
-    \frac{\partial T}{\partial \rho u} \nabla \rho u + 
-    \frac{\partial T}{\partial \rho v} \nabla \rho v + 
-    \frac{\partial T}{\partial \rho w} \nabla \rho w + 
-    \frac{\partial T}{\partial \rho E} \nabla \rho E
+    \nabla T(\rho, \rho v_1, \rho v_2, \rho v_3, \rho E) = 
+    \frac{\partial T}{\partial \rho}     \nabla \rho + 
+    \frac{\partial T}{\partial \rho v_1} \nabla \rho v_1 + 
+    \frac{\partial T}{\partial \rho v_2} \nabla \rho v_2 + 
+    \frac{\partial T}{\partial \rho v_3} \nabla \rho v_3 + 
+    \frac{\partial T}{\partial \rho E}   \nabla \rho E
 
 
 .. note::
 
-    In ``Cylindrical`` coordinates, we have :math:`\nabla(r \rho u_\theta)` instead 
-    of :math:`\nabla(\rho u_\theta)`. The gradient of tangential momentum is 
+    In ``Cylindrical`` coordinates, we have :math:`\nabla(r \rho v_\theta)` instead 
+    of :math:`\nabla(\rho v_\theta)`. The gradient of tangential momentum is 
     computed from the angular momentum gradient as
 
     .. math::
 
-        \nabla(\rho u_\theta) = 
+        \nabla(\rho v_\theta) = 
         \begin{bmatrix}
-            \frac{\nabla_1(r \rho u_\theta)}{r} - \frac{u_\theta}{r}, &
-            \frac{\nabla_2(r \rho u_\theta)}{r}, &
-            \frac{\nabla_3(r \rho u_\theta)}{r}
+            \frac{\nabla_1(r \rho v_\theta)}{r} - \frac{v_\theta}{r}, &
+            \frac{\nabla_2(r \rho v_\theta)}{r}, &
+            \frac{\nabla_3(r \rho v_\theta)}{r}
         \end{bmatrix}
+
+
+
+
+
+Vorticity
+---------
+
++-------------------+-------------------------------------------------------------------------------------------+
+| **Model name:**   | ``Vorticity``                                                                             |
++-------------------+-------------------------------------------------------------------------------------------+
+| **Model fields:** | ``Vorticity-1``  ``Vorticity-2``  ``Vorticity-3``                                         |
++-------------------+-------------------------------------------------------------------------------------------+
+
+
+Vorticity, used in the Spalart-Allmaras turbulence model, is defined as the Curl of 
+velocity as
+
+.. math::
+
+    \vec{\omega} = \nabla \times \vec{v}
+
+
+
+In Cartesian coordinates, this is computed as
+
+.. math::
+
+    \vec{\omega} = \nabla \times \vec{v} &= \bigg(\frac{\partial v_z}{\partial x} - \frac{\partial v_y}{\partial z}\bigg) \hat{x}  +  \bigg(\frac{\partial v_x}{\partial z} - \frac{\partial v_z}{\partial x}\bigg) \hat{y}  +  \bigg( \frac{\partial v_y}{\partial x} - \frac{\partial v_x}{\partial y}\bigg) \hat{z} \\
+    &= \bigg[ \bigg(\nabla_2 v_3  -  \nabla_3 v_2\bigg), \bigg(\nabla_3 v_1 - \nabla_1 v_3\bigg), \bigg(\nabla_1 v_2 - \nabla_2 v_1\bigg)\bigg]
+
+
+In Cylindrical coordinates, the Curl of a vector is given as
+
+
+.. math::
+
+    \vec{\omega} = \nabla \times \vec{v} &= \bigg(\frac{1}{r}\frac{\partial v_z}{\partial \theta} - \frac{\partial v_\theta}{\partial z}\bigg) \hat{r}  +  \bigg(\frac{\partial v_r}{\partial z} - \frac{\partial v_z}{\partial r}\bigg) \hat{\theta}  +  \frac{1}{r}\bigg( \frac{\partial r v_\theta}{\partial r} - \frac{\partial v_r}{\partial \theta}\bigg) \hat{z} \\
+    &= \bigg(\frac{1}{r}\frac{\partial v_z}{\partial \theta} - \frac{\partial v_\theta}{\partial z}\bigg) \hat{r}  +  \bigg(\frac{\partial v_r}{\partial z} - \frac{\partial v_z}{\partial r}\bigg) \hat{\theta}  +  \bigg( \frac{\partial v_\theta}{\partial r} - \frac{1}{r}\frac{\partial v_r}{\partial \theta} + \frac{v_\theta}{r}\bigg) \hat{z} \\
+    &= \bigg[ \bigg(\nabla_2 v_3  -  \nabla_3 v_2\bigg), \bigg(\nabla_3 v_1 - \nabla_1 v_3\bigg), \bigg(\nabla_1 v_2 - \nabla_2 v_1 + \frac{v_2}{r}\bigg)\bigg]
+
+
+In the non-inertial frame for Cylindrical coordinates, the relative 
+vorticity is accounted for as
+
+.. math::
+
+    \omega_3 = \omega_3 - 2\omega
+
+Note, that here :math:`\omega_3` is the third component of the vorticity 
+vector, while :math:`\omega` is the rate of rotation for the non-inertial frame.
+
+
+
+
+
+
+
 
 
 

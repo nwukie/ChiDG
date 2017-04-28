@@ -107,25 +107,6 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../../examples/example_main.html">Examples</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html">Smooth bump</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#background">Background</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup">Setup</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup-from-scratch">Setup from scratch:</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#use-setup-provided">Use setup provided:</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#results">Results</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html">NACA 2412 Airfoil</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#background">Background</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#set-up">Set-up</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#results">Results</a></li>
-</ul>
-</li>
-</ul>
-</li>
 <li class="toctree-l1 current"><a class="reference internal" href="../details_main.html">Code details</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../architecture/detail_architecture.html">Finding your way around ChiDG</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../architecture/detail_architecture.html#source-layout-chidg-src">Source Layout <code class="docutils literal"><span class="pre">chidg/src</span></code></a><ul>
@@ -244,6 +225,25 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../autodiff/detail_autodiff.html">Automatic Differentiation</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../autodiff/detail_autodiff.html#dnad-dual-number-automatic-differentiation">DNAD - Dual Number Automatic Differentiation</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/example_main.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html">Smooth bump</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#background">Background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup">Setup</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup-from-scratch">Setup from scratch:</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#use-setup-provided">Use setup provided:</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#results">Results</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html">NACA 2412 Airfoil</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#background">Background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#set-up">Set-up</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#results">Results</a></li>
 </ul>
 </li>
 </ul>
@@ -371,10 +371,11 @@ volume in physical space to reference space as</p>
 expansion representing the element coordinates as</p>
 <div class="math">
 \[x = \sum \psi \hat{x}   \quad\rightarrow\quad  \frac{\partial x}{\partial \xi} = \sum \frac{\partial \psi}{\partial \xi} \hat{x}\]</div>
-<p>The metric terms are computed by inverting the matrices
+<p>The element metric terms are obtained by inverting the matrices
 <span class="math">\(\partial \vec{x}/\partial \vec{\xi}\)</span> to give</p>
 <div class="math">
-\[\begin{split}\begin{pmatrix}
+\[\begin{split}\mathcal{T} =
+\begin{pmatrix}
   \xi_x   \quad \xi_y   \quad   \xi_z \\
   \eta_x  \quad \eta_y  \quad   \eta_z \\
   \zeta_x \quad \zeta_y \quad   \zeta_z
@@ -382,12 +383,15 @@ expansion representing the element coordinates as</p>
 \quad
 \quad
 \quad
+\mathcal{T} =
 \begin{pmatrix}
    \xi_r   \quad   \xi_\theta   \quad   \xi_z  \\
    \eta_r  \quad   \eta_\theta  \quad   \eta_z \\
    \zeta_r \quad   \zeta_\theta \quad   \zeta_z
 \end{pmatrix}\end{split}\]</div>
-<p>The metric terms are defined at each quadrature point in the <code class="docutils literal"><span class="pre">metric(:,:,:)</span></code> component
+<p>Note, that the cylindrical element transformation matrix has <span class="math">\(r\)</span>-scaling included
+implicitly since it was computed by inverting the mapping constructed previously.
+The metric terms are defined at each quadrature point in the <code class="docutils literal"><span class="pre">metric(:,:,:)</span></code> component
 of a given <code class="docutils literal"><span class="pre">element_t</span></code>. To access the matrix of metric components for a given quadrature
 node <code class="docutils literal"><span class="pre">igq</span></code>, the component can be used as</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">metric</span><span class="p">(:,:,</span><span class="n">igq</span><span class="p">)</span>
@@ -418,10 +422,13 @@ quadrature node in the set.</p>
 <div class="math">
 \[ \begin{align}\begin{aligned}J^{-1} = ( x_\xi y_\eta z_\zeta  -  x_\eta y_\xi z_\zeta  -  x_\xi y_\zeta z_\eta  +  x_\zeta y_\xi z_\eta  +  x_\eta y_\zeta z_\xi  -  x_\zeta y_\eta z_\xi )\\J^{-1} = r ( r_\xi \theta_\eta z_\zeta  -  r_\eta \theta_\xi z_\zeta  -  r_\xi \theta_\zeta z_\eta  +  r_\zeta \theta_\xi z_\eta  +  r_\eta \theta_\zeta z_\xi  -  r_\zeta \theta_\eta z_\xi )\end{aligned}\end{align} \]</div>
 </div>
-<div class="section" id="derivatives-gradients">
-<h4>Derivatives + Gradients<a class="headerlink" href="#derivatives-gradients" title="Permalink to this headline">¶</a></h4>
-<p>The derivatives of basis functions with respect to the computational coordinates on a
-reference element are already defined in a quadrature instance associated with an
+<div class="section" id="gradients">
+<h4>Gradients<a class="headerlink" href="#gradients" title="Permalink to this headline">¶</a></h4>
+<p>Gradients of basis functions with respect to the reference coordinates
+are not dependent on the physical coordinate system. So, any calculations
+of the terms <span class="math">\(\partial \psi/\partial \vec{\xi}\)</span> do not need to be modified
+with a change from one physical coordinate system to another.
+These gradients are defined on a defined in a quadrature instance associated with an
 element in the component <code class="docutils literal"><span class="pre">element%gq%vol</span></code>. For example, the component
 <code class="docutils literal"><span class="pre">element%gq%vol%ddxi</span></code> gives:</p>
 <div class="math">
@@ -432,13 +439,46 @@ element in the component <code class="docutils literal"><span class="pre">elemen
         \vdots &amp; \vdots &amp; \vdots &amp; \vdots \\
         \frac{\partial \psi_{{ngq},1}}{\partial \xi} &amp; \frac{\partial \psi_{{ngq},2}}{\partial \xi} &amp;  \cdots &amp;  \frac{\partial \psi_{{ngq},N}}{\partial \xi} \\
     \end{pmatrix}\end{split}\]</div>
-<p>Gradients in pysical coordinates in an <code class="docutils literal"><span class="pre">element_t</span></code> can be computed using
-<code class="docutils literal"><span class="pre">grad1(:,:)</span></code>, <code class="docutils literal"><span class="pre">grad2(:,:)</span></code>, and <code class="docutils literal"><span class="pre">grad3(:,:)</span></code>  components. The gradients
-of basis functions with respect to physical
-coordinates(<span class="math">\(x,y,z\)</span> , <span class="math">\(r,\theta,z\)</span> ) are specific to each
-<code class="docutils literal"><span class="pre">element_t</span></code> and these derivatives can be accessed in the
-<code class="docutils literal"><span class="pre">grad1</span></code>, <code class="docutils literal"><span class="pre">grad2</span></code>, <code class="docutils literal"><span class="pre">grad3</span></code> components. For example, the <code class="docutils literal"><span class="pre">element%grad1</span></code> component
-contains the gradient along the 1st physical coordinate  for all test functions at all
+<p>Gradients with respect to the physical coordinate system do change depending on the
+coordinate system being used. The gradient for Cartesian and Cylindrical coordinates is</p>
+<div class="math">
+\[\begin{split}\nabla f &amp;= \frac{\partial f}{\partial x}\hat{x}  +  \frac{\partial f}{\partial y}\hat{y}  +  \frac{\partial f}{\partial z}\hat{z} \\
+\nabla f &amp;= \frac{\partial f}{\partial r}\hat{r}  +  \frac{1}{r}\frac{\partial f}{\partial \theta}\hat{\theta}  +  \frac{\partial f}{\partial z}\hat{z}\end{split}\]</div>
+<p>The coordinate transformation for the gradient from reference space to physical space
+is computed using the transpose of the element metric matrix as</p>
+<div class="math">
+\[\nabla_x \psi = \mathcal{T}^T \nabla_\xi \psi\]</div>
+<p>For the Cartesian and Cylindrical coordinate systems, these are expanded as</p>
+<div class="math">
+\[\begin{split}\nabla_{\vec{x}} \psi
+=
+\begin{bmatrix}
+    \xi_x   &amp;   \eta_x  &amp;   \zeta_x \\
+    \xi_y   &amp;   \eta_y  &amp;   \zeta_y \\
+    \xi_z   &amp;   \eta_z  &amp;   \zeta_z \\
+\end{bmatrix}
+\begin{bmatrix}
+    \psi_\xi \\ \psi_\eta \\ \psi_\zeta
+\end{bmatrix}
+\\
+\nabla_{\vec{r}} \psi
+=
+\begin{bmatrix}
+    \xi_r       &amp;   \eta_r      &amp;   \zeta_r      \\
+    \xi_\theta  &amp;   \eta_\theta &amp;   \zeta_\theta \\
+    \xi_z       &amp;   \eta_z      &amp;   \zeta_z      \\
+\end{bmatrix}
+\begin{bmatrix}
+    \psi_\xi \\ \psi_\eta \\ \psi_\zeta
+\end{bmatrix}\end{split}\]</div>
+<p>Note that the terms <span class="math">\(\nabla_{\vec{x}} \psi\)</span> and <span class="math">\(\nabla_{\vec{r}} \psi\)</span> are the gradient
+vectors and not the directional derivatives. For the Cartesian coordinate system, these
+things are identical. For the cylindrical coordinate system,
+they are not.</p>
+<p>Gradients of basis functions with respect to the pysical coordinate system
+in an <code class="docutils literal"><span class="pre">element_t</span></code> can be accessed in the <code class="docutils literal"><span class="pre">grad1(:,:)</span></code>, <code class="docutils literal"><span class="pre">grad2(:,:)</span></code>,
+and <code class="docutils literal"><span class="pre">grad3(:,:)</span></code>  components. For example, the <code class="docutils literal"><span class="pre">element%grad1</span></code> component
+contains the gradient along the 1st physical coordinate for all basis functions at all
 quadrature nodes as:</p>
 <div class="math">
 \[\begin{split}\nabla_1 \psi_{ngq, nmode} =

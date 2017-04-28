@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>ChiDG Instance &mdash; ChiDG 0.1 documentation</title>
+  <title>ChiDG API &mdash; ChiDG 0.1 documentation</title>
   
 
   
@@ -107,25 +107,6 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../../examples/example_main.html">Examples</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html">Smooth bump</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#background">Background</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup">Setup</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup-from-scratch">Setup from scratch:</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#use-setup-provided">Use setup provided:</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#results">Results</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html">NACA 2412 Airfoil</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#background">Background</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#set-up">Set-up</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#results">Results</a></li>
-</ul>
-</li>
-</ul>
-</li>
 <li class="toctree-l1 current"><a class="reference internal" href="../details_main.html">Code details</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../architecture/detail_architecture.html">Finding your way around ChiDG</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../architecture/detail_architecture.html#source-layout-chidg-src">Source Layout <code class="docutils literal"><span class="pre">chidg/src</span></code></a><ul>
@@ -136,13 +117,7 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">ChiDG Instance</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#components">Components</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#data">Data</a></li>
-</ul>
-</li>
-</ul>
-</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">ChiDG API</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../mesh/detail_mesh.html">Mesh</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../mesh/detail_mesh.html#coordinate-systems">Coordinate Systems</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../mesh/detail_mesh.html#id1">Mesh</a><ul>
@@ -248,6 +223,25 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/example_main.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html">Smooth bump</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#background">Background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup">Setup</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup-from-scratch">Setup from scratch:</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#use-setup-provided">Use setup provided:</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#results">Results</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html">NACA 2412 Airfoil</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#background">Background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#set-up">Set-up</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/naca2412/example_naca2412.html#results">Results</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 
             
@@ -280,7 +274,7 @@
       
           <li><a href="../details_main.html">Code details</a> &raquo;</li>
       
-    <li>ChiDG Instance</li>
+    <li>ChiDG API</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -294,19 +288,68 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="chidg-instance">
-<span id="chidg-t"></span><h1>ChiDG Instance<a class="headerlink" href="#chidg-instance" title="Permalink to this headline">¶</a></h1>
-<p>ChiDG exists primarily as a Fortran Class(<code class="docutils literal"><span class="pre">chidg_t</span></code>) that provides an interface to
-the simulation environment. A <code class="docutils literal"><span class="pre">chidg_t</span></code> instance contains five primary components.
-These are:</p>
+  <div class="section" id="chidg-api">
+<span id="chidg-t"></span><h1>ChiDG API<a class="headerlink" href="#chidg-api" title="Permalink to this headline">¶</a></h1>
+<p>The ChiDG API is provided as a Fortran Class(<code class="docutils literal"><span class="pre">chidg_t</span></code>) that provides an interface to
+the ChiDG library.</p>
 <div class="highlight-fortran"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="kd">::</span> <span class="n">chidg_t</span>
+
     <span class="k">type</span><span class="p">(</span><span class="n">chidg_data_t</span><span class="p">)</span>          <span class="k">data</span>
 <span class="k">    type</span><span class="p">(</span><span class="n">time_integrator_t</span><span class="p">)</span>     <span class="n">time_integrator</span>
     <span class="k">type</span><span class="p">(</span><span class="n">nonlinear_solver_t</span><span class="p">)</span>    <span class="n">nonlinear_solver</span>
     <span class="k">type</span><span class="p">(</span><span class="n">linear_solver_t</span><span class="p">)</span>       <span class="n">linear_solver</span>
     <span class="k">type</span><span class="p">(</span><span class="n">preconditioner_t</span><span class="p">)</span>      <span class="n">preconditioner</span>
-    <span class="p">...</span>
+
+<span class="k">contains</span>
+
+    <span class="c">! Open/Close</span>
+    <span class="k">procedure</span>   <span class="kd">::</span> <span class="n">start_up</span>
+    <span class="k">procedure</span>   <span class="kd">::</span> <span class="n">shut_down</span>
+
+    <span class="c">! IO</span>
+    <span class="k">procedure</span>   <span class="kd">::</span> <span class="n">read_grid</span>
+    <span class="k">procedure</span>   <span class="kd">::</span> <span class="n">read_solution</span>
+    <span class="k">procedure</span>   <span class="kd">::</span> <span class="n">write_grid</span>
+    <span class="k">procedure</span>   <span class="kd">::</span> <span class="n">write_solution</span>
+
+    <span class="c">! Initialization</span>
+    <span class="k">procedure</span>   <span class="kd">::</span> <span class="n">set</span>
+    <span class="k">procedure</span>   <span class="kd">::</span> <span class="n">init</span>
+
+    <span class="c">! Run</span>
+    <span class="k">procedure</span>   <span class="kd">::</span> <span class="n">run</span>
+
 <span class="k">end type </span><span class="n">chidg_t</span>
+</pre></div>
+</div>
+<p class="rubric"><strong>Example:</strong></p>
+<div class="highlight-fortran"><div class="highlight"><pre><span></span><span class="c">! This is an example of how a driver might use the ChiDG API to run an</span>
+<span class="c">! analysis. This is similar to the file src/driver.f90 that is used</span>
+<span class="c">! to create the ChiDG executable.</span>
+
+<span class="c">! Import the ChiDG API class</span>
+<span class="k">use </span><span class="n">type_chidg</span><span class="p">,</span> <span class="n">only</span><span class="p">:</span> <span class="n">chidg_t</span>
+
+<span class="c">! Create an instance of the ChiDG API</span>
+<span class="k">type</span><span class="p">(</span><span class="n">chidg_t</span><span class="p">)</span>   <span class="kd">::</span> <span class="n">chidg</span>
+
+<span class="c">! Initialize MPI and ChiDG infrastructure</span>
+<span class="k">call </span><span class="n">chidg</span><span class="p">%</span><span class="n">start_up</span><span class="p">(</span><span class="s1">&#39;mpi&#39;</span><span class="p">)</span>
+<span class="k">call </span><span class="n">chidg</span><span class="p">%</span><span class="n">start_up</span><span class="p">(</span><span class="s1">&#39;core&#39;</span><span class="p">)</span>
+
+<span class="c">! Set algorithms</span>
+<span class="k">call </span><span class="n">chidg</span><span class="p">%</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;Time Integrator&#39;</span> <span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="s1">&#39;Steady&#39;</span>      <span class="p">)</span>
+<span class="k">call </span><span class="n">chidg</span><span class="p">%</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;Nonlinear Solver&#39;</span><span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="s1">&#39;Quasi-Newton&#39;</span><span class="p">)</span>
+<span class="k">call </span><span class="n">chidg</span><span class="p">%</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;Linear Solver&#39;</span>   <span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="s1">&#39;FGMRES&#39;</span>      <span class="p">)</span>
+<span class="k">call </span><span class="n">chidg</span><span class="p">%</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;Preconditioner&#39;</span>  <span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="s1">&#39;ILU0&#39;</span>        <span class="p">)</span>
+<span class="k">call </span><span class="n">chidg</span><span class="p">%</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;Solution Order&#39;</span>  <span class="p">,</span> <span class="n">integer_input</span><span class="o">=</span><span class="mi">2</span>         <span class="p">)</span>
+
+<span class="c">! Read grid (solution if available)</span>
+<span class="k">call </span><span class="n">chidg</span><span class="p">%</span><span class="n">read_grid</span><span class="p">(</span><span class="s1">&#39;grid.h5&#39;</span><span class="p">)</span>
+<span class="k">call </span><span class="n">chidg</span><span class="p">%</span><span class="n">read_solution</span><span class="p">(</span><span class="s1">&#39;grid.h5&#39;</span><span class="p">)</span>
+
+<span class="c">! Run ChiDG analysis</span>
+<span class="k">call </span><span class="n">chidg</span><span class="p">%</span><span class="n">run</span><span class="p">()</span>
 </pre></div>
 </div>
 <dl class="function">
@@ -378,34 +421,55 @@ These are:</p>
 <dl class="function">
 <dt>
 <code class="descname">chidg%init('option')</code></dt>
-<dd><p>Performs shut-down routines on a ChiDG instance. Options are:</p>
+<dd><p>Performs initialization activities on data. This should be executed after add data has been
+read in. In an operational setting, using the option <code class="docutils literal"><span class="pre">all</span></code> is recommended. The more granular
+initialization options are sometimes useful for testing purposes, where not all initialization
+is necessary. Options are:</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="19%" />
-<col width="81%" />
+<col width="17%" />
+<col width="83%" />
 </colgroup>
 <tbody valign="top">
 <tr class="row-odd"><td><code class="docutils literal"><span class="pre">all</span></code></td>
 <td><div class="first last line-block">
-<div class="line">Calls <code class="docutils literal"><span class="pre">MPI_Finalize</span></code>.</div>
+<div class="line">Calls all initialization routines.</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">domains</span></code></td>
+<td><div class="first last line-block">
+<div class="line">Initialize domain data that depend on solution expansion.</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">bc</span></code></td>
+<td><div class="first last line-block">
+<div class="line">Initialize boundary condition coupling, bc parallel comm.</div>
 </div>
 </td>
 </tr>
 <tr class="row-even"><td><code class="docutils literal"><span class="pre">communication</span></code></td>
 <td><div class="first last line-block">
-<div class="line">Close log files, close HDF interface.</div>
+<div class="line">Initialize interior communication. Local/Global interior faces.</div>
 </div>
 </td>
 </tr>
 <tr class="row-odd"><td><code class="docutils literal"><span class="pre">chimera</span></code></td>
 <td><div class="first last line-block">
-<div class="line">Close log files.</div>
+<div class="line">Initialize chimera communication.</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">finalize</span></code></td>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">solvers</span></code></td>
 <td><div class="first last line-block">
-<div class="line">Close log files.</div>
+<div class="line">Allocate matrix/vector storage used by solvers.</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">finalize</span></code></td>
+<td><div class="first last line-block">
+<div class="line">Check necessary algorithms have been set. Initialize time integrator and preconditioner.</div>
 </div>
 </td>
 </tr>
@@ -413,28 +477,6 @@ These are:</p>
 </table>
 </dd></dl>
 
-<div class="line-block">
-<div class="line"><br /></div>
-<div class="line"><br /></div>
-<div class="line"><br /></div>
-</div>
-<div class="section" id="components">
-<h2>Components<a class="headerlink" href="#components" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="data">
-<h3>Data<a class="headerlink" href="#data" title="Permalink to this headline">¶</a></h3>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="nb">type</span><span class="p">(</span><span class="n">chidg_data_t</span><span class="p">)</span>  <span class="n">data</span>
-</pre></div>
-</div>
-<p>The <code class="docutils literal"><span class="pre">chidg_data_t</span></code> data type contains all of the working information to run a ChiDG
-calculation. This includes:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="nb">type</span><span class="p">(</span><span class="n">mesh_t</span><span class="p">)</span>            <span class="n">mesh</span><span class="p">(:)</span>
-<span class="nb">type</span><span class="p">(</span><span class="n">bcset_t</span><span class="p">)</span>           <span class="n">bcset</span><span class="p">(:)</span>
-<span class="nb">type</span><span class="p">(</span><span class="n">equation_set_t</span><span class="p">)</span>    <span class="n">eqnset</span><span class="p">(:)</span>
-<span class="nb">type</span><span class="p">(</span><span class="n">solverdata_t</span><span class="p">)</span>      <span class="n">sdata</span>
-</pre></div>
-</div>
-</div>
-</div>
 </div>
 
 

@@ -290,15 +290,15 @@
             
   <div class="section" id="chidg-api">
 <span id="chidg-t"></span><h1>ChiDG API<a class="headerlink" href="#chidg-api" title="Permalink to this headline">¶</a></h1>
-<p>The ChiDG API is provided as a Fortran Class(<code class="docutils literal"><span class="pre">chidg_t</span></code>) that provides an interface to
+<p>The ChiDG API is a Fortran Class(<code class="docutils literal"><span class="pre">chidg_t</span></code>) that provides an interface to
 the ChiDG library.</p>
 <div class="highlight-fortran"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="kd">::</span> <span class="n">chidg_t</span>
 
-    <span class="k">type</span><span class="p">(</span><span class="n">chidg_data_t</span><span class="p">)</span>          <span class="k">data</span>
-<span class="k">    type</span><span class="p">(</span><span class="n">time_integrator_t</span><span class="p">)</span>     <span class="n">time_integrator</span>
-    <span class="k">type</span><span class="p">(</span><span class="n">nonlinear_solver_t</span><span class="p">)</span>    <span class="n">nonlinear_solver</span>
-    <span class="k">type</span><span class="p">(</span><span class="n">linear_solver_t</span><span class="p">)</span>       <span class="n">linear_solver</span>
-    <span class="k">type</span><span class="p">(</span><span class="n">preconditioner_t</span><span class="p">)</span>      <span class="n">preconditioner</span>
+    <span class="k">type</span><span class="p">(</span><span class="n">chidg_data_t</span><span class="p">)</span>                      <span class="kd">::</span> <span class="k">data</span>
+<span class="k">    class</span><span class="p">(</span><span class="n">time_integrator_t</span><span class="p">),</span>   <span class="k">allocatable</span> <span class="kd">::</span> <span class="n">time_integrator</span>
+    <span class="k">class</span><span class="p">(</span><span class="n">nonlinear_solver_t</span><span class="p">),</span>  <span class="k">allocatable</span> <span class="kd">::</span> <span class="n">nonlinear_solver</span>
+    <span class="k">class</span><span class="p">(</span><span class="n">linear_solver_t</span><span class="p">),</span>     <span class="k">allocatable</span> <span class="kd">::</span> <span class="n">linear_solver</span>
+    <span class="k">class</span><span class="p">(</span><span class="n">preconditioner_t</span><span class="p">),</span>    <span class="k">allocatable</span> <span class="kd">::</span> <span class="n">preconditioner</span>
 
 <span class="k">contains</span>
 
@@ -352,6 +352,7 @@ the ChiDG library.</p>
 <span class="k">call </span><span class="n">chidg</span><span class="p">%</span><span class="n">run</span><span class="p">()</span>
 </pre></div>
 </div>
+<p class="rubric"><strong>API procedures:</strong></p>
 <dl class="function">
 <dt>
 <code class="descname">chidg%start_up('option')</code></dt>
@@ -420,61 +421,68 @@ the ChiDG library.</p>
 
 <dl class="function">
 <dt>
-<code class="descname">chidg%init('option')</code></dt>
-<dd><p>Performs initialization activities on data. This should be executed after add data has been
-read in. In an operational setting, using the option <code class="docutils literal"><span class="pre">all</span></code> is recommended. The more granular
-initialization options are sometimes useful for testing purposes, where not all initialization
-is necessary. Options are:</p>
+<code class="descname">chidg%set('String Selector', algorithm='string', integer_index=value)</code></dt>
+<dd><p>Set algorithms and parameters for the ChiDG instance.</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="17%" />
-<col width="83%" />
+<col width="24%" />
+<col width="76%" />
 </colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head"><code class="docutils literal"><span class="pre">String</span> <span class="pre">Selector</span></code></th>
+<th class="head">Expected input</th>
+</tr>
+</thead>
 <tbody valign="top">
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">all</span></code></td>
-<td><div class="first last line-block">
-<div class="line">Calls all initialization routines.</div>
-</div>
-</td>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">Time</span> <span class="pre">Integrator</span></code></td>
+<td>algorithm=&#8217;string&#8217;</td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">domains</span></code></td>
-<td><div class="first last line-block">
-<div class="line">Initialize domain data that depend on solution expansion.</div>
-</div>
-</td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">Nonlinear</span> <span class="pre">Solver</span></code></td>
+<td>algorithm=&#8217;string&#8217;</td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">bc</span></code></td>
-<td><div class="first last line-block">
-<div class="line">Initialize boundary condition coupling, bc parallel comm.</div>
-</div>
-</td>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">Linear</span> <span class="pre">Solver</span></code></td>
+<td>algorithm=&#8217;string&#8217;</td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">communication</span></code></td>
-<td><div class="first last line-block">
-<div class="line">Initialize interior communication. Local/Global interior faces.</div>
-</div>
-</td>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">Preconditioner</span></code></td>
+<td>algorithm=&#8217;string&#8217;</td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">chimera</span></code></td>
-<td><div class="first last line-block">
-<div class="line">Initialize chimera communication.</div>
-</div>
-</td>
-</tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">solvers</span></code></td>
-<td><div class="first last line-block">
-<div class="line">Allocate matrix/vector storage used by solvers.</div>
-</div>
-</td>
-</tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">finalize</span></code></td>
-<td><div class="first last line-block">
-<div class="line">Check necessary algorithms have been set. Initialize time integrator and preconditioner.</div>
-</div>
-</td>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">Solution</span> <span class="pre">Order</span></code></td>
+<td>integer_input=value</td>
 </tr>
 </tbody>
 </table>
+</dd></dl>
+
+<dl class="function">
+<dt>
+<code class="descname">chidg%read_grid('file name')</code></dt>
+<dd><p>Read domains and boundary conditions from the ChiDG-formatted HDF file indicated by the
+string parameter passed in.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">All calls to <code class="docutils literal"><span class="pre">chidg%set()</span></code> shall occur before this.</p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt>
+<code class="descname">chidg%read_solution('file name')</code></dt>
+<dd><p>Read solution from the ChiDG-formatted HDF file indicated by the
+string parameter passed in.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">A grid shall already have been read/initialized before a call to <code class="docutils literal"><span class="pre">chidg%read_solution('file')</span></code>.</p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt>
+<code class="descname">chidg%run()</code></dt>
+<dd><p>Run the ChiDG analysis. This calls a certain number of &#8216;steps&#8217; on the time integrator.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">All reading/initializing/setting shall occur before this.</p>
+</div>
 </dd></dl>
 
 </div>

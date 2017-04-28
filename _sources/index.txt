@@ -56,8 +56,8 @@ equations using the discontinuous Galerkin method on Chimera-overset grids.
 |
 |
 
-ChiDG exists as:
-----------------
+The ChiDG API is:
+-----------------
 
 a Fortran Class that provides an interface to the simulation environment.
 
@@ -84,15 +84,15 @@ a Fortran Class that provides an interface to the simulation environment.
 Example applications:
 --------------------------------
 
-.. image:: figures/naca2412.png
-    :width: 36 %
-    :align: left
-.. image:: figures/mode91_3dview.png
-    :width: 32 %
-    :align: right
-.. image:: figures/aachen_turbine_nonreflectingbc.png
-    :width: 20 %
-    :align: center
+ .. image:: figures/naca2412.png
+     :width: 36 %
+     :align: left
+ .. image:: figures/mode91_3dview.png
+     :width: 32 %
+     :align: right
+ .. image:: figures/aachen_turbine_nonreflectingbc.png
+     :width: 20 %
+     :align: center
 
 
 

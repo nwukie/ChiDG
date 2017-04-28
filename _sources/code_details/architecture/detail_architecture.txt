@@ -4,7 +4,7 @@ Finding your way around ChiDG
 
 
 ChiDG is a fairly large code and exists primarily as a composition of small concepts that
-create the entire simulation environment. Keep in mind that the ChiDG environment 
+create the entire simulation environment. Keep in mind that the ChiDG API
 exists as the ``chidg_t`` datatype, which resides in ``src/chidg/type_chidg.f90``.
 To understand ChiDG, it is recommended to start with the ``chidg_t`` class, look
 at what it contains. Start there and work your way into the code from the top down.

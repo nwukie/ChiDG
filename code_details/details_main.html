@@ -287,8 +287,6 @@
             
   <div class="section" id="code-details">
 <h1>Code details<a class="headerlink" href="#code-details" title="Permalink to this headline">¶</a></h1>
-<div class="toctree-wrapper compound">
-</div>
 <p class="rubric">Overview</p>
 <p>From a high-level perspective, ChiDG is a library. A ChiDG environment can
 be imported from the library and used by some driver. For example, the ChiDG
@@ -296,7 +294,7 @@ executable is just a driver file that links with the ChiDG library and
 creates a ChiDG-object, which is then used to initialize the framework,
 read data, and run a simulation.</p>
 <a class="reference internal image-reference" href="../_images/chidg_overview.png"><img alt="../_images/chidg_overview.png" class="align-center" src="../_images/chidg_overview.png" style="width: 90%;" /></a>
-<p class="rubric">ChiDG Library: libchidg.a</p>
+<p class="rubric">ChiDG Library</p>
 <p>The ChiDG library contains the infrastructure(classes, datatypes, etc.)
 for representing concepts related to solving partial differential
 equations on discretizations of space and time. These are things like
@@ -305,8 +303,22 @@ The ChiDG library also contains a ChiDG API. This is provided through
 an object <code class="docutils literal"><span class="pre">chidg_t</span></code>. In this way, all of the capability of the ChiDG
 library can be accessed and driven by creating a <code class="docutils literal"><span class="pre">chidg</span></code> object, and
 using high-level routines that it provides. Things like
-<code class="docutils literal"><span class="pre">chidg%read_grid('mygrid.h5')</span></code> and <code class="docutils literal"><span class="pre">chidg%set('Time</span> <span class="pre">Integrator',</span> <span class="pre">'Quasi-Newton')</span></code>.</p>
+<code class="docutils literal"><span class="pre">chidg%read_grid('mygrid.h5')</span></code> and <code class="docutils literal"><span class="pre">chidg%set('Nonlinear</span> <span class="pre">Solver',</span> <span class="pre">'Quasi-Newton')</span></code>.</p>
 <a class="reference internal image-reference" href="../_images/chidg_library.png"><img alt="../_images/chidg_library.png" class="align-center" src="../_images/chidg_library.png" style="width: 90%;" /></a>
+<p class="rubric">Extended topics:</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="architecture/detail_architecture.html">Finding your way around ChiDG</a></li>
+<li class="toctree-l1"><a class="reference internal" href="chidg/detail_chidg.html">ChiDG API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mesh/detail_mesh.html">Mesh</a></li>
+<li class="toctree-l1"><a class="reference internal" href="equations/detail_equations.html">Equation Sets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="boundary_conditions/detail_boundary_conditions.html">Boundary conditions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="solvers/detail_solvers.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="containers/detail_containers.html">ChiDG Matrix/Vector</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parallel/detail_parallel.html">Parallelization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="autodiff/detail_autodiff.html">Automatic Differentiation</a></li>
+</ul>
+</div>
 </div>
 
 

@@ -22,24 +22,25 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     tol = 1.e-14_rk
     IO_DESTINATION = 'file'
 
-
+    !
     ! Initialize element mapping
+    !
     call chidg%start_up('core')
     
 
     !
-    ! Create mesh file
+    ! Set the accuracy of the solution expansion
     !
-    call create_mesh_file("D1 NxNxN", filename,nelem_xi=1,nelem_eta=1,nelem_zeta=1)
+    call chidg%set('Solution Order', integer_input=2)
+
 
     !
-    ! Read grid and add domain to chidg
+    ! Create/Read grid 
     !
+    call create_mesh_file("D1 NxNxN", filename,nelem_xi=1,nelem_eta=1,nelem_zeta=1)
     call chidg%read_grid(filename, spacedim)
 
 
-    call chidg%set('Solution Order', integer_input=2)
-    call chidg%init('domains')
 
 
 
@@ -111,22 +112,23 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
     IO_DESTINATION = 'file'
 
 
-    ! Initialize element mapping
+    !
+    ! Initialize chidg environment
+    !
     call chidg%start_up('core')
     
+
     !
-    ! Create mesh file
+    ! Set the accuracy of the solution expansion
+    !
+    call chidg%set('Solution Order', integer_input=2)
+
+
+    !
+    ! Create/Read grid
     !
     call create_mesh_file("D1 NxNxN", filename, nelem_xi=3,nelem_eta=3,nelem_zeta=3)
-
-    !
-    ! Read grid
-    !
     call chidg%read_grid(filename,spacedim)
-
-
-    call chidg%set('Solution Order', integer_input=2)
-    call chidg%init('domains')
 
     
     ! Test number of allocated domains
@@ -203,21 +205,24 @@ subroutine testIO__read_grid_hdf__D2_E1_M1()
     tol = 1.e-14_rk
     IO_DESTINATION = 'file'
 
-    ! Initialize element mapping
+    !
+    ! Initialize chidg environment
+    !
     call chidg%start_up('core')
     
+
     !
-    ! Create mesh file
+    ! Set the accuracy of the solution expansion
+    !
+    call chidg%set('Solution Order', integer_input=2)
+
+
+    !
+    ! Create/Read grid
     !
     call create_mesh_file("D2 NxNxN M1", filename, nelem_xi =2,nelem_eta =1,nelem_zeta =1)
-
-    !
-    ! Read grid
-    !
     call chidg%read_grid(filename,spacedim)
 
-    call chidg%set('Solution Order', integer_input=2)
-    call chidg%init('domains')
 
 
 
@@ -302,21 +307,22 @@ subroutine testIO__read_grid_hdf__D2_E27_M1()
     
     IO_DESTINATION = 'file'
 
+    !
     ! Initialize element mapping
+    !
     call chidg%start_up('core')
     
     !
-    ! Create mesh file
+    ! Set the accuracy of the solution expansion
+    !
+    call chidg%set('Solution Order', integer_input=2)
+
+
+    !
+    ! Create/Read grid
     !
     call create_mesh_file("D2 NxNxN M1", filename, nelem_xi=6, nelem_eta=3, nelem_zeta=3)
-
-    !
-    ! Read grid
-    !
     call chidg%read_grid(filename,spacedim)
-
-    call chidg%set('Solution Order', integer_input=2)
-    call chidg%init('domains')
 
 
 

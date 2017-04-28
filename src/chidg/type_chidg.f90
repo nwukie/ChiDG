@@ -111,8 +111,8 @@ module type_chidg
 
         ! IO
         procedure            :: read_grid
-        procedure, private   :: read_domains
-        procedure, private   :: read_boundary_conditions
+        procedure            :: read_domains
+        procedure            :: read_boundary_conditions
         procedure            :: read_solution
         procedure            :: write_grid
         procedure            :: write_solution
@@ -308,12 +308,12 @@ contains
                 call self%init('bc')
 
                 ! communication
-                call self%init('communication')
-                call self%init('chimera')
+                call self%init('comm - interior')
+                call self%init('comm - chimera')
 
                 ! matrix/vector
-                call self%init('solvers')
-                call self%init('finalize')
+                call self%init('storage')
+                !call self%init('finalize')
 
 
 
@@ -337,28 +337,28 @@ contains
             !
             ! Initialize communication. Local face communication. Global parallel communication.
             !
-            case ('communication')
+            case ('comm - interior')
                 call establish_neighbor_communication(self%data%mesh,ChiDG_COMM)
 
 
             !
             ! Initialize chimera
             !
-            case ('chimera')
+            case ('comm - chimera')
                 call establish_chimera_communication(self%data%mesh,ChiDG_COMM)
 
 
             !
             ! Initialize solver storage initialization: vectors, matrices, etc.
             !
-            case ('solvers')
+            case ('storage')
                 call self%data%initialize_solution_solver()
 
 
             !
             ! Allocate components, based on input or default input data
             !
-            case ('finalize')
+            case ('algorithms')
 
                 !
                 ! Test chidg necessary components have been allocated
@@ -382,7 +382,7 @@ contains
 
 
             case default
-                call chidg_signal_one(WARN,'chidg%init: Invalid initialization string',trim(activity))
+                call chidg_signal_one(FATAL,'chidg%init: Invalid initialization string',trim(activity))
 
         end select
 
@@ -604,6 +604,13 @@ contains
                                                      bc_symmetry,    &
                                                      bc_farfield,    &
                                                      bc_periodic )
+
+
+
+        !
+        ! Initialize data
+        !
+        call self%init('all')
 
 
         call write_line('Done reading grid.', io_proc=GLOBAL_MASTER)
@@ -1075,8 +1082,11 @@ contains
         call write_line("---------------------------------------------------", io_proc=GLOBAL_MASTER)
 
 
+        !
+        ! Initialize algorithms
+        !
+        call self%init('algorithms')
 
-!        call self%auxiliary_environment%start_up('core')
 
 
         !
@@ -1135,7 +1145,6 @@ contains
             ! 1: Update time t
             ! 2: Call time integrator to take a step
             !
-            !self%data%sdata%t = self%data%time_manager%dt*istep
             self%data%time_manager%t = self%data%time_manager%dt*istep
             call self%time_integrator%step(self%data,self%nonlinear_solver, &
                                                      self%linear_solver,    &

@@ -269,7 +269,6 @@ contains
         !
         !------------------------------------------------------------------------------
         basis            = 'legendre'
-        spacedim         = 3
         gq_rule          = 2
         time_integrator  = 'steady'
         nonlinear_solver = 'quasi_newton'
@@ -354,14 +353,6 @@ contains
         end if
 
 
-
-        !
-        ! Read grid
-        !
-        call this%chidg%read_grid(this%gridfile,spacedim)
-
-
-
         !
         ! Set ChiDG components
         !
@@ -373,9 +364,11 @@ contains
 
 
         !
-        ! Wrap-up initialization activities
+        ! Read grid
         !
-        call this%chidg%init('all')
+        call this%chidg%read_grid(this%gridfile)
+
+
 
 
         !

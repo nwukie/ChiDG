@@ -65,6 +65,13 @@ subroutine test_update_space_linearadvection()
     call chidgB%start_up('core')
 
 
+    !
+    ! Set accuracy of the solution expansion
+    !
+    call chidgA%set('Solution Order', integer_input=2)
+    call chidgB%set('Solution Order', integer_input=2)
+
+
     chidgAfile = 'D1E16M1.h5'
     chidgBfile = 'D2E8M1.h5'
     call create_mesh_file("D1 NxNxN", chidgAfile, nelem_xi=4, nelem_eta=2, nelem_zeta=2)
@@ -79,29 +86,22 @@ subroutine test_update_space_linearadvection()
     call chidgA%read_grid(chidgAfile,spacedim)
     call chidgB%read_grid(chidgBfile,spacedim)
 
-    
-
-
-    call chidgA%set('Solution Order', integer_input=2)
-    call chidgB%set('Solution Order', integer_input=2)
-
-
 
 
     !
     ! Initialize solution data storage
     !
-    call chidgA%init('domains')
-    call chidgA%init('bc')
-    call chidgA%init('communication')
-    call chidgA%init('chimera')
-    call chidgA%init('solvers')
+    !call chidgA%init('domains')
+    !call chidgA%init('bc')
+    !call chidgA%init('communication')
+    !call chidgA%init('chimera')
+    !call chidgA%init('solvers')
 
-    call chidgB%init('domains')
-    call chidgB%init('bc')
-    call chidgB%init('communication')
-    call chidgB%init('chimera')
-    call chidgB%init('solvers')
+    !call chidgB%init('domains')
+    !call chidgB%init('bc')
+    !call chidgB%init('communication')
+    !call chidgB%init('chimera')
+    !call chidgB%init('solvers')
 
 
 

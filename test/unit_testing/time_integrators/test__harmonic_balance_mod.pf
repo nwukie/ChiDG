@@ -272,16 +272,10 @@ contains
         call chidg%read_grid(filename,spacedim)
 
 
-        !
-        ! Initialize ChiDG interfaces
-        ! TODO: Initialize all interfaces
-        !
-!        call chidg%init('all')
-        call chidg%init('domains')
-        call chidg%init('bc')
-        call chidg%init('communication')
-        call chidg%init('solvers')
 
+        !
+        ! Initialize the time integrator
+        !
         call chidg%time_integrator%init(chidg%data)
         
 

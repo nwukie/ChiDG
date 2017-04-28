@@ -64,7 +64,7 @@ contains
     subroutine setUp(this)
         class(test_interpolate_chimera),    intent(inout)   :: this
 
-        integer(ik)                     :: ivar, idom, spacedim
+        integer(ik)                     :: ivar, idom
         type(meshdata_t),   allocatable :: meshdata(:) 
         
         !
@@ -85,23 +85,18 @@ contains
         this%filename = "D2E8M1_abutting_matching.h5"
         call create_mesh_file("D2 E8 M1 : Abutting : Matching",this%filename)
 
+
+        !
+        ! Set order of solution expansion
+        !
+        call this%chidg%set('Solution Order', integer_input=2)
+
+
         !
         ! Read D2_E8_M1. Two domains, 2x2x2 elements in each domain, linear mapping
         !
-        spacedim = 3
-        call this%chidg%read_grid(this%filename, spacedim)
+        call this%chidg%read_grid(this%filename)
 
-
-
-        !
-        ! Initialize chidg solution data storage
-        !
-        call this%chidg%set('Solution Order', integer_input=2)
-        call this%chidg%init('domains')
-        call this%chidg%init('bc')
-        call this%chidg%init('communication')
-        call this%chidg%init('chimera')
-        call this%chidg%init('solvers')
 
         !
         ! Initialized solution to constant values

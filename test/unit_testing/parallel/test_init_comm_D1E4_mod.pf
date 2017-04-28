@@ -34,7 +34,7 @@ contains
         type(chidg_t)                               :: chidg
         type(mpi_comm)                              :: ChiDG_COMM
 
-        integer(ik)                     :: iread, spacedim, ierr
+        integer(ik)                     :: iread, ierr
         character(len=:), allocatable   :: gridfile
 
         
@@ -46,7 +46,6 @@ contains
 
         gridfile       = "D1E4M1.h5"
         IO_DESTINATION = 'file'
-        spacedim       = 3
 
 
 
@@ -66,18 +65,16 @@ contains
 
 
         !
-        ! Read partition data: grid, boundary conditions
-        !
-        call chidg%read_grid(gridfile, spacedim)
-        call MPI_Barrier(ChiDG_COMM,ierr)
-
-
-        !
-        ! Initialization
+        ! Set the accuracy of the solution expansion
         !
         call chidg%set('Solution Order', integer_input=3)
-        call chidg%init('domains')
-        call chidg%init('communication')
+
+
+        !
+        ! Read partition data: grid, boundary conditions
+        !
+        call chidg%read_grid(gridfile)
+        call MPI_Barrier(ChiDG_COMM,ierr)
 
 
 

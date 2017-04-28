@@ -80,20 +80,16 @@ subroutine test_chidg_matrix_operator_mv()
 
 
     !
+    ! Set the order of accuracy for the solution
+    !
+    call chidg%set('Solution Order', integer_input=2)
+
+
+    !
     ! Get grid points
     !
     call chidg%read_grid(filename,spacedim)
 
-
-
-    !
-    ! Initialize ChiDG Chimera Interfaces
-    !
-    call chidg%set('Solution Order', integer_input=2)
-    call chidg%init('domains')
-    call chidg%init('bc')
-    call chidg%init('communication')
-    call chidg%init('chimera')
 
 
     !

@@ -512,7 +512,7 @@ contains
         class(bc_state_t),  allocatable :: bc_state
         type(bc_state_group_t)          :: bc_state_groups(3)
         type(string_t)                  :: group_names(1,6)
-        integer(ik)                     :: iread, spacedim, ierr, ielem, ivar, itime, iproc
+        integer(ik)                     :: iread, ierr, ielem, ivar, itime, iproc
         real(rk)                        :: initial_vals(this%nterms_s)
         class(function_t),  allocatable :: constant
 
@@ -540,7 +540,6 @@ contains
 
         IO_DESTINATION = 'file'
         this%gridfile  = 'D1E8M1.h5'
-        spacedim       = 3
 
 
 
@@ -589,20 +588,18 @@ contains
 
 
         !
+        ! Set accuracy for the solution expansion
+        !
+        call this%chidg%set('Solution Order', integer_input=this%solution_order)
+
+
+        !
         ! Read partition data: grid, boundary conditions
         !
-        call this%chidg%read_grid(this%gridfile, spacedim)
+        call this%chidg%read_grid(this%gridfile)
 
         
 
-        !
-        ! Initialization
-        !
-        call this%chidg%set('Solution Order', integer_input=this%solution_order)
-        call this%chidg%init('domains')
-        call this%chidg%init('bc')
-        call this%chidg%init('communication')
-        call this%chidg%init('solvers')
 
 
 !        !

@@ -487,7 +487,6 @@ contains
         !
         !------------------------------------------------------------------------------
         basis            = 'legendre'
-        spacedim         = 3
         gq_rule          = 2
         time_integrator  = 'steady'
         nonlinear_solver = 'newton'
@@ -604,14 +603,6 @@ contains
         call MPI_Barrier(this%ChiDG_COMM,ierr)
 
 
-
-
-        !
-        ! Read grid
-        !
-        call this%chidg%read_grid(this%gridfile,spacedim)
-
-
         !
         ! Set ChiDG components
         !
@@ -620,6 +611,14 @@ contains
         call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
         call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
         call this%chidg%set('Preconditioner',   algorithm=preconditioner)
+
+
+        !
+        ! Read grid
+        !
+        call this%chidg%read_grid(this%gridfile)
+
+
 
 
         !
@@ -634,12 +633,6 @@ contains
             end select
         end associate
             
-
-
-        !
-        ! Wrap-up initialization activities
-        !
-        call this%chidg%init('all')
 
 
         !

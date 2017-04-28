@@ -19,9 +19,7 @@ subroutine test__detect_chimera_donors()
                               INTERIOR, BOUNDARY, CHIMERA, IO_DESTINATION
 
     use type_chidg,     only: chidg_t
-    use type_meshdata,  only: meshdata_t
     use type_point,     only: point_t
-    use mod_bc,         only: create_bc
     use mod_test_utilities, only: create_mesh_file
     use mod_file_utilities, only: delete_file
 
@@ -30,17 +28,15 @@ subroutine test__detect_chimera_donors()
 
 
     type(chidg_t)                   :: chidg
-    type(meshdata_t),   allocatable :: meshdata(:)
     type(point_t)                   :: coord
     character(len=100)              :: filename = "D2E8M1_overlapping_matching.h5"
     real(rk)                        :: tol
     integer(ik)                     :: ndom, ChiID, ddomain, delement, ndonors, ngq
     integer(ik)                     :: ndonors_component, ndonors_size
-    integer(ik)                     :: idom, ielem, igq, idonor, iface, spacedim
+    integer(ik)                     :: idom, ielem, igq, idonor, iface
 
 
     tol             = 1.e-13_rk
-    spacedim        = 3
     IO_DESTINATION  = 'file'
 
 
@@ -48,6 +44,11 @@ subroutine test__detect_chimera_donors()
     ! Initialize ChiDG environment
     !
     call chidg%start_up('core')
+
+    !
+    ! Set accuracy for the solution expansion
+    !
+    call chidg%set('Solution Order', integer_input=2)
 
     !
     ! Create grid file
@@ -58,13 +59,13 @@ subroutine test__detect_chimera_donors()
     !
     ! Read 2-Domain overlapping grid
     !
-    call chidg%read_grid(filename,spacedim)
+    call chidg%read_domains(filename)
+    call chidg%read_boundary_conditions(filename)
 
 
 
-    call chidg%set('Solution Order', integer_input=2)
     call chidg%init('domains')
-    call chidg%init('communication')
+    call chidg%init('comm - interior')
 
 
 

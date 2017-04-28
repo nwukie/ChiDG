@@ -57,7 +57,7 @@ contains
     subroutine setUp(this)
         class(test_interpolate_chimera_multipledonor),    intent(inout)   :: this
 
-        integer(ik)                     :: ieqn, idom, spacedim
+        integer(ik)                     :: ieqn, idom
         type(meshdata_t),   allocatable :: meshdata(:) 
         
         !
@@ -77,23 +77,20 @@ contains
         this%filename = "D2E8M1_overlapping_multipledonor.h5"
         call create_mesh_file("D2 E8 M1 : Overlapping : NonMatching",this%filename)
 
-        !
-        ! Read D2_E8_M1. Two domains, 2x2x2 elements in each domain, linear mapping
-        !
-        spacedim = 3
-        call this%chidg%read_grid(this%filename,spacedim)
-
 
 
         !
-        ! Initialize chidg solution data storage
+        ! Set the order of accuracy for the solution
         !
         call this%chidg%set('Solution Order', integer_input=2)
 
-        call this%chidg%init('domains')
-        call this%chidg%init('communication')
-        call this%chidg%init('chimera')
-        call this%chidg%init('solvers')
+
+
+        !
+        ! Read D2_E8_M1. Two domains, 2x2x2 elements in each domain, linear mapping
+        !
+        call this%chidg%read_grid(this%filename)
+
 
         !
         ! Initialized solution to constant values

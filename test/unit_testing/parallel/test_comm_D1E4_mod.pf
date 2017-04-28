@@ -118,7 +118,7 @@ contains
     subroutine setUp(this)
         class(test_comm_D1E4), intent(inout) :: this
 
-        integer(ik) :: iread, spacedim, ierr, ielem, ivar, itime, iproc
+        integer(ik) :: iread, ierr, ielem, ivar, itime, iproc
         real(rk)    :: initial_vals(this%nterms_s)
 
         
@@ -132,7 +132,6 @@ contains
 
         IO_DESTINATION = 'file'
         this%gridfile  = 'D1E4M1.h5'
-        spacedim       = 3
 
         !
         ! Create mesh
@@ -144,37 +143,17 @@ contains
 
 
         !
-        ! Read partition data: grid, boundary conditions
-        !
-        call this%chidg%read_grid(this%gridfile, spacedim)
-
-        
-        !!
-        !! Each processor report its partition, just to know how to write the tests
-        !!
-        !do iproc = 0,NRANK-1
-        !    if (iproc == IRANK) then
-        !        
-        !        do ielem = 1,this%chidg%data%mesh%domain(1)%nelem
-        !            print*, 'Rank: ', IRANK
-        !            print*, '   ElemG: ', this%chidg%data%mesh%domain(1)%elems(ielem)%ielement_g
-        !            print*, '   ElemL: ', this%chidg%data%mesh%domain(1)%elems(ielem)%ielement_l
-        !        end do !ielem
-
-        !    end if
-        !    call MPI_Barrier(this%ChiDG_COMM, ierr)
-        !end do
-
-
-        !
-        ! Initialization
+        ! Set accuracy for the solution expansion
         !
         call this%chidg%set('Solution Order', integer_input=this%solution_order)
-        call this%chidg%init('domains')
-        call this%chidg%init('communication')
-        call this%chidg%init('solvers')
 
 
+        !
+        ! Read partition data: grid, boundary conditions
+        !
+        call this%chidg%read_grid(this%gridfile)
+
+        
 
         !
         ! Initialize solution vector

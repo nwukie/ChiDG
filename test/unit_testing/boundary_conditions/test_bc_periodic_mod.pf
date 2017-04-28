@@ -96,6 +96,16 @@ contains
 
 
         !
+        ! Set ChiDG components
+        !
+        call this%chidg%set('Solution Order',   integer_input=2)
+        call this%chidg%set('Time Integrator',  algorithm=time_integrator)
+        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
+
+
+        !
         ! Create mesh. 2x2x2. Periodic offsets specified on all boundaries
         !
         if (IRANK == GLOBAL_MASTER) then
@@ -162,23 +172,6 @@ contains
         ! Read grid
         !
         call this%chidg%read_grid('test_file.h5')
-
-
-        !
-        ! Set ChiDG components
-        !
-        call this%chidg%set('Solution Order',   integer_input=2)
-        call this%chidg%set('Time Integrator',  algorithm=time_integrator)
-        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
-        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
-        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
-
-
-        !
-        ! Wrap-up initialization activities
-        !
-        call this%chidg%init('all')
-
 
 
     end subroutine setUp

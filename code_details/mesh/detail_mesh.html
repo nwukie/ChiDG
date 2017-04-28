@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Mesh &mdash; ChiDG 0.1 documentation</title>
+  <title>Computational Grid &mdash; ChiDG 0.1 documentation</title>
   
 
   
@@ -118,9 +118,10 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Mesh</a><ul>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Computational Grid</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#coordinate-systems">Coordinate Systems</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#id1">Mesh</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#mesh">Mesh</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#domain">Domain</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#elements">Elements</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#faces">Faces</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#chimera-interfaces">Chimera Interfaces</a></li>
@@ -274,7 +275,7 @@
       
           <li><a href="../details_main.html">Code details</a> &raquo;</li>
       
-    <li>Mesh</li>
+    <li>Computational Grid</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -288,8 +289,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="mesh">
-<h1>Mesh<a class="headerlink" href="#mesh" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="computational-grid">
+<h1>Computational Grid<a class="headerlink" href="#computational-grid" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="coordinate-systems">
 <h2>Coordinate Systems<a class="headerlink" href="#coordinate-systems" title="Permalink to this headline">¶</a></h2>
 <p>ChiDG supports two coordinate systems: <code class="docutils literal"><span class="pre">Cartesian</span></code> and <code class="docutils literal"><span class="pre">Cylindrical</span></code>. In the
@@ -309,11 +310,32 @@ as:</p>
 y &amp;= r sin(\theta)       \quad\quad\quad \theta &amp;= \text{atan2}(y,x) \\
 z &amp;= z                   \quad\quad\quad\quad\quad \: \: z &amp;= z\end{split}\]</div>
 </div>
-<div class="section" id="id1">
-<h2>Mesh<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
-<p>The <code class="docutils literal"><span class="pre">mesh_t</span></code> data structure contains an entire geometry description for a single
+<div class="section" id="mesh">
+<h2>Mesh<a class="headerlink" href="#mesh" title="Permalink to this headline">¶</a></h2>
+<p>A <code class="docutils literal"><span class="pre">mesh_t</span></code> instance contains the entire description of the computational grid for
+the local processor. A <code class="docutils literal"><span class="pre">mesh_t</span></code> conatains an array of <code class="docutils literal"><span class="pre">domain_t</span></code> objects, one
+for each block. A <code class="docutils literal"><span class="pre">mesh_t</span></code> object also contains boundary condition geometry,
+located in the <code class="docutils literal"><span class="pre">bc_patch_group</span></code> component. The <code class="docutils literal"><span class="pre">bc_patch_group</span></code> objects
+are independent of the <code class="docutils literal"><span class="pre">domains</span></code>. A given <code class="docutils literal"><span class="pre">bc_patch_group</span></code> could potentially
+include references to faces on multiple <code class="docutils literal"><span class="pre">domain</span></code> objects.</p>
+<div class="highlight-fortran"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="kd">::</span> <span class="n">mesh_t</span>
+
+    <span class="k">type</span><span class="p">(</span><span class="n">domain_t</span><span class="p">),</span>         <span class="k">allocatable</span> <span class="kd">::</span> <span class="n">domain</span><span class="p">(:)</span>
+    <span class="k">type</span><span class="p">(</span><span class="n">bc_patch_group_t</span><span class="p">),</span> <span class="k">allocatable</span> <span class="kd">::</span> <span class="n">bc_patch_group</span><span class="p">(:)</span>
+
+<span class="k">contains</span>
+
+
+<span class="k">end type </span><span class="n">mesh_t</span>
+</pre></div>
+</div>
+<a class="reference internal image-reference" href="../../_images/d__mesh.png"><img alt="../../_images/d__mesh.png" class="align-center" src="../../_images/d__mesh.png" style="width: 90%;" /></a>
+</div>
+<div class="section" id="domain">
+<h2>Domain<a class="headerlink" href="#domain" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal"><span class="pre">domain_t</span></code> data structure contains an entire geometry description for a single
 domain. This exists as an array of <code class="docutils literal"><span class="pre">element_t</span></code> types, and array of <code class="docutils literal"><span class="pre">face_t</span></code> types,
-and a <code class="docutils literal"><span class="pre">chimera_t</span></code> instance. An <code class="docutils literal"><span class="pre">element_t</span></code> exists for every element in the <code class="docutils literal"><span class="pre">mesh_t</span></code>
+and a <code class="docutils literal"><span class="pre">chimera_t</span></code> instance. An <code class="docutils literal"><span class="pre">element_t</span></code> exists for every element in the <code class="docutils literal"><span class="pre">domain_t</span></code>
 domain. For a given <code class="docutils literal"><span class="pre">element_t</span></code>, a <code class="docutils literal"><span class="pre">face_t</span></code> instance exists for each face.</p>
 <a class="reference internal image-reference" href="../../_images/d_mesh_exploded.png"><img alt="../../_images/d_mesh_exploded.png" class="align-center" src="../../_images/d_mesh_exploded.png" style="width: 90%;" /></a>
 <a class="reference internal image-reference" href="../../_images/d_mesh_arrays.png"><img alt="../../_images/d_mesh_arrays.png" class="align-center" src="../../_images/d_mesh_arrays.png" style="width: 90%;" /></a>
@@ -528,13 +550,13 @@ component are outward facing. This applied to <span class="math">\(\eta\)</span>
 </div>
 <div class="section" id="chimera-interfaces">
 <h3>Chimera Interfaces<a class="headerlink" href="#chimera-interfaces" title="Permalink to this headline">¶</a></h3>
-<p>Each <code class="docutils literal"><span class="pre">mesh_t</span></code> instance contains a <code class="docutils literal"><span class="pre">mesh%chimera</span></code> component that holds all information
+<p>Each <code class="docutils literal"><span class="pre">domain_t</span></code> instance contains a <code class="docutils literal"><span class="pre">mesh%chimera</span></code> component that holds all information
 regarding chimera communication for that particular mesh block. This takes the
 form of <code class="docutils literal"><span class="pre">chimera_receiver</span></code> and <code class="docutils literal"><span class="pre">chimera_donor</span></code> components. Currently, only
 the <code class="docutils literal"><span class="pre">chimera_receiver</span></code> is utilized. <code class="docutils literal"><span class="pre">chimera_donor</span></code> will be used to facilitate
 communication between processors for parallel code execution.</p>
 <a class="reference internal image-reference" href="../../_images/d__chimera_receiver.png"><img alt="../../_images/d__chimera_receiver.png" class="align-center" src="../../_images/d__chimera_receiver.png" style="width: 90%;" /></a>
-<p>In a given <code class="docutils literal"><span class="pre">mesh_t</span></code> block, every face that gets information from a separate block is
+<p>In a given <code class="docutils literal"><span class="pre">domain_t</span></code>, every face that gets information from a separate block is
 designated as a CHIMERA face, it is assigned an integer ID <code class="docutils literal"><span class="pre">face%ChiID</span></code>, and it gets an
 entry in the <code class="docutils literal"><span class="pre">mesh%chimera%recv%data</span></code> components. It can be accessed as</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">mesh</span><span class="o">%</span><span class="n">chimera</span><span class="o">%</span><span class="n">recv</span><span class="o">%</span><span class="n">data</span><span class="p">(</span><span class="n">ChiID</span><span class="p">)</span>

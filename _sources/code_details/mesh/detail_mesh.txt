@@ -1,6 +1,6 @@
-====
-Mesh
-====
+==================
+Computational Grid
+==================
 
 
 
@@ -53,15 +53,42 @@ The transformation between ``Cartesian`` and ``Cylindrical`` coordinates is give
 
 
 
-
-
 ----
 Mesh
 ----
 
-The ``mesh_t`` data structure contains an entire geometry description for a single
+A ``mesh_t`` instance contains the entire description of the computational grid for 
+the local processor. A ``mesh_t`` conatains an array of ``domain_t`` objects, one 
+for each block. A ``mesh_t`` object also contains boundary condition geometry, 
+located in the ``bc_patch_group`` component. The ``bc_patch_group`` objects
+are independent of the ``domains``. A given ``bc_patch_group`` could potentially
+include references to faces on multiple ``domain`` objects.
+
+.. code-block:: fortran
+    
+    type :: mesh_t
+
+        type(domain_t),         allocatable :: domain(:)
+        type(bc_patch_group_t), allocatable :: bc_patch_group(:)
+
+    contains
+
+        
+    end type mesh_t
+
+
+.. image:: d__mesh.png
+    :width: 90 %
+    :align: center
+
+
+------
+Domain
+------
+
+The ``domain_t`` data structure contains an entire geometry description for a single
 domain. This exists as an array of ``element_t`` types, and array of ``face_t`` types,
-and a ``chimera_t`` instance. An ``element_t`` exists for every element in the ``mesh_t``
+and a ``chimera_t`` instance. An ``element_t`` exists for every element in the ``domain_t``
 domain. For a given ``element_t``, a ``face_t`` instance exists for each face.
 
 
@@ -390,7 +417,7 @@ Unit normal vectors can be accessed in the ``unorm`` component and are computed 
 Chimera Interfaces
 ------------------
 
-Each ``mesh_t`` instance contains a ``mesh%chimera`` component that holds all information
+Each ``domain_t`` instance contains a ``mesh%chimera`` component that holds all information
 regarding chimera communication for that particular mesh block. This takes the
 form of ``chimera_receiver`` and ``chimera_donor`` components. Currently, only
 the ``chimera_receiver`` is utilized. ``chimera_donor`` will be used to facilitate 
@@ -403,7 +430,7 @@ communication between processors for parallel code execution.
 
 
 
-In a given ``mesh_t`` block, every face that gets information from a separate block is 
+In a given ``domain_t``, every face that gets information from a separate block is 
 designated as a CHIMERA face, it is assigned an integer ID ``face%ChiID``, and it gets an 
 entry in the ``mesh%chimera%recv%data`` components. It can be accessed as
 

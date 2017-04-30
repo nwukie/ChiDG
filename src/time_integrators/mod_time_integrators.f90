@@ -12,6 +12,7 @@ module mod_time_integrators
     use type_backward_euler,    only: backward_euler_t
     use type_harmonic_balance,     only: harmonic_balance_t 
     use type_explicit_runge_kutta, only: explicit_runge_kutta_t
+    use type_DIRK,                 only: DIRK_t
     implicit none
 
 
@@ -22,6 +23,7 @@ module mod_time_integrators
     type(backward_euler_t)              :: BACKWARD_EULER
     type(harmonic_balance_t)            :: HB 
     type(explicit_runge_kutta_t)        :: EXPLICIT_RK
+    type(DIRK_t)                        :: DIRK
 
     logical :: initialized = .false.
 
@@ -66,6 +68,8 @@ contains
                    'Runge-Kutta Method', 'Fourth Runge-Kutta Method', 'Fourth Order RK Method', 'RK4', 'Three-Eighth Rule', 'Fourth Order Kutta') ! this probably needs to be split up in several RK schemes
                 allocate(instance, source=EXPLICIT_RK)
 
+            case ('DIRK')
+                allocate(instance, source=DIRK)
 
             case default
                 user_msg = "We can't seem to find a time integrator that matches the input &

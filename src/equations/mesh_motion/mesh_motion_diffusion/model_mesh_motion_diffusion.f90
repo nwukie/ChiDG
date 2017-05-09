@@ -49,10 +49,12 @@ contains
     subroutine init(self)   
         class(mesh_motion_diffusion_m), intent(inout)   :: self
 
-        call self%set_name('Mesh Motion : Diffusion')
-!        call self%set_dependency('f(Q-)')
+        call self%set_name('Mesh Motion Diffusion')
+        call self%set_dependency('f(Q-)')
 
-        call self%add_model_field('Scalar Diffusion Coefficient')
+        call self%add_model_field('Mesh Motion Grid Displacement 1')
+        call self%add_model_field('Mesh Motion Grid Displacement 2')
+        call self%add_model_field('Mesh Motion Grid Displacement 3')
 
     end subroutine init
     !***************************************************************************************
@@ -74,36 +76,32 @@ contains
         type(chidg_worker_t),       intent(inout)   :: worker
 
         type(AD_D), dimension(:),   allocatable :: &
-            d, grad1_d, grad2_d, grad3_d, d_normalization, sumsqr, rho
-
-        real(rk) :: p
+            d1, d2, d3, rho 
 
 
         ! Get primary field to initialize derivatives
         rho     = worker%get_primary_field_general('Density', 'value')
-        d       = rho
-        grad1_d = rho
-        grad2_d = rho
-        grad3_d = rho
-
+        d1       = rho
+        d2       = rho
+        d3       = rho
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        d       = worker%get_auxiliary_field_general('Mesh Motion : Diffusion', 'value')
-        grad1_d = worker%get_auxiliary_field_general('Mesh Motion : Diffusion', 'grad1')
-        grad2_d = worker%get_auxiliary_field_general('Mesh Motion : Diffusion', 'grad2')
-        grad3_d = worker%get_auxiliary_field_general('Mesh Motion : Diffusion', 'grad3')
+        ! Is this the right way to handle multiple components?
+        d1       = worker%get_auxiliary_field_general('grid_displacement1', 'value')
+        d2       = worker%get_auxiliary_field_general('grid_displacement2', 'value')
+        d3       = worker%get_auxiliary_field_general('grid_displacement3', 'value')
+        
 
 
-
-
-        d_normalization = d
 
         !
-        ! Store Wall Distance to model field
+        ! Store grid displacements to model field
         !
-        call worker%store_model_field('Scalar Diffusion Coefficient','value', d_normalization)
+        call worker%store_model_field('Mesh Motion Grid Displacement 1','value', d1)
+        call worker%store_model_field('Mesh Motion Grid Displacement 2','value', d2)
+        call worker%store_model_field('Mesh Motion Grid Displacement 3','value', d3)
 
 
     end subroutine compute

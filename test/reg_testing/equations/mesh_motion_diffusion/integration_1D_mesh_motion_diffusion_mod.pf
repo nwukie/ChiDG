@@ -1,0 +1,1274 @@
+
+!
+!           Test a 1D linear diffusion problem with a source term.
+!
+!   div(-mu(u)*grad(u)) = S
+!
+!   Linear Diffusion Flux Definition:
+!       F(u) = -mu(u)*dudx
+!
+!   Diffusion Coefficient Model:
+!       mu(u) = 1.0
+!
+!   Source Definition:
+!       S(x) = -4*pi*pi*sin(2*pi*x)
+!
+!   Boundary conditions are:
+!       Dirichlet U(x=0) = 1
+!       Neumann dU/dX(x=1) = 2pi - 1
+!
+!   Analytical Solution is:
+!       U(x) = sin(2*pi*x) + 1 - x     for x in [0,1]
+!
+!   Reference:
+!       B. van Leer and S. Nomura, "Discontinuous Galerkin for Diffusion", AIAA 2005-5108
+!
+!
+!   Tests that are being run here:
+!       - Run the calculation on multiple grids with order of accuracy 2-5
+!       - Test for convergence in 1 Newton iteration (linear problem)
+!       - Test convergence rates for spatial orders of accuracy
+!
+!--------------------------------------------------------------------------------
+module integration_1D_mesh_motion_diffusion_mod
+#include <messenger.h>
+    use pfunit_mod
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: ZERO, THREE, IO_DESTINATION, ONE, TWO, PI, FOUR, &
+                                      XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use type_chidg,             only: chidg_t
+    use type_chidg_data,        only: chidg_data_t
+    use mod_string,             only: string_t
+    use type_bc_state,          only: bc_state_t
+    use type_bc_group,          only: bc_group_t
+    use mod_bc,                 only: create_bc
+    use type_function,          only: function_t
+    use type_ivector,           only: ivector_t
+    use mod_function,           only: create_function
+    use mod_interpolate,        only: interpolate_element_standard
+    use mod_test_utilities,     only: create_mesh_file
+    use mod_file_utilities,     only: delete_file
+
+    use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM
+    use mpi_f08,                only: MPI_COMM, MPI_REAL8, MPI_SUM
+    use mod_io
+
+    use type_chidg_worker,      only: chidg_worker_t
+    use type_properties,        only: properties_t
+    use DNAD_D
+
+    ! Imports for defining a new operator and model
+    use mod_operators,          only: operator_factory
+    use type_operator,          only: operator_t
+    use mod_models,             only: model_factory
+    use type_model,             only: model_t
+
+    ! Imports for defining a new equation builder
+    use mod_equations,                  only: equation_builder_factory
+    use type_equation_builder,          only: equation_builder_t
+    use type_equation_set,              only: equation_set_t
+    implicit none
+
+
+    ! Store the nonlinear convergence for each test case. This is used 
+    ! to test the nonlinear convergence between a case running on
+    ! a different number of procs.
+    !
+    ! Procs: 1, 2, 3
+    !
+    type(ivector_t) :: nsteps_convergence(3,2,4)            ! nprocs, ngrids, norders
+    type(ivector_t) :: nsteps_convergence_chimera(3,2,4)    ! nprocs, ngrids, norders
+    real(rk)        :: error(3,2,4)                         ! nprocs, ngrids, norders
+    real(rk)        :: error_chimera(3,2,4)                 ! nprocs, ngrids, norders
+
+    public  :: mesh_motion_diffusion_1D
+
+
+
+
+
+
+
+
+    !>  The diffusion coefficient model.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/3/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    type, extends(model_t), public :: testing_1D_mesh_motion_diffusion_model_t
+
+    contains
+
+        procedure   :: init    => init_model
+        procedure   :: compute => compute_model
+
+    end type testing_1D_mesh_motion_diffusion_model_t
+    !***************************************************************************************
+
+
+
+
+
+
+    !>  A new equation set builder to build a linear diffusion equation set with the 
+    !!  new custom volume source.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/19/2016
+    !!
+    !----------------------------------------------------------------------------------------
+    type, extends(equation_builder_t), public :: test_mesh_motion_diffusion_builder_t
+
+
+    contains
+
+        procedure   :: init => init_builder
+        procedure   :: build
+
+    end type test_mesh_motion_diffusion_builder_t
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  This parameter initialize the state for each test
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie (AFRL)
+    !!
+    !-------------------------------------------------------------------------------
+    @TestParameter
+    type, extends(MpiTestParameter) :: case_grid_order
+        integer(ik)                 :: nelem_xi
+        character(:),   allocatable :: gridtype     ! singleblock, chimera
+        character(:),   allocatable :: gridfile 
+        integer(ik)                 :: order
+    contains
+        procedure   :: toString
+    end type case_grid_order
+    !*******************************************************************************
+
+
+
+
+
+
+
+    !>  Main testing fixture with test components that get initialized for each test
+    !!
+    !!  @author Nathan A. Wukie 
+    !!  @author Nathan A. Wukie (AFRL)
+    !!
+    !-------------------------------------------------------------------------------
+    @TestCase(testParameters={getParameters()}, constructor=newTest)
+    type, extends(MpiTestCase) :: mesh_motion_diffusion_1D
+
+        integer(ik)                 :: nelem_xi
+        character(:),   allocatable :: gridtype
+        character(:),   allocatable :: gridfile
+        integer(ik)                 :: order
+
+        type(chidg_t)   :: chidg
+        type(mpi_comm)  :: ChiDG_COMM
+    contains
+        procedure   :: setUp
+        procedure   :: tearDown
+    end type mesh_motion_diffusion_1D
+    !*******************************************************************************
+
+
+
+
+contains
+
+
+
+
+    !----------------------------------------------------------------------------------------
+    !                       Scalar Diffusion Coefficient Model Methods
+    !----------------------------------------------------------------------------------------
+
+    !>  Initialize scalar diffusion coefficient model with name and model field being 
+    !!  provided.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/3/2016
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine init_model(self)
+        class(testing_1D_mesh_motion_diffusion_model_t),    intent(inout)   :: self
+
+        call self%set_name('Testing 1D Mesh Motion Diffusion :: Coefficient Model')
+        call self%set_dependency('f(Q-)')
+
+        call self%add_model_field('Mesh Motion Diffusion Coefficient')
+
+    end subroutine init_model
+    !****************************************************************************************
+
+
+
+    !>  Implement the function for providing the scalar diffusion coefficient field.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/3/2016
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine compute_model(self,worker)
+        class(testing_1D_mesh_motion_diffusion_model_t), intent(in)      :: self
+        type(chidg_worker_t),                       intent(inout)   :: worker
+
+        type(AD_D), allocatable, dimension(:)   :: u, mu
+
+        real(rk), allocatable, dimension(:)     :: x_gq
+        integer(ik)                             :: idom, ielem, iface
+
+        u = worker%get_primary_field_general('grid_displacement2', 'value')
+
+        idom = worker%element_info%idomain_l
+        ielem = worker%element_info%ielement_l
+        if (worker%interpolation_source== 'element') then
+            x_gq = worker%mesh(idom)%elems(ielem)%quad_pts(:)%c1_
+        else
+            iface = worker%iface
+            x_gq = worker%mesh(idom)%faces(ielem, iface)%quad_pts(:)%c1_
+        end if
+
+
+        mu = u
+        mu = ZERO
+
+        !
+        ! DIFFUSIVITY DEFINITION
+        !
+
+        !Constant diffusivity
+        !mu = 1._rk
+        
+        !Linear Diffusivity
+        !mu = 1._rk-0.5_rk*x_gq
+
+        !Exponential Diffusivity
+        mu = exp(-0.5_rk*x_gq)
+
+        call worker%store_model_field('Mesh Motion Diffusion Coefficient', 'value', mu)
+
+    end subroutine compute_model
+    !****************************************************************************************
+
+
+
+
+
+    
+    !----------------------------------------------------------------------------------------
+    !                           Builder Methods for new equation set
+    !----------------------------------------------------------------------------------------
+
+
+    !>  Initialize the new linear diffusion builder.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/30/2016
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine init_builder(self)
+        class(test_mesh_motion_diffusion_builder_t),   intent(inout)  :: self
+
+        call self%set_name("Test 1D Mesh Motion Diffusion")
+
+    end subroutine init_builder
+    !****************************************************************************************
+
+    
+
+
+
+    !>  Implement the linear diffusion builder definition.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/19/2016
+    !!
+    !----------------------------------------------------------------------------------------
+    function build(self,blueprint) result(mesh_motion_diffusion_eqn)
+        class(test_mesh_motion_diffusion_builder_t), intent(in)  :: self
+        character(*),                           intent(in)  :: blueprint
+
+        type(equation_set_t)                :: mesh_motion_diffusion_eqn
+        
+
+        !
+        ! Set equationset name.
+        !
+        call mesh_motion_diffusion_eqn%set_name("Test 1D Mesh Motion Diffusion")
+
+
+        !
+        ! Add spatial operators
+        !
+        call mesh_motion_diffusion_eqn%add_operator("Mesh Motion Diffusion Boundary Average Operator")
+        call mesh_motion_diffusion_eqn%add_operator("Mesh Motion Diffusion Volume Operator")
+        call mesh_motion_diffusion_eqn%add_operator("Mesh Motion Diffusion BC Operator")
+
+
+        !
+        ! Add model for 'compute_mu' scalar coefficient
+        !
+        call mesh_motion_diffusion_eqn%add_model("Testing 1D Mesh Motion Diffusion :: Coefficient Model")
+
+
+    end function build
+    !***************************************************************************************
+
+
+
+
+
+
+    !-------------------------------------------------------------------------------
+    !                               Test methods
+    !-------------------------------------------------------------------------------
+
+
+
+    !> Parameter constructors
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------
+    function newTest(test_parameter) result(test)
+        type(case_grid_order),  intent(in)          :: test_parameter
+        type(mesh_motion_diffusion_1D)    :: test
+
+        test%nelem_xi   = test_parameter%nelem_xi
+        test%gridtype   = test_parameter%gridtype
+        test%gridfile   = test_parameter%gridfile
+        test%order      = test_parameter%order
+
+    end function newTest
+    !******************************************************************************
+
+
+    !> Parameter initialization
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------
+    function getParameters() result(params)
+        type(case_grid_order), allocatable :: params(:)
+    
+        integer(ik),        allocatable :: nelem_xi(:)
+        type(string_t),     allocatable :: gridtype(:)
+        type(string_t),     allocatable :: files(:)
+        integer(ik),        allocatable :: orders(:)
+        integer(ik) :: icase
+
+
+        nelem_xi = [ 20, 20, 20, &
+                     30, 30, 30, &
+                     20, 20, 20, &
+                     30, 30, 30  &
+                     ]
+
+        gridtype = [ string_t("singleblock"), &
+                     string_t("singleblock"), &
+                     string_t("singleblock"), &
+                     string_t("singleblock"), &
+                     string_t("singleblock"), &
+                     string_t("singleblock"), &
+                     string_t("chimera"),     &
+                     string_t("chimera"),     &
+                     string_t("chimera"),     &
+                     string_t("chimera"),     &
+                     string_t("chimera"),     &
+                     string_t("chimera")      &
+                     ]
+
+
+
+        files = [ string_t("1D_mesh_motion_diffusion_20x1x1.h5"),         &
+                  string_t("1D_mesh_motion_diffusion_20x1x1.h5"),         &
+                  string_t("1D_mesh_motion_diffusion_20x1x1.h5"),         &
+                  string_t("1D_mesh_motion_diffusion_30x1x1.h5"),         &
+                  string_t("1D_mesh_motion_diffusion_30x1x1.h5"),         &
+                  string_t("1D_mesh_motion_diffusion_30x1x1.h5"),         &
+                  string_t("1D_mesh_motion_diffusion_20x1x1_chimera.h5"), &
+                  string_t("1D_mesh_motion_diffusion_20x1x1_chimera.h5"), &
+                  string_t("1D_mesh_motion_diffusion_20x1x1_chimera.h5"), &
+                  string_t("1D_mesh_motion_diffusion_20x1x1_chimera.h5"), &
+                  string_t("1D_mesh_motion_diffusion_30x1x1_chimera.h5"), &
+                  string_t("1D_mesh_motion_diffusion_30x1x1_chimera.h5")  &
+                  ]
+
+
+        orders = [ 2, 3, 4, &
+                   2, 3, 4, &
+                   2, 3, 4, &
+                   2, 3, 4  &
+                   ]
+
+
+        !Initialize the test case container with the parameter
+        allocate(params(size(files)))
+        do icase = 1,size(files)
+            params(icase)%nelem_xi  = nelem_xi(icase)
+            params(icase)%gridtype  = gridtype(icase)%str
+            params(icase)%gridfile  = files(icase)%str
+            params(icase)%order     = orders(icase)
+        end do
+
+    end function getParameters
+    !****************************************************************************************
+
+
+
+    !>  Reporting the parameters of the test
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function toString(this) result(string)
+        class (case_grid_order),    intent(in)  :: this
+        character(:), allocatable   :: string
+
+        character(len=200) :: buffer
+
+        write(buffer,'( "(nelem_xi, gridtype, order)=","(", I2,",", A10,",", I1, ")" )') this%nelem_xi, this%gridtype, this%order
+        string = trim(buffer)
+
+    end function toString
+    !****************************************************************************************
+
+
+
+
+
+
+
+    !>  Set up test routine.
+    !!
+    !!  This routine reads the grid file, sets up boundary conditions, initializes storage
+    !!  and sets the appropriate configuration options.
+    !!  This routine also gets the numer of processors and the correct MPI communicator for 
+    !!  the test.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie (AFRL)
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(mesh_motion_diffusion_1D),  intent(inout)   :: this
+
+        class(function_t),  allocatable :: fcn
+        type(string_t)                  :: group_names(2,6)
+        type(bc_group_t)                :: bc_groups(3)
+        class(bc_state_t),  allocatable :: bc_state
+
+        
+        type(testing_1D_mesh_motion_diffusion_model_t)   :: diffusion_coefficient_model
+        type(test_mesh_motion_diffusion_builder_t)       :: builder_test_mesh_motion_diffusion
+
+
+
+        !-------------------------------------------------------------------------------
+        !               Initialize and register the diffusion coefficient model
+        !-------------------------------------------------------------------------------
+        call diffusion_coefficient_model%init()
+        call model_factory%register(diffusion_coefficient_model)
+
+
+
+
+        !-------------------------------------------------------------------------------
+        !
+        !                 Initialize and register equation set builder
+        !
+        !-------------------------------------------------------------------------------
+        call builder_test_mesh_motion_diffusion%init()
+        call equation_builder_factory%register(builder_test_mesh_motion_diffusion)
+
+
+
+        !------------------------------------------------------------------------------
+        !
+        ! Define input data here that is normally read through the namelist input file
+        !
+        ! As a result, we don't call chidg%init('io')
+        !
+        !------------------------------------------------------------------------------
+        basis            = "legendre"
+        spacedim         = 3
+        gq_rule          = 1 
+        time_integrator  = "steady"
+        nonlinear_solver = "newton"
+        linear_solver    = "fgmres"
+        preconditioner   = "ILU0"
+        IO_DESTINATION   = "file"
+        !------------------------------------------------------------------------------
+
+        !
+        ! Get MPI communicator information from pFUnit
+        !
+
+        IRANK                   = this%getProcessRank()
+        NRANK                   = this%getNumProcessesRequested()
+        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+
+        ! Set timescheme options to pass during initialization
+        !call toptions%set("dt", 0.1_rk) ! means nothing here
+        !call toptions%set("nsteps",100)
+        !call toptions%set("nwrite",0)
+
+
+        ! Set linear solver options to pass during initialization
+        !call loptions%set("tol",1.e-14_rk)
+        call loptions%set("tol",1.e-15_rk)
+
+        ! Set nonlinear solver options
+        call noptions%set("tol",5.e-11_rk)
+        call noptions%set("cfl0",1.0_rk)
+        call noptions%set("nsteps",1000)
+
+
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call this%chidg%start_up('core',this%ChiDG_COMM)
+
+
+        !
+        ! Create mesh
+        !
+        if (IRANK == GLOBAL_MASTER) then
+
+            bc_groups(1)%name = "Left Boundary"
+            call create_bc("Mesh Motion Value",bc_state)
+            call bc_state%set_fcn_option("Value1","val",ONE)
+            call bc_state%set_fcn_option("Value2","val",ZERO)
+            call bc_state%set_fcn_option("Value3","val",ZERO)
+            call bc_groups(1)%bc_states%push_back(bc_state)
+
+
+            bc_groups(2)%name = "Other Boundary"
+            call create_bc("Mesh Motion Extrapolate", bc_state)
+            !call create_bc("Mesh Motion Derivative",  bc_state)
+            !call bc_state%set_fcn_option("Derivative1","val",ZERO)
+            !call bc_state%set_fcn_option("Derivative2","val",ZERO)
+            !call bc_state%set_fcn_option("Derivative3","val",ZERO)
+            call bc_groups(2)%bc_states%push_back(bc_state)
+                
+            bc_groups(3)%name = "Right Boundary"
+            call create_bc("Mesh Motion Value",bc_state)
+            call bc_state%set_fcn_option("Value1","val",ZERO)
+            call bc_state%set_fcn_option("Value2","val",ZERO)
+            call bc_state%set_fcn_option("Value3","val",ZERO)
+            call bc_groups(3)%bc_states%push_back(bc_state)
+
+
+            if (this%gridtype == 'chimera') then
+
+
+                group_names(1,:) = [string_t("Left Boundary") , &
+                                    string_t("Empty")         , &
+                                    string_t("Other Boundary") , &
+                                    string_t("Other Boundary") , &
+                                    string_t("Other Boundary") , &
+                                    string_t("Other Boundary")]
+
+                group_names(2,:) = [string_t("Empty")         , &
+                                    string_t("Right Boundary"), &
+                                    string_t("Other Boundary") , &
+                                    string_t("Other Boundary") , &
+                                    string_t("Other Boundary") , &
+                                    string_t("Other Boundary")]
+
+                call create_mesh_file('D2 NxNxN M1',this%gridfile,equation_sets=[string_t("Test 1D Mesh Motion Diffusion"),  &
+                                                                                 string_t("Test 1D Mesh Motion Diffusion")], &
+                                                                  group_names  = group_names,                           &
+                                                                  bc_groups    = bc_groups,                             &
+                                                                  nelem_xi     = this%nelem_xi,                         &
+                                                                  nelem_eta    = 1,                                     &
+                                                                  nelem_zeta   = 1)
+
+
+            else
+
+
+                group_names(1,:) = [string_t("Left Boundary") , &
+                                    string_t("Right Boundary"), &
+                                    string_t("Other Boundary") , &
+                                    string_t("Other Boundary") , &
+                                    string_t("Other Boundary") , &
+                                    string_t("Other Boundary")]
+
+                call create_mesh_file('D1 NxNxN',this%gridfile,equation_sets=[string_t("Test 1D Mesh Motion Diffusion")], &
+                                                               group_names  = group_names,                           &
+                                                               bc_groups    = bc_groups,                             &
+                                                               nelem_xi     = this%nelem_xi,                         &
+                                                               nelem_eta    = 1,                                     &
+                                                               nelem_zeta   = 1)
+
+            end if
+
+        end if
+
+
+
+
+
+
+        !
+        ! Read grid
+        !
+        call this%chidg%read_grid(this%gridfile,spacedim)
+ 
+
+       call this%chidg%read_boundaryconditions(this%gridfile)
+
+
+
+
+        !
+        ! Set ChiDG components
+        !
+        call this%chidg%set('Solution Order',   integer_input=this%order)
+        call this%chidg%set('Time Integrator',  algorithm=time_integrator)
+        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
+
+
+
+
+        !
+        ! Wrap-up initialization activities
+        !
+        call this%chidg%init('all')
+
+
+
+        
+
+        !
+        ! Initialize solution
+        !
+        call create_function(fcn,'constant')
+        call fcn%set_option('val',1.0_rk)
+        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
+        call fcn%set_option('val',0.0_rk)
+        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,2)
+        call fcn%set_option('val',0.0_rk)
+        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,3)
+
+
+
+    end subroutine SetUp
+    !*****************************************************************************************
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(mesh_motion_diffusion_1D),  intent(inout)   :: this
+
+        ! Close ChiDG
+        call this%chidg%shut_down('core')
+
+        if (IRANK == GLOBAL_MASTER) then
+            call delete_file(this%gridfile)
+        end if
+
+    end subroutine tearDown
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Run the simulation.
+    !!
+    !!      - compute the entropy error, test against the reference values.
+    !!      - store the nonlinear convergence to the module variable so it can 
+    !!        be used by a test for nonlinear convergence.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie (AFRL)
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    @Test(npes=[1,2,3])
+    subroutine run_calculations(self)
+        class(mesh_motion_diffusion_1D),  intent(inout)   :: self
+
+        real(rk)    :: computed_error
+        integer(ik) :: npes_index, grid_index, order_index
+
+
+        npes_index  = get_npes_index(NRANK)
+        grid_index  = get_grid_index(self%nelem_xi)
+        order_index = get_order_index(self%order)
+
+
+        !
+        ! Run ChiDG simulation
+        !
+        call self%chidg%run(write_initial=.false., write_final=.false.)
+
+
+        !
+        ! Store the number of nonlinear iterations that the solution converged in. Problem 
+        ! is linear so it should converge in 1 Newton Step. Really, just the solution 
+        ! of 1 linear system of equations.
+        !
+        if (self%gridtype == 'singleblock') then
+            nsteps_convergence(npes_index,grid_index,order_index)         = self%chidg%nonlinear_solver%newton_iterations
+        elseif (self%gridtype == 'chimera') then
+            nsteps_convergence_chimera(npes_index,grid_index,order_index) = self%chidg%nonlinear_solver%newton_iterations 
+        end if
+
+
+        !
+        ! Compute error
+        !
+        computed_error = compute_1D_mesh_motion_diffusion_error(self%chidg%data,self%ChiDG_COMM)
+
+
+        !
+        ! Store the computed error for the current case
+        !
+        if (self%gridtype == 'singleblock') then
+            error(npes_index,grid_index,order_index)         = computed_error
+        elseif (self%gridtype == 'chimera') then
+            error_chimera(npes_index,grid_index,order_index) = computed_error
+        end if
+
+
+
+
+    end subroutine run_calculations
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+    !>  Access the stored number of steps convergence data(module global variable) and confirm
+    !!  that all simulations converged in 1 step.
+    !!
+    !!  This assumes that the 'run_calculations' routine has already been executed for all cases
+    !!  and numbers of processors to that the 'nsteps_convergence' variable has been populated.
+    !!  So, we are relying on pFUnit to do things in order here. Works now, but I don't think
+    !!  there is a guaruntee that this can't change.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie (AFRL)
+    !!
+    !-----------------------------------------------------------------------------------------
+    @Test(npes=[1])
+    subroutine test_conv_conforming(self)
+        class(mesh_motion_diffusion_1D),  intent(inout)   :: self
+
+        integer(ik)             :: inpes, igrid, iorder, nsteps
+
+        do inpes = 1,3
+            do igrid = 1,2
+                do iorder = 1,3
+
+                    ! Test that the current convergence for the processor count matches the serial convergence
+                    nsteps = nsteps_convergence(inpes,igrid,iorder)%size()
+
+                    @assertEqual(1, nsteps)
+
+                end do
+            end do
+        end do
+
+
+    end subroutine test_conv_conforming
+    !*****************************************************************************************
+
+
+
+
+
+    !>  Access the stored number of steps convergence data(module global variable) and confirm
+    !!  that all simulations converged in 1 step.
+    !!
+    !!  This assumes that the 'run_calculations' routine has already been executed for all cases
+    !!  and numbers of processors to that the 'nsteps_convergence' variable has been populated.
+    !!  So, we are relying on pFUnit to do things in order here. Works now, but I don't think
+    !!  there is a guaruntee that this can't change.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie (AFRL)
+    !!
+    !-----------------------------------------------------------------------------------------
+    @Test(npes=[1])
+    subroutine test_conv_chimera(self)
+        class(mesh_motion_diffusion_1D),  intent(inout)   :: self
+
+        integer(ik)             :: inpes, igrid, iorder, nsteps
+
+        do inpes = 1,3
+            do igrid = 1,2
+                do iorder = 1,3
+
+                    ! Test that the current convergence for the processor count matches the serial convergence
+                    nsteps = nsteps_convergence_chimera(inpes,igrid,iorder)%size()
+
+                    @assertEqual(1, nsteps)
+
+                end do
+            end do
+        end do
+
+    end subroutine test_conv_chimera
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/16/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    @Test(npes=[1])
+    subroutine test_err_conforming(self)
+        class(mesh_motion_diffusion_1D),  intent(inout)   :: self
+
+        integer(ik) :: inpes, igrid, iorder
+        real(rk)    :: error_previous, error_current, mesh_parameter_previous, mesh_parameter_current, convergence_rate, tol
+
+        tol = 0.1_rk
+
+
+        do inpes = 1,3
+            do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
+                do iorder = 1,3
+
+                    error_previous = error(inpes,igrid-1,iorder)
+                    error_current  = error(inpes,igrid  ,iorder)
+
+                    mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
+                    mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
+
+                    
+                    !
+                    ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
+                    !
+                    convergence_rate = (log10(error_previous)-log10(error_current)) / &
+                                       (log10(mesh_parameter_previous)-log10(mesh_parameter_current))
+
+                
+                    @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
+                    @assertLessThan(convergence_rate, real(iorder+1,rk)+tol)
+
+                end do
+            end do
+        end do
+
+
+    end subroutine test_err_conforming
+    !*****************************************************************************************
+
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/16/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    @Test(npes=[1])
+    subroutine test_err_chimera(self)
+        class(mesh_motion_diffusion_1D),  intent(inout)   :: self
+
+        integer(ik) :: inpes, igrid, iorder
+        real(rk)    :: error_previous, error_current, mesh_parameter_previous, &
+                       mesh_parameter_current, convergence_rate, tol
+
+        tol = 0.1_rk
+
+
+        do inpes = 1,3
+            do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
+                do iorder = 1,3
+
+                    error_previous = error_chimera(inpes,igrid-1,iorder)
+                    error_current  = error_chimera(inpes,igrid  ,iorder)
+
+                    mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
+                    mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
+
+                    
+                    !
+                    ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
+                    !
+                    convergence_rate = (log10(error_previous)-log10(error_current)) / &
+                                       (log10(mesh_parameter_previous)-log10(mesh_parameter_current))
+
+                
+                    @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
+                    @assertLessThan(convergence_rate, real(iorder+1,rk)+tol)
+
+                end do
+            end do
+        end do
+
+
+
+    end subroutine test_err_chimera
+    !*****************************************************************************************
+
+
+
+
+
+
+    !>  Function to compute the error in the 1D scalar diffusion equation.
+    !!
+    !!  The error is computed as the L2-Norm of the difference in the analytical and
+    !!  numerical solutions integrated over the domain.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/16/2016
+    !!
+    !!
+    !------------------------------------------------------------------------------------
+    function compute_1D_mesh_motion_diffusion_error(data,ChiDG_COMM) result(error)
+        type(chidg_data_t), intent(inout)   :: data
+        type(mpi_comm),     intent(in)      :: ChiDG_COMM
+
+        real(rk), allocatable, dimension(:) :: &
+            u_dg, u_analytical, x_gq, gq_error_squared
+
+
+        integer(ik) :: iu1, iu2, iu3
+        integer(ik) :: ielem, idom, ierr, itime
+        real(rk)    :: error_squared_sum, error_squared_sum_reduced, element_error_squared, error
+
+
+        associate (mesh   => data%mesh,     &
+                   sdata  => data%sdata,    &
+                   eqnset => data%eqnset,   &
+                   prop   => data%eqnset(1)%prop)
+
+
+            !
+            ! Get equation indices
+            !
+            iu1 = prop%get_primary_field_index("grid_displacement1")
+            iu2 = prop%get_primary_field_index("grid_displacement2")
+            iu3 = prop%get_primary_field_index("grid_displacement3")
+
+
+            !
+            ! Zero error accumulator
+            !
+            error_squared_sum = ZERO
+
+
+
+            !
+            ! Loop over elements and accumulate error
+            !
+            itime = 1
+            do idom = 1,data%ndomains()
+                do ielem = 1,data%mesh(idom)%nelem
+
+
+                    !
+                    ! Compute the analytical solution at the quadrature nodes
+                    !
+                    x_gq = mesh(idom)%elems(ielem)%quad_pts(:)%c1_
+                    u_analytical = x_gq
+
+                    !
+                    !ANALYTICAL SOLUTION DEFINITION
+                    !
+
+                    !Constant Diffusivity - XI-MAX Dirichlet BC
+                    !u_analytical =  ONE-x_gq
+
+
+                    !Constant Diffusivity - XI_MAX Neumann BC
+                    !u_analytical =  ONE
+
+
+
+                    !Linear Diffusivity - XI-MAX Dirichlet BC
+                    !u_analytical =  ONE-log(ONE-0.5_rk*x_gq)/log(ONE-0.5_rk)
+
+                    !Linear Diffusivity - XI_MAX Neumann BC
+                    !u_analytical =  ONE
+
+                    !Exponential Diffusivity - XI-MAX Dirichlet BC
+                    u_analytical =  (ONE-exp(-0.5_rk*(ONE-x_gq)))/(ONE-exp(-0.5_rk))
+
+
+                    !Exponential Diffusivity - XI_MAX Neumann BC
+                    !u_analytical =  ONE
+
+
+                    !
+                    ! Interpolate DG numerical solution
+                    !
+                    u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,iu1,itime,'value')
+
+
+                    !
+                    ! Compute error
+                    !                    
+                    gq_error_squared = (u_analytical - u_dg)**TWO
+
+
+                    !
+                    ! Integrate error
+                    !
+                    element_error_squared = sum(gq_error_squared * mesh(idom)%elems(ielem)%jinv * mesh(idom)%elems(ielem)%gq%vol%weights)
+
+
+                    !
+                    ! Accumulate error from each element
+                    !
+                    error_squared_sum = error_squared_sum + element_error_squared
+                    !
+                    ! Compute the analytical solution at the quadrature nodes
+                    !
+                    x_gq = mesh(idom)%elems(ielem)%quad_pts(:)%c1_
+                    u_analytical = ZERO 
+
+                    !
+                    ! Interpolate DG numerical solution
+                    !
+                    u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,iu2,itime,'value')
+
+
+                    !
+                    ! Compute error
+                    !                    
+                    gq_error_squared = (u_analytical - u_dg)**TWO
+
+
+                    !
+                    ! Integrate error
+                    !
+                    element_error_squared = sum(gq_error_squared * mesh(idom)%elems(ielem)%jinv * mesh(idom)%elems(ielem)%gq%vol%weights)
+
+
+                    !
+                    ! Accumulate error from each element
+                    !
+                    error_squared_sum = error_squared_sum + element_error_squared
+
+!
+                    ! Compute the analytical solution at the quadrature nodes
+                    !
+                    x_gq = mesh(idom)%elems(ielem)%quad_pts(:)%c1_
+                    u_analytical = ZERO 
+
+                    !
+                    ! Interpolate DG numerical solution
+                    !
+                    u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,iu3,itime,'value')
+
+
+                    !
+                    ! Compute error
+                    !                    
+                    gq_error_squared = (u_analytical - u_dg)**TWO
+
+
+                    !
+                    ! Integrate error
+                    !
+                    element_error_squared = sum(gq_error_squared * mesh(idom)%elems(ielem)%jinv * mesh(idom)%elems(ielem)%gq%vol%weights)
+
+
+                    !
+                    ! Accumulate error from each element
+                    !
+                    error_squared_sum = error_squared_sum + element_error_squared
+
+
+
+                end do ! ielem
+            end do ! idom
+
+
+        end associate
+
+
+
+        ! Reduce the total error across processors
+        call MPI_AllReduce(error_squared_sum,error_squared_sum_reduced,1,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+
+        ! Sqrt of the reduced error
+        error = sqrt(error_squared_sum_reduced)
+
+        
+    end function compute_1D_mesh_motion_diffusion_error
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/16/2016
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    function mesh_parameter(igrid,iorder) result(param)
+        integer(ik),    intent(in)  :: igrid
+        integer(ik),    intent(in)  :: iorder
+
+        integer(ik) :: nelem, nterms_1d
+        real(rk)    :: param
+
+        select case (igrid)
+            case(1)
+                nelem = 20
+            case(2)
+                nelem = 30
+            case default
+                call chidg_signal(FATAL,"integration_1D_mesh_motion_diffusion_mod%mesh_parameter: invalid igrid")
+        end select
+
+
+        select case (iorder)
+            case(1) ! iorder = 1  =>  order = 2
+                nterms_1d = (iorder+1)
+            case(2)
+                nterms_1d = (iorder+1)
+            case(3)
+                nterms_1d = (iorder+1)
+            case(4)
+                nterms_1d = (iorder+1)
+            case default
+                call chidg_signal(FATAL,"integration_1D_mesh_motion_diffusion_mod%mesh_parameter: invalid iorder")
+        end select
+
+
+        param = ONE/(real(nelem,rk)*real(nterms_1d,rk))
+
+    end function mesh_parameter
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    ! Utility for returning the index associated with a certain number of procs
+    !------------------------------------------------------------------------------
+    function get_npes_index(numproc) result(inpes)
+        integer(ik), intent(in) :: numproc
+
+        integer(ik) :: inpes
+
+        select case (numproc)
+            case(1)
+                inpes = 1
+            case(2)
+                inpes = 2
+            case(3)
+                inpes = 3
+        end select
+
+    end function get_npes_index
+    !******************************************************************************
+
+
+
+    ! Utility for returning the index associated with a certain grid file
+    !------------------------------------------------------------------------------
+    function get_grid_index(nelem) result(igrid)
+        integer(ik),    intent(in)  :: nelem
+
+        integer(ik) :: igrid
+
+        select case (nelem)
+            case(20)
+                igrid = 1
+            case(30)
+                igrid = 2
+        end select
+
+    end function get_grid_index
+    !******************************************************************************
+
+
+
+    ! Utility for returning the index associated with a certain order of accuracy
+    !------------------------------------------------------------------------------
+    function get_order_index(order) result(iorder)
+        integer(ik), intent(in) :: order
+
+        integer(ik) :: iorder
+
+        select case (order)
+            case(2)
+                iorder = 1
+            case(3)
+                iorder = 2
+            case(4)
+                iorder = 3
+            case(5)
+                iorder = 4
+        end select
+
+    end function get_order_index
+    !******************************************************************************
+
+
+
+
+
+
+end module integration_1D_mesh_motion_diffusion_mod

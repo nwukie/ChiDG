@@ -20,6 +20,12 @@ module mod_operators
     use SD_boundary_operator,                       only: SD_boundary_operator_t
     use SD_bc_operator,                             only: SD_bc_operator_t
 
+    ! Mesh Motion Diffusion Operators
+    use MMD_volume_operator,                         only: MMD_volume_operator_t
+    use MMD_boundary_operator,                       only: MMD_boundary_operator_t
+    use MMD_bc_operator,                             only: MMD_bc_operator_t
+
+
     ! Fluid Inviscid Operators
     use euler_volume_operator,                      only: euler_volume_operator_t
     use euler_volume_cylindrical_source,            only: euler_volume_cylindrical_source_t
@@ -178,6 +184,12 @@ contains
         type(SD_volume_operator_t)                      :: SD_volume_operator
         type(SD_boundary_operator_t)                    :: SD_boundary_operator
         type(SD_bc_operator_t)                          :: SD_bc_operator
+        
+        ! Mesh Motion Diffusion Operators
+        type(MMD_volume_operator_t)                      :: MMD_volume_operator
+        type(MMD_boundary_operator_t)                    :: MMD_boundary_operator
+        type(MMD_bc_operator_t)                          :: MMD_bc_operator
+
 
         ! Dual Linear Advection Operators
         type(DLA_volume_advective_flux_t)               :: DLA_volume_operator
@@ -228,6 +240,12 @@ contains
             call operator_factory%register(SD_volume_operator)
             call operator_factory%register(SD_boundary_operator)
             call operator_factory%register(SD_bc_operator)
+
+            ! Register Mesh Motion Diffusion
+            call operator_factory%register(MMD_volume_operator)
+            call operator_factory%register(MMD_boundary_operator)
+            call operator_factory%register(MMD_bc_operator)
+
 
             ! Register Dual Linear Advection
             call operator_factory%register(DLA_volume_operator)

@@ -484,6 +484,7 @@ contains
              (trim(bc_family) == 'Periodic')        .or. &
              (trim(bc_family) == 'Farfield')        .or. &
              (trim(bc_family) == 'Scalar')          .or. &
+             (trim(bc_family) == 'Mesh Motion')          .or. &
              (trim(bc_family) == 'Extrapolation')   .or. &
              (trim(bc_family) == 'Empty') ) then
 
@@ -494,7 +495,7 @@ contains
 
              user_msg = "bc_state%set_family: An invalid Family was trying to be set for the &
                          bc_state. Valid Families are: 'Inlet', 'Outlet', 'Wall', Symmetry', &
-                         'Periodic', 'Farfield', 'Scalar', 'Extrapolation'."
+                         'Periodic', 'Farfield', 'Scalar', 'Mesh Motion', 'Extrapolation'."
              call chidg_signal_one(FATAL,user_msg,trim(bc_family))
 
         end if

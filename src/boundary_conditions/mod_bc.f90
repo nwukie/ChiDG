@@ -27,6 +27,10 @@ module mod_bc
     use bc_state_scalar_derivative,             only: scalar_derivative_t
     use bc_state_scalar_extrapolate,            only: scalar_extrapolate_t
 
+    use bc_state_mesh_motion_value,                  only: mesh_motion_value_t
+    use bc_state_mesh_motion_derivative,             only: mesh_motion_derivative_t
+    use bc_state_mesh_motion_extrapolate,            only: mesh_motion_extrapolate_t
+
 
     ! Fluid boundary conditions
     use bc_state_wall,                          only: wall_t
@@ -91,6 +95,11 @@ contains
         type(scalar_value_t)                    :: SCALAR_VALUE
         type(scalar_derivative_t)               :: SCALAR_DERIVATIVE
         type(scalar_extrapolate_t)              :: SCALAR_EXTRAPOLATE
+        
+        type(mesh_motion_value_t)                    :: MESH_MOTION_VALUE
+        type(mesh_motion_derivative_t)               :: MESH_MOTION_DERIVATIVE
+        type(mesh_motion_extrapolate_t)              :: MESH_MOTION_EXTRAPOLATE
+
 
         type(wall_t)                            :: WALL
         type(moving_wall_t)                     :: MOVING_WALL
@@ -126,6 +135,11 @@ contains
             call registered_bcs%push_back(SCALAR_VALUE)
             call registered_bcs%push_back(SCALAR_DERIVATIVE)
             call registered_bcs%push_back(SCALAR_EXTRAPOLATE)
+            
+            call registered_bcs%push_back(MESH_MOTION_VALUE)
+            call registered_bcs%push_back(MESH_MOTION_DERIVATIVE)
+            call registered_bcs%push_back(MESH_MOTION_EXTRAPOLATE)
+
 
             call registered_bcs%push_back(WALL)
             call registered_bcs%push_back(MOVING_WALL)

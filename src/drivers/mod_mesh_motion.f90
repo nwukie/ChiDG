@@ -47,7 +47,8 @@ contains
         type(dict_t)                    :: noptions, loptions
         class(bc_state_t),  allocatable :: dirichlet_zero, neumann_zero, dirichlet_dspl
         class(function_t),  allocatable :: mmd_initial, mmd_analytical 
-        integer(ik)                     :: iorder, p, aux_field_index, wd_nterms_s, ierr, iproc
+        integer(ik)                     :: iorder, p, wd_nterms_s, ierr, iproc
+        integer(ik)                     :: aux_field_index1, aux_field_index2, aux_field_index3
         type(file_properties_t)         :: wd_props
         logical                         :: wd_file_exists, have_wd_field
         real(rk)                        :: error_val
@@ -203,25 +204,25 @@ contains
             call mesh_motion%report('before')
             call mesh_motion%run(write_initial=.false., write_final=.false.)
             
-!
-            ! Read solution if it exists.
-            !
-            call create_function(mmd_analytical,'mmd_cdiff')
-            call mmd_analytical%set_option('dspl',0.1_rk) !Prescribed displacement of the moving wall (x1=0 face)
-            
-!            call create_function(mmd_analytical,'mmd_ldiff')
+!!
+!            ! Read solution if it exists.
+!            !
+!            call create_function(mmd_analytical,'mmd_cdiff')
 !            call mmd_analytical%set_option('dspl',0.1_rk) !Prescribed displacement of the moving wall (x1=0 face)
-!            call mmd_analytical%set_option('frac',0.1_rk) !0<frac<1, rate of decrease of diffusivity away from moving wall (along x1)
-!            call mmd_analytical%set_option('xstart', ZERO)
-!            call mmd_analytical%set_option('xlength', ONE)
-
-
-            q_ref = mesh_motion%data%sdata%q
-            call q_ref%project(mesh_motion%data%mesh,mmd_analytical,1)
-
-            !Implement this!
-            ! Computes the L2 state error against a reference ChiDG vector.
-            error_val = mesh_motion%compute_l2_state_error(q_ref)
+!            
+!!            call create_function(mmd_analytical,'mmd_ldiff')
+!!            call mmd_analytical%set_option('dspl',0.1_rk) !Prescribed displacement of the moving wall (x1=0 face)
+!!            call mmd_analytical%set_option('frac',0.1_rk) !0<frac<1, rate of decrease of diffusivity away from moving wall (along x1)
+!!            call mmd_analytical%set_option('xstart', ZERO)
+!!            call mmd_analytical%set_option('xlength', ONE)
+!
+!
+!            q_ref = mesh_motion%data%sdata%q
+!            call q_ref%project(mesh_motion%data%mesh,mmd_analytical,1)
+!
+!            !Implement this!
+!            ! Computes the L2 state error against a reference ChiDG vector.
+!            error_val = mesh_motion%compute_l2_state_error(q_ref)
 
             call mesh_motion%report('after')
 
@@ -235,33 +236,38 @@ contains
 
         end if ! have_wd_field .and. wd_file_exists
 
-        call write_line('Storing Mesh Motion field to Auxiliary field ChiDG Vector:', io_proc=GLOBAL_MASTER)
-
-
-        !
-        ! Try to find 'Mesh Motion' auxiliary field storage.
-        !
-        aux_field_index = chidg%data%sdata%get_auxiliary_field_index('Mesh Motion : Diffusion')
-
-
-
-
-        !
-        ! If no 'Mesh Motion' auxiliary field storage was not found, create one.
-        !
-        if (aux_field_index == 0) then
-
-            call chidg%data%sdata%add_auxiliary_field('Mesh Motion : Diffusion', mesh_motion%data%sdata%q)
-
-        !
-        ! If 'Mesh Motion' auxiliary field storage was found, copy Wall Distance solution 
-        ! to working ChiDG environment.
-        !
-        else
-            chidg%data%sdata%auxiliary_field(aux_field_index) = mesh_motion%data%sdata%q
-
-        end if
-
+!        call write_line('Storing Mesh Motion field to Auxiliary field ChiDG Vector:', io_proc=GLOBAL_MASTER)
+!
+!
+!        !
+!        ! Try to find 'Mesh Motion' auxiliary field storage.
+!        !
+!        aux_field_index1 = chidg%data%sdata%get_auxiliary_field_index('Mesh Motion Grid Displacement 1')
+!        aux_field_index2 = chidg%data%sdata%get_auxiliary_field_index('Mesh Motion Grid Displacement 2')
+!        aux_field_index3 = chidg%data%sdata%get_auxiliary_field_index('Mesh Motion Grid Displacement 3')
+!
+!
+!
+!        !
+!        ! Generalize the following code to copy the appropriate sections of q in the grid displacement aux fields
+!        !   Or: Can an aux field consist of multiple equations/components?
+!
+!        !
+!        ! If no 'Mesh Motion' auxiliary field storage was not found, create one.
+!        !
+!        if (aux_field_index1 == 0) then
+!
+!            call chidg%data%sdata%add_auxiliary_field('Mesh Motion : Diffusion', mesh_motion%data%sdata%q)
+!
+!        !
+!        ! If 'Mesh Motion' auxiliary field storage was found, copy Wall Distance solution 
+!        ! to working ChiDG environment.
+!        !
+!        else
+!            chidg%data%sdata%auxiliary_field(aux_field_index1) = mesh_motion%data%sdata%q
+!
+!        end if
+!
 
 
     end subroutine mesh_motion_driver

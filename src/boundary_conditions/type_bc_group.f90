@@ -111,6 +111,7 @@ contains
              (trim(family) == 'Periodic')       .or. &
              (trim(family) == 'Farfield')       .or. &
              (trim(family) == 'Scalar'  )       .or. &
+             (trim(family) == 'Mesh Motion'  )       .or. &
              (trim(family) == 'Extrapolation')  .or. &
              (trim(family) == 'Empty'   ) ) then
 

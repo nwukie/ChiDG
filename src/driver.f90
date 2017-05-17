@@ -25,6 +25,7 @@ program driver
     use mod_chidg_convert,      only: chidg_convert
     use mod_chidg_post,         only: chidg_post, chidg_post_vtk, chidg_post_matplotlib
     use mod_chidg_airfoil,      only: chidg_airfoil
+    use mod_tutorials,          only: tutorial_driver
 
     
     !
@@ -36,7 +37,7 @@ program driver
 
 
     integer                                     :: narg, iorder, ierr
-    character(len=1024)                         :: chidg_action, filename, grid_file, solution_file
+    character(len=1024)                         :: chidg_action, filename, grid_file, solution_file, tutorial
     class(function_t),              allocatable :: constant, monopole, fcn, polynomial
 
 
@@ -133,7 +134,7 @@ program driver
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,1)
 
             ! rho_u
-            call constant%set_option('val',50.0_rk)
+            call constant%set_option('val',150.0_rk)
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,2)
 
             ! rho_v
@@ -205,31 +206,36 @@ program driver
         ! 
         select case (trim(chidg_action))
             case ('edit')
-                if (narg /= 2) call chidg_signal(FATAL,"The 'edit' action expects: chidg edit filename.h5")
+                if (narg /= 2) call chidg_signal(FATAL,"The 'edit' action expects to be called as: chidg edit filename.h5")
                 call get_command_argument(2,filename)
                 call chidg_edit(trim(filename))
 
             case ('convert')
-                if (narg /= 2) call chidg_signal(FATAL,"The 'convert' action expects: chidg convert filename.x")
+                if (narg /= 2) call chidg_signal(FATAL,"The 'convert' action expects to be called as: chidg convert filename.x")
                 call get_command_argument(2,filename)
                 call chidg_convert(trim(filename))
 
             case ('post')
-                if (narg /= 3) call chidg_signal(FATAL,"The 'post' action expects: chidg post gridfile.h5 solutionfile.h5")
+                if (narg /= 3) call chidg_signal(FATAL,"The 'post' action expects to be called as: chidg post gridfile.h5 solutionfile.h5")
                 call get_command_argument(2,grid_file)
                 call get_command_argument(3,solution_file)
                 call chidg_post(trim(grid_file), trim(solution_file))
                 call chidg_post_vtk(trim(grid_file), trim(solution_file))
 
             case ('matplotlib')
-                if (narg /= 2) call chidg_signal(FATAL,"The 'matplotlib' action expects: chidg matplotlib solutionfile.h5")
+                if (narg /= 2) call chidg_signal(FATAL,"The 'matplotlib' action expects to be called as: chidg matplotlib solutionfile.h5")
                 call get_command_argument(2,filename)
                 call chidg_post_matplotlib(trim(filename))
 
             case ('airfoil')
-                if (narg /= 2) call chidg_signal(FATAL,"The 'airfoil' action expects: chidg airfoil solutionfile.h5")
+                if (narg /= 2) call chidg_signal(FATAL,"The 'airfoil' action expects to be called as: chidg airfoil solutionfile.h5")
                 call get_command_argument(2,solution_file)
                 call chidg_airfoil(trim(solution_file))
+
+            case ('tutorial')
+                if (narg /= 2) call chidg_signal(FATAL,"The 'tutorial' action expects to be called as: chidg tutorial selected_tutorial.")
+                call get_command_argument(2,tutorial)
+                call tutorial_driver(trim(tutorial))
 
             case default
                 call chidg_signal(FATAL,"We didn't understand the way chidg was called. Available chidg 'actions' are: 'edit' 'convert' 'post' 'matplotlib' and 'airfoil'.")

@@ -551,6 +551,8 @@ contains
         do idomain = 1,self%mesh%ndomains()
             eqn_ID = self%mesh%domain(idomain)%eqn_ID
             nfields = self%eqnset(eqn_ID)%prop%nprimary_fields()
+
+            self%mesh%ntime_ = self%time_manager%ntime
             call self%mesh%domain(idomain)%init_sol(nfields,nterms_s,self%time_manager%ntime)
         end do
 

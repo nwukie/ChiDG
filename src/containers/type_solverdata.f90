@@ -111,9 +111,9 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine init_base(self,mesh,function_data)
-        class(solverdata_t),                intent(inout)           :: self
-        type(mesh_t),                   intent(inout)           :: mesh
-        type(equationset_function_data_t),  intent(in)              :: function_data(:)
+        class(solverdata_t),                intent(inout)   :: self
+        type(mesh_t),                       intent(inout)   :: mesh
+        type(equationset_function_data_t),  intent(in)      :: function_data(:)
         
 
         integer(ik) :: ierr, ndom, maxelems, idom
@@ -121,11 +121,11 @@ contains
 
 
         ! Initialize vectors
-        call self%q%init(  mesh,mesh%domain(1)%ntime)
-        call self%dq%init( mesh,mesh%domain(1)%ntime)
-        call self%rhs%init(mesh,mesh%domain(1)%ntime)
-        call self%q_in%init(mesh,mesh%domain(1)%ntime)
-        call self%q_out%init(mesh,mesh%domain(1)%ntime)
+        call self%q%init(    mesh,mesh%ntime_)
+        call self%dq%init(   mesh,mesh%ntime_)
+        call self%rhs%init(  mesh,mesh%ntime_)
+        call self%q_in%init( mesh,mesh%ntime_)
+        call self%q_out%init(mesh,mesh%ntime_)
 
         ! Initialize matrix and parallel recv data
         call self%lhs%init(mesh,'full')

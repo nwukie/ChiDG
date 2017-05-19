@@ -569,7 +569,7 @@ contains
     !!  boundar functions are overridden with neumann boundary conditions.
     !!
     !------------------------------------------------------------------------------------------
-    subroutine read_grid(self,gridfile,spacedim,equation_set, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield, bc_periodic)
+    subroutine read_grid(self,gridfile,spacedim,equation_set, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield, bc_periodic, partitions_in)
         class(chidg_t),     intent(inout)               :: self
         character(*),       intent(in)                  :: gridfile
         character(*),       intent(in),     optional    :: equation_set
@@ -580,6 +580,7 @@ contains
         class(bc_state_t),  intent(in),     optional    :: bc_symmetry
         class(bc_state_t),  intent(in),     optional    :: bc_farfield
         class(bc_state_t),  intent(in),     optional    :: bc_periodic
+        type(partition_t),  intent(in),     optional    :: partitions_in(:)
 
 
         call write_line(' ', ltrim=.false., io_proc=GLOBAL_MASTER)
@@ -589,7 +590,7 @@ contains
         !
         ! Read domain geometry. Also performs partitioning.
         !
-        call self%read_domains(gridfile,spacedim,equation_set)
+        call self%read_domains(gridfile,spacedim,equation_set,partitions_in)
 
 
 
@@ -640,11 +641,12 @@ contains
     !!  TODO: Generalize spacedim
     !!
     !------------------------------------------------------------------------------------------
-    subroutine read_domains(self,gridfile,spacedim,equation_set)
+    subroutine read_domains(self,gridfile,spacedim,equation_set, partitions_in)
         class(chidg_t),     intent(inout)               :: self
         character(*),       intent(in)                  :: gridfile
         integer(ik),        intent(in),     optional    :: spacedim
         character(*),       intent(in),     optional    :: equation_set
+        type(partition_t),  intent(in),     optional    :: partitions_in(:)
 
 
         type(domain_connectivity_t),    allocatable                 :: connectivities(:)
@@ -660,27 +662,44 @@ contains
         call write_line(' ',                      ltrim=.false., io_proc=GLOBAL_MASTER)
         call write_line('   Reading domains... ', ltrim=.false., io_proc=GLOBAL_MASTER)
 
-        !
-        ! Master rank: Read connectivity, partition connectivity, distribute partitions
-        !
-        call write_line("   partitioning...", ltrim=.false., io_proc=GLOBAL_MASTER)
-        if ( IRANK == GLOBAL_MASTER ) then
-
-            call read_connectivity_hdf(gridfile,connectivities)
-            call read_weights_hdf(gridfile,weights)
-
-            call partition_connectivity(connectivities, weights, partitions)
-
-            call send_partitions(partitions,MPI_COMM_WORLD)
-        end if
 
 
         !
-        ! All ranks: Receive partition from GLOBAL_MASTER
+        ! Partitions defined from user input
         !
-        call write_line("   distributing partitions...", ltrim=.false., io_proc=GLOBAL_MASTER)
-        call recv_partition(self%partition,MPI_COMM_WORLD)
+        if ( present(partitions_in) ) then
 
+            self%partition = partitions_in(IRANK+1)
+
+
+        !
+        ! Partitions from partitioner tool
+        !
+        else
+
+            !
+            ! Master rank: Read connectivity, partition connectivity, distribute partitions
+            !
+            call write_line("   partitioning...", ltrim=.false., io_proc=GLOBAL_MASTER)
+            if ( IRANK == GLOBAL_MASTER ) then
+
+                call read_connectivity_hdf(gridfile,connectivities)
+                call read_weights_hdf(gridfile,weights)
+
+                call partition_connectivity(connectivities, weights, partitions)
+
+                call send_partitions(partitions,MPI_COMM_WORLD)
+            end if
+
+
+            !
+            ! All ranks: Receive partition from GLOBAL_MASTER
+            !
+            call write_line("   distributing partitions...", ltrim=.false., io_proc=GLOBAL_MASTER)
+            call recv_partition(self%partition,MPI_COMM_WORLD)
+
+
+        end if ! partitions in from user
 
 
 

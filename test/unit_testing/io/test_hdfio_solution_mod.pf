@@ -4,7 +4,6 @@ module test_hdfio_solution_mod
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, ZERO, IO_DESTINATION
     use type_chidg,         only: chidg_t
-    use type_meshdata,      only: meshdata_t
     use mod_test_utilities, only: create_mesh_file
     use mod_file_utilities, only: copy_file, delete_file
     implicit none
@@ -55,11 +54,8 @@ contains
     subroutine setUp(this)
         class(test_hdfio_solution),    intent(inout)   :: this
 
-        integer(ik)                     :: spacedim
-        type(meshdata_t), allocatable   :: meshdata(:)
 
         IO_DESTINATION = 'file'
-
 
 
         !
@@ -68,29 +64,40 @@ contains
         call this%chidgO1%start_up('core')
         call this%chidgO2%start_up('core')
 
+
         !
-        ! Create file
+        ! Create grid file
         !
         call create_mesh_file("D1 NxNxN",this%fileorig,nelem_xi=3,nelem_eta=3,nelem_zeta=3)
 
+
+
+
         !
-        ! Initialize chidg domain
+        ! Set accuracy for solution expansion
         !
-        spacedim = 3
-        call this%chidgO1%read_grid(this%fileorig,spacedim)
         call this%chidgO1%set('Solution Order', integer_input=1)
         call this%chidgO1%set('Time Integrator', algorithm='Steady')
-        call this%chidgO1%init('domains')
-        call this%chidgO1%init('communication')
-        call this%chidgO1%init('solvers')
 
-        spacedim = 3
-        call this%chidgO2%read_grid(this%fileorig,spacedim)
+
+        !
+        ! Read grid file
+        !
+        call this%chidgO1%read_grid(this%fileorig)
+
+
+        
+        !
+        ! Set accuracy for solution expansion
+        !
         call this%chidgO2%set('Solution Order', integer_input=2)
         call this%chidgO2%set('Time Integrator', algorithm='Steady')
-        call this%chidgO2%init('domains')
-        call this%chidgO2%init('communication')
-        call this%chidgO2%init('solvers')
+
+
+        !
+        ! Read grid file
+        !
+        call this%chidgO2%read_grid(this%fileorig)
 
 
         !
@@ -98,8 +105,9 @@ contains
         !
         call copy_file(this%fileorig, this%fileO1)
         call copy_file(this%fileorig, this%fileO2)
+
         
-    end subroutine
+    end subroutine setUp
     !*******************************************************************************************
 
 
@@ -126,7 +134,7 @@ contains
         call delete_file(this%fileO2)
         call delete_file(this%fileNew)
 
-    end subroutine
+    end subroutine tearDown
     !******************************************************************************************
 
 

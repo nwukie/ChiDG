@@ -2,6 +2,7 @@ module type_bc_patch
 #include <messenger.h>
     use mod_kinds,                  only: ik
     use type_ivector,               only: ivector_t
+    use type_point,                 only: point_t
     use type_bc_element_coupling,   only: bc_element_coupling_t
     implicit none
 
@@ -45,6 +46,7 @@ module type_bc_patch
         procedure   :: add_coupled_element
         procedure   :: ncoupled_elements
         procedure   :: set_coupled_element_recv
+        procedure   :: set_coupled_element_data
 
         ! Return indices for a given face_ID
         procedure   :: idomain_g
@@ -260,21 +262,55 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------
-    subroutine add_coupled_element(self,face_ID,idomain_g, idomain_l, ielement_g, ielement_l, proc)
+    subroutine add_coupled_element(self,face_ID,idomain_g, idomain_l, ielement_g, ielement_l, iface, proc)
         class(bc_patch_t),  intent(inout)   :: self
         integer(ik),        intent(in)      :: face_ID
         integer(ik),        intent(in)      :: idomain_g
         integer(ik),        intent(in)      :: idomain_l
         integer(ik),        intent(in)      :: ielement_g
         integer(ik),        intent(in)      :: ielement_l
+        integer(ik),        intent(in)      :: iface
         integer(ik),        intent(in)      :: proc
 
 
-        call self%coupling(face_ID)%add_coupled_element(idomain_g,idomain_l,ielement_g,ielement_l,proc)
+        call self%coupling(face_ID)%add_coupled_element(idomain_g,idomain_l,ielement_g,ielement_l,iface,proc)
 
 
     end subroutine add_coupled_element
     !***********************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Initialized auxiliary data for a coupled element.
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/182017
+    !!
+    !!
+    !-----------------------------------------------------------------------------------
+    subroutine set_coupled_element_data(self,face_ID,idomain_g,ielement_g,neqns,nterms_s,total_area,areas,quad_pts)
+        class(bc_patch_t),  intent(inout)   :: self
+        integer(ik),        intent(in)      :: face_ID
+        integer(ik),        intent(in)      :: idomain_g
+        integer(ik),        intent(in)      :: ielement_g
+        integer(ik),        intent(in)      :: neqns
+        integer(ik),        intent(in)      :: nterms_s
+        real(rk),           intent(in)      :: total_area
+        real(rk),           intent(in)      :: areas(:)
+        type(point_t),      intent(in)      :: quad_pts(:)
+
+        call self%coupling(face_ID)%set_coupled_element_data(idomain_g,ielement_g,neqns,nterms_s,total_area,areas,quad_pts)
+    
+    end subroutine set_coupled_element_data
+    !***********************************************************************************
+
 
 
 

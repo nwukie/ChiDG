@@ -7,6 +7,7 @@ module bc_state_outlet_constant_pressure
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use type_point,             only: point_t
+    use mpi_f08,                only: mpi_comm
     use ieee_arithmetic
     use DNAD_D
     implicit none
@@ -74,10 +75,11 @@ contains
     !!  @param[inout]   prop    properties_t object containing equations and material_t objects
     !!
     !-------------------------------------------------------------------------------------------
-    subroutine compute_bc_state(self,worker,prop)
+    subroutine compute_bc_state(self,worker,prop,bc_COMM)
         class(outlet_constant_pressure_t),  intent(inout)   :: self
         type(chidg_worker_t),               intent(inout)   :: worker
         class(properties_t),                intent(inout)   :: prop
+        type(mpi_comm),                     intent(in)      :: bc_COMM
 
 
         ! Storage at quadrature nodes

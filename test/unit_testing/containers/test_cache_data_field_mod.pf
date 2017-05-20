@@ -21,7 +21,7 @@ module test_cache_data_field_mod
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
     use type_chidg,                 only: chidg_t
-    use type_cache_data_field,   only: cache_data_field_t
+    use type_cache_data_field,      only: cache_data_field_t
     use mod_test_utilities,         only: create_mesh_file
     use mod_file_utilities,         only: delete_file
     implicit none
@@ -73,16 +73,17 @@ contains
         call create_mesh_file("D1 NxNxN",this%filename,nelem_xi=3,nelem_eta=3,nelem_zeta=3)
 
         !
+        ! Set the accuracy for the solution expansion
+        !
+        call this%chidg%set('Solution Order', integer_input=this%solution_order)
+
+        !
         ! Read grid + bcs
         !
         call this%chidg%read_grid(this%filename,3)
 
-        !
-        ! Initialize
-        !
-        call this%chidg%set('Solution Order', integer_input=this%solution_order)
-        call this%chidg%init('domains')
-        call this%chidg%init('communication')
+!        call this%chidg%init('domains')
+!        call this%chidg%init('communication')
 
     end subroutine setUp
     !******************************************************************************************

@@ -12,7 +12,23 @@ module type_domain_vector
 
 
 
-    !> Data type for storing the matrix of dense blocks which hold the linearization for an algorithm
+    !>  Domain-level vector container.
+    !!
+    !!  Contains vector information for a single domain. For each element on the domain,
+    !!  a densevector_t instance is created that contains data for the element.
+    !!
+    !!  Use in local problem:
+    !!  ---------------------
+    !!  For each domain in the processor-local data%mesh, an instance of domain_vector_t
+    !!  is allocated on chidg_vector%dom(:) 
+    !!
+    !!  Use in global problem:
+    !!  ----------------------
+    !!  This is also used to receive domain data from other processors. The container
+    !!  access chidg_vector%recv%comm(:)%dom(:) designates that for any processor
+    !!  being communicated with, for each domain that is being received, an instance
+    !!  of domain_vector_t is allocated to receive that data.
+    !!
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -21,20 +37,20 @@ module type_domain_vector
     !----------------------------------------------------------------------------------------------
     type, public :: domain_vector_t
 
-        type(densevector_t), allocatable :: vecs(:)     !< Local element vectors
+        type(densevector_t), allocatable :: vecs(:)     ! Local element vectors
 
     contains
 
-        generic,    public  :: init => init_local, init_recv    !< Initialize vector
-        procedure, private  :: init_local                       !< Initialize vector to store data for local domain
-        procedure, private  :: init_recv                        !< Initialize vector to store data for domains being received from another processor
+        generic,    public  :: init => init_local, init_recv    ! Initialize vector.
+        procedure, private  :: init_local                       ! Initialize vector for local domain.
+        procedure, private  :: init_recv                        ! Initialize vector for domain received from another proc.
 
-        procedure,  public  :: distribute               !< Given a full-vector representation, distribute it to the denseblock format
-        procedure,  public  :: clear                    !< Zero all vector storage elements
+        procedure,  public  :: distribute       ! Given a full-vector representation, distribute it to a dense array.
+        procedure,  public  :: clear            ! Zero all vector storage elements.
         
-        procedure,  public  :: norm             !< Return the L2 vector norm of the block-vector
-        procedure,  public  :: sumsqr           !< Return the sum of the squared block-vector entries
-        procedure,  public  :: sumsqr_fields    !< Return the sum of squared entries for fields independently
+        procedure,  public  :: norm             ! Return the L2 vector norm of the block-vector.
+        procedure,  public  :: sumsqr           ! Return the sum of the squared block-vector entries.
+        procedure,  public  :: sumsqr_fields    ! Return the sum of squared entries for fields independently.
         procedure,  public  :: nentries
         procedure,  public  :: dump
 
@@ -135,14 +151,15 @@ contains
             if (new_elements) then
                 deallocate(self%vecs)
                 allocate(self%vecs(nelem), stat=ierr)
+                if (ierr /= 0) call AllocationError
             end if
 
         else
 
             allocate(self%vecs(nelem), stat=ierr)
+            if (ierr /= 0) call AllocationError
 
         end if
-        if (ierr /= 0) call AllocationError
 
 
 
@@ -194,13 +211,14 @@ contains
     !!  @date   11/5/2016
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine init_recv(self,iproc)
-        class(domain_vector_t),   intent(inout)   :: self
-        integer(ik),            intent(in)      :: iproc
+    subroutine init_recv(self,proc)
+        class(domain_vector_t), intent(inout)   :: self
+        integer(ik),            intent(in)      :: proc
 
         type(ivector_t) :: recv_elems
-        integer(ik)     :: nelem_recv, ielem_recv, ierr, ielem, iface, nterms, neqns, loc, recv_element
-        integer(ik)     :: idomain_g, idomain_l, ielement_g, ielement_l, ntime
+        integer(ik)     :: nelem_recv, ielem_recv, ierr, ielem, iface, nterms,  &
+                           neqns, loc, recv_element, idomain_g, idomain_l,      &
+                           ielement_g, ielement_l, ntime
         logical         :: new_elements, proc_element, already_added, comm_element
 
 
@@ -208,14 +226,14 @@ contains
         !
         ! Get the domain index we are receiving
         !
-        call MPI_Recv(idomain_g, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-        call MPI_Recv(idomain_l, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+        call MPI_Recv(idomain_g, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+        call MPI_Recv(idomain_l, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
 
         !
         ! Get the number of elements being received from domain
         !
-        call MPI_Recv(nelem_recv, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+        call MPI_Recv(nelem_recv, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
         
 
 
@@ -234,14 +252,15 @@ contains
             if (new_elements) then
                 deallocate(self%vecs)
                 allocate(self%vecs(nelem_recv), stat=ierr)
+                if (ierr /= 0) call AllocationError
             end if
 
         else
 
             allocate(self%vecs(nelem_recv), stat=ierr)
+            if (ierr /= 0) call AllocationError
 
         end if
-        if (ierr /= 0) call AllocationError
 
 
 
@@ -252,17 +271,16 @@ contains
         do ielem_recv = 1,nelem_recv
 
 
-            call MPI_Recv(ielement_g, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-            call MPI_Recv(ielement_l, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-            call MPI_Recv(nterms,     1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-            call MPI_Recv(neqns,      1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-            call MPI_Recv(ntime,      1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(ielement_g, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(ielement_l, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(nterms,     1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(neqns,      1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(ntime,      1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
             !
             ! Call densevector initialization routine
             !
             call self%vecs(ielem_recv)%init(nterms,neqns,ntime,idomain_g,idomain_l,ielement_g,ielement_l)
-
 
         end do
 

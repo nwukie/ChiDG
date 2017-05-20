@@ -1,6 +1,6 @@
 module type_chidg
 #include <messenger.h>
-    use mod_constants,              only: NFACES
+    use mod_constants,              only: NFACES, NO_ID
     use mod_equations,              only: register_equation_builders
     use mod_operators,              only: register_operators
     use mod_models,                 only: register_models
@@ -111,8 +111,8 @@ module type_chidg
 
         ! IO
         procedure            :: read_grid
-        procedure, private   :: read_domains
-        procedure, private   :: read_boundary_conditions
+        procedure            :: read_domains
+        procedure            :: read_boundary_conditions
         procedure            :: read_solution
         procedure            :: write_grid
         procedure            :: write_solution
@@ -308,12 +308,12 @@ contains
                 call self%init('bc')
 
                 ! communication
-                call self%init('communication')
-                call self%init('chimera')
+                call self%init('comm - interior')
+                call self%init('comm - chimera')
 
                 ! matrix/vector
-                call self%init('solvers')
-                call self%init('finalize')
+                call self%init('storage')
+                !call self%init('finalize')
 
 
 
@@ -337,28 +337,28 @@ contains
             !
             ! Initialize communication. Local face communication. Global parallel communication.
             !
-            case ('communication')
+            case ('comm - interior')
                 call establish_neighbor_communication(self%data%mesh,ChiDG_COMM)
 
 
             !
             ! Initialize chimera
             !
-            case ('chimera')
+            case ('comm - chimera')
                 call establish_chimera_communication(self%data%mesh,ChiDG_COMM)
 
 
             !
             ! Initialize solver storage initialization: vectors, matrices, etc.
             !
-            case ('solvers')
+            case ('storage')
                 call self%data%initialize_solution_solver()
 
 
             !
             ! Allocate components, based on input or default input data
             !
-            case ('finalize')
+            case ('algorithms')
 
                 !
                 ! Test chidg necessary components have been allocated
@@ -382,7 +382,7 @@ contains
 
 
             case default
-                call chidg_signal_one(WARN,'chidg%init: Invalid initialization string',trim(activity))
+                call chidg_signal_one(FATAL,'chidg%init: Invalid initialization string',trim(activity))
 
         end select
 
@@ -569,7 +569,7 @@ contains
     !!  boundar functions are overridden with neumann boundary conditions.
     !!
     !------------------------------------------------------------------------------------------
-    subroutine read_grid(self,gridfile,spacedim,equation_set, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield, bc_periodic)
+    subroutine read_grid(self,gridfile,spacedim,equation_set, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield, bc_periodic, partitions_in)
         class(chidg_t),     intent(inout)               :: self
         character(*),       intent(in)                  :: gridfile
         character(*),       intent(in),     optional    :: equation_set
@@ -580,6 +580,7 @@ contains
         class(bc_state_t),  intent(in),     optional    :: bc_symmetry
         class(bc_state_t),  intent(in),     optional    :: bc_farfield
         class(bc_state_t),  intent(in),     optional    :: bc_periodic
+        type(partition_t),  intent(in),     optional    :: partitions_in(:)
 
 
         call write_line(' ', ltrim=.false., io_proc=GLOBAL_MASTER)
@@ -589,7 +590,7 @@ contains
         !
         ! Read domain geometry. Also performs partitioning.
         !
-        call self%read_domains(gridfile,spacedim,equation_set)
+        call self%read_domains(gridfile,spacedim,equation_set,partitions_in)
 
 
 
@@ -604,6 +605,13 @@ contains
                                                      bc_symmetry,    &
                                                      bc_farfield,    &
                                                      bc_periodic )
+
+
+
+        !
+        ! Initialize data
+        !
+        call self%init('all')
 
 
         call write_line('Done reading grid.', io_proc=GLOBAL_MASTER)
@@ -633,11 +641,12 @@ contains
     !!  TODO: Generalize spacedim
     !!
     !------------------------------------------------------------------------------------------
-    subroutine read_domains(self,gridfile,spacedim,equation_set)
+    subroutine read_domains(self,gridfile,spacedim,equation_set, partitions_in)
         class(chidg_t),     intent(inout)               :: self
         character(*),       intent(in)                  :: gridfile
         integer(ik),        intent(in),     optional    :: spacedim
         character(*),       intent(in),     optional    :: equation_set
+        type(partition_t),  intent(in),     optional    :: partitions_in(:)
 
 
         type(domain_connectivity_t),    allocatable                 :: connectivities(:)
@@ -653,27 +662,44 @@ contains
         call write_line(' ',                      ltrim=.false., io_proc=GLOBAL_MASTER)
         call write_line('   Reading domains... ', ltrim=.false., io_proc=GLOBAL_MASTER)
 
-        !
-        ! Master rank: Read connectivity, partition connectivity, distribute partitions
-        !
-        call write_line("   partitioning...", ltrim=.false., io_proc=GLOBAL_MASTER)
-        if ( IRANK == GLOBAL_MASTER ) then
-
-            call read_connectivity_hdf(gridfile,connectivities)
-            call read_weights_hdf(gridfile,weights)
-
-            call partition_connectivity(connectivities, weights, partitions)
-
-            call send_partitions(partitions,MPI_COMM_WORLD)
-        end if
 
 
         !
-        ! All ranks: Receive partition from GLOBAL_MASTER
+        ! Partitions defined from user input
         !
-        call write_line("   distributing partitions...", ltrim=.false., io_proc=GLOBAL_MASTER)
-        call recv_partition(self%partition,MPI_COMM_WORLD)
+        if ( present(partitions_in) ) then
 
+            self%partition = partitions_in(IRANK+1)
+
+
+        !
+        ! Partitions from partitioner tool
+        !
+        else
+
+            !
+            ! Master rank: Read connectivity, partition connectivity, distribute partitions
+            !
+            call write_line("   partitioning...", ltrim=.false., io_proc=GLOBAL_MASTER)
+            if ( IRANK == GLOBAL_MASTER ) then
+
+                call read_connectivity_hdf(gridfile,connectivities)
+                call read_weights_hdf(gridfile,weights)
+
+                call partition_connectivity(connectivities, weights, partitions)
+
+                call send_partitions(partitions,MPI_COMM_WORLD)
+            end if
+
+
+            !
+            ! All ranks: Receive partition from GLOBAL_MASTER
+            !
+            call write_line("   distributing partitions...", ltrim=.false., io_proc=GLOBAL_MASTER)
+            call recv_partition(self%partition,MPI_COMM_WORLD)
+
+
+        end if ! partitions in from user
 
 
 
@@ -823,6 +849,7 @@ contains
 
                 bc_group_name = bc_patch_data(idom)%bc_group_name%at(iface)
                 bc_ID         = self%data%get_bc_state_group_id(bc_group_name%get())
+                if (bc_ID == NO_ID) call chidg_signal_one(FATAL,"chidg%read_boundary_conditions: bc state group was not found.", bc_group_name%get())
 
                 call self%data%mesh%add_bc_patch(bc_patch_data(idom)%domain_name,               &
                                                  bc_group_name%get(),                           &
@@ -1075,8 +1102,11 @@ contains
         call write_line("---------------------------------------------------", io_proc=GLOBAL_MASTER)
 
 
+        !
+        ! Initialize algorithms
+        !
+        call self%init('algorithms')
 
-!        call self%auxiliary_environment%start_up('core')
 
 
         !
@@ -1135,7 +1165,6 @@ contains
             ! 1: Update time t
             ! 2: Call time integrator to take a step
             !
-            !self%data%sdata%t = self%data%time_manager%dt*istep
             self%data%time_manager%t = self%data%time_manager%dt*istep
             call self%time_integrator%step(self%data,self%nonlinear_solver, &
                                                      self%linear_solver,    &

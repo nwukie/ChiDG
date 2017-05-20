@@ -272,8 +272,8 @@ contains
     function new_bc_state_group(self) result(bc_ID)
         class(chidg_data_t),    intent(inout)   :: self
 
-        type(bc_state_group_t), allocatable :: temp_bcs(:)
-        integer(ik)                         :: bc_ID, ierr
+        type(bc_state_group_t), allocatable     :: temp_bcs(:)
+        integer(ik)                             :: bc_ID, ierr
 
 
         !
@@ -553,6 +553,8 @@ contains
         do idomain = 1,self%mesh%ndomains()
             eqn_ID = self%mesh%domain(idomain)%eqn_ID
             nfields = self%eqnset(eqn_ID)%prop%nprimary_fields()
+
+            self%mesh%ntime_ = self%time_manager%ntime
             call self%mesh%domain(idomain)%init_sol(nfields,nterms_s,self%time_manager%ntime)
         end do
 
@@ -597,10 +599,6 @@ contains
             !
             call self%bc_state_group(ibc)%init_coupling(self%mesh)
 
-            !
-            ! Propagate boundary condition coupling. 
-            !
-            call self%bc_state_group(ibc)%propagate_coupling(self%mesh)
 
         end do
 

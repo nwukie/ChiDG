@@ -28,7 +28,7 @@ subroutine test_chidg_matrix_operator_chimera_mv()
     class(function_t),  allocatable :: constant, gaussian
     real(rk),           allocatable :: density_residual_D4_E31(:), density_residual_D4_E36(:)
     integer(ik)                     :: ChiID, iface, ndonors, gq_index, igq, ngq, neqns, &
-                                       spacedim, nterms_s, idom, ielem, idom_d, ielem_d, &
+                                       nterms_s, idom, ielem, idom_d, ielem_d, &
                                        idonor, idom_p, ielem_p, imat, itime
     real(rk)                        :: chi_xi, chi_eta, chi_zeta, ref_xi, ref_eta, ref_zeta
     type(point_t)                   :: chimera_node
@@ -38,7 +38,6 @@ subroutine test_chidg_matrix_operator_chimera_mv()
 
 
     tol             = 1.e-12_rk
-    spacedim        = 3
     neqns           = 5
     nterms_s        = 8
     IO_DESTINATION  = 'file'
@@ -57,22 +56,15 @@ subroutine test_chidg_matrix_operator_chimera_mv()
 
 
     !
-    ! Read grid
-    !
-    call chidg%read_grid(filename,spacedim)
-
-
-
-    !
-    ! Initialize data
+    ! Set order of accuracy for the solution expansion
     !
     call chidg%set('Solution Order', integer_input=2)
-    call chidg%init('domains')
-    call chidg%init('bc')
-    call chidg%init('communication')
-    call chidg%init('chimera')
-    call chidg%init('solvers')
 
+
+    !
+    ! Read grid
+    !
+    call chidg%read_grid(filename)
 
 
     !

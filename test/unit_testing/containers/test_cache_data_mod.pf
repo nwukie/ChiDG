@@ -62,14 +62,15 @@ contains
         call create_mesh_file("D1 NxNxN",this%filename,nelem_xi=3,nelem_eta=3,nelem_zeta=3)
 
         !
+        ! Set the accuracy for the solution expansion
+        !
+        call this%chidg%set('Solution Order', integer_input=this%solution_order)
+
+        !
         ! Read grid + bcs
         !
         call this%chidg%read_grid(this%filename,3)
 
-        ! Initialize
-        call this%chidg%set('Solution Order', integer_input=this%solution_order)
-        call this%chidg%init('domains')
-        call this%chidg%init('communication')
 
     end subroutine setUp
     !******************************************************************************************

@@ -152,10 +152,11 @@ contains
     !!  @date   1/31/2016
     !!
     !-----------------------------------------------------------------------------------
-    subroutine compute_bc_state(self,worker,prop)
+    subroutine compute_bc_state(self,worker,prop,bc_COMM)
         class(periodic_t),              intent(inout)   :: self
         type(chidg_worker_t),           intent(inout)   :: worker
         class(properties_t),            intent(inout)   :: prop
+        type(mpi_comm),                 intent(in)      :: bc_COMM
 
 
         ! DO NOTHING IN PERIODIC BOUNDARY CONDITION

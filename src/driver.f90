@@ -93,7 +93,6 @@ program driver
         ! Initialize communication, storage, auxiliary fields
         !
         call manager%process(chidg)
-        call chidg%init('all')
 
 
 
@@ -237,14 +236,6 @@ program driver
                 call chidg_signal(FATAL,"We didn't understand the way chidg was called. Available chidg 'actions' are: 'edit' 'convert' 'post' 'matplotlib' and 'airfoil'.")
         end select
 
-!<<<<<<< HEAD
-!        else if ( trim(chidg_action) == 'post' ) then
-!            call chidg_post(trim(filename))
-!            call chidg_post_vtk(trim(filename))
-!            call chidg_post_matplotlib(trim(filename))
-!        else
-!            call chidg_signal(FATAL,"chidg: unrecognized action '"//trim(chidg_action)//"'. Valid options are: 'edit', 'convert'")
-!=======
 
         call chidg%shut_down('core')
 

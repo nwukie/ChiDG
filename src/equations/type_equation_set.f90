@@ -1051,7 +1051,8 @@ contains
             !
             if (differentiate) then
                 ! compute function, wrt (all exterior)/interior states
-                compute_pattern = [DIAG]
+                !compute_pattern = [DIAG]
+                compute_pattern = [iface]
             else
                 ! compute function, but do not differentiate
                 compute_pattern = [0]
@@ -1074,7 +1075,6 @@ contains
                 !
                 ! Get index of boundary condition, patch, patch face. 
                 !
-                !bc_ID    = mesh%domain(idom)%faces(ielem,iface)%bc_ID
                 group_ID = mesh%domain(idom)%faces(ielem,iface)%group_ID
                 patch_ID = mesh%domain(idom)%faces(ielem,iface)%patch_ID
                 face_ID  = mesh%domain(idom)%faces(ielem,iface)%face_ID
@@ -1100,13 +1100,6 @@ contains
                             !
                             ! Get coupled element to linearize against.
                             !
-                            !worker%function_info%seed%idomain_g  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g_coupled(face_ID)%at(icompute)
-                            !worker%function_info%seed%idomain_l  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l_coupled(face_ID)%at(icompute)
-                            !worker%function_info%seed%ielement_g = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g_coupled(face_ID)%at(icompute)
-                            !worker%function_info%seed%ielement_l = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l_coupled(face_ID)%at(icompute)
-                            !worker%function_info%seed%iproc      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%proc_coupled(face_ID)%at(icompute)
-                            !worker%function_info%idepend         = icompute
-
                             worker%function_info%seed%idomain_g  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(icompute)
                             worker%function_info%seed%idomain_l  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(icompute)
                             worker%function_info%seed%ielement_g = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(icompute)
@@ -1162,11 +1155,11 @@ contains
     !--------------------------------------------------------------------------------------
     function get_face_ncompute(self,mesh,face_info,idiff) result(ncompute)
         class(equation_set_t),  intent(in)   :: self
-        type(mesh_t),       intent(in)   :: mesh
+        type(mesh_t),           intent(in)   :: mesh
         type(face_info_t),      intent(in)   :: face_info
         integer(ik),            intent(in)   :: idiff
 
-        integer(ik) :: ChiID, ncompute
+        integer(ik) :: ChiID, group_ID, patch_ID, face_ID, ncompute
         logical     :: compute_wrt_none, compute_wrt_interior, compute_wrt_exterior, &
                        chimera_face, bc_face
 
@@ -1197,7 +1190,10 @@ contains
                 ncompute = mesh%domain(idom)%chimera%recv%data(ChiID)%ndonors()
 
             else if ( bc_face ) then
-                ncompute = mesh%domain(idom)%faces(ielem,iface)%bc_ndepend
+                group_ID = mesh%domain(idom)%faces(ielem,iface)%group_ID
+                patch_ID = mesh%domain(idom)%faces(ielem,iface)%patch_ID
+                face_ID  = mesh%domain(idom)%faces(ielem,iface)%face_ID
+                ncompute = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ncoupled_elements(face_ID)
 
             else
                 ! Standard conforming neighbor, only one dependent element.

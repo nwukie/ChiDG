@@ -84,12 +84,6 @@ subroutine test_chidg_matrix_operator_HB_mv()
 
 
     !
-    ! Initalize ChiDG Chimera interfaces
-    !
-    call chidg%init('domains')
-    call chidg%init('communication')
-
-    !
     ! Initialize data containers
     !
     call A%init(chidg%data%mesh, mtype = 'full')

@@ -26,6 +26,8 @@ module type_mesh
     !----------------------------------------------------------------------------------
     type, public :: mesh_t
 
+        integer(ik)                         :: ntime_
+
         type(domain_t),         allocatable :: domain(:)
         type(bc_patch_group_t), allocatable :: bc_patch_group(:)
 

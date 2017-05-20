@@ -23,13 +23,13 @@ module type_densematrix_vector
         integer(ik)                 :: ielement_g
         integer(ik)                 :: ielement_l
 
-        integer(ik)                 :: size_        = 0
-        integer(ik)                 :: capacity_    = 0
-        integer(ik)                 :: buffer_      = 7
+        integer(ik)                 :: size_      = 0
+        integer(ik)                 :: capacity_  = 0
+        integer(ik)                 :: buffer_    = 7
 
-        type(densematrix_t),   allocatable  :: data_(:)
+        type(densematrix_t),    allocatable :: data_(:)
 
-        real (rk), allocatable              :: mass(:,:)
+        real (rk),              allocatable :: mass(:,:)
 
     contains
         ! Initializers
@@ -60,22 +60,20 @@ module type_densematrix_vector
 
 
         ! Data accessors
-        procedure, public   :: at               !< return data from element densematrix_vector%at(ielem)
-        procedure, public   :: data             !< return full data vector
-        procedure, public   :: dmat             !< return densematrix array from element densematrix_vector%dmat(ielem)
-        procedure, public   :: dparent_g        !< return parent global domain for the index position densematrix
-        procedure, public   :: eparent_g        !< return parent global element for the index position densematrix
-        procedure, public   :: dparent_l        !< return parent local domain for the index position densematrix
-        procedure, public   :: eparent_l        !< return parent local element for the index position densematrix
-        procedure, public   :: parent_proc      !< return parent processor rank
-        procedure, public   :: itranspose       !< return itranspose, imat index of densematrix in transposed location.
-        !procedure, public   :: find             !< find element in densematrix vector based idonor_domain_g ad i_element_g NB (not used anymore in blockmatrix)!
-        procedure, public   :: get_diagonal     !< return index of densematrix representing the diagonal.
-        procedure, public   :: get_idomain_g    !< return the global domain index which the densematrix_vector is associated with
-        procedure, public   :: get_ielement_g   !< return the global element index which the densematrix vector is associated with
-        procedure, public   :: get_idomain_l    !< return the local domain index which the densematrix_vector is associated with
-        procedure, public   :: get_ielement_l   !< return the local element indexwhich the densematrix vector is associated with
-        
+        procedure, public   :: at               ! return data from element densematrix_vector%at(ielem)
+        procedure, public   :: data             ! return full data vector
+        procedure, public   :: dmat             ! return densematrix array from element densematrix_vector%dmat(ielem)
+        procedure, public   :: dparent_g        ! return parent global domain for the index position densematrix
+        procedure, public   :: eparent_g        ! return parent global element for the index position densematrix
+        procedure, public   :: dparent_l        ! return parent local domain for the index position densematrix
+        procedure, public   :: eparent_l        ! return parent local element for the index position densematrix
+        procedure, public   :: parent_proc      ! return parent processor rank
+        procedure, public   :: itranspose       ! return itranspose, imat index of densematrix in transposed location.
+        procedure, public   :: get_diagonal     ! return index of densematrix representing the diagonal.
+        procedure, public   :: get_idomain_g    ! return the global domain index which the densematrix_vector is associated with
+        procedure, public   :: get_ielement_g   ! return the global element index which the densematrix vector is associated with
+        procedure, public   :: get_idomain_l    ! return the local domain index which the densematrix_vector is associated with
+        procedure, public   :: get_ielement_l   ! return the local element indexwhich the densematrix vector is associated with
 
     end type densematrix_vector_t
     !*****************************************************************************************
@@ -830,50 +828,6 @@ contains
 
 
 
-
-
-
-!    !>  Find element in densematrix_vector based idomain_g and ielement_g
-!    !!
-!    !!  @Matteo Ugolotti
-!    !!  @date   11/14/2016
-!    !!
-!    !!  This procedure is very similar to procedure "loc", the only difference
-!    !!  is that "find" returns an error when the densematrix is not found.
-!    !!  This procedure is used in blockmatrix!
-!    !!
-!    !----------------------------------------------------------------------------------------
-!    function find(self,idomain_g,ielement_g) result (res)
-!        class(densematrix_vector_t),    intent(in)  :: self
-!        integer(ik),                    intent(in)  :: idomain_g
-!        integer(ik),                    intent(in)  :: ielement_g
-!        
-!        integer(ik) :: ival
-!        logical     :: matrix_match = .false.
-!        logical     :: no_donor_matrix = .false. 
-!        integer(ik) :: res
-!
-!        res = 0
-!
-!        do ival = 1 , self%size()
-!
-!            matrix_match = ( (idomain_g == self%dparent_g(ival)) .and. &
-!                            (ielement_g == self%eparent_g(ival)) )
-!
-!            if ( matrix_match ) then
-!                res = ival
-!                exit
-!            end if
-!            
-!
-!        end do ! ival
-!        
-!    
-!        no_donor_matrix = (res == 0)
-!        if (no_donor_matrix) call chidg_signal(MSG, 'densematrix_vector%find: no donor densematrix found to store derivative')
-!
-!    end function find
-!    !****************************************************************************************
 
 
 

@@ -6,6 +6,7 @@ module bc_state_fluid_extrapolate
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use type_point,             only: point_t
+    use mpi_f08,                only: mpi_comm
     use DNAD_D
     implicit none
 
@@ -84,21 +85,22 @@ contains
     !!  @param[in]      flux    function_into_t containing info on the function being computed
     !!
     !-------------------------------------------------------------------------------------------
-    subroutine compute_bc_state(self,worker,prop)
-        class(fluid_extrapolate_t),    intent(inout)   :: self
+    subroutine compute_bc_state(self,worker,prop,bc_COMM)
+        class(fluid_extrapolate_t), intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         class(properties_t),        intent(inout)   :: prop
+        type(mpi_comm),             intent(in)      :: bc_COMM
 
 
         ! Storage at quadrature nodes
-        type(AD_D), allocatable, dimension(:)   ::      &
-            rho_m,  rhou_m,  rhov_m,  rhow_m,  rhoE_m,  &
-            rho_bc, rhou_bc, rhov_bc, rhow_bc, rhoE_bc, &
+        type(AD_D), allocatable, dimension(:)   ::                      &
+            rho_m,  rhou_m,  rhov_m,  rhow_m,  rhoE_m,                  &
+            rho_bc, rhou_bc, rhov_bc, rhow_bc, rhoE_bc,                 &
             drho_dx_m, drhou_dx_m, drhov_dx_m, drhow_dx_m, drhoE_dx_m,  &
             drho_dy_m, drhou_dy_m, drhov_dy_m, drhow_dy_m, drhoE_dy_m,  &
             drho_dz_m, drhou_dz_m, drhov_dz_m, drhow_dz_m, drhoE_dz_m,  &
-            flux_x, flux_y,  flux_z,  integrand,        &
-            u_bc,   v_bc,    w_bc,                      &
+            flux_x, flux_y,  flux_z,  integrand,                        &
+            u_bc,   v_bc,    w_bc,                                      &
             H_bc
 
 

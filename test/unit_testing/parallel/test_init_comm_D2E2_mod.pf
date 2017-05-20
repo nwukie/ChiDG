@@ -45,11 +45,11 @@ contains
     subroutine test_init_comm_D2E2(this)
         class(MpiTestMethod), intent(inout) :: this
 
-        type(chidg_t)                               :: chidg
-        type(mpi_comm)                              :: ChiDG_COMM
+        type(chidg_t)               :: chidg
+        type(mpi_comm)              :: ChiDG_COMM
 
-        integer(ik)                     :: iread, spacedim, ierr
-        character(len=:), allocatable   :: gridfile
+        integer(ik)                 :: iread, ierr
+        character(:), allocatable   :: gridfile
 
         
         IRANK              = this%getProcessRank()
@@ -69,21 +69,21 @@ contains
 
 
         IO_DESTINATION = 'file'
-        spacedim       = 3
+
+
+        !
+        ! Set accuracy for the solution expansion
+        !
+        call chidg%set('Solution Order', integer_input=3)
 
 
         !
         ! Read partition data: grid, boundary conditions
         !
-        call chidg%read_grid(gridfile, spacedim)
+        call chidg%read_grid(gridfile)
+        call MPI_Barrier(ChiDG_COMM,ierr)
 
 
-        !
-        ! Initialization
-        !
-        call chidg%set('Solution Order', integer_input=3)
-        call chidg%init('domains')
-        call chidg%init('communication')
 
 
         !
@@ -231,11 +231,9 @@ contains
 
         call chidg%shut_down('core')
 
-        call MPI_Barrier(ChiDG_COMM,ierr)
         if (IRANK == GLOBAL_MASTER) then
             call delete_file(gridfile)
         end if
-        call MPI_Barrier(ChiDG_COMM,ierr)
 
     end subroutine test_init_comm_D2E2
     !******************************************************************************************

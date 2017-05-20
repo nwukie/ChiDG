@@ -483,12 +483,12 @@ contains
 
         real(rk)        :: vals(size(integral))
 
-        logical         :: boundary_face, chimera_face, conforming_face, diff_interior, diff_none
+        logical         :: boundary_face, chimera_face, conforming_face, diff_interior, diff_none, diff_exterior
         logical         :: add_flux = .false.
 
 
         associate ( idomain_l  => face_info%idomain_l, ielement_l  => face_info%ielement_l, iface => face_info%iface, &
-                    ifcn  => function_info%ifcn,       idonor => function_info%idepend,     idiff => function_info%idiff )
+                    ifcn  => function_info%ifcn,       idepend => function_info%idepend,     idiff => function_info%idiff )
 
             conforming_face = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR)
             boundary_face   = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY)
@@ -496,22 +496,39 @@ contains
 
             diff_none     = (idiff == 0)
             diff_interior = (idiff == DIAG)
+            diff_exterior = ( (idiff == 1) .or. (idiff == 2) .or. &
+                              (idiff == 3) .or. (idiff == 4) .or. &
+                              (idiff == 5) .or. (idiff == 6) )
 
             associate ( rhs => sdata%rhs%dom(idomain_l)%vecs, lhs => sdata%lhs)
 
                 !
-                ! Only store rhs once. if idiff == DIAG. Also, since the integral could be computed more than once for chimera faces, only store for the first donor.
-                ! The integral should be the same for any value of idonor. Only the derivatives will change
+                ! Only store rhs once. 
                 !
-                if ( (boundary_face .and. diff_interior) .or. (boundary_face .and. diff_none) ) then
+                !   For BOUNDARY faces: only store if diff_exterior or diff_none, since the boundary integrals only get computed
+                !                       for these cases, not diff_interior actually. This is because the interior element is 
+                !                       registered with the boundary condition as a coupled element, and these get computed for
+                !                       icompute = [iface] and not icompute = [DIAG]. Only store for idepend == 1, since 
+                !                       could be computed multiple times.
+                !
+                !   For CHIMERA faces: only store if diff_interior or diff_none. Only store for idepend == 1, since could be
+                !                      computed multiple times. The residual should be the same for any value of idepend, 
+                !                      only the derivatives will change.
+                !
+                !if (  (boundary_face .and. diff_interior) .or. &
+                if (  (boundary_face .and. diff_exterior) .or. &
+                      (boundary_face .and. diff_none    ) ) then
 
-                    vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_
-                    call rhs(ielement_l)%setvar(ieqn,itime,vals)
+                    if (idepend == 1) then
+                        vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_
+                        call rhs(ielement_l)%setvar(ieqn,itime,vals)
+                    end if
 
 
-                else if ( (chimera_face .and. diff_interior) .or. (chimera_face .and. diff_none) ) then
+                else if ( (chimera_face .and. diff_interior) .or. &
+                          (chimera_face .and. diff_none    ) ) then
 
-                    if (idonor == 1) then
+                    if (idepend == 1) then
                         vals = rhs(ielement_l)%getvar(ieqn,itime) + integral(:)%x_ad_
                         call rhs(ielement_l)%setvar(ieqn,itime,vals)
                     end if
@@ -575,14 +592,14 @@ contains
         type(AD_D),             intent(inout)   :: integral(:)
 
         integer(ik)                 :: i, idomain_l, ielement_l, iface, ChiID
-        integer(ik)                 :: idiff, idonor, ifcn
+        integer(ik)                 :: idiff, ifcn
         real(rk)                    :: vals(size(integral))
 
         logical :: conforming_face, boundary_face, chimera_face, &
                    diff_none, diff_interior, diff_exterior, add_linearization
 
         associate ( idomain_l => face_info%idomain_l, ielement_l => face_info%ielement_l,  iface => face_info%iface, &
-                    ifcn      => function_info%ifcn,  idonor     => function_info%idepend, idiff => function_info%idiff, seed => function_info%seed )
+                    ifcn      => function_info%ifcn,  idepend    => function_info%idepend, idiff => function_info%idiff, seed => function_info%seed )
 
         
         conforming_face = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR)
@@ -608,7 +625,7 @@ contains
                 else
                     ! Store linearization of Chimera boundary receiver element. Since this could be computed multiple times,
                     ! we just store it once.
-                    if (idonor == 1) then
+                    if (idepend == 1) then
                         call lhs%store(integral,face_info,seed,ieqn,itime)
                     end if
                 end if

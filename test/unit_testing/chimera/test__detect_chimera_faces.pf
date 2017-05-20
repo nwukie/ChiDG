@@ -13,28 +13,22 @@
 @Test
 subroutine test__detect_chimera_faces()
     use pfunit_mod
-    use mod_kinds,      only: rk, ik
-    use mod_constants,  only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                              INTERIOR, BOUNDARY, CHIMERA, IO_DESTINATION
+    use mod_kinds,          only: rk, ik
+    use mod_constants,      only: XI_MIN, XI_MAX, INTERIOR, CHIMERA, IO_DESTINATION
 
-    use type_chidg,     only: chidg_t
-    use type_meshdata,  only: meshdata_t
-    use mod_bc,         only: create_bc
+    use type_chidg,         only: chidg_t
 
     use mod_test_utilities, only: create_mesh_file
     use mod_file_utilities, only: delete_file
 
-    use mod_chimera,    only: detect_chimera_faces
+    use mod_chimera,        only: detect_chimera_faces
     implicit none
 
 
-    type(chidg_t)                   :: chidg
-    type(meshdata_t),   allocatable :: meshdata(:)
-    character(len=100)              :: filename = 'D2E8M1_overlapping_matching.h5'
-    integer(ik)                     :: idom, ndom, ielem, spacedim
+    type(chidg_t)           :: chidg
+    character(len=100)      :: filename = 'D2E8M1_overlapping_matching.h5'
 
 
-    spacedim        = 3
     IO_DESTINATION  = 'file'
 
 
@@ -42,6 +36,12 @@ subroutine test__detect_chimera_faces()
     ! Initialize ChiDG environment
     !
     call chidg%start_up('core')
+
+
+    !
+    ! Set accuracy of the solution expansion
+    !
+    call chidg%set('Solution Order', integer_input=2)
 
 
     !
@@ -53,13 +53,13 @@ subroutine test__detect_chimera_faces()
     !
     ! Read 2-Domain overlapping grid
     !
-    call chidg%read_grid(filename,spacedim)
+    call chidg%read_domains(filename)
+    call chidg%read_boundary_conditions(filename)
 
 
 
-    call chidg%set('Solution Order', integer_input=2)
     call chidg%init('domains')
-    call chidg%init('communication')
+    call chidg%init('comm - interior')
 
 
 
@@ -113,7 +113,9 @@ subroutine test__detect_chimera_faces()
     call chidg%shut_down('core')
 
 
+    !
     ! Clean-up
+    !
     call delete_file(filename)
 
 end subroutine test__detect_chimera_faces

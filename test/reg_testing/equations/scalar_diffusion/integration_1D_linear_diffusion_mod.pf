@@ -603,7 +603,6 @@ contains
 
 
         ! Set linear solver options to pass during initialization
-        !call loptions%set("tol",1.e-14_rk)
         call loptions%set("tol",1.e-15_rk)
 
         ! Set nonlinear solver options
@@ -689,14 +688,6 @@ contains
 
 
 
-
-
-        !
-        ! Read grid
-        !
-        call this%chidg%read_grid(this%gridfile,spacedim)
-
-
         !
         ! Set ChiDG components
         !
@@ -708,9 +699,10 @@ contains
 
 
         !
-        ! Wrap-up initialization activities
+        ! Read grid
         !
-        call this%chidg%init('all')
+        call this%chidg%read_grid(this%gridfile,spacedim)
+
 
 
         !

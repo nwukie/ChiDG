@@ -30,17 +30,14 @@ module type_chidg_worker
 #include <messenger.h>
     use mod_kinds,          only: ik, rk
     use mod_constants,      only: NFACES, ME, NEIGHBOR, BC, ZERO, CHIMERA, ONE, THIRD, TWO
-    use mod_interpolate,    only: interpolate_element_standard, &
-                                  interpolate_element_autodiff, &
-                                  interpolate_face_standard,    &
-                                  interpolate_face_autodiff
 
+    use mod_interpolate,    only: interpolate_element_autodiff
     use mod_integrate,      only: integrate_boundary_scalar_flux, &
                                   integrate_volume_vector_flux,   &
                                   integrate_volume_scalar_source
 
     use type_point,         only: point_t
-    use type_mesh,      only: mesh_t
+    use type_mesh,          only: mesh_t
     use type_solverdata,    only: solverdata_t
     use type_element_info,  only: element_info_t
     use type_face_info,     only: face_info_t

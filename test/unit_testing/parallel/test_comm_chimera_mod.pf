@@ -41,17 +41,17 @@ module test_comm_chimera_mod
 
 contains
 
-    !>  This test reads two, 2x2x2 element domains that are overlapping to test the chimear communication
+    !>  This test reads two, 2x2x2 element domains that are overlapping to test the 
+    !!  chimera communication.
     !!
     !!  Overlapping cubes. Each cube is 2x2x2 elements. Only one element of overlap
     !!
+    !!
     !!    |--------|-|---------|
     !!    |        | |         |
     !!    |        | |         |
     !!    |        | |         |
     !!    |--------|-|---------|
-    !!
-    !!
     !!
     !!
     !!
@@ -62,7 +62,7 @@ contains
     subroutine setUp(this)
         class(test_comm_chimera), intent(inout) :: this
 
-        integer(ik)                     :: iread, spacedim, ierr, ielem
+        integer(ik)                     :: iread, ierr, ielem
         real(rk)                        :: initial_vals(this%nterms_s)
 
         
@@ -76,7 +76,6 @@ contains
 
         this%gridfile  = 'D2E8M1_overlapping_matching.h5'
         IO_DESTINATION = 'file'
-        spacedim       = 3
 
         !
         ! Create mesh file
@@ -87,20 +86,17 @@ contains
         call MPI_Barrier(this%ChiDG_COMM,ierr)
 
 
+        !
+        ! Set accuracy for the solution expansion
+        !
+        call this%chidg%set('Solution Order', integer_input=this%solution_order)
+
 
         !
         ! Read partition data: grid, boundary conditions
         !
-        call this%chidg%read_grid(this%gridfile, spacedim)
+        call this%chidg%read_grid(this%gridfile)
 
-
-        !
-        ! Initialization
-        !
-        call this%chidg%set('Solution Order', integer_input=this%solution_order)
-        call this%chidg%init('domains')
-        call this%chidg%init('communication')
-        call this%chidg%init('chimera')
 
 
     end subroutine setUp

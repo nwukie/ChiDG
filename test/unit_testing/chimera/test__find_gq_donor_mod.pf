@@ -148,7 +148,7 @@ contains
 
         call this%chidg%set('Solution Order', integer_input=2)
         call this%chidg%init('domains')
-        call this%chidg%init('communication')
+        call this%chidg%init('comm - interior')
 
     end subroutine setUp
     !**************************************************************************************

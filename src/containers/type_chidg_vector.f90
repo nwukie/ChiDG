@@ -30,12 +30,12 @@ module type_chidg_vector
     !------------------------------------------------------------------------------------------
     type, public :: chidg_vector_t
 
-        type(domain_vector_t),    allocatable :: dom(:)       ! Local block vector storage
+        type(domain_vector_t),    allocatable   :: dom(:)       ! Local block vector storage
 
-        type(chidg_vector_send_t)           :: send         ! What to send to other processors
-        type(chidg_vector_recv_t)           :: recv         ! Receive data from other processors
+        type(chidg_vector_send_t)               :: send         ! What to send to other processors
+        type(chidg_vector_recv_t)               :: recv         ! Receive data from other processors
 
-        integer(ik),            private     :: ntime_       ! No. of time instances stored
+        integer(ik),    private                 :: ntime_       ! No. of time instances stored
 
     contains
 
@@ -64,7 +64,9 @@ module type_chidg_vector
                                                                 ! densevctors
         procedure,  public  :: set_ntime                        ! Set ntime in the associated
                                                                 ! densevectors
+
 !        generic :: assignment(=) => 
+        
 
     end type chidg_vector_t
     !*****************************************************************************************
@@ -135,9 +137,9 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine initialize(self,mesh,ntime)
-        class(chidg_vector_t),   intent(inout)   :: self
-        type(mesh_t),        intent(inout)   :: mesh
-        integer(ik),             intent(in)      :: ntime
+        class(chidg_vector_t),  intent(inout)   :: self
+        type(mesh_t),           intent(inout)   :: mesh
+        integer(ik),            intent(in)      :: ntime
 
         integer(ik) :: ierr, ndomains, idom
 

@@ -88,7 +88,7 @@ contains
         !
         call chidg%read_solution(solution_file)
         call chidg%time_integrator%read_time_options(chidg%data,solution_file)
-        call chidg%read_grid(filename,spacedim)
+        call chidg%read_grid(grid_file,spacedim)
 
 
         !

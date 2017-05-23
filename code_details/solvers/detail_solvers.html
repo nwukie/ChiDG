@@ -299,8 +299,8 @@
 <h2>Time Integrators<a class="headerlink" href="#time-integrators" title="Permalink to this headline">¶</a></h2>
 <table border="1" class="docutils">
 <colgroup>
-<col width="73%" />
-<col width="27%" />
+<col width="69%" />
+<col width="31%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">Algorithm</th>
@@ -314,8 +314,17 @@
 <tr class="row-odd"><td><a class="reference internal" href="#backward-euler">Backward Euler</a></td>
 <td><code class="docutils literal"><span class="pre">Backward</span> <span class="pre">Euler</span></code></td>
 </tr>
+<tr class="row-even"><td><a class="reference internal" href="#diagonally-implicit-runge-kutta">Diagonally-Implicit Runge-Kutta</a></td>
+<td><code class="docutils literal"><span class="pre">DIRK</span></code></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#harmonic-balance">Harmonic Balance</a></td>
+<td><code class="docutils literal"><span class="pre">Harmonic</span> <span class="pre">Balance</span></code></td>
+</tr>
 <tr class="row-even"><td><a class="reference internal" href="#forward-euler">Forward Euler</a></td>
 <td><code class="docutils literal"><span class="pre">Forward</span> <span class="pre">Euler</span></code></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#explicit-runge-kutta">Explicit Runge Kutta</a></td>
+<td><code class="docutils literal"><span class="pre">Runge-Kutta</span> <span class="pre">Method</span></code></td>
 </tr>
 </tbody>
 </table>
@@ -373,7 +382,99 @@ time derivative:</p>
 \[\frac{\Delta \hat{Q}}{\Delta t}\boldsymbol{M} + R(\hat{Q}^{n+1}) = 0\]</div>
 <p>Newton Linearization:</p>
 <div class="math">
-\[\bigg(\frac{\boldsymbol{M}}{\Delta t} + \frac{\partial R(\hat{Q}^{n})}{\partial Q}\bigg) \Delta Q = -R(\hat{Q}^{n})\]</div>
+\[\begin{split}\bigg(\frac{\boldsymbol{M}}{\Delta t} + \frac{\partial R(\hat{Q}^{m})}{\partial Q}\bigg) \delta Q^{m} &amp; = -\frac{\boldsymbol{M}}{\Delta t}\Delta Q^{m} -R(\hat{Q}^{m})\\
+\hat{Q}^{m} &amp; = \hat{Q}^{n} + \Delta Q^{m}\end{split}\]</div>
+<p>where, <span class="math">\(\delta Q^{m} = \Delta Q^{m + 1} -\Delta Q^{m}\)</span> for the <span class="math">\(m^{th}\)</span> Newton iteration.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<ul class="last simple">
+<li>The ChiDG nonlinear solver requires the assembly of the linearized system outlined above</li>
+<li>The nonlinear solver computes <span class="math">\(\hat{Q}^{m}\)</span> instead of <span class="math">\(\Delta \hat{Q}^{m}\)</span></li>
+<li>For the assembly of the rhs of the linearized system, <span class="math">\(\Delta \hat{Q}^{m} = \hat{Q}^{m} - \hat{Q}^{n}\)</span></li>
+</ul>
+</div>
+</div>
+<div class="section" id="diagonally-implicit-runge-kutta">
+<h4>Diagonally-Implicit Runge-Kutta<a class="headerlink" href="#diagonally-implicit-runge-kutta" title="Permalink to this headline">¶</a></h4>
+<div class="math">
+\[\boldsymbol{M}\frac{\partial Q}{\partial t} + R(Q) = 0\]</div>
+<p>With the coefficient arrays associated with the diagonally implicit Runge-Kutta method:</p>
+<div class="math">
+\[\begin{split}\boldsymbol{A} = \left[\begin{array}{ccc}
+                       \gamma &amp; 0 &amp; 0 \\
+                       \tau_{2} - \gamma &amp; \gamma &amp; 0 \\
+                       b_{1} &amp; b_{2} &amp; \gamma \end{array} \right]\end{split}\]</div>
+<div class="math">
+\[\boldsymbol{b} = \left[\begin{array}{ccc}
+                         b_{1} &amp; b_{2} &amp; \gamma \end{array} \right]\]</div>
+<p>where <span class="math">\(\gamma\)</span> is the root of <span class="math">\(x^{3} - 3x^{2} + \frac{3}{2}x - \frac{1}{6} = 0 \in \left(\frac{1}{6},\frac{1}{2}\right)\)</span> and</p>
+<div class="math">
+\[\begin{split}\tau_{2} &amp; = (1 + \gamma)/2\\
+b_{1} &amp; = -(6\gamma^{2} - 16\gamma + 1)/4\\
+b_{2} &amp; = (6\gamma^{2} - 20\gamma + 5)/4\end{split}\]</div>
+<p>The solution is advanced in time as:</p>
+<div class="math">
+\[\hat{Q}^{n + 1} = \hat{Q}^{n} + b_{1}\Delta \hat{Q}_{1} + b_{2}\Delta \hat{Q}_{2} + b_{3} \Delta \hat{Q}_{3}\]</div>
+<p>Implicit system:</p>
+<div class="math">
+\[\frac{\Delta \hat{Q}_{i}}{\Delta t}\boldsymbol{M} = -R\left(\hat{Q}^{n} + \sum_{j = 1}^{i}A_{ij}\Delta \hat{Q}_{i}\right)\;\;\;\text{for}\;i = 1,3\]</div>
+<p>Newton linearization:</p>
+<div class="math">
+\[\left(\boldsymbol{M} + \gamma \Delta t \frac{\partial R(\hat{Q}^{m}_{i})}{\partial Q}\right)\delta \hat{Q}^{m}_{i} = -\boldsymbol{M}\Delta \hat{Q}^{m}_{i} - \Delta t R\left(\hat{Q}^{m}_{i}\right)\;\;\;\text{for}\;i = 1,3\]</div>
+<p>with</p>
+<div class="math">
+\[\begin{split}\hat{Q}^{m}_{i} &amp; = \hat{Q}^{n} + \sum_{j = 1}^{i - 1}A_{ij}\Delta \hat{Q}_{i} + \gamma \Delta \hat{Q}^{m}_{i}\\
+\delta \hat{Q}^{m}_{i} &amp; = \Delta \hat{Q}^{m + 1}_{i} - \Delta \hat{Q}^{m}_{i}\end{split}\]</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<ul class="last simple">
+<li>The ChiDG nonlinear solver requires the assembly of the stagewise linearized systems</li>
+<li>The nonlinear solver computes <span class="math">\(\hat{Q}^{m}_{i}\)</span> instead of <span class="math">\(\Delta \hat{Q}^{m}_{i}\)</span></li>
+<li>For the assembly of the rhs of the linearized system, <span class="math">\(\Delta \hat{Q}^{m}_{i} = (\hat{Q}^{m}_{i} - \hat{Q}^{n} - \sum_{j = 1}^{i - 1}A_{ij}\Delta \hat{Q}_{i})/\gamma\)</span></li>
+</ul>
+</div>
+</div>
+<div class="section" id="harmonic-balance">
+<h4>Harmonic Balance<a class="headerlink" href="#harmonic-balance" title="Permalink to this headline">¶</a></h4>
+<p>Consider a set of <span class="math">\(N\)</span> independent equations:</p>
+<div class="math">
+\[\frac{\partial \hat{\boldsymbol{Q}}^{*}}{\partial t} + \nabla \cdot \boldsymbol{F}^{*} + \boldsymbol{S}^{*} = 0\]</div>
+<p>where</p>
+<div class="math">
+\[\begin{split}\hat{\boldsymbol{Q}^{*}} &amp; = \left[\hat{Q}_{1}, \hat{Q}_{2}, \cdots, \hat{Q}^{N}\right]^{T}\\
+\boldsymbol{F}^{*} &amp; = \left[\vec{F}(\hat{Q}_{1}, \nabla \hat{Q}_{1}), \vec{F}(\hat{Q}_{2}, \nabla \hat{Q}_{2}), \cdots, \vec{F}(\hat{Q}_{N}, \nabla \hat{Q}_{N})\right]^{T}\\
+\boldsymbol{S}^{*} &amp; = \left[S(\hat{Q}_{1}, \nabla \hat{Q}_{1}), S(\hat{Q}_{2}, \nabla \hat{Q}_{2}), \cdots, S(\hat{Q}_{N}, \nabla \hat{Q}_{N})\right]^{T}\end{split}\]</div>
+<p>In the harmonic balance method, a conservative solution vector at any instant of time is represented as a Fourier series in time as:</p>
+<div class="math">
+\[\hat{Q}_{n} = A_{0} + \sum_{k = 1}^{K}\left[A_{k}\text{sin}(\omega_{k}t_{n}) + B_{k}\text{cos}(\omega_{k}t_{n})\right]\]</div>
+<p>with <span class="math">\(K\)</span> frequencies, <span class="math">\(\boldsymbol{\omega} = [\omega_{1}, \omega_{2}, \cdots, \omega_{K}]\)</span> and the instant of time <span class="math">\(t_{n}\)</span> belongs to the set of time levels,
+<span class="math">\(\boldsymbol{t} = [t_{1}, t_{2}, \cdots, t_{N}]\)</span> with <span class="math">\(N = 2K + 1\)</span>. Thus, the series of conservative solution vectors can be related to the Fourier coefficients vectors,
+<span class="math">\(\hat{\boldsymbol{Q}}_{F}\)</span> as:</p>
+<div class="math">
+\[\hat{\boldsymbol{Q}}^{*} = E^{-1}\hat{\boldsymbol{Q}}_{F}\]</div>
+<p>Defining the pseudo spectral operator as,</p>
+<div class="math">
+\[D = \frac{\partial E^{-1}}{\partial t}E\]</div>
+<p>which couples <span class="math">\(\hat{\boldsymbol{Q}}^{*}\)</span> such that the conservative solutions satisfy time-varying sinusoidal functions according to their Fourier representation, the governing
+equation can be rewritten as the Harmonic Balance equation:</p>
+<div class="math">
+\[D\hat{\boldsymbol{Q}}^{*} + \nabla \boldsymbol{F}^{*} + S^{*} = 0\]</div>
+<p>Multiplying with a column of test functions, <span class="math">\(\psi\)</span> and applying Gauss&#8217; divergence theorem provides the working form of the Harmonic Balance equation:</p>
+<div class="math">
+\[\int_{\Omega_{e}}\psi D\hat{\boldsymbol{Q}}^{*}d\Omega + \int_{\Gamma_{e}}\boldsymbol{F}^{*} \cdot \vec{n}d\Gamma -
+\int_{\Omega_{e}}\nabla \psi \cdot \boldsymbol{F}^{*}d\Omega + \int_{\Omega_{e}}\psi \boldsymbol{S}^{*}d\Omega = 0\]</div>
+<p>Newton Linearization:</p>
+<p>Consider,</p>
+<blockquote>
+<div><div class="math">
+\[\begin{split}\mathscr{R}^{*} &amp; = \int_{\Gamma_{e}}\boldsymbol{F}^{*} \cdot \vec{n}d\Gamma - \int_{\Omega_{e}}\nabla \psi \cdot \boldsymbol{F}^{*}d\Omega +
+\int_{\Omega_{e}}\psi \boldsymbol{S}^{*}d\Omega\\
+\mathscr{D}^{*} &amp; = \int_{\Omega_{e}}\psi D\hat{\boldsymbol{Q}}^{*}d\Omega\end{split}\]</div>
+</div></blockquote>
+<p>Then, Newton linearization of the Harmonic Balance system of equations is:</p>
+<div class="math">
+\[\left(\frac{\partial \mathscr{D}^{*}}{\partial \hat{\boldsymbol{Q}}^{*}} + \frac{\partial \mathscr{R}^{*}}{\partial \hat{\boldsymbol{Q}}^{*}}\right)\Delta \hat{\boldsymbol{Q}^{*}} =
+-(\mathscr{D}^{*} + \mathscr{R}^{*})\]</div>
 </div>
 </div>
 <div class="section" id="explicit-integrators">
@@ -390,6 +491,21 @@ time derivative:</p>
 <p>Solution iterated in time as:</p>
 <div class="math">
 \[\hat{Q}^{n+1} = \hat{Q}^n - {\Delta t} \boldsymbol{M}^{-1}R(\hat{Q}^{n})\]</div>
+</div>
+<div class="section" id="explicit-runge-kutta">
+<h4>Explicit Runge Kutta<a class="headerlink" href="#explicit-runge-kutta" title="Permalink to this headline">¶</a></h4>
+<p>For a general explicit runge Kutta method with <span class="math">\(s\)</span> stages:</p>
+<div class="math">
+\[\boldsymbol{M}\frac{\hat{Q}^{n + 1} - \hat{Q}^{n}}{\Delta t} = \sum_{i = 1}^{s}b_{i}\Delta \hat{Q}_{i}\]</div>
+<p>where</p>
+<div class="math">
+\[\Delta \hat{Q}_{i} = -R\left(\hat{Q}^{n} + \sum_{j = 1}^{i - 1}a_{ij}\Delta \hat{Q}_{j}\right)\]</div>
+<p>Algebraic problem:</p>
+<div class="math">
+\[\frac{\Delta \hat{Q}}{\Delta t}\boldsymbol{M} - \sum_{i = 1}^{s}b_{i}\Delta \hat{Q}_{i} = 0\]</div>
+<p>Solution iterated in time as:</p>
+<div class="math">
+\[\hat{Q}^{n + 1} = \hat{Q}^{n} + \Delta t \boldsymbol{M}^{-1}\sum_{i = 1}^{s}b_{i}\Delta \hat{Q}_{i}\]</div>
 <div class="line-block">
 <div class="line"><br /></div>
 <div class="line"><br /></div>

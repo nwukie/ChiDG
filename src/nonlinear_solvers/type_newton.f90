@@ -11,7 +11,7 @@ module type_newton
     use type_chidg_vector
 
 !    use mod_spatial,    only: update_space
-    use mod_tecio,      only: write_tecio_variables
+!    use mod_tecio,      only: write_tecio_variables
     use mod_entropy,    only: compute_entropy_error
 
     implicit none

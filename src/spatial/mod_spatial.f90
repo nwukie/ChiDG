@@ -77,10 +77,6 @@ contains
 
     
 
-        !--------------------------------------------------------------------------------------
-        !                                    Interior Scheme
-        !--------------------------------------------------------------------------------------
-
         !
         ! Clear function_status data. This tracks if a function has already been called. So, 
         ! in this way we can compute a function on a face and apply it to both elements. 

@@ -847,13 +847,15 @@ contains
             do iface = 1,NFACES
 
                 bc_group_name = bc_patch_data(idom)%bc_group_name%at(iface)
-                bc_ID         = self%data%get_bc_state_group_id(bc_group_name%get())
-                if (bc_ID == NO_ID) call chidg_signal_one(FATAL,"chidg%read_boundary_conditions: bc state group was not found.", bc_group_name%get())
+                if (trim(bc_group_name%get()) /= 'empty') then
+                    bc_ID         = self%data%get_bc_state_group_id(bc_group_name%get())
+                    if (bc_ID == NO_ID) call chidg_signal_one(FATAL,"chidg%read_boundary_conditions: bc state group was not found.", bc_group_name%get())
 
-                call self%data%mesh%add_bc_patch(bc_patch_data(idom)%domain_name,               &
-                                                 bc_group_name%get(),                           &
-                                                 bc_patch_data(idom)%bc_connectivity(iface),    &
-                                                 bc_ID)
+                    call self%data%mesh%add_bc_patch(bc_patch_data(idom)%domain_name,               &
+                                                     bc_group_name%get(),                           &
+                                                     bc_patch_data(idom)%bc_connectivity(iface),    &
+                                                     bc_ID)
+                end if
 
             end do !iface
         end do !ipatch

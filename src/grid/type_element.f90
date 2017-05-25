@@ -71,7 +71,7 @@ module type_element
         real(rk), allocatable           :: metric(:,:,:)        ! metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
         real(rk), allocatable           :: jinv(:)              ! volume jacobian at quadrature nodes
 
-        ! Matrices of cartesian gradients of basis/test functions
+        ! Matrices of physical gradients of basis/test functions
         real(rk), allocatable           :: grad1(:,:)           ! Grad of basis functions in at quadrature nodes
         real(rk), allocatable           :: grad2(:,:)           ! Grad of basis functions in at quadrature nodes
         real(rk), allocatable           :: grad3(:,:)           ! Grad of basis functions in at quadrature nodes
@@ -627,17 +627,6 @@ contains
 
         do iterm = 1,self%nterms_s
             do inode = 1,self%gq%vol%nnodes
-                !self%grad1(inode,iterm) = self%metric(1,1,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
-                !                          self%metric(2,1,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
-                !                          self%metric(3,1,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode))
-
-                !self%grad2(inode,iterm) = self%metric(1,2,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
-                !                          self%metric(2,2,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
-                !                          self%metric(3,2,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode))
-
-                !self%grad3(inode,iterm) = self%metric(1,3,inode) * self%gq%vol%ddxi(inode,iterm)   * (ONE/self%jinv(inode)) + &
-                !                          self%metric(2,3,inode) * self%gq%vol%ddeta(inode,iterm)  * (ONE/self%jinv(inode)) + &
-                !                          self%metric(3,3,inode) * self%gq%vol%ddzeta(inode,iterm) * (ONE/self%jinv(inode))
 
                 self%grad1(inode,iterm) = self%metric(1,1,inode) * self%gq%vol%ddxi(inode,iterm)   + &
                                           self%metric(2,1,inode) * self%gq%vol%ddeta(inode,iterm)  + &
@@ -650,6 +639,7 @@ contains
                 self%grad3(inode,iterm) = self%metric(1,3,inode) * self%gq%vol%ddxi(inode,iterm)   + &
                                           self%metric(2,3,inode) * self%gq%vol%ddeta(inode,iterm)  + &
                                           self%metric(3,3,inode) * self%gq%vol%ddzeta(inode,iterm) 
+
             end do
         end do
 

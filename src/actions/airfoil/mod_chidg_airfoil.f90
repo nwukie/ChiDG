@@ -131,15 +131,6 @@ contains
         call manager%process(chidg)
 
 
-        !call chidg%init('domains')
-        !call chidg%init('bc')
-        !call chidg%init('communication')
-        !call chidg%init('chimera')
-        !call chidg%init('solvers')
-        !call chidg%init('finalize')
-
-
-
 
         !
         ! Read solution modes from HDF5

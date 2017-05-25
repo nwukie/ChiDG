@@ -832,7 +832,7 @@ contains
             integer(TEC)   :: jcellmax                  = 0    ! not used
             integer(TEC)   :: kcellmax                  = 0    ! not used
             real(rk)       :: solutiontime              = 0._rk
-!            integer(TEC)   :: strandid                  = 0
+!            integer(TEC)   :: strandid                  = 0    ! strandID is now a module variable
             integer(TEC)   :: parentzone                = 0
             integer(TEC)   :: isblock                   = 1
             integer(TEC)   :: nfconns                   = 0
@@ -924,7 +924,7 @@ contains
             integer(TEC)   :: jcellmax                  = 0    ! not used
             integer(TEC)   :: kcellmax                  = 0    ! not used
             real(rk)       :: solutiontime              = 0._rk
-!            integer(TEC)   :: strandid                  = 0
+!            integer(TEC)   :: strandid                  = 0    ! strandID is now a module variable
             integer(TEC)   :: parentzone                = 0
             integer(TEC)   :: isblock                   = 1
             integer(TEC)   :: nfconns                   = 0

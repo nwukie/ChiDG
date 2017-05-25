@@ -1,6 +1,6 @@
 module type_chidg
 #include <messenger.h>
-    use mod_constants,              only: NFACES
+    use mod_constants,              only: NFACES, NO_ID
     use mod_equations,              only: register_equation_builders
     use mod_operators,              only: register_operators
     use mod_models,                 only: register_models
@@ -848,6 +848,7 @@ contains
 
                 bc_group_name = bc_patch_data(idom)%bc_group_name%at(iface)
                 bc_ID         = self%data%get_bc_state_group_id(bc_group_name%get())
+                if (bc_ID == NO_ID) call chidg_signal_one(FATAL,"chidg%read_boundary_conditions: bc state group was not found.", bc_group_name%get())
 
                 call self%data%mesh%add_bc_patch(bc_patch_data(idom)%domain_name,               &
                                                  bc_group_name%get(),                           &

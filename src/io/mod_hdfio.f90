@@ -1,3 +1,36 @@
+!----------------------------------------------------------------------------------------
+!!
+!!  High-Level API for ChiDG HDF File Format
+!!
+!!  Procedures:
+!!  -----------
+!!
+!!  read_domains_hdf
+!!  write_domains_hdf
+!!
+!!  read_solution_hdf
+!!      read_domain_field_hdf
+!!
+!!  write_solution_hdf
+!!      write_variable_hdf
+!!      write_domain_field_hdf
+!!
+!!  read_equations_hdf
+!!
+!!  read_boundaryconditions_hdf
+!!      read_bc_patches_hdf
+!!      read_bc_state_groups_hdf
+!!
+!!  read_connectivity_hdf
+!!
+!!  TODO:
+!!  -----------
+!!      - Relocate solution_order to a particular variable, instead of the domain.
+!!        This is in case a variable is writted from another analysis like a wall
+!!        distance calculation, but then a Navier Stokes solution is started.
+!!      
+!!
+!****************************************************************************************
 module mod_hdfio
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik,rdouble
@@ -50,44 +83,6 @@ module mod_hdfio
 
 
 contains
-
-    !----------------------------------------------------------------------------------------
-    !!
-    !!  High-Level API for ChiDG HDF File Format
-    !!
-    !!  Procedures:
-    !!  -----------
-    !!
-    !!  read_domains_hdf
-    !!  write_domains_hdf
-    !!
-    !!  read_solution_hdf
-    !!      read_domain_field_hdf
-    !!
-    !!  write_solution_hdf
-    !!      write_variable_hdf
-    !!      write_domain_field_hdf
-    !!
-    !!  read_equations_hdf
-    !!
-    !!  read_boundaryconditions_hdf
-    !!      read_bc_patches_hdf
-    !!      read_bc_state_groups_hdf
-    !!
-    !!  read_connectivity_hdf
-    !!
-    !!  TODO:
-    !!  -----------
-    !!      - Relocate solution_order to a particular variable, instead of the domain.
-    !!        This is in case a variable is writted from another analysis like a wall
-    !!        distance calculation, but then a Navier Stokes solution is started.
-    !!      
-    !!
-    !****************************************************************************************
-
-
-
-
 
 
    

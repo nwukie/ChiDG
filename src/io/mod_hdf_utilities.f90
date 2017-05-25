@@ -1,3 +1,154 @@
+!----------------------------------------------------------------------------------------
+!!
+!!  ChiDG HDF File Format API
+!!
+!!  HDF:
+!!  ---------------------------
+!!  open_hdf
+!!  close_hdf
+!!
+!!
+!!  File:
+!!  ---------------------------
+!!  initialize_file_hdf
+!!  initialize_file_structure_hdf
+!!  open_file_hdf
+!!  close_file_hdf
+!!  check_file_storage_version_hdf
+!!  
+!!  set_storage_version_major_hdf
+!!  set_storage_version_minor_hdf
+!!  get_storage_version_major_hdf
+!!  get_storage_version_minor_hdf
+!!
+!!  get_properties_hdf
+!!
+!!  set_contains_grid_hdf
+!!  get_contains_grid_hdf
+!!
+!!  set_contains_solution_hdf
+!!  get_contains_solution_hdf
+!!
+!!  set_time_step_hdf
+!!  get_time_step_hdf
+!!
+!!  set_nsteps_hdf
+!!  get_nsteps_hdf
+!!
+!!  set_nwrite_hdf
+!!  get_nwrite_hdf
+!!
+!!  set_frequencies_hdf
+!!  get_frequencies_hdf
+!!
+!!  set_time_levels_hdf
+!!  get_time_levels_hdf
+!!
+!!  
+!!
+!!  Domain-level routines:
+!!  ---------------------------
+!!  add_domain_hdf
+!!  create_domain_hdf
+!!  open_domain_hdf
+!!  close_domain_hdf
+!!
+!!  set_ndomains_hdf
+!!  get_ndomains_hdf
+!!
+!!  get_domain_name_hdf
+!!  get_domain_names_hdf
+!!
+!!  set_domain_index_hdf
+!!  get_domain_index_hdf
+!!  get_domain_indices_hdf
+!!
+!!  set_domain_coordinates_hdf
+!!  get_domain_coordinates_hdf
+!!
+!!  set_domain_coordinate_system_hdf
+!!  get_domain_coordinate_system_hdf
+!!
+!!  set_domain_connectivity_hdf
+!!  get_domain_connectivity_hdf
+!!
+!!  get_domain_nelements_hdf
+!!  get_domain_nnodes_hdf
+!!
+!!  set_coordinate_order_hdf
+!!  get_coordinate_order_hdf
+!!  get_coordinate_orders_hdf
+!!
+!!  set_domain_field_order_hdf
+!!  get_field_order_hdf
+!!  get_field_orders_hdf
+!!
+!!  set_domain_dimensionality_hdf
+!!  get_domain_dimensionality_hdf
+!!  get_domain_dimensionalities_hdf
+!!
+!!  set_domain_mapping_hdf
+!!  get_domain_mapping_hdf
+!!
+!!  set_domain_equation_set_hdf
+!!  get_domain_equation_set_hdf
+!!  get_domain_equation_sets_hdf
+!!
+!!
+!!  Boundary Conditions:
+!!  ---------------------------
+!!  create_bc_group_hdf
+!!  get_nbc_state_groups_hdf
+!!  get_bc_state_group_names_hdf
+!!
+!!  set_bc_patch_hdf
+!!  add_bc_state_hdf
+!!  get_bc_states_hdf
+!!  add_bc_properties_hdf
+!!  get_bc_properties_hdf
+!!  get_nbc_states_hdf
+!!  get_bc_state_names_hdf
+!!
+!!  remove_bc_state_group_hdf
+!!  remove_bc_state_hdf
+!!  remove_bc_property_hdf
+!!
+!!  get_bcnames_hdf
+!!
+!!  check_bc_state_exists_hdf
+!!  check_bc_property_exists_hdf
+!!
+!!
+!!
+!!  Equations:
+!!  ----------------------------
+!!
+!!  create_eqn_group_hdf
+!!  remove_eqn_group_hdf
+!!  check_eqn_group_exists_hdf
+!!  prune_eqn_groups_hdf
+!!
+!!
+!!  Time Integrators:
+!!  ----------------------------
+!!  set_time_integrator_hdf
+!!  get_time_integrator_hdf
+!!
+!!  set_ntimes_hdf
+!!  get_ntimes_hdf
+!!
+!!  Utilities:
+!!  ----------------------------
+!!  delete_group_attributes_hdf
+!!  check_attribute_exists_hdf
+!!  check_link_exists_hdf
+!!  check_file_exists_hdf
+!!  check_file_has_extension_hdf
+!!  check_file_structure_hdf      
+!!  check_file_domains_hdf
+!!  check_file_ntimes_hdf
+!!
+!****************************************************************************************
 module mod_hdf_utilities
 #include <messenger.h>
     use mod_kinds,              only: rk, ik, rdouble
@@ -37,157 +188,6 @@ module mod_hdf_utilities
 
 contains
 
-    !----------------------------------------------------------------------------------------
-    !!
-    !!  ChiDG HDF File Format API
-    !!
-    !!  HDF:
-    !!  ---------------------------
-    !!  open_hdf
-    !!  close_hdf
-    !!
-    !!
-    !!  File:
-    !!  ---------------------------
-    !!  initialize_file_hdf
-    !!  initialize_file_structure_hdf
-    !!  open_file_hdf
-    !!  close_file_hdf
-    !!  check_file_storage_version_hdf
-    !!  
-    !!  set_storage_version_major_hdf
-    !!  set_storage_version_minor_hdf
-    !!  get_storage_version_major_hdf
-    !!  get_storage_version_minor_hdf
-    !!
-    !!  get_properties_hdf
-    !!
-    !!  set_contains_grid_hdf
-    !!  get_contains_grid_hdf
-    !!
-    !!  set_contains_solution_hdf
-    !!  get_contains_solution_hdf
-    !!
-    !!  set_time_step_hdf
-    !!  get_time_step_hdf
-    !!
-    !!  set_nsteps_hdf
-    !!  get_nsteps_hdf
-    !!
-    !!  set_nwrite_hdf
-    !!  get_nwrite_hdf
-    !!
-    !!  set_frequencies_hdf
-    !!  get_frequencies_hdf
-    !!
-    !!  set_time_levels_hdf
-    !!  get_time_levels_hdf
-    !!
-    !!  
-    !!
-    !!  Domain-level routines:
-    !!  ---------------------------
-    !!  add_domain_hdf
-    !!  create_domain_hdf
-    !!  open_domain_hdf
-    !!  close_domain_hdf
-    !!
-    !!  set_ndomains_hdf
-    !!  get_ndomains_hdf
-    !!
-    !!  get_domain_name_hdf
-    !!  get_domain_names_hdf
-    !!
-    !!  set_domain_index_hdf
-    !!  get_domain_index_hdf
-    !!  get_domain_indices_hdf
-    !!
-    !!  set_domain_coordinates_hdf
-    !!  get_domain_coordinates_hdf
-    !!
-    !!  set_domain_coordinate_system_hdf
-    !!  get_domain_coordinate_system_hdf
-    !!
-    !!  set_domain_connectivity_hdf
-    !!  get_domain_connectivity_hdf
-    !!
-    !!  get_domain_nelements_hdf
-    !!  get_domain_nnodes_hdf
-    !!
-    !!  set_coordinate_order_hdf
-    !!  get_coordinate_order_hdf
-    !!  get_coordinate_orders_hdf
-    !!
-    !!  set_domain_field_order_hdf
-    !!  get_field_order_hdf
-    !!  get_field_orders_hdf
-    !!
-    !!  set_domain_dimensionality_hdf
-    !!  get_domain_dimensionality_hdf
-    !!  get_domain_dimensionalities_hdf
-    !!
-    !!  set_domain_mapping_hdf
-    !!  get_domain_mapping_hdf
-    !!
-    !!  set_domain_equation_set_hdf
-    !!  get_domain_equation_set_hdf
-    !!  get_domain_equation_sets_hdf
-    !!
-    !!
-    !!  Boundary Conditions:
-    !!  ---------------------------
-    !!  create_bc_group_hdf
-    !!  get_nbc_state_groups_hdf
-    !!  get_bc_state_group_names_hdf
-    !!
-    !!  set_bc_patch_hdf
-    !!  add_bc_state_hdf
-    !!  get_bc_states_hdf
-    !!  add_bc_properties_hdf
-    !!  get_bc_properties_hdf
-    !!  get_nbc_states_hdf
-    !!  get_bc_state_names_hdf
-    !!
-    !!  remove_bc_state_group_hdf
-    !!  remove_bc_state_hdf
-    !!  remove_bc_property_hdf
-    !!
-    !!  get_bcnames_hdf
-    !!
-    !!  check_bc_state_exists_hdf
-    !!  check_bc_property_exists_hdf
-    !!
-    !!
-    !!
-    !!  Equations:
-    !!  ----------------------------
-    !!
-    !!  create_eqn_group_hdf
-    !!  remove_eqn_group_hdf
-    !!  check_eqn_group_exists_hdf
-    !!  prune_eqn_groups_hdf
-    !!
-    !!
-    !!  Time Integrators:
-    !!  ----------------------------
-    !!  set_time_integrator_hdf
-    !!  get_time_integrator_hdf
-    !!
-    !!  set_ntimes_hdf
-    !!  get_ntimes_hdf
-    !!
-    !!  Utilities:
-    !!  ----------------------------
-    !!  delete_group_attributes_hdf
-    !!  check_attribute_exists_hdf
-    !!  check_link_exists_hdf
-    !!  check_file_exists_hdf
-    !!  check_file_has_extension_hdf
-    !!  check_file_structure_hdf      
-    !!  check_file_domains_hdf
-    !!  check_file_ntimes_hdf
-    !!
-    !****************************************************************************************
 
 
 

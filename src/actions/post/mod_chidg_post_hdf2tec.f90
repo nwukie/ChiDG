@@ -110,7 +110,7 @@ contains
         !
         ! Write solution
         !
-        call write_tecio(chidg%data,'0.plt')
+        call write_tecio(chidg%data,'0.plt', write_domains=.true., write_surfaces=.true.)
         
 
         !

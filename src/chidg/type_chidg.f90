@@ -65,7 +65,7 @@ module type_chidg
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     type, public :: chidg_t
 
         ! Auxiliary ChiDG environment that can be used to solve sub-problems
@@ -119,7 +119,7 @@ module type_chidg
 
 
     end type chidg_t
-    !*******************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -144,7 +144,7 @@ contains
     !!  @date   11/18/2016
     !!
     !!
-    !-------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine start_up(self,activity,comm)
         class(chidg_t), intent(inout)           :: self
         character(*),   intent(in)              :: activity
@@ -220,7 +220,7 @@ contains
 
 
     end subroutine start_up
-    !******************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -234,7 +234,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine shut_down(self,selection)
         class(chidg_t), intent(inout)               :: self
         character(*),   intent(in),     optional    :: selection
@@ -619,7 +619,7 @@ contains
 
 
     end subroutine read_grid
-    !*******************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -640,7 +640,7 @@ contains
     !!
     !!  TODO: Generalize spacedim
     !!
-    !------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine read_domains(self,gridfile,spacedim,equation_set, partitions_in)
         class(chidg_t),     intent(inout)               :: self
         character(*),       intent(in)                  :: gridfile
@@ -765,7 +765,7 @@ contains
         call write_line(' ',                           ltrim=.false., io_proc=GLOBAL_MASTER)
 
     end subroutine read_domains
-    !******************************************************************************************
+    !*****************************************************************************************
 
 
 
@@ -849,14 +849,14 @@ contains
 
                 bc_group_name = bc_patch_data(idom)%bc_group_name%at(iface)
                 if (trim(bc_group_name%get()) /= 'empty') then
-                    bc_ID         = self%data%get_bc_state_group_id(bc_group_name%get())
+                    bc_ID = self%data%get_bc_state_group_id(bc_group_name%get())
                     if (bc_ID == NO_ID) call chidg_signal_one(FATAL,"chidg%read_boundary_conditions: bc state group was not found.", bc_group_name%get())
 
                     call self%data%mesh%add_bc_patch(bc_patch_data(idom)%domain_name,               &
                                                      bc_group_name%get(),                           &
                                                      bc_patch_data(idom)%bc_connectivity(iface),    &
                                                      bc_ID)
-                end if
+                end if ! not empty
 
             end do !iface
         end do !ipatch

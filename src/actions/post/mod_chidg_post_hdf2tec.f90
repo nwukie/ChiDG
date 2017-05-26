@@ -18,7 +18,7 @@ module mod_chidg_post_hdf2tec
     use mod_kinds,              only: rk, ik
     use type_chidg,             only: chidg_t
     use type_dict,              only: dict_t
-    use mod_tecio,              only: write_tecio_variables
+    use mod_tecio,              only: write_tecio
     use type_file_properties,   only: file_properties_t
     use mod_hdf_utilities,      only: get_properties_hdf
     implicit none
@@ -89,9 +89,6 @@ contains
         call chidg%set('Solution Order', integer_input=solution_order)
         call chidg%set('Time Integrator', algorithm=trim(time_string))
         call chidg%time_integrator%initialize_state(chidg%data)
-        !call chidg%init('domains')
-        !call chidg%init('communication')
-        !call chidg%init('solvers')
 
 
 
@@ -113,7 +110,7 @@ contains
         !
         ! Write solution
         !
-        call write_tecio_variables(chidg%data,'0.plt')
+        call write_tecio(chidg%data,'0.plt', write_domains=.true., write_surfaces=.true.)
         
 
         !

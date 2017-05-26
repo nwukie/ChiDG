@@ -15,8 +15,10 @@ module type_shear_stress
     !!
     !!  Model Fields:
     !!      : shear_11, shear_12, shear_13
-    !!      : shear_21, shear_22, shear_23
-    !!      : shear_31, shear_32, shear_33
+    !!      :           shear_22, shear_23
+    !!      :                     shear_33
+    !!
+    !!  Lower-triangular components are not computed because the tensor is symmetric.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   12/1/2016

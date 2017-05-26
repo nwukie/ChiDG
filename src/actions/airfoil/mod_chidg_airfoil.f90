@@ -131,15 +131,6 @@ contains
         call manager%process(chidg)
 
 
-        call chidg%init('domains')
-        call chidg%init('bc')
-        call chidg%init('communication')
-        call chidg%init('chimera')
-        call chidg%init('solvers')
-        call chidg%init('finalize')
-
-
-
 
         !
         ! Read solution modes from HDF5
@@ -158,19 +149,8 @@ contains
 
 
         !
-        ! Loop through boundary conditions and look for an 'Airfoil' boundary
+        ! Get 'Airfoil' boundary group ID
         !
-!        iairfoil = 0
-!        do ibc = 1,size(chidg%data%bc)
-!
-!            found_airfoil = (chidg%data%bc(ibc)%get_name() == 'Airfoil')
-!
-!            if (found_airfoil) then
-!                iairfoil = ibc
-!                exit
-!            end if
-!
-!        end do
         group_ID = chidg%data%mesh%get_bc_patch_group_id('Airfoil')
 
 

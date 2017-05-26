@@ -33,7 +33,6 @@ module type_chidg
     use mod_chidg_mpi,              only: chidg_mpi_init, chidg_mpi_finalize,   &
                                           IRANK, NRANK, ChiDG_COMM
 
-    use mod_tecio,                  only: write_tecio_variables
     use mod_hdfio,                  only: read_domains_hdf, read_boundaryconditions_hdf,   &
                                           read_solution_hdf, write_solution_hdf,        &
                                           read_connectivity_hdf, read_weights_hdf,      &

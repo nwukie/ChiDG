@@ -831,7 +831,7 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     function get_face_interpolation_interpolator(mesh,source_face,interpolation_source,idonor,interpolation_type,donor_face) result(interpolator)
-        type(mesh_t),   intent(in)  :: mesh
+        type(mesh_t),       intent(in)  :: mesh
         type(face_info_t),  intent(in)  :: source_face
         integer(ik),        intent(in)  :: interpolation_source
         integer(ik),        intent(in)  :: idonor

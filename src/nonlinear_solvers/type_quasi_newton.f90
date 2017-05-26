@@ -3,7 +3,7 @@ module type_quasi_newton
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, DIAG
     use mod_hdfio,              only: write_solution_hdf
-    use mod_tecio,              only: write_tecio_variables
+!    use mod_tecio,              only: write_tecio_variables
     use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER, IRANK, NRANK
     use mpi_f08,                only: MPI_Barrier
 

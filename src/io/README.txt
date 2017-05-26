@@ -42,12 +42,8 @@ ChiDG-file, such as reading grids, writing solutions, etc.
 Visualization
 -------------
 
-mod_tecio_interface.f90
-contains routines for initializing files and zones for tecplot files to write
-ChiDG data.
-
 mod_tecio.f90
-contains routines for writing ChiDG-data to Tecplot files that can be read in
+contains routines for initializing/writing ChiDG-data to Tecplot files that can be read in
 Tecplot.
 
 mod_vtk_calc_func.f90

@@ -1,7 +1,9 @@
 module type_steady
 #include <messenger.h>
     use mod_kinds,                      only: rk,ik
+    use mod_constants,                  only: ZERO
     use mod_spatial,                    only: update_space
+    use mod_chidg_mpi,                  only: GLOBAL_MASTER
 
     use type_time_integrator_steady,    only: time_integrator_steady_t
     use type_system_assembler,          only: system_assembler_t
@@ -12,6 +14,7 @@ module type_steady
     use type_preconditioner,            only: preconditioner_t
     use type_chidg_vector
 
+    use mod_entropy,                    only: compute_entropy_error
     implicit none
     private
 
@@ -83,7 +86,6 @@ contains
         integer(ik)             :: ierr
         type(assemble_steady_t) :: assemble_steady
 
-
         if (allocated(self%system)) deallocate(self%system)
         allocate(self%system, source=assemble_steady, stat=ierr)
         if (ierr /= 0) call AllocationError
@@ -124,6 +126,9 @@ contains
         call self%residual_norm%push_back(nonlinear_solver%residual_norm%at(nonlinear_solver%residual_norm%size()))
 
 
+        !call write_line("Entropy Error: ", compute_entropy_error(data), io_proc=GLOBAL_MASTER)
+
+
     end subroutine step
     !******************************************************************************************
 
@@ -150,6 +155,8 @@ contains
         !
         ! Steady equation, so we only need the spatial operators computed.
         !
+        data%time_manager%itime = 1
+        data%time_manager%t     = ZERO
         call update_space(data,timing,differentiate)
 
 

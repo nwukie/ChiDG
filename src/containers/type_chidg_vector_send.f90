@@ -2,7 +2,7 @@ module type_chidg_vector_send
 #include <messenger.h>
     use mod_kinds,                      only: ik
     use type_ivector,                   only: ivector_t
-    use type_mesh,                      only: mesh_t
+    use type_mesh,                  only: mesh_t
     use type_chidg_vector_send_comm,    only: chidg_vector_send_comm_t
     use mpi_f08,                        only: MPI_Request, MPI_STATUSES_IGNORE, MPI_Waitall
     implicit none
@@ -10,10 +10,11 @@ module type_chidg_vector_send
 
 
 
-    !>  Container for storing information about what parts of chidg_vector to send to other
-    !!  processors.
+    !>  Container for storing information about what parts of chidg_vector to send 
+    !!  to other processors.
     !!
-    !!  For each processor that we are sending data to, a chidg_vector_send_comm_t instance exists:
+    !!  For each processor that we are sending data to, a chidg_vector_send_comm_t 
+    !!  instance exists:
     !!      self%comm(icomm)
     !!
     !!  The chidg_vector_send_comm_t instance contains all the information about what
@@ -57,13 +58,11 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     subroutine init(self,mesh)
-        class(chidg_vector_send_t),  intent(inout)   :: self
-        type(mesh_t),               intent(in)      :: mesh(:)
+        class(chidg_vector_send_t), intent(inout)   :: self
+        type(mesh_t),               intent(in)      :: mesh
 
-        integer(ik) :: idom, iproc, nprocs_send, ierr, loc, nsends
-        integer(ik), allocatable    :: comm_procs_dom(:)
-        type(ivector_t)             :: comm_procs
-        logical                     :: already_added
+        integer(ik) :: idom, iproc, nprocs_send, ierr, nsends
+        integer(ik),    allocatable :: send_procs_array(:)
 
 
         !
@@ -77,20 +76,8 @@ contains
         !
         ! Detect processors that we need to send to, from all mesh instances.
         !
-        do idom = 1,size(mesh)
-
-            ! Get comm_procs from current domain
-            comm_procs_dom = mesh(idom)%get_send_procs() 
-            
-            ! Loop through and add them to list if not already added
-            do iproc = 1,size(comm_procs_dom)
-                ! check if proc was already added to list from another domain
-                loc = comm_procs%loc(comm_procs_dom(iproc))
-                already_added = (loc /= 0)
-                if ( .not. already_added ) call comm_procs%push_back(comm_procs_dom(iproc))
-            end do ! iproc
-
-        end do ! idom
+        send_procs_array = mesh%get_send_procs()
+        nprocs_send = size(send_procs_array)
 
 
 
@@ -98,7 +85,6 @@ contains
         !
         ! Get total number of procs we are sending to and allocate send info for each
         !
-        nprocs_send = comm_procs%size()
         allocate(self%comm(nprocs_send), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -108,8 +94,8 @@ contains
         !
         ! Call initialization for each proc that we are sending to
         !
-        do iproc = 1,comm_procs%size()
-            call self%comm(iproc)%init(mesh,comm_procs%at(iproc))
+        do iproc = 1,nprocs_send
+            call self%comm(iproc)%init(mesh,send_procs_array(iproc))
         end do !iproc
 
 
@@ -119,7 +105,7 @@ contains
         ! That way, chidg_vector%comm_wait can wait on them to complete.
         !
         nsends = 0
-        do iproc = 1,comm_procs%size()
+        do iproc = 1,nprocs_send
             nsends = nsends + self%comm(iproc)%nsends()
         end do ! iproc
 
@@ -154,6 +140,7 @@ contains
             nrequests = self%comm(icomm)%initialization_requests%size()
             if (nrequests > 0) then
                 call MPI_Waitall(nrequests, self%comm(icomm)%initialization_requests%data, MPI_STATUSES_IGNORE, ierr)
+                call self%comm(icomm)%initialization_requests%clear()
             end if
 
         end do

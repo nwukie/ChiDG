@@ -52,7 +52,7 @@ contains
         class(fluid_wave_speed_t), intent(inout)   :: self
 
         call self%set_name('Fluid Wave Speed')
-        call self%set_dependency('Q-')
+        call self%set_dependency('f(Q-)')
 
         call self%add_model_field('Maximum Wave Speed')
 
@@ -81,8 +81,8 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho  = worker%get_primary_field_general('Density',    'value')
-        rhoE = worker%get_primary_field_general('Energy', 'value')
+        rho  = worker%get_primary_field_general('Density', 'value')
+        rhoE = worker%get_primary_field_general('Energy',  'value')
 
 
         !

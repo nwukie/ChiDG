@@ -6,9 +6,10 @@ module mod_chidg_edit_domaininfo
     use hdf5
     use h5lt
 
-    use mod_hdf_utilities,              only: get_ndomains_hdf, get_domain_names_hdf, get_domain_name_hdf,  &
-                                              open_domain_hdf, close_domain_hdf, set_domain_equation_set_hdf, &
-                                              check_domain_exists_hdf, set_domain_name_hdf
+    use mod_hdf_utilities,              only: get_ndomains_hdf, get_domain_names_hdf, get_domain_name_hdf,          &
+                                              open_domain_hdf, close_domain_hdf, set_domain_equation_set_hdf,       &
+                                              check_domain_exists_hdf, set_domain_name_hdf, create_eqn_group_hdf,   &
+                                              check_eqn_group_exists_hdf, prune_eqn_groups_hdf
     use mod_chidg_edit_printoverview,   only: print_overview
     implicit none
 
@@ -187,6 +188,12 @@ contains
         call close_domain_hdf(domain_id)
 
 
+        !
+        ! Prune equation sets that dont have a domain
+        !
+        call prune_eqn_groups_hdf(fid)
+
+
     end subroutine chidg_edit_domaininfo_domain
     !************************************************************************************************
 
@@ -247,7 +254,6 @@ contains
         ! Move link to rename
         !
         if ( (trim(dname_new) /= '') .and. (trim(dname_new) /= trim(dname_current)) ) then
-            !call h5gmove_f(fid, trim(adjustl(dname_current)), "D_"//trim(adjustl(dname_new)), ierr)
             call h5lmove_f(fid, "D_"//trim(adjustl(dname_current)), fid, "D_"//trim(adjustl(dname_new)), ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"chidg_edit_domaininfo_domain_name: error renaming domain")
 
@@ -285,7 +291,7 @@ contains
 
 
         logical                             :: list_equations
-        logical                             :: equation_not_found
+        logical                             :: equation_not_found, eq_exists
         character(:),           allocatable :: not_found_string
         integer(ik)                         :: ierr, idom, iind
         integer(HID_T)                      :: did
@@ -348,12 +354,26 @@ contains
         end do
 
 
+
         !
-        ! Set equation set
+        ! Add equation set group to file if it doesn't already exist
+        !
+        eq_exists = check_eqn_group_exists_hdf(fid, trim(adjustl(equation_set)) )
+        if (.not. eq_exists) then
+            call create_eqn_group_hdf(fid,trim(equation_set))
+        end if
+
+
+
+
+        !
+        ! Set domain equation set
         !
         if (trim(equation_set) /= '') then
-            call set_domain_equation_set_hdf(domain_id,trim(adjustl(equation_set)))
+            call set_domain_equation_set_hdf(domain_id, trim(adjustl(equation_set)) )
         end if
+
+
 
     end subroutine chidg_edit_domaininfo_domain_equation_set
     !************************************************************************************************

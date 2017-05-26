@@ -1,10 +1,10 @@
-module type_blockvector
+module type_domain_vector
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, TWO
     use mod_chidg_mpi,      only: ChiDG_COMM
     use mpi_f08,            only: MPI_Recv, MPI_ANY_TAG, MPI_STATUS_IGNORE, MPI_INTEGER4
-    use type_mesh,          only: mesh_t
+    use type_domain,        only: domain_t
     use type_ivector,       only: ivector_t
     use type_densevector
     use DNAD_D
@@ -12,35 +12,51 @@ module type_blockvector
 
 
 
-    !> Data type for storing the matrix of dense blocks which hold the linearization for an algorithm
+    !>  Domain-level vector container.
+    !!
+    !!  Contains vector information for a single domain. For each element on the domain,
+    !!  a densevector_t instance is created that contains data for the element.
+    !!
+    !!  Use in local problem:
+    !!  ---------------------
+    !!  For each domain in the processor-local data%mesh, an instance of domain_vector_t
+    !!  is allocated on chidg_vector%dom(:) 
+    !!
+    !!  Use in global problem:
+    !!  ----------------------
+    !!  This is also used to receive domain data from other processors. The container
+    !!  access chidg_vector%recv%comm(:)%dom(:) designates that for any processor
+    !!  being communicated with, for each domain that is being received, an instance
+    !!  of domain_vector_t is allocated to receive that data.
+    !!
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
     !!
     !----------------------------------------------------------------------------------------------
-    type, public :: blockvector_t
+    type, public :: domain_vector_t
 
-        type(densevector_t), allocatable :: vecs(:)     !< Local element vectors
+        type(densevector_t), allocatable :: vecs(:)     ! Local element vectors
 
     contains
 
-        generic,    public  :: init => init_local, init_recv    !< Initialize vector
-        procedure, private  :: init_local                       !< Initialize vector to store data for local domain
-        procedure, private  :: init_recv                        !< Initialize vector to store data for domains being received from another processor
+        generic,    public  :: init => init_local, init_recv    ! Initialize vector.
+        procedure, private  :: init_local                       ! Initialize vector for local domain.
+        procedure, private  :: init_recv                        ! Initialize vector for domain received from another proc.
 
-        procedure,  public  :: distribute               !< Given a full-vector representation, distribute it to the denseblock format
-        procedure,  public  :: clear                    !< Zero all vector storage elements
+        procedure,  public  :: distribute       ! Given a full-vector representation, distribute it to a dense array.
+        procedure,  public  :: clear            ! Zero all vector storage elements.
         
-        procedure,  public  :: norm             !< Return the L2 vector norm of the block-vector
-        procedure,  public  :: sumsqr           !< Return the sum of the squared block-vector entries
-        procedure,  public  :: sumsqr_fields    !< Return the sum of squared entries for fields independently
+        procedure,  public  :: norm             ! Return the L2 vector norm of the block-vector.
+        procedure,  public  :: sumsqr           ! Return the sum of the squared block-vector entries.
+        procedure,  public  :: sumsqr_fields    ! Return the sum of squared entries for fields independently.
         procedure,  public  :: nentries
         procedure,  public  :: dump
 
         final :: destructor
 
-    end type blockvector_t
+    end type domain_vector_t
     !*********************************************************************************************
 
 
@@ -109,16 +125,16 @@ contains
     !!  @date   11/5/2016
     !!
     !------------------------------------------------------------------------------------------
-    subroutine init_local(self,mesh)
-        class(blockvector_t),   intent(inout) :: self
-        type(mesh_t),           intent(in)    :: mesh
+    subroutine init_local(self,domain)
+        class(domain_vector_t),   intent(inout) :: self
+        type(domain_t),         intent(in)    :: domain
 
         integer(ik) :: nelem, ierr, ielem, nterms, neqns, ntime
         integer(ik) :: dparent_g, dparent_l, eparent_g, eparent_l
         logical     :: new_elements
 
 
-        nelem = mesh%nelem  ! Number of elements in the local block
+        nelem = domain%nelem  ! Number of elements in the local block
 
         !
         ! ALLOCATE SIZE FOR 'vecs'
@@ -131,18 +147,19 @@ contains
             ! If so (new_elements), then reallocate matrix size.
             ! If not, do nothing
             !
-            new_elements = (mesh%nelem /= size(self%vecs))
+            new_elements = (domain%nelem /= size(self%vecs))
             if (new_elements) then
                 deallocate(self%vecs)
                 allocate(self%vecs(nelem), stat=ierr)
+                if (ierr /= 0) call AllocationError
             end if
 
         else
 
             allocate(self%vecs(nelem), stat=ierr)
+            if (ierr /= 0) call AllocationError
 
         end if
-        if (ierr /= 0) call AllocationError
 
 
 
@@ -150,14 +167,14 @@ contains
         !
         ! Loop through elements and call initialization for densevectors
         !
-        do ielem = 1,mesh%nelem
-            dparent_g = mesh%elems(ielem)%idomain_g
-            dparent_l = mesh%elems(ielem)%idomain_l
-            eparent_g = mesh%elems(ielem)%ielement_g
-            eparent_l = mesh%elems(ielem)%ielement_l
-            nterms    = mesh%elems(ielem)%nterms_s
-            neqns     = mesh%elems(ielem)%neqns
-            ntime     = mesh%elems(ielem)%ntime
+        do ielem = 1,domain%nelem
+            dparent_g = domain%elems(ielem)%idomain_g
+            dparent_l = domain%elems(ielem)%idomain_l
+            eparent_g = domain%elems(ielem)%ielement_g
+            eparent_l = domain%elems(ielem)%ielement_l
+            nterms    = domain%elems(ielem)%nterms_s
+            neqns     = domain%elems(ielem)%neqns
+            ntime     = domain%elems(ielem)%ntime
 
             ! Call densevector initialization routine
             call self%vecs(ielem)%init(nterms,neqns,ntime,dparent_g,dparent_l,eparent_g,eparent_l)
@@ -188,19 +205,20 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/30/2016
     !!
-    !!  @param[in]  mesh    mesh_t instance containing initialized elements and faces
+    !!  @param[in]  domain    domain_t instance containing initialized elements and faces
     !!
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/5/2016
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine init_recv(self,iproc)
-        class(blockvector_t),   intent(inout)   :: self
-        integer(ik),            intent(in)      :: iproc
+    subroutine init_recv(self,proc)
+        class(domain_vector_t), intent(inout)   :: self
+        integer(ik),            intent(in)      :: proc
 
         type(ivector_t) :: recv_elems
-        integer(ik)     :: nelem_recv, ielem_recv, ierr, ielem, iface, nterms, neqns, loc, recv_element
-        integer(ik)     :: idomain_g, idomain_l, ielement_g, ielement_l, ntime
+        integer(ik)     :: nelem_recv, ielem_recv, ierr, ielem, iface, nterms,  &
+                           neqns, loc, recv_element, idomain_g, idomain_l,      &
+                           ielement_g, ielement_l, ntime
         logical         :: new_elements, proc_element, already_added, comm_element
 
 
@@ -208,14 +226,14 @@ contains
         !
         ! Get the domain index we are receiving
         !
-        call MPI_Recv(idomain_g, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-        call MPI_Recv(idomain_l, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+        call MPI_Recv(idomain_g, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+        call MPI_Recv(idomain_l, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
 
         !
         ! Get the number of elements being received from domain
         !
-        call MPI_Recv(nelem_recv, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+        call MPI_Recv(nelem_recv, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
         
 
 
@@ -234,14 +252,15 @@ contains
             if (new_elements) then
                 deallocate(self%vecs)
                 allocate(self%vecs(nelem_recv), stat=ierr)
+                if (ierr /= 0) call AllocationError
             end if
 
         else
 
             allocate(self%vecs(nelem_recv), stat=ierr)
+            if (ierr /= 0) call AllocationError
 
         end if
-        if (ierr /= 0) call AllocationError
 
 
 
@@ -252,17 +271,16 @@ contains
         do ielem_recv = 1,nelem_recv
 
 
-            call MPI_Recv(ielement_g, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-            call MPI_Recv(ielement_l, 1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-            call MPI_Recv(nterms,     1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-            call MPI_Recv(neqns,      1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-            call MPI_Recv(ntime,      1, MPI_INTEGER4, iproc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(ielement_g, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(ielement_l, 1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(nterms,     1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(neqns,      1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv(ntime,      1, MPI_INTEGER4, proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
             !
             ! Call densevector initialization routine
             !
             call self%vecs(ielem_recv)%init(nterms,neqns,ntime,idomain_g,idomain_l,ielement_g,ielement_l)
-
 
         end do
 
@@ -293,7 +311,7 @@ contains
     !!
     !------------------------------------------------------------------------------------
     subroutine distribute(self,fullvec)
-        class(blockvector_t),    intent(inout)   :: self
+        class(domain_vector_t),    intent(inout)   :: self
         real(rk),                intent(in)      :: fullvec(:) 
 
         integer(ik)     :: ndof, ielem, nvars, nterms, fstart, fend, ndof_l
@@ -310,7 +328,7 @@ contains
         end do
 
         ! Test that the number of dof's match between the full and block format's
-        if (ndof /= size(fullvec) ) call chidg_signal(FATAL,"blockvector_t%distribute: Storage sizes of full-vector and block-vector are not equal.")
+        if (ndof /= size(fullvec) ) call chidg_signal(FATAL,"domain_vector_t%distribute: Storage sizes of full-vector and block-vector are not equal.")
 
 
 
@@ -360,7 +378,7 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     subroutine clear(self)
-        class(blockvector_t),   intent(inout)   :: self
+        class(domain_vector_t),   intent(inout)   :: self
 
         integer(ik) :: iblk
 
@@ -391,7 +409,7 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     function norm(self) result(res)
-        class(blockvector_t),   intent(in)  :: self
+        class(domain_vector_t),   intent(in)  :: self
 
         real(rk)    :: res
         integer(ik) :: ielem
@@ -428,7 +446,7 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     function sumsqr(self) result(res)
-        class(blockvector_t),   intent(in)  :: self
+        class(domain_vector_t),   intent(in)  :: self
 
         real(rk)    :: res
         integer(ik) :: ielem
@@ -464,7 +482,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function sumsqr_fields(self) result(res)
-        class(blockvector_t),   intent(in)  :: self
+        class(domain_vector_t),   intent(in)  :: self
 
         real(rk),   allocatable :: res(:)
         integer(ik)             :: ielem
@@ -498,7 +516,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function nentries(self) result(res)
-        class(blockvector_t),   intent(in)  :: self
+        class(domain_vector_t),   intent(in)  :: self
 
         integer(ik) :: res, ielem
 
@@ -527,7 +545,7 @@ contains
     !!
     !------------------------------------------------
     subroutine dump(self)
-        class(blockvector_t),   intent(in)  :: self
+        class(domain_vector_t),   intent(in)  :: self
         integer(ik) :: ielem, ientry
 
         do ielem = 1,size(self%vecs)
@@ -564,9 +582,9 @@ contains
     !------------------------------------------------------------------------
     function mult_real_bv(left,right) result(res)
         real(rk),               intent(in)  :: left
-        type(blockvector_t),    intent(in)  :: right
+        type(domain_vector_t),    intent(in)  :: right
 
-        type(blockvector_t) :: res
+        type(domain_vector_t) :: res
 
         res%vecs = left * right%vecs
 
@@ -583,10 +601,10 @@ contains
     !!
     !------------------------------------------------------------------------
     function mult_bv_real(left,right) result(res)
-        type(blockvector_t),    intent(in)  :: left
+        type(domain_vector_t),    intent(in)  :: left
         real(rk),               intent(in)  :: right
 
-        type(blockvector_t) :: res
+        type(domain_vector_t) :: res
 
         res%vecs = left%vecs * right
 
@@ -605,9 +623,9 @@ contains
     !------------------------------------------------------------------------
     function div_real_bv(left,right) result(res)
         real(rk),               intent(in)  :: left
-        type(blockvector_t),    intent(in)  :: right
+        type(domain_vector_t),    intent(in)  :: right
 
-        type(blockvector_t) :: res
+        type(domain_vector_t) :: res
 
         res%vecs = left / right%vecs
 
@@ -624,10 +642,10 @@ contains
     !!
     !------------------------------------------------------------------------
     function div_bv_real(left,right) result(res)
-        type(blockvector_t),    intent(in)  :: left
+        type(domain_vector_t),    intent(in)  :: left
         real(rk),               intent(in)  :: right
 
-        type(blockvector_t) :: res
+        type(domain_vector_t) :: res
 
         res%vecs = left%vecs / right
 
@@ -646,10 +664,10 @@ contains
     !!
     !------------------------------------------------------------------------
     function add_bv_bv(left,right) result(res)
-        type(blockvector_t),  intent(in)  :: left
-        type(blockvector_t),  intent(in)  :: right
+        type(domain_vector_t),  intent(in)  :: left
+        type(domain_vector_t),  intent(in)  :: right
 
-        type(blockvector_t) :: res
+        type(domain_vector_t) :: res
 
         res%vecs = left%vecs + right%vecs
 
@@ -667,10 +685,10 @@ contains
     !!
     !------------------------------------------------------------------------
     function sub_bv_bv(left,right) result(res)
-        type(blockvector_t),  intent(in)  :: left
-        type(blockvector_t),  intent(in)  :: right
+        type(domain_vector_t),  intent(in)  :: left
+        type(domain_vector_t),  intent(in)  :: right
 
-        type(blockvector_t) :: res
+        type(domain_vector_t) :: res
 
         res%vecs = left%vecs - right%vecs
 
@@ -682,8 +700,8 @@ contains
 
 
     subroutine destructor(self)
-        type(blockvector_t), intent(inout) :: self
+        type(domain_vector_t), intent(inout) :: self
 
     end subroutine
 
-end module type_blockvector
+end module type_domain_vector

@@ -74,6 +74,7 @@ module eqn_wall_distance
     use mod_operators,          only: operator_factory
     use mod_models,             only: model_factory
     use DNAD_D
+    use ieee_arithmetic
     implicit none
 
 
@@ -201,8 +202,8 @@ contains
         class(p_laplace_model), intent(inout)   :: self
 
         call self%set_name('p-Laplace')
-        call self%set_dependency('Q-')
-        !call self%set_dependency('Grad(Q)')
+        call self%set_dependency('f(Q-)')
+        !call self%set_dependency('f(Grad(Q))')
 
         call self%add_model_field('Scalar Diffusion Coefficient')
 
@@ -265,6 +266,7 @@ contains
             mu = sumsqr
             mu = ONE
         end if
+
 
 
 

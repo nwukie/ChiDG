@@ -125,12 +125,6 @@ contains
 
 
 
-
-
-        invrho_m = ONE/rho_m
-        invrho_p = ONE/rho_p
-
-
         !
         ! Get normal vector
         !
@@ -140,11 +134,13 @@ contains
 
 
 
-
         !
         ! Get model fields:
         !   Viscosity
         !
+        invrho_m = ONE/rho_m
+        invrho_p = ONE/rho_p
+
         mu_l_m = worker%get_model_field_face('Laminar Viscosity','value', 'face interior')
         mu_l_p = worker%get_model_field_face('Laminar Viscosity','value', 'face exterior')
 

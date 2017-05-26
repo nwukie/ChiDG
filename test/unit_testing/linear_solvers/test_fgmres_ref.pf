@@ -6,33 +6,27 @@ subroutine test_fgmres_ref_solve()
                                           IO_DESTINATION
 
     use type_chidg,                 only: chidg_t
-    use type_point,                 only: point_t
-    use type_domain_connectivity,   only: domain_connectivity_t
-
+    use type_chidg_matrix
+    use type_chidg_vector,          only: chidg_vector_t
     use type_fgmres,                only: fgmres_t
 
-    use type_chidg_matrix
-    use type_chidg_vector,           only: chidg_vector_t
-
-    use mod_test_utilities,         only: create_mesh
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: delete_file
+    use mod_string,                 only: string_t
     implicit none
 
     type(chidg_t)               :: chidg
-    type(point_t),  allocatable :: nodes(:)
-    type(domain_connectivity_t) :: connectivity
-
-    type(chidg_matrix_t)         :: A
-    type(chidg_vector_t)         :: x, b
+    type(chidg_matrix_t)        :: A
+    type(chidg_vector_t)        :: x, b
     type(fgmres_t)              :: linear_solver
     
-    real(rk)    :: tol
-    integer(ik) :: nterms_c, idomain, spacedim, imat, ielem, itime
+    character(:),   allocatable :: file_name
+    real(rk)                    :: tol
+    integer(ik)                 :: idomain, imat, ielem, itime
 
 
     tol             = 1.e-9_rk
     idomain         = 1
-    spacedim        = 3
-    nterms_c        = 8
     IO_DESTINATION  = 'file'
 
 
@@ -45,6 +39,7 @@ subroutine test_fgmres_ref_solve()
     !
     ! Set ChiDG components
     !
+    call chidg%set('Solution Order', integer_input=1)
     call chidg%set('Time Integrator',  'steady'  )
     call chidg%set('Nonlinear Solver', 'newton'  )
     call chidg%set('Linear Solver',    'fgmres'  )
@@ -52,28 +47,26 @@ subroutine test_fgmres_ref_solve()
 
 
     !
-    ! Get grid points
+    ! Create grid file
     !
-    call create_mesh('211',nodes,connectivity)
+    file_name = 'file.h5'
+    call create_mesh_file('D1 NxNxN', file_name, equation_sets=[string_t('Scalar Advection')], &
+                                                 nelem_xi=2, nelem_eta=1, nelem_zeta=1)
 
-
+    
     !
-    ! Initialize domain
+    ! Read grid
     !
-    call chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection','Cartesian')
+    call chidg%read_grid(file_name)
 
-    call chidg%set('Solution Order', integer_input=1)
-    call chidg%init('domains')
-    call chidg%init('communication')
-    call chidg%init('solvers')
 
 
     !
     ! Initialize data containers
     !
     call A%init(chidg%data%mesh,mtype='full')
-    call x%init(chidg%data%mesh)
-    call b%init(chidg%data%mesh)
+    call x%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
+    call b%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
 
 
 
@@ -87,7 +80,7 @@ subroutine test_fgmres_ref_solve()
     ielem = 1
     itime = 1
     imat = A%dom(1)%lblks(ielem,itime)%loc(1,1)
-    A%dom(1)%lblks(1,1)%data_(imat)%mat   = ZERO
+    A%dom(1)%lblks(1,1)%data_(imat)%mat = ZERO
 
     imat = A%dom(1)%lblks(ielem,itime)%loc(1,2)
     A%dom(1)%lblks(1,1)%data_(imat)%mat = ONE
@@ -117,7 +110,7 @@ subroutine test_fgmres_ref_solve()
     !
     ! Finalize ChiDG initialization
     !
-    call chidg%init('finalize')
+    call chidg%init('algorithms')
 
 
     !
@@ -141,8 +134,6 @@ subroutine test_fgmres_ref_solve()
 
 
 
-
-
     !
     ! Close ChiDG interface
     !
@@ -150,6 +141,10 @@ subroutine test_fgmres_ref_solve()
 
 
 
+    !
+    ! Clean up
+    !
+    call delete_file(file_name)
 
 
 end subroutine test_fgmres_ref_solve

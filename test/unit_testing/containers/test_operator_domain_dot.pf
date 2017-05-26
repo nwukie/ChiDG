@@ -1,36 +1,32 @@
 @Test
-subroutine test_operator_block_dot()
+subroutine test_operator_domain_dot()
     use pfunit_mod
 
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, &
                                           SEVEN, EIGHT, NINE, TEN, IO_DESTINATION
-    use type_blockvector,           only: blockvector_t
+
     use type_chidg,                 only: chidg_t
-    use type_point,                 only: point_t
-    use type_domain_connectivity,   only: domain_connectivity_t
+    use type_domain_vector,         only: domain_vector_t
 
-    use mod_test_utilities,         only: create_mesh
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: delete_file
+    use mod_string,                 only: string_t
 
-    use operator_block_dot
+    use operator_domain_dot
     implicit none
 
 
     type(chidg_t)               :: chidg
-    type(point_t),  allocatable :: nodes(:)
-    type(domain_connectivity_t) :: connectivity
-    type(blockvector_t)         :: a, b
+    type(domain_vector_t)       :: a, b
 
     real(rk)                    :: tol
-    integer(ik)                 :: nterms_c, idomain, spacedim
     real(rk),   dimension(8)    :: vec_a1, vec_a2, vec_a3, vec_b1, vec_b2, vec_b3
     real(rk)                    :: dot_ref, dot_test
+    character(:),   allocatable :: file_name
 
 
     tol         = 1.e-13_rk
-    idomain     = 1
-    spacedim    = 3
-    nterms_c    = 8
 
     IO_DESTINATION = 'file'
 
@@ -39,34 +35,36 @@ subroutine test_operator_block_dot()
     call chidg%start_up('core')
 
 
-    ! Get grid points
-    call create_mesh('311',nodes,connectivity)
-
-    
-    ! Initialize domain
-    call chidg%data%add_domain('D_01',              &
-                               nodes,               &
-                               connectivity,        &
-                               spacedim,            &
-                               nterms_c,            &
-                               'Scalar Advection',  &
-                               'Cartesian')
-
+    !
+    ! Set accuracy for the solution expansion
+    !
     call chidg%set('Solution Order', integer_input=2)
-    call chidg%init('domains')
-    call chidg%init('communication')
+
+
+    !
+    ! Create grid file
+    !
+    file_name = 'file.h5'
+    call create_mesh_file('D1 NxNxN', file_name, equation_sets=[string_t('Scalar Advection')], &
+                                      nelem_xi=3, nelem_eta=1, nelem_zeta=1)
+
+
+    !
+    ! Read grid file
+    !
+    call chidg%read_grid(file_name)
 
 
 
     !
     ! Initialize data containers
     !
-    call a%init(chidg%data%mesh(1))
-    call b%init(chidg%data%mesh(1))
+    call a%init(chidg%data%mesh%domain(1))
+    call b%init(chidg%data%mesh%domain(1))
 
 
     !
-    ! Initialize blockvector data (a)
+    ! Initialize domain_vector data (a)
     !
     vec_a1 = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
     vec_a2 = [TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, ONE]
@@ -78,7 +76,7 @@ subroutine test_operator_block_dot()
 
 
     !
-    ! Initialize blockvector data (b)
+    ! Initialize domain_vector data (b)
     !
     vec_b1 = [THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, ONE, TWO]
     vec_b2 = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
@@ -99,7 +97,7 @@ subroutine test_operator_block_dot()
     !
     ! Compute dot product implementation. THIS IS BEING TESTED
     !
-    dot_test = block_dot(a,b)
+    dot_test = domain_dot(a,b)
 
 
 
@@ -116,7 +114,11 @@ subroutine test_operator_block_dot()
     !
     call chidg%shut_down('core')
 
+    !
+    ! Clean up
+    !
+    call delete_file(file_name)
 
-end subroutine test_operator_block_dot
+end subroutine test_operator_domain_dot
 
 

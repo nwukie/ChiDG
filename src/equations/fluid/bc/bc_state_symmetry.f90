@@ -1,9 +1,13 @@
 module bc_state_symmetry
+#include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: TWO, HALF, ZERO
+    use mod_fluid,              only: omega
     use type_bc_state,          only: bc_state_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
+    use mpi_f08,                only: mpi_comm
+    use ieee_arithmetic
     use DNAD_D
     implicit none
     
@@ -76,23 +80,25 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine compute_bc_state(self,worker,prop)
+    subroutine compute_bc_state(self,worker,prop,bc_COMM)
         class(symmetry_t),      intent(inout)   :: self
         type(chidg_worker_t),   intent(inout)   :: worker
         class(properties_t),    intent(inout)   :: prop
+        type(mpi_comm),         intent(in)      :: bc_COMM
 
         ! Storage at quadrature nodes
-        type(AD_D), allocatable, dimension(:)   ::      &
-            density_m,  mom1_m,  mom2_m,  mom3_m,  energy_m,  &
-            density_bc, mom1_bc, mom2_bc, mom3_bc, energy_bc, &
+        type(AD_D), allocatable, dimension(:)   ::                      &
+            density_m,  mom1_m,  mom2_m,  mom3_m,  energy_m,            &
+            density_bc, mom1_bc, mom2_bc, mom3_bc, energy_bc,           &
             drho_dx_m, drhou_dx_m, drhov_dx_m, drhow_dx_m, drhoE_dx_m,  &
             drho_dy_m, drhou_dy_m, drhov_dy_m, drhow_dy_m, drhoE_dy_m,  &
             drho_dz_m, drhou_dz_m, drhov_dz_m, drhow_dz_m, drhoE_dz_m,  &
             normal_momentum
 
         real(rk), allocatable, dimension(:) :: &
-            unorm_1, unorm_2, unorm_3
+            unorm_1, unorm_2, unorm_3, r
 
+        integer(ik) :: igq
 
         !
         ! Interpolate interior solution to quadrature nodes
@@ -128,8 +134,13 @@ contains
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
+        r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
-            mom2_m = mom2_m / worker%coordinate('1','boundary')
+            mom2_m = mom2_m / r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 
@@ -150,6 +161,13 @@ contains
         unorm_3 = worker%unit_normal(3)
 
 
+        !
+        ! Convert to relative momentum
+        !
+        mom1_m = mom1_m
+        mom2_m = mom2_m  -  density_m*r*omega
+        mom3_m = mom3_m
+
 
         !
         ! Dot momentum with normal vector
@@ -159,18 +177,32 @@ contains
 
 
         !
-        ! Reverse normal momentum
+        ! Subtract relative normal momentum from relative momentum
         !
         mom1_bc = mom1_m  -  TWO*normal_momentum*unorm_1
         mom2_bc = mom2_m  -  TWO*normal_momentum*unorm_2
         mom3_bc = mom3_m  -  TWO*normal_momentum*unorm_3
 
 
+
+        !
+        ! Convert to absolute momentum
+        !
+        mom1_bc = mom1_bc
+        mom2_bc = mom2_bc  +  density_bc*r*omega
+        mom3_bc = mom3_bc
+
+
+
         !
         ! Account for cylindrical. Convert tangential momentum back to angular momentum.
         !
         if (worker%coordinate_system() == 'Cylindrical') then
-            mom2_bc = mom2_bc * worker%coordinate('1','boundary')
+            mom2_bc = mom2_bc * r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 

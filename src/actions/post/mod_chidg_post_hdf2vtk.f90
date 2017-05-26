@@ -25,47 +25,50 @@ contains
 
 
 
-    !>  Post processing tool for writing a tecplot file of sampled modal data
+    !>  Post processing tool for writing a vtk file of sampled modal data
     !!
     !!  @author Mayank Sharma
     !!  @date 10/31/2016
     !!
+    !!  Functionality for unsteady IO
     !!
-    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/22/2017
     !!
     !------------------------------------------------------------------------------------------
-    subroutine chidg_post_hdf2vtk(filename)
+    subroutine chidg_post_hdf2vtk(grid_file,solution_file)
+        character(*)                    ::  grid_file
+        character(*)                    ::  solution_file
 
-        character(*)                    ::  filename
 
-
-        type(chidg_t)                   ::  chidg
-        type(file_properties_t)         ::  file_props
-        character(:),allocatable        ::  eqnset
-        integer(ik)                     ::  nterms_s,spacedim,solution_order
+        type(chidg_t)                       ::  chidg
+        type(file_properties_t)             ::  file_props
+        character(:),           allocatable ::  eqnset
+        character(:),           allocatable ::  time_string
+        integer(ik)                         ::  nterms_s,spacedim,solution_order
 
 
         !
         ! Initialize ChiDG environment
         !
-        call chidg%start_up('core')
         call chidg%start_up('mpi')
+        call chidg%start_up('core')
+
 
 
         !
         ! Get nterms_s and eqnset
         !
-        file_props = get_properties_hdf(filename)
+        file_props = get_properties_hdf(solution_file)
 
-        nterms_s   = file_props%nterms_s(1)     ! Global variable from mod_io 
-        eqnset     = file_props%eqnset(1)       ! Global variable from mod_io
-        spacedim   = file_props%spacedim(1)     ! Global variable from mod_io
+        nterms_s    = file_props%nterms_s(1)     ! Global variable from mod_io 
+        eqnset      = file_props%eqnset(1)       ! Global variable from mod_io
+        spacedim    = file_props%spacedim(1)     ! Global variable from mod_io
+        time_string = file_props%time_integrator
 
 
-        !
-        ! Read grid data from file
-        !
-        call chidg%read_grid(filename,spacedim)
+
+
 
 
         solution_order = 0
@@ -73,23 +76,32 @@ contains
             solution_order = solution_order + 1
         end do
 
+
         !
         ! Initialize solution data storage
         !
         call chidg%set('Solution Order', integer_input=solution_order)
-        !call chidg%initialize_solution_domains()
-        call chidg%init('domains')
-        call chidg%init('communication')
-        call chidg%init('solvers')
-        !call chidg%initialize_solution_solver()
+        call chidg%set('Time Integrator', algorithm=trim(time_string))
+        call chidg%time_integrator%initialize_state(chidg%data)
+        !call chidg%init('domains')
+        !call chidg%init('communication')
+        !call chidg%init('solvers')
 
 
         !
-        ! Read solution modes from HDF5
+        ! Read grid/solution modes and time integrator options from HDF5
         !
-        call chidg%read_solution(filename)
+        call chidg%read_grid(grid_file,spacedim)
+        call chidg%read_solution(solution_file)
+        call chidg%time_integrator%read_time_options(chidg%data,solution_file)
+        
 
-
+        !
+        ! Get post processing data (q_out)
+        !        
+        call chidg%time_integrator%process_data_for_output(chidg%data)
+        
+        
         !
         ! Write solution in vtk format
         !
@@ -97,7 +109,7 @@ contains
 
 
         !
-        ! Close ChiDG
+        ! Shut down ChiDG
         !
         call chidg%shut_down('core')
 

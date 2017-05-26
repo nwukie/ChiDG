@@ -263,19 +263,18 @@ contains
         integer(ik) :: iface, icorner, imap, base_corners(4)
         integer(ik) :: corner_one, corner_two, corner_three, corner_four, corner_five, corner_six, corner_seven, corner_eight
 
+
         do iface = 1,NFACES
-            do icorner = 1,NFACE_CORNERS
-                do imap = 1,NMAP
+            do imap = 1,NMAP
 
-                    corner_one   = 1
-                    corner_two   = corner_one + imap
-                    corner_three = (imap+1)*(imap+1) - (imap+1) + 1
-                    corner_four  = corner_three + imap
-                    corner_five  = (imap+1)*(imap+1)*(imap+1) - (imap+1)*(imap+1) + 1
-                    corner_six   = corner_five + imap
-                    corner_seven = (imap+1)*(imap+1)*(imap+1) - (imap+1) + 1
-                    corner_eight = corner_seven + imap
-
+                corner_one   = 1
+                corner_two   = corner_one + imap
+                corner_three = (imap+1)*(imap+1) - (imap+1) + 1
+                corner_four  = corner_three + imap
+                corner_five  = (imap+1)*(imap+1)*(imap+1) - (imap+1)*(imap+1) + 1
+                corner_six   = corner_five + imap
+                corner_seven = (imap+1)*(imap+1)*(imap+1) - (imap+1) + 1
+                corner_eight = corner_seven + imap
 
 
                 select case ( iface )
@@ -315,12 +314,10 @@ contains
 
 
 
-                end do !imap
-
-
-
-            end do !icorner
+            end do !imap
         end do !iface
+
+
 
 
     end subroutine compute_face_corner_indices

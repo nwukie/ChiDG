@@ -511,9 +511,9 @@ contains
         !
         do itime = 1,timestep
 
-            d = (itime - 1)*data%ndomains()
+            d = (itime - 1)*data%mesh%ndomains()
 
-            do ifile = 1,data%ndomains()
+            do ifile = 1,data%mesh%ndomains()
 
                 write(funit,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itime - 1,'" part="',ifile - 1,'" file="',trim(file_arr(d + ifile)),'"/>'
                 

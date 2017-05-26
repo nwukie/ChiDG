@@ -54,7 +54,7 @@ contains
         class(shear_stress_t), intent(inout)   :: self
 
         call self%set_name('Shear Stress')
-        call self%set_dependency('Grad(Q)')
+        call self%set_dependency('f(Grad(Q))')
 
         call self%add_model_field('Shear-11')
         call self%add_model_field('Shear-22')
@@ -155,6 +155,10 @@ contains
             grad1_mom2 = (grad1_mom2/r) - mom2/r
             grad2_mom2 = (grad2_mom2/r)
             grad3_mom2 = (grad3_mom2/r)
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 

@@ -1,4 +1,5 @@
 module mod_HB_matrices
+#include<messenger.h>
 
 !*****************************************************************************************
 !*                                                                                       *
@@ -52,11 +53,11 @@ contains
     !!
     !------------------------------------------------------------------------------------
     subroutine calc_inv_E(nfreq,ntime,omega,t,inv_E)
-        integer(ik),                    intent(in)          :: nfreq,ntime
-        real(rk),dimension(:),          intent(in)          :: omega,t
-        real(rk),dimension(ntime,ntime),intent(inout)       :: inv_E 
+        integer(ik),            intent(in)          :: nfreq,ntime
+        real(rk),dimension(:),  intent(in)          :: omega,t
+        real(rk),dimension(:,:),intent(inout)       :: inv_E 
 
-        integer                                             :: irow,icol
+        integer                                     :: irow,icol
 
         
         
@@ -101,11 +102,11 @@ contains
     !!
     !------------------------------------------------------------------------------------
     subroutine calc_diff_inv_E(nfreq,ntime,omega,t,diff_inv_E)
-        integer(ik),                    intent(in)          :: nfreq,ntime
-        real(rk),dimension(:),          intent(in)          :: omega,t
-        real(rk),dimension(ntime,ntime),intent(inout)       :: diff_inv_E
+        integer(ik),            intent(in)          :: nfreq,ntime
+        real(rk),dimension(:),  intent(in)          :: omega,t
+        real(rk),dimension(:,:),intent(inout)       :: diff_inv_E
 
-        integer                                             :: irow,icol
+        integer                                     :: irow,icol
 
 
 
@@ -139,6 +140,42 @@ contains
 
 
 
+    !>  Calculate the Fourier transform matrix
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   3/18/2017
+    !!
+    !------------------------------------------------------------------------------------
+    subroutine calc_E(nfreq,ntime,omega,t,E)
+        integer(ik),    intent(in)      :: nfreq, ntime
+        real(rk),       intent(in)      :: omega(:), t(:)
+        real(rk),       intent(inout)   :: E(:,:)
+
+        real(rk),   allocatable        :: inv_E(:,:)
+        integer(ik)                    :: ierr
+
+
+        !
+        ! Compute the inverse Fourier transform matrix
+        !
+        if (allocated(inv_E)) deallocate(inv_E)
+        allocate(inv_E(ntime,ntime), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        call calc_inv_E(nfreq,ntime,omega,t,inv_E)
+
+
+        !
+        ! E - Fourier transform matrix
+        !
+        E = inv(inv_E)
+
+
+    end subroutine calc_E
+    !************************************************************************************
+
+
+
     !> Calculate the pseudo spectral operator 
     !!
     !! @author Mayank Sharma
@@ -153,10 +190,18 @@ contains
     subroutine calc_pseudo_spectral_operator(nfreq,ntime,omega,t,D)
         integer(ik),                    intent(in)          :: nfreq,ntime
         real(rk),dimension(:),          intent(in)          :: omega,t
-        real(rk),dimension(ntime,ntime),intent(inout)       :: D 
+        real(rk),allocatable,           intent(inout)       :: D(:,:)
 
-        real(rk),dimension(ntime,ntime)                     :: inv_E,diff_inv_E,E
-        integer(ik)                                         :: i
+        real(rk),       allocatable              :: inv_E(:,:),diff_inv_E(:,:), E(:,:)
+        integer(ik)                              :: i,ierr
+        character(:),   allocatable              :: user_msg, dev_msg
+
+
+        if (allocated(inv_E) .and. allocated(diff_inv_E) .and. allocated(E) &
+            .and. allocated(D)) deallocate(inv_E,diff_inv_E,E,D)
+        allocate(inv_E(ntime,ntime),diff_inv_E(ntime,ntime), &
+                 E(ntime,ntime),D(ntime,ntime), stat=ierr)
+        if (ierr /= 0) call AllocationError
 
 
         !
@@ -165,7 +210,14 @@ contains
         call calc_inv_E(nfreq,ntime,omega,t,inv_E)
 
         call calc_diff_inv_E(nfreq,ntime,omega,t,diff_inv_E)
+    
+        user_msg = 'The size of an array being inverted here is ZERO. Check &
+                    the frequencies you have entered in chidg.nml'
+        dev_msg  = 'The inv subroutine expects a valid non-zero integer matrix size. Check &
+                    in time_manager.f90'
 
+        if (size(inv_E,1) == 0) call chidg_signal_two(FATAL, user_msg, size(inv_E,1), dev_msg)
+        
         E = inv(inv_E)
 
         D = matmul(diff_inv_E,E)

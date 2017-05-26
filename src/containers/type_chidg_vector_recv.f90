@@ -46,12 +46,10 @@ contains
     !------------------------------------------------------------------------------------------
     subroutine init(self,mesh)
         class(chidg_vector_recv_t), intent(inout)   :: self
-        type(mesh_t),               intent(inout)   :: mesh(:)
+        type(mesh_t),               intent(inout)   :: mesh
 
-        integer(ik)                 :: idom, iproc, icomm, ncomm, ndom_recv, ierr, loc
-        integer(ik),    allocatable :: comm_procs_dom(:)
-        type(ivector_t)             :: comm_procs
-        logical                     :: not_in_list
+        integer(ik)                 :: idom, iproc, icomm, ncomm, ierr
+        integer(ik),    allocatable :: comm_procs_array(:)
 
 
         !
@@ -62,27 +60,15 @@ contains
 
 
         !
-        ! Get processor ranks that we are receiving from
+        ! Get processor ranks that we are receiving from: mesh
         !
-        do idom = 1,size(mesh)
-            comm_procs_dom = mesh(idom)%get_recv_procs()
-
-            do iproc = 1,size(comm_procs_dom)
-                ! See if proc is already in list
-                loc = comm_procs%loc(comm_procs_dom(iproc))
-                not_in_list = ( loc == 0 )
-
-                ! If not, add to list
-                if ( not_in_list ) call comm_procs%push_back(comm_procs_dom(iproc))
-            end do ! iproc
-
-        end do ! idom
+        comm_procs_array = mesh%get_recv_procs()
 
 
         !
         ! Allocate recv communication for each processor sending data here.
         !
-        ncomm = comm_procs%size()
+        ncomm = size(comm_procs_array)
         if (allocated(self%comm)) deallocate(self%comm)
         allocate(self%comm(ncomm), stat=ierr)
         if (ierr /= 0) call AllocationError
@@ -92,8 +78,8 @@ contains
         !
         ! Call initialization for each communicating process
         !
-        do icomm = 1,comm_procs%size()
-            iproc = comm_procs%at(icomm)
+        do icomm = 1,ncomm
+            iproc = comm_procs_array(icomm)
             call self%comm(icomm)%init(mesh,iproc,icomm)
         end do
 

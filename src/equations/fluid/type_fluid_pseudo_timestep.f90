@@ -1,8 +1,9 @@
 module type_fluid_pseudo_timestep
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: THIRD, ONE, HALF
+    use mod_fluid,              only: omega
     use type_pseudo_timestep,   only: pseudo_timestep_t
-    use type_mesh,              only: mesh_t
+    use type_mesh,          only: mesh_t
     use type_properties,        only: properties_t
     use type_solverdata,        only: solverdata_t
     use mod_interpolate,        only: interpolate_element_standard
@@ -44,7 +45,7 @@ contains
     subroutine compute(self,idomain,mesh,prop,sdata,cfl,itime)
         class(fluid_pseudo_timestep_t), intent(in)      :: self
         integer(ik),                    intent(in)      :: idomain
-        type(mesh_t),                   intent(inout)   :: mesh(:)
+        type(mesh_t),               intent(inout)   :: mesh
         type(properties_t),             intent(in)      :: prop
         type(solverdata_t),             intent(inout)   :: sdata
         real(rk),                       intent(in)      :: cfl(:)
@@ -57,7 +58,7 @@ contains
 
         real(rk), allocatable, dimension(:) ::  &
                 rho, rhou, rhov, rhow, rhoE,    &
-                p, vmag, c
+                p, vmag, c, r
 
 
         real(rk)    ::  h, lam, gam
@@ -74,7 +75,7 @@ contains
 
 
 
-       do ielem = 1,mesh(idomain)%nelem
+       do ielem = 1,mesh%domain(idomain)%nelem
 
 
             !
@@ -90,22 +91,15 @@ contains
             !
             ! Account for Cylindrical coordinates. Get tangential momentum from angular momentum
             !
-            if ( mesh(idomain)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
-                rhov = rhov / mesh(idomain)%elems(ielem)%quad_pts(:)%c1_
+            if ( mesh%domain(idomain)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
+                rhov = rhov / mesh%domain(idomain)%elems(ielem)%quad_pts(:)%c1_
             end if
 
             !
             ! Compute pressure
             !
-            !p = prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE)
             gam = 1.4_rk
             p = (gam - ONE)*(rhoE - HALF*(rhou*rhou + rhov*rhov + rhow*rhow)/rho )
-
-            !
-            ! Compute cell sound speed
-            !
-            !gam = prop%fluid%compute_gamma(rho,rhou,rhov,rhow,rhoE)
-
 
             
 
@@ -132,7 +126,9 @@ contains
             !
             ! Compute velocity magnitude
             !
+            r = mesh%domain(idomain)%elems(ielem)%quad_pts(:)%c1_
             vmag = sqrt((rhou*rhou + rhov*rhov + rhow*rhow)/(rho*rho))
+            !vmag = sqrt((rhou*rhou + (rhov-rho*omega*r)*(rhov-rho*omega*r) + rhow*rhow)/(rho*rho))
 
 
             !
@@ -145,7 +141,7 @@ contains
             !
             ! Compute element spacing parameter
             !
-            h = mesh(idomain)%elems(ielem)%vol**(THIRD)
+            h = mesh%domain(idomain)%elems(ielem)%vol**(THIRD)
 
 
             !
@@ -153,7 +149,7 @@ contains
             !
             !sdata%dt(idomain,ielem) = (cfl*h)/lam
             do ieqn = 1,size(cfl)
-                mesh(idomain)%elems(ielem)%dtau(ieqn) = cfl(ieqn)*h/lam
+                mesh%domain(idomain)%elems(ielem)%dtau(ieqn) = cfl(ieqn)*h/lam
             end do
 
 

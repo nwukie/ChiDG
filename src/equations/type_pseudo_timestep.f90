@@ -1,6 +1,6 @@
 module type_pseudo_timestep
     use mod_kinds,          only: ik, rk
-    use type_mesh,          only: mesh_t
+    use type_mesh,      only: mesh_t
     use type_solverdata,    only: solverdata_t
     use type_properties,    only: properties_t
     implicit none
@@ -33,7 +33,7 @@ module type_pseudo_timestep
             import solverdata_t
             class(pseudo_timestep_t),   intent(in)      :: self
             integer(ik),                intent(in)      :: idomain
-            type(mesh_t),               intent(inout)   :: mesh(:)
+            type(mesh_t),           intent(inout)   :: mesh
             type(properties_t),         intent(in)      :: prop
             type(solverdata_t),         intent(inout)   :: sdata
             real(rk),                   intent(in)      :: cfl(:)
@@ -88,7 +88,7 @@ contains
     subroutine compute(self,idomain,mesh,prop,sdata,cfl,itime)
         class(default_pseudo_timestep_t),   intent(in)      :: self
         integer(ik),                        intent(in)      :: idomain
-        type(mesh_t),                       intent(inout)   :: mesh(:)
+        type(mesh_t),                   intent(inout)   :: mesh
         type(properties_t),                 intent(in)      :: prop
         type(solverdata_t),                 intent(inout)   :: sdata
         real(rk),                           intent(in)      :: cfl(:)
@@ -101,12 +101,12 @@ contains
         !
         ! Loop through elements and compute time-step function
         !
-       do ielem = 1,mesh(idomain)%nelem
+       do ielem = 1,mesh%domain(idomain)%nelem
 
             !
             ! Compute element spacing parameter
             !
-            h = mesh(idomain)%elems(ielem)%vol**(1._rk / 3._rk)
+            h = mesh%domain(idomain)%elems(ielem)%vol**(1._rk / 3._rk)
 
 
             !
@@ -114,7 +114,7 @@ contains
             !
             !sdata%dt(idomain,ielem) = cfl*h
             do ieqn = 1,size(cfl)
-                mesh(idomain)%elems(ielem)%dtau(ieqn) = cfl(ieqn)*h
+                mesh%domain(idomain)%elems(ielem)%dtau(ieqn) = cfl(ieqn)*h
             end do
 
 

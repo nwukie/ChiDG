@@ -50,7 +50,7 @@ contains
         class(wall_distance_m), intent(inout)   :: self
 
         call self%set_name('Wall Distance : p-Poisson Normalization')
-        call self%set_dependency('Q-')
+        call self%set_dependency('f(Q-)')
 
         call self%add_model_field('Wall Distance')
 

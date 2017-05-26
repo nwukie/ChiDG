@@ -5,6 +5,7 @@ module bc_state_spalart_allmaras_farfield
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use ieee_arithmetic,        only: ieee_is_nan
+    use mpi_f08,                only: mpi_comm
     use DNAD_D
     implicit none
     
@@ -55,7 +56,6 @@ contains
         call self%bcproperties%add('Turbulent Viscosity Ratio', 'Required')
         call self%set_fcn_option('Turbulent Viscosity Ratio', 'val', 3._rk)
 
-
     end subroutine init
     !********************************************************************************
 
@@ -73,10 +73,11 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine compute_bc_state(self,worker,prop)
+    subroutine compute_bc_state(self,worker,prop,bc_COMM)
         class(spalart_allmaras_farfield_t), intent(inout)   :: self
         type(chidg_worker_t),               intent(inout)   :: worker
         class(properties_t),                intent(inout)   :: prop
+        type(mpi_comm),                     intent(in)      :: bc_COMM
 
 
         ! Storage at quadrature nodes
@@ -143,7 +144,7 @@ contains
         !
         density_nutilde_bc = density_nutilde_m
         where(inflow)
-            density_nutilde_bc = density_m * (nutilde_nu * 1.e-5_rk)
+            density_nutilde_bc = density_m * (nutilde_nu * 0.00018_rk)
         end where
 
 

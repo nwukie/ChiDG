@@ -49,7 +49,7 @@ contains
         class(constant_viscosity_t), intent(inout)   :: self
 
         call self%set_name('Constant Viscosity')
-        call self%set_dependency('Q-')
+        call self%set_dependency('f(Q-)')
 
         call self%add_model_field('Laminar Viscosity')
 
@@ -74,7 +74,8 @@ contains
         type(AD_D), dimension(:),   allocatable :: &
             viscosity, T
 
-        real(rk) :: mu0 = 0.00018_rk  ! [kg/(m*s)]
+        !real(rk) :: mu0 = 2.0831e-5_rk  ! [kg/(m*s)]
+        real(rk) :: mu0 = 1.6343e-5_rk  ! [kg/(m*s)]
 
         !
         ! Interpolate solution to quadrature nodes

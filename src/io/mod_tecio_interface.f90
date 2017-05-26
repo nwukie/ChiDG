@@ -1,8 +1,9 @@
 module mod_tecio_interface
+#include<messenger.h>
     use iso_c_binding
     use mod_kinds,      only: rk,ik,rdouble,TEC
     use mod_constants,  only: OUTPUT_RES
-    use type_mesh,      only: mesh_t
+    use type_domain,    only: domain_t
 
 
     implicit none
@@ -46,7 +47,7 @@ contains
                             debug,                      &
                             isdouble)
 
-        if (tecstat /= 0) stop "Error: Initializing TECINI142"
+        if (tecstat /= 0) call chidg_signal(FATAL,"init_tecio_file: Error in TecIO file initialization.")
 
     end subroutine init_tecio_file
     !*****************************************************************************************
@@ -70,16 +71,14 @@ contains
     !!
     !!  @param[in]  zonetitle   Name for the zone being initialized.
     !!  @param[in]  mesh        mesh_t containing the mesh description to be initialized.
-    !!  @param[in]  writetype   Intidate if a Grid or Solution file is being written.
     !!  @param[in]  timeindex   Integer index of time strand.
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine init_tecio_zone(zonetitle,mesh,writetype,timeindex)
-            type(mesh_t) , intent(in)        :: mesh
-            integer(ik)  , intent(in)        :: writetype
-            integer(ik)  , intent(in)        :: timeindex
+    subroutine init_tecio_zone(zonetitle,domain,timeindex)
+            character(*),   intent(in)  :: zonetitle
+            type(domain_t), intent(in)  :: domain
+            integer(ik),    intent(in)  :: timeindex
 
-            character(*)   :: zonetitle
             integer(TEC)   :: zonetype                  = 5    ! 0 - ordered, 5 - FEBRICK
             integer(TEC)   :: numpts
             integer(TEC)   :: numelements
@@ -108,8 +107,8 @@ contains
             solutiontime = real(timeindex,rk)
             strandid = timeindex
 
-            numpts      = (OUTPUT_RES+1)*(OUTPUT_RES+1)*(OUTPUT_RES+1) * mesh%nelem
-            numelements = (OUTPUT_RES*OUTPUT_RES*OUTPUT_RES) * mesh%nelem
+            numpts      = (OUTPUT_RES+1)*(OUTPUT_RES+1)*(OUTPUT_RES+1) * domain%nelem
+            numelements = (OUTPUT_RES*OUTPUT_RES*OUTPUT_RES) * domain%nelem
 
 
 
@@ -134,7 +133,8 @@ contains
                                 NullPtr,                    &
                                 NullPtr,                    &
                                 sharconnfrom)
-            if(tecstat /= 0) stop "Error in TECZNE initialization"
+
+            if(tecstat /= 0) call chidg_signal(FATAL,"init_tecio_zone: Error in TecIO zone initialization.")
 
     end subroutine init_tecio_zone
     !****************************************************************************************
@@ -157,7 +157,7 @@ contains
         integer(kind=TEC) :: tecstat
 
         tecstat = TECEND142()
-        if (tecstat /= 0) stop "Error: TECIO finalization error"
+        if (tecstat /= 0) call chidg_signal(FATAL,"finalize_tecio: Error in TecIO file end.")
 
     end subroutine finalize_tecio
     !*****************************************************************************************

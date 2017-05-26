@@ -99,8 +99,8 @@ contains
     !!
     !--------------------------------------------------------------------------------------
     subroutine push_back(self,element)
-        class(bcvector_t),      intent(inout)   :: self
-        class(bc_state_t),   intent(in)      :: element
+        class(bcvector_t),  intent(inout)   :: self
+        class(bc_state_t),  intent(in)      :: element
 
         logical     :: capacity_reached
         integer(ik) :: size, ierr
@@ -119,7 +119,6 @@ contains
         ! Add element to end of vector
         !
         size = self%size()
-        !allocate(self%data(size + 1)%item, source=element, stat=ierr)
         allocate(self%data(size + 1)%state, source=element, stat=ierr)
         if (ierr /= 0) call AllocationError
 

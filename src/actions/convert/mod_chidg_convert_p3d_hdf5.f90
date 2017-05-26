@@ -22,6 +22,7 @@ module mod_chidg_convert_p3d_hdf5
     use mod_plot3d_utilities,   only: get_block_elements_plot3d, get_block_boundary_faces_plot3d, &
                                       check_block_mapping_conformation_plot3d, get_block_points_plot3d
     use type_point,             only: point_t
+    use type_chidg,             only: chidg_t
     use hdf5
     use h5lt
     implicit none
@@ -42,6 +43,9 @@ contains
     !-----------------------------------------------------------------------------------------------
     subroutine chidg_convert_p3d_hdf5(filename)
         character(*),   intent(in)  :: filename
+
+        ! ChiDG environment for messages and loggin
+        type(chidg_t)               :: chidg
 
         ! File, group vars
         character(1024)             :: file_prefix, hdf_file, blockgroup, blockname
@@ -65,6 +69,11 @@ contains
         character(len=1024)         :: eqnset_string
 
 
+        !
+        ! Initialize logs and infrastructure
+        !
+        call chidg%start_up('mpi')
+        call chidg%start_up('core')
     
         !
         ! Send output to screen, not file.
@@ -96,8 +105,10 @@ contains
         !
         ! Create base ChiDG file and get file identifier
         !
-        call initialize_file_hdf(file_prefix)
-        file_id = open_file_hdf(file_prefix)
+        !call initialize_file_hdf(file_prefix)
+        !file_id = open_file_hdf(file_prefix)
+        call initialize_file_hdf(hdf_file)
+        file_id = open_file_hdf(hdf_file)
 
 
         !

@@ -16,7 +16,7 @@ module mod_gridgen_blocks
                                       set_bc_patch_group_hdf
 
     use type_point,             only: point_t
-    use type_bc_group,          only: bc_group_t
+    use type_bc_state_group,    only: bc_state_group_t
     use type_bc_state,          only: bc_state_t
     use type_bc_state_wrapper,  only: bc_state_wrapper_t
     use hdf5
@@ -74,11 +74,11 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine create_mesh_file__singleblock(filename,equation_sets,group_names,bc_groups,nelem_xi,nelem_eta,nelem_zeta,clusterx)
+    subroutine create_mesh_file__singleblock(filename,equation_sets,group_names,bc_state_groups,nelem_xi,nelem_eta,nelem_zeta,clusterx)
         character(*),               intent(in)              :: filename
         type(string_t),             intent(in), optional    :: equation_sets(:)
         type(string_t),             intent(in), optional    :: group_names(:,:)
-        type(bc_group_t),           intent(in), optional    :: bc_groups(:)
+        type(bc_state_group_t),     intent(in), optional    :: bc_state_groups(:)
         integer(ik),                intent(in)              :: nelem_xi
         integer(ik),                intent(in)              :: nelem_eta
         integer(ik),                intent(in)              :: nelem_zeta
@@ -151,14 +151,16 @@ contains
         !
         ! Add bc_group's
         !
-        if (present(bc_groups)) then
-            do igroup = 1,size(bc_groups)
-                call create_bc_group_hdf(file_id,bc_groups(igroup)%name)
+        if (present(bc_state_groups)) then
+            do igroup = 1,size(bc_state_groups)
+                call create_bc_group_hdf(file_id,bc_state_groups(igroup)%name)
 
-                bcgroup_id = open_bc_group_hdf(file_id,bc_groups(igroup)%name)
+                bcgroup_id = open_bc_group_hdf(file_id,bc_state_groups(igroup)%name)
 
-                do istate = 1,bc_groups(igroup)%bc_states%size()
-                    call add_bc_state_hdf(bcgroup_id, bc_groups(igroup)%bc_states%at(istate))
+                !do istate = 1,bc_state_groups(igroup)%bc_states%size()
+                do istate = 1,bc_state_groups(igroup)%nbc_states()
+                    !call add_bc_state_hdf(bcgroup_id, bc_state_groups(igroup)%bc_state%at(istate))
+                    call add_bc_state_hdf(bcgroup_id, bc_state_groups(igroup)%bc_state(istate)%state)
                 end do
                 call close_bc_group_hdf(bcgroup_id)
             end do
@@ -224,16 +226,16 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------
-    subroutine create_mesh_file__multiblock(filename,equation_sets,group_names,bc_groups,     &
+    subroutine create_mesh_file__multiblock(filename,equation_sets,group_names,bc_state_groups,     &
                                                           nelem_xi,  nelem_eta,  nelem_zeta,  &
                                                           xmax,ymax,zmax,clusterx)
-        character(*),       intent(in)              :: filename
-        type(string_t),     intent(in), optional    :: equation_sets(:)
-        type(string_t),     intent(in), optional    :: group_names(:,:)
-        type(bc_group_t),   intent(in), optional    :: bc_groups(:)
-        integer(ik),        intent(in)              :: nelem_xi,  nelem_eta,  nelem_zeta
-        real(rk),           intent(in), optional    :: xmax, ymax, zmax
-        integer(ik),        intent(in), optional    :: clusterx
+        character(*),           intent(in)              :: filename
+        type(string_t),         intent(in), optional    :: equation_sets(:)
+        type(string_t),         intent(in), optional    :: group_names(:,:)
+        type(bc_state_group_t), intent(in), optional    :: bc_state_groups(:)
+        integer(ik),            intent(in)              :: nelem_xi,  nelem_eta,  nelem_zeta
+        real(rk),               intent(in), optional    :: xmax, ymax, zmax
+        integer(ik),            intent(in), optional    :: clusterx
 
         class(bc_state_t),  allocatable                 :: bc_state
         character(8)                                    :: faces(6)
@@ -386,14 +388,16 @@ contains
         !
         ! Add bc_group's
         !
-        if (present(bc_groups)) then
-            do igroup = 1,size(bc_groups)
-                call create_bc_group_hdf(file_id,bc_groups(igroup)%name)
+        if (present(bc_state_groups)) then
+            do igroup = 1,size(bc_state_groups)
+                call create_bc_group_hdf(file_id,bc_state_groups(igroup)%name)
 
-                bcgroup_id = open_bc_group_hdf(file_id,bc_groups(igroup)%name)
+                bcgroup_id = open_bc_group_hdf(file_id,bc_state_groups(igroup)%name)
 
-                do istate = 1,bc_groups(igroup)%bc_states%size()
-                    call add_bc_state_hdf(bcgroup_id, bc_groups(igroup)%bc_states%at(istate))
+                !do istate = 1,bc_state_groups(igroup)%bc_states%size()
+                do istate = 1,bc_state_groups(igroup)%nbc_states()
+                    !call add_bc_state_hdf(bcgroup_id, bc_state_groups(igroup)%bc_states%at(istate))
+                    call add_bc_state_hdf(bcgroup_id, bc_state_groups(igroup)%bc_state(istate)%state)
                 end do
                 call close_bc_group_hdf(bcgroup_id)
             end do
@@ -518,13 +522,13 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine create_mesh_file__D2E8M1(filename,abutting,matching,equation_sets,group_names,bc_groups)
-        character(*),       intent(in)              :: filename
-        logical,            intent(in)              :: abutting
-        logical,            intent(in)              :: matching
-        type(string_t),     intent(in), optional    :: equation_sets(:)
-        type(string_t),     intent(in), optional    :: group_names(:,:)
-        type(bc_group_t),   intent(in), optional    :: bc_groups(:)
+    subroutine create_mesh_file__D2E8M1(filename,abutting,matching,equation_sets,group_names,bc_state_groups)
+        character(*),           intent(in)              :: filename
+        logical,                intent(in)              :: abutting
+        logical,                intent(in)              :: matching
+        type(string_t),         intent(in), optional    :: equation_sets(:)
+        type(string_t),         intent(in), optional    :: group_names(:,:)
+        type(bc_state_group_t), intent(in), optional    :: bc_state_groups(:)
 
         class(bc_state_t),  allocatable                 :: bc_state
         character(8)                                    :: faces(5)
@@ -648,7 +652,7 @@ contains
         !
         ! Add bc_group's
         !
-        if (present(bc_groups)) then
+        if (present(bc_state_groups)) then
             user_msg = 'create_mesh_file__D2E8M1: Not quite ready to accept custom bc_group sets.'
             call chidg_signal(FATAL,user_msg)
         else

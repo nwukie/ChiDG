@@ -2,7 +2,7 @@ module type_chidg_cache
 #include <messenger.h>
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: NFACES, CACHE_FACE_INTERIOR, CACHE_FACE_EXTERIOR
-    use type_mesh,          only: mesh_t
+    use type_mesh,      only: mesh_t
     use type_properties,    only: properties_t
     use type_seed,          only: seed_t
     use DNAD_D
@@ -56,7 +56,7 @@ contains
     !--------------------------------------------------------------------------------------
     subroutine resize(self,mesh,prop,idomain_l,ielement_l,differentiate)
         class(chidg_cache_t),   intent(inout)   :: self
-        type(mesh_t),           intent(in)      :: mesh(:)
+        type(mesh_t),       intent(in)      :: mesh
         type(properties_t),     intent(in)      :: prop(:)
         integer(ik),            intent(in)      :: idomain_l
         integer(ik),            intent(in)      :: ielement_l

@@ -58,8 +58,11 @@ module type_time_integrator
 
 
         ! Must define this procedure in any extended type
-        procedure(data_interface),   deferred   :: step             ! define the time integrator stepping procedure
-        procedure(state_interface),  deferred   :: initialize_state ! process a read solution for the current time-integrator
+        procedure(data_interface),   deferred   :: step                 ! define the time integrator stepping procedure
+        procedure(state_interface),  deferred   :: initialize_state     ! process a read solution for the current time-integrator
+        procedure(write_interface),  deferred   :: write_time_options   ! write time integrator options to .h5 file
+        procedure(read_interface),   deferred   :: read_time_options    ! read time integrator options from .h5 file
+        procedure(post_interface),   deferred   :: process_data_for_output   
 
     end type time_integrator_t
     !*****************************************************************************************
@@ -104,6 +107,42 @@ module type_time_integrator
             type(chidg_data_t),                     intent(inout)   :: data
         end subroutine
     end interface
+
+
+    ! Interface for writing time_integrator options to hdf5 file
+    abstract interface
+        subroutine write_interface(self,data,filename)
+            use type_chidg_data,        only: chidg_data_t
+            import time_integrator_t
+            class(time_integrator_t),               intent(inout)   :: self
+            type(chidg_data_t),                     intent(inout)   :: data
+            character(*),                           intent(in)      :: filename
+        end subroutine
+    end interface
+
+
+    ! Interface for reading time_integrator options from .h5 file
+    abstract interface
+        subroutine read_interface(self,data,filename)
+            use type_chidg_data,        only: chidg_data_t
+            import time_integrator_t
+            class(time_integrator_t),               intent(inout)   :: self
+            type(chidg_data_t),                     intent(inout)   :: data
+            character(*),                           intent(in)      :: filename
+        end subroutine
+    end interface
+
+
+    ! Interface for modifying data for post processing
+    abstract interface
+        subroutine post_interface(self,data)
+            use type_chidg_data,        only: chidg_data_t
+            import time_integrator_t
+            class(time_integrator_t),           intent(inout)   :: self
+            type(chidg_data_t),                 intent(inout)   :: data
+        end subroutine
+    end interface
+
 
 
 contains

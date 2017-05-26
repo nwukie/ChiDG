@@ -1,5 +1,8 @@
 module euler_bc_operator
+#include <messenger.h>
     use mod_kinds,          only: ik, rk
+    use mod_constants,      only: ZERO
+    use mod_fluid,          only: omega
     use type_operator,      only: operator_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
@@ -90,15 +93,12 @@ contains
         ! data at quadrature nodes
         type(AD_D), allocatable, dimension(:)   ::              &
             density_bc, mom1_bc, mom2_bc, mom3_bc, energy_bc,   &
-            u_bc, v_bc, w_bc, H_bc, p_bc,                       &
+            H_bc, p_bc, u_a, v_a, w_a,                          &
             flux_1, flux_2, flux_3, integrand
 
         real(rk),   allocatable, dimension(:)   ::  &
-            norm_1, norm_2, norm_3
+            norm_1, norm_2, norm_3, r
             
-        real(rk) :: gam_bc
-
-
 
         !
         ! Interpolate boundary condition state to face quadrature nodes
@@ -113,35 +113,37 @@ contains
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
+        r = worker%coordinate('1','boundary') 
         if (worker%coordinate_system() == 'Cylindrical') then
-            mom2_bc = mom2_bc / worker%coordinate('1','boundary')
+            mom2_bc = mom2_bc / r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 
 
-
-
+        !
+        ! Get normal vector
+        !
         norm_1 = worker%normal(1)
         norm_2 = worker%normal(2)
         norm_3 = worker%normal(3)
 
+        
+        !
+        ! Get fluid advection velocity
+        !
+        u_a = worker%get_model_field_face('Advection Velocity-1', 'value', 'boundary')
+        v_a = worker%get_model_field_face('Advection Velocity-2', 'value', 'boundary')
+        w_a = worker%get_model_field_face('Advection Velocity-3', 'value', 'boundary')
 
 
         !
-        ! Compute gamma
+        ! Get pressure
         !
-        p_bc   = worker%get_model_field_face('Pressure','value','boundary')
-        gam_bc = 1.4_rk
-
-
-
-        !
-        ! Compute velocity components
-        !
-        u_bc = mom1_bc/density_bc
-        v_bc = mom2_bc/density_bc
-        w_bc = mom3_bc/density_bc
-
+        p_bc = worker%get_model_field_face('Pressure','value','boundary')
 
 
         !
@@ -150,26 +152,23 @@ contains
         H_bc = (energy_bc + p_bc)/density_bc
 
 
-
-
         !=================================================
         ! mass flux
         !=================================================
-        flux_1 = (density_bc * u_bc)
-        flux_2 = (density_bc * v_bc)
-        flux_3 = (density_bc * w_bc)
+        flux_1 = (density_bc * u_a )
+        flux_2 = (density_bc * v_a )
+        flux_3 = (density_bc * w_a )
 
         integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-
 
         call worker%integrate_boundary('Density',integrand)
 
         !=================================================
         ! momentum-1 flux
         !=================================================
-        flux_1 = (density_bc * u_bc * u_bc) + p_bc
-        flux_2 = (density_bc * u_bc * v_bc)
-        flux_3 = (density_bc * u_bc * w_bc)
+        flux_1 = (mom1_bc * u_a) + p_bc
+        flux_2 = (mom1_bc * v_a)
+        flux_3 = (mom1_bc * w_a)
 
         integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
 
@@ -178,9 +177,9 @@ contains
         !=================================================
         ! momentum-2 flux
         !=================================================
-        flux_1 = (density_bc * v_bc * u_bc)
-        flux_2 = (density_bc * v_bc * v_bc) + p_bc
-        flux_3 = (density_bc * v_bc * w_bc)
+        flux_1 = (mom2_bc * u_a)
+        flux_2 = (mom2_bc * v_a) + p_bc
+        flux_3 = (mom2_bc * w_a)
 
         integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
 
@@ -188,7 +187,11 @@ contains
         ! Convert to tangential to angular momentum flux
         !
         if (worker%coordinate_system() == 'Cylindrical') then
-            integrand = integrand * worker%coordinate('1','boundary')
+            integrand = integrand * r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
         call worker%integrate_boundary('Momentum-2',integrand)
@@ -196,21 +199,20 @@ contains
         !=================================================
         ! momentum-3 flux
         !=================================================
-        flux_1 = (density_bc * w_bc * u_bc)
-        flux_2 = (density_bc * w_bc * v_bc)
-        flux_3 = (density_bc * w_bc * w_bc) + p_bc
+        flux_1 = (mom3_bc * u_a)
+        flux_2 = (mom3_bc * v_a)
+        flux_3 = (mom3_bc * w_a) + p_bc
 
         integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-
 
         call worker%integrate_boundary('Momentum-3',integrand)
 
         !=================================================
         ! energy flux
         !=================================================
-        flux_1 = (density_bc * u_bc * H_bc)
-        flux_2 = (density_bc * v_bc * H_bc)
-        flux_3 = (density_bc * w_bc * H_bc)
+        flux_1 = (density_bc * H_bc * u_a)
+        flux_2 = (density_bc * H_bc * v_a)  +  omega*r*p_bc
+        flux_3 = (density_bc * H_bc * w_a)
 
         integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
 

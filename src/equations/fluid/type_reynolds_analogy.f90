@@ -23,7 +23,8 @@ module type_reynolds_analogy
     type, extends(model_t)  :: reynolds_analogy_t
 
         real(rk)    :: Cp = 1003.0_rk
-        real(rk)    :: Pr = 0.8_rk
+        !real(rk)    :: Pr = 0.8_rk
+        real(rk)    :: Pr = 0.72_rk
 
     contains
 
@@ -52,7 +53,7 @@ contains
         class(reynolds_analogy_t), intent(inout)   :: self
 
         call self%set_name('Reynolds Analogy')
-        call self%set_dependency('Q-')
+        call self%set_dependency('f(Q-)')
 
         call self%add_model_field('Laminar Thermal Conductivity')
 

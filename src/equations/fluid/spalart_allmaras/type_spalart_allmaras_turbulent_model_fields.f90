@@ -54,7 +54,7 @@ contains
         class(spalart_allmaras_turbulent_model_fields_t), intent(inout)   :: self
 
         call self%set_name('Spalart Allmaras Turbulent Model Fields')
-        call self%set_dependency('Q-')
+        call self%set_dependency('f(Q-)')
 
         call self%add_model_field('Turbulent Viscosity')
         call self%add_model_field('Second Coefficient of Turbulent Viscosity')

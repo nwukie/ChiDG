@@ -3,7 +3,7 @@ module type_cache_data
     use mod_kinds,                  only: ik, rk
     use mod_constants,              only: INTERIOR, BOUNDARY, CHIMERA, ZERO
     use type_cache_data_field,      only: cache_data_field_t
-    use type_mesh,                  only: mesh_t
+    use type_mesh,              only: mesh_t
     use type_properties,            only: properties_t
     use type_seed,                  only: seed_t
     use DNAD_D
@@ -52,7 +52,7 @@ contains
     subroutine resize(self,cache_component,mesh,prop,idomain_l,ielement_l,iface,differentiate)
         class(cache_data_t),    intent(inout)           :: self
         character(*),           intent(in)              :: cache_component
-        type(mesh_t),           intent(in)              :: mesh(:)
+        type(mesh_t),       intent(in)              :: mesh
         type(properties_t),     intent(in)              :: prop(:)
         integer(ik),            intent(in)              :: idomain_l
         integer(ik),            intent(in)              :: ielement_l
@@ -61,10 +61,15 @@ contains
 
         integer(ik)                 :: nprimary_fields,nmodel_fields, ntotal_fields, ierr, &
                                        ChiID, donor_idomain, ifield, iprimary_field, imodel_field, &
-                                       nauxiliary_fields, iauxiliary_field
+                                       nauxiliary_fields, iauxiliary_field, eqn_ID
         logical                     :: interior_face, chimera_face, boundary_face, reallocate
         character(:),   allocatable :: field, user_msg
 
+        
+        !
+        ! Get equation set index
+        !
+        eqn_ID = mesh%domain(idomain_l)%eqn_ID
 
         !
         ! Check if iface was provided for face-type caches
@@ -82,35 +87,34 @@ contains
 
         select case (trim(cache_component))
             case ('element')
-                nprimary_fields   = prop(idomain_l)%nprimary_fields()
-                nauxiliary_fields = prop(idomain_l)%nauxiliary_fields()
-                nmodel_fields     = prop(idomain_l)%nmodel_fields()
+                nprimary_fields   = prop(eqn_ID)%nprimary_fields()
+                nauxiliary_fields = prop(eqn_ID)%nauxiliary_fields()
+                nmodel_fields     = prop(eqn_ID)%nmodel_fields()
             case ('face interior')
-                nprimary_fields   = prop(idomain_l)%nprimary_fields()
-                nauxiliary_fields = prop(idomain_l)%nauxiliary_fields()
-                nmodel_fields     = prop(idomain_l)%nmodel_fields()
+                nprimary_fields   = prop(eqn_ID)%nprimary_fields()
+                nauxiliary_fields = prop(eqn_ID)%nauxiliary_fields()
+                nmodel_fields     = prop(eqn_ID)%nmodel_fields()
 
 
             case ('face exterior')
 
-                interior_face = (mesh(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR)
-                chimera_face  = (mesh(idomain_l)%faces(ielement_l,iface)%ftype == CHIMERA )
-                boundary_face = (mesh(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY)
+                interior_face = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR)
+                chimera_face  = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == CHIMERA )
+                boundary_face = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY)
 
                 if (interior_face .or. boundary_face) then
-                    nprimary_fields   = prop(idomain_l)%nprimary_fields()
-                    nauxiliary_fields = prop(idomain_l)%nauxiliary_fields()
-                    nmodel_fields     = prop(idomain_l)%nmodel_fields()
+                    nprimary_fields   = prop(eqn_ID)%nprimary_fields()
+                    nauxiliary_fields = prop(eqn_ID)%nauxiliary_fields()
+                    nmodel_fields     = prop(eqn_ID)%nmodel_fields()
                 else if (chimera_face) then
-                    ChiID = mesh(idomain_l)%faces(ielement_l,iface)%ChiID
+                    ChiID = mesh%domain(idomain_l)%faces(ielement_l,iface)%ChiID
                     ! To handle different fields on either side of the chimera boundary,
                     ! we will have to store the properties_t of the chimera donors so
                     ! we can query them here. For now, just use the source domain
                     ! and assume they have the same fields.
-                    !neqns = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_neqns%at(1)
-                    nprimary_fields   = mesh(idomain_l)%chimera%recv%data(ChiID)%donor_neqns%at(1)
-                    nauxiliary_fields = prop(idomain_l)%nauxiliary_fields()
-                    nmodel_fields     = prop(idomain_l)%nmodel_fields()
+                    nprimary_fields   = mesh%domain(idomain_l)%chimera%recv%data(ChiID)%donor_neqns%at(1)
+                    nauxiliary_fields = prop(eqn_ID)%nauxiliary_fields()
+                    nmodel_fields     = prop(eqn_ID)%nmodel_fields()
                 else
                     call chidg_signal(FATAL,"cache_data: Face type wasn't recognized")
                 end if
@@ -149,24 +153,24 @@ contains
 
         ! Resize primary fields
         ifield = 1
-        do iprimary_field = 1,prop(idomain_l)%nprimary_fields()
-            field = prop(idomain_l)%get_primary_field_name(iprimary_field)
+        do iprimary_field = 1,prop(eqn_ID)%nprimary_fields()
+            field = prop(eqn_ID)%get_primary_field_name(iprimary_field)
             call self%fields(ifield)%resize(field,cache_component,mesh,prop,idomain_l,ielement_l,iface,differentiate)
             ifield = ifield + 1
         end do
 
 
         ! Resize model fields
-        do imodel_field = 1,prop(idomain_l)%nmodel_fields()
-            field = prop(idomain_l)%get_model_field_name(imodel_field)
+        do imodel_field = 1,prop(eqn_ID)%nmodel_fields()
+            field = prop(eqn_ID)%get_model_field_name(imodel_field)
             call self%fields(ifield)%resize(field,cache_component,mesh,prop,idomain_l,ielement_l,iface,differentiate)
             ifield = ifield + 1
         end do
 
 
         ! Resize auxiliary fields
-        do iauxiliary_field = 1,prop(idomain_l)%nauxiliary_fields()
-            field = prop(idomain_l)%get_auxiliary_field_name(iauxiliary_field)
+        do iauxiliary_field = 1,prop(eqn_ID)%nauxiliary_fields()
+            field = prop(eqn_ID)%get_auxiliary_field_name(iauxiliary_field)
             call self%fields(ifield)%resize(field,cache_component,mesh,prop,idomain_l,ielement_l,iface,differentiate)
             ifield = ifield + 1
         end do

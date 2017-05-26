@@ -41,12 +41,14 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------
-    subroutine chidg_post_hdf2tec(filename)
-        character(*)    :: filename
+    subroutine chidg_post_hdf2tec(grid_file,solution_file)
+        character(*)    :: grid_file
+        character(*)    :: solution_file
     
         type(chidg_t)                       :: chidg
         type(file_properties_t)             :: file_props
         character(:),           allocatable :: eqnset
+        character(:),           allocatable :: time_string
         integer(ik)                         :: nterms_s, spacedim, solution_order
 
 
@@ -60,25 +62,19 @@ contains
 
 
 
-
-
-
         !
         ! Get nterms_s and eqnset.
         !
-        file_props = get_properties_hdf(filename)
+        file_props = get_properties_hdf(solution_file)
 
         nterms_s    = file_props%nterms_s(1)
         eqnset      = file_props%eqnset(1)
         spacedim    = file_props%spacedim(1)
+        time_string = file_props%time_integrator
 
 
 
 
-        !
-        ! Read grid data from file
-        !
-        call chidg%read_grid(filename,spacedim)
 
 
         solution_order = 0
@@ -91,29 +87,33 @@ contains
         ! Initialize solution data storage
         !
         call chidg%set('Solution Order', integer_input=solution_order)
-!        call chidg%initialize_solution_domains()
-        call chidg%init('domains')
-        call chidg%init('communication')
-        call chidg%init('solvers')
-!        call chidg%initialize_solution_solver()
+        call chidg%set('Time Integrator', algorithm=trim(time_string))
+        call chidg%time_integrator%initialize_state(chidg%data)
+        !call chidg%init('domains')
+        !call chidg%init('communication')
+        !call chidg%init('solvers')
 
 
 
 
         !
-        ! Read solution modes from HDF5
+        ! Read grid/solution modes and time integrator options from HDF5
         !
-        call chidg%read_solution(filename)
-
-
+        call chidg%read_grid(grid_file,spacedim)
+        call chidg%read_solution(solution_file)
+        call chidg%time_integrator%read_time_options(chidg%data,solution_file)
 
 
         !
-        ! Write solution in TecIO format
+        ! Get post processing data (q_out)
         !
-        call write_tecio_variables(chidg%data,'0.plt',1)
+        call chidg%time_integrator%process_data_for_output(chidg%data)
 
-
+        
+        !
+        ! Write solution
+        !
+        call write_tecio_variables(chidg%data,'0.plt')
         
 
         !

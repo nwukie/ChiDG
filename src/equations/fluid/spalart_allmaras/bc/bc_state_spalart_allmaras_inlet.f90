@@ -5,6 +5,7 @@ module bc_state_spalart_allmaras_inlet
     use type_bc_state,          only: bc_state_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
+    use mpi_f08,                only: mpi_comm
     use DNAD_D
     implicit none
     
@@ -74,10 +75,11 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine compute_bc_state(self,worker,prop)
-        class(spalart_allmaras_inlet_t),          intent(inout)   :: self
-        type(chidg_worker_t),   intent(inout)   :: worker
-        class(properties_t),    intent(inout)   :: prop
+    subroutine compute_bc_state(self,worker,prop,bc_COMM)
+        class(spalart_allmaras_inlet_t),    intent(inout)   :: self
+        type(chidg_worker_t),               intent(inout)   :: worker
+        class(properties_t),                intent(inout)   :: prop
+        type(mpi_comm),                     intent(in)      :: bc_COMM
 
 
         ! Storage at quadrature nodes
@@ -88,8 +90,6 @@ contains
             grad3_density_nutilde_m,                    &
             density_m, mu_m, nu_m
 
-        real(rk)                                    :: time
-        type(point_t),  allocatable, dimension(:)   :: coords
         real(rk),       allocatable, dimension(:)   :: nutilde_nu
 
 
@@ -108,17 +108,20 @@ contains
         !
         ! Get User boundary condition viscosity ratio
         !
-        coords = worker%coords()
-        time   = worker%time()
-        nutilde_nu = self%bcproperties%compute('Turbulent Viscosity Ratio',time, coords)
+        nutilde_nu = self%bcproperties%compute('Turbulent Viscosity Ratio',worker%time(), worker%coords())
+
+
+        !
+        ! Get viscosity from interior
+        !
+        mu_m = worker%get_model_field_face('Laminar Viscosity', 'value', 'face interior')
+        nu_m = mu_m/density_m
 
 
         !
         ! Compute boundary condition state
         !
-        !density_nutilde_bc = nutilde_nu * density_nutilde_m
-        !density_nutilde_bc = density_m * (nutilde_nu * nu_m)
-        density_nutilde_bc = density_m * (nutilde_nu * 1.e-5_rk)
+        density_nutilde_bc = density_m * (nutilde_nu * nu_m)
 
 
 

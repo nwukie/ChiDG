@@ -4,7 +4,7 @@ module type_RASILU0_send_comm
     use mod_constants,              only: NFACES, DIAG, INTERIOR
     use mod_chidg_mpi,              only: ChiDG_COMM, IRANK
     use type_ivector,               only: ivector_t
-    use type_mesh,                  only: mesh_t
+    use type_mesh,              only: mesh_t
     use type_chidg_matrix,          only: chidg_matrix_t
     use type_mpi_request_vector,    only: mpi_request_vector_t
     use type_RASILU0_send_comm_dom, only: RASILU0_send_comm_dom_t
@@ -65,7 +65,7 @@ contains
     !-------------------------------------------------------------------------------------------
     subroutine init(self,mesh,A,proc)
         class(RASILU0_send_comm_t), intent(inout)   :: self
-        type(mesh_t),               intent(in)      :: mesh(:)
+        type(mesh_t),           intent(in)      :: mesh
         type(chidg_matrix_t),       intent(in)      :: A
         integer(ik),                intent(in)      :: proc
 
@@ -87,9 +87,9 @@ contains
         !
         ! Accumulate the domains that send to processor 'proc'
         !
-        do idom = 1,size(mesh)
+        do idom = 1,mesh%ndomains()
 
-            send_procs_dom = mesh(idom)%get_send_procs_local()
+            send_procs_dom = mesh%domain(idom)%get_send_procs_local()
 
             ! Check if this domain is communicating with 'proc'
             comm_domain = any(send_procs_dom == proc)
@@ -116,17 +116,17 @@ contains
 
 
             idom = dom_send%at(idom_send)
-            self%dom(idom_send)%idomain_g = mesh(idom)%idomain_g
-            self%dom(idom_send)%idomain_l = mesh(idom)%idomain_l
+            self%dom(idom_send)%idomain_g = mesh%domain(idom)%idomain_g
+            self%dom(idom_send)%idomain_l = mesh%domain(idom)%idomain_l
 
             !
             ! Loop through element faces and find neighbors that are off-processor on 'proc' 
             ! to determine which elements to send as overlap data.
             !
-            do ielem = 1,mesh(idom)%nelem
+            do ielem = 1,mesh%domain(idom)%nelem
                 do iface = 1,NFACES
 
-                    overlap_elem = (mesh(idom)%faces(ielem,iface)%ineighbor_proc == proc)
+                    overlap_elem = (mesh%domain(idom)%faces(ielem,iface)%ineighbor_proc == proc)
 
                     if (overlap_elem) then
                         call self%dom(idom_send)%elem_send%push_back_unique(ielem)
@@ -162,9 +162,9 @@ contains
                 !
                 ! Communicate the indices of the element being sent
                 !
-                call MPI_ISend(mesh(idom)%elems(ielem)%idomain_g,  1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
+                call MPI_ISend(mesh%domain(idom)%elems(ielem)%idomain_g,  1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
                 call self%mpi_requests%push_back(request)
-                call MPI_ISend(mesh(idom)%elems(ielem)%ielement_g, 1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
+                call MPI_ISend(mesh%domain(idom)%elems(ielem)%ielement_g, 1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
                 call self%mpi_requests%push_back(request)
 
 
@@ -189,13 +189,13 @@ contains
                 do iface = 1,NFACES
 
                     ! Get neighbor for iface
-                    if ( (mesh(idom)%faces(ielem,iface)%ftype          == INTERIOR) .and. &
-                         (mesh(idom)%faces(ielem,iface)%ineighbor_proc == IRANK   ) ) then
+                    if ( (mesh%domain(idom)%faces(ielem,iface)%ftype          == INTERIOR) .and. &
+                         (mesh%domain(idom)%faces(ielem,iface)%ineighbor_proc == IRANK   ) ) then
 
 
-                        idomain_g_n  = mesh(idom)%faces(ielem,iface)%ineighbor_domain_g
-                        ielement_g_n = mesh(idom)%faces(ielem,iface)%ineighbor_element_g
-                        ielement_l_n = mesh(idom)%faces(ielem,iface)%ineighbor_element_l
+                        idomain_g_n  = mesh%domain(idom)%faces(ielem,iface)%ineighbor_domain_g
+                        ielement_g_n = mesh%domain(idom)%faces(ielem,iface)%ineighbor_element_g
+                        ielement_l_n = mesh%domain(idom)%faces(ielem,iface)%ineighbor_element_l
 
                         !
                         ! Find linearization of ielem wrt neighbor, ielem_n

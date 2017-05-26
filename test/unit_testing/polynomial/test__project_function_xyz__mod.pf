@@ -48,7 +48,7 @@ contains
         integer(ik), parameter      :: npt = 8
         type(point_t)               :: nodes(8)
         type(domain_connectivity_t) :: connectivity
-        integer(ik)                 :: nterms_c, idomain, spacedim
+        integer(ik)                 :: nterms_c, idomain, spacedim, nelements_g, eqn_ID
 
         IO_DESTINATION = 'file'
         
@@ -85,8 +85,13 @@ contains
         this%solution_order = 3
         this%nterms_s       = 27
         spacedim            = 3
+        nelements_g         = 1
 
-        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection','Cartesian')
+        call this%chidg%data%add_equation_set('Scalar Advection')
+
+        eqn_ID = this%chidg%data%get_equation_set_id('Scalar Advection')
+        !call this%chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Scalar Advection','Cartesian')
+        call this%chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Cartesian',eqn_ID)
 
         call this%chidg%set('Solution Order', integer_input=this%solution_order)
         call this%chidg%init('domains')
@@ -139,7 +144,7 @@ contains
 
 
         call create_function(fcn,'x_squared')
-        associate (elem => this%chidg%data%mesh(1)%elems(1))
+        associate (elem => this%chidg%data%mesh%domain(1)%elems(1))
             
             ! Function evaluation points
             x = [0._rk, 0.5_rk, 1.0_rk, 1.5_rk, 2.0_rk, 2.5_rk, 3.0_rk, 3.5_rk, 4.0_rk, 4.5_rk, 5.0_rk]
@@ -232,7 +237,7 @@ contains
 
         call create_function(fcn,'y_squared')
         
-        associate (elem => self%chidg%data%mesh(1)%elems(1))
+        associate (elem => self%chidg%data%mesh%domain(1)%elems(1))
         
         ! Function evaluation points
         x = ZERO
@@ -323,7 +328,7 @@ contains
 
         call create_function(fcn,'z_squared')
 
-        associate (elem => self%chidg%data%mesh(1)%elems(1))
+        associate (elem => self%chidg%data%mesh%domain(1)%elems(1))
         
         ! Function evaluation points
         x = ZERO
@@ -416,7 +421,7 @@ contains
 
         call create_function(fcn,'xyz')
 
-        associate (elem => self%chidg%data%mesh(1)%elems(1))
+        associate (elem => self%chidg%data%mesh%domain(1)%elems(1))
         
         ! Function evaluation points
         x = [0._rk, 2.5_rk, 5.0_rk, 0._rk, 2.5_rk, 5.0_rk, 0._rk, 2.5_rk, 5.0_rk, &

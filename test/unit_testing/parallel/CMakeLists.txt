@@ -5,6 +5,7 @@ add_test_sources(parallel
                 test_init_comm_D2E2_mod.pf
                 test_comm_D1E4_mod.pf
                 test_comm_D2E2_mod.pf
+                test_comm_bc_D1E8_mod.pf
                 test_comm_chimera_mod.pf
                 )
                 

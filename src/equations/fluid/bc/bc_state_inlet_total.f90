@@ -6,6 +6,8 @@ module bc_state_inlet_total
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use type_point,             only: point_t
+    use mpi_f08,                only: mpi_comm
+    use ieee_arithmetic
     use DNAD_D
     implicit none
 
@@ -90,10 +92,11 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine compute_bc_state(self,worker,prop)
+    subroutine compute_bc_state(self,worker,prop,bc_COMM)
         class(inlet_total_t),   intent(inout)   :: self
         type(chidg_worker_t),   intent(inout)   :: worker
         class(properties_t),    intent(inout)   :: prop
+        type(mpi_comm),         intent(in)      :: bc_COMM
 
 
         ! Storage at quadrature nodes
@@ -108,29 +111,26 @@ contains
             T_bc,   vmag2_m, vmag, H_bc
 
 
-        real(rk)                                    :: gam_m, cp_m, M, time
-        type(point_t),  allocatable, dimension(:)   :: coords
+        integer(ik)                                 :: ierr, igq
+        real(rk)                                    :: gam_m, cp_m, M
         real(rk),       allocatable, dimension(:)   ::  &
             TT, n1, n2, n3, nmag, alpha, r, PT
-        integer(ik) :: ierr
             
 
 
         !
         ! Get boundary condition Total Temperature, Total Pressure, and normal vector
         !
-        coords = worker%coords()
-        time   = worker%time()
-        PT = self%bcproperties%compute('Total Pressure',     time, coords)
-        TT = self%bcproperties%compute('Total Temperature',  time, coords)
+        PT = self%bcproperties%compute('Total Pressure',     worker%time(), worker%coords())
+        TT = self%bcproperties%compute('Total Temperature',  worker%time(), worker%coords())
 
 
         !
         ! Get user-input normal vector and normalize
         !
-        n1 = self%bcproperties%compute('Normal-1', time, coords)
-        n2 = self%bcproperties%compute('Normal-2', time, coords)
-        n3 = self%bcproperties%compute('Normal-3', time, coords)
+        n1 = self%bcproperties%compute('Normal-1', worker%time(), worker%coords())
+        n2 = self%bcproperties%compute('Normal-2', worker%time(), worker%coords())
+        n3 = self%bcproperties%compute('Normal-3', worker%time(), worker%coords())
 
 
         !   Explicit allocation to handle GCC bug:
@@ -185,8 +185,13 @@ contains
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
+        r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
-            mom2_m = mom2_m / worker%coordinate('1','boundary')
+            mom2_m = mom2_m / r
+        else if (worker%coordinate_system() == 'Cartesian') then
+
+        else
+            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 
@@ -197,7 +202,6 @@ contains
         u_m = mom1_m/density_m
         v_m = mom2_m/density_m
         w_m = mom3_m/density_m
-
 
 
         !
@@ -220,7 +224,6 @@ contains
         !
         ! Compute boundary condition temperature and pressure
         !
-        !& HARDCODED GAMMA. HARDCODED CP
         gam_m = 1.4_rk
         cp_m  = 287.15_rk*(gam_m/(gam_m-ONE))
 
@@ -253,8 +256,9 @@ contains
         ! Account for cylindrical. Convert tangential momentum back to angular momentum.
         !
         if (worker%coordinate_system() == 'Cylindrical') then
-            mom2_bc = mom2_bc * worker%coordinate('1','boundary')
+            mom2_bc = mom2_bc * r
         end if
+
 
 
         !

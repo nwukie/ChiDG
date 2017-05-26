@@ -193,15 +193,16 @@ contains
         sqrt_two = sqrt(2._rk)
         inv_sqrt_two = 1._rk/sqrt_two
         
-        test_metric(1,1,:) = inv_sqrt_two/4._rk
-        test_metric(2,1,:) = -inv_sqrt_two/4._rk
-        test_metric(3,1,:) = 0._rk
-        test_metric(1,2,:) = inv_sqrt_two/4._rk
-        test_metric(2,2,:) = inv_sqrt_two/4._rk
-        test_metric(3,2,:) = 0._rk
-        test_metric(1,3,:) = 0._rk
-        test_metric(2,3,:) = 0._rk
-        test_metric(3,3,:) = 0.25_rk
+        test_metric(1,1,:) = inv_sqrt_two/4._rk   /  0.125_rk
+        test_metric(2,1,:) = -inv_sqrt_two/4._rk  /  0.125_rk
+        test_metric(3,1,:) = 0._rk                /  0.125_rk
+        test_metric(1,2,:) = inv_sqrt_two/4._rk   /  0.125_rk
+        test_metric(2,2,:) = inv_sqrt_two/4._rk   /  0.125_rk
+        test_metric(3,2,:) = 0._rk                /  0.125_rk
+        test_metric(1,3,:) = 0._rk                /  0.125_rk
+        test_metric(2,3,:) = 0._rk                /  0.125_rk
+        test_metric(3,3,:) = 0.25_rk              /  0.125_rk
+
         @assertEqual(test_metric,self%elem%metric,tol)
         
     end subroutine testElement_metric
@@ -301,15 +302,15 @@ contains
         sqrt_two = sqrt(2._rk)
         inv_sqrt_two = 1._rk/sqrt_two
         
-        test_metric(1,1,:) = inv_sqrt_two/4._rk
-        test_metric(2,1,:) = -inv_sqrt_two/4._rk
-        test_metric(3,1,:) = 0._rk
-        test_metric(1,2,:) = inv_sqrt_two/4._rk
-        test_metric(2,2,:) = inv_sqrt_two/4._rk
-        test_metric(3,2,:) = 0._rk
-        test_metric(1,3,:) = 0._rk
-        test_metric(2,3,:) = 0._rk
-        test_metric(3,3,:) = 0.25_rk
+        test_metric(1,1,:) = inv_sqrt_two/4._rk     / 0.125_rk
+        test_metric(2,1,:) = -inv_sqrt_two/4._rk    / 0.125_rk
+        test_metric(3,1,:) = 0._rk                  / 0.125_rk
+        test_metric(1,2,:) = inv_sqrt_two/4._rk     / 0.125_rk
+        test_metric(2,2,:) = inv_sqrt_two/4._rk     / 0.125_rk
+        test_metric(3,2,:) = 0._rk                  / 0.125_rk
+        test_metric(1,3,:) = 0._rk                  / 0.125_rk
+        test_metric(2,3,:) = 0._rk                  / 0.125_rk
+        test_metric(3,3,:) = 0.25_rk                / 0.125_rk
         
         @assertEqual(test_metric,self%faces(XI_MIN)%metric,tol)
         @assertEqual(test_metric,self%faces(XI_MAX)%metric,tol)
@@ -429,27 +430,27 @@ contains
         
         ! XI_MIN
         test_area = ONE
-        @assertEqual(test_area,self%faces(XI_MIN)%area,tol)
+        @assertEqual(test_area,self%faces(XI_MIN)%total_area,tol)
         
         ! XI_MAX
         test_area = ONE
-        @assertEqual(test_area,self%faces(XI_MAX)%area,tol)
+        @assertEqual(test_area,self%faces(XI_MAX)%total_area,tol)
         
         ! ETA_MIN
         test_area = ONE
-        @assertEqual(test_area,self%faces(ETA_MIN)%area,tol)
+        @assertEqual(test_area,self%faces(ETA_MIN)%total_area,tol)
         
         ! ETA_MAX
         test_area = ONE
-        @assertEqual(test_area,self%faces(ETA_MAX)%area,tol)
+        @assertEqual(test_area,self%faces(ETA_MAX)%total_area,tol)
 
         ! ZETA_MIN
         test_area = ONE
-        @assertEqual(test_area,self%faces(ZETA_MIN)%area,tol)
+        @assertEqual(test_area,self%faces(ZETA_MIN)%total_area,tol)
         
         ! ZETA_MAX
         test_area = ONE
-        @assertEqual(test_area,self%faces(ZETA_MAX)%area,tol)
+        @assertEqual(test_area,self%faces(ZETA_MAX)%total_area,tol)
        
 
     end subroutine testElement_face_area

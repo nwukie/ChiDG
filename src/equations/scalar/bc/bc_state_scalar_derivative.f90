@@ -4,7 +4,9 @@ module bc_state_scalar_derivative
     use type_bc_state,      only: bc_state_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
+    use mpi_f08,            only: mpi_comm
     use DNAD_D
+    use ieee_arithmetic
     implicit none
 
 
@@ -82,10 +84,11 @@ contains
     !!  @date   9/15/2016
     !!
     !---------------------------------------------------------------------------------------------
-    subroutine compute_bc_state(self,worker,prop)
+    subroutine compute_bc_state(self,worker,prop,bc_COMM)
         class(scalar_derivative_t), intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         class(properties_t),        intent(inout)   :: prop
+        type(mpi_comm),             intent(in)      :: bc_COMM
 
         ! Equation indices
         integer(ik)     :: iu
@@ -110,15 +113,25 @@ contains
         !
         ! Initialize derivative arrays
         !
-        dudx_bc = ZERO * worker%get_primary_field_face('u', 'grad1','face interior')
-        dudy_bc = ZERO * dudx_bc
-        dudz_bc = ZERO * dudx_bc
+        dudx_bc = ZERO*worker%get_primary_field_face('u', 'grad1','face interior')
+        dudy_bc = ZERO*dudx_bc
+        dudz_bc = ZERO*dudx_bc
+
+
+
+
+
 
 
         !
         ! Get derivative value
         !
         dudx_bc = self%bcproperties%compute("Derivative",worker%time(),worker%coords())
+
+
+
+
+
 
 
 

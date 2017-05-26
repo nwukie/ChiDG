@@ -286,7 +286,7 @@ contains
                             ! Assemble rhs
                             !
                             temp_1 = (ONE/(alpha*dt))*matmul(data%mesh%domain(idom)%elems(ielem)%mass, delta_q%dom(idom)%vecs(ielem)%getvar(ivar,itime))
-                            temp_2 = rhs%dom(idom)%vecs(ielem)%getvar(ivar,itime) + temp_1
+                            temp_2 = (ONE/alpha)*(rhs%dom(idom)%vecs(ielem)%getvar(ivar,itime)) + temp_1
                             call rhs%dom(idom)%vecs(ielem)%setvar(ivar,itime,temp_2)
 
                         end do  ! ivar

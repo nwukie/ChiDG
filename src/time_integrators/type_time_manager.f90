@@ -103,7 +103,8 @@ contains
                   'Runge-Kutta Method', 'Fourth Runge-Kutta Method',                    &
                   'Fourth Order RK Method', 'RK4',                                      &
                   'Three-Eighth Rule', 'Fourth Order Kutta',                            &
-                  'Backward_Euler', 'Backward Euler', 'backward euler', 'backward_euler')
+                  'Backward_Euler', 'Backward Euler', 'backward euler', 'backward_euler'&
+                  'DIRK')
 
                 call self%set_name(time_integrator)
 

@@ -612,7 +612,7 @@ contains
                         case ('forward_euler','Forward_Euler','FORWARD_EULER','forward euler','Forward Euler')
                             write(funit,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itimestep - 1,'" part="',ifile - 1,'" file="',&
                                                             trim(file_arr(d + ifile)),'"/>'
-                        case ('backward_euler','Backward_Euler','BACKWARD_EULER','backward euler','Backward Euler','BACKWARD EULER')
+                        case ('backward_euler','Backward_Euler','BACKWARD_EULER','backward euler','Backward Euler','BACKWARD EULER','DIRK')
                             write(funit,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itimestep - 1,'" part="',ifile - 1,'" file="',&
                                                             trim(file_arr(d + ifile)),'"/>'
                         case ('Harmonic Balance','Harmonic_Balance','harmonic balance','harmonic_balance','HB')
@@ -710,7 +710,7 @@ contains
                         case ('forward_euler','Forward_Euler','FORWARD_EULER','forward euler','Forward Euler')
                             write(funit_1,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itimestep - 1,'" part="',ifile - 1,'" file="',&
                                                             trim(file_arr(d + ifile)),'"/>'
-                        case ('backward_euler','Backward_Euler','BACKWARD_EULER','backward euler','Backward Euler','BACKWARD EULER')
+                        case ('backward_euler','Backward_Euler','BACKWARD_EULER','backward euler','Backward Euler','BACKWARD EULER','DIRK')
                             write(funit_1,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itimestep - 1,'" part="',ifile - 1,'" file="',&
                                                             trim(file_arr(d + ifile)),'"/>'
                         case ('Harmonic Balance','Harmonic_Balance','harmonic balance','harmonic_balance','HB')

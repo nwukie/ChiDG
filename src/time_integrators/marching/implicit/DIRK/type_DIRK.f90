@@ -116,7 +116,7 @@ contains
         !
         ! Constants used to define DIRK coefficients
         !
-        alpha = 0.435866521508459
+        alpha = 0.435866521508459_rk
         tau   = (ONE + alpha)/TWO
         b1    = -(SIX*(alpha*alpha) - (16._rk*alpha) + ONE)/FOUR
         b2    = (SIX*(alpha*alpha) - (20._rk*alpha) + FIVE)/FOUR

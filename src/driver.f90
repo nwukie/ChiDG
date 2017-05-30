@@ -105,9 +105,9 @@ program driver
             ! Set initial solution
             !
 !            call create_function(fcn,'gaussian')
-!            call fcn%set_option('b_x',0._rk)
-!            call fcn%set_option('b_y',3.14_rk)
-!            call fcn%set_option('b_z',0._rk)
+!            call fcn%set_option('b_x',1._rk)
+!            call fcn%set_option('b_y',1._rk)
+!            call fcn%set_option('b_z',1._rk)
 !            call fcn%set_option('c',0.5_rk)
 !            call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,1)
 !            call create_function(constant,'constant')

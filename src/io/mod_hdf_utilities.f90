@@ -125,6 +125,7 @@
 !!
 !!  create_eqn_group_hdf
 !!  remove_eqn_group_hdf
+!!  get_eqn_group_names_hdf
 !!  check_eqn_group_exists_hdf
 !!  prune_eqn_groups_hdf
 !!
@@ -4902,9 +4903,7 @@ contains
 
     !>  Create an equation group on the ChiDG HDF file root.
     !!
-    !!  
     !!  If group already exists, no need to do anything, exit routine.
-    !!
     !!
     !!  @author Nathan A. Wukie
     !!  @date   4/4/2017

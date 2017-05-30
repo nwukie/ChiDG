@@ -16,12 +16,18 @@
 !!      write_domain_field_hdf
 !!
 !!  read_equations_hdf
+!!  write_equations_hdf
 !!
 !!  read_boundaryconditions_hdf
 !!      read_bc_patches_hdf
 !!      read_bc_state_groups_hdf
 !!
+!!  TODO: write_boundaryconditions_hdf
+!!  TODO:   write_bc_patches_hdf
+!!  TODO:   write_bc_state_groups_hdf
+!!
 !!  read_connectivity_hdf
+!!  TODO: write_connectivity_hdf
 !!
 !!  TODO:
 !!  -----------
@@ -63,7 +69,7 @@ module mod_hdfio
                                           set_domain_connectivity_partition_hdf, set_domain_mapping_hdf, &
                                           set_domain_dimensionality_hdf, set_domain_coordinates_hdf,     &
                                           set_domain_coordinate_system_hdf, set_contains_grid_hdf,       &
-                                          get_eqn_group_names_hdf
+                                          get_eqn_group_names_hdf, create_eqn_group_hdf
 
     use type_svector,               only: svector_t
     use mod_string,                 only: string_t
@@ -1412,13 +1418,13 @@ contains
 
 
 
-    !> Read solution modes from HDF file.
+    !>  Read the equation set groups that are defined in the HDF file.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
     !!
     !!  @param[in]      filename    Character string of the file to be read from
-    !!  @param[inout]   data        chidg_data_t that will accept the solution modes
+    !!  @param[inout]   data        chidg_data_t instance where the equations will be added.
     !!
     !!
     !----------------------------------------------------------------------------------------
@@ -1477,15 +1483,54 @@ contains
 
 
 
+    !>  Write the equation set groups that are defined in chidg_data to the HDF file.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   5/30/2017
+    !!
+    !!  @param[in]      filename    Character string of the file to be read to.
+    !!  @param[inout]   data        chidg_data_t we will write equation set groups from.
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine write_equations_hdf(filename,data)
+        character(*),       intent(in)      :: filename
+        type(chidg_data_t), intent(inout)   :: data
+
+        integer(HID_T)                  :: fid
+        integer(ik)                     :: ierr, eqn_ID
+
+        character(:),       allocatable :: user_msg, eqnset_name
+        logical                         :: file_exists, contains_solution
+
+        type(svector_t) :: eqn_groups
+        type(string_t)  :: eqn_string
 
 
+        !
+        ! Open file
+        !
+        fid = open_file_hdf(filename)
 
 
+        !
+        ! Add equation groups to chidg_data
+        !
+        do eqn_ID = 1,data%nequation_sets()
+
+            eqnset_name = data%get_equation_set_name(eqn_ID)
+            call create_eqn_group_hdf(fid,eqnset_name)
+
+        end do !eqn_ID
 
 
+        !
+        ! Close file
+        !
+        call close_file_hdf(fid)
 
-
-
+    end subroutine write_equations_hdf
+    !****************************************************************************************
 
 
 

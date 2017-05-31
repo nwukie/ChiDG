@@ -126,9 +126,6 @@ contains
         call self%residual_norm%push_back(nonlinear_solver%residual_norm%at(nonlinear_solver%residual_norm%size()))
 
 
-        !call write_line("Entropy Error: ", compute_entropy_error(data), io_proc=GLOBAL_MASTER)
-
-
     end subroutine step
     !******************************************************************************************
 
@@ -145,11 +142,11 @@ contains
     !!  @date   2/8/2016
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine assemble(self,data,timing,differentiate)
+    subroutine assemble(self,data,differentiate,timing)
         class(assemble_steady_t),   intent(inout)               :: self
         type(chidg_data_t),         intent(inout)               :: data
+        logical,                    intent(in)                  :: differentiate
         real(rk),                   intent(inout),  optional    :: timing
-        logical,                    intent(in),     optional    :: differentiate
 
 
         !
@@ -157,7 +154,7 @@ contains
         !
         data%time_manager%itime = 1
         data%time_manager%t     = ZERO
-        call update_space(data,timing,differentiate)
+        call update_space(data,differentiate,timing)
 
 
     end subroutine assemble

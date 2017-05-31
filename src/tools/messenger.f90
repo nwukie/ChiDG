@@ -341,10 +341,11 @@ contains
     !!  @param[in]  color           String indicating a color for the text
     !!  @param[in]  ltrim           Logical indicating to trim the string of empty characters
     !!  @param[in]  bold            Logical to output text in bold
+    !!  @param[in]  silence         Logical, allows writing to be turned on or off
     !!  @param[in]  io_proc         Integer specifying MPI Rank responsible for outputing a message
     !!
     !------------------------------------------------------------------------------------------
-    subroutine write_line(a,b,c,d,e,f,g,h,delimiter,columns,column_width,width,color,ltrim,bold,io_proc)
+    subroutine write_line(a,b,c,d,e,f,g,h,delimiter,columns,column_width,width,color,ltrim,bold,silence,io_proc)
         class(*),           intent(in), target, optional        :: a
         class(*),           intent(in), target, optional        :: b
         class(*),           intent(in), target, optional        :: c
@@ -360,9 +361,10 @@ contains
         character(*),       intent(in),         optional        :: color
         logical,            intent(in),         optional        :: ltrim
         logical,            intent(in),         optional        :: bold
+        logical,            intent(in),         optional        :: silence
         integer(ik),        intent(in),         optional        :: io_proc
 
-        class(*), pointer               :: auxdata => null()
+        class(*), pointer   :: auxdata => null()
 
         integer :: iaux
         logical :: print_info_one, print_info_two, print_info_three, print_info_four, print_info_five
@@ -384,6 +386,18 @@ contains
         else
             proc_write = .true.
         end if
+
+
+        !
+        ! Handle 'silence' input logical. 
+        !   - proc_write only needs modified if silence is requested,
+        !     and if proc_write was already set to true. In this case,
+        !     silence requests that it be set back to false.
+        !
+        if ( present(silence) ) then
+            if (proc_write .and. silence) proc_write = .false.
+        end if
+
 
 
 
@@ -561,7 +575,7 @@ contains
             type is(real(8))
                 if (abs(linedata) < 0.1) then
                     write(write_internal, '(E24.14)') linedata
-                else if ( (abs(linedata) > 0.1) .and. (abs(linedata) < 1.e16) ) then
+                else if ( (abs(linedata) > 0.1) .and. (abs(linedata) < 1.e10) ) then
                     write(write_internal, '(F24.14)') linedata
                 else
                     write(write_internal, '(E24.14)') linedata

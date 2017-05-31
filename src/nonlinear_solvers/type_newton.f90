@@ -3,17 +3,13 @@ module type_newton
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, DIAG
     use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER
+    use mod_io,                 only: verbosity
     use type_nonlinear_solver,  only: nonlinear_solver_t
     use type_linear_solver,     only: linear_solver_t
     use type_chidg_data,        only: chidg_data_t
     use type_system_assembler,  only: system_assembler_t
     use type_preconditioner,    only: preconditioner_t
     use type_chidg_vector
-
-!    use mod_spatial,    only: update_space
-!    use mod_tecio,      only: write_tecio_variables
-    use mod_entropy,    only: compute_entropy_error
-
     implicit none
     private
 
@@ -84,7 +80,7 @@ contains
                     rhs => data%sdata%rhs,  &
                     lhs => data%sdata%lhs)
 
-            call write_line('Entering time', io_proc=GLOBAL_MASTER)
+            call write_line('NONLINER SOLVER', io_proc=GLOBAL_MASTER, silence=(verbosity<2))
 
             !
             ! start timer
@@ -102,10 +98,11 @@ contains
             resid  = ONE    ! Force inner loop entry
             niter = 0       ! Initialize inner loop counter
 
+            call write_line("iter","|R(Q)|","Linear Solver(niter)", delimiter='', columns=.True., column_width=30, io_proc=GLOBAL_MASTER, silence=(verbosity<2))
             do while ( resid > self%tol )
                 niter = niter + 1
 
-                call write_line("   niter: ", niter, delimiter='', io_proc=GLOBAL_MASTER)
+                !call write_line("   niter: ", niter, delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<2))
 
 
                 !
@@ -118,14 +115,13 @@ contains
                 ! Update Spatial Residual and Linearization (rhs, lin)
                 !
                 call system%assemble(data,timing=timing,differentiate=.true.)
-!                call update_space(data,timing)
                 resid = rhs%norm(ChiDG_COMM)
 
 
                 !
                 ! Print diagnostics
                 !
-                call write_line("   R(Q) - Norm: ", resid, delimiter='', io_proc=GLOBAL_MASTER)
+                !call write_line("   R(Q) - Norm: ", resid, delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<2))
 
                 !
                 ! Tolerance check
@@ -189,14 +185,21 @@ contains
                 !call write_tecio_variables(data,trim(filename),niter+1)
 
 
-            end do ! niter
+                !
+                ! Print iteration information
+                !
+                call write_line(niter, resid, linear_solver%niter, delimiter='', columns=.True., column_width=30, io_proc=GLOBAL_MASTER, silence=(verbosity<2))
+
+
+            end do ! while error
 
 
             !
             ! stop timer. Record timings
             !
             call self%timer%stop()
-            call self%timer%report('Solver Elapsed Time:')
+            call write_line('Nonlinear solver elapsed time: ', self%timer%elapsed(), io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+            !call self%timer%report('Solver Elapsed Time:')
             call self%total_time%push_back(self%timer%elapsed())
 
 
@@ -209,10 +212,6 @@ contains
         ! Store newton iteration count
         !
         call self%newton_iterations%push_back(niter)
-
-
-        !entropy_error = compute_entropy_error(data)
-        !call write_line('Entropy error: ', entropy_error, delimiter='')
 
     end subroutine solve
     !****************************************************************************************

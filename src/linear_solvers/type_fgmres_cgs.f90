@@ -4,7 +4,7 @@ module type_fgmres_cgs
     use mod_constants,          only: ZERO
     use mod_inv,                only: inv
     use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER
-    use mod_inv,                only: inv
+    use mod_io,                 only: verbosity
     use mpi_f08
 
     use type_timer,             only: timer_t
@@ -91,7 +91,7 @@ contains
 
         call self%timer%reset()
         call self%timer%start()
-        call write_line('           Linear Solver: ', io_proc=GLOBAL_MASTER)
+        call write_line('           Linear Solver: ', io_proc=GLOBAL_MASTER, silence=(verbosity<4))
 
 
 
@@ -363,7 +363,7 @@ contains
                 ! Test exit conditions
                 !
                 res = abs(p(j+1))
-                call write_line(res, io_proc=GLOBAL_MASTER)
+                call write_line(res, io_proc=GLOBAL_MASTER, silence=(verbosity<4))
                 converged = (res < self%tol)
                 
                 if ( converged ) then
@@ -445,29 +445,34 @@ contains
         ! Report
         !
         err = self%error(A,x,b)
-        call write_line('   Linear Solver Error: ', err, delimiter='', io_proc=GLOBAL_MASTER)
-
         call self%timer%stop()
-        call self%timer%report('Linear solver compute time: ')
+        call write_line('   Linear Solver Error: ',         err,                  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        call write_line('   Linear Solver compute time: ',  self%timer%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        call write_line('   Linear Solver Iterations: ',    self%niter,           delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
 
-        call write_line('   Linear Solver Iterations: ', self%niter, delimiter='', io_proc=GLOBAL_MASTER)
+        !call self%timer%report('Linear solver compute time: ')
+        !call timer_precon%report('Preconditioner time: ')
+        call write_line('   Preconditioner time: ',           timer_precon%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        call write_line('       Precon time per iteration: ', timer_precon%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
 
-        call timer_precon%report('Preconditioner time: ')
-        call write_line('Precon time per iteration: ', timer_precon%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER)
 
+        !call timer_mv%report('MV time: ')
+        call write_line('   MV time: ',                   timer_mv%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        call write_line('       MV time per iteration: ', timer_mv%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
 
-        call timer_mv%report('MV time: ')
-        call write_line('MV time per iteration: ', timer_mv%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER)
-
-        call timer_comm%report('MV comm time: ')
-        call write_line('MV comm time per iteration: ', timer_comm%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER)
-        call timer_blas%report('MV blas time: ')
-        call write_line('MV blas time per iteration: ', timer_blas%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER)
+        !call timer_comm%report('MV comm time: ')
+        call write_line('   MV comm time: ',                   timer_comm%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        call write_line('       MV comm time per iteration: ', timer_comm%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        !call timer_blas%report('MV blas time: ')
+        call write_line('   MV blas time: ',                   timer_blas%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        call write_line('       MV blas time per iteration: ', timer_blas%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
         call timer_comm%reset()
         call timer_blas%reset()
 
-        call timer_dot%report('Dot time: ')
-        call timer_norm%report('Norm time: ')
+        !call timer_dot%report('Dot time: ')
+        !call timer_norm%report('Norm time: ')
+        call write_line('   Dot time: ',  timer_dot%elapsed(),  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        call write_line('   Norm time: ', timer_norm%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
 
 
 

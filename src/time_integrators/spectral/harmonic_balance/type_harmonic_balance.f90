@@ -135,11 +135,11 @@ contains
     !!  @date   2/13/2017
     !!
     !-------------------------------------------------------------------------------------------------
-    subroutine assemble(self,data,timing,differentiate)
+    subroutine assemble(self,data,differentiate,timing)
         class(assemble_harmonic_balance_t),   intent(inout)               :: self
         type(chidg_data_t),                   intent(inout)               :: data
+        logical,                              intent(in)                  :: differentiate
         real(rk),                             intent(inout), optional     :: timing
-        logical,                              intent(in),    optional     :: differentiate
 
         integer(ik)             :: itime_outer, itime_inner, idom, ielem, ivar    ! Loop counters
         real(rk), allocatable   :: temp_1(:), temp_2(:)     ! Temporary variables
@@ -162,11 +162,9 @@ contains
             !
             ! Spatial update needed
             ! 
-!            data%sdata%itime = itime_outer
-!            data%sdata%t     = data%time_manager%time_lev%at(itime_outer)
             data%time_manager%itime = itime_outer
             data%time_manager%t     = data%time_manager%time_lev%at(itime_outer)
-            call update_space(data,timing,differentiate)
+            call update_space(data,differentiate,timing)
 
             do idom = 1,data%mesh%ndomains()
 

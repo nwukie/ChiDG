@@ -171,11 +171,11 @@ contains
     !!  \f$ rhs = \frac{M}{dt}*dq + rhs \f$
     !!
     !------------------------------------------------------------------------------------------------
-    subroutine assemble(self,data,timing,differentiate)
+    subroutine assemble(self,data,differentiate,timing)
         class(assemble_backward_euler_t),   intent(inout)               :: self
         type(chidg_data_t),                 intent(inout)               :: data
+        logical,                            intent(in)                  :: differentiate
         real(rk),                           intent(inout),  optional    :: timing
-        logical,                            intent(in),     optional    :: differentiate
 
         integer(ik)                 :: ntime, itime, idom, ielem, ivar, imat, ierr, &
                                        nterms, rstart, rend, cstart, cend
@@ -187,7 +187,7 @@ contains
         !
         ! Get spatial update
         !
-        call update_space(data,timing,differentiate)
+        call update_space(data,differentiate,timing)
 
 
         associate ( q   => data%sdata%q,   &

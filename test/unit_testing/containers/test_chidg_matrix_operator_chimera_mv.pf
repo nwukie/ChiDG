@@ -189,7 +189,7 @@ subroutine test_chidg_matrix_operator_chimera_mv()
 
 
 
-    call update_space(chidg%data)
+    call update_space(chidg%data,differentiate=.true.)
 
 
 

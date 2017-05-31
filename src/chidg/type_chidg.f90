@@ -430,10 +430,7 @@ contains
         !
         select case (trim(selector))
             
-            case ('Time','time','time_integrator','Time_Integrator','timeintegrator','TimeIntegrator', 'time integrator', 'Time Integrator', &
-                  'nonlinearsolver','NonlinearSolver','nonlinear_solver','Nonlinear_Solver','nonlinear solver', 'Nonlinear Solver', &
-                  'linearsolver','LinearSolver','linear_solver','Linear_Solver','linear solver', 'Linear Solver', &
-                  'preconditioner','Preconditioner')
+            case ('Time Integrator', 'Nonlinear Solver', 'Linear Solver', 'Preconditioner')
 
                 user_msg = "chidg%set: The component being set needs an algorithm string passed in &
                             along with it. Try 'call chidg%set('your component', algorithm='your algorithm string')"
@@ -447,7 +444,7 @@ contains
         !
         select case (trim(selector))
 
-            case ('solution order', 'Solution Order', 'solution_order', 'Solution_Order')
+            case ('Solution Order')
 
                 user_msg = "chidg%set: The component being set needs an integer passed in &
                             along with it. Try 'call chidg%set('your component', integer_input=my_int)"
@@ -467,50 +464,34 @@ contains
             !
             ! Allocation for time integrator
             !
-            case ('Time','time','time_integrator','Time_Integrator','timeintegrator','TimeIntegrator', 'time integrator', 'Time Integrator')
-                if (allocated(self%time_integrator)) then
-                    deallocate(self%time_integrator)
-                    !call create_time_integrator(algorithm,self%time_integrator,options)
-                    call create_time_integrator(algorithm,self%time_integrator)
-                else
-                    !call create_time_integrator(algorithm,self%time_integrator,options)
-                    call create_time_integrator(algorithm,self%time_integrator)
-                end if
+            case ('Time Integrator')
+                if (allocated(self%time_integrator)) deallocate(self%time_integrator)
+                call create_time_integrator(algorithm,self%time_integrator)
 
 
 
             !
             ! Allocation for nonlinear solver
             !
-            case ('nonlinearsolver','NonlinearSolver','nonlinear_solver','Nonlinear_Solver','nonlinear solver', 'Nonlinear Solver')
-                if (allocated(self%nonlinear_solver)) then
-                    deallocate(self%nonlinear_solver)
-                    call create_nonlinear_solver(algorithm,self%nonlinear_solver,options)
-                else
-                    call create_nonlinear_solver(algorithm,self%nonlinear_solver,options)
-                end if
-
+            case ('Nonlinear Solver')
+                if (allocated(self%nonlinear_solver)) deallocate(self%nonlinear_solver)
+                call create_nonlinear_solver(algorithm,self%nonlinear_solver,options)
 
 
 
             !
             ! Allocation for linear solver
             !
-            case ('linearsolver','LinearSolver','linear_solver','Linear_Solver','linear solver', 'Linear Solver')
-                if (allocated(self%linear_solver)) then
-                    deallocate(self%linear_solver)
-                    call create_linear_solver(algorithm,self%linear_solver,options)
-                else
-                    call create_linear_solver(algorithm,self%linear_solver,options)
-                end if
+            case ('Linear Solver')
+                if (allocated(self%linear_solver)) deallocate(self%linear_solver)
+                call create_linear_solver(algorithm,self%linear_solver,options)
 
 
             !
             ! Allocation for preconditioner
             !
-            case ('preconditioner','Preconditioner')
+            case ('Preconditioner')
                 if (allocated(self%preconditioner)) deallocate(self%preconditioner)
-
                 call create_preconditioner(algorithm,self%preconditioner)
 
 
@@ -519,7 +500,7 @@ contains
             ! Set the 'solution order'. Order-of-accuracy, that is. Compute the number of terms
             ! in the 1D, 3D solution bases
             !
-            case ('solution order', 'Solution Order', 'solution_order', 'Solution_Order')
+            case ('Solution Order')
                 self%nterms_s_1d = integer_input
                 self%nterms_s    = self%nterms_s_1d * self%nterms_s_1d * self%nterms_s_1d
         
@@ -1011,6 +992,9 @@ contains
         call write_domains_hdf(self%data,file_name)
 
 
+        ! TODO: write_boundary_conditions
+
+
         call write_line("Done writing grid.", io_proc=GLOBAL_MASTER)
         call write_line(' ', ltrim=.false.,   io_proc=GLOBAL_MASTER)
 
@@ -1156,10 +1140,10 @@ contains
         !
         wcount = 1
         nsteps = self%data%time_manager%nsteps
+        call write_line("-","Step","System residual", columns=.true., column_width=30, io_proc=GLOBAL_MASTER)
         do istep = 1,nsteps
             
 
-            call write_line("- Step ", istep, io_proc=GLOBAL_MASTER)
 
 
             !
@@ -1187,7 +1171,8 @@ contains
             !
             ! Print diagnostics
             !
-            call write_line("-  System residual |R(Q)|: ", self%time_integrator%residual_norm%at(istep), delimiter='', io_proc=GLOBAL_MASTER)
+            !call write_line("-  System residual |R(Q)|: ", self%time_integrator%residual_norm%at(istep), delimiter='', io_proc=GLOBAL_MASTER)
+            call write_line(istep, self%time_integrator%residual_norm%at(istep), columns=.true., column_width=30, io_proc=GLOBAL_MASTER)
 
 
             wcount = wcount + 1

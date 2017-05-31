@@ -325,7 +325,7 @@ contains
             ! Perform backward Euler assemble operation
             ! THIS IS BEING TESTED
             !
-            call assemble_BE%assemble(chidg%data)
+            call assemble_BE%assemble(chidg%data,differentiate=.true.)
 
 
             !

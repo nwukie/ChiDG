@@ -130,7 +130,7 @@ contains
         class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
 
         integer(ik),    parameter   :: nstage = 3
-        type(chidg_vector_t)        :: dq(nstage), q_temp, q_n
+        type(chidg_vector_t)        :: dq(nstage), q_temp, q_n, residual
         real(rk)                    :: alpha = 0.435866521508459_rk
         real(rk)                    :: tau, b1, b2, t_n
         integer(ik)                 :: istage, jstage
@@ -217,10 +217,6 @@ contains
                 !
                 call nonlinear_solver%solve(data,self%system,linear_solver,preconditioner)
 
-                !
-                ! Store end residual from nonlinear solver
-                !
-                call self%residual_norm%push_back(nonlinear_solver%residual_norm%at(nonlinear_solver%residual_norm%size()))
 
                 !
                 ! Store stagewise update
@@ -229,8 +225,14 @@ contains
 
             end do
 
-        end associate
 
+            !
+            ! Store end residual(change in solution)
+            !
+            residual = q - q_n
+            call self%residual_norm%push_back( residual%norm(ChiDG_COMM) )
+
+        end associate
 
     end subroutine step
     !*****************************************************************************************************************
@@ -253,11 +255,11 @@ contains
     !!  \f$ rhs = \frac{M \Delta Q_{i}}{dt} + rhs \f$
     !!
     !-----------------------------------------------------------------------------------------------------------------
-    subroutine assemble(self,data,timing,differentiate)
+    subroutine assemble(self,data,differentiate,timing)
         class(assemble_DIRK_t), intent(inout)               :: self
         type(chidg_data_t),     intent(inout)               :: data
+        logical,                intent(in)                  :: differentiate
         real(rk),               intent(inout),  optional    :: timing
-        logical,                intent(in),     optional    :: differentiate
 
         real(rk)                    :: alpha = 0.435866521508459_rk
         type(chidg_vector_t)        :: delta_q 
@@ -270,7 +272,7 @@ contains
         !
         ! Get spatial update
         !
-        call update_space(data,timing,differentiate)
+        call update_space(data,differentiate,timing)
 
         associate( q   => data%sdata%q,   &
                    dq  => data%sdata%dq,  &

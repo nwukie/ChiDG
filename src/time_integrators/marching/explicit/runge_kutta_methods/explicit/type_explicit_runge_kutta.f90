@@ -143,7 +143,7 @@ contains
                 !
                 ! Update Spatial Residual and Linearization (rhs, lin)
                 !
-                call update_space(data)
+                call update_space(data,differentiate=.false.)
                 call self%residual_norm%push_back(rhs%norm(ChiDG_COMM))
 
                 do idom = 1,data%mesh%ndomains()

@@ -74,7 +74,7 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine create_mesh_file__singleblock(filename,equation_sets,group_names,bc_state_groups,nelem_xi,nelem_eta,nelem_zeta,clusterx)
+    subroutine create_mesh_file__singleblock(filename,equation_sets,group_names,bc_state_groups,nelem_xi,nelem_eta,nelem_zeta,clusterx,x_max_in,x_min_in)
         character(*),               intent(in)              :: filename
         type(string_t),             intent(in), optional    :: equation_sets(:)
         type(string_t),             intent(in), optional    :: group_names(:,:)
@@ -83,6 +83,8 @@ contains
         integer(ik),                intent(in)              :: nelem_eta
         integer(ik),                intent(in)              :: nelem_zeta
         integer(ik),                intent(in), optional    :: clusterx
+        real(rk),                   intent(in), optional    :: x_max_in
+        real(rk),                   intent(in), optional    :: x_min_in
 
         character(:),                   allocatable :: user_msg
         class(bc_state_t),              allocatable :: bc_state
@@ -102,7 +104,7 @@ contains
 
 
         ! Generate coordinates for first block
-        call meshgen_NxNxN_linear(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords,clusterx)
+        call meshgen_NxNxN_linear(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords,clusterx,x_max_in,x_min_in)
 
 
 
@@ -157,9 +159,7 @@ contains
 
                 bcgroup_id = open_bc_group_hdf(file_id,bc_state_groups(igroup)%name)
 
-                !do istate = 1,bc_state_groups(igroup)%bc_states%size()
                 do istate = 1,bc_state_groups(igroup)%nbc_states()
-                    !call add_bc_state_hdf(bcgroup_id, bc_state_groups(igroup)%bc_state%at(istate))
                     call add_bc_state_hdf(bcgroup_id, bc_state_groups(igroup)%bc_state(istate)%state)
                 end do
                 call close_bc_group_hdf(bcgroup_id)
@@ -394,9 +394,7 @@ contains
 
                 bcgroup_id = open_bc_group_hdf(file_id,bc_state_groups(igroup)%name)
 
-                !do istate = 1,bc_state_groups(igroup)%bc_states%size()
                 do istate = 1,bc_state_groups(igroup)%nbc_states()
-                    !call add_bc_state_hdf(bcgroup_id, bc_state_groups(igroup)%bc_states%at(istate))
                     call add_bc_state_hdf(bcgroup_id, bc_state_groups(igroup)%bc_state(istate)%state)
                 end do
                 call close_bc_group_hdf(bcgroup_id)
@@ -721,18 +719,20 @@ contains
     !!                          filled, and returned
     !!
     !--------------------------------------------------------------------------------------
-    subroutine meshgen_NxNxN_linear(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords,clusterx)
-        integer(ik)             :: nelem_xi
-        integer(ik)             :: nelem_eta
-        integer(ik)             :: nelem_zeta
-        real(rk),   allocatable :: xcoords(:,:,:)
-        real(rk),   allocatable :: ycoords(:,:,:)
-        real(rk),   allocatable :: zcoords(:,:,:)
-        integer(ik), optional   :: clusterx
+    subroutine meshgen_NxNxN_linear(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords,clusterx,x_max_in,x_min_in)
+        integer(ik),    intent(in)                  :: nelem_xi
+        integer(ik),    intent(in)                  :: nelem_eta
+        integer(ik),    intent(in)                  :: nelem_zeta
+        real(rk),       intent(inout),  allocatable :: xcoords(:,:,:)
+        real(rk),       intent(inout),  allocatable :: ycoords(:,:,:)
+        real(rk),       intent(inout),  allocatable :: zcoords(:,:,:)
+        integer(ik),    intent(in),     optional    :: clusterx
+        real(rk),       intent(in),     optional    :: x_max_in
+        real(rk),       intent(in),     optional    :: x_min_in
 
         integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ierr, &
                        npts_xi, npts_eta, npts_zeta
-        real(rk)    :: x,y,z
+        real(rk)    :: x,y,z, x_max, x_min
 
 
         npts_xi   = nelem_xi   + 1
@@ -744,24 +744,49 @@ contains
                  zcoords(npts_xi,npts_eta,npts_zeta), stat=ierr)
         if (ierr /= 0) call AllocationError
 
+
+        !
+        ! Set max/min X-Coordinate
+        !
+        if (present(x_max_in)) then
+            x_max = x_max_in
+        else
+            x_max = ONE
+        end if
+
+        if (present(x_min_in)) then
+            x_min = x_min_in
+        else
+            x_min = ZERO
+        end if
+
+
+
+
+        !
+        ! Generate points
+        !
         do ipt_zeta = 1,npts_zeta
             do ipt_eta = 1,npts_eta
                 do ipt_xi = 1,npts_xi
 
                     if (present(clusterx)) then
                         if ( clusterx == -1 ) then
-                            x = ONE - tanh( (PI/TWO)*(ONE - real(ipt_xi-1,rk)/real(npts_xi-1,rk) ) )/tanh(PI/TWO)
+                            !x = ONE - tanh( (PI/TWO)*(ONE - real(ipt_xi-1,rk)/real(npts_xi-1,rk) ) )/tanh(PI/TWO)
+                            x = x_max - (x_max-x_min)*tanh( (PI/TWO)*(ONE - real(ipt_xi-1,rk)/real(npts_xi-1,rk) ) )/tanh(PI/TWO)
                         else if ( clusterx == 1 ) then
                             call chidg_signal(FATAL,"meshgen_NxNxN_linear: 'clusterx'=1 not yet implemented.")
                         else
                             call chidg_signal(FATAL,"meshgen_NxNxN_linear: Invalid value for 'clusterx'. -1,1.")
                         end if
                     else
-                        x = real(ipt_xi-1,rk)/real(npts_xi-1,rk)
+                        !x = real(ipt_xi-1,rk)/real(npts_xi-1,rk)
+                        x = x_min + (x_max - x_min)*real(ipt_xi-1,rk)/real(npts_xi-1,rk)
                     end if
 
                     if (ipt_xi == npts_xi) then
-                        x = ONE
+                        !x = ONE
+                        x = x_max
                     end if
 
                     y = real(ipt_eta-1,rk)/real(npts_eta-1,rk)

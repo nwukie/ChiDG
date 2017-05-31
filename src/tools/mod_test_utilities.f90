@@ -57,7 +57,7 @@ contains
                                                     group_names,                        &
                                                     bc_state_groups,                    &
                                                     nelem_xi,  nelem_eta,  nelem_zeta,  &
-                                                    clusterx)
+                                                    clusterx, x_max_in, x_min_in)
         character(*),                           intent(in)  :: selector
         character(*),                           intent(in)  :: filename
         type(string_t),             optional,   intent(in)  :: equation_sets(:)
@@ -67,6 +67,8 @@ contains
         integer(ik),                optional,   intent(in)  :: nelem_eta
         integer(ik),                optional,   intent(in)  :: nelem_zeta
         integer(ik),                optional,   intent(in)  :: clusterx
+        real(rk),                   optional,   intent(in)  :: x_max_in
+        real(rk),                   optional,   intent(in)  :: x_min_in
 
         character(:),   allocatable :: user_msg
         integer(ik)                 :: ierr
@@ -85,7 +87,7 @@ contains
                                                              group_names,                       &
                                                              bc_state_groups,                   &
                                                              nelem_xi, nelem_eta, nelem_zeta,   &
-                                                             clusterx)
+                                                             clusterx, x_max_in, x_min_in)
 
             case("D2 NxNxN M1")
                 call create_mesh_file__multiblock(filename, equation_sets,                      &

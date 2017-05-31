@@ -58,7 +58,7 @@ module type_time_integrator
 
 
         ! Must define this procedure in any extended type
-        procedure(data_interface),   deferred   :: step                 ! define the time integrator stepping procedure
+        procedure(step_interface),   deferred   :: step                 ! define the time integrator stepping procedure
         procedure(state_interface),  deferred   :: initialize_state     ! process a read solution for the current time-integrator
         procedure(write_interface),  deferred   :: write_time_options   ! write time integrator options to .h5 file
         procedure(read_interface),   deferred   :: read_time_options    ! read time integrator options from .h5 file
@@ -83,7 +83,7 @@ module type_time_integrator
     
     ! Interface for passing a domain_t type
     abstract interface
-        subroutine data_interface(self,data,nonlinear_solver,linear_solver,preconditioner)
+        subroutine step_interface(self,data,nonlinear_solver,linear_solver,preconditioner)
             use type_chidg_data,        only: chidg_data_t
             use type_nonlinear_solver,  only: nonlinear_solver_t
             use type_linear_solver,     only: linear_solver_t

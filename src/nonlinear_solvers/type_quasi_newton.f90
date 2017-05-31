@@ -3,8 +3,8 @@ module type_quasi_newton
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, DIAG
     use mod_hdfio,              only: write_solution_hdf
-!    use mod_tecio,              only: write_tecio_variables
     use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER, IRANK, NRANK
+    use mod_io,                 only: verbosity
     use mpi_f08,                only: MPI_Barrier
 
     use type_chidg_data,        only: chidg_data_t
@@ -84,8 +84,7 @@ contains
                     rhs => data%sdata%rhs,  &
                     lhs => data%sdata%lhs)
 
-            call write_line('Entering time', io_proc=GLOBAL_MASTER)
-            call write_line(' ', io_proc=GLOBAL_MASTER)
+            call write_line('NONLINER SOLVER', io_proc=GLOBAL_MASTER, silence=(verbosity<2))
 
             !
             ! start timer
@@ -107,9 +106,9 @@ contains
 
             absolute_convergence = .true.
             relative_convergence = .true.
+            call write_line("iter","|R(Q)|","CFL", "Linear Solver(niter)", delimiter='', columns=.True., column_width=30, io_proc=GLOBAL_MASTER, silence=(verbosity<2))
             do while ( absolute_convergence .and. relative_convergence )
                 niter = niter + 1
-                call write_line("   niter: ", niter, delimiter='', columns=.True., column_width=20, io_proc=GLOBAL_MASTER)
 
 
                 !
@@ -129,9 +128,7 @@ contains
                 !
                 ! Print diagnostics, check tolerance.
                 !
-                call write_line("   R(Q) - Norm: ", resid, delimiter='', columns=.True., column_width=20, io_proc=GLOBAL_MASTER)
                 call self%residual_norm%push_back(resid)
-
                 if ( resid < self%tol ) exit
                 if ( ieee_is_nan(resid) ) then
                     call chidg_signal(FATAL,"quasi_newton%solve: NaN residual calculation. Check initial solution and operator objects.")
@@ -182,13 +179,13 @@ contains
                     cfln = 0.1
                 end where
 
-                if (IRANK == GLOBAL_MASTER) then
-                    call add_to_line("  CFL: ")
-                    do icfl = 1,size(cfln)
-                        call add_to_line(cfln(icfl))
-                    end do
-                    call send_line()
-                end if
+                !if (IRANK == GLOBAL_MASTER) then
+                !    call add_to_line("  CFL: ")
+                !    do icfl = 1,size(cfln)
+                !        call add_to_line(cfln(icfl))
+                !    end do
+                !    call send_line()
+                !end if
 
 
 
@@ -205,7 +202,6 @@ contains
                     eqn_ID = data%mesh%domain(idom)%eqn_ID
                     do ielem = 1,data%mesh%domain(idom)%nelem
                         do itime = 1,data%mesh%domain(idom)%ntime
-                            !do ieqn = 1,data%eqnset(idom)%prop%nprimary_fields()
                             do ieqn = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
                                 ! get element-local timestep
@@ -271,7 +267,7 @@ contains
                         !   Try: 1, 0.5, 0.25... 2^-i
                         !
                         alpha = TWO**(-real(step,rk)) 
-                        call write_line("       Testing newton direction with 'alpha' = ", alpha, io_proc=GLOBAL_MASTER)
+                        call write_line("       Testing newton direction with 'alpha' = ", alpha, io_proc=GLOBAL_MASTER, silence=(verbosity<3))
 
 
                         !
@@ -314,7 +310,7 @@ contains
                             searching = .false.
                         end if
 
-                        call write_line("       Rn(Q) = ", fn, io_proc=GLOBAL_MASTER)
+                        call write_line("       Rn(Q) = ", fn, io_proc=GLOBAL_MASTER, silence=(verbosity<3))
 
                         step = step + 1
 
@@ -361,6 +357,10 @@ contains
                 relative_convergence = ( (log10(resid0) - log10(resid)) < real(self%norders_reduction,rk) )
 
 
+                !
+                ! Print iteration information
+                !
+                call write_line(niter, resid, cfln(1), linear_solver%niter, delimiter='', columns=.True., column_width=30, io_proc=GLOBAL_MASTER, silence=(verbosity<2))
 
             end do ! niter
 
@@ -369,8 +369,8 @@ contains
             ! stop timer
             !
             call self%timer%stop()
-            call self%timer%report('Solver Elapsed Time: ')
             call self%total_time%push_back(self%timer%elapsed())
+            call write_line('Nonlinear Solver elapsed time: ', self%timer%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
 
 
 

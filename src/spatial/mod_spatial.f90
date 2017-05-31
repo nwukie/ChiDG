@@ -3,6 +3,7 @@ module mod_spatial
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES, DIAG, CHIMERA, INTERIOR
     use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM, GLOBAL_MASTER
+    use mod_io,                 only: verbosity
     use mpi_f08,                only: MPI_Barrier
 
 
@@ -34,34 +35,19 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine update_space(data,timing,differentiate)
+    subroutine update_space(data,differentiate,timing)
         type(chidg_data_t), intent(inout),  target      :: data
+        logical,            intent(in)                  :: differentiate
         real(rk),           intent(inout),  optional    :: timing
-        logical,            intent(in),     optional    :: differentiate
 
         integer(ik)                 :: idom, ielem, iface, idiff, ierr, &
                                        diff_min, diff_max, eqn_ID
         type(timer_t)               :: timer, comm_timer, loop_timer
 
         type(element_info_t)        :: elem_info
-
         type(chidg_worker_t)        :: worker
         type(chidg_cache_t)         :: cache
         type(cache_handler_t)       :: cache_handler
-
-        logical                     :: differentiate_function, io_spatial
-
-        
-        !
-        ! Decide whether to differentiate the discretization or not
-        !
-        if (present(differentiate)) then
-            ! User-specified
-            differentiate_function = differentiate
-        else
-            ! Default, differentiate
-            differentiate_function = .true.
-        end if
 
 
         !
@@ -105,7 +91,7 @@ contains
         ! Loop through given element compute the residual functions and also the 
         ! linearization of those functions.
         !
-        call write_line('-  Updating spatial scheme', io_proc=GLOBAL_MASTER)
+        call write_line('-  Updating spatial scheme', io_proc=GLOBAL_MASTER, silence=(verbosity < 3))
 
 
         !
@@ -144,7 +130,7 @@ contains
 
 
                 ! Update the element cache
-                call cache_handler%update(worker,data%eqnset, data%bc_state_group, differentiate_function)
+                call cache_handler%update(worker,data%eqnset, data%bc_state_group, differentiate)
 
 
 
@@ -154,9 +140,9 @@ contains
 
                     call worker%set_face(iface)
 
-                    call eqnset%compute_boundary_advective_operators(worker, differentiate_function)
-                    call eqnset%compute_boundary_diffusive_operators(worker, differentiate_function)
-                    call eqnset%compute_bc_operators(worker,data%bc_state_group, differentiate_function)
+                    call eqnset%compute_boundary_advective_operators(worker, differentiate)
+                    call eqnset%compute_boundary_diffusive_operators(worker, differentiate)
+                    call eqnset%compute_bc_operators(worker,data%bc_state_group, differentiate)
 
                 end do  ! faces loop
                 
@@ -165,8 +151,8 @@ contains
                 !
                 ! Compute contributions from volume integrals
                 !
-                call eqnset%compute_volume_advective_operators(worker, differentiate_function)
-                call eqnset%compute_volume_diffusive_operators(worker, differentiate_function)
+                call eqnset%compute_volume_advective_operators(worker, differentiate)
+                call eqnset%compute_volume_diffusive_operators(worker, differentiate)
 
 
             end do  ! ielem
@@ -183,17 +169,19 @@ contains
         call MPI_Barrier(ChiDG_COMM,ierr)
 
 
-
-
-
         call timer%stop()
 
-        io_spatial = .true.
-        if (io_spatial) then
-            call timer%report('Spatial Discretization Time')
-            call comm_timer%report('    - Spatial comm time:')
-            call loop_timer%report('    - Spatial loop time:')
-        end if
+
+
+        !
+        ! Timing IO
+        !
+        call write_line('Spatial Discretization Time: ', timer%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        call write_line('   - Spatial comm time: ', comm_timer%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+        call write_line('   - Spatial loop time: ', loop_timer%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+!            call timer%report('Spatial Discretization Time')
+!            call comm_timer%report('    - Spatial comm time:')
+!            call loop_timer%report('    - Spatial loop time:')
 
         if (present(timing)) then
             timing = timer%elapsed()

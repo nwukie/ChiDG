@@ -162,10 +162,10 @@ subroutine test_update_space_linearadvection()
     ! Call update_space
     !
     call write_line("ChiDG - A: Updating Space")
-    call update_space(chidgA%data)
+    call update_space(chidgA%data,differentiate=.true.)
 
     call write_line("ChiDG - B: Updating Space")
-    call update_space(chidgB%data)
+    call update_space(chidgB%data,differentiate=.true.)
 
 
 

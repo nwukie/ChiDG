@@ -640,7 +640,6 @@ contains
                         !
                         if (present(field)) then
 
-                            !field_index = data%eqnset(idom)%prop%get_primary_field_index(trim(field))
                             field_index = data%eqnset(eqn_ID)%prop%get_primary_field_index(trim(field))
 
                             if (field_index /= 0) then
@@ -656,10 +655,8 @@ contains
                             !
                             ! For each field: get the name, write to file
                             ! 
-                            !neqns = data%eqnset(idom)%prop%nprimary_fields()
                             neqns = data%eqnset(eqn_ID)%prop%nprimary_fields()
                             do ieqn = 1,neqns
-                                !field_name = trim(data%eqnset(idom)%prop%get_primary_field_name(ieqn))
                                 field_name = trim(data%eqnset(eqn_ID)%prop%get_primary_field_name(ieqn))
                                 call write_domain_field_hdf(domain_id,data,field_name,itime)
                             end do ! ieqn
@@ -837,7 +834,6 @@ contains
             ! Get number of terms initialized for the current element
             !
             if (field_type == 'Primary') then
-                !nterms_ielem = data%sdata%q%dom(idom)%vecs(ielem)%nterms()
                 nterms_ielem = data%sdata%q_in%dom(idom)%vecs(ielem)%nterms()
             else if (field_type == 'Auxiliary') then
                 nterms_ielem = data%sdata%auxiliary_field(aux_vector_index)%dom(idom)%vecs(ielem)%nterms() 
@@ -907,8 +903,6 @@ contains
 
             ! Store modes in ChiDG Vector
             if (field_type == 'Primary') then
-                !ivar = data%eqnset(idom)%prop%get_primary_field_index(trim(field_name))
-                !call data%sdata%q%dom(idom)%vecs(ielem)%setvar(ivar,itime,real(bufferterms,rk))
                 ivar = data%eqnset(eqn_ID)%prop%get_primary_field_index(trim(field_name))
                 call data%sdata%q_in%dom(idom)%vecs(ielem)%setvar(ivar,itime,real(bufferterms,rk))
             else if (field_type == 'Auxiliary') then
@@ -919,9 +913,6 @@ contains
 
 
         end do
-
-
-
 
 
 
@@ -1143,10 +1134,6 @@ contains
 
     end subroutine write_domain_field_hdf
     !****************************************************************************************
-
-
-
-
 
 
 
@@ -1391,7 +1378,6 @@ contains
 
                 ! Save to bc_state_group_data_t
                 bc_state_groups(igroup)%name = group_name%get()
-                !call bc_groups(igroup)%bc_states%push_back(bc)
                 call bc_state_groups(igroup)%add_bc_state(bc)
 
             end do !istate

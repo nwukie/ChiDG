@@ -11,20 +11,53 @@
 !       vec(c) = [1.0, 0.0, 0.0]
 !
 !   Boundary conditions are:
-!       Dirichlet U(x=-10) = U(x=10)
+!       Periodic U(x=-10) = U(x=10)
 !
+!   Initial solution is:
+!       u = exp( -(x**TWO)/(TWO) )      (Gaussian profile, centered at x=0)
 !
 !   Analytical Solution is:
-!       numerator   = 1 - exp( (x-1) * cx/mu )
-!       denominator = 1 - exp(-cx/mu)
+!       Periodic, so evaluated after one period, the analytical solution
+!       is equal to the initial solution:
+!       u = exp( -(x**TWO)/(TWO) )      (Gaussian profile, centered at x=0)
+!
+!                        .
+!                       . .             (Initial solution)
+!     (t=0)             | |
+!               _______/   \_______
 !
 !
+!                            .
+!                           . .
+!                           | |
+!               ___________/   \____
+!
+!
+!
+!                                  .
+!               .                 . 
+!               |                 |     (Solution through periodic boundaries)
+!                \_______________/  
+!
+!
+!                    .
+!                   . .
+!                   | |
+!               ___/   \___________
+!
+!
+!                        .
+!                       . .
+!    (t=T)              | |             (Final solution = Initial solution)
+!               _______/   \_______
+!
+!
+!   Where T is the time after one period.
 !
 !
 !   Tests that are being run here:
-!       - Run the calculation on multiple grids with order of accuracy 2-5
-!       - Test for convergence in 1 Newton iteration (linear problem)
-!       - Test convergence rates for spatial orders of accuracy
+!       - Run the calculation using several different time steps
+!       - Test convergence rates for temporal orders of accuracy
 !
 !   @author Nathan A. Wukie (AFRL)
 !   @date   05/30/2017
@@ -73,10 +106,11 @@ module integration_test_DIRK_mod
     ! to test the nonlinear convergence between a case running on
     ! a different number of procs.
     !
-    ! Procs: 1, 2, 3
+    ! Integrators:  'Backward Euler', 'Diagonally Implicit Runge-Kutta'
+    ! dt:           '0.1, 0.08'
     !
-    real(rk)        :: error(3,2)                         ! nprocs, ndt
-    real(rk)        :: error_chimera(3,2)                 ! nprocs, ndt
+    real(rk)        :: error(2,2)                         ! nintegrators, ndt
+    real(rk)        :: expected_order(2)                  ! nintegrators
 
     public  :: linear_advection_1D
 
@@ -163,7 +197,10 @@ module integration_test_DIRK_mod
     type, extends(MpiTestParameter) :: case_grid_order
 
         real(rk)                    :: dt
+        integer(ik)                 :: nsteps
+        integer(ik)                 :: expected_order
         character(:),   allocatable :: gridfile
+        character(:),   allocatable :: integrator
 
     contains
 
@@ -188,7 +225,10 @@ module integration_test_DIRK_mod
     type, extends(MpiTestCase) :: linear_advection_1D
 
         real(rk)                    :: dt
+        integer(ik)                 :: nsteps
+        integer(ik)                 :: expected_order
         character(:),   allocatable :: gridfile
+        character(:),   allocatable :: integrator
 
         type(chidg_t)   :: chidg
         type(mpi_comm)  :: ChiDG_COMM
@@ -258,9 +298,9 @@ contains
         cy_model = cy
         cz_model = cz
 
-        call worker%store_model_field('Scalar Advection Velocity-1',  'value', cx_model)
-        call worker%store_model_field('Scalar Advection Velocity-2',  'value', cy_model)
-        call worker%store_model_field('Scalar Advection Velocity-3',  'value', cz_model)
+        call worker%store_model_field('Scalar Advection Velocity-1', 'value', cx_model)
+        call worker%store_model_field('Scalar Advection Velocity-2', 'value', cy_model)
+        call worker%store_model_field('Scalar Advection Velocity-3', 'value', cz_model)
 
     end subroutine compute_model
     !****************************************************************************************
@@ -412,8 +452,11 @@ contains
         type(case_grid_order),  intent(in)          :: test_parameter
         type(linear_advection_1D)    :: test
 
-        test%dt       = test_parameter%dt
-        test%gridfile = test_parameter%gridfile
+        test%dt             = test_parameter%dt
+        test%nsteps         = test_parameter%nsteps
+        test%expected_order = test_parameter%expected_order
+        test%gridfile       = test_parameter%gridfile
+        test%integrator     = test_parameter%integrator
 
     end function newTest
     !******************************************************************************
@@ -428,19 +471,37 @@ contains
         type(case_grid_order), allocatable :: params(:)
     
         real(rk),           allocatable :: dt(:)
-        type(string_t),     allocatable :: files(:)
+        type(string_t),     allocatable :: files(:), integrators(:)
+        integer(ik),        allocatable :: nsteps(:), expected_order(:)
         integer(ik)                     :: icase
 
+        integrators = [string_t('backward_euler'),   string_t('backward_euler'), &
+                       string_t('DIRK'),             string_t('DIRK')]
 
-        dt    = [ 0.1, 0.05 ]
-        files = [ string_t('1D_linear_advection.h5'), string_t('1D_linear_advection.h5') ]
+        files       = [ string_t('1D_linear_advection.h5'), string_t('1D_linear_advection.h5'), &
+                        string_t('1D_linear_advection.h5'), string_t('1D_linear_advection.h5') ]
+
+        expected_order = [    1,    1,    3,    3 ]
+        dt             = [ 0.10, 0.08, 0.10, 0.08 ]
+        nsteps         = [  200,  250,  200,  250 ]
+        !nsteps         = [    10,   10,  10,   10 ]
+
+
+        !integrators    = [string_t('DIRK'),                   string_t('DIRK')]
+        !files          = [string_t('1D_linear_advection.h5'), string_t('1D_linear_advection.h5')]
+        !dt             = [ 0.10, 0.08]
+        !nsteps         = [  200,  250]
+        !expected_order = [    3,    3]
 
 
         !Initialize the test case container with the parameter
         allocate(params(size(files)))
         do icase = 1,size(files)
-            params(icase)%dt       = dt(icase)
-            params(icase)%gridfile = files(icase)%str
+            params(icase)%dt             = dt(icase)
+            params(icase)%nsteps         = nsteps(icase)
+            params(icase)%expected_order = expected_order(icase)
+            params(icase)%gridfile       = files(icase)%str
+            params(icase)%integrator     = integrators(icase)%str
         end do
 
     end function getParameters
@@ -458,8 +519,13 @@ contains
 
         character(len=200) :: buffer
 
-        write(buffer,'( "(gridfile, dt)=","(", A30,",", F16.8, ")" )') this%gridfile, this%dt
-        string = trim(buffer)
+        write(buffer,'( "(Integrator, dt)=","(", A20,",", F16.8, ")" )') trim(this%integrator), this%dt
+
+        if (len(trim(buffer)) > 60) then
+            string = buffer(1:60)
+        else
+            string = buffer
+        end if
 
     end function toString
     !****************************************************************************************
@@ -514,7 +580,7 @@ contains
         call equation_builder_factory%register(builder_test_linear_advection)
 
         !-------------------------------------------------------------------------------
-        !               Initialize and register the gaussian function
+        !  Initialize and register the gaussian function (initial/analytical solution)
         !-------------------------------------------------------------------------------
         call gaussian%init()
         call registered_fcns%push_back(gaussian)
@@ -530,10 +596,15 @@ contains
         !------------------------------------------------------------------------------
         basis            = 'legendre'
         gq_rule          = 1
-        time_integrator  = 'DIRK'
+        time_integrator  = trim(this%integrator)
+        dt               = this%dt
+        time_steps       = this%nsteps
+        ttol             = 1.e-6_rk
+        ntime_instances  = 1
         nonlinear_solver = 'newton'
         linear_solver    = 'fgmres_cgs'
-        preconditioner   = 'ILU0'
+        preconditioner   = 'RASILU0'
+        nwrite           = 10000000
         IO_DESTINATION   = 'file'
         !------------------------------------------------------------------------------
 
@@ -612,9 +683,11 @@ contains
             call create_mesh_file('D1 NxNxN',this%gridfile,equation_sets   = [string_t("Test 1D Linear Advection")],  &
                                                            group_names     = group_names,                             &
                                                            bc_state_groups = bc_state_groups,                         &
-                                                           nelem_xi        = 20,                                      &
+                                                           nelem_xi        = 40,                                      &
                                                            nelem_eta       = 1,                                       &
-                                                           nelem_zeta      = 1)
+                                                           nelem_zeta      = 1,                                       &
+                                                           x_max_in        =  10._rk,                                 &
+                                                           x_min_in        = -10._rk)
 
         end if !GLOBAL_MASTER
 
@@ -623,10 +696,10 @@ contains
         ! Set ChiDG components
         !
         call this%chidg%set('Solution Order',   integer_input=5)
-        call this%chidg%set('time_integrator',  algorithm=time_integrator)
-        call this%chidg%set('nonlinear_solver', algorithm=nonlinear_solver, options=noptions)
-        call this%chidg%set('linear_solver',    algorithm=linear_solver,    options=loptions)
-        call this%chidg%set('preconditioner',   algorithm=preconditioner)
+        call this%chidg%set('Time Integrator',  algorithm=time_integrator)
+        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
 
 
         !
@@ -686,16 +759,16 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    @Test(npes=[1,2,3])
+    @Test(npes=[6])
     subroutine run_calculations(self)
         class(linear_advection_1D),  intent(inout)   :: self
 
         real(rk)    :: computed_error
-        integer(ik) :: npes_index, dt_index
+        integer(ik) :: integrator_index, dt_index
 
 
-        npes_index  = get_npes_index(NRANK)
-        dt_index    = get_dt_index(self%dt)
+        integrator_index = get_integrator_index(self%integrator)
+        dt_index         = get_dt_index(self%dt)
 
 
         !
@@ -713,7 +786,9 @@ contains
         !
         ! Store the computed error for the current case
         !
-        error(npes_index,dt_index) = computed_error
+        print*, integrator_index, dt_index
+        error(integrator_index,dt_index) = computed_error
+        expected_order(integrator_index) = self%expected_order
 
 
     end subroutine run_calculations
@@ -738,20 +813,21 @@ contains
     subroutine test_err_conforming(self)
         class(linear_advection_1D),  intent(inout)   :: self
 
-        integer(ik) :: inpes
+        integer(ik) :: iintegrator
         real(rk)    :: error_previous, error_current, time_parameter_previous, time_parameter_current, convergence_rate, tol
 
         tol = 0.1_rk
 
 
-        do inpes = 1,3
+        do iintegrator = 1,2
 
-            error_previous = error(inpes,1)
-            error_current  = error(inpes,2)
+            error_previous = error(iintegrator,1)
+            error_current  = error(iintegrator,2)
 
             time_parameter_previous = time_parameter(1)
             time_parameter_current  = time_parameter(2)
 
+            print*, error_previous, error_current, time_parameter_previous, time_parameter_current
             
             !
             ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
@@ -762,9 +838,9 @@ contains
             !
             ! Confirm DIRK scheme converges with third-order accuracy.
             !
-            @assertGreaterThan(convergence_rate, real(3,rk)-tol)
+            @assertGreaterThan(convergence_rate, real(expected_order(iintegrator),rk), tol)
 
-        end do !inpes
+        end do !iintegrator
 
 
     end subroutine test_err_conforming
@@ -898,9 +974,9 @@ contains
 
         select case (itime)
             case(1)
-                dt = 0.1
+                dt = 0.10
             case(2)
-                dt = 0.05
+                dt = 0.08
             case default
                 call chidg_signal(FATAL,"integration_test_DIRK_mod%time_parameter: invalid itime")
         end select
@@ -922,21 +998,21 @@ contains
 
     ! Utility for returning the index associated with a certain number of procs
     !----------------------------------------------------------------------------------------
-    function get_npes_index(numproc) result(inpes)
-        integer(ik), intent(in) :: numproc
+    function get_integrator_index(integrator) result(ind)
+        character(*),   intent(in)  :: integrator
 
-        integer(ik) :: inpes
+        integer(ik) :: ind
 
-        select case (numproc)
-            case(1)
-                inpes = 1
-            case(2)
-                inpes = 2
-            case(3)
-                inpes = 3
+        select case (trim(integrator))
+            case('backward_euler')
+                ind = 1
+            case('DIRK')
+                ind = 2
+            case default
+                call chidg_signal(FATAL,"integration_test_DIRK_mod.get_integrator_index: invalid integrator string.")
         end select
 
-    end function get_npes_index
+    end function get_integrator_index
     !****************************************************************************************
 
 
@@ -949,14 +1025,14 @@ contains
         integer(ik) :: dt_index
 
 
-        if ( (dt - 0.1) < 0.0001 ) then
+        if      ( abs(dt - 0.10) < 0.0001 ) then
             dt_index = 1
 
-        else if ( (dt - 0.05) < 0.0001 ) then
-            dt_index = 1
+        else if ( abs(dt - 0.08) < 0.0001 ) then
+            dt_index = 2
 
         else
-            call chidg_signal(FATAL,"integration_test_DIRK_mod :: get_dt_index.")
+            call chidg_signal(FATAL,"integration_test_DIRK_mod.get_dt_index: invalid time step.")
         end if
 
     end function get_dt_index

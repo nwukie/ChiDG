@@ -14,6 +14,7 @@ module mod_chidg_post_hdf2matplotlib
     use mod_matplotlib_io,      only: write_matplotlib_file
     use type_file_properties,   only: file_properties_t
     use mod_hdf_utilities,      only: get_properties_hdf
+    use mod_string,             only: get_file_prefix
 
     implicit none
 
@@ -29,14 +30,16 @@ contains
     !!  @date   3/24/2017
     !!
     !---------------------------------------------------------------------------------------------
-    subroutine chidg_post_hdf2matplotlib(filename)
-        character(*)                :: filename
+    subroutine chidg_post_hdf2matplotlib(grid_file,solution_file)
+        character(*)                :: grid_file
+        character(*)                :: solution_file
 
         type(chidg_t)               :: chidg
         type(file_properties_t)     :: file_props
         character(:),   allocatable :: eqnset
         character(:),   allocatable :: time_string, coord, matplotlib_file, &
-                                       original_sol_file, Fourier_coeff_file
+                                       original_sol_file, Fourier_coeff_file, &
+                                       file_prefix
         integer(ik)                 :: nterms_s, spacedim, solution_order
 
 
@@ -50,7 +53,7 @@ contains
         !
         ! Get nterms_s and eqnset
         !
-        file_props = get_properties_hdf(filename)
+        file_props = get_properties_hdf(solution_file)
 
         nterms_s    = file_props%nterms_s(1)
         eqnset      = file_props%eqnset(1)
@@ -58,6 +61,10 @@ contains
         time_string = file_props%time_integrator
 
 
+        !
+        ! Read grid data from file
+        !
+        call chidg%read_grid(grid_file,spacedim)
 
         solution_order = 0
         do while (solution_order*solution_order*solution_order < nterms_s)
@@ -79,9 +86,9 @@ contains
         !
         ! Read grid/solution modes and time integrator options from HDF5
         !
-        call chidg%read_grid(filename,spacedim)
-        call chidg%read_solution(filename)
-        call chidg%time_integrator%read_time_options(chidg%data,filename)
+        call chidg%read_solution(solution_file)
+        call chidg%time_integrator%read_time_options(chidg%data,solution_file)
+        call chidg%read_grid(grid_file,spacedim)
 
 
         !
@@ -94,11 +101,9 @@ contains
         ! Write solution for matplotlib
         !
         coord              = 'x'
-        matplotlib_file    = 'chidg_results.dat'
-        original_sol_file  = 'chidg_original_results.dat'
-        Fourier_coeff_file = 'chidg_coefficients.dat'
-        call write_matplotlib_file(chidg%data,1,coord,matplotlib_file,filename_2 = original_sol_file,&
-                                   filename_3 = Fourier_coeff_file)
+        file_prefix        = get_file_prefix(solution_file,'.h5')
+        matplotlib_file    = file_prefix//'_matplotlib.dat'
+        call write_matplotlib_file(chidg%data,1,coord,matplotlib_file)
 
 
         !

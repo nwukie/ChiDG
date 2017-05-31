@@ -1140,7 +1140,7 @@ contains
         !
         wcount = 1
         nsteps = self%data%time_manager%nsteps
-        call write_line("-","Step","System residual", columns=.true., column_width=30, io_proc=GLOBAL_MASTER)
+        call write_line("Step","System residual", columns=.true., column_width=30, io_proc=GLOBAL_MASTER)
         do istep = 1,nsteps
             
 
@@ -1171,7 +1171,6 @@ contains
             !
             ! Print diagnostics
             !
-            !call write_line("-  System residual |R(Q)|: ", self%time_integrator%residual_norm%at(istep), delimiter='', io_proc=GLOBAL_MASTER)
             call write_line(istep, self%time_integrator%residual_norm%at(istep), columns=.true., column_width=30, io_proc=GLOBAL_MASTER)
 
 

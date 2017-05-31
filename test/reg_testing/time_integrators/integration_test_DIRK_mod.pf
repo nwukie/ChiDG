@@ -786,7 +786,7 @@ contains
         !
         ! Store the computed error for the current case
         !
-        print*, integrator_index, dt_index
+        !print*, integrator_index, dt_index
         error(integrator_index,dt_index) = computed_error
         expected_order(integrator_index) = self%expected_order
 
@@ -827,7 +827,7 @@ contains
             time_parameter_previous = time_parameter(1)
             time_parameter_current  = time_parameter(2)
 
-            print*, error_previous, error_current, time_parameter_previous, time_parameter_current
+            !print*, error_previous, error_current, time_parameter_previous, time_parameter_current
             
             !
             ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)

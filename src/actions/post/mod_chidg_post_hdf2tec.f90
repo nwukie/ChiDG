@@ -21,6 +21,7 @@ module mod_chidg_post_hdf2tec
     use mod_tecio,              only: write_tecio
     use type_file_properties,   only: file_properties_t
     use mod_hdf_utilities,      only: get_properties_hdf
+    use mod_string,             only: get_file_prefix
     implicit none
 
 
@@ -48,8 +49,9 @@ contains
         type(chidg_t)                       :: chidg
         type(file_properties_t)             :: file_props
         character(:),           allocatable :: eqnset
-        character(:),           allocatable :: time_string
-        integer(ik)                         :: nterms_s, spacedim, solution_order
+        character(:),           allocatable :: time_string, grid_file_prefix, solution_file_prefix, step_str, &
+                                               plt_filename
+        integer(ik)                         :: nterms_s, spacedim, solution_order, istep, itimestep
 
 
 
@@ -107,10 +109,16 @@ contains
         call chidg%time_integrator%process_data_for_output(chidg%data)
 
         
+        grid_file_prefix     = get_file_prefix(grid_file,'.h5')
+        solution_file_prefix = get_file_prefix(solution_file,'.h5')
+        step_str             = solution_file_prefix(len(grid_file_prefix)+2:)
+
+        plt_filename = step_str//'.plt'
+
         !
         ! Write solution
         !
-        call write_tecio(chidg%data,'0.plt', write_domains=.true., write_surfaces=.true.)
+        call write_tecio(chidg%data,plt_filename, write_domains=.true., write_surfaces=.true.)
         
 
         !

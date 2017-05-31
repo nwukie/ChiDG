@@ -9,9 +9,10 @@ module mod_time_integrators
     ! Import solverdata types
     use type_steady,               only: steady_t
     use type_forward_euler,        only: forward_euler_t
-!    use type_backward_euler,    only: backward_euler_t
+    use type_backward_euler,    only: backward_euler_t
     use type_harmonic_balance,     only: harmonic_balance_t 
     use type_explicit_runge_kutta, only: explicit_runge_kutta_t
+    use type_DIRK,                 only: DIRK_t
     implicit none
 
 
@@ -19,9 +20,10 @@ module mod_time_integrators
     ! Instantiate solver types for sourcing
     type(steady_t)                      :: STEADY
     type(forward_euler_t)               :: FORWARD_EULER
-!    type(backward_euler_t)              :: BACKWARD_EULER
+    type(backward_euler_t)              :: BACKWARD_EULER
     type(harmonic_balance_t)            :: HB 
     type(explicit_runge_kutta_t)        :: EXPLICIT_RK
+    type(DIRK_t)                        :: DIRK
 
     logical :: initialized = .false.
 
@@ -55,9 +57,9 @@ contains
 
             case ('forward_euler','Forward_Euler','FORWARD_EULER','forward euler', 'Forward Euler')
                 allocate(instance, source=FORWARD_EULER)
-!
-!            case ('backward_euler', 'Backward_Euler', 'BACKWARD_EULER', 'backward euler', 'Backward Euler', 'BACKWARD EULER')
-!                allocate(instance, source=BACKWARD_EULER)
+
+            case ('backward_euler', 'Backward_Euler', 'BACKWARD_EULER', 'backward euler', 'Backward Euler', 'BACKWARD EULER')
+                allocate(instance, source=BACKWARD_EULER)
             
             case ('Harmonic Balance', 'Harmonic_Balance', 'harmonic balance', 'harmonic_balance', 'HB')
                 allocate(instance, source=HB)
@@ -66,6 +68,8 @@ contains
                    'Runge-Kutta Method', 'Fourth Runge-Kutta Method', 'Fourth Order RK Method', 'RK4', 'Three-Eighth Rule', 'Fourth Order Kutta') ! this probably needs to be split up in several RK schemes
                 allocate(instance, source=EXPLICIT_RK)
 
+            case ('DIRK')
+                allocate(instance, source=DIRK)
 
             case default
                 user_msg = "We can't seem to find a time integrator that matches the input &

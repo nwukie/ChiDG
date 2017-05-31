@@ -34,8 +34,10 @@ contains
     !!	@date	11/17/2016
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine write_vtk_file(data)
-        type(chidg_data_t),     intent(inout)                   ::  data
+    subroutine write_vtk_file(data,itimestep,pvd_filename)
+        type(chidg_data_t),             intent(inout)           :: data
+        integer(ik),                    intent(in)              :: itimestep
+        character(:),   allocatable,    intent(in)              :: pvd_filename
 
         integer(ik),parameter                                   :: bo_type = 0_ik
         integer(ik)                                             :: idom,ielem,nelem,noeq,s,num_pts,num_cells,ntime
@@ -46,7 +48,7 @@ contains
         integer(ik),            dimension(:,:), allocatable     :: connectivity,connectivity_A
         integer(ik),            dimension(:),   allocatable     :: offsets,types
         character(len = 100),   dimension(:),   allocatable     :: file_arr
-        character(len = 100)                                    :: new_dir_path,pvd_filename,make_directory,delete_directory
+        character(len = 100)                                    :: new_dir_path,make_directory,delete_directory
 		logical                                                 :: dir_exists
 
 
@@ -65,14 +67,16 @@ contains
 
         inquire(file = trim(new_dir_path)//'/.', exist = dir_exists)
         if (dir_exists) then
-            call system(delete_directory)
+            continue
+            !call system(delete_directory)
+        else
+            call system(make_directory)
         end if
-        call system(make_directory)
 
         !
         ! Name of the final .pvd file
         !
-        pvd_filename = 'chidg_results.pvd'
+        !pvd_filename = 'chidg_results.pvd'
 
 
         ntime = data%sdata%q_out%get_ntime()   ! No. of time steps in the solution file (1 for steady cases)
@@ -101,7 +105,7 @@ contains
                 !
                 ! Get the file names for the individual vtk files for individual domains
                 !
-                write(file_arr(d + idom), fmt = '(a,i0,a,i0,a)') trim(new_dir_path)//'/chidg_results_',itime - 1,'_',idom - 1,'.vtu'
+                write(file_arr(d + idom), fmt = '(a,i0,a,i0,a,i0,a)') trim(new_dir_path)//'/chidg_results_',itime - 1,'_',idom - 1,'_',itimestep,'.vtu'
 
                 !
                 ! Get number of elements in the current block
@@ -167,7 +171,7 @@ contains
         ! Write the final Paraview data file (.pvd)
         ! This file is a multi block collection file for entire geometry
         !
-        call write_pvd_final(data,pvd_filename,file_arr,ntime)
+        call write_pvd_final(data,pvd_filename,file_arr,ntime,itimestep)
 
 
     end subroutine write_vtk_file

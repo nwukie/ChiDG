@@ -92,18 +92,19 @@ contains
                 self%dt         = 0
                 self%ntime      = 1
                 self%nsteps     = 1
-                self%nwrite     = 0
+                self%nwrite     = 1
 
 
-            case ('Forward_Euler', 'Forward Euler', 'forward euler', 'forward_euler',   &
-                  'Second Order Runge-Kutta', 'Explicit Midpoint', 'Second Order RK',   &
-                  'Modified Euler', 'Second Order Heun Method',                         &
-                  'Ralston Method', 'Second Order Ralston Method',                      &
-                  'Third Order Runge-Kutta', 'Third Order Kutta', 'Third Order RK',     &
-                  'Runge-Kutta Method', 'Fourth Runge-Kutta Method',                    &
-                  'Fourth Order RK Method', 'RK4',                                      &
-                  'Three-Eighth Rule', 'Fourth Order Kutta',                            &
-                  'Backward_Euler', 'Backward Euler', 'backward euler', 'backward_euler')
+            case ('Forward_Euler', 'Forward Euler', 'forward euler', 'forward_euler',    &
+                  'Second Order Runge-Kutta', 'Explicit Midpoint', 'Second Order RK',    &
+                  'Modified Euler', 'Second Order Heun Method',                          &
+                  'Ralston Method', 'Second Order Ralston Method',                       &
+                  'Third Order Runge-Kutta', 'Third Order Kutta', 'Third Order RK',      &
+                  'Runge-Kutta Method', 'Fourth Runge-Kutta Method',                     &
+                  'Fourth Order RK Method', 'RK4',                                       &
+                  'Three-Eighth Rule', 'Fourth Order Kutta',                             &
+                  'Backward_Euler', 'Backward Euler', 'backward euler', 'backward_euler',&
+                  'DIRK')
 
                 call self%set_name(time_integrator)
 
@@ -123,7 +124,7 @@ contains
                 
                 call self%set_name(time_integrator)
                 self%nsteps     = 1
-                self%nwrite     = 0
+                self%nwrite     = 1
                 !
                 ! Verify that at least one frequency has been passed in
                 !

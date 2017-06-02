@@ -48,11 +48,6 @@ subroutine test_domain_matrix__store_1eq_8terms()
     !
     ! Create (3x3x3) mesh
     !
-    !call create_mesh('3x3x3',nodes,connectivity)
-    !call create_mesh_file("D1 NxNxN", 'file.h5', 'Scalar Advection',    &
-    !                                             nelem_xi   = 3,        &
-    !                                             nelem_eta  = 3,        &
-    !                                             nelem_zeta = 3 )
     call create_mesh_file("D1 NxNxN", filename = 'file.h5',                             &
                                       equation_sets = [string_t('Scalar Advection')],   &
                                       nelem_xi   = 3,                                   &
@@ -66,25 +61,7 @@ subroutine test_domain_matrix__store_1eq_8terms()
     call chidg%set('Nonlinear Solver', algorithm='Newton')
     call chidg%set('Linear Solver'   , algorithm='FGMRES')
     call chidg%set('Preconditioner'  , algorithm='ILU0')
-    call chidg%read_grid('file.h5')
-    call chidg%init('all')
-
-
-
-    
-!    !
-!    ! Initialize domain_t instance.
-!    !
-!    neqns       = 1
-!    idomain     = 1
-!    spacedim    = 3
-!    nterms_c    = 8
-!    nterms_s    = 8
-!    ntime       = 1
-!    nelements_g = 9
-!    call domain%init_geom(idomain,nelements_g,spacedim,nterms_c,nodes,connectivity,'Cartesian')
-!    call domain%init_sol(neqns,nterms_s,ntime)
-!    call domain%init_comm_local()
+    call chidg%read_mesh('file.h5')
 
 
 
@@ -92,7 +69,6 @@ subroutine test_domain_matrix__store_1eq_8terms()
     !
     ! Call initialization on domain matrix
     !
-    !call bmat%init(domain,mtype='full')
     call bmat%init(chidg%data%mesh,idom=1,mtype='full')
 
 
@@ -224,11 +200,6 @@ subroutine test_domain_matrix__store_2eq_8terms()
     !
     ! Create 3x3x3 mesh
     !
-    !call create_mesh('3x3x3',nodes,connectivity)
-    !call create_mesh_file("D1 NxNxN", 'file.h5', 'Dual Linear Advection',   &
-    !                                             nelem_xi   = 3,            &
-    !                                             nelem_eta  = 3,            &
-    !                                             nelem_zeta = 3 )
     call create_mesh_file("D1 NxNxN", filename = 'file.h5',                                 &
                                       equation_sets = [string_t('Dual Linear Advection')],  &
                                       nelem_xi   = 3,                                       &
@@ -243,28 +214,13 @@ subroutine test_domain_matrix__store_2eq_8terms()
     call chidg%set('Nonlinear Solver', algorithm='Newton')
     call chidg%set('Linear Solver'   , algorithm='FGMRES')
     call chidg%set('Preconditioner'  , algorithm='ILU0')
-    call chidg%read_grid('file.h5')
-    call chidg%init('all')
+    call chidg%read_mesh('file.h5')
 
-!    !
-!    ! Initialize domain_t instance.
-!    !
-!    neqns       = 2
-!    idomain     = 1
-!    spacedim    = 3
-!    nterms_c    = 8
-!    nterms_s    = 8
-!    ntime       = 1
-!    nelements_g = 9
-!    call domain%init_geom(idomain,nelements_g,spacedim,nterms_c,nodes,connectivity,'Cartesian')
-!    call domain%init_sol(neqns,nterms_s,ntime)
-!    call domain%init_comm_local()
 
 
     !
     ! Call initialization on domain matrix
     !
-    !call bmat%init(domain,mtype='full')
     call bmat%init(chidg%data%mesh,idom=1,mtype='full')
 
 
@@ -398,11 +354,6 @@ subroutine test_domain_matrix__clear_1eq_8terms()
     !
     ! Create a 3x3x3 mesh
     !
-    !call create_mesh('3x3x3',nodes,connectivity)
-    !call create_mesh_file("D1 NxNxN", 'file.h5', 'Dual Linear Advection',   &
-    !                                             nelem_xi   = 3,            &
-    !                                             nelem_eta  = 3,            &
-    !                                             nelem_zeta = 3 )
     call create_mesh_file("D1 NxNxN", filename = 'file.h5',                             &
                                       equation_sets = [string_t('Scalar Advection')],   &
                                       nelem_xi   = 3,                                   &
@@ -417,23 +368,7 @@ subroutine test_domain_matrix__clear_1eq_8terms()
     call chidg%set('Nonlinear Solver', algorithm='Newton')
     call chidg%set('Linear Solver'   , algorithm='FGMRES')
     call chidg%set('Preconditioner'  , algorithm='ILU0')
-    call chidg%read_grid('file.h5')
-    call chidg%init('all')
-
-
-!    !
-!    ! Initialize a domain_t instance.
-!    !
-!    neqns       = 1
-!    idomain     = 1
-!    spacedim    = 3
-!    nterms_c    = 8
-!    nterms_s    = 8
-!    ntime       = 1
-!    nelements_g = 9
-!    call domain%init_geom(idomain,nelements_g,spacedim,nterms_c,nodes,connectivity,'Cartesian')
-!    call domain%init_sol(neqns,nterms_s,ntime)                              
-!    call domain%init_comm_local()
+    call chidg%read_mesh('file.h5')
 
 
 

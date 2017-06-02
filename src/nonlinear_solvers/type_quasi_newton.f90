@@ -2,7 +2,7 @@ module type_quasi_newton
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, DIAG
-    use mod_hdfio,              only: write_solution_hdf
+    use mod_hdfio,              only: write_fields_hdf
     use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER, IRANK, NRANK
     use mod_io,                 only: verbosity
     use mpi_f08,                only: MPI_Barrier
@@ -340,7 +340,7 @@ contains
                 !
                 !if (wcount == self%nwrite) then
                 !    if (data%eqnset(1)%get_name() == 'Euler') then
-                !        call write_solution_hdf(data,'flat_plate_quartic.h5')
+                !        call write_fields_hdf(data,'flat_plate_quartic.h5')
                 !        write(filename,'(I2)') niter
                 !        call write_tecio_variables(data,trim(filename)//'.dat',niter)
                 !        wcount = 0

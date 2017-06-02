@@ -1,6 +1,6 @@
 !> Test for reading an hdf grid. D1_E1_M1 = One Domain, One Element, Linear Mapping
 @Test
-subroutine testIO__read_grid_hdf__D1_E1_M1() 
+subroutine testIO__read_mesh_hdf__D1_E1_M1() 
     use pfunit_mod
     use type_chidg,             only: chidg_t
     use mod_kinds,              only: rk,ik
@@ -38,7 +38,7 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     ! Create/Read grid 
     !
     call create_mesh_file("D1 NxNxN", filename,nelem_xi=1,nelem_eta=1,nelem_zeta=1)
-    call chidg%read_grid(filename, spacedim)
+    call chidg%read_mesh(filename, spacedim)
 
 
 
@@ -72,7 +72,7 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
 
     call delete_file(filename)
 
-end subroutine testIO__read_grid_hdf__D1_E1_M1
+end subroutine testIO__read_mesh_hdf__D1_E1_M1
 !******************************************************************************************
 
 
@@ -88,7 +88,7 @@ end subroutine testIO__read_grid_hdf__D1_E1_M1
 
 !> Test for reading an hdf grid. D1_E27_M1 = One Domain, 27 Elements (3x3x3), Linear Mapping
 @Test
-subroutine testIO__read_grid_hdf__D1_E27_M1() 
+subroutine testIO__read_mesh_hdf__D1_E27_M1() 
     use pfunit_mod
     use type_chidg,             only: chidg_t
     use mod_kinds,              only: rk,ik
@@ -128,7 +128,7 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
     ! Create/Read grid
     !
     call create_mesh_file("D1 NxNxN", filename, nelem_xi=3,nelem_eta=3,nelem_zeta=3)
-    call chidg%read_grid(filename,spacedim)
+    call chidg%read_mesh(filename,spacedim)
 
     
     ! Test number of allocated domains
@@ -166,7 +166,7 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
 
     call delete_file(filename)
 
-end subroutine testIO__read_grid_hdf__D1_E27_M1
+end subroutine testIO__read_mesh_hdf__D1_E27_M1
 
 
 
@@ -182,7 +182,7 @@ end subroutine testIO__read_grid_hdf__D1_E27_M1
 
 ! Test for reading an hdf grid. D2_E1_M1 = Two Domains, One Element, Linear Mapping
 @Test
-subroutine testIO__read_grid_hdf__D2_E1_M1() 
+subroutine testIO__read_mesh_hdf__D2_E1_M1() 
     use pfunit_mod
     use type_chidg,             only: chidg_t
     use mod_kinds,              only: rk,ik
@@ -221,7 +221,7 @@ subroutine testIO__read_grid_hdf__D2_E1_M1()
     ! Create/Read grid
     !
     call create_mesh_file("D2 NxNxN M1", filename, nelem_xi =2,nelem_eta =1,nelem_zeta =1)
-    call chidg%read_grid(filename,spacedim)
+    call chidg%read_mesh(filename,spacedim)
 
 
 
@@ -264,7 +264,7 @@ subroutine testIO__read_grid_hdf__D2_E1_M1()
 
     call delete_file(filename)
 
-end subroutine testIO__read_grid_hdf__D2_E1_M1
+end subroutine testIO__read_mesh_hdf__D2_E1_M1
 
 
 
@@ -283,7 +283,7 @@ end subroutine testIO__read_grid_hdf__D2_E1_M1
 
 ! Test for reading an hdf grid. D2_E27_M1 = Two Domains, One Element, Linear Mapping
 @Test
-subroutine testIO__read_grid_hdf__D2_E27_M1() 
+subroutine testIO__read_mesh_hdf__D2_E27_M1() 
     use pfunit_mod
     use type_chidg,             only: chidg_t
     use mod_kinds,              only: rk,ik
@@ -322,7 +322,7 @@ subroutine testIO__read_grid_hdf__D2_E27_M1()
     ! Create/Read grid
     !
     call create_mesh_file("D2 NxNxN M1", filename, nelem_xi=6, nelem_eta=3, nelem_zeta=3)
-    call chidg%read_grid(filename,spacedim)
+    call chidg%read_mesh(filename,spacedim)
 
 
 
@@ -362,7 +362,7 @@ subroutine testIO__read_grid_hdf__D2_E27_M1()
     call chidg%shut_down('core')
 
     call delete_file(filename)
-end subroutine testIO__read_grid_hdf__D2_E27_M1
+end subroutine testIO__read_mesh_hdf__D2_E27_M1
 
 
 

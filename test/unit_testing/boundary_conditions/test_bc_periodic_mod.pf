@@ -171,7 +171,7 @@ contains
         !
         ! Read grid
         !
-        call this%chidg%read_grid('test_file.h5')
+        call this%chidg%read_mesh('test_file.h5')
 
 
     end subroutine setUp

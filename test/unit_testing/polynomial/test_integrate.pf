@@ -59,7 +59,7 @@ subroutine test_integrate_boundary_constant()
     !
     ! Read grid
     !
-    call chidg%read_grid(file_name)
+    call chidg%read_mesh(file_name)
 
 
 

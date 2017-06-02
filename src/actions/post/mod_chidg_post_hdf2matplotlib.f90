@@ -64,7 +64,7 @@ contains
         !
         ! Read grid data from file
         !
-        call chidg%read_grid(grid_file,spacedim)
+        call chidg%read_mesh(grid_file,spacedim)
 
         solution_order = 0
         do while (solution_order*solution_order*solution_order < nterms_s)
@@ -78,17 +78,14 @@ contains
         call chidg%set('Solution Order', integer_input=solution_order)
         call chidg%set('Time Integrator', algorithm=trim(time_string))
         call chidg%time_integrator%initialize_state(chidg%data)
-        !call chidg%init('domains')
-        !call chidg%init('communication')
-        !call chidg%init('solvers')
 
 
         !
         ! Read grid/solution modes and time integrator options from HDF5
         !
-        call chidg%read_solution(solution_file)
+        call chidg%read_fields(solution_file)
         call chidg%time_integrator%read_time_options(chidg%data,solution_file)
-        call chidg%read_grid(grid_file,spacedim)
+        call chidg%read_mesh(grid_file,spacedim)
 
 
         !

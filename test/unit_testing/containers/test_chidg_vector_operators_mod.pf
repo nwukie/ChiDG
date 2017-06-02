@@ -115,7 +115,7 @@ contains
         !
         ! Read grid file
         !
-        call this%chidg%read_grid(this%file_name)
+        call this%chidg%read_mesh(this%file_name)
 
 
 

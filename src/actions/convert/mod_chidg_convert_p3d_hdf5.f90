@@ -11,20 +11,20 @@
 module mod_chidg_convert_p3d_hdf5
 #include <messenger.h>
     use mod_kinds,              only: rk,ik, rdouble
-    use mod_constants,          only: IO_DESTINATION, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, TWO
+    use mod_constants,          only: IO_DESTINATION, TWO
     use mod_equations,          only: equation_builder_factory
-    use mod_hdf_utilities,      only: initialize_file_hdf, set_ndomains_hdf, open_file_hdf,     &
-                                      set_domain_mapping_hdf, set_domain_dimensionality_hdf,    &
-                                      set_domain_equation_set_hdf, set_contains_grid_hdf,       &
-                                      set_domain_coordinates_hdf, set_bc_patch_hdf,             &
-                                      add_domain_hdf, open_domain_hdf, close_domain_hdf,        &
+    use mod_hdf_utilities,      only: initialize_file_hdf, open_file_hdf,                   &
+                                      set_domain_dimensionality_hdf,                        &
+                                      set_domain_equation_set_hdf, set_contains_grid_hdf,   &
+                                      set_domain_coordinates_hdf, set_patch_hdf,            &
+                                      create_patch_hdf, close_patch_hdf,                    &
+                                      add_domain_hdf, open_domain_hdf, close_domain_hdf,    &
                                       close_file_hdf, close_hdf, open_hdf
     use mod_plot3d_utilities,   only: get_block_elements_plot3d, get_block_boundary_faces_plot3d, &
                                       check_block_mapping_conformation_plot3d, get_block_points_plot3d
     use type_point,             only: point_t
     use type_chidg,             only: chidg_t
-    use hdf5
-    use h5lt
+    use hdf5,                   only: HID_T
     implicit none
 
 
@@ -52,7 +52,7 @@ contains
         logical                     :: file_exists
 
         ! HDF5 vars
-        integer(HID_T)              :: file_id, dom_id
+        integer(HID_T)              :: file_id, dom_id, patch_id
 
         ! Plot3d vars
         integer(ik)                 :: i, j, k, ext_loc, fileunit, bcface
@@ -262,8 +262,11 @@ contains
                 ! Get face node indices for boundary 'bcface'
                 faces = get_block_boundary_faces_plot3d(coords1,coords2,coords3,mapping,bcface)
 
+
                 ! Set bc patch face indices
-                call set_bc_patch_hdf(dom_id,faces,bcface)
+                patch_id = create_patch_hdf(dom_id,bcface)
+                call set_patch_hdf(patch_id,faces)
+                call close_patch_hdf(patch_id)
 
             end do !bcface
 

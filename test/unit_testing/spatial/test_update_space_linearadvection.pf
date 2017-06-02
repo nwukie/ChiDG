@@ -83,26 +83,8 @@ subroutine test_update_space_linearadvection()
     ! The second has two blocks. Here, we wish to initialize both and then compare 
     ! the initialized data between the two. They should be the same.
     !
-    call chidgA%read_grid(chidgAfile,spacedim)
-    call chidgB%read_grid(chidgBfile,spacedim)
-
-
-
-    !
-    ! Initialize solution data storage
-    !
-    !call chidgA%init('domains')
-    !call chidgA%init('bc')
-    !call chidgA%init('communication')
-    !call chidgA%init('chimera')
-    !call chidgA%init('solvers')
-
-    !call chidgB%init('domains')
-    !call chidgB%init('bc')
-    !call chidgB%init('communication')
-    !call chidgB%init('chimera')
-    !call chidgB%init('solvers')
-
+    call chidgA%read_mesh(chidgAfile,spacedim)
+    call chidgB%read_mesh(chidgBfile,spacedim)
 
 
 

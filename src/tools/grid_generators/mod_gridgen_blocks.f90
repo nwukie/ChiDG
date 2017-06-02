@@ -7,13 +7,15 @@ module mod_gridgen_blocks
     use mod_plot3d_utilities,   only: get_block_points_plot3d, &
                                       get_block_elements_plot3d, &
                                       get_block_boundary_faces_plot3d
-    use mod_hdf_utilities,      only: initialize_file_hdf, add_domain_hdf, &
-                                      open_file_hdf, close_file_hdf, &
-                                      open_domain_hdf, close_domain_hdf, &
-                                      set_bc_patch_hdf, add_bc_state_hdf, &
-                                      set_contains_grid_hdf, close_hdf, open_hdf, &
-                                      create_bc_group_hdf, open_bc_group_hdf, close_bc_group_hdf, &
-                                      set_bc_patch_group_hdf
+    use mod_hdf_utilities,      only: initialize_file_hdf, add_domain_hdf,          &
+                                      open_file_hdf, close_file_hdf,                &
+                                      open_domain_hdf, close_domain_hdf,            &
+                                      set_patch_hdf, add_bc_state_hdf,              &
+                                      set_contains_grid_hdf, close_hdf, open_hdf,   &
+                                      create_bc_state_group_hdf, open_bc_group_hdf, &
+                                      close_bc_group_hdf, set_patch_group_hdf,      &
+                                      open_patch_hdf, close_patch_hdf,              &
+                                      create_patch_hdf
 
     use type_point,             only: point_t
     use type_bc_state_group,    only: bc_state_group_t
@@ -138,8 +140,11 @@ contains
             ! Get face node indices for boundary 'bcface'
             faces = get_block_boundary_faces_plot3d(xcoords,ycoords,zcoords,mapping,bcface)
 
+
             ! Set bc patch face indices
-            call set_bc_patch_hdf(dom_id,faces,bcface)
+            patch_id = create_patch_hdf(dom_id,bcface)
+            call set_patch_hdf(patch_id,faces)
+            call close_patch_hdf(patch_id)
 
         end do !bcface
 
@@ -155,7 +160,7 @@ contains
         !
         if (present(bc_state_groups)) then
             do igroup = 1,size(bc_state_groups)
-                call create_bc_group_hdf(file_id,bc_state_groups(igroup)%name)
+                call create_bc_state_group_hdf(file_id,bc_state_groups(igroup)%name)
 
                 bcgroup_id = open_bc_group_hdf(file_id,bc_state_groups(igroup)%name)
 
@@ -165,7 +170,7 @@ contains
                 call close_bc_group_hdf(bcgroup_id)
             end do
         else
-            call create_bc_group_hdf(file_id,'Default')
+            call create_bc_state_group_hdf(file_id,'Default')
 
             bcgroup_id = open_bc_group_hdf(file_id,'Default')
             call add_bc_state_hdf(bcgroup_id,bc_state)
@@ -181,18 +186,18 @@ contains
         patch_names = ['XI_MIN  ','XI_MAX  ', 'ETA_MIN ', 'ETA_MAX ', 'ZETA_MIN', 'ZETA_MAX']
         do bcface = 1,size(patch_names)
 
-            call h5gopen_f(dom_id,'BoundaryConditions/'//trim(adjustl(patch_names(bcface))),patch_id,ierr)
+            patch_id = open_patch_hdf(dom_id,trim(patch_names(bcface)))
 
 
             ! Set bc_group
             if (present(group_names)) then
-                call set_bc_patch_group_hdf(patch_id,group_names(1,bcface)%get())
+                call set_patch_group_hdf(patch_id,group_names(1,bcface)%get())
             else
-                call set_bc_patch_group_hdf(patch_id,'Default')
+                call set_patch_group_hdf(patch_id,'Default')
             end if
 
 
-            call h5gclose_f(patch_id,ierr)
+            call close_patch_hdf(patch_id)
 
         end do
 
@@ -239,7 +244,8 @@ contains
 
         class(bc_state_t),  allocatable                 :: bc_state
         character(8)                                    :: faces(6)
-        integer(HID_T)                                  :: file_id, dom1_id, dom2_id, bcface1_id, bcface2_id, bcgroup_id
+        integer(HID_T)                                  :: file_id, dom1_id, dom2_id, bcface1_id, bcface2_id, &
+                                                           bcgroup_id, patch1_id, patch2_id
         integer(ik)                                     :: spacedim, mapping, bcface, ierr, igroup, istate, &
                                                            nxi_max, neta_max, nzeta_max,xi_mid
         type(point_t),  allocatable                     :: nodes1(:), nodes2(:)
@@ -371,9 +377,17 @@ contains
             faces1 = get_block_boundary_faces_plot3d(xcoords1,ycoords1,zcoords1,mapping,bcface)
             faces2 = get_block_boundary_faces_plot3d(xcoords2,ycoords2,zcoords2,mapping,bcface)
 
+
             ! Set bc patch face indices
-            call set_bc_patch_hdf(dom1_id,faces1,bcface)
-            call set_bc_patch_hdf(dom2_id,faces2,bcface)
+            patch1_id = create_patch_hdf(dom1_id,bcface)
+            patch2_id = create_patch_hdf(dom2_id,bcface)
+
+            call set_patch_hdf(patch1_id,faces1)
+            call set_patch_hdf(patch2_id,faces2)
+
+            call close_patch_hdf(patch1_id)
+            call close_patch_hdf(patch2_id)
+
         end do !bcface
 
 
@@ -390,7 +404,7 @@ contains
         !
         if (present(bc_state_groups)) then
             do igroup = 1,size(bc_state_groups)
-                call create_bc_group_hdf(file_id,bc_state_groups(igroup)%name)
+                call create_bc_state_group_hdf(file_id,bc_state_groups(igroup)%name)
 
                 bcgroup_id = open_bc_group_hdf(file_id,bc_state_groups(igroup)%name)
 
@@ -400,7 +414,7 @@ contains
                 call close_bc_group_hdf(bcgroup_id)
             end do
         else
-            call create_bc_group_hdf(file_id,'Default')
+            call create_bc_state_group_hdf(file_id,'Default')
 
             bcgroup_id = open_bc_group_hdf(file_id,'Default')
             call add_bc_state_hdf(bcgroup_id,bc_state)
@@ -416,19 +430,19 @@ contains
         !
         faces = ['XI_MIN  ','XI_MAX  ', 'ETA_MIN ', 'ETA_MAX ', 'ZETA_MIN', 'ZETA_MAX']
         do bcface = 1,size(faces)
-            call h5gopen_f(dom1_id,'BoundaryConditions/'//trim(adjustl(faces(bcface))),bcface1_id,ierr)
-            call h5gopen_f(dom2_id,'BoundaryConditions/'//trim(adjustl(faces(bcface))),bcface2_id,ierr)
+            patch1_id = open_patch_hdf(dom1_id,trim(adjustl(faces(bcface))))
+            patch2_id = open_patch_hdf(dom2_id,trim(adjustl(faces(bcface))))
 
             if (present(group_names)) then
-                call set_bc_patch_group_hdf(bcface1_id,group_names(1,bcface)%get())
-                call set_bc_patch_group_hdf(bcface2_id,group_names(2,bcface)%get())
+                call set_patch_group_hdf(patch1_id,group_names(1,bcface)%get())
+                call set_patch_group_hdf(patch2_id,group_names(2,bcface)%get())
             else
-                call set_bc_patch_group_hdf(bcface1_id,'Default')
-                call set_bc_patch_group_hdf(bcface2_id,'Default')
+                call set_patch_group_hdf(patch1_id,'Default')
+                call set_patch_group_hdf(patch2_id,'Default')
             end if
 
-            call h5gclose_f(bcface1_id,ierr)
-            call h5gclose_f(bcface2_id,ierr)
+            call close_patch_hdf(patch1_id)
+            call close_patch_hdf(patch2_id)
         end do
 
 
@@ -444,21 +458,6 @@ contains
 
     end subroutine create_mesh_file__multiblock
     !*************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -531,7 +530,8 @@ contains
         class(bc_state_t),  allocatable                 :: bc_state
         character(8)                                    :: faces(5)
         character(:),   allocatable                     :: user_msg
-        integer(HID_T)                                  :: file_id, dom1_id, dom2_id, bcface_id, bcgroup_id
+        integer(HID_T)                                  :: file_id, dom1_id, dom2_id, bcgroup_id, &
+                                                           patch1_id, patch2_id
         integer(ik)                                     :: spacedim, mapping, bcface, ierr, igroup, istate
         type(point_t),  allocatable                     :: nodes1(:), nodes2(:)
         integer(ik),    allocatable                     :: elements1(:,:), elements2(:,:) 
@@ -631,9 +631,17 @@ contains
             faces1 = get_block_boundary_faces_plot3d(xcoords1,ycoords1,zcoords1,mapping,bcface)
             faces2 = get_block_boundary_faces_plot3d(xcoords2,ycoords2,zcoords2,mapping,bcface)
 
+
             ! Set bc patch face indices
-            call set_bc_patch_hdf(dom1_id,faces1,bcface)
-            call set_bc_patch_hdf(dom2_id,faces2,bcface)
+            patch1_id = create_patch_hdf(dom1_id,bcface)
+            patch2_id = create_patch_hdf(dom2_id,bcface)
+
+            call set_patch_hdf(patch1_id,faces1)
+            call set_patch_hdf(patch2_id,faces2)
+
+            call close_patch_hdf(patch1_id)
+            call close_patch_hdf(patch2_id)
+
         end do !bcface
 
 
@@ -654,7 +662,7 @@ contains
             user_msg = 'create_mesh_file__D2E8M1: Not quite ready to accept custom bc_group sets.'
             call chidg_signal(FATAL,user_msg)
         else
-            call create_bc_group_hdf(file_id,'Default')
+            call create_bc_state_group_hdf(file_id,'Default')
 
             bcgroup_id = open_bc_group_hdf(file_id,'Default')
             call add_bc_state_hdf(bcgroup_id,bc_state)
@@ -672,9 +680,9 @@ contains
         !
         faces = ['XI_MIN  ', 'ETA_MIN ', 'ETA_MAX ', 'ZETA_MIN', 'ZETA_MAX']
         do bcface = 1,size(faces)
-            call h5gopen_f(dom1_id,'BoundaryConditions/'//trim(adjustl(faces(bcface))),bcface_id,ierr)
-            call set_bc_patch_group_hdf(bcface_id,'Default')
-            call h5gclose_f(bcface_id,ierr)
+            patch1_id = open_patch_hdf(dom1_id,trim(adjustl(faces(bcface))))
+            call set_patch_group_hdf(patch1_id,'Default')
+            call close_patch_hdf(patch1_id)
         end do
 
         !
@@ -682,9 +690,9 @@ contains
         !
         faces = ['XI_MAX  ', 'ETA_MIN ', 'ETA_MAX ', 'ZETA_MIN', 'ZETA_MAX']
         do bcface = 1,size(faces)
-            call h5gopen_f(dom2_id,'BoundaryConditions/'//trim(adjustl(faces(bcface))),bcface_id,ierr)
-            call set_bc_patch_group_hdf(bcface_id,'Default')
-            call h5gclose_f(bcface_id,ierr)
+            patch2_id = open_patch_hdf(dom2_id,trim(adjustl(faces(bcface))))
+            call set_patch_group_hdf(patch2_id,'Default')
+            call close_patch_hdf(patch2_id)
         end do
 
 

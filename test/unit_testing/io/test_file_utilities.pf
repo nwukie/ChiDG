@@ -24,7 +24,6 @@ subroutine test_file_utilties_copy()
     !
     ! Create a file
     !
-    !call create_mesh_file("D1 E1 M1",fileorig)
     call create_mesh_file("D1 NxNxN",fileorig,nelem_xi=1,nelem_eta=1,nelem_zeta=1)
 
 
@@ -98,7 +97,6 @@ subroutine test_file_utilties_delete()
     !
     ! Create a file
     !
-    !call create_mesh_file("D1 E1 M1",fileorig)
     call create_mesh_file("D1 NxNxN",fileorig,nelem_xi=1,nelem_eta=1,nelem_zeta=1)
 
 

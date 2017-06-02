@@ -251,16 +251,8 @@ contains
         !
         ! Get grid points
         !
-        call chidg%read_grid(filename,spacedim)
+        call chidg%read_mesh(filename,spacedim)
 
-
-        !
-        ! Initialize ChiDG interfaces
-        ! 
-        !call chidg%init('domains')
-        !call chidg%init('bc')
-        !call chidg%init('communication')
-        !call chidg%init('solvers')
 
         call chidg%time_integrator%init(chidg%data)
 

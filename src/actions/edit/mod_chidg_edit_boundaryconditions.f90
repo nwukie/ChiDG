@@ -16,15 +16,15 @@ module mod_chidg_edit_boundaryconditions
                                      get_domain_name_hdf, get_bc_state_names_hdf,       &
                                      delete_group_attributes_hdf,                       &
                                      add_bc_state_hdf, set_bc_property_function_hdf,    &
-                                     create_bc_group_hdf, remove_bc_state_group_hdf,    &
+                                     create_bc_state_group_hdf, remove_bc_state_group_hdf,    &
                                      get_bc_state_group_names_hdf,                      &
                                      get_bc_state_group_family_hdf,                     &
-                                     get_bc_patch_group_hdf, set_bc_patch_group_hdf,    &
+                                     get_patch_group_hdf, set_patch_group_hdf,    &
                                      check_bc_property_exists_hdf, remove_bc_state_hdf, &
                                      check_bc_state_exists_hdf, check_link_exists_hdf,  &
                                      open_bc_group_hdf, close_bc_group_hdf,             &
                                      open_domain_hdf, close_domain_hdf,                 &
-                                     check_domain_exists_hdf
+                                     check_domain_exists_hdf, open_patch_hdf, close_patch_hdf
     implicit none
 
 
@@ -45,7 +45,7 @@ contains
     !!  chidg_edit_boundarycondition_patch
     !!  print_bc_overview
     !!  print_bc_states
-    !!  print_bc_patches
+    !!  print_patches
     !!  print_bc_state_properties
     !!  print_bc_state_property_options
     !!
@@ -179,7 +179,7 @@ contains
                     call write_line(command, color='blue')
                     read(*,'(A1024)') group_name
 
-                    call create_bc_group_hdf(fid,group_name)
+                    call create_bc_state_group_hdf(fid,group_name)
                     call chidg_edit_boundarycondition_state_group(fid,group_name)
 
                 !
@@ -505,7 +505,7 @@ contains
         integer(HID_T),     intent(in)  :: fid
         character(*),       intent(in)  :: domain_name
 
-        integer(HID_T)              :: bcgroup, domain_id
+        integer(HID_T)              :: patch_group, domain_id
         integer(ik)                 :: ierr, iface
         character(:),   allocatable :: dname, dname_trim, command
         logical                     :: run_edit_bc_domain
@@ -517,7 +517,7 @@ contains
         !
         ! Open boundary condition group
         !
-        call h5gopen_f(domain_id, "BoundaryConditions", bcgroup, ierr)
+        call h5gopen_f(domain_id, "Patches", patch_group, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"chidg_edit_boundarycondition_domain: h5gopen - BoundaryConditions")
 
 
@@ -564,7 +564,7 @@ contains
                     run_edit_bc_domain = .false.
 
                 case default
-                    call chidg_edit_boundarycondition_patch(fid,bcgroup,domain_id,iface)
+                    call chidg_edit_boundarycondition_patch(fid,patch_group,domain_id,iface)
 
             end select
 
@@ -575,7 +575,7 @@ contains
         !
         ! Close groups
         !
-        call h5gclose_f(bcgroup,ierr)
+        call h5gclose_f(patch_group,ierr)
 
         call close_domain_hdf(domain_id)
 
@@ -600,9 +600,9 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine chidg_edit_boundarycondition_patch(fid,bcgroup,domain_id,iface)
+    subroutine chidg_edit_boundarycondition_patch(fid,patch_group,domain_id,iface)
         integer(HID_T),     intent(in)  :: fid
-        integer(HID_T),     intent(in)  :: bcgroup
+        integer(HID_T),     intent(in)  :: patch_group
         integer(HID_T),     intent(in)  :: domain_id
         integer(ik),        intent(in)  :: iface
 
@@ -620,7 +620,7 @@ contains
         ! Open boundary condition face group
         !
         patches = ["  XI_MIN","  XI_MAX"," ETA_MIN"," ETA_MAX","ZETA_MIN","ZETA_MAX"]
-        call h5gopen_f(bcgroup, trim(adjustl(patches(iface))), patch_id, ierr)
+        call h5gopen_f(patch_group, trim(adjustl(patches(iface))), patch_id, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"chidg_edit_boundarycondition_patch: error opening group for boundary condition face")
 
 
@@ -660,12 +660,12 @@ contains
                     set_group = (trim(group) /= "")
 
                     if (set_group) then
-                        call set_bc_patch_group_hdf(patch_id,group)
+                        call set_patch_group_hdf(patch_id,group)
                     end if
 
                 case(2)
 
-                    call set_bc_patch_group_hdf(patch_id,'empty')
+                    call set_patch_group_hdf(patch_id,'empty')
 
                 case default
                     run = .false.
@@ -943,7 +943,7 @@ contains
         call write_line(' ')
         call write_line(' ')
 
-        call print_bc_patches(fid,active_topic,active_domain,active_face)
+        call print_patches(fid,active_topic,active_domain,active_face)
         call write_line(' ')
         call write_line(' ')
 
@@ -1060,7 +1060,7 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine print_bc_patches(fid,active_topic,active_domain,active_face)
+    subroutine print_patches(fid,active_topic,active_domain,active_face)
         integer(HID_T),     intent(in)              :: fid
         character(*),       intent(in), optional    :: active_topic
         integer(HID_T),     intent(in), optional    :: active_domain
@@ -1069,10 +1069,10 @@ contains
 
         character(len=10)                   :: faces(NFACES)
         integer(ik)                         :: idom_hdf, iface, ierr
-        integer(HID_T)                      :: patch_id
+        integer(HID_T)                      :: dom_id, patch_id
         type(svector_t),    allocatable     :: bcs(:)
-        character(:),       allocatable     :: bc_patch_group
-        type(string_t)                      :: bc_patch_groups(NFACES)
+        character(:),       allocatable     :: patch_group
+        type(string_t)                      :: patch_groups(NFACES)
         character(len=1024), allocatable    :: dnames(:)
         character(:),       allocatable     :: color, domain_name, active_domain_name
 
@@ -1122,20 +1122,21 @@ contains
             !
             domain_name = dnames(idom_hdf)
             
+            dom_id = open_domain_hdf(fid,trim(domain_name))
 
             faces = ["  XI_MIN","  XI_MAX"," ETA_MIN"," ETA_MAX","ZETA_MIN","ZETA_MAX"]
             do iface = 1,NFACES
 
-                call h5gopen_f(fid, "/D_"//trim(domain_name)//"/BoundaryConditions/"//trim(adjustl(faces(iface))), patch_id, ierr)
-                if (ierr /= 0) call chidg_signal(FATAL,"print_bc_patches: h5gopen_f - patch (ex. XI_MIN)")
+                patch_id = open_patch_hdf(dom_id,trim(adjustl(faces(iface))))
                 
-                bc_patch_group = get_bc_patch_group_hdf(patch_id)
-                call bc_patch_groups(iface)%set(bc_patch_group)
+                patch_group = get_patch_group_hdf(patch_id)
+                call patch_groups(iface)%set(patch_group)
 
-                call h5gclose_f(patch_id,ierr)
+                call close_patch_hdf(patch_id)
 
             end do !iface
 
+            call close_domain_hdf(dom_id)
 
 
             if (present(active_domain)) then
@@ -1145,7 +1146,6 @@ contains
                 !
                 ! Print active domain
                 !
-                !if (idom_hdf == active_domain) then
                 if (trim(active_domain_name) == trim(domain_name)) then
 
 
@@ -1155,12 +1155,12 @@ contains
 
                         if ( present(active_face) ) then
                             if ( iface == active_face ) then
-                                call add_to_line( "["//bc_patch_groups(iface)%get()//"]", columns=.True., column_width=15, color='blue',bold=.true.)
+                                call add_to_line( "["//patch_groups(iface)%get()//"]", columns=.True., column_width=15, color='blue',bold=.true.)
                             else
-                                call add_to_line( bc_patch_groups(iface)%get(), columns=.True., column_width=15, color='pink')
+                                call add_to_line( patch_groups(iface)%get(), columns=.True., column_width=15, color='pink')
                             end if
                         else
-                            call add_to_line( bc_patch_groups(iface)%get(), columns=.True., column_width=15, color='pink')
+                            call add_to_line( patch_groups(iface)%get(), columns=.True., column_width=15, color='pink')
                         end if
 
                     end do
@@ -1175,7 +1175,7 @@ contains
 
                     call add_to_line( domain_name, columns=.True., column_width=15)
                     do iface = 1,6
-                        call add_to_line( bc_patch_groups(iface)%get(), columns=.True., column_width=15)
+                        call add_to_line( patch_groups(iface)%get(), columns=.True., column_width=15)
                     end do
                     call send_line()
 
@@ -1187,7 +1187,7 @@ contains
                 !
                 call add_to_line( domain_name, columns=.True., column_width=15)
                 do iface = 1,6
-                    call add_to_line( bc_patch_groups(iface)%get(), columns=.True., column_width=15)
+                    call add_to_line( patch_groups(iface)%get(), columns=.True., column_width=15)
                 end do
                 call send_line()
 
@@ -1197,7 +1197,7 @@ contains
 
 
 
-    end subroutine print_bc_patches
+    end subroutine print_patches
     !******************************************************************************************
 
 

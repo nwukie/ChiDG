@@ -80,10 +80,7 @@ contains
         !
         ! Read grid + bcs
         !
-        call this%chidg%read_grid(this%filename,3)
-
-!        call this%chidg%init('domains')
-!        call this%chidg%init('communication')
+        call this%chidg%read_mesh(this%filename,3)
 
     end subroutine setUp
     !******************************************************************************************

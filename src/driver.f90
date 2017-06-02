@@ -86,7 +86,7 @@ program driver
         !
         ! Read grid and boundary condition data
         !
-        call chidg%read_grid(gridfile)
+        call chidg%read_mesh(gridfile)
 
 
         !
@@ -161,7 +161,7 @@ program driver
             !
             ! TODO: put in check that solutionfile actually contains solution
             !
-            call chidg%read_solution(solutionfile_in)
+            call chidg%read_fields(solutionfile_in)
 
         end if
 

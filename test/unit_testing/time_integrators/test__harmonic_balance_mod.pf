@@ -269,7 +269,7 @@ contains
         !
         ! Get grid points
         !
-        call chidg%read_grid(filename,spacedim)
+        call chidg%read_mesh(filename,spacedim)
 
 
 

@@ -126,7 +126,7 @@ contains
         ! Read grid data from file
         !
         gridfile = filename
-        call chidg%read_grid(filename,spacedim)
+        call chidg%read_mesh(filename,spacedim)
 
         call manager%process(chidg)
 
@@ -135,7 +135,7 @@ contains
         !
         ! Read solution modes from HDF5
         !
-        call chidg%read_solution(filename)
+        call chidg%read_fields(filename)
         chidg%data%sdata%q = chidg%data%sdata%q_in
 
 

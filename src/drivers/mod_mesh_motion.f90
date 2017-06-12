@@ -39,11 +39,10 @@ contains
         type(chidg_t),  intent(inout)           :: chidg
         character(*),   intent(in), optional    :: fileout
 
-        type(chidg_vector_t), allocatable        :: q_ref
         character(:), allocatable   :: user_msg
         integer(ik)                 :: order
 
-        type(chidg_t)                   :: mesh_motion
+        type(chidg_t)                   :: mesh_motion,chidg_temp
         type(dict_t)                    :: noptions, loptions
         class(bc_state_t),  allocatable :: dirichlet_zero, neumann_zero, dirichlet_dspl
         class(function_t),  allocatable :: mmd_initial, mmd_analytical 
@@ -238,7 +237,26 @@ contains
 
 !        call write_line('Storing Mesh Motion field to Auxiliary field ChiDG Vector:', io_proc=GLOBAL_MASTER)
 !
+!        !Initialize chidg instance as temporary storage to copy grid displacement components into the 
+!        call chidg_temp%start_up('core')
+!        call chidg_temp%set('Time Integrator' , algorithm='Steady'                        )
+!        call chidg_temp%set('Nonlinear Solver', algorithm='Quasi-Newton', options=noptions)
+!        call chidg_temp%set('Linear Solver'   , algorithm='fgmres_cgs',   options=loptions)
+!        call chidg_temp%set('Preconditioner'  , algorithm='RASILU0'                       )
 !
+!        call chidg_temp%set('Solution Order', integer_input=order)
+!        call chidg_temp%init('all')
+!
+!        !chidg_temp%nonlinear_solver%search = .false.
+!        chidg_temp%nonlinear_solver%search = .true.
+!
+!
+!        !
+!        ! Read grid, boundary conditions.
+!        !
+!        
+!        call chidg_temp%read_grid(gridfile, equation_set='Scalar Diffusion')
+!        
 !        !
 !        ! Try to find 'Mesh Motion' auxiliary field storage.
 !        !
@@ -255,19 +273,77 @@ contains
 !        !
 !        ! If no 'Mesh Motion' auxiliary field storage was not found, create one.
 !        !
+!        !
+!
+!        ieqn = 1 
+!        do idom = 1, ndom
+!            do ielem = 1, nelems
+!                chidg_temp%data%sdata%q%doms(idom)%vecs(ielem)%setvar( 1,1,& 
+!                    mesh_motion%data%sdata%q%doms(idom)%vecs(ielem)%getvar(ieqn,1)) = 
+!            end do
+!        end do
+!
+!
 !        if (aux_field_index1 == 0) then
 !
-!            call chidg%data%sdata%add_auxiliary_field('Mesh Motion : Diffusion', mesh_motion%data%sdata%q)
+!            
+!            call chidg%data%sdata%add_auxiliary_field('Mesh Motion Grid Displacement 1', chidg_temp%data%sdata%q)
 !
 !        !
 !        ! If 'Mesh Motion' auxiliary field storage was found, copy Wall Distance solution 
 !        ! to working ChiDG environment.
 !        !
 !        else
-!            chidg%data%sdata%auxiliary_field(aux_field_index1) = mesh_motion%data%sdata%q
+!            chidg%data%sdata%auxiliary_field(aux_field_index1) = chidg_temp%data%sdata%q
 !
 !        end if
 !
+!        ieqn = 2 
+!        do idom = 1, ndom
+!            do ielem = 1, nelems
+!                chidg_temp%data%sdata%q%doms(idom)%vecs(ielem)%setvar( 1,1,& 
+!                    mesh_motion%data%sdata%q%doms(idom)%vecs(ielem)%getvar(ieqn,1)) = 
+!            end do
+!        end do
+!
+!
+!        if (aux_field_index1 == 0) then
+!
+!            
+!            call chidg%data%sdata%add_auxiliary_field('Mesh Motion Grid Displacement 2', chidg_temp%data%sdata%q)
+!
+!        !
+!        ! If 'Mesh Motion' auxiliary field storage was found, copy Wall Distance solution 
+!        ! to working ChiDG environment.
+!        !
+!        else
+!            chidg%data%sdata%auxiliary_field(aux_field_index2) = chidg_temp%data%sdata%q
+!
+!        end if
+!
+!        ieqn = 3 
+!        do idom = 1, ndom
+!            do ielem = 1, nelems
+!                chidg_temp%data%sdata%q%doms(idom)%vecs(ielem)%setvar( 1,1,& 
+!                    mesh_motion%data%sdata%q%doms(idom)%vecs(ielem)%getvar(ieqn,1)) = 
+!            end do
+!        end do
+!
+!
+!        if (aux_field_index1 == 0) then
+!
+!            
+!            call chidg%data%sdata%add_auxiliary_field('Mesh Motion Grid Displacement 3', chidg_temp%data%sdata%q)
+!
+!        !
+!        ! If 'Mesh Motion' auxiliary field storage was found, copy Wall Distance solution 
+!        ! to working ChiDG environment.
+!        !
+!        else
+!            chidg%data%sdata%auxiliary_field(aux_field_index3) = chidg_temp%data%sdata%q
+!
+!        end if
+
 
 
     end subroutine mesh_motion_driver

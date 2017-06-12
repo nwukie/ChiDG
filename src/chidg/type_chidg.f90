@@ -1156,7 +1156,6 @@ contains
 
 !        call self%auxiliary_environment%start_up('core')
 
-
         !
         ! Check optional incoming parameters
         !

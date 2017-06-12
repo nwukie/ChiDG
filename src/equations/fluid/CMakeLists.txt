@@ -1,4 +1,5 @@
 add_subdirectory(euler)
+add_subdirectory(euler_ale)
 add_subdirectory(viscous)
 add_subdirectory(bc)
 add_subdirectory(spalart_allmaras)

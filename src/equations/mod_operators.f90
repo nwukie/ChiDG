@@ -25,6 +25,11 @@ module mod_operators
     use MMD_boundary_operator,                       only: MMD_boundary_operator_t
     use MMD_bc_operator,                             only: MMD_bc_operator_t
 
+    ! Mesh Motion Linear Elasticity Operators
+    use MMLE_volume_operator,                         only: MMLE_volume_operator_t
+    use MMLE_boundary_operator,                       only: MMLE_boundary_operator_t
+    use MMLE_bc_operator,                             only: MMLE_bc_operator_t
+
 
     ! Fluid Inviscid Operators
     use euler_volume_operator,                      only: euler_volume_operator_t
@@ -190,6 +195,12 @@ contains
         type(MMD_boundary_operator_t)                    :: MMD_boundary_operator
         type(MMD_bc_operator_t)                          :: MMD_bc_operator
 
+        ! Mesh Motion Linear Elasticity Operators
+        type(MMLE_volume_operator_t)                      :: MMLE_volume_operator
+        type(MMLE_boundary_operator_t)                    :: MMLE_boundary_operator
+        type(MMLE_bc_operator_t)                          :: MMLE_bc_operator
+
+
 
         ! Dual Linear Advection Operators
         type(DLA_volume_advective_flux_t)               :: DLA_volume_operator
@@ -245,6 +256,11 @@ contains
             call operator_factory%register(MMD_volume_operator)
             call operator_factory%register(MMD_boundary_operator)
             call operator_factory%register(MMD_bc_operator)
+
+            ! Register Mesh Motion  Linear Elasticity
+            call operator_factory%register(MMLE_volume_operator)
+            call operator_factory%register(MMLE_boundary_operator)
+            call operator_factory%register(MMLE_bc_operator)
 
 
             ! Register Dual Linear Advection

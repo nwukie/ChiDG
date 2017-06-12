@@ -18,13 +18,12 @@ program driver
     use type_function,              only: function_t
     use mod_function,               only: create_function
     use mod_chidg_mpi,              only: GLOBAL_MASTER, ChiDG_COMM, IRANK
-    use eqn_wall_distance,          only: set_p_poisson_parameter
     use mod_io
 
     ! Actions
     use mod_chidg_edit,         only: chidg_edit
     use mod_chidg_convert,      only: chidg_convert
-    use mod_chidg_post,         only: chidg_post,chidg_post_vtk, chidg_post_matplotlib
+    use mod_chidg_post,         only: chidg_post, chidg_post_vtk, chidg_post_matplotlib
     use mod_chidg_airfoil,      only: chidg_airfoil
 
     
@@ -88,16 +87,11 @@ program driver
         ! Read grid and boundary condition data
         !
         call chidg%read_grid(gridfile)
-        call chidg%read_boundaryconditions(gridfile)
 
-        
-
-!        call set_p_poisson_parameter(4._rk)
         !
         ! Initialize communication, storage, auxiliary fields
         !
         call manager%process(chidg)
-        call chidg%init('all')
 
 
 
@@ -149,8 +143,8 @@ program driver
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,3)
 
             ! rho_w
-            call constant%set_option('val',0.0_rk)
-            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,4)
+           call constant%set_option('val',0.0_rk)
+           call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,4)
 
             ! rho_E
             call constant%set_option('val',248000.0_rk)
@@ -242,13 +236,6 @@ program driver
             case default
                 call chidg_signal(FATAL,"We didn't understand the way chidg was called. Available chidg 'actions' are: 'edit' 'convert' 'post' 'matplotlib' and 'airfoil'.")
         end select
-
-!        else if ( trim(chidg_action) == 'post' ) then
-!            call chidg_post(trim(filename))
-!            call chidg_post_vtk(trim(filename))
-!            call chidg_post_matplotlib(trim(filename))
-!        else
-!            call chidg_signal(FATAL,"chidg: unrecognized action '"//trim(chidg_action)//"'. Valid options are: 'edit', 'convert'")
 
         call chidg%shut_down('core')
 

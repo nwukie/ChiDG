@@ -64,7 +64,7 @@ contains
     subroutine setUp(this)
         class(test_interpolate_chimera),    intent(inout)   :: this
 
-        integer(ik)                     :: ivar, idom, spacedim
+        integer(ik)                     :: ivar, idom
         type(meshdata_t),   allocatable :: meshdata(:) 
         
         !
@@ -85,24 +85,18 @@ contains
         this%filename = "D2E8M1_abutting_matching.h5"
         call create_mesh_file("D2 E8 M1 : Abutting : Matching",this%filename)
 
+
+        !
+        ! Set order of solution expansion
+        !
+        call this%chidg%set('Solution Order', integer_input=2)
+
+
         !
         ! Read D2_E8_M1. Two domains, 2x2x2 elements in each domain, linear mapping
         !
-        spacedim = 3
-        call this%chidg%read_grid(this%filename, spacedim)
-        call this%chidg%read_boundaryconditions(this%filename)
+        call this%chidg%read_grid(this%filename)
 
-
-
-        !
-        ! Initialize chidg solution data storage
-        !
-        call this%chidg%set('Solution Order', integer_input=2)
-        call this%chidg%init('domains')
-        call this%chidg%init('bc')
-        call this%chidg%init('communication')
-        call this%chidg%init('chimera')
-        call this%chidg%init('solvers')
 
         !
         ! Initialized solution to constant values
@@ -169,7 +163,7 @@ contains
 
 
         
-        associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q)        
             idomain = 1         ! domain index
             ielem   = 2         ! given element
             itime   = 1
@@ -256,7 +250,7 @@ contains
         type(function_info_t)       :: fcn
         
         
-        associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q)        
             idomain = 1         ! domain index
             ielem   = 2         ! given element
             iface   = XI_MAX    ! given face
@@ -345,7 +339,7 @@ contains
         type(function_info_t)       :: fcn
         
         
-        associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q )
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q )
             idomain = 1         ! domain index
             ielem   = 2         ! given element
             iface   = XI_MAX    ! given face
@@ -438,14 +432,14 @@ contains
         integer(ik)                 :: ielem_n, iface_n, idonor, ChiID, ndonor_nodes
         
         
-        associate ( elems => self%chidg%data%mesh(1)%elems, faces => self%chidg%data%mesh(1)%faces, q => self%chidg%data%sdata%q)        
+        associate ( elems => self%chidg%data%mesh%domain(1)%elems, faces => self%chidg%data%mesh%domain(1)%faces, q => self%chidg%data%sdata%q)        
             idomain = 1         ! domain index
             ielem   = 2         ! given element
             iface   = XI_MAX    ! given face
             itime   = 1
             idonor  = 1
 
-            ChiID = self%chidg%data%mesh(idomain)%faces(ielem,iface)%ChiID
+            ChiID = self%chidg%data%mesh%domain(idomain)%faces(ielem,iface)%ChiID
 
             !
             ! A seed element, neighbor to ielem/iface. Performing NEIGHBOR interpolation so 
@@ -498,8 +492,8 @@ contains
             iface_n = compute_neighbor_face(   self%chidg%data%mesh,idomain,ielem,iface,idonor)
 
 
-            mat = self%chidg%data%mesh(idomain)%chimera%recv%data(ChiID)%donor_interpolator%at(idonor)
-            ndonor_nodes = self%chidg%data%mesh(idomain)%chimera%recv%data(ChiID)%donor_gq_indices(idonor)%size()
+            mat = self%chidg%data%mesh%domain(idomain)%chimera%recv%data(ChiID)%donor_interpolator%at(idonor)
+            ndonor_nodes = self%chidg%data%mesh%domain(idomain)%chimera%recv%data(ChiID)%donor_gq_indices(idonor)%size()
 
             do igq = 1,ndonor_nodes
                 ! Set expected derivatives

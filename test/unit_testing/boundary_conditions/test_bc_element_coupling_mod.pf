@@ -1,0 +1,278 @@
+module test_bc_element_coupling_mod
+    use pfunit_mod
+    use mod_kinds,                  only: rk,ik
+    use mod_constants,              only: IO_DESTINATION
+    use mod_chidg_mpi,              only: IRANK
+    use type_chidg,                 only: chidg_t
+    use type_bc_element_coupling,   only: bc_element_coupling_t
+    use type_point,                 only: point_t
+    implicit none
+
+    public  :: test_bc_element_coupling
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/28/2017
+    !!
+    !--------------------------------------------------------------------------
+    @TestCase
+    type, extends(TestCase) ::  test_bc_element_coupling
+
+        type(chidg_t)               :: chidg
+        type(bc_element_coupling_t) :: coupling
+
+    contains
+
+        procedure   ::  setUp
+        procedure   ::  tearDown
+
+    end type test_bc_element_coupling
+    !***************************************************************************
+
+
+contains
+
+
+    !----------------------------------------------------------------------------------
+    !
+    !                                       SETUP
+    !
+    !----------------------------------------------------------------------------------
+
+
+
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a 
+    !! derived type procedure. The argument names have to match
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !----------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(test_bc_element_coupling),    intent(inout)   :: this
+        
+        !
+        ! Start up ChiDG
+        !
+        IO_DESTINATION = 'file'
+        call this%chidg%start_up('core')
+        
+    end subroutine setUp
+    !**********************************************************************************
+    
+
+    !>
+    !!
+    !!
+    !----------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(test_bc_element_coupling),    intent(inout)   :: this
+
+        !
+        ! Close ChiDG interface
+        !
+        call this%chidg%shut_down('core')
+
+    end subroutine tearDown
+    !**********************************************************************************
+
+
+
+
+
+
+    !----------------------------------------------------------------------------------
+    !
+    !                                       TESTS
+    !
+    !----------------------------------------------------------------------------------
+
+
+
+
+    !> Test 'add_coupled_element' procedure of bc_element_coupling
+    !!
+    !!  Call bc_element_coupling%add_coupled_element ONE time.
+    !!
+    !!  Check:
+    !!      number of coupled elements
+    !!      data for element coupling
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/12/2017
+    !!
+    !!---------------------------------------------------------------------------------
+    @Test
+    subroutine test_bc_element_coupling__add_one(self)
+        class(test_bc_element_coupling),    intent(inout)   :: self
+
+        type(bc_element_coupling_t) :: coupling
+        integer(ik)                 :: idomain_g,   idomain_l,          &
+                                       ielement_g,  ielement_l, iface,  &
+                                       neqns, nterms_s
+        real(rk)                    :: total_area
+        real(rk),       allocatable :: areas(:)
+        type(point_t),  allocatable :: quad_pts(:)
+
+        idomain_g  = 2
+        idomain_l  = 1
+        ielement_g = 4
+        ielement_l = 2
+        iface      = 3
+        neqns      = 2
+        nterms_s   = 8
+        total_area = 1._rk
+        areas      = [0.25_rk, 0.25_rk, 0.25_rk, 0.25_rk]
+        quad_pts   = [ point_t(0.1_rk,0.2_rk,0.3_rk), &
+                       point_t(0.1_rk,0.2_rk,0.3_rk), &
+                       point_t(0.1_rk,0.2_rk,0.3_rk), &
+                       point_t(0.1_rk,0.2_rk,0.3_rk) ]
+
+        !
+        ! THIS IS BEING TESTED
+        !
+        call coupling%add_coupled_element(idomain_g,idomain_l,ielement_g,ielement_l,iface,IRANK)
+        call coupling%set_coupled_element_data(idomain_g,ielement_g,neqns,nterms_s,total_area,areas,quad_pts)
+
+
+        !
+        ! Test one face
+        !
+        @assertEqual(coupling%ncoupled_elements(), 1)
+
+
+        !
+        ! Test components were set correctly
+        !
+        @assertEqual(coupling%idomain_g(1),  idomain_g)
+        @assertEqual(coupling%idomain_l(1),  idomain_l)
+        @assertEqual(coupling%ielement_g(1), ielement_g)
+        @assertEqual(coupling%ielement_l(1), ielement_l)
+        @assertEqual(coupling%iface(1),      iface)
+        @assertEqual(coupling%neqns(1),      neqns)
+        @assertEqual(coupling%nterms_s(1),   nterms_s)
+        @assertEqual(coupling%proc(1),       IRANK)
+
+        
+    end subroutine test_bc_element_coupling__add_one
+    !**********************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !> Test 'add_coupled_element' procedure of bc_element_coupling
+    !!
+    !!  Call bc_element_coupling%add_coupled_element TWO times.
+    !!
+    !!  Check:
+    !!      number of coupled elements
+    !!      data for element coupling
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/12/2017
+    !!
+    !!---------------------------------------------------------------------------------
+    @Test
+    subroutine test_bc_element_coupling__add_two(self)
+        class(test_bc_element_coupling),    intent(inout)   :: self
+
+        type(bc_element_coupling_t) :: coupling
+        integer(ik)                 :: idomain_g,   idomain_l,  &
+                                       ielement_g,  ielement_l, &
+                                       iface, proc, neqns, nterms_s
+        real(rk)                    :: total_area
+        real(rk),       allocatable :: areas(:)
+        type(point_t),  allocatable :: quad_pts(:)
+
+        idomain_g  = 2
+        idomain_l  = 1
+        ielement_g = 4
+        ielement_l = 2
+        iface      = 2
+        neqns      = 1
+        nterms_s   = 8
+        total_area = 1._rk
+        areas      = [0.25_rk, 0.25_rk, 0.25_rk, 0.25_rk]
+        quad_pts   = [ point_t(0.1_rk,0.2_rk,0.3_rk), &
+                       point_t(0.1_rk,0.2_rk,0.3_rk), &
+                       point_t(0.1_rk,0.2_rk,0.3_rk), &
+                       point_t(0.1_rk,0.2_rk,0.3_rk) ]
+        proc       = 0
+
+        !
+        ! THIS IS BEING TESTED
+        !
+        call coupling%add_coupled_element(idomain_g,idomain_l,ielement_g,ielement_l,iface,proc)
+        call coupling%set_coupled_element_data(idomain_g,ielement_g,neqns,nterms_s,total_area,areas,quad_pts)
+
+
+        idomain_g  = 3
+        idomain_l  = 2
+        ielement_g = 6
+        ielement_l = 3
+        iface      = 4
+        neqns      = 1
+        nterms_s   = 8
+        total_area = 1._rk
+        areas      = [0.25_rk, 0.25_rk, 0.25_rk, 0.25_rk]
+        quad_pts   = [ point_t(0.1_rk,0.2_rk,0.3_rk), &
+                       point_t(0.1_rk,0.2_rk,0.3_rk), &
+                       point_t(0.1_rk,0.2_rk,0.3_rk), &
+                       point_t(0.1_rk,0.2_rk,0.3_rk) ]
+        proc       = 1
+
+        !
+        ! THIS IS BEING TESTED
+        !
+        call coupling%add_coupled_element(idomain_g,idomain_l,ielement_g,ielement_l,iface,proc)
+        call coupling%set_coupled_element_data(idomain_g,ielement_g,neqns,nterms_s,total_area,areas,quad_pts)
+
+
+
+
+
+        !
+        ! Test two elements
+        !
+        @assertEqual(coupling%ncoupled_elements(), 2)
+
+
+        !
+        ! Test components were set correctly
+        !
+        @assertEqual(coupling%idomain_g(1),  2)
+        @assertEqual(coupling%idomain_l(1),  1)
+        @assertEqual(coupling%ielement_g(1), 4)
+        @assertEqual(coupling%ielement_l(1), 2)
+        @assertEqual(coupling%iface(1),      2)
+        @assertEqual(coupling%neqns(1),      1)
+        @assertEqual(coupling%nterms_s(1),   8)
+        @assertEqual(coupling%proc(1),       0)
+        
+        @assertEqual(coupling%idomain_g(2),  3)
+        @assertEqual(coupling%idomain_l(2),  2)
+        @assertEqual(coupling%ielement_g(2), 6)
+        @assertEqual(coupling%ielement_l(2), 3)
+        @assertEqual(coupling%iface(2),      4)
+        @assertEqual(coupling%neqns(2),      1)
+        @assertEqual(coupling%nterms_s(2),   8)
+        @assertEqual(coupling%proc(2),       1)
+
+
+    end subroutine test_bc_element_coupling__add_two
+    !**********************************************************************************
+
+
+
+
+
+
+end module test_bc_element_coupling_mod

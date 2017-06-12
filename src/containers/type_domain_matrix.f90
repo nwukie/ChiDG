@@ -1,4 +1,4 @@
-module type_blockmatrix
+module type_domain_matrix
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: DIAG, ZERO, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, ETA_MAX, ZETA_MAX, &
@@ -8,14 +8,13 @@ module type_blockmatrix
     use type_densematrix_vector,only: densematrix_vector_t
     use type_face_info,         only: face_info_t
     use type_seed,              only: seed_t
-    use type_bcset_coupling,    only: bcset_coupling_t
     use type_ivector,           only: ivector_t
     use mod_chidg_mpi,          only: IRANK
     use DNAD_D
     implicit none
 
 
-    !> Container for storing denseblock linearizations that make up a blockmatrix
+    !> Container for storing denseblock linearizations that make up a domain_matrix
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -30,7 +29,7 @@ module type_blockmatrix
     !!    .
     !!    .
     !-------------------------------------------------------------------------------------------
-    type, public :: blockmatrix_t
+    type, public :: domain_matrix_t
 
         !
         ! Primary storage, (nelem,ntime)
@@ -42,29 +41,29 @@ module type_blockmatrix
         !
         ! Supporting data
         !
-        integer(ik),            allocatable :: ldata(:,:)               !< Block-local data, (nelem,3) nvars, nterms, ntime.
-        !integer(ik),            allocatable :: local_transpose(:,:)     !< Block index of the transposed location (nelem,6)
+        integer(ik),            allocatable :: ldata(:,:)               ! Block-local data, (nelem,3) nvars, nterms, ntime.
+        !integer(ik),            allocatable :: local_transpose(:,:)    ! Block index of the transposed location (nelem,6)
         !type(ivector_t),        allocatable :: local_transpose(:)
-        type(ivector_t),        allocatable :: local_lower_blocks(:)    !< For each element, which blocks (1-6) are lower blocks
-        type(ivector_t),        allocatable :: local_upper_blocks(:)    !< For each element, which blocks (1-6) are upper blocks
+        type(ivector_t),        allocatable :: local_lower_blocks(:)    ! For each element, which blocks (1-6) are lower blocks
+        type(ivector_t),        allocatable :: local_upper_blocks(:)    ! For each element, which blocks (1-6) are upper blocks
 
 
     contains
 
         ! Initializers
-        generic,   public  :: init => initialize_linearization          !< Initialize full linearization matrix
+        generic,   public  :: init => initialize_linearization          ! Initialize full linearization matrix
         procedure, private :: initialize_linearization
 
 
         ! Setters
-        procedure :: store                                              !< Store linearization data for local blocks
-        procedure :: store_chimera                                      !< Store linearization data for chimera blocks
-        procedure :: store_bc                                           !< Store linearization data for boundary condition blocks
-        procedure :: clear                                              !< Zero all data storage
+        procedure :: store                                              ! Store linearization data for local blocks
+        procedure :: store_chimera                                      ! Store linearization data for chimera blocks
+        procedure :: store_bc                                           ! Store linearization data for boundary condition blocks
+        procedure :: clear                                              ! Zero all data storage
 
         final :: destructor
 
-    end type blockmatrix_t
+    end type domain_matrix_t
     !*******************************************************************************************
 
 
@@ -87,26 +86,27 @@ contains
     !!  @date   11/10/2016
     !!
     !-------------------------------------------------------------------------------------------
-    subroutine initialize_linearization(self,mesh,bcset_coupling,mtype)
-        class(blockmatrix_t),   intent(inout)             :: self
-        class(mesh_t),          intent(in)                :: mesh
-        type(bcset_coupling_t), intent(in), optional      :: bcset_coupling
-        character(*),           intent(in)                :: mtype
+    subroutine initialize_linearization(self,mesh,idom,mtype)
+        class(domain_matrix_t), intent(inout)   :: self
+        class(mesh_t),          intent(in)      :: mesh
+        integer(ik),            intent(in)      :: idom
+        character(*),           intent(in)      :: mtype
 
         character(:),   allocatable :: user_msg
         integer(ik),    allocatable :: blocks(:)
-        integer(ik)                 :: nelem, ierr, ielem, iblk, size1d, parent,  &
+        integer(ik)                 :: nelem, ierr, ielem, iblk, size1d, parent,        &
                                        block_index, neqns, nterms_s, ntime,             &
                                        nchimera_elements, maxdonors, idonor, iface,     &
                                        itime, dparent_g, dparent_l, eparent_g,          &
                                        eparent_l, parent_proc, eparent_l_trans,         &
                                        imat_trans, ChiID, ndonors, max_coupled_elems,   &
                                        ncoupled_elems, icoupled_elem, icoupled_elem_bc, &
-                                       ielem_bc, ibc, imat
+                                       ielem_bc, ibc, imat, group_ID, patch_ID,         &
+                                       face_ID, elem_ID, idomain_l, ielement_l
         logical                     :: new_elements, chimera_face, more_donors,         &
-                                       donor_already_called, contains_chimera_face,     &
+                                       already_added, contains_chimera_face,            &
                                        block_initialized, lower_block, upper_block,     &
-                                       transposed_block
+                                       transposed_block, domain_has_face
         logical                     :: init_chimera = .false.
         logical                     :: init_bc      = .false.
 
@@ -146,21 +146,21 @@ contains
                 init_bc      = .false.
 
             case default
-                call chidg_signal(FATAL,'blockmatrix%init: unrecognized matrix type')
+                call chidg_signal(FATAL,'domain_matrix%init: unrecognized matrix type')
 
         end select
 
 
 
-        ! Check to make sure the mesh numerics were initialized
-        user_msg = "blockmatrix%initialize_linearization: Incoming mesh_t was not &
-                    initialized. Make sure to call mesh%init_sol"
-        if (.not. mesh%solInitialized) call chidg_signal(FATAL,user_msg)
+        ! Check to make sure the domain numerics were initialized
+        user_msg = "domain_matrix%initialize_linearization: Incoming domain_t was not &
+                    initialized. Make sure to call domain%init_sol"
+        if (.not. mesh%domain(idom)%solInitialized) call chidg_signal(FATAL,user_msg)
 
 
 
-        nelem = mesh%nelem      ! Number of elements in the local block
-        ntime = mesh%ntime      ! Number of time levels
+        nelem = mesh%domain(idom)%nelem      ! Number of elements in the local block
+        ntime = mesh%domain(idom)%ntime      ! Number of time levels
         !
         ! Allocation for 'local blocks'
         !
@@ -173,61 +173,15 @@ contains
 
 
         !
-        ! Allocation for 'chimera blocks'
+        ! Allocation for 'chimera', 'bc' coupling
         !
         if (allocated(self%chi_blks)) deallocate(self%chi_blks)
+        if (allocated(self%bc_blks))  deallocate(self%bc_blks)
+
         if (init_chimera) allocate(self%chi_blks(nelem,ntime), stat=ierr)
-        if (ierr  /=   0) call AllocationError
-
-
-
-
-
-!        !------------------------------------------------------------------------------
-!        !
-!        !                  Allocation for 'boundary condition blocks'
-!        !
-!        ! TODO: If the only 'coupled' element to the local face flux is the local element,
-!        !       then a block is still allocated for it here. However, the linearization of the
-!        !       local element is stored in self%lblks so the block here is not used. It
-!        !       would be wasted compute time in the matrix-vector product because it is 
-!        !       just zeros.
-!        !
-!        !------------------------------------------------------------------------------
-!        if ( init_bc .and. present(bcset_coupling) ) then
-!            if (allocated(self%bc_blks)) deallocate(self%bc_blks)
-!
-!            !
-!            ! Get maximum number of coupled elements across all boundary conditions.
-!            !
-!            max_coupled_elems = 0
-!            do ibc = 1,size(bcset_coupling%bc)
-!
-!                !
-!                ! Loop through bc elems and test number of coupled elements against current maximum
-!                !
-!                do ielem = 1,size(bcset_coupling%bc(ibc)%elems)
-!                    ncoupled_elems = bcset_coupling%bc(ibc)%coupled_elems(ielem)%size()
-!                
-!                    if ( ncoupled_elems > max_coupled_elems ) then
-!                        max_coupled_elems = ncoupled_elems
-!                    end if
-!
-!                end do ! ielem
-!
-!            end do ! ibc
-!
-!
-!            !
-!            ! Allocate boundary condition blocks
-!            !
-!            allocate(self%bc_blks(nelem,max_coupled_elems), stat=ierr)
-!            if (ierr /= 0) call AllocationError
-!
-!        end if
-
-
-
+        if (ierr /= 0) call AllocationError
+        if (init_bc) allocate(self%bc_blks(nelem,ntime), stat=ierr)
+        if (ierr /= 0) call AllocationError
 
 
 
@@ -236,46 +190,46 @@ contains
 
 
         !
-        ! Loop through elements and call initialization for 'local', 'chimera', and 
-        ! 'boundary condition' denseblock matrices.
+        ! Loop through elements and call initialization for INTERIOR, CHIMERA, and 
+        ! denseblock matrices.
         !
-        do ielem = 1,mesh%nelem
-            do itime = 1,mesh%ntime 
+        do ielem = 1,mesh%domain(idom)%nelem
+            do itime = 1,mesh%domain(idom)%ntime 
                 imat = 1
                 
                 ! Set the element indices that the densematrix_vector is associated with.
-                self%lblks(ielem,itime)%idomain_g  = mesh%elems(ielem)%idomain_g
-                self%lblks(ielem,itime)%idomain_l  = mesh%elems(ielem)%idomain_l
-                self%lblks(ielem,itime)%ielement_g = mesh%elems(ielem)%ielement_g
-                self%lblks(ielem,itime)%ielement_l = mesh%elems(ielem)%ielement_l
-                self%lblks(ielem,itime)%mass       = mesh%elems(ielem)%mass
+                self%lblks(ielem,itime)%idomain_g  = mesh%domain(idom)%elems(ielem)%idomain_g
+                self%lblks(ielem,itime)%idomain_l  = mesh%domain(idom)%elems(ielem)%idomain_l
+                self%lblks(ielem,itime)%ielement_g = mesh%domain(idom)%elems(ielem)%ielement_g
+                self%lblks(ielem,itime)%ielement_l = mesh%domain(idom)%elems(ielem)%ielement_l
+                self%lblks(ielem,itime)%mass       = mesh%domain(idom)%elems(ielem)%mass
 
 
                 !--------------------------------------------
                 !
-                ! Initialization  --  'local blocks'
+                ! Initialization  --  INTERIOR coupling
                 !
                 !--------------------------------------------
                 do block_index = 1,size(blocks)
                     iblk = blocks(block_index)
-                    size1d = mesh%elems(ielem)%neqns  *  mesh%elems(ielem)%nterms_s
+                    size1d = mesh%domain(idom)%elems(ielem)%neqns  *  mesh%domain(idom)%elems(ielem)%nterms_s
 
                     !
                     ! Parent is the element with respect to which the linearization is computed
                     !
-                    dparent_l = mesh%idomain_l
+                    dparent_l = mesh%domain(idom)%idomain_l
                     if (iblk == DIAG) then
-                        dparent_g   = mesh%elems(ielem)%idomain_g
-                        dparent_l   = mesh%elems(ielem)%idomain_l
-                        eparent_g   = mesh%elems(ielem)%ielement_g
-                        eparent_l   = mesh%elems(ielem)%ielement_l
+                        dparent_g   = mesh%domain(idom)%elems(ielem)%idomain_g
+                        dparent_l   = mesh%domain(idom)%elems(ielem)%idomain_l
+                        eparent_g   = mesh%domain(idom)%elems(ielem)%ielement_g
+                        eparent_l   = mesh%domain(idom)%elems(ielem)%ielement_l
                         parent_proc = IRANK
                     else
-                        dparent_g   = mesh%faces(ielem,iblk)%ineighbor_domain_g
-                        dparent_l   = mesh%faces(ielem,iblk)%ineighbor_domain_l
-                        eparent_g   = mesh%faces(ielem,iblk)%ineighbor_element_g
-                        eparent_l   = mesh%faces(ielem,iblk)%ineighbor_element_l
-                        parent_proc = mesh%faces(ielem,iblk)%ineighbor_proc
+                        dparent_g   = mesh%domain(idom)%faces(ielem,iblk)%ineighbor_domain_g
+                        dparent_l   = mesh%domain(idom)%faces(ielem,iblk)%ineighbor_domain_l
+                        eparent_g   = mesh%domain(idom)%faces(ielem,iblk)%ineighbor_element_g
+                        eparent_l   = mesh%domain(idom)%faces(ielem,iblk)%ineighbor_element_l
+                        parent_proc = mesh%domain(idom)%faces(ielem,iblk)%ineighbor_proc
                     end if
 
 
@@ -290,9 +244,9 @@ contains
                         call self%lblks(ielem,itime)%push_back(temp_blk)
 
                         ! Store data about number of equations and number of terms in solution expansion
-                        self%ldata(ielem,1) = mesh%elems(ielem)%neqns
-                        self%ldata(ielem,2) = mesh%elems(ielem)%nterms_s
-                        self%ldata(ielem,3) = mesh%elems(ielem)%ntime
+                        self%ldata(ielem,1) = mesh%domain(idom)%elems(ielem)%neqns
+                        self%ldata(ielem,2) = mesh%domain(idom)%elems(ielem)%nterms_s
+                        self%ldata(ielem,3) = mesh%domain(idom)%elems(ielem)%ntime
 
 
                         !
@@ -321,66 +275,67 @@ contains
 
                 !--------------------------------------------
                 !
-                ! Initialization  --  'chimera blocks'
+                ! Initialization  --  CHIMERA coupling
                 !
                 !--------------------------------------------
                 if (init_chimera) then
                     ! Set the element indices that the densematrix_vector is associated with.
-                    self%chi_blks(ielem,itime)%idomain_g  = mesh%elems(ielem)%idomain_g
-                    self%chi_blks(ielem,itime)%idomain_l  = mesh%elems(ielem)%idomain_l
-                    self%chi_blks(ielem,itime)%ielement_g = mesh%elems(ielem)%ielement_g
-                    self%chi_blks(ielem,itime)%ielement_l = mesh%elems(ielem)%ielement_l
+                    self%chi_blks(ielem,itime)%idomain_g  = mesh%domain(idom)%elems(ielem)%idomain_g
+                    self%chi_blks(ielem,itime)%idomain_l  = mesh%domain(idom)%elems(ielem)%idomain_l
+                    self%chi_blks(ielem,itime)%ielement_g = mesh%domain(idom)%elems(ielem)%ielement_g
+                    self%chi_blks(ielem,itime)%ielement_l = mesh%domain(idom)%elems(ielem)%ielement_l
+                    self%chi_blks(ielem,itime)%mass       = mesh%domain(idom)%elems(ielem)%mass
 
                     do iface = 1,NFACES
 
                         !
                         ! If facetype is CHIMERA
                         !
-                        chimera_face = ( mesh%faces(ielem,iface)%ftype == CHIMERA )
+                        chimera_face = ( mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA )
                         if (chimera_face) then
 
                             !
                             ! Get ChiID and number of donor elements
                             !
-                            ChiID   = mesh%faces(ielem,iface)%ChiID
-                            ndonors = mesh%chimera%recv%data(ChiID)%ndonors()
+                            ChiID   = mesh%domain(idom)%faces(ielem,iface)%ChiID
+                            ndonors = mesh%domain(idom)%chimera%recv%data(ChiID)%ndonors()
 
                             !
                             ! Call block initialization for each Chimera donor
                             !
                             do idonor = 1,ndonors
-                                neqns       = mesh%chimera%recv%data(ChiID)%donor_neqns%at(idonor)
-                                nterms_s    = mesh%chimera%recv%data(ChiID)%donor_nterms_s%at(idonor)
-                                dparent_g   = mesh%chimera%recv%data(ChiID)%donor_domain_g%at(idonor)
-                                dparent_l   = mesh%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
-                                eparent_g   = mesh%chimera%recv%data(ChiID)%donor_element_g%at(idonor)
-                                eparent_l   = mesh%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
-                                parent_proc = mesh%chimera%recv%data(ChiID)%donor_proc%at(idonor)
+                                neqns       = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_neqns%at(idonor)
+                                nterms_s    = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_nterms_s%at(idonor)
+                                dparent_g   = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_domain_g%at(idonor)
+                                dparent_l   = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
+                                eparent_g   = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_element_g%at(idonor)
+                                eparent_l   = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
+                                parent_proc = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_proc%at(idonor)
 
                                 size1d = neqns * nterms_s
 
                                 !
                                 ! Check if block initialization was already called for current donor
                                 !
-                                donor_already_called = .false.
+                                already_added = .false.
                                 do imat = 1,self%chi_blks(ielem,itime)%size()
                                     
                                     ! dummy densematrix to get a specific densematrix inside the chi_blks
                                     ! densematrix_vector temporary variable to access densematrix routine
                                     temp1 = self%chi_blks(ielem,itime)%at(imat)
                                     
-                                    donor_already_called = ( dparent_g == temp1%dparent_g() .and. &
-                                                             dparent_l == temp1%dparent_l() .and. &
-                                                             eparent_g == temp1%eparent_g() .and. &
-                                                             eparent_l == temp1%eparent_l() )
-                                    if (donor_already_called) exit
+                                    already_added = ( dparent_g == temp1%dparent_g() .and. &
+                                                      dparent_l == temp1%dparent_l() .and. &
+                                                      eparent_g == temp1%eparent_g() .and. &
+                                                      eparent_l == temp1%eparent_l() )
+                                    if (already_added) exit
                                 end do
 
                             
                                 !
                                 ! If a block for the donor element hasn't yet been initialized, call initialization procedure
                                 !
-                                if (.not. donor_already_called) then
+                                if (.not. already_added) then
 
                                     !
                                     ! Call block initialization, store
@@ -405,70 +360,98 @@ contains
 
 
 
-!        !--------------------------------------------
-!        !
-!        ! Initialization  --  'boundary condition blocks'
-!        !
-!        !--------------------------------------------
-!        !
-!        ! Loop through boundary conditions and initialize blocks for coupling
-!        !
-!        if ( init_bc .and. present(bcset_coupling) ) then
-!            do ibc = 1,size(bcset_coupling%bc)
-!
-!                !
-!                ! For the current boundary condition, loop through bc elements.
-!                !
-!                do ielem_bc = 1,size(bcset_coupling%bc(ibc)%elems)
-!
-!                    ncoupled_elems = bcset_coupling%bc(ibc)%coupled_elems(ielem_bc)%size()
-!                    !
-!                    ! Initialize block storage for each coupled element
-!                    !
-!                    do icoupled_elem_bc = 1,ncoupled_elems
-!
-!                        !
-!                        ! Get block indices
-!                        !
-!                        ielem         = bcset_coupling%bc(ibc)%elems(ielem_bc)
-!                        icoupled_elem = bcset_coupling%bc(ibc)%coupled_elems(ielem_bc)%at(icoupled_elem_bc)
-!
-!
-!                        !
-!                        ! Check if block has already been initialized for the coupled element
-!                        !
-!                        block_initialized = .false.
-!                        do iblk = 1,size(self%bc_blks,2)
-!                            if ( self%bc_blks(ielem,iblk)%eparent() == icoupled_elem ) then
-!                                block_initialized = .true.
-!                                exit
-!                            end if
-!                        end do
-!
-!
-!                        if ( .not. block_initialized ) then
-!                            !
-!                            ! Compute block size
-!                            !
-!                            size1d = mesh%elems(ielem)%neqns  *  mesh%elems(ielem)%nterms_s
-!
-!                            !
-!                            ! Call boundary condition block initialization
-!                            !
-!                            dparent_l = mesh%idomain_l
-!                            eparent_l = icoupled_elem
-!                            call self%bc_blks(ielem,icoupled_elem_bc)%init(size1d,dparent_l,eparent_l)
-!                        end if
-!
-!
-!                    end do ! icoupled_elem
-!
-!                end do ! ielem
-!
-!            end do ! ibc
-!
-!        end if ! init_bc
+        !--------------------------------------------
+        !
+        ! Initialization  --  BOUNDARY coupling
+        !
+        !--------------------------------------------
+        if (init_bc) then
+            do itime = 1,mesh%domain(idom)%ntime 
 
+                do group_ID = 1,mesh%nbc_patch_groups()
+                    do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
+                        do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
+
+                            ! Get indices of the local element to determine if it is on 'idom'
+                            idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l(face_ID)
+                            ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
+                            domain_has_face = (idom == idomain_l)
+
+
+                            !
+                            ! If domain contains current face, add all coupling information.
+                            !   ASSUMPTIONS:
+                            !       - all coupled elements use the same number of equations
+                            !       - all coupled elements run with the same nterms_s
+                            !
+                            if (domain_has_face) then
+                                do elem_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%ncoupled_elements(face_ID)
+
+                                    ! Set the element indices that the densematrix_vector is associated with.
+                                    self%bc_blks(ielement_l,itime)%idomain_g  = mesh%domain(idomain_l)%elems(ielement_l)%idomain_g
+                                    self%bc_blks(ielement_l,itime)%idomain_l  = mesh%domain(idomain_l)%elems(ielement_l)%idomain_l
+                                    self%bc_blks(ielement_l,itime)%ielement_g = mesh%domain(idomain_l)%elems(ielement_l)%ielement_g
+                                    self%bc_blks(ielement_l,itime)%ielement_l = mesh%domain(idomain_l)%elems(ielement_l)%ielement_l
+                                    self%bc_blks(ielement_l,itime)%mass       = mesh%domain(idomain_l)%elems(ielement_l)%mass
+
+
+
+                                    !
+                                    ! Compute size of coupling matrix
+                                    !
+                                    neqns    = mesh%domain(idomain_l)%elems(ielement_l)%neqns
+                                    nterms_s = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s
+                                    size1d   = neqns * nterms_s
+
+
+                                    !
+                                    ! Get indices for coupled element
+                                    !
+                                    dparent_g   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g(elem_ID)
+                                    dparent_l   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l(elem_ID)
+                                    eparent_g   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(elem_ID)
+                                    eparent_l   = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(elem_ID)
+                                    parent_proc = mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%proc(elem_ID)
+
+
+                                    !
+                                    ! We need to check that we dont try to add the local element more than once.
+                                    ! For example, if an element had two different boundary conditions on different
+                                    ! faces, they would both try to add the local element.
+                                    !
+                                    already_added = .false.
+                                    do imat = 1,self%bc_blks(ielement_l,itime)%size()
+                                        
+                                        ! dummy densematrix to get a specific densematrix inside the bc_blks
+                                        ! densematrix_vector temporary variable to access densematrix routine
+                                        temp1 = self%bc_blks(ielement_l,itime)%at(imat)
+                                        
+                                        already_added = ( dparent_g == temp1%dparent_g() .and. &
+                                                          dparent_l == temp1%dparent_l() .and. &
+                                                          eparent_g == temp1%eparent_g() .and. &
+                                                          eparent_l == temp1%eparent_l() )
+                                        if (already_added) exit
+                                    end do
+
+
+
+                                    !
+                                    ! Call initialization, store initialized matrix to bc_blks
+                                    !
+                                    if (.not. already_added) then
+                                        call temp_blk%init(size1d,size1d,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+                                        call self%bc_blks(ielement_l,itime)%push_back(temp_blk)
+                                    end if
+
+                                end do !elem_ID, coupling
+                            end if
+
+                        end do !face_ID
+                    end do !patch_ID
+                end do !group_ID
+            end do !itime
+
+        end if !init_bc
 
 
 
@@ -481,8 +464,8 @@ contains
         select case (trim(mtype))
             case ('full','Full','FULL')
 
-                do ielem = 1,mesh%nelem
-                    do itime = 1,mesh%ntime
+                do ielem = 1,mesh%domain(idom)%nelem
+                    do itime = 1,mesh%domain(idom)%ntime
                         do imat = 1,self%lblks(ielem,itime)%size()
 
                             if ( self%lblks(ielem,itime)%parent_proc(imat) == IRANK ) then
@@ -506,7 +489,7 @@ contains
                                         end if
 
                                         if ( (imat_trans == self%lblks(eparent_l,itime)%size() ) .and. &
-                                             (transposed_block .eqv. .false.) ) call chidg_signal(FATAL,"blockmatrix%init: no transposed element found")
+                                             (transposed_block .eqv. .false.) ) call chidg_signal(FATAL,"domain_matrix%init: no transposed element found")
                                     end do !imat_trans
 
                             end if
@@ -556,7 +539,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine store(self,integral,face_info,seed,ivar,itime)
-        class(blockmatrix_t),   intent(inout)   :: self
+        class(domain_matrix_t),   intent(inout)   :: self
         type(AD_D),             intent(in)      :: integral(:)
         type(face_info_t),      intent(in)      :: face_info
         type(seed_t),           intent(in)      :: seed
@@ -610,7 +593,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine store_chimera(self,integral,face_info,seed,ivar,itime)
-        class(blockmatrix_t),       intent(inout)   :: self
+        class(domain_matrix_t),       intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
         type(face_info_t),          intent(in)      :: face_info
         type(seed_t),               intent(in)      :: seed
@@ -670,24 +653,24 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine store_bc(self,integral,face,seed,ivar,itime)
-        class(blockmatrix_t),       intent(inout)   :: self
+        class(domain_matrix_t),       intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
         type(face_info_t),          intent(in)      :: face
         type(seed_t),               intent(in)      :: seed
         integer(ik),                intent(in)      :: ivar
         integer(ik),                intent(in)      :: itime
 
-        integer(ik) :: idomain_l, ielement_l
-        integer(ik) :: idonor_domain_l, idonor_element_l, imat
+        integer(ik) :: ielement_l
+        integer(ik) :: icoupled_domain_g, icoupled_element_g, icoupled_element_l, imat
         integer(ik) :: nterms, size_integral
-        logical     :: local_element_linearization = .false.
+        logical     :: local_coupling = .false.
 
 
-        idomain_l  = face%idomain_l
         ielement_l = face%ielement_l
 
-        idonor_domain_l  = seed%idomain_l
-        idonor_element_l = seed%ielement_l
+        icoupled_domain_g  = seed%idomain_g
+        icoupled_element_g = seed%ielement_g
+        icoupled_element_l = seed%ielement_l
 
 
         !
@@ -697,9 +680,9 @@ contains
         ! but the ILU preconditioner expects the full diagonal contribution to be in 
         ! lblks.
         !
-        local_element_linearization = (ielement_l == idonor_element_l)
+        local_coupling = (ielement_l == icoupled_element_l)
 
-        if ( local_element_linearization ) then
+        if ( local_coupling ) then
 
             call self%store(integral,face,seed,ivar,itime)
 
@@ -710,13 +693,14 @@ contains
             nterms = self%ldata(ielement_l,2)
 
             ! Find coupled bc densematrix location 
-            imat = self%bc_blks(ielement_l,itime)%loc(idonor_domain_l,idonor_element_l)
+            imat = self%bc_blks(ielement_l,itime)%loc(icoupled_domain_g,icoupled_element_g)
 
             ! Store derivatives
             call self%bc_blks(ielement_l,itime)%store(imat,ivar,nterms,integral)
 
 
         end if ! check local block.
+
 
     end subroutine store_bc
     !******************************************************************************************
@@ -741,7 +725,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine clear(self)
-        class(blockmatrix_t),   intent(inout)   :: self
+        class(domain_matrix_t),   intent(inout)   :: self
 
         integer(ik)             :: ielem, itime
 
@@ -786,9 +770,9 @@ contains
     !!
     !!---------------------------------------------
     subroutine destructor(self)
-        type(blockmatrix_t), intent(inout) :: self
+        type(domain_matrix_t), intent(inout) :: self
 
     end subroutine
     !**********************************************
 
-end module type_blockmatrix
+end module type_domain_matrix

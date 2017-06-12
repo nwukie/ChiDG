@@ -14,7 +14,6 @@ module test__harmonic_balance_mod
     use mod_io                 
     use type_chidg,             only: chidg_t
     use type_meshdata,          only: meshdata_t
-    use type_bc,                only: bc_t
     use mod_bc,                 only: create_bc
     use mod_test_utilities,     only: create_mesh_file
     use mod_file_utilities,     only: delete_file
@@ -187,7 +186,6 @@ contains
         type(assemble_harmonic_balance_t)       :: assemble_HB
         type(chidg_t)                           :: chidg
         type(meshdata_t),   allocatable         :: meshdata(:)
-        class(bc_t),        allocatable         :: bc
         type(chidg_vector_t)                    :: q_temp, rhs_temp
         type(string_t)                          :: eqnset(1)
         integer(ik)                             :: spacedim, nterms_s, ielem, itime, ierr
@@ -272,19 +270,12 @@ contains
         ! Get grid points
         !
         call chidg%read_grid(filename,spacedim)
-        call chidg%read_boundaryconditions(filename)
+
 
 
         !
-        ! Initialize ChiDG interfaces
-        ! TODO: Initialize all interfaces
+        ! Initialize the time integrator
         !
-!        call chidg%init('all')
-        call chidg%init('domains')
-        call chidg%init('bc')
-        call chidg%init('communication')
-        call chidg%init('solvers')
-
         call chidg%time_integrator%init(chidg%data)
         
 
@@ -333,33 +324,33 @@ contains
             !
             ! Compute reference values
             !
-            associate ( D => chidg%data%time_manager%D, &
-                        mesh => chidg%data%mesh(1) )
+            associate ( D      => chidg%data%time_manager%D, &
+                        domain => chidg%data%mesh%domain(1) )
                 
                 vref_a = 0.7_rk
-                ref_1 = D(1,2)*matmul(mesh%elems(1)%mass,vref_a)
+                ref_1 = D(1,2)*matmul(domain%elems(1)%mass,vref_a)
                 vref_a = 0.1_rk; vref_b = 0.7_rk
-                ref_2 = vref_a + D(2,2)*matmul(mesh%elems(1)%mass,vref_b) 
+                ref_2 = vref_a + D(2,2)*matmul(domain%elems(1)%mass,vref_b) 
                 vref_a = 0.7_rk
-                ref_3 = D(3,2)*matmul(mesh%elems(1)%mass,vref_a)
+                ref_3 = D(3,2)*matmul(domain%elems(1)%mass,vref_a)
                 vref_a = 0.8_rk 
-                ref_4 = D(1,1)*matmul(mesh%elems(2)%mass,vref_a)
-                ref_5 = D(2,1)*matmul(mesh%elems(2)%mass,vref_a)
-                ref_6 = D(3,1)*matmul(mesh%elems(2)%mass,vref_a)
+                ref_4 = D(1,1)*matmul(domain%elems(2)%mass,vref_a)
+                ref_5 = D(2,1)*matmul(domain%elems(2)%mass,vref_a)
+                ref_6 = D(3,1)*matmul(domain%elems(2)%mass,vref_a)
                 vref_a = 0.3_rk
                 ref_7 = vref_a
                 vref_a = 0.9_rk 
-                ref_8 = D(1,3)*matmul(mesh%elems(5)%mass,vref_a)
-                ref_9 = D(2,3)*matmul(mesh%elems(5)%mass,vref_a) 
-                ref_10 = D(3,3)*matmul(mesh%elems(5)%mass,vref_a)
+                ref_8 = D(1,3)*matmul(domain%elems(5)%mass,vref_a)
+                ref_9 = D(2,3)*matmul(domain%elems(5)%mass,vref_a) 
+                ref_10 = D(3,3)*matmul(domain%elems(5)%mass,vref_a)
                 vref_a = 0.4_rk
                 ref_11 = vref_a
                 vref_a = 0.2_rk
                 ref_12 = vref_a
                 vref_a = 0.6_rk 
-                ref_13 = D(1,1)*matmul(mesh%elems(8)%mass,vref_a)
-                ref_14 = D(2,1)*matmul(mesh%elems(8)%mass,vref_a) 
-                ref_15 = D(3,1)*matmul(mesh%elems(8)%mass,vref_a)
+                ref_13 = D(1,1)*matmul(domain%elems(8)%mass,vref_a)
+                ref_14 = D(2,1)*matmul(domain%elems(8)%mass,vref_a) 
+                ref_15 = D(3,1)*matmul(domain%elems(8)%mass,vref_a)
 
 
             end associate

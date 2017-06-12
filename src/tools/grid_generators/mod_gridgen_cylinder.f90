@@ -5,7 +5,7 @@ module mod_gridgen_cylinder
     use mod_string,             only: string_t
     use mod_bc,                 only: create_bc
     use type_bc_state,          only: bc_state_t
-    use type_bc_group,          only: bc_group_t
+    use type_bc_state_group,    only: bc_state_group_t
     use mod_plot3d_utilities,   only: get_block_points_plot3d, get_block_elements_plot3d, &
                                       get_block_boundary_faces_plot3d
     use mod_hdf_utilities,      only: add_domain_hdf, initialize_file_hdf, open_domain_hdf, &
@@ -62,12 +62,12 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------
-    subroutine create_mesh_file__cylinder(filename,overlap_deg,equation_sets, group_names, bc_groups)
+    subroutine create_mesh_file__cylinder(filename,overlap_deg,equation_sets, group_names, bc_state_groups)
         character(*),               intent(in)              :: filename
         real(rk),                   intent(in)              :: overlap_deg
         type(string_t),             intent(in), optional    :: equation_sets(:)
         type(string_t),             intent(in), optional    :: group_names(:,:)
-        type(bc_group_t),           intent(in), optional    :: bc_groups(:)
+        type(bc_state_group_t),     intent(in), optional    :: bc_state_groups(:)
 
         integer(ik) :: npt_xi, npt_eta, npt_zeta, &
                        nelem_xi, nelem_eta, nelem_zeta, &
@@ -204,15 +204,17 @@ contains
         !
         ! Add bc_group's
         !
-        if (present(bc_groups)) then
+        if (present(bc_state_groups)) then
 
-            do igroup = 1,size(bc_groups)
-                call create_bc_group_hdf(file_id,bc_groups(igroup)%name)
+            do igroup = 1,size(bc_state_groups)
+                call create_bc_group_hdf(file_id,bc_state_groups(igroup)%name)
 
-                bcgroup_id = open_bc_group_hdf(file_id,bc_groups(igroup)%name)
+                bcgroup_id = open_bc_group_hdf(file_id,bc_state_groups(igroup)%name)
 
-                do istate = 1,bc_groups(igroup)%bc_states%size()
-                    call add_bc_state_hdf(bcgroup_id, bc_groups(igroup)%bc_states%at(istate))
+                !do istate = 1,bc_state_groups(igroup)%bc_states%size()
+                do istate = 1,bc_state_groups(igroup)%nbc_states()
+                    !call add_bc_state_hdf(bcgroup_id, bc_state_groups(igroup)%bc_states%at(istate))
+                    call add_bc_state_hdf(bcgroup_id, bc_state_groups(igroup)%bc_state(istate)%state)
                 end do
                 call close_bc_group_hdf(bcgroup_id)
             end do

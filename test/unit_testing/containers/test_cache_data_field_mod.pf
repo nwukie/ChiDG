@@ -21,7 +21,7 @@ module test_cache_data_field_mod
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
     use type_chidg,                 only: chidg_t
-    use type_cache_data_field,   only: cache_data_field_t
+    use type_cache_data_field,      only: cache_data_field_t
     use mod_test_utilities,         only: create_mesh_file
     use mod_file_utilities,         only: delete_file
     implicit none
@@ -73,17 +73,17 @@ contains
         call create_mesh_file("D1 NxNxN",this%filename,nelem_xi=3,nelem_eta=3,nelem_zeta=3)
 
         !
+        ! Set the accuracy for the solution expansion
+        !
+        call this%chidg%set('Solution Order', integer_input=this%solution_order)
+
+        !
         ! Read grid + bcs
         !
         call this%chidg%read_grid(this%filename,3)
-        call this%chidg%read_boundaryconditions(this%filename)
 
-        !
-        ! Initialize
-        !
-        call this%chidg%set('Solution Order', integer_input=this%solution_order)
-        call this%chidg%init('domains')
-        call this%chidg%init('communication')
+!        call this%chidg%init('domains')
+!        call this%chidg%init('communication')
 
     end subroutine setUp
     !******************************************************************************************
@@ -192,8 +192,8 @@ contains
         !
         ! Test that the cache allocated the correct component
         !
-        nnodes_face = self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%face%nnodes
-        nnodes_vol  = self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%vol%nnodes
+        nnodes_face = self%chidg%data%mesh%domain(idomain)%faces(ielem,iface)%gq%face%nnodes
+        nnodes_vol  = self%chidg%data%mesh%domain(idomain)%faces(ielem,iface)%gq%vol%nnodes
 
         ! TEST 'value' ALLOCATION
         ! Number of nodes
@@ -310,8 +310,8 @@ contains
         !
         ! Test that the cache allocated the correct component
         !
-        nnodes_face = self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%face%nnodes
-        nnodes_vol  = self%chidg%data%mesh(idomain)%faces(ielem,iface)%gq%vol%nnodes
+        nnodes_face = self%chidg%data%mesh%domain(idomain)%faces(ielem,iface)%gq%face%nnodes
+        nnodes_vol  = self%chidg%data%mesh%domain(idomain)%faces(ielem,iface)%gq%vol%nnodes
 
         ! Number of nodes
         @assertEqual(size(cache_data_field%value,1), nnodes_face)
@@ -423,8 +423,8 @@ contains
         !
         ! Test that the cache allocated the correct component
         !
-        nnodes_face = self%chidg%data%mesh(idomain)%elems(ielem)%gq%face%nnodes
-        nnodes_vol  = self%chidg%data%mesh(idomain)%elems(ielem)%gq%vol%nnodes
+        nnodes_face = self%chidg%data%mesh%domain(idomain)%elems(ielem)%gq%face%nnodes
+        nnodes_vol  = self%chidg%data%mesh%domain(idomain)%elems(ielem)%gq%vol%nnodes
 
         ! Number of nodes
         @assertEqual(size(cache_data_field%value,1), nnodes_vol)

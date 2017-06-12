@@ -1,11 +1,11 @@
 module operator_chidg_dot
-    use mod_kinds,          only: rk, ik
-    use mod_constants,      only: ZERO
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: ZERO
     
-    use type_chidg_vector,   only: chidg_vector_t
-    use operator_block_dot, only: block_dot
-    use mod_chidg_mpi,      only: GROUP_MASTER
-    use mpi_f08,            only: mpi_comm, MPI_AllReduce, MPI_Reduce, MPI_REAL8, MPI_SUM
+    use type_chidg_vector,      only: chidg_vector_t
+    use operator_domain_dot,    only: domain_dot
+    use mod_chidg_mpi,          only: GROUP_MASTER
+    use mpi_f08,                only: mpi_comm, MPI_AllReduce, MPI_Reduce, MPI_REAL8, MPI_SUM
     implicit none
 
     interface dot
@@ -34,7 +34,7 @@ contains
 
         ! Compute vector dot-product
         do idom = 1,size(a%dom)
-            res = res + block_dot(a%dom(idom),b%dom(idom))
+            res = res + domain_dot(a%dom(idom),b%dom(idom))
         end do
 
     end function dot_local

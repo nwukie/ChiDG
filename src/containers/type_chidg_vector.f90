@@ -7,7 +7,7 @@ module type_chidg_vector
     use type_function,              only: function_t
     use type_chidg_vector_send,     only: chidg_vector_send_t
     use type_chidg_vector_recv,     only: chidg_vector_recv_t
-    use type_blockvector
+    use type_domain_vector
     use mpi_f08,                    only: MPI_AllReduce, MPI_Reduce, MPI_COMM, MPI_REAL8,    &
                                           MPI_SUM, MPI_STATUS_IGNORE, MPI_Recv, MPI_Request, &
                                           MPI_STATUSES_IGNORE, MPI_INTEGER4
@@ -19,7 +19,7 @@ module type_chidg_vector
 
     !>  High-level ChiDG vector container.
     !! 
-    !!  Container stores a blockvector_t for each domain_t
+    !!  Container stores a domain_vector_t for each domain_t
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -30,12 +30,12 @@ module type_chidg_vector
     !------------------------------------------------------------------------------------------
     type, public :: chidg_vector_t
 
-        type(blockvector_t),    allocatable :: dom(:)       !< Local block vector storage
+        type(domain_vector_t),    allocatable   :: dom(:)       ! Local block vector storage
 
-        type(chidg_vector_send_t)           :: send         !< What to send to other processors
-        type(chidg_vector_recv_t)           :: recv         !< Receive data from other processors
+        type(chidg_vector_send_t)               :: send         ! What to send to other processors
+        type(chidg_vector_recv_t)               :: recv         ! Receive data from other processors
 
-        integer(ik),            private     :: ntime_       !< No. of time instances stored
+        integer(ik),    private                 :: ntime_       ! No. of time instances stored
 
     contains
 
@@ -44,11 +44,13 @@ module type_chidg_vector
 
         procedure,  public  :: project                          ! Project function to basis
         procedure,  public  :: clear                            ! Zero the densevector data
+
         generic,    public  :: norm => norm_local, norm_comm    ! Compute L2 vector norm
         procedure,  public  :: norm_local                       ! proc-local L2 vector norm
         procedure,  public  :: norm_comm                        ! MPI group L2 vector norm
         generic,    public  :: norm_fields => norm_fields_comm  ! L2 norm of independent fields
         procedure,  public  :: norm_fields_comm                 ! MPI group L2 field norms
+
         procedure,  public  :: sumsqr                           ! Sum squared proc-local entries 
         procedure,  public  :: sumsqr_fields
         procedure,  public  :: dump
@@ -62,7 +64,9 @@ module type_chidg_vector
                                                                 ! densevctors
         procedure,  public  :: set_ntime                        ! Set ntime in the associated
                                                                 ! densevectors
+
 !        generic :: assignment(=) => 
+        
 
     end type chidg_vector_t
     !*****************************************************************************************
@@ -129,13 +133,13 @@ contains
     !!  @date   2/1/2016
     !!
     !!  @param[in]  mesh    Array of mesh_t instances used to initialize each 
-    !!                      blockvector_t subcomponent.
+    !!                      domain_vector_t subcomponent.
     !!
     !------------------------------------------------------------------------------------------
     subroutine initialize(self,mesh,ntime)
-        class(chidg_vector_t),   intent(inout)   :: self
-        type(mesh_t),            intent(inout)   :: mesh(:)
-        integer(ik),             intent(in)      :: ntime
+        class(chidg_vector_t),  intent(inout)   :: self
+        type(mesh_t),           intent(inout)   :: mesh
+        integer(ik),            intent(in)      :: ntime
 
         integer(ik) :: ierr, ndomains, idom
 
@@ -152,16 +156,16 @@ contains
         if (allocated(self%dom)) deallocate(self%dom)
 
 
-        ! Allocate blockvector_t for each mesh
-        ndomains = size(mesh)
+        ! Allocate domain_vector_t for each mesh
+        ndomains = mesh%ndomains()
         allocate(self%dom(ndomains), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
 
-        ! Call initialization procedure for each blockvector_t
+        ! Call initialization procedure for each domain_vector_t
         do idom = 1,ndomains
-            call self%dom(idom)%init(mesh(idom))
+            call self%dom(idom)%init(mesh%domain(idom))
         end do
 
 
@@ -196,8 +200,8 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine project(self,mesh,fcn,ivar)
-        class(chidg_vector_t),   intent(inout)   :: self
-        type(mesh_t),           intent(in)      :: mesh(:)
+        class(chidg_vector_t),  intent(inout)   :: self
+        type(mesh_t),       intent(in)      :: mesh
         class(function_t),      intent(inout)   :: fcn
         integer(ik),            intent(in)      :: ivar
 
@@ -210,18 +214,18 @@ contains
         !
         ! Loop through elements in mesh and call function projection
         !
-        do idom = 1,size(mesh)
+        do idom = 1,mesh%ndomains()
 
             ! Check that variable index 'ivar' is valid
             user_msg = 'project: variable index ivar exceeds the number of equations.'
-            if (ivar > mesh(idom)%neqns ) call chidg_signal(FATAL,user_msg)
+            if (ivar > mesh%domain(idom)%neqns ) call chidg_signal(FATAL,user_msg)
 
-            do ielem = 1,mesh(idom)%nelem
-                do itime = 1,mesh(idom)%ntime
+            do ielem = 1,mesh%domain(idom)%nelem
+                do itime = 1,mesh%domain(idom)%ntime
                     !
                     ! Call function projection
                     !
-                    fmodes = mesh(idom)%elems(ielem)%project(fcn)
+                    fmodes = mesh%domain(idom)%elems(ielem)%project(fcn)
 
 
                     !
@@ -255,7 +259,7 @@ contains
         integer :: idom
 
 
-        ! Call clear procedure for each blockvector_t
+        ! Call clear procedure for each domain_vector_t
         do idom = 1,size(self%dom)
             call self%dom(idom)%clear()
         end do
@@ -511,9 +515,9 @@ contains
             ! Loop through domains/elements to send
             do idom_send = 1,self%send%comm(icomm)%dom_send%size()
                 idom = self%send%comm(icomm)%dom_send%at(idom_send)
-
                 do ielem_send = 1,self%send%comm(icomm)%elems_send(idom_send)%size()
                     ielem = self%send%comm(icomm)%elems_send(idom_send)%at(ielem_send)
+
 
                     ! Post non-blocking send message for the vector data
                     data_size = size(self%dom(idom)%vecs(ielem)%vec)
@@ -524,6 +528,7 @@ contains
 
                     ! Increment send counter
                     isend = isend + 1
+
             
                 end do !ielem_send
             end do !idom_send

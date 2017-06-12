@@ -6,30 +6,21 @@ subroutine test_fgmres_solve()
                                           IO_DESTINATION
 
     use type_chidg,                 only: chidg_t
-    use type_point,                 only: point_t
-    use type_domain_connectivity,   only: domain_connectivity_t
-
-    use type_fgmres,                only: fgmres_t
-    use precon_identity,            only: precon_identity_t
-
     use type_chidg_matrix
-    use type_chidg_vector,           only: chidg_vector_t
+    use type_chidg_vector,          only: chidg_vector_t
 
-    use mod_test_utilities,         only: create_mesh
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: delete_file
+    use mod_string,                 only: string_t
     implicit none
 
     type(chidg_t)               :: chidg
-    type(point_t),  allocatable :: nodes(:)
-    type(domain_connectivity_t) :: connectivity
-
-    real(rk)    :: tol
-    integer(ik) :: nterms_c, idomain, spacedim, ixi_min, ixi_max, idiag, nelements_g
+    character(:),   allocatable :: file_name
+    real(rk)                    :: tol
+    integer(ik)                 :: ixi_min, ixi_max, idiag
 
 
     tol      = 1.e-9_rk
-    idomain  = 1
-    spacedim = 3
-    nterms_c = 8
     IO_DESTINATION = 'file'
 
 
@@ -43,8 +34,9 @@ subroutine test_fgmres_solve()
     !
     ! Set ChiDG components
     !
-    call chidg%set('Time Integrator',  'steady'  )
-    call chidg%set('Nonlinear Solver', 'newton'  )
+    call chidg%set('Solution Order', integer_input=1)
+    call chidg%set('Time Integrator',  'Steady'  )
+    call chidg%set('Nonlinear Solver', 'Newton'  )
     call chidg%set('Linear Solver',    'fgmres'  )
     call chidg%set('Preconditioner',   'identity')
 
@@ -52,21 +44,16 @@ subroutine test_fgmres_solve()
     !
     ! Get grid points
     !
-    call create_mesh('311',nodes,connectivity)
+    file_name = 'file.h5'
+    call create_mesh_file('D1 NxNxN', file_name, equation_sets=[string_t('Scalar Advection')], &
+                                      nelem_xi=3, nelem_eta=1, nelem_zeta=1)
 
+    
 
     !
-    ! Initialize domain
+    ! Read grid file
     !
-    nelements_g = 3
-    call chidg%data%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Scalar Advection','Cartesian')
-
-    call chidg%set('Solution Order', integer_input=1)
-    call chidg%init('domains')
-    call chidg%init('communication')
-    call chidg%init('solvers')
-
-
+    call chidg%read_grid(file_name)
 
 
     associate ( A => chidg%data%sdata%lhs,  &
@@ -117,7 +104,7 @@ subroutine test_fgmres_solve()
         !
         ! Finalize ChiDG initialization
         !
-        call chidg%init('finalize')
+        call chidg%init('algorithms')
 
 
         !
@@ -146,5 +133,11 @@ subroutine test_fgmres_solve()
     ! Close ChiDG interface
     !
     call chidg%shut_down('core')
+
+
+    !
+    ! Clean up
+    !
+    call delete_file(file_name)
 
 end subroutine test_fgmres_solve

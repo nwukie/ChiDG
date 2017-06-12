@@ -62,16 +62,13 @@ contains
         ! Assemble auxiliary fields across processors
         !
         auxiliary_fields_local = chidg%data%get_auxiliary_field_names()
-        ! Send
-        has_wall_distance = .false.
-        do iproc = 0,NRANK-1
-            do ifield = 1,auxiliary_fields_local%size()
-                field_name = auxiliary_fields_local%at(ifield)
-                has_wall_distance = (field_name%get() == 'Wall Distance : p-Poisson')
-                if (has_wall_distance) exit
-            end do
 
-        end do !iproc
+        has_wall_distance = .false.
+        do ifield = 1,auxiliary_fields_local%size()
+            field_name = auxiliary_fields_local%at(ifield)
+            has_wall_distance = (field_name%get() == 'Wall Distance : p-Poisson')
+            if (has_wall_distance) exit
+        end do
 
 
         call MPI_AllReduce(has_wall_distance, all_have_wall_distance, 1, MPI_LOGICAL, MPI_LOR, ChiDG_COMM, ierr)

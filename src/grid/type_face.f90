@@ -35,51 +35,51 @@ module type_face
     !------------------------------------------------------------------------------------------
     type, public :: face_t
 
-        integer(ik)                 :: spacedim             !< Number of spatial dimensions
+        integer(ik)        :: spacedim        ! Number of spatial dimensions
 
         ! Self information
-        integer(ik)                 :: ftype                !< INTERIOR, BOUNDARY, CHIMERA, ORPHAN 
-        integer(ik)                 :: iface                !< XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
-        integer(ik)                 :: ChiID = 0            !< Identifier for domain-local Chimera interfaces
+        integer(ik)        :: ftype           ! INTERIOR, BOUNDARY, CHIMERA, ORPHAN 
+        integer(ik)        :: iface           ! XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
+        integer(ik)        :: ChiID = 0       ! Identifier for domain-local Chimera interfaces
 
-        integer(ik)                 :: bc_ID      = 0       !< Identifier for Boundary Condition index bcs(bc_ID)
-        integer(ik)                 :: patch_ID   = 0       !< Identifier for boundary condition patch bc(bc_ID)%bc_patch(patch_ID)
-        integer(ik)                 :: patch_face = 0       !< Index in bc_patch bcs(bc_ID)%bc_patch(patch_ID)%coupled_elements(patch_face)
-        integer(ik)                 :: bc_ndepend = 0       !< Number of coupled element if bc face.
+        integer(ik)        :: bc_ID      = 0  ! Index for bc state group data%bc_state_group(bc_ID)
+        integer(ik)        :: group_ID   = 0  ! Index for bc patch group mesh%bc_patch_group(group_ID)
+        integer(ik)        :: patch_ID   = 0  ! Index for bc patch 
+        integer(ik)        :: face_ID    = 0  ! Index for bc patch face
 
 
         integer(ik)                 :: pmm_ID = NO_PMM_ASSIGNED
 
         ! Owner-element information
-        integer(ik)                 :: idomain_g            !< Global index of the parent domain
-        integer(ik)                 :: idomain_l            !< Processor-local index of the parent domain
-        integer(ik)                 :: iparent_g            !< Domain-global index of the parent element
-        integer(ik)                 :: iparent_l            !< Processor-local index of the parent element
-        integer(ik)                 :: neqns                !< Number of equations in equationset_t
-        integer(ik)                 :: nterms_s             !< Number of terms in solution polynomial expansion
-        integer(ik)                 :: ntime
+        integer(ik)        :: idomain_g       ! Global index of the parent domain
+        integer(ik)        :: idomain_l       ! Processor-local index of the parent domain
+        integer(ik)        :: iparent_g       ! Domain-global index of the parent element
+        integer(ik)        :: iparent_l       ! Processor-local index of the parent element
+        integer(ik)        :: neqns           ! Number of equations in equationset_t
+        integer(ik)        :: nterms_s        ! Number of terms in solution polynomial expansion
+        integer(ik)        :: ntime
 
 
         ! Neighbor information
-        integer(ik)                 :: ineighbor_proc      = NO_PROC    !< MPI processor rank of the neighboring element
-        integer(ik)                 :: ineighbor_domain_g  = 0          !< Global index of the neighboring element's domain
-        integer(ik)                 :: ineighbor_domain_l  = 0          !< Processor-local index of the neighboring element's domain
-        integer(ik)                 :: ineighbor_element_g = 0          !< Domain-global index of the neighboring element
-        integer(ik)                 :: ineighbor_element_l = 0          !< Processor-local index of the neighboring element
-        integer(ik)                 :: ineighbor_face      = 0
-        integer(ik)                 :: ineighbor_neqns     = 0
-        integer(ik)                 :: ineighbor_nterms_s  = 0
-        integer(ik)                 :: recv_comm           = 0
-        integer(ik)                 :: recv_domain         = 0
-        integer(ik)                 :: recv_element        = 0
+        integer(ik)        :: ineighbor_proc      = NO_PROC    ! MPI processor rank of the neighboring element
+        integer(ik)        :: ineighbor_domain_g  = 0          ! Global index of the neighboring element's domain
+        integer(ik)        :: ineighbor_domain_l  = 0          ! Processor-local index of the neighboring element's domain
+        integer(ik)        :: ineighbor_element_g = 0          ! Domain-global index of the neighboring element
+        integer(ik)        :: ineighbor_element_l = 0          ! Processor-local index of the neighboring element
+        integer(ik)        :: ineighbor_face      = 0
+        integer(ik)        :: ineighbor_neqns     = 0
+        integer(ik)        :: ineighbor_nterms_s  = 0
+        integer(ik)        :: recv_comm           = 0
+        integer(ik)        :: recv_domain         = 0
+        integer(ik)        :: recv_element        = 0
 
         ! Neighbor information if neighbor is off-processor
-        real(rk)                        :: neighbor_h(3)                !< Approximate size of neighbor bounding box
-        real(rk),           allocatable :: neighbor_grad1(:,:)          !< Grad of basis functions in at quadrature nodes
-        real(rk),           allocatable :: neighbor_grad2(:,:)          !< Grad of basis functions in at quadrature nodes
-        real(rk),           allocatable :: neighbor_grad3(:,:)          !< Grad of basis functions in at quadrature nodes
-        real(rk),           allocatable :: neighbor_br2_face(:,:)       !< Matrix for computing/obtaining br2 modes at face nodes
-        real(rk),           allocatable :: neighbor_br2_vol(:,:)        !< Matrix for computing/obtaining br2 modes at volume nodes
+        real(rk)                        :: neighbor_h(3)           ! Approximate size of neighbor bounding box
+        real(rk),           allocatable :: neighbor_grad1(:,:)     ! Grad of basis functions in at quadrature nodes
+        real(rk),           allocatable :: neighbor_grad2(:,:)     ! Grad of basis functions in at quadrature nodes
+        real(rk),           allocatable :: neighbor_grad3(:,:)     ! Grad of basis functions in at quadrature nodes
+        real(rk),           allocatable :: neighbor_br2_face(:,:)  ! Matrix for computing/obtaining br2 modes at face nodes
+        real(rk),           allocatable :: neighbor_br2_vol(:,:)   ! Matrix for computing/obtaining br2 modes at volume nodes
         real(rk),           allocatable :: neighbor_invmass(:,:)    
 
 
@@ -91,26 +91,26 @@ module type_face
 
 
         ! Geometry
-        type(densevector_t)             :: coords               !< Modal expansion of coordinates 
-        type(point_t),      allocatable :: quad_pts(:)          !< Discrete coordinates at quadrature nodes
-        character(:),       allocatable :: coordinate_system    !< 'Cartesian' or 'Cylindrical'
+        type(densevector_t)             :: coords               ! Modal expansion of coordinates 
+        type(point_t),      allocatable :: quad_pts(:)          ! Discrete coordinates at quadrature nodes
+        character(:),       allocatable :: coordinate_system    ! 'Cartesian' or 'Cylindrical'
 
         ! Metric terms
-        real(rk),           allocatable :: jinv(:)              !< array of inverse element jacobians on the face
-        real(rk),           allocatable :: metric(:,:,:)        !< Face metric terms
-        real(rk),           allocatable :: norm(:,:)            !< Face normal vector - scaled by differential area
-        real(rk),           allocatable :: unorm(:,:)           !< Face normal vector - unit length
+        real(rk),           allocatable :: jinv(:)              ! array of inverse element jacobians on the face
+        real(rk),           allocatable :: metric(:,:,:)        ! Face metric terms
+        real(rk),           allocatable :: norm(:,:)            ! Face normal vector - scaled by differential area
+        real(rk),           allocatable :: unorm(:,:)           ! Face normal vector - unit length
 
 
         ! Matrices of cartesian gradients of basis/test functions
-        real(rk),           allocatable :: grad1(:,:)           !< Deriv of basis functions in at quadrature nodes
-        real(rk),           allocatable :: grad2(:,:)           !< Deriv of basis functions in at quadrature nodes
-        real(rk),           allocatable :: grad3(:,:)           !< Deriv of basis functions in at quadrature nodes
+        real(rk),           allocatable :: grad1(:,:)           ! Deriv of basis functions in at quadrature nodes
+        real(rk),           allocatable :: grad2(:,:)           ! Deriv of basis functions in at quadrature nodes
+        real(rk),           allocatable :: grad3(:,:)           ! Deriv of basis functions in at quadrature nodes
 
 
         ! Quadrature matrices
-        type(quadrature_t),  pointer    :: gq     => null()     !< Pointer to solution quadrature instance
-        type(quadrature_t),  pointer    :: gqmesh => null()     !< Pointer to mesh quadrature instance
+        type(quadrature_t),  pointer    :: gq     => null()     ! Pointer to solution quadrature instance
+        type(quadrature_t),  pointer    :: gqmesh => null()     ! Pointer to mesh quadrature instance
 
 
         ! BR2 matrix
@@ -157,20 +157,21 @@ module type_face
 
         procedure           :: init_neighbor
 
-        procedure           :: compute_quadrature_metrics       !< Compute metric terms at quadrature nodes
-        procedure           :: compute_quadrature_normals       !< Compute normals at quadrature nodes
-        procedure           :: compute_quadrature_coords        !< Compute cartesian coordinates at quadrature nodes
-        procedure           :: compute_quadrature_gradients     !< Compute gradients in cartesian coordinates
+        procedure           :: compute_quadrature_metrics       ! Compute metric terms at quadrature nodes
+        procedure           :: compute_quadrature_normals       ! Compute normals at quadrature nodes
+        procedure           :: compute_quadrature_coords        ! Compute cartesian coordinates at quadrature nodes
+        procedure           :: compute_quadrature_gradients     ! Compute gradients in cartesian coordinates
 
-        procedure           :: get_neighbor_element_g           !< Return neighbor element index
-        procedure           :: get_neighbor_element_l           !< Return neighbor element index
-        procedure           :: get_neighbor_face                !< Return neighbor face index
         
         ! ALE procedures
         procedure, public   :: update_face_ale
         procedure           :: update_coords_ale
         procedure           :: compute_quadrature_coords_ale
         procedure           :: compute_quadrature_metrics_ale
+
+        procedure           :: get_neighbor_element_g           ! Return neighbor element index
+        procedure           :: get_neighbor_element_l           ! Return neighbor element index
+        procedure           :: get_neighbor_face                ! Return neighbor face index
 
         final               :: destructor
 

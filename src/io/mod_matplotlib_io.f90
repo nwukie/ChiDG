@@ -3,9 +3,6 @@ module mod_matplotlib_io
     use mod_kinds,          only: rk,ik,rdouble
     use mod_constants,      only: ZERO,ONE,HALF,TWO,OUTPUT_RES
     use type_point,         only: point_t
-    use type_element,       only: element_t
-    use type_blockvector,   only: blockvector_t   
-    use type_solverdata,    only: solverdata_t
     use type_chidg_data,    only: chidg_data_t
     use type_chidg_vector,  only: chidg_vector_t
     use mod_chimera,        only: find_gq_donor
@@ -158,7 +155,7 @@ contains
                            eta   => donor_coords(ipt)%c2_,  &
                            zeta  => donor_coords(ipt)%c3_)
 
-                    val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q_in%dom(idom)%&
+                    val = real(data%mesh%domain(idom)%elems(ielem)%solution_point(data%sdata%q_in%dom(idom)%&
                                    vecs(ielem),ieqn,itime,xi,eta,zeta),rdouble)
                     solution_values(itime,ipt) = val(1)
 
@@ -240,7 +237,7 @@ contains
                            eta   => donor_coords(ipt)%c2_,  &
                            zeta  => donor_coords(ipt)%c3_)
 
-                    val = real(data%mesh(idom)%elems(ielem)%solution_point(q_coeff_vector%dom(idom)%&
+                    val = real(data%mesh%domain(idom)%elems(ielem)%solution_point(q_coeff_vector%dom(idom)%&
                                    vecs(ielem),ieqn,itime,xi,eta,zeta),rdouble)
                     solution_values(itime,ipt) = val(1)
 
@@ -301,7 +298,7 @@ contains
                            eta   => donor_coords(ipt)%c2_,  &
                            zeta  => donor_coords(ipt)%c3_)
 
-                    val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q_out%dom(idom)%&
+                    val = real(data%mesh%domain(idom)%elems(ielem)%solution_point(data%sdata%q_out%dom(idom)%&
                                    vecs(ielem),ieqn,itime,xi,eta,zeta),rdouble)
                     solution_values(itime,ipt) = val(1)
 

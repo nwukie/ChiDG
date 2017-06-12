@@ -13,25 +13,25 @@ module type_rvector
     !!
     !---------------------------------------------------------------------------------
     type, public :: rvector_t
+
         integer(ik)             :: size_        = 0
         integer(ik)             :: capacity_    = 0
-        integer(ik)             :: buffer_      = 20
-
+        integer(ik)             :: buffer_      = 5
         real(rk),   allocatable :: data_(:)
 
     contains
 
-        procedure, public   :: size
-        procedure, public   :: capacity
+        procedure, public   :: size     ! return the number of stored elements 
+        procedure, public   :: capacity ! return the current allocated capacity
 
-        !< Data modifiers
+        ! Data modifiers
         procedure, public   :: push_back
         procedure, public   :: clear
         procedure, private  :: increase_capacity
 
-        !< Data accessors
-        procedure, public   :: at
-        procedure, public   :: data
+        ! Data accessors
+        procedure, public   :: at       ! return data from element ivector%at(ielem) 
+        procedure, public   :: data     ! return full data vector 
 
     end type rvector_t
     !***********************************************************************************
@@ -54,6 +54,7 @@ contains
         integer(ik) :: res
 
         res = self%size_
+
     end function size
     !**********************************************************************************
 

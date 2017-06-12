@@ -1,14 +1,17 @@
 module type_bc_patch
 #include <messenger.h>
-    use mod_kinds,      only: ik
-    use type_ivector,   only: ivector_t
+    use mod_kinds,                  only: ik
+    use type_ivector,               only: ivector_t
+    use type_point,                 only: point_t
+    use type_bc_element_coupling,   only: bc_element_coupling_t
     implicit none
 
 
     !>  A boundary condition patch
     !!
-    !!  This contains the boundary condition geometry description. A domain, element, and face
-    !!  index for each face the boundary condition is operating on.
+    !!  This contains the boundary condition geometry description. A domain, 
+    !!  element, and face index for each face the boundary condition is 
+    !!  operating on.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/30/2016
@@ -16,7 +19,7 @@ module type_bc_patch
     !!
     !!
     !!
-    !-----------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------
     type, public :: bc_patch_t
 
         integer(ik)                     :: patch_ID
@@ -31,29 +34,35 @@ module type_bc_patch
 
         
         ! For each face in the patch, a list of elements it is coupled with
-        type(ivector_t),    allocatable :: idomain_g_coupled(:)
-        type(ivector_t),    allocatable :: idomain_l_coupled(:)
-        type(ivector_t),    allocatable :: ielement_g_coupled(:)
-        type(ivector_t),    allocatable :: ielement_l_coupled(:)
-        type(ivector_t),    allocatable :: proc_coupled(:)
+        type(bc_element_coupling_t), allocatable    :: coupling(:)
 
     contains
 
+        ! Patch faces
         procedure   :: add_face
         procedure   :: nfaces
 
-        ! Return indices for a given bc face
+        ! Patch face coupling
+        procedure   :: add_coupled_element
+        procedure   :: ncoupled_elements
+        procedure   :: set_coupled_element_recv
+        procedure   :: set_coupled_element_data
+
+        ! Return indices for a given face_ID
         procedure   :: idomain_g
         procedure   :: idomain_l
         procedure   :: ielement_g
         procedure   :: ielement_l
         procedure   :: iface
 
-        procedure   :: add_coupled_element
-        procedure   :: ncoupled_elements
+
+        ! Parallel communication patterns
+        procedure   :: get_recv_procs
+        procedure   :: get_send_procs
+
 
     end type bc_patch_t
-    !******************************************************************************************
+    !****************************************************************************
 
 
 
@@ -71,7 +80,7 @@ contains
     !!  @date   8/30/2016
     !!
     !!
-    !------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------
     function add_face(self,idomain_g,idomain_l,ielement_g,ielement_l,iface) result(iface_bc)
         class(bc_patch_t),  intent(inout)   :: self
         integer(ik),        intent(in)      :: idomain_g
@@ -80,7 +89,7 @@ contains
         integer(ik),        intent(in)      :: ielement_l
         integer(ik),        intent(in)      :: iface
 
-        integer(ik)                     :: nfaces, ierr, iface_bc
+        integer(ik) :: nfaces, ierr, iface_bc
 
         !
         ! Add face to bc_patch list
@@ -101,23 +110,15 @@ contains
         !
         ! Extend coupling storage. Need a vector for each bc_face
         !
-        if (allocated(self%idomain_g_coupled)) deallocate(self%idomain_g_coupled,   &
-                                                          self%idomain_l_coupled,   &
-                                                          self%ielement_g_coupled,  &
-                                                          self%ielement_l_coupled,  &
-                                                          self%proc_coupled)
+        if (allocated(self%coupling)) deallocate(self%coupling)
 
         nfaces = self%nfaces()
-        allocate(self%idomain_g_coupled(nfaces),    &
-                 self%idomain_l_coupled(nfaces),    &
-                 self%ielement_g_coupled(nfaces),   &
-                 self%ielement_l_coupled(nfaces),   &
-                 self%proc_coupled(nfaces), stat=ierr)
+        allocate(self%coupling(nfaces), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
     end function add_face
-    !******************************************************************************************
+    !*****************************************************************************
 
 
 
@@ -129,7 +130,7 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/30/2016
     !!
-    !------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------
     function nfaces(self) result(nfaces_bc)
         class(bc_patch_t),  intent(in)  :: self
 
@@ -138,7 +139,7 @@ contains
         nfaces_bc = self%iface_%size()
 
     end function nfaces
-    !*******************************************************************************************
+    !******************************************************************************
 
 
 
@@ -151,17 +152,17 @@ contains
     !!  @date   2/27/2017
     !!
     !!
-    !------------------------------------------------------------------------------------------
-    function idomain_g(self,ind) result(idom_bc)
+    !------------------------------------------------------------------------------
+    function idomain_g(self,face_ID) result(idomain_g_)
         class(bc_patch_t),  intent(in)  :: self
-        integer(ik),        intent(in)  :: ind
+        integer(ik),        intent(in)  :: face_ID
 
-        integer(ik) :: idom_bc
+        integer(ik) :: idomain_g_
 
-        idom_bc = self%idomain_g_%at(ind)
+        idomain_g_ = self%idomain_g_%at(face_ID)
 
     end function idomain_g
-    !******************************************************************************************
+    !*******************************************************************************
 
 
     !>  Return the local domain index of a boundary condition face
@@ -170,17 +171,17 @@ contains
     !!  @date   8/30/2016
     !!
     !!
-    !------------------------------------------------------------------------------------------
-    function idomain_l(self,ind) result(idom_bc)
+    !-------------------------------------------------------------------------------
+    function idomain_l(self,face_ID) result(idomain_l_)
         class(bc_patch_t),  intent(in)  :: self
-        integer(ik),        intent(in)  :: ind
+        integer(ik),        intent(in)  :: face_ID
 
-        integer(ik) :: idom_bc
+        integer(ik) :: idomain_l_
 
-        idom_bc = self%idomain_l_%at(ind)
+        idomain_l_ = self%idomain_l_%at(face_ID)
 
     end function idomain_l
-    !******************************************************************************************
+    !********************************************************************************
 
 
 
@@ -191,17 +192,17 @@ contains
     !!  @date   2/27/2017
     !!
     !!
-    !------------------------------------------------------------------------------------------
-    function ielement_g(self,ind) result(ielem_bc)
+    !--------------------------------------------------------------------------------
+    function ielement_g(self,face_ID) result(ielement_g_)
         class(bc_patch_t),  intent(in)  :: self
-        integer(ik),        intent(in)  :: ind
+        integer(ik),        intent(in)  :: face_ID
 
-        integer(ik) :: ielem_bc
+        integer(ik) :: ielement_g_
 
-        ielem_bc = self%ielement_g_%at(ind)
+        ielement_g_ = self%ielement_g_%at(face_ID)
 
     end function ielement_g
-    !******************************************************************************************
+    !*********************************************************************************
 
 
 
@@ -211,17 +212,17 @@ contains
     !!  @date   8/30/2016
     !!
     !!
-    !------------------------------------------------------------------------------------------
-    function ielement_l(self,ind) result(ielem_bc)
+    !---------------------------------------------------------------------------------
+    function ielement_l(self,face_ID) result(ielement_l_)
         class(bc_patch_t),  intent(in)  :: self
-        integer(ik),        intent(in)  :: ind
+        integer(ik),        intent(in)  :: face_ID
 
-        integer(ik) :: ielem_bc
+        integer(ik) :: ielement_l_
 
-        ielem_bc = self%ielement_l_%at(ind)
+        ielement_l_ = self%ielement_l_%at(face_ID)
 
     end function ielement_l
-    !******************************************************************************************
+    !**********************************************************************************
 
 
 
@@ -235,17 +236,17 @@ contains
     !!  @date   8/30/2016
     !!
     !!
-    !------------------------------------------------------------------------------------------
-    function iface(self,ind) result(iface_bc)
+    !----------------------------------------------------------------------------------
+    function iface(self,face_ID) result(iface_)
         class(bc_patch_t),  intent(in)  :: self
-        integer(ik),        intent(in)  :: ind
+        integer(ik),        intent(in)  :: face_ID
 
-        integer(ik) :: iface_bc
+        integer(ik) :: iface_
 
-        iface_bc = self%iface_%at(ind)
+        iface_ = self%iface_%at(face_ID)
 
     end function iface
-    !******************************************************************************************
+    !**********************************************************************************
 
 
 
@@ -254,82 +255,194 @@ contains
 
 
 
-
-
-
-    !>  For a face in the bc_patch, (iface_bc), add an element that it is coupled with.
+    !>  For a face in the bc_patch, (face_ID), add an element that it is coupled with.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/27/2017
     !!
     !!
-    !------------------------------------------------------------------------------------------
-    subroutine add_coupled_element(self,iface_bc,idomain_g, idomain_l, ielement_g, ielement_l, proc)
+    !-----------------------------------------------------------------------------------
+    subroutine add_coupled_element(self,face_ID,idomain_g, idomain_l, ielement_g, ielement_l, iface, proc)
         class(bc_patch_t),  intent(inout)   :: self
-        integer(ik),        intent(in)      :: iface_bc
+        integer(ik),        intent(in)      :: face_ID
         integer(ik),        intent(in)      :: idomain_g
         integer(ik),        intent(in)      :: idomain_l
         integer(ik),        intent(in)      :: ielement_g
         integer(ik),        intent(in)      :: ielement_l
+        integer(ik),        intent(in)      :: iface
         integer(ik),        intent(in)      :: proc
 
-        integer(ik) :: idomain_g_coupled, ielement_g_coupled, ielem_coupled
-        logical     :: already_added
 
-        !
-        ! Check if element has already been added to coupling list
-        ! for the specified face
-        !
-        already_added = .false.
-        do ielem_coupled = 1,self%ncoupled_elements(iface_bc)
-            idomain_g_coupled  = self%idomain_g_coupled(iface_bc)%at(ielem_coupled)
-            ielement_g_coupled = self%ielement_g_coupled(iface_bc)%at(ielem_coupled)
+        call self%coupling(face_ID)%add_coupled_element(idomain_g,idomain_l,ielement_g,ielement_l,iface,proc)
 
-            if ( (idomain_g_coupled  == idomain_g ) .and. &
-                 (ielement_g_coupled == ielement_g) ) already_added = .true.
-
-        end do
-
-        !
-        ! If coupled element wasn't already added to the list, add all indices here
-        !
-        if (.not. already_added) then
-            call self%idomain_g_coupled(iface_bc)%push_back(idomain_g)
-            call self%idomain_l_coupled(iface_bc)%push_back(idomain_l)
-            call self%ielement_g_coupled(iface_bc)%push_back(ielement_g)
-            call self%ielement_l_coupled(iface_bc)%push_back(ielement_l)
-            call self%proc_coupled(iface_bc)%push_back(proc)
-        end if
 
     end subroutine add_coupled_element
-    !*******************************************************************************************
+    !***********************************************************************************
 
 
 
 
 
 
-    !>  For a face in the bc_patch, (iface_bc), return the number of elements it is coupled with.
+
+
+
+    !>  Initialized auxiliary data for a coupled element.
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/182017
+    !!
+    !!
+    !-----------------------------------------------------------------------------------
+    subroutine set_coupled_element_data(self,face_ID,idomain_g,ielement_g,neqns,nterms_s,total_area,areas,quad_pts)
+        class(bc_patch_t),  intent(inout)   :: self
+        integer(ik),        intent(in)      :: face_ID
+        integer(ik),        intent(in)      :: idomain_g
+        integer(ik),        intent(in)      :: ielement_g
+        integer(ik),        intent(in)      :: neqns
+        integer(ik),        intent(in)      :: nterms_s
+        real(rk),           intent(in)      :: total_area
+        real(rk),           intent(in)      :: areas(:)
+        type(point_t),      intent(in)      :: quad_pts(:)
+
+        call self%coupling(face_ID)%set_coupled_element_data(idomain_g,ielement_g,neqns,nterms_s,total_area,areas,quad_pts)
+    
+    end subroutine set_coupled_element_data
+    !***********************************************************************************
+
+
+
+
+
+
+
+
+    !>  For a face in the bc_patch, (iface_bc), return the number of elements it is 
+    !!  coupled with.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/27/2017
     !!
     !!
     !!
-    !--------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------
     function ncoupled_elements(self,iface_bc) result(res)
         class(bc_patch_t),  intent(in)  :: self
         integer(ik),        intent(in)  :: iface_bc
 
         integer(ik) :: res
 
-        res = self%ielement_g_coupled(iface_bc)%size()
+        res = self%coupling(iface_bc)%ncoupled_elements()
 
     end function ncoupled_elements
-    !********************************************************************************************
+    !************************************************************************************
 
 
 
+
+
+
+
+
+    !>  Set the chidg_vector recv access data for a parallel coupled element.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/10/2017
+    !!
+    !!
+    !------------------------------------------------------------------------------------
+    subroutine set_coupled_element_recv(self,face_ID,idomain_g,ielement_g,recv_comm,recv_domain,recv_element)
+        class(bc_patch_t),  intent(inout)   :: self
+        integer(ik),        intent(in)      :: face_ID
+        integer(ik),        intent(in)      :: idomain_g
+        integer(ik),        intent(in)      :: ielement_g
+        integer(ik),        intent(in)      :: recv_comm
+        integer(ik),        intent(in)      :: recv_domain
+        integer(ik),        intent(in)      :: recv_element
+
+
+        call self%coupling(face_ID)%set_coupled_element_recv(idomain_g,ielement_g,recv_comm,recv_domain,recv_element)
+
+
+    end subroutine set_coupled_element_recv
+    !************************************************************************************
+
+
+
+
+
+
+    !>  Return the processor ranks that the current bc_patch is receiving information
+    !!  from.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/10/2017
+    !!
+    !!
+    !------------------------------------------------------------------------------------
+    function get_recv_procs(self) result(recv_procs_array)
+        class(bc_patch_t),  intent(in)  :: self
+
+        integer(ik),    allocatable :: recv_procs_array(:)
+        type(ivector_t)             :: recv_procs
+        integer(ik)                 :: face_ID, icoupled, proc
+        logical                     :: comm_proc
+
+
+        !
+        ! Accumulate recv procs from each patch face
+        !
+        do face_ID = 1,self%nfaces()
+
+            ! Loop through coupled elements, accumulate off-processor coupling ranks
+            do icoupled = 1,self%ncoupled_elements(face_ID)
+                proc = self%coupling(face_ID)%proc(icoupled)
+                comm_proc = (proc /= IRANK)
+                if (comm_proc) call recv_procs%push_back_unique(proc)
+            end do !icoupled
+
+        end do !face_ID
+
+
+        !
+        ! Return as integer array
+        !
+        recv_procs_array = recv_procs%data()
+
+    end function get_recv_procs
+    !*************************************************************************************
+
+
+
+
+
+
+
+    !>  Return the processor ranks that the current bc_patch is sending information
+    !!  to.
+    !!
+    !!  Currently, this pattern is the same as the receive pattern. So we just call
+    !!  the routine: get_recv_procs
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/10/2017
+    !!
+    !!
+    !------------------------------------------------------------------------------------
+    function get_send_procs(self) result(send_procs_array)
+        class(bc_patch_t),  intent(in)  :: self
+
+        integer(ik),    allocatable :: send_procs_array(:)
+
+        !
+        ! Comm pattern currently same as recv. All processors we are receiving from, we 
+        ! are also sending to.
+        !
+        send_procs_array = self%get_recv_procs()
+
+    end function get_send_procs
+    !*************************************************************************************
 
 
 

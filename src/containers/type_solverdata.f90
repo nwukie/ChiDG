@@ -5,7 +5,7 @@ module type_solverdata
     use mod_string,                     only: string_t
     use type_chidg_vector,               only: chidg_vector_t
     use type_chidg_matrix,               only: chidg_matrix_t
-    use type_mesh,                      only: mesh_t
+    use type_mesh,                  only: mesh_t
     use type_function_status,           only: function_status_t
     use type_equationset_function_data, only: equationset_function_data_t
     use type_element_info,              only: element_info_t
@@ -27,10 +27,10 @@ module type_solverdata
         !
         ! Base solver data
         !
-        type(chidg_vector_t)             :: q              !< Solution vector
-        type(chidg_vector_t)             :: dq             !< Change in solution vector
-        type(chidg_vector_t)             :: rhs            !< Residual of the spatial scheme
-        type(chidg_matrix_t)             :: lhs            !< Linearization of the spatial scheme
+        type(chidg_vector_t)             :: q              ! Solution vector
+        type(chidg_vector_t)             :: dq             ! Change in solution vector
+        type(chidg_vector_t)             :: rhs            ! Residual of the spatial scheme
+        type(chidg_matrix_t)             :: lhs            ! Linearization of the spatial scheme
 
 
         !
@@ -54,23 +54,17 @@ module type_solverdata
         !
         ! Time information
         !
-        real(rk)                        :: t               !< Global time
-        real(rk),   allocatable         :: dt(:,:)         !< Element-local time-step, (ndomains,maxelems)
+        !real(rk)                        :: t               ! Global time
+        real(rk),   allocatable         :: dt(:,:)         ! Element-local time-step, (ndomains,maxelems)
 
         !
         ! Function registration
         !
-        type(function_status_t)         :: function_status !< Status of function residuals and linearizations
+        type(function_status_t)         :: function_status ! Status of function residuals and linearizations
 
 
         logical                         :: solverInitialized = .false.
 
-
-
-
-        ! NOTE: if one wanted to add specialized data, instead of deriving from chidgData, 
-        ! maybe you could add a chidgExtension class that could be specialized further which 
-        ! could contain non-standard data class(chidgExtension_t)
 
     contains
 
@@ -116,30 +110,25 @@ contains
     !!                              each function in eqnset.
     !!
     !-------------------------------------------------------------------------------------------
-    !subroutine init_base(self,mesh,bcset_coupling,function_data)
-    !subroutine init_base(self,mesh,bc,function_data)
     subroutine init_base(self,mesh,function_data)
-        class(solverdata_t),                intent(inout)           :: self
-        type(mesh_t),                       intent(inout)           :: mesh(:)
-!        type(bc_t),                         intent(inout)           :: bc(:)
-!        type(bcset_coupling_t),             intent(in)              :: bcset_coupling(:)
-        type(equationset_function_data_t),  intent(in)              :: function_data(:)
+        class(solverdata_t),                intent(inout)   :: self
+        type(mesh_t),                       intent(inout)   :: mesh
+        type(equationset_function_data_t),  intent(in)      :: function_data(:)
         
 
         integer(ik) :: ierr, ndom, maxelems, idom
         logical     :: increase_maxelems = .false.
 
 
-        ! Initialize and allocate storage
-        call self%q%init(  mesh,mesh(1)%ntime)
-        call self%dq%init( mesh,mesh(1)%ntime)
-        call self%rhs%init(mesh,mesh(1)%ntime)
-!        call self%lhs%init(mesh,bcset_coupling,'full')
-        call self%lhs%init(mesh,'full')
-        call self%q_in%init(mesh,mesh(1)%ntime)
-        call self%q_out%init(mesh,mesh(1)%ntime)
+        ! Initialize vectors
+        call self%q%init(    mesh,mesh%ntime_)
+        call self%dq%init(   mesh,mesh%ntime_)
+        call self%rhs%init(  mesh,mesh%ntime_)
+        call self%q_in%init( mesh,mesh%ntime_)
+        call self%q_out%init(mesh,mesh%ntime_)
 
-        ! Initialize matrix parallel recv data
+        ! Initialize matrix and parallel recv data
+        call self%lhs%init(mesh,'full')
         call self%lhs%init_recv(self%rhs)
 
 
@@ -149,14 +138,14 @@ contains
         !
         ! Find maximum number of elements in any domain
         !
-        ndom = size(mesh)
+        ndom = mesh%ndomains()
         maxelems = 0
         do idom = 1,ndom
 
-            increase_maxelems = ( mesh(idom)%nelem > maxelems )
+            increase_maxelems = ( mesh%domain(idom)%nelem > maxelems )
 
             if (increase_maxelems) then
-                maxelems = mesh(idom)%nelem
+                maxelems = mesh%domain(idom)%nelem
             end if
 
         end do

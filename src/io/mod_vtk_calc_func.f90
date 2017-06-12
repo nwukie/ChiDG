@@ -1,14 +1,11 @@
+!
+! Module containing functions and subroutines for arranging a ChiDG instance data for a vtk file
+!
+!
 module mod_vtk_calc_func
 #include <messenger.h>
-    
-! Module containing functions and subroutines for arranging a ChiDG instance data for a vtk file
-
     use mod_kinds,           only: rk,ik,rdouble
     use mod_constants,       only: ONE,HALF,TWO,OUTPUT_RES
-
-    use type_element,        only: element_t
-    use type_blockvector,    only: blockvector_t
-    use type_solverdata,     only: solverdata_t
     use type_chidg_data,     only: chidg_data_t
     use type_chidg_vector,   only: chidg_vector_t
 
@@ -162,10 +159,10 @@ contains
 
 
                                     ! Get coordinate value at point
-                                    if ( data%mesh(idom)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
-                                        r_coord     = real(data%mesh(idom)%elems(ielem)%grid_point(1,xi,eta,zeta),rdouble)
-                                        theta_coord = real(data%mesh(idom)%elems(ielem)%grid_point(2,xi,eta,zeta),rdouble)
-                                        z_coord     = real(data%mesh(idom)%elems(ielem)%grid_point(3,xi,eta,zeta),rdouble)
+                                    if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
+                                        r_coord     = real(data%mesh%domain(idom)%elems(ielem)%grid_point(1,xi,eta,zeta),rdouble)
+                                        theta_coord = real(data%mesh%domain(idom)%elems(ielem)%grid_point(2,xi,eta,zeta),rdouble)
+                                        z_coord     = real(data%mesh%domain(idom)%elems(ielem)%grid_point(3,xi,eta,zeta),rdouble)
 
                                         if (icoord == 1) then
                                             val = r_coord*cos(theta_coord)
@@ -177,7 +174,7 @@ contains
 
                                     else
 
-                                        val = real(data%mesh(idom)%elems(ielem)%grid_point(icoord,xi,eta,zeta),rdouble)
+                                        val = real(data%mesh%domain(idom)%elems(ielem)%grid_point(icoord,xi,eta,zeta),rdouble)
 
                                     end if
 
@@ -263,7 +260,7 @@ contains
         ! For each conservative variable in equation set, compute values pointwise and save in the conservative variable array
         !
         !do ivar = 1,data%eqnset(idom)%prop%nprimary_fields()
-        eqn_ID = data%mesh(idom)%eqn_ID
+        eqn_ID = data%mesh%domain(idom)%eqn_ID
         do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
             !
@@ -279,7 +276,7 @@ contains
                             xi = (((real(ipt_xi,rk) - ONE)/(real(npts,rk) - ONE)) - HALF)*TWO
 
                             ! Get solution value at a point 
-                            val = real(data%mesh(idom)%elems(ielem)%solution_point(data%sdata%q_out%dom(idom)%vecs(ielem),ivar,itime,xi,eta,zeta),rdouble)
+                            val = real(data%mesh%domain(idom)%elems(ielem)%solution_point(data%sdata%q_out%dom(idom)%vecs(ielem),ivar,itime,xi,eta,zeta),rdouble)
                             ival = ival + 1                   ! Counter for conservative variable array
                             cons_var_val(ivar,ival) = val(1)  ! Store values in the array
                                                               ! Each row of the array contains the values for one conservative variable

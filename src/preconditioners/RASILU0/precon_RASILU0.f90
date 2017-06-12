@@ -128,7 +128,7 @@ contains
 
         integer(ik) :: iread, ielem, iblk, diag
 
-        call write_line('Restricted Additive Schwarz(RAS) preconditioner: ',   io_proc=GLOBAL_MASTER)
+        call write_line('   Restricted Additive Schwarz(RAS) preconditioner: ', ltrim=.false., io_proc=GLOBAL_MASTER)
 
         !
         ! Initialize Lower-Diagonal matrix for processor-local data
@@ -140,18 +140,18 @@ contains
         !
         ! Initialize the overlap data
         !
-        call write_line('   RAS: initializing send pattern...', ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('       RAS: initializing send pattern...', ltrim=.false., io_proc=GLOBAL_MASTER)
         call self%send%init(data%mesh, data%sdata%lhs)
-        call write_line('   RAS: initializing receive pattern...', ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('       RAS: initializing receive pattern...', ltrim=.false., io_proc=GLOBAL_MASTER)
         call self%recv%init(data%mesh, data%sdata%lhs, data%sdata%rhs)
 
 
         !
         ! Release nonblocking send buffers
         !
-        call write_line('   RAS: waiting on remaining communication buffers ...', ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('       RAS: waiting on remaining communication buffers ...', ltrim=.false., io_proc=GLOBAL_MASTER)
         call self%send%init_wait()
-        call write_line('   RAS: initialization complete!', ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('       RAS: initialization complete!', ltrim=.false., io_proc=GLOBAL_MASTER)
 
 
     end subroutine init

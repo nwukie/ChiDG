@@ -1,7 +1,7 @@
 module type_function_status
 #include <messenger.h>
     use mod_constants,                  only: BOUNDARY_ADVECTIVE_FLUX
-    use type_mesh,                      only: mesh_t
+    use type_mesh,                  only: mesh_t
     use type_equationset_function_data, only: equationset_function_data_t
     use type_function_status_data,      only: function_status_data_t
     use type_face_info,                 only: face_info_t
@@ -65,7 +65,7 @@ contains
     !-----------------------------------------------------------------------------------------
     subroutine init(self, mesh, function_data)
         class(function_status_t),           intent(inout)   :: self
-        type(mesh_t),                       intent(in)      :: mesh(:)
+        type(mesh_t),                   intent(in)      :: mesh
         type(equationset_function_data_t),  intent(in)      :: function_data(:)
 
         integer :: idom, ndom, ierr
@@ -77,13 +77,13 @@ contains
         if (allocated(self%dom)) deallocate(self%dom)
 
 
-        ndom = size(mesh)
+        ndom = mesh%ndomains()
         allocate(self%dom(ndom), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
         do idom = 1,ndom
-            call self%dom(idom)%init( mesh(idom), function_data(idom) )
+            call self%dom(idom)%init( mesh%domain(idom), function_data(idom) )
         end do
 
 

@@ -9,7 +9,8 @@ module type_bc
     use type_bc_group,              only: bc_group_t
     use type_bc_state,              only: bc_state_t
     use type_bc_state_wrapper,      only: bc_state_wrapper_t
-    use type_mesh,                  only: mesh_t
+    use type_mesh,              only: mesh_t
+    use type_domain,                only: domain_t
     use type_point,                 only: point_t
     use type_boundary_connectivity, only: boundary_connectivity_t
     use mod_chidg_mpi,              only: IRANK, NRANK, ChiDG_COMM
@@ -216,9 +217,9 @@ contains
     !!  @date   11/19/2016
     !!
     !------------------------------------------------------------------------------------------
-    subroutine init_bc_patch(self,mesh,bc_connectivity)
+    subroutine init_bc_patch(self,domain,bc_connectivity)
         class(bc_t),                    intent(inout)           :: self
-        type(mesh_t),                   intent(inout)           :: mesh
+        type(domain_t),                 intent(inout)           :: domain
         type(boundary_connectivity_t),  intent(in)              :: bc_connectivity
 
 
@@ -228,7 +229,7 @@ contains
         integer(ik)                 :: nelem_xi, nelem_eta, nelem_zeta, nelem_bc, ielem_bc,         & 
                                        xi_begin, eta_begin, zeta_begin, xi_end, eta_end, zeta_end,  & 
                                        ixi, ieta, izeta, ierr, ielem, ielem_test, nface_nodes,      &
-                                       iface, inode, i, nfaces_bc, iface_bc, patch_face, patch_ID,  &
+                                       iface, inode, i, nfaces_bc, iface_bc, face_ID, patch_ID,     &
                                        ncoupled_elements, try_face, nterms_1d, mapping
 
         logical,        allocatable :: node_matched(:), xi_face, eta_face, zeta_face
@@ -270,13 +271,13 @@ contains
             !
             ! Search for local element with common nodes
             !
-            do ielem = 1,mesh%nelem
+            do ielem = 1,domain%nelem
 
                 
                 !
                 ! Get nodes from element being tested
                 !
-                element_nodes = mesh%elems(ielem)%connectivity%get_element_nodes()
+                element_nodes = domain%elems(ielem)%connectivity%get_element_nodes()
 
 
                 !
@@ -294,7 +295,7 @@ contains
                 ! Determine element mapping index
                 !
                 nterms_1d = 0
-                do while (nterms_1d*nterms_1d*nterms_1d < mesh%elems(ielem)%nterms_c)
+                do while (nterms_1d*nterms_1d*nterms_1d < domain%elems(ielem)%nterms_c)
                     nterms_1d = nterms_1d + 1
                 end do
                 mapping = nterms_1d - 1
@@ -338,10 +339,10 @@ contains
                         !
                         ! For the element, get the global indices of the corner nodes for face, try_face
                         !
-                        corner_indices(1) = mesh%elems(ielem)%connectivity%get_element_node(corner_one)
-                        corner_indices(2) = mesh%elems(ielem)%connectivity%get_element_node(corner_two)
-                        corner_indices(3) = mesh%elems(ielem)%connectivity%get_element_node(corner_three)
-                        corner_indices(4) = mesh%elems(ielem)%connectivity%get_element_node(corner_four)
+                        corner_indices(1) = domain%elems(ielem)%connectivity%get_element_node(corner_one)
+                        corner_indices(2) = domain%elems(ielem)%connectivity%get_element_node(corner_two)
+                        corner_indices(3) = domain%elems(ielem)%connectivity%get_element_node(corner_three)
+                        corner_indices(4) = domain%elems(ielem)%connectivity%get_element_node(corner_four)
 
 
                         !
@@ -380,21 +381,21 @@ contains
 
 
                     !
-                    ! Add domain, element, face index. Get patch_face, index of where the face exists in the bc_patch
+                    ! Add domain, element, face index. Get face_ID, index of where the face exists in the bc_patch
                     !
-                    patch_face = self%bc_patch(patch_ID)%add_face(mesh%elems(ielem)%idomain_g,     &
-                                                                  mesh%elems(ielem)%idomain_l,     &
-                                                                  mesh%elems(ielem)%ielement_g,    &
-                                                                  mesh%elems(ielem)%ielement_l,    &
+                    face_ID = self%bc_patch(patch_ID)%add_face(domain%elems(ielem)%idomain_g,     &
+                                                                  domain%elems(ielem)%idomain_l,     &
+                                                                  domain%elems(ielem)%ielement_g,    &
+                                                                  domain%elems(ielem)%ielement_l,    &
                                                                   iface)
 
 
                     !
-                    ! Inform mesh face about bc_ID it is associated with, patch_ID it belongs to, and the location, patch_face, in the bc_patch.
+                    ! Inform domain face about bc_ID it is associated with, patch_ID it belongs to, and the location, face_ID, in the bc_patch.
                     !
-                    mesh%faces(ielem,iface)%bc_ID      = self%bc_ID
-                    mesh%faces(ielem,iface)%patch_ID   = patch_ID
-                    mesh%faces(ielem,iface)%patch_face = patch_face
+                    domain%faces(ielem,iface)%bc_ID    = self%bc_ID
+                    domain%faces(ielem,iface)%patch_ID = patch_ID
+                    domain%faces(ielem,iface)%face_ID  = face_ID
 
 
 
@@ -405,19 +406,19 @@ contains
                     if ( self%get_family() == 'Periodic' ) then
 
                         ! Set to ORPHAN face so it will be recognized as chimera in the detection process.
-                        mesh%faces(ielem,iface)%ftype = ORPHAN
+                        domain%faces(ielem,iface)%ftype = ORPHAN
 
                         ! time, pnt do nothing here, but interface for function requires them.
-                        mesh%faces(ielem,iface)%periodic_offset  = .true.
-                        mesh%faces(ielem,iface)%chimera_offset_1 = self%bc_state(1)%state%bcproperties%compute('Offset-1',time,pnt)
-                        mesh%faces(ielem,iface)%chimera_offset_2 = self%bc_state(1)%state%bcproperties%compute('Offset-2',time,pnt)
-                        mesh%faces(ielem,iface)%chimera_offset_3 = self%bc_state(1)%state%bcproperties%compute('Offset-3',time,pnt)
+                        domain%faces(ielem,iface)%periodic_offset  = .true.
+                        domain%faces(ielem,iface)%chimera_offset_1 = self%bc_state(1)%state%bcproperties%compute('Offset-1',time,pnt)
+                        domain%faces(ielem,iface)%chimera_offset_2 = self%bc_state(1)%state%bcproperties%compute('Offset-2',time,pnt)
+                        domain%faces(ielem,iface)%chimera_offset_3 = self%bc_state(1)%state%bcproperties%compute('Offset-3',time,pnt)
 
                     else if ( allocated(self%bc_state) .and. (.not. self%get_family() == 'Periodic') ) then
-                        mesh%faces(ielem,iface)%ftype = BOUNDARY
+                        domain%faces(ielem,iface)%ftype = BOUNDARY
 
                     else
-                        mesh%faces(ielem,iface)%ftype = ORPHAN
+                        domain%faces(ielem,iface)%ftype = ORPHAN
 
                     end if
 
@@ -493,10 +494,11 @@ contains
     !------------------------------------------------------------------------------------------
     subroutine init_bc_comm(self,mesh)
         class(bc_t),    intent(inout)   :: self
-        type(mesh_t),   intent(inout)   :: mesh(:)
+        type(mesh_t),   intent(inout)   :: mesh
 
         logical                     :: irank_has_geometry, ranks_have_geometry(NRANK)
-        integer(ik)                 :: ierr, color
+        !integer(ik)                 :: ierr, color
+        integer                 :: ierr, color
         character(:),   allocatable :: user_msg
 
 
@@ -560,23 +562,23 @@ contains
     !------------------------------------------------------------------------------------------
     subroutine init_bc_specialized(self,mesh)
         class(bc_t),    intent(inout)   :: self
-        type(mesh_t),   intent(inout)   :: mesh(:)
+        type(mesh_t),   intent(inout)   :: mesh
 
         integer(ik) :: iop
 
 
-        !
-        ! Have bc_operators initialize the boundary condition coupling
-        !
-        if (allocated(self%bc_state)) then
-            if (allocated(self%bc_patch)) then
-
-                do iop = 1,size(self%bc_state)
-                    call self%bc_state(iop)%state%init_bc_specialized(mesh,self%bc_patch, self%bc_COMM)
-                end do !iop
-
-            end if !bc_patch
-        end if !bc_state
+!        !
+!        ! Have bc_operators initialize the boundary condition coupling
+!        !
+!        if (allocated(self%bc_state)) then
+!            if (allocated(self%bc_patch)) then
+!
+!                do iop = 1,size(self%bc_state)
+!                    call self%bc_state(iop)%state%init_bc_specialized(mesh,self%bc_patch, self%bc_COMM)
+!                end do !iop
+!
+!            end if !bc_patch
+!        end if !bc_state
 
 
     end subroutine init_bc_specialized
@@ -604,22 +606,22 @@ contains
     !------------------------------------------------------------------------------------------
     subroutine init_bc_coupling(self,mesh)
         class(bc_t),        intent(inout)   :: self
-        type(mesh_t),       intent(in)      :: mesh(:)
+        type(mesh_t),   intent(in)      :: mesh
 
         integer(ik) :: iop
 
-        !
-        ! Have bc_operators initialize the boundary condition coupling
-        !
-        if (allocated(self%bc_state)) then
-            if (allocated(self%bc_patch)) then
-
-                do iop = 1,size(self%bc_state)
-                    call self%bc_state(iop)%state%init_bc_coupling(mesh,self%bc_patch)
-                end do !iop
-
-            end if !bc_patch
-        end if !bc_state
+!        !
+!        ! Have bc_operators initialize the boundary condition coupling
+!        !
+!        if (allocated(self%bc_state)) then
+!            if (allocated(self%bc_patch)) then
+!
+!                do iop = 1,size(self%bc_state)
+!                    call self%bc_state(iop)%state%init_bc_coupling(mesh,self%bc_patch)
+!                end do !iop
+!
+!            end if !bc_patch
+!        end if !bc_state
 
     end subroutine init_bc_coupling
     !******************************************************************************************
@@ -640,29 +642,29 @@ contains
     !-----------------------------------------------------------------------------------------
     subroutine propagate_bc_coupling(self,mesh)
         class(bc_t),    intent(in)      :: self
-        type(mesh_t),   intent(inout)   :: mesh(:)
+        type(mesh_t),   intent(inout)   :: mesh
 
         integer(ik) :: ipatch, iface_bc, idom, ielem, iface
 
 
-        !
-        ! set ncoupled elements back to mesh face
-        !
-        if (allocated(self%bc_patch)) then
-
-            do ipatch = 1,size(self%bc_patch)
-                do iface_bc = 1,self%bc_patch(ipatch)%nfaces()
-
-                    idom  = self%bc_patch(ipatch)%idomain_l(iface_bc)
-                    ielem = self%bc_patch(ipatch)%ielement_l(iface_bc)
-                    iface = self%bc_patch(ipatch)%iface(iface_bc)
-
-                    mesh(idom)%faces(ielem,iface)%bc_ndepend = self%bc_patch(ipatch)%ncoupled_elements(iface_bc)
-
-                end do !iface_bc
-            end do !ipatch
-
-        end if !bc_patch
+!        !
+!        ! set ncoupled elements back to mesh face
+!        !
+!        if (allocated(self%bc_patch)) then
+!
+!            do ipatch = 1,size(self%bc_patch)
+!                do iface_bc = 1,self%bc_patch(ipatch)%nfaces()
+!
+!                    idom  = self%bc_patch(ipatch)%idomain_l(iface_bc)
+!                    ielem = self%bc_patch(ipatch)%ielement_l(iface_bc)
+!                    iface = self%bc_patch(ipatch)%iface(iface_bc)
+!
+!                    mesh%domain(idom)%faces(ielem,iface)%bc_ndepend = self%bc_patch(ipatch)%ncoupled_elements(iface_bc)
+!
+!                end do !iface_bc
+!            end do !ipatch
+!
+!        end if !bc_patch
 
 
 

@@ -2,9 +2,9 @@ module type_RASILU0_recv
 #include <messenger.h>
     use mod_kinds,              only: ik, rk
 
-    use type_mesh,              only: mesh_t
-    use type_chidg_matrix,       only: chidg_matrix_t
-    use type_chidg_vector,       only: chidg_vector_t
+    use type_mesh,          only: mesh_t
+    use type_chidg_matrix,      only: chidg_matrix_t
+    use type_chidg_vector,      only: chidg_vector_t
     use type_RASILU0_recv_dom,  only: RASILU0_recv_dom_t
     implicit none
 
@@ -51,9 +51,9 @@ contains
     !------------------------------------------------------------------------------------------
     subroutine init(self,mesh,A,b)
         class(RASILU0_recv_t),  intent(inout)   :: self
-        type(mesh_t),           intent(in)      :: mesh(:)
-        type(chidg_matrix_t),    intent(in)      :: A
-        type(chidg_vector_t),    intent(in)      :: b
+        type(mesh_t),       intent(in)      :: mesh
+        type(chidg_matrix_t),   intent(in)      :: A
+        type(chidg_vector_t),   intent(in)      :: b
 
         integer(ik) :: idom, ndom, ierr, icomm_vec, idom_vec, ielem_vec, proc, &
                        iblk, icomm, idomain_g, ielem, &
@@ -61,7 +61,7 @@ contains
                        trans_elem, trans_block
         logical     :: check_ok
 
-        ndom = size(mesh)
+        ndom = mesh%ndomains()
 
 
         !
@@ -76,7 +76,7 @@ contains
         ! Call initialization on each
         !
         do idom = 1,ndom
-            call self%dom(idom)%init(mesh(idom),A%dom(idom))
+            call self%dom(idom)%init(mesh%domain(idom),A%dom(idom))
         end do
 
 
@@ -85,7 +85,7 @@ contains
         ! Initialize indices of where to find off-processor recv data in the chidgVector
         !
         do idom = 1,ndom
-            idomain_g = mesh(idom)%idomain_g
+            idomain_g = mesh%domain(idom)%idomain_g
 
             do icomm = 1,size(self%dom(idom)%comm)
                 proc = self%dom(idom)%comm(icomm)%proc

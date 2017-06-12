@@ -7,10 +7,8 @@ How does ChiDG handle boundary conditions?
         - The 'bc_patch_t' component of the boundary condition contains the geometry descriptor
           of what faces the boundary condition is to be applied to. Each face in a 'mesh_t' that is a
           boundary condition face also knows where it's boundary condition information is located within
-          a boundary condition. A face has BC_ID that defines which boundary condition it is associated with,
-          and BC_face that defines which bc_face in the boundary condition it coincides with. This is because
-          the boundary condition may contain extra information about what other elements the face is coupled
-          with through the boundary condition.
+          a boundary condition. A face has bc_ID, group_ID, patch_ID, and face_ID that define which boundary 
+          condition object it is associated with.
 
         - The 'bc_state_t' components are a list of boundary condition state functions. A boundary condition
           is required to compute an external boundary state Q_BC that gets compute as a function of the 

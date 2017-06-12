@@ -1,4 +1,4 @@
-module test_blockmatrix_mod
+module test_domain_matrix_mod
     use pfunit_mod
     use type_chidg,                 only: chidg_t
     use type_point,                 only: point_t
@@ -8,13 +8,15 @@ module test_blockmatrix_mod
                                           SEVEN, EIGHT, NINE, TEN, &
                                           XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, &
                                           ZETA_MAX, IO_DESTINATION
-    use mod_test_utilities,         only: create_mesh
-    use type_blockmatrix,           only: blockmatrix_t
+    use mod_string,                 only: string_t
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: delete_file
+    use type_domain_matrix,         only: domain_matrix_t
     use DNAD_D
     use fcn_constant,               only: constant_f
     implicit none
 
-    public  :: test_blockmatrix
+    public  :: test_domain_matrix
 
     !>
     !!
@@ -24,16 +26,16 @@ module test_blockmatrix_mod
     !!
     !-----------------------------------------------------------------------------------------
     @TestCase
-    type, extends(TestCase) ::  test_blockmatrix
+    type, extends(TestCase) ::  test_domain_matrix
 
-        type(chidg_t)                        :: chidg
-        type(blockmatrix_t)                  :: bmat
-        type(constant_f)                     :: fcn
+        type(chidg_t)                       :: chidg
+        type(domain_matrix_t)               :: bmat
+        type(constant_f)                    :: fcn
 
     contains
         procedure   ::  setUp
         procedure   ::  tearDown
-    end type test_blockmatrix
+    end type test_domain_matrix
     !*****************************************************************************************
 
 
@@ -45,9 +47,9 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine setUp(this)
-        class(test_blockmatrix),    intent(inout)   :: this
+        class(test_domain_matrix),    intent(inout)   :: this
 
-        integer(ik)                                 :: nterms_c, ivar, ielem, iblk, spacedim, nelements_g
+        integer(ik)                                 :: nterms_c, ivar, ielem, iblk, spacedim, nelements_g, eqn_ID
         type(point_t),  allocatable                 :: nodes(:)
         type(domain_connectivity_t)                 :: connectivity
         
@@ -62,29 +64,45 @@ contains
         !
         ! Create 3x3x3 element grid
         !
-        call create_mesh('333',nodes,connectivity)
-
-
-        !
-        ! Initialize domains
-        !
-        nterms_c    = 8
-        spacedim    = 3
-        nelements_g = 9
-        call this%chidg%data%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Scalar Advection','Cartesian')
+        !call create_mesh('333',nodes,connectivity)
+        call create_mesh_file("D1 NxNxN", filename = 'file.h5',                             &
+                                          equation_sets = [string_t('Scalar Advection')],   &
+                                          nelem_xi   = 3,                                   &
+                                          nelem_eta  = 3,                                   &
+                                          nelem_zeta = 3 )
 
         call this%chidg%set('Solution Order', integer_input=2)
-        call this%chidg%set('time', algorithm='steady')
+        call this%chidg%set('Time Integrator' , algorithm='Steady')
+        call this%chidg%set('Nonlinear Solver', algorithm='Newton')
+        call this%chidg%set('Linear Solver'   , algorithm='FGMRES')
+        call this%chidg%set('Preconditioner'  , algorithm='ILU0')
+        call this%chidg%read_grid('file.h5')
+        call this%chidg%init('all')
 
-        !call this%chidg%initialize_solution_domains()
-        call this%chidg%init('domains')
-        call this%chidg%init('communication')
+!        !
+!        ! Initialize domains
+!        !
+!        nterms_c    = 8
+!        spacedim    = 3
+!        nelements_g = 9
+!
+!
+!        call this%chidg%data%add_equation_set('Scalar Advection')
+!        eqn_ID = this%chidg%data%get_equation_set_id('Scalar Advection')
+!
+!        call this%chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Cartesian',eqn_ID)
+!
+!        call this%chidg%set('Solution Order', integer_input=2)
+!        call this%chidg%set('time', algorithm='steady')
+!        call this%chidg%init('domains')
+!        call this%chidg%init('communication')
 
 
         !
-        ! Initialize blockmatrix
+        ! Initialize domain_matrix
         !
-        call this%bmat%init(this%chidg%data%mesh(1),mtype='full')
+        !call this%bmat%init(this%chidg%data%mesh%domain(1),mtype='full')
+        call this%bmat%init(this%chidg%data%mesh,idom=1,mtype='full')
 
     
     end subroutine setUp
@@ -99,12 +117,15 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine tearDown(this)
-        class(test_blockmatrix),    intent(inout)   :: this
+        class(test_domain_matrix),    intent(inout)   :: this
         
         ! Close ChiDG interface
         call this%chidg%shut_down('core')
 
-    end subroutine
+
+        call delete_file('file.h5')
+
+    end subroutine tearDown
     !*****************************************************************************************
 
 
@@ -122,16 +143,16 @@ contains
     !!
     !-----------------------------------------------------------------------------------
     @Test
-    subroutine test_blockmatrix__init_linearization__nelem(self)
-        class(test_blockmatrix),    intent(inout)   :: self
+    subroutine test_domain_matrix__init_linearization__nelem(self)
+        class(test_domain_matrix),    intent(inout)   :: self
         
         integer(ik) :: nelem
 
-        nelem = self%chidg%data%mesh(1)%nelem
+        nelem = self%chidg%data%mesh%domain(1)%nelem
         @assertEqual(nelem,size(self%bmat%lblks,1))  
         @assertEqual(nelem,size(self%bmat%chi_blks,1))  
 
-    end subroutine test_blockmatrix__init_linearization__nelem
+    end subroutine test_domain_matrix__init_linearization__nelem
     !************************************************************************************
     
     
@@ -146,16 +167,16 @@ contains
     !!
     !------------------------------------------------------------------------------------
     @Test
-    subroutine test_blockmatrix__init_linearization__ntime(self)
-        class(test_blockmatrix),    intent(inout)   :: self
+    subroutine test_domain_matrix__init_linearization__ntime(self)
+        class(test_domain_matrix),    intent(inout)   :: self
 
         integer(ik) :: ntime
 
-        ntime = self%chidg%data%mesh(1)%ntime
+        ntime = self%chidg%data%mesh%domain(1)%ntime
         @assertEqual(ntime,size(self%bmat%lblks,2))  
         @assertEqual(ntime,size(self%bmat%chi_blks,2))  
         
-    end subroutine test_blockmatrix__init_linearization__ntime
+    end subroutine test_domain_matrix__init_linearization__ntime
     !*************************************************************************************
     
     
@@ -170,15 +191,15 @@ contains
     !!
     !-------------------------------------------------------------------------------------
     @Test
-    subroutine test_blockmatrix__init_linearization__denseblocks(self)
-        class(test_blockmatrix),    intent(inout)   :: self
+    subroutine test_domain_matrix__init_linearization__denseblocks(self)
+        class(test_domain_matrix),    intent(inout)   :: self
         
         integer(ik)                 :: ielem, size1d, nmat, imat, itime, ientry
         integer(ik), allocatable    :: idomain_g(:), ielement_g(:)
         integer(ik), allocatable    :: idomain_g_known(:), ielement_g_known(:)
         real(rk),    allocatable    :: mat(:,:)
         
-        associate ( mesh => self%chidg%data%mesh(1), lblks => self%bmat%lblks)
+        associate ( domain => self%chidg%data%mesh%domain(1), lblks => self%bmat%lblks)
         
             
             
@@ -212,7 +233,7 @@ contains
             end do
             
             ! Test first element, linearization block sizes
-            size1d = mesh%nterms_s * mesh%neqns
+            size1d = domain%nterms_s * domain%neqns
             do imat = 1,lblks(ielem,itime)%size()
                 mat = lblks(ielem,itime)%dmat(imat)
 
@@ -260,7 +281,7 @@ contains
 
             
             ! Test  linearization block sizes
-            size1d = mesh%nterms_s * mesh%neqns
+            size1d = domain%nterms_s * domain%neqns
             do imat = 1,lblks(ielem,itime)%size()
                 mat = lblks(ielem,itime)%dmat(imat)
 
@@ -276,7 +297,7 @@ contains
         end associate   
     
     
-    end subroutine test_blockmatrix__init_linearization__denseblocks
+    end subroutine test_domain_matrix__init_linearization__denseblocks
     !**********************************************************************************
     
     
@@ -286,4 +307,4 @@ contains
 
 
 
-end module test_blockmatrix_mod
+end module test_domain_matrix_mod

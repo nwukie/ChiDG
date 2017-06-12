@@ -32,7 +32,6 @@ subroutine test_chidg_matrix_operator_HB_mv()
     use type_chidg_matrix,  only: chidg_matrix_t
     use type_chidg_vector,  only: chidg_vector_t
     use type_meshdata,      only: meshdata_t
-    use type_bc,            only: bc_t
     use mod_bc,             only: create_bc
     use mod_test_utilities, only: create_mesh_file
     use mod_file_utilities, only: delete_file
@@ -44,7 +43,6 @@ subroutine test_chidg_matrix_operator_HB_mv()
 
     type(chidg_t)                       :: chidg
     type(meshdata_t),   allocatable     :: meshdata(:)
-    class(bc_t),        allocatable     :: bc
     integer(ik)                         :: idom, spacedim, nterms_s, idiag, idom_d, ielem_d, itime, ielem, imat
     real(rk),           dimension(8)    :: bref_1, bref_HB_1, bref_HB_2, bref_HB_3, bref_HB_4, &
                                            bref_HB_5, bref_HB_6, bref_HB_7, bref_HB_8
@@ -83,21 +81,14 @@ subroutine test_chidg_matrix_operator_HB_mv()
     ! Get grid points
     !
     call chidg%read_grid(filename,spacedim)
-    call chidg%read_boundaryconditions(filename)
 
-
-    !
-    ! Initalize ChiDG Chimera interfaces
-    !
-    call chidg%init('domains')
-    call chidg%init('communication')
 
     !
     ! Initialize data containers
     !
     call A%init(chidg%data%mesh, mtype = 'full')
-    call x%init(chidg%data%mesh,chidg%data%mesh(1)%ntime)
-    call b%init(chidg%data%mesh,chidg%data%mesh(1)%ntime)
+    call x%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
+    call b%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
 
 
     !

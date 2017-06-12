@@ -22,33 +22,34 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     tol = 1.e-14_rk
     IO_DESTINATION = 'file'
 
-
+    !
     ! Initialize element mapping
+    !
     call chidg%start_up('core')
     
 
     !
-    ! Create mesh file
+    ! Set the accuracy of the solution expansion
     !
-    call create_mesh_file("D1 NxNxN", filename,nelem_xi=1,nelem_eta=1,nelem_zeta=1)
+    call chidg%set('Solution Order', integer_input=2)
+
 
     !
-    ! Read grid and add domain to chidg
+    ! Create/Read grid 
     !
+    call create_mesh_file("D1 NxNxN", filename,nelem_xi=1,nelem_eta=1,nelem_zeta=1)
     call chidg%read_grid(filename, spacedim)
 
 
-    call chidg%set('Solution Order', integer_input=2)
-    call chidg%init('domains')
 
 
 
     ! Test number of allocated domains
-    @assertEqual(ndomains,chidg%data%ndomains())
+    @assertEqual(ndomains,chidg%data%mesh%ndomains())
 
     
     ! Test domain mapping
-    @assertEqual(nterms_c,chidg%data%mesh(1)%nterms_c)
+    @assertEqual(nterms_c,chidg%data%mesh%domain(1)%nterms_c)
     
     ! Test points
     ! This is for element with center at zero
@@ -56,12 +57,12 @@ subroutine testIO__read_grid_hdf__D1_E1_M1()
     y = [ZERO, ZERO, ONE,  ONE,  ZERO, ZERO, ONE,  ONE]
     z = [ZERO, ZERO, ZERO, ZERO, ONE,  ONE,  ONE,  ONE]
 
-    @assertEqual(x,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c1_,tol)
-    @assertEqual(y,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c2_,tol)
-    @assertEqual(z,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c3_,tol)
+    @assertEqual(x,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c1_,tol)
+    @assertEqual(y,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c2_,tol)
+    @assertEqual(z,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c3_,tol)
     
     !  Test nelem
-    @assertEqual(nelem,chidg%data%mesh(1)%nelem)
+    @assertEqual(nelem,chidg%data%mesh%domain(1)%nelem)
     
     
     !
@@ -111,49 +112,50 @@ subroutine testIO__read_grid_hdf__D1_E27_M1()
     IO_DESTINATION = 'file'
 
 
-    ! Initialize element mapping
+    !
+    ! Initialize chidg environment
+    !
     call chidg%start_up('core')
     
+
     !
-    ! Create mesh file
+    ! Set the accuracy of the solution expansion
+    !
+    call chidg%set('Solution Order', integer_input=2)
+
+
+    !
+    ! Create/Read grid
     !
     call create_mesh_file("D1 NxNxN", filename, nelem_xi=3,nelem_eta=3,nelem_zeta=3)
-
-    !
-    ! Read grid
-    !
     call chidg%read_grid(filename,spacedim)
-
-
-    call chidg%set('Solution Order', integer_input=2)
-    call chidg%init('domains')
 
     
     ! Test number of allocated domains
-    @assertEqual(ndomains,chidg%data%ndomains())
+    @assertEqual(ndomains,chidg%data%mesh%ndomains())
 
     
     ! Test domain mapping
-    @assertEqual(nterms_c,chidg%data%mesh(1)%nterms_c)
+    @assertEqual(nterms_c,chidg%data%mesh%domain(1)%nterms_c)
     
     ! Test points
     x = [ZERO, THIRD, ZERO,  THIRD, ZERO,  THIRD, ZERO,  THIRD]
     y = [ZERO, ZERO,  THIRD, THIRD, ZERO,  ZERO,  THIRD, THIRD]
     z = [ZERO, ZERO,  ZERO,  ZERO,  THIRD, THIRD, THIRD, THIRD]
-    @assertEqual(x,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c1_,tol)
-    @assertEqual(y,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c2_,tol)
-    @assertEqual(z,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c3_,tol)
+    @assertEqual(x,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c1_,tol)
+    @assertEqual(y,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c2_,tol)
+    @assertEqual(z,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c3_,tol)
     
     !  Test nelem
-    @assertEqual(nelem,chidg%data%mesh(1)%nelem)
+    @assertEqual(nelem,chidg%data%mesh%domain(1)%nelem)
     
     
     !  Test all elements have been initialized
-    do ielem = 1,chidg%data%mesh(1)%nelem
-        @assertTrue(chidg%data%mesh(1)%elems(ielem)%geomInitialized)
+    do ielem = 1,chidg%data%mesh%domain(1)%nelem
+        @assertTrue(chidg%data%mesh%domain(1)%elems(ielem)%geomInitialized)
         
         do iface = 1,NFACES
-            @assertTrue(chidg%data%mesh(1)%faces(ielem,iface)%geomInitialized)
+            @assertTrue(chidg%data%mesh%domain(1)%faces(ielem,iface)%geomInitialized)
         end do
     end do
     
@@ -203,53 +205,56 @@ subroutine testIO__read_grid_hdf__D2_E1_M1()
     tol = 1.e-14_rk
     IO_DESTINATION = 'file'
 
-    ! Initialize element mapping
+    !
+    ! Initialize chidg environment
+    !
     call chidg%start_up('core')
     
+
     !
-    ! Create mesh file
+    ! Set the accuracy of the solution expansion
+    !
+    call chidg%set('Solution Order', integer_input=2)
+
+
+    !
+    ! Create/Read grid
     !
     call create_mesh_file("D2 NxNxN M1", filename, nelem_xi =2,nelem_eta =1,nelem_zeta =1)
-
-    !
-    ! Read grid
-    !
     call chidg%read_grid(filename,spacedim)
 
-    call chidg%set('Solution Order', integer_input=2)
-    call chidg%init('domains')
 
 
 
     ! Test number of allocated domains
-    @assertEqual(ndomains,chidg%data%ndomains())
+    @assertEqual(ndomains,chidg%data%mesh%ndomains())
 
     
     ! Test domain mapping
-    @assertEqual(nterms_c,chidg%data%mesh(1)%nterms_c)
-    @assertEqual(nterms_c,chidg%data%mesh(2)%nterms_c)
+    @assertEqual(nterms_c,chidg%data%mesh%domain(1)%nterms_c)
+    @assertEqual(nterms_c,chidg%data%mesh%domain(2)%nterms_c)
 
 
     ! Test number of elements
-    @assertEqual(nelem,chidg%data%mesh(1)%nelem)
-    @assertEqual(nelem,chidg%data%mesh(2)%nelem)
+    @assertEqual(nelem,chidg%data%mesh%domain(1)%nelem)
+    @assertEqual(nelem,chidg%data%mesh%domain(2)%nelem)
 
 
     ! Test points
     x = [ZERO, HALF, ZERO, HALF, ZERO, HALF, ZERO, HALF]
     y = [ZERO, ZERO, ONE,  ONE,  ZERO, ZERO, ONE,  ONE ]
     z = [ZERO, ZERO, ZERO, ZERO, ONE,  ONE,  ONE,  ONE ]
-    @assertEqual(x,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c1_,tol)
-    @assertEqual(y,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c2_,tol)
-    @assertEqual(z,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c3_,tol)
+    @assertEqual(x,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c1_,tol)
+    @assertEqual(y,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c2_,tol)
+    @assertEqual(z,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c3_,tol)
     
     
     x = x + HALF
     y = [ZERO, ZERO, ONE,  ONE,  ZERO, ZERO, ONE, ONE]
     z = [ZERO, ZERO, ZERO, ZERO, ONE,  ONE,  ONE, ONE]
-    @assertEqual(x,chidg%data%mesh(2)%elems(1)%elem_pts(:)%c1_,tol)
-    @assertEqual(y,chidg%data%mesh(2)%elems(1)%elem_pts(:)%c2_,tol)
-    @assertEqual(z,chidg%data%mesh(2)%elems(1)%elem_pts(:)%c3_,tol)
+    @assertEqual(x,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:)%c1_,tol)
+    @assertEqual(y,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:)%c2_,tol)
+    @assertEqual(z,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:)%c3_,tol)
     
 
     !
@@ -302,53 +307,54 @@ subroutine testIO__read_grid_hdf__D2_E27_M1()
     
     IO_DESTINATION = 'file'
 
+    !
     ! Initialize element mapping
+    !
     call chidg%start_up('core')
     
     !
-    ! Create mesh file
+    ! Set the accuracy of the solution expansion
+    !
+    call chidg%set('Solution Order', integer_input=2)
+
+
+    !
+    ! Create/Read grid
     !
     call create_mesh_file("D2 NxNxN M1", filename, nelem_xi=6, nelem_eta=3, nelem_zeta=3)
-
-    !
-    ! Read grid
-    !
     call chidg%read_grid(filename,spacedim)
-
-    call chidg%set('Solution Order', integer_input=2)
-    call chidg%init('domains')
 
 
 
     ! Test number of allocated domains
-    @assertEqual(ndomains,chidg%data%ndomains())
+    @assertEqual(ndomains,chidg%data%mesh%ndomains())
 
     
     ! Test domain mapping
-    @assertEqual(nterms_c,chidg%data%mesh(1)%nterms_c)
-    @assertEqual(nterms_c,chidg%data%mesh(2)%nterms_c)
+    @assertEqual(nterms_c,chidg%data%mesh%domain(1)%nterms_c)
+    @assertEqual(nterms_c,chidg%data%mesh%domain(2)%nterms_c)
 
 
     ! Test number of elements
-    @assertEqual(nelem,chidg%data%mesh(1)%nelem)
-    @assertEqual(nelem,chidg%data%mesh(2)%nelem)
+    @assertEqual(nelem,chidg%data%mesh%domain(1)%nelem)
+    @assertEqual(nelem,chidg%data%mesh%domain(2)%nelem)
 
 
     ! Test points
     x = [ZERO, SIXTH, ZERO, SIXTH, ZERO,  SIXTH, ZERO,  SIXTH]
     y = [ZERO, ZERO, THIRD, THIRD, ZERO,  ZERO,  THIRD, THIRD]
     z = [ZERO, ZERO, ZERO,  ZERO,  THIRD, THIRD, THIRD, THIRD]
-    @assertEqual(x,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c1_,tol)
-    @assertEqual(y,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c2_,tol)
-    @assertEqual(z,chidg%data%mesh(1)%elems(1)%elem_pts(:)%c3_,tol)
+    @assertEqual(x,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c1_,tol)
+    @assertEqual(y,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c2_,tol)
+    @assertEqual(z,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c3_,tol)
     
     
     x = x + HALF
     y = [ZERO, ZERO, THIRD, THIRD, ZERO, ZERO, THIRD, THIRD]
     z = [ZERO, ZERO, ZERO, ZERO, THIRD, THIRD, THIRD, THIRD]
-    @assertEqual(x,chidg%data%mesh(2)%elems(1)%elem_pts(:)%c1_,tol)
-    @assertEqual(y,chidg%data%mesh(2)%elems(1)%elem_pts(:)%c2_,tol)
-    @assertEqual(z,chidg%data%mesh(2)%elems(1)%elem_pts(:)%c3_,tol)
+    @assertEqual(x,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:)%c1_,tol)
+    @assertEqual(y,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:)%c2_,tol)
+    @assertEqual(z,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:)%c3_,tol)
     
     !
     ! Close ChiDG

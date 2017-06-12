@@ -1,18 +1,18 @@
-module test_blockvector_mod
+module test_domain_vector_mod
     use pfunit_mod
     use type_chidg,                 only: chidg_t
     use type_point,                 only: point_t
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, &
                                           XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, IO_DESTINATION
-    use type_blockvector,           only: blockvector_t
+    use type_domain_vector,         only: domain_vector_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use DNAD_D
     use fcn_constant,               only: constant_f
     use mod_test_utilities,         only: create_mesh
     implicit none
 
-    public  :: test_blockvector
+    public  :: test_domain_vector
 
     !>
     !!
@@ -21,16 +21,16 @@ module test_blockvector_mod
     !!
     !----------------------------------------------------------------------------
     @TestCase
-    type, extends(TestCase) ::  test_blockvector
+    type, extends(TestCase) ::  test_domain_vector
 
         type(chidg_t)                        :: chidg
-        type(blockvector_t)                  :: bvec
+        type(domain_vector_t)                  :: bvec
         type(constant_f)                     :: fcn
 
     contains
         procedure   ::  setUp
         procedure   ::  tearDown
-    end type test_blockvector
+    end type test_domain_vector
     !*****************************************************************************
 
 
@@ -41,9 +41,9 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine setUp(this)
-        class(test_blockvector),    intent(inout)   :: this
+        class(test_domain_vector),    intent(inout)   :: this
 
-        integer(ik)                 :: nterms_c, ivar, spacedim, nelements_g
+        integer(ik)                 :: nterms_c, ivar, spacedim, nelements_g, eqn_ID
         type(point_t),  allocatable :: nodes(:)
         type(domain_connectivity_t) :: connectivity
         
@@ -67,16 +67,21 @@ contains
         spacedim    = 3
         nterms_c    = 8
         nelements_g = 27
-        call this%chidg%data%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Scalar Advection','Cartesian')
+
+
+        call this%chidg%data%add_equation_set('Scalar Advection')
+        eqn_ID = this%chidg%data%get_equation_set_id('Scalar Advection')
+
+        call this%chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Cartesian',eqn_ID)
 
         call this%chidg%set('Solution Order', integer_input=2)
         call this%chidg%init('domains')
 
 
         !
-        ! Initialize blockvector
+        ! Initialize domain_vector
         !
-        call this%bvec%init(this%chidg%data%mesh(1))
+        call this%bvec%init(this%chidg%data%mesh%domain(1))
     
     
     end subroutine setUp
@@ -89,7 +94,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine tearDown(this)
-        class(test_blockvector),    intent(inout)   :: this
+        class(test_domain_vector),    intent(inout)   :: this
         
         ! Close ChiDG interface
         call this%chidg%shut_down('core')
@@ -110,15 +115,15 @@ contains
     !!
     !--------------------------------------------------------------------------
     @Test
-    subroutine test_blockvector__init__nrows(self)
-        class(test_blockvector),    intent(inout)   :: self
+    subroutine test_domain_vector__init__nrows(self)
+        class(test_domain_vector),    intent(inout)   :: self
         
         integer(ik)                 :: nelem
 
-        nelem = self%chidg%data%mesh(1)%nelem
+        nelem = self%chidg%data%mesh%domain(1)%nelem
         @assertEqual(nelem,size(self%bvec%vecs,1))  
 
-    end subroutine test_blockvector__init__nrows
+    end subroutine test_domain_vector__init__nrows
     !**************************************************************************
     
 
@@ -136,8 +141,8 @@ contains
     !!
     !--------------------------------------------------------------------------
     @Test
-    subroutine test_blockvector__init__densevector_allocation(self)
-        class(test_blockvector),    intent(inout)   :: self
+    subroutine test_domain_vector__init__densevector_allocation(self)
+        class(test_domain_vector),    intent(inout)   :: self
         
 
         associate ( vecs => self%bvec%vecs )
@@ -176,7 +181,7 @@ contains
         end associate
 
 
-    end subroutine test_blockvector__init__densevector_allocation
+    end subroutine test_domain_vector__init__densevector_allocation
     !**************************************************************************
 
 
@@ -186,7 +191,7 @@ contains
 
 
 
-    !>  Test that densevector components of blockvector are all initialized with correct storage sizes
+    !>  Test that densevector components of domain_vector are all initialized with correct storage sizes
     !!
     !!  @author Nathan A. Wukie
     !!
@@ -194,19 +199,19 @@ contains
     !!
     !--------------------------------------------------------------------------
     @Test
-    subroutine test_blockvector__init__densevector_sizes(self)
-        class(test_blockvector),    intent(inout)       :: self
+    subroutine test_domain_vector__init__densevector_sizes(self)
+        class(test_domain_vector),    intent(inout)       :: self
 
         integer(ik) :: size1d
 
 
-        associate ( mesh => self%chidg%data%mesh(1), vecs => self%bvec%vecs)
+        associate ( domain => self%chidg%data%mesh%domain(1), vecs => self%bvec%vecs)
 
 
             !
             ! Test first element, linearization block sizes
             !
-            size1d = mesh%nterms_s  *  mesh%neqns
+            size1d = domain%nterms_s  *  domain%neqns
 
 
             @assertEqual(size1d,size(vecs(1)%vec))
@@ -240,7 +245,7 @@ contains
         end associate   
     
     
-    end subroutine test_blockvector__init__densevector_sizes
+    end subroutine test_domain_vector__init__densevector_sizes
     !**************************************************************************
     
     
@@ -253,7 +258,7 @@ contains
 
 
 
-    !>  Test blockvector%norm procedure
+    !>  Test domain_vector%norm procedure
     !!
     !!  @author Nathan A. Wukie
     !!
@@ -261,8 +266,8 @@ contains
     !!
     !---------------------------------------------------------------------------
     @Test
-    subroutine test_blockvector__norm(self)
-        class(test_blockvector),    intent(inout)   :: self
+    subroutine test_domain_vector__norm(self)
+        class(test_domain_vector),    intent(inout)   :: self
 
         integer(ik) :: ielem
         real(rk)    :: norm_ref, norm
@@ -287,7 +292,7 @@ contains
         norm_ref = sqrt( sum( ref_vec**TWO + ref_vec**TWO) )    ! Twice since two elements were set
         @assertEqual(norm_ref,norm)
 
-    end subroutine test_blockvector__norm
+    end subroutine test_domain_vector__norm
     !***************************************************************************
 
 
@@ -300,7 +305,7 @@ contains
 
 
 
-    !>  Test blockvector%sumsqr procedure
+    !>  Test domain_vector%sumsqr procedure
     !!
     !!  @author Nathan A. Wukie
     !!
@@ -308,8 +313,8 @@ contains
     !!
     !---------------------------------------------------------------------------
     @Test
-    subroutine test_blockvector__sumsqr(self)
-        class(test_blockvector),    intent(inout)   :: self
+    subroutine test_domain_vector__sumsqr(self)
+        class(test_domain_vector),    intent(inout)   :: self
 
         integer(ik) :: ielem
         real(rk)    :: sumsqr_ref, sumsqr
@@ -334,7 +339,7 @@ contains
         sumsqr_ref = sum( ref_vec**TWO + ref_vec**TWO)   ! Twice since two elements were set
         @assertEqual(sumsqr_ref,sumsqr)
 
-    end subroutine test_blockvector__sumsqr
+    end subroutine test_domain_vector__sumsqr
     !***************************************************************************
 
 
@@ -354,7 +359,7 @@ contains
 
 
 
-    !>  Test blockvector%clear procedure
+    !>  Test domain_vector%clear procedure
     !!
     !!  @author Nathan A. Wukie
     !!
@@ -362,8 +367,8 @@ contains
     !!
     !----------------------------------------------------------------------------
     @Test
-    subroutine test_blockvector__clear(self)
-        class(test_blockvector),    intent(inout)   :: self
+    subroutine test_domain_vector__clear(self)
+        class(test_domain_vector),    intent(inout)   :: self
 
         integer(ik) :: ielem
         real(rk)    :: ref_vec(8)
@@ -379,7 +384,7 @@ contains
 
 
 
-        ! Call blockvector%clear to ZERO vector storage. THIS IS BEING TESTED.
+        ! Call domain_vector%clear to ZERO vector storage. THIS IS BEING TESTED.
         call self%bvec%clear()
 
 
@@ -388,14 +393,14 @@ contains
         end do 
 
 
-    end subroutine test_blockvector__clear
+    end subroutine test_domain_vector__clear
     !****************************************************************************
 
 
 
 
 
-    !>  Test blockvector%nentries procedure
+    !>  Test domain_vector%nentries procedure
     !!
     !!  @author Nathan A. Wukie
     !!
@@ -403,8 +408,8 @@ contains
     !!
     !----------------------------------------------------------------------------
     @Test
-    subroutine test_blockvector__nentries(self)
-        class(test_blockvector),    intent(inout)   :: self
+    subroutine test_domain_vector__nentries(self)
+        class(test_domain_vector),    intent(inout)   :: self
 
         integer(ik) :: nentries_ref, nentries, nelems, nterms
 
@@ -415,13 +420,13 @@ contains
 
 
         !
-        ! Call blockvector%nentrios to return number of values store in the vector. THIS IS BEING TESTED.
+        ! Call domain_vector%nentrios to return number of values store in the vector. THIS IS BEING TESTED.
         !
         nentries = self%bvec%nentries()
 
         @assertEqual(nentries_ref,nentries)
 
-    end subroutine test_blockvector__nentries
+    end subroutine test_domain_vector__nentries
     !*****************************************************************************
 
 
@@ -432,4 +437,4 @@ contains
     
 
 
-end module test_blockvector_mod
+end module test_domain_vector_mod

@@ -115,7 +115,7 @@ contains
         class(test_find_gq_donor),  intent(inout)   :: this
 
         type(meshdata_t)                :: meshdata
-        integer(ik)                     :: nterms_c, spacedim, nelements_g
+        integer(ik)                     :: nterms_c, spacedim, nelements_g, eqn_ID
 
         spacedim        = 3
         nterms_c        = 8
@@ -131,19 +131,24 @@ contains
         nelements_g = 8
 
 
+        ! Initialize equation set
+        call this%chidg%data%add_equation_set('Scalar Advection')
+        eqn_ID = this%chidg%data%get_equation_set_id('Scalar Advection')
+
+
         ! Add domain to ChiDG, initialize
-        call this%chidg%data%add_domain('D_01',                 &
-                                        meshdata%points,        &
-                                        meshdata%connectivity,  &
-                                        nelements_g,            &
-                                        spacedim,               &
-                                        nterms_c,               &
-                                        'Scalar Advection',     &
-                                        'Cartesian')
+        call this%chidg%data%mesh%add_domain('D_01',                 &
+                                             meshdata%points,        &
+                                             meshdata%connectivity,  &
+                                             nelements_g,            &
+                                             spacedim,               &
+                                             nterms_c,               &
+                                             'Cartesian',            &
+                                             eqn_ID)
 
         call this%chidg%set('Solution Order', integer_input=2)
         call this%chidg%init('domains')
-        call this%chidg%init('communication')
+        call this%chidg%init('comm - interior')
 
     end subroutine setUp
     !**************************************************************************************

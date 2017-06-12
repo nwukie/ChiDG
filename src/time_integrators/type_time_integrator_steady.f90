@@ -89,13 +89,10 @@ contains
                 fid = open_file_hdf(filename)
 
 
-!                !
-!                ! Write time_integrator name to hdf file
-!                !
-!                call h5ltset_attribute_string_f(fid,"/","time_integrator",trim(data%time_manager%get_name()), ierr)
-!                if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltset_attribute_string_f")
+                !
+                ! Write time_integrator name to hdf file
+                !
                 call set_time_integrator_hdf(fid,trim(data%time_manager%get_name()))
-
                 
                 call close_file_hdf(fid)
 
@@ -134,8 +131,6 @@ contains
         !
         ! Read time_integrator name
         !
-        !call h5ltget_attribute_string_f(fid,"/","time_integrator",temp_string,ierr)
-        !if (ierr /= 0) call chidg_signal(FATAL,"Error h5ltget_attribute_string_f")
         temp_string = get_time_integrator_hdf(fid)
 
 

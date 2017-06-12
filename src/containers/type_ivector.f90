@@ -17,13 +17,13 @@ module type_ivector
 
         integer(ik)                 :: size_        = 0
         integer(ik)                 :: capacity_    = 0
-        integer(ik)                 :: buffer_      = 20
+        integer(ik)                 :: buffer_      = 5
         integer(ik),   allocatable  :: data_(:)
 
     contains
-        procedure, public   :: size     !< return the number of stored elements
-        procedure, public   :: capacity !< return the current allocated capacity
-        procedure, public   :: loc      !< return the location of a stored value
+        procedure, public   :: size     ! return the number of stored elements
+        procedure, public   :: capacity ! return the current allocated capacity
+        procedure, public   :: loc      ! return the location of a stored value
 
 
         ! Data modifiers
@@ -34,8 +34,8 @@ module type_ivector
 
 
         ! Data accessors
-        procedure, public   :: at       !< return data from element ivector%at(ielem)
-        procedure, public   :: data     !< return full data vector
+        procedure, public   :: at       ! return data from element ivector%at(ielem)
+        procedure, public   :: data     ! return full data vector
 
     end type ivector_t
     !*****************************************************************************************
@@ -59,6 +59,7 @@ contains
         integer(ik) :: res
 
         res = self%size_
+
     end function size
     !*****************************************************************************************
 
@@ -80,17 +81,9 @@ contains
         integer(ik) :: res
 
         res = self%capacity_
+
     end function capacity
     !*****************************************************************************************
-
-
-
-
-
-
-
-
-
 
 
 

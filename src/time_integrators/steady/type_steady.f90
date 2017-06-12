@@ -1,6 +1,7 @@
 module type_steady
 #include <messenger.h>
     use mod_kinds,                      only: rk,ik
+    use mod_constants,                  only: ZERO
     use mod_spatial,                    only: update_space
     use mod_chidg_mpi,                  only: GLOBAL_MASTER
 
@@ -154,6 +155,8 @@ contains
         !
         ! Steady equation, so we only need the spatial operators computed.
         !
+        data%time_manager%itime = 1
+        data%time_manager%t     = ZERO
         call update_space(data,timing,differentiate)
 
 

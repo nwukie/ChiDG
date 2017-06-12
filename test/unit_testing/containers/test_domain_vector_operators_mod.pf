@@ -1,4 +1,4 @@
-module test_blockvector_operators_mod
+module test_domain_vector_operators_mod
     use pfunit_mod
     use type_chidg,                 only: chidg_t
     use mod_kinds,                  only: rk,ik
@@ -7,12 +7,12 @@ module test_blockvector_operators_mod
                                           XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, &
                                           ZETA_MAX, IO_DESTINATION
     use type_point,                 only: point_t
-    use type_blockvector
+    use type_domain_vector
     use type_domain_connectivity,   only: domain_connectivity_t
     use mod_test_utilities,         only: create_mesh
     implicit none
 
-    public  :: test_blockvector_operators
+    public  :: test_domain_vector_operators
 
     !>
     !!  
@@ -22,17 +22,17 @@ module test_blockvector_operators_mod
     !!
     !------------------------------------------------------------------------------------------
     @TestCase
-    type, extends(TestCase) ::  test_blockvector_operators
+    type, extends(TestCase) ::  test_domain_vector_operators
 
         type(chidg_t)                        :: chidg
-        type(blockvector_t)                  :: bv_a, bv_b, bv_res
+        type(domain_vector_t)                  :: bv_a, bv_b, bv_res
 
     contains
 
         procedure   ::  setUp
         procedure   ::  tearDown
 
-    end type test_blockvector_operators
+    end type test_domain_vector_operators
     !******************************************************************************************
 
 
@@ -45,9 +45,9 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine setUp(this)
-        class(test_blockvector_operators),    intent(inout)   :: this
+        class(test_domain_vector_operators),    intent(inout)   :: this
 
-        integer(ik)                                 :: ivar, nterms_c, spacedim, nelements_g
+        integer(ik)                                 :: ivar, nterms_c, spacedim, nelements_g, eqn_ID
         type(point_t),  allocatable                 :: nodes(:)
         type(domain_connectivity_t)                 :: connectivity
         
@@ -67,22 +67,27 @@ contains
         spacedim    = 3
         nterms_c    = 8
         nelements_g = 4
-        call this%chidg%data%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Scalar Advection','Cartesian')
+
+        
+        call this%chidg%data%add_equation_set('Scalar Advection')
+        eqn_ID = this%chidg%data%get_equation_set_id('Scalar Advection')
+
+        call this%chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Cartesian',eqn_ID)
 
         call this%chidg%set('Solution Order', integer_input=2)
         call this%chidg%init('domains')
 
 
         !
-        ! Initialize blockvectors
+        ! Initialize domain_vectors
         !
-        call this%bv_a%init(this%chidg%data%mesh(1))
-        call this%bv_b%init(this%chidg%data%mesh(1))
-        call this%bv_res%init(this%chidg%data%mesh(1))
+        call this%bv_a%init(this%chidg%data%mesh%domain(1))
+        call this%bv_b%init(this%chidg%data%mesh%domain(1))
+        call this%bv_res%init(this%chidg%data%mesh%domain(1))
 
 
         !
-        ! Initialize blockvector data for operators
+        ! Initialize domain_vector data for operators
         !
         this%bv_a%vecs(1)%vec = ONE
         this%bv_a%vecs(2)%vec = TWO
@@ -106,7 +111,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine tearDown(this)
-        class(test_blockvector_operators),    intent(inout)   :: this
+        class(test_domain_vector_operators),    intent(inout)   :: this
         
         ! Close ChiDG interface
         call this%chidg%shut_down('core')
@@ -121,7 +126,7 @@ contains
 
 
 
-    !>  Test:    real * blockvector
+    !>  Test:    real * domain_vector
     !!
     !!  @author Nathan A. Wukie
     !!
@@ -129,8 +134,8 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     @Test
-    subroutine test_blockvector_operators_mult_real_bv(self)
-        class(test_blockvector_operators),    intent(inout)   :: self
+    subroutine test_domain_vector_operators_mult_real_bv(self)
+        class(test_domain_vector_operators),    intent(inout)   :: self
         
         integer(ik)                 :: nelem
         real(rk)                    :: val
@@ -138,13 +143,13 @@ contains
         val = 0.1_rk
 
         !
-        ! Multiply real * blockvector. TESTING THIS
+        ! Multiply real * domain_vector. TESTING THIS
         !
         self%bv_res = val * self%bv_a
 
 
         !
-        ! Test values. blockvector%vecs%vec
+        ! Test values. domain_vector%vecs%vec
         !
         @assertEqual(val*ONE,   self%bv_res%vecs(1)%vec)
         @assertEqual(val*TWO,   self%bv_res%vecs(2)%vec)
@@ -165,7 +170,7 @@ contains
         @assertEqual(4, self%bv_res%vecs(4)%eparent_l())
 
 
-    end subroutine test_blockvector_operators_mult_real_bv
+    end subroutine test_domain_vector_operators_mult_real_bv
     !******************************************************************************************
     
 
@@ -176,7 +181,7 @@ contains
 
 
 
-    !>  Test:    blockvector * real
+    !>  Test:    domain_vector * real
     !!
     !!  @author Nathan A. Wukie
     !!
@@ -185,8 +190,8 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     @Test
-    subroutine test_blockvector_operators_mult_bv_real(self)
-        class(test_blockvector_operators),    intent(inout)   :: self
+    subroutine test_domain_vector_operators_mult_bv_real(self)
+        class(test_domain_vector_operators),    intent(inout)   :: self
         
         integer(ik)                 :: nelem
         real(rk)                    :: val
@@ -194,13 +199,13 @@ contains
         val = 0.1_rk
 
         !
-        ! Multiply real * blockvector. TESTING THIS
+        ! Multiply real * domain_vector. TESTING THIS
         !
         self%bv_res = self%bv_a * val
 
 
         !
-        ! Test values. blockvector%vecs%vec
+        ! Test values. domain_vector%vecs%vec
         !
         @assertEqual(val*ONE,   self%bv_res%vecs(1)%vec)
         @assertEqual(val*TWO,   self%bv_res%vecs(2)%vec)
@@ -220,7 +225,7 @@ contains
         @assertEqual(4, self%bv_res%vecs(4)%eparent_g())
         @assertEqual(4, self%bv_res%vecs(4)%eparent_l())
 
-    end subroutine test_blockvector_operators_mult_bv_real
+    end subroutine test_domain_vector_operators_mult_bv_real
     !******************************************************************************************
     
 
@@ -229,7 +234,7 @@ contains
 
 
 
-    !>  Test:    real / blockvector
+    !>  Test:    real / domain_vector
     !!
     !!  @author Nathan A. Wukie
     !!
@@ -237,8 +242,8 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     @Test
-    subroutine test_blockvector_operators_div_real_bv(self)
-        class(test_blockvector_operators),    intent(inout)   :: self
+    subroutine test_domain_vector_operators_div_real_bv(self)
+        class(test_domain_vector_operators),    intent(inout)   :: self
         
         integer(ik)                 :: nelem
         real(rk)                    :: val
@@ -246,13 +251,13 @@ contains
         val = 0.1_rk
 
         !
-        ! Multiply real * blockvector. TESTING THIS
+        ! Multiply real * domain_vector. TESTING THIS
         !
         self%bv_res = val / self%bv_a
 
 
         !
-        ! Test values. blockvector%vecs%vec
+        ! Test values. domain_vector%vecs%vec
         !
         @assertEqual(val/ONE,   self%bv_res%vecs(1)%vec)
         @assertEqual(val/TWO,   self%bv_res%vecs(2)%vec)
@@ -272,7 +277,7 @@ contains
         @assertEqual(4, self%bv_res%vecs(4)%eparent_g())
         @assertEqual(4, self%bv_res%vecs(4)%eparent_l())
 
-    end subroutine test_blockvector_operators_div_real_bv
+    end subroutine test_domain_vector_operators_div_real_bv
     !******************************************************************************************
     
 
@@ -285,7 +290,7 @@ contains
 
 
 
-    !>  Test:    blockvector / real
+    !>  Test:    domain_vector / real
     !!
     !!  @author Nathan A. Wukie
     !!
@@ -293,8 +298,8 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     @Test
-    subroutine test_blockvector_operators_div_bv_real(self)
-        class(test_blockvector_operators),    intent(inout)   :: self
+    subroutine test_domain_vector_operators_div_bv_real(self)
+        class(test_domain_vector_operators),    intent(inout)   :: self
         
         integer(ik)                 :: nelem
         real(rk)                    :: val
@@ -302,13 +307,13 @@ contains
         val = 0.1_rk
 
         !
-        ! Multiply real * blockvector. TESTING THIS
+        ! Multiply real * domain_vector. TESTING THIS
         !
         self%bv_res = self%bv_a / val
 
 
         !
-        ! Test values. blockvector%vecs%vec
+        ! Test values. domain_vector%vecs%vec
         !
         @assertEqual(ONE/val,   self%bv_res%vecs(1)%vec)
         @assertEqual(TWO/val,   self%bv_res%vecs(2)%vec)
@@ -328,7 +333,7 @@ contains
         @assertEqual(4, self%bv_res%vecs(4)%eparent_l())
 
 
-    end subroutine test_blockvector_operators_div_bv_real
+    end subroutine test_domain_vector_operators_div_bv_real
     !******************************************************************************************
     
 
@@ -339,7 +344,7 @@ contains
 
 
     
-    !>  Test:    blockvector + blockvector
+    !>  Test:    domain_vector + domain_vector
     !!
     !!  @author Nathan A. Wukie
     !!
@@ -347,8 +352,8 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     @Test
-    subroutine test_blockvector_operators_add_bv_bv(self)
-        class(test_blockvector_operators),    intent(inout)   :: self
+    subroutine test_domain_vector_operators_add_bv_bv(self)
+        class(test_domain_vector_operators),    intent(inout)   :: self
         
         integer(ik)                 :: nelem
         real(rk)                    :: val
@@ -356,13 +361,13 @@ contains
         val = 0.1_rk
 
         !
-        ! Multiply real * blockvector. TESTING THIS
+        ! Multiply real * domain_vector. TESTING THIS
         !
         self%bv_res = self%bv_a + self%bv_b
 
 
         !
-        ! Test values. blockvector%vecs%vec
+        ! Test values. domain_vector%vecs%vec
         !
         @assertEqual(THREE, self%bv_res%vecs(1)%vec)
         @assertEqual(FIVE,  self%bv_res%vecs(2)%vec)
@@ -383,7 +388,7 @@ contains
 
 
 
-    end subroutine test_blockvector_operators_add_bv_bv
+    end subroutine test_domain_vector_operators_add_bv_bv
     !******************************************************************************************
     
 
@@ -396,7 +401,7 @@ contains
 
 
 
-    !>  Test:    blockvector - blockvector
+    !>  Test:    domain_vector - domain_vector
     !!
     !!  @author Nathan A. Wukie
     !!
@@ -404,8 +409,8 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     @Test
-    subroutine test_blockvector_operators_sub_bv_bv(self)
-        class(test_blockvector_operators),    intent(inout)   :: self
+    subroutine test_domain_vector_operators_sub_bv_bv(self)
+        class(test_domain_vector_operators),    intent(inout)   :: self
         
         integer(ik)                 :: nelem
         real(rk)                    :: val
@@ -413,13 +418,13 @@ contains
         val = 0.1_rk
 
         !
-        ! Multiply real * blockvector. TESTING THIS
+        ! Multiply real * domain_vector. TESTING THIS
         !
         self%bv_res = self%bv_a - self%bv_b
 
 
         !
-        ! Test values. blockvector%vecs%vec
+        ! Test values. domain_vector%vecs%vec
         !
         @assertEqual(-ONE, self%bv_res%vecs(1)%vec)
         @assertEqual(-ONE, self%bv_res%vecs(2)%vec)
@@ -439,7 +444,7 @@ contains
         @assertEqual(4, self%bv_res%vecs(4)%eparent_l())
 
 
-    end subroutine test_blockvector_operators_sub_bv_bv
+    end subroutine test_domain_vector_operators_sub_bv_bv
     !******************************************************************************************
     
 
@@ -456,4 +461,4 @@ contains
 
 
 
-end module test_blockvector_operators_mod
+end module test_domain_vector_operators_mod

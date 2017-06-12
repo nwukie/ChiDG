@@ -193,7 +193,6 @@ contains
         !
         !------------------------------------------------------------------------------
         basis            = 'legendre'
-        spacedim         = 3
         nterms_s         = this%order**THREE
         gq_rule          = 2
         time_integrator  = 'steady'
@@ -232,22 +231,6 @@ contains
         !
         call this%chidg%start_up('core',this%ChiDG_COMM)
 
-
-        !
-        ! Read grid
-        !
-        call this%chidg%read_grid('naca2412_A0p0.h5',spacedim)
-        call this%chidg%read_boundaryconditions('naca2412_A0p0.h5')
-
-
-
-!        call this%chidg%initialize_solution_domains(nterms_s)
-!        call this%chidg%init('communication')
-!        call this%chidg%init('chimera')
-!        call this%chidg%initialize_solution_solver()
-        call this%chidg%init('all')
-
-
         !
         ! Set ChiDG components
         !
@@ -255,6 +238,17 @@ contains
         call this%chidg%set('nonlinear_solver', nonlinear_solver, noptions)
         call this%chidg%set('linear_solver',    linear_solver,    loptions)
         call this%chidg%set('preconditioner',   preconditioner)
+
+
+
+        !
+        ! Read grid
+        !
+        call this%chidg%read_grid('naca2412_A0p0.h5')
+
+
+
+
 
 
         !

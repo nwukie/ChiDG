@@ -43,7 +43,7 @@ module mod_interpolate
     use type_face_info,     only: face_info_t
     use type_function_info, only: function_info_t
     use type_recv,          only: recv_t
-    use type_chidg_vector,   only: chidg_vector_t
+    use type_chidg_vector,  only: chidg_vector_t
     implicit none
 
 
@@ -80,7 +80,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function interpolate_element_autodiff(mesh,q,elem_info,fcn_info,ieqn,itime,interpolation_type,Pmin,Pmax) result(var_gq)
-        type(mesh_t),           intent(in)              :: mesh(:)
+        type(mesh_t),       intent(in)              :: mesh
         type(chidg_vector_t),   intent(in)              :: q
         type(element_info_t),   intent(in)              :: elem_info
         type(function_info_t),  intent(in)              :: fcn_info
@@ -93,8 +93,8 @@ contains
 
         character(:),   allocatable :: user_msg
 
-        type(AD_D)              :: var_gq(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%nnodes)
-        type(AD_D)              :: qdiff(mesh(elem_info%idomain_l)%elems(elem_info%ielement_l)%nterms_s)
+        type(AD_D)              :: var_gq(mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%nnodes)
+        type(AD_D)              :: qdiff(mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%nterms_s)
         real(rk),   allocatable :: qtmp(:)
 
         integer(ik) :: nderiv, set_deriv, iterm, mode_min, mode_max
@@ -111,7 +111,7 @@ contains
         !
         ! Allocate derivative arrays for temporary solution variable
         !
-        do iterm = 1,mesh(idom)%elems(ielem)%nterms_s
+        do iterm = 1,mesh%domain(idom)%elems(ielem)%nterms_s
             qdiff(iterm) = AD_D(nderiv)
         end do
 
@@ -146,7 +146,7 @@ contains
         if (differentiate_me) then
             ! Differentiating element, initialize appropriate derivatives to ONE
             do iterm = 1,size(qdiff)
-                set_deriv = (ieqn - 1)*mesh(idom)%elems(ielem)%nterms_s + iterm
+                set_deriv = (ieqn - 1)*mesh%domain(idom)%elems(ielem)%nterms_s + iterm
                 qdiff(iterm)%xp_ad_(set_deriv) = ONE
             end do
         else
@@ -163,16 +163,16 @@ contains
         !
         select case (interpolation_type)
             case('value')
-                var_gq = matmul(mesh(idom)%elems(ielem)%gq%vol%val,qdiff)
+                var_gq = matmul(mesh%domain(idom)%elems(ielem)%gq%vol%val,qdiff)
 
             case('grad1')
-                var_gq = matmul(mesh(idom)%elems(ielem)%grad1,qdiff)
+                var_gq = matmul(mesh%domain(idom)%elems(ielem)%grad1,qdiff)
 
             case('grad2')
-                var_gq = matmul(mesh(idom)%elems(ielem)%grad2,qdiff)
+                var_gq = matmul(mesh%domain(idom)%elems(ielem)%grad2,qdiff)
 
             case('grad3')
-                var_gq = matmul(mesh(idom)%elems(ielem)%grad3,qdiff)
+                var_gq = matmul(mesh%domain(idom)%elems(ielem)%grad3,qdiff)
 
             case default
                 user_msg = "interpolate_element_autodiff: The 'interpolation_type' incoming&
@@ -228,7 +228,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     function interpolate_face_autodiff(mesh,q,face_info,fcn_info, ieqn, itime, interpolation_type, interpolation_source) result(var_gq)
-        type(mesh_t),           intent(in)              :: mesh(:)
+        type(mesh_t),       intent(in)              :: mesh
         type(chidg_vector_t),   intent(in)              :: q
         type(face_info_t),      intent(in)              :: face_info
         type(function_info_t),  intent(in)              :: fcn_info
@@ -240,7 +240,7 @@ contains
         type(face_info_t)   :: iface_info
         type(recv_t)        :: recv_info
 
-        type(AD_D)                      :: var_gq(mesh(face_info%idomain_l)%elems(face_info%ielement_l)%gq%face%nnodes)
+        type(AD_D)                      :: var_gq(mesh%domain(face_info%idomain_l)%elems(face_info%ielement_l)%gq%face%nnodes)
         type(AD_D),         allocatable :: qdiff(:)
         real(rk),           allocatable :: qtmp(:)
         real(rk),           allocatable :: interpolator(:,:)
@@ -301,7 +301,7 @@ contains
             if (parallel_interpolation) then
                 nterms_s = q%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%nterms()
             else
-                nterms_s = mesh(iface_info%idomain_l)%elems(iface_info%ielement_l)%nterms_s
+                nterms_s = mesh%domain(iface_info%idomain_l)%elems(iface_info%ielement_l)%nterms_s
             end if
 
 
@@ -411,15 +411,15 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     function interpolate_element_standard(mesh,q,idomain_l,ielement_l,ieqn,itime,interpolation_type) result(var_gq)
-        type(mesh_t),           intent(in)      :: mesh(:)
-        type(chidg_vector_t),    intent(in)      :: q
+        type(mesh_t),       intent(in)      :: mesh
+        type(chidg_vector_t),   intent(in)      :: q
         integer(ik),            intent(in)      :: idomain_l
         integer(ik),            intent(in)      :: ielement_l
         integer(ik),            intent(in)      :: ieqn
         integer(ik),            intent(in)      :: itime
         character(len=*),       intent(in)      :: interpolation_type
 
-        real(rk),   dimension(mesh(idomain_l)%elems(ielement_l)%gq%vol%nnodes) :: var_gq
+        real(rk),   dimension(mesh%domain(idomain_l)%elems(ielement_l)%gq%vol%nnodes) :: var_gq
 
 
         !
@@ -429,13 +429,13 @@ contains
         !
         select case (interpolation_type)
             case('value')
-                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%gq%vol%val, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
+                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%gq%vol%val, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
             case('grad1')
-                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%grad1,      q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
+                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad1,      q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
             case('grad2')
-                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%grad2,      q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
+                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad2,      q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
             case('grad3')
-                var_gq = matmul(mesh(idomain_l)%elems(ielement_l)%grad3,      q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
+                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad3,      q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
             case default
                 call chidg_signal(FATAL,"interpolate_element_standard: invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
         end select
@@ -461,19 +461,19 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function interpolate_face_standard(mesh,q,idomain_l,ielement_l,iface,ieqn,itime) result(var_gq)
-        type(mesh_t),           intent(in)      :: mesh(:)
-        type(chidg_vector_t),    intent(in)      :: q
+        type(mesh_t),       intent(in)      :: mesh
+        type(chidg_vector_t),   intent(in)      :: q
         integer(ik),            intent(in)      :: idomain_l, ielement_l, iface, ieqn
         integer(ik),            intent(in)      :: itime
 
-        real(rk),   dimension(mesh(idomain_l)%elems(ielement_l)%gq%face%nnodes) :: var_gq
+        real(rk),   dimension(mesh%domain(idomain_l)%elems(ielement_l)%gq%face%nnodes) :: var_gq
 
         !
         ! Use quadrature instance to compute variable at quadrature nodes.
         ! This takes the form of a matrix multiplication of the face quadrature matrix
         ! with the array of modes for the given variable
         !
-        var_gq = matmul(mesh(idomain_l)%faces(ielement_l,iface)%gq%face%val(:,:,iface), q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
+        var_gq = matmul(mesh%domain(idomain_l)%faces(ielement_l,iface)%gq%face%val(:,:,iface), q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
 
 
     end function interpolate_face_standard
@@ -738,7 +738,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function get_face_interpolation_info(mesh,face_info,interpolation_source,idonor) result(iface_info)
-        type(mesh_t),       intent(in)                  :: mesh(:)
+        type(mesh_t),   intent(in)                  :: mesh
         type(face_info_t),  intent(in)                  :: face_info
         integer(ik),        intent(in)                  :: interpolation_source
         integer(ik),        intent(in)                  :: idonor
@@ -764,24 +764,24 @@ contains
 
         elseif ( interpolation_source == NEIGHBOR ) then
 
-            chimera_interpolation    = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )
-            conforming_interpolation = ( mesh(idom)%faces(ielem,iface)%ftype == INTERIOR )
+            chimera_interpolation    = ( mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA )
+            conforming_interpolation = ( mesh%domain(idom)%faces(ielem,iface)%ftype == INTERIOR )
 
             ! Interpolate from conforming NEIGHBOR element
             if ( conforming_interpolation ) then
-                iface_info%idomain_g  = mesh(idom)%faces(ielem,iface)%ineighbor_domain_g  
-                iface_info%idomain_l  = mesh(idom)%faces(ielem,iface)%ineighbor_domain_l
-                iface_info%ielement_g = mesh(idom)%faces(ielem,iface)%ineighbor_element_g
-                iface_info%ielement_l = mesh(idom)%faces(ielem,iface)%ineighbor_element_l
+                iface_info%idomain_g  = mesh%domain(idom)%faces(ielem,iface)%ineighbor_domain_g  
+                iface_info%idomain_l  = mesh%domain(idom)%faces(ielem,iface)%ineighbor_domain_l
+                iface_info%ielement_g = mesh%domain(idom)%faces(ielem,iface)%ineighbor_element_g
+                iface_info%ielement_l = mesh%domain(idom)%faces(ielem,iface)%ineighbor_element_l
                 iface_info%iface      = compute_neighbor_face(mesh,idom,ielem,iface,idonor)         ! THIS PROBABLY NEEDS IMPROVED
 
             ! Interpolate from CHIMERA donor element
             elseif ( chimera_interpolation ) then
-                ChiID = mesh(idom)%faces(ielem,iface)%ChiID
-                iface_info%idomain_g  = mesh(idom)%chimera%recv%data(ChiID)%donor_domain_g%at(idonor)
-                iface_info%idomain_l  = mesh(idom)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
-                iface_info%ielement_g = mesh(idom)%chimera%recv%data(ChiID)%donor_element_g%at(idonor)
-                iface_info%ielement_l = mesh(idom)%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
+                ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
+                iface_info%idomain_g  = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_domain_g%at(idonor)
+                iface_info%idomain_l  = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
+                iface_info%ielement_g = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_element_g%at(idonor)
+                iface_info%ielement_l = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
             else
                 call chidg_signal(FATAL,"get_face_interpolation_info: neighbor conforming_interpolation nor chimera_interpolation were detected")
             end if
@@ -831,12 +831,12 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     function get_face_interpolation_interpolator(mesh,source_face,interpolation_source,idonor,interpolation_type,donor_face) result(interpolator)
-        type(mesh_t),       intent(in)  :: mesh(:)
+        type(mesh_t),   intent(in)  :: mesh
         type(face_info_t),  intent(in)  :: source_face
         integer(ik),        intent(in)  :: interpolation_source
         integer(ik),        intent(in)  :: idonor
         type(face_info_t),  intent(in)  :: donor_face
-        character(len=*),   intent(in)  :: interpolation_type
+        character(*),       intent(in)  :: interpolation_type
 
         real(rk),       allocatable :: interpolator(:,:)
         integer(ik),    allocatable :: gq_node_indices(:)
@@ -852,13 +852,13 @@ contains
         if ( interpolation_source == ME ) then
             select case(interpolation_type)
                 case('value')
-                    interpolator = mesh(idom)%faces(ielem,iface)%gq%face%val(:,:,iface)
+                    interpolator = mesh%domain(idom)%faces(ielem,iface)%gq%face%val(:,:,iface)
                 case('grad1')
-                    interpolator = mesh(idom)%faces(ielem,iface)%grad1
+                    interpolator = mesh%domain(idom)%faces(ielem,iface)%grad1
                 case('grad2')
-                    interpolator = mesh(idom)%faces(ielem,iface)%grad2
+                    interpolator = mesh%domain(idom)%faces(ielem,iface)%grad2
                 case('grad3')
-                    interpolator = mesh(idom)%faces(ielem,iface)%grad3
+                    interpolator = mesh%domain(idom)%faces(ielem,iface)%grad3
                 case default
                     call chidg_signal(FATAL,"get_face_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
             end select
@@ -868,39 +868,39 @@ contains
 
         elseif ( interpolation_source == NEIGHBOR ) then
 
-            chimera_interpolation    = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )
-            conforming_interpolation = ( mesh(idom)%faces(ielem,iface)%ftype == INTERIOR )
+            chimera_interpolation    = ( mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA )
+            conforming_interpolation = ( mesh%domain(idom)%faces(ielem,iface)%ftype == INTERIOR )
 
 
             ! Interpolate from conforming NEIGHBOR element
             if ( conforming_interpolation ) then
 
-                parallel_interpolation   = ( IRANK /= mesh(idom)%faces(ielem,iface)%ineighbor_proc )
+                parallel_interpolation   = ( IRANK /= mesh%domain(idom)%faces(ielem,iface)%ineighbor_proc )
 
                 ! If parallel use iface_interp to get an interpolation for an opposite face. Assumes same order and eqns.
                 if (parallel_interpolation) then
                     select case(interpolation_type)
                         case('value')
-                            interpolator = mesh(idom)%faces(ielem,iface)%gq%face%val(:,:,donor_face%iface)    ! THIS PROBABLY NEEDS IMPROVED
+                            interpolator = mesh%domain(idom)%faces(ielem,iface)%gq%face%val(:,:,donor_face%iface)    ! THIS PROBABLY NEEDS IMPROVED
                         case('grad1')
-                            interpolator = mesh(idom)%faces(ielem,iface)%neighbor_grad1
+                            interpolator = mesh%domain(idom)%faces(ielem,iface)%neighbor_grad1
                         case('grad2')
-                            interpolator = mesh(idom)%faces(ielem,iface)%neighbor_grad2
+                            interpolator = mesh%domain(idom)%faces(ielem,iface)%neighbor_grad2
                         case('grad3')
-                            interpolator = mesh(idom)%faces(ielem,iface)%neighbor_grad3
+                            interpolator = mesh%domain(idom)%faces(ielem,iface)%neighbor_grad3
                         case default
                             call chidg_signal(FATAL,"get_face_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
                     end select
                 else
                     select case(interpolation_type)
                         case('value')
-                            interpolator = mesh(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%gq%face%val(:,:,donor_face%iface)
+                            interpolator = mesh%domain(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%gq%face%val(:,:,donor_face%iface)
                         case('grad1')
-                            interpolator = mesh(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%grad1
+                            interpolator = mesh%domain(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%grad1
                         case('grad2')
-                            interpolator = mesh(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%grad2
+                            interpolator = mesh%domain(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%grad2
                         case('grad3')
-                            interpolator = mesh(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%grad3
+                            interpolator = mesh%domain(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%grad3
                         case default
                             call chidg_signal(FATAL,"get_face_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
                     end select
@@ -909,16 +909,16 @@ contains
 
             ! Interpolate from CHIMERA donor element
             elseif ( chimera_interpolation ) then
-                ChiID = mesh(idom)%faces(ielem,iface)%ChiID
+                ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
                     select case(interpolation_type)
                         case('value')
-                            interpolator = mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator%at(idonor)
+                            interpolator = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_interpolator%at(idonor)
                         case('grad1')
-                            interpolator = mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_grad1%at(idonor)
+                            interpolator = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_interpolator_grad1%at(idonor)
                         case('grad2')
-                            interpolator = mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_grad2%at(idonor)
+                            interpolator = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_interpolator_grad2%at(idonor)
                         case('grad3')
-                            interpolator = mesh(idom)%chimera%recv%data(ChiID)%donor_interpolator_grad3%at(idonor)
+                            interpolator = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_interpolator_grad3%at(idonor)
                         case default
                             call chidg_signal(FATAL,"get_face_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
                     end select
@@ -964,7 +964,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function get_face_interpolation_mask(mesh,face_info,interpolation_source,idonor) result(mask)
-        type(mesh_t),       intent(in)                  :: mesh(:)
+        type(mesh_t),   intent(in)                  :: mesh
         type(face_info_t),  intent(in)                  :: face_info
         integer(ik),        intent(in)                  :: interpolation_source
         integer(ik),        intent(in)                  :: idonor
@@ -982,21 +982,21 @@ contains
         if ( interpolation_source == NEIGHBOR ) then
 
 
-            nnodes = mesh(idom)%faces(ielem,iface)%gq%face%nnodes
+            nnodes = mesh%domain(idom)%faces(ielem,iface)%gq%face%nnodes
             allocate(mask(nnodes), stat=ierr) 
             mask = .false.
             if (ierr /= 0) call AllocationError
 
 
 
-            chimera_interpolation = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )
+            chimera_interpolation = ( mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA )
 
             !
             ! Interpolate from CHIMERA donor element
             !
             if ( chimera_interpolation ) then
-                ChiID = mesh(idom)%faces(ielem,iface)%ChiID
-                gq_node_indices = mesh(idom)%chimera%recv%data(ChiID)%donor_gq_indices(idonor)%data()
+                ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
+                gq_node_indices = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_gq_indices(idonor)%data()
 
                 ! Create mask over full GQ vector of only those nodes that are filled by the current element
                 do inode = 1,size(gq_node_indices)
@@ -1044,7 +1044,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function get_face_interpolation_comm(mesh,face_info,interpolation_source,idonor) result(recv_info)
-        type(mesh_t),       intent(in)                  :: mesh(:)
+        type(mesh_t),   intent(in)                  :: mesh
         type(face_info_t),  intent(in)                  :: face_info
         integer(ik),        intent(in)                  :: interpolation_source
         integer(ik),        intent(in)                  :: idonor
@@ -1067,33 +1067,33 @@ contains
 
         if ( interpolation_source == NEIGHBOR ) then
 
-            chimera_interpolation    = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )
-            conforming_interpolation = ( mesh(idom)%faces(ielem,iface)%ftype == INTERIOR )
+            chimera_interpolation    = ( mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA )
+            conforming_interpolation = ( mesh%domain(idom)%faces(ielem,iface)%ftype == INTERIOR )
 
 
             ! Interpolate from conforming NEIGHBOR element
             if ( conforming_interpolation ) then
 
-                parallel_interpolation   = ( IRANK /= mesh(idom)%faces(ielem,iface)%ineighbor_proc )
+                parallel_interpolation   = ( IRANK /= mesh%domain(idom)%faces(ielem,iface)%ineighbor_proc )
 
                 if (parallel_interpolation) then
-                    recv_info%comm    = mesh(idom)%faces(ielem,iface)%recv_comm
-                    recv_info%domain  = mesh(idom)%faces(ielem,iface)%recv_domain
-                    recv_info%element = mesh(idom)%faces(ielem,iface)%recv_element
+                    recv_info%comm    = mesh%domain(idom)%faces(ielem,iface)%recv_comm
+                    recv_info%domain  = mesh%domain(idom)%faces(ielem,iface)%recv_domain
+                    recv_info%element = mesh%domain(idom)%faces(ielem,iface)%recv_element
                 end if
 
 
 
             ! Interpolate from CHIMERA donor element
             elseif ( chimera_interpolation ) then
-                ChiID = mesh(idom)%faces(ielem,iface)%ChiID
-                donor_proc = mesh(idom)%chimera%recv%data(ChiID)%donor_proc%at(idonor)
+                ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
+                donor_proc = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_proc%at(idonor)
 
                 parallel_interpolation = (IRANK /= donor_proc)
                 if (parallel_interpolation) then
-                     recv_info%comm    = mesh(idom)%chimera%recv%data(ChiID)%donor_recv_comm%at(idonor)
-                     recv_info%domain  = mesh(idom)%chimera%recv%data(ChiID)%donor_recv_domain%at(idonor)
-                     recv_info%element = mesh(idom)%chimera%recv%data(ChiID)%donor_recv_element%at(idonor)
+                     recv_info%comm    = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_recv_comm%at(idonor)
+                     recv_info%domain  = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_recv_domain%at(idonor)
+                     recv_info%element = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_recv_element%at(idonor)
                 end if
 
             else
@@ -1132,7 +1132,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function get_face_interpolation_ndonors(mesh,face_info,interpolation_source) result(ndonors)
-        type(mesh_t),       intent(in)  :: mesh(:)
+        type(mesh_t),   intent(in)  :: mesh
         type(face_info_t),  intent(in)  :: face_info
         integer(ik),        intent(in)  :: interpolation_source
 
@@ -1155,8 +1155,8 @@ contains
         !
         elseif (interpolation_source == NEIGHBOR ) then
 
-            chimera_interpolation    = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA )
-            conforming_interpolation = ( mesh(idom)%faces(ielem,iface)%ftype == INTERIOR )
+            chimera_interpolation    = ( mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA )
+            conforming_interpolation = ( mesh%domain(idom)%faces(ielem,iface)%ftype == INTERIOR )
 
 
             ! Test for standard conforming interpolation from neighbor
@@ -1166,9 +1166,8 @@ contains
 
             ! Test for chimera interpolation from neighbor
             elseif ( chimera_interpolation ) then
-                ChiID   = mesh(idom)%faces(ielem,iface)%ChiID
-                ndonors = mesh(idom)%chimera%recv%data(ChiID)%ndonors()
-
+                ChiID   = mesh%domain(idom)%faces(ielem,iface)%ChiID
+                ndonors = mesh%domain(idom)%chimera%recv%data(ChiID)%ndonors()
 
 
             else
@@ -1201,7 +1200,7 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     function get_face_interpolation_style(mesh,face_info,interpolation_source) result(interpolation_style)
-        type(mesh_t),       intent(in)  :: mesh(:)
+        type(mesh_t),   intent(in)  :: mesh
         type(face_info_t),  intent(in)  :: face_info
         integer(ik),        intent(in)  :: interpolation_source
 
@@ -1212,12 +1211,12 @@ contains
         associate( idom => face_info%idomain_l, ielem => face_info%ielement_l, iface => face_info%iface )
 
         if ( interpolation_source == ME ) then
-            conforming_interpolation = ( (mesh(idom)%faces(ielem,iface)%ftype == INTERIOR) .or. &
-                                         (mesh(idom)%faces(ielem,iface)%ftype == BOUNDARY) .or. &
-                                         (mesh(idom)%faces(ielem,iface)%ftype == CHIMERA) )         ! including chimera here because in the ME case, it doesn't matter
+            conforming_interpolation = ( (mesh%domain(idom)%faces(ielem,iface)%ftype == INTERIOR) .or. &
+                                         (mesh%domain(idom)%faces(ielem,iface)%ftype == BOUNDARY) .or. &
+                                         (mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA) )         ! including chimera here because in the ME case, it doesn't matter
         elseif (interpolation_source == NEIGHBOR ) then
-            chimera_interpolation    = ( mesh(idom)%faces(ielem,iface)%ftype == CHIMERA  )
-            conforming_interpolation = ( mesh(idom)%faces(ielem,iface)%ftype == INTERIOR )
+            chimera_interpolation    = ( mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA  )
+            conforming_interpolation = ( mesh%domain(idom)%faces(ielem,iface)%ftype == INTERIOR )
         else
             call chidg_signal(FATAL,"get_face_interpolation_style: Invalid interpolation_source. ME or NEIGHBOR")
         end if
@@ -1251,7 +1250,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function get_interpolation_nderiv(mesh,function_info) result(nderiv)
-        type(mesh_t),           intent(in)  :: mesh(:)
+        type(mesh_t),       intent(in)  :: mesh
         type(function_info_t),  intent(in)  :: function_info
 
         integer(ik) :: nderiv, neqns_seed, nterms_s_seed

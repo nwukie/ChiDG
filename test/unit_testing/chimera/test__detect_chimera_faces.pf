@@ -13,30 +13,22 @@
 @Test
 subroutine test__detect_chimera_faces()
     use pfunit_mod
-    use mod_kinds,      only: rk, ik
-    use mod_constants,  only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                              INTERIOR, BOUNDARY, CHIMERA, IO_DESTINATION
+    use mod_kinds,          only: rk, ik
+    use mod_constants,      only: XI_MIN, XI_MAX, INTERIOR, CHIMERA, IO_DESTINATION
 
-    use type_chidg,     only: chidg_t
-    use type_meshdata,  only: meshdata_t
-    use type_bc,        only: bc_t
-    use mod_bc,         only: create_bc
+    use type_chidg,         only: chidg_t
 
     use mod_test_utilities, only: create_mesh_file
     use mod_file_utilities, only: delete_file
 
-    use mod_chimera,    only: detect_chimera_faces
+    use mod_chimera,        only: detect_chimera_faces
     implicit none
 
 
-    type(chidg_t)                   :: chidg
-    class(bc_t),        allocatable :: bc
-    type(meshdata_t),   allocatable :: meshdata(:)
-    character(len=100)              :: filename = 'D2E8M1_overlapping_matching.h5'
-    integer(ik)                     :: idom, ndom, ielem, spacedim
+    type(chidg_t)           :: chidg
+    character(len=100)      :: filename = 'D2E8M1_overlapping_matching.h5'
 
 
-    spacedim        = 3
     IO_DESTINATION  = 'file'
 
 
@@ -44,6 +36,12 @@ subroutine test__detect_chimera_faces()
     ! Initialize ChiDG environment
     !
     call chidg%start_up('core')
+
+
+    !
+    ! Set accuracy of the solution expansion
+    !
+    call chidg%set('Solution Order', integer_input=2)
 
 
     !
@@ -55,14 +53,13 @@ subroutine test__detect_chimera_faces()
     !
     ! Read 2-Domain overlapping grid
     !
-    call chidg%read_grid(filename,spacedim)
-    call chidg%read_boundaryconditions(filename)
+    call chidg%read_domains(filename)
+    call chidg%read_boundary_conditions(filename)
 
 
 
-    call chidg%set('Solution Order', integer_input=2)
     call chidg%init('domains')
-    call chidg%init('communication')
+    call chidg%init('comm - interior')
 
 
 
@@ -81,29 +78,29 @@ subroutine test__detect_chimera_faces()
     !
     associate (mesh => chidg%data%mesh)
     ! XI_MAX faces of domain-1 should be chimera faces
-    @assertEqual(CHIMERA, mesh(1)%faces(2,XI_MAX)%ftype)
-    @assertEqual(CHIMERA, mesh(1)%faces(4,XI_MAX)%ftype)
-    @assertEqual(CHIMERA, mesh(1)%faces(6,XI_MAX)%ftype)
-    @assertEqual(CHIMERA, mesh(1)%faces(8,XI_MAX)%ftype)
+    @assertEqual(CHIMERA, mesh%domain(1)%faces(2,XI_MAX)%ftype)
+    @assertEqual(CHIMERA, mesh%domain(1)%faces(4,XI_MAX)%ftype)
+    @assertEqual(CHIMERA, mesh%domain(1)%faces(6,XI_MAX)%ftype)
+    @assertEqual(CHIMERA, mesh%domain(1)%faces(8,XI_MAX)%ftype)
 
     ! XI_MIN faces of domain-2 should be chimera faces
-    @assertEqual(CHIMERA, mesh(2)%faces(1,XI_MIN)%ftype)
-    @assertEqual(CHIMERA, mesh(2)%faces(3,XI_MIN)%ftype)
-    @assertEqual(CHIMERA, mesh(2)%faces(5,XI_MIN)%ftype)
-    @assertEqual(CHIMERA, mesh(2)%faces(7,XI_MIN)%ftype)
+    @assertEqual(CHIMERA, mesh%domain(2)%faces(1,XI_MIN)%ftype)
+    @assertEqual(CHIMERA, mesh%domain(2)%faces(3,XI_MIN)%ftype)
+    @assertEqual(CHIMERA, mesh%domain(2)%faces(5,XI_MIN)%ftype)
+    @assertEqual(CHIMERA, mesh%domain(2)%faces(7,XI_MIN)%ftype)
 
 
 
     ! THESE SHOULD BE BOUNDARY FACES
-    @assertEqual(INTERIOR, mesh(1)%faces(2,XI_MIN)%ftype)
-    @assertEqual(INTERIOR, mesh(1)%faces(4,XI_MIN)%ftype)
-    @assertEqual(INTERIOR, mesh(1)%faces(6,XI_MIN)%ftype)
-    @assertEqual(INTERIOR, mesh(1)%faces(8,XI_MIN)%ftype)
+    @assertEqual(INTERIOR, mesh%domain(1)%faces(2,XI_MIN)%ftype)
+    @assertEqual(INTERIOR, mesh%domain(1)%faces(4,XI_MIN)%ftype)
+    @assertEqual(INTERIOR, mesh%domain(1)%faces(6,XI_MIN)%ftype)
+    @assertEqual(INTERIOR, mesh%domain(1)%faces(8,XI_MIN)%ftype)
 
-    @assertEqual(INTERIOR, mesh(2)%faces(1,XI_MAX)%ftype)
-    @assertEqual(INTERIOR, mesh(2)%faces(3,XI_MAX)%ftype)
-    @assertEqual(INTERIOR, mesh(2)%faces(5,XI_MAX)%ftype)
-    @assertEqual(INTERIOR, mesh(2)%faces(7,XI_MAX)%ftype)
+    @assertEqual(INTERIOR, mesh%domain(2)%faces(1,XI_MAX)%ftype)
+    @assertEqual(INTERIOR, mesh%domain(2)%faces(3,XI_MAX)%ftype)
+    @assertEqual(INTERIOR, mesh%domain(2)%faces(5,XI_MAX)%ftype)
+    @assertEqual(INTERIOR, mesh%domain(2)%faces(7,XI_MAX)%ftype)
 
 
     end associate
@@ -116,7 +113,9 @@ subroutine test__detect_chimera_faces()
     call chidg%shut_down('core')
 
 
+    !
     ! Clean-up
+    !
     call delete_file(filename)
 
 end subroutine test__detect_chimera_faces

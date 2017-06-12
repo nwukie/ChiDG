@@ -2,7 +2,7 @@ module type_cache_data_field
 #include <messenger.h>
     use mod_kinds,          only: ik
     use mod_constants,      only: INTERIOR, BOUNDARY, CHIMERA, NFACES, ZERO
-    use type_mesh,          only: mesh_t
+    use type_mesh,      only: mesh_t
     use type_properties,    only: properties_t
     use type_seed,          only: seed_t
     use DNAD_D
@@ -72,7 +72,7 @@ contains
         class(cache_data_field_t),  intent(inout)           :: self
         character(*),               intent(in)              :: field
         character(*),               intent(in)              :: cache_component
-        type(mesh_t),               intent(in)              :: mesh(:)
+        type(mesh_t),           intent(in)              :: mesh
         type(properties_t),         intent(in)              :: prop(:)
         integer(ik),                intent(in)              :: idomain_l
         integer(ik),                intent(in)              :: ielement_l
@@ -101,9 +101,9 @@ contains
 
 
             case('element')
-                nnodes      = mesh(idomain_l)%elems(ielement_l)%gq%vol%nnodes
-                nnodes_vol  = mesh(idomain_l)%elems(ielement_l)%gq%vol%nnodes
-                nnodes_face = mesh(idomain_l)%elems(ielement_l)%gq%face%nnodes
+                nnodes      = mesh%domain(idomain_l)%elems(ielement_l)%gq%vol%nnodes
+                nnodes_vol  = mesh%domain(idomain_l)%elems(ielement_l)%gq%vol%nnodes
+                nnodes_face = mesh%domain(idomain_l)%elems(ielement_l)%gq%face%nnodes
 
                 ! Interior element
                 !ndepend_value = 1
@@ -123,9 +123,9 @@ contains
 
             case('face interior')
 
-                nnodes      = mesh(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
-                nnodes_vol  = mesh(idomain_l)%faces(ielement_l,iface)%gq%vol%nnodes
-                nnodes_face = mesh(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
+                nnodes      = mesh%domain(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
+                nnodes_vol  = mesh%domain(idomain_l)%faces(ielement_l,iface)%gq%vol%nnodes
+                nnodes_face = mesh%domain(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
 
                 ! Interior element + Face Exterior Elements
                 !ndepend_value = 1
@@ -138,9 +138,9 @@ contains
 
             case('face exterior')
 
-                nnodes      = mesh(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
-                nnodes_vol  = mesh(idomain_l)%faces(ielement_l,iface)%gq%vol%nnodes
-                nnodes_face = mesh(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
+                nnodes      = mesh%domain(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
+                nnodes_vol  = mesh%domain(idomain_l)%faces(ielement_l,iface)%gq%vol%nnodes
+                nnodes_face = mesh%domain(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
 
                 ! Exterior Elements
                 !ndepend_value = self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface)
@@ -447,31 +447,34 @@ contains
     !------------------------------------------------------------------------------------
     function get_ndepend_face_exterior(self,mesh,idomain_l,ielement_l,iface) result(ndepend)
         class(cache_data_field_t),  intent(in)  :: self
-        type(mesh_t),               intent(in)  :: mesh(:)
+        type(mesh_t),               intent(in)  :: mesh
         integer(ik),                intent(in)  :: idomain_l
         integer(ik),                intent(in)  :: ielement_l
         integer(ik),                intent(in)  :: iface
 
         character(:),   allocatable :: user_msg
-        integer(ik)                 :: ndepend, ChiID
+        integer(ik)                 :: ndepend, ChiID, group_ID, patch_ID, face_ID
         logical                     :: conforming_face, chimera_face, boundary_face
 
 
-        conforming_face = (mesh(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR)
-        chimera_face    = (mesh(idomain_l)%faces(ielement_l,iface)%ftype == CHIMERA )
-        boundary_face   = (mesh(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY)
+        conforming_face = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR)
+        chimera_face    = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == CHIMERA )
+        boundary_face   = (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY)
 
         if (conforming_face) then
             ndepend = 1   ! Exterior element
 
 
         else if (chimera_face) then
-            ChiID   = mesh(idomain_l)%faces(ielement_l,iface)%ChiID
-            ndepend = mesh(idomain_l)%chimera%recv%data(ChiID)%ndonors()
+            ChiID   = mesh%domain(idomain_l)%faces(ielement_l,iface)%ChiID
+            ndepend = mesh%domain(idomain_l)%chimera%recv%data(ChiID)%ndonors()
 
 
         else if (boundary_face) then
-            ndepend = mesh(idomain_l)%faces(ielement_l,iface)%BC_ndepend
+            group_ID = mesh%domain(idomain_l)%faces(ielement_l,iface)%group_ID
+            patch_ID = mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_ID
+            face_ID  = mesh%domain(idomain_l)%faces(ielement_l,iface)%face_ID
+            ndepend  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ncoupled_elements(face_ID)
 
         else
             user_msg = "cache_data_field%get_ndepend_face_exterior: Invalid face type detected."

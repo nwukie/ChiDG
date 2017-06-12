@@ -149,13 +149,13 @@ contains
             case("D1 NxNxN PMM")
                 call create_mesh_file__pmm__singleblock(filename, equation_sets,                     &
                                                              group_names,                       &
-                                                             bc_groups,                         &
+                                                             bc_state_groups,                         &
                                                              nelem_xi, nelem_eta, nelem_zeta,   &
                                                              clusterx)
             case("D1 NxNxN PMM_SIN")
                 call create_mesh_file__pmm__sinusoidal__singleblock(filename, equation_sets,                     &
                                                              group_names,                       &
-                                                             bc_groups,                         &
+                                                             bc_state_groups,                         &
                                                              nelem_xi, nelem_eta, nelem_zeta,   &
                                                              clusterx)
 

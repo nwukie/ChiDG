@@ -529,7 +529,41 @@ contains
 
     end function new_equation_set
     !***************************************************************************************
+    !>  Given an equation set name, return its index identifier in chidg_data.
+    !!
+    !!  Returns eqn_ID such that data%eqnset(eqn_ID) is valid and corresponds to the
+    !!  equation set with name eqn_name that was given.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/5/2017
+    !!
+    !-------------------------------------------------------------------------------------
+    function get_equation_set_id(self, eqn_name) result(eqn_ID)
+        class(chidg_data_t),    intent(in)  :: self
+        character(*),           intent(in)  :: eqn_name
 
+        integer(ik)                 :: ieqn, eqn_ID
+        character(:),   allocatable :: user_msg
+        logical                     :: names_match
+
+
+        eqn_ID = 0
+        do ieqn = 1,self%nequation_sets()
+
+            names_match = trim(self%eqnset(ieqn)%name) == trim(eqn_name)
+
+
+            if (names_match) eqn_ID = ieqn
+            if (names_match) exit
+        end do
+
+        user_msg = "chidg_data%get_equation_set_id: No equation set was found that had a name &
+                    matching the incoming string"
+        if (eqn_ID == 0) call chidg_signal_one(FATAL,user_msg,eqn_name)
+
+
+    end function get_equation_set_id
+    !**************************************************************************************
 
     !> 
     !!  @author Eric Wolf
@@ -560,30 +594,6 @@ contains
 
         end do
 
-    !>  Given an equation set name, return its index identifier in chidg_data.
-    !!
-    !!  Returns eqn_ID such that data%eqnset(eqn_ID) is valid and corresponds to the
-    !!  equation set with name eqn_name that was given.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   4/5/2017
-    !!
-    !-------------------------------------------------------------------------------------
-    function get_equation_set_id(self, eqn_name) result(eqn_ID)
-        class(chidg_data_t),    intent(in)  :: self
-        character(*),           intent(in)  :: eqn_name
-
-        integer(ik)                 :: ieqn, eqn_ID
-        character(:),   allocatable :: user_msg
-        logical                     :: names_match
-
-
-        eqn_ID = 0
-        do ieqn = 1,self%nequation_sets()
-
-            names_match = trim(self%eqnset(ieqn)%name) == trim(eqn_name)
-
-<<<<<<< HEAD
         !
         ! Once pmm is found, initialize pmm_patch on pmm
         !
@@ -594,7 +604,7 @@ contains
             !
             idom = self%get_domain_index(domain_name)
 
-            call self%pmm(pmm_ID)%init_pmm_domain(self%mesh(idom))
+            call self%pmm(pmm_ID)%init_pmm_domain(self%mesh%domain(idom))
 
         else
 
@@ -626,12 +636,7 @@ contains
 
         type(prescribed_mesh_motion_t), allocatable :: temp_pmms(:)
         integer(ik)             :: pmm_ID, ierr, npmm
-=======
-            if (names_match) eqn_ID = ieqn
-            if (names_match) exit
->>>>>>> origin/dev
 
-        end do
 
         !
         ! Get number of boundary conditions
@@ -642,26 +647,17 @@ contains
             npmm = 0
         end if
 
-        user_msg = "chidg_data%get_equation_set_id: No equation set was found that had a name &
-                    matching the incoming string"
-        if (eqn_ID == 0) call chidg_signal_one(FATAL,user_msg,eqn_name)
-
-        !
+                !
         ! Increment number of boundary conditions
         !
         npmm = npmm + 1
 
 
-<<<<<<< HEAD
         !
         ! Allocate number of boundary conditions
         !
         allocate(temp_pmms(npmm), stat=ierr)
         if (ierr /= 0) call AllocationError
-=======
-    end function get_equation_set_id
-    !**************************************************************************************
->>>>>>> origin/dev
 
 
         !

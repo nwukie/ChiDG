@@ -18,8 +18,6 @@ module mod_function
     use fcn_polynomial,                     only: polynomial_f
 !    use fcn_cylindricalduct_eigenfunction,  only: cylindricalduct_eigenfunction_f
     use fcn_monopole,                       only: monopole_f
-    use fcn_mmd_cdiff,                      only: mmd_cdiff_f
-    use fcn_mmd_ldiff,                      only: mmd_ldiff_f
     use fcn_cantilevered_beam,              only: cantilevered_beam_f
     implicit none
 
@@ -59,9 +57,6 @@ contains
         type(constant_f)                        :: constant
         type(sine_f)                            :: sin_function
         type(polynomial_f)                      :: polynomial
-        type(mmd_cdiff_f)                         :: mmd_cdiff
-        type(mmd_ldiff_f)                         :: mml_cdiff
-        type(cantilevered_beam_f)               :: cantilevered_beam
 
         !
         ! Acoustics
@@ -86,7 +81,6 @@ contains
             call registered_fcns%push_back(polynomial)
 !            call registered_fcns%push_back(cylindricalduct_eigenfunction)
             call registered_fcns%push_back(monopole)
-            call registered_fcns%push_back(cantilevered_beam)
 
 
             !

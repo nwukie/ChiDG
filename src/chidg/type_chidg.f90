@@ -1376,18 +1376,19 @@ contains
         error_val = ZERO
         !error_val = q_diff%norm_local()
 
-        ndom = self%data%ndomains()
+        ndom = self%data%mesh%ndomains()
         do idom = 1, ndom
-            nelems = self%data%mesh(idom)%nelem
-            neqns = self%data%mesh(idom)%neqns
-            nterms = self%data%mesh(idom)%nterms_s
+            nelems = self%data%mesh%domain(idom)%nelem
+            neqns = self%data%mesh%domain(idom)%neqns
+            nterms = self%data%mesh%domain(idom)%nterms_s
             do ielem = 1, nelems
                 local_error_val = ZERO
                 do ieqn = 1, neqns
                     temp = &
-                    matmul(self%data%mesh(idom)%elems(ielem)%gq%vol%val,&
+                        matmul(self%data%mesh%domain(idom)%elems(ielem)%gq%vol%val,&
                     q_diff%dom(idom)%vecs(ielem)%vec((ieqn-1)*nterms+1:ieqn*nterms))
-                    temp = temp**TWO*self%data%mesh(idom)%elems(ielem)%gq%vol%weights*self%data%mesh(idom)%elems(ielem)%jinv
+                    temp = temp**TWO*self%data%mesh%domain(idom)%elems(ielem)%gq%vol%weights*&
+                        self%data%mesh%domain(idom)%elems(ielem)%jinv
                     local_error_val = local_error_val + sum(temp)
                 end do
                 error_val = error_val + local_error_val

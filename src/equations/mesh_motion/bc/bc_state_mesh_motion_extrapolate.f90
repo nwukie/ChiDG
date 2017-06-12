@@ -6,6 +6,7 @@ module bc_state_mesh_motion_extrapolate
     use type_properties,    only: properties_t
     use type_point,         only: point_t
     use DNAD_D
+    use mpi_f08,            only: mpi_comm
     implicit none
 
 
@@ -73,10 +74,11 @@ contains
     !!  @param[in]      iface   Index of the face being computed
     !!  @param[in]      iblk    Index of the linearization block being computed
     !---------------------------------------------------------------------------------------------
-    subroutine compute_bc_state(self,worker,prop)
+    subroutine compute_bc_state(self,worker,prop, bc_COMM)
         class(mesh_motion_extrapolate_t),    intent(inout)   :: self
         type(chidg_worker_t),           intent(inout)   :: worker
         class(properties_t),            intent(inout)   :: prop
+        type(mpi_comm),             intent(in)      :: bc_COMM
 
         ! Equation indices
         integer(ik)     :: iu

@@ -1807,14 +1807,14 @@ contains
         real(rk), dimension(:), allocatable :: grid_vel_gq
 
         if (field == 'u_grid') then
-            grid_vel_gq = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grid_vel1(:)
+            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grid_vel1(:)
 
         else if (field == 'v_grid') then
 
-            grid_vel_gq = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grid_vel2(:)
+            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grid_vel2(:)
         else if (field == 'w_grid') then
 
-            grid_vel_gq = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grid_vel3(:)
+            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grid_vel3(:)
         else
             call chidg_signal(FATAL,"chidg_worker%get_grid_velocity_element(field): Invalid value for 'field'.")
         end if
@@ -1834,14 +1834,14 @@ contains
         real(rk), dimension(:), allocatable :: grid_vel_gq
 
         if (field == 'u_grid') then
-            grid_vel_gq = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel1(:)
+            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel1(:)
 
         else if (field == 'v_grid') then
 
-            grid_vel_gq = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel2(:)
+            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel2(:)
         else if (field == 'w_grid') then
 
-            grid_vel_gq = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel3(:)
+            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel3(:)
         else
             call chidg_signal(FATAL,"chidg_worker%get_grid_velocity_face(field): Invalid value for 'field'.")
         end if
@@ -1858,7 +1858,7 @@ contains
 
         real(rk), dimension(:,:,:), allocatable :: jacobian_grid_gq
 
-        jacobian_grid_gq = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%jacobian_grid(:,:,:)
+        jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%jacobian_grid(:,:,:)
 
     end function get_jacobian_grid_element
     !>
@@ -1872,7 +1872,7 @@ contains
 
         real(rk), dimension(:,:,:), allocatable :: jacobian_grid_gq
 
-        jacobian_grid_gq = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%inv_jacobian_grid(:,:,:)
+        jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%inv_jacobian_grid(:,:,:)
 
     end function get_inv_jacobian_grid_element
 
@@ -1888,7 +1888,7 @@ contains
 
         real(rk), dimension(:,:,:), allocatable :: jacobian_grid_gq
 
-        jacobian_grid_gq = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%jacobian_grid(:,:,:)
+        jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%jacobian_grid(:,:,:)
 
     end function get_jacobian_grid_face
 
@@ -1903,7 +1903,7 @@ contains
 
         real(rk), dimension(:,:,:), allocatable :: jacobian_grid_gq
 
-        jacobian_grid_gq = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%inv_jacobian_grid(:,:,:)
+        jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%inv_jacobian_grid(:,:,:)
 
     end function get_inv_jacobian_grid_face
 
@@ -1919,7 +1919,7 @@ contains
 
         real(rk), dimension(:), allocatable :: det_jacobian_grid_gq
 
-        det_jacobian_grid_gq = self%mesh(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%det_jacobian_grid(:)
+        det_jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%det_jacobian_grid(:)
 
         !det_jacobian_grid_gq = ONE/det_jacobian_grid_gq
     end function get_det_jacobian_grid_element
@@ -1935,7 +1935,7 @@ contains
 
         real(rk), dimension(:), allocatable :: det_jacobian_grid_gq
 
-        det_jacobian_grid_gq = self%mesh(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%det_jacobian_grid(:)
+        det_jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%det_jacobian_grid(:)
 
         !det_jacobian_grid_gq = ONE/det_jacobian_grid_gq
     end function get_det_jacobian_grid_face

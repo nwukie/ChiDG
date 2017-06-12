@@ -105,15 +105,15 @@ contains
 
 
         ! Loop through domains
-        do idom = 1,data%ndomains()
+        do idom = 1,data%mesh%ndomains()
             associate ( mesh => data%mesh, eqnset => data%eqnset(idom) )
-            nelem = mesh(idom)%nelem
+            nelem = mesh%domain(idom)%nelem
 
             ! Loop through elements in the current domain
             do ielem = 1,nelem
                 !Update element mesh motion quantities
 
-                call mesh(idom)%elems(ielem)%update_element_ale()
+                call mesh%domain(idom)%elems(ielem)%update_element_ale()
 
 !                elem_info%idomain_g  = mesh(idom)%elems(ielem)%idomain_g
 !                elem_info%idomain_l  = mesh(idom)%elems(ielem)%idomain_l
@@ -132,7 +132,7 @@ contains
                 do iface = 1,NFACES
 
                     !Update mesh mesh motion quantities on each face
-                    call mesh(idom)%faces(ielem, iface)%update_face_ale(mesh(idom)%elems(ielem))
+                    call mesh%domain(idom)%faces(ielem, iface)%update_face_ale(mesh%domain(idom)%elems(ielem))
 
 !                    call worker%set_face(iface)
 !

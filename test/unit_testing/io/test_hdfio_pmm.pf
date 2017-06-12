@@ -27,6 +27,7 @@ subroutine testIO__read_pmm_hdf__nopmm__D1_E1_M1()
     call chidg%start_up('core')
     
 
+    call chidg%set('Solution Order', integer_input=2)
     !
     ! Create mesh file
     !
@@ -38,17 +39,15 @@ subroutine testIO__read_pmm_hdf__nopmm__D1_E1_M1()
     call chidg%read_grid(filename, spacedim)
 
 
-    call chidg%set('Solution Order', integer_input=2)
-    call chidg%init('domains')
 
     !  Test nelem
-    @assertEqual(NO_PMM_ASSIGNED,chidg%data%mesh(1)%elems(1)%pmm_ID)
-    @assertEqual(NO_PMM_ASSIGNED,chidg%data%mesh(1)%faces(1,1)%pmm_ID)
-    @assertEqual(NO_PMM_ASSIGNED,chidg%data%mesh(1)%faces(1,2)%pmm_ID)
-    @assertEqual(NO_PMM_ASSIGNED,chidg%data%mesh(1)%faces(1,3)%pmm_ID)
-    @assertEqual(NO_PMM_ASSIGNED,chidg%data%mesh(1)%faces(1,4)%pmm_ID)
-    @assertEqual(NO_PMM_ASSIGNED,chidg%data%mesh(1)%faces(1,5)%pmm_ID)
-    @assertEqual(NO_PMM_ASSIGNED,chidg%data%mesh(1)%faces(1,6)%pmm_ID)
+    @assertEqual(NO_PMM_ASSIGNED,chidg%data%mesh%domain(1)%elems(1)%pmm_ID)
+    @assertEqual(NO_PMM_ASSIGNED,chidg%data%mesh%domain(1)%faces(1,1)%pmm_ID)
+    @assertEqual(NO_PMM_ASSIGNED,chidg%data%mesh%domain(1)%faces(1,2)%pmm_ID)
+    @assertEqual(NO_PMM_ASSIGNED,chidg%data%mesh%domain(1)%faces(1,3)%pmm_ID)
+    @assertEqual(NO_PMM_ASSIGNED,chidg%data%mesh%domain(1)%faces(1,4)%pmm_ID)
+    @assertEqual(NO_PMM_ASSIGNED,chidg%data%mesh%domain(1)%faces(1,5)%pmm_ID)
+    @assertEqual(NO_PMM_ASSIGNED,chidg%data%mesh%domain(1)%faces(1,6)%pmm_ID)
     
     
     !
@@ -90,6 +89,7 @@ subroutine testIO__read_pmm_hdf__staticpmm__D1_E1_M1()
     ! Initialize element mapping
     call chidg%start_up('core')
     
+    call chidg%set('Solution Order', integer_input=2)
 
     !
     ! Create mesh file, assigning static pmm
@@ -103,19 +103,17 @@ subroutine testIO__read_pmm_hdf__staticpmm__D1_E1_M1()
 
     call chidg%read_prescribedmeshmotions(filename)
 
-    call chidg%set('Solution Order', integer_input=2)
-    call chidg%init('domains')
 
     !  Test nelem
     @assertEqual('static', chidg%data%pmm(1)%pmmf_name)
     @assertEqual(1, chidg%data%pmm(1)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh(1)%elems(1)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh(1)%faces(1,1)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh(1)%faces(1,2)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh(1)%faces(1,3)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh(1)%faces(1,4)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh(1)%faces(1,5)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh(1)%faces(1,6)%pmm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%elems(1)%pmm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,1)%pmm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,2)%pmm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,3)%pmm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,4)%pmm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,5)%pmm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,6)%pmm_ID)
     
     
     !
@@ -158,6 +156,7 @@ subroutine testIO__read_pmm_hdf__sinpmm__D1_E1_M1()
     call chidg%start_up('core')
     
 
+    call chidg%set('Solution Order', integer_input=2)
     !
     ! Create mesh file, assigning static pmm
     !
@@ -170,21 +169,19 @@ subroutine testIO__read_pmm_hdf__sinpmm__D1_E1_M1()
 
     call chidg%read_prescribedmeshmotions(filename)
 
-    call chidg%set('Solution Order', integer_input=2)
-    call chidg%init('domains')
 
     !  Test nelem
     @assertEqual('sinusoidal', chidg%data%pmm(1)%pmmf_name)
     @assertEqual('sin_pmm', chidg%data%pmm(1)%get_name())
     @assertEqual(1.5_rk, chidg%data%pmm(1)%pmmf%get_option_value('L_X'))
     @assertEqual(1, chidg%data%pmm(1)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh(1)%elems(1)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh(1)%faces(1,1)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh(1)%faces(1,2)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh(1)%faces(1,3)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh(1)%faces(1,4)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh(1)%faces(1,5)%pmm_ID)
-    @assertEqual(1,chidg%data%mesh(1)%faces(1,6)%pmm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%elems(1)%pmm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,1)%pmm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,2)%pmm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,3)%pmm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,4)%pmm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,5)%pmm_ID)
+    @assertEqual(1,chidg%data%mesh%domain(1)%faces(1,6)%pmm_ID)
     
     
     !

@@ -67,7 +67,7 @@ subroutine test_domain_matrix__store_1eq_8terms()
     call chidg%set('Linear Solver'   , algorithm='FGMRES')
     call chidg%set('Preconditioner'  , algorithm='ILU0')
     call chidg%read_grid('file.h5')
-    call chidg%init('all')
+    !call chidg%init('all')
 
 
 
@@ -244,7 +244,7 @@ subroutine test_domain_matrix__store_2eq_8terms()
     call chidg%set('Linear Solver'   , algorithm='FGMRES')
     call chidg%set('Preconditioner'  , algorithm='ILU0')
     call chidg%read_grid('file.h5')
-    call chidg%init('all')
+    !call chidg%init('all')
 
 !    !
 !    ! Initialize domain_t instance.
@@ -418,7 +418,7 @@ subroutine test_domain_matrix__clear_1eq_8terms()
     call chidg%set('Linear Solver'   , algorithm='FGMRES')
     call chidg%set('Preconditioner'  , algorithm='ILU0')
     call chidg%read_grid('file.h5')
-    call chidg%init('all')
+    !call chidg%init('all')
 
 
 !    !

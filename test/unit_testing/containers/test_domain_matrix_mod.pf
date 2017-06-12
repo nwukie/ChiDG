@@ -77,7 +77,7 @@ contains
         call this%chidg%set('Linear Solver'   , algorithm='FGMRES')
         call this%chidg%set('Preconditioner'  , algorithm='ILU0')
         call this%chidg%read_grid('file.h5')
-        call this%chidg%init('all')
+        !call this%chidg%init('all')
 
 !        !
 !        ! Initialize domains

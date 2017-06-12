@@ -5,7 +5,7 @@ module type_prescribed_mesh_motion
     use mod_prescribed_mesh_motion_function,    only: create_prescribed_mesh_motion_function
     use type_prescribed_mesh_motion_function,   only: prescribed_mesh_motion_function_t
     use type_chidg_worker,                      only: chidg_worker_t
-    use type_mesh,                              only: mesh_t
+    use type_domain,                              only: domain_t
     use type_point,                             only: point_t
     implicit none
 
@@ -146,9 +146,9 @@ contains
     !!  @author Eric Wolf
     !!  @date 4/7/2017
     !--------------------------------------------------------------------------------
-    subroutine init_pmm_domain(self,mesh)
+    subroutine init_pmm_domain(self,domain)
         class(prescribed_mesh_motion_t),               intent(inout)       :: self
-        type(mesh_t),                                       intent(inout)           :: mesh
+        type(domain_t),                                       intent(inout)           ::domain 
 
 
         integer(ik)     :: ielem, nelem, iface
@@ -156,15 +156,15 @@ contains
         ! Loop through the elements and faces in the mesh and assign the pmm_ID
 
 
-        nelem = mesh%nelem
+        nelem = domain%nelem
         do ielem = 1, nelem
             !Check if a PMM has already been assigned
             !if (mesh%elems(ielem)%pmm_ID /= NO_PMM_ASSIGNED)  then
             !   bad bad bad
             !else
-            mesh%elems(ielem)%pmm_ID = self%pmm_ID
+            domain%elems(ielem)%pmm_ID = self%pmm_ID
             do iface = 1, NFACES
-                mesh%faces(ielem, iface)%pmm_ID = self%pmm_ID
+                domain%faces(ielem, iface)%pmm_ID = self%pmm_ID
             end do
             !end if
         end do
@@ -225,9 +225,9 @@ contains
         type(point_t)   :: ref_pos, grid_pos, grid_vel
         
         !Use the pmm_function to compute the values of the position and velocity at elem_pts
-        do inode = 1, worker%mesh(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%nterms_c
+        do inode = 1, worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%nterms_c
 
-            ref_pos = worker%mesh(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%elem_pts(inode)
+            ref_pos = worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%elem_pts(inode)
 
            ! grid_pos = self%pmmf%compute_pos(ref_pos, self%time)
            ! grid_vel = self%pmmf%compute_vel(ref_pos, self%time)
@@ -239,7 +239,7 @@ contains
         end do
 
         !Use the element_t procedures to recompute coordinate expansion, quadrature node values, and grid metrics
-        call worker%mesh(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%update_element_ale()
+        call worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%update_element_ale()
 
     end subroutine pmm_update_element
     !********************************************************************************
@@ -253,8 +253,8 @@ contains
         class(prescribed_mesh_motion_t),        intent(inout)   :: self
         type(chidg_worker_t),                   intent(in)      :: worker
 
-        call worker%mesh(worker%element_info%idomain_l)%faces(worker%element_info%ielement_l, worker%iface)%update_face_ale(&
-            worker%mesh(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l))
+        call worker%mesh%domain(worker%element_info%idomain_l)%faces(worker%element_info%ielement_l, worker%iface)%update_face_ale(&
+            worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l))
 
 
     end subroutine pmm_update_face

@@ -6,6 +6,7 @@ module bc_state_mesh_motion_derivative
     use type_properties,    only: properties_t
     use DNAD_D
     use ieee_arithmetic
+    use mpi_f08,            only: mpi_comm
     implicit none
 
 
@@ -85,10 +86,11 @@ contains
     !!  @date   9/15/2016
     !!
     !---------------------------------------------------------------------------------------------
-    subroutine compute_bc_state(self,worker,prop)
+    subroutine compute_bc_state(self,worker,prop, bc_COMM)
         class(mesh_motion_derivative_t), intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         class(properties_t),        intent(inout)   :: prop
+        type(mpi_comm),             intent(in)      :: bc_COMM
 
         ! Equation indices
         integer(ik)     :: iu

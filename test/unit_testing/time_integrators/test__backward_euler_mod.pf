@@ -1,0 +1,407 @@
+!   Test the backward Euler system assemble operation
+!
+!   @aauthor Mayank Sharma
+!   @date    4/11/2017
+!
+!-------------------------------------------------------------------------------------------------
+module test__backward_euler_mod
+#include<messenger.h>
+    use pfunit_mod,
+    use mod_kinds,                  only: rk,ik
+    use mod_constants,              only: ZERO,ONE,THREE,SEVEN,IO_DESTINATION
+    use mod_io
+    use type_chidg,                 only: chidg_t
+    use type_meshdata,              only: meshdata_t
+    use mod_bc,                     only: create_bc 
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: delete_file
+    use mod_spatial,                only: update_space
+    use type_chidg_vector,          only: chidg_vector_t
+    use mod_string,                 only: string_t
+
+    use type_chidg_worker,          only: chidg_worker_t
+    use type_properties,            only: properties_t  
+
+    use mod_operators,              only: operator_factory
+    use type_operator,              only: operator_t
+
+    use mod_equations,              only: equation_builder_factory
+    use type_equation_builder,      only: equation_builder_t
+    use type_equation_set,          only: equation_set_t
+
+    use type_time_integrator,       only: time_integrator_t
+    use type_system_assembler,      only: system_assembler_t
+    use type_backward_euler,        only: backward_euler_t, assemble_backward_euler_t
+
+    implicit none
+
+
+
+    !>  Define an operator for the equation set used in this test
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/11/2017
+    !!
+    !---------------------------------------------------------------------------------------------------
+    type, extends(operator_t),  public      :: test_blank_operator_t
+
+
+    contains
+
+        procedure   :: init    => init_blank
+        procedure   :: compute => compute_blank
+
+
+    end type test_blank_operator_t
+    !***************************************************************************************************
+
+
+
+    !>  Define a new equation set builder for this test. The equation set is 'blank' because
+    !!  we want to set the spatial residual ourselves and not have the code compute them
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/11/2017
+    !!
+    !---------------------------------------------------------------------------------------------------
+    type, extends(equation_builder_t),  public      :: test_blank_equation_set_builder_t
+
+
+    contains
+
+        procedure   :: init => init_builder
+        procedure   :: build
+
+
+    end type test_blank_equation_set_builder_t
+    !***************************************************************************************************
+
+
+
+contains
+
+
+
+    !>  Initialize operator. The operator type doesn't matter since we aren't computing anything here
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/11/2017
+    !!
+    !---------------------------------------------------------------------------------------------------
+    subroutine init_blank(self)
+        class(test_blank_operator_t),   intent(inout)   :: self
+
+        !Set operator name
+        call self%set_name("Test Blank Operator")
+
+        ! Set operator type
+        call self%set_operator_type("Volume Diffusive Flux")
+
+        ! Set operator equations
+        call self%add_primary_field("u")
+
+
+    end subroutine init_blank
+    !***************************************************************************************************
+
+
+
+    !>  Compute operator terms. NOTHING is being done here
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/11/2017
+    !!
+    !---------------------------------------------------------------------------------------------------
+    subroutine compute_blank(self,worker,prop)
+        class(test_blank_operator_t),   intent(inout)   :: self
+        type(chidg_worker_t),           intent(inout)   :: worker
+        class(properties_t),            intent(inout)   :: prop
+
+
+    end subroutine compute_blank
+    !***************************************************************************************************
+
+
+
+    !>  Initialize equation set builder
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/11/2017
+    !!
+    !---------------------------------------------------------------------------------------------------
+    subroutine init_builder(self)
+        class(test_blank_equation_set_builder_t),   intent(inout)   :: self
+
+        call self%set_name("Test Blank Equation Set")
+
+
+    end subroutine init_builder
+    !***************************************************************************************************
+
+
+
+    !>  Implement the equation set builder definition
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/11/2017
+    !!
+    !---------------------------------------------------------------------------------------------------
+    function build(self,blueprint) result(test_blank_eqn)
+        class(test_blank_equation_set_builder_t),   intent(in)  :: self
+        character(*),                               intent(in)  :: blueprint
+
+        type(equation_set_t)        :: test_blank_eqn
+
+
+        !
+        ! Set equation set name
+        ! 
+        call test_blank_eqn%set_name("Test Blank Equation Set")
+
+        !
+        ! Add spatial operators
+        !
+        call test_blank_eqn%add_operator("Test Blank Operator")
+
+
+    end function build
+    !***************************************************************************************************
+
+
+
+
+    !>  Test the temporal contributions to lhs and rhs from the backward Euler method
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   4/11/2017
+    !!
+    !---------------------------------------------------------------------------------------------------
+    @Test
+    subroutine test__backward_euler
+        type(test_blank_operator_t)                 :: operator_test_blank_equation_set
+        type(test_blank_equation_set_builder_t)     :: builder_test_blank_equation_set      
+        type(assemble_backward_euler_t)             :: assemble_BE
+        type(chidg_t)                               :: chidg
+        type(meshdata_t),   allocatable             :: meshdata(:)
+        type(string_t)                              :: eqnset(1)
+        integer(ik)                                 :: spacedim, nterms_s, ielem, itime, ierr, imat
+        real(rk),           dimension(8)            :: vals
+        real(rk),           dimension(8)            :: vref_a, ref_a, ref_b, ref_c, ref_d, ref_e, ref_f
+        real(rk),           dimension(8,8)          :: vref_1, vref_2, ref_1, ref_2, ref_3
+        real(rk)                                    :: tol
+        character(:),       allocatable             :: filename
+
+
+        !
+        ! Initialize and tegister operator
+        !
+        call operator_test_blank_equation_set%init()
+        call operator_factory%register(operator_test_blank_equation_set)
+
+
+        !
+        ! Initialize and register equation set builder
+        !
+        call builder_test_blank_equation_set%init()
+        call equation_builder_factory%register(builder_test_blank_equation_set)
+
+
+        !
+        ! Define input data
+        !
+        tol                 = 1.e-13_rk
+        spacedim            = 3
+        nterms_s            = 8
+        IO_DESTINATION      = 'file'
+        time_integrator     = 'Backward_Euler'
+        nonlinear_solver    = 'newton'
+        linear_solver       = 'fgmres'
+        preconditioner      = 'ILU0'
+        dt                  = 0.001
+
+
+        !
+        ! Initialize ChiDG
+        ! Also initializes time_manager
+        !
+        call chidg%start_up('core')
+
+
+        !
+        ! Set chidg components
+        !
+        call chidg%set('Solution Order',  integer_input=2)
+        call chidg%set('Time Integrator', algorithm=time_integrator)
+
+
+        !
+        ! Set equation sert string
+        !
+        call eqnset(1)%set("Test Blank Equation Set")
+
+
+        !
+        ! Create grid file
+        !
+        filename = 'D1_2x2x2_singleblock.h5'
+        call create_mesh_file("D1 NxNxN", filename, equation_sets = eqnset, &
+                                                    nelem_xi = 2, nelem_eta = 2, nelem_zeta = 2)
+
+
+        !
+        ! Get grid points
+        !
+        call chidg%read_mesh(filename,spacedim)
+
+
+        call chidg%time_integrator%init(chidg%data)
+
+
+        associate ( q   => chidg%data%sdata%q, &
+                    lhs => chidg%data%sdata%lhs, &
+                    rhs => chidg%data%sdata%rhs)
+
+            !
+            ! Set residual linearizations
+            !
+            imat = lhs%dom(1)%lblks(1,1)%get_diagonal()
+            lhs%dom(1)%lblks(1,1)%data_(imat)%mat = ONE
+
+            imat = lhs%dom(1)%lblks(3,1)%get_diagonal()
+            lhs%dom(1)%lblks(3,1)%data_(imat)%mat = THREE
+
+            imat = lhs%dom(1)%lblks(7,1)%get_diagonal()
+            lhs%dom(1)%lblks(7,1)%data_(imat)%mat = SEVEN
+
+
+            !
+            ! Set spatial residual contributions
+            !
+            vals = 0.2_rk
+            call rhs%dom(1)%vecs(1)%settime(1,vals)
+
+            vals = 0.6_rk
+            call rhs%dom(1)%vecs(3)%settime(1,vals)
+
+            vals = 0.7_rk
+            call rhs%dom(1)%vecs(5)%settime(1,vals)
+
+            vals = 0.9_rk
+            call rhs%dom(1)%vecs(7)%settime(1,vals)
+
+            vals = 0.1_rk
+            call rhs%dom(1)%vecs(8)%settime(1,vals)
+
+
+            !
+            ! Set solution vector
+            !
+            vals = 0.1_rk
+            call q%dom(1)%vecs(1)%settime(1,vals)
+
+            vals = 0.4_rk
+            call q%dom(1)%vecs(3)%settime(1,vals)
+
+            vals = 0.8_rk
+            call q%dom(1)%vecs(6)%settime(1,vals)
+
+
+            !
+            ! Set q_n, solution at previous step
+            !
+            call assemble_BE%q_n%init(chidg%data%mesh,1)
+            call assemble_BE%q_n%clear()
+
+
+            !
+            ! Perform backward Euler assemble operation
+            ! THIS IS BEING TESTED
+            !
+            call assemble_BE%assemble(chidg%data,differentiate=.true.)
+
+
+            !
+            ! Compute reference values
+            !
+            associate ( dt     => chidg%data%time_manager%dt, &
+                        domain => chidg%data%mesh%domain(1) )
+               
+                !
+                ! Compute lhs reference values
+                !
+                vref_1 = ONE; vref_2 = (ONE/dt)*(domain%elems(1)%mass)
+                ref_1  = vref_1 + vref_2
+                vref_1 = THREE; vref_2 = (ONE/dt)*(domain%elems(3)%mass)
+                ref_2  = vref_1 + vref_2
+                vref_1 = SEVEN; vref_2 = (ONE/dt)*(domain%elems(7)%mass)
+                ref_3  = vref_1 + vref_2
+
+
+                !
+                ! Compute rhs reference values
+                ! 
+                vref_a = 0.1_rk
+                ref_a  = 0.2_rk + (ONE/dt)*matmul(domain%elems(1)%mass,vref_a)
+                vref_a = 0.4_rk
+                ref_b  = 0.6_rk + (ONE/dt)*matmul(domain%elems(3)%mass,vref_a)
+                ref_c  = 0.7_rk
+                vref_a = 0.8_rk
+                ref_d  = (ONE/dt)*matmul(domain%elems(6)%mass,vref_a)
+                ref_e  = 0.9_rk
+                ref_f  = 0.1_rk
+
+            end associate
+
+
+            !
+            ! Test assemble operation
+            !
+            imat = lhs%dom(1)%lblks(1,1)%get_diagonal()
+            @assertEqual(ref_1,lhs%dom(1)%lblks(1,1)%data_(imat)%mat)
+            imat = lhs%dom(1)%lblks(3,1)%get_diagonal()
+            @assertEqual(ref_2,lhs%dom(1)%lblks(3,1)%data_(imat)%mat)
+            imat = lhs%dom(1)%lblks(7,1)%get_diagonal()
+            @assertEqual(ref_3,lhs%dom(1)%lblks(7,1)%data_(imat)%mat)
+            @assertEqual(ref_a,rhs%dom(1)%vecs(1)%gettime(1),tol)
+            @assertEqual(ref_b,rhs%dom(1)%vecs(3)%gettime(1),tol)
+            @assertEqual(ref_c,rhs%dom(1)%vecs(5)%gettime(1),tol)
+            @assertEqual(ref_d,rhs%dom(1)%vecs(6)%gettime(1),tol)
+            @assertEqual(ref_e,rhs%dom(1)%vecs(7)%gettime(1),tol)
+            @assertEqual(ref_f,rhs%dom(1)%vecs(8)%gettime(1),tol)
+
+        end associate
+
+
+        call chidg%shut_down('core')
+
+        !
+        ! Reset io variables so that they can be used by other tests
+        !
+        time_integrator = 'steady'
+
+        call delete_file(filename)
+
+
+    end subroutine test__backward_euler
+    !***************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+end module test__backward_euler_mod

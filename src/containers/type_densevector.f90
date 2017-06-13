@@ -161,6 +161,7 @@ contains
         self%nvars_  = nvars
         self%ntime_  = ntime
 
+
         !
         ! Compute total number of elements for densevector storage
         !
@@ -177,12 +178,13 @@ contains
             if (reallocate) then
                 deallocate(self%vec)
                 allocate(self%vec(vsize), stat=ierr)
+                if (ierr /= 0) call AllocationError
             end if
 
         else
             allocate(self%vec(vsize), stat=ierr)
+            if (ierr /= 0) call AllocationError
         end if
-        if (ierr /= 0) call AllocationError
 
 
         !
@@ -593,6 +595,7 @@ contains
         ! Set ntime
         !
         self%ntime_ = ntime_in
+
 
         !
         ! Reinitialize the densevector

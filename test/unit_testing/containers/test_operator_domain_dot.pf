@@ -52,7 +52,7 @@ subroutine test_operator_domain_dot()
     !
     ! Read grid file
     !
-    call chidg%read_grid(file_name)
+    call chidg%read_mesh(file_name)
 
 
 

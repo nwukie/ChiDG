@@ -62,8 +62,8 @@ subroutine test__compute_chimera_interpolators()
     !
     ! Read 2-Domain overlapping grid
     !
-    call chidg%read_domains(filename)
-    call chidg%read_boundary_conditions(filename)
+    call chidg%read_mesh_grids(filename)
+    call chidg%read_mesh_boundary_conditions(filename)
 
 
 

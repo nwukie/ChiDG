@@ -89,7 +89,7 @@ contains
         !
         ! Read D2_E8_M1. Two domains, 2x2x2 elements in each domain, linear mapping
         !
-        call this%chidg%read_grid(this%filename)
+        call this%chidg%read_mesh(this%filename)
 
 
         !

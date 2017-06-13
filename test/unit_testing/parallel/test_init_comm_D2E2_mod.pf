@@ -80,7 +80,7 @@ contains
         !
         ! Read partition data: grid, boundary conditions
         !
-        call chidg%read_grid(gridfile)
+        call chidg%read_mesh(gridfile)
         call MPI_Barrier(ChiDG_COMM,ierr)
 
 

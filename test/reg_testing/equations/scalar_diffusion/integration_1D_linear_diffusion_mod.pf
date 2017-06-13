@@ -701,7 +701,7 @@ contains
         !
         ! Read grid
         !
-        call this%chidg%read_grid(this%gridfile,spacedim)
+        call this%chidg%read_mesh(this%gridfile,spacedim)
 
 
 

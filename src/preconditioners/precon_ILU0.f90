@@ -4,6 +4,7 @@ module precon_ILU0
     use mod_constants,          only: DIAG, XI_MIN, ETA_MIN, ZETA_MIN, XI_MAX, ETA_MAX, ZETA_MAX, ONE
     use mod_inv,                only: inv
     use mod_chidg_mpi,          only: IRANK
+    use mod_io,                 only: verbosity
 
     use type_preconditioner,    only: preconditioner_t
     use type_chidg_data,        only: chidg_data_t
@@ -88,7 +89,7 @@ contains
                        eparent_g_lower
 
 
-        call write_line(' Computing ILU0 factorization', io_proc=GLOBAL_MASTER)
+        call write_line(' Computing ILU0 factorization', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
 
 
         !
@@ -182,7 +183,7 @@ contains
 
         end do ! idom
 
-        call write_line(' Done Computing ILU0 factorization', io_proc=GLOBAL_MASTER)
+        call write_line(' Done Computing ILU0 factorization', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
     end subroutine update
     !*******************************************************************************************
 

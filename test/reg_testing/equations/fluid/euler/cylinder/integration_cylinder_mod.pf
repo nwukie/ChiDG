@@ -345,7 +345,7 @@ contains
         !
         ! Read grid
         !
-        call this%chidg%read_grid(this%gridfile)
+        call this%chidg%read_mesh(this%gridfile)
 
 
 
@@ -368,7 +368,7 @@ contains
 
         else
 
-            call this%chidg%read_solution('cylinder_solution.h5')
+            call this%chidg%read_fields('cylinder_solution.h5')
 
         end if
 
@@ -453,7 +453,7 @@ contains
         call self%chidg%run(write_initial=.false., write_final=.false.)
 
 
-        call self%chidg%write_solution('cylinder_solution.h5')
+        call self%chidg%write_fields('cylinder_solution.h5')
 
 
 

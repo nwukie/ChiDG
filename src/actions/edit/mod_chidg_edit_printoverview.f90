@@ -5,7 +5,7 @@ module mod_chidg_edit_printoverview
     use h5lt
 
     use mod_hdf_utilities,  only: get_properties_hdf, get_ndomains_hdf, get_domain_names_hdf,   &
-                                  get_coordinate_orders_hdf, get_solution_orders_hdf,           &
+                                  get_domain_coordinate_orders_hdf, get_domain_field_orders_hdf,           &
                                   get_domain_equation_sets_hdf, get_contains_grid_hdf,          &
                                   get_contains_solution_hdf, get_domain_name_hdf
 
@@ -57,7 +57,6 @@ contains
         !
         ndom     = get_ndomains_hdf(fid)
         dnames   = get_domain_names_hdf(fid)
-        !eqnset   = get_domain_equation_sets_hdf(fid,dnames)
         eqnset   = get_domain_equation_sets_hdf(fid)
 
 
@@ -72,7 +71,7 @@ contains
         ! Handle contains_grid
         !
         if ( contains_grid ) then
-            corder   = get_coordinate_orders_hdf(fid,dnames)
+            corder   = get_domain_coordinate_orders_hdf(fid,dnames)
         else
             allocate(corder(ndom), stat=ierr)
             if (ierr /= 0) call AllocationError
@@ -85,8 +84,7 @@ contains
         ! Handle contains_solution
         !
         if ( contains_solution ) then
-            !sorder   = get_solution_orders_hdf(fid,dnames)
-            sorder   = get_solution_orders_hdf(fid)
+            sorder   = get_domain_field_orders_hdf(fid)
         else
             allocate(sorder(ndom), stat=ierr)
             if (ierr /= 0) call AllocationError
@@ -113,7 +111,6 @@ contains
 
                 if (present(active_domain)) then
                     active_domain_name = get_domain_name_hdf(active_domain)
-                    !if ( active_domain_name == idom ) then
                     if ( active_domain_name == dname_trim ) then
                         call write_line(dname_trim, corder(idom), sorder(idom), trim(eqnset(idom)), delimiter='  :  ', columns=.True., column_width=20, color='pink')
                     else

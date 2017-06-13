@@ -8,6 +8,8 @@ module type_time_integrator_spectral
     use h5lt
     use mod_hdf_utilities,      only: open_file_hdf, close_file_hdf, get_ntimes_hdf, &
                                       set_time_integrator_hdf, get_time_integrator_hdf, &
+                                      set_nsteps_hdf, get_nsteps_hdf, &
+                                      set_nwrite_hdf, get_nwrite_hdf, &
                                       set_frequencies_hdf, get_frequencies_hdf, &
                                       set_time_levels_hdf, get_time_levels_hdf
     use mod_HB_post,            only: get_post_processing_data
@@ -80,7 +82,7 @@ contains
         character(*),                       intent(in)      :: filename
 
         integer(HID_T)          :: fid
-        integer(kind = 8)       :: nfreq, ntime
+        integer(kind = 8)       :: nfreq, ntime, SIZE_ONE = 1
         real(rk),   allocatable :: freq(:), time_lev(:)
         integer                 :: ierr, iwrite
 
@@ -114,10 +116,12 @@ contains
                 !
                 call set_time_integrator_hdf(fid,trim(data%time_manager%get_name()))
 
-
+                
                 !
-                ! Write frequencies and time levels to hdf file
+                ! Write nsteps, nwrite, frequencies and time levels to hdf file
                 !
+                call set_nsteps_hdf(fid,data%time_manager%nsteps)
+                call set_nwrite_hdf(fid,data%time_manager%nwrite)        
                 call set_frequencies_hdf(fid,freq,nfreq)
                 call set_time_levels_hdf(fid,time_lev,ntime)
 
@@ -145,12 +149,13 @@ contains
         type(chidg_data_t),                 intent(inout)   :: data
         character(*),                       intent(in)      :: filename
 
-        integer(HID_T)              :: fid
-        integer(kind = 8)           :: nfreq, ntime
-        character(:),   allocatable :: temp_string
-        real(rk),       allocatable :: freq(:), time_lev(:)
-        integer(ik)                 :: ierr, ifreq, itime 
-        
+        integer(HID_T)                  :: fid
+        integer(kind = 8)               :: nfreq, ntime
+        character(:),   allocatable     :: temp_string
+        real(rk),       allocatable     :: freq(:), time_lev(:)
+        integer(ik)                     :: ierr, ifreq, itime 
+        integer(ik),    dimension(1)    :: nsteps, nwrite
+
         
         !
         ! Open hdf file
@@ -180,8 +185,10 @@ contains
 
 
         !
-        ! Read frequencies and time levels
+        ! Read nsteps, nwrite, frequencies and time levels
         !
+        nsteps   = get_nsteps_hdf(fid)
+        nwrite   = get_nwrite_hdf(fid)
         freq     = get_frequencies_hdf(fid,nfreq)
         time_lev = get_time_levels_hdf(fid,ntime)
 
@@ -193,6 +200,8 @@ contains
         !
         data%time_manager%time_scheme = trim(temp_string)
         data%time_manager%ntime       = ntime
+        data%time_manager%nsteps      = nsteps(1)
+        data%time_manager%nwrite      = nwrite(1)
 
         do ifreq = 1,int(nfreq,ik)
 

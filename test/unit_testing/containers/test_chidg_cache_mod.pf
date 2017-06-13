@@ -41,11 +41,10 @@ contains
         class(test_chidg_cache),    intent(inout)   :: this
         
         call this%chidg%start_up('core')
-        call this%chidg%read_grid('D1_E27_M1.h5',3)
-        call this%chidg%read_boundaryconditions('D1_E27_M1.h5')
-
-        call this%chidg%initialize_solution_domains(this%nterms_s)
-        call this%chidg%init('communication')
+        call this%chidg%read_mesh('D1_E27_M1.h5',3)
+        !call this%chidg%read_boundaryconditions('D1_E27_M1.h5')
+        !call this%chidg%initialize_solution_domains(this%nterms_s)
+        !call this%chidg%init('communication')
 
     end subroutine setUp
     !************************************************************************************

@@ -7,7 +7,9 @@ module type_time_integrator_steady
     use h5lt
     use mod_hdf_utilities,      only: open_file_hdf, close_file_hdf, &
                                       get_ntimes_hdf, set_time_integrator_hdf,  &
-                                      get_time_integrator_hdf
+                                      get_time_integrator_hdf, &
+                                      set_nsteps_hdf, get_nsteps_hdf, &
+                                      set_nwrite_hdf, get_nwrite_hdf
     use mpi_f08
     implicit none
 
@@ -93,7 +95,15 @@ contains
                 ! Write time_integrator name to hdf file
                 !
                 call set_time_integrator_hdf(fid,trim(data%time_manager%get_name()))
-                
+
+
+                !
+                ! Write nsteps and nwrite
+                ! 
+                call set_nsteps_hdf(fid,data%time_manager%nsteps)
+                call set_nwrite_hdf(fid,data%time_manager%nwrite)
+
+
                 call close_file_hdf(fid)
 
             end if
@@ -117,9 +127,10 @@ contains
         type(chidg_data_t),                 intent(inout)   :: data
         character(*),                       intent(in)      :: filename
 
-        integer(HID_T)              :: fid
-        character(:),   allocatable :: temp_string
-        integer(ik)                 :: ierr, ntime
+        integer(HID_T)                  :: fid
+        character(:),   allocatable     :: temp_string
+        integer(ik),    dimension(1)    :: nsteps, nwrite
+        integer(ik)                     :: ierr, ntime
 
         
         !
@@ -132,6 +143,13 @@ contains
         ! Read time_integrator name
         !
         temp_string = get_time_integrator_hdf(fid)
+
+        
+        !
+        ! Read nsteps and nwrite
+        !
+        nsteps = get_nsteps_hdf(fid)
+        nwrite = get_nwrite_hdf(fid)
 
 
         !
@@ -147,6 +165,8 @@ contains
         !
         data%time_manager%time_scheme = trim(temp_string)
         data%time_manager%ntime       = ntime
+        data%time_manager%nsteps      = nsteps(1)
+        data%time_manager%nwrite      = nwrite(1)
 
 
     end subroutine read_time_options

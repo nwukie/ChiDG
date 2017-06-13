@@ -1,4 +1,4 @@
-module test_hdfio_solution_mod
+module test_hdfio_fields_mod
     use pfunit_mod
     use type_chidg,         only: chidg_t
     use mod_kinds,          only: rk,ik
@@ -9,7 +9,7 @@ module test_hdfio_solution_mod
     implicit none
 
 
-    public  :: test_hdfio_solution
+    public  :: test_hdfio_fields
 
 
 
@@ -21,7 +21,7 @@ module test_hdfio_solution_mod
     !!
     !-----------------------------------------------------------------------------
     @TestCase
-    type, extends(TestCase) ::  test_hdfio_solution
+    type, extends(TestCase) ::  test_hdfio_fields
 
         type(chidg_t)               :: chidgO1
         type(chidg_t)               :: chidgO2
@@ -35,7 +35,7 @@ module test_hdfio_solution_mod
         procedure   ::  setUp
         procedure   ::  tearDown
 
-    end type test_hdfio_solution
+    end type test_hdfio_fields
     !*****************************************************************************
 
 
@@ -52,7 +52,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine setUp(this)
-        class(test_hdfio_solution),    intent(inout)   :: this
+        class(test_hdfio_fields),    intent(inout)   :: this
 
 
         IO_DESTINATION = 'file'
@@ -74,7 +74,7 @@ contains
 
 
         !
-        ! Set accuracy for solution expansion
+        ! Set accuracy for fields expansion
         !
         call this%chidgO1%set('Solution Order', integer_input=1)
         call this%chidgO1%set('Time Integrator', algorithm='Steady')
@@ -83,12 +83,12 @@ contains
         !
         ! Read grid file
         !
-        call this%chidgO1%read_grid(this%fileorig)
+        call this%chidgO1%read_mesh(this%fileorig)
 
 
         
         !
-        ! Set accuracy for solution expansion
+        ! Set accuracy for fields expansion
         !
         call this%chidgO2%set('Solution Order', integer_input=2)
         call this%chidgO2%set('Time Integrator', algorithm='Steady')
@@ -97,7 +97,7 @@ contains
         !
         ! Read grid file
         !
-        call this%chidgO2%read_grid(this%fileorig)
+        call this%chidgO2%read_mesh(this%fileorig)
 
 
         !
@@ -118,7 +118,7 @@ contains
 
     !------------------------------------------------------------------------------------------
     subroutine tearDown(this)
-        class(test_hdfio_solution),    intent(inout)   :: this
+        class(test_hdfio_fields),    intent(inout)   :: this
 
         !
         ! Close ChiDG instances
@@ -149,17 +149,17 @@ contains
 
 
 
-    !>  This tests writing a first-order solution and reading the first-order solution
+    !>  This tests writing a first-order fields and reading the first-order fields
     !!  back from file.
     !!
-    !!  Testing:    write_solution (O1), read_solution (O1)
+    !!  Testing:    write_fields (O1), read_fields (O1)
     !!
     !!  @author Nathan A. Wukie
     !!
     !---------------------------------------------------------------------------------
     @Test
-    subroutine test_hdfio_solution_writeO1_read_O1(this)
-        class(test_hdfio_solution),     intent(inout)   :: this 
+    subroutine test_hdfio_fields_writeO1_read_O1(this)
+        class(test_hdfio_fields),     intent(inout)   :: this 
 
         real(rk)                    :: tol, ref(1)
         integer(ik)                 :: ielem, idom
@@ -172,13 +172,13 @@ contains
                     q_in => this%chidgO1%data%sdata%q_in )
 
             !
-            ! Set reference solution values
+            ! Set reference fields values
             !
             ref = [ONE]
 
 
             !
-            ! Assign reference solution
+            ! Assign reference fields
             !
             do ielem = 1,this%chidgO1%data%mesh%domain(1)%nelem
                 q%dom(1)%vecs(ielem)%vec = ref + real(ielem,rk)
@@ -188,7 +188,7 @@ contains
             !
             ! Write variable
             !
-            call this%chidgO1%write_solution(this%fileO1)
+            call this%chidgO1%write_fields(this%fileO1)
 
             !
             ! Reset variable
@@ -201,11 +201,11 @@ contains
             !
             ! Read variable
             !
-            call this%chidgO1%read_solution(this%fileO1)
+            call this%chidgO1%read_fields(this%fileO1)
 
 
             !
-            ! Test that the read solution values equal the reference values
+            ! Test that the read fields values equal the reference values
             !
             do ielem = 1,this%chidgO1%data%mesh%domain(1)%nelem
                 @assertEqual(ref+real(ielem,rk), q_in%dom(1)%vecs(ielem)%vec,  tol)
@@ -214,7 +214,7 @@ contains
 
         end associate
 
-    end subroutine test_hdfio_solution_writeO1_read_O1
+    end subroutine test_hdfio_fields_writeO1_read_O1
     !******************************************************************************************
 
 
@@ -224,17 +224,17 @@ contains
 
 
 
-    !>  This tests writing a first-order solution to a new file and reading the 
-    !!  first-order solution back from the new file.
+    !>  This tests writing a first-order fields to a new file and reading the 
+    !!  first-order fields back from the new file.
     !!
-    !!  Testing:    write_solution (O1), read_solution (O1)
+    !!  Testing:    write_fields (O1), read_fields (O1)
     !!
     !!  @author Matteo Ugolotti
     !!
     !---------------------------------------------------------------------------------
     @Test
-    subroutine test_hdfio_solution_writeO1new_read_O1(this)
-        class(test_hdfio_solution),     intent(inout)   :: this 
+    subroutine test_hdfio_fields_writeO1new_read_O1(this)
+        class(test_hdfio_fields),     intent(inout)   :: this 
 
         real(rk)                    :: tol, ref(1)
         integer(ik)                 :: ielem, idom
@@ -247,13 +247,13 @@ contains
                     q_in => this%chidgO1%data%sdata%q_in)
 
             !
-            ! Set reference solution values
+            ! Set reference fields values
             !
             ref = [ONE]
 
 
             !
-            ! Assign reference solution
+            ! Assign reference fields
             !
             do ielem = 1,this%chidgO1%data%mesh%domain(1)%nelem
                 q%dom(1)%vecs(ielem)%vec = ref + real(ielem,rk)
@@ -263,7 +263,7 @@ contains
             !
             ! Write variable
             !
-            call this%chidgO1%write_solution(this%fileNew)
+            call this%chidgO1%write_fields(this%fileNew)
 
             !
             ! Reset variable
@@ -276,11 +276,11 @@ contains
             !
             ! Read variable
             !
-            call this%chidgO1%read_solution(this%fileNew)
+            call this%chidgO1%read_fields(this%fileNew)
 
 
             !
-            ! Test that the read solution values equal the reference values
+            ! Test that the read fields values equal the reference values
             !
             do ielem = 1,this%chidgO1%data%mesh%domain(1)%nelem
                 @assertEqual(ref+real(ielem,rk), q_in%dom(1)%vecs(ielem)%vec,  tol)
@@ -290,7 +290,7 @@ contains
 
         end associate
 
-    end subroutine test_hdfio_solution_writeO1new_read_O1
+    end subroutine test_hdfio_fields_writeO1new_read_O1
     !******************************************************************************************
 
 
@@ -302,17 +302,17 @@ contains
 
 
 
-    !>  This tests writing a second-order solution and reading the second-order solution
+    !>  This tests writing a second-order fields and reading the second-order fields
     !!  back from file.
     !!
-    !!  Testing:    write_solution, read_solution
+    !!  Testing:    write_fields, read_fields
     !!
     !!  @author Nathan A. Wukie
     !!
     !------------------------------------------------------------------------------------------
     @Test
-    subroutine test_hdfio_solution_writeO2_read_O2(this)
-        class(test_hdfio_solution),     intent(inout)   :: this 
+    subroutine test_hdfio_fields_writeO2_read_O2(this)
+        class(test_hdfio_fields),     intent(inout)   :: this 
 
         real(rk)                    :: tol, ref(8)
         integer(ik)                 :: ielem, idom
@@ -325,13 +325,13 @@ contains
                     q_in => this%chidgO2%data%sdata%q_in )
             
             !
-            ! Set reference solution values
+            ! Set reference fields values
             !
             ref = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
             
             
             !
-            ! Assign reference solution
+            ! Assign reference fields
             !
             do ielem = 1,this%chidgO2%data%mesh%domain(1)%nelem
                 q%dom(1)%vecs(ielem)%vec = ref + real(ielem,rk)
@@ -342,7 +342,7 @@ contains
             !
             ! Write variable
             !
-            call this%chidgO2%write_solution(this%fileO2)
+            call this%chidgO2%write_fields(this%fileO2)
             
 
             !
@@ -356,11 +356,11 @@ contains
             !
             ! Read variable
             !
-            call this%chidgO2%read_solution(this%fileO2)
+            call this%chidgO2%read_fields(this%fileO2)
            
 
             !
-            ! Test that the read solution values equal the reference values
+            ! Test that the read fields values equal the reference values
             !
             do ielem = 1,this%chidgO2%data%mesh%domain(1)%nelem
                 @assertEqual(ref+real(ielem,rk), q_in%dom(1)%vecs(ielem)%vec,  tol)
@@ -368,7 +368,7 @@ contains
 
        end associate
             
-    end subroutine test_hdfio_solution_writeO2_read_O2
+    end subroutine test_hdfio_fields_writeO2_read_O2
     !******************************************************************************************
 
 
@@ -382,17 +382,17 @@ contains
 
 
 
-    !>  This tests writing a second-order solution to a new file and reading the second-order 
-    !!  solution back from the new file.
+    !>  This tests writing a second-order fields to a new file and reading the second-order 
+    !!  fields back from the new file.
     !!
-    !!  Testing:    write_solution, read_solution
+    !!  Testing:    write_fields, read_fields
     !!
     !!  @author Matteo Ugolotti
     !!
     !------------------------------------------------------------------------------------------
     @Test
-    subroutine test_hdfio_solution_writeO2new_read_O2(this)
-        class(test_hdfio_solution),     intent(inout)   :: this 
+    subroutine test_hdfio_fields_writeO2new_read_O2(this)
+        class(test_hdfio_fields),     intent(inout)   :: this 
 
         real(rk)                    :: tol, ref(8)
         integer(ik)                 :: ielem, idom
@@ -405,13 +405,13 @@ contains
                     q_in => this%chidgO2%data%sdata%q_in )
             
             !
-            ! Set reference solution values
+            ! Set reference fields values
             !
             ref = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
             
             
             !
-            ! Assign reference solution
+            ! Assign reference fields
             !
             do ielem = 1,this%chidgO2%data%mesh%domain(1)%nelem
                 q%dom(1)%vecs(ielem)%vec = ref + real(ielem,rk)
@@ -421,7 +421,7 @@ contains
             !
             ! Write variable
             !
-            call this%chidgO2%write_solution(this%fileNew)
+            call this%chidgO2%write_fields(this%fileNew)
             
 
             !
@@ -435,11 +435,11 @@ contains
             !
             ! Read variable
             !
-            call this%chidgO2%read_solution(this%fileNew)
+            call this%chidgO2%read_fields(this%fileNew)
            
 
             !
-            ! Test that the read solution values equal the reference values
+            ! Test that the read fields values equal the reference values
             !
             do ielem = 1,this%chidgO2%data%mesh%domain(1)%nelem
                 @assertEqual(ref+real(ielem,rk), q_in%dom(1)%vecs(ielem)%vec,  tol)
@@ -447,7 +447,7 @@ contains
 
        end associate
             
-    end subroutine test_hdfio_solution_writeO2new_read_O2
+    end subroutine test_hdfio_fields_writeO2new_read_O2
     !******************************************************************************************
 
 
@@ -462,17 +462,17 @@ contains
 
 
 
-    !>  This tests writing a first-order solution and reading it back into a second-order
-    !!  solution.
+    !>  This tests writing a first-order fields and reading it back into a second-order
+    !!  fields.
     !!
-    !!  Testing:    write_solution, read_solution
+    !!  Testing:    write_fields, read_fields
     !!
     !!  @author Nathan A. Wukie
     !!
     !------------------------------------------------------------------------------------------
     @Test
-    subroutine test_hdfio_solution_writeO1_read_O2(this)
-        class(test_hdfio_solution),     intent(inout)   :: this 
+    subroutine test_hdfio_fields_writeO1_read_O2(this)
+        class(test_hdfio_fields),     intent(inout)   :: this 
 
         real(rk)                    :: tol, ref_q1(1), ref_q2(8)
         integer(ik)                 :: ielem, idom
@@ -486,13 +486,13 @@ contains
                     q2_in => this%chidgO2%data%sdata%q_in )
             
             !
-            ! Set q1 reference solution values
+            ! Set q1 reference fields values
             !
             ref_q1 = [ONE]
             
             
             !
-            ! Assign reference solution
+            ! Assign reference fields
             !
             do ielem = 1,this%chidgO1%data%mesh%domain(1)%nelem
                 q1%dom(1)%vecs(ielem)%vec = ref_q1 + real(ielem,rk)
@@ -502,7 +502,7 @@ contains
             !
             ! Write variable
             !
-            call this%chidgO1%write_solution(this%fileO1)
+            call this%chidgO1%write_fields(this%fileO1)
             
 
             !
@@ -514,9 +514,9 @@ contains
             
 
             !
-            ! Read O1 solution to O2 instance.
+            ! Read O1 fields to O2 instance.
             !
-            call this%chidgO2%read_solution(this%fileO1)
+            call this%chidgO2%read_fields(this%fileO1)
            
             !
             ! Set new expected values
@@ -524,7 +524,7 @@ contains
             ref_q2 = [ONE, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO]
 
             !
-            ! Test that the read solution values equal the expected values
+            ! Test that the read fields values equal the expected values
             !
             do ielem = 1,this%chidgO2%data%mesh%domain(1)%nelem
                 @assertEqual(ref_q2(1)+real(ielem,rk), q2_in%dom(1)%vecs(ielem)%vec(1),  tol)
@@ -533,7 +533,7 @@ contains
 
        end associate
             
-    end subroutine test_hdfio_solution_writeO1_read_O2
+    end subroutine test_hdfio_fields_writeO1_read_O2
     !******************************************************************************************
 
 
@@ -548,17 +548,17 @@ contains
 
 
 
-    !>  This tests writing a first-order solution to a new file and reading it back into 
-    !!  a second-order solution from the new file.
+    !>  This tests writing a first-order fields to a new file and reading it back into 
+    !!  a second-order fields from the new file.
     !!
-    !!  Testing:    write_solution, read_solution
+    !!  Testing:    write_fields, read_fields
     !!
     !!  @author Matteo Ugolotti
     !!
     !------------------------------------------------------------------------------------------
     @Test
-    subroutine test_hdfio_solution_writeO1new_read_O2(this)
-        class(test_hdfio_solution),     intent(inout)   :: this 
+    subroutine test_hdfio_fields_writeO1new_read_O2(this)
+        class(test_hdfio_fields),     intent(inout)   :: this 
 
         real(rk)                    :: tol, ref_q1(1), ref_q2(8)
         integer(ik)                 :: ielem, idom
@@ -572,13 +572,13 @@ contains
                     q2_in => this%chidgO2%data%sdata%q_in )
             
             !
-            ! Set q1 reference solution values
+            ! Set q1 reference fields values
             !
             ref_q1 = [ONE]
             
             
             !
-            ! Assign reference solution
+            ! Assign reference fields
             !
             do ielem = 1,this%chidgO1%data%mesh%domain(1)%nelem
                 q1%dom(1)%vecs(ielem)%vec = ref_q1 + real(ielem,rk)
@@ -588,7 +588,7 @@ contains
             !
             ! Write variable
             !
-            call this%chidgO1%write_solution(this%fileNew)
+            call this%chidgO1%write_fields(this%fileNew)
             
 
             !
@@ -600,9 +600,9 @@ contains
             
 
             !
-            ! Read O1 solution to O2 instance.
+            ! Read O1 fields to O2 instance.
             !
-            call this%chidgO2%read_solution(this%fileNew)
+            call this%chidgO2%read_fields(this%fileNew)
            
             !
             ! Set new expected values
@@ -610,7 +610,7 @@ contains
             ref_q2 = [ONE, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO]
 
             !
-            ! Test that the read solution values equal the expected values
+            ! Test that the read fields values equal the expected values
             !
             do ielem = 1,this%chidgO2%data%mesh%domain(1)%nelem
                 @assertEqual(ref_q2(1)+real(ielem,rk), q2_in%dom(1)%vecs(ielem)%vec(1),  tol)
@@ -619,7 +619,7 @@ contains
 
        end associate
             
-    end subroutine test_hdfio_solution_writeO1new_read_O2
+    end subroutine test_hdfio_fields_writeO1new_read_O2
     !******************************************************************************************
 
 
@@ -635,17 +635,17 @@ contains
 
 
 
-    !>  This tests writing a first-order solution and reading it back into a second-order
-    !!  solution.
+    !>  This tests writing a first-order fields and reading it back into a second-order
+    !!  fields.
     !!
-    !!  Testing:    write_solution, read_solution
+    !!  Testing:    write_fields, read_fields
     !!
     !!  @author Nathan A. Wukie
     !!
     !------------------------------------------------------------------------------------------
     @Test
-    subroutine test_hdfio_solution_writeO2_read_O1(this)
-        class(test_hdfio_solution),     intent(inout)   :: this 
+    subroutine test_hdfio_fields_writeO2_read_O1(this)
+        class(test_hdfio_fields),     intent(inout)   :: this 
 
         real(rk)                    :: tol, ref_q1(1), ref_q2(8)
         integer(ik)                 :: ielem, idom
@@ -659,13 +659,13 @@ contains
                     q1_in => this%chidgO1%data%sdata%q_in )
             
             !
-            ! Set q2 reference solution values
+            ! Set q2 reference fields values
             !
             ref_q2 = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
             
             
             !
-            ! Assign reference solution
+            ! Assign reference fields
             !
             do ielem = 1,this%chidgO2%data%mesh%domain(1)%nelem
                 q2%dom(1)%vecs(ielem)%vec = ref_q2 + real(ielem,rk)
@@ -675,7 +675,7 @@ contains
             !
             ! Write variable
             !
-            call this%chidgO2%write_solution(this%fileO2)
+            call this%chidgO2%write_fields(this%fileO2)
             
 
             !
@@ -687,9 +687,9 @@ contains
             
 
             !
-            ! Read O2 solution to O1 instance.
+            ! Read O2 fields to O1 instance.
             !
-            call this%chidgO1%read_solution(this%fileO2)
+            call this%chidgO1%read_fields(this%fileO2)
            
             !
             ! Set new expected values
@@ -697,7 +697,7 @@ contains
             ref_q1 = [ONE]
 
             !
-            ! Test that the read solution values equal the expected values
+            ! Test that the read fields values equal the expected values
             !
             do ielem = 1,this%chidgO1%data%mesh%domain(1)%nelem
                 @assertEqual(ref_q1(1)+real(ielem,rk), q1_in%dom(1)%vecs(ielem)%vec(1),  tol)
@@ -705,7 +705,7 @@ contains
 
        end associate
             
-    end subroutine test_hdfio_solution_writeO2_read_O1
+    end subroutine test_hdfio_fields_writeO2_read_O1
     !*******************************************************************************************
 
 
@@ -714,17 +714,17 @@ contains
 
 
 
-    !>  This tests writing a first-order solution to a new file and reading it back into a 
-    !!  second-order solution from the new file.
+    !>  This tests writing a first-order fields to a new file and reading it back into a 
+    !!  second-order fields from the new file.
     !!
-    !!  Testing:    write_solution, read_solution
+    !!  Testing:    write_fields, read_fields
     !!
     !!  @author Matteo Ugolotti
     !!
     !------------------------------------------------------------------------------------------
     @Test
-    subroutine test_hdfio_solution_writeO2new_read_O1(this)
-        class(test_hdfio_solution),     intent(inout)   :: this 
+    subroutine test_hdfio_fields_writeO2new_read_O1(this)
+        class(test_hdfio_fields),     intent(inout)   :: this 
 
         real(rk)                    :: tol, ref_q1(1), ref_q2(8)
         integer(ik)                 :: ielem, idom
@@ -738,13 +738,13 @@ contains
                     q1_in => this%chidgO1%data%sdata%q_in )
             
             !
-            ! Set q2 reference solution values
+            ! Set q2 reference fields values
             !
             ref_q2 = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
             
             
             !
-            ! Assign reference solution
+            ! Assign reference fields
             !
             do ielem = 1,this%chidgO2%data%mesh%domain(1)%nelem
                 q2%dom(1)%vecs(ielem)%vec = ref_q2 + real(ielem,rk)
@@ -754,7 +754,7 @@ contains
             !
             ! Write variable
             !
-            call this%chidgO2%write_solution(this%fileNew)
+            call this%chidgO2%write_fields(this%fileNew)
             
 
             !
@@ -766,9 +766,9 @@ contains
             
 
             !
-            ! Read O2 solution to O1 instance.
+            ! Read O2 fields to O1 instance.
             !
-            call this%chidgO1%read_solution(this%fileNew)
+            call this%chidgO1%read_fields(this%fileNew)
            
             !
             ! Set new expected values
@@ -776,7 +776,7 @@ contains
             ref_q1 = [ONE]
 
             !
-            ! Test that the read solution values equal the expected values
+            ! Test that the read fields values equal the expected values
             !
             do ielem = 1,this%chidgO1%data%mesh%domain(1)%nelem
                 @assertEqual(ref_q1(1)+real(ielem,rk), q1_in%dom(1)%vecs(ielem)%vec(1), tol)
@@ -785,7 +785,7 @@ contains
 
        end associate
             
-    end subroutine test_hdfio_solution_writeO2new_read_O1
+    end subroutine test_hdfio_fields_writeO2new_read_O1
     !*******************************************************************************************
 
 
@@ -795,4 +795,4 @@ contains
 
 
 
-end module test_hdfio_solution_mod
+end module test_hdfio_fields_mod

@@ -53,7 +53,7 @@ subroutine test_fgmres_solve()
     !
     ! Read grid file
     !
-    call chidg%read_grid(file_name)
+    call chidg%read_mesh(file_name)
 
 
     associate ( A => chidg%data%sdata%lhs,  &

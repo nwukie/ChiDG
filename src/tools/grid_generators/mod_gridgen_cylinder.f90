@@ -10,9 +10,11 @@ module mod_gridgen_cylinder
                                       get_block_boundary_faces_plot3d
     use mod_hdf_utilities,      only: add_domain_hdf, initialize_file_hdf, open_domain_hdf, &
                                       close_domain_hdf, add_bc_state_hdf, open_file_hdf,    &
-                                      close_file_hdf, close_hdf, set_bc_patch_hdf,          &
+                                      close_file_hdf, close_hdf, set_patch_hdf,             &
                                       set_contains_grid_hdf, open_bc_group_hdf,             &
-                                      close_bc_group_hdf, set_bc_patch_group_hdf, create_bc_group_hdf
+                                      close_bc_group_hdf, set_patch_group_hdf,              &
+                                      create_bc_state_group_hdf, create_patch_hdf,                &
+                                      open_patch_hdf, close_patch_hdf
     use hdf5
 
     use type_point,             only: point_t
@@ -87,7 +89,7 @@ contains
 
         real(rk),   allocatable, dimension(:)   :: xupper, yupper, xlower, ylower
 
-        integer(HID_T)                  :: file_id, dom_id, bcface_id, bcgroup_id
+        integer(HID_T)                  :: file_id, dom_id, bcgroup_id, patch_id
         class(bc_state_t),  allocatable :: inlet, outlet, wall
         type(point_t),      allocatable :: nodes(:)
         integer(ik),        allocatable :: elements(:,:), faces(:,:)
@@ -207,13 +209,11 @@ contains
         if (present(bc_state_groups)) then
 
             do igroup = 1,size(bc_state_groups)
-                call create_bc_group_hdf(file_id,bc_state_groups(igroup)%name)
+                call create_bc_state_group_hdf(file_id,bc_state_groups(igroup)%name)
 
                 bcgroup_id = open_bc_group_hdf(file_id,bc_state_groups(igroup)%name)
 
-                !do istate = 1,bc_state_groups(igroup)%bc_states%size()
                 do istate = 1,bc_state_groups(igroup)%nbc_states()
-                    !call add_bc_state_hdf(bcgroup_id, bc_state_groups(igroup)%bc_states%at(istate))
                     call add_bc_state_hdf(bcgroup_id, bc_state_groups(igroup)%bc_state(istate)%state)
                 end do
                 call close_bc_group_hdf(bcgroup_id)
@@ -222,9 +222,9 @@ contains
 
         else
 
-            call create_bc_group_hdf(file_id,'Inlet')
-            call create_bc_group_hdf(file_id,'Outlet')
-            call create_bc_group_hdf(file_id,'Walls')
+            call create_bc_state_group_hdf(file_id,'Inlet')
+            call create_bc_state_group_hdf(file_id,'Outlet')
+            call create_bc_state_group_hdf(file_id,'Walls')
 
             bcgroup_id = open_bc_group_hdf(file_id,'Inlet')
             call add_bc_state_hdf(bcgroup_id,inlet)
@@ -275,8 +275,12 @@ contains
                 ! Get face node indices for boundary 'bcface'
                 faces = get_block_boundary_faces_plot3d(coords(:,:,:,1),coords(:,:,:,2),coords(:,:,:,3),mapping=4,bcface=bcface)
 
+
                 ! Set bc patch face indices
-                call set_bc_patch_hdf(dom_id,faces,bcface)
+                patch_id = create_patch_hdf(dom_id,bcface)
+                call set_patch_hdf(patch_id,faces)
+                call close_patch_hdf(patch_id)
+
             end do !bcface
 
 
@@ -289,17 +293,17 @@ contains
             face_strings = ['XI_MIN  ','XI_MAX  ', 'ETA_MIN ', 'ETA_MAX ', 'ZETA_MIN', 'ZETA_MAX']
             do bcface = 1,size(face_strings)
 
-                call h5gopen_f(dom_id,'BoundaryConditions/'//trim(adjustl(face_strings(bcface))),bcface_id,ierr)
+                patch_id = open_patch_hdf(dom_id,trim(adjustl(face_strings(bcface))))
 
                 if ( (idomain == 2) .and. (face_strings(bcface) == 'ETA_MIN ') ) then
-                    call set_bc_patch_group_hdf(bcface_id,'Outlet')
+                    call set_patch_group_hdf(patch_id,'Outlet')
                 else if ( (idomain == 4) .and. (face_strings(bcface) == 'ETA_MIN ') ) then
-                    call set_bc_patch_group_hdf(bcface_id,'Inlet')
+                    call set_patch_group_hdf(patch_id,'Inlet')
                 else if ( (face_strings(bcface) /= 'XI_MIN  ') .and. (face_strings(bcface) /= 'XI_MAX  ') ) then
-                    call set_bc_patch_group_hdf(bcface_id,'Walls')
+                    call set_patch_group_hdf(patch_id,'Walls')
                 end if
 
-                call h5gclose_f(bcface_id,ierr)
+                call close_patch_hdf(patch_id)
 
             end do
 

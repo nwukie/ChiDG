@@ -35,13 +35,11 @@ module type_chidg
     use mod_chidg_mpi,              only: chidg_mpi_init, chidg_mpi_finalize,   &
                                           IRANK, NRANK, ChiDG_COMM
 
-    use mod_tecio,                  only: write_tecio_variables
-    use mod_hdfio,                  only: read_domains_hdf, read_boundaryconditions_hdf,   &
-                                          read_solution_hdf, write_solution_hdf,        &
-                                          read_connectivity_hdf, read_weights_hdf,      &
-                                          write_domains_hdf, read_equations_hdf, &
+    use mod_hdfio,                  only: read_grids_hdf, read_boundaryconditions_hdf,   &
+                                          read_fields_hdf, write_fields_hdf,        &
+                                          read_global_connectivity_hdf, read_weights_hdf,      &
+                                          write_grids_hdf, read_equations_hdf,              &
                                           read_prescribedmeshmotion_hdf
-
     use mod_hdf_utilities,          only: close_hdf
     use mod_partitioners,           only: partition_connectivity, send_partitions, &
                                           recv_partition
@@ -118,13 +116,14 @@ module type_chidg
         procedure   :: report
 
         ! IO
-        procedure            :: read_grid
-        procedure            :: read_domains
-        procedure            :: read_boundary_conditions
-        procedure            :: read_solution
+        procedure            :: read_mesh
+        procedure            :: read_mesh_grids
+        procedure            :: read_mesh_boundary_conditions
         procedure            :: read_prescribedmeshmotions
-        procedure            :: write_grid
-        procedure            :: write_solution
+        procedure            :: write_mesh
+        procedure            :: read_fields
+        procedure            :: write_fields
+
 
 
     end type chidg_t
@@ -441,10 +440,7 @@ contains
         !
         select case (trim(selector))
             
-            case ('Time','time','time_integrator','Time_Integrator','timeintegrator','TimeIntegrator', 'time integrator', 'Time Integrator', &
-                  'nonlinearsolver','NonlinearSolver','nonlinear_solver','Nonlinear_Solver','nonlinear solver', 'Nonlinear Solver', &
-                  'linearsolver','LinearSolver','linear_solver','Linear_Solver','linear solver', 'Linear Solver', &
-                  'preconditioner','Preconditioner')
+            case ('Time Integrator', 'Nonlinear Solver', 'Linear Solver', 'Preconditioner')
 
                 user_msg = "chidg%set: The component being set needs an algorithm string passed in &
                             along with it. Try 'call chidg%set('your component', algorithm='your algorithm string')"
@@ -458,7 +454,7 @@ contains
         !
         select case (trim(selector))
 
-            case ('solution order', 'Solution Order', 'solution_order', 'Solution_Order')
+            case ('Solution Order')
 
                 user_msg = "chidg%set: The component being set needs an integer passed in &
                             along with it. Try 'call chidg%set('your component', integer_input=my_int)"
@@ -478,50 +474,34 @@ contains
             !
             ! Allocation for time integrator
             !
-            case ('Time','time','time_integrator','Time_Integrator','timeintegrator','TimeIntegrator', 'time integrator', 'Time Integrator')
-                if (allocated(self%time_integrator)) then
-                    deallocate(self%time_integrator)
-                    !call create_time_integrator(algorithm,self%time_integrator,options)
-                    call create_time_integrator(algorithm,self%time_integrator)
-                else
-                    !call create_time_integrator(algorithm,self%time_integrator,options)
-                    call create_time_integrator(algorithm,self%time_integrator)
-                end if
+            case ('Time Integrator')
+                if (allocated(self%time_integrator)) deallocate(self%time_integrator)
+                call create_time_integrator(algorithm,self%time_integrator)
 
 
 
             !
             ! Allocation for nonlinear solver
             !
-            case ('nonlinearsolver','NonlinearSolver','nonlinear_solver','Nonlinear_Solver','nonlinear solver', 'Nonlinear Solver')
-                if (allocated(self%nonlinear_solver)) then
-                    deallocate(self%nonlinear_solver)
-                    call create_nonlinear_solver(algorithm,self%nonlinear_solver,options)
-                else
-                    call create_nonlinear_solver(algorithm,self%nonlinear_solver,options)
-                end if
-
+            case ('Nonlinear Solver')
+                if (allocated(self%nonlinear_solver)) deallocate(self%nonlinear_solver)
+                call create_nonlinear_solver(algorithm,self%nonlinear_solver,options)
 
 
 
             !
             ! Allocation for linear solver
             !
-            case ('linearsolver','LinearSolver','linear_solver','Linear_Solver','linear solver', 'Linear Solver')
-                if (allocated(self%linear_solver)) then
-                    deallocate(self%linear_solver)
-                    call create_linear_solver(algorithm,self%linear_solver,options)
-                else
-                    call create_linear_solver(algorithm,self%linear_solver,options)
-                end if
+            case ('Linear Solver')
+                if (allocated(self%linear_solver)) deallocate(self%linear_solver)
+                call create_linear_solver(algorithm,self%linear_solver,options)
 
 
             !
             ! Allocation for preconditioner
             !
-            case ('preconditioner','Preconditioner')
+            case ('Preconditioner')
                 if (allocated(self%preconditioner)) deallocate(self%preconditioner)
-
                 call create_preconditioner(algorithm,self%preconditioner)
 
 
@@ -530,7 +510,7 @@ contains
             ! Set the 'solution order'. Order-of-accuracy, that is. Compute the number of terms
             ! in the 1D, 3D solution bases
             !
-            case ('solution order', 'Solution Order', 'solution_order', 'Solution_Order')
+            case ('Solution Order')
                 self%nterms_s_1d = integer_input
                 self%nterms_s    = self%nterms_s_1d * self%nterms_s_1d * self%nterms_s_1d
         
@@ -579,7 +559,7 @@ contains
     !!  boundar functions are overridden with neumann boundary conditions.
     !!
     !------------------------------------------------------------------------------------------
-    subroutine read_grid(self,gridfile,spacedim,equation_set, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield, bc_periodic, partitions_in)
+    subroutine read_mesh(self,gridfile,spacedim,equation_set, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield, bc_periodic, partitions_in)
         class(chidg_t),     intent(inout)               :: self
         character(*),       intent(in)                  :: gridfile
         character(*),       intent(in),     optional    :: equation_set
@@ -594,13 +574,13 @@ contains
 
 
         call write_line(' ', ltrim=.false., io_proc=GLOBAL_MASTER)
-        call write_line('Reading grid... ', io_proc=GLOBAL_MASTER)
+        call write_line('Reading mesh... ', io_proc=GLOBAL_MASTER)
 
 
         !
         ! Read domain geometry. Also performs partitioning.
         !
-        call self%read_domains(gridfile,spacedim,equation_set,partitions_in)
+        call self%read_mesh_grids(gridfile,spacedim,equation_set,partitions_in)
 
 
 
@@ -609,12 +589,12 @@ contains
         !
         ! Read boundary conditions.
         !
-        call self%read_boundary_conditions(gridfile, bc_wall,        &
-                                                     bc_inlet,       &
-                                                     bc_outlet,      &
-                                                     bc_symmetry,    &
-                                                     bc_farfield,    &
-                                                     bc_periodic )
+        call self%read_mesh_boundary_conditions(gridfile, bc_wall,        &
+                                                          bc_inlet,       &
+                                                          bc_outlet,      &
+                                                          bc_symmetry,    &
+                                                          bc_farfield,    &
+                                                          bc_periodic )
 
 
 
@@ -624,11 +604,11 @@ contains
         call self%init('all')
 
 
-        call write_line('Done reading grid.', io_proc=GLOBAL_MASTER)
+        call write_line('Done reading mesh.', io_proc=GLOBAL_MASTER)
         call write_line(' ', ltrim=.false.,   io_proc=GLOBAL_MASTER)
 
 
-    end subroutine read_grid
+    end subroutine read_mesh
     !*****************************************************************************************
 
 
@@ -638,7 +618,7 @@ contains
 
 
 
-    !>  Read grid from file.
+    !>  Read volume grid portion of mesh from file.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -651,7 +631,7 @@ contains
     !!  TODO: Generalize spacedim
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine read_domains(self,gridfile,spacedim,equation_set, partitions_in)
+    subroutine read_mesh_grids(self,gridfile,spacedim,equation_set, partitions_in)
         class(chidg_t),     intent(inout)               :: self
         character(*),       intent(in)                  :: gridfile
         integer(ik),        intent(in),     optional    :: spacedim
@@ -669,8 +649,8 @@ contains
                                                domain_dimensionality, ielem, eqn_ID
 
 
-        call write_line(' ',                      ltrim=.false., io_proc=GLOBAL_MASTER)
-        call write_line('   Reading domains... ', ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line(' ',                           ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('   Reading domain grids... ', ltrim=.false., io_proc=GLOBAL_MASTER)
 
 
 
@@ -693,7 +673,7 @@ contains
             call write_line("   partitioning...", ltrim=.false., io_proc=GLOBAL_MASTER)
             if ( IRANK == GLOBAL_MASTER ) then
 
-                call read_connectivity_hdf(gridfile,connectivities)
+                call read_global_connectivity_hdf(gridfile,connectivities)
                 call read_weights_hdf(gridfile,weights)
 
                 call partition_connectivity(connectivities, weights, partitions)
@@ -720,7 +700,7 @@ contains
             if ( iread == IRANK ) then
 
                 call read_equations_hdf(gridfile, self%data)
-                call read_domains_hdf(gridfile,self%partition,meshdata)
+                call read_grids_hdf(gridfile,self%partition,meshdata)
 
             end if
             call MPI_Barrier(ChiDG_COMM,ierr)
@@ -771,10 +751,10 @@ contains
 
 
 
-        call write_line('   Done reading domains... ', ltrim=.false., io_proc=GLOBAL_MASTER)
-        call write_line(' ',                           ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('   Done reading domains grids... ', ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line(' ',                                 ltrim=.false., io_proc=GLOBAL_MASTER)
 
-    end subroutine read_domains
+    end subroutine read_mesh_grids
     !*****************************************************************************************
 
 
@@ -787,7 +767,7 @@ contains
 
 
 
-    !>  Read boundary conditions from grid file.
+    !>  Read boundary conditions portion of mesh from file.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/5/2016
@@ -795,7 +775,7 @@ contains
     !!  @param[in]  gridfile    String specifying a gridfile, including extension.
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine read_boundary_conditions(self, gridfile, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield, bc_periodic)
+    subroutine read_mesh_boundary_conditions(self, gridfile, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield, bc_periodic)
         class(chidg_t),     intent(inout)               :: self
         character(*),       intent(in)                  :: gridfile
         class(bc_state_t),  intent(in),     optional    :: bc_wall
@@ -877,7 +857,7 @@ contains
         call write_line(' ',                                    ltrim=.false., io_proc=GLOBAL_MASTER)
 
 
-    end subroutine read_boundary_conditions
+    end subroutine read_mesh_boundary_conditions
     !*****************************************************************************************
 
 
@@ -975,7 +955,7 @@ contains
 
 
 
-    !>  Read solution from file.
+    !>  Read fields from file.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -983,7 +963,7 @@ contains
     !!  @param[in]  solutionfile    String containing a solution file name, including extension.
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine read_solution(self,file_name)
+    subroutine read_fields(self,file_name)
         class(chidg_t),     intent(inout)           :: self
         character(*),       intent(in)              :: file_name
 
@@ -999,13 +979,13 @@ contains
         !
         call write_line("   reading from: ", file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
 
-        call read_solution_hdf(file_name,self%data)
+        call read_fields_hdf(file_name,self%data)
 
 
         call write_line('Done reading solution.', io_proc=GLOBAL_MASTER)
         call write_line(' ', ltrim=.false.,       io_proc=GLOBAL_MASTER)
 
-    end subroutine read_solution
+    end subroutine read_fields
     !*****************************************************************************************
 
 
@@ -1091,26 +1071,29 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine write_grid(self,file_name)
+    subroutine write_mesh(self,file_name)
         class(chidg_t),     intent(inout)           :: self
         character(*),       intent(in)              :: file_name
 
 
         call write_line(' ', ltrim=.false., io_proc=GLOBAL_MASTER)
-        call write_line('Writing grid... ', io_proc=GLOBAL_MASTER)
+        call write_line('Writing mesh... ', io_proc=GLOBAL_MASTER)
 
 
         !
         ! Call grid reader based on file extension
         !
         call write_line("   writing to: ", file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
-        call write_domains_hdf(self%data,file_name)
+        call write_grids_hdf(self%data,file_name)
 
 
-        call write_line("Done writing grid.", io_proc=GLOBAL_MASTER)
+        ! TODO: write_boundary_conditions
+
+
+        call write_line("Done writing mesh.", io_proc=GLOBAL_MASTER)
         call write_line(' ', ltrim=.false.,   io_proc=GLOBAL_MASTER)
 
-    end subroutine write_grid
+    end subroutine write_mesh
     !*****************************************************************************************
 
 
@@ -1130,7 +1113,7 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine write_solution(self,file_name)
+    subroutine write_fields(self,file_name)
         class(chidg_t),     intent(inout)           :: self
         character(*),       intent(in)              :: file_name
 
@@ -1144,7 +1127,7 @@ contains
         !
         call write_line("   writing to:", file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
 
-        call write_solution_hdf(self%data,file_name)
+        call write_fields_hdf(self%data,file_name)
         call self%time_integrator%write_time_options(self%data,file_name)
 
 
@@ -1152,7 +1135,7 @@ contains
         call write_line("Done writing solution.", io_proc=GLOBAL_MASTER)
         call write_line(' ', ltrim=.false.,       io_proc=GLOBAL_MASTER)
 
-    end subroutine write_solution
+    end subroutine write_fields
     !*****************************************************************************************
 
 
@@ -1226,7 +1209,7 @@ contains
         !
         ! Write initial solution
         !
-        if (option_write_initial) call self%write_solution('initial.h5')
+        if (option_write_initial) call self%write_fields('initial.h5')
 
 
 
@@ -1251,10 +1234,10 @@ contains
         !
         wcount = 1
         nsteps = self%data%time_manager%nsteps
+        call write_line("Step","System residual", columns=.true., column_width=30, io_proc=GLOBAL_MASTER)
         do istep = 1,nsteps
             
 
-            call write_line("- Step ", istep, io_proc=GLOBAL_MASTER)
 
 
             !
@@ -1273,7 +1256,7 @@ contains
             !
             if (wcount == self%data%time_manager%nwrite) then
                 write(filename, "(A,I7.7,A3)") trim(prefix)//'_', istep, '.h5'
-                call self%write_solution(filename)
+                call self%write_fields(filename)
                 wcount = 0
             end if
 
@@ -1282,7 +1265,7 @@ contains
             !
             ! Print diagnostics
             !
-            call write_line("-  System residual |R(Q)|: ", self%time_integrator%residual_norm%at(istep), delimiter='', io_proc=GLOBAL_MASTER)
+            call write_line(istep, self%time_integrator%residual_norm%at(istep), columns=.true., column_width=30, io_proc=GLOBAL_MASTER)
 
 
             wcount = wcount + 1
@@ -1294,7 +1277,7 @@ contains
         !
         ! Write the final solution to hdf file
         !        
-        if (option_write_final) call self%write_solution(solutionfile_out)
+        if (option_write_final) call self%write_fields(solutionfile_out)
 
 
     end subroutine run

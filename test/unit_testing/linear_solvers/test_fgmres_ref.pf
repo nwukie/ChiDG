@@ -57,7 +57,7 @@ subroutine test_fgmres_ref_solve()
     !
     ! Read grid
     !
-    call chidg%read_grid(file_name)
+    call chidg%read_mesh(file_name)
 
 
 

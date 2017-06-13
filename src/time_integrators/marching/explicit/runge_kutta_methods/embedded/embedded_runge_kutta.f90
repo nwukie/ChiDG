@@ -146,7 +146,7 @@ module embedded_runge_kutta
                     !
                     ! Update Spatial Residual and Linearization (rhs,lin)
                     !
-                    call update_space(data)
+                    call update_space(data,differentiate=.false.)
 
                     do idom = 1,data%ndomains()
                         do ielem = 1,data%mesh(idom)%nelem

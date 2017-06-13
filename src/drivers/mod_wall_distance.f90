@@ -115,14 +115,7 @@ contains
         ! Solid walls get dirichlet zero bc.
         ! All other families get neumann zero bc.
         !
-!        call wall_distance%read_grid(gridfile, equation_set='Wall Distance : p-Poisson')
-!        call wall_distance%read_boundaryconditions(gridfile, bc_wall     = dirichlet_zero, &
-!                                                             bc_inlet    = neumann_zero,   &
-!                                                             bc_outlet   = neumann_zero,   &
-!                                                             bc_symmetry = neumann_zero,   &
-!                                                             bc_farfield = neumann_zero)
-
-        call wall_distance%read_grid(gridfile, equation_set = 'Wall Distance : p-Poisson',  &
+        call wall_distance%read_mesh(gridfile, equation_set = 'Wall Distance : p-Poisson',  &
                                                bc_wall      = dirichlet_zero,               &
                                                bc_inlet     = neumann_zero,                 &
                                                bc_outlet    = neumann_zero,                 &
@@ -166,7 +159,7 @@ contains
         !
         if (wd_file_exists .and. have_wd_field) then
 
-            call wall_distance%read_solution(fileout)
+            call wall_distance%read_fields(fileout)
             wall_distance%data%sdata%q = wall_distance%data%sdata%q_in
 
         !
@@ -177,7 +170,7 @@ contains
             !
             ! Store grid to file
             !
-            call wall_distance%write_grid(fileout)
+            call wall_distance%write_mesh(fileout)
 
             ! Get wall-distance approximation for p-Poisson equation using a low-order
             ! polynomial expansion. We are going in steps of 'p' here to make sure
@@ -220,7 +213,7 @@ contains
                     call wall_distance%data%sdata%q_in%project(wall_distance%data%mesh,constant,1)
 
                 else
-                    call wall_distance%read_solution(fileout)
+                    call wall_distance%read_fields(fileout)
                 end if
 
 
@@ -235,7 +228,7 @@ contains
                 !
                 ! Write wall distance to auxiliary field
                 !
-                call wall_distance%write_solution(fileout)
+                call wall_distance%write_fields(fileout)
 
 
             end do
@@ -281,7 +274,7 @@ contains
                 !
                 ! Read solution if it exists.
                 !
-                call wall_distance%read_solution(fileout)
+                call wall_distance%read_fields(fileout)
 
 !                !
 !                ! Read solution if it exists.
@@ -293,7 +286,7 @@ contains
 !                    call wall_distance%data%sdata%q_in%project(wall_distance%data%mesh,constant,1)
 !
 !                else
-!                    call wall_distance%read_solution(fileout)
+!                    call wall_distance%read_fields(fileout)
 !                end if
 
 
@@ -308,7 +301,7 @@ contains
                 !
                 ! Write wall distance to auxiliary field
                 !
-                call wall_distance%write_solution(fileout)
+                call wall_distance%write_fields(fileout)
 
 
             end do

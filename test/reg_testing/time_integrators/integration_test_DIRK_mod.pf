@@ -1,0 +1,1068 @@
+!--------------------------------------------------------------------------------
+!
+!           Test time integrators: 1D linear advection problem
+!
+!   Objective: 
+!   ----------------------
+!   Test formal temporal order of accuracy for time intetrators
+!
+!
+!   Approach:  
+!   ----------------------
+!   Run scalar linear advection equation with a gaussian pulse on a 1D periodic
+!   domain. Analytical solution equals the initial solution after 1 period.
+!   Compute order of accuracy by computing the numerical solution to
+!   analytical solution after one period and for each integrator, compute the error
+!   using two different time steps. Order of accuracy is computed by investigating
+!   the reduction in error compared against the reduction in time step.
+!
+!   
+!   Math:
+!   ----------------------
+!
+!   div( vec(c)*u ) = 0
+!
+!   Fluxes:
+!       Advective Flux: F_a(u) = vec(c)*u
+!
+!   Scalar advection coefficient model is:
+!       vec(c) = [1.0, 0.0, 0.0]
+!
+!   Boundary conditions are:
+!       Periodic U(x=-10) = U(x=10)
+!
+!   Initial solution is:
+!       u = exp( -(x**TWO)/(TWO) )      (Gaussian profile, centered at x=0)
+!
+!   Analytical Solution is:
+!       Periodic, so evaluated after one period, the analytical solution
+!       is equal to the initial solution:
+!       u = exp( -(x**TWO)/(TWO) )      (Gaussian profile, centered at x=0)
+!
+!                        .
+!                       . .             (Initial solution)
+!     (t=0)             | |
+!               _______/   \_______
+!
+!
+!                            .
+!                           . .
+!                           | |
+!               ___________/   \____
+!
+!
+!
+!                                  .
+!               .                 . 
+!               |                 |     (Solution through periodic boundaries)
+!                \_______________/  
+!
+!
+!                    .
+!                   . .
+!                   | |
+!               ___/   \___________
+!
+!
+!                        .
+!                       . .
+!    (t=T)              | |             (Final solution = Initial solution)
+!               _______/   \_______
+!
+!
+!   Where T is the time after one period.
+!
+!   
+!   Test layout:
+!   ----------------------
+!       1: Define new advection coefficient model to set c = [1,0,0].
+!       2: Define new gaussian function to use for initial condition and analytical solution.
+!       3: Define equation set builder to construct scalar advection.
+!       4: Define test parameter object that defines a state for each test.
+!       5: SetUp: generate/read/initialize grid + bcs
+!       6: Run calculations and compute error against analytical solution
+!       7: Compute temporal convergence rates using the previously computed
+!          errors and step sizes.
+!
+!
+!   @author Nathan A. Wukie (AFRL)
+!   @date   05/30/2017
+!
+!--------------------------------------------------------------------------------
+module integration_test_DIRK_mod
+#include <messenger.h>
+    use pfunit_mod
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: ZERO, IO_DESTINATION, ONE, TWO
+    use mod_string,             only: string_t
+    use type_chidg,             only: chidg_t
+    use type_chidg_data,        only: chidg_data_t
+    use mod_bc,                 only: create_bc
+    use type_bc_state,          only: bc_state_t
+    use type_bc_state_group,    only: bc_state_group_t
+    use type_function,          only: function_t
+    use type_ivector,           only: ivector_t
+    use type_point,             only: point_t
+    use mod_function,           only: create_function, registered_fcns
+    use mod_interpolate,        only: interpolate_element_standard
+    use mod_test_utilities,     only: create_mesh_file
+    use mod_file_utilities,     only: delete_file
+
+    use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM
+    use mpi_f08,                only: MPI_COMM, MPI_REAL8, MPI_SUM
+    use mod_io
+
+    ! Imports for defining a new operator
+    use type_chidg_worker,      only: chidg_worker_t
+    use type_properties,        only: properties_t
+    use mod_operators,          only: operator_factory
+    use type_operator,          only: operator_t
+    use mod_models,             only: model_factory
+    use type_model,             only: model_t
+    use DNAD_D
+
+    ! Imports for defining a new equation builder
+    use mod_equations,                  only: equation_builder_factory
+    use type_equation_builder,          only: equation_builder_t
+    use type_equation_set,              only: equation_set_t
+    implicit none
+
+
+    ! Store the nonlinear convergence for each test case. This is used 
+    ! to test the nonlinear convergence between a case running on
+    ! a different number of procs.
+    !
+    ! Integrators:   = ['backward_euler', 'backward_euler',    'DIRK',    'DIRK']
+    ! dt:            = [ 0.0125,                   0.00625,    0.10,       0.08 ]
+    ! nsteps:        = [   1600,                      3200,     200,        250 ]
+    !
+    real(rk)        :: error(2,2)               ! nintegrators, ndt
+    real(rk)        :: time_parameter(2,2)      ! nintegrators, ndt
+    real(rk)        :: expected_order(2)        ! nintegrators
+
+    public  :: linear_advection_1D
+
+
+
+    real(rk), parameter :: cx = ONE
+    real(rk), parameter :: cy = ZERO
+    real(rk), parameter :: cz = ZERO
+
+
+
+
+    !>  The advection coefficient model.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   05/30/2017
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    type, extends(model_t), public :: testing_1D_linear_adv_model_t
+
+    contains
+
+        procedure   :: init    => init_model
+        procedure   :: compute => compute_model
+
+    end type testing_1D_linear_adv_model_t
+    !***************************************************************************************
+
+
+    !>  Gaussian function.
+    !!
+    !!  Used as initial condition.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   05/30/2017
+    !!
+    !-------------------------------------------------------------------------------------
+    type, extends(function_t), public :: gaussian_test_t
+
+
+    contains
+
+        procedure   :: init
+        procedure   :: compute
+
+    end type gaussian_test_t
+    !*************************************************************************************
+
+
+
+
+    !>  A new equation set builder to build a linear advection equation set with the 
+    !!  defined advection coefficient.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   05/30/2017
+    !!
+    !-----------------------------------------------------------------------------------------
+    type, extends(equation_builder_t), public :: test_1D_linear_advection_builder_t
+
+
+    contains
+
+        procedure   :: init => init_builder
+        procedure   :: build
+
+    end type test_1D_linear_advection_builder_t
+    !*****************************************************************************************
+
+
+
+
+
+
+
+    !>  This parameter initialize the state for each test
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   05/30/2017
+    !!
+    !----------------------------------------------------------------------------------------
+    @TestParameter
+    type, extends(MpiTestParameter) :: case_grid_order
+
+        real(rk)                    :: dt
+        integer(ik)                 :: nsteps
+        integer(ik)                 :: expected_order
+        character(:),   allocatable :: gridfile
+        character(:),   allocatable :: integrator
+
+    contains
+
+        procedure   :: toString
+
+    end type case_grid_order
+    !****************************************************************************************
+
+
+
+
+
+
+
+    !>  Main testing fixture with test components that get initialized for each test
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   5/30/2017
+    !!
+    !----------------------------------------------------------------------------------------
+    @TestCase(testParameters={getParameters()}, constructor=newTest)
+    type, extends(MpiTestCase) :: linear_advection_1D
+
+        real(rk)                    :: dt
+        integer(ik)                 :: nsteps
+        integer(ik)                 :: expected_order
+        character(:),   allocatable :: gridfile
+        character(:),   allocatable :: integrator
+
+        type(chidg_t)   :: chidg
+        type(mpi_comm)  :: ChiDG_COMM
+
+    contains
+        procedure   :: setUp
+        procedure   :: tearDown
+    end type linear_advection_1D
+    !****************************************************************************************
+
+
+
+
+contains
+
+
+
+
+    !----------------------------------------------------------------------------------------
+    !                       Scalar Advection Coefficient Model Methods
+    !----------------------------------------------------------------------------------------
+
+    !>  Initialize scalar advection coefficient model with name and model field being 
+    !!  provided.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/3/2016
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine init_model(self)
+        class(testing_1D_linear_adv_model_t),    intent(inout)   :: self
+
+        call self%set_name('Testing 1D Linear Advection :: Coefficient Model')
+        call self%set_dependency('f(Q-)')
+
+        call self%add_model_field('Scalar Advection Velocity-1')
+        call self%add_model_field('Scalar Advection Velocity-2')
+        call self%add_model_field('Scalar Advection Velocity-3')
+
+    end subroutine init_model
+    !****************************************************************************************
+
+
+
+    !>  Implement the function for providing the scalar advection coefficient field.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/3/2016
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine compute_model(self,worker)
+        class(testing_1D_linear_adv_model_t),  intent(in)      :: self
+        type(chidg_worker_t),                       intent(inout)   :: worker
+
+        type(AD_D), allocatable, dimension(:)   :: u, cx_model,cy_model,cz_model
+
+
+        u = worker%get_primary_field_general('u', 'value')
+
+        ! Initialize derivative arrays
+        cx_model = u
+        cy_model = u
+        cz_model = u
+
+        ! mu(u) = 1.0
+        cx_model = cx
+        cy_model = cy
+        cz_model = cz
+
+        call worker%store_model_field('Scalar Advection Velocity-1', 'value', cx_model)
+        call worker%store_model_field('Scalar Advection Velocity-2', 'value', cy_model)
+        call worker%store_model_field('Scalar Advection Velocity-3', 'value', cz_model)
+
+    end subroutine compute_model
+    !****************************************************************************************
+
+
+
+
+
+    
+    !-------------------------------------------------------------------------------
+    !                           Builder Methods for new equation set
+    !-------------------------------------------------------------------------------
+
+
+    !>  Initialize the new linear advection builder.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/30/2016
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine init_builder(self)
+        class(test_1D_linear_advection_builder_t),   intent(inout)  :: self
+
+        call self%set_name('Test 1D Linear Advection')
+
+    end subroutine init_builder
+    !*****************************************************************************************
+
+    
+
+
+
+    !>  Implement the linear advection builder definition.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/19/2016
+    !!
+    !-----------------------------------------------------------------------------------------
+    function build(self,blueprint) result(linear_advection_eqn)
+        class(test_1D_linear_advection_builder_t),    intent(in)  :: self
+        character(*),                                           intent(in)  :: blueprint
+
+        type(equation_set_t)    :: linear_advection_eqn
+        
+
+        !
+        ! Set equationset name.
+        !
+        call linear_advection_eqn%set_name("Test 1D Linear Advection")
+
+
+        !
+        ! Add spatial operators
+        !
+        call linear_advection_eqn%add_operator("Scalar Advection Boundary Average Operator")
+        call linear_advection_eqn%add_operator("Scalar Advection LaxFriedrichs Operator")
+        call linear_advection_eqn%add_operator("Scalar Advection Volume Operator")
+        call linear_advection_eqn%add_operator("Scalar Advection BC Operator")
+
+        !
+        ! Add model for 'compute_mu' scalar coefficient
+        !
+        call linear_advection_eqn%add_model('Testing 1D Linear Advection :: Coefficient Model')
+
+    end function build
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !----------------------------------------------------------------------------------
+    !                              Function methods
+    !----------------------------------------------------------------------------------
+
+
+    !>  Initialize gaussian function object.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   05/30/2017
+    !!
+    !----------------------------------------------------------------------------------
+    subroutine init(self)
+        class(gaussian_test_t),  intent(inout)   :: self
+
+        !
+        ! Set function name
+        !
+        call self%set_name("Gaussian Test")
+
+
+    end subroutine init
+    !**********************************************************************************
+
+
+
+    !>  Compute the function value.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   05/30/2017
+    !!
+    !----------------------------------------------------------------------------------
+    impure elemental function compute(self,time,coord) result(val)
+        class(gaussian_test_t), intent(inout)   :: self
+        real(rk),               intent(in)      :: time
+        type(point_t),          intent(in)      :: coord
+
+        real(rk)    :: x, y, z, a, b, c, val
+
+
+        !
+        ! Get inputs and function parameters
+        !
+        x = coord%c1_
+        y = coord%c2_
+        z = coord%c3_
+
+        a = ONE
+        b = ZERO
+        c = ONE
+
+        val = a*exp( -((x - b)**TWO) / (TWO * c**TWO))
+
+    end function compute
+    !***********************************************************************************
+
+
+
+
+
+    !-------------------------------------------------------------------------------
+    !                               Test methods
+    !-------------------------------------------------------------------------------
+
+
+
+    !> Parameter constructors
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------
+    function newTest(test_parameter) result(test)
+        type(case_grid_order),  intent(in)          :: test_parameter
+        type(linear_advection_1D)    :: test
+
+        test%dt             = test_parameter%dt
+        test%nsteps         = test_parameter%nsteps
+        test%expected_order = test_parameter%expected_order
+        test%gridfile       = test_parameter%gridfile
+        test%integrator     = test_parameter%integrator
+
+    end function newTest
+    !******************************************************************************
+
+
+    !> Parameter initialization
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------
+    function getParameters() result(params)
+        type(case_grid_order), allocatable :: params(:)
+    
+        real(rk),           allocatable :: dt(:)
+        type(string_t),     allocatable :: files(:), integrators(:)
+        integer(ik),        allocatable :: nsteps(:), expected_order(:)
+        integer(ik)                     :: icase
+
+        integrators = [string_t('backward_euler'),   string_t('backward_euler'), &
+                       string_t('DIRK'),             string_t('DIRK')]
+
+        files       = [ string_t('1D_linear_advection.h5'), string_t('1D_linear_advection.h5'), &
+                        string_t('1D_linear_advection.h5'), string_t('1D_linear_advection.h5') ]
+
+        expected_order = [      1,       1,    3,    3 ]
+        dt             = [ 0.0125, 0.00625, 0.10, 0.08 ]
+        nsteps         = [   1600,    3200,  200,  250 ]
+
+
+        !Initialize the test case container with the parameter
+        allocate(params(size(files)))
+        do icase = 1,size(files)
+            params(icase)%dt             = dt(icase)
+            params(icase)%nsteps         = nsteps(icase)
+            params(icase)%expected_order = expected_order(icase)
+            params(icase)%gridfile       = files(icase)%str
+            params(icase)%integrator     = integrators(icase)%str
+        end do
+
+    end function getParameters
+    !*****************************************************************************************
+
+
+
+    !>  Reporting the parameters of the test
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function toString(this) result(string)
+        class (case_grid_order),    intent(in)  :: this
+        character(:), allocatable   :: string
+
+        character(len=200) :: buffer
+
+        write(buffer,'( "(Integrator, dt)=","(", A20,",", F16.8, ")" )') trim(this%integrator), this%dt
+
+        if (len(trim(buffer)) > 60) then
+            string = buffer(1:60)
+        else
+            string = buffer
+        end if
+
+    end function toString
+    !****************************************************************************************
+
+
+
+
+
+
+
+    !>  Set up test routine.
+    !!
+    !!  This routine reads the grid file, sets up boundary conditions, initializes storage
+    !!  and sets the appropriate configuration options.
+    !!  This routine also gets the numer of processors and the correct MPI communicator for 
+    !!  the test.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie (AFRL)
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(linear_advection_1D),  intent(inout)   :: this
+
+        class(bc_state_t),  allocatable :: bc_state
+        type(bc_state_group_t)          :: bc_state_groups(3)
+        type(string_t)                  :: group_names(2,6)
+        class(function_t),  allocatable :: fcn
+
+        
+        ! Objects to register for equation set
+        type(test_1D_linear_advection_builder_t)    :: builder_test_linear_advection
+        type(testing_1D_linear_adv_model_t)         :: advection_coefficient_model
+
+        ! Objects to register for functions 
+        type(gaussian_test_t)                       :: gaussian
+
+
+
+
+        !-------------------------------------------------------------------------------
+        !               Initialize and register the advection coefficient model
+        !-------------------------------------------------------------------------------
+        call advection_coefficient_model%init()
+        call model_factory%register(advection_coefficient_model)
+
+        !-------------------------------------------------------------------------------
+        !                 Initialize and register equation set builder
+        !-------------------------------------------------------------------------------
+        call builder_test_linear_advection%init()
+        call equation_builder_factory%register(builder_test_linear_advection)
+
+        !-------------------------------------------------------------------------------
+        !  Initialize and register the gaussian function (initial/analytical solution)
+        !-------------------------------------------------------------------------------
+        call gaussian%init()
+        call registered_fcns%push_back(gaussian)
+
+
+
+        !------------------------------------------------------------------------------
+        !
+        ! Define input data here that is normally read through the namelist input file
+        !
+        ! As a result, we don't call chidg%init('io')
+        !
+        !------------------------------------------------------------------------------
+        basis            = 'legendre'
+        gq_rule          = 1
+        time_integrator  = trim(this%integrator)
+        dt               = this%dt
+        time_steps       = this%nsteps
+        ttol             = 1.e-6_rk
+        ntime_instances  = 1
+        nonlinear_solver = 'newton'
+        linear_solver    = 'fgmres_cgs'
+        preconditioner   = 'RASILU0'
+        nwrite           = 10000000
+        IO_DESTINATION   = 'file'
+        !------------------------------------------------------------------------------
+
+        !
+        ! Get MPI communicator information from pFUnit
+        !
+        IRANK                   = this%getProcessRank()
+        NRANK                   = this%getNumProcessesRequested()
+        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+
+
+
+        ! Set timescheme options to pass during initialization
+        !call toptions%set('dt', 0.1_rk) ! means nothing here
+        !call toptions%set('nsteps',100)
+        !call toptions%set('nwrite',0)
+
+
+        ! Set linear solver options to pass during initialization
+        call loptions%set('tol',1.e-14_rk)
+
+        ! Set nonlinear solver options
+        call noptions%set('tol',5.e-10_rk)
+        call noptions%set('cfl0',1.0_rk)
+        call noptions%set('nsteps',100)
+
+
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call this%chidg%start_up('core',this%ChiDG_COMM)
+
+
+
+        !
+        ! Create mesh
+        !
+        if (IRANK == GLOBAL_MASTER) then
+
+            !
+            ! Set boundary condition function groups
+            !
+            bc_state_groups(1)%name = "Left Boundary"
+            bc_state_groups(2)%name = "Right Boundary"
+            bc_state_groups(3)%name = "YZ Boundaries"
+
+            call create_bc("Periodic", bc_state)
+            call bc_state%set_fcn_option("Offset-1","val",20._rk)
+            call bc_state%set_fcn_option("Offset-2","val",0._rk)
+            call bc_state%set_fcn_option("Offset-3","val",0._rk)
+            call bc_state_groups(1)%add_bc_state(bc_state)
+
+
+            call create_bc("Periodic", bc_state)
+            call bc_state%set_fcn_option("Offset-1","val",-20._rk)
+            call bc_state%set_fcn_option("Offset-2","val",0._rk)
+            call bc_state%set_fcn_option("Offset-3","val",0._rk)
+            call bc_state_groups(2)%add_bc_state(bc_state)
+
+
+            call create_bc("Scalar Extrapolate", bc_state)
+            call bc_state_groups(3)%add_bc_state(bc_state)
+
+            
+
+
+
+            group_names(1,:) = [string_t("Left Boundary")  , &
+                                string_t("Right Boundary") , &
+                                string_t("YZ Boundaries")  , &
+                                string_t("YZ Boundaries")  , &
+                                string_t("YZ Boundaries")  , &
+                                string_t("YZ Boundaries") ]
+
+            call create_mesh_file('D1 NxNxN',this%gridfile,equation_sets   = [string_t("Test 1D Linear Advection")],  &
+                                                           group_names     = group_names,                             &
+                                                           bc_state_groups = bc_state_groups,                         &
+                                                           nelem_xi        = 40,                                      &
+                                                           nelem_eta       = 1,                                       &
+                                                           nelem_zeta      = 1,                                       &
+                                                           x_max_in        =  10._rk,                                 &
+                                                           x_min_in        = -10._rk)
+
+        end if !GLOBAL_MASTER
+
+
+        !
+        ! Set ChiDG components
+        !
+        call this%chidg%set('Solution Order',   integer_input=5)
+        call this%chidg%set('Time Integrator',  algorithm=time_integrator)
+        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
+
+
+        !
+        ! Read grid
+        !
+        call this%chidg%read_mesh(this%gridfile)
+
+
+
+        !
+        ! Initialize solution
+        !
+        call create_function(fcn,'Gaussian Test')
+        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
+
+
+    end subroutine SetUp
+    !*****************************************************************************************
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(linear_advection_1D),  intent(inout)   :: this
+
+        ! Close ChiDG
+        call this%chidg%shut_down('core')
+
+        if (IRANK == GLOBAL_MASTER) then
+            call delete_file(this%gridfile)
+        end if
+
+    end subroutine tearDown
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Run the simulation.
+    !!
+    !!      - compute the entropy error, test against the reference values.
+    !!      - store the nonlinear convergence to the module variable so it can 
+    !!        be used by a test for nonlinear convergence.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   05/30/2017
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    @Test(npes=[6])
+    subroutine run_calculations(self)
+        class(linear_advection_1D),  intent(inout)   :: self
+
+        real(rk)    :: computed_error
+        integer(ik) :: integrator_index, dt_index
+
+
+        integrator_index = get_integrator_index(self%integrator)
+        dt_index         = get_dt_index(self%dt)
+
+
+        !
+        ! Run ChiDG simulation
+        !
+        call self%chidg%run(write_initial=.false., write_final=.false.)
+
+
+        !
+        ! Compute error
+        !
+        computed_error = compute_DIRK_error(self%chidg%data,self%ChiDG_COMM)
+
+
+        !
+        ! Store the computed error for the current case
+        !
+        error(integrator_index,dt_index)          = computed_error
+        time_parameter(integrator_index,dt_index) = ONE/self%dt
+        expected_order(integrator_index)          = self%expected_order
+
+
+    end subroutine run_calculations
+    !*****************************************************************************************
+
+
+
+
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/16/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    @Test(npes=[1])
+    subroutine test_err_conforming(self)
+        class(linear_advection_1D),  intent(inout)   :: self
+
+        integer(ik) :: integrator_index
+        real(rk)    :: error_previous, error_current, time_parameter_previous, time_parameter_current, convergence_rate, tol
+
+        tol = 0.1_rk
+
+        ! Get index for locating error values
+        integrator_index = get_integrator_index(self%integrator)
+
+
+        ! Retrieve error and time discretization parameter
+        error_previous = error(integrator_index,1)
+        error_current  = error(integrator_index,2)
+
+        time_parameter_previous = time_parameter(integrator_index,1)
+        time_parameter_current  = time_parameter(integrator_index,2)
+        !time_parameter_previous = time_step(1)
+        !time_parameter_current  = time_step(2)
+
+        
+        !
+        ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
+        !
+        convergence_rate = abs(log10(error_current)-log10(error_previous))/(log10(time_parameter_current)-log10(time_parameter_previous))
+
+    
+        !
+        ! Confirm DIRK scheme converges with third-order accuracy.
+        !
+        @assertEqual(real(self%expected_order,rk), convergence_rate, tol)
+
+
+    end subroutine test_err_conforming
+    !*****************************************************************************************
+
+
+
+
+
+
+
+    !>  Function to compute the error in the 1D scalar advection equation due to time
+    !!  integration.
+    !!
+    !!  The error is computed as the L2-Norm of the difference in the analytical and
+    !!  numerical solutions integrated over the domain.
+    !!
+    !!  The analytical solution is periodic and the numerical solution is computed
+    !!  over a single time period. As such, the analytical solution after one period
+    !!  is equal to the analytical solution at t=0, the original gaussian profile.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   05/30/2017
+    !!
+    !----------------------------------------------------------------------------------------
+    function compute_DIRK_error(data,ChiDG_COMM) result(error)
+        type(chidg_data_t), intent(inout)   :: data
+        type(mpi_comm),     intent(in)      :: ChiDG_COMM
+
+        real(rk), allocatable, dimension(:) :: &
+            u_dg, u_analytical, x_gq, gq_error_squared
+
+        type(gaussian_test_t) :: gaussian
+
+        integer(ik) :: ielem, idom, ierr, itime, iu
+        real(rk)    :: error_squared_sum, error_squared_sum_reduced, element_error_squared, error, time
+
+
+        associate (mesh => data%mesh, sdata => data%sdata, eqnset => data%eqnset, prop => data%eqnset(1)%prop)
+
+            !
+            ! Get equation indices
+            !
+            iu = prop%get_primary_field_index("u")
+
+            !
+            ! Zero error accumulator
+            !
+            error_squared_sum = ZERO
+
+            !
+            ! Loop over elements and accumulate error
+            !
+            itime = 1
+            time  = ZERO
+            do idom = 1,data%mesh%ndomains()
+                do ielem = 1,data%mesh%domain(idom)%nelem
+
+
+                    !
+                    ! Compute the analytical solution at the quadrature nodes
+                    !
+                    u_analytical = gaussian%compute(time,mesh%domain(idom)%elems(ielem)%quad_pts)
+
+                    !
+                    ! Interpolate DG numerical solution
+                    !
+                    u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,iu,itime,'value')
+
+
+                    !
+                    ! Compute error at GQ nodes
+                    !                    
+                    gq_error_squared = (u_analytical - u_dg)**TWO
+
+
+                    !
+                    ! Integrate error
+                    !
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%gq%vol%weights)
+
+
+                    !
+                    ! Accumulate error from each element
+                    !
+                    error_squared_sum = error_squared_sum + element_error_squared
+
+
+                end do ! ielem
+            end do ! idom
+
+
+        end associate
+
+
+        ! Reduce the total error across processors
+        call MPI_AllReduce(error_squared_sum,error_squared_sum_reduced,1,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+
+        ! Sqrt of the reduced error
+        error = sqrt(error_squared_sum_reduced)
+
+    end function compute_DIRK_error
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+!    !>
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   05/30/2017
+!    !!
+!    !!
+!    !!
+!    !----------------------------------------------------------------------------------------
+!    function time_parameter(itime) result(param)
+!        integer(ik),    intent(in)  :: itime
+!
+!        real(rk)    :: dt, param
+!
+!        select case (itime)
+!            case(1)
+!                dt = 0.0125_rk
+!            case(2)
+!                dt = 0.00625_rk
+!            case default
+!                call chidg_signal(FATAL,"integration_test_DIRK_mod%time_parameter: invalid itime")
+!        end select
+!
+!        param = ONE/dt
+!
+!    end function time_parameter
+!    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    ! Utility for returning the index associated with a certain number of procs
+    !----------------------------------------------------------------------------------------
+    function get_integrator_index(integrator) result(ind)
+        character(*),   intent(in)  :: integrator
+
+        integer(ik) :: ind
+
+        select case (trim(integrator))
+            case('backward_euler')
+                ind = 1
+            case('DIRK')
+                ind = 2
+            case default
+                call chidg_signal(FATAL,"integration_test_DIRK_mod.get_integrator_index: invalid integrator string.")
+        end select
+
+    end function get_integrator_index
+    !****************************************************************************************
+
+
+
+    ! Utility for returning the index associated with a certain number of procs
+    !----------------------------------------------------------------------------------------
+    function get_dt_index(dt) result(dt_index)
+        real(rk),   intent(in)  :: dt
+
+        integer(ik) :: dt_index
+
+
+        if      ( ( abs(dt - 0.0125_rk)  < 0.0001_rk ) .or. &
+                  ( abs(dt - 0.10_rk)    < 0.0001_rk ) ) then
+            dt_index = 1
+
+        else if ( ( abs(dt - 0.00625_rk) < 0.0001_rk ) .or. &
+                  ( abs(dt - 0.08_rk)    < 0.0001_rk ) ) then
+            dt_index = 2
+
+        else
+            call chidg_signal(FATAL,"integration_test_DIRK_mod.get_dt_index: invalid time step.")
+        end if
+
+    end function get_dt_index
+    !****************************************************************************************
+
+
+
+
+
+end module integration_test_DIRK_mod

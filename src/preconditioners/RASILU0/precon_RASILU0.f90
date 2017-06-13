@@ -59,6 +59,7 @@ module precon_RASILU0
                                           ETA_MAX, ZETA_MAX, ONE
     use mod_inv,                    only: inv
     use mod_chidg_mpi,              only: IRANK, NRANK, ChiDG_COMM
+    use mod_io,                     only: verbosity
 
     use type_RASILU0_send,          only: RASILU0_send_t
     use type_RASILU0_recv,          only: RASILU0_recv_t
@@ -128,7 +129,7 @@ contains
 
         integer(ik) :: iread, ielem, iblk, diag
 
-        call write_line('   Restricted Additive Schwarz(RAS) preconditioner: ', ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('   Restricted Additive Schwarz(RAS) preconditioner: ', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
 
         !
         ! Initialize Lower-Diagonal matrix for processor-local data
@@ -140,18 +141,18 @@ contains
         !
         ! Initialize the overlap data
         !
-        call write_line('       RAS: initializing send pattern...', ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('       RAS: initializing send pattern...', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
         call self%send%init(data%mesh, data%sdata%lhs)
-        call write_line('       RAS: initializing receive pattern...', ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('       RAS: initializing receive pattern...', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
         call self%recv%init(data%mesh, data%sdata%lhs, data%sdata%rhs)
 
 
         !
         ! Release nonblocking send buffers
         !
-        call write_line('       RAS: waiting on remaining communication buffers ...', ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('       RAS: waiting on remaining communication buffers ...', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
         call self%send%init_wait()
-        call write_line('       RAS: initialization complete!', ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('       RAS: initialization complete!', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
 
 
     end subroutine init
@@ -190,7 +191,7 @@ contains
                                        parent_proc, ierr, iproc, idiagLD, idiagA, dparent_g_lower, eparent_g_lower
 
 
-        call write_line('   RAS: Computing ILU0 factorization', ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('   RAS: Computing ILU0 factorization', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
 
 
 
@@ -365,7 +366,7 @@ contains
 
 
 
-        call write_line(' Done Computing RAS-ILU0 factorization', io_proc=GLOBAL_MASTER)
+        call write_line(' Done Computing RAS-ILU0 factorization', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
 
 
     end subroutine update
@@ -679,7 +680,7 @@ contains
         type(mpi_request)           :: request
 
 
-        call write_line('       RAS: sending...', ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('       RAS: sending...', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
 
 
         do icomm = 1,size(self%send%comm)
@@ -749,7 +750,7 @@ contains
 
         type(mpi_request)           :: request
 
-        call write_line('       RAS: receiving...', ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('       RAS: receiving...', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
 
         do idom_recv = 1,size(self%recv%dom)
 
@@ -801,7 +802,7 @@ contains
 
         integer(ik) :: nwait, iwait, ierr
 
-        call write_line('       RAS: waiting...', ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('       RAS: waiting...', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
 
         nwait = self%mpi_requests%size()
         if (nwait > 0) then

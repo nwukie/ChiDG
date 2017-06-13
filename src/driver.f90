@@ -86,7 +86,7 @@ program driver
         !
         ! Read grid and boundary condition data
         !
-        call chidg%read_grid(gridfile)
+        call chidg%read_mesh(gridfile)
 
         !
         ! Initialize communication, storage, auxiliary fields
@@ -104,9 +104,9 @@ program driver
             ! Set initial solution
             !
 !            call create_function(fcn,'gaussian')
-!            call fcn%set_option('b_x',0._rk)
-!            call fcn%set_option('b_y',3.14_rk)
-!            call fcn%set_option('b_z',0._rk)
+!            call fcn%set_option('b_x',1._rk)
+!            call fcn%set_option('b_y',1._rk)
+!            call fcn%set_option('b_z',1._rk)
 !            call fcn%set_option('c',0.5_rk)
 !            call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,1)
 !            call create_function(constant,'constant')
@@ -143,8 +143,8 @@ program driver
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,3)
 
             ! rho_w
-           call constant%set_option('val',0.0_rk)
-           call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,4)
+            call constant%set_option('val',0.0_rk)
+            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,4)
 
             ! rho_E
             call constant%set_option('val',248000.0_rk)
@@ -163,7 +163,7 @@ program driver
             !
             ! TODO: put in check that solutionfile actually contains solution
             !
-            call chidg%read_solution(solutionfile_in)
+            call chidg%read_fields(solutionfile_in)
 
         end if
 
@@ -224,9 +224,10 @@ program driver
                 call chidg_post_vtk(trim(grid_file), trim(solution_file))
 
             case ('matplotlib')
-                if (narg /= 2) call chidg_signal(FATAL,"The 'matplotlib' action expects: chidg matplotlib solutionfile.h5")
-                call get_command_argument(2,filename)
-                call chidg_post_matplotlib(trim(filename))
+                if (narg /= 3) call chidg_signal(FATAL,"The 'matplotlib' action expects: chidg matplotlib gridfile.h5solutionfile.h5")
+                call get_command_argument(2,grid_file)
+                call get_command_argument(3,solution_file)
+                call chidg_post_matplotlib(trim(grid_file),trim(solution_file))
 
             case ('airfoil')
                 if (narg /= 2) call chidg_signal(FATAL,"The 'airfoil' action expects: chidg airfoil solutionfile.h5")

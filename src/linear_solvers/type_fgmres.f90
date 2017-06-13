@@ -4,7 +4,7 @@ module type_fgmres
     use mod_constants,          only: ZERO
     use mod_inv,                only: inv
     use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER, IRANK, NRANK
-    use mod_inv,                only: inv
+    use mod_io,                 only: verbosity
     use mpi_f08
 
     use type_linear_solver,     only: linear_solver_t 
@@ -90,7 +90,7 @@ contains
         !
         call self%timer%reset()
         call self%timer%start()
-        call write_line('           Linear Solver: ', io_proc=GLOBAL_MASTER)
+        call write_line('           Linear Solver: ', io_proc=GLOBAL_MASTER, silence=(verbosity<4))
 
         
 
@@ -240,7 +240,7 @@ contains
                 
 
                 if ( reorthogonalize .or. self%force_reorthogonalize ) then
-                    call write_line('GMRES: Reorthogonalizing...', io_proc=GLOBAL_MASTER)
+                    call write_line('GMRES: Reorthogonalizing...', io_proc=GLOBAL_MASTER, silence=(verbosity<4))
 
                     do i = 1,j
 
@@ -317,7 +317,7 @@ contains
                 ! Test exit conditions
                 !
                 res = abs(p(j+1))
-                call write_line(res, io_proc=GLOBAL_MASTER)
+                call write_line(res, io_proc=GLOBAL_MASTER, silence=(verbosity<4))
                 converged = (res < self%tol)
                 
                 if ( converged ) then
@@ -398,12 +398,11 @@ contains
         ! Report
         !
         err = self%error(A,x,b)
-        call write_line('   Linear Solver Error: ', err, delimiter='', io_proc=GLOBAL_MASTER)
-
         call self%timer%stop()
-        call self%timer%report('Linear solver compute time: ')
-
-        call write_line('   Linear Solver Iterations: ', self%niter, delimiter='', io_proc=GLOBAL_MASTER)
+        !call self%timer%report('Linear solver compute time: ')
+        call write_line('   Linear Solver error: ',        err,                  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        call write_line('   Linear Solver compute time: ', self%timer%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        call write_line('   Linear Solver iterations: ',   self%niter,           delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
 
 
     end subroutine solve

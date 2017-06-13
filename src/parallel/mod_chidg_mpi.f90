@@ -26,8 +26,8 @@ module mod_chidg_mpi
                                                ! could be modified during run-time for a group.
 
 
-    logical :: chidg_mpi_initialized = .false.
-    logical :: chidg_mpi_finalized   = .false.
+    logical :: mpi_is_initialized = .false.
+    logical :: mpi_is_finalized   = .false.
 
 contains
 
@@ -49,28 +49,31 @@ contains
     !!
     !----------------------------------------------------------------------------------
     subroutine chidg_mpi_init()
-
         integer :: ierr
+
+
+        !
+        ! Check if MPI_Init has been called already or by someone else
+        !
+        call MPI_Initialized(mpi_is_initialized,ierr)
+
 
         !
         ! Initialize MPI
         !
-        if ( .not. chidg_mpi_initialized ) then
-            call MPI_Init(ierr)
-
-            chidg_mpi_initialized = .true.
-        end if
+        if ( .not. mpi_is_initialized ) call MPI_Init(ierr)
 
 
 
+        !
+        ! Initialize IRANK, NRANK
+        !
         call MPI_Comm_Size(MPI_COMM_WORLD,NRANK,ierr)
         call MPI_Comm_Rank(MPI_COMM_WORLD,IRANK,ierr)
 
 
     end subroutine chidg_mpi_init
     !**********************************************************************************
-
-
 
 
 
@@ -87,31 +90,22 @@ contains
     !!
     !----------------------------------------------------------------------------------
     subroutine chidg_mpi_finalize()
-
         integer :: ierr
+
+        !
+        ! Check if MPI_Finalize has been called already or by someone else
+        !
+        call MPI_Finalized(mpi_is_finalized,ierr)
+
 
         !
         ! Initialize MPI
         !
-        if ( .not. chidg_mpi_finalized ) then
-            call MPI_Finalize(ierr)
-
-            chidg_mpi_finalized = .true.
-        end if
+        if ( .not. mpi_is_finalized ) call MPI_Finalize(ierr)
 
 
     end subroutine chidg_mpi_finalize
     !**********************************************************************************
-
-
-
-
-
-
-
-
-
-
 
 
 

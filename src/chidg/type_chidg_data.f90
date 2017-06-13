@@ -10,6 +10,8 @@ module type_chidg_data
     use type_mesh,                      only: mesh_t
     use type_bc_state,                  only: bc_state_t
     use type_bc_state_group,            only: bc_state_group_t
+    use type_svector,                   only: svector_t
+    use mod_string,                     only: string_t
     use type_equation_set,              only: equation_set_t
     use type_solverdata,                only: solverdata_t
     use type_time_manager,              only: time_manager_t
@@ -76,6 +78,7 @@ module type_chidg_data
         procedure   :: add_equation_set
         procedure   :: new_equation_set
         procedure   :: get_equation_set_id
+        procedure   :: get_equation_set_name
         procedure   :: nequation_sets
 
 
@@ -680,10 +683,41 @@ contains
         !
         call move_alloc(temp_pmms,self%pmm)
 
-
-
     end function new_pmm
     !******************************************************************************************
+
+    !>  Given an equation set name, return its index identifier in chidg_data.
+    !!
+    !!  Returns eqn_ID such that data%eqnset(eqn_ID) is valid and corresponds to the
+    !!  equation set with name eqn_name that was given.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/5/2017
+    !!
+    !-------------------------------------------------------------------------------------
+    function get_equation_set_name(self, eqn_ID) result(eqn_name)
+        class(chidg_data_t),    intent(in)  :: self
+        integer(ik),            intent(in)  :: eqn_ID
+
+        character(:),   allocatable :: eqn_name, user_msg
+
+        !
+        ! Check if eqn_ID is within bounds
+        !
+        if ( eqn_ID > self%nequation_sets() ) call chidg_signal(FATAL,"chidg_data%get_equation_set_name: eqn_ID is out of bounds.")
+        if ( eqn_ID < 1 )                     call chidg_signal(FATAL,"chidg_data%get_equation_set_name: eqn_ID is out of bounds.")
+
+        
+        !
+        ! Get name
+        !
+        eqn_name = self%eqnset(eqn_ID)%name
+
+
+    end function get_equation_set_name
+    !**************************************************************************************
+
+
 
 
 

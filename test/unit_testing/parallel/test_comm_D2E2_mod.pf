@@ -87,7 +87,7 @@ contains
         !
         ! Read partition data: grid, boundary conditions
         !
-        call this%chidg%read_grid(this%gridfile)
+        call this%chidg%read_mesh(this%gridfile)
 
 
         !

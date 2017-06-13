@@ -1,19 +1,14 @@
 add_lib_sources(mod_io.f90
                 mod_hdfio.f90
                 mod_hdf_utilities.f90
-                mod_tecio_interface.f90
                 mod_tecio.f90
                 mod_vtk_file_unstr.f90
                 mod_vtk_calc_func.f90
                 mod_vtkio.f90
                 mod_file_utilities.f90
                 mod_plot3d_utilities.f90
-                mod_chimera_io.f90
                 type_file_properties.f90
                 type_chidg_file.f90
                 mod_HB_post.f90
                 mod_matplotlib_io.f90
                 )
-
-
-

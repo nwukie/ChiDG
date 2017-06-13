@@ -64,7 +64,6 @@ contains
         !
         ! Create 3x3x3 element grid
         !
-        !call create_mesh('333',nodes,connectivity)
         call create_mesh_file("D1 NxNxN", filename = 'file.h5',                             &
                                           equation_sets = [string_t('Scalar Advection')],   &
                                           nelem_xi   = 3,                                   &
@@ -76,32 +75,12 @@ contains
         call this%chidg%set('Nonlinear Solver', algorithm='Newton')
         call this%chidg%set('Linear Solver'   , algorithm='FGMRES')
         call this%chidg%set('Preconditioner'  , algorithm='ILU0')
-        call this%chidg%read_grid('file.h5')
-        !call this%chidg%init('all')
-
-!        !
-!        ! Initialize domains
-!        !
-!        nterms_c    = 8
-!        spacedim    = 3
-!        nelements_g = 9
-!
-!
-!        call this%chidg%data%add_equation_set('Scalar Advection')
-!        eqn_ID = this%chidg%data%get_equation_set_id('Scalar Advection')
-!
-!        call this%chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Cartesian',eqn_ID)
-!
-!        call this%chidg%set('Solution Order', integer_input=2)
-!        call this%chidg%set('time', algorithm='steady')
-!        call this%chidg%init('domains')
-!        call this%chidg%init('communication')
+        call this%chidg%read_mesh('file.h5')
 
 
         !
         ! Initialize domain_matrix
         !
-        !call this%bmat%init(this%chidg%data%mesh%domain(1),mtype='full')
         call this%bmat%init(this%chidg%data%mesh,idom=1,mtype='full')
 
     

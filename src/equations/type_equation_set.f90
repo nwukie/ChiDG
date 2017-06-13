@@ -68,6 +68,9 @@ module type_equation_set
         ! Models
         type(model_wrapper_t),      allocatable :: models(:)
 
+        ! IO fields
+        type(model_wrapper_t),      allocatable :: io_fields(:)
+
         ! Pseudo time-step calculator
         class(pseudo_timestep_t),   allocatable :: pseudo_timestep
 

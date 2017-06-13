@@ -7,10 +7,6 @@ module mod_test_utilities
     use mod_plot3d_utilities,       only: get_block_points_plot3d,   &
                                           get_block_elements_plot3d, &
                                           get_block_boundary_faces_plot3d
-    use mod_hdf_utilities,          only: initialize_file_hdf, add_domain_hdf, &
-                                          open_domain_hdf, close_domain_hdf,   &
-                                          set_bc_patch_hdf, add_bc_state_hdf,  &
-                                          set_contains_grid_hdf, close_file_hdf, close_hdf
     use mod_bc,                     only: create_bc
     use mod_gridgen_blocks_pmm,         only: create_mesh_file__pmm__singleblock,   &                    
                                                 create_mesh_file__pmm__sinusoidal__singleblock
@@ -29,7 +25,6 @@ module mod_test_utilities
 
     use type_point,                 only: point_t
     use type_bc_state_group,        only: bc_state_group_t
-    use type_bc_state_wrapper,      only: bc_state_wrapper_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use hdf5
     implicit none
@@ -59,7 +54,7 @@ contains
                                                     group_names,                        &
                                                     bc_state_groups,                    &
                                                     nelem_xi,  nelem_eta,  nelem_zeta,  &
-                                                    clusterx)
+                                                    clusterx, x_max_in, x_min_in)
         character(*),                           intent(in)  :: selector
         character(*),                           intent(in)  :: filename
         type(string_t),             optional,   intent(in)  :: equation_sets(:)
@@ -69,6 +64,8 @@ contains
         integer(ik),                optional,   intent(in)  :: nelem_eta
         integer(ik),                optional,   intent(in)  :: nelem_zeta
         integer(ik),                optional,   intent(in)  :: clusterx
+        real(rk),                   optional,   intent(in)  :: x_max_in
+        real(rk),                   optional,   intent(in)  :: x_min_in
 
         character(:),   allocatable :: user_msg
         integer(ik)                 :: ierr
@@ -87,7 +84,7 @@ contains
                                                              group_names,                       &
                                                              bc_state_groups,                   &
                                                              nelem_xi, nelem_eta, nelem_zeta,   &
-                                                             clusterx)
+                                                             clusterx, x_max_in, x_min_in)
 
             case("D2 NxNxN M1")
                 call create_mesh_file__multiblock(filename, equation_sets,                      &

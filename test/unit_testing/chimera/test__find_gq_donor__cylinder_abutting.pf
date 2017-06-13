@@ -52,8 +52,8 @@ subroutine test_find_gq_donor_cylinder_abutting()
     !
     ! Read grid
     !
-    call chidgA%read_domains(trim(filename))
-    call chidgA%read_boundary_conditions(trim(filename))
+    call chidgA%read_mesh_grids(trim(filename))
+    call chidgA%read_mesh_boundary_conditions(trim(filename))
 
 
     !

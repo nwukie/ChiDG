@@ -75,6 +75,7 @@
 !!  create_domain_hdf
 !!  open_domain_hdf
 !!  close_domain_hdf
+!!  check_domain_exists_hdf
 !!
 !!  get_ndomains_hdf
 !!  
@@ -118,11 +119,18 @@
 !!  get_domain_equation_set_hdf
 !!  get_domain_equation_sets_hdf
 !!
+!!
 !!  create_patch_hdf
 !!  open_patch_hdf
 !!  close_patch_hdf
-!!  get_patch_hdf
 !!  set_patch_hdf
+!!  get_patch_hdf
+!!  set_patch_group_hdf
+!!  get_patch_group_hdf
+!!  
+!!
+!!  get_npatches_hdf
+!!  copy_patches_attributes_hdf
 !!
 !!
 !!
@@ -135,6 +143,9 @@
 !!  get_nbc_state_groups_hdf
 !!  get_bc_state_group_names_hdf
 !!
+!!  copy_bc_state_groups_hdf
+!!  remove_bc_state_group_hdf
+!!
 !!
 !!  add_bc_state_hdf
 !!  get_bc_states_hdf
@@ -144,7 +155,6 @@
 !!  add_bc_properties_hdf
 !!  get_bc_properties_hdf
 !!
-!!  remove_bc_state_group_hdf
 !!  remove_bc_state_hdf
 !!  remove_bc_property_hdf
 !!
@@ -1165,6 +1175,31 @@ contains
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/15/2016
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
+    function check_domain_exists_hdf(fid,domain_name) result(exist_status)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: domain_name
+
+        integer(ik) :: ierr
+        logical     :: exist_status
+
+        ! Check if face contains the bc_state
+        call h5lexists_f(fid, "D_"//trim(domain_name), exist_status, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"check_domain_exists_hdf: Error in call to h5lexists_f")
+
+
+    end function check_domain_exists_hdf
+    !*********************************************************************************************
+
+
+
 
 
 
@@ -1319,8 +1354,8 @@ contains
     function get_domain_names_hdf(fid) result(names)
         integer(HID_T),     intent(in)  :: fid
 
-        character(:),       allocatable     :: user_msg
-        character(len=1024), allocatable    :: names(:)
+        character(:),           allocatable :: user_msg
+        character(len=1024),    allocatable :: names(:)
         character(len=1024)                 :: gname
         integer(HSIZE_T)                    :: igrp
         integer                             :: ndomains, nmembers, type
@@ -2834,18 +2869,18 @@ contains
         logical                     :: exists
 
         ! Check exists
-        exists = check_link_exists_hdf(dom_id,"Patches/"//trim(adjustl(patch)))
+        exists = check_link_exists_hdf(dom_id,"Patches/"//"P_"//trim(adjustl(patch)))
         msg    = "open_patch_hdf: Couldn't find bc patch "//trim(adjustl(patch))//" on domain."
         if (.not. exists) call chidg_signal(FATAL,msg)
 
 
         ! Open face boundary condition group
-        call h5gopen_f(dom_id, "Patches/"//trim(adjustl(patch)), patch_id, ierr)
+        call h5gopen_f(dom_id, "Patches/"//"P_"//trim(adjustl(patch)), patch_id, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"open_patch_hdf: error opening boundary face group")
 
 
     end function open_patch_hdf
-    !***************************************************************************************
+    !**************************************************************************************
 
 
 
@@ -2902,16 +2937,171 @@ contains
         !
         ! Create empty group for boundary condition
         !
-        call h5gcreate_f(dom_id,"Patches/"//bc_face_string,patch_id, ierr)
+        call h5gcreate_f(dom_id,"Patches/"//"P_"//bc_face_string,patch_id, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"create_patch_hdf: h5gcreate_f")
         
 
     end function create_patch_hdf
     !*****************************************************************************************
 
+    
+
+
+    !>  Return the number of patches on a domain.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   6/13/2017
+    !!
+    !--------------------------------------------------------------------------------------
+    function get_npatches_hdf(dom_id) result(npatches)
+        integer(HID_T), intent(in)  :: dom_id
+
+        integer(ik)     :: nmembers, ierr, igrp, type, npatches
+        character(1024) :: gname
+
+
+        !  Get number of groups linked to the current bc_face
+        call h5gn_members_f(dom_id, "Patches", nmembers, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_npatches_hdf: error h5gn_members_f")
+
+        npatches = 0
+        if ( nmembers > 0 ) then
+            do igrp = 0,nmembers-1
+                ! Get group name
+                call h5gget_obj_info_idx_f(dom_id, "Patches", igrp, gname, type, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"get_npatches_hdf: error h5gget_obj_info_idx_f")
+
+                ! Test if group is a patch: 'P_'
+                if (gname(1:2) == 'P_') npatches = npatches + 1
+            end do  ! igrp
+        end if
+        
+
+    end function get_npatches_hdf
+    !**************************************************************************************
 
 
 
+
+
+
+
+    !>  Copy bc group association for all patches from file_a to file_b.
+    !!
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/13/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine copy_patches_attributes_hdf(fid_a,fid_b)
+        integer(HID_T), intent(in)  :: fid_a
+        integer(HID_T), intent(in)  :: fid_b
+
+        integer(HID_T)                  :: dom_id_a, dom_id_b, patch_id_a, patch_id_b
+        integer(ik)                     :: idom, ipatch
+        character(1024),    allocatable :: domain_names(:), patch_names(:)
+        character(:),       allocatable :: patch_bc_group
+        logical                         :: exists
+
+
+        !
+        ! Copy Domain patch configuration
+        !   For each domain in file_a:
+        !       - loop through patches
+        !       - open patch and get bc group name
+        !       - set bc group name for same patch on file_b
+        !       - close current patch
+        !       - repeat for next patch
+        !
+        call write_line("Copying patch boundary group associations...")
+        domain_names = get_domain_names_hdf(fid_a) 
+        do idom = 1,size(domain_names)
+
+            ! Check if there is a domain of the same name in 'fid_b'
+            exists = check_domain_exists_hdf(fid_b,trim(domain_names(idom)))
+
+            if (exists) then
+                
+                dom_id_a = open_domain_hdf(fid_a, trim(domain_names(idom)))
+                dom_id_b = open_domain_hdf(fid_b, trim(domain_names(idom)))
+
+                patch_names = get_patch_names_hdf(dom_id_a)
+                do ipatch = 1,size(patch_names)
+           
+                    ! Check if there is a patch of the same name in fid_b
+                    patch_id_a = open_patch_hdf(dom_id_a, trim(patch_names(ipatch)))
+                    patch_id_b = open_patch_hdf(dom_id_b, trim(patch_names(ipatch)))
+
+                    patch_bc_group = get_patch_group_hdf(patch_id_a)
+                    call set_patch_group_hdf(patch_id_b,patch_bc_group)
+
+                    call close_patch_hdf(patch_id_a)
+                    call close_patch_hdf(patch_id_b)
+
+                end do !ipatch
+
+                call close_domain_hdf(dom_id_a)
+                call close_domain_hdf(dom_id_b)
+
+            end if !exists
+
+        end do !idom
+
+
+    end subroutine copy_patches_attributes_hdf
+    !*************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Return a vector of the names for each boundary condition state group.
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/8/2016
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_patch_names_hdf(dom_id) result(patch_names)
+        integer(HID_T), intent(in)  :: dom_id
+
+        integer(ik)                     :: nmembers, ierr, igrp, type, npatches, ipatch
+        character(1024)                 :: gname
+        character(1024),    allocatable :: patch_names(:)
+
+
+        ! Get number of patches, allocate names
+        npatches = get_npatches_hdf(dom_id)
+        allocate(patch_names(npatches), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        !  Get number of groups linked to the "Patches"
+        call h5gn_members_f(dom_id, "Patches", nmembers, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_patch_names_hdf: error h5gn_members_f")
+
+        ! Iterate over them and accumulate patch names
+        ipatch = 1
+        if ( nmembers > 0 ) then
+            do igrp = 0,nmembers-1
+                ! Get group name
+                call h5gget_obj_info_idx_f(dom_id, "Patches", igrp, gname, type, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"get_patch_names_hdf: error h5gget_obj_info_idx_f")
+
+                ! Test if group is a boundary condition state. 'P_'
+                if (gname(1:2) == 'P_') then
+                    patch_names(ipatch) = trim(gname(3:))
+                    ipatch = ipatch + 1
+                end if
+            end do  ! igrp
+        end if
+
+    end function get_patch_names_hdf
+    !***************************************************************************************
 
 
 
@@ -3247,10 +3437,9 @@ contains
     
     !>  Return a vector of the names for each boundary condition state group.
     !!
+    !!
     !!  @author Nathan A. Wukie
     !!  @date   11/8/2016
-    !!
-    !!
     !!
     !----------------------------------------------------------------------------------------
     function get_bc_state_group_names_hdf(fid) result(bc_state_group_names)
@@ -3285,8 +3474,107 @@ contains
 
 
 
+    !>  Copy a boundary condition state group from one file to another file.
+    !!
+    !!  NOTE: if BCSG_ of same name already exists on fid_b, it is removed first.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/14/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine copy_bc_state_groups_hdf(fid_a,fid_b)
+        integer(HID_T), intent(in)  :: fid_a
+        integer(HID_T), intent(in)  :: fid_b
 
-    !>
+        integer(ik) :: igroup, ierr
+
+        type(svector_t) :: bc_state_group_names
+        type(string_t)  :: group_name
+
+
+        !
+        ! Copy BCSG configuration
+        !   - copy entire BCSG groups from file_a to file_b
+        !
+        call write_line("Copying boundary condition state groups...")
+        bc_state_group_names = get_bc_state_group_names_hdf(fid_a)
+        do igroup = 1,bc_state_group_names%size()
+            ! Get string of current group
+            group_name = bc_state_group_names%at(igroup)
+
+            ! Remove group in target if already exists
+            call remove_bc_state_group_hdf(fid_b,group_name%get())
+
+            ! Copy group from fid_a to fid_b
+            call h5ocopy_f(fid_a,"BCSG_"//trim(group_name%get()),fid_b,"BCSG_"//trim(group_name%get()),ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"copy_bc_state_groups_hdf: error copying boundary state groups.")
+
+        end do !igroup
+
+
+    end subroutine copy_bc_state_groups_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+    !>  Remove a bc_state group from the HDF file.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/8/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------------
+    subroutine remove_bc_state_group_hdf(fid,group_name)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: group_name
+
+        integer(HID_T)  :: bcgroup_id
+        integer(ik)     :: istate, ierr
+        logical         :: group_exists
+        type(svector_t) :: bc_state_names
+        type(string_t)  :: state_name
+
+
+        group_exists = check_link_exists_hdf(fid,"BCSG_"//trim(group_name))
+
+        if (group_exists) then
+
+            ! Open boundary condition state group
+            call h5gopen_f(fid,"BCSG_"//trim(group_name),bcgroup_id,ierr)
+
+            ! Get the names of all bc_states in the group
+            bc_state_names = get_bc_state_names_hdf(bcgroup_id)
+
+            ! Call remove for each one
+            do istate = 1,bc_state_names%size()
+                state_name = bc_state_names%at(istate)
+                call remove_bc_state_hdf(bcgroup_id,state_name%get())
+            end do
+
+            ! Close the bc_state group
+            call h5gclose_f(bcgroup_id,ierr)
+
+            ! Unlink the bc_state group
+            call h5gunlink_f(fid,"BCSG_"//trim(group_name),ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"remove_bc_state_group_hdf: error unlinking bc_state group")
+        end if
+
+    end subroutine remove_bc_state_group_hdf
+    !***********************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Open a boundary condition state group, return HDF identifier.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   11/11/2016
@@ -3306,7 +3594,7 @@ contains
     !***************************************************************************************
 
 
-    !>
+    !>  Close a boundary condition state group.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   11/11/2016
@@ -3735,52 +4023,6 @@ contains
 
 
 
-    !>  Remove a bc_state group from the HDF file.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   11/8/2016
-    !!
-    !!
-    !-----------------------------------------------------------------------------------------------
-    subroutine remove_bc_state_group_hdf(fid,group_name)
-        integer(HID_T), intent(in)  :: fid
-        character(*),   intent(in)  :: group_name
-
-        integer(HID_T)  :: bcgroup_id
-        integer(ik)     :: istate, ierr
-        logical         :: group_exists
-        type(svector_t) :: bc_state_names
-        type(string_t)  :: state_name
-
-
-        group_exists = check_link_exists_hdf(fid,"BCSG_"//trim(group_name))
-
-        if (group_exists) then
-
-            ! Open boundary condition state group
-            call h5gopen_f(fid,"BCSG_"//trim(group_name),bcgroup_id,ierr)
-
-            ! Get the names of all bc_states in the group
-            bc_state_names = get_bc_state_names_hdf(bcgroup_id)
-
-            ! Call remove for each one
-            do istate = 1,bc_state_names%size()
-                state_name = bc_state_names%at(istate)
-                call remove_bc_state_hdf(bcgroup_id,state_name%get())
-            end do
-
-            ! Close the bc_state group
-            call h5gclose_f(bcgroup_id,ierr)
-
-            ! Unlink the bc_state group
-            call h5gunlink_f(fid,"BCSG_"//trim(group_name),ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"remove_bc_state_group_hdf: error unlinking bc_state group")
-        end if
-
-    end subroutine remove_bc_state_group_hdf
-    !***********************************************************************************************
-
-
 
 
 
@@ -4085,34 +4327,6 @@ contains
 
     end function check_bc_property_exists_hdf
     !********************************************************************************************
-
-
-
-
-
-
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   11/30/2016
-    !!
-    !--------------------------------------------------------------------------------------------
-    function check_domain_exists_hdf(fid,domain_name) result(exist_status)
-        integer(HID_T),     intent(in)  :: fid
-        character(len=*),   intent(in)  :: domain_name
-
-        integer(ik) :: ierr
-        logical     :: exist_status
-
-        ! Check if face contains the bc_state
-        call h5lexists_f(fid, "D_"//trim(domain_name), exist_status, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"check_domain_exists_hdf: Error in call to h5lexists_f")
-
-
-    end function check_domain_exists_hdf
-    !*********************************************************************************************
 
 
 

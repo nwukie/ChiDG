@@ -52,7 +52,7 @@ module mod_io
    
     ! io
     integer(ik),            save    :: nwrite           = 100
-    integer(ik),            save    :: verbosity        = 1
+    integer(ik),            save    :: verbosity        = 2
     logical,                save    :: initial_write    = .false.
     logical,                save    :: final_write      = .true.
 !    integer(ik),         save    :: output_res       = 10

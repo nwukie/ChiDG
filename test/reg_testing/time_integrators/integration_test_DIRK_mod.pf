@@ -1,6 +1,24 @@
 !--------------------------------------------------------------------------------
 !
-!           Test DIRK time integration: 1D linear advection problem
+!           Test time integrators: 1D linear advection problem
+!
+!   Objective: 
+!   ----------------------
+!   Test formal temporal order of accuracy for time intetrators
+!
+!
+!   Approach:  
+!   ----------------------
+!   Run scalar linear advection equation with a gaussian pulse on a 1D periodic
+!   domain. Analytical solution equals the initial solution after 1 period.
+!   Compute order of accuracy by computing the numerical solution to
+!   analytical solution after one period and for each integrator, compute the error
+!   using two different time steps. Order of accuracy is computed by investigating
+!   the reduction in error compared against the reduction in time step.
+!
+!   
+!   Math:
+!   ----------------------
 !
 !   div( vec(c)*u ) = 0
 !
@@ -55,7 +73,8 @@
 !   Where T is the time after one period.
 !
 !   
-!   File layout:
+!   Test layout:
+!   ----------------------
 !       1: Define new advection coefficient model to set c = [1,0,0].
 !       2: Define new gaussian function to use for initial condition and analytical solution.
 !       3: Define equation set builder to construct scalar advection.
@@ -113,12 +132,13 @@ module integration_test_DIRK_mod
     ! to test the nonlinear convergence between a case running on
     ! a different number of procs.
     !
-    ! Integrators:   = ['backward_euler', 'backward_euler', 'DIRK', 'DIRK']
-    ! dt:            = [ 0.0125, 0.00625, 0.10, 0.08 ]
-    ! nsteps:        = [   1600,    3200,  200,  250 ]
+    ! Integrators:   = ['backward_euler', 'backward_euler',    'DIRK',    'DIRK']
+    ! dt:            = [ 0.0125,                   0.00625,    0.10,       0.08 ]
+    ! nsteps:        = [   1600,                      3200,     200,        250 ]
     !
-    real(rk)        :: error(2,2)                         ! nintegrators, ndt
-    real(rk)        :: expected_order(2)                  ! nintegrators
+    real(rk)        :: error(2,2)               ! nintegrators, ndt
+    real(rk)        :: time_parameter(2,2)      ! nintegrators, ndt
+    real(rk)        :: expected_order(2)        ! nintegrators
 
     public  :: linear_advection_1D
 
@@ -786,8 +806,9 @@ contains
         !
         ! Store the computed error for the current case
         !
-        error(integrator_index,dt_index) = computed_error
-        expected_order(integrator_index) = self%expected_order
+        error(integrator_index,dt_index)          = computed_error
+        time_parameter(integrator_index,dt_index) = ONE/self%dt
+        expected_order(integrator_index)          = self%expected_order
 
 
     end subroutine run_calculations
@@ -825,8 +846,10 @@ contains
         error_previous = error(integrator_index,1)
         error_current  = error(integrator_index,2)
 
-        time_parameter_previous = time_parameter(1)
-        time_parameter_current  = time_parameter(2)
+        time_parameter_previous = time_parameter(integrator_index,1)
+        time_parameter_current  = time_parameter(integrator_index,2)
+        !time_parameter_previous = time_step(1)
+        !time_parameter_current  = time_step(2)
 
         
         !
@@ -838,7 +861,7 @@ contains
         !
         ! Confirm DIRK scheme converges with third-order accuracy.
         !
-        @assertEqual(convergence_rate, real(self%expected_order,rk), tol)
+        @assertEqual(real(self%expected_order,rk), convergence_rate, tol)
 
 
     end subroutine test_err_conforming
@@ -957,32 +980,32 @@ contains
 
 
 
-    !>
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   05/30/2017
-    !!
-    !!
-    !!
-    !----------------------------------------------------------------------------------------
-    function time_parameter(itime) result(param)
-        integer(ik),    intent(in)  :: itime
-
-        real(rk)    :: dt, param
-
-        select case (itime)
-            case(1)
-                dt = 0.0125_rk
-            case(2)
-                dt = 0.00625_rk
-            case default
-                call chidg_signal(FATAL,"integration_test_DIRK_mod%time_parameter: invalid itime")
-        end select
-
-        param = ONE/dt
-
-    end function time_parameter
-    !****************************************************************************************
+!    !>
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   05/30/2017
+!    !!
+!    !!
+!    !!
+!    !----------------------------------------------------------------------------------------
+!    function time_parameter(itime) result(param)
+!        integer(ik),    intent(in)  :: itime
+!
+!        real(rk)    :: dt, param
+!
+!        select case (itime)
+!            case(1)
+!                dt = 0.0125_rk
+!            case(2)
+!                dt = 0.00625_rk
+!            case default
+!                call chidg_signal(FATAL,"integration_test_DIRK_mod%time_parameter: invalid itime")
+!        end select
+!
+!        param = ONE/dt
+!
+!    end function time_parameter
+!    !****************************************************************************************
 
 
 
@@ -1005,7 +1028,7 @@ contains
             case('backward_euler')
                 ind = 1
             case('DIRK')
-                ind = 1
+                ind = 2
             case default
                 call chidg_signal(FATAL,"integration_test_DIRK_mod.get_integrator_index: invalid integrator string.")
         end select
@@ -1023,10 +1046,12 @@ contains
         integer(ik) :: dt_index
 
 
-        if      ( abs(dt - 0.0125_rk) < 0.0001_rk ) then
+        if      ( ( abs(dt - 0.0125_rk)  < 0.0001_rk ) .or. &
+                  ( abs(dt - 0.10_rk)    < 0.0001_rk ) ) then
             dt_index = 1
 
-        else if ( abs(dt - 0.00625_rk) < 0.0001_rk ) then
+        else if ( ( abs(dt - 0.00625_rk) < 0.0001_rk ) .or. &
+                  ( abs(dt - 0.08_rk)    < 0.0001_rk ) ) then
             dt_index = 2
 
         else

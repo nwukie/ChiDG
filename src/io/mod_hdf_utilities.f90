@@ -118,7 +118,6 @@
 !!  get_domain_equation_set_hdf
 !!  get_domain_equation_sets_hdf
 !!
-!!  ! Patches
 !!  create_patch_hdf
 !!  open_patch_hdf
 !!  close_patch_hdf

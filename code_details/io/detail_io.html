@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Periodic boundary condition &mdash; ChiDG 0.1 documentation</title>
+  <title>Input/Output &mdash; ChiDG 0.1 documentation</title>
   
 
   
@@ -33,9 +33,9 @@
 
   
     <link rel="top" title="ChiDG 0.1 documentation" href="../../index.html"/>
-        <link rel="up" title="Boundary conditions" href="detail_boundary_conditions.html"/>
-        <link rel="next" title="Solvers" href="../solvers/detail_solvers.html"/>
-        <link rel="prev" title="Fluid boundary conditions" href="detail_bc_fluid.html"/> 
+        <link rel="up" title="Code details" href="../details_main.html"/>
+        <link rel="next" title="Finding your way around ChiDG" href="../architecture/detail_architecture.html"/>
+        <link rel="prev" title="ChiDG API" href="../chidg/detail_chidg.html"/> 
 
   
   <script src="../../_static/js/modernizr.min.js"></script>
@@ -109,17 +109,17 @@
 </li>
 <li class="toctree-l1 current"><a class="reference internal" href="../details_main.html">Code details</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../chidg/detail_chidg.html">ChiDG API</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../io/detail_io.html">Input/Output</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../io/detail_io.html#chidg-hdf-file-format">ChiDG HDF File Format</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../io/detail_io.html#domains-d">Domains (<code class="docutils literal"><span class="pre">D_</span></code>)</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../io/detail_io.html#boundary-condition-state-groups-bcsg">Boundary Condition State Groups (<code class="docutils literal"><span class="pre">BCSG_</span></code>)</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../io/detail_io.html#equations-eqn">Equations (<code class="docutils literal"><span class="pre">EQN_</span></code>)</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Input/Output</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#chidg-hdf-file-format">ChiDG HDF File Format</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#domains-d">Domains (<code class="docutils literal"><span class="pre">D_</span></code>)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#boundary-condition-state-groups-bcsg">Boundary Condition State Groups (<code class="docutils literal"><span class="pre">BCSG_</span></code>)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#equations-eqn">Equations (<code class="docutils literal"><span class="pre">EQN_</span></code>)</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="../io/detail_io.html#post-processing-visualization">Post-Processing &amp; Visualization</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="../io/detail_io.html#tecio">TecIO</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../io/detail_io.html#vtkio">vtkIO</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../io/detail_io.html#matplotlib">matplotlib</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#post-processing-visualization">Post-Processing &amp; Visualization</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#tecio">TecIO</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#vtkio">vtkIO</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#matplotlib">matplotlib</a></li>
 </ul>
 </li>
 </ul>
@@ -168,21 +168,21 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l2 current"><a class="reference internal" href="detail_boundary_conditions.html">Boundary conditions</a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="detail_bc_theory.html">Theory + Abstractions</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="detail_bc_theory.html#boundary-condition-patch">Boundary condition patch</a></li>
-<li class="toctree-l4"><a class="reference internal" href="detail_bc_theory.html#boundary-condition-state-functions">Boundary condition state functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../boundary_conditions/detail_boundary_conditions.html">Boundary conditions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../boundary_conditions/detail_bc_theory.html">Theory + Abstractions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_theory.html#boundary-condition-patch">Boundary condition patch</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_theory.html#boundary-condition-state-functions">Boundary condition state functions</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="detail_bc_fluid.html">Fluid boundary conditions</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="detail_bc_fluid.html#inlet-total">Inlet - Total</a></li>
-<li class="toctree-l4"><a class="reference internal" href="detail_bc_fluid.html#outlet-constant-pressure">Outlet - Constant Pressure</a></li>
-<li class="toctree-l4"><a class="reference internal" href="detail_bc_fluid.html#wall">Wall</a></li>
-<li class="toctree-l4"><a class="reference internal" href="detail_bc_fluid.html#symmetry">Symmetry</a></li>
-<li class="toctree-l4"><a class="reference internal" href="detail_bc_fluid.html#farfield">Farfield</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html">Fluid boundary conditions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#inlet-total">Inlet - Total</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#outlet-constant-pressure">Outlet - Constant Pressure</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#wall">Wall</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#symmetry">Symmetry</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../boundary_conditions/detail_bc_fluid.html#farfield">Farfield</a></li>
 </ul>
 </li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#">Periodic boundary condition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../boundary_conditions/detail_bc_periodic.html">Periodic boundary condition</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../solvers/detail_solvers.html">Solvers</a><ul>
@@ -286,13 +286,11 @@
       
           <li><a href="../details_main.html">Code details</a> &raquo;</li>
       
-          <li><a href="detail_boundary_conditions.html">Boundary conditions</a> &raquo;</li>
-      
-    <li>Periodic boundary condition</li>
+    <li>Input/Output</li>
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="../../_sources/code_details/boundary_conditions/detail_bc_periodic.txt" rel="nofollow"> View page source</a>
+            <a href="../../_sources/code_details/io/detail_io.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -302,62 +300,215 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="periodic-boundary-condition">
-<h1>Periodic boundary condition<a class="headerlink" href="#periodic-boundary-condition" title="Permalink to this headline">¶</a></h1>
-<p>Set a <code class="docutils literal"><span class="pre">Periodic</span></code> condition.</p>
-<table border="1" class="docutils">
-<colgroup>
-<col width="14%" />
-<col width="86%" />
-</colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">Parameter</th>
-<th class="head">Description</th>
-</tr>
-</thead>
-<tbody valign="top">
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">Offset-1</span></code></td>
-<td>Offset in coordinate direction 1 of the opposite periodic boundary.</td>
-</tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">Offset-2</span></code></td>
-<td>Offset in coordinate direction 2 of the opposite periodic boundary.</td>
-</tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">Offset-3</span></code></td>
-<td>Offset in coordinate direction 3 of the opposite periodic boundary.</td>
-</tr>
-</tbody>
-</table>
-<p>The <code class="docutils literal"><span class="pre">Periodic</span></code> boundary condition is actually a little bit special in ChiDG in that
-it does not actually compute an exterior state <span class="math">\(Q_{BC}\)</span> like all other boundary
-condition state functions are expected to do. Rather, any faces in a <code class="docutils literal"><span class="pre">bc_patch_t</span></code>
-that are associated with a <code class="docutils literal"><span class="pre">Periodic</span></code> boundary condition are reset from BOUNDARY
-faces to CHIMERA faces. Additionally, the offset parameters from the <code class="docutils literal"><span class="pre">Periodic</span></code>
-<code class="docutils literal"><span class="pre">bc_state_t</span></code> object are stored in the <code class="docutils literal"><span class="pre">face_t</span></code> object to inform the Chimera
-infrastructure to search for a donor, not at the original location, but at a location
-defined by the offset coordinates. In this way, the <code class="docutils literal"><span class="pre">Periodic</span></code> boundary supports
-fully non-matching boundaries through the Chimera infrastructure.</p>
-<div class="align-center figure">
-<a class="reference internal image-reference" href="../../_images/periodic_chimera.png"><img alt="../../_images/periodic_chimera.png" src="../../_images/periodic_chimera.png" style="width: 270pt;" /></a>
+  <div class="section" id="input-output">
+<h1>Input/Output<a class="headerlink" href="#input-output" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="chidg-hdf-file-format">
+<h2>ChiDG HDF File Format<a class="headerlink" href="#chidg-hdf-file-format" title="Permalink to this headline">¶</a></h2>
+<p>The ChiDG file format uses HDF5 as the storage container for Grid, Solution, and
+some configuration data. As such, ChiDG stores data in the HDF5 structure as Groups,
+Datasets, and Attributes. The main groups are identified on the file root using a
+prefix string. These groups along with their prefixes are:</p>
+<blockquote>
+<div><ul class="simple">
+<li><strong>Domains</strong> (<code class="docutils literal"><span class="pre">D_</span></code>)</li>
+<li><strong>Boundary condition state groups</strong> (<code class="docutils literal"><span class="pre">BCSG_</span></code>)</li>
+<li><strong>Equations</strong> (<code class="docutils literal"><span class="pre">EQN_</span></code>)</li>
+</ul>
+</div></blockquote>
+<a class="reference internal image-reference" href="../../_images/chidg_file_root.png"><img alt="../../_images/chidg_file_root.png" class="align-center" src="../../_images/chidg_file_root.png" style="width: 70%;" /></a>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
+<div class="section" id="domains-d">
+<h3>Domains (<code class="docutils literal"><span class="pre">D_</span></code>)<a class="headerlink" href="#domains-d" title="Permalink to this headline">¶</a></h3>
+<p>A domain in the file corresponds to the <code class="docutils literal"><span class="pre">domain_t</span></code> data structures and nomenclature
+in the ChiDG library itself. Domains in the ChiDG file are located on the file
+root(<code class="docutils literal"><span class="pre">/</span></code>), are marked with a leading prefix <code class="docutils literal"><span class="pre">D_</span></code>, and contain the groups, <strong>Grid</strong>,
+<strong>Patches</strong>, <strong>Fields</strong>. If a file contained a domain named <em>box</em>, the following HDF group
+paths would exist: <code class="docutils literal"><span class="pre">/D_box/Grid</span></code>, <code class="docutils literal"><span class="pre">/D_box/Patches</span></code>, <code class="docutils literal"><span class="pre">/D_box/Fields</span></code>. It is recommended
+to use the ChiDG file API for reading/writing domain data.</p>
+<a class="reference internal image-reference" href="../../_images/chidg_file_domain.png"><img alt="../../_images/chidg_file_domain.png" class="align-center" src="../../_images/chidg_file_domain.png" style="width: 70%;" /></a>
+<div class="section" id="grid">
+<h4>Grid<a class="headerlink" href="#grid" title="Permalink to this headline">¶</a></h4>
+<p>The grid consists of:</p>
+<blockquote>
+<div><ul class="simple">
+<li><strong>nodes</strong></li>
+<li><strong>element connectivities</strong></li>
+</ul>
+</div></blockquote>
+<p>These are represented using four datasets, <code class="docutils literal"><span class="pre">Coordinate1</span></code>, <code class="docutils literal"><span class="pre">Coordinate2</span></code>, <code class="docutils literal"><span class="pre">Coordinate3</span></code>, <code class="docutils literal"><span class="pre">Elements</span></code>.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">Nodes</span></code> are an unstructured list of discrete points from which elements can be constructed.</li>
+<li><code class="docutils literal"><span class="pre">Coordinates123</span></code> are the physical coordinate values of the nodes.</li>
+<li><code class="docutils literal"><span class="pre">Elements</span></code> contains a connectivity array for each element on the domain.</li>
+</ul>
+<p class="last">A slice of the <code class="docutils literal"><span class="pre">Elements</span></code> dataset is the connectivity information for a
+given element. The format of this connectivity data is given as follows:</p>
 </div>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">In setting up <code class="docutils literal"><span class="pre">Periodic</span></code> boundaries, recognize that opposite boundaries will
-require opposite offset coordinates. To accomplish this, create two different
-boundary condition groups. Add a <code class="docutils literal"><span class="pre">Periodic</span></code> state function to each. When
-setting the coordinate offset parameters, make sure these parameters are
-opposite sign between the two groups.</p>
+<p><strong>Connectivity format:</strong></p>
+<div class="line-block">
+<div class="line"><code class="docutils literal"><span class="pre">connectivity(1)</span>&nbsp; <span class="pre">=</span> <span class="pre">Global</span> <span class="pre">domain</span> <span class="pre">index(idomain_g)</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">connectivity(2)</span>&nbsp; <span class="pre">=</span> <span class="pre">GLobal</span> <span class="pre">element</span> <span class="pre">index(ielement_g)</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">connectivity(3)</span>&nbsp; <span class="pre">=</span> <span class="pre">Element</span> <span class="pre">order</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">connectivity(4:)</span> <span class="pre">=</span> <span class="pre">Element</span> <span class="pre">connectivity</span></code></div>
 </div>
-<div class="admonition warning">
-<p class="first admonition-title">Warning</p>
-<p class="last">A current limitation to the <code class="docutils literal"><span class="pre">Periodic</span></code> boundary condition implementation
-is that it shall not be used to specify <code class="docutils literal"><span class="pre">Periodic</span></code> boundaries that
-couple an element with itself. The Chimera infrastructure automatically
-throws the receiver element out as a potential donor candidate. This
-situation might be encountered when trying to run a &#8216;2D&#8217; calculation
-with 3D elements, but only using 1 element in the 3rd dimension. One
-might consider applying <code class="docutils literal"><span class="pre">Periodic</span></code> boundaries in the 3rd dimension,
-however the infrastructure will not set up this coupling correctly.
-An alternative would be to apply <code class="docutils literal"><span class="pre">Symmetry</span></code>-like boundary conditions.</p>
+<p class="last">The <code class="docutils literal"><span class="pre">Element</span> <span class="pre">connectivity</span></code> portion of the array is a list of integer
+indices that correspond to <code class="docutils literal"><span class="pre">nodes</span></code> which represent the given element.</p>
+</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="15%" />
+<col width="85%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">Coordinate1</span></code></td>
+<td>Rank-1 array,   <code class="docutils literal"><span class="pre">H5T_NATIVE_DOUBLE</span></code>,    Coordinate-1 for nodes.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">Coordinate2</span></code></td>
+<td>Rank-1 array,   <code class="docutils literal"><span class="pre">H5T_NATIVE_DOUBLE</span></code>,    Coordinate-2 for nodes.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">Coordinate3</span></code></td>
+<td>Rank-1 array,   <code class="docutils literal"><span class="pre">H5T_NATIVE_DOUBLE</span></code>,    Coordinate-3 for nodes.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">Elements</span></code></td>
+<td>Rank-2 array,   <code class="docutils literal"><span class="pre">H5T_NATIVE_INTEGER</span></code>,   Element connectivities. Rank-1 = element index. Rank-2 = connectivity.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="patches">
+<h4>Patches<a class="headerlink" href="#patches" title="Permalink to this headline">¶</a></h4>
+<p>Individual patches are located inside of the <code class="docutils literal"><span class="pre">D_name/Patches</span></code> group. Patch groups
+use the prefix <code class="docutils literal"><span class="pre">P_</span></code>, so given a patch with the name <em>inlet</em> the following group could be
+defined <code class="docutils literal"><span class="pre">D_name/Patches/P_inlet</span></code>.</p>
+<a class="reference internal image-reference" href="../../_images/chidg_file_patch.png"><img alt="../../_images/chidg_file_patch.png" class="align-center" src="../../_images/chidg_file_patch.png" style="width: 30%;" /></a>
+<p>Currently, domains
+are constructed from block-structured grids, so six patches are created:
+<code class="docutils literal"><span class="pre">[XI_MIN,</span> <span class="pre">XI_MAX,</span> <span class="pre">ETA_MIN,</span> <span class="pre">ETA_MAX,</span> <span class="pre">ZETA_MIN,</span> <span class="pre">ZETA_MAX]</span></code>. Each pach corresponds to
+a group of faces on a single side of the block. Patches are used primarily as the
+<em>geometry</em> portion of boundary conditions. A patch is associated with a boundary
+condition state group in order to set up a boundary condition.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">Faces</span></code></td>
+<td>Rank-2 array,   <code class="docutils literal"><span class="pre">H5T_NATIVE_INTEGER</span></code>,    Face connectivities for all faces in the patch.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">Boundary</span> <span class="pre">State</span> <span class="pre">Group</span></code></td>
+<td>Attribute,      <code class="docutils literal"><span class="pre">String</span></code>,    Association of the patch with a boundary condition state group, <code class="docutils literal"><span class="pre">BCSG_</span></code>.</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">In the future, patches will be generalized so they can have arbitrary names
+and arbitrary face groupings.</p>
+</div>
+</div>
+<div class="section" id="fields">
+<h4>Fields<a class="headerlink" href="#fields" title="Permalink to this headline">¶</a></h4>
+<p>Any volume fields defined for a given domain are located in the <code class="docutils literal"><span class="pre">D_name/Fields</span></code> group.
+These could be both <code class="docutils literal"><span class="pre">auxiliary</span></code> (ex. wall distance) and <code class="docutils literal"><span class="pre">primary</span></code> (ex. Density) fields.
+Datasets are stored directly on the <code class="docutils literal"><span class="pre">Fields</span></code> group. The data stored are the modal coefficients
+of the basis function representation. That is, if a field <span class="math">\(Q\)</span> is represented as an expansion in
+basis functions <span class="math">\(\psi(\vec{x})\)</span> as</p>
+<div class="math">
+\[Q = \sum \hat{Q} \psi(\vec{x})\]</div>
+<p>The values stored in the field dataset are the modal coefficients, <span class="math">\(\hat{Q}\)</span>.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The format for a domain field is a Rank-3 array:</p>
+<ul class="simple">
+<li>Rank-1 = nmodes</li>
+<li>Rank-2 = nelements</li>
+<li>Rank-3 = ntime</li>
+</ul>
+<p class="last">If one had read the dataset for a particular field into a Rank-3
+array in working memory(<code class="docutils literal"><span class="pre">my_array(:,:,:)</span></code>), then the modal coefficients of that field
+for element 2 at time instance 1 could be accessed as: <code class="docutils literal"><span class="pre">my_array(:,2,1)</span></code></p>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>For <strong>time-marching</strong> calculations, the size in Rank-3 for fields will be 1. The time-marching
+solution is written out to different files. So, even though many time steps are computed, only
+one is computed at a time. So, the third rank of the field storage is only of size 1.</p>
+<p class="last">For a <strong>time-spectral</strong> scheme like Harmonic Balance, the algorithm is solving directly
+for multiple instances in time and the solution is also multiple instances in time. So,
+the Rank-3 size for a time-spectral solution could be greater than 1 depending on the
+richness of the temporal solution space.</p>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
+</div>
+</div>
+<div class="section" id="boundary-condition-state-groups-bcsg">
+<h3>Boundary Condition State Groups (<code class="docutils literal"><span class="pre">BCSG_</span></code>)<a class="headerlink" href="#boundary-condition-state-groups-bcsg" title="Permalink to this headline">¶</a></h3>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
+</div>
+<div class="section" id="equations-eqn">
+<h3>Equations (<code class="docutils literal"><span class="pre">EQN_</span></code>)<a class="headerlink" href="#equations-eqn" title="Permalink to this headline">¶</a></h3>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
+</div>
+</div>
+<div class="section" id="post-processing-visualization">
+<h2>Post-Processing &amp; Visualization<a class="headerlink" href="#post-processing-visualization" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="tecio">
+<h3>TecIO<a class="headerlink" href="#tecio" title="Permalink to this headline">¶</a></h3>
+<p>Given a ChiDG file containing a solution, a TecIO file can be created for visualization
+in Tecplot.</p>
+<dl class="function">
+<dt>
+<code class="descname">chidg post mesh_file.h5 solution_file.h5</code></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="vtkio">
+<h3>vtkIO<a class="headerlink" href="#vtkio" title="Permalink to this headline">¶</a></h3>
+<p>Given a ChiDG file containing a solution, a vtkIO file can be created for visualization
+in Paraview.</p>
+<dl class="function">
+<dt>
+<code class="descname">chidg post mesh_file.h5 solution_file.h5</code></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="matplotlib">
+<h3>matplotlib<a class="headerlink" href="#matplotlib" title="Permalink to this headline">¶</a></h3>
+<dl class="function">
+<dt>
+<code class="descname">chidg matplotlib points.dat</code></dt>
+<dd></dd></dl>
+
+</div>
 </div>
 </div>
 
@@ -368,10 +519,10 @@ An alternative would be to apply <code class="docutils literal"><span class="pre
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="../solvers/detail_solvers.html" class="btn btn-neutral float-right" title="Solvers" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="../architecture/detail_architecture.html" class="btn btn-neutral float-right" title="Finding your way around ChiDG" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="detail_bc_fluid.html" class="btn btn-neutral" title="Fluid boundary conditions" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="../chidg/detail_chidg.html" class="btn btn-neutral" title="ChiDG API" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

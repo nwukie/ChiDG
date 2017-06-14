@@ -51,6 +51,7 @@ using high-level routines that it provides. Things like
     :maxdepth: 1
 
     chidg/detail_chidg
+    io/detail_io
     architecture/detail_architecture
     mesh/detail_mesh
     equations/detail_equations

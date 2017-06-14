@@ -48,7 +48,7 @@ The velocity vector in ``Cartesian`` and ``Cylindrical`` coordinates is
 
 .. math::
 
-    \vec{u} = [v_x, v_y, v_z]       \quad\quad  \vec{v} = [v_r, v_\theta, v_z]
+   \vec{u} = [v_x, v_y, v_z]       \quad\quad  \vec{v} = [v_r, v_\theta, v_z]
 
 Some distinctions are made here between absolute, relative, and frame velocities.
 The absolute velocity(:math:`v`) is that which is perceived in the inertial frame of 

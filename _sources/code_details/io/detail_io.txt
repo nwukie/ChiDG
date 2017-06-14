@@ -191,6 +191,9 @@ boundary conditions and are marked in the ChiDG root with the leading prefix ``B
 
 Boundary condition state groups can hold one or more Boundary Condition State functions,
 ``BCS_``. ``BCS_`` groups in-turn can hold any number of Boundary Condition Parameters, ``BCP_``.
+In this way, boundary condition state groups are built through a composition of function
+objects. 
+
 
 
 .. figure:: chidg_file_bcsg.png
@@ -198,6 +201,22 @@ Boundary condition state groups can hold one or more Boundary Condition State fu
     :align: center
 
     Boundary condition state group(``BCSG_``) template.
+
+.. note::
+
+    Sometimes a ``BCSG_`` group will only contain a single ``BCS_`` group. Consider the
+    case of an inlet boundary condition for the Euler equations. In this case, a single
+    ``BCS_`` object may be defined to set the boundary state for each equation in the 
+    Euler equations. So the ``BCSG_`` object might contain just ``BCS_fluid_inlet``.
+
+    Consider then an inlet boundary condition for the Reynolds-Averaged Navier-Stokes(RANS) 
+    equations using a one-equation turbulence model. The same inlet ``BCS_fluid inlet`` object can 
+    be used to define the boundary state for the primary Navier-Stokes equations. However,
+    an additional boundary condition state is required to define the turbulence equation.
+    An additional ``BCS_`` object can be added that handles the definition for the extra 
+    equation. So the ``BCSG_`` object might contain both ``BCS_fluid_inlet`` and ``BCS_turb_inlet``.
+
+
 
 Boundary Condition State Function (``BCS_``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

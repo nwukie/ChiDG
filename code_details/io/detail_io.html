@@ -464,10 +464,25 @@ richness of the temporal solution space.</p>
 Boundary Condition State Groups define the <em>state</em> portion of the
 boundary conditions and are marked in the ChiDG root with the leading prefix <code class="docutils literal"><span class="pre">BCSG_</span></code>.</p>
 <p>Boundary condition state groups can hold one or more Boundary Condition State functions,
-<code class="docutils literal"><span class="pre">BCS_</span></code>. <code class="docutils literal"><span class="pre">BCS_</span></code> groups in-turn can hold any number of Boundary Condition Parameters, <code class="docutils literal"><span class="pre">BCP_</span></code>.</p>
+<code class="docutils literal"><span class="pre">BCS_</span></code>. <code class="docutils literal"><span class="pre">BCS_</span></code> groups in-turn can hold any number of Boundary Condition Parameters, <code class="docutils literal"><span class="pre">BCP_</span></code>.
+In this way, boundary condition state groups are built through a composition of function
+objects.</p>
 <div class="figure align-center" id="id3">
 <a class="reference internal image-reference" href="../../_images/chidg_file_bcsg.png"><img alt="../../_images/chidg_file_bcsg.png" src="../../_images/chidg_file_bcsg.png" style="width: 50%;" /></a>
 <p class="caption"><span class="caption-text">Boundary condition state group(<code class="docutils literal"><span class="pre">BCSG_</span></code>) template.</span></p>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>Sometimes a <code class="docutils literal"><span class="pre">BCSG_</span></code> group will only contain a single <code class="docutils literal"><span class="pre">BCS_</span></code> group. Consider the
+case of an inlet boundary condition for the Euler equations. In this case, a single
+<code class="docutils literal"><span class="pre">BCS_</span></code> object may be defined to set the boundary state for each equation in the
+Euler equations. So the <code class="docutils literal"><span class="pre">BCSG_</span></code> object might contain just <code class="docutils literal"><span class="pre">BCS_fluid_inlet</span></code>.</p>
+<p class="last">Consider then an inlet boundary condition for the Reynolds-Averaged Navier-Stokes(RANS)
+equations using a one-equation turbulence model. The same inlet <code class="docutils literal"><span class="pre">BCS_fluid</span> <span class="pre">inlet</span></code> object can
+be used to define the boundary state for the primary Navier-Stokes equations. However,
+an additional boundary condition state is required to define the turbulence equation.
+An additional <code class="docutils literal"><span class="pre">BCS_</span></code> object can be added that handles the definition for the extra
+equation. So the <code class="docutils literal"><span class="pre">BCSG_</span></code> object might contain both <code class="docutils literal"><span class="pre">BCS_fluid_inlet</span></code> and <code class="docutils literal"><span class="pre">BCS_turb_inlet</span></code>.</p>
 </div>
 <div class="section" id="boundary-condition-state-function-bcs">
 <h4>Boundary Condition State Function (<code class="docutils literal"><span class="pre">BCS_</span></code>)<a class="headerlink" href="#boundary-condition-state-function-bcs" title="Permalink to this headline">¶</a></h4>

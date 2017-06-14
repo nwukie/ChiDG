@@ -460,11 +460,26 @@ richness of the temporal solution space.</p>
 </div>
 <div class="section" id="boundary-condition-state-groups-bcsg">
 <h3>Boundary Condition State Groups (<code class="docutils literal"><span class="pre">BCSG_</span></code>)<a class="headerlink" href="#boundary-condition-state-groups-bcsg" title="Permalink to this headline">¶</a></h3>
+<p>Boundary conditions in ChiDG are composed of two separate parts; <em>state</em> and <em>geometry</em>.
+Boundary Condition State Groups define the <em>state</em> portion of the
+boundary conditions and are marked in the ChiDG root with the leading prefix <code class="docutils literal"><span class="pre">BCSG_</span></code>.</p>
+<p>Boundary condition state groups can hold one or more Boundary Condition State functions,
+<code class="docutils literal"><span class="pre">BCS_</span></code>. <code class="docutils literal"><span class="pre">BCS_</span></code> groups in-turn can hold any number of Boundary Condition Parameters, <code class="docutils literal"><span class="pre">BCP_</span></code>.</p>
+<div class="figure align-center" id="id3">
+<a class="reference internal image-reference" href="../../_images/chidg_file_bcsg.png"><img alt="../../_images/chidg_file_bcsg.png" src="../../_images/chidg_file_bcsg.png" style="width: 50%;" /></a>
+<p class="caption"><span class="caption-text">Boundary condition state group(<code class="docutils literal"><span class="pre">BCSG_</span></code>) template.</span></p>
+</div>
+<div class="section" id="boundary-condition-state-function-bcs">
+<h4>Boundary Condition State Function (<code class="docutils literal"><span class="pre">BCS_</span></code>)<a class="headerlink" href="#boundary-condition-state-function-bcs" title="Permalink to this headline">¶</a></h4>
+</div>
+<div class="section" id="boundary-condition-parameters-bcp">
+<h4>Boundary Condition Parameters (<code class="docutils literal"><span class="pre">BCP_</span></code>)<a class="headerlink" href="#boundary-condition-parameters-bcp" title="Permalink to this headline">¶</a></h4>
 <div class="line-block">
 <div class="line"><br /></div>
 <div class="line"><br /></div>
 <div class="line"><br /></div>
 <div class="line"><br /></div>
+</div>
 </div>
 </div>
 <div class="section" id="equations-eqn">

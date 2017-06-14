@@ -185,6 +185,31 @@ The values stored in the field dataset are the modal coefficients, :math:`\hat{Q
 Boundary Condition State Groups (``BCSG_``)
 ============================================
 
+Boundary conditions in ChiDG are composed of two separate parts; *state* and *geometry*.
+Boundary Condition State Groups define the *state* portion of the 
+boundary conditions and are marked in the ChiDG root with the leading prefix ``BCSG_``.
+
+Boundary condition state groups can hold one or more Boundary Condition State functions,
+``BCS_``. ``BCS_`` groups in-turn can hold any number of Boundary Condition Parameters, ``BCP_``.
+
+
+.. figure:: chidg_file_bcsg.png
+    :width: 50 %
+    :align: center
+
+    Boundary condition state group(``BCSG_``) template.
+
+Boundary Condition State Function (``BCS_``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+
+Boundary Condition Parameters (``BCP_``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
 
 
 |

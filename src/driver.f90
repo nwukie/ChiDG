@@ -89,7 +89,6 @@ program driver
         !
         call chidg%read_mesh(gridfile)
 
-
         !
         ! Initialize communication, storage, auxiliary fields
         !
@@ -126,15 +125,18 @@ program driver
 !            call create_function(constant,'Radius')
 !            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,1)
 
+            
+
 
             call create_function(constant,'constant')
 
+
             ! rho
-            call constant%set_option('val',1.14_rk)
+            call constant%set_option('val',1._rk)
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,1)
 
             ! rho_u
-            call constant%set_option('val',50.0_rk)
+            call constant%set_option('val',1.0_rk)
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,2)
 
             ! rho_v
@@ -146,7 +148,7 @@ program driver
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,4)
 
             ! rho_E
-            call constant%set_option('val',248000.0_rk)
+            call constant%set_option('val',45.1429_rk)
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,5)
 
 !            ! rho_nutilde
@@ -242,7 +244,6 @@ program driver
             case default
                 call chidg_signal(FATAL,"We didn't understand the way chidg was called. Available chidg 'actions' are: 'edit' 'convert' 'post' 'matplotlib' and 'airfoil'.")
         end select
-
 
         call chidg%shut_down('core')
 

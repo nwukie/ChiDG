@@ -354,6 +354,7 @@ contains
         ! Check function status
         !
         fcn_set = self%bcprop(ifcn)%status()
+        
 
 
         !

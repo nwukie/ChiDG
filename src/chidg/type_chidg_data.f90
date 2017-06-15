@@ -22,6 +22,10 @@ module type_chidg_data
     ! Factory methods
     use mod_equations,                  only: equation_builder_factory
 
+    !Mesh motion
+    use type_prescribed_mesh_motion,               only: prescribed_mesh_motion_t
+    use type_prescribed_mesh_motion_group,               only: prescribed_mesh_motion_group_t
+
 
     implicit none
 
@@ -58,6 +62,8 @@ module type_chidg_data
         ! An object containing time information
         type(time_manager_t)                        :: time_manager
 
+        ! For each domain, a mesh motion type
+        type(prescribed_mesh_motion_t),            allocatable :: pmm(:)
 
     contains
 
@@ -80,6 +86,11 @@ module type_chidg_data
         procedure   :: initialize_solution_domains
         procedure   :: initialize_solution_bc
         procedure   :: initialize_solution_solver
+
+        ! Mesh Motion
+        procedure   :: new_pmm
+        procedure   :: add_pmm_domain
+        procedure   :: add_pmm_group
 
 
         ! Release allocated memory
@@ -244,6 +255,11 @@ contains
         self%bc_state_group(bc_ID) = bc_state_group
                                                                             
 
+
+        !
+        ! Allocate equation set - causing segfault?
+        !
+!        temp_eqnset(idomain_l) = equation_builder_factory%produce(eqnset,'default')
 
 
 
@@ -425,6 +441,46 @@ contains
 
 
 
+    !
+    !   Mesh Motion
+    !------------------------------------------------------------------------------------------
+
+    !> 
+    !!  @author Eric Wolf
+    !!  @date   4/3/2017
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine add_pmm_group(self,pmm_group)
+        class(chidg_data_t),            intent(inout)           :: self
+        type(prescribed_mesh_motion_group_t),               intent(inout)              :: pmm_group
+
+        integer(ik)                         :: pmm_ID
+
+
+        !
+        ! Create a new boundary condition
+        !
+        pmm_ID = self%new_pmm()
+
+
+
+        !
+        ! Initialize pmm from pmm_group. Note that, since pmm_group contains pmm,
+        ! we must pass the pmm info instead of pmm_group to avoid a circular dependency.
+        !
+        call self%pmm(pmm_ID)%init_pmm_group(pmm_group%pmm)
+
+
+    end subroutine add_pmm_group
+    !******************************************************************************************
+
+
+
+
+
+
+
 
 
 
@@ -476,14 +532,6 @@ contains
 
     end function new_equation_set
     !***************************************************************************************
-
-
-
-
-
-
-
-
     !>  Given an equation set name, return its index identifier in chidg_data.
     !!
     !!  Returns eqn_ID such that data%eqnset(eqn_ID) is valid and corresponds to the
@@ -507,11 +555,10 @@ contains
 
             names_match = trim(self%eqnset(ieqn)%name) == trim(eqn_name)
 
+
             if (names_match) eqn_ID = ieqn
             if (names_match) exit
-
         end do
-
 
         user_msg = "chidg_data%get_equation_set_id: No equation set was found that had a name &
                     matching the incoming string"
@@ -521,10 +568,123 @@ contains
     end function get_equation_set_id
     !**************************************************************************************
 
+    !> 
+    !!  @author Eric Wolf
+    !!  @date   4/3/2017
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine add_pmm_domain(self, domain_name, domain_pmm_name)
+        class(chidg_data_t),            intent(inout)   :: self
+        character(*),                   intent(in)      :: domain_name
+        character(*),                   intent(in)      :: domain_pmm_name
+
+        character(:),   allocatable :: pmm_name, user_msg
+        integer(ik)                 :: pmm_ID, ipmm, idom
+        logical                     :: found_pmm
+
+        
+        !
+        ! Find the correct boundary condition to add bc_patch to
+        !
+        do ipmm = 1,size(self%pmm)
+
+            pmm_name = self%pmm(ipmm)%get_name()
+            found_pmm = (trim(domain_pmm_name) == trim(pmm_name))
+
+            if (found_pmm) pmm_ID = ipmm
+            if (found_pmm) exit
+
+        end do
+
+        !
+        ! Once pmm is found, initialize pmm_patch on pmm
+        !
+        if (found_pmm) then
+            
+            !
+            ! Find domain index in mesh(:) from domain_name
+            !
+            idom = self%get_domain_index(domain_name)
+
+            call self%pmm(pmm_ID)%init_pmm_domain(self%mesh%domain(idom))
+
+        else
 
 
+            user_msg = "chidg_data%add_pmm_patch: It looks like we didn't find a prescribed mesh motion  &
+                        group that matches with the string indicated in a pmm domain. Make &
+                        sure that a pmm group with the correct name exists. Also make &
+                        sure that the name set on the pmm domain corresponds to one of the &
+                        pmm groups that exists."
+            if ( (trim(domain_pmm_name) /= 'empty') .and. &
+                (trim(domain_pmm_name) /= 'Empty') ) &
+                call chidg_signal_one(FATAL,user_msg,trim(domain_pmm_name))
+
+        end if
 
 
+    end subroutine add_pmm_domain
+    !*******************************************************************************************
+   
+
+    !>
+    !!  @author Eric Wolf
+    !!  @date   4/3/2017
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    function new_pmm(self) result(pmm_ID)
+        class(chidg_data_t),    intent(inout)   :: self
+
+        type(prescribed_mesh_motion_t), allocatable :: temp_pmms(:)
+        integer(ik)             :: pmm_ID, ierr, npmm
+
+
+        !
+        ! Get number of boundary conditions
+        !
+        if (allocated(self%pmm)) then
+            npmm = size(self%pmm)
+        else
+            npmm = 0
+        end if
+
+                !
+        ! Increment number of boundary conditions
+        !
+        npmm = npmm + 1
+
+
+        !
+        ! Allocate number of boundary conditions
+        !
+        allocate(temp_pmms(npmm), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        !
+        ! Copy any previously allocated boundary conditions to new array
+        !
+        if ( npmm > 1) then
+            temp_pmms(1:size(self%pmm)) = self%pmm(1:size(self%pmm))
+        end if
+
+
+        !
+        ! Set ID of new pmm and store to array
+        !
+        pmm_ID = npmm
+        temp_pmms(pmm_ID)%pmm_ID = pmm_ID
+
+
+        !
+        ! Attach extended allocation to chidg_data%pmm
+        !
+        call move_alloc(temp_pmms,self%pmm)
+
+    end function new_pmm
+    !******************************************************************************************
 
     !>  Given an equation set name, return its index identifier in chidg_data.
     !!
@@ -556,8 +716,6 @@ contains
 
     end function get_equation_set_name
     !**************************************************************************************
-
-
 
 
 

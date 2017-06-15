@@ -133,7 +133,6 @@ contains
                 call cache_handler%update(worker,data%eqnset, data%bc_state_group, differentiate)
 
 
-
                 ! Faces loop. For the current element, compute the 
                 ! contributions from boundary integrals.
                 do iface = 1,NFACES

@@ -125,6 +125,17 @@ module type_chidg_worker
                                            integrate_volume_source
         procedure   :: integrate_volume_flux
         procedure   :: integrate_volume_source
+        
+        !ALE procedures
+        procedure   :: get_grid_velocity_element
+        procedure   :: get_grid_velocity_face
+        procedure   :: get_jacobian_grid_element
+        procedure   :: get_inv_jacobian_grid_element
+        procedure   :: get_jacobian_grid_face
+        procedure   :: get_inv_jacobian_grid_face
+        procedure   :: get_det_jacobian_grid_element
+        procedure   :: get_det_jacobian_grid_face
+
 
 
         final       :: destructor
@@ -1776,5 +1787,161 @@ contains
 
     end subroutine destructor
     !*************************************************************************************
+
+
+    !
+    ! ALE Procedures
+    !
+
+    ! Get ALE quantities
+    !>
+    !!
+    !!  @author Eric M. Wolf
+    !!  @date 1/9/2017
+    !!
+    !----------------------------------------------------------------------------------------------------
+    function get_grid_velocity_element(self,field) result(grid_vel_gq)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(len=*),       intent(in)  :: field
+
+        real(rk), dimension(:), allocatable :: grid_vel_gq
+
+        if (field == 'u_grid') then
+            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grid_vel1(:)
+
+        else if (field == 'v_grid') then
+
+            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grid_vel2(:)
+        else if (field == 'w_grid') then
+
+            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grid_vel3(:)
+        else
+            call chidg_signal(FATAL,"chidg_worker%get_grid_velocity_element(field): Invalid value for 'field'.")
+        end if
+    end function get_grid_velocity_element
+
+
+    !>
+    !!
+    !!  @author Eric M. Wolf
+    !!  @date 1/9/2017
+    !!
+    !----------------------------------------------------------------------------------------------------
+    function get_grid_velocity_face(self,field) result(grid_vel_gq)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(len=*),       intent(in)  :: field
+
+        real(rk), dimension(:), allocatable :: grid_vel_gq
+
+        if (field == 'u_grid') then
+            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel1(:)
+
+        else if (field == 'v_grid') then
+
+            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel2(:)
+        else if (field == 'w_grid') then
+
+            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel3(:)
+        else
+            call chidg_signal(FATAL,"chidg_worker%get_grid_velocity_face(field): Invalid value for 'field'.")
+        end if
+    end function get_grid_velocity_face
+
+    !>
+    !!
+    !!  @author Eric M. Wolf
+    !!  @date 1/9/2017
+    !!
+    !----------------------------------------------------------------------------------------------------
+    function get_jacobian_grid_element(self) result(jacobian_grid_gq)
+        class(chidg_worker_t),  intent(in)  :: self
+
+        real(rk), dimension(:,:,:), allocatable :: jacobian_grid_gq
+
+        jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%jacobian_grid(:,:,:)
+
+    end function get_jacobian_grid_element
+    !>
+    !!
+    !!  @author Eric M. Wolf
+    !!  @date 1/9/2017
+    !!
+    !----------------------------------------------------------------------------------------------------
+    function get_inv_jacobian_grid_element(self) result(jacobian_grid_gq)
+        class(chidg_worker_t),  intent(in)  :: self
+
+        real(rk), dimension(:,:,:), allocatable :: jacobian_grid_gq
+
+        jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%inv_jacobian_grid(:,:,:)
+
+    end function get_inv_jacobian_grid_element
+
+
+    !>
+    !!
+    !!  @author Eric M. Wolf
+    !!  @date 1/9/2017
+    !!
+    !----------------------------------------------------------------------------------------------------
+    function get_jacobian_grid_face(self) result(jacobian_grid_gq)
+        class(chidg_worker_t),  intent(in)  :: self
+
+        real(rk), dimension(:,:,:), allocatable :: jacobian_grid_gq
+
+        jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%jacobian_grid(:,:,:)
+
+    end function get_jacobian_grid_face
+
+    !>
+    !!
+    !!  @author Eric M. Wolf
+    !!  @date 1/9/2017
+    !!
+    !----------------------------------------------------------------------------------------------------
+    function get_inv_jacobian_grid_face(self) result(jacobian_grid_gq)
+        class(chidg_worker_t),  intent(in)  :: self
+
+        real(rk), dimension(:,:,:), allocatable :: jacobian_grid_gq
+
+        jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%inv_jacobian_grid(:,:,:)
+
+    end function get_inv_jacobian_grid_face
+
+
+    !>
+    !!
+    !!  @author Eric M. Wolf
+    !!  @date 1/9/2017
+    !!
+    !----------------------------------------------------------------------------------------------------
+    function get_det_jacobian_grid_element(self) result(det_jacobian_grid_gq)
+        class(chidg_worker_t),  intent(in)  :: self
+
+        real(rk), dimension(:), allocatable :: det_jacobian_grid_gq
+
+        det_jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%det_jacobian_grid(:)
+
+        !det_jacobian_grid_gq = ONE/det_jacobian_grid_gq
+    end function get_det_jacobian_grid_element
+
+    !>
+    !!
+    !!  @author Eric M. Wolf
+    !!  @date 1/9/2017
+    !!
+    !----------------------------------------------------------------------------------------------------
+    function get_det_jacobian_grid_face(self) result(det_jacobian_grid_gq)
+        class(chidg_worker_t),  intent(in)  :: self
+
+        real(rk), dimension(:), allocatable :: det_jacobian_grid_gq
+
+        det_jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%det_jacobian_grid(:)
+
+        !det_jacobian_grid_gq = ONE/det_jacobian_grid_gq
+    end function get_det_jacobian_grid_face
+
+
+
+
 
 end module type_chidg_worker

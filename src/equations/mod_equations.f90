@@ -31,6 +31,8 @@ module mod_equations
     use eqn_navier_stokes_av,               only: navier_stokes_av
     use eqn_laminar_navier_stokes,          only: laminar_navier_stokes
     use eqn_wall_distance,                  only: wall_distance
+    use eqn_mesh_motion_diffusion,                  only: mesh_motion_diffusion 
+    use eqn_mesh_motion_linear_elasticity,                  only: mesh_motion_linear_elasticity
     use eqn_test_case_linear_advection,     only: test_case_linear_advection
     use eqn_test_case_poisson_equation,     only: test_case_poisson_equation
     implicit none
@@ -128,6 +130,8 @@ contains
         type(navier_stokes_av)           :: navier_stokes_av_builder
         type(laminar_navier_stokes)      :: laminar_navier_stokes_builder
         type(wall_distance)              :: wall_distance_builder
+        type(mesh_motion_diffusion)              :: mesh_motion_diffusion_builder
+        type(mesh_motion_linear_elasticity)              :: mesh_motion_linear_elasticity_builder
         type(test_case_linear_advection) :: test_case_linear_advection_builder
         type(test_case_poisson_equation) :: test_case_poisson_equation_builder
 
@@ -152,6 +156,8 @@ contains
             call equation_builder_factory%register(navier_stokes_av_builder)
             call equation_builder_factory%register(laminar_navier_stokes_builder)
             call equation_builder_factory%register(wall_distance_builder)
+            call equation_builder_factory%register(mesh_motion_diffusion_builder)
+            call equation_builder_factory%register(mesh_motion_linear_elasticity_builder)
             call equation_builder_factory%register(test_case_linear_advection_builder)
             call equation_builder_factory%register(test_case_poisson_equation_builder)
 

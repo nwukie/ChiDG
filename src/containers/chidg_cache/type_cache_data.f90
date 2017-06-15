@@ -278,6 +278,7 @@ contains
                                (self%fields(field_index)%value_seeds(iseed)%ielement_g == seed%ielement_g)
 
                     if (has_seed) then
+            
                         cache_data = self%fields(field_index)%value(:,iseed)
                         seed_found = .true.
                         exit

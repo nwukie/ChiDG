@@ -1,0 +1,144 @@
+module test_pmm_mod
+    use pfunit_mod
+    use mod_kinds,          only: rk,ik
+    use type_chidg,         only: chidg_t
+    use type_prescribed_mesh_motion_group,               only: prescribed_mesh_motion_group_t
+    use type_prescribed_mesh_motion,                     only: prescribed_mesh_motion_t
+    use type_prescribed_mesh_motion_function,            only: prescribed_mesh_motion_function_t
+    implicit none
+
+    public  :: test_pmm
+
+
+    !>  Test pmm_t procedures.
+    !!
+    !!  Test init_pmm_group:
+    !!      - Standard initialization with multiple pmm_state objects in the
+    !!        group.
+    !!      - Also overriding initialization with an incoming pmm_state object
+    !!        to override the pmm_group initialization.
+    !!
+    !!  Test init_pmm_patch:
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/1/2017
+    !!
+    !--------------------------------------------------------------------------
+    @TestCase
+    type, extends(TestCase) ::  test_pmm
+
+        type(chidg_t)   :: chidg
+
+    contains
+
+        procedure   ::  setUp
+        procedure   ::  tearDown
+
+    end type test_pmm
+    !***************************************************************************
+
+
+contains
+
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a 
+    !! derived type procedure. The argument names have to match
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   3/1/2017
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(test_pmm),    intent(inout)   :: this
+
+        
+        !
+        ! Start up ChiDG
+        ! 
+        call this%chidg%start_up('core')
+
+
+
+    end subroutine setUp
+    !**************************************************************************************
+    
+
+    !>
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(test_pmm),    intent(inout)   :: this
+
+
+        !
+        ! Close ChiDG interface
+        !
+        call this%chidg%shut_down('core')
+
+    end subroutine tearDown
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Test calling pmm%init_pmm_group.
+    !!
+    !!  1: Initialize one pmm_group object with a pmm funciton. 
+    !!  2: Pass the pmm_group to a pmm_t object using init_pmm_group
+    !!  3: Check number of allocated state functions and names
+    !!
+    !!  @author Eric Wolf
+    !!  @date   4/21/2017
+    !!
+    !!-------------------------------------------------------------------------------------
+    @Test
+    subroutine test_pmm__init_pmm_group(self)
+        class(test_pmm), intent(inout)   :: self
+
+        class(prescribed_mesh_motion_function_t),  allocatable :: pmmf
+        class(prescribed_mesh_motion_group_t),allocatable                :: pmm_group
+        class(prescribed_mesh_motion_t),allocatable     :: pmm
+
+        
+        !
+        ! Initialize pmm_group with some data
+        !
+        ! Create a boundary condition state function, add it to the pmm_group
+        !
+        allocate(pmm_group)
+        pmm_group%name = 'Group One'
+
+        allocate(pmm_group%pmm)
+        call pmm_group%pmm%add_pmmf('sinusoidal')
+
+
+        !
+        ! Call init_pmm_group. THIS IS BEING TESTED.
+        !
+        allocate(pmm)
+        call pmm%init_pmm_group(pmm_group%pmm)
+
+
+
+        !@assertEqual(size(pmm%pmmf), 1)
+        @assertEqual(pmm_group%name, 'Group One')
+        @assertEqual(pmm_group%pmm%pmmf%get_name(), 'sinusoidal')
+        @assertEqual(pmm%pmmf%get_name(), 'sinusoidal')
+
+
+    end subroutine test_pmm__init_pmm_group
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+end module test_pmm_mod

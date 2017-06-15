@@ -176,7 +176,6 @@ contains
             state_ID = self%new_bc_state()
             allocate(self%bc_state(state_ID)%state, source=bc_scalar, stat=ierr)
 
-
         !
         ! If no default boundary condition was set for the group, add the states from the file:
         !
@@ -857,6 +856,7 @@ contains
              (trim(family) == 'Farfield')       .or. &
              (trim(family) == 'Scalar'  )       .or. &
              (trim(family) == 'Extrapolation')  .or. &
+             (trim(family) == 'Mesh Motion')  .or. &
              (trim(family) == 'Empty'   ) ) then
 
             self%bc_family = family
@@ -864,7 +864,7 @@ contains
         else
             user_msg = "bc%set_family: The string passed in to set the boundary condition family did &
                         not match any of valid boundary condition families. These include: 'Wall', &
-                        'Inlet', 'Outlet', 'Symmetry', 'Periodic', 'Farfield', 'Scalar', 'Extrapolation'"
+                        'Inlet', 'Outlet', 'Symmetry', 'Periodic', 'Farfield', 'Scalar', 'Extrapolation', 'Mesh Motion'"
             call chidg_signal_one(FATAL,user_msg,family)
         end if
 

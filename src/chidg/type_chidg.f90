@@ -1,15 +1,17 @@
 module type_chidg
 #include <messenger.h>
-    use mod_constants,              only: NFACES, NO_ID
+    use mod_constants,              only: NFACES, ZERO, ONE, TWO, NO_ID
     use mod_equations,              only: register_equation_builders
     use mod_operators,              only: register_operators
     use mod_models,                 only: register_models
     use mod_bc,                     only: register_bcs
     use mod_function,               only: register_functions
+    use mod_prescribed_mesh_motion_function, only: register_prescribed_mesh_motion_functions
     use mod_grid,                   only: initialize_grid
     use mod_string,                 only: get_file_extension, string_t, get_file_prefix
 
     use type_chidg_data,            only: chidg_data_t
+    use type_chidg_vector,          only: chidg_vector_t, sub_chidg_vector_chidg_vector
     use type_time_integrator,       only: time_integrator_t
     use mod_time,                   only: time_manager_global
     use type_linear_solver,         only: linear_solver_t
@@ -36,12 +38,17 @@ module type_chidg
     use mod_hdfio,                  only: read_grids_hdf, read_boundaryconditions_hdf,   &
                                           read_fields_hdf, write_fields_hdf,        &
                                           read_global_connectivity_hdf, read_weights_hdf,      &
-                                          write_grids_hdf, read_equations_hdf
+                                          write_grids_hdf, read_equations_hdf,              &
+                                          read_prescribedmeshmotion_hdf
     use mod_hdf_utilities,          only: close_hdf
     use mod_partitioners,           only: partition_connectivity, send_partitions, &
                                           recv_partition
     use mpi_f08
     use mod_io
+
+
+    use type_prescribed_mesh_motion_domain_data,        only: prescribed_mesh_motion_domain_data_t
+    use type_prescribed_mesh_motion_group_wrapper,        only: prescribed_mesh_motion_group_wrapper_t
     implicit none
 
 
@@ -112,6 +119,7 @@ module type_chidg
         procedure            :: read_mesh
         procedure            :: read_mesh_grids
         procedure            :: read_mesh_boundary_conditions
+        procedure            :: read_prescribedmeshmotions
         procedure            :: write_mesh
         procedure            :: read_fields
         procedure            :: write_fields
@@ -181,6 +189,7 @@ contains
                     ! Order matters here. Functions need to come first. Used by 
                     ! equations and bcs.
                     call register_functions()
+                    call register_prescribed_mesh_motion_functions()
                     call register_models()
                     call register_equation_builders()
                     call register_operators()
@@ -841,6 +850,91 @@ contains
 
 
 
+    !>  Read prescribed mesh motions from grid file.
+    !!
+    !!  @author Eric Wolf
+    !!  @date  3/30/2017 
+    !!
+    !!  @param[in]  gridfile    String specifying a gridfile, including extension.
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine read_prescribedmeshmotions(self, gridfile)
+        class(chidg_t),     intent(inout)               :: self
+        character(*),       intent(in)                  :: gridfile
+
+        character(5),           dimension(1)    :: extensions
+        character(:),           allocatable     :: extension
+        type(prescribed_mesh_motion_domain_data_t),  allocatable     :: pmm_domain_data(:)
+        type(string_t)                          :: pmm_group_name
+        type(prescribed_mesh_motion_group_wrapper_t)            :: pmm_group_wrapper
+        type(string_t)                          :: group_name
+        integer(ik)                                 :: idom, ndomains, iface, ibc, ierr, iread, npmm_groups
+
+
+        !
+        ! Get filename extension
+        !
+        extensions = ['.h5']
+        extension = get_file_extension(gridfile, extensions)
+
+
+        !
+        ! Call boundary condition reader based on file extension
+        !
+        call write_line('Prescribed Mesh Motions: reading...', io_proc=GLOBAL_MASTER)
+        do iread = 0,NRANK-1
+            if ( iread == IRANK ) then
+
+
+                if ( extension == '.h5' ) then
+                    call read_prescribedmeshmotion_hdf(gridfile,pmm_domain_data,pmm_group_wrapper,self%partition)
+                else
+                    call chidg_signal(FATAL,"chidg%read_boundaryconditions: grid file extension not recognized")
+                end if
+
+
+            end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do
+
+
+
+
+
+        call write_line('Prescribed Mesh Motions: processing...', io_proc=GLOBAL_MASTER)
+        !
+        ! Add all boundary condition groups
+        !
+        npmm_groups = pmm_group_wrapper%ngroups
+        if (npmm_groups>0) then
+        do ibc = 1,npmm_groups
+
+            call self%data%add_pmm_group(pmm_group_wrapper%pmm_groups(ibc))
+
+        end do !ibc
+        end if
+
+
+        !
+        ! Add boundary condition patches
+        !
+        ndomains = size(pmm_domain_data)
+        do idom = 1,ndomains
+            
+            call pmm_group_name%set(pmm_domain_data(idom)%pmm_group_name)
+            call self%data%add_pmm_domain(pmm_domain_data(idom)%domain_name,            &
+                                        pmm_group_name%get())
+
+        end do !ipatch
+
+
+
+
+    end subroutine read_prescribedmeshmotions
+    !*****************************************************************************************
+
+
+
 
 
 
@@ -1080,7 +1174,6 @@ contains
         call self%init('algorithms')
 
 
-
         !
         ! Check optional incoming parameters
         !
@@ -1236,7 +1329,40 @@ contains
 
 
 
+    function compute_l2_state_error(self,q_ref) result(error_val)
+        class(chidg_t), intent(inout)       :: self
+        type(chidg_vector_t), intent(in)    :: q_ref
 
+        type(chidg_vector_t), allocatable    :: q_diff
+        real(rk)                            :: error_val, local_error_val
+
+        integer(ik)                         :: ndom, nelems, neqns, nterms, idom, ielem, iterm, ieqn
+        real(rk), allocatable               :: temp(:)
+        q_diff = q_ref
+        q_diff = sub_chidg_vector_chidg_vector(self%data%sdata%q,q_ref)
+        error_val = ZERO
+        !error_val = q_diff%norm_local()
+
+        ndom = self%data%mesh%ndomains()
+        do idom = 1, ndom
+            nelems = self%data%mesh%domain(idom)%nelem
+            neqns = self%data%mesh%domain(idom)%neqns
+            nterms = self%data%mesh%domain(idom)%nterms_s
+            do ielem = 1, nelems
+                local_error_val = ZERO
+                do ieqn = 1, neqns
+                    temp = &
+                        matmul(self%data%mesh%domain(idom)%elems(ielem)%gq%vol%val,&
+                    q_diff%dom(idom)%vecs(ielem)%vec((ieqn-1)*nterms+1:ieqn*nterms))
+                    temp = temp**TWO*self%data%mesh%domain(idom)%elems(ielem)%gq%vol%weights*&
+                        self%data%mesh%domain(idom)%elems(ielem)%jinv
+                    local_error_val = local_error_val + sum(temp)
+                end do
+                error_val = error_val + local_error_val
+            end do
+        end do
+        error_val = sqrt(error_val)
+    end function compute_l2_state_error
 
 
 

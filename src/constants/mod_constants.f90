@@ -213,4 +213,9 @@ module mod_constants
     
     integer(ik),    parameter   :: NO_EQUATION_SET = 0
 
+    !
+    !   Prescribed mesh Motion
+    !
+
+    integer(ik), parameter         :: NO_PMM_ASSIGNED = -1
 end module mod_constants

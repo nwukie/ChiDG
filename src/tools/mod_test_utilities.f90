@@ -8,6 +8,8 @@ module mod_test_utilities
                                           get_block_elements_plot3d, &
                                           get_block_boundary_faces_plot3d
     use mod_bc,                     only: create_bc
+    use mod_gridgen_blocks_pmm,         only: create_mesh_file__pmm__singleblock,   &                    
+                                                create_mesh_file__pmm__sinusoidal__singleblock
     use mod_gridgen_blocks,         only: create_mesh_file__singleblock,                    &
                                           create_mesh_file__multiblock,                     &
                                           create_mesh_file__D2E8M1,                         &
@@ -137,6 +139,24 @@ contains
                                                            equation_sets   = equation_sets,   &
                                                            group_names     = group_names,     &
                                                            bc_state_groups = bc_state_groups)
+
+            !
+            ! PMM
+            !
+            case("D1 NxNxN PMM")
+                call create_mesh_file__pmm__singleblock(filename, equation_sets,                     &
+                                                             group_names,                       &
+                                                             bc_state_groups,                         &
+                                                             nelem_xi, nelem_eta, nelem_zeta,   &
+                                                             clusterx)
+            case("D1 NxNxN PMM_SIN")
+                call create_mesh_file__pmm__sinusoidal__singleblock(filename, equation_sets,                     &
+                                                             group_names,                       &
+                                                             bc_state_groups,                         &
+                                                             nelem_xi, nelem_eta, nelem_zeta,   &
+                                                             clusterx)
+
+
 
             case default
                 user_msg = "create_mesh_file: There was no valid case that matched the incoming string"

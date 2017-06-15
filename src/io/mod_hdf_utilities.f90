@@ -214,6 +214,11 @@ module mod_hdf_utilities
     use type_chidg_data,        only: chidg_data_t
     use hdf5
     use h5lt
+
+
+    use type_prescribed_mesh_motion,    only: prescribed_mesh_motion_t
+    use type_prescribed_mesh_motion_group,    only: prescribed_mesh_motion_group_t
+    use type_prescribed_mesh_motion_group_wrapper,    only: prescribed_mesh_motion_group_wrapper_t
     implicit none
 
     
@@ -5207,6 +5212,467 @@ contains
 
     end function check_file_exists_hdf
     !*********************************************************************************************
+
+
+    !
+    !   Mesh Motion
+    !
+
+    !   Prescribed Mesh Motion
+
+    !>  Return the number of pmm groups are in the HDF file.
+    !!
+    !!  Boundary condition state groups: 'PMM_'
+    !!
+    !!  @author Eric Wolf 
+    !!  @date   4/4/2017 
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_npmm_groups_hdf(fid) result(ngroups)
+        integer(HID_T)  :: fid
+        
+        integer(ik)     :: ngroups
+        type(svector_t) :: pmm_group_names
+
+
+        pmm_group_names = get_pmm_group_names_hdf(fid)
+
+        ngroups = pmm_group_names%size()
+
+    end function get_npmm_groups_hdf
+    !****************************************************************************************
+
+
+
+
+
+    
+    !>  Return a vector of the names for each pmm group.
+    !!
+    !!  @author Eric Wolf 
+    !!  @date   4/4/2017
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_pmm_group_names_hdf(fid) result(pmm_group_names)
+        integer(HID_T), intent(in)  :: fid
+
+        integer(ik)     :: nmembers, ierr, igrp, type
+        character(1024) :: gname
+        type(svector_t) :: pmm_group_names
+
+
+        !  Get number of groups linked to the current bc_face
+        call h5gn_members_f(fid, ".", nmembers, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_pmm_group_names_hdf: error h5gn_members_f")
+
+        if ( nmembers > 0 ) then
+            do igrp = 0,nmembers-1
+                ! Get group name
+                call h5gget_obj_info_idx_f(fid, ".", igrp, gname, type, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"get_pmm_group_names_hdf: error h5gget_obj_info_idx_f")
+
+                ! Test if group is a boundary condition state. 'BCSG_'
+                if (gname(1:4) == 'PMM_') then
+                    call pmm_group_names%push_back(string_t(trim(gname(5:))))
+                end if
+            end do  ! igrp
+        end if
+
+    end function get_pmm_group_names_hdf
+    !***************************************************************************************
+
+    !>  Open a PMM group and return HDF group identifier.
+    !!
+    !!  @author Eric Wolf 
+    !!  @date  4/25/2017 
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function open_pmm_hdf(fid,pmmname) result(pmmgroup_id)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: pmmname
+
+        integer(HID_T)  :: pmmgroup_id
+        integer(ik)     :: ierr
+        logical         :: exists
+
+
+        ! Check exists
+        exists = check_link_exists_hdf(fid,"PMM_"//trim(pmmname))
+        if (.not. exists) call chidg_signal_one(FATAL,"open_pmm_hdf: Couldn't find PMM in file.","PMM_"//trim(pmmname))
+
+
+        ! If so, open.
+        call h5gopen_f(fid,"PMM_"//trim(pmmname), pmmgroup_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"open_pmm_hdf: Error in h5gopen_f")
+
+
+    end function open_pmm_hdf
+    !****************************************************************************************
+
+
+
+
+    
+
+    !>  Given the name of a bc_state on a face, return an initialized bc_state instance.
+    !!
+    !!  You may consider calling 'get_bc_state_names_hdf' first to get a list of 
+    !!  available bc_state's on a face. Then the names could be passed into this routine
+    !!  to return the bc_state instance.
+    !!
+    !!  @author Eric Wolf
+    !!  @date   3/30/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_pmm_hdf(pmmgroup_id,pmm_name) result(pmm)
+        integer(HID_T), intent(in)  :: pmmgroup_id
+        character(*),   intent(in)  :: pmm_name
+
+
+        class(prescribed_mesh_motion_t),  allocatable :: pmm
+        character(:),       allocatable :: pmmname, pname, oname
+        character(1024)                 :: fname
+        integer(HID_T)                  :: pmm_id, pmmfo_id
+        integer(ik)                     :: ierr, iprop, nprop, iopt, noptions
+        real(rdouble), dimension(1)     :: buf
+        real(rk)                        :: ovalue
+        logical                         :: group_exists
+
+
+        !
+        !   Prescribed mesh motion group structure
+        ! /PMM_pmm_name/...
+        !   ATTRIBUTE "Function"    - name of a registered pmmf
+        !   /PMMFO_oname/...        - oname is the name of an option for this pmmf
+        !       ATTRIBUTE "val"     - value of this option
+        !   ...                     - more options
+
+!        ! Open pmmf group 
+!               
+        ! Get boundary condition name string
+        if (pmm_name(1:4) == "PMM_") then
+            pmmname = trim(pmm_name(5:))
+        else
+            pmmname = trim(pmm_name)
+        end if
+
+
+        ! Create boundary condition state and get number of properties
+
+        allocate(pmm, stat=ierr)
+        if (ierr /=0) call AllocationError
+        call pmm%set_name(pmmname)
+       
+
+        ! Read the function name set for the property.
+        call h5ltget_attribute_string_f(pmmgroup_id, ".", "Function", fname, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_pmm_hdf: error getting function name.")
+
+        
+        ! Set/Create the function for the current property
+        call pmm%add_pmmf(trim(fname))
+
+        
+        ! Get number of options for the function
+        noptions = pmm%pmmf%get_noptions()
+
+
+
+        ! Get each option value
+        do iopt = 1,noptions
+            ! Get option name
+            oname = pmm%pmmf%get_option_key(iopt)
+
+            ! Get option value from file
+            group_exists = check_link_exists_hdf(pmmgroup_id,"PMMFO_"//trim(oname))
+            if (group_exists) then
+                call h5gopen_f(pmmgroup_id, "PMMFO_"//trim(oname), pmmfo_id, ierr)
+                call h5ltget_attribute_double_f(pmmfo_id,".", "val", buf, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"get_pmm_hdf: error getting option value")
+                ovalue = real(buf(1),rk)
+
+                ! Set boundary condition option
+                call pmm%pmmf%set_option(trim(oname), ovalue)
+
+                ! Close current property group
+                call h5gclose_f(pmmfo_id,ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"get_pmm_hdf: h5gclose")
+            end if
+        end do ! iopt
+
+
+    end function get_pmm_hdf
+    !*****************************************************************************************
+
+
+
+    !>
+    !!
+    !!  @author Eric Wolf
+    !!  @date  3/30/2017 
+    !!
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine set_pmm_domain_group_hdf(patch_id,group)
+        integer(HID_T), intent(in)  :: patch_id
+        character(*),   intent(in)  :: group
+
+        integer(ik) :: ierr
+
+        ! Set 'Prescribed Mesh Motion Group'
+        call h5ltset_attribute_string_f(patch_id, ".", "Prescribed Mesh Motion Group", trim(group), ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_pmm_domain_group_hdf: error setting the attribute 'Boundary State Group'")
+
+
+    end subroutine set_pmm_domain_group_hdf
+    !***************************************************************************************
+
+    
+    !>  Return 'Boundary State Group' attribute for a given patch.
+    !!
+    !!
+    !!  If found, returns the group attribute.
+    !!  If not found, returns 'empty'.
+    !!
+    !!
+    !!  @author Eric Wolf 
+    !!  @date   3/30/2017
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    function get_pmm_domain_group_hdf(patch_id) result(group_trim)
+        integer(HID_T), intent(in)  :: patch_id
+
+        character(1024)             :: group
+        character(:),   allocatable :: group_trim
+        integer(ik)                 :: ierr
+        integer(ik)                 :: exists
+
+
+        call check_attribute_exists_hdf(patch_id,"Prescribed Mesh Motion Group","Soft Fail",exists)
+
+        ! Get 'Prescribed Mesh Motion Group'
+        if (exists==0) then
+            call h5ltget_attribute_string_f(patch_id, ".", "Prescribed Mesh Motion Group", group, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_pmm_domain_group_hdf: error setting the attribute 'Prescribed Mesh Motion Group'")
+            group_trim = trim(group)
+        else
+            group_trim = 'empty'
+        end if
+            
+    end function get_pmm_domain_group_hdf
+    !***************************************************************************************
+
+
+
+    !>  Add a pmm group to the ChiDG HDF file.
+    !!
+    !!  
+    !!      
+    !!
+    !!  @author Eric Wolf
+    !!  @date   4/21/2017 
+    !!
+    !!  @param[in]  fid             HDF file identifier
+    !!  @param[in]  group_name      Unique name for the new boundary condition state group.
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine create_pmm_group_hdf(fid,group_name,fname)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: group_name
+        character(*),   intent(in),optional  :: fname
+
+        character(:),   allocatable :: user_msg
+        integer(HID_T)              :: pmmgroup_id
+        integer(ik)                 :: ierr
+        logical                     :: group_exists
+
+
+        ! Check if bc_state group exists
+        group_exists = check_link_exists_hdf(fid,"PMM_"//trim(group_name))
+
+        user_msg = "create_pmm_group_hdf: Boundary condition state group already exists. &
+                    Cannot have two groups with the same name"
+        if (group_exists) call chidg_signal_one(FATAL,user_msg,trim(group_name))
+
+
+        !
+        ! Create a new group for the bc_state_t
+        !
+        call h5gcreate_f(fid, "PMM_"//trim(group_name), pmmgroup_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'create_pmm_group_hdf: error creating new group for bc_state.')
+
+
+        ! Set 'Family'
+        if (present(fname)) then
+            call h5ltset_attribute_string_f(pmmgroup_id, ".", "Function", fname, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"create_pmm_group_hdf: error setting the attribute 'Function'")
+        end if
+
+
+        call h5gclose_f(pmmgroup_id,ierr)
+
+    end subroutine create_pmm_group_hdf
+    !****************************************************************************************
+
+    !>  Sets pmmf name attribute to the ChiDG HDF file.
+    !!
+    !!  
+    !!      
+    !!
+    !!  @author Eric Wolf
+    !!  @date   4/25/2017 
+    !!
+    !!  @param[in]  fid             HDF file identifier
+    !!  @param[in]  pmmname         Unique name for the pmm group.
+    !!  @param[in]  fname           Unique name for the pmmf name - must be the name of a registered pmmf!.
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_pmmf_name_hdf(fid,pmmname,fname)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: pmmname 
+        character(*),   intent(in)  :: fname
+
+        character(:),   allocatable :: user_msg
+        integer(HID_T)              :: pmmgroup_id
+        integer(ik)                 :: ierr
+        real(rdouble), dimension(1)     :: buf
+        logical                     :: group_exists
+
+        group_exists = check_link_exists_hdf(fid,"PMM_"//trim(pmmname))
+
+        user_msg = "set_pmmf_name_hdf: PMM group does not exist. &
+                    Create the pmm before trying to set the function name."
+        if (.not. group_exists) call chidg_signal_one(FATAL,user_msg,trim(fname))
+
+
+
+        pmmgroup_id = open_pmm_hdf(fid, pmmname)
+
+        call h5ltset_attribute_string_f(pmmgroup_id, ".", "Function", fname, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_pmmf_name_hdf: error setting the attribute 'Function'")
+
+
+        call h5gclose_f(pmmgroup_id,ierr)
+
+    end subroutine set_pmmf_name_hdf
+    !****************************************************************************************
+
+
+
+
+    !>  Add a pmm group to the ChiDG HDF file.
+    !!
+    !!  
+    !!      
+    !!
+    !!  @author Eric Wolf
+    !!  @date   4/25/2017 
+    !!
+    !!  @param[in]  fid             HDF file identifier
+    !!  @param[in]  group_name      Unique name for the new boundary condition state group.
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine create_pmmfo_group_hdf(fid,pmmname,oname,val)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: pmmname 
+        character(*),   intent(in)  :: oname
+        real(rk),       intent(in),optional  :: val
+
+        character(:),   allocatable :: user_msg
+        integer(HSIZE_T)                :: adim
+        integer(HID_T)              :: pmmgroup_id, pmmfo_id
+        integer(ik)                 :: ierr
+        real(rdouble), dimension(1)     :: buf
+        logical                     :: group_exists
+
+
+        pmmgroup_id = open_pmm_hdf(fid, pmmname)
+
+        ! Check if bc_state group exists
+        group_exists = check_link_exists_hdf(pmmgroup_id,"PMMFO_"//trim(oname))
+
+        user_msg = "create_pmmfo_group_hdf: PMMF option group already exists. &
+                    Cannot have two groups with the same name"
+        if (group_exists) call chidg_signal_one(FATAL,user_msg,trim(oname))
+
+        !
+        ! Create a new group for the option
+        !
+        call h5gcreate_f(pmmgroup_id, "PMMFO_"//trim(oname), pmmfo_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'create_pmmfo_group_hdf: error creating new group for PMMF option.')
+        if (present(val)) then
+            adim = 1
+            call h5ltset_attribute_double_f(pmmfo_id, ".", "val", [real(val,rdouble)], adim, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"create_pmmfo_group_hdf: error setting option value")
+        end if
+
+        
+
+        call h5gclose_f(pmmfo_id,ierr)
+
+    end subroutine create_pmmfo_group_hdf
+    !****************************************************************************************
+
+
+    !>  Sets pmmf option value attribute to the ChiDG HDF file.
+    !!
+    !!  
+    !!      
+    !!
+    !!  @author Eric Wolf
+    !!  @date   4/25/2017 
+    !!
+    !!  @param[in]  fid             HDF file identifier
+    !!  @param[in]  pmmname         Unique name for the pmm group.
+    !!  @param[in]  oname           Unique name for the pmmfo group.
+    !!  @param[in]  val             Option value
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_pmmfo_val_hdf(fid,pmmname,oname,val)
+        integer(HID_T), intent(in)  :: fid
+        character(*),   intent(in)  :: pmmname 
+        character(*),   intent(in)  :: oname
+        real(rk),       intent(in)  :: val
+
+        character(:),   allocatable :: user_msg
+        integer(HSIZE_T)                :: adim
+        integer(HID_T)              :: pmmgroup_id, pmmfo_id
+        integer(ik)                 :: ierr
+        real(rdouble), dimension(1)     :: buf
+        logical                     :: group_exists
+
+
+        pmmgroup_id = open_pmm_hdf(fid, pmmname)
+
+        ! Check if bc_state group exists
+        group_exists = check_link_exists_hdf(pmmgroup_id,"PMMFO_"//trim(oname))
+
+        user_msg = "set_pmmfo_val_hdf: PMMF option group does not exist. &
+                    Create the pmmfo group before trying to set the value."
+        if (.not. group_exists) call chidg_signal_one(FATAL,user_msg,trim(oname))
+
+        !
+        ! Create a new group for the option
+        !
+        call h5gopen_f(pmmgroup_id, "PMMFO_"//trim(oname), pmmfo_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,'set_pmmfo_val_hdf: error opening group for PMMF option.')
+        adim = 1
+        call h5ltset_attribute_double_f(pmmfo_id, ".", "val", [real(val,rdouble)], adim, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_pmmfo_val_hdf: error setting option value")
+
+        
+
+        call h5gclose_f(pmmfo_id,ierr)
+
+    end subroutine set_pmmfo_val_hdf
+    !****************************************************************************************
 
 
 

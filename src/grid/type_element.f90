@@ -2,9 +2,9 @@ module type_element
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES,XI_MIN,XI_MAX,ETA_MIN, &
-                                      ETA_MAX,ZETA_MIN,ZETA_MAX,ONE,ZERO, &
+                                      ETA_MAX,ZETA_MIN,ZETA_MAX,ONE,ZERO,THIRD, &
                                       DIR_1, DIR_2, DIR_3, DIR_THETA, XI_DIR, ETA_DIR, ZETA_DIR, &
-                                      TWO_DIM, THREE_DIM, RKTOL, VALID_POINT, INVALID_POINT
+                                      TWO_DIM, THREE_DIM, RKTOL, VALID_POINT, INVALID_POINT, NO_PMM_ASSIGNED  
     use mod_quadrature,         only: GQ, get_quadrature
     use mod_grid,               only: get_element_mapping, face_corners
     use mod_polynomial,         only: polynomialVal, dpolynomialVal
@@ -60,6 +60,7 @@ module type_element
         integer(ik)     :: nterms_c_1d                      ! N-terms in 1d coordinate expansion.
         integer(ik)     :: ntime                            ! Number of time levels in solution
 
+        integer(ik)                 :: pmm_ID = NO_PMM_ASSIGNED
         ! Element quadrature points, mesh points and modes
         type(element_connectivity_t)    :: connectivity         ! Integer indices of the associated nodes in block node list
         type(point_t),  allocatable     :: quad_pts(:)          ! Coordinates of discrete quadrature points
@@ -70,6 +71,31 @@ module type_element
         ! Element metric terms
         real(rk), allocatable           :: metric(:,:,:)        ! metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
         real(rk), allocatable           :: jinv(:)              ! volume jacobian at quadrature nodes
+        real(rk), allocatable           :: jacobian_matrix(:,:,:)        !< metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
+        real(rk), allocatable           :: inv_jacobian_matrix(:,:,:)        !< metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
+
+        !ALE mesh motion terms - to be computed and updated according to a TBD mesh motion algorithm 
+        ! Grid displacements/new Cartesian coordinates analogous to elem_pts
+        ! Grid Velocities
+        ! Grid motion inverse Jacobian
+        ! Grid motion Jacobian determinant
+        type(point_t), allocatable      :: ale_quad_pts(:)
+        type(point_t), allocatable      :: ale_elem_pts(:)
+        type(point_t), allocatable      :: ale_vel_elem_pts(:)
+        type(densevector_t)             :: ale_coords               !< Modal representation of cartesian coordinates (nterms_var,(x,y,z))
+        type(densevector_t)             :: ale_vel_coords               !< Modal representation of cartesian coordinates (nterms_var,(x,y,z))
+        real(rk), allocatable           :: grid_vel1(:)
+        real(rk), allocatable           :: grid_vel2(:)
+        real(rk), allocatable           :: grid_vel3(:)
+        real(rk), allocatable           :: jacobian_grid(:,:,:)
+        real(rk), allocatable           :: inv_jacobian_grid(:,:,:)
+        real(rk), allocatable           :: det_jacobian_grid(:)
+        real(rk), allocatable           :: det_jacobian_grid_modes(:)
+
+        real(rk), allocatable           :: metric_ale(:,:,:)        !< metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
+        real(rk), allocatable           :: jacobian_matrix_ale(:,:,:)        !< metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
+        real(rk), allocatable           :: inv_jacobian_matrix_ale(:,:,:)        !< metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
+        real(rk), allocatable           :: jinv_ale(:)              !< jacobian terms at quadrature nodes
 
         ! Matrices of physical gradients of basis/test functions
         real(rk), allocatable           :: grad1(:,:)           ! Grad of basis functions in at quadrature nodes
@@ -89,6 +115,7 @@ module type_element
 
         ! Element volume, approx. size of bounding box
         real(rk)                        :: vol
+        real(rk)                        :: vol_ale
         real(rk)                        :: h(3)     
 
 
@@ -134,6 +161,13 @@ module type_element
         procedure           :: compute_quadrature_metrics
         procedure           :: compute_quadrature_coords
         procedure           :: assign_quadrature
+
+
+        ! ALE procedures
+        procedure, public   :: update_element_ale
+        procedure           :: update_geom_ale
+        procedure           :: compute_quadrature_coords_ale
+        procedure           :: compute_quadrature_metrics_ale
 
         final               :: destructor
 
@@ -281,6 +315,31 @@ contains
         self%h(2) = ywidth
         self%h(3) = zwidth
 
+        allocate(self%ale_elem_pts(nterms_c),stat=ierr)
+        call self%ale_coords%init(nterms_c,3,ntime,idomain_g,idomain_l,ielem_g,ielem_l)
+        self%ale_elem_pts = self%elem_pts
+        modes1 = matmul(element_mapping,self%ale_elem_pts(:)%c1_)
+        modes2 = matmul(element_mapping,self%ale_elem_pts(:)%c2_)
+        modes3 = matmul(element_mapping,self%ale_elem_pts(:)%c3_)
+
+        call self%ale_coords%setvar(1,itime = 1,vals = modes1)
+        call self%ale_coords%setvar(2,itime = 1,vals = modes2)
+        call self%ale_coords%setvar(3,itime = 1,vals = modes3)
+
+
+        allocate(self%ale_vel_elem_pts(nterms_c),stat=ierr)
+        call self%ale_vel_coords%init(nterms_c,3,ntime,idomain_g,idomain_l,ielem_g,ielem_l)
+        self%ale_vel_elem_pts(:)%c1_ = ZERO  
+        self%ale_vel_elem_pts(:)%c2_ = ZERO  
+        self%ale_vel_elem_pts(:)%c3_ = ZERO  
+
+        modes1 = matmul(element_mapping,self%ale_vel_elem_pts(:)%c1_)
+        modes2 = matmul(element_mapping,self%ale_vel_elem_pts(:)%c2_)
+        modes3 = matmul(element_mapping,self%ale_vel_elem_pts(:)%c3_)
+
+        call self%ale_vel_coords%setvar(1,itime = 1,vals = modes1)
+        call self%ale_vel_coords%setvar(2,itime = 1,vals = modes2)
+        call self%ale_vel_coords%setvar(3,itime = 1,vals = modes3)
 
 
         !
@@ -360,6 +419,20 @@ contains
                  self%grad3_trans(nterms_s,nnodes),   &
                  self%mass(nterms_s,nterms_s),      &
                  self%invmass(nterms_s,nterms_s),   &
+                 self%jinv_ale(nnodes),                     &
+                 self%metric_ale(3,3,nnodes),                   &
+                 self%ale_quad_pts(nnodes),                     &
+                 self%grid_vel1(nnodes),                       &
+                 self%grid_vel2(nnodes),                       &
+                 self%grid_vel3(nnodes),                       &
+                 self%jacobian_grid(nnodes,3,3),            &
+                 self%inv_jacobian_grid(nnodes,3,3),            &
+                 self%det_jacobian_grid(nnodes),            &
+                 self%det_jacobian_grid_modes(nterms_s),            &
+                 self%jacobian_matrix(nnodes,3,3),          &
+                 self%inv_jacobian_matrix(nnodes,3,3),          &
+                 self%jacobian_matrix_ale(nnodes,3,3),          &
+                 self%inv_jacobian_matrix_ale(nnodes,3,3),          &
                  self%dtau(neqns), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -370,6 +443,7 @@ contains
         call self%compute_element_matrices()
 
 
+        call self%update_element_ale()
 
         !
         ! Confirm element numerics were initialized
@@ -592,6 +666,26 @@ contains
             self%metric(1,3,inode) = ONE/self%jinv(inode) * scaling_12(inode) * (d1deta(inode)*d2dzeta(inode) - d1dzeta(inode)*d2deta(inode))
             self%metric(2,3,inode) = ONE/self%jinv(inode) * scaling_12(inode) * (d1dzeta(inode)*d2dxi(inode)  - d1dxi(inode)*d2dzeta(inode) )
             self%metric(3,3,inode) = ONE/self%jinv(inode) * scaling_12(inode) * (d1dxi(inode)*d2deta(inode)   - d1deta(inode)*d2dxi(inode)  )
+        
+
+
+
+        end do
+
+        do inode = 1,nnodes
+            self%jacobian_matrix(inode,1,1) = d1dxi(inode)
+            self%jacobian_matrix(inode,1,2) = d1deta(inode)
+            self%jacobian_matrix(inode,1,3) = d1dzeta(inode)
+                                          
+            self%jacobian_matrix(inode,2,1) = d2dxi(inode)
+            self%jacobian_matrix(inode,2,2) = d2deta(inode)
+            self%jacobian_matrix(inode,2,3) = d2dzeta(inode)
+                                          
+            self%jacobian_matrix(inode,3,1) = d3dxi(inode)
+            self%jacobian_matrix(inode,3,2) = d3deta(inode)
+            self%jacobian_matrix(inode,3,3) = d3dzeta(inode)
+
+            self%inv_jacobian_matrix(inode,:,:) = inv(self%jacobian_matrix(inode,:,:))
         end do
 
 
@@ -1534,6 +1628,249 @@ contains
 
 
 
+
+
+    subroutine update_element_ale(self)
+        class(element_t),       intent(inout)      :: self
+
+        call self%update_geom_ale()
+        call self%compute_quadrature_coords_ale()
+        call self%compute_quadrature_metrics_ale()
+
+    end subroutine update_element_ale
+
+    subroutine update_geom_ale(self)
+        class(element_t),               intent(inout)   :: self
+
+        type(point_t),  allocatable :: points(:)
+        real(rk),       allocatable :: element_mapping(:,:)
+        real(rk),       allocatable :: xmodes(:), ymodes(:), zmodes(:)
+        integer(ik)                 :: spacedim, ierr, nterms_c, ipt, npts_1d, npts, mapping, inode, idomain_g, ielem_g
+
+
+
+        mapping = nint((self%nterms_c)**THIRD-ONE,ik)
+        spacedim = 3 
+        !
+        ! Get element mapping
+        !
+        element_mapping = get_element_mapping(spacedim,mapping)
+    
+        ! We are assuming that the ale_elem_pts have already been updated according to mesh motion
+        ! A worker has a pointer to the mesh, which it has used to update this field
+
+
+        !
+        ! Compute mesh x,y,z modes
+        !
+        xmodes = matmul(element_mapping,self%ale_elem_pts(:)%c1_)
+        ymodes = matmul(element_mapping,self%ale_elem_pts(:)%c2_)
+        zmodes = matmul(element_mapping,self%ale_elem_pts(:)%c3_)
+
+        call self%ale_coords%setvar(1,itime = 1,vals = xmodes)
+        call self%ale_coords%setvar(2,itime = 1,vals = ymodes)
+        call self%ale_coords%setvar(3,itime = 1,vals = zmodes)
+
+        !
+        !   Compute grid velocity modes
+        !
+
+        xmodes = matmul(element_mapping,self%ale_vel_elem_pts(:)%c1_)
+        ymodes = matmul(element_mapping,self%ale_vel_elem_pts(:)%c2_)
+        zmodes = matmul(element_mapping,self%ale_vel_elem_pts(:)%c3_)
+
+        call self%ale_vel_coords%setvar(1,itime = 1,vals = xmodes)
+        call self%ale_vel_coords%setvar(2,itime = 1,vals = ymodes)
+        call self%ale_vel_coords%setvar(3,itime = 1,vals = zmodes)
+
+
+    end subroutine update_geom_ale
+    !***********************************************************************************************************
+    
+    subroutine compute_quadrature_coords_ale(self)
+        class(element_t),   intent(inout)   :: self
+        integer(ik)                         :: nnodes
+        real(rk)                            :: x(self%gq%vol%nnodes),y(self%gq%vol%nnodes),z(self%gq%vol%nnodes)
+        real(rk)                            :: vg1(self%gq%vol%nnodes),vg2(self%gq%vol%nnodes),vg3(self%gq%vol%nnodes)
+        integer(ik)                         :: inode
+
+        nnodes = self%gq%vol%nnodes
+
+        !
+        ! compute cartesian coordinates associated with quadrature points
+        !
+        x = matmul(self%gqmesh%vol%val,self%ale_coords%getvar(1,itime = 1))
+        y = matmul(self%gqmesh%vol%val,self%ale_coords%getvar(2,itime = 1))
+        z = matmul(self%gqmesh%vol%val,self%ale_coords%getvar(3,itime = 1))
+
+
+        !
+        ! Initialize each point with cartesian coordinates
+        !
+        do inode = 1,nnodes
+            call self%ale_quad_pts(inode)%set(x(inode),y(inode),z(inode))
+        end do
+!
+
+        ! Grid velocity
+
+        ! compute cartesian coordinates associated with quadrature points
+        !
+        vg1 = matmul(self%gqmesh%vol%val,self%ale_vel_coords%getvar(1,itime = 1))
+        vg2 = matmul(self%gqmesh%vol%val,self%ale_vel_coords%getvar(2,itime = 1))
+        vg3 = matmul(self%gqmesh%vol%val,self%ale_vel_coords%getvar(3,itime = 1))
+
+
+        !
+        ! Initialize each point with cartesian coordinates
+        !
+        do inode = 1,nnodes
+            self%grid_vel1(inode) = vg1(inode)
+            self%grid_vel2(inode) = vg2(inode)
+            self%grid_vel3(inode) = vg3(inode)
+        end do
+
+
+    end subroutine compute_quadrature_coords_ale
+    !**************************************************************************************************************
+
+
+    subroutine compute_quadrature_metrics_ale(self)
+        class(element_t),    intent(inout)   :: self
+
+        integer(ik)             :: inode
+        integer(ik)             :: nnodes
+        character(:),   allocatable :: coordinate_system
+
+        real(rk),   dimension(self%gq%vol%nnodes)   ::  &
+            d1dxi, d1deta, d1dzeta,                     &
+            d2dxi, d2deta, d2dzeta,                     &
+            d3dxi, d3deta, d3dzeta,                     &
+            scaling_12, scaling_13, scaling_23, scaling_123
+
+        real(rk),       allocatable     :: fvals(:), temp(:)
+
+        nnodes = self%gq%vol%nnodes
+
+        d1dxi   = matmul(self%gqmesh%vol%ddxi,  self%ale_coords%getvar(1,itime = 1))
+        d1deta  = matmul(self%gqmesh%vol%ddeta, self%ale_coords%getvar(1,itime = 1))
+        d1dzeta = matmul(self%gqmesh%vol%ddzeta,self%ale_coords%getvar(1,itime = 1))
+
+        d2dxi   = matmul(self%gqmesh%vol%ddxi,  self%ale_coords%getvar(2,itime = 1))
+        d2deta  = matmul(self%gqmesh%vol%ddeta, self%ale_coords%getvar(2,itime = 1))
+        d2dzeta = matmul(self%gqmesh%vol%ddzeta,self%ale_coords%getvar(2,itime = 1))
+
+        d3dxi   = matmul(self%gqmesh%vol%ddxi,  self%ale_coords%getvar(3,itime = 1))
+        d3deta  = matmul(self%gqmesh%vol%ddeta, self%ale_coords%getvar(3,itime = 1))
+        d3dzeta = matmul(self%gqmesh%vol%ddzeta,self%ale_coords%getvar(3,itime = 1))
+
+
+
+
+
+        !
+        ! Define area/volume scaling for coordinate system
+        !   Cartesian:
+        !       12 = x-y  ;  13 = x-z  ;  23 = y-z
+        !
+        !   Cylindrical
+        !       12 = r-theta  ;  13 = r-z      ;  23 = theta-z
+        !
+        select case (self%coordinate_system)
+            case ('Cartesian')
+                scaling_12  = ONE
+                scaling_13  = ONE
+                scaling_23  = ONE
+                scaling_123 = ONE
+            case ('Cylindrical')
+                scaling_12  = self%quad_pts(:)%c1_
+                scaling_13  = ONE
+                scaling_23  = self%quad_pts(:)%c1_
+                scaling_123 = self%quad_pts(:)%c1_
+            case default
+                call chidg_signal(FATAL,"element%compute_quadrature_metrics: Invalid coordinate system. Choose 'Cartesian' or 'Cylindrical'.")
+        end select
+
+
+        !
+        ! Compute inverse cell mapping jacobian
+        !
+        self%jinv_ale = scaling_123*(d1dxi*d2deta*d3dzeta  -  d1deta*d2dxi*d3dzeta - &
+                                 d1dxi*d2dzeta*d3deta  +  d1dzeta*d2dxi*d3deta + &
+                                 d1deta*d2dzeta*d3dxi  -  d1dzeta*d2deta*d3dxi)
+
+        !
+        ! Check for negative jacobians
+        !
+        if (any(self%jinv_ale < ZERO)) call chidg_signal(FATAL,"element%compute_quadrature_metrics: Negative element jacobians. Check element quality and orientation.")
+
+
+        self%det_jacobian_grid = self%jinv_ale/self%jinv
+        !
+        ! Compute element volume
+        !
+        self%vol_ale = abs(sum(self%jinv_ale * self%gq%vol%weights))
+
+
+        !
+        ! Loop through quadrature nodes and compute metric terms. This is the explicit formula
+        ! for inverting a 3x3 matrix.
+        !
+        !   See: http://mathworld.wolfram.com/MatrixInverse.html 
+        !
+        do inode = 1,nnodes
+            self%metric_ale(1,1,inode) = ONE/self%jinv_ale(inode) * scaling_23(inode) * (d2deta(inode)*d3dzeta(inode) - d2dzeta(inode)*d3deta(inode))
+            self%metric_ale(2,1,inode) = ONE/self%jinv_ale(inode) * scaling_23(inode) * (d2dzeta(inode)*d3dxi(inode)  - d2dxi(inode)*d3dzeta(inode) )
+            self%metric_ale(3,1,inode) = ONE/self%jinv_ale(inode) * scaling_23(inode) * (d2dxi(inode)*d3deta(inode)   - d2deta(inode)*d3dxi(inode)  )
+
+            self%metric_ale(1,2,inode) = ONE/self%jinv_ale(inode) * scaling_13(inode) * (d1dzeta(inode)*d3deta(inode) - d1deta(inode)*d3dzeta(inode))
+            self%metric_ale(2,2,inode) = ONE/self%jinv_ale(inode) * scaling_13(inode) * (d1dxi(inode)*d3dzeta(inode)  - d1dzeta(inode)*d3dxi(inode) )
+            self%metric_ale(3,2,inode) = ONE/self%jinv_ale(inode) * scaling_13(inode) * (d1deta(inode)*d3dxi(inode)   - d1dxi(inode)*d3deta(inode)  )
+
+            self%metric_ale(1,3,inode) = ONE/self%jinv_ale(inode) * scaling_12(inode) * (d1deta(inode)*d2dzeta(inode) - d1dzeta(inode)*d2deta(inode))
+            self%metric_ale(2,3,inode) = ONE/self%jinv_ale(inode) * scaling_12(inode) * (d1dzeta(inode)*d2dxi(inode)  - d1dxi(inode)*d2dzeta(inode) )
+            self%metric_ale(3,3,inode) = ONE/self%jinv_ale(inode) * scaling_12(inode) * (d1dxi(inode)*d2deta(inode)   - d1deta(inode)*d2dxi(inode)  )
+
+!
+
+
+        end do
+
+        do inode = 1,nnodes
+            self%jacobian_matrix_ale(inode,1,1) = d1dxi(inode)
+            self%jacobian_matrix_ale(inode,1,2) = d1deta(inode)
+            self%jacobian_matrix_ale(inode,1,3) = d1dzeta(inode)
+                                              
+            self%jacobian_matrix_ale(inode,2,1) = d2dxi(inode)
+            self%jacobian_matrix_ale(inode,2,2) = d2deta(inode)
+            self%jacobian_matrix_ale(inode,2,3) = d2dzeta(inode)
+                                              
+            self%jacobian_matrix_ale(inode,3,1) = d3dxi(inode)
+            self%jacobian_matrix_ale(inode,3,2) = d3deta(inode)
+            self%jacobian_matrix_ale(inode,3,3) = d3dzeta(inode)
+
+            self%inv_jacobian_matrix_ale(inode,:,:) = inv(self%jacobian_matrix_ale(inode,:,:))
+        end do
+
+
+        do inode = 1, nnodes
+            self%jacobian_grid(inode,:,:) = matmul(self%jacobian_matrix_ale(inode,:,:),self%inv_jacobian_matrix(inode,:,:))
+            !self%jacobian_grid(inode,:,:) = matmul(self%inv_jacobian_matrix(inode,:,:),self%jacobian_matrix_ale(inode,:,:))
+            self%inv_jacobian_grid(inode,:,:) = inv(self%jacobian_grid(inode,:,:))
+        end do
+        
+        fvals = self%det_jacobian_grid * self%gq%vol%weights * self%jinv
+
+
+        !
+        ! Project
+        !
+        temp = matmul(transpose(self%gq%vol%val),fvals)
+        self%det_jacobian_grid_modes = matmul(self%invmass,temp)
+
+
+    end subroutine compute_quadrature_metrics_ale
+    !********************************************************************************************************
 
 
 

@@ -74,7 +74,7 @@ contains
         integer(ik) :: npt_xi, npt_eta, npt_zeta, &
                        nelem_xi, nelem_eta, nelem_zeta, &
                        i,j,k,n, ierr, ncoords, ipt_xi, ipt_eta, ipt_zeta, &
-                       bcface, idomain, spacedim, igroup, istate
+                       bcface, idomain, igroup, istate
 
         real(rk),   allocatable :: coords(:,:,:,:)
         real(rk)                :: x, y, z, alpha
@@ -260,9 +260,8 @@ contains
             !
             ! Add domains
             !
-            spacedim = 3
             write(domainname, '(I2.2)') idomain
-            call add_domain_hdf(file_id,trim(domainname),nodes,elements,'Cartesian','Euler',spacedim)
+            call add_domain_hdf(file_id,trim(domainname),nodes,elements,'Cartesian','Euler')
 
 
 

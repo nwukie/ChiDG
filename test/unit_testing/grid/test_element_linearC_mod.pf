@@ -53,7 +53,7 @@ contains
         type(element_connectivity_t)    :: connectivity
         real(rk)                        :: sqrt_two, inv_sqrt_two
         integer(ik)                     :: ftype, ineighbor, mapping, ielem,            &
-                                           idomain, spacedim, neqns, nterms_s, ntime,   &
+                                           idomain, neqns, nterms_s, ntime,             &
                                            ineighbor_domain_g,  ineighbor_domain_l,     &
                                            ineighbor_element_g, ineighbor_element_l,    &
                                            ineighbor_face, ineighbor_proc,              &
@@ -95,13 +95,12 @@ contains
         call connectivity%set_element_nodes([1, 2, 3, 4, 5, 6, 7, 8])
         
         ! Initialize Element geometry and Numerics
-        spacedim = 3
         idomain  = 1
         ielem    = 1
         neqns    = 2
         nterms_s = 8
         ntime    = 1
-        call this%elem%init_geom(spacedim,nodes,connectivity,idomain,ielem,'Cartesian')
+        call this%elem%init_geom(nodes,connectivity,idomain,ielem,'Cartesian')
         call this%elem%init_sol(neqns,nterms_s,ntime)
         
 

@@ -14,12 +14,16 @@ module type_interpolator
     !---------------------------------------------------------------------
     type, public :: interpolator_t
 
-        !type(volume_interpolator_t) :: vol
-        !type(face_interpolator_t)   :: face
+        real(rk),   allocatable :: nodes(:,:)   ! (nnodes,ncoords)
+
+        real(rk),   allocatable :: val(:,:)     ! (nnodes,nmodes)
+        real(rk),   allocatable :: ddxi(:,:)    ! (nnodes,nmodes)
+        real(rk),   allocatable :: ddeta(:,:)   ! (nnodes,nmodes)
+        real(rk),   allocatable :: ddzeta(:,:)  ! (nnodes,nmodes)
 
     contains
 
-        
+         
 
     end type interpolator_t
     !*********************************************************************

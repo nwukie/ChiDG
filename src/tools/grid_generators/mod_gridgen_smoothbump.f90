@@ -66,7 +66,7 @@ contains
 
         class(bc_state_t),  allocatable             :: bc_state
         integer(HID_T)                              :: file_id, dom_id, bcface_id, bcgroup_id, patch_id
-        integer(ik)                                 :: ierr, spacedim, mapping, bcface, igroup, istate
+        integer(ik)                                 :: ierr, mapping, bcface, igroup, istate
         character(8)                                :: patch_names(6)
         type(point_t),      allocatable             :: nodes(:)
         integer(ik),        allocatable             :: elements(:,:), faces(:,:)
@@ -98,11 +98,10 @@ contains
         !
         ! Add domains
         !
-        spacedim = 3
         if (present(equation_sets)) then
-            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian',equation_sets(1)%get(),spacedim)
+            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian',equation_sets(1)%get())
         else
-            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian','Euler',spacedim)
+            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian','Euler')
         end if
 
 

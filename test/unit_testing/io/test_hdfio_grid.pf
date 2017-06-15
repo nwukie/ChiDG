@@ -13,8 +13,6 @@ subroutine testIO__read_mesh_hdf__D1_E1_M1()
     type(chidg_t)                   :: chidg
     character(100), parameter       :: filename = 'D1_E1_M1.h5'
     integer,        parameter       :: ndomains = 1
-    integer(ik),    parameter       :: spacedim = 3
-    integer(ik),    parameter       :: nterms_c = 8
     integer,        parameter       :: nelem    = 1
     real(rk)                        :: x(8), y(8), z(8)
     real(rk)                        :: tol
@@ -38,7 +36,7 @@ subroutine testIO__read_mesh_hdf__D1_E1_M1()
     ! Create/Read grid 
     !
     call create_mesh_file("D1 NxNxN", filename,nelem_xi=1,nelem_eta=1,nelem_zeta=1)
-    call chidg%read_mesh(filename, spacedim)
+    call chidg%read_mesh(filename)
 
 
 
@@ -47,9 +45,6 @@ subroutine testIO__read_mesh_hdf__D1_E1_M1()
     ! Test number of allocated domains
     @assertEqual(ndomains,chidg%data%mesh%ndomains())
 
-    
-    ! Test domain mapping
-    @assertEqual(nterms_c,chidg%data%mesh%domain(1)%nterms_c)
     
     ! Test points
     ! This is for element with center at zero
@@ -101,8 +96,6 @@ subroutine testIO__read_mesh_hdf__D1_E27_M1()
     type(chidg_t)                   :: chidg
     character(100), parameter       :: filename = 'D1_E27_M1.h5'
     integer,        parameter       :: ndomains = 1
-    integer,        parameter       :: spacedim = 3
-    integer,        parameter       :: nterms_c = 8
     integer,        parameter       :: nelem    = 27
     real(rk)                        :: x(8), y(8), z(8)
     real(rk)                        :: tol
@@ -128,15 +121,12 @@ subroutine testIO__read_mesh_hdf__D1_E27_M1()
     ! Create/Read grid
     !
     call create_mesh_file("D1 NxNxN", filename, nelem_xi=3,nelem_eta=3,nelem_zeta=3)
-    call chidg%read_mesh(filename,spacedim)
+    call chidg%read_mesh(filename)
 
     
     ! Test number of allocated domains
     @assertEqual(ndomains,chidg%data%mesh%ndomains())
 
-    
-    ! Test domain mapping
-    @assertEqual(nterms_c,chidg%data%mesh%domain(1)%nterms_c)
     
     ! Test points
     x = [ZERO, THIRD, ZERO,  THIRD, ZERO,  THIRD, ZERO,  THIRD]
@@ -195,8 +185,6 @@ subroutine testIO__read_mesh_hdf__D2_E1_M1()
     type(chidg_t)                   :: chidg
     character(100), parameter       :: filename = 'D2_E1_M1.h5'
     integer,        parameter       :: ndomains = 2
-    integer(ik),    parameter       :: spacedim = 3
-    integer(ik),    parameter       :: nterms_c = 8
     integer,        parameter       :: nelem    = 1
     integer(ik)                     :: idom
     real(rk)                        :: x(8), y(8), z(8)
@@ -221,7 +209,7 @@ subroutine testIO__read_mesh_hdf__D2_E1_M1()
     ! Create/Read grid
     !
     call create_mesh_file("D2 NxNxN M1", filename, nelem_xi =2,nelem_eta =1,nelem_zeta =1)
-    call chidg%read_mesh(filename,spacedim)
+    call chidg%read_mesh(filename)
 
 
 
@@ -230,11 +218,6 @@ subroutine testIO__read_mesh_hdf__D2_E1_M1()
     @assertEqual(ndomains,chidg%data%mesh%ndomains())
 
     
-    ! Test domain mapping
-    @assertEqual(nterms_c,chidg%data%mesh%domain(1)%nterms_c)
-    @assertEqual(nterms_c,chidg%data%mesh%domain(2)%nterms_c)
-
-
     ! Test number of elements
     @assertEqual(nelem,chidg%data%mesh%domain(1)%nelem)
     @assertEqual(nelem,chidg%data%mesh%domain(2)%nelem)
@@ -296,8 +279,6 @@ subroutine testIO__read_mesh_hdf__D2_E27_M1()
     type(chidg_t)                   :: chidg
     character(100), parameter       :: filename = 'D2_E27_M1.h5'
     integer,        parameter       :: ndomains = 2
-    integer(ik),    parameter       :: spacedim = 3
-    integer(ik),    parameter       :: nterms_c = 8
     integer,        parameter       :: nelem    = 27
     integer(ik)                     :: idom
     real(rk)                        :: x(8), y(8), z(8)
@@ -322,7 +303,7 @@ subroutine testIO__read_mesh_hdf__D2_E27_M1()
     ! Create/Read grid
     !
     call create_mesh_file("D2 NxNxN M1", filename, nelem_xi=6, nelem_eta=3, nelem_zeta=3)
-    call chidg%read_mesh(filename,spacedim)
+    call chidg%read_mesh(filename)
 
 
 
@@ -330,10 +311,6 @@ subroutine testIO__read_mesh_hdf__D2_E27_M1()
     @assertEqual(ndomains,chidg%data%mesh%ndomains())
 
     
-    ! Test domain mapping
-    @assertEqual(nterms_c,chidg%data%mesh%domain(1)%nterms_c)
-    @assertEqual(nterms_c,chidg%data%mesh%domain(2)%nterms_c)
-
 
     ! Test number of elements
     @assertEqual(nelem,chidg%data%mesh%domain(1)%nelem)

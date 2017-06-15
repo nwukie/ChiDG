@@ -47,14 +47,13 @@ subroutine test_update_space_linearadvection()
     type(chidg_t)                   :: chidgA, chidgB
     character(:),       allocatable :: chidgAfile, chidgBfile
     class(function_t),  allocatable :: gaussian
-    integer(ik)                     :: ChiID, spacedim, idomA, idomB, ielemA, ielemB, itime, &
+    integer(ik)                     :: ChiID, idomA, idomB, ielemA, ielemB, itime, &
                                        imatA, imatB
     real(rk)                        :: tol
 
 
 
     tol             = 1.e-15_rk
-    spacedim        = 3
     IO_DESTINATION  = 'file'
 
 
@@ -83,8 +82,8 @@ subroutine test_update_space_linearadvection()
     ! The second has two blocks. Here, we wish to initialize both and then compare 
     ! the initialized data between the two. They should be the same.
     !
-    call chidgA%read_mesh(chidgAfile,spacedim)
-    call chidgB%read_mesh(chidgBfile,spacedim)
+    call chidgA%read_mesh(chidgAfile)
+    call chidgB%read_mesh(chidgBfile)
 
 
 

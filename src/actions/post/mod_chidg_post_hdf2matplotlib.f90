@@ -40,7 +40,7 @@ contains
         character(:),   allocatable :: time_string, coord, matplotlib_file, &
                                        original_sol_file, Fourier_coeff_file, &
                                        file_prefix
-        integer(ik)                 :: nterms_s, spacedim, solution_order
+        integer(ik)                 :: nterms_s, solution_order
 
 
         !
@@ -57,14 +57,13 @@ contains
 
         nterms_s    = file_props%nterms_s(1)
         eqnset      = file_props%eqnset(1)
-        spacedim    = file_props%spacedim(1)
         time_string = file_props%time_integrator
 
 
         !
         ! Read grid data from file
         !
-        call chidg%read_mesh(grid_file,spacedim)
+        call chidg%read_mesh(grid_file)
 
         solution_order = 0
         do while (solution_order*solution_order*solution_order < nterms_s)
@@ -85,7 +84,7 @@ contains
         !
         call chidg%read_fields(solution_file)
         call chidg%time_integrator%read_time_options(chidg%data,solution_file)
-        call chidg%read_mesh(grid_file,spacedim)
+        call chidg%read_mesh(grid_file)
 
 
         !

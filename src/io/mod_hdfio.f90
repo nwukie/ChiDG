@@ -55,7 +55,7 @@ module mod_hdfio
     use mod_hdf_utilities,          only: get_ndomains_hdf, get_domain_names_hdf,                         &
                                           get_domain_equation_set_hdf, set_domain_coordinate_order_hdf,   &
                                           set_domain_field_order_hdf, get_domain_field_order_hdf,         &
-                                          get_domain_coordinate_order_hdf, get_domain_dimensionality_hdf, &
+                                          get_domain_coordinate_order_hdf, &
                                           set_contains_solution_hdf, set_domain_equation_set_hdf,         &
                                           get_domain_coordinates_hdf, get_domain_coordinate_system_hdf,   &
                                           get_domain_connectivity_hdf, get_domain_nnodes_hdf,             &
@@ -71,7 +71,7 @@ module mod_hdfio
                                           close_bc_group_hdf, get_domain_nelements_hdf,                   &
                                           get_domain_name_hdf, set_ntimes_hdf, get_ntimes_hdf,            &
                                           get_time_integrator_hdf, set_domain_connectivity_partition_hdf, &
-                                          set_domain_dimensionality_hdf, set_domain_coordinates_hdf,      &
+                                          set_domain_coordinates_hdf,      &
                                           set_domain_coordinate_system_hdf, set_contains_grid_hdf,        &
                                           get_eqn_group_names_hdf, create_eqn_group_hdf,                  &
                                           copy_bc_state_groups_hdf, get_patch_names_hdf,                  &
@@ -120,8 +120,7 @@ contains
 
         logical                                 :: contains_grid
         character(:),           allocatable     :: user_msg, domain_name
-        integer                                 :: ierr, nterms_1d, mapping, &
-                                                   nterms_c, spacedim, iconn, &
+        integer                                 :: ierr, nterms_1d, mapping, iconn, &
                                                    nconn, nelements, nnodes
 
 
@@ -176,20 +175,12 @@ contains
             nterms_1d = (mapping + 1)
 
 
-            !
-            ! Get dimension of the current block: 3D
-            !
-            spacedim = get_domain_dimensionality_hdf(domain_id)
-            nterms_c = nterms_1d * nterms_1d * nterms_1d
-
-            meshdata(iconn)%nterms_c = nterms_c
-            meshdata(iconn)%name     = domain_name
-            meshdata(iconn)%spacedim = spacedim
 
 
             !
-            ! Get coordinates
+            ! Get domain name/coordinates
             !
+            meshdata(iconn)%name         = domain_name
             meshdata(iconn)%points       = get_domain_coordinates_hdf(domain_id)
             meshdata(iconn)%coord_system = get_domain_coordinate_system_hdf(domain_id)
 
@@ -256,7 +247,7 @@ contains
         character(:),   allocatable     :: field_name, domain_name
         integer(HID_T)                  :: fid, domain_id
         integer(HSIZE_T)                :: adim
-        integer(ik)                     :: idom, ieqn, neqns, iwrite, spacedim, time, &
+        integer(ik)                     :: idom, ieqn, neqns, iwrite, time, &
                                            field_index, iproc, nelements_g, ielem
         integer                         :: ierr, order_s
         logical                         :: file_exists
@@ -318,9 +309,8 @@ contains
                     ! Write domain attributes
                     !
                     mapping = data%mesh%domain(idom)%nterms_s - 1
-                    spacedim = data%mesh%domain(idom)%spacedim
                     call set_domain_coordinate_order_hdf(domain_id,mapping)
-                    call set_domain_dimensionality_hdf(domain_id, spacedim)
+
 
 
                     !
@@ -540,7 +530,7 @@ contains
         character(:),   allocatable     :: field_name, domain_name, time_string
         integer(HID_T)                  :: fid, domain_id
         integer(HSIZE_T)                :: adim, nfreq, ntime
-        integer(ik)                     :: idom, ieqn, neqns, iwrite, spacedim, &
+        integer(ik)                     :: idom, ieqn, neqns, iwrite, &
                                            time, field_index, iproc, eqn_ID
         integer                         :: ierr, order_s
         logical                         :: file_exists
@@ -613,21 +603,10 @@ contains
                     !
                     adim = 1
                     order_s = 0
-                    spacedim = data%mesh%domain(idom)%spacedim
-
-                    if ( spacedim == THREE_DIM ) then
-                        do while ( order_s*order_s*order_s /= data%mesh%domain(idom)%nterms_s )
-                           order_s = order_s + 1 
-                        end do
-                        order_s = order_s - 1 ! to be consistent with he definition of 'Order of the polynomial'
-
-                    else if ( spacedim == TWO_DIM ) then
-                        do while ( order_s*order_s /= data%mesh%domain(idom)%nterms_s )
-                           order_s = order_s + 1 
-                        end do
-                        order_s = order_s - 1 ! to be consistent with he definition of 'Order of the polynomial'
-
-                    end if
+                    do while ( order_s*order_s*order_s /= data%mesh%domain(idom)%nterms_s )
+                       order_s = order_s + 1 
+                    end do
+                    order_s = order_s - 1 ! to be consistent with he definition of 'Order of the polynomial'
 
 
 
@@ -740,7 +719,7 @@ contains
         real(rdouble),  allocatable         :: bufferterms(:)
         type(c_ptr)                         :: cp_var
 
-        integer(ik)                         :: spacedim, ielem_g, aux_vector_index, eqn_ID
+        integer(ik)                         :: ielem_g, aux_vector_index, eqn_ID
         integer                             :: type, ierr, nterms_1d, nterms_s, order,  &
                                                ivar, ielem, nterms_ielem, idom, ndims
         logical                             :: ElementsEqual, variables_exists
@@ -782,14 +761,7 @@ contains
 
         domain_name = get_domain_name_hdf(domain_id)
         idom     = data%get_domain_index(domain_name)
-        spacedim = data%mesh%domain(idom)%spacedim
-
-        if ( spacedim == THREE_DIM ) then
-            nterms_s = nterms_1d*nterms_1d*nterms_1d
-        else if ( spacedim == TWO_DIM ) then
-            nterms_s = nterms_1d*nterms_1d
-        end if
-
+        nterms_s = nterms_1d*nterms_1d*nterms_1d
 
         
         !

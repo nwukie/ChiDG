@@ -578,7 +578,6 @@ contains
         !
         !------------------------------------------------------------------------------
         basis            = "legendre"
-        spacedim         = 3
         gq_rule          = 1
         time_integrator  = "steady"
         nonlinear_solver = "newton"
@@ -701,7 +700,7 @@ contains
         !
         ! Read grid
         !
-        call this%chidg%read_mesh(this%gridfile,spacedim)
+        call this%chidg%read_mesh(this%gridfile)
 
 
 

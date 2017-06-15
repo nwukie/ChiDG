@@ -184,7 +184,7 @@ contains
         type(chidg_t)                               :: chidg
         type(meshdata_t),   allocatable             :: meshdata(:)
         type(string_t)                              :: eqnset(1)
-        integer(ik)                                 :: spacedim, nterms_s, ielem, itime, ierr, imat
+        integer(ik)                                 :: nterms_s, ielem, itime, ierr, imat
         real(rk),           dimension(8)            :: vals
         real(rk),           dimension(8)            :: vref_a, ref_a, ref_b, ref_c, ref_d, ref_e, ref_f
         real(rk),           dimension(8,8)          :: vref_1, vref_2, ref_1, ref_2, ref_3
@@ -210,7 +210,6 @@ contains
         ! Define input data
         !
         tol                 = 1.e-13_rk
-        spacedim            = 3
         nterms_s            = 8
         IO_DESTINATION      = 'file'
         time_integrator     = 'Backward_Euler'
@@ -251,7 +250,7 @@ contains
         !
         ! Get grid points
         !
-        call chidg%read_mesh(filename,spacedim)
+        call chidg%read_mesh(filename)
 
 
         call chidg%time_integrator%init(chidg%data)

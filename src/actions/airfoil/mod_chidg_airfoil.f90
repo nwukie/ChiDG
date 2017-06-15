@@ -49,7 +49,7 @@ contains
     type(chidg_manager_t)                       :: manager
         type(chidg_t)               :: chidg
         type(file_properties_t)     :: file_props
-        integer(ik)                 :: nterms_s, spacedim, solution_order, group_ID, &
+        integer(ik)                 :: nterms_s, solution_order, group_ID, &
                                        ibc, patch_ID, face_ID, idomain_g, &
                                        ielement_g, iface, itime
         logical                     :: found_airfoil
@@ -88,7 +88,6 @@ contains
         !
         file_props = get_properties_hdf(filename)
         nterms_s   = file_props%nterms_s(1)
-        spacedim   = file_props%spacedim(1)
 
         solution_order = 0
         do while (solution_order*solution_order*solution_order < nterms_s)
@@ -126,7 +125,7 @@ contains
         ! Read grid data from file
         !
         gridfile = filename
-        call chidg%read_mesh(filename,spacedim)
+        call chidg%read_mesh(filename)
 
         call manager%process(chidg)
 

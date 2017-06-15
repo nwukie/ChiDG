@@ -54,7 +54,7 @@ contains
 
         type(point_t),  allocatable                     :: nodes(:)
         type(domain_connectivity_t)                     :: connectivity
-        integer(ik)                                     :: nterms_c, spacedim, nelements_g, eqn_ID
+        integer(ik)                                     :: nelements_g, eqn_ID
 
         IO_DESTINATION = 'file'
 
@@ -73,8 +73,6 @@ contains
         !
         ! Add domain to ChiDG
         !
-        spacedim    = 3
-        nterms_c    = 8
         nelements_g = 27
 
 
@@ -82,7 +80,7 @@ contains
         call this%chidg%data%add_equation_set('Dual Linear Advection')
         eqn_ID = this%chidg%data%get_equation_set_id('Dual Linear Advection')
 
-        call this%chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Cartesian',eqn_ID)
+        call this%chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,'Cartesian',eqn_ID)
 
         call this%chidg%set('Solution Order', integer_input=2)
         call this%chidg%init('domains')

@@ -81,7 +81,7 @@ contains
 
         
         ! Initialize domain
-        nterms_c            = npt
+        !nterms_c            = npt
         this%solution_order = 3
         this%nterms_s       = 27
         spacedim            = 3
@@ -90,7 +90,7 @@ contains
         call this%chidg%data%add_equation_set('Scalar Advection')
 
         eqn_ID = this%chidg%data%get_equation_set_id('Scalar Advection')
-        call this%chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Cartesian',eqn_ID)
+        call this%chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,'Cartesian',eqn_ID)
 
         call this%chidg%set('Solution Order', integer_input=this%solution_order)
         call this%chidg%init('domains')

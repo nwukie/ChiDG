@@ -168,9 +168,8 @@ contains
     !!  @date   11/5/2016
     !!
     !---------------------------------------------------------------------------------------
-    subroutine init_geom(self,spacedim,nodes,connectivity,idomain_l,ielem_l,coord_system)
+    subroutine init_geom(self,nodes,connectivity,idomain_l,ielem_l,coord_system)
         class(element_t),               intent(inout)   :: self
-        integer(ik),                    intent(in)      :: spacedim
         type(point_t),                  intent(in)      :: nodes(:)
         type(element_connectivity_t),   intent(in)      :: connectivity
         integer(ik),                    intent(in)      :: idomain_l
@@ -185,7 +184,7 @@ contains
                                        ymin, ymax, ywidth,  &
                                        zmin, zmax, zwidth
         integer(ik)                 :: ierr, nterms_c, ipt, npts_1d, npts, &
-                                       mapping, inode, idomain_g, ielem_g
+                                       mapping, inode, idomain_g, ielem_g, spacedim
         integer(ik)                 :: ntime = 1
 
 
@@ -227,6 +226,7 @@ contains
         !
         ! Get element mapping
         !
+        spacedim=3
         element_mapping = get_element_mapping(spacedim,mapping)
         nterms_c = size(element_mapping,1)
         self%nterms_c = nterms_c
@@ -402,37 +402,34 @@ contains
         class(element_t),   intent(inout)   :: self
 
         character(:), allocatable   :: user_msg
-        integer(ik)                 :: nterms_s,nterms_c,spacedim
         integer(ik)                 :: nnodes_face, nnodes_vol, igq_s, igq_f
 
-        spacedim = self%spacedim
-        nterms_s = self%nterms_s
-        nterms_c = self%nterms_c
 
-        user_msg = "element%assign_quadrature: coordinate expansion not defined."
-        if (nterms_c == 0) call chidg_signal(FATAL,user_msg)
+        associate (spacedim => self%spacedim, nterms_s => self%nterms_s, nterms_c => self%nterms_c)
 
+            user_msg = "element%assign_quadrature: coordinate expansion not defined."
+            if (nterms_c == 0) call chidg_signal(FATAL,user_msg)
 
-
-        !
-        ! Get number of quadrature nodes
-        !
-        call compute_nnodes_gq(spacedim,nterms_s,nterms_c,nnodes_face,nnodes_vol)
+            !
+            ! Get number of quadrature nodes
+            !
+            call compute_nnodes_gq(spacedim,nterms_s,nterms_c,nnodes_face,nnodes_vol)
 
 
-        !
-        ! Get solution quadrature instance
-        !
-        call get_quadrature(spacedim,nterms_s,nnodes_vol,nnodes_face,igq_s)
-        self%gq => GQ(igq_s)
+            !
+            ! Get solution quadrature instance
+            !
+            call get_quadrature(spacedim,nterms_s,nnodes_vol,nnodes_face,igq_s)
+            self%gq => GQ(igq_s)
 
 
-        !
-        ! Get coordinate quadrature instance
-        !
-        call get_quadrature(spacedim,nterms_c,nnodes_vol,nnodes_face,igq_f)
-        self%gqmesh => GQ(igq_f)
+            !
+            ! Get coordinate quadrature instance
+            !
+            call get_quadrature(spacedim,nterms_c,nnodes_vol,nnodes_face,igq_f)
+            self%gqmesh => GQ(igq_f)
 
+        end associate
 
     end subroutine assign_quadrature
     !*****************************************************************************************
@@ -1476,6 +1473,13 @@ contains
         !
         ! Get nodes from connectivity
         !
+        !   Given global indices of corner nodes such as:
+        !       corner_indices = [23, 24, 37, 38]
+        !
+        !   We want to find their element-local connectivity indices:
+        !       corner_position = [1, 2, 5, 6]
+        !   
+        !
         element_indices = self%connectivity%get_element_nodes()
 
         do cindex = 1,size(corner_indices)
@@ -1520,7 +1524,7 @@ contains
         end do
 
 
-        user_msg = "element%get_face_from_cornders: Couldn't find a face index that matched &
+        user_msg = "element%get_face_from_corners: Couldn't find a face index that matched &
                     the provided corner indices."
         if (.not. face_match) call chidg_signal(FATAL,user_msg)
 

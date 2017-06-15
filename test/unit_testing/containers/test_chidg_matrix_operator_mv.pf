@@ -52,7 +52,7 @@ subroutine test_chidg_matrix_operator_mv()
 
     type(chidg_t)                   :: chidg
     type(meshdata_t),   allocatable :: meshdata(:)
-    integer(ik)                     :: idom, spacedim, nterms_s, idiag, idom_d, ielem_d, itime, ielem
+    integer(ik)                     :: idom, nterms_s, idiag, idom_d, ielem_d, itime, ielem
     real(rk), dimension(8)          :: bref_1, bref_2
     real(rk)                        :: tol
     character(:),       allocatable :: filename
@@ -61,7 +61,6 @@ subroutine test_chidg_matrix_operator_mv()
     type(chidg_vector_t)             :: x, b
 
     tol             = 1.e-13_rk
-    spacedim        = 3
     nterms_s        = 8
     IO_DESTINATION  = 'file'
     
@@ -88,7 +87,7 @@ subroutine test_chidg_matrix_operator_mv()
     !
     ! Get grid points
     !
-    call chidg%read_mesh(filename,spacedim)
+    call chidg%read_mesh(filename)
 
 
 

@@ -466,7 +466,7 @@ contains
 
 
                             !
-                            ! Set parameters based on face
+                            ! Set parameters based on element face
                             ! 
                             select case(iface)
                                 case(XI_MIN)
@@ -590,7 +590,7 @@ contains
 
 
                             !
-                            ! Set parameters based on face
+                            ! Set parameters based on element face
                             ! 
                             select case(iface)
                                 case(XI_MIN)

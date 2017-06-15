@@ -840,14 +840,13 @@ contains
         real(rk), allocatable, dimension(:,:)   ::  &
             interpolator, interpolator_grad1, interpolator_grad2, interpolator_grad3, metric
 
-
+        
 
         !
         ! Loop over all domains
         !
         do idom = 1,mesh%ndomains()
 
-            spacedim = mesh%domain(idom)%spacedim
 
             !
             ! Loop over each chimera face
@@ -895,6 +894,7 @@ contains
                             !
                             ! Compute value interpolator
                             !
+                            spacedim = 3
                             interpolator(ipt,iterm) = polynomialVal(spacedim,donor_nterms_s,iterm,node)
 
                             
@@ -978,9 +978,9 @@ contains
 
 
         integer(ik), allocatable    :: domains_g(:)
-        integer(ik)                 :: idom, ielem, inewton, spacedim,                  &
-                                       idomain_g, idomain_l, ielement_g, ielement_l,    &
-                                       icandidate, ncandidates, idonor, ndonors, donor_index
+        integer(ik)                 :: idom, ielem, inewton, idomain_g, idomain_l,      &
+                                       ielement_g, ielement_l, icandidate, ncandidates, &
+                                       idonor, ndonors, donor_index
 
         real(rk), allocatable   :: xcenter(:), ycenter(:), zcenter(:), dist(:), donor_vols(:)
         real(rk)                :: xgq, ygq, zgq, dx, dy, dz, xi, eta, zeta, xn, yn, zn,    &

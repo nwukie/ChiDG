@@ -13,7 +13,7 @@ subroutine test_chidgdata__add_domain__onedomain()
     type(chidg_t)               :: chidg
     type(point_t),  allocatable :: nodes(:)
     type(domain_connectivity_t) :: connectivity
-    integer(ik)                 :: nterms_c, nterms_s, spacedim, nelements_g, eqn_ID
+    integer(ik)                 :: nterms_s, nelements_g, eqn_ID
     
 
     IO_DESTINATION = 'file'
@@ -33,9 +33,7 @@ subroutine test_chidgdata__add_domain__onedomain()
     !
     ! Set expansion terms
     !
-    nterms_c    = 8
     nterms_s    = 8
-    spacedim    = 3
     nelements_g = 9
 
     
@@ -45,7 +43,7 @@ subroutine test_chidgdata__add_domain__onedomain()
     call chidg%data%add_equation_set('Scalar Advection')
     eqn_ID = chidg%data%get_equation_set_id('Scalar Advection')
 
-    call chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,spacedim,nterms_c,'Cartesian',eqn_ID)
+    call chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,'Cartesian',eqn_ID)
 
 
 

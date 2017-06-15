@@ -48,7 +48,7 @@ subroutine test_time_manager__init_steady()
 
     @assertEqual(time_integrator,t_manager%time_scheme)
     @assertEqual(1,t_manager%nsteps)
-    @assertEqual(1,t_manager%nwrite)
+    @assertEqual(0,t_manager%nwrite)
     @assertEqual(1,t_manager%ntime)
      
 
@@ -190,7 +190,7 @@ subroutine test_time_manager__init_HB1()
     @assertEqual(3,t_manager%time_lev%size())
     @assertEqual(3,t_manager%ntime)
     @assertEqual(1,t_manager%nsteps)
-    @assertEqual(1,t_manager%nwrite)
+    @assertEqual(0,t_manager%nwrite)
     @assertEqual(t_lev_1,t_manager%time_lev%data_(1),tol)
     @assertEqual(t_lev_2,t_manager%time_lev%data_(2),tol)
     @assertEqual(t_lev_3,t_manager%time_lev%data_(3),tol)

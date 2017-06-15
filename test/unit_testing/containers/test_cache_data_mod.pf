@@ -69,7 +69,7 @@ contains
         !
         ! Read grid + bcs
         !
-        call this%chidg%read_mesh(this%filename,3)
+        call this%chidg%read_mesh(this%filename)
 
 
     end subroutine setUp

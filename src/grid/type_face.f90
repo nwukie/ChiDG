@@ -651,21 +651,6 @@ contains
 
         do iterm = 1,self%nterms_s
             do inode = 1,nnodes
-                !self%grad1(inode,iterm) = &
-                !    self%metric(1,1,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
-                !    self%metric(2,1,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
-                !    self%metric(3,1,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode)) 
-
-                !self%grad2(inode,iterm) = &
-                !    self%metric(1,2,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
-                !    self%metric(2,2,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
-                !    self%metric(3,2,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode)) 
-
-                !self%grad3(inode,iterm) = &
-                !    self%metric(1,3,inode) * self%gq%face%ddxi(inode,iterm,iface)   * (ONE/self%jinv(inode)) + &
-                !    self%metric(2,3,inode) * self%gq%face%ddeta(inode,iterm,iface)  * (ONE/self%jinv(inode)) + &
-                !    self%metric(3,3,inode) * self%gq%face%ddzeta(inode,iterm,iface) * (ONE/self%jinv(inode))
-
                 self%grad1(inode,iterm) = &
                     self%metric(1,1,inode) * self%gq%face%ddxi(inode,iterm,iface)   + &
                     self%metric(2,1,inode) * self%gq%face%ddeta(inode,iterm,iface)  + &

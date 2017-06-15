@@ -52,7 +52,7 @@ contains
         integer(ik), parameter          :: npt = 8
         type(point_t)                   :: nodes(npt)
         type(element_connectivity_t)    :: connectivity
-        integer(ik)                     :: ftype, mapping, ielem, idomain, spacedim, ntime, &
+        integer(ik)                     :: ftype, mapping, ielem, idomain, ntime,           &
                                            neqns, nterms_s, ineighbor_domain_g,             &
                                            ineighbor_domain_l, ineighbor_element_g,         &
                                            ineighbor_element_l, ineighbor_face,             &
@@ -111,13 +111,12 @@ contains
         !
         ! Initialize Element geometry and Numerics
         !
-        spacedim = 3
         idomain  = 1
         ielem    = 1
         neqns    = 2
         nterms_s = 8
         ntime    = 1
-        call this%elem%init_geom(spacedim,nodes,connectivity,idomain,ielem,'Cylindrical')
+        call this%elem%init_geom(nodes,connectivity,idomain,ielem,'Cylindrical')
         call this%elem%init_sol(neqns,nterms_s,ntime)
         
         

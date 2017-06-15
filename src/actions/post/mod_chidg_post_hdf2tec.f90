@@ -51,7 +51,7 @@ contains
         character(:),           allocatable :: eqnset
         character(:),           allocatable :: time_string, grid_file_prefix, solution_file_prefix, step_str, &
                                                plt_filename
-        integer(ik)                         :: nterms_s, spacedim, solution_order, istep, itimestep
+        integer(ik)                         :: nterms_s, solution_order, istep, itimestep
 
 
 
@@ -71,7 +71,6 @@ contains
 
         nterms_s    = file_props%nterms_s(1)
         eqnset      = file_props%eqnset(1)
-        spacedim    = file_props%spacedim(1)
         time_string = file_props%time_integrator
 
 
@@ -98,7 +97,7 @@ contains
         !
         ! Read grid/solution modes and time integrator options from HDF5
         !
-        call chidg%read_mesh(grid_file,spacedim)
+        call chidg%read_mesh(grid_file)
         call chidg%read_fields(solution_file)
         call chidg%time_integrator%read_time_options(chidg%data,solution_file)
 

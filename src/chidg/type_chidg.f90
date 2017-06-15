@@ -313,7 +313,6 @@ contains
 
                 ! matrix/vector
                 call self%init('storage')
-                !call self%init('finalize')
 
 
 
@@ -534,7 +533,6 @@ contains
     !!  @param[in]  gridfile        String containing a grid file name, including extension.
     !!
     !!  @param[in]  equation_set    Optionally, override the equation set for all domains
-    !!  @param[in]  spacedim        Optionally, set number of spatial dimensions
     !!  
     !!  @param[in]  bc_wall         Optionally, override wall boundary functions
     !!  @param[in]  bc_inlet        Optionally, override inlet boundary functions
@@ -550,11 +548,10 @@ contains
     !!  boundar functions are overridden with neumann boundary conditions.
     !!
     !------------------------------------------------------------------------------------------
-    subroutine read_mesh(self,gridfile,spacedim,equation_set, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield, bc_periodic, partitions_in)
+    subroutine read_mesh(self,gridfile,equation_set, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield, bc_periodic, partitions_in)
         class(chidg_t),     intent(inout)               :: self
         character(*),       intent(in)                  :: gridfile
         character(*),       intent(in),     optional    :: equation_set
-        integer(ik),        intent(in),     optional    :: spacedim
         class(bc_state_t),  intent(in),     optional    :: bc_wall
         class(bc_state_t),  intent(in),     optional    :: bc_inlet
         class(bc_state_t),  intent(in),     optional    :: bc_outlet
@@ -571,7 +568,7 @@ contains
         !
         ! Read domain geometry. Also performs partitioning.
         !
-        call self%read_mesh_grids(gridfile,spacedim,equation_set,partitions_in)
+        call self%read_mesh_grids(gridfile,equation_set,partitions_in)
 
 
 
@@ -622,10 +619,9 @@ contains
     !!  TODO: Generalize spacedim
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine read_mesh_grids(self,gridfile,spacedim,equation_set, partitions_in)
+    subroutine read_mesh_grids(self,gridfile,equation_set, partitions_in)
         class(chidg_t),     intent(inout)               :: self
         character(*),       intent(in)                  :: gridfile
-        integer(ik),        intent(in),     optional    :: spacedim
         character(*),       intent(in),     optional    :: equation_set
         type(partition_t),  intent(in),     optional    :: partitions_in(:)
 
@@ -636,8 +632,7 @@ contains
 
         character(:),       allocatable     :: domain_equation_set
         type(meshdata_t),   allocatable     :: meshdata(:)
-        integer(ik)                         :: idom, iread, ierr, &
-                                               domain_dimensionality, ielem, eqn_ID
+        integer(ik)                         :: idom, iread, ierr, ielem, eqn_ID
 
 
         call write_line(' ',                           ltrim=.false., io_proc=GLOBAL_MASTER)
@@ -706,14 +701,6 @@ contains
         do idom = 1,size(meshdata)
 
 
-            ! Use spacedim if specified, else default to 3D
-            if (present(spacedim)) then
-                domain_dimensionality = spacedim
-            else 
-                domain_dimensionality = 3
-            end if
-
-
             ! Use equation_set if specified, else default to the grid file data
             if (present(equation_set)) then
                 domain_equation_set = equation_set
@@ -731,8 +718,6 @@ contains
                                             meshdata(idom)%points,        &
                                             meshdata(idom)%connectivity,  &
                                             meshdata(idom)%nelements_g,   &
-                                            domain_dimensionality,        &
-                                            meshdata(idom)%nterms_c,      &
                                             meshdata(idom)%coord_system,  &
                                             eqn_ID )
 
@@ -829,7 +814,8 @@ contains
             do iface = 1,NFACES
 
                 bc_group_name = bc_patch_data(idom)%bc_group_name%at(iface)
-                if (trim(bc_group_name%get()) /= 'empty') then
+                if ( (trim(bc_group_name%get()) /= 'empty') .and. &
+                     (trim(bc_group_name%get()) /= 'Empty') )then
                     bc_ID = self%data%get_bc_state_group_id(bc_group_name%get())
                     if (bc_ID == NO_ID) call chidg_signal_one(FATAL,"chidg%read_boundary_conditions: bc state group was not found.", bc_group_name%get())
 
@@ -1144,8 +1130,6 @@ contains
         call write_line("Step","System residual", columns=.true., column_width=30, io_proc=GLOBAL_MASTER)
         do istep = 1,nsteps
             
-
-
 
             !
             ! 1: Update time t

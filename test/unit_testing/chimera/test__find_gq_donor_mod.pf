@@ -115,10 +115,8 @@ contains
         class(test_find_gq_donor),  intent(inout)   :: this
 
         type(meshdata_t)                :: meshdata
-        integer(ik)                     :: nterms_c, spacedim, nelements_g, eqn_ID
+        integer(ik)                     :: nelements_g, eqn_ID
 
-        spacedim        = 3
-        nterms_c        = 8
         IO_DESTINATION  = 'file'
 
 
@@ -141,8 +139,6 @@ contains
                                              meshdata%points,        &
                                              meshdata%connectivity,  &
                                              nelements_g,            &
-                                             spacedim,               &
-                                             nterms_c,               &
                                              'Cartesian',            &
                                              eqn_ID)
 

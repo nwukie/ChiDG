@@ -17,13 +17,13 @@ module type_quadrature
     !-----------------------------------------------------------------------------------------
     type, public :: quadrature_t
 
-        integer(ik)                 :: spacedim     !< Number of spatial dimensions initialized.
-        integer(ik)                 :: nnodes_v     !< Number of nodes in volume quadrature set.
-        integer(ik)                 :: nnodes_f     !< Number of nodes in face quadrature set.
-        integer(ik)                 :: nterms       !< Number of terms in expansion.
+        integer(ik)                 :: spacedim     ! Number of spatial dimensions initialized.
+        integer(ik)                 :: nnodes_v     ! Number of nodes in volume quadrature set.
+        integer(ik)                 :: nnodes_f     ! Number of nodes in face quadrature set.
+        integer(ik)                 :: nterms       ! Number of terms in expansion.
 
-        type(volumeQuadrature_t)    :: vol          !< Volume quadrature instance
-        type(faceQuadrature_t)      :: face         !< Face quadrature instance
+        type(volumeQuadrature_t)    :: vol          ! Volume quadrature instance
+        type(faceQuadrature_t)      :: face         ! Face quadrature instance
 
         logical                     :: isInitialized = .false.
 

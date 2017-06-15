@@ -110,9 +110,9 @@
 !!  TODO: get_domain_field_order_hdf
 !!  TODO: get_domain_field_orders_hdf
 !!
-!!  set_domain_dimensionality_hdf
-!!  get_domain_dimensionality_hdf
-!!  get_domain_dimensionalities_hdf
+!!  set_domain_dimensionality_hdf   DEPRECATED
+!!  get_domain_dimensionality_hdf   DEPRECATED
+!!  get_domain_dimensionalities_hdf DEPRECATED
 !!
 !!
 !!  set_domain_equation_set_hdf
@@ -391,7 +391,6 @@ contains
             ! Set additional attributes
             eqn_ID    = data%mesh%domain(idom)%eqn_ID
             domain_id = open_domain_hdf(fid,trim(domain_name))
-            call set_domain_dimensionality_hdf(domain_id, data%get_dimensionality())
             call set_domain_equation_set_hdf(domain_id,data%eqnset(eqn_ID)%get_name())
             call close_domain_hdf(domain_id)
     
@@ -921,12 +920,6 @@ contains
         end if
 
 
-        !
-        ! Get number of spatial dimensions
-        !
-        prop%spacedim = get_domain_dimensionalities_hdf(fid,prop%domain_names)
-
-
 
 
         !
@@ -936,20 +929,22 @@ contains
             
 
             nterms_1d = (prop%order_c(idom) + 1)
-            if ( prop%spacedim(idom) == THREE_DIM ) then
-                prop%nterms_c(idom) = nterms_1d * nterms_1d * nterms_1d
-            else if ( prop%spacedim(idom) == TWO_DIM ) then
-                prop%nterms_c(idom) = nterms_1d * nterms_1d
-            end if
+            prop%nterms_c(idom) = nterms_1d * nterms_1d * nterms_1d
+            !if ( prop%spacedim(idom) == THREE_DIM ) then
+            !    prop%nterms_c(idom) = nterms_1d * nterms_1d * nterms_1d
+            !else if ( prop%spacedim(idom) == TWO_DIM ) then
+            !    prop%nterms_c(idom) = nterms_1d * nterms_1d
+            !end if
 
 
  
             nterms_1d = (prop%order_s(idom) + 1)
-            if ( prop%spacedim(idom) == THREE_DIM ) then
-                prop%nterms_s(idom) = nterms_1d * nterms_1d * nterms_1d
-            else if ( prop%spacedim(idom) == TWO_DIM ) then
-                prop%nterms_s(idom) = nterms_1d * nterms_1d
-            end if
+            prop%nterms_s(idom) = nterms_1d * nterms_1d * nterms_1d
+            !if ( prop%spacedim(idom) == THREE_DIM ) then
+            !    prop%nterms_s(idom) = nterms_1d * nterms_1d * nterms_1d
+            !else if ( prop%spacedim(idom) == TWO_DIM ) then
+            !    prop%nterms_s(idom) = nterms_1d * nterms_1d
+            !end if
 
 
         end do ! idom
@@ -986,14 +981,13 @@ contains
     !!  @date   10/17/2016
     !!
     !---------------------------------------------------------------------------------------
-    subroutine add_domain_hdf(fid,domain_name,nodes,elements,coord_system,equation_set,spacedim)
+    subroutine add_domain_hdf(fid,domain_name,nodes,elements,coord_system,equation_set)
         integer(HID_T), intent(in)  :: fid
         character(*),   intent(in)  :: domain_name
         type(point_t),  intent(in)  :: nodes(:)
         integer(ik),    intent(in)  :: elements(:,:)
         character(*),   intent(in)  :: coord_system
         character(*),   intent(in)  :: equation_set
-        integer(ik),    intent(in)  :: spacedim
 
 
         integer(HID_T)  :: dom_id, grid_id, bc_id, var_id
@@ -1014,7 +1008,6 @@ contains
             ! Write domain attributes
             mapping  = elements(1,3)
             call set_domain_coordinate_order_hdf(dom_id,mapping)
-            call set_domain_dimensionality_hdf(dom_id, spacedim)
 
 
             ! Set 'Coordinate System', 'Coordinates', and 'Elements'
@@ -2103,99 +2096,103 @@ contains
 
 
 
-    !>
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   4/11/2016
-    !!
-    !!
-    !---------------------------------------------------------------------------------------
-    subroutine set_domain_dimensionality_hdf(dom_id,dimensionality)
-        integer(HID_T), intent(in)  :: dom_id
-        integer(ik),    intent(in)  :: dimensionality
-
-        integer(ik)         :: ierr
-
-        !  Get coordinate mapping
-        call h5ltset_attribute_int_f(dom_id,".","Dimensionality",[dimensionality],SIZE_ONE,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dimensionality_hdf: h5ltset_attribute_int_f")
-
-    end subroutine set_domain_dimensionality_hdf
-    !****************************************************************************************
-
-
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   4/11/2016
-    !!
-    !!
-    !----------------------------------------------------------------------------------------
-    function get_domain_dimensionality_hdf(dom_id) result(dimensionality)
-        integer(HID_T), intent(in)  :: dom_id
-
-        integer(ik) :: dimensionality, ierr
-        integer, dimension(1)   :: buf
-
-        !  Get coordinate mapping
-        call h5ltget_attribute_int_f(dom_id,".","Dimensionality",buf,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"get_domain_dimensionality_hdf: h5ltget_attribute_int_f")
-
-        dimensionality = int(buf(1),kind=ik)
-
-    end function get_domain_dimensionality_hdf
-    !****************************************************************************************
-
-
-
-
-
-
-
-
-
-
-    !>  Returns an array of integers that specifies the number of spatial dimensions to use 
-    !!  for every domain.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   4/11/2016
-    !!
-    !!  @param[in]  fid         HDF file identifier.
-    !!  @param[in]  dnames(:)   List of domain names to be interrogated. 
-    !!
-    !----------------------------------------------------------------------------------------
-    function get_domain_dimensionalities_hdf(fid, dnames) result(dimensionalities)
-        integer(HID_T),         intent(in)  :: fid
-        character(len=1024),    intent(in)  :: dnames(:)
-
-        integer(ik), allocatable    :: dimensionalities(:)
-        integer(ik)                 :: ierr, idom
-        integer, dimension(1)       :: dimensionality
-
-
-        !
-        ! Allocate storage for orders
-        !
-        allocate(dimensionalities(size(dnames)), stat=ierr)
-        if (ierr /= 0) call AllocationError
-
-        !
-        !  Loop through groups and read domains
-        !
-        do idom = 1,size(dnames)
-
-            call h5ltget_attribute_int_f(fid, "D_"//trim(dnames(idom)), "Dimensionality", dimensionality, ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"get_domain_dimensionalities_hdf: Error h5ltget_attribute_int_f")
-
-            dimensionalities(idom) = dimensionality(1)
-
-        end do
-
-    end function get_domain_dimensionalities_hdf
-    !****************************************************************************************
+!    !>  
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   4/11/2016
+!    !!
+!    !!  DEPRECATED: Nathan A. Wukie
+!    !!
+!    !---------------------------------------------------------------------------------------
+!    subroutine set_domain_dimensionality_hdf(dom_id,dimensionality)
+!        integer(HID_T), intent(in)  :: dom_id
+!        integer(ik),    intent(in)  :: dimensionality
+!
+!        integer(ik)         :: ierr
+!
+!        !  Get coordinate mapping
+!        call h5ltset_attribute_int_f(dom_id,".","Dimensionality",[dimensionality],SIZE_ONE,ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dimensionality_hdf: h5ltset_attribute_int_f")
+!
+!    end subroutine set_domain_dimensionality_hdf
+!    !****************************************************************************************
+!
+!
+!
+!
+!    !>  
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   4/11/2016
+!    !!
+!    !!  DEPRECATED: Nathan A. Wukie
+!    !!
+!    !----------------------------------------------------------------------------------------
+!    function get_domain_dimensionality_hdf(dom_id) result(dimensionality)
+!        integer(HID_T), intent(in)  :: dom_id
+!
+!        integer(ik) :: dimensionality, ierr
+!        integer, dimension(1)   :: buf
+!
+!        !  Get coordinate mapping
+!        call h5ltget_attribute_int_f(dom_id,".","Dimensionality",buf,ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,"get_domain_dimensionality_hdf: h5ltget_attribute_int_f")
+!
+!        dimensionality = int(buf(1),kind=ik)
+!
+!    end function get_domain_dimensionality_hdf
+!    !****************************************************************************************
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!    !>  Returns an array of integers that specifies the number of spatial dimensions to use 
+!    !!  for every domain.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   4/11/2016
+!    !!
+!    !!  DEPRECATED: Nathan A. Wukie
+!    !!
+!    !!  @param[in]  fid         HDF file identifier.
+!    !!  @param[in]  dnames(:)   List of domain names to be interrogated. 
+!    !!
+!    !----------------------------------------------------------------------------------------
+!    function get_domain_dimensionalities_hdf(fid, dnames) result(dimensionalities)
+!        integer(HID_T),         intent(in)  :: fid
+!        character(len=1024),    intent(in)  :: dnames(:)
+!
+!        integer(ik), allocatable    :: dimensionalities(:)
+!        integer(ik)                 :: ierr, idom
+!        integer, dimension(1)       :: dimensionality
+!
+!
+!        !
+!        ! Allocate storage for orders
+!        !
+!        allocate(dimensionalities(size(dnames)), stat=ierr)
+!        if (ierr /= 0) call AllocationError
+!
+!        !
+!        !  Loop through groups and read domains
+!        !
+!        do idom = 1,size(dnames)
+!
+!            call h5ltget_attribute_int_f(fid, "D_"//trim(dnames(idom)), "Dimensionality", dimensionality, ierr)
+!            if (ierr /= 0) call chidg_signal(FATAL,"get_domain_dimensionalities_hdf: Error h5ltget_attribute_int_f")
+!
+!            dimensionalities(idom) = dimensionality(1)
+!
+!        end do
+!
+!    end function get_domain_dimensionalities_hdf
+!    !****************************************************************************************
 
 
 

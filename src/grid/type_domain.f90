@@ -58,10 +58,8 @@ module type_domain
         integer(ik)                     :: idomain_g
         integer(ik)                     :: idomain_l
 
-        integer(ik)                     :: spacedim    = 0     ! N-spatial dimensions
         integer(ik)                     :: neqns       = 0     ! N-equations being solved
         integer(ik)                     :: nterms_s    = 0     ! N-terms in solution expansion
-        integer(ik)                     :: nterms_c    = 0     ! N-terms in coordinate expansion
         integer(ik)                     :: nelements_g = 0     ! Number of elements in the global domain
         integer(ik)                     :: nelem       = 0     ! Number of total elements
         integer(ik)                     :: ntime       = 0     ! Number of time instances
@@ -147,16 +145,11 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !!  @param[in]  nterms_c    Number of terms in the coordinate expansion
-    !!  @param[in]  points_g    Rank-3 matrix of coordinate points defining a block mesh
-    !!
     !-----------------------------------------------------------------------------------------
-    subroutine init_geom(self,idomain_l,nelements_g,spacedim,nterms_c,nodes,connectivity,coord_system)
+    subroutine init_geom(self,idomain_l,nelements_g,nodes,connectivity,coord_system)
         class(domain_t),                intent(inout)   :: self
         integer(ik),                    intent(in)      :: idomain_l
         integer(ik),                    intent(in)      :: nelements_g
-        integer(ik),                    intent(in)      :: spacedim
-        integer(ik),                    intent(in)      :: nterms_c
         type(point_t),                  intent(in)      :: nodes(:)
         type(domain_connectivity_t),    intent(in)      :: connectivity
         character(*),                   intent(in)      :: coord_system
@@ -165,8 +158,6 @@ contains
         !
         ! Store number of terms in coordinate expansion and domain index
         !
-        self%spacedim    = spacedim
-        self%nterms_c    = nterms_c
         self%idomain_g   = connectivity%get_domain_index()
         self%idomain_l   = idomain_l
         self%nelements_g = nelements_g
@@ -176,8 +167,8 @@ contains
         !
         ! Call geometry initialization for elements and faces
         !
-        call self%init_elems_geom(spacedim,nodes,connectivity,coord_system)
-        call self%init_faces_geom(spacedim,nodes,connectivity)
+        call self%init_elems_geom(nodes,connectivity,coord_system)
+        call self%init_faces_geom(nodes,connectivity)
 
 
         !
@@ -297,9 +288,8 @@ contains
     !!  @param[in]  points_g    Rank-3 matrix of coordinate points defining a block mesh
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine init_elems_geom(self,spacedim,nodes,connectivity,coord_system)
-        class(domain_t),                  intent(inout)   :: self
-        integer(ik),                    intent(in)      :: spacedim
+    subroutine init_elems_geom(self,nodes,connectivity,coord_system)
+        class(domain_t),                intent(inout)   :: self
         type(point_t),                  intent(in)      :: nodes(:)
         type(domain_connectivity_t),    intent(in)      :: connectivity
         character(*),                   intent(in)      :: coord_system
@@ -307,29 +297,14 @@ contains
 
         type(element_connectivity_t)    :: element_connectivity
 
-        integer(ik) :: ierr, ielem_l, nelem, nterms_s, &
-                       nnodes, nterms_c, npts_1d, mapping, idomain_l
+        integer(ik) :: ierr, ielem_l, nelem, nterms_s, nnodes, idomain_l
 
 
         !
-        ! Compute number of 1d points for a single element
+        ! Store total number of elements
         !
-        ! Really just computing the cube/square-root of nterms_c, the number of 
-        ! terms in the coordinate expansion.
-        !
-        npts_1d = 0
-        do while (npts_1d*npts_1d*npts_1d < self%nterms_c)
-            npts_1d = npts_1d + 1
-        end do
-
-
-
-        !
-        ! Store number of elements in each direction along with total number of elements
-        !
-        nelem           = connectivity%get_nelements()
-        self%nelem      = nelem
-        mapping         = (npts_1d - 1)     ! 1-linear, 2-quadratic, 3-cubic, etc.
+        nelem      = connectivity%get_nelements()
+        self%nelem = nelem
 
 
         !
@@ -346,7 +321,7 @@ contains
         do ielem_l = 1,nelem
 
             element_connectivity = connectivity%get_element_connectivity(ielem_l)
-            call self%elems(ielem_l)%init_geom(spacedim,nodes,element_connectivity,idomain_l,ielem_l,coord_system)
+            call self%elems(ielem_l)%init_geom(nodes,element_connectivity,idomain_l,ielem_l,coord_system)
 
         end do ! ielem
 
@@ -417,9 +392,8 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine init_faces_geom(self,spacedim,nodes,connectivity)
-        class(domain_t),                  intent(inout)   :: self
-        integer(ik),                    intent(in)      :: spacedim
+    subroutine init_faces_geom(self,nodes,connectivity)
+        class(domain_t),                intent(inout)   :: self
         type(point_t),                  intent(in)      :: nodes(:)
         type(domain_connectivity_t),    intent(in)      :: connectivity
 

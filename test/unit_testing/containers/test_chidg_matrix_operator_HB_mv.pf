@@ -43,7 +43,7 @@ subroutine test_chidg_matrix_operator_HB_mv()
 
     type(chidg_t)                       :: chidg
     type(meshdata_t),   allocatable     :: meshdata(:)
-    integer(ik)                         :: idom, spacedim, nterms_s, idiag, idom_d, ielem_d, itime, ielem, imat
+    integer(ik)                         :: idom, nterms_s, idiag, idom_d, ielem_d, itime, ielem, imat
     real(rk),           dimension(8)    :: bref_1, bref_HB_1, bref_HB_2, bref_HB_3, bref_HB_4, &
                                            bref_HB_5, bref_HB_6, bref_HB_7, bref_HB_8
     real(rk),           dimension(8)    :: vals
@@ -55,7 +55,6 @@ subroutine test_chidg_matrix_operator_HB_mv()
 
 
     tol             = 1.e-13_rk
-    spacedim        = 3
     nterms_s        = 8
     IO_DESTINATION  = 'file'
     time_integrator = 'harmonic_balance'
@@ -80,7 +79,7 @@ subroutine test_chidg_matrix_operator_HB_mv()
     !
     ! Get grid points
     !
-    call chidg%read_mesh(filename,spacedim)
+    call chidg%read_mesh(filename)
 
 
     !

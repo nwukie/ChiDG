@@ -14,7 +14,6 @@ module mod_chidg_convert_p3d_hdf5
     use mod_constants,          only: IO_DESTINATION, TWO
     use mod_equations,          only: equation_builder_factory
     use mod_hdf_utilities,      only: initialize_file_hdf, open_file_hdf,                   &
-                                      set_domain_dimensionality_hdf,                        &
                                       set_domain_equation_set_hdf, set_contains_grid_hdf,   &
                                       set_domain_coordinates_hdf, set_patch_hdf,            &
                                       create_patch_hdf, close_patch_hdf,                    &
@@ -57,7 +56,7 @@ contains
         ! Plot3d vars
         integer(ik)                 :: i, j, k, ext_loc, fileunit, bcface
         integer(ik)                 :: npts, npt_i, npt_j, npt_k
-        integer(ik)                 :: ierr, igrid, nblks, mapping, spacedim, system
+        integer(ik)                 :: ierr, igrid, nblks, mapping, system
         integer(ik),    allocatable :: blkdims(:,:)
         real(rdouble),  allocatable :: coordsx(:,:,:), coordsy(:,:,:), coordsz(:,:,:)
         real(rdouble),  allocatable :: coords1(:,:,:), coords2(:,:,:), coords3(:,:,:)
@@ -137,13 +136,13 @@ contains
         !
         do igrid = 1,nblks
 
-            ! Read spacedim from user
-            spacedim = 0
-            do while ( (spacedim < 2) .or. (spacedim > 3) )
-                call write_line("Enter number of spatial dimensions for block: ", igrid, delimiter=" ")
-                call write_line("Key -- ( 2 = 2D, 3 = 3D )")
-                read*, spacedim
-            end do
+            !! Read spacedim from user
+            !spacedim = 0
+            !do while ( (spacedim < 2) .or. (spacedim > 3) )
+            !    call write_line("Enter number of spatial dimensions for block: ", igrid, delimiter=" ")
+            !    call write_line("Key -- ( 2 = 2D, 3 = 3D )")
+            !    read*, spacedim
+            !end do
 
 
             ! Read mapping from user
@@ -245,7 +244,7 @@ contains
             !
             ! Add new domain to file
             !
-            call add_domain_hdf(file_id,trim(blockname),nodes,elements,coord_system,trim(eqnset_string),spacedim)
+            call add_domain_hdf(file_id,trim(blockname),nodes,elements,coord_system,trim(eqnset_string))
 
 
             !

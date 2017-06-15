@@ -620,8 +620,9 @@ contains
         ! Open boundary condition face group
         !
         patches = ["  XI_MIN","  XI_MAX"," ETA_MIN"," ETA_MAX","ZETA_MIN","ZETA_MAX"]
-        call h5gopen_f(patch_group, trim(adjustl(patches(iface))), patch_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"chidg_edit_boundarycondition_patch: error opening group for boundary condition face")
+        patch_id = open_patch_hdf(domain_id, trim(adjustl(patches(iface))) )
+        !call h5gopen_f(patch_group, trim(adjustl(patches(iface))), patch_id, ierr)
+        !if (ierr /= 0) call chidg_signal(FATAL,"chidg_edit_boundarycondition_patch: error opening group for boundary condition face")
 
 
         !
@@ -680,7 +681,8 @@ contains
         !
         ! Close boundary condition face group
         !
-        call h5gclose_f(patch_id, ierr)
+        call close_patch_hdf(patch_id)
+        !call h5gclose_f(patch_id, ierr)
 
     end subroutine chidg_edit_boundarycondition_patch
     !******************************************************************************************

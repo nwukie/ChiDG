@@ -29,6 +29,10 @@
 !!  read_global_connectivity_hdf
 !!  TODO: write_connectivity_hdf
 !!
+!!  
+!!  copy_configuration_hdf
+!!
+!!
 !!  TODO:
 !!  -----------
 !!      - Relocate solution_order to a particular variable, instead of the domain.
@@ -69,7 +73,9 @@ module mod_hdfio
                                           get_time_integrator_hdf, set_domain_connectivity_partition_hdf, &
                                           set_domain_dimensionality_hdf, set_domain_coordinates_hdf,      &
                                           set_domain_coordinate_system_hdf, set_contains_grid_hdf,        &
-                                          get_eqn_group_names_hdf, create_eqn_group_hdf,                 &
+                                          get_eqn_group_names_hdf, create_eqn_group_hdf,                  &
+                                          copy_bc_state_groups_hdf, get_patch_names_hdf,                  &
+                                          set_patch_group_hdf, get_patch_group_hdf, check_domain_exists_hdf,&
                                           get_npmm_groups_hdf, get_pmm_group_names_hdf, get_pmm_hdf,    &
                                           get_pmm_domain_group_hdf
 
@@ -257,7 +263,8 @@ contains
         character(:),   allocatable     :: field_name, domain_name
         integer(HID_T)                  :: fid, domain_id
         integer(HSIZE_T)                :: adim
-        integer(ik)                     :: idom, ieqn, neqns, iwrite, spacedim, time, field_index, iproc, nelements_g, ielem
+        integer(ik)                     :: idom, ieqn, neqns, iwrite, spacedim, time, &
+                                           field_index, iproc, nelements_g, ielem
         integer                         :: ierr, order_s
         logical                         :: file_exists
         integer(ik)                     :: itime, mapping, connectivity_size
@@ -1961,6 +1968,16 @@ contains
 
     end subroutine read_pmm_groups_hdf
     !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
 
 
 

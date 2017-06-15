@@ -25,6 +25,7 @@ program driver
     use mod_chidg_convert,      only: chidg_convert
     use mod_chidg_post,         only: chidg_post, chidg_post_vtk, chidg_post_matplotlib
     use mod_chidg_airfoil,      only: chidg_airfoil
+    use mod_chidg_clone,        only: chidg_clone
 
     
     !
@@ -36,7 +37,7 @@ program driver
 
 
     integer                                     :: narg, iorder, ierr
-    character(len=1024)                         :: chidg_action, filename, grid_file, solution_file
+    character(len=1024)                         :: chidg_action, filename, grid_file, solution_file, file_a, file_b
     class(function_t),              allocatable :: constant, monopole, fcn, polynomial
 
 
@@ -233,6 +234,12 @@ program driver
                 if (narg /= 2) call chidg_signal(FATAL,"The 'airfoil' action expects: chidg airfoil solutionfile.h5")
                 call get_command_argument(2,solution_file)
                 call chidg_airfoil(trim(solution_file))
+
+            case ('clone')
+                if (narg /= 3) call chidg_signal(FATAL,"The 'clone' action expects: chidg clone source_file.h5 target_file.h5")
+                call get_command_argument(2,file_a)
+                call get_command_argument(3,file_b)
+                call chidg_clone(trim(file_a),trim(file_b))
 
             case default
                 call chidg_signal(FATAL,"We didn't understand the way chidg was called. Available chidg 'actions' are: 'edit' 'convert' 'post' 'matplotlib' and 'airfoil'.")

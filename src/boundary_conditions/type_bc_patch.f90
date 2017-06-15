@@ -2,7 +2,7 @@ module type_bc_patch
 #include <messenger.h>
     use mod_kinds,                  only: ik
     use type_ivector,               only: ivector_t
-    use type_point,                 only: point_t
+    use type_point
     use type_bc_element_coupling,   only: bc_element_coupling_t
     implicit none
 
@@ -304,9 +304,9 @@ contains
         integer(ik),        intent(in)      :: nterms_s
         real(rk),           intent(in)      :: total_area
         real(rk),           intent(in)      :: areas(:)
-        type(point_t),      intent(in)      :: quad_pts(:)
+        real(rk),           intent(in)      :: quad_pts(:,:)
 
-        call self%coupling(face_ID)%set_coupled_element_data(idomain_g,ielement_g,neqns,nterms_s,total_area,areas,quad_pts)
+        call self%coupling(face_ID)%set_coupled_element_data(idomain_g,ielement_g,neqns,nterms_s,total_area,areas,point_t(quad_pts))
     
     end subroutine set_coupled_element_data
     !***********************************************************************************

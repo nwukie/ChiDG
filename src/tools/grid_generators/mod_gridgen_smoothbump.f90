@@ -15,7 +15,6 @@ module mod_gridgen_smoothbump
                                       close_patch_hdf
     use hdf5
 
-    use type_point,             only: point_t
     use type_bc_state,          only: bc_state_t
     use type_bc_state_group,    only: bc_state_group_t
     implicit none
@@ -68,7 +67,7 @@ contains
         integer(HID_T)                              :: file_id, dom_id, bcface_id, bcgroup_id, patch_id
         integer(ik)                                 :: ierr, mapping, bcface, igroup, istate
         character(8)                                :: patch_names(6)
-        type(point_t),      allocatable             :: nodes(:)
+        real(rk),           allocatable             :: nodes(:,:)
         integer(ik),        allocatable             :: elements(:,:), faces(:,:)
         class(bc_state_t),  allocatable             :: inlet, outlet, wall
         real(rk),           allocatable, dimension(:,:,:)   :: xcoords, ycoords, zcoords

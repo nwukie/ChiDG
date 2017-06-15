@@ -9,7 +9,6 @@ module type_domain
     use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
     use mpi_f08
 
-    use type_point,                 only: point_t
     use type_element,               only: element_t
     use type_face,                  only: face_t
     use type_ivector,               only: ivector_t
@@ -70,9 +69,9 @@ module type_domain
         !
         ! mesh geometry data
         !
-        type(point_t),    allocatable   :: nodes(:)     ! Nodes of the domain - unpartitioned.
-        type(element_t),  allocatable   :: elems(:)     ! Element storage (1:nelem)
-        type(face_t),     allocatable   :: faces(:,:)   ! Face storage (1:nelem,1:nfaces)
+        real(rk),           allocatable :: nodes(:,:)   ! Nodes of the domain - unpartitioned.
+        type(element_t),    allocatable :: elems(:)     ! Element storage (1:nelem)
+        type(face_t),       allocatable :: faces(:,:)   ! Face storage (1:nelem,1:nfaces)
         
 
         ! chimera interfaces container
@@ -150,7 +149,7 @@ contains
         class(domain_t),                intent(inout)   :: self
         integer(ik),                    intent(in)      :: idomain_l
         integer(ik),                    intent(in)      :: nelements_g
-        type(point_t),                  intent(in)      :: nodes(:)
+        real(rk),                       intent(in)      :: nodes(:,:)
         type(domain_connectivity_t),    intent(in)      :: connectivity
         character(*),                   intent(in)      :: coord_system
 
@@ -290,7 +289,7 @@ contains
     !-----------------------------------------------------------------------------------------
     subroutine init_elems_geom(self,nodes,connectivity,coord_system)
         class(domain_t),                intent(inout)   :: self
-        type(point_t),                  intent(in)      :: nodes(:)
+        real(rk),                       intent(in)      :: nodes(:,:)
         type(domain_connectivity_t),    intent(in)      :: connectivity
         character(*),                   intent(in)      :: coord_system
 
@@ -394,7 +393,7 @@ contains
     !-----------------------------------------------------------------------------------------
     subroutine init_faces_geom(self,nodes,connectivity)
         class(domain_t),                intent(inout)   :: self
-        type(point_t),                  intent(in)      :: nodes(:)
+        real(rk),                       intent(in)      :: nodes(:,:)
         type(domain_connectivity_t),    intent(in)      :: connectivity
 
         integer(ik)     :: ielem, iface, ierr

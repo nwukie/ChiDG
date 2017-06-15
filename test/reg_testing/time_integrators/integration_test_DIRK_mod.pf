@@ -102,7 +102,7 @@ module integration_test_DIRK_mod
     use type_bc_state_group,    only: bc_state_group_t
     use type_function,          only: function_t
     use type_ivector,           only: ivector_t
-    use type_point,             only: point_t
+    use type_point
     use mod_function,           only: create_function, registered_fcns
     use mod_interpolate,        only: interpolate_element_standard
     use mod_test_utilities,     only: create_mesh_file
@@ -924,7 +924,7 @@ contains
                     !
                     ! Compute the analytical solution at the quadrature nodes
                     !
-                    u_analytical = gaussian%compute(time,mesh%domain(idom)%elems(ielem)%quad_pts)
+                    u_analytical = gaussian%compute(time,point_t(mesh%domain(idom)%elems(ielem)%quad_pts))
 
                     !
                     ! Interpolate DG numerical solution

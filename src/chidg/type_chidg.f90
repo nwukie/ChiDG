@@ -724,7 +724,7 @@ contains
             eqn_ID = self%data%get_equation_set_id(domain_equation_set)
 
             call self%data%mesh%add_domain( trim(meshdata(idom)%name),    &
-                                            meshdata(idom)%points,        &
+                                            meshdata(idom)%nodes,         &
                                             meshdata(idom)%connectivity,  &
                                             meshdata(idom)%nelements_g,   &
                                             meshdata(idom)%coord_system,  &

@@ -188,7 +188,7 @@ contains
             ! Get domain name/coordinates
             !
             meshdata(iconn)%name         = domain_name
-            meshdata(iconn)%points       = get_domain_coordinates_hdf(domain_id)
+            meshdata(iconn)%nodes        = get_domain_coordinates_hdf(domain_id)
             meshdata(iconn)%coord_system = get_domain_coordinate_system_hdf(domain_id)
 
 

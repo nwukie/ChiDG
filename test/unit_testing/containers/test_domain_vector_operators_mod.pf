@@ -6,7 +6,6 @@ module test_domain_vector_operators_mod
                                           EIGHT, NINE, TEN, &
                                           XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, &
                                           ZETA_MAX, IO_DESTINATION
-    use type_point,                 only: point_t
     use type_domain_vector
     use type_domain_connectivity,   only: domain_connectivity_t
     use mod_test_utilities,         only: create_mesh
@@ -48,7 +47,7 @@ contains
         class(test_domain_vector_operators),    intent(inout)   :: this
 
         integer(ik)                                 :: ivar, nelements_g, eqn_ID
-        type(point_t),  allocatable                 :: nodes(:)
+        real(rk),       allocatable                 :: nodes(:,:)
         type(domain_connectivity_t)                 :: connectivity
         
         IO_DESTINATION = 'file'

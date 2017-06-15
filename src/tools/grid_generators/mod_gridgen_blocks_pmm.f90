@@ -94,7 +94,8 @@ contains
         character(len=10)                           :: patch_names(6)
         integer(HID_T)                              :: file_id, dom_id, patch_id, bcgroup_id
         integer(ik)                                 :: mapping, bcface, ierr, igroup, istate
-        type(point_t),                  allocatable :: nodes(:)
+        !type(point_t),                  allocatable :: nodes(:)
+        real(rk),                       allocatable :: nodes(:,:)
         integer(ik),                    allocatable :: elements(:,:) 
         integer(ik),                    allocatable :: faces(:,:)
         real(rk),   dimension(:,:,:),   allocatable :: xcoords, ycoords, zcoords
@@ -250,7 +251,8 @@ contains
         character(len=10)                           :: patch_names(6)
         integer(HID_T)                              :: file_id, dom_id, patch_id, bcgroup_id
         integer(ik)                                 :: mapping, bcface, ierr, igroup, istate
-        type(point_t),                  allocatable :: nodes(:)
+        !type(point_t),                  allocatable :: nodes(:)
+        real(rk),                       allocatable :: nodes(:,:)
         integer(ik),                    allocatable :: elements(:,:) 
         integer(ik),                    allocatable :: faces(:,:)
         real(rk),   dimension(:,:,:),   allocatable :: xcoords, ycoords, zcoords

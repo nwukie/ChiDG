@@ -40,7 +40,8 @@ contains
         real(rk),   intent(in)  :: ycoords(:,:,:)
         real(rk),   intent(in)  :: zcoords(:,:,:)
 
-        type(point_t),  allocatable :: points(:)
+        !type(point_t),  allocatable :: points(:)
+        real(rk),       allocatable :: points(:,:)
         integer(ik)                 :: ipt, npts, i,j,k, ierr
 
 
@@ -48,7 +49,7 @@ contains
         npts = size(xcoords,1)*size(xcoords,2)*size(xcoords,3)
 
         
-        allocate(points(npts), stat=ierr)
+        allocate(points(npts,3), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
@@ -57,9 +58,9 @@ contains
             do j = 1,size(xcoords,2)
                 do i = 1,size(xcoords,1)
 
-                    points(ipt)%c1_ = xcoords(i,j,k)    
-                    points(ipt)%c2_ = ycoords(i,j,k)    
-                    points(ipt)%c3_ = zcoords(i,j,k)    
+                    points(ipt,1) = xcoords(i,j,k)    
+                    points(ipt,2) = ycoords(i,j,k)    
+                    points(ipt,3) = zcoords(i,j,k)    
     
                     ipt = ipt + 1
 

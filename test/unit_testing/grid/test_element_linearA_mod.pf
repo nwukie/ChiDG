@@ -4,10 +4,10 @@ module test_element_linearA_mod
     use mod_constants,              only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
                                           XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use type_chidg,                 only: chidg_t
-    use type_point,                 only: point_t
     use type_element,               only: element_t
     use type_face,                  only: face_t
     use type_element_connectivity,  only: element_connectivity_t
+    use type_point,                 only: point_t
     use mod_io,                     only: gq_rule
     implicit none
 
@@ -26,7 +26,7 @@ module test_element_linearA_mod
         type(chidg_t)               :: chidg
         type(element_t)             :: elem
         type(face_t),   allocatable :: faces(:)
-        type(point_t),  allocatable :: nodes(:)
+        real(rk),       allocatable :: nodes(:,:)
 
     contains
 
@@ -50,7 +50,7 @@ contains
         class(test_element_linearA),    intent(inout)   :: this
         
         integer(ik), parameter          :: npt = 8
-        type(point_t)                   :: nodes(npt)
+        real(rk)                        :: nodes(npt,3)
         type(element_connectivity_t)    :: connectivity
         integer(ik)                     :: ftype, mapping, ielem, idomain,              &
                                            ntime, neqns, nterms_s,                      &
@@ -78,14 +78,14 @@ contains
         !      *------*
         !         y=1
         !
-        call nodes(1)%set(0._rk, 0._rk, 0._rk)
-        call nodes(2)%set(5._rk, 0._rk, 0._rk)
-        call nodes(3)%set(0._rk, 1._rk, 0._rk)
-        call nodes(4)%set(5._rk, 1._rk, 0._rk)
-        call nodes(5)%set(0._rk, 0._rk, 1._rk)
-        call nodes(6)%set(5._rk, 0._rk, 1._rk)
-        call nodes(7)%set(0._rk, 1._rk, 1._rk)
-        call nodes(8)%set(5._rk, 1._rk, 1._rk)
+        nodes(1,:) = [0._rk, 0._rk, 0._rk]
+        nodes(2,:) = [5._rk, 0._rk, 0._rk]
+        nodes(3,:) = [0._rk, 1._rk, 0._rk]
+        nodes(4,:) = [5._rk, 1._rk, 0._rk]
+        nodes(5,:) = [0._rk, 0._rk, 1._rk]
+        nodes(6,:) = [5._rk, 0._rk, 1._rk]
+        nodes(7,:) = [0._rk, 1._rk, 1._rk]
+        nodes(8,:) = [5._rk, 1._rk, 1._rk]
         this%nodes = nodes
 
         mapping = 1
@@ -305,9 +305,9 @@ contains
         test_y = [y1, y1, y2, y2, y1, y1, y2, y2]
         test_z = [z1, z1, z1, z1, z2, z2, z2, z2]
         
-        @assertEqual(test_x,self%elem%quad_pts(:)%c1_)
-        @assertEqual(test_y,self%elem%quad_pts(:)%c2_)
-        @assertEqual(test_z,self%elem%quad_pts(:)%c3_)
+        @assertEqual(test_x,self%elem%quad_pts(:,1))
+        @assertEqual(test_y,self%elem%quad_pts(:,2))
+        @assertEqual(test_z,self%elem%quad_pts(:,3))
 
     end subroutine testElement_quadpts
     !*******************************************************************************************
@@ -826,10 +826,10 @@ contains
         ref_zeta = [-ONE, -ONE, -ONE, -ONE, ONE, ONE, ONE, ONE]
 
 
-        do ipt = 1,size(self%nodes)
-            x = self%nodes(ipt)%c1_
-            y = self%nodes(ipt)%c2_
-            z = self%nodes(ipt)%c3_
+        do ipt = 1,size(self%nodes,1)
+            x = self%nodes(ipt,1)
+            y = self%nodes(ipt,2)
+            z = self%nodes(ipt,3)
 
             check_coords = self%elem%computational_point(x, y, z)
 

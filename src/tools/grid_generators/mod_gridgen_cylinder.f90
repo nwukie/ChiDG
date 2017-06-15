@@ -17,7 +17,6 @@ module mod_gridgen_cylinder
                                       open_patch_hdf, close_patch_hdf
     use hdf5
 
-    use type_point,             only: point_t
     use type_bc_state,          only: bc_state_t
     use type_bc_state_wrapper,  only: bc_state_wrapper_t
     implicit none
@@ -91,7 +90,8 @@ contains
 
         integer(HID_T)                  :: file_id, dom_id, bcgroup_id, patch_id
         class(bc_state_t),  allocatable :: inlet, outlet, wall
-        type(point_t),      allocatable :: nodes(:)
+        !type(point_t),      allocatable :: nodes(:)
+        real(rk),           allocatable :: nodes(:,:)
         integer(ik),        allocatable :: elements(:,:), faces(:,:)
 
 

@@ -92,7 +92,8 @@ module type_face
 
         ! Geometry
         type(densevector_t)             :: coords               ! Modal expansion of coordinates 
-        type(point_t),      allocatable :: quad_pts(:)          ! Discrete coordinates at quadrature nodes
+        !type(point_t),      allocatable :: quad_pts(:)          ! Discrete coordinates at quadrature nodes
+        real(rk),           allocatable :: quad_pts(:,:)
         character(:),       allocatable :: coordinate_system    ! 'Cartesian' or 'Cylindrical'
 
         ! Metric terms
@@ -125,8 +126,10 @@ module type_face
 
         real(rk), allocatable           :: jacobian_matrix(:,:,:)        !< metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
         real(rk), allocatable           :: inv_jacobian_matrix(:,:,:)        !< metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
-        type(point_t), allocatable      :: ale_quad_pts(:)
-        type(point_t), allocatable      :: ale_elem_pts(:)
+        !type(point_t), allocatable      :: ale_quad_pts(:)
+        !type(point_t), allocatable      :: ale_elem_pts(:)
+        real(rk),   allocatable         :: ale_quad_pts(:,:)
+        real(rk),   allocatable         :: ale_elem_pts(:,:)
         type(densevector_t)             :: ale_coords               !< Modal representation of cartesian coordinates (nterms_var,(x,y,z))
         type(densevector_t)             :: ale_vel_coords               !< Modal representation of cartesian coordinates (nterms_var,(x,y,z))
         real(rk), allocatable           :: grid_vel1(:)
@@ -346,12 +349,12 @@ contains
         !
         if (allocated(self%jinv)) deallocate(self%jinv, self%quad_pts, self%metric, &
                                              self%norm, self%unorm, self%grad1, self%grad2, self%grad3)
-        allocate(self%quad_pts(nnodes),                     &
+        allocate(self%quad_pts(nnodes,3),                     &
                  self%jinv(nnodes),                         &
                  self%metric(3,3,nnodes),                   &
                  self%norm(nnodes,3),                       &
                  self%unorm(nnodes,3),                      &
-                 self%ale_quad_pts(nnodes),                     &
+                 self%ale_quad_pts(nnodes,3),                     &
                  self%jinv_ale(nnodes),                         &
                  self%metric_ale(3,3,nnodes),                   &
                  self%jacobian_matrix(nnodes,3,3),          &
@@ -462,10 +465,14 @@ contains
                 scaling_23  = ONE
                 scaling_123 = ONE
             case ('Cylindrical')
-                scaling_12  = self%quad_pts(:)%c1_
+                !scaling_12  = self%quad_pts(:)%c1_
+                !scaling_13  = ONE
+                !scaling_23  = self%quad_pts(:)%c1_
+                !scaling_123 = self%quad_pts(:)%c1_
+                scaling_12  = self%quad_pts(:,1)
                 scaling_13  = ONE
-                scaling_23  = self%quad_pts(:)%c1_
-                scaling_123 = self%quad_pts(:)%c1_
+                scaling_23  = self%quad_pts(:,1)
+                scaling_123 = self%quad_pts(:,1)
             case default
                 call chidg_signal(FATAL,"face%compute_quadrature_metrics: Invalid coordinate system. Choose 'Cartesian' or 'Cylindrical'.")
         end select
@@ -604,10 +611,14 @@ contains
                 scaling_23  = ONE
                 scaling_123 = ONE
             case ('Cylindrical')
-                scaling_12  = self%quad_pts(:)%c1_
+                !scaling_12  = self%quad_pts(:)%c1_
+                !scaling_13  = ONE
+                !scaling_23  = self%quad_pts(:)%c1_
+                !scaling_123 = self%quad_pts(:)%c1_
+                scaling_12  = self%quad_pts(:,1)
                 scaling_13  = ONE
-                scaling_23  = self%quad_pts(:)%c1_
-                scaling_123 = self%quad_pts(:)%c1_
+                scaling_23  = self%quad_pts(:,1)
+                scaling_123 = self%quad_pts(:,1)
             case default
                 call chidg_signal(FATAL,"face%compute_quadrature_normals: Invalid coordinate system. Choose 'Cartesian' or 'Cylindrical'.")
         end select
@@ -781,7 +792,10 @@ contains
         ! For each quadrature node, store real coordinates
         !
         do inode = 1,self%gq%face%nnodes
-            call self%quad_pts(inode)%set(c1(inode),c2(inode),c3(inode))
+            !call self%quad_pts(inode)%set(c1(inode),c2(inode),c3(inode))
+            self%quad_pts(inode,1) = c1(inode)
+            self%quad_pts(inode,2) = c2(inode)
+            self%quad_pts(inode,3) = c3(inode)
         end do
 
     end subroutine compute_quadrature_coords
@@ -934,9 +948,12 @@ contains
         ! Initialize each point with cartesian coordinates
         !
         do inode = 1,nnodes
-            call self%ale_quad_pts(inode)%set(x(inode),y(inode),z(inode))
+            !call self%ale_quad_pts(inode)%set(x(inode),y(inode),z(inode))
+            self%ale_quad_pts(inode,1) = x(inode)
+            self%ale_quad_pts(inode,2) = y(inode)
+            self%ale_quad_pts(inode,3) = z(inode)
         end do
-!
+
 
         ! Grid velocity
 

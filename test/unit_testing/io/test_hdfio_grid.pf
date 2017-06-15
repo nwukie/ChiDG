@@ -10,12 +10,12 @@ subroutine testIO__read_mesh_hdf__D1_E1_M1()
     use mod_grid,               only: compute_element_mappings
     implicit none
     
-    type(chidg_t)                   :: chidg
-    character(100), parameter       :: filename = 'D1_E1_M1.h5'
-    integer,        parameter       :: ndomains = 1
-    integer,        parameter       :: nelem    = 1
-    real(rk)                        :: x(8), y(8), z(8)
-    real(rk)                        :: tol
+    type(chidg_t)             :: chidg
+    character(100), parameter :: filename = 'D1_E1_M1.h5'
+    integer,        parameter :: ndomains = 1
+    integer,        parameter :: nelem    = 1
+    real(rk)                  :: x(8), y(8), z(8)
+    real(rk)                  :: tol
     
     tol = 1.e-14_rk
     IO_DESTINATION = 'file'
@@ -52,9 +52,12 @@ subroutine testIO__read_mesh_hdf__D1_E1_M1()
     y = [ZERO, ZERO, ONE,  ONE,  ZERO, ZERO, ONE,  ONE]
     z = [ZERO, ZERO, ZERO, ZERO, ONE,  ONE,  ONE,  ONE]
 
-    @assertEqual(x,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c1_,tol)
-    @assertEqual(y,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c2_,tol)
-    @assertEqual(z,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c3_,tol)
+    !@assertEqual(x,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c1_,tol)
+    !@assertEqual(y,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c2_,tol)
+    !@assertEqual(z,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c3_,tol)
+    @assertEqual(x,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:,1),tol)
+    @assertEqual(y,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:,2),tol)
+    @assertEqual(z,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:,3),tol)
     
     !  Test nelem
     @assertEqual(nelem,chidg%data%mesh%domain(1)%nelem)
@@ -132,9 +135,12 @@ subroutine testIO__read_mesh_hdf__D1_E27_M1()
     x = [ZERO, THIRD, ZERO,  THIRD, ZERO,  THIRD, ZERO,  THIRD]
     y = [ZERO, ZERO,  THIRD, THIRD, ZERO,  ZERO,  THIRD, THIRD]
     z = [ZERO, ZERO,  ZERO,  ZERO,  THIRD, THIRD, THIRD, THIRD]
-    @assertEqual(x,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c1_,tol)
-    @assertEqual(y,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c2_,tol)
-    @assertEqual(z,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c3_,tol)
+    !@assertEqual(x,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c1_,tol)
+    !@assertEqual(y,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c2_,tol)
+    !@assertEqual(z,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c3_,tol)
+    @assertEqual(x,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:,1),tol)
+    @assertEqual(y,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:,2),tol)
+    @assertEqual(z,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:,3),tol)
     
     !  Test nelem
     @assertEqual(nelem,chidg%data%mesh%domain(1)%nelem)
@@ -227,17 +233,23 @@ subroutine testIO__read_mesh_hdf__D2_E1_M1()
     x = [ZERO, HALF, ZERO, HALF, ZERO, HALF, ZERO, HALF]
     y = [ZERO, ZERO, ONE,  ONE,  ZERO, ZERO, ONE,  ONE ]
     z = [ZERO, ZERO, ZERO, ZERO, ONE,  ONE,  ONE,  ONE ]
-    @assertEqual(x,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c1_,tol)
-    @assertEqual(y,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c2_,tol)
-    @assertEqual(z,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c3_,tol)
+    !@assertEqual(x,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c1_,tol)
+    !@assertEqual(y,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c2_,tol)
+    !@assertEqual(z,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c3_,tol)
+    @assertEqual(x,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:,1),tol)
+    @assertEqual(y,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:,2),tol)
+    @assertEqual(z,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:,3),tol)
     
     
     x = x + HALF
     y = [ZERO, ZERO, ONE,  ONE,  ZERO, ZERO, ONE, ONE]
     z = [ZERO, ZERO, ZERO, ZERO, ONE,  ONE,  ONE, ONE]
-    @assertEqual(x,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:)%c1_,tol)
-    @assertEqual(y,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:)%c2_,tol)
-    @assertEqual(z,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:)%c3_,tol)
+    !@assertEqual(x,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:)%c1_,tol)
+    !@assertEqual(y,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:)%c2_,tol)
+    !@assertEqual(z,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:)%c3_,tol)
+    @assertEqual(x,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:,1),tol)
+    @assertEqual(y,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:,2),tol)
+    @assertEqual(z,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:,3),tol)
     
 
     !
@@ -321,17 +333,17 @@ subroutine testIO__read_mesh_hdf__D2_E27_M1()
     x = [ZERO, SIXTH, ZERO, SIXTH, ZERO,  SIXTH, ZERO,  SIXTH]
     y = [ZERO, ZERO, THIRD, THIRD, ZERO,  ZERO,  THIRD, THIRD]
     z = [ZERO, ZERO, ZERO,  ZERO,  THIRD, THIRD, THIRD, THIRD]
-    @assertEqual(x,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c1_,tol)
-    @assertEqual(y,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c2_,tol)
-    @assertEqual(z,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c3_,tol)
+    @assertEqual(x,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:,1),tol)
+    @assertEqual(y,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:,2),tol)
+    @assertEqual(z,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:,3),tol)
     
     
     x = x + HALF
     y = [ZERO, ZERO, THIRD, THIRD, ZERO, ZERO, THIRD, THIRD]
     z = [ZERO, ZERO, ZERO, ZERO, THIRD, THIRD, THIRD, THIRD]
-    @assertEqual(x,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:)%c1_,tol)
-    @assertEqual(y,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:)%c2_,tol)
-    @assertEqual(z,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:)%c3_,tol)
+    @assertEqual(x,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:,1),tol)
+    @assertEqual(y,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:,2),tol)
+    @assertEqual(z,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:,3),tol)
     
     !
     ! Close ChiDG

@@ -17,7 +17,6 @@ module mod_gridgen_blocks
                                       open_patch_hdf, close_patch_hdf,              &
                                       create_patch_hdf
 
-    use type_point,             only: point_t
     use type_bc_state_group,    only: bc_state_group_t
     use type_bc_state,          only: bc_state_t
     use type_bc_state_wrapper,  only: bc_state_wrapper_t
@@ -93,7 +92,7 @@ contains
         character(len=10)                           :: patch_names(6)
         integer(HID_T)                              :: file_id, dom_id, patch_id, bcgroup_id
         integer(ik)                                 :: mapping, bcface, ierr, igroup, istate
-        type(point_t),                  allocatable :: nodes(:)
+        real(rk),                       allocatable :: nodes(:,:)
         integer(ik),                    allocatable :: elements(:,:) 
         integer(ik),                    allocatable :: faces(:,:)
         real(rk),   dimension(:,:,:),   allocatable :: xcoords, ycoords, zcoords
@@ -246,7 +245,7 @@ contains
                                                            bcgroup_id, patch1_id, patch2_id
         integer(ik)                                     :: mapping, bcface, ierr, igroup, istate, &
                                                            nxi_max, neta_max, nzeta_max,xi_mid
-        type(point_t),  allocatable                     :: nodes1(:), nodes2(:)
+        real(rk),       allocatable                     :: nodes1(:,:), nodes2(:,:)
         integer(ik),    allocatable                     :: elements1(:,:), elements2(:,:) 
         integer(ik),    allocatable                     :: faces1(:,:), faces2(:,:)
         real(rk),       allocatable, dimension(:,:,:)   :: xcoords1, ycoords1, zcoords1, &
@@ -530,7 +529,7 @@ contains
         integer(HID_T)                                  :: file_id, dom1_id, dom2_id, bcgroup_id, &
                                                            patch1_id, patch2_id
         integer(ik)                                     :: mapping, bcface, ierr, igroup, istate
-        type(point_t),  allocatable                     :: nodes1(:), nodes2(:)
+        real(rk),       allocatable                     :: nodes1(:,:), nodes2(:,:)
         integer(ik),    allocatable                     :: elements1(:,:), elements2(:,:) 
         integer(ik),    allocatable                     :: faces1(:,:), faces2(:,:)
         real(rk),       allocatable, dimension(:,:,:)   :: xcoords1, xcoords2, ycoords1, ycoords2, zcoords1, zcoords2

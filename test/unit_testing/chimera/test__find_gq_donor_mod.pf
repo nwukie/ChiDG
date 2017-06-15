@@ -125,7 +125,7 @@ contains
 
 
         ! Create 2x2x2-element Grid
-        call create_mesh('2x2x2',meshdata%points,meshdata%connectivity)
+        call create_mesh('2x2x2',meshdata%nodes,meshdata%connectivity)
         nelements_g = 8
 
 
@@ -136,7 +136,7 @@ contains
 
         ! Add domain to ChiDG, initialize
         call this%chidg%data%mesh%add_domain('D_01',                 &
-                                             meshdata%points,        &
+                                             meshdata%nodes,         &
                                              meshdata%connectivity,  &
                                              nelements_g,            &
                                              'Cartesian',            &

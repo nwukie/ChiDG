@@ -6,13 +6,12 @@ subroutine test_domain_vector_distribute()
     use type_domain_vector,         only: domain_vector_t
     use mod_test_utilities,         only: create_mesh
     use type_chidg,                 only: chidg_t
-    use type_point,                 only: point_t
     use type_domain_connectivity,   only: domain_connectivity_t
 
     implicit none
     type(chidg_t)               :: chidg
     type(domain_vector_t)       :: bvec
-    type(point_t),  allocatable :: nodes(:)
+    real(rk),       allocatable :: nodes(:,:)
     type(domain_connectivity_t) :: connectivity
     real(rk),       allocatable :: fullvec(:)
     integer(ik)                 :: idomain, nelements_g, eqn_ID

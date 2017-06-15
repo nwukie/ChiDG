@@ -22,8 +22,8 @@ module mod_chimera
                                       ONE, ZERO, TWO, TWO_DIM, THREE_DIM, &
                                       INVALID_POINT, VALID_POINT, NO_PROC
 
-    use type_mesh,          only: mesh_t
-    use type_point,             only: point_t
+    use type_point
+    use type_mesh,              only: mesh_t
     use type_element_info,      only: element_info_t
     use type_face_info,         only: face_info_t
     use type_ivector,           only: ivector_t
@@ -32,7 +32,7 @@ module mod_chimera
     use type_mvector,           only: mvector_t
 
     use mod_polynomial,         only: polynomialVal, dpolynomialVal
-    use mod_periodic,           only: compute_periodic_offset
+    use mod_periodic,           only: get_periodic_offset
     use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM
     use mpi_f08,                only: MPI_BCast, MPI_Send, MPI_Recv, MPI_INTEGER4, MPI_REAL8, &
                                       MPI_LOGICAL, MPI_ANY_TAG, MPI_STATUS_IGNORE
@@ -208,12 +208,14 @@ contains
         integer(ik), allocatable    :: domains_g(:)
         integer(ik)                 :: receiver_indices(5), parallel_indices(9)
 
-        real(rk)                :: gq_coords(3), parallel_coords(3), donor_vol, local_vol, parallel_vol
+
+        real(rk)                :: donor_metric(3,3), parallel_metric(3,3)
         real(rk), allocatable   :: donor_vols(:)
-        real(rk)                :: offset_1, offset_2, offset_3,                                            &
-                                   d1dxi, d1deta, d1dzeta, d2dxi, d2deta, d2dzeta, d3dxi, d3deta, d3dzeta,  &
-                                   donor_jinv, parallel_jinv
-        real(rk)        :: donor_metric(3,3), parallel_metric(3,3)
+        real(rk)                :: gq_coords(3), parallel_coords(3), offset(3), gq_node(3), &
+                                   donor_jinv, donor_vol, local_vol, parallel_vol, parallel_jinv
+        real(rk)                :: d1dxi, d1deta, d1dzeta, &
+                                   d2dxi, d2deta, d2dzeta, &
+                                   d3dxi, d3deta, d3dzeta
 
         type(mvector_t) :: dmetric
         type(rvector_t) :: djinv
@@ -221,7 +223,8 @@ contains
         type(face_info_t)           :: receiver
         type(element_info_t)        :: donor
         type(point_t)               :: donor_coord
-        type(point_t)               :: gq_node
+        !type(point_t)               :: gq_node
+        !real(rk)                    :: gq_node(3)
         type(point_t)               :: dummy_coord
         logical                     :: new_donor     = .false.
         logical                     :: already_added = .false.
@@ -287,27 +290,30 @@ contains
                             !
                             ! Get node coordinates
                             !
-                            gq_node = mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface)%quad_pts(igq)
+                            gq_node = mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface)%quad_pts(igq,1:3)
 
 
                             !
                             ! Get offset coordinates from face for potential periodic offset.
                             !
-                            call compute_periodic_offset(mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface), gq_node, offset_1, offset_2, offset_3)
+                            !call get_periodic_offset(mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface), gq_node, offset_1, offset_2, offset_3)
+                            offset = get_periodic_offset(mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface))
 
-                            call gq_node%add_x(offset_1)
-                            call gq_node%add_y(offset_2)
-                            call gq_node%add_z(offset_3)
+                            !call gq_node%add_x(offset_1)
+                            !call gq_node%add_y(offset_2)
+                            !call gq_node%add_z(offset_3)
+                            gq_node = gq_node + offset
 
 
                             searching = .true.
                             call MPI_BCast(searching,1,MPI_LOGICAL, iproc, ChiDG_COMM, ierr)
 
                             ! Send gq node physical coordinates
-                            gq_coords(1) = gq_node%c1_
-                            gq_coords(2) = gq_node%c2_
-                            gq_coords(3) = gq_node%c3_
-                            call MPI_BCast(gq_coords,3,MPI_REAL8, iproc, ChiDG_COMM, ierr)
+                            !gq_coords(1) = gq_node%c1_
+                            !gq_coords(2) = gq_node%c2_
+                            !gq_coords(3) = gq_node%c3_
+                            !call MPI_BCast(gq_coords,3,MPI_REAL8, iproc, ChiDG_COMM, ierr)
+                            call MPI_BCast(gq_node,3,MPI_REAL8, iproc, ChiDG_COMM, ierr)
 
                             ! Send receiver indices
                             receiver_indices(1) = receiver%idomain_g
@@ -322,7 +328,7 @@ contains
                             !
                             ! Call routine to find LOCAL gq donor for current node
                             !
-                            call find_gq_donor(mesh,gq_node, receiver, donor, donor_coord, donor_volume=local_vol)
+                            call find_gq_donor(mesh,point_t(gq_node), receiver, donor, donor_coord, donor_volume=local_vol)
                             donor_found = (donor_coord%status == VALID_POINT)
 
                             local_domain_g = 0
@@ -689,8 +695,9 @@ contains
                     !
                     ! Receive gq node physical coordinates from iproc
                     !
-                    call MPI_BCast(gq_coords,3,MPI_REAL8, iproc, ChiDG_COMM, ierr)
-                    call gq_node%set(gq_coords(1), gq_coords(2), gq_coords(3))
+                    !call MPI_BCast(gq_coords,3,MPI_REAL8, iproc, ChiDG_COMM, ierr)
+                    !call gq_node%set(gq_coords(1), gq_coords(2), gq_coords(3))
+                    call MPI_BCast(gq_node,3,MPI_REAL8, iproc, ChiDG_COMM, ierr)
 
                     
                     !
@@ -707,7 +714,7 @@ contains
                     !
                     ! Try to find donor
                     !
-                    call find_gq_donor(mesh,gq_node,receiver,donor,donor_coord, donor_volume=donor_vol)
+                    call find_gq_donor(mesh,point_t(gq_node),receiver,donor,donor_coord, donor_volume=donor_vol)
                     donor_found = (donor_coord%status == VALID_POINT)
 
                     
@@ -969,7 +976,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------------------------------------
     subroutine find_gq_donor(mesh,gq_node,receiver_face,donor_element,donor_coordinate,donor_volume)
-        type(mesh_t),           intent(in)              :: mesh
+        type(mesh_t),               intent(in)              :: mesh
         type(point_t),              intent(in)              :: gq_node
         type(face_info_t),          intent(in)              :: receiver_face
         type(element_info_t),       intent(inout)           :: donor_element
@@ -1023,12 +1030,18 @@ contains
                 !
                 ! Get bounding coordinates for the current element
                 !
-                xmin = minval(mesh%domain(idom)%elems(ielem)%elem_pts(:)%c1_)
-                xmax = maxval(mesh%domain(idom)%elems(ielem)%elem_pts(:)%c1_)
-                ymin = minval(mesh%domain(idom)%elems(ielem)%elem_pts(:)%c2_)
-                ymax = maxval(mesh%domain(idom)%elems(ielem)%elem_pts(:)%c2_)
-                zmin = minval(mesh%domain(idom)%elems(ielem)%elem_pts(:)%c3_)
-                zmax = maxval(mesh%domain(idom)%elems(ielem)%elem_pts(:)%c3_)
+                !xmin = minval(mesh%domain(idom)%elems(ielem)%elem_pts(:)%c1_)
+                !xmax = maxval(mesh%domain(idom)%elems(ielem)%elem_pts(:)%c1_)
+                !ymin = minval(mesh%domain(idom)%elems(ielem)%elem_pts(:)%c2_)
+                !ymax = maxval(mesh%domain(idom)%elems(ielem)%elem_pts(:)%c2_)
+                !zmin = minval(mesh%domain(idom)%elems(ielem)%elem_pts(:)%c3_)
+                !zmax = maxval(mesh%domain(idom)%elems(ielem)%elem_pts(:)%c3_)
+                xmin = minval(mesh%domain(idom)%elems(ielem)%elem_pts(:,1))
+                xmax = maxval(mesh%domain(idom)%elems(ielem)%elem_pts(:,1))
+                ymin = minval(mesh%domain(idom)%elems(ielem)%elem_pts(:,2))
+                ymax = maxval(mesh%domain(idom)%elems(ielem)%elem_pts(:,2))
+                zmin = minval(mesh%domain(idom)%elems(ielem)%elem_pts(:,3))
+                zmax = maxval(mesh%domain(idom)%elems(ielem)%elem_pts(:,3))
 
                 !
                 ! Grow bounding box by 10%. Use delta x,y,z instead of scaling xmin etc. in case xmin is 0

@@ -88,6 +88,8 @@
 !!
 !!  set_domain_coordinates_hdf
 !!  get_domain_coordinates_hdf
+!!  set_domain_coordinate_perturbations_hdf
+!!  get_domain_coordinate_perturbations_hdf
 !!
 !!  set_domain_coordinate_system_hdf
 !!  get_domain_coordinate_system_hdf
@@ -989,7 +991,8 @@ contains
     subroutine add_domain_hdf(fid,domain_name,nodes,elements,coord_system,equation_set)
         integer(HID_T), intent(in)  :: fid
         character(*),   intent(in)  :: domain_name
-        type(point_t),  intent(in)  :: nodes(:)
+        !type(point_t),  intent(in)  :: nodes(:)
+        real(rk),       intent(in)  :: nodes(:,:)
         integer(ik),    intent(in)  :: elements(:,:)
         character(*),   intent(in)  :: coord_system
         character(*),   intent(in)  :: equation_set
@@ -1577,13 +1580,12 @@ contains
     !----------------------------------------------------------------------------------------
     subroutine set_domain_coordinates_hdf(dom_id,nodes)
         integer(HID_T), intent(in)  :: dom_id
-        type(point_t),  intent(in)  :: nodes(:)
+        real(rk),       intent(in)  :: nodes(:,:)
 
         integer(HID_T)      :: grid_id, xspace_id, yspace_id, zspace_id, xset_id, yset_id, zset_id
         integer(HSIZE_T)    :: dims_rank_one(1)
-        integer(ik)         :: ipt, npts, ierr
+        integer(ik)         :: ipt, ierr
         logical             :: exists
-        real(rk), allocatable, dimension(:) :: xcoords, ycoords, zcoords
 
         !
         ! Create a grid-group within the current block domain
@@ -1598,24 +1600,13 @@ contains
 
 
 
-
         !
         ! Re-order coordinates to be linear arrays
         !
-        npts = size(nodes)
-        dims_rank_one = npts
-        allocate(xcoords(npts), ycoords(npts), zcoords(npts), stat=ierr)
-
-        ipt = 1
-        do ipt = 1,npts
-            xcoords(ipt) = nodes(ipt)%c1_
-            ycoords(ipt) = nodes(ipt)%c2_
-            zcoords(ipt) = nodes(ipt)%c3_
-        end do
+        dims_rank_one = size(nodes,1)
 
 
-        call h5lexists_f(grid_id, "Coordinate1", exists, ierr)
-!        exists = check_link_exists_hdf(grid_id,"Coordinate1")
+        exists = check_link_exists_hdf(grid_id,"Coordinate1")
         if (exists) then
             !
             ! Open 'Coordinate' data sets
@@ -1665,11 +1656,11 @@ contains
         !
         ! Write coordinates to datasets
         !
-        call h5dwrite_f(xset_id, H5T_NATIVE_DOUBLE, xcoords, dims_rank_one, ierr)
+        call h5dwrite_f(xset_id, H5T_NATIVE_DOUBLE, nodes(:,1), dims_rank_one, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5dwrite_f")
-        call h5dwrite_f(yset_id, H5T_NATIVE_DOUBLE, ycoords, dims_rank_one, ierr)
+        call h5dwrite_f(yset_id, H5T_NATIVE_DOUBLE, nodes(:,2), dims_rank_one, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5dwrite_f")
-        call h5dwrite_f(zset_id, H5T_NATIVE_DOUBLE, zcoords, dims_rank_one, ierr)
+        call h5dwrite_f(zset_id, H5T_NATIVE_DOUBLE, nodes(:,3), dims_rank_one, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_her: h5dwrite_f")
 
 
@@ -1703,6 +1694,148 @@ contains
 
 
 
+    !>  For a domain, set the perturbation for the domain coordinates.
+    !!
+    !!  /D_domainname/Grid/DCoordinate1
+    !!  /D_domainname/Grid/DCoordinate2
+    !!  /D_domainname/Grid/DCoordinate3
+    !!
+    !!  This is used in the context of the ALE formulation, which is formulated using a map
+    !!  from original to deformed elements. 
+    !!
+    !!  The datasets DCoordinate1, DCoordinate2, DCoordinate3, represent the perturbation
+    !!  of the original nodes to the deformed nodes. By default, the perturbation values
+    !!  are present in the file, but are zero.
+    !!
+    !!  @author Nathan A. Wukie 
+    !!  @date   6/15/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine set_domain_coordinate_perturbations_hdf(dom_id,nodes)
+        integer(HID_T), intent(in)  :: dom_id
+        real(rk),       intent(in)  :: nodes(:,:)
+
+        integer(HID_T)      :: grid_id, xspace_id, yspace_id, zspace_id, xset_id, yset_id, zset_id
+        integer(HSIZE_T)    :: dims_rank_one(1)
+        integer(ik)         :: ipt, ierr
+        logical             :: exists
+
+        !
+        ! Create a grid-group within the current block domain
+        !
+        exists = check_link_exists_hdf(dom_id,"Grid")
+        if (exists) then
+            call h5gopen_f(dom_id,"Grid", grid_id,ierr)
+        else
+            call h5gcreate_f(dom_id, "Grid", grid_id, ierr)
+        end if
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinates_hdf: h5gcreate_f")
+
+
+
+
+        !
+        ! Re-order coordinates to be linear arrays
+        !
+        dims_rank_one = size(nodes,1)
+
+
+        exists = check_link_exists_hdf(grid_id,"DCoordinate1")
+        if (exists) then
+            !
+            ! Open 'Coordinate' data sets
+            !
+            call h5dopen_f(grid_id, "DCoordinate1", xset_id, ierr, H5P_DEFAULT_F)
+            call h5dopen_f(grid_id, "DCoordinate2", yset_id, ierr, H5P_DEFAULT_F)
+            call h5dopen_f(grid_id, "DCoordinate3", zset_id, ierr, H5P_DEFAULT_F)
+
+        else
+
+            !
+            ! Create dataspaces for grid coordinates
+            !
+            call h5screate_simple_f(1, dims_rank_one, xspace_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinates_hdf: h5screate_simple_f")
+            call h5screate_simple_f(1, dims_rank_one, yspace_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinates_hdf: h5screate_simple_f")
+            call h5screate_simple_f(1, dims_rank_one, zspace_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinates_hdf: h5screate_simple_f")
+
+
+            !
+            ! Create datasets for grid coordinates
+            !
+            call h5dcreate_f(grid_id, "DCoordinate1", H5T_NATIVE_DOUBLE, xspace_id, xset_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinates_hdf: h5dcreate_f")
+            call h5dcreate_f(grid_id, "DCoordinate2", H5T_NATIVE_DOUBLE, yspace_id, yset_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinates_hdf: h5dcreate_f")
+            call h5dcreate_f(grid_id, "DCoordinate3", H5T_NATIVE_DOUBLE, zspace_id, zset_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinates_hdf: h5dcreate_f")
+
+
+            !
+            ! Close dataspaces
+            !
+            call h5sclose_f(xspace_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinates_hdf: h5sclose_f")
+            call h5sclose_f(yspace_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinates_hdf: h5sclose_f")
+            call h5sclose_f(zspace_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinates_hdf: h5sclose_f")
+
+
+
+        end if
+
+        !
+        ! Write coordinates to datasets
+        !
+        call h5dwrite_f(xset_id, H5T_NATIVE_DOUBLE, nodes(:,1), dims_rank_one, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinates_hdf: h5dwrite_f")
+        call h5dwrite_f(yset_id, H5T_NATIVE_DOUBLE, nodes(:,2), dims_rank_one, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinates_hdf: h5dwrite_f")
+        call h5dwrite_f(zset_id, H5T_NATIVE_DOUBLE, nodes(:,3), dims_rank_one, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_dcoordinates_hdf: h5dwrite_f")
+
+
+        !
+        ! Close datasets
+        !
+        call h5dclose_f(xset_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5dclose_f")
+        call h5dclose_f(yset_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5dclose_f")
+        call h5dclose_f(zset_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5dclose_f")
+
+
+        !
+        ! Close Grid group
+        !
+        call h5gclose_f(grid_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_domain_coordinates_hdf: h5gclose_f")
+
+
+    end subroutine set_domain_coordinate_perturbations_hdf
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     !>  For a domain, get the domain coordinates
     !!
     !!  /D_domainname/Grid/Coordinate1
@@ -1717,7 +1850,8 @@ contains
     function get_domain_coordinates_hdf(dom_id) result(nodes)
         integer(HID_T), intent(in)  :: dom_id
 
-        type(point_t), allocatable  :: nodes(:)
+        !type(point_t), allocatable  :: nodes(:)
+        real(rk),      allocatable  :: nodes(:,:)
 
         integer(HID_T)              :: grid_id, did_1, did_2, did_3, sid
         integer(HSIZE_T)            :: rank_one_dims(1), maxdims(3)
@@ -1780,12 +1914,14 @@ contains
         !
         !  Accumulate pts into a single points_t matrix to initialize domain
         !
-        allocate(nodes(npts), stat=ierr)
+        allocate(nodes(npts,3), stat=ierr)
         if (ierr /= 0) call AllocationError
             
 
         do ipt = 1,rank_one_dims(1)
-            call nodes(ipt)%set(real(pts1(ipt),rk),real(pts2(ipt),rk),real(pts3(ipt),rk))
+            nodes(ipt,1) = real(pts1(ipt),rk)
+            nodes(ipt,2) = real(pts2(ipt),rk)
+            nodes(ipt,3) = real(pts3(ipt),rk)
         end do
 
 

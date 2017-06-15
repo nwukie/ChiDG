@@ -11,7 +11,7 @@ module type_element
     use mod_inv,                only: inv
 
 
-    use type_point,                 only: point_t
+    use type_point
     use type_densevector,           only: densevector_t
     use type_quadrature,            only: quadrature_t
     use type_function,              only: function_t
@@ -63,8 +63,8 @@ module type_element
         integer(ik)                 :: pmm_ID = NO_PMM_ASSIGNED
         ! Element quadrature points, mesh points and modes
         type(element_connectivity_t)    :: connectivity         ! Integer indices of the associated nodes in block node list
-        type(point_t),  allocatable     :: quad_pts(:)          ! Coordinates of discrete quadrature points
-        type(point_t),  allocatable     :: elem_pts(:)          ! Coordinates of discrete points defining element
+        real(rk),       allocatable     :: quad_pts(:,:)        ! Coordinates of discrete quadrature points
+        real(rk),       allocatable     :: elem_pts(:,:)        ! Coordinates of discrete points defining element
         type(densevector_t)             :: coords               ! Modal expansion of coordinates (nterms_var,(x,y,z))
         character(:),   allocatable     :: coordinate_system    ! 'Cartesian', 'Cylindrical'
 
@@ -79,9 +79,9 @@ module type_element
         ! Grid Velocities
         ! Grid motion inverse Jacobian
         ! Grid motion Jacobian determinant
-        type(point_t), allocatable      :: ale_quad_pts(:)
-        type(point_t), allocatable      :: ale_elem_pts(:)
-        type(point_t), allocatable      :: ale_vel_elem_pts(:)
+        real(rk), allocatable           :: ale_quad_pts(:,:)
+        real(rk), allocatable           :: ale_elem_pts(:,:)
+        real(rk), allocatable           :: ale_vel_elem_pts(:,:)
         type(densevector_t)             :: ale_coords               !< Modal representation of cartesian coordinates (nterms_var,(x,y,z))
         type(densevector_t)             :: ale_vel_coords               !< Modal representation of cartesian coordinates (nterms_var,(x,y,z))
         real(rk), allocatable           :: grid_vel1(:)
@@ -204,14 +204,14 @@ contains
     !---------------------------------------------------------------------------------------
     subroutine init_geom(self,nodes,connectivity,idomain_l,ielem_l,coord_system)
         class(element_t),               intent(inout)   :: self
-        type(point_t),                  intent(in)      :: nodes(:)
+        real(rk),                       intent(in)      :: nodes(:,:)
         type(element_connectivity_t),   intent(in)      :: connectivity
         integer(ik),                    intent(in)      :: idomain_l
         integer(ik),                    intent(in)      :: ielem_l
         character(*),                   intent(in)      :: coord_system
 
         character(:),   allocatable :: user_msg
-        type(point_t),  allocatable :: points(:)
+        real(rk),       allocatable :: points(:,:)
         real(rk),       allocatable :: element_mapping(:,:)
         real(rk),       allocatable :: modes1(:), modes2(:), modes3(:)
         real(rk)                    :: xmin, xmax, xwidth,  &
@@ -241,19 +241,15 @@ contains
         npts_1d          = mapping+1
         npts             = npts_1d * npts_1d * npts_1d
         self%nterms_c_1d = npts_1d
-        allocate(points(npts), stat=ierr)
+        allocate(points(npts,3), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         do ipt = 1,npts
-            !
             ! Get node index
-            !
             inode = connectivity%get_element_node(ipt)
 
-            !
             ! Add node to element points list
-            !
-            points(ipt) = nodes(inode)
+            points(ipt,:) = nodes(inode,:)
         end do !ipt
 
 
@@ -266,13 +262,13 @@ contains
         self%nterms_c = nterms_c
 
         user_msg = "element%init_geom: mapping and points do not match."
-        if (nterms_c /= size(points)) call chidg_signal(FATAL,user_msg)
+        if (nterms_c /= size(points,1)) call chidg_signal(FATAL,user_msg)
 
 
         !
         ! Allocate storage
         !
-        allocate(self%elem_pts(nterms_c),stat=ierr)
+        allocate(self%elem_pts(nterms_c,3),stat=ierr)
         call self%coords%init(nterms_c,3,ntime,idomain_g,idomain_l,ielem_g,ielem_l)
         self%spacedim       = spacedim
         self%idomain_g      = idomain_g
@@ -286,9 +282,12 @@ contains
         !
         ! Compute modal expansion of element coordinates
         !
-        modes1 = matmul(element_mapping,self%elem_pts(:)%c1_)
-        modes2 = matmul(element_mapping,self%elem_pts(:)%c2_)
-        modes3 = matmul(element_mapping,self%elem_pts(:)%c3_)
+        !modes1 = matmul(element_mapping,self%elem_pts(:)%c1_)
+        !modes2 = matmul(element_mapping,self%elem_pts(:)%c2_)
+        !modes3 = matmul(element_mapping,self%elem_pts(:)%c3_)
+        modes1 = matmul(element_mapping,self%elem_pts(:,1))
+        modes2 = matmul(element_mapping,self%elem_pts(:,2))
+        modes3 = matmul(element_mapping,self%elem_pts(:,3))
 
         call self%coords%setvar(1,itime = 1,vals = modes1)
         call self%coords%setvar(2,itime = 1,vals = modes2)
@@ -299,43 +298,52 @@ contains
         !
         ! Compute approximate size of bounding box
         !
-        xmax = maxval(points(:)%c1_)
-        xmin = minval(points(:)%c1_)
+        xmax = maxval(points(:,1))
+        xmin = minval(points(:,1))
         xwidth = abs(xmax - xmin)
 
-        ymax = maxval(points(:)%c2_)
-        ymin = minval(points(:)%c2_)
+        ymax = maxval(points(:,2))
+        ymin = minval(points(:,2))
         ywidth = abs(ymax - ymin)
 
-        zmax = maxval(points(:)%c3_)
-        zmin = minval(points(:)%c3_)
+        zmax = maxval(points(:,3))
+        zmin = minval(points(:,3))
         zwidth = abs(zmax - zmin)
 
         self%h(1) = xwidth
         self%h(2) = ywidth
         self%h(3) = zwidth
 
-        allocate(self%ale_elem_pts(nterms_c),stat=ierr)
+        allocate(self%ale_elem_pts(nterms_c,3),stat=ierr)
         call self%ale_coords%init(nterms_c,3,ntime,idomain_g,idomain_l,ielem_g,ielem_l)
         self%ale_elem_pts = self%elem_pts
-        modes1 = matmul(element_mapping,self%ale_elem_pts(:)%c1_)
-        modes2 = matmul(element_mapping,self%ale_elem_pts(:)%c2_)
-        modes3 = matmul(element_mapping,self%ale_elem_pts(:)%c3_)
+        !modes1 = matmul(element_mapping,self%ale_elem_pts(:)%c1_)
+        !modes2 = matmul(element_mapping,self%ale_elem_pts(:)%c2_)
+        !modes3 = matmul(element_mapping,self%ale_elem_pts(:)%c3_)
+        modes1 = matmul(element_mapping,self%ale_elem_pts(:,1))
+        modes2 = matmul(element_mapping,self%ale_elem_pts(:,2))
+        modes3 = matmul(element_mapping,self%ale_elem_pts(:,3))
 
         call self%ale_coords%setvar(1,itime = 1,vals = modes1)
         call self%ale_coords%setvar(2,itime = 1,vals = modes2)
         call self%ale_coords%setvar(3,itime = 1,vals = modes3)
 
 
-        allocate(self%ale_vel_elem_pts(nterms_c),stat=ierr)
+        allocate(self%ale_vel_elem_pts(nterms_c,3),stat=ierr)
         call self%ale_vel_coords%init(nterms_c,3,ntime,idomain_g,idomain_l,ielem_g,ielem_l)
-        self%ale_vel_elem_pts(:)%c1_ = ZERO  
-        self%ale_vel_elem_pts(:)%c2_ = ZERO  
-        self%ale_vel_elem_pts(:)%c3_ = ZERO  
+        !self%ale_vel_elem_pts(:)%c1_ = ZERO  
+        !self%ale_vel_elem_pts(:)%c2_ = ZERO  
+        !self%ale_vel_elem_pts(:)%c3_ = ZERO  
+        self%ale_vel_elem_pts(:,1) = ZERO  
+        self%ale_vel_elem_pts(:,2) = ZERO  
+        self%ale_vel_elem_pts(:,3) = ZERO  
 
-        modes1 = matmul(element_mapping,self%ale_vel_elem_pts(:)%c1_)
-        modes2 = matmul(element_mapping,self%ale_vel_elem_pts(:)%c2_)
-        modes3 = matmul(element_mapping,self%ale_vel_elem_pts(:)%c3_)
+        !modes1 = matmul(element_mapping,self%ale_vel_elem_pts(:)%c1_)
+        !modes2 = matmul(element_mapping,self%ale_vel_elem_pts(:)%c2_)
+        !modes3 = matmul(element_mapping,self%ale_vel_elem_pts(:)%c3_)
+        modes1 = matmul(element_mapping,self%ale_vel_elem_pts(:,1))
+        modes2 = matmul(element_mapping,self%ale_vel_elem_pts(:,2))
+        modes3 = matmul(element_mapping,self%ale_vel_elem_pts(:,3))
 
         call self%ale_vel_coords%setvar(1,itime = 1,vals = modes1)
         call self%ale_vel_coords%setvar(2,itime = 1,vals = modes2)
@@ -408,20 +416,20 @@ contains
                         self%grad1_trans, self%grad2_trans, self%grad3_trans, &
                         self%mass, self%invmass, self%dtau)
 
-        allocate(self%jinv(nnodes),                 &
-                 self%metric(3,3,nnodes),           &
-                 self%quad_pts(nnodes),             &
-                 self%grad1(nnodes,nterms_s),         &
-                 self%grad2(nnodes,nterms_s),         &
-                 self%grad3(nnodes,nterms_s),         &
-                 self%grad1_trans(nterms_s,nnodes),   &
-                 self%grad2_trans(nterms_s,nnodes),   &
-                 self%grad3_trans(nterms_s,nnodes),   &
-                 self%mass(nterms_s,nterms_s),      &
-                 self%invmass(nterms_s,nterms_s),   &
+        allocate(self%jinv(nnodes),                         &
+                 self%metric(3,3,nnodes),                   &
+                 self%quad_pts(nnodes,3),                   &
+                 self%ale_quad_pts(nnodes,3),               &
+                 self%grad1(nnodes,nterms_s),               &
+                 self%grad2(nnodes,nterms_s),               &
+                 self%grad3(nnodes,nterms_s),               &
+                 self%grad1_trans(nterms_s,nnodes),         &
+                 self%grad2_trans(nterms_s,nnodes),         &
+                 self%grad3_trans(nterms_s,nnodes),         &
+                 self%mass(nterms_s,nterms_s),              &
+                 self%invmass(nterms_s,nterms_s),           &
                  self%jinv_ale(nnodes),                     &
-                 self%metric_ale(3,3,nnodes),                   &
-                 self%ale_quad_pts(nnodes),                     &
+                 self%metric_ale(3,3,nnodes),               &
                  self%grid_vel1(nnodes),                       &
                  self%grid_vel2(nnodes),                       &
                  self%grid_vel3(nnodes),                       &
@@ -620,10 +628,10 @@ contains
                 scaling_23  = ONE
                 scaling_123 = ONE
             case ('Cylindrical')
-                scaling_12  = self%quad_pts(:)%c1_
+                scaling_12  = self%quad_pts(:,1)
                 scaling_13  = ONE
-                scaling_23  = self%quad_pts(:)%c1_
-                scaling_123 = self%quad_pts(:)%c1_
+                scaling_23  = self%quad_pts(:,1)
+                scaling_123 = self%quad_pts(:,1)
             case default
                 call chidg_signal(FATAL,"element%compute_quadrature_metrics: Invalid coordinate system. Choose 'Cartesian' or 'Cylindrical'.")
         end select
@@ -782,7 +790,10 @@ contains
         ! Initialize each point with coordinates
         !
         do inode = 1,nnodes
-            call self%quad_pts(inode)%set(coord1(inode),coord2(inode),coord3(inode))
+            !call self%quad_pts(inode)%set(coord1(inode),coord2(inode),coord3(inode))
+            self%quad_pts(inode,1) = coord1(inode)
+            self%quad_pts(inode,2) = coord2(inode)
+            self%quad_pts(inode,3) = coord3(inode)
         end do
 
     end subroutine compute_quadrature_coords
@@ -1526,7 +1537,7 @@ contains
         ! Call function for evaluation at quadrature nodes and multiply by quadrature weights
         !
         time  = 0._rk
-        fvals = fcn%compute(time,self%quad_pts) * self%gq%vol%weights * self%jinv
+        fvals = fcn%compute(time,point_t(self%quad_pts)) * self%gq%vol%weights * self%jinv
 
 
         !
@@ -1663,9 +1674,12 @@ contains
         !
         ! Compute mesh x,y,z modes
         !
-        xmodes = matmul(element_mapping,self%ale_elem_pts(:)%c1_)
-        ymodes = matmul(element_mapping,self%ale_elem_pts(:)%c2_)
-        zmodes = matmul(element_mapping,self%ale_elem_pts(:)%c3_)
+        !xmodes = matmul(element_mapping,self%ale_elem_pts(:)%c1_)
+        !ymodes = matmul(element_mapping,self%ale_elem_pts(:)%c2_)
+        !zmodes = matmul(element_mapping,self%ale_elem_pts(:)%c3_)
+        xmodes = matmul(element_mapping,self%ale_elem_pts(:,1))
+        ymodes = matmul(element_mapping,self%ale_elem_pts(:,2))
+        zmodes = matmul(element_mapping,self%ale_elem_pts(:,3))
 
         call self%ale_coords%setvar(1,itime = 1,vals = xmodes)
         call self%ale_coords%setvar(2,itime = 1,vals = ymodes)
@@ -1674,10 +1688,12 @@ contains
         !
         !   Compute grid velocity modes
         !
-
-        xmodes = matmul(element_mapping,self%ale_vel_elem_pts(:)%c1_)
-        ymodes = matmul(element_mapping,self%ale_vel_elem_pts(:)%c2_)
-        zmodes = matmul(element_mapping,self%ale_vel_elem_pts(:)%c3_)
+        !xmodes = matmul(element_mapping,self%ale_vel_elem_pts(:)%c1_)
+        !ymodes = matmul(element_mapping,self%ale_vel_elem_pts(:)%c2_)
+        !zmodes = matmul(element_mapping,self%ale_vel_elem_pts(:)%c3_)
+        xmodes = matmul(element_mapping,self%ale_vel_elem_pts(:,1))
+        ymodes = matmul(element_mapping,self%ale_vel_elem_pts(:,2))
+        zmodes = matmul(element_mapping,self%ale_vel_elem_pts(:,3))
 
         call self%ale_vel_coords%setvar(1,itime = 1,vals = xmodes)
         call self%ale_vel_coords%setvar(2,itime = 1,vals = ymodes)
@@ -1690,7 +1706,7 @@ contains
     subroutine compute_quadrature_coords_ale(self)
         class(element_t),   intent(inout)   :: self
         integer(ik)                         :: nnodes
-        real(rk)                            :: x(self%gq%vol%nnodes),y(self%gq%vol%nnodes),z(self%gq%vol%nnodes)
+        real(rk)                            :: coord1(self%gq%vol%nnodes),coord2(self%gq%vol%nnodes),coord3(self%gq%vol%nnodes)
         real(rk)                            :: vg1(self%gq%vol%nnodes),vg2(self%gq%vol%nnodes),vg3(self%gq%vol%nnodes)
         integer(ik)                         :: inode
 
@@ -1699,21 +1715,26 @@ contains
         !
         ! compute cartesian coordinates associated with quadrature points
         !
-        x = matmul(self%gqmesh%vol%val,self%ale_coords%getvar(1,itime = 1))
-        y = matmul(self%gqmesh%vol%val,self%ale_coords%getvar(2,itime = 1))
-        z = matmul(self%gqmesh%vol%val,self%ale_coords%getvar(3,itime = 1))
+        !coord1 = matmul(self%gqmesh%vol%val,self%ale_coords%getvar(1,itime = 1))
+        !coord2 = matmul(self%gqmesh%vol%val,self%ale_coords%getvar(2,itime = 1))
+        !coord3 = matmul(self%gqmesh%vol%val,self%ale_coords%getvar(3,itime = 1))
+        self%ale_quad_pts(:,1) = matmul(self%gqmesh%vol%val,self%ale_coords%getvar(1,itime = 1))
+        self%ale_quad_pts(:,2) = matmul(self%gqmesh%vol%val,self%ale_coords%getvar(2,itime = 1))
+        self%ale_quad_pts(:,3) = matmul(self%gqmesh%vol%val,self%ale_coords%getvar(3,itime = 1))
 
 
         !
         ! Initialize each point with cartesian coordinates
         !
-        do inode = 1,nnodes
-            call self%ale_quad_pts(inode)%set(x(inode),y(inode),z(inode))
-        end do
-!
+        !do inode = 1,nnodes
+        !    !call self%ale_quad_pts(inode)%set(x(inode),y(inode),z(inode))
+        !    call self%ale_quad_pts(inode,1) = coord1(inode)
+        !    call self%ale_quad_pts(inode,2) = coord2(inode)
+        !    call self%ale_quad_pts(inode,3) = coord3(inode)
+        !end do
+
 
         ! Grid velocity
-
         ! compute cartesian coordinates associated with quadrature points
         !
         vg1 = matmul(self%gqmesh%vol%val,self%ale_vel_coords%getvar(1,itime = 1))
@@ -1783,10 +1804,14 @@ contains
                 scaling_23  = ONE
                 scaling_123 = ONE
             case ('Cylindrical')
-                scaling_12  = self%quad_pts(:)%c1_
+                !scaling_12  = self%quad_pts(:)%c1_
+                !scaling_13  = ONE
+                !scaling_23  = self%quad_pts(:)%c1_
+                !scaling_123 = self%quad_pts(:)%c1_
+                scaling_12  = self%quad_pts(:,1)
                 scaling_13  = ONE
-                scaling_23  = self%quad_pts(:)%c1_
-                scaling_123 = self%quad_pts(:)%c1_
+                scaling_23  = self%quad_pts(:,1)
+                scaling_123 = self%quad_pts(:,1)
             case default
                 call chidg_signal(FATAL,"element%compute_quadrature_metrics: Invalid coordinate system. Choose 'Cartesian' or 'Cylindrical'.")
         end select

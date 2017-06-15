@@ -46,7 +46,8 @@ contains
         class(test_project_function_xyz),    intent(inout)   :: this
         
         integer(ik), parameter      :: npt = 8
-        type(point_t)               :: nodes(8)
+        !type(point_t)               :: nodes(8)
+        real(rk)                    :: nodes(8,3)
         type(domain_connectivity_t) :: connectivity
         integer(ik)                 :: nterms_c, idomain, spacedim, nelements_g, eqn_ID
 
@@ -63,14 +64,15 @@ contains
         !!      *-------*
         !!         y=1
         !!
-        call nodes(1)%set(0._rk, 0._rk, 0._rk)
-        call nodes(2)%set(5._rk, 0._rk, 0._rk)
-        call nodes(3)%set(0._rk, 1._rk, 0._rk)
-        call nodes(4)%set(5._rk, 1._rk, 0._rk)
-        call nodes(5)%set(0._rk, 0._rk, 1._rk)
-        call nodes(6)%set(5._rk, 0._rk, 1._rk)
-        call nodes(7)%set(0._rk, 1._rk, 1._rk)
-        call nodes(8)%set(5._rk, 1._rk, 1._rk)
+        nodes(1,:) = [0._rk, 0._rk, 0._rk]
+        nodes(2,:) = [5._rk, 0._rk, 0._rk]
+        nodes(3,:) = [0._rk, 1._rk, 0._rk]
+        nodes(4,:) = [5._rk, 1._rk, 0._rk]
+        nodes(5,:) = [0._rk, 0._rk, 1._rk]
+        nodes(6,:) = [5._rk, 0._rk, 1._rk]
+        nodes(7,:) = [0._rk, 1._rk, 1._rk]
+        nodes(8,:) = [5._rk, 1._rk, 1._rk]
+        
 
         call connectivity%init('test domain',1,8)
         call connectivity%data(1)%init(1)

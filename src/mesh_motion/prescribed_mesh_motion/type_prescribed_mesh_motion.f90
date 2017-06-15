@@ -221,13 +221,14 @@ contains
         class(prescribed_mesh_motion_t),        intent(inout)   :: self
         type(chidg_worker_t),                   intent(inout)      :: worker
 
-        integer(ik)     :: inode
-        type(point_t)   :: ref_pos, grid_pos, grid_vel
+        integer(ik)             :: inode
+        !type(point_t)   :: ref_pos, grid_pos, grid_vel
+        real(rk), dimension(3)  :: ref_pos, grid_pos, grid_vel
         
         !Use the pmm_function to compute the values of the position and velocity at elem_pts
         do inode = 1, worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%nterms_c
 
-            ref_pos = worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%elem_pts(inode)
+            ref_pos = worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%elem_pts(inode,1:3)
 
            ! grid_pos = self%pmmf%compute_pos(ref_pos, self%time)
            ! grid_vel = self%pmmf%compute_vel(ref_pos, self%time)

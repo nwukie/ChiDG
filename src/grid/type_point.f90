@@ -1,4 +1,5 @@
 module type_point
+#include <messenger.h>
     use mod_kinds,      only: ik,rk
     use mod_constants,  only: ZERO, VALID_POINT, INVALID_POINT
     implicit none
@@ -50,9 +51,71 @@ module type_point
 
 
 
+    !
+    ! Constructors
+    !
+    interface point_t
+        module procedure construct_point_from_real
+        module procedure construct_points_from_reals
+    end interface
 
 
 contains
+
+
+
+
+    !>  Construct a single point_t from a Rank1 real array of size 3.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/15/2017
+    !!
+    !!  TODO: TEST
+    !!
+    !---------------------------------------------------------------------------------
+    function construct_point_from_real(point_real) result(point_)
+        real(rk),   intent(in)  :: point_real(:)
+
+        type(point_t)   :: point_
+
+        point_%c1_ = point_real(1)
+        point_%c2_ = point_real(2)
+        point_%c3_ = point_real(3)
+
+    end function construct_point_from_real
+    !*********************************************************************************
+
+
+
+    !>  Construct an array of point_t's from a Rank2 real array of size (npts,3)
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/15/2017
+    !!
+    !!  TODO: TEST
+    !!
+    !---------------------------------------------------------------------------------
+    function construct_points_from_reals(points_real) result(points_)
+        real(rk),   intent(in)  :: points_real(:,:)
+
+        integer(ik)                 :: ierr, ipoint
+        type(point_t),  allocatable :: points_(:)
+
+        allocate(points_(size(points_real,1)),stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        do ipoint = 1,size(points_real,1)
+            points_(ipoint)%c1_ = points_real(ipoint,1)
+            points_(ipoint)%c2_ = points_real(ipoint,2)
+            points_(ipoint)%c3_ = points_real(ipoint,3)
+        end do
+
+    end function construct_points_from_reals
+    !*********************************************************************************
+
+
+
+
 
 
 

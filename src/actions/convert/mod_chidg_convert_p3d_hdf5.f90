@@ -21,7 +21,6 @@ module mod_chidg_convert_p3d_hdf5
                                       close_file_hdf, close_hdf, open_hdf
     use mod_plot3d_utilities,   only: get_block_elements_plot3d, get_block_boundary_faces_plot3d, &
                                       check_block_mapping_conformation_plot3d, get_block_points_plot3d
-    use type_point,             only: point_t
     use type_chidg,             only: chidg_t
     use hdf5,                   only: HID_T
     implicit none
@@ -61,7 +60,7 @@ contains
         real(rdouble),  allocatable :: coordsx(:,:,:), coordsy(:,:,:), coordsz(:,:,:)
         real(rdouble),  allocatable :: coords1(:,:,:), coords2(:,:,:), coords3(:,:,:)
         integer,        allocatable :: elements(:,:), faces(:,:)
-        type(point_t),  allocatable :: nodes(:)
+        real(rk),       allocatable :: nodes(:,:)
         character(:),   allocatable :: coord_system
 
         ! equation set string

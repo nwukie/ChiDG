@@ -189,7 +189,7 @@ contains
     !--------------------------------------------------------------------
     subroutine create_mesh(string,nodes,connectivity)
         character(*),                   intent(in)      :: string
-        type(point_t),  allocatable,    intent(inout)   :: nodes(:)
+        real(rk),       allocatable,    intent(inout)   :: nodes(:,:)
         type(domain_connectivity_t),    intent(inout)   :: connectivity
 
         integer(ik)                                     :: idomain, mapping, ielem

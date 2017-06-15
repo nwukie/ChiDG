@@ -4,7 +4,6 @@ module test_bc_patch_mod
     use mod_constants,      only: IO_DESTINATION
     use type_chidg,         only: chidg_t
     use type_bc_patch,      only: bc_patch_t
-    use type_point,         only: point_t
     implicit none
 
     public  :: test_bc_patch
@@ -277,7 +276,7 @@ contains
                                        proc, patch_face, iface, neqns, nterms_s
         real(rk)                    :: total_area
         real(rk),       allocatable :: areas(:)
-        type(point_t),  allocatable :: quad_pts(:)
+        real(rk)                    :: quad_pts(4,3)
 
 
 
@@ -304,11 +303,11 @@ contains
         nterms_s   = 8
         total_area = 1._rk
         areas      = [0.25_rk, 0.25_rk, 0.25_rk, 0.25_rk]
-        quad_pts   = [ point_t(0.1_rk,0.2_rk,0.3_rk), &
-                       point_t(0.1_rk,0.2_rk,0.3_rk), &
-                       point_t(0.1_rk,0.2_rk,0.3_rk), &
-                       point_t(0.1_rk,0.2_rk,0.3_rk) ]
-        proc       = 5
+        quad_pts(1,:) = [0.1_rk,0.2_rk,0.3_rk]
+        quad_pts(2,:) = [0.1_rk,0.2_rk,0.3_rk]
+        quad_pts(3,:) = [0.1_rk,0.2_rk,0.3_rk]
+        quad_pts(4,:) = [0.1_rk,0.2_rk,0.3_rk]
+        proc          = 5
 
         !
         ! THIS IS BEING TESTED
@@ -364,10 +363,10 @@ contains
         nterms_s   = 8
         total_area = 1._rk
         areas      = [0.25_rk, 0.25_rk, 0.25_rk, 0.25_rk]
-        quad_pts   = [ point_t(0.1_rk,0.2_rk,0.3_rk), &
-                       point_t(0.1_rk,0.2_rk,0.3_rk), &
-                       point_t(0.1_rk,0.2_rk,0.3_rk), &
-                       point_t(0.1_rk,0.2_rk,0.3_rk) ]
+        quad_pts(1,:) = [0.1_rk,0.2_rk,0.3_rk]
+        quad_pts(2,:) = [0.1_rk,0.2_rk,0.3_rk]
+        quad_pts(3,:) = [0.1_rk,0.2_rk,0.3_rk]
+        quad_pts(4,:) = [0.1_rk,0.2_rk,0.3_rk]
         proc       = 6
 
         !

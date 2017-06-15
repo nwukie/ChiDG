@@ -5,7 +5,6 @@ module test_element_linearC_mod
     use mod_constants,              only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, &
                                           EIGHT, NINE, TEN, &
                                           XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX  
-    use type_point,                 only: point_t
     use type_face,                  only: face_t
     use type_element,               only: element_t
     use type_element_connectivity,  only: element_connectivity_t
@@ -49,7 +48,7 @@ contains
         class(test_element_linearC),    intent(inout)   :: this
         
         integer(ik), parameter          :: npt = 8
-        type(point_t)                   :: nodes(npt)
+        real(rk)                        :: nodes(npt,3)
         type(element_connectivity_t)    :: connectivity
         real(rk)                        :: sqrt_two, inv_sqrt_two
         integer(ik)                     :: ftype, ineighbor, mapping, ielem,            &
@@ -78,14 +77,14 @@ contains
         !
         sqrt_two        = sqrt(2._rk)
         inv_sqrt_two    = 1._rk/sqrt_two
-        call nodes(1)%set(0._rk,          0._rk,      0._rk)
-        call nodes(2)%set(inv_sqrt_two,   0._rk,      inv_sqrt_two)
-        call nodes(3)%set(inv_sqrt_two,   0._rk,     -inv_sqrt_two)
-        call nodes(4)%set(sqrt_two,       0._rk,      0._rk)
-        call nodes(5)%set(0._rk,          1._rk,      0._rk)
-        call nodes(6)%set(inv_sqrt_two,   1._rk,      inv_sqrt_two)
-        call nodes(7)%set(inv_sqrt_two,   1._rk,     -inv_sqrt_two)
-        call nodes(8)%set(sqrt_two,       1._rk,      0._rk)
+        nodes(1,:) = [0._rk,         0._rk,  0._rk       ]
+        nodes(2,:) = [inv_sqrt_two,  0._rk,  inv_sqrt_two]
+        nodes(3,:) = [inv_sqrt_two,  0._rk, -inv_sqrt_two]
+        nodes(4,:) = [sqrt_two,      0._rk,  0._rk       ]
+        nodes(5,:) = [0._rk,         1._rk,  0._rk       ]
+        nodes(6,:) = [inv_sqrt_two,  1._rk,  inv_sqrt_two]
+        nodes(7,:) = [inv_sqrt_two,  1._rk, -inv_sqrt_two]
+        nodes(8,:) = [sqrt_two,      1._rk,  0._rk       ]
 
 
         mapping = 1

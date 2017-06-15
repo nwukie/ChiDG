@@ -6,7 +6,6 @@ module test_domain_linear_mod
     use mod_test_utilities, only: create_mesh
 
     use type_chidg,                 only: chidg_t
-    use type_point,                 only: point_t
     use type_domain,                only: domain_t
     use type_element,               only: element_t
     use type_face,                  only: face_t
@@ -49,7 +48,7 @@ contains
         class(test_domain_linear),    intent(inout)   :: this
         
         integer(ik), parameter      :: npt = 64
-        type(point_t),  allocatable :: nodes(:)
+        real(rk),       allocatable :: nodes(:,:)
         type(domain_connectivity_t) :: connectivity
         integer(ik)                 :: ftype, ineighbor, mapping, ielem, &
                                        ipt_xi, ipt_eta, ipt_zeta, ipt

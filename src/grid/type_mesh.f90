@@ -2,7 +2,6 @@ module type_mesh
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: NO_ID
-    use type_point,                 only: point_t
     use type_domain,                only: domain_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use type_boundary_connectivity, only: boundary_connectivity_t
@@ -82,7 +81,8 @@ contains
     subroutine add_domain(self, name, nodes, connectivity, nelements_g, coord_system, eqn_ID)
         class(mesh_t),                  intent(inout)   :: self
         character(*),                   intent(in)      :: name
-        type(point_t),                  intent(in)      :: nodes(:)
+        !type(point_t),                  intent(in)      :: nodes(:)
+        real(rk),                       intent(in)      :: nodes(:,:)
         type(domain_connectivity_t),    intent(in)      :: connectivity
         integer(ik),                    intent(in)      :: nelements_g
         character(*),                   intent(in)      :: coord_system

@@ -1,6 +1,5 @@
 module type_meshdata
-    use mod_kinds,                  only: ik
-    use type_point,                 only: point_t
+    use mod_kinds,                  only: ik, rk
     use type_domain_connectivity,   only: domain_connectivity_t
 
 
@@ -17,7 +16,7 @@ module type_meshdata
     type, public :: meshdata_t
 
         character(:),   allocatable :: name             ! Name of the current domain
-        type(point_t),  allocatable :: points(:)        ! Array containing mesh points
+        real(rk),       allocatable :: nodes(:,:)
         type(domain_connectivity_t) :: connectivity     ! Connectivity data for each element
         character(:),   allocatable :: eqnset           ! Equation set to allocate for the domain
         character(:),   allocatable :: coord_system     ! 'Cartesian' or 'Cylindrical'

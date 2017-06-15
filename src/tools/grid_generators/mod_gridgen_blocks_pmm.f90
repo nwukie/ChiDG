@@ -93,7 +93,7 @@ contains
         class(bc_state_t),              allocatable :: bc_state
         character(len=10)                           :: patch_names(6)
         integer(HID_T)                              :: file_id, dom_id, patch_id, bcgroup_id
-        integer(ik)                                 :: spacedim, mapping, bcface, ierr, igroup, istate
+        integer(ik)                                 :: mapping, bcface, ierr, igroup, istate
         type(point_t),                  allocatable :: nodes(:)
         integer(ik),                    allocatable :: elements(:,:) 
         integer(ik),                    allocatable :: faces(:,:)
@@ -122,12 +122,10 @@ contains
         !
         ! Add domains
         !
-        spacedim = 3
-
         if ( present(equation_sets) ) then
-            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian',equation_sets(1)%get(),spacedim)
+            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian',equation_sets(1)%get())
         else
-            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian','Scalar Advection',spacedim)
+            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian','Scalar Advection')
         end if
 
 
@@ -251,7 +249,7 @@ contains
         class(bc_state_t),              allocatable :: bc_state
         character(len=10)                           :: patch_names(6)
         integer(HID_T)                              :: file_id, dom_id, patch_id, bcgroup_id
-        integer(ik)                                 :: spacedim, mapping, bcface, ierr, igroup, istate
+        integer(ik)                                 :: mapping, bcface, ierr, igroup, istate
         type(point_t),                  allocatable :: nodes(:)
         integer(ik),                    allocatable :: elements(:,:) 
         integer(ik),                    allocatable :: faces(:,:)
@@ -280,12 +278,10 @@ contains
         !
         ! Add domains
         !
-        spacedim = 3
-
         if ( present(equation_sets) ) then
-            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian',equation_sets(1)%get(),spacedim)
+            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian',equation_sets(1)%get())
         else
-            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian','Scalar Advection',spacedim)
+            call add_domain_hdf(file_id,'01',nodes,elements,'Cartesian','Scalar Advection')
         end if
 
 

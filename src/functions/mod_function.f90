@@ -18,7 +18,6 @@ module mod_function
     use fcn_polynomial,                     only: polynomial_f
 !    use fcn_cylindricalduct_eigenfunction,  only: cylindricalduct_eigenfunction_f
     use fcn_monopole,                       only: monopole_f
-    use fcn_cantilevered_beam,              only: cantilevered_beam_f
     implicit none
 
 

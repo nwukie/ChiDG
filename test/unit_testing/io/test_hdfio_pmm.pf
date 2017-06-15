@@ -36,9 +36,9 @@ subroutine testIO__read_pmm_hdf__nopmm__D1_E1_M1()
     !
     ! Read grid and add domain to chidg
     !
-    call chidg%read_grid(filename, spacedim)
 
 
+    call chidg%read_mesh(filename, spacedim)
 
     !  Test nelem
     @assertEqual(NO_PMM_ASSIGNED,chidg%data%mesh%domain(1)%elems(1)%pmm_ID)
@@ -99,7 +99,7 @@ subroutine testIO__read_pmm_hdf__staticpmm__D1_E1_M1()
     !
     ! Read grid and add domain to chidg
     !
-    call chidg%read_grid(filename, spacedim)
+    call chidg%read_mesh(filename, spacedim)
 
     call chidg%read_prescribedmeshmotions(filename)
 
@@ -165,7 +165,7 @@ subroutine testIO__read_pmm_hdf__sinpmm__D1_E1_M1()
     !
     ! Read grid and add domain to chidg
     !
-    call chidg%read_grid(filename, spacedim)
+    call chidg%read_mesh(filename, spacedim)
 
     call chidg%read_prescribedmeshmotions(filename)
 
@@ -240,7 +240,7 @@ end subroutine testIO__read_pmm_hdf__sinpmm__D1_E1_M1
 !    !
 !    ! Read grid
 !    !
-!    call chidg%read_grid(filename,spacedim)
+!    call chidg%read_mesh(filename,spacedim)
 !
 !
 !    call chidg%set('Solution Order', integer_input=2)

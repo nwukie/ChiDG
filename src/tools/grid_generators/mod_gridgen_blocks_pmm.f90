@@ -7,13 +7,15 @@ module mod_gridgen_blocks_pmm
     use mod_plot3d_utilities,   only: get_block_points_plot3d, &
                                       get_block_elements_plot3d, &
                                       get_block_boundary_faces_plot3d
-    use mod_hdf_utilities,      only: initialize_file_hdf, add_domain_hdf, &
-                                      open_file_hdf, close_file_hdf, &
-                                      open_domain_hdf, close_domain_hdf, &
-                                      set_bc_patch_hdf, add_bc_state_hdf, &
-                                      set_contains_grid_hdf, close_hdf, open_hdf, &
-                                      create_bc_group_hdf, open_bc_group_hdf, close_bc_group_hdf, &
-                                      set_bc_patch_group_hdf, &
+    use mod_hdf_utilities,      only: initialize_file_hdf, add_domain_hdf,          &
+                                      open_file_hdf, close_file_hdf,                &
+                                      open_domain_hdf, close_domain_hdf,            &
+                                      set_patch_hdf, add_bc_state_hdf,              &
+                                      set_contains_grid_hdf, close_hdf, open_hdf,   &
+                                      create_bc_state_group_hdf, open_bc_group_hdf, &
+                                      close_bc_group_hdf, set_patch_group_hdf,      &
+                                      open_patch_hdf, close_patch_hdf,              &
+                                      create_patch_hdf,                             &
                                       create_pmm_group_hdf, set_pmm_domain_group_hdf, &
                                       create_pmmfo_group_hdf, set_pmmf_name_hdf, set_pmmfo_val_hdf
 
@@ -140,7 +142,11 @@ contains
             faces = get_block_boundary_faces_plot3d(xcoords,ycoords,zcoords,mapping,bcface)
 
             ! Set bc patch face indices
-            call set_bc_patch_hdf(dom_id,faces,bcface)
+            patch_id = create_patch_hdf(dom_id,bcface)
+            call set_patch_hdf(patch_id,faces)
+            call close_patch_hdf(patch_id)
+
+
 
         end do !bcface
 
@@ -156,7 +162,7 @@ contains
         !
         if (present(bc_state_groups)) then
             do igroup = 1,size(bc_state_groups)
-                call create_bc_group_hdf(file_id,bc_state_groups(igroup)%name)
+                call create_bc_state_group_hdf(file_id,bc_state_groups(igroup)%name)
 
                 bcgroup_id = open_bc_group_hdf(file_id,bc_state_groups(igroup)%name)
 
@@ -166,7 +172,7 @@ contains
                 call close_bc_group_hdf(bcgroup_id)
             end do
         else
-            call create_bc_group_hdf(file_id,'Default')
+            call create_bc_state_group_hdf(file_id,'Default')
 
             bcgroup_id = open_bc_group_hdf(file_id,'Default')
             call add_bc_state_hdf(bcgroup_id,bc_state)
@@ -182,18 +188,18 @@ contains
         patch_names = ['XI_MIN  ','XI_MAX  ', 'ETA_MIN ', 'ETA_MAX ', 'ZETA_MIN', 'ZETA_MAX']
         do bcface = 1,size(patch_names)
 
-            call h5gopen_f(dom_id,'BoundaryConditions/'//trim(adjustl(patch_names(bcface))),patch_id,ierr)
 
+            patch_id = open_patch_hdf(dom_id,trim(patch_names(bcface)))
 
             ! Set bc_group
             if (present(group_names)) then
-                call set_bc_patch_group_hdf(patch_id,group_names(1,bcface)%get())
+                call set_patch_group_hdf(patch_id,group_names(1,bcface)%get())
             else
-                call set_bc_patch_group_hdf(patch_id,'Default')
+                call set_patch_group_hdf(patch_id,'Default')
             end if
 
 
-            call h5gclose_f(patch_id,ierr)
+            call close_patch_hdf(patch_id)
 
         end do
 
@@ -212,7 +218,6 @@ contains
 
         ! Close file
         call close_domain_hdf(dom_id)
-        call close_file_hdf(file_id)
         call close_hdf()
 
     end subroutine create_mesh_file__pmm__singleblock
@@ -293,9 +298,12 @@ contains
             
             ! Get face node indices for boundary 'bcface'
             faces = get_block_boundary_faces_plot3d(xcoords,ycoords,zcoords,mapping,bcface)
-
             ! Set bc patch face indices
-            call set_bc_patch_hdf(dom_id,faces,bcface)
+            patch_id = create_patch_hdf(dom_id,bcface)
+            call set_patch_hdf(patch_id,faces)
+            call close_patch_hdf(patch_id)
+
+
 
         end do !bcface
 
@@ -311,7 +319,7 @@ contains
         !
         if (present(bc_state_groups)) then
             do igroup = 1,size(bc_state_groups)
-                call create_bc_group_hdf(file_id,bc_state_groups(igroup)%name)
+                call create_bc_state_group_hdf(file_id,bc_state_groups(igroup)%name)
 
                 bcgroup_id = open_bc_group_hdf(file_id,bc_state_groups(igroup)%name)
 
@@ -321,7 +329,7 @@ contains
                 call close_bc_group_hdf(bcgroup_id)
             end do
         else
-            call create_bc_group_hdf(file_id,'Default')
+            call create_bc_state_group_hdf(file_id,'Default')
 
             bcgroup_id = open_bc_group_hdf(file_id,'Default')
             call add_bc_state_hdf(bcgroup_id,bc_state)
@@ -337,18 +345,18 @@ contains
         patch_names = ['XI_MIN  ','XI_MAX  ', 'ETA_MIN ', 'ETA_MAX ', 'ZETA_MIN', 'ZETA_MAX']
         do bcface = 1,size(patch_names)
 
-            call h5gopen_f(dom_id,'BoundaryConditions/'//trim(adjustl(patch_names(bcface))),patch_id,ierr)
 
 
+            patch_id = open_patch_hdf(dom_id,trim(patch_names(bcface)))
             ! Set bc_group
             if (present(group_names)) then
-                call set_bc_patch_group_hdf(patch_id,group_names(1,bcface)%get())
+                call set_patch_group_hdf(patch_id,group_names(1,bcface)%get())
             else
-                call set_bc_patch_group_hdf(patch_id,'Default')
+                call set_patch_group_hdf(patch_id,'Default')
             end if
 
 
-            call h5gclose_f(patch_id,ierr)
+            call close_patch_hdf(patch_id)
 
         end do
 

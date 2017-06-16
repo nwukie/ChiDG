@@ -164,7 +164,7 @@ contains
         integer(ik) :: ielem
         
         do ielem = 1,self%domain%nelem
-            @assertTrue(self%domain%elems(ielem)%geomInitialized)
+            @assertTrue(self%domain%elems(ielem)%geom_initialized)
             @assertTrue(self%domain%elems(ielem)%numInitialized)
         end do
         
@@ -187,7 +187,7 @@ contains
         
         do ielem = 1,self%domain%nelem
             do iface = 1,NFACES
-                @assertTrue(self%domain%faces(ielem,iface)%geomInitialized)
+                @assertTrue(self%domain%faces(ielem,iface)%geom_initialized)
                 @assertTrue(self%domain%faces(ielem,iface)%numInitialized)
             end do
         end do

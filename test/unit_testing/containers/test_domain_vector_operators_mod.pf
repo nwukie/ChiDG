@@ -47,7 +47,7 @@ contains
         class(test_domain_vector_operators),    intent(inout)   :: this
 
         integer(ik)                                 :: ivar, nelements_g, eqn_ID
-        real(rk),       allocatable                 :: nodes(:,:)
+        real(rk),       allocatable                 :: nodes(:,:), dnodes(:,:), vnodes(:,:)
         type(domain_connectivity_t)                 :: connectivity
         
         IO_DESTINATION = 'file'
@@ -62,6 +62,10 @@ contains
         ! Read 2x2x1 element grid
         !
         call create_mesh('221',nodes,connectivity)
+        dnodes = nodes
+        vnodes = nodes
+        dnodes = ZERO
+        vnodes = ZERO
 
         nelements_g = 4
 
@@ -69,7 +73,7 @@ contains
         call this%chidg%data%add_equation_set('Scalar Advection')
         eqn_ID = this%chidg%data%get_equation_set_id('Scalar Advection')
 
-        call this%chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,'Cartesian',eqn_ID)
+        call this%chidg%data%mesh%add_domain('D_01',nodes,dnodes,vnodes,connectivity,nelements_g,'Cartesian',eqn_ID)
 
         call this%chidg%set('Solution Order', integer_input=2)
         call this%chidg%init('domains')

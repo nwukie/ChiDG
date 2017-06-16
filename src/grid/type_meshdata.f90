@@ -16,7 +16,9 @@ module type_meshdata
     type, public :: meshdata_t
 
         character(:),   allocatable :: name             ! Name of the current domain
-        real(rk),       allocatable :: nodes(:,:)
+        real(rk),       allocatable :: nodes(:,:)       ! Physical coordinates of grid nodes (npts, 3-coords)
+        real(rk),       allocatable :: dnodes(:,:)      ! Grid node displacements            (npts, 3-coords)
+        real(rk),       allocatable :: vnodes(:,:)      ! Grid node velocities               (npts, 3-coords)
         type(domain_connectivity_t) :: connectivity     ! Connectivity data for each element
         character(:),   allocatable :: eqnset           ! Equation set to allocate for the domain
         character(:),   allocatable :: coord_system     ! 'Cartesian' or 'Cylindrical'

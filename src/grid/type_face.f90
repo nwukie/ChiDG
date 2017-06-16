@@ -92,8 +92,7 @@ module type_face
 
         ! Geometry
         type(densevector_t)             :: coords               ! Modal expansion of coordinates 
-        !type(point_t),      allocatable :: quad_pts(:)          ! Discrete coordinates at quadrature nodes
-        real(rk),           allocatable :: quad_pts(:,:)
+        real(rk),           allocatable :: quad_pts(:,:)        ! Discrete coordinates at quadrature nodes
         character(:),       allocatable :: coordinate_system    ! 'Cartesian' or 'Cylindrical'
 
         ! Metric terms
@@ -147,7 +146,7 @@ module type_face
 
 
         ! Logical tests
-        logical :: geomInitialized     = .false.
+        logical :: geom_initialized    = .false.
         logical :: neighborInitialized = .false.
         logical :: numInitialized      = .false.
 
@@ -156,6 +155,7 @@ module type_face
     contains
 
         procedure           :: init_geom
+        procedure           :: init_ale
         procedure           :: init_sol
 
         procedure           :: init_neighbor
@@ -238,21 +238,52 @@ contains
         
 
         !
-        ! Set coordinates
+        ! Set modal representation of element coordinates, displacements, velocities:
+        !   1: set reference coordinates
+        !   2: set default ALE (displacements, velocities)
         !
         self%coords = elem%coords
-        self%ale_coords = elem%ale_coords
-        self%ale_vel_coords = elem%ale_vel_coords
+        call self%init_ale(elem)
 
 
         !
         ! Set coordinate system, confirm initialization.
         !
         self%coordinate_system = elem%coordinate_system
-        self%geomInitialized = .true.
+        self%geom_initialized  = .true.
 
     end subroutine init_geom
     !******************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Initialize ALE data from nodal displacements.
+    !!
+    !!  @author Eric Wolf (AFRL)
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/16/2017
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine init_ale(self,elem)
+        class(face_t),      intent(inout)   :: self
+        type(element_t),    intent(in)  :: elem
+
+        self%ale_coords     = elem%ale_coords
+        self%ale_vel_coords = elem%ale_vel_coords
+
+    end subroutine init_ale
+    !**************************************************************************************
+
+
+
+
+
 
 
 
@@ -347,28 +378,52 @@ contains
         !
         ! (Re)Allocate storage for face data structures.
         !
-        if (allocated(self%jinv)) deallocate(self%jinv, self%quad_pts, self%metric, &
-                                             self%norm, self%unorm, self%grad1, self%grad2, self%grad3)
-        allocate(self%quad_pts(nnodes,3),                     &
-                 self%jinv(nnodes),                         &
-                 self%metric(3,3,nnodes),                   &
-                 self%norm(nnodes,3),                       &
-                 self%unorm(nnodes,3),                      &
-                 self%ale_quad_pts(nnodes,3),                     &
-                 self%jinv_ale(nnodes),                         &
-                 self%metric_ale(3,3,nnodes),                   &
-                 self%jacobian_matrix(nnodes,3,3),          &
-                 self%inv_jacobian_matrix(nnodes,3,3),          &
-                 self%jacobian_matrix_ale(nnodes,3,3),          &
+        if (allocated(self%jinv)) &
+            deallocate(self%jinv,                       &
+                       self%quad_pts,                   &
+                       self%metric,                     &
+                       self%norm,                       &
+                       self%unorm,                      &
+                       self%ale_quad_pts,               &
+                       self%jinv_ale,                   &
+                       self%metric_ale,                 &
+                       self%jacobian_matrix,            &
+                       self%inv_jacobian_matrix,        &
+                       self%jacobian_matrix_ale,        &
+                       self%inv_jacobian_matrix_ale,    &
+                       self%jacobian_grid,              &
+                       self%inv_jacobian_grid,          &
+                       self%det_jacobian_grid,          &
+                       self%grid_vel1,                  &
+                       self%grid_vel2,                  &
+                       self%grid_vel3,                  &
+                       self%grad1,                      &
+                       self%grad2,                      &
+                       self%grad3                       &
+                       ) 
+
+
+
+        allocate(self%jinv(nnodes),                                 &
+                 self%quad_pts(nnodes,3),                           &
+                 self%metric(3,3,nnodes),                           &
+                 self%norm(nnodes,3),                               &
+                 self%unorm(nnodes,3),                              &
+                 self%ale_quad_pts(nnodes,3),                       &
+                 self%jinv_ale(nnodes),                             &
+                 self%metric_ale(3,3,nnodes),                       &
+                 self%jacobian_matrix(nnodes,3,3),                  &
+                 self%inv_jacobian_matrix(nnodes,3,3),              &
+                 self%jacobian_matrix_ale(nnodes,3,3),              &
                  self%inv_jacobian_matrix_ale(nnodes,3,3),          &
-                 self%jacobian_grid(nnodes,3,3),          &
-                 self%inv_jacobian_grid(nnodes,3,3),          &
-                 self%det_jacobian_grid(nnodes),            &
-                 self%grid_vel1(nnodes),                       &
-                 self%grid_vel2(nnodes),                       &
-                 self%grid_vel3(nnodes),                       &
-                 self%grad1(nnodes,self%nterms_s),          &
-                 self%grad2(nnodes,self%nterms_s),          &
+                 self%jacobian_grid(nnodes,3,3),                    &
+                 self%inv_jacobian_grid(nnodes,3,3),                &
+                 self%det_jacobian_grid(nnodes),                    &
+                 self%grid_vel1(nnodes),                            &
+                 self%grid_vel2(nnodes),                            &
+                 self%grid_vel3(nnodes),                            &
+                 self%grad1(nnodes,self%nterms_s),                  &
+                 self%grad2(nnodes,self%nterms_s),                  &
                  self%grad3(nnodes,self%nterms_s), stat=ierr) 
         if (ierr /= 0) call AllocationError
 
@@ -465,10 +520,6 @@ contains
                 scaling_23  = ONE
                 scaling_123 = ONE
             case ('Cylindrical')
-                !scaling_12  = self%quad_pts(:)%c1_
-                !scaling_13  = ONE
-                !scaling_23  = self%quad_pts(:)%c1_
-                !scaling_123 = self%quad_pts(:)%c1_
                 scaling_12  = self%quad_pts(:,1)
                 scaling_13  = ONE
                 scaling_23  = self%quad_pts(:,1)
@@ -593,9 +644,6 @@ contains
 
 
 
-
-
-
         !
         ! Define area/volume scaling for coordinate system
         !   Cartesian:
@@ -611,10 +659,6 @@ contains
                 scaling_23  = ONE
                 scaling_123 = ONE
             case ('Cylindrical')
-                !scaling_12  = self%quad_pts(:)%c1_
-                !scaling_13  = ONE
-                !scaling_23  = self%quad_pts(:)%c1_
-                !scaling_123 = self%quad_pts(:)%c1_
                 scaling_12  = self%quad_pts(:,1)
                 scaling_13  = ONE
                 scaling_23  = self%quad_pts(:,1)
@@ -754,12 +798,6 @@ contains
 
 
 
-
-
-
-
-
-
     !> Compute cartesian coordinates at face quadrature nodes
     !!
     !!  @author Nathan A. Wukie
@@ -792,7 +830,6 @@ contains
         ! For each quadrature node, store real coordinates
         !
         do inode = 1,self%gq%face%nnodes
-            !call self%quad_pts(inode)%set(c1(inode),c2(inode),c3(inode))
             self%quad_pts(inode,1) = c1(inode)
             self%quad_pts(inode,2) = c2(inode)
             self%quad_pts(inode,3) = c3(inode)
@@ -948,7 +985,6 @@ contains
         ! Initialize each point with cartesian coordinates
         !
         do inode = 1,nnodes
-            !call self%ale_quad_pts(inode)%set(x(inode),y(inode),z(inode))
             self%ale_quad_pts(inode,1) = x(inode)
             self%ale_quad_pts(inode,2) = y(inode)
             self%ale_quad_pts(inode,3) = z(inode)
@@ -972,40 +1008,6 @@ contains
             self%grid_vel2(inode) = vg2(inode)
             self%grid_vel3(inode) = vg3(inode)
         end do 
-!
-!        !
-!        ! compute cartesian coordinates associated with quadrature points
-!        !
-!        x = matmul(self%gqmesh%face%val,self%coords_ale%getvar(1))
-!        y = matmul(self%gqmesh%face%val,self%coords_ale%getvar(2))
-!        z = matmul(self%gqmesh%face%val,self%coords_ale%getvar(3))
-!
-!
-!        !
-!        ! Initialize each point with cartesian coordinates
-!        !
-!        do inode = 1,nnodes
-!            call self%ale_quad_pts(inode)%set(x(inode),y(inode),z(inode))
-!        end do
-!!
-!
-!        ! Grid velocity
-!
-!        ! compute cartesian coordinates associated with quadrature points
-!        !
-!        vg1 = matmul(self%gqmesh%vol%val,self%vel_modes_ale%getvar(1))
-!        vg2 = matmul(self%gqmesh%vol%val,self%vel_modes_ale%getvar(2))
-!        vg3 = matmul(self%gqmesh%vol%val,self%vel_modes_ale%getvar(3))
-!
-!
-!        !
-!        ! Initialize each point with cartesian coordinates
-!        !
-!        do inode = 1,nnodes
-!            call self%grid_vel1(inode) = vg1(inode)
-!            call self%grid_vel2(inode) = vg2(inode)
-!            call self%grid_vel3(inode) = vg3(inode)
-!        end do
 
 
     end subroutine compute_quadrature_coords_ale

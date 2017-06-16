@@ -52,9 +52,6 @@ subroutine testIO__read_mesh_hdf__D1_E1_M1()
     y = [ZERO, ZERO, ONE,  ONE,  ZERO, ZERO, ONE,  ONE]
     z = [ZERO, ZERO, ZERO, ZERO, ONE,  ONE,  ONE,  ONE]
 
-    !@assertEqual(x,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c1_,tol)
-    !@assertEqual(y,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c2_,tol)
-    !@assertEqual(z,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c3_,tol)
     @assertEqual(x,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:,1),tol)
     @assertEqual(y,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:,2),tol)
     @assertEqual(z,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:,3),tol)
@@ -135,9 +132,6 @@ subroutine testIO__read_mesh_hdf__D1_E27_M1()
     x = [ZERO, THIRD, ZERO,  THIRD, ZERO,  THIRD, ZERO,  THIRD]
     y = [ZERO, ZERO,  THIRD, THIRD, ZERO,  ZERO,  THIRD, THIRD]
     z = [ZERO, ZERO,  ZERO,  ZERO,  THIRD, THIRD, THIRD, THIRD]
-    !@assertEqual(x,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c1_,tol)
-    !@assertEqual(y,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c2_,tol)
-    !@assertEqual(z,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c3_,tol)
     @assertEqual(x,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:,1),tol)
     @assertEqual(y,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:,2),tol)
     @assertEqual(z,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:,3),tol)
@@ -148,10 +142,10 @@ subroutine testIO__read_mesh_hdf__D1_E27_M1()
     
     !  Test all elements have been initialized
     do ielem = 1,chidg%data%mesh%domain(1)%nelem
-        @assertTrue(chidg%data%mesh%domain(1)%elems(ielem)%geomInitialized)
+        @assertTrue(chidg%data%mesh%domain(1)%elems(ielem)%geom_initialized)
         
         do iface = 1,NFACES
-            @assertTrue(chidg%data%mesh%domain(1)%faces(ielem,iface)%geomInitialized)
+            @assertTrue(chidg%data%mesh%domain(1)%faces(ielem,iface)%geom_initialized)
         end do
     end do
     
@@ -233,9 +227,6 @@ subroutine testIO__read_mesh_hdf__D2_E1_M1()
     x = [ZERO, HALF, ZERO, HALF, ZERO, HALF, ZERO, HALF]
     y = [ZERO, ZERO, ONE,  ONE,  ZERO, ZERO, ONE,  ONE ]
     z = [ZERO, ZERO, ZERO, ZERO, ONE,  ONE,  ONE,  ONE ]
-    !@assertEqual(x,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c1_,tol)
-    !@assertEqual(y,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c2_,tol)
-    !@assertEqual(z,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:)%c3_,tol)
     @assertEqual(x,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:,1),tol)
     @assertEqual(y,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:,2),tol)
     @assertEqual(z,chidg%data%mesh%domain(1)%elems(1)%elem_pts(:,3),tol)
@@ -244,9 +235,6 @@ subroutine testIO__read_mesh_hdf__D2_E1_M1()
     x = x + HALF
     y = [ZERO, ZERO, ONE,  ONE,  ZERO, ZERO, ONE, ONE]
     z = [ZERO, ZERO, ZERO, ZERO, ONE,  ONE,  ONE, ONE]
-    !@assertEqual(x,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:)%c1_,tol)
-    !@assertEqual(y,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:)%c2_,tol)
-    !@assertEqual(z,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:)%c3_,tol)
     @assertEqual(x,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:,1),tol)
     @assertEqual(y,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:,2),tol)
     @assertEqual(z,chidg%data%mesh%domain(2)%elems(1)%elem_pts(:,3),tol)

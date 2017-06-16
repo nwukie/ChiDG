@@ -2,7 +2,7 @@
 subroutine test_chidgdata__add_domain__onedomain()
     use pfunit_mod
     use mod_kinds,                  only: ik, rk
-    use mod_constants,              only: IO_DESTINATION
+    use mod_constants,              only: IO_DESTINATION, ZERO
     use type_chidg,                 only: chidg_t
     use mod_test_utilities,         only: create_mesh
     use type_domain_connectivity,   only: domain_connectivity_t
@@ -10,7 +10,7 @@ subroutine test_chidgdata__add_domain__onedomain()
 
 
     type(chidg_t)               :: chidg
-    real(rk),       allocatable :: nodes(:,:)
+    real(rk),       allocatable :: nodes(:,:), dnodes(:,:), vnodes(:,:)
     type(domain_connectivity_t) :: connectivity
     integer(ik)                 :: nterms_s, nelements_g, eqn_ID
     
@@ -27,6 +27,10 @@ subroutine test_chidgdata__add_domain__onedomain()
     ! Generate mesh points
     !
     call create_mesh('333',nodes,connectivity)
+    dnodes = nodes
+    vnodes = nodes
+    dnodes = ZERO
+    vnodes = ZERO
 
 
     !
@@ -42,7 +46,7 @@ subroutine test_chidgdata__add_domain__onedomain()
     call chidg%data%add_equation_set('Scalar Advection')
     eqn_ID = chidg%data%get_equation_set_id('Scalar Advection')
 
-    call chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,'Cartesian',eqn_ID)
+    call chidg%data%mesh%add_domain('D_01',nodes,dnodes,vnodes,connectivity,nelements_g,'Cartesian',eqn_ID)
 
 
 

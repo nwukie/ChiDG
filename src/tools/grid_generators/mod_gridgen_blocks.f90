@@ -117,6 +117,7 @@ contains
         elements = get_block_elements_plot3d(xcoords,ycoords,zcoords,mapping,idomain=1)
 
 
+
         !
         ! Add domains
         !
@@ -606,7 +607,6 @@ contains
         nodes2    = get_block_points_plot3d(xcoords2,ycoords2,zcoords2)
         elements1 = get_block_elements_plot3d(xcoords1,ycoords1,zcoords1,mapping,idomain=1)
         elements2 = get_block_elements_plot3d(xcoords2,ycoords2,zcoords2,mapping,idomain=2)
-
 
         !
         ! Add domains

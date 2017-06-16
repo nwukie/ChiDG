@@ -52,32 +52,6 @@ module mod_hdfio
     use mod_constants,              only: ZERO, NFACES, TWO_DIM, THREE_DIM, NO_PROC
     use mod_bc,                     only: create_bc
     use mod_chidg_mpi,              only: IRANK, NRANK, ChiDG_COMM
-    use mod_hdf_utilities,          only: get_ndomains_hdf, get_domain_names_hdf,                         &
-                                          get_domain_equation_set_hdf, set_domain_coordinate_order_hdf,   &
-                                          set_domain_field_order_hdf, get_domain_field_order_hdf,         &
-                                          get_domain_coordinate_order_hdf, &
-                                          set_contains_solution_hdf, set_domain_equation_set_hdf,         &
-                                          get_domain_coordinates_hdf, get_domain_coordinate_system_hdf,   &
-                                          get_domain_connectivity_hdf, get_domain_nnodes_hdf,             &
-                                          check_file_storage_version_hdf, check_file_exists_hdf,          &
-                                          get_contains_solution_hdf, get_contains_grid_hdf,               &
-                                          get_bc_state_names_hdf, get_bc_state_hdf,                       &
-                                          get_nbc_state_groups_hdf, get_bc_state_group_names_hdf,         &
-                                          get_patch_group_hdf, get_bc_state_group_family_hdf,             &
-                                          get_patch_hdf, open_file_hdf, close_file_hdf,                   &
-                                          open_patch_hdf, close_patch_hdf,                                &
-                                          open_domain_hdf, close_domain_hdf, initialize_file_hdf,         &
-                                          initialize_file_structure_hdf, open_bc_group_hdf,               &
-                                          close_bc_group_hdf, get_domain_nelements_hdf,                   &
-                                          get_domain_name_hdf, set_ntimes_hdf, get_ntimes_hdf,            &
-                                          get_time_integrator_hdf, set_domain_connectivity_partition_hdf, &
-                                          set_domain_coordinates_hdf,      &
-                                          set_domain_coordinate_system_hdf, set_contains_grid_hdf,        &
-                                          get_eqn_group_names_hdf, create_eqn_group_hdf,                  &
-                                          copy_bc_state_groups_hdf, get_patch_names_hdf,                  &
-                                          set_patch_group_hdf, get_patch_group_hdf, check_domain_exists_hdf,&
-                                          get_npmm_groups_hdf, get_pmm_group_names_hdf, get_pmm_hdf,    &
-                                          get_pmm_domain_group_hdf
 
     use type_svector,               only: svector_t
     use mod_string,                 only: string_t
@@ -88,14 +62,16 @@ module mod_hdfio
     use type_bc_state,              only: bc_state_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use type_partition,             only: partition_t
+
     use iso_c_binding,              only: c_ptr
+    use mod_hdf_utilities
     use hdf5
     use h5lt
     use mpi_f08
 
-    use type_prescribed_mesh_motion,    only: prescribed_mesh_motion_t
-    use type_prescribed_mesh_motion_group,    only: prescribed_mesh_motion_group_t
-    use type_prescribed_mesh_motion_group_wrapper,    only: prescribed_mesh_motion_group_wrapper_t
+    use type_prescribed_mesh_motion,                only: prescribed_mesh_motion_t
+    use type_prescribed_mesh_motion_group,          only: prescribed_mesh_motion_group_t
+    use type_prescribed_mesh_motion_group_wrapper,  only: prescribed_mesh_motion_group_wrapper_t
     use type_prescribed_mesh_motion_domain_data,    only: prescribed_mesh_motion_domain_data_t
     implicit none
 
@@ -182,13 +158,13 @@ contains
             nterms_1d = (mapping + 1)
 
 
-
-
             !
             ! Get domain name/coordinates
             !
             meshdata(iconn)%name         = domain_name
             meshdata(iconn)%nodes        = get_domain_coordinates_hdf(domain_id)
+            meshdata(iconn)%dnodes       = get_domain_coordinate_displacements_hdf(domain_id)
+            meshdata(iconn)%vnodes       = get_domain_coordinate_velocities_hdf(domain_id)
             meshdata(iconn)%coord_system = get_domain_coordinate_system_hdf(domain_id)
 
 
@@ -205,7 +181,6 @@ contains
             ! Read equation set attribute
             !
             meshdata(iconn)%eqnset = get_domain_equation_set_hdf(domain_id)
-
 
 
             !
@@ -313,17 +288,14 @@ contains
                     
 
                     !
-                    ! Write domain attributes
-                    !
-                    mapping = data%mesh%domain(idom)%nterms_s - 1
-                    call set_domain_coordinate_order_hdf(domain_id,mapping)
-
-
-
-                    !
                     ! Write nodes
                     !
-                    call set_domain_coordinates_hdf(domain_id,data%mesh%domain(idom)%nodes)
+                    mapping = data%mesh%domain(idom)%nterms_s - 1
+                    call set_domain_coordinate_order_hdf(        domain_id,mapping                      )
+                    call set_domain_coordinates_hdf(             domain_id,data%mesh%domain(idom)%nodes )
+                    call set_domain_coordinate_displacements_hdf(domain_id,data%mesh%domain(idom)%dnodes)
+                    call set_domain_coordinate_velocities_hdf(   domain_id,data%mesh%domain(idom)%vnodes)
+
 
                     !
                     ! Assemble element connectivities

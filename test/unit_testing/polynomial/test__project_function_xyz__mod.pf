@@ -46,8 +46,7 @@ contains
         class(test_project_function_xyz),    intent(inout)   :: this
         
         integer(ik), parameter      :: npt = 8
-        !type(point_t)               :: nodes(8)
-        real(rk)                    :: nodes(8,3)
+        real(rk)                    :: nodes(8,3), dnodes(8,3), vnodes(8,3)
         type(domain_connectivity_t) :: connectivity
         integer(ik)                 :: nterms_c, idomain, spacedim, nelements_g, eqn_ID
 
@@ -72,6 +71,8 @@ contains
         nodes(6,:) = [5._rk, 0._rk, 1._rk]
         nodes(7,:) = [0._rk, 1._rk, 1._rk]
         nodes(8,:) = [5._rk, 1._rk, 1._rk]
+        dnodes = ZERO
+        vnodes = ZERO
         
 
         call connectivity%init('test domain',1,8)
@@ -92,7 +93,7 @@ contains
         call this%chidg%data%add_equation_set('Scalar Advection')
 
         eqn_ID = this%chidg%data%get_equation_set_id('Scalar Advection')
-        call this%chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,'Cartesian',eqn_ID)
+        call this%chidg%data%mesh%add_domain('D_01',nodes,dnodes,vnodes,connectivity,nelements_g,'Cartesian',eqn_ID)
 
         call this%chidg%set('Solution Order', integer_input=this%solution_order)
         call this%chidg%init('domains')

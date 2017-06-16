@@ -2,7 +2,7 @@
 subroutine test_domain_vector_distribute()
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
-    use mod_constants,              only: ONE, TWO, THREE, FOUR
+    use mod_constants,              only: ONE, TWO, THREE, FOUR, ZERO
     use type_domain_vector,         only: domain_vector_t
     use mod_test_utilities,         only: create_mesh
     use type_chidg,                 only: chidg_t
@@ -11,7 +11,7 @@ subroutine test_domain_vector_distribute()
     implicit none
     type(chidg_t)               :: chidg
     type(domain_vector_t)       :: bvec
-    real(rk),       allocatable :: nodes(:,:)
+    real(rk),       allocatable :: nodes(:,:), dnodes(:,:), vnodes(:,:)
     type(domain_connectivity_t) :: connectivity
     real(rk),       allocatable :: fullvec(:)
     integer(ik)                 :: idomain, nelements_g, eqn_ID
@@ -29,6 +29,10 @@ subroutine test_domain_vector_distribute()
     ! Generate points for a 2x2x1 mesh
     !
     call create_mesh('221',nodes,connectivity)
+    dnodes = nodes
+    vnodes = nodes
+    dnodes = ZERO
+    vnodes = ZERO
 
 
 
@@ -42,7 +46,7 @@ subroutine test_domain_vector_distribute()
 
     idomain     = 1
     nelements_g = 4
-    call chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,'Cartesian',eqn_ID)
+    call chidg%data%mesh%add_domain('D_01',nodes,dnodes,vnodes,connectivity,nelements_g,'Cartesian',eqn_ID)
 
     call chidg%set('Solution Order', integer_input=2)
     call chidg%init('domains')

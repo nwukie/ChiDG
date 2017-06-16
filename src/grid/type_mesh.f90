@@ -78,11 +78,12 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------
-    subroutine add_domain(self, name, nodes, connectivity, nelements_g, coord_system, eqn_ID)
+    subroutine add_domain(self, name, nodes, dnodes, vnodes, connectivity, nelements_g, coord_system, eqn_ID)
         class(mesh_t),                  intent(inout)   :: self
         character(*),                   intent(in)      :: name
-        !type(point_t),                  intent(in)      :: nodes(:)
         real(rk),                       intent(in)      :: nodes(:,:)
+        real(rk),                       intent(in)      :: dnodes(:,:)
+        real(rk),                       intent(in)      :: vnodes(:,:)
         type(domain_connectivity_t),    intent(in)      :: connectivity
         integer(ik),                    intent(in)      :: nelements_g
         character(*),                   intent(in)      :: coord_system
@@ -104,13 +105,20 @@ contains
 
 
         !
-        ! Initialize new domain
+        ! Initialize reference domain
         !
         call self%domain(idomain_l)%init_geom(idomain_l,    &
                                               nelements_g,  &
                                               nodes,        &
                                               connectivity, &
                                               coord_system )
+
+        
+        !
+        ! Initialize ALE 
+        !
+        call self%domain(idomain_l)%init_ale(dnodes,vnodes)
+
 
         
         !

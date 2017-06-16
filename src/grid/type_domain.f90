@@ -4,7 +4,7 @@ module type_domain
     use mod_constants,              only: XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, &
                                           ORPHAN, INTERIOR, BOUNDARY, CHIMERA, TWO_DIM, &
                                           THREE_DIM, NO_NEIGHBOR_FOUND, NEIGHBOR_FOUND, &
-                                          NO_PROC, NFACES, NO_EQUATION_SET
+                                          NO_PROC, NFACES, NO_EQUATION_SET, ZERO
     use mod_grid,                   only: FACE_CORNERS
     use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
     use mpi_f08
@@ -67,11 +67,13 @@ module type_domain
 
         
         !
-        ! mesh geometry data
+        ! domain data
         !
-        real(rk),           allocatable :: nodes(:,:)   ! Nodes of the domain - unpartitioned.
-        type(element_t),    allocatable :: elems(:)     ! Element storage (1:nelem)
-        type(face_t),       allocatable :: faces(:,:)   ! Face storage (1:nelem,1:nfaces)
+        real(rk),           allocatable :: nodes(:,:)      ! Nodes of the reference domain.                 Proc-global. (nnodes, 3-coords)
+        real(rk),           allocatable :: dnodes(:,:)     ! Node displacements: node_ale = nodes + dnodes. Proc-global. (nnodes, 3-coords)
+        real(rk),           allocatable :: vnodes(:,:)     ! Node velocities:                               Proc-global. (nnodes, 3-coords)
+        type(element_t),    allocatable :: elems(:)        ! Element storage (1:nelem)
+        type(face_t),       allocatable :: faces(:,:)      ! Face storage (1:nelem,1:nfaces)
         
 
         ! chimera interfaces container
@@ -89,6 +91,7 @@ module type_domain
     contains
 
         procedure           :: init_geom                ! geometry init for elements and faces 
+        procedure           :: init_ale
         procedure           :: init_sol                 ! init data depending on solution order for elements and faces
         procedure           :: init_eqn                 ! initialize the equation set identifier on the mesh
 
@@ -143,6 +146,14 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
+    !!  @param[in]  idomain_l       Proc-local domain index.
+    !!  @param[in]  nelements_g     Proc-global number of elements in the domain.
+    !!  @param[in]  nodes           Proc-global node list.                  (nnodes, 3-coords)
+    !!  @param[in]  dnodes          Proc-global node coordinate delta list. (nnodes, 3-coords)
+    !!  @param[in]  connectivity    Proc-local connectivities.
+    !!  @param[in]  coord_system    Coordinate system of the nodal coordinates.
+    !!  
+    !!  TODO: test dnodes initialization
     !!
     !-----------------------------------------------------------------------------------------
     subroutine init_geom(self,idomain_l,nelements_g,nodes,connectivity,coord_system)
@@ -157,17 +168,28 @@ contains
         !
         ! Store number of terms in coordinate expansion and domain index
         !
-        self%idomain_g   = connectivity%get_domain_index()
-        self%idomain_l   = idomain_l
-        self%nelements_g = nelements_g
-        self%nodes       = nodes
+        self%idomain_g    = connectivity%get_domain_index()
+        self%idomain_l    = idomain_l
+        self%nelements_g  = nelements_g
+
+
+        !
+        ! Initialize nodes:
+        !   Reference nodes = nodes
+        !   Default node coordinate deltas = zero
+        !
+        self%nodes  = nodes
+        self%dnodes = nodes
+        self%vnodes = nodes
+        self%dnodes = ZERO
+        self%vnodes = ZERO
 
 
         !
         ! Call geometry initialization for elements and faces
         !
         call self%init_elems_geom(nodes,connectivity,coord_system)
-        call self%init_faces_geom(nodes,connectivity)
+        call self%init_faces_geom()
 
 
         !
@@ -182,6 +204,39 @@ contains
 
 
 
+
+
+
+
+
+    !>  Initialize ALE data from node displacement data. 
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/16/2017
+    !!
+    !!
+    !!  TODO: Test
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine init_ale(self,dnodes,vnodes)
+        class(domain_t),        intent(inout)   :: self
+        real(rk),               intent(in)      :: dnodes(:,:)
+        real(rk),               intent(in)      :: vnodes(:,:)
+
+        integer(ik) :: ielem, iface
+
+        do ielem = 1,self%nelem
+            call self%elems(ielem)%init_ale(dnodes,vnodes)
+
+            do iface = 1,NFACES
+                call self%faces(ielem,iface)%init_ale(self%elems(ielem))
+            end do !iface
+
+        end do !ielem
+
+
+    end subroutine init_ale
+    !*****************************************************************************************
 
 
 
@@ -226,12 +281,10 @@ contains
         call self%init_elems_sol(neqns,nterms_s,ntime)
         call self%init_faces_sol()               
 
-        
         !
         ! Confirm initialization
         !
         self%solInitialized = .true.
-
 
     end subroutine init_sol
     !*****************************************************************************************
@@ -391,10 +444,8 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine init_faces_geom(self,nodes,connectivity)
+    subroutine init_faces_geom(self)
         class(domain_t),                intent(inout)   :: self
-        real(rk),                       intent(in)      :: nodes(:,:)
-        type(domain_connectivity_t),    intent(in)      :: connectivity
 
         integer(ik)     :: ielem, iface, ierr
 

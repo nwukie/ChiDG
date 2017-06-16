@@ -90,7 +90,6 @@ contains
 
         integer(HID_T)                  :: file_id, dom_id, bcgroup_id, patch_id
         class(bc_state_t),  allocatable :: inlet, outlet, wall
-        !type(point_t),      allocatable :: nodes(:)
         real(rk),           allocatable :: nodes(:,:)
         integer(ik),        allocatable :: elements(:,:), faces(:,:)
 
@@ -256,6 +255,7 @@ contains
             !
             nodes    = get_block_points_plot3d(coords(:,:,:,1),coords(:,:,:,2),coords(:,:,:,3))
             elements = get_block_elements_plot3d(coords(:,:,:,1),coords(:,:,:,2),coords(:,:,:,3),mapping=4,idomain=idomain)
+
 
             !
             ! Add domains

@@ -103,8 +103,6 @@ contains
         !
         ! Create base ChiDG file and get file identifier
         !
-        !call initialize_file_hdf(file_prefix)
-        !file_id = open_file_hdf(file_prefix)
         call initialize_file_hdf(hdf_file)
         file_id = open_file_hdf(hdf_file)
 
@@ -135,27 +133,16 @@ contains
         !
         do igrid = 1,nblks
 
-            !! Read spacedim from user
-            !spacedim = 0
-            !do while ( (spacedim < 2) .or. (spacedim > 3) )
-            !    call write_line("Enter number of spatial dimensions for block: ", igrid, delimiter=" ")
-            !    call write_line("Key -- ( 2 = 2D, 3 = 3D )")
-            !    read*, spacedim
-            !end do
-
-
             ! Read mapping from user
             call write_line("Enter mapping for block: ", igrid, delimiter=" ")
             call write_line("Key -- (1 = linear, 2 = quadratic, 3 = cubic, 4 = quartic, 5 = quintic, 6 = sextic, 7 = septic )")
             read*, mapping
 
 
-
             ! Read coordinate system
             call write_line("Enter coordinate system to use: ")
             call write_line("Key: (1 = Cartesian, 2 = Cylindrical)")
             read*, system
-
 
 
             !
@@ -218,6 +205,7 @@ contains
             !
             nodes    = get_block_points_plot3d(coords1,coords2,coords3)
             elements = get_block_elements_plot3d(coords1,coords2,coords3,mapping,igrid)
+
 
 
             !

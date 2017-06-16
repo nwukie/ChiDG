@@ -3,7 +3,7 @@ module test_function_status_mod
     use mod_kinds,                      only: ik, rk
     use mod_constants,                  only: XI_MIN, XI_MAX, ETA_MIN, &
                                               ETA_MAX, ZETA_MIN, ZETA_MAX, &
-                                              NFUNCTION_TYPES, NFACES, NBLK, IO_DESTINATION
+                                              NFUNCTION_TYPES, NFACES, NBLK, IO_DESTINATION, ZERO
     use type_chidg,                     only: chidg_t
     use type_domain_connectivity,       only: domain_connectivity_t
     use type_equationset_function_data, only: equationset_function_data_t
@@ -51,7 +51,7 @@ contains
     subroutine setUp(this)
         class(test_function_status),    intent(inout)   :: this
 
-        real(rk),       allocatable                     :: nodes(:,:)
+        real(rk),       allocatable                     :: nodes(:,:), dnodes(:,:), vnodes(:,:)
         type(domain_connectivity_t)                     :: connectivity
         integer(ik)                                     :: nelements_g, eqn_ID
 
@@ -67,6 +67,10 @@ contains
         ! Generate some mesh data. 3x3x3 element block.
         !
         call create_mesh('333',nodes,connectivity)
+        dnodes = nodes
+        vnodes = nodes
+        dnodes = ZERO
+        vnodes = ZERO
 
 
         !
@@ -79,7 +83,7 @@ contains
         call this%chidg%data%add_equation_set('Dual Linear Advection')
         eqn_ID = this%chidg%data%get_equation_set_id('Dual Linear Advection')
 
-        call this%chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,'Cartesian',eqn_ID)
+        call this%chidg%data%mesh%add_domain('D_01',nodes,dnodes,vnodes,connectivity,nelements_g,'Cartesian',eqn_ID)
 
         call this%chidg%set('Solution Order', integer_input=2)
         call this%chidg%init('domains')

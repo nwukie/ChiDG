@@ -43,7 +43,7 @@ contains
         class(test_domain_vector),    intent(inout)   :: this
 
         integer(ik)                 :: ivar, nelements_g, eqn_ID
-        real(rk),       allocatable :: nodes(:,:)
+        real(rk),       allocatable :: nodes(:,:), dnodes(:,:), vnodes(:,:)
         type(domain_connectivity_t) :: connectivity
         
         IO_DESTINATION = 'file'
@@ -58,6 +58,10 @@ contains
         ! Generate points for 3x3x3 element mesh
         !
         call create_mesh('333',nodes,connectivity)
+        dnodes = nodes
+        vnodes = nodes
+        dnodes = ZERO
+        vnodes = ZERO
 
 
         !
@@ -69,7 +73,7 @@ contains
         call this%chidg%data%add_equation_set('Scalar Advection')
         eqn_ID = this%chidg%data%get_equation_set_id('Scalar Advection')
 
-        call this%chidg%data%mesh%add_domain('D_01',nodes,connectivity,nelements_g,'Cartesian',eqn_ID)
+        call this%chidg%data%mesh%add_domain('D_01',nodes,dnodes,vnodes,connectivity,nelements_g,'Cartesian',eqn_ID)
 
         call this%chidg%set('Solution Order', integer_input=2)
         call this%chidg%init('domains')

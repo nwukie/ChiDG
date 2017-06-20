@@ -162,8 +162,8 @@ contains
                 !
                 ! Get block-element index of current iface_bc
                 !
-                idomain_g  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g(face_ID)
-                idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l(face_ID)
+                idomain_g  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g()
+                idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l()
                 ielement_g = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID)
                 ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
                 iface      = mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)

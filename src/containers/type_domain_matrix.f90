@@ -373,7 +373,7 @@ contains
                         do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
 
                             ! Get indices of the local element to determine if it is on 'idom'
-                            idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l(face_ID)
+                            idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l()
                             ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
                             domain_has_face = (idom == idomain_l)
 

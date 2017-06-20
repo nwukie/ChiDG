@@ -94,11 +94,12 @@ contains
         character(len=10)                           :: patch_names(6)
         integer(HID_T)                              :: file_id, dom_id, patch_id, bcgroup_id
         integer(ik)                                 :: mapping, bcface, ierr, igroup, istate
-        !type(point_t),                  allocatable :: nodes(:)
         real(rk),                       allocatable :: nodes(:,:)
         integer(ik),                    allocatable :: elements(:,:) 
         integer(ik),                    allocatable :: faces(:,:)
         real(rk),   dimension(:,:,:),   allocatable :: xcoords, ycoords, zcoords
+        character(len=8)                            :: bc_face_strings(6)
+        character(:),   allocatable                 :: bc_face_string
 
 
         ! Create/initialize file
@@ -135,13 +136,15 @@ contains
         !
         dom_id = open_domain_hdf(file_id,'01')
 
+        bc_face_strings = ["XI_MIN  ","XI_MAX  ","ETA_MIN ","ETA_MAX ","ZETA_MIN","ZETA_MAX"]
         do bcface = 1,size(patch_names)
             
             ! Get face node indices for boundary 'bcface'
             faces = get_block_boundary_faces_plot3d(xcoords,ycoords,zcoords,mapping,bcface)
 
             ! Set bc patch face indices
-            patch_id = create_patch_hdf(dom_id,bcface)
+            bc_face_string  = trim(bc_face_strings(bcface))
+            patch_id = create_patch_hdf(dom_id,bc_face_string)
             call set_patch_hdf(patch_id,faces)
             call close_patch_hdf(patch_id)
 
@@ -256,6 +259,8 @@ contains
         integer(ik),                    allocatable :: elements(:,:) 
         integer(ik),                    allocatable :: faces(:,:)
         real(rk),   dimension(:,:,:),   allocatable :: xcoords, ycoords, zcoords
+        character(len=8)                            :: bc_face_strings(6)
+        character(:),   allocatable                 :: bc_face_string
 
 
         ! Create/initialize file
@@ -292,12 +297,15 @@ contains
         !
         dom_id = open_domain_hdf(file_id,'01')
 
+        bc_face_strings = ["XI_MIN  ","XI_MAX  ","ETA_MIN ","ETA_MAX ","ZETA_MIN","ZETA_MAX"]
         do bcface = 1,size(patch_names)
             
             ! Get face node indices for boundary 'bcface'
             faces = get_block_boundary_faces_plot3d(xcoords,ycoords,zcoords,mapping,bcface)
+
             ! Set bc patch face indices
-            patch_id = create_patch_hdf(dom_id,bcface)
+            bc_face_string  = trim(bc_face_strings(bcface))
+            patch_id = create_patch_hdf(dom_id,bc_face_string)
             call set_patch_hdf(patch_id,faces)
             call close_patch_hdf(patch_id)
 

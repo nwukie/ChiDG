@@ -220,9 +220,9 @@ contains
                                     ! Get coordinate value at point
                                     if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
 
-                                        r     = real(data%mesh%domain(idom)%elems(ielem)%grid_point(1,xi,eta,zeta),rdouble)
-                                        theta = real(data%mesh%domain(idom)%elems(ielem)%grid_point(2,xi,eta,zeta),rdouble)
-                                        z     = real(data%mesh%domain(idom)%elems(ielem)%grid_point(3,xi,eta,zeta),rdouble)
+                                        r     = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',1,xi,eta,zeta),rdouble)
+                                        theta = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',2,xi,eta,zeta),rdouble)
+                                        z     = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',3,xi,eta,zeta),rdouble)
 
                                         if (icoord == 1) then
                                             val = r*cos(theta)
@@ -234,7 +234,7 @@ contains
 
                                     else
 
-                                        val = real(data%mesh%domain(idom)%elems(ielem)%grid_point(icoord,xi,eta,zeta),rdouble)
+                                        val = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',icoord,xi,eta,zeta),rdouble)
 
                                     end if
 
@@ -460,7 +460,7 @@ contains
                             !
                             ! Get face index from the current element
                             !
-                            idom  = data%mesh%bc_patch_group(isurface)%patch(ipatch)%idomain_l_%at(ibc_face)
+                            idom  = data%mesh%bc_patch_group(isurface)%patch(ipatch)%idomain_l()
                             ielem = data%mesh%bc_patch_group(isurface)%patch(ipatch)%ielement_l_%at(ibc_face)
                             iface = data%mesh%bc_patch_group(isurface)%patch(ipatch)%iface_%at(ibc_face)
 
@@ -534,9 +534,9 @@ contains
                                         ! Get coordinate value at point
                                         if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
 
-                                            r     = real(data%mesh%domain(idom)%elems(ielem)%grid_point(1,xi,eta,zeta),rdouble)
-                                            theta = real(data%mesh%domain(idom)%elems(ielem)%grid_point(2,xi,eta,zeta),rdouble)
-                                            z     = real(data%mesh%domain(idom)%elems(ielem)%grid_point(3,xi,eta,zeta),rdouble)
+                                            r     = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',1,xi,eta,zeta),rdouble)
+                                            theta = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',2,xi,eta,zeta),rdouble)
+                                            z     = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',3,xi,eta,zeta),rdouble)
 
                                             if (icoord == 1) then
                                                 val = r*cos(theta)
@@ -548,7 +548,7 @@ contains
 
                                         else
 
-                                            val = real(data%mesh%domain(idom)%elems(ielem)%grid_point(icoord,xi,eta,zeta),rdouble)
+                                            val = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',icoord,xi,eta,zeta),rdouble)
 
                                         end if
 
@@ -584,7 +584,7 @@ contains
                             !
                             ! Get face index from the current element
                             !
-                            idom  = data%mesh%bc_patch_group(isurface)%patch(ipatch)%idomain_l_%at(ibc_face)
+                            idom  = data%mesh%bc_patch_group(isurface)%patch(ipatch)%idomain_l()
                             ielem = data%mesh%bc_patch_group(isurface)%patch(ipatch)%ielement_l_%at(ibc_face)
                             iface = data%mesh%bc_patch_group(isurface)%patch(ipatch)%iface_%at(ibc_face)
 

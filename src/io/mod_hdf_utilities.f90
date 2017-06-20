@@ -3426,27 +3426,18 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    function create_patch_hdf(dom_id,iface) result(patch_id)
+    function create_patch_hdf(dom_id,patch_name) result(patch_id)
         integer(HID_T), intent(in)  :: dom_id
-        integer(ik),    intent(in)  :: iface
+        character(*),   intent(in)  :: patch_name
 
-        character(len=8)            :: bc_face_strings(6)
-        character(:),   allocatable :: bc_face_string
-        integer(HID_T)              :: bc_id, patch_id
+        integer(HID_T)              :: patch_id
         integer(ik)                 :: ierr
-
-
-        !
-        ! Get boundary condition string
-        !
-        bc_face_strings = ["XI_MIN  ","XI_MAX  ","ETA_MIN ","ETA_MAX ","ZETA_MIN","ZETA_MAX"]
-        bc_face_string  = trim(bc_face_strings(iface))
 
 
         !
         ! Create empty group for boundary condition
         !
-        call h5gcreate_f(dom_id,"Patches/"//"P_"//bc_face_string,patch_id, ierr)
+        call h5gcreate_f(dom_id,"Patches/"//"P_"//patch_name,patch_id, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"create_patch_hdf: h5gcreate_f")
         
 
@@ -3620,9 +3611,8 @@ contains
 
     !>  Set patch face connectivity indices for a block boundary.
     !!
-    !!  /D_domainname/Patches/"face"/Faces
+    !!  /D_domainname/Patches/P_patchname/Faces
     !!
-    !!  "face" is XI_MIN, XI_MAX, ETA_MIN, etc.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   10/15/2016
@@ -3638,22 +3628,29 @@ contains
         integer                     :: ierr
         integer(HID_T)              :: patch_space_id, patch_set_id
         integer(HSIZE_T)            :: dims(2)
+        logical                     :: exists
             
+        exists = check_link_exists_hdf(patch_id,"Faces")
 
         !
-        ! Create dataspaces for boundary condition connectivity
+        ! : already exists, just open data set.
+        ! : doesn't exists, create data set
         !
-        dims(1) = size(patch,1)
-        dims(2) = size(patch,2)
-        call h5screate_simple_f(2, dims, patch_space_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_patch_hdf: h5screate_simple_f")
+        if (exists) then
+            call h5dopen_f(patch_id,"Faces",patch_set_id, ierr, H5P_DEFAULT_F)
 
+        else
+            ! Create dataspaces for boundary condition connectivity
+            dims(1) = size(patch,1)
+            dims(2) = size(patch,2)
+            call h5screate_simple_f(2, dims, patch_space_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_patch_hdf: h5screate_simple_f")
 
-        !
-        ! Create datasets for boundary condition connectivity
-        !
-        call h5dcreate_f(patch_id,"Faces", H5T_NATIVE_INTEGER, patch_space_id, patch_set_id,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_patch_hdf: h5dcreate_f")
+            ! Create datasets for boundary condition connectivity
+            call h5dcreate_f(patch_id,"Faces", H5T_NATIVE_INTEGER, patch_space_id, patch_set_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_patch_hdf: h5dcreate_f")
+
+        end if
 
 
         !
@@ -3667,8 +3664,9 @@ contains
         ! Close groups
         !
         call h5dclose_f(patch_set_id, ierr)
-        call h5sclose_f(patch_space_id, ierr)
 
+        ! If dataset didn't already exists, then a dataspace was created and needs closed also.
+        if (.not. exists) call h5sclose_f(patch_space_id, ierr)
 
     end subroutine set_patch_hdf
     !****************************************************************************************
@@ -3685,8 +3683,6 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   10/17/2016
     !!
-    !!
-    !!
     !----------------------------------------------------------------------------------------
     function get_patch_hdf(patch_id) result(patch)
         use iso_c_binding,  only: c_ptr, c_loc
@@ -3701,7 +3697,6 @@ contains
         
 
         ! Open Faces patch data
-        ! TODO: WARNING, should replace with XI_MIN, XI_MAX, etc. somehow. Maybe not...
         call h5dopen_f(patch_id, "Faces", faces_did, ierr, H5P_DEFAULT_F)
 
 
@@ -3732,12 +3727,12 @@ contains
 
     
 
-    !>
+    !>  Set patch attribute 'Boundary State Group'
+    !!
+    !!  Exists as: P_patchname/Boundary State Group
     !!
     !!  @author Nathan A. Wukie
     !!  @date   11/8/2016
-    !!
-    !!
     !!
     !--------------------------------------------------------------------------------------
     subroutine set_patch_group_hdf(patch_id,group)

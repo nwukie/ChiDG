@@ -39,12 +39,13 @@ module type_mesh
         procedure           :: ndomains
 
 
-        ! Boundary patch procedures
-        procedure           :: add_bc_patch
-        procedure           :: get_bc_patch_group_id
+        ! Boundary patch group procedures
         procedure, private  :: new_bc_patch_group
+        procedure           :: get_bc_patch_group_id
         procedure           :: nbc_patch_groups
 
+        ! Boundary patch procedures
+        procedure           :: add_bc_patch
 
         ! Resouce management
         procedure           :: release
@@ -93,14 +94,9 @@ contains
 
 
         !
-        ! Create new domain
+        ! Create new domain, initialize
         !
         idomain_l = self%new_domain()
-
-
-        !
-        ! Set name
-        !
         self%domain(idomain_l)%name = trim(name)
 
 
@@ -280,10 +276,11 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------
-    subroutine add_bc_patch(self,domain_name, group_name, bc_connectivity, bc_ID)
+    subroutine add_bc_patch(self,domain_name, group_name, patch_name, bc_connectivity, bc_ID)
         class(mesh_t),                  intent(inout)   :: self
         character(*),                   intent(in)      :: domain_name
         character(*),                   intent(in)      :: group_name
+        character(*),                   intent(in)      :: patch_name
         type(boundary_connectivity_t),  intent(in)      :: bc_connectivity
         integer(ik),                    intent(in)      :: bc_ID
 
@@ -294,12 +291,14 @@ contains
         !   - don't create patches for 'Empty' groups. These should be left ORPHAN
         !     so that they get picked up by Chimera.
         !
-        if ( (trim(group_name) /= 'Empty') .and. &
-             (trim(group_name) /= 'empty') ) then
+        !if ( (trim(group_name) /= 'Empty') .and. &
+        !     (trim(group_name) /= 'empty') ) then
 
 
+            !
+            ! Add new group, if not already in existence
+            !
             group_ID = self%get_bc_patch_group_id(group_name)
-
             if (group_ID == NO_ID) then
                 group_ID = self%new_bc_patch_group()
                 self%bc_patch_group(group_ID)%name     = trim(group_name)
@@ -316,15 +315,18 @@ contains
             !
             ! Add bc_patch
             !
-            call self%bc_patch_group(group_ID)%add_bc_patch(self%domain(idomain), bc_connectivity, bc_ID)
+            call self%bc_patch_group(group_ID)%add_bc_patch(self%domain(idomain), patch_name, bc_connectivity, bc_ID)
 
 
-        end if
+        !end if
 
 
 
     end subroutine add_bc_patch
     !*********************************************************************************
+
+
+
 
 
 

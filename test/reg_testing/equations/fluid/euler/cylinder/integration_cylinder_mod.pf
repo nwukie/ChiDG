@@ -206,6 +206,7 @@ contains
         type(string_t)                  :: group_names(4,6)
         class(function_t),  allocatable :: fcn
         real(rk)                        :: tol
+        logical                         :: file_exists
 
         
         tol = 1.e-6_rk
@@ -368,7 +369,8 @@ contains
 
         else
 
-            call this%chidg%read_fields('cylinder_solution.h5')
+            inquire(file='cylinder_solution.h5', exist=file_exists)
+            if (file_exists) call this%chidg%read_fields('cylinder_solution.h5')
 
         end if
 
@@ -383,6 +385,8 @@ contains
     !-------------------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(cylinder),  intent(inout)   :: this
+
+        logical :: file_exists
 
         !
         ! Close ChiDG
@@ -404,7 +408,9 @@ contains
         if ( (this%getProcessRank() == GLOBAL_MASTER)   .and. &
              (this%getNumProcessesRequested() == 10)    .and. &
              (this%order == 4) ) then
-            call delete_file('cylinder_solution.h5')
+
+            inquire(file='cylinder_solution.h5', exist=file_exists)
+            if (file_exists) call delete_file('cylinder_solution.h5')
         end if
 
     end subroutine tearDown

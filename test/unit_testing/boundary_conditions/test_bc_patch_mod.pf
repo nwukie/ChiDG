@@ -124,7 +124,9 @@ contains
         !
         ! THIS IS BEING TESTED
         !
-        patch_face = bc_patch%add_face(idomain_g, idomain_l, ielement_g, ielement_l, iface)
+        bc_patch%idomain_g_ = idomain_g
+        bc_patch%idomain_l_ = idomain_l
+        patch_face = bc_patch%add_face(ielement_g, ielement_l, iface)
 
 
         !
@@ -136,11 +138,11 @@ contains
         !
         ! Test components were set correctly
         !
-        @assertEqual(bc_patch%idomain_g_%at(patch_face), idomain_g)
-        @assertEqual(bc_patch%idomain_l_%at(patch_face), idomain_l)
-        @assertEqual(bc_patch%ielement_g_%at(patch_face), ielement_g)
-        @assertEqual(bc_patch%ielement_l_%at(patch_face), ielement_l)
-        @assertEqual(bc_patch%iface_%at(patch_face), iface)
+        @assertEqual(bc_patch%idomain_g(), idomain_g)
+        @assertEqual(bc_patch%idomain_l(), idomain_l)
+        @assertEqual(bc_patch%ielement_g(patch_face), ielement_g)
+        @assertEqual(bc_patch%ielement_l(patch_face), ielement_l)
+        @assertEqual(bc_patch%iface(     patch_face), iface)
         
     end subroutine test_bc_patch__add_face__one
     !**********************************************************************************
@@ -180,7 +182,9 @@ contains
         !
         ! THIS IS BEING TESTED
         !
-        patch_face = bc_patch%add_face(idomain_g, idomain_l, ielement_g, ielement_l, iface)
+        bc_patch%idomain_g_ = idomain_g
+        bc_patch%idomain_l_ = idomain_l
+        patch_face = bc_patch%add_face(ielement_g, ielement_l, iface)
 
 
         !
@@ -192,11 +196,11 @@ contains
         !
         ! Test components were set correctly
         !
-        @assertEqual(bc_patch%idomain_g_%at(patch_face), idomain_g)
-        @assertEqual(bc_patch%idomain_l_%at(patch_face), idomain_l)
-        @assertEqual(bc_patch%ielement_g_%at(patch_face), ielement_g)
-        @assertEqual(bc_patch%ielement_l_%at(patch_face), ielement_l)
-        @assertEqual(bc_patch%iface_%at(patch_face), iface)
+        @assertEqual(bc_patch%idomain_g(), idomain_g)
+        @assertEqual(bc_patch%idomain_l(), idomain_l)
+        @assertEqual(bc_patch%ielement_g(patch_face), ielement_g)
+        @assertEqual(bc_patch%ielement_l(patch_face), ielement_l)
+        @assertEqual(bc_patch%iface(     patch_face), iface)
 
 
 
@@ -215,7 +219,9 @@ contains
         !
         ! THIS IS BEING TESTED
         !
-        patch_face = bc_patch%add_face(idomain_g, idomain_l, ielement_g, ielement_l, iface)
+        bc_patch%idomain_g_ = idomain_g
+        bc_patch%idomain_l_ = idomain_l
+        patch_face = bc_patch%add_face(ielement_g, ielement_l, iface)
 
 
         !
@@ -227,11 +233,11 @@ contains
         !
         ! Test components were set correctly
         !
-        @assertEqual(bc_patch%idomain_g_%at(patch_face), idomain_g)
-        @assertEqual(bc_patch%idomain_l_%at(patch_face), idomain_l)
-        @assertEqual(bc_patch%ielement_g_%at(patch_face), ielement_g)
-        @assertEqual(bc_patch%ielement_l_%at(patch_face), ielement_l)
-        @assertEqual(bc_patch%iface_%at(patch_face), iface)
+        @assertEqual(bc_patch%idomain_g(), idomain_g)
+        @assertEqual(bc_patch%idomain_l(), idomain_l)
+        @assertEqual(bc_patch%ielement_g(patch_face), ielement_g)
+        @assertEqual(bc_patch%ielement_l(patch_face), ielement_l)
+        @assertEqual(bc_patch%iface(     patch_face), iface)
 
 
 
@@ -283,9 +289,9 @@ contains
         !
         ! First, add a bc_patch face so there is storage allocated for element coupling
         !
-        patch_face = bc_patch%add_face(idomain_g=1, &
-                                       idomain_l=1, &
-                                       ielement_g=1,&
+        bc_patch%idomain_g_ = 1
+        bc_patch%idomain_l_ = 1
+        patch_face = bc_patch%add_face(ielement_g=1,&
                                        ielement_l=1,&
                                        iface=1)
 

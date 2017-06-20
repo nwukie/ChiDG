@@ -18,7 +18,7 @@ module type_chidg
     use type_nonlinear_solver,      only: nonlinear_solver_t
     use type_preconditioner,        only: preconditioner_t
     use type_meshdata,              only: meshdata_t
-    use type_bc_patch_data,         only: bc_patch_data_t
+    use type_domain_patch_data,     only: domain_patch_data_t
     use type_bc_state_group,        only: bc_state_group_t
     use type_bc_state,              only: bc_state_t
     use type_dict,                  only: dict_t
@@ -39,7 +39,7 @@ module type_chidg
                                           read_fields_hdf, write_fields_hdf,        &
                                           read_global_connectivity_hdf, read_weights_hdf,      &
                                           write_grids_hdf, read_equations_hdf,              &
-                                          read_prescribedmeshmotion_hdf
+                                          read_prescribedmeshmotion_hdf, write_patches_hdf
     use mod_hdf_utilities,          only: close_hdf
     use mod_partitioners,           only: partition_connectivity, send_partitions, &
                                           recv_partition
@@ -772,11 +772,10 @@ contains
         class(bc_state_t),  intent(in),     optional    :: bc_farfield
         class(bc_state_t),  intent(in),     optional    :: bc_periodic
 
-        type(bc_patch_data_t),  allocatable     :: bc_patch_data(:)
-        type(string_t)                          :: bc_group_name
+        type(domain_patch_data_t),  allocatable :: domain_patch_data(:)
+        type(string_t)                          :: group_name, patch_name
         type(bc_state_group_t), allocatable     :: bc_state_groups(:)
-        type(string_t)                          :: group_name
-        integer(ik)                             :: idom, ndomains, iface, ibc, ierr, iread, bc_ID
+        integer(ik)                             :: idom, ndomains, ipatch, ibc, ierr, iread, bc_ID
 
 
         call write_line(' ',                                  ltrim=.false., io_proc=GLOBAL_MASTER)
@@ -789,7 +788,7 @@ contains
         do iread = 0,NRANK-1
             if ( iread == IRANK ) then
 
-                call read_boundaryconditions_hdf(gridfile,bc_patch_data,bc_state_groups,self%partition)
+                call read_boundaryconditions_hdf(gridfile,domain_patch_data,bc_state_groups,self%partition)
 
             end if
             call MPI_Barrier(ChiDG_COMM,ierr)
@@ -820,21 +819,21 @@ contains
         ! Add boundary condition patch groups
         !
         call write_line('   processing patches...', ltrim=.false., io_proc=GLOBAL_MASTER)
-        ndomains = size(bc_patch_data)
+        ndomains = size(domain_patch_data)
         do idom = 1,ndomains
-            do iface = 1,NFACES
+            do ipatch = 1,domain_patch_data(idom)%patch_name%size()
 
-                bc_group_name = bc_patch_data(idom)%bc_group_name%at(iface)
-                if ( (trim(bc_group_name%get()) /= 'empty') .and. &
-                     (trim(bc_group_name%get()) /= 'Empty') )then
-                    bc_ID = self%data%get_bc_state_group_id(bc_group_name%get())
-                    if (bc_ID == NO_ID) call chidg_signal_one(FATAL,"chidg%read_boundary_conditions: bc state group was not found.", bc_group_name%get())
+                group_name = domain_patch_data(idom)%group_name%at(ipatch)
+                patch_name = domain_patch_data(idom)%patch_name%at(ipatch)
 
-                    call self%data%mesh%add_bc_patch(bc_patch_data(idom)%domain_name,               &
-                                                     bc_group_name%get(),                           &
-                                                     bc_patch_data(idom)%bc_connectivity(iface),    &
-                                                     bc_ID)
-                end if ! not empty
+                bc_ID = self%data%get_bc_state_group_id(group_name%get())
+                !if (bc_ID == NO_ID) call chidg_signal_one(FATAL,"chidg%read_boundary_conditions: bc state group was not found.", group_name%get())
+
+                call self%data%mesh%add_bc_patch(domain_patch_data(idom)%domain_name,               &
+                                                 group_name%get(),                                  &
+                                                 patch_name%get(),                                  &
+                                                 domain_patch_data(idom)%bc_connectivity(ipatch),   &
+                                                 bc_ID)
 
             end do !iface
         end do !ipatch
@@ -1073,6 +1072,7 @@ contains
         !
         call write_line("   writing to: ", file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
         call write_grids_hdf(self%data,file_name)
+        call write_patches_hdf(self%data,file_name)
 
 
         ! TODO: write_boundary_conditions
@@ -1197,7 +1197,10 @@ contains
         !
         ! Write initial solution
         !
-        if (option_write_initial) call self%write_fields('initial.h5')
+        if (option_write_initial) then
+            call self%write_mesh('initial.h5')
+            call self%write_fields('initial.h5')
+        end if
 
 
 
@@ -1242,6 +1245,7 @@ contains
             !
             if (wcount == self%data%time_manager%nwrite) then
                 write(filename, "(A,I7.7,A3)") trim(prefix)//'_', istep, '.h5'
+                call self%write_mesh(filename)
                 call self%write_fields(filename)
                 wcount = 0
             end if
@@ -1263,7 +1267,10 @@ contains
         !
         ! Write the final solution to hdf file
         !        
-        if (option_write_final) call self%write_fields(solutionfile_out)
+        if (option_write_final) then
+            call self%write_mesh(solutionfile_out)
+            call self%write_fields(solutionfile_out)
+        end if
 
 
     end subroutine run

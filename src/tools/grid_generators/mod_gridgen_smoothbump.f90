@@ -71,6 +71,8 @@ contains
         integer(ik),        allocatable             :: elements(:,:), faces(:,:)
         class(bc_state_t),  allocatable             :: inlet, outlet, wall
         real(rk),           allocatable, dimension(:,:,:)   :: xcoords, ycoords, zcoords
+        character(len=8)                            :: bc_face_strings(6)
+        character(:),   allocatable                 :: bc_face_string
 
 
 
@@ -110,13 +112,15 @@ contains
         !
         dom_id = open_domain_hdf(file_id,'01')
 
+        bc_face_strings = ["XI_MIN  ","XI_MAX  ","ETA_MIN ","ETA_MAX ","ZETA_MIN","ZETA_MAX"]
         do bcface = 1,6
 
             ! Get face node indices for boundary 'bcface'
             faces = get_block_boundary_faces_plot3d(xcoords,ycoords,zcoords,mapping=4,bcface=bcface)
 
             ! Create/Set patch face indices
-            patch_id = create_patch_hdf(dom_id,bcface)
+            bc_face_string  = trim(bc_face_strings(bcface))
+            patch_id = create_patch_hdf(dom_id,bc_face_string)
             call set_patch_hdf(patch_id,faces)
             call close_patch_hdf(patch_id)
 

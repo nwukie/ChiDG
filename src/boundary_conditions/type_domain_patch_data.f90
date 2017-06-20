@@ -1,4 +1,4 @@
-module type_bc_patch_data
+module type_domain_patch_data
     use mod_kinds,                  only: ik
     use type_bcvector,              only: bcvector_t
     use type_svector,               only: svector_t
@@ -26,14 +26,15 @@ module type_bc_patch_data
     !!  @note   Modified to use bcvector_t for holding vector of bc_operators for each face
     !!
     !------------------------------------------------------------------------------
-    type, public :: bc_patch_data_t
+    type, public :: domain_patch_data_t
 
         ! Boundary condition patch information
-        character(:),                   allocatable :: domain_name          ! Domain name the bcdata is associated with.
-        type(boundary_connectivity_t),  allocatable :: bc_connectivity(:)   ! Face connectivities for faces defining the patch.
-        type(svector_t)                             :: bc_group_name        ! Boundary State Group each face patch is associated with.
+        character(:),                   allocatable :: domain_name          ! Domain name the patches are associated with.
+        type(svector_t)                             :: patch_name           ! List of patch names
+        type(svector_t)                             :: group_name           ! List of Boundary State Groups that each patch is associated with.
+        type(boundary_connectivity_t),  allocatable :: bc_connectivity(:)   ! List of face connectivities for each patch.
 
-    end type bc_patch_data_t
+    end type domain_patch_data_t
     !******************************************************************************
 
 
@@ -53,4 +54,4 @@ module type_bc_patch_data
 
 
 
-end module type_bc_patch_data
+end module type_domain_patch_data

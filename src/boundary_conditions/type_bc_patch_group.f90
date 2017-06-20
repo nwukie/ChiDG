@@ -66,9 +66,10 @@ contains
     !!  @date   11/19/2016
     !!
     !------------------------------------------------------------------------------------------
-    subroutine add_bc_patch(self,domain,bc_connectivity,bc_ID)
+    subroutine add_bc_patch(self,domain,patch_name,bc_connectivity,bc_ID)
         class(bc_patch_group_t),        intent(inout)           :: self
         type(domain_t),                 intent(inout)           :: domain
+        character(*),                   intent(in)              :: patch_name
         type(boundary_connectivity_t),  intent(in)              :: bc_connectivity
         integer(ik),                    intent(in)              :: bc_ID
 
@@ -96,7 +97,7 @@ contains
         !
         ! Get number of elements/faces associated with boundary condition.
         !
-        nelem_bc = bc_connectivity%get_nfaces()
+        nelem_bc = bc_connectivity%nfaces()
 
 
         !
@@ -170,7 +171,12 @@ contains
                     ! only those processor that contain faces on the boundary 
                     ! actually allocate a patch.
                     !
-                    if (patch_ID == NO_ID) patch_ID = self%new_bc_patch()
+                    ! Also, store global connectivity list for IO purposes.
+                    !
+                    if (patch_ID == NO_ID) then
+                        patch_ID = self%new_bc_patch()
+                        call self%patch(patch_ID)%init(patch_name,patch_ID,domain%idomain_g,domain%idomain_l,bc_connectivity)
+                    end if
 
 
                     !
@@ -238,12 +244,9 @@ contains
                     !
                     ! Add domain, element, face index. Get face_ID, index of where the face exists in the bc_patch
                     !
-                    face_ID = self%patch(patch_ID)%add_face(domain%elems(ielem)%idomain_g,  &
-                                                            domain%elems(ielem)%idomain_l,  &
-                                                            domain%elems(ielem)%ielement_g, &
+                    face_ID = self%patch(patch_ID)%add_face(domain%elems(ielem)%ielement_g, &
                                                             domain%elems(ielem)%ielement_l, &
                                                             iface)
-
 
                     !
                     ! Inform domain face about:
@@ -257,14 +260,18 @@ contains
                     domain%faces(ielem,iface)%group_ID = self%group_ID
                     domain%faces(ielem,iface)%patch_ID = patch_ID
                     domain%faces(ielem,iface)%face_ID  = face_ID
-                    domain%faces(ielem,iface)%ftype    = BOUNDARY
+
+                    ! If associated with a boundary condition state group, reset face type.
+                    if (bc_ID /= NO_ID) then
+                        domain%faces(ielem,iface)%ftype = BOUNDARY
+                    end if
 
 
                     ! End ielem search
                     exit
 
 
-                end if
+                end if ! all(nodes_matched)
 
             end do ! ielem
 

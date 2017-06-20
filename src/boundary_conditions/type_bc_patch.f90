@@ -3,6 +3,7 @@ module type_bc_patch
     use mod_kinds,                  only: ik
     use type_ivector,               only: ivector_t
     use type_point
+    use type_boundary_connectivity, only: boundary_connectivity_t
     use type_bc_element_coupling,   only: bc_element_coupling_t
     implicit none
 
@@ -13,6 +14,18 @@ module type_bc_patch
     !!  element, and face index for each face the boundary condition is 
     !!  operating on.
     !!
+    !!  NOTE: A patch is defined only on a single domain.
+    !!
+    !!  For grouping faces across multiple domains, a bc_patch_group can be used
+    !!  to compose groups of patches, each containing its own contribution from
+    !!  a single domain.
+    !!
+    !!  NOTE: The patch entries are only those elements/faces that have been
+    !!        detected on the local processor. HOWEVER, the connectivity
+    !!        list is the connectivity of the patch for the global problem;
+    !!        including those elements/faces that are not located on the current 
+    !!        processor.
+    !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/30/2016
     !!  @date   2/27/2017   ! updated for added generality
@@ -22,12 +35,15 @@ module type_bc_patch
     !----------------------------------------------------------------------------
     type, public :: bc_patch_t
 
-        integer(ik)                     :: patch_ID
+        character(:),   allocatable     :: name             ! Patch name
+        integer(ik)                     :: patch_ID         ! proc-local patch_ID within a patch group.
+        type(boundary_connectivity_t)   :: connectivity     ! global patch connectivity
 
         ! List of faces. Each combination(domain,element,face) in the
         ! vectors defines a face in the patch.
-        type(ivector_t)                 :: idomain_g_
-        type(ivector_t)                 :: idomain_l_
+        integer(ik)                     :: idomain_g_
+        integer(ik)                     :: idomain_l_
+
         type(ivector_t)                 :: ielement_g_
         type(ivector_t)                 :: ielement_l_
         type(ivector_t)                 :: iface_
@@ -37,6 +53,8 @@ module type_bc_patch
         type(bc_element_coupling_t), allocatable    :: coupling(:)
 
     contains
+
+        procedure   :: init
 
         ! Patch faces
         procedure   :: add_face
@@ -74,6 +92,36 @@ contains
 
 
 
+
+    !>
+    !!
+    !!
+    !!
+    !!  TODO: TEST
+    !!
+    !----------------------------------------------------------------------------
+    subroutine init(self,patch_name,patch_ID,idomain_g,idomain_l,bc_connectivity)
+        class(bc_patch_t),              intent(inout)   :: self
+        character(*),                   intent(in)      :: patch_name
+        integer(ik),                    intent(in)      :: patch_ID
+        integer(ik),                    intent(in)      :: idomain_g
+        integer(ik),                    intent(in)      :: idomain_l
+        type(boundary_connectivity_t),  intent(in)      :: bc_connectivity
+
+
+        self%name         = trim(patch_name)
+        self%patch_ID     = patch_ID
+        self%idomain_g_   = idomain_g
+        self%idomain_l_   = idomain_l
+        self%connectivity = bc_connectivity
+
+    end subroutine init
+    !****************************************************************************
+
+
+
+
+
     !>  Add a face to the boundary condition patch.
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -81,10 +129,8 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------
-    function add_face(self,idomain_g,idomain_l,ielement_g,ielement_l,iface) result(iface_bc)
+    function add_face(self,ielement_g,ielement_l,iface) result(iface_bc)
         class(bc_patch_t),  intent(inout)   :: self
-        integer(ik),        intent(in)      :: idomain_g
-        integer(ik),        intent(in)      :: idomain_l
         integer(ik),        intent(in)      :: ielement_g
         integer(ik),        intent(in)      :: ielement_l
         integer(ik),        intent(in)      :: iface
@@ -94,8 +140,6 @@ contains
         !
         ! Add face to bc_patch list
         !
-        call self%idomain_g_%push_back(idomain_g)
-        call self%idomain_l_%push_back(idomain_l)
         call self%ielement_g_%push_back(ielement_g)
         call self%ielement_l_%push_back(ielement_l)
         call self%iface_%push_back(iface)
@@ -153,13 +197,12 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------
-    function idomain_g(self,face_ID) result(idomain_g_)
+    function idomain_g(self) result(idomain_g_)
         class(bc_patch_t),  intent(in)  :: self
-        integer(ik),        intent(in)  :: face_ID
 
         integer(ik) :: idomain_g_
 
-        idomain_g_ = self%idomain_g_%at(face_ID)
+        idomain_g_ = self%idomain_g_
 
     end function idomain_g
     !*******************************************************************************
@@ -172,13 +215,12 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------
-    function idomain_l(self,face_ID) result(idomain_l_)
+    function idomain_l(self) result(idomain_l_)
         class(bc_patch_t),  intent(in)  :: self
-        integer(ik),        intent(in)  :: face_ID
 
         integer(ik) :: idomain_l_
 
-        idomain_l_ = self%idomain_l_%at(face_ID)
+        idomain_l_ = self%idomain_l_
 
     end function idomain_l
     !********************************************************************************

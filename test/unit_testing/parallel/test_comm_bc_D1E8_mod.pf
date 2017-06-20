@@ -196,8 +196,8 @@ contains
                         !
                         ! Get block-element index of current face_ID_coupled
                         !
-                        idomain_g  = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%idomain_g( face_ID_coupled)
-                        idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%idomain_l( face_ID_coupled)
+                        idomain_g  = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%idomain_g()
+                        idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%idomain_l()
                         ielement_g = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%ielement_g(face_ID_coupled)
                         ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%ielement_l(face_ID_coupled)
                         iface      = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%iface(face_ID_coupled)
@@ -255,14 +255,14 @@ contains
                 do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
                     do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
 
-                        idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l( face_ID)
+                        idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l()
                         ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
                         
                         !
                         ! Get block-element index of current face_ID_coupled
                         !
-                        call idomain_g_vector%push_back(  mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g( face_ID) )
-                        call idomain_l_vector%push_back(  mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l( face_ID) )
+                        call idomain_g_vector%push_back(  mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g() )
+                        call idomain_l_vector%push_back(  mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l() )
                         call ielement_g_vector%push_back( mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID) )
                         call ielement_l_vector%push_back( mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID) )
                         call iface_vector%push_back(      mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(     face_ID) )

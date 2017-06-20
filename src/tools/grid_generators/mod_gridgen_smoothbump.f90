@@ -12,7 +12,7 @@ module mod_gridgen_smoothbump
                                       close_hdf, set_patch_hdf, set_contains_grid_hdf,              &
                                       open_bc_group_hdf, close_bc_group_hdf, create_bc_state_group_hdf,   &
                                       set_patch_group_hdf, open_file_hdf, create_patch_hdf,         &
-                                      close_patch_hdf
+                                      open_patch_hdf, close_patch_hdf
     use hdf5
 
     use type_bc_state,          only: bc_state_t
@@ -191,7 +191,8 @@ contains
         patch_names = ['XI_MIN  ','XI_MAX  ', 'ETA_MIN ', 'ETA_MAX ', 'ZETA_MIN', 'ZETA_MAX']
         do bcface = 1,size(patch_names)
 
-            call h5gopen_f(dom_id,'BoundaryConditions/'//trim(adjustl(patch_names(bcface))),patch_id,ierr)
+            !call h5gopen_f(dom_id,'BoundaryConditions/'//trim(adjustl(patch_names(bcface))),patch_id,ierr)
+            patch_id = open_patch_hdf(dom_id,trim(patch_names(bcface)))
 
 
             ! Set bc_group

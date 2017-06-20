@@ -629,10 +629,10 @@ contains
         ! Set ChiDG components
         !
         call this%chidg%set('Solution Order',   integer_input=this%order)
-        call this%chidg%set('time_integrator',  algorithm=time_integrator)
-        call this%chidg%set('nonlinear_solver', algorithm=nonlinear_solver, options=noptions)
-        call this%chidg%set('linear_solver',    algorithm=linear_solver,    options=loptions)
-        call this%chidg%set('preconditioner',   algorithm=preconditioner)
+        call this%chidg%set('Time Integrator',  algorithm=time_integrator)
+        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
 
 
         !

@@ -288,13 +288,14 @@ contains
                     
 
                     !
-                    ! Write nodes
+                    ! Write nodes, displacements, velocities, coordinate system
                     !
                     mapping = data%mesh%domain(idom)%nterms_s - 1
-                    call set_domain_coordinate_order_hdf(        domain_id,mapping                      )
-                    call set_domain_coordinates_hdf(             domain_id,data%mesh%domain(idom)%nodes )
-                    call set_domain_coordinate_displacements_hdf(domain_id,data%mesh%domain(idom)%dnodes)
-                    call set_domain_coordinate_velocities_hdf(   domain_id,data%mesh%domain(idom)%vnodes)
+                    call set_domain_coordinate_order_hdf(        domain_id,mapping                                 )
+                    call set_domain_coordinates_hdf(             domain_id,data%mesh%domain(idom)%nodes            )
+                    call set_domain_coordinate_displacements_hdf(domain_id,data%mesh%domain(idom)%dnodes           )
+                    call set_domain_coordinate_velocities_hdf(   domain_id,data%mesh%domain(idom)%vnodes           )
+                    call set_domain_coordinate_system_hdf(       domain_id,data%mesh%domain(idom)%coordinate_system)
 
 
                     !
@@ -315,8 +316,6 @@ contains
                     nelements_g = data%mesh%domain(idom)%get_nelements_global()
                     call set_domain_connectivity_partition_hdf(domain_id,nelements_g,elements)
 
-                    ! Set coordinate system
-                    call set_domain_coordinate_system_hdf(domain_id,data%mesh%domain(idom)%coordinate_system)
 
                     ! Write equation set attribute
                     call set_domain_equation_set_hdf(domain_id,trim(data%eqnset(idom)%name))

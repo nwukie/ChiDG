@@ -198,10 +198,14 @@ contains
         !
         ! Compute Fourier coefficient modes
         !
-        associate ( ntimes   => data%time_manager%time_lev%size(),    &
-                    nfreq    => data%time_manager%freq_data%size(),   &
-                    time_lev => data%time_manager%time_lev%data(),    &
-                    freq     => data%time_manager%freq_data%data())
+        !associate ( ntimes   => data%time_manager%time_lev%size(),    &
+        !            nfreq    => data%time_manager%freq_data%size(),   &
+        !            time_lev => data%time_manager%time_lev%data(),    &
+        !            freq     => data%time_manager%freq_data%data())
+        associate ( ntimes   => size(data%time_manager%times),  &
+                    nfreq    => size(data%time_manager%freqs),  &
+                    time_lev => data%time_manager%times,        &
+                    freq     => data%time_manager%freqs)
           
             if (allocated(E)) deallocate(E)
             allocate(E(ntimes,ntimes), stat=ierr)

@@ -35,12 +35,8 @@ module type_chidg
     use mod_chidg_mpi,              only: chidg_mpi_init, chidg_mpi_finalize,   &
                                           IRANK, NRANK, ChiDG_COMM
 
-    use mod_hdfio,                  only: read_grids_hdf, read_boundaryconditions_hdf,   &
-                                          read_fields_hdf, write_fields_hdf,        &
-                                          read_global_connectivity_hdf, read_weights_hdf,      &
-                                          write_grids_hdf, read_equations_hdf,              &
-                                          read_prescribedmeshmotion_hdf, write_patches_hdf
-    use mod_hdf_utilities,          only: close_hdf
+    use mod_hdfio
+    use mod_hdf_utilities
     use mod_partitioners,           only: partition_connectivity, send_partitions, &
                                           recv_partition
     use mpi_f08
@@ -694,7 +690,7 @@ contains
         do iread = 0,NRANK-1
             if ( iread == IRANK ) then
 
-                call read_equations_hdf(gridfile, self%data)
+                call read_equations_hdf(self%data, gridfile)
                 call read_grids_hdf(gridfile,self%partition,meshdata)
 
             end if
@@ -1062,20 +1058,71 @@ contains
         class(chidg_t),     intent(inout)           :: self
         character(*),       intent(in)              :: file_name
 
+        integer(ik)     :: ierr, iproc, iwrite
+        integer(HID_T)  :: fid
+        logical         :: file_exists
 
         call write_line(' ', ltrim=.false., io_proc=GLOBAL_MASTER)
         call write_line('Writing mesh... ', io_proc=GLOBAL_MASTER)
+
+
+
+        !
+        ! Check for file existence
+        !
+        ! Create new file if necessary
+        !   Barrier makes sure everyone has called file_exists before
+        !   one potentially gets created by another processor
+        !
+        file_exists = check_file_exists_hdf(file_name)
+        call MPI_Barrier(ChiDG_COMM,ierr)
+        if (.not. file_exists) then
+
+                ! Create a new file
+                if (IRANK == GLOBAL_MASTER) then
+                    call initialize_file_hdf(file_name)
+                end if
+                call MPI_Barrier(ChiDG_COMM,ierr)
+
+                ! Initialize the file structure.
+                do iproc = 0,NRANK-1
+                    if (iproc == IRANK) then
+                        fid = open_file_hdf(file_name)
+                        call initialize_file_structure_hdf(fid,self%data)
+                        call close_file_hdf(fid)
+                    end if
+                    call MPI_Barrier(ChiDG_COMM,ierr)
+                end do
+
+        end if
+        call MPI_Barrier(ChiDG_COMM,ierr)
+
+
+
+
+
+
 
 
         !
         ! Call grid reader based on file extension
         !
         call write_line("   writing to: ", file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
-        call write_grids_hdf(self%data,file_name)
-        call write_patches_hdf(self%data,file_name)
 
+        !
+        ! Each process, write its own portion of the solution
+        !
+        do iwrite = 0,NRANK-1
+            if ( iwrite == IRANK ) then
 
-        ! TODO: write_boundary_conditions
+                call write_grids_hdf(self%data,file_name)
+                call write_boundaryconditions_hdf(self%data,file_name)
+                call write_equations_hdf(self%data,file_name)
+
+            end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do
+
 
 
         call write_line("Done writing mesh.", io_proc=GLOBAL_MASTER)

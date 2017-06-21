@@ -8,23 +8,12 @@ module mod_chidg_edit_boundaryconditions
     use type_bc_state,      only: bc_state_t
     use type_svector,       only: svector_t
     use type_function,      only: function_t
+
+    use mod_hdf_utilities
     use hdf5
     use h5lt
 
     use mod_chidg_edit_printoverview,   only: print_overview
-    use mod_hdf_utilities,     only: get_ndomains_hdf, get_domain_names_hdf,            &
-                                     get_domain_name_hdf, get_bc_state_names_hdf,       &
-                                     delete_group_attributes_hdf,                       &
-                                     add_bc_state_hdf, set_bc_property_function_hdf,    &
-                                     create_bc_state_group_hdf, remove_bc_state_group_hdf,    &
-                                     get_bc_state_group_names_hdf,                      &
-                                     get_bc_state_group_family_hdf,                     &
-                                     get_patch_group_hdf, set_patch_group_hdf,    &
-                                     check_bc_property_exists_hdf, remove_bc_state_hdf, &
-                                     check_bc_state_exists_hdf, check_link_exists_hdf,  &
-                                     open_bc_group_hdf, close_bc_group_hdf,             &
-                                     open_domain_hdf, close_domain_hdf,                 &
-                                     check_domain_exists_hdf, open_patch_hdf, close_patch_hdf
     implicit none
 
 
@@ -1015,7 +1004,7 @@ contains
         do igroup = 1,bc_state_groups%size()
 
             group_name = bc_state_groups%at(igroup)
-            bcgroup_id = open_bc_group_hdf(fid,group_name%get())
+            bcgroup_id = open_bc_state_group_hdf(fid,group_name%get())
 
             group_family = get_bc_state_group_family_hdf(bcgroup_id)
 
@@ -1039,7 +1028,7 @@ contains
                 call add_to_line(trim(bc_state_name%get()), columns=.true., column_width=25,color=color,bold=bold)
             end do
 
-            call close_bc_group_hdf(bcgroup_id)
+            call close_bc_state_group_hdf(bcgroup_id)
 
             call send_line()
 

@@ -195,7 +195,7 @@ contains
                 ! Initialize new zone in the TecIO file for the current domain
                 !
                 zonestring = 'Domain '//data%mesh%domain(idom)%name
-                call init_tecio_volume_zone(zonestring,data%mesh%domain(idom),itime)
+                call init_tecio_volume_zone(zonestring,data%mesh%domain(idom),data%time_manager%times(itime))
 
 
                 xilim   = npts
@@ -446,7 +446,7 @@ contains
                 ! Initialize new zone in the TecIO file for the current domain
                 !
                 zonestring = data%mesh%bc_patch_group(isurface)%name
-                call init_tecio_surface_zone(zonestring,data%mesh%bc_patch_group(isurface),itime)
+                call init_tecio_surface_zone(zonestring,data%mesh%bc_patch_group(isurface),data%time_manager%times(itime))
 
 
 
@@ -819,10 +819,10 @@ contains
     !!  @param[in]  timeindex   Integer index of time strand.
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine init_tecio_volume_zone(zonetitle,domain,timeindex)
+    subroutine init_tecio_volume_zone(zonetitle,domain,solutiontime)
             character(*),   intent(in)  :: zonetitle
             type(domain_t), intent(in)  :: domain
-            integer(ik),    intent(in)  :: timeindex
+            real(rk),       intent(in)  :: solutiontime
 
             integer(TEC)   :: zonetype                  = 5    ! 5 = FEBRICK
             integer(TEC)   :: numpts
@@ -831,7 +831,7 @@ contains
             integer(TEC)   :: icellmax                  = 0    ! not used
             integer(TEC)   :: jcellmax                  = 0    ! not used
             integer(TEC)   :: kcellmax                  = 0    ! not used
-            real(rk)       :: solutiontime              = 0._rk
+!            real(rk)       :: solutiontime              = 0._rk
 !            integer(TEC)   :: strandid                  = 0    ! strandID is now a module variable
             integer(TEC)   :: parentzone                = 0
             integer(TEC)   :: isblock                   = 1
@@ -853,7 +853,7 @@ contains
             ! Handle time index
             !
             strandID = strandID + 1
-            solutiontime = real(timeindex,rk)
+            !solutiontime = real(timeindex,rk)
 
 
             !
@@ -911,10 +911,10 @@ contains
     !!  @param[in]  timeindex   Integer index of time strand.
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine init_tecio_surface_zone(zonetitle,patch_group,timeindex)
+    subroutine init_tecio_surface_zone(zonetitle,patch_group,solutiontime)
             character(*),           intent(in)  :: zonetitle
             type(bc_patch_group_t), intent(in)  :: patch_group
-            integer(ik),            intent(in)  :: timeindex
+            real(rk),               intent(in)  :: solutiontime
 
             integer(TEC)   :: zonetype                  = 3    ! 3 = FEQUADRILATERAL
             integer(TEC)   :: numpts
@@ -923,7 +923,7 @@ contains
             integer(TEC)   :: icellmax                  = 0    ! not used
             integer(TEC)   :: jcellmax                  = 0    ! not used
             integer(TEC)   :: kcellmax                  = 0    ! not used
-            real(rk)       :: solutiontime              = 0._rk
+!            real(rk)       :: solutiontime              = 0._rk
 !            integer(TEC)   :: strandid                  = 0    ! strandID is now a module variable
             integer(TEC)   :: parentzone                = 0
             integer(TEC)   :: isblock                   = 1
@@ -945,7 +945,7 @@ contains
             ! Handle time index
             !
             strandID = strandID + 1
-            solutiontime = real(timeindex,rk)
+            !solutiontime = real(timeindex,rk)
 
 
             !

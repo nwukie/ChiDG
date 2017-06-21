@@ -12,9 +12,9 @@
 !!      read_patches_hdf
 !!      read_bc_state_groups_hdf
 !!
-!!  TODO: write_boundaryconditions_hdf
+!!  write_boundaryconditions_hdf
 !!      write_patches_hdf
-!!  TODO:   write_bc_state_groups_hdf
+!!      write_bc_state_groups_hdf
 !!
 !!  read_fields_hdf
 !!      read_domain_field_hdf
@@ -229,111 +229,69 @@ contains
         character(:),   allocatable     :: field_name, domain_name
         integer(HID_T)                  :: fid, domain_id
         integer(HSIZE_T)                :: adim
-        integer(ik)                     :: idom, ieqn, neqns, iwrite, time, &
+        integer(ik)                     :: idom, ieqn, neqns, time, &
                                            field_index, iproc, nelements_g, ielem
         integer                         :: ierr, order_s
         logical                         :: file_exists
         integer(ik)                     :: itime, mapping, connectivity_size
         integer(ik),    allocatable     :: elements(:,:)
 
-        !
-        ! Check for file existence
-        !
-        file_exists = check_file_exists_hdf(file_name)
 
+
+        fid = open_file_hdf(file_name)
 
         !
-        ! Create new file if necessary
+        ! Write solution for each domain
         !
-        if (.not. file_exists) then
+        do idom = 1,data%mesh%ndomains()
 
-                ! Create a new file
-                if (IRANK == GLOBAL_MASTER) then
-                    call initialize_file_hdf(file_name)
-                end if
-                call MPI_Barrier(ChiDG_COMM,ierr)
+            domain_name = data%mesh%domain(idom)%name
+            domain_id   = open_domain_hdf(fid,trim(domain_name))
+            
 
-                ! Initialize the file structure.
-                do iproc = 0,NRANK-1
-                    if (iproc == IRANK) then
-                        fid = open_file_hdf(file_name)
-                        call initialize_file_structure_hdf(fid,data)
-                        call close_file_hdf(fid)
-                    end if
-                    call MPI_Barrier(ChiDG_COMM,ierr)
-                end do
-
-            else
-
-        end if
+            !
+            ! Write nodes, displacements, velocities, coordinate system
+            !
+            mapping = data%mesh%domain(idom)%nterms_s - 1
+            call set_domain_coordinate_order_hdf(        domain_id,mapping                                 )
+            call set_domain_coordinates_hdf(             domain_id,data%mesh%domain(idom)%nodes            )
+            call set_domain_coordinate_displacements_hdf(domain_id,data%mesh%domain(idom)%dnodes           )
+            call set_domain_coordinate_velocities_hdf(   domain_id,data%mesh%domain(idom)%vnodes           )
+            call set_domain_coordinate_system_hdf(       domain_id,data%mesh%domain(idom)%coordinate_system)
 
 
+            !
+            ! Assemble element connectivities
+            !
+            connectivity_size = size(data%mesh%domain(idom)%elems(1)%connectivity%data)
+            
+            if (allocated(elements)) deallocate(elements)
+            allocate(elements(data%mesh%domain(idom)%nelem, connectivity_size), stat=ierr)
+            if (ierr /= 0) call AllocationError
 
-        !
-        ! Each process, write its own portion of the solution
-        !
-        do iwrite = 0,NRANK-1
-            if ( iwrite == IRANK ) then
-
-
-                fid = open_file_hdf(file_name)
-
-                !
-                ! Write solution for each domain
-                !
-                do idom = 1,data%mesh%ndomains()
-
-                    domain_name = data%mesh%domain(idom)%name
-                    domain_id   = open_domain_hdf(fid,trim(domain_name))
-                    
-
-                    !
-                    ! Write nodes, displacements, velocities, coordinate system
-                    !
-                    mapping = data%mesh%domain(idom)%nterms_s - 1
-                    call set_domain_coordinate_order_hdf(        domain_id,mapping                                 )
-                    call set_domain_coordinates_hdf(             domain_id,data%mesh%domain(idom)%nodes            )
-                    call set_domain_coordinate_displacements_hdf(domain_id,data%mesh%domain(idom)%dnodes           )
-                    call set_domain_coordinate_velocities_hdf(   domain_id,data%mesh%domain(idom)%vnodes           )
-                    call set_domain_coordinate_system_hdf(       domain_id,data%mesh%domain(idom)%coordinate_system)
+            do ielem = 1,data%mesh%domain(idom)%nelem
+                elements(ielem,:) = data%mesh%domain(idom)%elems(ielem)%connectivity%data
+            end do
 
 
-                    !
-                    ! Assemble element connectivities
-                    !
-                    connectivity_size = size(data%mesh%domain(idom)%elems(1)%connectivity%data)
-                    
-                    if (allocated(elements)) deallocate(elements)
-                    allocate(elements(data%mesh%domain(idom)%nelem, connectivity_size), stat=ierr)
-                    if (ierr /= 0) call AllocationError
-
-                    do ielem = 1,data%mesh%domain(idom)%nelem
-                        elements(ielem,:) = data%mesh%domain(idom)%elems(ielem)%connectivity%data
-                    end do
+            ! Set elements
+            nelements_g = data%mesh%domain(idom)%get_nelements_global()
+            call set_domain_connectivity_partition_hdf(domain_id,nelements_g,elements)
 
 
-                    ! Set elements
-                    nelements_g = data%mesh%domain(idom)%get_nelements_global()
-                    call set_domain_connectivity_partition_hdf(domain_id,nelements_g,elements)
-
-
-                    ! Write equation set attribute
-                    call set_domain_equation_set_hdf(domain_id,trim(data%eqnset(idom)%name))
+            ! Write equation set attribute
+            call set_domain_equation_set_hdf(domain_id,trim(data%eqnset(idom)%name))
 
 
 
-                    call close_domain_hdf(domain_id)
+            call close_domain_hdf(domain_id)
 
 
-                end do ! idom
+        end do ! idom
 
 
-                call set_contains_grid_hdf(fid,"True")
-                call close_file_hdf(fid)
-
-            end if
-            call MPI_Barrier(ChiDG_COMM,ierr)
-        end do
+        call set_contains_grid_hdf(fid,"True")
+        call close_file_hdf(fid)
 
     end subroutine write_grids_hdf
     !*****************************************************************************************
@@ -364,6 +322,7 @@ contains
         integer(HID_T)                  :: fid, domain_id
         integer                         :: ierr
 
+        real(rk),           allocatable :: times(:)
         integer(ik)                     :: idom, ndomains, ieqn, neqns, itime, ntime, eqn_ID, iread
         character(:),       allocatable :: field_name, user_msg, domain_name
         logical                         :: file_exists, contains_solution
@@ -401,7 +360,9 @@ contains
                 !
                 ! Read solution for each time step
                 !
-                ntime = get_ntimes_hdf(fid)
+                times = get_times_hdf(fid)
+                ntime = size(times)
+                !ntime = get_ntimes_hdf(fid)
 
 
                 !
@@ -559,12 +520,6 @@ contains
 
 
                 fid = open_file_hdf(file_name)
-                !
-                ! Set the attribute times to the hdf file
-                !
-                call set_ntimes_hdf(fid,data%ntime())
-
-
 
                 !
                 ! Write solution for each domain
@@ -572,8 +527,8 @@ contains
                 do idom = 1,data%mesh%ndomains()
 
                     domain_name = data%mesh%domain(idom)%name
-                    domain_id   = open_domain_hdf(fid,trim(domain_name))
                     eqn_ID      = data%mesh%domain(idom)%eqn_ID
+                    domain_id   = open_domain_hdf(fid,trim(domain_name))
                     
 
                     !
@@ -593,38 +548,28 @@ contains
                     !
                     call set_domain_field_order_hdf(domain_id,order_s)
                     
+
                     !
                     ! Loop through time levels
                     !
                     do itime = 1,data%ntime()
 
-
-                        !
                         ! If specified, only write specified field.
-                        !
                         if (present(field)) then
-
                             field_index = data%eqnset(eqn_ID)%prop%get_primary_field_index(trim(field))
 
                             if (field_index /= 0) then
                                 call write_domain_field_hdf(domain_id,data,field,itime)
                             end if
 
-
-                        !
                         ! Else, write each field in the file.
-                        !
                         else
-
-                            !
                             ! For each field: get the name, write to file
-                            ! 
                             neqns = data%eqnset(eqn_ID)%prop%nprimary_fields()
                             do ieqn = 1,neqns
                                 field_name = trim(data%eqnset(eqn_ID)%prop%get_primary_field_name(ieqn))
                                 call write_domain_field_hdf(domain_id,data,field_name,itime)
                             end do ! ieqn
-
                         end if
 
                     end do ! itime
@@ -1120,12 +1065,8 @@ contains
         type(bc_state_group_t),     intent(inout), allocatable  :: bc_state_groups(:)
         type(partition_t),          intent(in)                  :: partition
 
-        character(len=10)       :: faces(NFACES)
         integer(HID_T)          :: fid
         integer                 :: ierr, nconn
-
-
-        faces = ["  XI_MIN","  XI_MAX"," ETA_MIN"," ETA_MAX","ZETA_MIN","ZETA_MAX"]
 
 
         fid = open_file_hdf(filename)
@@ -1157,6 +1098,46 @@ contains
     end subroutine read_boundaryconditions_hdf
     !****************************************************************************************
 
+
+
+
+
+
+
+
+    !>  Read boundary conditions from HDF5 file in ChiDG format and return data in bcdata_t
+    !!  container. The calling procedure can then use the returned bcdata_t to initialize
+    !!  boundary conditions.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/9/2016
+    !!
+    !!  @param[in]      filename    String of the HDF5 file to be read.
+    !!  @param[inout]   bcdata(:)   Array of bcdata_t instances, one for each domain. 
+    !!                              These will be returned with data about the boundary
+    !!                              conditions that can be used for initialization.
+    !!  @param[in]      partition   Partition information to only read boundary conditions 
+    !!                              for the domains in the partition
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine write_boundaryconditions_hdf(data,file_name)
+        type(chidg_data_t), intent(in)  :: data
+        character(*),       intent(in)  :: file_name
+
+
+        !
+        ! Read domain patches
+        !
+        call write_patches_hdf(data,file_name)
+
+
+        !
+        ! Read boundary condition state groups
+        !
+        call write_bc_state_groups_hdf(data,file_name)
+
+    end subroutine write_boundaryconditions_hdf
+    !****************************************************************************************
 
 
 
@@ -1316,7 +1297,7 @@ contains
 
             ! Open face boundary condition group
             group_name = bc_group_names%at(igroup)
-            group_id = open_bc_group_hdf(fid,group_name%get())
+            group_id = open_bc_state_group_hdf(fid,group_name%get())
 
             !
             ! Get bc_group Family attribute.
@@ -1342,7 +1323,7 @@ contains
 
 
             ! Close face boundary condition group
-            call close_bc_group_hdf(group_id)
+            call close_bc_state_group_hdf(group_id)
 
         end do !igroup
 
@@ -1374,106 +1355,57 @@ contains
         character(*),       intent(in)  :: file_name
 
         logical                     :: file_exists, exists
-        integer(ik)                 :: iproc, iwrite, idom, igroup, ipatch, ierr, iface, nfaces, npts
+        integer(ik)                 :: idom, igroup, ipatch, ierr, iface, nfaces, npts
         integer(ik),    allocatable :: faces(:,:)
         integer(HID_T)              :: fid, dom_id, patch_id
         character(:),   allocatable :: patch_name, domain_name, group_name
 
+        fid = open_file_hdf(file_name)
+
+        do igroup = 1,data%mesh%nbc_patch_groups()
+            do ipatch = 1,data%mesh%bc_patch_group(igroup)%npatches()
+
+                idom        = data%mesh%bc_patch_group(igroup)%patch(ipatch)%idomain_l()
+                patch_name  = data%mesh%bc_patch_group(igroup)%patch(ipatch)%name
+                group_name  = data%mesh%bc_patch_group(igroup)%name
+                domain_name = data%mesh%domain(idom)%name
 
 
-        !
-        ! Check for file existence
-        !
-        file_exists = check_file_exists_hdf(file_name)
+                dom_id = open_domain_hdf(fid,domain_name)
+
+                ! Check if patch exists        
+                exists = check_link_exists_hdf(dom_id,"Patches/"//"P_"//trim(adjustl(patch_name)))
+                if (.not. exists) then
+                    patch_id = create_patch_hdf(dom_id,trim(adjustl(patch_name)))
+                else
+                    patch_id = open_patch_hdf(dom_id,trim(adjustl(patch_name)))
+                end if 
 
 
-        !
-        ! Create new file if necessary
-        !   Barrier makes sure everyone has called file_exists before
-        !   one potentially gets created by another processor
-        !
-        call MPI_Barrier(ChiDG_COMM,ierr)
-        if (.not. file_exists) then
+                ! Allocate array to assemble connectivities
+                nfaces = data%mesh%bc_patch_group(igroup)%patch(ipatch)%connectivity%nfaces()
+                npts   = size(data%mesh%bc_patch_group(igroup)%patch(ipatch)%connectivity%data(1)%data)
+                if (allocated(faces)) deallocate(faces)
+                allocate(faces(nfaces,npts), stat=ierr)
+                if (ierr /= 0) call AllocationError
 
-                ! Create a new file
-                if (IRANK == GLOBAL_MASTER) then
-                    call initialize_file_hdf(file_name)
-                end if
-                call MPI_Barrier(ChiDG_COMM,ierr)
-
-                ! Initialize the file structure.
-                do iproc = 0,NRANK-1
-                    if (iproc == IRANK) then
-                        fid = open_file_hdf(file_name)
-                        call initialize_file_structure_hdf(fid,data)
-                        call close_file_hdf(fid)
-                    end if
-                    call MPI_Barrier(ChiDG_COMM,ierr)
+                ! Assemble patch connectivities
+                do iface = 1,nfaces
+                    faces(iface,:) = data%mesh%bc_patch_group(igroup)%patch(ipatch)%connectivity%data(iface)%data
                 end do
 
-        end if
-        call MPI_Barrier(ChiDG_COMM,ierr)
+                ! Set connectivies and group association
+                call set_patch_hdf(patch_id,faces)
+                call set_patch_group_hdf(patch_id,trim(group_name))
+
+                call close_patch_hdf(patch_id)
+                call close_domain_hdf(dom_id)
+
+            end do !ipatch
+        end do !igroup
 
 
-
-        !
-        ! Each process, write its own portion of the solution
-        !
-        do iwrite = 0,NRANK-1
-            if ( iwrite == IRANK ) then
-
-                fid = open_file_hdf(file_name)
-
-                do igroup = 1,data%mesh%nbc_patch_groups()
-                    do ipatch = 1,data%mesh%bc_patch_group(igroup)%npatches()
-
-                        idom        = data%mesh%bc_patch_group(igroup)%patch(ipatch)%idomain_l()
-                        patch_name  = data%mesh%bc_patch_group(igroup)%patch(ipatch)%name
-                        group_name  = data%mesh%bc_patch_group(igroup)%name
-                        domain_name = data%mesh%domain(idom)%name
-
-
-                        dom_id = open_domain_hdf(fid,domain_name)
-
-                        ! Check if patch exists        
-                        exists = check_link_exists_hdf(dom_id,"Patches/"//"P_"//trim(adjustl(patch_name)))
-                        if (.not. exists) then
-                            patch_id = create_patch_hdf(dom_id,trim(adjustl(patch_name)))
-                        else
-                            patch_id = open_patch_hdf(dom_id,trim(adjustl(patch_name)))
-                        end if 
-
-
-                        ! Allocate array to assemble connectivities
-                        nfaces = data%mesh%bc_patch_group(igroup)%patch(ipatch)%connectivity%nfaces()
-                        npts   = size(data%mesh%bc_patch_group(igroup)%patch(ipatch)%connectivity%data(1)%data)
-                        if (allocated(faces)) deallocate(faces)
-                        allocate(faces(nfaces,npts), stat=ierr)
-                        if (ierr /= 0) call AllocationError
-
-                        ! Assemble patch connectivities
-                        do iface = 1,nfaces
-                            faces(iface,:) = data%mesh%bc_patch_group(igroup)%patch(ipatch)%connectivity%data(iface)%data
-                        end do
-
-                        ! Set connectivies and group association
-                        call set_patch_hdf(patch_id,faces)
-                        call set_patch_group_hdf(patch_id,trim(group_name))
-
-                        call close_patch_hdf(patch_id)
-                        call close_domain_hdf(dom_id)
-
-                    end do !ipatch
-                end do !igroup
-
-
-
-                call close_file_hdf(fid)
-
-            end if
-            call MPI_Barrier(ChiDG_COMM,ierr)
-        end do
-
+        call close_file_hdf(fid)
 
 
     end subroutine write_patches_hdf
@@ -1496,97 +1428,49 @@ contains
         type(chidg_data_t), intent(in)  :: data
         character(*),       intent(in)  :: file_name
 
-        integer(ik) :: igroup, istate
+        integer(ik)                 :: igroup, istate, ierr
+        integer(HID_T)              :: fid, bcsg_id
+        character(:),   allocatable :: group_name, state_name
+        logical                     :: exists
+
+        fid = open_file_hdf(file_name)
 
 
+        !
+        ! Add boundary condition state groups to the file.
+        !
         do igroup = 1,data%nbc_state_groups()
+            group_name = data%bc_state_group(igroup)%get_name()
+
+            !
+            ! If the group already exists, completely remove so we don't end up with
+            ! conflicting settings.
+            !
+            exists = check_link_exists_hdf(fid,"BCSG_"//group_name)
+            if (exists) call remove_bc_state_group_hdf(fid,trim(group_name))
+
+            !
+            ! Add all states
+            !
+            call create_bc_state_group_hdf(fid,trim(group_name))
+            bcsg_id = open_bc_state_group_hdf(fid,trim(group_name))
 
             do istate = 1,data%bc_state_group(igroup)%nbc_states()
 
+                state_name = data%bc_state_group(igroup)%bc_state(istate)%state%name
+                call add_bc_state_hdf(bcsg_id, data%bc_state_group(igroup)%bc_state(istate)%state)
+
             end do !istate
+
+
+            call close_bc_state_group_hdf(bcsg_id)
         end do !igroup
+
+
+        call close_file_hdf(fid)
 
     end subroutine write_bc_state_groups_hdf
     !***************************************************************************************
-
-
-
-
-!        ngroups        = get_nbc_state_groups_hdf(fid)
-!        bc_group_names = get_bc_state_group_names_hdf(fid)
-!
-!
-!        if (allocated(bc_state_groups)) deallocate(bc_state_groups)
-!        allocate(bc_state_groups(ngroups), stat=ierr)
-!        if (ierr /= 0) call AllocationError
-!
-!
-!        !
-!        ! Read each group of bc_state's
-!        !
-!        do igroup = 1,ngroups
-!
-!            ! Open face boundary condition group
-!            group_name = bc_group_names%at(igroup)
-!            group_id = open_bc_group_hdf(fid,group_name%get())
-!
-!            !
-!            ! Get bc_group Family attribute.
-!            !
-!            bc_state_groups(igroup)%family = get_bc_state_group_family_hdf(group_id)
-!
-!            !
-!            ! Loop through and read states + their properties
-!            !
-!            bc_state_names = get_bc_state_names_hdf(group_id)
-!            do istate = 1,bc_state_names%size()
-!
-!                ! Get bc_state name, return bc_state from file and source-allocate
-!                state_name = bc_state_names%at(istate)
-!                if (allocated(bc)) deallocate(bc)
-!                allocate(bc, source = get_bc_state_hdf(group_id,state_name%get()))
-!
-!                ! Save to bc_state_group_data_t
-!                bc_state_groups(igroup)%name = group_name%get()
-!                call bc_state_groups(igroup)%add_bc_state(bc)
-!
-!            end do !istate
-!
-!
-!            ! Close face boundary condition group
-!            call close_bc_group_hdf(group_id)
-!
-!        end do !igroup
-!
-!
-!
-!    end subroutine write_bc_state_groups_hdf
-!    !****************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1605,9 +1489,9 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine read_equations_hdf(filename,data)
-        character(*),       intent(in)      :: filename
+    subroutine read_equations_hdf(data,filename)
         type(chidg_data_t), intent(inout)   :: data
+        character(*),       intent(in)      :: filename
 
         integer(HID_T)                  :: fid
         integer                         :: ierr, ieqn
@@ -1670,9 +1554,9 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine write_equations_hdf(filename,data)
-        character(*),       intent(in)      :: filename
+    subroutine write_equations_hdf(data,filename)
         type(chidg_data_t), intent(inout)   :: data
+        character(*),       intent(in)      :: filename
 
         integer(HID_T)                  :: fid
         integer(ik)                     :: ierr, eqn_ID

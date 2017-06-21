@@ -52,7 +52,7 @@ subroutine test_time_manager__init_steady()
     @assertEqual(1,t_manager%ntime)
      
 
-end subroutine
+end subroutine test_time_manager__init_steady
 
 
 
@@ -101,13 +101,11 @@ subroutine test_time_manager__init_unsteady()
     !
     ! Initialize the time_manager based on the default time parameters, THIS BEING TESTED
     !
-
     call t_manager%init()
     
     !
     ! Test this subroutine
     !
-
     @assertEqual(time_integrator,t_manager%time_scheme)
     @assertEqual(1,t_manager%ntime)
     @assertEqual(dt,t_manager%dt)
@@ -115,7 +113,7 @@ subroutine test_time_manager__init_unsteady()
     @assertEqual(nwrite,t_manager%nwrite)
      
 
-end subroutine
+end subroutine test_time_manager__init_unsteady
 
 
 
@@ -151,7 +149,7 @@ subroutine test_time_manager__init_HB1()
     
     type(time_manager_t)    :: t_manager
     
-    real(rk)                :: t_lev_1, t_lev_2, t_lev_3
+    real(rk)                :: t_lev(3)
     real(rk),   parameter   :: tol = 1.e-6_rk
 
     !------------------------------------------------------------------------------------------
@@ -178,26 +176,24 @@ subroutine test_time_manager__init_HB1()
     !
     ! Calculate expected HB time levels
     !
-    t_lev_1 = (TWO*PI)/10._rk*(ONE/THREE)
-    t_lev_2 = (TWO*PI)/10._rk*(TWO/THREE)
-    t_lev_3 = (TWO*PI)/10._rk*(THREE/THREE)
+    t_lev = [ (TWO*PI)/10._rk*(ONE/THREE), &
+              (TWO*PI)/10._rk*(TWO/THREE), &
+              (TWO*PI)/10._rk*(THREE/THREE)]
     
 
     !
     ! Test this subroutine
     !
     @assertEqual(time_integrator,t_manager%time_scheme)
-    @assertEqual(3,t_manager%time_lev%size())
+    @assertEqual(3,size(t_manager%times))
     @assertEqual(3,t_manager%ntime)
     @assertEqual(1,t_manager%nsteps)
     @assertEqual(0,t_manager%nwrite)
-    @assertEqual(t_lev_1,t_manager%time_lev%data_(1),tol)
-    @assertEqual(t_lev_2,t_manager%time_lev%data_(2),tol)
-    @assertEqual(t_lev_3,t_manager%time_lev%data_(3),tol)
-    @assertEqual([10],t_manager%freq_data%data(),tol)
-    @assertEqual(1,t_manager%freq_data%size())
+    @assertEqual(t_lev,t_manager%times,tol)
+    @assertEqual([10],t_manager%freqs,tol)
+    @assertEqual(1,size(t_manager%freqs))
 
-end subroutine
+end subroutine test_time_manager__init_HB1
 
 
 
@@ -280,27 +276,14 @@ subroutine test_time_manager__init_HB5()
     ! Test this subroutine
     !
     @assertEqual(time_integrator,t_manager%time_scheme)
-    @assertEqual(11,t_manager%time_lev%size())
-    @assertEqual(t_lev(1),t_manager%time_lev%data_(1),tol)
-    @assertEqual(t_lev(2),t_manager%time_lev%data_(2),tol)
-    @assertEqual(t_lev(3),t_manager%time_lev%data_(3),tol)
-    @assertEqual(t_lev(4),t_manager%time_lev%data_(4),tol)
-    @assertEqual(t_lev(5),t_manager%time_lev%data_(5),tol)
-    @assertEqual(t_lev(6),t_manager%time_lev%data_(6),tol)
-    @assertEqual(t_lev(7),t_manager%time_lev%data_(7),tol)
-    @assertEqual(t_lev(8),t_manager%time_lev%data_(8),tol)
-    @assertEqual(t_lev(9),t_manager%time_lev%data_(9),tol)
-    @assertEqual(t_lev(10),t_manager%time_lev%data_(10),tol)
-    @assertEqual(t_lev(11),t_manager%time_lev%data_(11),tol)
-    @assertEqual(1.1_rk,t_manager%freq_data%data_(1),tol)
-    @assertEqual(15.0_rk,t_manager%freq_data%data_(2),tol)
-    @assertEqual(13.05_rk,t_manager%freq_data%data_(3),tol)
-    @assertEqual(25.0001_rk,t_manager%freq_data%data_(4),tol)
-    @assertEqual(26.9_rk,t_manager%freq_data%data_(5),tol)
-    @assertEqual(5,t_manager%freq_data%size())
+    @assertEqual(11,size(t_manager%times))
+    @assertEqual(5, size(t_manager%freqs))
+    @assertEqual(t_lev,      t_manager%times,tol)
+    @assertEqual(frequencies(1:5),t_manager%freqs,tol)
 
 
-end subroutine
+end subroutine test_time_manager__init_HB5
+!***************************************************************************************
 
 
 
@@ -325,7 +308,7 @@ end subroutine
 !!  @author Mayank Sharma
 !!  @date   3/20/2017
 !!
-!----------------------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------------
 
 @Test
 subroutine test_time_manager__init_HB25()
@@ -406,212 +389,10 @@ subroutine test_time_manager__init_HB25()
     ! Test this subroutine
     !
     @assertEqual(time_integrator,t_manager%time_scheme)
-    @assertEqual(51,t_manager%time_lev%size())
-    
-    do i = 1,51
-        @assertEqual(t_lev(i),t_manager%time_lev%data_(i),tol)
-    end do
-    
-    do i = 1,25
-        @assertEqual(frequencies(i),t_manager%freq_data%data_(i),tol)
-    end do
-
-    @assertEqual(25,t_manager%freq_data%size())
+    @assertEqual(51,size(t_manager%times))
+    @assertEqual(25,size(t_manager%freqs))
+    @assertEqual(t_lev,t_manager%times,tol)
+    @assertEqual(frequencies(1:25),t_manager%freqs,tol)
 
 
-end subroutine
-
-
-
-
-
-
-
-
-!>  Test init procedure assuming the user chose 'HB': pushed also a zero requency
-!!
-!!
-!!  @author Matteo Ugolotti
-!!
-!!  Added tolerance for comparison
-!!
-!!  @author Mayank Sharma
-!!  @date   3/20/2017
-!!
-!---------------------------------------------------------------------------------------------
-
-@Test
-subroutine test_time_manager__init_HB5_0()
-    use pfunit_mod
-    use mod_io
-    use mod_kinds,          only: rk, ik
-    use mod_constants,      only: ZERO, PI, ONE, TWO, THREE
-    use type_time_manager,  only: time_manager_t
-
-    implicit none
-    
-    type(time_manager_t)    :: t_manager
-    
-    real(rk)                :: t_lev(9)
-    real(rk)                :: tmp
-    integer(ik)             :: i
-    real(rk),   parameter   :: tol = 1.e-6_rk
-
-    !------------------------------------------------------------------------------------------
-    !
-    ! Define input data here that is normally read through the namelist, 
-    ! these are mod_io variables
-    !
-    !------------------------------------------------------------------------------------------
-    
-    ! reinitialize frequencies to ZERO
-    frequencies     = ZERO
-
-    time_integrator = 'HB'
-    dt              = 0.001_rk
-    time_steps      = 10
-    ttol            = 1.e-8
-    ntime_instances = 1
-    frequencies(1)  = 0.3_rk
-    frequencies(2)  = 15_rk
-    frequencies(3)  = 0.0_rk
-    frequencies(4)  = 25.0001_rk
-    frequencies(5)  = 26.9_rk
-    nwrite          = 100
-    
-
-    !
-    ! Initialize the time_manager based on the default time parameters, THIS BEING TESTED
-    !
-    call t_manager%init()
-    
-
-    !
-    ! Calculate expected HB time levels
-    !
-    do i = 1,9
-        tmp = i
-        t_lev(i) = (TWO*PI)/0.3_rk*(tmp/9._rk)
-    end do 
-
-    !
-    ! Test this subroutine
-    !
-    @assertEqual(time_integrator,t_manager%time_scheme)
-    @assertEqual(4,t_manager%freq_data%size())
-    @assertEqual(9,t_manager%time_lev%size())
-    @assertEqual(t_lev(1),t_manager%time_lev%data_(1),tol)
-    @assertEqual(t_lev(2),t_manager%time_lev%data_(2),tol)
-    @assertEqual(t_lev(3),t_manager%time_lev%data_(3),tol)
-    @assertEqual(t_lev(4),t_manager%time_lev%data_(4),tol)
-    @assertEqual(t_lev(5),t_manager%time_lev%data_(5),tol)
-    @assertEqual(t_lev(6),t_manager%time_lev%data_(6),tol)
-    @assertEqual(t_lev(7),t_manager%time_lev%data_(7),tol)
-    @assertEqual(t_lev(8),t_manager%time_lev%data_(8),tol)
-    @assertEqual(t_lev(9),t_manager%time_lev%data_(9),tol)
-    @assertEqual(0.3_rk,t_manager%freq_data%data_(1),tol)
-    @assertEqual(15.0_rk,t_manager%freq_data%data_(2),tol)
-    @assertEqual(25.0001_rk,t_manager%freq_data%data_(3),tol)
-    @assertEqual(26.9_rk,t_manager%freq_data%data_(4),tol)
-
-
-end subroutine
-
-
-
-
-
-
-
-
-
-
-
-!>  Test push_back procedure to verify no doubles frequencies are stored
-!!  The init procedure is called first and 5 frequencies are pushed back by the push_back subroutine
-!!  Only three of them should be stored in freq_data, since two frequencies are pushed twice.
-!!
-!!
-!!  @author Matteo Ugolotti
-!!
-!!  Added tolerance for comparison
-!!
-!!  @author Mayank Sharma
-!!  @date   3/20/2017
-!!
-!----------------------------------------------------------------------------------------------
-@Test
-subroutine test_time_manager__init_push_back()
-    
-    use pfunit_mod
-    use mod_io
-    use mod_kinds,          only: rk, ik
-    use mod_constants,      only: ZERO, PI, ONE, TWO, THREE
-    use type_time_manager,  only: time_manager_t
-
-    implicit none
-    
-    type(time_manager_t)    :: t_manager
-    
-    real(rk)                :: t_lev(7)
-    real(rk)                :: tmp
-    integer(ik)             :: i
-    real(rk),   parameter   :: tol = 1.e-6_rk
-
-    !------------------------------------------------------------------------------------------
-    !
-    ! Define input data here that is normally read through the namelist, 
-    ! these are mod_io variables
-    !
-    !------------------------------------------------------------------------------------------
-    
-    ! reinitialize frequencies to ZERO
-    frequencies     = ZERO
-
-    time_integrator = 'HB'
-    dt              = 0.001_rk
-    time_steps      = 10
-    ttol            = 1.e-8
-    ntime_instances = 1
-    frequencies(1)  = 0.3_rk
-    frequencies(2)  = 5.0_rk
-    frequencies(3)  = 5.0_rk
-    frequencies(4)  = 25.0001_rk
-    frequencies(5)  = 25.0001_rk
-    nwrite          = 100
-    
-
-    !
-    ! Initialize the time_manager based on the default time parameters, THIS BEING TESTED
-    !
-    call t_manager%init()
-    
-
-    !
-    ! Calculate expected HB time levels
-    !
-    do i = 1,7
-        tmp = i
-        t_lev(i) = (TWO*PI)/0.3_rk*(tmp/7._rk)
-    end do 
-
-    !
-    ! Test this subroutine
-    !
-    @assertEqual(time_integrator,t_manager%time_scheme)
-    @assertEqual(3,t_manager%freq_data%size())
-    @assertEqual(7,t_manager%time_lev%size())
-    @assertEqual(t_lev(1),t_manager%time_lev%data_(1),tol)
-    @assertEqual(t_lev(2),t_manager%time_lev%data_(2),tol)
-    @assertEqual(t_lev(3),t_manager%time_lev%data_(3),tol)
-    @assertEqual(t_lev(4),t_manager%time_lev%data_(4),tol)
-    @assertEqual(t_lev(5),t_manager%time_lev%data_(5),tol)
-    @assertEqual(t_lev(6),t_manager%time_lev%data_(6),tol)
-    @assertEqual(t_lev(7),t_manager%time_lev%data_(7),tol)
-    @assertEqual(0.3_rk,t_manager%freq_data%data_(1),tol)
-    @assertEqual(5.0_rk,t_manager%freq_data%data_(2),tol)
-    @assertEqual(25.0001_rk,t_manager%freq_data%data_(3),tol)
-
-
-end subroutine
-
+end subroutine test_time_manager__init_HB25

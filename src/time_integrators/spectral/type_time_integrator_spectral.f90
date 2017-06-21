@@ -4,14 +4,9 @@ module type_time_integrator_spectral
     use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM
     use type_chidg_data,        only: chidg_data_t
     use type_time_integrator,   only: time_integrator_t
+    use mod_hdf_utilities
     use hdf5
     use h5lt
-    use mod_hdf_utilities,      only: open_file_hdf, close_file_hdf, get_ntimes_hdf, &
-                                      set_time_integrator_hdf, get_time_integrator_hdf, &
-                                      set_nsteps_hdf, get_nsteps_hdf, &
-                                      set_nwrite_hdf, get_nwrite_hdf, &
-                                      set_frequencies_hdf, get_frequencies_hdf, &
-                                      set_time_levels_hdf, get_time_levels_hdf
     use mod_HB_post,            only: get_post_processing_data
     use mpi_f08
     implicit none
@@ -82,48 +77,22 @@ contains
         character(*),                       intent(in)      :: filename
 
         integer(HID_T)          :: fid
-        integer(kind = 8)       :: nfreq, ntime, SIZE_ONE = 1
-        real(rk),   allocatable :: freq(:), time_lev(:)
         integer                 :: ierr, iwrite
 
 
         do iwrite = 0,NRANK - 1
             if (iwrite == IRANK) then
                 
-                !
                 ! Assuming that the file exists, open the hdf file
-                !
                 fid = open_file_hdf(filename)
 
-
-                !
-                ! Set number of frequencies and time levels
-                ! Also set frequency and time level data
-                !
-                nfreq = int(data%time_manager%freq_data%size(),8)
-                ntime = int(data%time_manager%time_lev%size(),8)
-
-                if (allocated(freq) .and. allocated(time_lev)) deallocate(freq,time_lev)
-                allocate(freq(nfreq), time_lev(ntime), stat=ierr)
-                if (ierr /= 0) call AllocationError
-
-                freq     = data%time_manager%freq_data%data()
-                time_lev = data%time_manager%time_lev%data()
-
-
-                !
-                ! Write time_integrator name to hdf file
-                !
-                call set_time_integrator_hdf(fid,trim(data%time_manager%get_name()))
-
                 
-                !
                 ! Write nsteps, nwrite, frequencies and time levels to hdf file
-                !
-                call set_nsteps_hdf(fid,data%time_manager%nsteps)
-                call set_nwrite_hdf(fid,data%time_manager%nwrite)        
-                call set_frequencies_hdf(fid,freq,nfreq)
-                call set_time_levels_hdf(fid,time_lev,ntime)
+                call set_time_integrator_hdf(fid,trim(data%time_manager%get_name()))
+                call set_nsteps_hdf(     fid,data%time_manager%nsteps)
+                call set_nwrite_hdf(     fid,data%time_manager%nwrite)        
+                call set_frequencies_hdf(fid,data%time_manager%freqs )
+                call set_times_hdf(      fid,data%time_manager%times )
 
                 
                 call close_file_hdf(fid)
@@ -150,12 +119,6 @@ contains
         character(*),                       intent(in)      :: filename
 
         integer(HID_T)                  :: fid
-        integer(kind = 8)               :: nfreq, ntime
-        character(:),   allocatable     :: temp_string
-        real(rk),       allocatable     :: freq(:), time_lev(:)
-        integer(ik)                     :: ierr, ifreq, itime 
-        integer(ik),    dimension(1)    :: nsteps, nwrite
-
         
         !
         ! Open hdf file
@@ -166,55 +129,15 @@ contains
         !
         ! Set no. of time levels and frequencies
         !
-        ntime = get_ntimes_hdf(fid)
-        nfreq = (ntime - 1)/2
+        data%time_manager%time_scheme = trim(get_time_integrator_hdf(fid))
+        data%time_manager%times       = get_times_hdf(fid)
+        data%time_manager%freqs       = get_frequencies_hdf(fid)
+        data%time_manager%nsteps      = get_nsteps_hdf(fid)
+        data%time_manager%nwrite      = get_nwrite_hdf(fid)
+        data%time_manager%ntime       = size(data%time_manager%times)
 
-
-        !
-        ! Allocate frequency and time level data arrays
-        !
-        if (allocated(freq) .and. allocated(time_lev)) deallocate(freq,time_lev)
-        allocate(freq(nfreq), time_lev(ntime), stat=ierr)
-        if (ierr /= 0) call AllocationError
-
-        
-        !
-        ! Read time integrator name
-        !
-        temp_string = get_time_integrator_hdf(fid)
-
-
-        !
-        ! Read nsteps, nwrite, frequencies and time levels
-        !
-        nsteps   = get_nsteps_hdf(fid)
-        nwrite   = get_nwrite_hdf(fid)
-        freq     = get_frequencies_hdf(fid,nfreq)
-        time_lev = get_time_levels_hdf(fid,ntime)
 
         call close_file_hdf(fid)
-
-
-        !
-        ! Set time_options in time_manager
-        !
-        data%time_manager%time_scheme = trim(temp_string)
-        data%time_manager%ntime       = ntime
-        data%time_manager%nsteps      = nsteps(1)
-        data%time_manager%nwrite      = nwrite(1)
-
-        do ifreq = 1,int(nfreq,ik)
-
-            call data%time_manager%freq_data%push_back(freq(ifreq))
-
-        end do
-
-        do itime = 1,int(ntime,ik)
-
-            call data%time_manager%time_lev%push_back(time_lev(itime))
-
-        end do
-
 
     end subroutine read_time_options
     !*******************************************************************************

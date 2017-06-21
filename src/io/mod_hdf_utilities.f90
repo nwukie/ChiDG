@@ -52,8 +52,8 @@
 !!  set_frequencies_hdf
 !!  get_frequencies_hdf
 !!
-!!  set_time_levels_hdf
-!!  get_time_levels_hdf
+!!  !set_time_levels_hdf
+!!  !get_time_levels_hdf
 !!
 !!  
 !!
@@ -98,6 +98,7 @@
 !!
 !!  set_domain_connectivity_hdf
 !!  get_domain_connectivity_hdf
+!!  set_domain_connectivity_partition_hdf
 !!
 !!  get_domain_nelements_hdf
 !!  get_domain_nnodes_hdf
@@ -143,7 +144,11 @@
 !!  "BCSG_", "BCS_", "BCP_"
 !!  ---------------------------------------------------------------------
 !!  =====================================================================
+!!  "BCSG_"
 !!  create_bc_state_group_hdf
+!!  open_bc_state_group_hdf
+!!  close_bc_state_group_hdf
+!!
 !!  get_nbc_state_groups_hdf
 !!  get_bc_state_group_names_hdf
 !!
@@ -151,22 +156,26 @@
 !!  remove_bc_state_group_hdf
 !!
 !!
+!!  "BCS_"
+!!  open_bc_state_hdf
+!!  close_bc_state_hdf
 !!  add_bc_state_hdf
+!!
 !!  get_bc_states_hdf
 !!  get_nbc_states_hdf
 !!  get_bc_state_names_hdf
+!!  remove_bc_state_hdf
+!!  check_bc_state_exists_hdf
 !!
+!!
+!!  "BCP_"
 !!  add_bc_properties_hdf
 !!  get_bc_properties_hdf
-!!
-!!  remove_bc_state_hdf
 !!  remove_bc_property_hdf
-!!
-!!  get_bcnames_hdf
-!!
-!!  check_bc_state_exists_hdf
 !!  check_bc_property_exists_hdf
 !!
+!!
+!!  get_bcnames_hdf
 !!
 !!
 !!  =====================================================================
@@ -186,8 +195,15 @@
 !!  set_time_integrator_hdf
 !!  get_time_integrator_hdf
 !!
-!!  set_ntimes_hdf
-!!  get_ntimes_hdf
+!!  !set_ntimes_hdf
+!!  !get_ntimes_hdf
+!!
+!!  set_times_hdf
+!!  get_times_hdf
+!!
+!!  set_frequencies_hdf
+!!  get_frequencies_hdf
+!!
 !!
 !!  Utilities:
 !!  ---------------------------------------------------------------------
@@ -220,9 +236,9 @@ module mod_hdf_utilities
     use h5lt
 
 
-    use type_prescribed_mesh_motion,    only: prescribed_mesh_motion_t
-    use type_prescribed_mesh_motion_group,    only: prescribed_mesh_motion_group_t
-    use type_prescribed_mesh_motion_group_wrapper,    only: prescribed_mesh_motion_group_wrapper_t
+    use type_prescribed_mesh_motion,                only: prescribed_mesh_motion_t
+    use type_prescribed_mesh_motion_group,          only: prescribed_mesh_motion_group_t
+    use type_prescribed_mesh_motion_group_wrapper,  only: prescribed_mesh_motion_group_wrapper_t
     implicit none
 
     
@@ -4074,17 +4090,13 @@ contains
 
 
 
-
-
-
-
     !>  Open a boundary condition state group, return HDF identifier.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   11/11/2016
     !!
     !---------------------------------------------------------------------------------------
-    function open_bc_group_hdf(fid,group_name) result(bcgroup_id)
+    function open_bc_state_group_hdf(fid,group_name) result(bcgroup_id)
         integer(HID_T),     intent(in)  :: fid
         character(*),       intent(in)  :: group_name
 
@@ -4092,9 +4104,9 @@ contains
         integer(HID_T)  :: bcgroup_id
 
         call h5gopen_f(fid,"BCSG_"//trim(group_name),bcgroup_id,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"open_bc_group_hdf: Error opening boundary condition group")
+        if (ierr /= 0) call chidg_signal_one(FATAL,"open_bc_state_group_hdf: Error opening boundary condition group",trim(group_name))
 
-    end function open_bc_group_hdf
+    end function open_bc_state_group_hdf
     !***************************************************************************************
 
 
@@ -4104,16 +4116,67 @@ contains
     !!  @date   11/11/2016
     !!
     !---------------------------------------------------------------------------------------
-    subroutine close_bc_group_hdf(bcgroup_id)
+    subroutine close_bc_state_group_hdf(bcgroup_id)
         integer(HID_T), intent(in)  :: bcgroup_id
 
         integer(ik)     :: ierr
 
         call h5gclose_f(bcgroup_id,ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"close_bc_group_hdf: Error closing bc_group")
+        if (ierr /= 0) call chidg_signal(FATAL,"close_bc_state_group_hdf: Error closing bc_group")
 
-    end subroutine close_bc_group_hdf
+    end subroutine close_bc_state_group_hdf
     !***************************************************************************************
+
+
+
+
+
+
+    !>  Open a boundary condition state, return identifier. "BCS_statename"
+    !!
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/21/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function open_bc_state_hdf(group_id,state_name) result(state_id)
+        integer(HID_T), intent(in)  :: group_id
+        character(*),   intent(in)  :: state_name
+
+        integer(HID_T)  :: state_id
+        integer(ik)     :: ierr
+
+
+        call h5gopen_f(group_id,"BCS_"//trim(state_name), state_id, ierr)
+        if (ierr /= 0) call chidg_signal_one(FATAL,"open_bc_state_hdf: Error opening boundary state.",trim(state_name))
+
+
+    end function open_bc_state_hdf
+    !****************************************************************************************
+
+
+
+    !>  Close a boundary condition state.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/21/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine close_bc_state_hdf(state_id)
+        integer(HID_T), intent(in)  :: state_id
+
+        integer(ik)     :: ierr
+
+        call h5gclose_f(state_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"close_bc_state_hdf: Error closing boundary state.")
+
+    end subroutine close_bc_state_hdf
+    !***************************************************************************************
+
+
+
+
 
 
 
@@ -4136,7 +4199,8 @@ contains
         logical                             :: link_exists, state_found
 
 
-        if ( bc_state%get_name() == 'empty' ) then
+        if ( (bc_state%get_name() == 'empty') .or. &
+             (bc_state%get_name() == 'Empty') ) then
             !
             ! If 'empty' do not allocate new bc
             !
@@ -4908,24 +4972,111 @@ contains
 
 
 
-    !>  Given a file identifier, set the number of time levels in an hdf5 file.
+!    !>  Given a file identifier, set the number of time levels in an hdf5 file.
+!    !!
+!    !!  @author Matteo Ugolotti
+!    !!  @date   02/20/2017
+!    !!
+!    !!  @param[in]  fid     HDF file identifier
+!    !!
+!    !----------------------------------------------------------------------------------------
+!    subroutine set_ntimes_hdf(fid,ntimes)
+!        integer(HID_T), intent(in)  :: fid
+!        integer(ik),    intent(in)  :: ntimes
+!
+!        integer(ik)         :: ierr
+!
+!        call h5ltset_attribute_int_f(fid, "/", "ntimes", [ntimes], SIZE_ONE, ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,"set_ntimes_hdf: Error h5ltget_attribute_int_f")
+!
+!    end subroutine set_ntimes_hdf
+!    !****************************************************************************************
+!
+!
+!
+!    !>  Given a file identifier, return the number of time levels in an hdf5 file.
+!    !!
+!    !!  @author Matteo Ugolotti
+!    !!  @date   02/20/2017
+!    !!
+!    !!  @param[in]  fid     HDF file identifier
+!    !!
+!    !----------------------------------------------------------------------------------------
+!    function get_ntimes_hdf(fid) result(time_lev)
+!        integer(HID_T), intent(in)  :: fid
+!        
+!        integer                 :: ierr
+!        integer(ik)             :: time_lev
+!        integer, dimension(1)   :: buf
+!
+!        call h5ltget_attribute_int_f(fid, "/", "ntimes", buf, ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,"get_ntimess_hdf: h5ltget_attribute_int_f had a problem getting the number of time levels")
+!        time_lev = int(buf(1), kind=ik)
+!
+!    end function get_ntimes_hdf
+!    !***************************************************************************************
+
+
+
+
+    !>  Set solution times stored in the time.
     !!
-    !!  @author Matteo Ugolotti
-    !!  @date   02/20/2017
+    !!  Sets the array:  /Times
     !!
-    !!  @param[in]  fid     HDF file identifier
+    !!  For time-steady:   size(times)  = 1
+    !!  For time-marching: size(times)  = 1
+    !!  For time-spectral: size(times) >= 1
     !!
-    !----------------------------------------------------------------------------------------
-    subroutine set_ntimes_hdf(fid,ntimes)
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/21/2017
+    !!
+    !!  TODO: TEST
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine set_times_hdf(fid,times)
         integer(HID_T), intent(in)  :: fid
-        integer(ik),    intent(in)  :: ntimes
+        real(rk),       intent(in)  :: times(:)
 
-        integer(ik)         :: ierr
+        integer(HSIZE_T)    :: rank_dims(1)
+        integer(HID_T)      :: space_id, time_id
+        integer(ik)         :: ntime, ierr, nrank
+        logical             :: exists
 
-        call h5ltset_attribute_int_f(fid, "/", "ntimes", [ntimes], SIZE_ONE, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_ntimes_hdf: Error h5ltget_attribute_int_f")
 
-    end subroutine set_ntimes_hdf
+        ntime     = size(times)
+        nrank     = 1
+        rank_dims = [ntime]
+        if (ntime == 0) call chidg_signal(FATAL,"set_times_hdf: ntimes == 0.")
+
+        !
+        ! : Open 'Times'
+        ! : If 'Times' doesn't exists, create new 'Times' data set
+        !
+        exists = check_link_exists_hdf(fid,'Times')
+        if (exists) then
+            call h5dopen_f(fid,"Times",time_id, ierr, H5P_DEFAULT_F)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_times_hdf: h5dopen_f.")
+        else
+            call h5screate_simple_f(nrank, rank_dims, space_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_times_hdf: h5screate_simple_f.")
+
+            call h5dcreate_f(fid, "Times", H5T_NATIVE_DOUBLE, space_id, time_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_times_hdf: h5dcreate_f.")
+
+            call h5sclose_f(space_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_times_hdf: h5sclose_f.")
+        end if
+
+        ! Write coordinates to datasets
+        call h5dwrite_f(time_id, H5T_NATIVE_DOUBLE, times, rank_dims, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_times_hdf: h5dwrite_f")
+
+        ! Close datasets
+        call h5dclose_f(time_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_times_hdf: h5dclose_f")
+
+
+    end subroutine set_times_hdf
     !****************************************************************************************
 
 
@@ -4935,29 +5086,189 @@ contains
 
 
 
-
-
-    !>  Given a file identifier, return the number of time levels in an hdf5 file.
+    !>  Return array of times stored in the file. /Times
     !!
-    !!  @author Matteo Ugolotti
-    !!  @date   02/20/2017
     !!
-    !!  @param[in]  fid     HDF file identifier
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/21/2017
+    !!
+    !!  TODO: TEST
     !!
     !----------------------------------------------------------------------------------------
-    function get_ntimes_hdf(fid) result(time_lev)
-        integer(HID_T), intent(in)  :: fid
+    function get_times_hdf(fid) result(times)
+        integer(HID_T),             intent(in)      :: fid
+
+        real(rk),   allocatable :: times(:)
+        integer(HID_T)          :: time_id, space_id
+        integer(HSIZE_T)        :: rank_dims(1), maxdims(3)
+        integer(ik)             :: ierr, ntime, rank
+
+        real(rdouble), dimension(:), allocatable, target    :: read_times
+        type(c_ptr)                                         :: cp_times
+
+        ! Open dataset
+        call h5dopen_f(fid, "Times", time_id, ierr, H5P_DEFAULT_F)
+
+        ! Get dataspace id and dimensions
+        call h5dget_space_f(time_id, space_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_times_hdf: h5dget_space_f.")
+        call h5sget_simple_extent_dims_f(space_id, rank_dims, maxdims, rank)
+        if (rank == -1) call chidg_signal(FATAL,"get_times_hdf: h5sget_simple_extent_dims_f.")
+        ntime = rank_dims(1)
+
+
+        ! Allocat 'times' with storage
+        allocate(read_times(ntime), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        ! Read 'Times' to buffer cp_times, (read_times)
+        cp_times = c_loc(read_times(1))
+        call h5dread_f(time_id, H5T_NATIVE_DOUBLE, cp_times, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_times_hdf: h5dread_f")
+
+        ! Close identifiers
+        call h5dclose_f(time_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_times_hdf: h5dclose_f.")
+        call h5sclose_f(space_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_times_hdf: h5sclose_f.")
         
-        integer                 :: ierr
-        integer(ik)             :: time_lev
-        integer, dimension(1)   :: buf
 
-        call h5ltget_attribute_int_f(fid, "/", "ntimes", buf, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"get_ntimess_hdf: h5ltget_attribute_int_f had a problem getting the number of time levels")
-        time_lev = int(buf(1), kind=ik)
 
-    end function get_ntimes_hdf
-    !***************************************************************************************
+        ! Set out-going array using buffer
+        times = real(read_times,kind=rk)
+
+
+    end function get_times_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+
+    !>  Set solution times stored in the time.
+    !!
+    !!  Sets the array:  /Frequencies
+    !!
+    !!  For time-steady:   size(Frequencies)  = N/A
+    !!  For time-marching: size(Frequencies)  = N/A
+    !!  For time-spectral: size(Frequencies) >= 1
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/21/2017
+    !!
+    !!  TODO: TEST
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine set_frequencies_hdf(fid,freqs)
+        integer(HID_T), intent(in)  :: fid
+        real(rk),       intent(in)  :: freqs(:)
+
+        integer(HSIZE_T)    :: rank_dims(1)
+        integer(HID_T)      :: space_id, freq_id
+        integer(ik)         :: nfreq, ierr, nrank
+        logical             :: exists
+
+        nfreq     = size(freqs)
+        nrank     = 1
+        rank_dims = [nfreq]
+        if (nfreq == 0) call chidg_signal(FATAL,"set_frequencies_hdf: nfreq == 0.")
+
+        !
+        ! : Open 'Frequencies'
+        ! : If 'Times' doesn't exists, create new 'Frequencies' data set
+        !
+        exists = check_link_exists_hdf(fid,'Frequencies')
+        if (exists) then
+            call h5dopen_f(fid,"Frequencies",freq_id, ierr, H5P_DEFAULT_F)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_frequencies_hdf: h5dopen_f.")
+        else
+            call h5screate_simple_f(nrank, rank_dims, space_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_frequencies_hdf: h5screate_simple_f.")
+
+            call h5dcreate_f(fid, "Frequencies", H5T_NATIVE_DOUBLE, space_id, freq_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_frequencies_hdf: h5dcreate_f.")
+
+            call h5sclose_f(space_id,ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,"set_frequencies_hdf: h5sclose_f.")
+        end if
+
+        ! Write coordinates to datasets
+        call h5dwrite_f(freq_id, H5T_NATIVE_DOUBLE, freqs, rank_dims, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_frequencies_hdf: h5dwrite_f")
+
+        ! Close datasets
+        call h5dclose_f(freq_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_frequencies_hdf: h5dclose_f")
+
+
+    end subroutine set_frequencies_hdf
+    !****************************************************************************************
+
+
+
+
+
+
+    !>  Return array of frequencies stored in the file. /Frequencies
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/21/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_frequencies_hdf(fid) result(freqs)
+        integer(HID_T),             intent(in)      :: fid
+
+        real(rk),   allocatable :: freqs(:)
+        integer(HID_T)          :: freq_id, space_id
+        integer(HSIZE_T)        :: rank_dims(1), maxdims(3)
+        integer(ik)             :: ierr, nfreq, rank
+
+        real(rdouble), dimension(:), allocatable, target    :: read_freqs
+        type(c_ptr)                                         :: cp_freqs
+
+        ! Open dataset
+        call h5dopen_f(fid, "Frequencies", freq_id, ierr, H5P_DEFAULT_F)
+
+        ! Get dataspace id and dimensions
+        call h5dget_space_f(freq_id, space_id, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_frequencies_hdf: h5dget_space_f.")
+        call h5sget_simple_extent_dims_f(space_id, rank_dims, maxdims, rank)
+        if (rank == -1) call chidg_signal(FATAL,"get_frequencies_hdf: h5sget_simple_extend_dims_f.")
+        nfreq = rank_dims(1)
+
+
+        ! Allocate 'read_freqs' with storage
+        allocate(read_freqs(nfreq), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        ! Read 'Frequencies' to buffer cp_freqs, (read_freqs)
+        cp_freqs = c_loc(read_freqs(1))
+        call h5dread_f(freq_id, H5T_NATIVE_DOUBLE, cp_freqs, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_frequencies_hdf: h5dread_f")
+
+        ! Close identifiers
+        call h5dclose_f(freq_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_frequencies_hdf: h5dclose_f.")
+        call h5sclose_f(space_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_frequencies_hdf: h5sclose_f.")
+        
+
+
+        ! Set out-going array using buffer
+        freqs = real(read_freqs,kind=rk)
+
+
+    end function get_frequencies_hdf
+    !****************************************************************************************
+
+
+
+
+
+
 
 
 
@@ -5014,12 +5325,14 @@ contains
         integer(HID_T),     intent(in)  :: fid
         
         integer                     :: ierr
-        real(rk),   dimension(1)    :: dt
+        real(rk)                    :: dt
+        real(rk),   dimension(1)    :: buffer
 
-        call h5ltget_attribute_double_f(fid, "/", "dt", dt, ierr)
+        call h5ltget_attribute_double_f(fid, "/", "dt", buffer, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"get_time_step_hdf: h5ltget_attribute_double_f had a &
                                         problem getting time step")
 
+        dt = buffer(1)
 
     end function get_time_step_hdf
     !***************************************************************************************
@@ -5079,12 +5392,14 @@ contains
         integer(HID_T),     intent(in)  :: fid
         
         integer                         :: ierr
-        integer(ik),    dimension(1)    :: nsteps
+        integer(ik)                     :: nsteps
+        integer(ik),    dimension(1)    :: buffer
 
-        call h5ltget_attribute_int_f(fid, "/", "nsteps", nsteps, ierr)
+        call h5ltget_attribute_int_f(fid, "/", "nsteps", buffer, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"get_nsteps_hdf: h5ltget_attribute_double_f had a &
                                         problem getting nsteps")
 
+        nsteps = buffer(1)
 
     end function get_nsteps_hdf
     !***************************************************************************************
@@ -5144,12 +5459,14 @@ contains
         integer(HID_T),     intent(in)  :: fid
         
         integer                         :: ierr
-        integer(ik),    dimension(1)    :: nwrite
+        integer(ik)                     :: nwrite
+        integer(ik),    dimension(1)    :: buffer
 
-        call h5ltget_attribute_int_f(fid, "/", "nwrite", nwrite, ierr)
+        call h5ltget_attribute_int_f(fid, "/", "nwrite", buffer, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"get_nwrite_hdf: h5ltget_attribute_double_f had a &
                                         problem getting nwrite")
 
+        nwrite = buffer(1)
 
     end function get_nwrite_hdf
     !***************************************************************************************
@@ -5164,133 +5481,128 @@ contains
 
 
 
-    !>  Given a file identifier, set frequency data in a hdf5 file
-    !!  Used in type_time_integrator_spectral
-    !!
-    !!  @author Mayank Sharma
-    !!  @date   4/12/2017
-    !!
-    !!  @param[in]  fid     HDF file identifier
-    !!  @param[in]  freq    Frequency data
-    !!  @param[in]  nfreq   Number of frequencies
-    !1
-    !----------------------------------------------------------------------------------------
-    subroutine set_frequencies_hdf(fid,freq,nfreq)
-        integer(HID_T),     intent(in)  :: fid
-        real(rk),           intent(in)  :: freq(:)
-        integer(HSIZE_T),   intent(in)  :: nfreq
-
-        integer(ik)         :: ierr
-
-        call h5ltset_attribute_double_f(fid, "/", "frequencies", freq, nfreq, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_frequencies_hdf: Error h5ltget_attribute_double_f")
-
-
-    end subroutine set_frequencies_hdf
-    !****************************************************************************************
-
-
-
-
-
-
-
-
-
-
-    !>  Given a file identifier, return frequency data from a hdf5 file
-    !!  Used in type_time_integrator_spectral
-    !!
-    !!  @author Mayank Sharma
-    !!  @date   4/12/2017
-    !!
-    !!  @param[in]  fid     HDF file identifier
-    !!  @param[in]  nfreq   Number of frequencies
-    !!
-    !----------------------------------------------------------------------------------------
-    function get_frequencies_hdf(fid,nfreq) result(freq)
-        integer(HID_T),     intent(in)  :: fid
-        integer(HSIZE_T),   intent(in)  :: nfreq
-        
-        integer                 :: ierr
-        real(rk)                :: freq(nfreq)
-
-        call h5ltget_attribute_double_f(fid, "/", "frequencies", freq, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"get_frequencies_hdf: h5ltget_attribute_double_f had a &
-                                        problem getting frequencies")
-
-
-    end function get_frequencies_hdf
-    !***************************************************************************************
-
-
+!    !>  Given a file identifier, set frequency data in a hdf5 file
+!    !!  Used in type_time_integrator_spectral
+!    !!
+!    !!  @author Mayank Sharma
+!    !!  @date   4/12/2017
+!    !!
+!    !!  @param[in]  fid     HDF file identifier
+!    !!  @param[in]  freq    Frequency data
+!    !!  @param[in]  nfreq   Number of frequencies
+!    !1
+!    !----------------------------------------------------------------------------------------
+!    subroutine set_frequencies_hdf(fid,freq,nfreq)
+!        integer(HID_T),     intent(in)  :: fid
+!        real(rk),           intent(in)  :: freq(:)
+!        integer(HSIZE_T),   intent(in)  :: nfreq
+!
+!        integer(ik)         :: ierr
+!
+!        call h5ltset_attribute_double_f(fid, "/", "Frequencies", freq, nfreq, ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,"set_frequencies_hdf: Error h5ltget_attribute_double_f")
+!
+!
+!    end subroutine set_frequencies_hdf
+!    !****************************************************************************************
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!    !>  Given a file identifier, return frequency data from a hdf5 file
+!    !!  Used in type_time_integrator_spectral
+!    !!
+!    !!  @author Mayank Sharma
+!    !!  @date   4/12/2017
+!    !!
+!    !!  @param[in]  fid     HDF file identifier
+!    !!  @param[in]  nfreq   Number of frequencies
+!    !!
+!    !----------------------------------------------------------------------------------------
+!    function get_frequencies_hdf(fid,nfreq) result(freq)
+!        integer(HID_T),     intent(in)  :: fid
+!        integer(HSIZE_T),   intent(in)  :: nfreq
+!        
+!        integer                 :: ierr
+!        real(rk)                :: freq(nfreq)
+!
+!        call h5ltget_attribute_double_f(fid, "/", "Frequencies", freq, ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,"get_frequencies_hdf: h5ltget_attribute_double_f had a &
+!                                        problem getting frequencies")
+!
+!
+!    end function get_frequencies_hdf
+!    !***************************************************************************************
 
 
 
 
 
 
-
-
-
-    !>  Given a file identifier, set time level data in a hdf5 file
-    !!  Used in type_time_integrator_spectral
-    !!
-    !!  @author Mayank Sharma
-    !!  @date   4/12/2017
-    !!
-    !!  @param[in]  fid         HDF file identifier
-    !!  @param[in]  time_lev    Time level data
-    !!  @param[in]  ntime       Number of time levels
-    !1
-    !----------------------------------------------------------------------------------------
-    subroutine set_time_levels_hdf(fid,time_lev,ntime)
-        integer(HID_T),     intent(in)  :: fid
-        real(rk),           intent(in)  :: time_lev(:)
-        integer(HSIZE_T),   intent(in)  :: ntime
-
-        integer(ik)         :: ierr
-
-        call h5ltset_attribute_double_f(fid, "/", "time_levels", time_lev, ntime, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"set_time_levels_hdf: Error h5ltget_attribute_double_f")
-
-
-    end subroutine set_time_levels_hdf
-    !****************************************************************************************
-
-
-
-
-
-
-
-
-
-
-    !>  Given a file identifier, return time level data from a hdf5 file
-    !!  Used in type_time_integrator_spectral
-    !!
-    !!  @author Mayank Sharma
-    !!  @date   4/12/2017
-    !!
-    !!  @param[in]  fid     HDF file identifier
-    !!  @param[in]  ntime   Number of time levels
-    !!
-    !----------------------------------------------------------------------------------------
-    function get_time_levels_hdf(fid,ntime) result(time_lev)
-        integer(HID_T),     intent(in)  :: fid
-        integer(HSIZE_T),   intent(in)  :: ntime
-        
-        integer                 :: ierr
-        real(rk)                :: time_lev(ntime)
-
-        call h5ltget_attribute_double_f(fid, "/", "time_levels", time_lev, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"get_time_levels_hdf: h5ltget_attribute_double_f had a &
-                                        problem getting time levels")
-
-
-    end function get_time_levels_hdf
-    !***************************************************************************************
+!    !>  Given a file identifier, set time level data in a hdf5 file
+!    !!  Used in type_time_integrator_spectral
+!    !!
+!    !!  @author Mayank Sharma
+!    !!  @date   4/12/2017
+!    !!
+!    !!  @param[in]  fid         HDF file identifier
+!    !!  @param[in]  time_lev    Time level data
+!    !!  @param[in]  ntime       Number of time levels
+!    !1
+!    !----------------------------------------------------------------------------------------
+!    subroutine set_time_levels_hdf(fid,time_lev,ntime)
+!        integer(HID_T),     intent(in)  :: fid
+!        real(rk),           intent(in)  :: time_lev(:)
+!        integer(HSIZE_T),   intent(in)  :: ntime
+!
+!        integer(ik)         :: ierr
+!
+!        call h5ltset_attribute_double_f(fid, "/", "Times", time_lev, ntime, ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,"set_time_levels_hdf: Error h5ltget_attribute_double_f")
+!
+!
+!    end subroutine set_time_levels_hdf
+!    !****************************************************************************************
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!    !>  Given a file identifier, return time level data from a hdf5 file
+!    !!  Used in type_time_integrator_spectral
+!    !!
+!    !!  @author Mayank Sharma
+!    !!  @date   4/12/2017
+!    !!
+!    !!  @param[in]  fid     HDF file identifier
+!    !!  @param[in]  ntime   Number of time levels
+!    !!
+!    !----------------------------------------------------------------------------------------
+!    function get_time_levels_hdf(fid,ntime) result(time_lev)
+!        integer(HID_T),     intent(in)  :: fid
+!        integer(HSIZE_T),   intent(in)  :: ntime
+!        
+!        integer                 :: ierr
+!        real(rk)                :: time_lev(ntime)
+!
+!        call h5ltget_attribute_double_f(fid, "/", "Times", time_lev, ierr)
+!        if (ierr /= 0) call chidg_signal(FATAL,"get_time_levels_hdf: h5ltget_attribute_double_f had a &
+!                                        problem getting time levels")
+!
+!
+!    end function get_time_levels_hdf
+!    !***************************************************************************************
 
 
 

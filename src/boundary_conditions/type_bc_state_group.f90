@@ -97,7 +97,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     function get_name(self) result(name)
-        class(bc_state_group_t),  intent(inout)   :: self
+        class(bc_state_group_t),  intent(in)   :: self
 
         character(:),   allocatable :: name, user_msg
 

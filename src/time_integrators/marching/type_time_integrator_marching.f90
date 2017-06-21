@@ -6,11 +6,7 @@ module type_time_integrator_marching
     use type_time_integrator,   only: time_integrator_t
     use hdf5
     use h5lt
-    use mod_hdf_utilities,      only: open_file_hdf, close_file_hdf, get_ntimes_hdf, &
-                                      set_time_integrator_hdf,  get_time_integrator_hdf, &
-                                      set_time_step_hdf, get_time_step_hdf, &
-                                      set_nsteps_hdf, get_nsteps_hdf, &
-                                      set_nwrite_hdf, get_nwrite_hdf
+    use mod_hdf_utilities
     use mpi_f08
     implicit none
 
@@ -94,18 +90,15 @@ contains
                 fid = open_file_hdf(filename)
 
 
-                !
-                ! Write time integrator name to hdf file
-                !
-                call set_time_integrator_hdf(fid, trim(data%time_manager%get_name()))
-
 
                 !
                 ! Write dt, no. of time steps and nwrite to hdf file
                 !
-                call set_time_step_hdf(fid,data%time_manager%dt)
-                call set_nsteps_hdf(fid,data%time_manager%nsteps)
-                call set_nwrite_hdf(fid,data%time_manager%nwrite)
+                call set_time_integrator_hdf(fid, trim(data%time_manager%get_name()))
+                call set_time_step_hdf(      fid, data%time_manager%dt              )
+                call set_times_hdf(          fid, [data%time_manager%t]             )
+                call set_nsteps_hdf(         fid, data%time_manager%nsteps          )
+                call set_nwrite_hdf(         fid, data%time_manager%nwrite          )
 
                 
                 call close_file_hdf(fid)
@@ -132,10 +125,6 @@ contains
         character(*),                       intent(in)      :: filename
 
         integer(HID_T)                  :: fid
-        character(:),   allocatable     :: temp_string
-        real(rk),       dimension(1)    :: dt
-        integer(ik),    dimension(1)    :: nsteps, nwrite 
-        integer(ik)                     :: ierr, ntime
 
 
         !
@@ -145,35 +134,21 @@ contains
 
 
         !
-        ! Read time integrator name
-        !
-        temp_string = get_time_integrator_hdf(fid)
-
-
-        !
         ! Read dt, no. of time steps and nwrite
         !
-        dt     = get_time_step_hdf(fid)
-        nsteps = get_nsteps_hdf(fid)
-        nwrite = get_nwrite_hdf(fid)
+        data%time_manager%time_scheme = trim(get_time_integrator_hdf(fid))
+        data%time_manager%times       = get_times_hdf(fid)
+        data%time_manager%dt          = get_time_step_hdf(fid)
+        data%time_manager%nsteps      = get_nsteps_hdf(fid)
+        data%time_manager%nwrite      = get_nwrite_hdf(fid)
+        data%time_manager%t           = data%time_manager%times(1)
+        data%time_manager%ntime       = size(data%time_manager%times)
         
 
         !
-        ! Read ntime
+        ! Close file
         !
-        ntime = get_ntimes_hdf(fid)
-
         call close_file_hdf(fid)
-
-
-        !
-        ! Set time_options in time_manager
-        !
-        data%time_manager%time_scheme = trim(temp_string)
-        data%time_manager%dt          = dt(1)
-        data%time_manager%nsteps      = nsteps(1)
-        data%time_manager%nwrite      = nwrite(1)
-        data%time_manager%ntime       = ntime
 
 
     end subroutine read_time_options

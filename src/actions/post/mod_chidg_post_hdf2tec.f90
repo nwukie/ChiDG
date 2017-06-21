@@ -112,7 +112,11 @@ contains
         solution_file_prefix = get_file_prefix(solution_file,'.h5')
         step_str             = solution_file_prefix(len(grid_file_prefix)+2:)
 
-        plt_filename = step_str//'.plt'
+        if (trim(step_str) == '') then
+            plt_filename = '0.plt'
+        else
+            plt_filename = step_str//'.plt'
+        end if
 
         !
         ! Write solution

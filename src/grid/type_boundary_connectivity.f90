@@ -20,7 +20,7 @@ module type_boundary_connectivity
     contains
         
         procedure   :: init
-        procedure   :: get_nfaces            !< Return the number of elements in the domain
+        procedure   :: nfaces            ! Return number of face connectivities contained
 
     end type boundary_connectivity_t
     !*******************************************************************************
@@ -64,14 +64,14 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------
-    function get_nfaces(self) result(nfaces)
+    function nfaces(self) result(nfaces_)
         class(boundary_connectivity_t),  intent(in)  :: self
 
-        integer(ik) :: nfaces
+        integer(ik) :: nfaces_
 
-        nfaces = size(self%data)
+        nfaces_ = size(self%data)
 
-    end function get_nfaces
+    end function nfaces
     !********************************************************************************
 
 

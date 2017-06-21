@@ -96,6 +96,8 @@ contains
         integer(ik),                    allocatable :: elements(:,:) 
         integer(ik),                    allocatable :: faces(:,:)
         real(rk),   dimension(:,:,:),   allocatable :: xcoords, ycoords, zcoords
+        character(len=8)                            :: bc_face_strings(6)
+        character(:),   allocatable                 :: bc_face_string
 
 
         ! Create/initialize file
@@ -133,6 +135,7 @@ contains
         !
         dom_id = open_domain_hdf(file_id,'01')
 
+        bc_face_strings = ["XI_MIN  ","XI_MAX  ","ETA_MIN ","ETA_MAX ","ZETA_MIN","ZETA_MAX"]
         do bcface = 1,size(patch_names)
             
             ! Get face node indices for boundary 'bcface'
@@ -140,7 +143,8 @@ contains
 
 
             ! Set bc patch face indices
-            patch_id = create_patch_hdf(dom_id,bcface)
+            bc_face_string  = trim(bc_face_strings(bcface))
+            patch_id = create_patch_hdf(dom_id,bc_face_string)
             call set_patch_hdf(patch_id,faces)
             call close_patch_hdf(patch_id)
 
@@ -254,7 +258,8 @@ contains
         real(rk)                                        :: xmax_block1,xmin_block2, xmax_current,       &
                                                            xmax_new, ymax_new, zmax_new, ymax_current,  &
                                                            zmax_current
-
+        character(len=8)                                :: bc_face_strings(6)
+        character(:),   allocatable                     :: bc_face_string
 
         !
         ! Create/initialize file
@@ -369,6 +374,7 @@ contains
         dom1_id = open_domain_hdf(file_id,'01')
         dom2_id = open_domain_hdf(file_id,'02')
 
+        bc_face_strings = ["XI_MIN  ","XI_MAX  ","ETA_MIN ","ETA_MAX ","ZETA_MIN","ZETA_MAX"]
         do bcface = 1,6
             ! Get face node indices for boundary 'bcface'
             faces1 = get_block_boundary_faces_plot3d(xcoords1,ycoords1,zcoords1,mapping,bcface)
@@ -376,8 +382,9 @@ contains
 
 
             ! Set bc patch face indices
-            patch1_id = create_patch_hdf(dom1_id,bcface)
-            patch2_id = create_patch_hdf(dom2_id,bcface)
+            bc_face_string  = trim(bc_face_strings(bcface))
+            patch1_id = create_patch_hdf(dom1_id,bc_face_string)
+            patch2_id = create_patch_hdf(dom2_id,bc_face_string)
 
             call set_patch_hdf(patch1_id,faces1)
             call set_patch_hdf(patch2_id,faces2)
@@ -535,7 +542,8 @@ contains
         integer(ik),    allocatable                     :: faces1(:,:), faces2(:,:)
         real(rk),       allocatable, dimension(:,:,:)   :: xcoords1, xcoords2, ycoords1, ycoords2, zcoords1, zcoords2
         real(rk)                                        :: xmax,ymax, xmax_current, ymax_current, zmax_current
-
+        character(len=8)                                :: bc_face_strings(6)
+        character(:),   allocatable                     :: bc_face_string
 
         ! Create/initialize file
         call initialize_file_hdf(filename)
@@ -621,6 +629,7 @@ contains
         dom1_id = open_domain_hdf(file_id,'01')
         dom2_id = open_domain_hdf(file_id,'02')
 
+        bc_face_strings = ["XI_MIN  ","XI_MAX  ","ETA_MIN ","ETA_MAX ","ZETA_MIN","ZETA_MAX"]
         do bcface = 1,6
             ! Get face node indices for boundary 'bcface'
             faces1 = get_block_boundary_faces_plot3d(xcoords1,ycoords1,zcoords1,mapping,bcface)
@@ -628,8 +637,9 @@ contains
 
 
             ! Set bc patch face indices
-            patch1_id = create_patch_hdf(dom1_id,bcface)
-            patch2_id = create_patch_hdf(dom2_id,bcface)
+            bc_face_string  = trim(bc_face_strings(bcface))
+            patch1_id = create_patch_hdf(dom1_id,bc_face_string)
+            patch2_id = create_patch_hdf(dom2_id,bc_face_string)
 
             call set_patch_hdf(patch1_id,faces1)
             call set_patch_hdf(patch2_id,faces2)

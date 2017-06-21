@@ -13,7 +13,7 @@
 !!      read_bc_state_groups_hdf
 !!
 !!  TODO: write_boundaryconditions_hdf
-!!  TODO:   write_patches_hdf
+!!      write_patches_hdf
 !!  TODO:   write_bc_state_groups_hdf
 !!
 !!  read_fields_hdf
@@ -27,7 +27,7 @@
 !!
 !!
 !!  read_global_connectivity_hdf
-!!  TODO: write_connectivity_hdf
+!!  TODO: write_global_connectivity_hdf
 !!
 !!  
 !!  copy_configuration_hdf
@@ -57,7 +57,7 @@ module mod_hdfio
     use mod_string,                 only: string_t
     use type_chidg_data,            only: chidg_data_t
     use type_meshdata,              only: meshdata_t
-    use type_bc_patch_data,         only: bc_patch_data_t
+    use type_domain_patch_data,     only: domain_patch_data_t
     use type_bc_state_group,        only: bc_state_group_t
     use type_bc_state,              only: bc_state_t
     use type_domain_connectivity,   only: domain_connectivity_t
@@ -1115,10 +1115,10 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     subroutine read_boundaryconditions_hdf(filename, patch_data, bc_state_groups, partition)
-        character(*),           intent(in)                  :: filename
-        type(bc_patch_data_t),  intent(inout), allocatable  :: patch_data(:)
-        type(bc_state_group_t), intent(inout), allocatable  :: bc_state_groups(:)
-        type(partition_t),      intent(in)                  :: partition
+        character(*),               intent(in)                  :: filename
+        type(domain_patch_data_t),  intent(inout), allocatable  :: patch_data(:)
+        type(bc_state_group_t),     intent(inout), allocatable  :: bc_state_groups(:)
+        type(partition_t),          intent(in)                  :: partition
 
         character(len=10)       :: faces(NFACES)
         integer(HID_T)          :: fid
@@ -1176,13 +1176,13 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     subroutine read_patches_hdf(fid, patch_data, partition)
-        integer(HID_T),         intent(in)      :: fid
-        type(bc_patch_data_t),  intent(inout)   :: patch_data(:)
-        type(partition_t),      intent(in)      :: partition
+        integer(HID_T),             intent(in)      :: fid
+        type(domain_patch_data_t),  intent(inout)   :: patch_data(:)
+        type(partition_t),          intent(in)      :: partition
 
-        integer(ik)                 :: iconn, nconn, iface, ierr
+        integer(ik)                 :: iconn, nconn, ipatch, npatches, ierr
         integer(ik),    allocatable :: patch(:,:)
-        character(:),   allocatable :: bc_state_group
+        character(:),   allocatable :: group_name, patch_name
         integer                     :: ibc_face, nbcfaces
         character(1024)             :: domain
         character(len=10)           :: patches(NFACES)
@@ -1211,7 +1211,8 @@ contains
             !
             ! Allocation bcs for current domain
             !
-            allocate(patch_data(iconn)%bc_connectivity(NFACES), stat=ierr)
+            npatches = get_npatches_hdf(dom_id)
+            allocate(patch_data(iconn)%bc_connectivity(npatches), stat=ierr)
             if (ierr /= 0) call AllocationError
 
 
@@ -1219,11 +1220,11 @@ contains
             ! Loop faces and get boundary condition for each
             !
             ! TODO: should probably turn this into a loop over bcs instead of faces.
-            do iface = 1,NFACES
+            do ipatch = 1,npatches
 
 
                 ! Open face boundary condition group
-                patch_id = open_patch_hdf(dom_id,patches(iface))
+                patch_id = open_patch_hdf(dom_id,patches(ipatch))
     
 
                 ! Get bc patch connectivity for current face
@@ -1232,22 +1233,24 @@ contains
 
 
                 ! Store boundary condition connectivity
-                call patch_data(iconn)%bc_connectivity(iface)%init(nbcfaces)
+                call patch_data(iconn)%bc_connectivity(ipatch)%init(nbcfaces)
                 do ibc_face = 1,nbcfaces
-                    patch_data(iconn)%bc_connectivity(iface)%data(ibc_face)%data = patch(ibc_face,:)
+                    patch_data(iconn)%bc_connectivity(ipatch)%data(ibc_face)%data = patch(ibc_face,:)
                 end do
 
                 
                 ! Read Boundary State Group
-                bc_state_group = get_patch_group_hdf(patch_id)
-                call patch_data(iconn)%bc_group_name%push_back(string_t(bc_state_group))
+                group_name = get_patch_group_hdf(patch_id)
+                patch_name = patches(ipatch)
+                call patch_data(iconn)%group_name%push_back(string_t(trim(group_name)))
+                call patch_data(iconn)%patch_name%push_back(string_t(trim(patch_name)))
 
 
                 ! Close face boundary condition group
                 call close_patch_hdf(patch_id)
 
 
-            end do ! iface
+            end do ! ipatch
 
 
             ! Close domain group
@@ -1363,94 +1366,219 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   06/01/2017
     !!
+    !!  TODO: TEST
     !!
     !----------------------------------------------------------------------------------------
-    subroutine write_patches_hdf(fid, patch_data, partition)
-        integer(HID_T),         intent(in)      :: fid
-        type(bc_patch_data_t),  intent(inout)   :: patch_data(:)
-        type(partition_t),      intent(in)      :: partition
+    subroutine write_patches_hdf(data,file_name)
+        type(chidg_data_t), intent(in)  :: data
+        character(*),       intent(in)  :: file_name
 
-        integer(ik)                 :: iconn, nconn, iface, ierr
-        integer(ik),    allocatable :: patch(:,:)
-        character(:),   allocatable :: bc_state_group
-        integer                     :: ibc_face, nbcfaces
-        character(1024)             :: domain
-        character(len=10)           :: patches(NFACES)
+        logical                     :: file_exists, exists
+        integer(ik)                 :: iproc, iwrite, idom, igroup, ipatch, ierr, iface, nfaces, npts
+        integer(ik),    allocatable :: faces(:,:)
+        integer(HID_T)              :: fid, dom_id, patch_id
+        character(:),   allocatable :: patch_name, domain_name, group_name
 
-        integer(HID_T)              :: dom_id, patch_id
-
-
-        patches = ["  XI_MIN","  XI_MAX"," ETA_MIN"," ETA_MAX","ZETA_MIN","ZETA_MAX"]
 
 
         !
-        !  Loop through connectivities and read boundary conditions
+        ! Check for file existence
         !
-        nconn = size(partition%connectivities)
-        do iconn = 1,nconn
+        file_exists = check_file_exists_hdf(file_name)
 
 
-            !
-            ! Get name of current domain, open domain group
-            !
-            domain = partition%connectivities(iconn)%get_domain_name()
-            patch_data(iconn)%domain_name = domain
-            dom_id = open_domain_hdf(fid,trim(domain))
+        !
+        ! Create new file if necessary
+        !   Barrier makes sure everyone has called file_exists before
+        !   one potentially gets created by another processor
+        !
+        call MPI_Barrier(ChiDG_COMM,ierr)
+        if (.not. file_exists) then
 
-            
+                ! Create a new file
+                if (IRANK == GLOBAL_MASTER) then
+                    call initialize_file_hdf(file_name)
+                end if
+                call MPI_Barrier(ChiDG_COMM,ierr)
 
-
-            !
-            ! Allocation bcs for current domain
-            !
-            allocate(patch_data(iconn)%bc_connectivity(NFACES), stat=ierr)
-            if (ierr /= 0) call AllocationError
-
-
-            !
-            ! Loop faces and get boundary condition for each
-            !
-            ! TODO: should probably turn this into a loop over bcs instead of faces.
-            do iface = 1,NFACES
-
-
-                ! Open face boundary condition group
-                patch_id = open_patch_hdf(dom_id,patches(iface))
-    
-
-                ! Get bc patch connectivity for current face
-                patch = get_patch_hdf(patch_id)
-                nbcfaces = size(patch,1)
-
-
-                ! Store boundary condition connectivity
-                call patch_data(iconn)%bc_connectivity(iface)%init(nbcfaces)
-                do ibc_face = 1,nbcfaces
-                    patch_data(iconn)%bc_connectivity(iface)%data(ibc_face)%data = patch(ibc_face,:)
+                ! Initialize the file structure.
+                do iproc = 0,NRANK-1
+                    if (iproc == IRANK) then
+                        fid = open_file_hdf(file_name)
+                        call initialize_file_structure_hdf(fid,data)
+                        call close_file_hdf(fid)
+                    end if
+                    call MPI_Barrier(ChiDG_COMM,ierr)
                 end do
 
-                
-                ! Read Boundary State Group
-                bc_state_group = get_patch_group_hdf(patch_id)
-                call patch_data(iconn)%bc_group_name%push_back(string_t(bc_state_group))
+        end if
+        call MPI_Barrier(ChiDG_COMM,ierr)
 
 
-                ! Close face boundary condition group
-                call close_patch_hdf(patch_id)
+
+        !
+        ! Each process, write its own portion of the solution
+        !
+        do iwrite = 0,NRANK-1
+            if ( iwrite == IRANK ) then
+
+                fid = open_file_hdf(file_name)
+
+                do igroup = 1,data%mesh%nbc_patch_groups()
+                    do ipatch = 1,data%mesh%bc_patch_group(igroup)%npatches()
+
+                        idom        = data%mesh%bc_patch_group(igroup)%patch(ipatch)%idomain_l()
+                        patch_name  = data%mesh%bc_patch_group(igroup)%patch(ipatch)%name
+                        group_name  = data%mesh%bc_patch_group(igroup)%name
+                        domain_name = data%mesh%domain(idom)%name
 
 
-            end do ! iface
+                        dom_id = open_domain_hdf(fid,domain_name)
+
+                        ! Check if patch exists        
+                        exists = check_link_exists_hdf(dom_id,"Patches/"//"P_"//trim(adjustl(patch_name)))
+                        if (.not. exists) then
+                            patch_id = create_patch_hdf(dom_id,trim(adjustl(patch_name)))
+                        else
+                            patch_id = open_patch_hdf(dom_id,trim(adjustl(patch_name)))
+                        end if 
 
 
-            ! Close domain group
-            call close_domain_hdf(dom_id)
+                        ! Allocate array to assemble connectivities
+                        nfaces = data%mesh%bc_patch_group(igroup)%patch(ipatch)%connectivity%nfaces()
+                        npts   = size(data%mesh%bc_patch_group(igroup)%patch(ipatch)%connectivity%data(1)%data)
+                        if (allocated(faces)) deallocate(faces)
+                        allocate(faces(nfaces,npts), stat=ierr)
+                        if (ierr /= 0) call AllocationError
 
-        end do  ! iconn
+                        ! Assemble patch connectivities
+                        do iface = 1,nfaces
+                            faces(iface,:) = data%mesh%bc_patch_group(igroup)%patch(ipatch)%connectivity%data(iface)%data
+                        end do
+
+                        ! Set connectivies and group association
+                        call set_patch_hdf(patch_id,faces)
+                        call set_patch_group_hdf(patch_id,trim(group_name))
+
+                        call close_patch_hdf(patch_id)
+                        call close_domain_hdf(dom_id)
+
+                    end do !ipatch
+                end do !igroup
+
+
+
+                call close_file_hdf(fid)
+
+            end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do
 
 
 
     end subroutine write_patches_hdf
     !****************************************************************************************
+
+
+
+
+
+
+    !>  Write boundary condition state groups to file.
+    !!
+    !!  Writes and all boundary condition state groups to the file.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/20/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine write_bc_state_groups_hdf(data,file_name)
+        type(chidg_data_t), intent(in)  :: data
+        character(*),       intent(in)  :: file_name
+
+        integer(ik) :: igroup, istate
+
+
+        do igroup = 1,data%nbc_state_groups()
+
+            do istate = 1,data%bc_state_group(igroup)%nbc_states()
+
+            end do !istate
+        end do !igroup
+
+    end subroutine write_bc_state_groups_hdf
+    !***************************************************************************************
+
+
+
+
+!        ngroups        = get_nbc_state_groups_hdf(fid)
+!        bc_group_names = get_bc_state_group_names_hdf(fid)
+!
+!
+!        if (allocated(bc_state_groups)) deallocate(bc_state_groups)
+!        allocate(bc_state_groups(ngroups), stat=ierr)
+!        if (ierr /= 0) call AllocationError
+!
+!
+!        !
+!        ! Read each group of bc_state's
+!        !
+!        do igroup = 1,ngroups
+!
+!            ! Open face boundary condition group
+!            group_name = bc_group_names%at(igroup)
+!            group_id = open_bc_group_hdf(fid,group_name%get())
+!
+!            !
+!            ! Get bc_group Family attribute.
+!            !
+!            bc_state_groups(igroup)%family = get_bc_state_group_family_hdf(group_id)
+!
+!            !
+!            ! Loop through and read states + their properties
+!            !
+!            bc_state_names = get_bc_state_names_hdf(group_id)
+!            do istate = 1,bc_state_names%size()
+!
+!                ! Get bc_state name, return bc_state from file and source-allocate
+!                state_name = bc_state_names%at(istate)
+!                if (allocated(bc)) deallocate(bc)
+!                allocate(bc, source = get_bc_state_hdf(group_id,state_name%get()))
+!
+!                ! Save to bc_state_group_data_t
+!                bc_state_groups(igroup)%name = group_name%get()
+!                call bc_state_groups(igroup)%add_bc_state(bc)
+!
+!            end do !istate
+!
+!
+!            ! Close face boundary condition group
+!            call close_bc_group_hdf(group_id)
+!
+!        end do !igroup
+!
+!
+!
+!    end subroutine write_bc_state_groups_hdf
+!    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

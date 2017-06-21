@@ -6,11 +6,12 @@ module type_face_connectivity
 
 
 
-    !>  This data type contains the connectivity information for a single element
+    !>  This data type contains the connectivity information for a single face
     !!
     !!  Connectivity data format is as follows:
-    !!  !!!data = [ idomain_g, ielement_g, mapping, ipt1, ipt2, ipt3, ... ]
     !!  data = [ ipt1, ipt2, ipt3, ... ]
+    !!
+    !!  NOTE: no header/auxiliary data
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/10/2016

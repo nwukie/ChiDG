@@ -105,7 +105,7 @@ contains
                 !
                 ! Get geometry locator
                 !
-                idom  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l(face_ID)
+                idom  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l()
                 ielem = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
                 iface = mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
 

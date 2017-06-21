@@ -47,6 +47,8 @@ contains
 
         ! File, group vars
         character(1024)             :: file_prefix, hdf_file, blockgroup, blockname
+        character(len=8)            :: bc_face_strings(6)
+        character(:),   allocatable :: bc_face_string
         logical                     :: file_exists
 
         ! HDF5 vars
@@ -243,6 +245,8 @@ contains
             !
             ! Generate and write boundary condition connectivities
             !
+            bc_face_strings = ["XI_MIN  ","XI_MAX  ","ETA_MIN ","ETA_MAX ","ZETA_MIN","ZETA_MAX"]
+
             do bcface = 1,6
 
                 ! Get face node indices for boundary 'bcface'
@@ -250,7 +254,8 @@ contains
 
 
                 ! Set bc patch face indices
-                patch_id = create_patch_hdf(dom_id,bcface)
+                bc_face_string  = trim(bc_face_strings(bcface))
+                patch_id = create_patch_hdf(dom_id,bc_face_string)
                 call set_patch_hdf(patch_id,faces)
                 call close_patch_hdf(patch_id)
 

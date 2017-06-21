@@ -1179,6 +1179,7 @@ contains
     !!  @date   2/1/2016
     !!
     !!  @param[in]  elem    Element containing coordinate expansion
+    !!  @param[in]  type    'Reference' or 'ALE'
     !!  @param[in]  icoord  Integer corresponding to coordinate index 1(x), 2(y), 3(z)
     !!  @param[in]  xi      Real value for xi-coordinate
     !!  @param[in]  eta     Real value for eta-coordinate
@@ -1187,9 +1188,12 @@ contains
     !!  @author Mayank Sharma + MAtteo Ugolotti
     !!  @date   11/5/2016
     !!
+    !!  TODO: TEST type 'Reference' and 'ALE'
+    !!
     !-----------------------------------------------------------------------------------------
-    function grid_point(self,icoord,xi,eta,zeta) result(val)
+    function grid_point(self,type,icoord,xi,eta,zeta) result(val)
         class(element_t),   intent(in)  :: self
+        character(*),       intent(in)  :: type
         integer(ik),        intent(in)  :: icoord
         real(rk),           intent(in)  :: xi, eta, zeta
 
@@ -1218,7 +1222,12 @@ contains
         !
         ! Evaluate mesh point from dot product of modes and polynomial values
         !
-        val = dot_product(self%coords%getvar(icoord,itime = 1), polyvals)
+        if (type == 'Reference') then
+            val = dot_product(self%coords%getvar(icoord,itime = 1), polyvals)
+        else if (type == 'ALE') then
+            val = dot_product(self%ale_coords%getvar(icoord,itime = 1), polyvals)
+        end if
+
 
     end function grid_point
     !******************************************************************************************
@@ -1292,7 +1301,7 @@ contains
 
                 else if (self%coordinate_system == 'Cylindrical') then
                     if (phys_dir == DIR_THETA) then
-                        r = self%grid_point(1,xi,eta,zeta)
+                        r = self%grid_point('Reference',1,xi,eta,zeta)
                         val = val * r
                     end if
                 end if
@@ -1335,7 +1344,7 @@ contains
         integer(ik),            intent(in)      :: itime
         real(rk),               intent(in)      :: xi,eta,zeta
 
-        real(rk)                   :: val
+        real(rk)                   :: temp,val
         type(point_t)              :: node
         real(rk)                   :: polyvals(q%nterms())
         integer(ik)                :: iterm, spacedim
@@ -1357,7 +1366,9 @@ contains
         !
         ! Evaluate x from dot product of modes and polynomial values
         !
-        val = dot_product(q%getvar(ivar,itime),polyvals)
+        temp = dot_product(q%getvar(ivar,itime),polyvals)
+        val = temp/dot_product(self%det_jacobian_grid_modes,polyvals)
+
 
     end function solution_point
     !******************************************************************************************

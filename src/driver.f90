@@ -132,11 +132,11 @@ program driver
 
 
             ! rho
-            call constant%set_option('val',1.1_rk)
+            call constant%set_option('val',1.19_rk)
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,1)
 
             ! rho_u
-            call constant%set_option('val',10.0_rk)
+            call constant%set_option('val',40.816643_rk)
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,2)
 
             ! rho_v
@@ -148,7 +148,7 @@ program driver
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,4)
 
             ! rho_E
-            call constant%set_option('val',240000._rk)
+            call constant%set_option('val',250700._rk)
             call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,5)
 
 !            ! rho_nutilde

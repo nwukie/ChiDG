@@ -13,7 +13,6 @@ module type_DIRK
     use type_linear_solver,             only: linear_solver_t
     use type_preconditioner,            only: preconditioner_t
     use type_chidg_vector
-
     implicit none
     private
 
@@ -57,6 +56,16 @@ module type_DIRK
 
     end type assemble_DIRK_t
     !*****************************************************************************************************************
+
+
+
+    !
+    ! DIRK butcher tableau coefficients
+    !
+    real(rk),   parameter   :: alpha = 0.435866521508459_rk
+    real(rk),   parameter   :: tau   = (ONE + alpha)/TWO
+    real(rk),   parameter   :: b1    = -(SIX*(alpha*alpha) - (16._rk*alpha) + ONE)/FOUR
+    real(rk),   parameter   :: b2    = (SIX*(alpha*alpha) - (20._rk*alpha) + FIVE)/FOUR
 
 
 
@@ -131,18 +140,8 @@ contains
 
         integer(ik),    parameter   :: nstage = 3
         type(chidg_vector_t)        :: dq(nstage), q_temp, q_n, residual
-        real(rk)                    :: alpha = 0.435866521508459_rk
-        real(rk)                    :: tau, b1, b2, t_n
+        real(rk)                    :: t_n
         integer(ik)                 :: istage, jstage
-
-
-        !
-        ! Constants used to define DIRK coefficients
-        !
-        !alpha = 0.435866521508459_rk
-        tau   = (ONE + alpha)/TWO
-        b1    = -(SIX*(alpha*alpha) - (16._rk*alpha) + ONE)/FOUR
-        b2    = (SIX*(alpha*alpha) - (20._rk*alpha) + FIVE)/FOUR
 
 
         !
@@ -261,7 +260,6 @@ contains
         logical,                intent(in)                  :: differentiate
         real(rk),               intent(inout),  optional    :: timing
 
-        real(rk)                    :: alpha = 0.435866521508459_rk
         type(chidg_vector_t)        :: delta_q 
         real(rk)                    :: dt
         integer(ik)                 :: ntime, itime, idom, ielem, ivar, imat, ierr, &       

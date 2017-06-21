@@ -157,6 +157,8 @@ contains
                 !
                 ! Allocate times(:),freqs(:) storage
                 !
+                if (allocated(self%times)) deallocate(self%times)
+                if (allocated(self%freqs)) deallocate(self%freqs)
                 allocate(self%times(self%ntime), self%freqs(nfreq), stat=ierr)
                 if (ierr /= 0) call AllocationError
 

@@ -60,19 +60,15 @@ subroutine test_chidg_matrix_operator_HB_mv()
     time_integrator = 'harmonic_balance'
     frequencies(1)  = 2.0_rk*PI
 
-    print *, '1'
     
     ! Initialize ChiDG
     ! Also initializes time_manager
     !
     call chidg%start_up('core')
-    print *, '1b'
     call chidg%set('Solution Order', integer_input=2)
-    print *, '1c'
     call chidg%set('Time Integrator', algorithm = time_integrator)
 
 
-    print *, '2'
     !
     ! Create grid file
     !
@@ -83,14 +79,12 @@ subroutine test_chidg_matrix_operator_HB_mv()
     !
     ! Get grid points
     !
-    print *, '3'
     call chidg%read_mesh(filename)
 
 
     !
     ! Initialize data containers
     !
-    print *, '4'
     call A%init(chidg%data%mesh, mtype = 'full')
     call x%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
     call b%init(chidg%data%mesh,chidg%data%mesh%domain(1)%ntime)
@@ -103,7 +97,6 @@ subroutine test_chidg_matrix_operator_HB_mv()
     !
     ! There are 3 time levels here since there is 1 HB frequency
     !
-    print *, '5'
     ielem = 1
     itime = 1
     imat  = A%dom(1)%lblks(ielem,itime)%get_diagonal()
@@ -140,11 +133,9 @@ subroutine test_chidg_matrix_operator_HB_mv()
     !
     ! Perform matrx-vector multiplication. THIS IS BEING TESTED
     !
-    print *, '6'
     b = chidg_mv(A,x)
 
    
-    print *, '7'
     associate ( D => time_manager_global%D )
 
         bref_1 = (THREE*0.4_rk)*nterms_s    ! Residual linearization at ielem = 7, itime = 2 \times (densevector)
@@ -175,7 +166,6 @@ subroutine test_chidg_matrix_operator_HB_mv()
     !
     ! Close ChiDG interface
     !
-    print *, '8'
     call chidg%shut_down('core')
 
     !
@@ -189,7 +179,6 @@ subroutine test_chidg_matrix_operator_HB_mv()
     !
     call delete_file(filename)
 
-    print *, '9'
 
 end subroutine test_chidg_matrix_operator_HB_mv
 !*****************************************************************************************************************

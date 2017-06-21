@@ -262,7 +262,7 @@ contains
         !------------------------------------------------------------------------------
         basis            = 'legendre'
         gq_rule          = 2
-        time_integrator  = 'dirk'
+        time_integrator  = 'DIRK'
         nonlinear_solver = 'quasi_newton'
         linear_solver    = 'fgmres'
         preconditioner   = 'RASILU0'

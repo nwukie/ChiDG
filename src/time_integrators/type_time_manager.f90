@@ -128,7 +128,6 @@ contains
             case ('Harmonic Balance', 'Harmonic_Balance', 'harmonic balance',   &
                   'harmonic_balance', 'HB')
                 
-                print *, 'A'
                 call self%set_name(time_integrator)
                 self%nsteps     = 1
                 self%nwrite     = 0     ! don't write intermediate file
@@ -146,7 +145,6 @@ contains
                 !   : determine number of frequencies, by number of nonzero entries in IO variable 'frequencies'
                 !   : number of time levels = 2*nfreq + 1
                 !
-                print *, 'B'
                 nfreq = 0
                 do i = 1,size(frequencies)
                     if ( frequencies(i) /= ZERO ) then
@@ -168,7 +166,6 @@ contains
                 !
                 ! Store input frequencies
                 !
-                print *, 'D'
                 do i = 1,size(frequencies)
                     if ( frequencies(i) /= ZERO ) then
                         self%freqs(i) = frequencies(i)
@@ -178,7 +175,6 @@ contains
                 !
                 ! Compute, store time levels
                 !
-                print *, 'E'
                 do i = 1,self%ntime
                     self%times(i) = ((TWO*PI)/minval(self%freqs)) * (real(i)/real(self%ntime))
                 end do
@@ -188,7 +184,6 @@ contains
                 ! Compute the pseudo spectral operator when the HB time integrator is specified
                 ! in the namelist file
                 !
-                print *, 'F'
                 self%D = calc_pseudo_spectral_operator(self%freqs,self%times)
 
 
@@ -204,7 +199,6 @@ contains
         end select
 
 
-                print *, 'G'
     end subroutine init
     !------------------------------------------------------------------------------------------
 

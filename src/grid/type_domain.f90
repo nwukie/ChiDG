@@ -93,6 +93,7 @@ module type_domain
 
         procedure           :: init_geom                ! geometry init for elements and faces 
         procedure           :: init_ale
+        procedure           :: update_ale
         procedure           :: init_sol                 ! init data depending on solution order for elements and faces
         procedure           :: init_eqn                 ! initialize the equation set identifier on the mesh
 
@@ -229,10 +230,8 @@ contains
         do ielem = 1,self%nelem
             call self%elems(ielem)%init_ale(dnodes,vnodes)
 
-            call self%elems(ielem)%update_element_ale()
             do iface = 1,NFACES
                 call self%faces(ielem,iface)%init_ale(self%elems(ielem))
-                call self%faces(ielem,iface)%update_face_ale()
             end do !iface
 
         end do !ielem
@@ -241,6 +240,33 @@ contains
     end subroutine init_ale
     !*****************************************************************************************
 
+
+    !>  Initialize ALE data from node displacement data. 
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/16/2017
+    !!
+    !!
+    !!  TODO: Test
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine update_ale(self)
+        class(domain_t),        intent(inout)   :: self
+
+        integer(ik) :: ielem, iface
+
+        do ielem = 1,self%nelem
+
+            call self%elems(ielem)%update_element_ale()
+            do iface = 1,NFACES
+                call self%faces(ielem,iface)%update_face_ale()
+            end do !iface
+
+        end do !ielem
+
+
+    end subroutine update_ale
+    !*****************************************************************************************
 
 
 
@@ -284,6 +310,7 @@ contains
         call self%init_elems_sol(neqns,nterms_s,ntime)
         call self%init_faces_sol()               
 
+        call self%update_ale()
         !
         ! Confirm initialization
         !

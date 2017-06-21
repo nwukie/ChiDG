@@ -7,14 +7,7 @@ module mod_gridgen_uniform_flow_pmm
     use mod_bc,                 only: create_bc
     use mod_plot3d_utilities,   only: get_block_points_plot3d, get_block_elements_plot3d, &
                                       get_block_boundary_faces_plot3d
-    use mod_hdf_utilities,      only: add_domain_hdf, initialize_file_hdf, open_domain_hdf,         &
-                                      close_domain_hdf, add_bc_state_hdf, close_file_hdf,           &
-                                      close_hdf, set_patch_hdf, set_contains_grid_hdf,              &
-                                      open_bc_group_hdf, close_bc_group_hdf, create_bc_state_group_hdf,   &
-                                      set_patch_group_hdf, open_file_hdf, create_patch_hdf,         &
-                                      open_patch_hdf, close_patch_hdf,                              &
-                                      create_pmm_group_hdf, set_pmm_domain_group_hdf, &
-                                      create_pmmfo_group_hdf, set_pmmf_name_hdf, set_pmmfo_val_hdf
+    use mod_hdf_utilities
     use hdf5
 
     use type_bc_state,          only: bc_state_t
@@ -141,12 +134,12 @@ contains
             do igroup = 1,size(bc_state_groups)
                 call create_bc_state_group_hdf(file_id,bc_state_groups(igroup)%name)
 
-                bcgroup_id = open_bc_group_hdf(file_id,bc_state_groups(igroup)%name)
+                bcgroup_id = open_bc_state_group_hdf(file_id,bc_state_groups(igroup)%name)
 
                 do istate = 1,bc_state_groups(igroup)%nbc_states()
                     call add_bc_state_hdf(bcgroup_id, bc_state_groups(igroup)%bc_state(istate)%state)
                 end do
-                call close_bc_group_hdf(bcgroup_id)
+                call close_bc_state_group_hdf(bcgroup_id)
             end do
         else
 

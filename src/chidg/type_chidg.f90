@@ -178,6 +178,7 @@ contains
                 end if
 
                 ! Call environment initialization routines by default on first init call
+                print *, 'a'
                 if (.not. self%envInitialized ) then
                     call log_init()
 
@@ -195,17 +196,20 @@ contains
 
                 end if
 
+                print *, 'b'
                 ! Allocate an auxiliary ChiDG environment if not already done
                 if (.not. associated(self%auxiliary_environment)) then
                     allocate(self%auxiliary_environment, stat=ierr)
                     if (ierr /= 0) call AllocationError
                 end if
 
+                print *, 'c'
                 call self%data%time_manager%init()
 
                 !
                 ! Initialize global time_manager variable
                 !
+                print *, 'd'
                 call time_manager_global%init()
 
 
@@ -221,6 +225,7 @@ contains
         end select
 
 
+                print *, 'e'
 
 
 
@@ -590,6 +595,8 @@ contains
                                                           bc_periodic )
 
 
+                                                      
+        call self%read_prescribedmeshmotions(gridfile)
 
         !
         ! Initialize data
@@ -915,6 +922,7 @@ contains
         !
         ! Add boundary condition patches
         !
+        if (npmm_groups>0) then
         ndomains = size(pmm_domain_data)
         do idom = 1,ndomains
             
@@ -923,6 +931,7 @@ contains
                                         pmm_group_name%get())
 
         end do !ipatch
+        end if
 
 
 

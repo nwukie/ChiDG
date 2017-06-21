@@ -117,6 +117,7 @@ contains
                 end do
 
                 call mesh%domain(idom)%init_ale(mesh%domain(idom)%dnodes, mesh%domain(idom)%vnodes)
+                call mesh%domain(idom)%update_ale()
             end if
             end associate
         end do  ! idom

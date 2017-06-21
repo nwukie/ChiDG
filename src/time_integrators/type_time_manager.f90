@@ -162,6 +162,8 @@ contains
                 print *, 'C'
                 print *, self%ntime
                 print *, nfreq
+                print *, allocated(self%times)
+                print *, allocated(self%freqs)
                 allocate(self%times(self%ntime), self%freqs(nfreq), stat=ierr)
                 if (ierr /= 0) call AllocationError
 

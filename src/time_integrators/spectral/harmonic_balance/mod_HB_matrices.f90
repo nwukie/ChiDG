@@ -187,15 +187,17 @@ contains
     !! @param[in]   t     - Array containing HB time levels (size ntime)
     !!
     !------------------------------------------------------------------------------------
-    subroutine calc_pseudo_spectral_operator(nfreq,ntime,omega,t,D)
-        integer(ik),                    intent(in)          :: nfreq,ntime
-        real(rk),dimension(:),          intent(in)          :: omega,t
-        real(rk),allocatable,           intent(inout)       :: D(:,:)
+    !subroutine calc_pseudo_spectral_operator(nfreq,ntime,omega,t,D)
+    function calc_pseudo_spectral_operator(omega,t) result(D)
+        real(rk),                   intent(in)      :: omega(:)
+        real(rk),                   intent(in)      :: t(:)
 
-        real(rk),       allocatable              :: inv_E(:,:),diff_inv_E(:,:), E(:,:)
-        integer(ik)                              :: i,ierr
-        character(:),   allocatable              :: user_msg, dev_msg
+        real(rk),       allocatable :: inv_E(:,:),diff_inv_E(:,:), E(:,:), D(:,:)
+        character(:),   allocatable :: user_msg, dev_msg
+        integer(ik)                 :: i,ierr, ntime, nfreq
 
+        ntime = size(t)
+        nfreq = size(omega)
 
         if (allocated(inv_E) .and. allocated(diff_inv_E) .and. allocated(E) &
             .and. allocated(D)) deallocate(inv_E,diff_inv_E,E,D)
@@ -208,7 +210,6 @@ contains
         ! D - pseudo spectral operator
         !
         call calc_inv_E(nfreq,ntime,omega,t,inv_E)
-
         call calc_diff_inv_E(nfreq,ntime,omega,t,diff_inv_E)
     
         user_msg = 'The size of an array being inverted here is ZERO. Check &
@@ -223,7 +224,7 @@ contains
         D = matmul(diff_inv_E,E)
 
     
-    end subroutine calc_pseudo_spectral_operator
+    end function calc_pseudo_spectral_operator
     !************************************************************************************
 
 

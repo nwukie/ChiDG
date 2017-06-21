@@ -228,7 +228,7 @@ program driver
                 call get_command_argument(2,grid_file)
                 call get_command_argument(3,solution_file)
                 call chidg_post(trim(grid_file), trim(solution_file))
-                call chidg_post_vtk(trim(grid_file), trim(solution_file))
+                !call chidg_post_vtk(trim(grid_file), trim(solution_file))
 
             case ('matplotlib')
                 if (narg /= 3) call chidg_signal(FATAL,"The 'matplotlib' action expects: chidg matplotlib gridfile.h5solutionfile.h5")

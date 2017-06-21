@@ -154,7 +154,7 @@ contains
         !
         ! Set local variables equal to the values set in time_manager
         !
-        ntime = data%time_manager%time_lev%size()
+        ntime = size(data%time_manager%times)
         D = data%time_manager%D
 
         do itime_outer = 1,ntime
@@ -163,7 +163,7 @@ contains
             ! Spatial update needed
             ! 
             data%time_manager%itime = itime_outer
-            data%time_manager%t     = data%time_manager%time_lev%at(itime_outer)
+            data%time_manager%t     = data%time_manager%times(itime_outer)
             call update_space(data,differentiate,timing)
 
             do idom = 1,data%mesh%ndomains()

@@ -7,12 +7,7 @@ module mod_gridgen_smoothbump
     use mod_bc,                 only: create_bc
     use mod_plot3d_utilities,   only: get_block_points_plot3d, get_block_elements_plot3d, &
                                       get_block_boundary_faces_plot3d
-    use mod_hdf_utilities,      only: add_domain_hdf, initialize_file_hdf, open_domain_hdf,         &
-                                      close_domain_hdf, add_bc_state_hdf, close_file_hdf,           &
-                                      close_hdf, set_patch_hdf, set_contains_grid_hdf,              &
-                                      open_bc_group_hdf, close_bc_group_hdf, create_bc_state_group_hdf,   &
-                                      set_patch_group_hdf, open_file_hdf, create_patch_hdf,         &
-                                      open_patch_hdf, close_patch_hdf
+    use mod_hdf_utilities
     use hdf5
 
     use type_bc_state,          only: bc_state_t
@@ -139,46 +134,46 @@ contains
             do igroup = 1,size(bc_state_groups)
                 call create_bc_state_group_hdf(file_id,bc_state_groups(igroup)%name)
 
-                bcgroup_id = open_bc_group_hdf(file_id,bc_state_groups(igroup)%name)
+                bcgroup_id = open_bc_state_group_hdf(file_id,bc_state_groups(igroup)%name)
 
                 do istate = 1,bc_state_groups(igroup)%nbc_states()
                     call add_bc_state_hdf(bcgroup_id, bc_state_groups(igroup)%bc_state(istate)%state)
                 end do
-                call close_bc_group_hdf(bcgroup_id)
+                call close_bc_state_group_hdf(bcgroup_id)
             end do
         else
 
             ! Create Inlet boundary condition group
             call create_bc_state_group_hdf(file_id,'Inlet')
-            bcgroup_id = open_bc_group_hdf(file_id,'Inlet')
+            bcgroup_id = open_bc_state_group_hdf(file_id,'Inlet')
 
             call create_bc('Inlet - Total', bc_state)
             call bc_state%set_fcn_option('Total Pressure',   'val',110000._rk)
             call bc_state%set_fcn_option('Total Temperature','val',300._rk   )
 
             call add_bc_state_hdf(bcgroup_id,bc_state)
-            call close_bc_group_hdf(bcgroup_id)
+            call close_bc_state_group_hdf(bcgroup_id)
 
 
             ! Create Outlet boundary condition group
             call create_bc_state_group_hdf(file_id,'Outlet')
-            bcgroup_id = open_bc_group_hdf(file_id,'Outlet')
+            bcgroup_id = open_bc_state_group_hdf(file_id,'Outlet')
 
             call create_bc('Outlet - Constant Pressure', bc_state)
             call bc_state%set_fcn_option('Static Pressure','val',100000._rk)
 
             call add_bc_state_hdf(bcgroup_id,bc_state)
-            call close_bc_group_hdf(bcgroup_id)
+            call close_bc_state_group_hdf(bcgroup_id)
 
 
             ! Create Walls boundary condition group
             call create_bc_state_group_hdf(file_id,'Walls')
-            bcgroup_id = open_bc_group_hdf(file_id,'Walls')
+            bcgroup_id = open_bc_state_group_hdf(file_id,'Walls')
 
             call create_bc('Wall', bc_state)
 
             call add_bc_state_hdf(bcgroup_id,bc_state)
-            call close_bc_group_hdf(bcgroup_id)
+            call close_bc_state_group_hdf(bcgroup_id)
 
 
 

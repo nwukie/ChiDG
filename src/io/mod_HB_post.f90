@@ -201,18 +201,20 @@ contains
         !
         ! Get ntime and nfreq
         !
-        ntime = size(q_coeffs)
-        nfreq = data%time_manager%freq_data%size()
+        !ntime = size(q_coeffs)
+        !nfreq = data%time_manager%freq_data%size()
+        ntime = size(data%time_manager%times)
+        nfreq = size(data%time_manager%freqs)
         
 
         !
         ! Get frequency data
         !
-        if (allocated(freq_data)) deallocate(freq_data)
-        allocate(freq_data(nfreq), stat=ierr)
-        if (ierr /= 0) call AllocationError
-
-        freq_data = data%time_manager%freq_data%data()
+        !if (allocated(freq_data)) deallocate(freq_data)
+        !allocate(freq_data(nfreq), stat=ierr)
+        !if (ierr /= 0) call AllocationError
+        !freq_data = data%time_manager%freq_data%data()
+        freq_data = data%time_manager%freqs
 
         
         !
@@ -369,11 +371,15 @@ contains
         ! Set no. of frequencies and no. of time levels
         ! Also set frequency and time level data
         !
-        nfreq    = data%time_manager%freq_data%size()
-        ntime    = data%time_manager%time_lev%size()
-        freq     = data%time_manager%freq_data%data()
-        time_lev = data%time_manager%time_lev%data()
+        !nfreq    = data%time_manager%freq_data%size()
+        !ntime    = data%time_manager%time_lev%size()
+        !freq     = data%time_manager%freq_data%data()
+        !time_lev = data%time_manager%time_lev%data()
 
+        nfreq    = size(data%time_manager%freqs)
+        ntime    = size(data%time_manager%times)
+        freq     = data%time_manager%freqs
+        time_lev = data%time_manager%times
 
         !
         ! Compute Fourier transform matrix

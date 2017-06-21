@@ -4,7 +4,6 @@ module test__HB_matrices_mod
     use mod_kinds,          only: rk,ik
     use mod_constants 
     use mod_HB_matrices,    only: calc_inv_E, calc_diff_inv_E, calc_pseudo_spectral_operator
-
     implicit none
 
     public  :: HB_matrices
@@ -283,7 +282,8 @@ contains
         !
         call calc_inv_E(this%nfreq, this%ntime, this%freq, this%time, invE)
         call calc_diff_inv_E(this%nfreq, this%ntime, this%freq, this%time, dinvE)
-        call calc_pseudo_spectral_operator(this%nfreq, this%ntime, this%freq, this%time, D)
+        !call calc_pseudo_spectral_operator(this%nfreq, this%ntime, this%freq, this%time, D)
+        D = calc_pseudo_spectral_operator(this%freq,this%time)
 
         !
         ! Compare test matrices with computed matrices within a given tolerance

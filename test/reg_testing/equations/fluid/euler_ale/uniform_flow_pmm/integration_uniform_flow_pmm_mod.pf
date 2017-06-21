@@ -34,24 +34,43 @@
 !
 !--------------------------------------------------------------------------------
 module integration_uniform_flow_pmm_mod
+#include <messenger.h>
     use pfunit_mod
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: ZERO, THREE, IO_DESTINATION, &
+    use mod_constants,          only: ZERO, THREE, IO_DESTINATION, ONE, TWO, PI, FOUR, &
                                       XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use mod_string,             only: string_t
     use type_chidg,             only: chidg_t
+    use type_chidg_data,        only: chidg_data_t
     use mod_bc,                 only: create_bc
     use type_bc_state,          only: bc_state_t
     use type_bc_state_group,    only: bc_state_group_t
     use type_function,          only: function_t
     use type_rvector,           only: rvector_t
+    use type_ivector,           only: ivector_t
     use mod_function,           only: create_function
+    use mod_interpolate,        only: interpolate_element_standard
     use mod_test_utilities,     only: create_mesh_file
     use mod_file_utilities,     only: delete_file
 
-    use mod_chidg_mpi,          only: IRANK, NRANK
-    use mpi_f08,                only: MPI_COMM
+    use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM
+    use mpi_f08,                only: MPI_COMM, MPI_REAL8, MPI_SUM
     use mod_io
+    use type_chidg_worker,      only: chidg_worker_t
+    use type_properties,        only: properties_t
+    use DNAD_D
+
+    ! Imports for defining a new operator and model
+    use mod_operators,          only: operator_factory
+    use type_operator,          only: operator_t
+    use mod_models,             only: model_factory
+    use type_model,             only: model_t
+
+    ! Imports for defining a new equation builder
+    use mod_equations,                  only: equation_builder_factory
+    use type_equation_builder,          only: equation_builder_t
+    use type_equation_set,              only: equation_set_t
+
     implicit none
 
 
@@ -151,7 +170,6 @@ contains
         integer(ik),        allocatable :: nelem_xi(:)
         type(string_t),     allocatable :: files(:)
         integer(ik),        allocatable :: orders(:)
-        real(rk),           allocatable :: entropies(:)
         integer(ik) :: icase
 
         nelem_xi  = [ 6,  6,  6,  6, &
@@ -246,7 +264,7 @@ contains
         gq_rule          = 2
         time_integrator  = 'dirk'
         nonlinear_solver = 'quasi_newton'
-        linear_solver    = 'fgmres_cgs'
+        linear_solver    = 'fgmres'
         preconditioner   = 'RASILU0'
         IO_DESTINATION   = 'file'
         !------------------------------------------------------------------------------
@@ -409,6 +427,7 @@ contains
 
         real(rk)    :: tol
         integer(ik) :: npes_index, grid_index, order_index
+        real(rk)    :: computed_error
 
 
         npes_index  = get_npes_index(NRANK)
@@ -426,7 +445,7 @@ contains
         !
         nonlinear_convergence(npes_index,grid_index,order_index) = self%chidg%nonlinear_solver%residual_norm
 
-        computed_error = compute_1D_linear_diffusion_error(self%chidg%data,self%ChiDG_COMM)
+        computed_error = compute_uniform_flow_pmm_error(self%chidg%data,self%ChiDG_COMM)
 
 
 
@@ -459,9 +478,9 @@ contains
         tol = 0.1_rk
 
 
-        do inpes = 1,3
-            do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
-                do iorder = 1,3
+        do inpes = 1,2
+            do igrid = 2,3  ! Start at the second grid because we need the previous grid in order to compute a rate 
+                do iorder = 1,2
 
                     error_previous = error(inpes,igrid-1,iorder)
                     error_current  = error(inpes,igrid  ,iorder)
@@ -762,6 +781,51 @@ contains
     end subroutine test_nonlinear_convergence
     !*******************************************************************************************
 
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/16/2016
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    function mesh_parameter(igrid,iorder) result(param)
+        integer(ik),    intent(in)  :: igrid
+        integer(ik),    intent(in)  :: iorder
+
+        integer(ik) :: nelem, nterms_1d
+        real(rk)    :: param
+
+        select case (igrid)
+            case(1)
+                nelem = 20
+            case(2)
+                nelem = 30
+            case default
+                call chidg_signal(FATAL,"integration_1D_linear_diffusion_mod%mesh_parameter: invalid igrid")
+        end select
+
+
+        select case (iorder)
+            case(1) ! iorder = 1  =>  order = 2
+                nterms_1d = (iorder+1)
+            case(2)
+                nterms_1d = (iorder+1)
+            case(3)
+                nterms_1d = (iorder+1)
+            case(4)
+                nterms_1d = (iorder+1)
+            case default
+                call chidg_signal(FATAL,"integration_1D_linear_diffusion_mod%mesh_parameter: invalid iorder")
+        end select
+
+
+        param = ONE/(real(nelem,rk)*real(nterms_1d,rk))
+
+    end function mesh_parameter
+    !****************************************************************************************
 
 
 

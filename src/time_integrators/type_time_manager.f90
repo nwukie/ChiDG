@@ -159,11 +159,8 @@ contains
                 !
                 ! Allocate times(:),freqs(:) storage
                 !
-                print *, 'C'
-                print *, self%ntime
-                print *, nfreq
-                print *, allocated(self%times)
-                print *, allocated(self%freqs)
+                if (allocated(self%times)) deallocate(self%times)
+                if (allocated(self%freqs)) deallocate(self%freqs)
                 allocate(self%times(self%ntime), self%freqs(nfreq), stat=ierr)
                 if (ierr /= 0) call AllocationError
 

@@ -52,15 +52,14 @@ module type_prescribed_mesh_motion_function
 
 
     abstract interface
-        impure elemental function compute_pos_interface(self,time,coord)
-            use type_point, only: point_t
+        function compute_pos_interface(self,time,node)
             use mod_kinds,  only: rk
             import prescribed_mesh_motion_function_t
 
             class(prescribed_mesh_motion_function_t),  intent(inout)   :: self
             real(rk),           intent(in)      :: time
-            type(point_t),      intent(in)      :: coord
-            type(point_t)                            :: compute_pos_interface
+            real(rk),      intent(in)      :: node(3)
+            real(rk)                            :: compute_pos_interface(3)
         end function
     end interface
 
@@ -68,15 +67,14 @@ module type_prescribed_mesh_motion_function
 
 
     abstract interface
-        impure elemental function compute_vel_interface(self,time,coord)
-            use type_point, only: point_t
+        function compute_vel_interface(self,time,node)
             use mod_kinds,  only: rk
             import prescribed_mesh_motion_function_t
 
             class(prescribed_mesh_motion_function_t),  intent(inout)   :: self
             real(rk),           intent(in)      :: time
-            type(point_t),      intent(in)      :: coord
-            type(point_t)                            :: compute_vel_interface
+            real(rk),      intent(in)      :: node(3)
+            real(rk)                            :: compute_vel_interface(3)
         end function
     end interface
 

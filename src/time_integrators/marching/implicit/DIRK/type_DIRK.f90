@@ -4,6 +4,7 @@ module type_DIRK
     use mod_kinds,                      only: rk, ik
     use mod_constants,                  only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN
     use mod_spatial,                    only: update_space
+    use mod_update_grid,                only: update_grid
 
     use type_time_integrator_marching,  only: time_integrator_marching_t
     use type_system_assembler,          only: system_assembler_t
@@ -192,6 +193,7 @@ contains
                         end select
                         q_temp = q_n
                         data%time_manager%t = t_n + alpha*dt
+                        call update_grid(data)
                     case(2)
                         select type(an => self%system)
                             type is (assemble_DIRK_t)
@@ -200,6 +202,7 @@ contains
                         end select
                         q_temp = q_n + (tau - alpha)*dq(1)
                         data%time_manager%t = t_n + tau*dt
+                        call update_grid(data)
                     case(3)
                         select type(an => self%system)
                             type is (assemble_DIRK_t)
@@ -208,6 +211,7 @@ contains
                         end select
                         q_temp = q_n + b1*dq(1) + b2*dq(2)
                         data%time_manager%t = t_n + dt
+                        call update_grid(data)
 
                 end select
 

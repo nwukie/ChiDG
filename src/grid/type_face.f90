@@ -168,7 +168,6 @@ module type_face
         
         ! ALE procedures
         procedure, public   :: update_face_ale
-        procedure           :: update_coords_ale
         procedure           :: compute_quadrature_coords_ale
         procedure           :: compute_quadrature_metrics_ale
 
@@ -946,24 +945,13 @@ contains
     !******************************************************************************************
 
 
-    subroutine update_face_ale(self,elem)
+    subroutine update_face_ale(self)
         class(face_t),       intent(inout)      :: self
-        type(element_t),        intent(in)         :: elem
 
-        call self%update_coords_ale(elem)
         call self%compute_quadrature_coords_ale()
         call self%compute_quadrature_metrics_ale()
 
     end subroutine update_face_ale
-
-    subroutine update_coords_ale(self,elem)
-        class(face_t),      intent(inout)       :: self
-        type(element_t),       intent(in)          :: elem
-
-        self%ale_coords = elem%ale_coords
-        self%ale_vel_coords = elem%ale_vel_coords
-
-    end subroutine update_coords_ale
 
     subroutine compute_quadrature_coords_ale(self)
         class(face_t),   intent(inout)   :: self

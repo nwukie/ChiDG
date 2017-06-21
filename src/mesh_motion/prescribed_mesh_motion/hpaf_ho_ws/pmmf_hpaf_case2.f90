@@ -1,4 +1,4 @@
-module pmmf_hpaf_case1
+module pmmf_hpaf_case2
 #include <messenger.h>
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO, HALF, ONE, TWO, THREE, FIVE, EIGHT, PI
@@ -13,14 +13,14 @@ module pmmf_hpaf_case1
 
 
 
-    !>  hpaf_case1 mesh motion. 
+    !>  hpaf_case2 mesh motion. 
     !!
     !!  @author Eric Wolf
     !!  @date   3/15/2017 
     !!
     !!
     !-------------------------------------------------------------------------------
-    type, extends(prescribed_mesh_motion_function_t), public :: hpaf_case1_pmmf
+    type, extends(prescribed_mesh_motion_function_t), public :: hpaf_case2_pmmf
         private
 
         
@@ -30,7 +30,7 @@ module pmmf_hpaf_case1
         procedure   :: compute_pos
         procedure   :: compute_vel
 
-    end type hpaf_case1_pmmf
+    end type hpaf_case2_pmmf
     !********************************************************************************
 
 
@@ -47,12 +47,12 @@ contains
     !!
     !-------------------------------------------------------------------------
     subroutine init(self)
-        class(hpaf_case1_pmmf),  intent(inout)  :: self
+        class(hpaf_case2_pmmf),  intent(inout)  :: self
 
         !
         ! Set function name
         !
-        call self%set_name("hpaf_case1")
+        call self%set_name("hpaf_case2")
 
 
         !
@@ -73,7 +73,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function compute_pos(self,time,node) result(val)
-        class(hpaf_case1_pmmf),     intent(inout)  :: self
+        class(hpaf_case2_pmmf),     intent(inout)  :: self
         real(rk),                       intent(in)  :: time
         real(rk),                  intent(in)  :: node(3)
 
@@ -88,14 +88,14 @@ contains
         b2 = time**TWO*(3._rk-time)/4._rk
         b3 = time**THREE*(-8._rk*time**THREE+51._rk*time**TWO-111._rk*time+84._rk)/16._rk
 
-        !Case 1
-        height = b2
-        theta = ZERO
-
-!        !Case 2
+!        !Case 1
 !        height = b2
-!        A2 = (60._rk*PI/180._rk)
-!        theta = A2*b1
+!        theta = ZERO
+
+        !Case 2
+        height = b2
+        A2 = (60._rk*PI/180._rk)
+        theta = A2*b1
 !        
 !        !Case 3 
 !        height = b3
@@ -139,7 +139,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function compute_vel(self,time,node) result(val)
-        class(hpaf_case1_pmmf),     intent(inout)  :: self
+        class(hpaf_case2_pmmf),     intent(inout)  :: self
         real(rk),                       intent(in)  :: time
         real(rk),                  intent(in)  :: node(3)
 
@@ -162,18 +162,18 @@ contains
                 time**THREE*(-24._rk*time**TWO+102._rk*time-111._rk)/16._rk
 
 
-        !Case 1
-        height = b2
-        theta = ZERO
-        dheightdt = db2dt
-        dthetadt = ZERO
-
-!        !Case 2
+!        !Case 1
 !        height = b2
-!        A2 = (60._rk*PI/180._rk)
-!        theta = A2*b1
+!        theta = ZERO
 !        dheightdt = db2dt
-!        dthetadt = A2*db1dt
+!        dthetadt = ZERO
+
+        !Case 2
+        height = b2
+        A2 = (60._rk*PI/180._rk)
+        theta = A2*b1
+        dheightdt = db2dt
+        dthetadt = A2*db1dt
 !
 !        !Case 3 
 !        height = b3
@@ -208,4 +208,4 @@ contains
     !**********************************************************************************
 
 
-end module pmmf_hpaf_case1
+end module pmmf_hpaf_case2

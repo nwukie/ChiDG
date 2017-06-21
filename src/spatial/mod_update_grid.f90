@@ -1,7 +1,7 @@
 module mod_update_grid
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: NFACES, DIAG, CHIMERA, INTERIOR
+    use mod_constants,          only: NFACES, DIAG, CHIMERA, INTERIOR, NO_PMM_ASSIGNED
     use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM, GLOBAL_MASTER
     use mpi_f08,                only: MPI_Barrier
 
@@ -34,14 +34,13 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------------------------------
-    subroutine update_grid(data,current_time,timing,info)
+    subroutine update_grid(data,timing,info)
         type(chidg_data_t), intent(inout), target :: data
-        real(rk),           intent(in)            :: current_time
         real(rk),           optional        :: timing
         integer(ik),        optional        :: info
 
         type(timer_t)               :: timer, comm_timer
-        integer(ik)                 :: idom, ielem, iface, idiff, ifcn, ibc, ierr, nelem
+        integer(ik)                 :: inode, pmm_ID, idom, ielem, iface, idiff, ifcn, ibc, ierr, nelem
         logical                     :: interior_face
         logical                     :: chimera_face 
         logical                     :: compute_face 
@@ -106,43 +105,19 @@ contains
 
         ! Loop through domains
         do idom = 1,data%mesh%ndomains()
-            associate ( mesh => data%mesh, eqnset => data%eqnset(idom) )
-            nelem = mesh%domain(idom)%nelem
+            associate ( mesh => data%mesh, eqnset => data%eqnset(idom))
+            pmm_ID = mesh%domain(idom)%pmm_ID
 
-            ! Loop through elements in the current domain
-            do ielem = 1,nelem
-                !Update element mesh motion quantities
+            if (pmm_ID /= NO_PMM_ASSIGNED) then
 
-                call mesh%domain(idom)%elems(ielem)%update_element_ale()
+                do inode = 1, size(mesh%domain(idom)%nodes,1)
+                    mesh%domain(idom)%dnodes(inode,:) = data%pmm(pmm_ID)%pmmf%compute_pos(data%time_manager%t, mesh%domain(idom)%nodes(inode,:))
+                    mesh%domain(idom)%vnodes(inode,:) = data%pmm(pmm_ID)%pmmf%compute_vel(data%time_manager%t, mesh%domain(idom)%nodes(inode,:))
 
-!                elem_info%idomain_g  = mesh(idom)%elems(ielem)%idomain_g
-!                elem_info%idomain_l  = mesh(idom)%elems(ielem)%idomain_l
-!                elem_info%ielement_g = mesh(idom)%elems(ielem)%ielement_g
-!                elem_info%ielement_l = mesh(idom)%elems(ielem)%ielement_l
-!                call worker%set_element(elem_info)
-!
-!
-!
-!                ! Update the element cache
-!                call cache_handler%update(worker,data%eqnset,data%bcset)
+                end do
 
-
-
-               ! Faces loop. For the current element, compute the contributions from boundary integrals
-                do iface = 1,NFACES
-
-                    !Update mesh mesh motion quantities on each face
-                    call mesh%domain(idom)%faces(ielem, iface)%update_face_ale(mesh%domain(idom)%elems(ielem))
-
-!                    call worker%set_face(iface)
-!
-!                    call eqnset%compute_boundary_advective_operators(worker, idiff)
-!                    call eqnset%compute_boundary_diffusive_operators(worker, idiff)
-!                    call eqnset%compute_bc_operators(worker,data%bcset,idiff)
-
-                end do  ! faces loop
-                        
-            end do  ! ielem
+                call mesh%domain(idom)%init_ale(mesh%domain(idom)%dnodes, mesh%domain(idom)%vnodes)
+            end if
             end associate
         end do  ! idom
 

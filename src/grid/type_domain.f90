@@ -4,7 +4,7 @@ module type_domain
     use mod_constants,              only: XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, &
                                           ORPHAN, INTERIOR, BOUNDARY, CHIMERA, TWO_DIM, &
                                           THREE_DIM, NO_NEIGHBOR_FOUND, NEIGHBOR_FOUND, &
-                                          NO_PROC, NFACES, NO_EQUATION_SET, ZERO
+                                          NO_PROC, NFACES, NO_EQUATION_SET, ZERO, NO_PMM_ASSIGNED
     use mod_grid,                   only: FACE_CORNERS
     use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
     use mpi_f08
@@ -63,6 +63,7 @@ module type_domain
         integer(ik)                     :: nelem       = 0     ! Number of total elements
         integer(ik)                     :: ntime       = 0     ! Number of time instances
         integer(ik)                     :: eqn_ID      = NO_EQUATION_SET
+        integer(ik)                     :: pmm_ID      = NO_PMM_ASSIGNED
         character(:),   allocatable     :: coordinate_system   ! 'Cartesian' or 'Cylindrical'
 
         
@@ -228,8 +229,10 @@ contains
         do ielem = 1,self%nelem
             call self%elems(ielem)%init_ale(dnodes,vnodes)
 
+            call self%elems(ielem)%update_element_ale()
             do iface = 1,NFACES
                 call self%faces(ielem,iface)%init_ale(self%elems(ielem))
+                call self%faces(ielem,iface)%update_face_ale()
             end do !iface
 
         end do !ielem

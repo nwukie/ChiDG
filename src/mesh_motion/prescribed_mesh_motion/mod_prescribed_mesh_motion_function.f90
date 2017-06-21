@@ -9,6 +9,9 @@ module mod_prescribed_mesh_motion_function
     !
     use pmmf_static,                            only: static_pmmf
     use pmmf_sinusoidal,                        only: sinusoidal_pmmf
+    use pmmf_hpaf_case1,                        only: hpaf_case1_pmmf
+    use pmmf_hpaf_case2,                        only: hpaf_case2_pmmf
+    use pmmf_hpaf_case3,                        only: hpaf_case3_pmmf
     implicit none
 
 
@@ -40,6 +43,9 @@ contains
         !
         type(static_pmmf)                               :: static
         type(sinusoidal_pmmf)                           :: sinusoidal
+        type(hpaf_case1_pmmf)                           :: hpaf_case1
+        type(hpaf_case2_pmmf)                           :: hpaf_case2
+        type(hpaf_case3_pmmf)                           :: hpaf_case3
         
 
         if ( .not. initialized ) then
@@ -48,6 +54,9 @@ contains
             !
             call registered_pmmfs%push_back(static)
             call registered_pmmfs%push_back(sinusoidal)
+            call registered_pmmfs%push_back(hpaf_case1)
+            call registered_pmmfs%push_back(hpaf_case2)
+            call registered_pmmfs%push_back(hpaf_case3)
        
             !
             ! Initialize each boundary condition in set. Doesn't need modified.

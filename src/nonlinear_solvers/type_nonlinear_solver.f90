@@ -21,12 +21,12 @@ module type_nonlinear_solver
         logical         :: solverInitialized = .false.
 
         ! OPTIONS
-        real(rk)        :: cfl0     = 1.0_rk        ! Initial CFL number
-        real(rk)        :: tol      = 1.e-13_rk     ! Convergence tolerance
-        integer(ik)     :: nsteps   = 100           ! Max number of steps to take in the nonlinear solver
-        integer(ik)     :: nwrite   = 100           ! Write data every 'nwrite' steps
-        integer(ik)     :: norders_reduction = 10   ! Number of orders of magnitude residual is to be reduced by
-        logical         :: search   = .true.
+        real(rk)        :: cfl0              = 1.0_rk       ! Initial CFL number
+        real(rk)        :: tol               = 1.e-13_rk    ! Convergence tolerance
+        integer(ik)     :: nsteps            = 100          ! Max number of steps to take in the nonlinear solver
+        integer(ik)     :: nwrite            = 100          ! Write data every 'nwrite' steps
+        integer(ik)     :: norders_reduction = 10           ! Number of orders of magnitude residual is to be reduced by
+        logical         :: search            = .true.
 
 
         type(timer_t)   :: timer                    ! Timer data-type
@@ -94,17 +94,19 @@ module type_nonlinear_solver
 
     ! Interface for passing a domain_t type
     abstract interface
-        subroutine data_interface(self,data,system,linear_solver,preconditioner)
-            use type_chidg_data,        only: chidg_data_t
-            use type_system_assembler,  only: system_assembler_t
-            use type_linear_solver,     only: linear_solver_t
-            use type_preconditioner,    only: preconditioner_t
+        subroutine data_interface(self,data,system,linear_solver,preconditioner,solver_controller)
+            use type_chidg_data,            only: chidg_data_t
+            use type_system_assembler,      only: system_assembler_t
+            use type_linear_solver,         only: linear_solver_t
+            use type_preconditioner,        only: preconditioner_t
+            use type_solver_controller,     only: solver_controller_t
             import nonlinear_solver_t
-            class(nonlinear_solver_t),              intent(inout)   :: self
-            type(chidg_data_t),                     intent(inout)   :: data
-            class(system_assembler_t),  optional,   intent(inout)   :: system
-            class(linear_solver_t),     optional,   intent(inout)   :: linear_solver
-            class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
+            class(nonlinear_solver_t),                  intent(inout)   :: self
+            type(chidg_data_t),                         intent(inout)   :: data
+            class(system_assembler_t),      optional,   intent(inout)   :: system
+            class(linear_solver_t),         optional,   intent(inout)   :: linear_solver
+            class(preconditioner_t),        optional,   intent(inout)   :: preconditioner
+            class(solver_controller_t),     optional,   intent(inout)   :: solver_controller
         end subroutine
     end interface
 

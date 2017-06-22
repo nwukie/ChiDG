@@ -1257,12 +1257,16 @@ contains
         logical     :: parallel_seed
 
         !
-        ! If ielem_seed == 0 then we aren't interested in tracking derivatives. So set it 
-        ! to lowest number possible while still having something allocated in the AD type 
-        ! so the operations are valid.
+        ! If ielem_seed == 0 then we aren't interested in tracking derivatives. 
+        !   !So set it to lowest number possible while still having something 
+        !   !allocated in the AD type so the operations are valid.
+        !
+        !   Actually, allocating with size 0 is okay in fortran. Just need to be
+        !   careful not to try and access anything as var%xp_ad_(1)
         !
         if (function_info%seed%ielement_l == 0) then
-            nderiv = 1
+            !nderiv = 1
+            nderiv = 0
 
         else
 

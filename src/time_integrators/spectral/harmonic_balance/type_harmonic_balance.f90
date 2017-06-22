@@ -148,8 +148,12 @@ contains
         real(rk),allocatable    :: D(:,:)
 
         
-        associate ( rhs => data%sdata%rhs, q => data%sdata%q )
+        associate ( rhs => data%sdata%rhs, lhs => data%sdata%lhs, q => data%sdata%q )
     
+        call rhs%clear()
+        if (differentiate) call lhs%clear()
+
+        
 
         !
         ! Set local variables equal to the values set in time_manager

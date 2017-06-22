@@ -219,7 +219,9 @@ contains
         !
         group_family = self%get_family()
         state_family = bc_state%get_family()
-        add_state = (group_family == ' ') .or. (trim(group_family) == trim(state_family))
+        add_state = (trim(group_family) == ''                ) .or. &
+                    (trim(group_family) == 'Empty'           ) .or. &
+                    (trim(group_family) == trim(state_family))
 
 
         !
@@ -315,9 +317,8 @@ contains
     subroutine remove_states(self)  
         class(bc_state_group_t),    intent(inout)   :: self
 
-
         if (allocated(self%bc_state)) deallocate(self%bc_state)
-
+        call self%set_family('Empty')
 
     end subroutine remove_states
     !**************************************************************************************

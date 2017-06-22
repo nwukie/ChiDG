@@ -281,20 +281,20 @@ contains
         associate ( q   => chidg%data%sdata%q, &
                     rhs => chidg%data%sdata%rhs)
 
-            !
-            ! Set spatial residual contributions
-            !
-            vals  = 0.3_rk
-            call rhs%dom(1)%vecs(3)%settime(1,vals)
-
-            vals = 0.1_rk
-            call rhs%dom(1)%vecs(1)%settime(2,vals)
-
-            vals = 0.2_rk
-            call rhs%dom(1)%vecs(7)%settime(2,vals)
-
-            vals = 0.4_rk
-            call rhs%dom(1)%vecs(6)%settime(3,vals)
+!            !
+!            ! Set spatial residual contributions
+!            !
+!            vals  = 0.3_rk
+!            call rhs%dom(1)%vecs(3)%settime(1,vals)
+!
+!            vals = 0.1_rk
+!            call rhs%dom(1)%vecs(1)%settime(2,vals)
+!
+!            vals = 0.2_rk
+!            call rhs%dom(1)%vecs(7)%settime(2,vals)
+!
+!            vals = 0.4_rk
+!            call rhs%dom(1)%vecs(6)%settime(3,vals)
              
 
             !
@@ -326,9 +326,39 @@ contains
             associate ( D      => chidg%data%time_manager%D, &
                         domain => chidg%data%mesh%domain(1) )
                 
+                ! WUKIE: this was included the contributions from the spatial terms
+                ! however we changed that the rhs gets zeroed in the assemble routine
+                ! so its better just to check the time terms. Changed appropriately
+                ! below.
+                !vref_a = 0.7_rk
+                !ref_1 = D(1,2)*matmul(domain%elems(1)%mass,vref_a)
+                !vref_a = 0.1_rk; vref_b = 0.7_rk
+                !ref_2 = vref_a + D(2,2)*matmul(domain%elems(1)%mass,vref_b) 
+                !vref_a = 0.7_rk
+                !ref_3 = D(3,2)*matmul(domain%elems(1)%mass,vref_a)
+                !vref_a = 0.8_rk 
+                !ref_4 = D(1,1)*matmul(domain%elems(2)%mass,vref_a)
+                !ref_5 = D(2,1)*matmul(domain%elems(2)%mass,vref_a)
+                !ref_6 = D(3,1)*matmul(domain%elems(2)%mass,vref_a)
+                !vref_a = 0.3_rk
+                !ref_7 = vref_a
+                !vref_a = 0.9_rk 
+                !ref_8 = D(1,3)*matmul(domain%elems(5)%mass,vref_a)
+                !ref_9 = D(2,3)*matmul(domain%elems(5)%mass,vref_a) 
+                !ref_10 = D(3,3)*matmul(domain%elems(5)%mass,vref_a)
+                !vref_a = 0.4_rk
+                !ref_11 = vref_a
+                !vref_a = 0.2_rk
+                !ref_12 = vref_a
+                !vref_a = 0.6_rk 
+                !ref_13 = D(1,1)*matmul(domain%elems(8)%mass,vref_a)
+                !ref_14 = D(2,1)*matmul(domain%elems(8)%mass,vref_a) 
+                !ref_15 = D(3,1)*matmul(domain%elems(8)%mass,vref_a)
+
+
                 vref_a = 0.7_rk
                 ref_1 = D(1,2)*matmul(domain%elems(1)%mass,vref_a)
-                vref_a = 0.1_rk; vref_b = 0.7_rk
+                vref_a = ZERO; vref_b = 0.7_rk
                 ref_2 = vref_a + D(2,2)*matmul(domain%elems(1)%mass,vref_b) 
                 vref_a = 0.7_rk
                 ref_3 = D(3,2)*matmul(domain%elems(1)%mass,vref_a)
@@ -336,21 +366,20 @@ contains
                 ref_4 = D(1,1)*matmul(domain%elems(2)%mass,vref_a)
                 ref_5 = D(2,1)*matmul(domain%elems(2)%mass,vref_a)
                 ref_6 = D(3,1)*matmul(domain%elems(2)%mass,vref_a)
-                vref_a = 0.3_rk
+                vref_a = ZERO
                 ref_7 = vref_a
                 vref_a = 0.9_rk 
                 ref_8 = D(1,3)*matmul(domain%elems(5)%mass,vref_a)
                 ref_9 = D(2,3)*matmul(domain%elems(5)%mass,vref_a) 
                 ref_10 = D(3,3)*matmul(domain%elems(5)%mass,vref_a)
-                vref_a = 0.4_rk
+                vref_a = ZERO
                 ref_11 = vref_a
-                vref_a = 0.2_rk
+                vref_a = ZERO
                 ref_12 = vref_a
                 vref_a = 0.6_rk 
                 ref_13 = D(1,1)*matmul(domain%elems(8)%mass,vref_a)
                 ref_14 = D(2,1)*matmul(domain%elems(8)%mass,vref_a) 
                 ref_15 = D(3,1)*matmul(domain%elems(8)%mass,vref_a)
-
 
             end associate
 
@@ -358,15 +387,15 @@ contains
             !
             ! Test assemble operation
             !
-            @assertEqual(ref_1,rhs%dom(1)%vecs(1)%gettime(1),tol)
-            @assertEqual(ref_2,rhs%dom(1)%vecs(1)%gettime(2),tol)
-            @assertEqual(ref_3,rhs%dom(1)%vecs(1)%gettime(3),tol)
-            @assertEqual(ref_4,rhs%dom(1)%vecs(2)%gettime(1),tol)
-            @assertEqual(ref_5,rhs%dom(1)%vecs(2)%gettime(2),tol)
-            @assertEqual(ref_6,rhs%dom(1)%vecs(2)%gettime(3),tol)
-            @assertEqual(ref_7,rhs%dom(1)%vecs(3)%gettime(1),tol)
-            @assertEqual(ref_8,rhs%dom(1)%vecs(5)%gettime(1),tol)
-            @assertEqual(ref_9,rhs%dom(1)%vecs(5)%gettime(2),tol)
+            @assertEqual(ref_1, rhs%dom(1)%vecs(1)%gettime(1),tol)
+            @assertEqual(ref_2, rhs%dom(1)%vecs(1)%gettime(2),tol)
+            @assertEqual(ref_3, rhs%dom(1)%vecs(1)%gettime(3),tol)
+            @assertEqual(ref_4, rhs%dom(1)%vecs(2)%gettime(1),tol)
+            @assertEqual(ref_5, rhs%dom(1)%vecs(2)%gettime(2),tol)
+            @assertEqual(ref_6, rhs%dom(1)%vecs(2)%gettime(3),tol)
+            @assertEqual(ref_7, rhs%dom(1)%vecs(3)%gettime(1),tol)
+            @assertEqual(ref_8, rhs%dom(1)%vecs(5)%gettime(1),tol)
+            @assertEqual(ref_9, rhs%dom(1)%vecs(5)%gettime(2),tol)
             @assertEqual(ref_10,rhs%dom(1)%vecs(5)%gettime(3),tol)
             @assertEqual(ref_11,rhs%dom(1)%vecs(6)%gettime(3),tol)
             @assertEqual(ref_12,rhs%dom(1)%vecs(7)%gettime(2),tol)

@@ -55,6 +55,7 @@ contains
 
         self%nconn = nconn
 
+        if (allocated(self%connectivities)) deallocate(self%connectivities)
         allocate(self%connectivities(nconn), stat=ierr)
         if (ierr /= 0) call AllocationError
 

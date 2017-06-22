@@ -22,8 +22,6 @@ module type_linear_solver
     !-----------------------------------------------------------------------------------------------------
     type, public, abstract :: linear_solver_t
 
-!        character(len=:), allocatable   :: name_
-
         ! OPTIONS
         real(rk)        :: tol   = 1.e-8_rk     !< Convergance tolerance for iterative solvers
         integer(ik)     :: niter = 0
@@ -35,9 +33,7 @@ module type_linear_solver
     contains
     
         procedure   :: init
-!        procedure   :: set_options
         procedure   :: set
-!        procedure   :: get_name
 
         procedure(solve_interface), deferred :: solve
 
@@ -55,17 +51,19 @@ module type_linear_solver
 
 
     abstract interface
-        subroutine solve_interface(self,A,x,b,M)
-            use type_chidg_matrix,       only: chidg_matrix_t
-            use type_chidg_vector,       only: chidg_vector_t
+        subroutine solve_interface(self,A,x,b,M,solver_controller)
+            use type_chidg_matrix,      only: chidg_matrix_t
+            use type_chidg_vector,      only: chidg_vector_t
             use type_preconditioner,    only: preconditioner_t
+            use type_solver_controller, only: solver_controller_t
             import linear_solver_t
 
             class(linear_solver_t),     intent(inout)           :: self
-            type(chidg_matrix_t),        intent(inout)           :: A
-            type(chidg_vector_t),        intent(inout)           :: x
-            type(chidg_vector_t),        intent(inout)           :: b
+            type(chidg_matrix_t),       intent(inout)           :: A
+            type(chidg_vector_t),       intent(inout)           :: x
+            type(chidg_vector_t),       intent(inout)           :: b
             class(preconditioner_t),    intent(inout), optional :: M
+            class(solver_controller_t), intent(inout), optional :: solver_controller
         end subroutine
     end interface
 
@@ -98,30 +96,6 @@ contains
 
 
 
-!    !>
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   2/17/2016
-!    !!
-!    !!
-!    !!
-!    !------------------------------------------------------------------------------------------
-!    subroutine set_options(self)
-!        class(matrixsolver_t),  intent(inout)   :: self
-!
-!
-!
-!    end subroutine set_options
-!    !*******************************************************************************************
-
-
-
-
-
-
-
-
-
     !> Procedure for setting base matrix_solver options.
     !!
     !!  @author Nathan A. Wukie
@@ -139,30 +113,6 @@ contains
 
     end subroutine set
     !***************************************************************************************************
-
-
-
-
-
-!    !>  Return the name of the matrix solver.
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   2/17/2016
-!    !!
-!    !!
-!    !!
-!    !-----------------------------------------------------------------------------------------
-!    function get_name(self) result(res)
-!        class(matrixsolver_t),  intent(in)  :: self
-!
-!        character(len=:), allocatable :: res
-!
-!        res = trim(self%name_)
-!
-!    end function get_name
-!    !******************************************************************************************
-
-
 
 
 
@@ -254,19 +204,11 @@ contains
         type(chidg_vector_t) :: r
         real(rk)            :: err
 
-
-
-        !
         ! Compute residual
-        !
         r = self%residual(A,x,b)
-    
 
-        !
         ! Compute norm
-        !
         err = r%norm()
-
 
     end function error
     !*************************************************************************************************

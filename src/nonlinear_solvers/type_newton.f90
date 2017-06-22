@@ -9,6 +9,7 @@ module type_newton
     use type_chidg_data,        only: chidg_data_t
     use type_system_assembler,  only: system_assembler_t
     use type_preconditioner,    only: preconditioner_t
+    use type_solver_controller, only: solver_controller_t
     use type_chidg_vector
     implicit none
     private
@@ -16,9 +17,6 @@ module type_newton
 
 
     !>  Solution advancement via the newton's method
-    !!
-    !!
-    !!
     !!
     !!
     !!  @author Nathan A. Wukie
@@ -49,60 +47,57 @@ contains
 
 
 
-    !>  Solve for update 'dq'
+    !>  Solve for Newton update 'dq'
     !!
     !!  @author Nathan A. Wukie
     !!
-    !!
-    !!
     !-----------------------------------------------------------------------------------------
-    subroutine solve(self,data,system,linear_solver,preconditioner)
-        class(newton_t),                        intent(inout)   :: self
-        type(chidg_data_t),                     intent(inout)   :: data
-        class(system_assembler_t),  optional,   intent(inout)   :: system
-        class(linear_solver_t),     optional,   intent(inout)   :: linear_solver
-        class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
+    subroutine solve(self,data,system,linear_solver,preconditioner,solver_controller)
+        class(newton_t),                            intent(inout)   :: self
+        type(chidg_data_t),                         intent(inout)   :: data
+        class(system_assembler_t),      optional,   intent(inout)   :: system
+        class(linear_solver_t),         optional,   intent(inout)   :: linear_solver
+        class(preconditioner_t),        optional,   intent(inout)   :: preconditioner
+        class(solver_controller_t),     optional,   intent(inout)   :: solver_controller
 
         character(100)          :: filename
-        integer(ik)             :: itime, nsteps, ielem, wcount, iblk,  &
-                                   iindex, niter, iinner, ieqn,         &
-                                   rstart, rend, cstart, cend, nterms
-        real(rk)                :: resid, timing, entropy_error
+        integer(ik)             :: niter
+        real(rk)                :: resid, resid_prev, timing, entropy_error, residual_ratio
         real(rk), allocatable   :: vals(:)
         type(chidg_vector_t)    :: b, qn, qold, qnew
 
 
 
 
-        wcount = 1
         associate ( q   => data%sdata%q,    &
                     dq  => data%sdata%dq,   &
                     rhs => data%sdata%rhs,  &
                     lhs => data%sdata%lhs)
 
-            call write_line('NONLINER SOLVER', io_proc=GLOBAL_MASTER, silence=(verbosity<2))
+            call write_line('NONLINEAR SOLVER', io_proc=GLOBAL_MASTER, silence=(verbosity<2))
+            call write_line("iter","|R(Q)|","Linear Solver(niter)", "LHS Updated", "Preconditioner Updated", delimiter='', columns=.True., column_width=30, io_proc=GLOBAL_MASTER, silence=(verbosity<2))
+
 
             !
             ! start timer
             !
             call self%timer%start()
 
-
-            ! Store qn, since q will be operated on in the inner loop
-            qn = q
+            
+            !
+            ! Startup values
+            !
+            qn         = q      ! Store qn, since q will be operated on in the inner loop
+            resid      = ONE    ! Force inner loop entry
+            resid_prev = ONE    !
+            niter      = 0      ! Initialize inner loop counter
 
 
             !
             ! NONLINEAR CONVERGENCE LOOP
             !
-            resid  = ONE    ! Force inner loop entry
-            niter = 0       ! Initialize inner loop counter
-
-            call write_line("iter","|R(Q)|","Linear Solver(niter)", delimiter='', columns=.True., column_width=30, io_proc=GLOBAL_MASTER, silence=(verbosity<2))
             do while ( resid > self%tol )
                 niter = niter + 1
-
-                !call write_line("   niter: ", niter, delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<2))
 
 
                 !
@@ -114,20 +109,31 @@ contains
                 !
                 ! Update Spatial Residual and Linearization (rhs, lin)
                 !
-                call system%assemble(data,timing=timing,differentiate=.true.)
-                resid = rhs%norm(ChiDG_COMM)
+                if (present(solver_controller)) then
+                    if ( niter <= 2)  then
+                        residual_ratio = ONE
+                    else
+                        residual_ratio = resid/resid_prev
+                    end if
 
+                    call system%assemble( data,             &
+                                          timing=timing,    &
+                                          differentiate=solver_controller%update_lhs(niter,residual_ratio) )
+                else
+                    call system%assemble(data,timing=timing,differentiate=.true.)
+                end if
+                resid_prev = resid
+                resid      = rhs%norm(ChiDG_COMM)
 
-                !
-                ! Print diagnostics
-                !
-                !call write_line("   R(Q) - Norm: ", resid, delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<2))
 
                 !
                 ! Tolerance check
                 !
                 call self%residual_norm%push_back(resid)
-                if ( resid < self%tol ) exit
+                if ( resid < self%tol ) then
+                    call write_line(niter, resid, 0, solver_controller%lhs_updated, .false., delimiter='', columns=.True., column_width=30, io_proc=GLOBAL_MASTER, silence=(verbosity<2))
+                    exit
+                end if
                 call self%residual_time%push_back(timing)   ! non-essential record-keeping
 
 
@@ -147,7 +153,7 @@ contains
                 !
                 ! We need to solve the matrix system Ax=b for the update vector x (dq)
                 !
-                call linear_solver%solve(lhs,dq,b,preconditioner)
+                call linear_solver%solve(lhs,dq,b,preconditioner,solver_controller)
 
                 call self%matrix_iterations%push_back(linear_solver%niter)
                 call self%matrix_time%push_back(linear_solver%timer%elapsed())
@@ -157,38 +163,16 @@ contains
                 !
                 ! Advance solution with update vector
                 !
-                qnew = qold + dq
+                q = qold + dq
 
 
 
-                !
                 ! Clear working storage
-                !
-                call rhs%clear()
                 call dq%clear()
-                call lhs%clear()
-
-                
 
 
-                !
-                ! Store updated solution vector (qnew) to working solution vector (q)
-                !
-                q = qnew
-
-
-
-                !
-                ! Write incremental solution
-                !
-                !write(filename, "(I7,A4)") 1000000+niter, '.plt'
-                !call write_tecio_variables(data,trim(filename),niter+1)
-
-
-                !
                 ! Print iteration information
-                !
-                call write_line(niter, resid, linear_solver%niter, delimiter='', columns=.True., column_width=30, io_proc=GLOBAL_MASTER, silence=(verbosity<2))
+                call write_line(niter, resid, linear_solver%niter, solver_controller%lhs_updated, solver_controller%preconditioner_updated, delimiter='', columns=.True., column_width=30, io_proc=GLOBAL_MASTER, silence=(verbosity<2))
 
 
             end do ! while error

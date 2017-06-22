@@ -1277,10 +1277,10 @@ contains
             
 
             !
-            ! 1: Update time t
+            ! 1: Update time t. Compute as t = t + i*dt. This way we can restart time-marching and start from t /= 0.
             ! 2: Call time integrator to take a step
             !
-            self%data%time_manager%t = self%data%time_manager%dt*istep
+            self%data%time_manager%t = self%data%time_manager%t + self%data%time_manager%dt*istep
             call self%time_integrator%step(self%data,self%nonlinear_solver, &
                                                      self%linear_solver,    &
                                                      self%preconditioner)
@@ -1291,7 +1291,12 @@ contains
             ! Write solution every nwrite steps
             !
             if (wcount == self%data%time_manager%nwrite) then
-                write(filename, "(A,I7.7,A3)") trim(prefix)//'_', istep, '.h5'
+                !write(filename, "(A,I7.7,A3)") trim(prefix)//'_', istep, '.h5'
+                if (self%data%time_manager%t < 1.) then
+                    write(filename, "(A,F8.6,A3)") trim(prefix)//'_', self%data%time_manager%t, '.h5'
+                else
+                    write(filename, "(A,F0.6,A3)") trim(prefix)//'_', self%data%time_manager%t, '.h5'
+                end if
                 call self%write_mesh(filename)
                 call self%write_fields(filename)
                 wcount = 0
@@ -1302,7 +1307,7 @@ contains
             !
             ! Print diagnostics
             !
-            call write_line(istep, self%time_integrator%residual_norm%at(istep), columns=.true., column_width=30, io_proc=GLOBAL_MASTER)
+            call write_line("TIME INTEGRATOR", istep, self%time_integrator%residual_norm%at(istep), io_proc=GLOBAL_MASTER)
 
 
             wcount = wcount + 1

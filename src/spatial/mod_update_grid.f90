@@ -87,9 +87,9 @@ contains
         ! Communicate solution vector
         !
         !call comm_timer%start()
-        !call data%sdata%q%comm_send()
-        !call data%sdata%q%comm_recv()
-        !call data%sdata%q%comm_wait()
+        call data%sdata%q%comm_send()
+        call data%sdata%q%comm_recv()
+        call data%sdata%q%comm_wait()
         !call comm_timer%stop()
 
 
@@ -99,7 +99,7 @@ contains
         ! Loop through given element compute the residual functions and also the linearization of those functions
         !
     
-        print *, IRANK
+        !print *, IRANK
         call write_line('Updating grid according to mesh motion...', io_proc=GLOBAL_MASTER)
 
 
@@ -111,7 +111,9 @@ contains
             if (pmm_ID /= NO_PMM_ASSIGNED) then
 
                 do inode = 1, size(mesh%domain(idom)%nodes,1)
-                    mesh%domain(idom)%dnodes(inode,:) = data%pmm(pmm_ID)%pmmf%compute_pos(data%time_manager%t, mesh%domain(idom)%nodes(inode,:))
+                    mesh%domain(idom)%dnodes(inode,:) = &
+                        data%pmm(pmm_ID)%pmmf%compute_pos(data%time_manager%t, mesh%domain(idom)%nodes(inode,:)) - &
+                        mesh%domain(idom)%nodes(inode,:)
                     mesh%domain(idom)%vnodes(inode,:) = data%pmm(pmm_ID)%pmmf%compute_vel(data%time_manager%t, mesh%domain(idom)%nodes(inode,:))
 
                 end do
@@ -129,19 +131,19 @@ contains
         !
         ! Synchronize
         !
-        print *, 'Waiting in update_grid...'
+        !print *, 'Waiting in update_grid...'
         call MPI_Barrier(ChiDG_COMM,ierr)
 
 
 
 
 
-        call timer%stop()
-        call timer%report('Grid Update Time')
-        !call comm_timer%report('    - Grid update comm time:')
-        if (present(timing)) then
-            timing = timer%elapsed()
-        end if
+!        call timer%stop()
+!        call timer%report('Grid Update Time')
+!        !call comm_timer%report('    - Grid update comm time:')
+!        if (present(timing)) then
+!            timing = timer%elapsed()
+!        end if
 
 
     end subroutine update_grid

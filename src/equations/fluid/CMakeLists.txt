@@ -6,6 +6,7 @@ add_subdirectory(spalart_allmaras)
 
 add_lib_sources(
                 eqn_euler.f90
+                eqn_euler_ale.f90
                 eqn_navier_stokes.f90
                 eqn_navier_stokes_multi.f90
                 eqn_multi_navier_stokes_laminar.f90

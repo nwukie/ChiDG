@@ -573,7 +573,9 @@ contains
         !
         ! Read domain geometry. Also performs partitioning.
         !
+        print *, 'a'
         call self%read_mesh_grids(gridfile,equation_set,partitions_in)
+
 
 
 
@@ -582,6 +584,7 @@ contains
         !
         ! Read boundary conditions.
         !
+        print *, 'b'
         call self%read_mesh_boundary_conditions(gridfile, bc_wall,        &
                                                           bc_inlet,       &
                                                           bc_outlet,      &
@@ -591,14 +594,17 @@ contains
 
 
                                                       
+        print *, 'c'
         call self%read_prescribedmeshmotions(gridfile)
 
+        print *, 'd'
         !
         ! Initialize data
         !
         call self%init('all')
 
 
+        print *, 'e'
         call write_line('Done reading mesh.', io_proc=GLOBAL_MASTER)
         call write_line(' ', ltrim=.false.,   io_proc=GLOBAL_MASTER)
 

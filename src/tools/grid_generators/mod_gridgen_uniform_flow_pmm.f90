@@ -107,6 +107,7 @@ contains
         !
         dom_id = open_domain_hdf(file_id,'01')
 
+        bc_face_strings = ["XI_MIN  ","XI_MAX  ","ETA_MIN ","ETA_MAX ","ZETA_MIN","ZETA_MAX"]
         do bcface = 1,6
 
             ! Get face node indices for boundary 'bcface'
@@ -225,7 +226,7 @@ contains
         call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_FREQ_X')
         call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_FREQ_X',TWO*PI)
         call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_AMP_X')
-        call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_AMP_X',TWO)
+        call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_AMP_X',0.05_rk)
         call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_AMP_Y')
         call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_AMP_Y',ZERO)
         call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_AMP_Z')

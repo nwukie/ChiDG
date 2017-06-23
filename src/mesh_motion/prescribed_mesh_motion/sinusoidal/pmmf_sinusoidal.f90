@@ -108,27 +108,34 @@ contains
         GRID_AMP_X = self%get_option_value('GRID_AMP_X')
         GRID_AMP_Y = self%get_option_value('GRID_AMP_Y')
         GRID_AMP_Z = self%get_option_value('GRID_AMP_Z')
-        
+
         val(1) = node(1) + &
             GRID_AMP_X* &
             sin(GRID_MODE_X*TWO*PI*node(1)/L_X)* &
-            sin(GRID_MODE_Y*TWO*PI*node(2)/L_Y)* &
-            sin(GRID_MODE_Z*TWO*PI*node(3)/L_Z)* &
             sin(GRID_FREQ_X*time)
         
-        val(2) = node(2) + &
-            GRID_AMP_Y* &
-            sin(GRID_MODE_X*TWO*PI*node(1)/L_X)* &
-            sin(GRID_MODE_Y*TWO*PI*node(2)/L_Y)* &
-            sin(GRID_MODE_Z*TWO*PI*node(3)/L_Z)* &
-            sin(GRID_FREQ_Y*time)
-        
-        val(3) = node(3) + &
-            GRID_AMP_Z* &
-            sin(GRID_MODE_X*TWO*PI*node(1)/L_X)* &
-            sin(GRID_MODE_Y*TWO*PI*node(2)/L_Y)* &
-            sin(GRID_MODE_Z*TWO*PI*node(3)/L_Z)* &
-            sin(GRID_FREQ_Z*time)
+        val(2) = node(2)
+        val(3) = node(3)
+!        val(1) = node(1) + &
+!            GRID_AMP_X* &
+!            sin(GRID_MODE_X*TWO*PI*node(1)/L_X)* &
+!            sin(GRID_MODE_Y*TWO*PI*node(2)/L_Y)* &
+!            sin(GRID_MODE_Z*TWO*PI*node(3)/L_Z)* &
+!            sin(GRID_FREQ_X*time)
+!        
+!        val(2) = node(2) + &
+!            GRID_AMP_Y* &
+!            sin(GRID_MODE_X*TWO*PI*node(1)/L_X)* &
+!            sin(GRID_MODE_Y*TWO*PI*node(2)/L_Y)* &
+!            sin(GRID_MODE_Z*TWO*PI*node(3)/L_Z)* &
+!            sin(GRID_FREQ_Y*time)
+!        
+!        val(3) = node(3) + &
+!            GRID_AMP_Z* &
+!            sin(GRID_MODE_X*TWO*PI*node(1)/L_X)* &
+!            sin(GRID_MODE_Y*TWO*PI*node(2)/L_Y)* &
+!            sin(GRID_MODE_Z*TWO*PI*node(3)/L_Z)* &
+!            sin(GRID_FREQ_Z*time)
         
     end function compute_pos
     !**********************************************************************************
@@ -168,27 +175,34 @@ contains
         GRID_AMP_X = self%get_option_value('GRID_AMP_X')
         GRID_AMP_Y = self%get_option_value('GRID_AMP_Y')
         GRID_AMP_Z = self%get_option_value('GRID_AMP_Z')
-        
+
         val(1) =  &
             GRID_AMP_X* &
             sin(GRID_MODE_X*TWO*PI*node(1)/L_X)* &
-            sin(GRID_MODE_Y*TWO*PI*node(2)/L_Y)* &
-            sin(GRID_MODE_Z*TWO*PI*node(3)/L_Z)* &
             GRID_FREQ_X*cos(GRID_FREQ_X*time)
         
-        val(2) =  &
-            GRID_AMP_Y* &
-            sin(GRID_MODE_X*TWO*PI*node(1)/L_X)* &
-            sin(GRID_MODE_Y*TWO*PI*node(2)/L_Y)* &
-            sin(GRID_MODE_Z*TWO*PI*node(3)/L_Z)* &
-            GRID_FREQ_Y*cos(GRID_FREQ_Y*time)
+        !val(1) =  &
+        !    GRID_AMP_X* &
+        !    sin(GRID_MODE_X*TWO*PI*node(1)/L_X)* &
+        !    sin(GRID_MODE_Y*TWO*PI*node(2)/L_Y)* &
+        !    sin(GRID_MODE_Z*TWO*PI*node(3)/L_Z)* &
+        !    GRID_FREQ_X*cos(GRID_FREQ_X*time)
         
-        val(3) =  &
-            GRID_AMP_Z* &
-            sin(GRID_MODE_X*TWO*PI*node(1)/L_X)* &
-            sin(GRID_MODE_Y*TWO*PI*node(2)/L_Y)* &
-            sin(GRID_MODE_Z*TWO*PI*node(3)/L_Z)* &
-            GRID_FREQ_Z*cos(GRID_FREQ_Z*time)
+        val(2) = ZERO
+        val(3) = ZERO
+!        val(2) =  &
+!            GRID_AMP_Y* &
+!            sin(GRID_MODE_X*TWO*PI*node(1)/L_X)* &
+!            sin(GRID_MODE_Y*TWO*PI*node(2)/L_Y)* &
+!            sin(GRID_MODE_Z*TWO*PI*node(3)/L_Z)* &
+!            GRID_FREQ_Y*cos(GRID_FREQ_Y*time)
+!        
+!        val(3) =  &
+!            GRID_AMP_Z* &
+!            sin(GRID_MODE_X*TWO*PI*node(1)/L_X)* &
+!            sin(GRID_MODE_Y*TWO*PI*node(2)/L_Y)* &
+!            sin(GRID_MODE_Z*TWO*PI*node(3)/L_Z)* &
+!            GRID_FREQ_Z*cos(GRID_FREQ_Z*time)
  
         
     end function compute_vel

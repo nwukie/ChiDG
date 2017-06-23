@@ -1,4 +1,4 @@
-module euler_boundary_average_ale_operator
+module euler_ale_boundary_average_operator
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ONE, TWO, HALF
     use type_operator,          only: operator_t
@@ -20,14 +20,14 @@ module euler_boundary_average_ale_operator
     !!  @date   1/28/2016
     !!
     !--------------------------------------------------------------------------------
-    type, extends(operator_t), public :: euler_boundary_average_ale_operator_t
+    type, extends(operator_t), public :: euler_ale_boundary_average_operator_t
 
     contains
 
         procedure   :: init
         procedure   :: compute
 
-    end type euler_boundary_average_ale_operator_t
+    end type euler_ale_boundary_average_operator_t
     !********************************************************************************
 
 
@@ -50,7 +50,7 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(euler_boundary_average_ale_operator_t),   intent(inout) :: self
+        class(euler_ale_boundary_average_operator_t),   intent(inout) :: self
         
         !
         ! Set operator name
@@ -83,7 +83,7 @@ contains
     !!
     !!-------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(euler_boundary_average_ale_operator_t),   intent(inout)   :: self
+        class(euler_ale_boundary_average_operator_t),   intent(inout)   :: self
         type(chidg_worker_t),                       intent(inout)   :: worker
         class(properties_t),                        intent(inout)   :: prop
 
@@ -364,4 +364,4 @@ contains
 
 
 
-end module euler_boundary_average_ale_operator
+end module euler_ale_boundary_average_operator

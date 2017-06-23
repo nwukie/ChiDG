@@ -39,6 +39,14 @@ module mod_operators
     use euler_laxfriedrichs_operator,               only: euler_laxfriedrichs_operator_t
     use euler_bc_operator,                          only: euler_bc_operator_t
 
+    ! Fluid Inviscid ALE Operators
+    use euler_ale_volume_operator,                      only: euler_ale_volume_operator_t
+    use euler_ale_boundary_average_operator,            only: euler_ale_boundary_average_operator_t
+    use euler_ale_roe_operator,                         only: euler_ale_roe_operator_t
+    use euler_ale_laxfriedrichs_operator,               only: euler_ale_laxfriedrichs_operator_t
+    use euler_ale_bc_operator,                          only: euler_ale_bc_operator_t
+
+
     ! Fluid Viscous Operators
     use fluid_viscous_volume_operator,              only: fluid_viscous_volume_operator_t
     use fluid_viscous_boundary_average_operator,    only: fluid_viscous_boundary_average_operator_t
@@ -215,6 +223,14 @@ contains
         type(euler_laxfriedrichs_operator_t)            :: euler_laxfriedrichs_operator
         type(euler_bc_operator_t)                       :: euler_bc_operator
 
+        ! Fluid Inviscid Operators
+        type(euler_ale_volume_operator_t)                   :: euler_ale_volume_operator
+        type(euler_ale_boundary_average_operator_t)         :: euler_ale_average_operator
+        type(euler_ale_roe_operator_t)                      :: euler_ale_roe_operator
+        type(euler_ale_laxfriedrichs_operator_t)            :: euler_ale_laxfriedrichs_operator
+        type(euler_ale_bc_operator_t)                       :: euler_ale_bc_operator
+
+
         ! Fluid Viscous Operators
         type(fluid_viscous_volume_operator_t)           :: fluid_viscous_volume_operator
         type(fluid_viscous_boundary_average_operator_t) :: fluid_viscous_boundary_average_operator
@@ -276,6 +292,14 @@ contains
             call operator_factory%register(euler_roe_operator)
             call operator_factory%register(euler_laxfriedrichs_operator)
             call operator_factory%register(euler_bc_operator)
+            
+            ! Register Fluid Inviscid
+            call operator_factory%register(euler_ale_volume_operator)
+            call operator_factory%register(euler_ale_average_operator)
+            call operator_factory%register(euler_ale_roe_operator)
+            call operator_factory%register(euler_ale_laxfriedrichs_operator)
+            call operator_factory%register(euler_ale_bc_operator)
+
 
             ! Register Fluid Viscous
             call operator_factory%register(fluid_viscous_boundary_average_operator)

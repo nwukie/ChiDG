@@ -80,8 +80,8 @@ module integration_uniform_flow_pmm_mod
     !
     ! Procs: 1, 2, 4, 7, 10
     !
-    type(rvector_t) :: nonlinear_convergence(5,3,4) ! nprocs, ngrids, norders
-    real(rk)        :: error(5,3,4)                         ! nprocs, ngrids, norders
+    type(rvector_t) :: nonlinear_convergence(1,3,4) ! nprocs, ngrids, norders
+    real(rk)        :: error(1,3,4)                         ! nprocs, ngrids, norders
 
 
     public  :: uniform_flow_pmm
@@ -172,25 +172,21 @@ contains
         integer(ik),        allocatable :: orders(:)
         integer(ik) :: icase
 
-        nelem_xi  = [ 6,  6,  6,  6, &
-                     12, 12, 12, 12, &
-                     24, 24, 24, 24]
+        nelem_xi  = [ &
+                     40, 40, 40, 40, &
+                     80, 80, 80, 80]
 
-        files = [  string_t('uniform_flow_pmm_6x1x1.h5') , &
-                   string_t('uniform_flow_pmm_6x1x1.h5') , &
-                   string_t('uniform_flow_pmm_6x1x1.h5') , &
-                   string_t('uniform_flow_pmm_6x1x1.h5') , &
-                   string_t('uniform_flow_pmm_12x1x1.h5'), &
-                   string_t('uniform_flow_pmm_12x1x1.h5'), &
-                   string_t('uniform_flow_pmm_12x1x1.h5'), &
-                   string_t('uniform_flow_pmm_12x1x1.h5'), &
-                   string_t('uniform_flow_pmm_24x1x1.h5'), &
-                   string_t('uniform_flow_pmm_24x1x1.h5'), &
-                   string_t('uniform_flow_pmm_24x1x1.h5'), &
-                   string_t('uniform_flow_pmm_24x1x1.h5')  &
+        files = [  string_t('uniform_flow_pmm_40x1x1.h5'), &
+                   string_t('uniform_flow_pmm_40x1x1.h5'), &
+                   string_t('uniform_flow_pmm_40x1x1.h5'), &
+                   string_t('uniform_flow_pmm_40x1x1.h5'), &
+                   string_t('uniform_flow_pmm_80x1x1.h5'), &
+                   string_t('uniform_flow_pmm_80x1x1.h5'), &
+                   string_t('uniform_flow_pmm_80x1x1.h5'), &
+                   string_t('uniform_flow_pmm_80x1x1.h5')  &
                     ]
 
-        orders = [ 1, 2, 3, 4, &
+        orders = [  &
                    1, 2, 3, 4, &
                    1, 2, 3, 4 ]
 
@@ -253,6 +249,7 @@ contains
         
         tol = 1.e-6_rk
 
+        print *, '1'
         !------------------------------------------------------------------------------
         !
         ! Define input data here that is normally read through the namelist input file
@@ -261,15 +258,18 @@ contains
         !
         !------------------------------------------------------------------------------
         basis            = 'legendre'
-        gq_rule          = 2
+        gq_rule          = 3 
         time_integrator  = 'DIRK'
-        nonlinear_solver = 'quasi_newton'
+        nonlinear_solver = 'newton'
         linear_solver    = 'fgmres'
         preconditioner   = 'RASILU0'
         IO_DESTINATION   = 'file'
+        dt               = 0.00001_rk
+        time_steps       = 10
         !------------------------------------------------------------------------------
 
 
+        print *, '2'
         !
         ! Get MPI communicator information from pFUnit
         !
@@ -278,6 +278,7 @@ contains
         this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
 
 
+        print *, '3'
 
         ! Set timescheme options to pass during initialization
         !call toptions%set('dt', 0.1_rk) ! means nothing here
@@ -294,6 +295,7 @@ contains
         call noptions%set('cfl0',1.0_rk)
         call noptions%set('nsteps',100)
 
+        print *, '4'
 
 
         !
@@ -302,6 +304,7 @@ contains
         call this%chidg%start_up('core',this%ChiDG_COMM)
 
 
+        print *, '5'
 
 
         !
@@ -334,14 +337,18 @@ contains
                                 string_t('Walls') ]
 
 
-            call create_mesh_file('Uniform Flow PMM',this%gridfile,equation_sets=[string_t('Euler ALE')], &
+        print *, '6'
+            call create_mesh_file('Uniform Flow PMM',this%gridfile, &
+                                                              equation_sets=[string_t('Euler ALE')], &
                                                               group_names     = group_names,     &
                                                               bc_state_groups = bc_state_groups, &
                                                               nelem_xi        = this%nelem_xi,   &
                                                               nelem_eta       = 1,  &
-                                                              nelem_zeta      = 1)
+                                                              nelem_zeta      = 1) 
+                                                              
         end if
 
+        print *, '7'
 
         !
         ! Set ChiDG components
@@ -356,10 +363,13 @@ contains
         !
         ! Read grid
         !
+        print *, '8'
+
         call this%chidg%read_mesh(this%gridfile)
 
 
 
+        print *, '9'
 
         !
         ! Initialize solution
@@ -378,6 +388,7 @@ contains
         call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,5)
 
 
+        print *, '10'
 
     end subroutine SetUp
     !*******************************************************************************************
@@ -421,7 +432,7 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------
-    @Test(npes=[1,2,4,7,10])
+    @Test(npes=[10])
     subroutine test_entropy_error_rate(self)
         class(uniform_flow_pmm),  intent(inout)   :: self
 
@@ -435,6 +446,8 @@ contains
         order_index = get_order_index(self%order)
 
 
+        print *, 'order'
+        print *, self%order
         !
         ! Run ChiDG simulation
         !
@@ -448,6 +461,8 @@ contains
         computed_error = compute_uniform_flow_pmm_error(self%chidg%data,self%ChiDG_COMM)
 
 
+        print *, 'computed error'
+        print *, computed_error
 
         !
         ! Store the computed error for the current case
@@ -479,8 +494,8 @@ contains
 
 
         do inpes = 1,2
-            do igrid = 2,3  ! Start at the second grid because we need the previous grid in order to compute a rate 
-                do iorder = 1,2
+            do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
+                do iorder = 1,4
 
                     error_previous = error(inpes,igrid-1,iorder)
                     error_current  = error(inpes,igrid  ,iorder)
@@ -526,7 +541,7 @@ contains
         type(mpi_comm),     intent(in)      :: ChiDG_COMM
 
         real(rk), allocatable, dimension(:) :: &
-            u_dg, u_analytical, x_gq, gq_error_squared
+            u_dg, u_analytical, x_gq, gq_error_squared, det_jacobian_grid_gq
 
 
         integer(ik) :: idens, imom1, imom2, imom3, ienergy
@@ -569,6 +584,8 @@ contains
                     ! Compute the analytical solution at the quadrature nodes
                     !
                     x_gq = mesh%domain(idom)%elems(ielem)%quad_pts(:,1)
+                    det_jacobian_grid_gq = mesh%domain(idom)%elems(ielem)%det_jacobian_grid
+                    !print *, det_jacobian_grid_gq
                     u_analytical = ZERO*x_gq
                     u_analytical = 1.225_rk
 
@@ -578,6 +595,7 @@ contains
                     u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,idens,itime,'value')
 
 
+                    u_dg = u_dg/det_jacobian_grid_gq
                     !
                     ! Compute error
                     !                    
@@ -609,6 +627,7 @@ contains
                     u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,imom1,itime,'value')
 
 
+                    u_dg = u_dg/det_jacobian_grid_gq
                     !
                     ! Compute error
                     !                    
@@ -639,6 +658,7 @@ contains
                     u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,imom2,itime,'value')
 
 
+                    u_dg = u_dg/det_jacobian_grid_gq
                     !
                     ! Compute error
                     !                    
@@ -668,6 +688,7 @@ contains
                     u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,imom3,itime,'value')
 
 
+                    u_dg = u_dg/det_jacobian_grid_gq
                     !
                     ! Compute error
                     !                    
@@ -698,6 +719,7 @@ contains
                     u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,ienergy,itime,'value')
 
 
+                    u_dg = u_dg/det_jacobian_grid_gq
                     !
                     ! Compute error
                     !                    
@@ -762,7 +784,7 @@ contains
 
 
         do inpes = 1,5
-            do igrid = 1,3
+            do igrid = 1,2
                 do iorder = 1,4
 
                     ! Get the serial convergence for this (igrid,iorder)
@@ -800,9 +822,9 @@ contains
 
         select case (igrid)
             case(1)
-                nelem = 20
+                nelem = 40 
             case(2)
-                nelem = 30
+                nelem = 80 
             case default
                 call chidg_signal(FATAL,"integration_1D_linear_diffusion_mod%mesh_parameter: invalid igrid")
         end select
@@ -845,16 +867,16 @@ contains
         integer(ik) :: inpes
 
         select case (numproc)
-            case(1)
-                inpes = 1
-            case(2)
-                inpes = 2
-            case(4)
-                inpes = 3
-            case(7)
-                inpes = 4
+!            case(1)
+!                inpes = 1
+!            case(2)
+!                inpes = 2
+!            case(4)
+!                inpes = 3
+!            case(7)
+!                inpes = 4
             case(10)
-                inpes = 5
+                inpes = 1 
 
         end select
 
@@ -870,9 +892,9 @@ contains
         integer(ik)         :: igrid
 
         select case (trim(grid))
-            case('uniform_flow_pmm_6x1x1.h5')
+            case('uniform_flow_pmm_40x1x1.h5')
                 igrid = 1
-            case('uniform_flow_pmm_12x1x1.h5')
+            case('uniform_flow_pmm_80x1x1.h5')
                 igrid = 2 
             case('uniform_flow_pmm_24x1x1.h5')
                 igrid = 3

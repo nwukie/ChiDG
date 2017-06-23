@@ -1277,10 +1277,10 @@ contains
             
 
             !
-            ! 1: Update time t. Compute as t = t + i*dt. This way we can restart time-marching and start from t /= 0.
+            ! 1: Update time t. Compute as t = t + dt. This way we can restart time-marching and start from t /= 0.
             ! 2: Call time integrator to take a step
             !
-            self%data%time_manager%t = self%data%time_manager%t + self%data%time_manager%dt*istep
+            self%data%time_manager%t = self%data%time_manager%t + self%data%time_manager%dt
             call self%time_integrator%step(self%data,self%nonlinear_solver, &
                                                      self%linear_solver,    &
                                                      self%preconditioner)

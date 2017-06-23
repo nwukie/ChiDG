@@ -106,12 +106,14 @@ contains
         integer                                 :: ierr, nterms_1d, mapping, iconn, &
                                                    nconn, nelements, nnodes
 
+        print*, 'hi - 1'
 
         !
         ! Open file
         !
         fid = open_file_hdf(filename)
 
+        print*, 'hi - 2'
 
         !
         ! Check contains grid
@@ -131,6 +133,7 @@ contains
         if (ierr /= 0) call AllocationError
 
 
+        print*, 'hi - 3'
 
         !
         !  Loop through groups and read domains
@@ -192,11 +195,13 @@ contains
 
         end do  ! iconn
 
+        print*, 'hi - 4'
 
 
         !  Close file and Fortran interface
         call close_file_hdf(fid)
 
+        print*, 'hi - 5'
     end subroutine read_grids_hdf
     !****************************************************************************************
   
@@ -1506,8 +1511,10 @@ contains
         !
         ! Open file
         !
+        print*, 'read_equations_hdf: ', trim(filename)
         fid = open_file_hdf(filename)
 
+        print *, 'file opened'
 
         !
         ! Get equation names
@@ -1520,6 +1527,7 @@ contains
         !
         call close_file_hdf(fid)
 
+        print *, 'file closed'
 
         !
         ! Add equation groups to chidg_data

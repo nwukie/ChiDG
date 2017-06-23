@@ -432,7 +432,7 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------
-    @Test(npes=[10])
+    @Test(npes=[2])
     subroutine test_entropy_error_rate(self)
         class(uniform_flow_pmm),  intent(inout)   :: self
 

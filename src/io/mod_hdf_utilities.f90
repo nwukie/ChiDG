@@ -455,6 +455,7 @@ contains
         integer         :: ierr, loc
         logical         :: file_exists, file_is_hdf5
 
+        print*, 'OPENING :D'
         ! Trim if we need to
         filename_open = trim(filename)
 
@@ -511,6 +512,7 @@ contains
 
         integer :: ierr
 
+        print*, 'CLOSING :D'
         !  Close file and Fortran interface
         call h5fclose_f(fid, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"close_file_hdf: error closing file.")

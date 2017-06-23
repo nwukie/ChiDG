@@ -21,6 +21,8 @@ module type_chidg_matrix
     !!  @date   2/1/2016
     !!
     !!
+    !!  TODO: TEST self%stamp component and behavior
+    !!
     !------------------------------------------------------------------------------------------
     type, public :: chidg_matrix_t
 
@@ -28,6 +30,8 @@ module type_chidg_matrix
 
         logical     :: local_initialized = .false.      ! Has the matrix processor-local data been initialized
         logical     :: recv_initialized  = .false.      ! Has matrix been initialized with information about chidg_vector%recv
+
+        integer     :: stamp(8) = -1                    ! Stamp from date_and_time that gets updated when store routines are called
 
     contains
         ! Initializers
@@ -426,6 +430,10 @@ contains
         !
         call self%dom(idomain_l)%store(integral,face_info,seed,ivar,itime)
 
+
+        ! Update stamp
+        call date_and_time(values=self%stamp)
+
     end subroutine store
     !*******************************************************************************************
 
@@ -468,6 +476,9 @@ contains
         !
         call self%dom(idomain_l)%store_chimera(integral,face_info,seed,ivar,itime)
 
+        ! Update stamp
+        call date_and_time(values=self%stamp)
+
     end subroutine store_chimera
     !******************************************************************************************
 
@@ -509,6 +520,9 @@ contains
         ! Store linearization in associated domain domain_matrix_t
         !
         call self%dom(idomain_l)%store_bc(integral,face_info,seed,ivar,itime)
+
+        ! Update stamp
+        call date_and_time(values=self%stamp)
 
     end subroutine store_bc
     !*******************************************************************************************

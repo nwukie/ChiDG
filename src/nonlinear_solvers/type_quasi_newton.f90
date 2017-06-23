@@ -12,6 +12,7 @@ module type_quasi_newton
     use type_system_assembler,  only: system_assembler_t
     use type_linear_solver,     only: linear_solver_t
     use type_preconditioner,    only: preconditioner_t
+    use type_solver_controller, only: solver_controller_t
     use type_chidg_vector
 
     use ieee_arithmetic,        only: ieee_is_nan
@@ -59,32 +60,35 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine solve(self,data,system,linear_solver,preconditioner)
+    subroutine solve(self,data,system,linear_solver,preconditioner,solver_controller)
         class(quasi_newton_t),                  intent(inout)   :: self
         type(chidg_data_t),                     intent(inout)   :: data
         class(system_assembler_t),  optional,   intent(inout)   :: system
         class(linear_solver_t),     optional,   intent(inout)   :: linear_solver
         class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
+        class(solver_controller_t), optional,   intent(inout)   :: solver_controller
 
         character(100)          :: filename
-        integer(ik)             :: itime, nsteps, ielem, wcount, iblk, iindex,  &
+        integer(ik)             :: itime, nsteps, ielem, iblk, iindex,  &
                                    niter, ieqn, idom, ierr,                     &
                                    rstart, rend, cstart, cend, nterms, imat, iwrite, step, eqn_ID, icfl
 
-        real(rk)                :: dtau, amp, cfl, timing, resid, resid0, resid_new,    &
-                                   alpha, f0, fn, forcing_term
+        real(rk)                :: dtau, amp, cfl, timing, resid, resid_prev, resid0, resid_new,    &
+                                   alpha, f0, fn, forcing_term, residual_ratio
         real(rk), allocatable   :: vals(:), cfln(:), rnorm0(:), rnorm(:)
         type(chidg_vector_t)    :: b, qn, qold, qnew, dqdtau, q0
         logical                 :: searching, absolute_convergence, relative_convergence
       
+      
+        call write_line('NONLINEAR SOLVER', io_proc=GLOBAL_MASTER, silence=(verbosity<2))
+        call write_line("iter","|R(Q)|","CFL", "Linear Solver(niter)", delimiter='', columns=.True., column_width=30, io_proc=GLOBAL_MASTER, silence=(verbosity<2))
 
-        wcount = 1
+
         associate ( q   => data%sdata%q,    &
                     dq  => data%sdata%dq,   &
                     rhs => data%sdata%rhs,  &
                     lhs => data%sdata%lhs)
 
-            call write_line('NONLINER SOLVER', io_proc=GLOBAL_MASTER, silence=(verbosity<2))
 
             !
             ! start timer
@@ -93,20 +97,19 @@ contains
             call self%timer%start()
 
 
-            ! Store qn, since q will be operated on in the inner loop
-            qn = q
+            !
+            ! Startup values
+            !
+            absolute_convergence = .true.
+            relative_convergence = .true.
+            qn     = q      ! Store qn, since q will be operated on in the inner loop
+            resid  = ONE    ! Force inner loop entry
+            niter  = 0      ! Initialize inner loop counter
 
 
             !
             ! NONLINEAR CONVERGENCE INNER LOOP
             !
-            resid = ONE    ! Force inner loop entry
-            niter = 0      ! Initialize inner loop counter
-
-
-            absolute_convergence = .true.
-            relative_convergence = .true.
-            call write_line("iter","|R(Q)|","CFL", "Linear Solver(niter)", delimiter='', columns=.True., column_width=30, io_proc=GLOBAL_MASTER, silence=(verbosity<2))
             do while ( absolute_convergence .and. relative_convergence )
                 niter = niter + 1
 
@@ -121,15 +124,34 @@ contains
                 !
                 ! Update Spatial Residual and Linearization (rhs, lin)
                 !
-                call system%assemble(data,timing=timing,differentiate=.true.)
-                resid = rhs%norm(ChiDG_COMM)
+                if (present(solver_controller)) then
+                    if ( niter <= 2)  then
+                        residual_ratio = ONE
+                    else
+                        residual_ratio = resid/resid_prev
+                    end if
+
+                    call system%assemble( data,             &
+                                          timing=timing,    &
+                                          differentiate=solver_controller%update_lhs(niter,residual_ratio) )
+                else
+                    call system%assemble(data,timing=timing,differentiate=.true.)
+                end if
+                resid_prev = resid
+                resid      = rhs%norm(ChiDG_COMM)
+
 
 
                 !
                 ! Print diagnostics, check tolerance.
                 !
                 call self%residual_norm%push_back(resid)
-                if ( resid < self%tol ) exit
+                if ( resid < self%tol ) then
+                    call write_line(niter, resid, cfln(1), 0, delimiter='', columns=.True., column_width=30, io_proc=GLOBAL_MASTER, silence=(verbosity<2))
+                    exit
+                end if
+
+
                 if ( ieee_is_nan(resid) ) then
                     call chidg_signal(FATAL,"quasi_newton%solve: NaN residual calculation. Check initial solution and operator objects.")
                 end if
@@ -244,7 +266,7 @@ contains
                 !linear_solver%tol = max(1.e-8_rk, forcing_term)
 
                 ! Solve system for newton step, dq
-                call linear_solver%solve(lhs,dq,b,preconditioner)
+                call linear_solver%solve(lhs,dq,b,preconditioner,solver_controller)
                 call self%matrix_iterations%push_back(linear_solver%niter)
                 call self%matrix_time%push_back(linear_solver%timer%elapsed())
 
@@ -279,7 +301,7 @@ contains
                         !
                         ! Clear working vector
                         !
-                        call rhs%clear()
+                        !call rhs%clear()
 
 
                         !
@@ -322,33 +344,13 @@ contains
 
 
                 !
-                ! Accept new solution
+                ! Accept new solution, clear working storage, iterate
                 !
                 q = qn
-
-
-                !
-                ! Clear working storage
-                !
-                call rhs%clear()
                 call dq%clear()
-                call lhs%clear()
 
 
-                !
-                ! Write solution if the count is right
-                !
-                !if (wcount == self%nwrite) then
-                !    if (data%eqnset(1)%get_name() == 'Euler') then
-                !        call write_fields_hdf(data,'flat_plate_quartic.h5')
-                !        write(filename,'(I2)') niter
-                !        call write_tecio_variables(data,trim(filename)//'.dat',niter)
-                !        wcount = 0
-                !    end if
-                !end if
-                wcount = wcount + 1
 
-                call MPI_Barrier(ChiDG_COMM,ierr)
 
 
 
@@ -362,6 +364,9 @@ contains
                 !
                 call write_line(niter, resid, cfln(1), linear_solver%niter, delimiter='', columns=.True., column_width=30, io_proc=GLOBAL_MASTER, silence=(verbosity<2))
 
+
+
+                call MPI_Barrier(ChiDG_COMM,ierr)
             end do ! niter
 
 

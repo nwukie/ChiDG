@@ -10,6 +10,7 @@ module type_fgmres_cgs
     use type_timer,             only: timer_t
     use type_linear_solver,     only: linear_solver_t 
     use type_preconditioner,    only: preconditioner_t
+    use type_solver_controller, only: solver_controller_t
     use type_chidg_vector
     use type_chidg_matrix
 
@@ -57,12 +58,13 @@ contains
     !!  @note   parallelization
     !!
     !---------------------------------------------------------------------------------------------
-    subroutine solve(self,A,x,b,M)
+    subroutine solve(self,A,x,b,M,solver_controller)
         class(fgmres_cgs_t),        intent(inout)               :: self
         type(chidg_matrix_t),       intent(inout)               :: A
         type(chidg_vector_t),       intent(inout)               :: x
         type(chidg_vector_t),       intent(inout)               :: b
         class(preconditioner_t),    intent(inout), optional     :: M
+        class(solver_controller_t), intent(inout), optional     :: solver_controller
 
         type(timer_t)   :: timer_mv, timer_dot, timer_norm, timer_precon
 
@@ -98,7 +100,12 @@ contains
         !
         ! Update preconditioner
         !
-        call M%update(A,b)
+        if (present(solver_controller)) then
+            if (solver_controller%update_preconditioner(A)) call M%update(A,b)
+        else
+            call M%update(A,b)
+        end if
+
 
 
 
@@ -446,9 +453,9 @@ contains
         !
         err = self%error(A,x,b)
         call self%timer%stop()
-        call write_line('   Linear Solver Error: ',         err,                  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
-        call write_line('   Linear Solver compute time: ',  self%timer%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
-        call write_line('   Linear Solver Iterations: ',    self%niter,           delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        call write_line('   Linear Solver Error: ',         err,                  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<4))
+        call write_line('   Linear Solver compute time: ',  self%timer%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<4))
+        call write_line('   Linear Solver Iterations: ',    self%niter,           delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<4))
 
         !call self%timer%report('Linear solver compute time: ')
         !call timer_precon%report('Preconditioner time: ')

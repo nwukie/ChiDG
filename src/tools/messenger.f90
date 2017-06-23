@@ -582,6 +582,27 @@ contains
                 end if
                 temp = write_internal
 
+            type is(logical(1))
+                if (linedata) then
+                    temp = 'True'
+                else
+                    temp = 'False'
+                end if
+
+            type is (logical(2))
+                if (linedata) then
+                    temp = 'True'
+                else
+                    temp = 'False'
+                end if
+
+            type is (logical(4))
+                if (linedata) then
+                    temp = 'True'
+                else
+                    temp = 'False'
+                end if
+
             class default
                 print*, 'Error: no IO rule for provided data in add_to_line'
                 stop

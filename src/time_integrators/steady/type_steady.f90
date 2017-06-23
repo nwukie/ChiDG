@@ -148,6 +148,8 @@ contains
         logical,                    intent(in)                  :: differentiate
         real(rk),                   intent(inout),  optional    :: timing
 
+        call data%sdata%rhs%clear()
+        if (differentiate) call data%sdata%lhs%clear()
 
         !
         ! Steady equation, so we only need the spatial operators computed.

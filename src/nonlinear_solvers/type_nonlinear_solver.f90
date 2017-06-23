@@ -101,12 +101,12 @@ module type_nonlinear_solver
             use type_preconditioner,        only: preconditioner_t
             use type_solver_controller,     only: solver_controller_t
             import nonlinear_solver_t
-            class(nonlinear_solver_t),                  intent(inout)   :: self
-            type(chidg_data_t),                         intent(inout)   :: data
-            class(system_assembler_t),      optional,   intent(inout)   :: system
-            class(linear_solver_t),         optional,   intent(inout)   :: linear_solver
-            class(preconditioner_t),        optional,   intent(inout)   :: preconditioner
-            class(solver_controller_t),     optional,   intent(inout)   :: solver_controller
+            class(nonlinear_solver_t),                  intent(inout)           :: self
+            type(chidg_data_t),                         intent(inout)           :: data
+            class(system_assembler_t),      optional,   intent(inout)           :: system
+            class(linear_solver_t),         optional,   intent(inout)           :: linear_solver
+            class(preconditioner_t),        optional,   intent(inout)           :: preconditioner
+            class(solver_controller_t),     optional,   intent(inout), target   :: solver_controller
         end subroutine
     end interface
 
@@ -234,6 +234,7 @@ contains
         ! Report if solver took at least one step
         !
         if (self%newton_iterations%size() > 0) then
+
 
             !
             ! Nonliner solver header

@@ -670,6 +670,7 @@ contains
                 call partition_connectivity(connectivities, weights, partitions)
 
                 call send_partitions(partitions,MPI_COMM_WORLD)
+                !call send_partitions(partitions,ChiDG_COMM)
             end if
 
 
@@ -678,6 +679,7 @@ contains
             !
             call write_line("   distributing partitions...", ltrim=.false., io_proc=GLOBAL_MASTER)
             call recv_partition(self%partition,MPI_COMM_WORLD)
+            !call recv_partition(self%partition,ChiDG_COMM)
 
 
         end if ! partitions in from user

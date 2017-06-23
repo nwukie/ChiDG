@@ -19,14 +19,14 @@ module type_solver_controller
     !!  @date   6/21/2017
     !!
     !---------------------------------------------------------------
-    type, abstract, public :: solver_controller_t
+    type, public :: solver_controller_t
 
         ! LHS controller data
-        logical :: force_update_lhs            = .true.
+        logical :: force_update_lhs            = .false.
         logical :: lhs_updated
 
         ! Preconditioner controller data
-        logical :: force_update_preconditioner = .true.
+        logical :: force_update_preconditioner = .false.
         integer :: lhs_stamp(8) = ZERO                      ! lhs date_time_stamp to recognize when lhs has been updated
         logical :: preconditioner_updated      
 
@@ -52,8 +52,9 @@ contains
     !!  @date   6/22/2017
     !!
     !-------------------------------------------------------------
-    function update_lhs(self,niter,residual_ratio) result(update)
+    function update_lhs(self,A,niter,residual_ratio) result(update)
         class(solver_controller_t), intent(inout)   :: self
+        type(chidg_matrix_t),       intent(in)      :: A
         integer(ik),                intent(in)      :: niter
         real(rk),                   intent(in)      :: residual_ratio
 

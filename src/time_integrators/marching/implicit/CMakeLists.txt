@@ -1,4 +1,4 @@
-add_subdirectory(backward_euler)
-add_subdirectory(DIRK)
-
-add_lib_sources()
+add_lib_sources(
+                type_DIRK.f90
+                type_backward_euler.f90
+                )

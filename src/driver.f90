@@ -18,6 +18,7 @@ program driver
     use type_function,              only: function_t
     use mod_function,               only: create_function
     use mod_chidg_mpi,              only: GLOBAL_MASTER, ChiDG_COMM, IRANK
+    use mod_file_utilities,         only: delete_file
     use mod_io
 
     ! Actions
@@ -36,8 +37,9 @@ program driver
     type(chidg_t)                               :: chidg
 
 
-    integer                                     :: narg, iorder, ierr
-    character(len=1024)                         :: chidg_action, filename, grid_file, solution_file, file_a, file_b
+    integer                                     :: iarg, narg, iorder, ierr, loc
+    character(len=1024)                         :: chidg_action, filename, grid_file, solution_file, file_a, file_b, file_in, pattern
+    character(:),                   allocatable :: command
     class(function_t),              allocatable :: constant, monopole, fcn, polynomial
 
 
@@ -218,11 +220,49 @@ program driver
                 call chidg_convert(trim(filename))
 
             case ('post')
-                if (narg /= 3) call chidg_signal(FATAL,"The 'post' action expects: chidg post gridfile.h5 solutionfile.h5")
-                call get_command_argument(2,grid_file)
-                call get_command_argument(3,solution_file)
-                call chidg_post(trim(grid_file), trim(solution_file))
-                !call chidg_post_vtk(trim(grid_file), trim(solution_file))
+            !>  ChiDG:post
+            !!
+            !!  Post-process solution files for visualization.
+            !!
+            !!  MODE 1: Single-file
+            !!  -------------------
+            !!
+            !!     Command-line:                    Output:
+            !!  chidg post myfile.h5       myfile.plt (Tecplot-readable)
+            !!
+            !!  MODE 1: Multi-file
+            !!  -------------------
+            !!  In the case where there are several files that need processed,
+            !!  wildcards can be passed in, but must be wrapped in quotes " ".
+            !!
+            !!  Files: myfile_0.1000.h5, myfile_0.2000.h5, myfile_0.3000.h5
+            !!
+            !!     Command-line:                Output:
+            !!  chidg post "myfile*"        myfile_0.1000.plt
+            !!                              myfile_0.2000.plt
+            !!                              myfile_0.3000.plt
+            !!
+            !!---------------------------------------------------------------------
+
+                if (narg /= 2) call chidg_signal(FATAL,"The 'post' action expects: chidg post file.h5")
+
+                call get_command_argument(2,pattern)
+                command = 'ls '//trim(pattern)//' > chidg_post_files.txt'
+                call system(command)
+            
+
+                open(7,file='chidg_post_files.txt',action='read')
+                do
+                    read(7,fmt='(a)', iostat=ierr) solution_file
+                    if (ierr /= 0) exit
+                    call chidg_post(trim(solution_file), trim(solution_file))
+                end do
+                close(7)
+
+                call delete_file('chidg_post_files.txt')
+            !***********************************************************************
+
+
 
             case ('matplotlib')
                 if (narg /= 3) call chidg_signal(FATAL,"The 'matplotlib' action expects: chidg matplotlib gridfile.h5solutionfile.h5")

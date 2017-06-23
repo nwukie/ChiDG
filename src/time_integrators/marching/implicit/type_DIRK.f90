@@ -30,7 +30,7 @@ module type_DIRK
 #include<messenger.h>
     use messenger,                      only: write_line
     use mod_kinds,                      only: rk, ik
-    use mod_constants,                  only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN
+    use mod_constants,                  only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, NO_ID
     use mod_spatial,                    only: update_space
     use mod_io,                         only: verbosity
 
@@ -38,6 +38,7 @@ module type_DIRK
     use type_system_assembler,          only: system_assembler_t
 
     use type_chidg_data,                only: chidg_data_t
+    use type_chidg_matrix,              only: chidg_matrix_t
     use type_nonlinear_solver,          only: nonlinear_solver_t           
     use type_linear_solver,             only: linear_solver_t
     use type_preconditioner,            only: preconditioner_t
@@ -429,18 +430,23 @@ contains
     !!  @param[in]  residual_ratio      R_{i}/R_{i-1}
     !!
     !----------------------------------------------------------------------------
-    function update_lhs(self,niter,residual_ratio) result(update)
+    function update_lhs(self,A,niter,residual_ratio) result(update)
         class(DIRK_solver_controller_t),    intent(inout)   :: self
+        type(chidg_matrix_t),               intent(in)      :: A
         integer(ik),                        intent(in)      :: niter
         real(rk),                           intent(in)      :: residual_ratio
 
         logical :: update
 
         ! Update lhs if:
-        !   1: number of newton iterations > 10
-        !   2: residual norm increases by factor of 10 (divergence)
-        !   3: being forced
-        if ( (niter > 10) .or. (residual_ratio > 10._rk) .or. (self%force_update_lhs) ) then
+        !   1: If matrix(lhs/A) hasn't been updated before
+        !   2: number of newton iterations > 10
+        !   3: residual norm increases by factor of 10 (divergence)
+        !   4: being forced
+        if ( all(A%stamp == NO_ID)      .or. &
+            (niter > 10)                .or. &
+            (residual_ratio > 10._rk)   .or. &
+            (self%force_update_lhs) ) then
             update = .true.
         else
             update = .false.

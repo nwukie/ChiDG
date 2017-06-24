@@ -58,8 +58,9 @@ contains
 
         character(100)              :: filename
         integer(ik)                 :: niter
-        real(rk)                    :: resid, resid_prev, timing, entropy_error, residual_ratio
+        real(rk)                    :: resid, resid0, resid_prev, timing, entropy_error, residual_ratio
         real(rk), allocatable       :: vals(:)
+        logical                     :: absolute_convergence, relative_convergence
         type(chidg_vector_t)        :: b, qn, qold, qnew
 
         type(solver_controller_t),  target  :: default_controller
@@ -94,16 +95,20 @@ contains
             !
             ! Startup values
             !
-            qn         = q      ! Store qn, since q will be operated on in the inner loop
-            resid      = ONE    ! Force inner loop entry
-            resid_prev = ONE    !
-            niter      = 0      ! Initialize inner loop counter
+            absolute_convergence = .true.
+            relative_convergence = .true.
+            qn                   = q      ! Store qn, since q will be operated on in the inner loop
+            resid                = ONE    ! Force inner loop entry
+            resid0               = ONE
+            resid_prev           = ONE    
+            niter                = 0      ! Initialize inner loop counter
 
 
             !
             ! NONLINEAR CONVERGENCE LOOP
             !
-            do while ( resid > self%tol )
+            !do while ( resid > self%tol )
+            do while( absolute_convergence .and. relative_convergence )
                 niter = niter + 1
 
 
@@ -116,36 +121,27 @@ contains
                 !
                 ! Update Spatial Residual and Linearization (rhs, lin)
                 !
-                !if (present(solver_controller)) then
-                !    if ( niter <= 2)  then
-                !        residual_ratio = ONE
-                !    else
-                !        residual_ratio = resid/resid_prev
-                !    end if
-
-                !    call system%assemble( data,             &
-                !                          timing=timing,    &
-                !                          differentiate=solver_controller%update_lhs(niter,residual_ratio) )
-                !else
-                !    call system%assemble(data,timing=timing,differentiate=.true.)
-                !end if
                 if ( niter <= 2)  then
                     residual_ratio = ONE
                 else
                     residual_ratio = resid/resid_prev
                 end if
 
-                call system%assemble( data,             &
-                                      timing=timing,    &
-                                      differentiate=controller%update_lhs(lhs,niter,residual_ratio) )
+                call system%assemble( data, timing=timing, differentiate=controller%update_lhs(lhs,niter,residual_ratio) )
+
+                !
+                ! Compute residual norms
+                !
                 resid_prev = resid
                 resid      = rhs%norm(ChiDG_COMM)
+                if (niter == 1) resid0 = resid
 
 
                 !
                 ! Tolerance check
                 !
                 call self%residual_norm%push_back(resid)
+                call write_line("|R| = ", resid, io_proc=GLOBAL_MASTER, silence=(verbosity<4))
                 if ( resid < self%tol ) then
                     call write_line(niter, resid, 0, controller%lhs_updated, .false., delimiter='', columns=.True., column_width=30, io_proc=GLOBAL_MASTER, silence=(verbosity<2))
                     exit
@@ -189,6 +185,18 @@ contains
 
                 ! Print iteration information
                 call write_line(niter, resid, linear_solver%niter, controller%lhs_updated, controller%preconditioner_updated, delimiter='', columns=.True., column_width=30, io_proc=GLOBAL_MASTER, silence=(verbosity<2))
+
+
+
+                !
+                ! Convergence switches
+                !
+                absolute_convergence = (resid > self%tol)
+                relative_convergence = ( (log10(resid0) - log10(resid)) < real(self%norders_reduction,rk) )
+
+
+
+
 
 
             end do ! while error

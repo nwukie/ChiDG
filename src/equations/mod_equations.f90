@@ -30,6 +30,7 @@ module mod_equations
     use eqn_flat_plate_zonal_rans,          only: flat_plate_zonal_rans
     use eqn_navier_stokes_av,               only: navier_stokes_av
     use eqn_laminar_navier_stokes,          only: laminar_navier_stokes
+    use eqn_rans_lowcache,                  only: rans_lowcache
     use eqn_wall_distance,                  only: wall_distance
     use eqn_mesh_motion_diffusion,                  only: mesh_motion_diffusion 
     use eqn_mesh_motion_linear_elasticity,                  only: mesh_motion_linear_elasticity
@@ -129,6 +130,7 @@ contains
         type(flat_plate_zonal_rans)      :: flat_plate_zonal_rans_builder
         type(navier_stokes_av)           :: navier_stokes_av_builder
         type(laminar_navier_stokes)      :: laminar_navier_stokes_builder
+        type(rans_lowcache)              :: rans_lowcache_builder
         type(wall_distance)              :: wall_distance_builder
         type(mesh_motion_diffusion)              :: mesh_motion_diffusion_builder
         type(mesh_motion_linear_elasticity)              :: mesh_motion_linear_elasticity_builder
@@ -155,6 +157,7 @@ contains
             call equation_builder_factory%register(flat_plate_zonal_rans_builder)
             call equation_builder_factory%register(navier_stokes_av_builder)
             call equation_builder_factory%register(laminar_navier_stokes_builder)
+            call equation_builder_factory%register(rans_lowcache_builder)
             call equation_builder_factory%register(wall_distance_builder)
             call equation_builder_factory%register(mesh_motion_diffusion_builder)
             call equation_builder_factory%register(mesh_motion_linear_elasticity_builder)

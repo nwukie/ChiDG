@@ -1015,6 +1015,7 @@ contains
 !!            ! Check which domains use the auxiliary field
 !!            !
 !!            do idom = 1,self%data%ndomains()
+!!                  ! NOTE: If anyone uncomments this, eqnset(idom) should probably be replaced with eqn_ID
 !!                domain_uses_field(idom) = self%data%eqnset(idom)%uses_auxiliary_field(aux_fields(iaux))
 !!            end do !idom
 !!

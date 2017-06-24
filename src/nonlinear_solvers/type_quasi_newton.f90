@@ -166,6 +166,7 @@ contains
                 ! Print diagnostics, check tolerance.
                 !
                 call self%residual_norm%push_back(resid)
+                call write_line('|R| = ', resid, io_proc=GLOBAL_MASTER, silence=(verbosity<4))
                 if ( resid < self%tol ) then
                     call write_line(niter, resid, cfln(1), 0, delimiter='', columns=.True., column_width=30, io_proc=GLOBAL_MASTER, silence=(verbosity<2))
                     exit

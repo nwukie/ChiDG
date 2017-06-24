@@ -72,7 +72,7 @@ contains
         logical,                intent(in)              :: write_surfaces
 
 
-        integer(ik)     :: ierr, ieq
+        integer(ik)     :: ierr, ieq, eqn_ID
         character(100)  :: varstring
 
 
@@ -88,7 +88,8 @@ contains
         ! TODO: Generalized TECIO for different equation set in each domain.
         !
         ieq = 1
-        do while (ieq <= data%eqnset(1)%prop%nprimary_fields())
+        eqn_ID = data%mesh%domain(1)%eqn_ID
+        do while (ieq <= data%eqnset(eqn_ID)%prop%nprimary_fields())
             varstring = trim(varstring)//","//trim(data%eqnset(1)%prop%get_primary_field_name(ieq))
             ieq = ieq + 1
         end do
@@ -170,6 +171,7 @@ contains
         character(:),   allocatable :: zonestring
 
 
+        call write_line("   TECIO: Writing domains...")
 
         ! using (output_res+1) so that the skip number used in tecplot to
         ! correctly display the element surfaces is the same as the number
@@ -417,6 +419,7 @@ contains
         character(:),   allocatable :: zonestring
 
 
+        call write_line("   TECIO: Writing surfaces...")
 
         ! using (output_res+1) so that the skip number used in tecplot to
         ! correctly display the element surfaces is the same as the number

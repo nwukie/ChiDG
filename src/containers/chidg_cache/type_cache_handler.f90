@@ -121,8 +121,9 @@ contains
         ! Determine if we want to update gradient terms in the cache
         !
         eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
-        compute_gradients = (allocated(equation_set(eqn_ID)%volume_diffusive_operator) .or. &
+        compute_gradients = (allocated(equation_set(eqn_ID)%volume_diffusive_operator)   .or. &
                              allocated(equation_set(eqn_ID)%boundary_diffusive_operator) )
+
 
 
 

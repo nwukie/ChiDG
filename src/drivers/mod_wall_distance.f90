@@ -185,9 +185,10 @@ contains
             !
             iorder = 2
             call noptions%set('tol',1.e-4_rk)   ! Set nonlinear solver options
-            call loptions%set('tol',1.e-5_rk)   ! Set linear solver options
+            call loptions%set('tol',1.e-1_rk)   ! Set linear solver options
             call wall_distance%set('Nonlinear Solver', algorithm='Newton', options=noptions)
             call wall_distance%set('Linear Solver'   , algorithm='fgmres_cgs',   options=loptions)
+            wall_distance%nonlinear_solver%norders_reduction = 3
             do p = 2,6,2
                 call write_line('Wall Distance Driver : Loop 1 : p = ', p)
                 
@@ -208,8 +209,9 @@ contains
                 ! Read solution if it exists.
                 !
                 if (p == 2) then
-                    call create_function(constant,'constant')
-                    call constant%set_option('val',0.001_rk)
+                    !call create_function(constant,'constant')
+                    !call constant%set_option('val',0.001_rk)
+                    call create_function(constant,'radius')
                     call wall_distance%data%sdata%q_in%project(wall_distance%data%mesh,constant,1)
 
                 else
@@ -258,6 +260,7 @@ contains
             call loptions%set('tol',1.e-8_rk)   ! Set linear solver options
             call wall_distance%set('Nonlinear Solver', algorithm='Quasi-Newton', options=noptions)
             call wall_distance%set('Linear Solver'   , algorithm='fgmres_cgs',   options=loptions)
+            wall_distance%nonlinear_solver%norders_reduction = 8
 
             order = chidg%nterms_s_1d
             do iorder = 3,order
@@ -275,19 +278,6 @@ contains
                 ! Read solution if it exists.
                 !
                 call wall_distance%read_fields(fileout)
-
-!                !
-!                ! Read solution if it exists.
-!                !
-!                !if (p == 2) then
-!                if (iorder == 2) then
-!                    call create_function(constant,'constant')
-!                    call constant%set_option('val',0.1_rk)
-!                    call wall_distance%data%sdata%q_in%project(wall_distance%data%mesh,constant,1)
-!
-!                else
-!                    call wall_distance%read_fields(fileout)
-!                end if
 
 
                 !

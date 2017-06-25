@@ -8,6 +8,7 @@ module type_chidg
     use mod_function,               only: register_functions
     use mod_prescribed_mesh_motion_function, only: register_prescribed_mesh_motion_functions
     use mod_grid,                   only: initialize_grid
+    use type_svector,               only: svector_t
     use mod_string,                 only: get_file_extension, string_t, get_file_prefix
 
     use type_chidg_data,            only: chidg_data_t
@@ -108,6 +109,7 @@ module type_chidg
         procedure   :: init
 
         ! Run
+        procedure   :: prerun
         procedure   :: run
         procedure   :: report
 
@@ -1194,6 +1196,46 @@ contains
 
 
 
+    !>
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   6/24/2017
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    subroutine prerun(self)
+        class(chidg_t), intent(inout)   :: self
+
+
+        character(:),   allocatable :: user_msg
+        integer(ik)                 :: ifield, ierr, iproc
+        type(svector_t)             :: auxiliary_fields_local
+        type(string_t)              :: field_name
+        logical                     :: has_wall_distance, all_have_wall_distance
+
+        auxiliary_fields_local = self%data%get_auxiliary_field_names()
+
+        has_wall_distance = .false.
+        do ifield = 1,auxiliary_fields_local%size()
+            field_name = auxiliary_fields_local%at(ifield)
+            has_wall_distance = (field_name%get() == 'Wall Distance : p-Poisson')
+            if (has_wall_distance) exit
+        end do !ifield
+
+        call MPI_AllReduce(has_wall_distance, all_have_wall_distance, 1, MPI_LOGICAL, MPI_LOR, ChiDG_COMM, ierr)
+
+        if (all_have_wall_distance) then
+            !call wall_distance_driver(chidg,'wall_distance.h5')
+        end if
+
+
+
+
+    end subroutine prerun
+    !*******************************************************************************************
+
+
 
 
 
@@ -1305,7 +1347,6 @@ contains
             ! Write solution every nwrite steps
             !
             if (wcount == self%data%time_manager%nwrite) then
-                !write(filename, "(A,I7.7,A3)") trim(prefix)//'_', istep, '.h5'
                 if (self%data%time_manager%t < 1.) then
                     write(filename, "(A,F8.6,A3)") trim(prefix)//'_', self%data%time_manager%t, '.h5'
                 else

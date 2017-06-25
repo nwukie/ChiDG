@@ -68,22 +68,13 @@ program driver
 
 
         !
-        ! Set ChiDG Algorithms
+        ! Set ChiDG Algorithms, Accuracy
         !
-        call chidg%set('Time Integrator' , algorithm=time_integrator)
+        call chidg%set('Time Integrator' , algorithm=time_integrator                   )
         call chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
         call chidg%set('Linear Solver'   , algorithm=linear_solver,    options=loptions)
         call chidg%set('Preconditioner'  , algorithm=preconditioner                    )
-
-
-        !
-        ! Set ChiDG Files, Order, etc.
-        !
-        !call chidg%set('Grid File',         file=grid_file              )
-        !call chidg%set('Solution File In',  file=solution_file_in       )
-        !call chidg%set('Solution File Out', file=solution_file_out      )
-        call chidg%set('Solution Order',    integer_input=solution_order)
-
+        call chidg%set('Solution Order'  , integer_input=solution_order                )
 
 
         !
@@ -103,33 +94,6 @@ program driver
         !
         if (solutionfile_in == 'none') then
 
-            !
-            ! Set initial solution
-            !
-!            call create_function(fcn,'gaussian')
-!            call fcn%set_option('b_x',1._rk)
-!            call fcn%set_option('b_y',1._rk)
-!            call fcn%set_option('b_z',1._rk)
-!            call fcn%set_option('c',0.5_rk)
-!            call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,1)
-!            call create_function(constant,'constant')
-!            call constant%set_option('val',0._rk)
-!            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,1)
-
-
-!            call polynomial%set_option('f',3.5_rk)
-!            call create_function(polynomial,'polynomial')
-
-
-!            ! d
-!            !call create_function(constant,'constant')
-!            !call constant%set_option('val',10000.0_rk)
-!            call create_function(constant,'Radius')
-!            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,1)
-
-            
-
-
             call create_function(constant,'constant')
 
             do ifield = 1,chidg%data%mesh%domain(1)%neqns
@@ -137,33 +101,6 @@ program driver
                 call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,ifield)
             end do
 
-!            ! rho
-!            call constant%set_option('val',1.19_rk)
-!            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,1)
-!
-!            ! rho_u
-!            call constant%set_option('val',40.816643_rk)
-!            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,2)
-!
-!            ! rho_v
-!            call constant%set_option('val',0.0_rk)
-!            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,3)
-!
-!            ! rho_w
-!            call constant%set_option('val',0.0_rk)
-!            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,4)
-!
-!            ! rho_E
-!            call constant%set_option('val',250700._rk)
-!            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,5)
-!
-!            ! rho_nutilde
-!            call constant%set_option('val',0.00009_rk)
-!            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,6)
-!
-!            ! eps
-!            call constant%set_option('val',0.000001_rk)
-!            call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,7)
 
         else
 

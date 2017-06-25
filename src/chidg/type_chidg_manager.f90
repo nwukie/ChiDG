@@ -5,7 +5,7 @@ module type_chidg_manager
     use mod_chidg_mpi,      only: IRANK, NRANK, GLOBAL_MASTER, ChiDG_COMM
     use type_chidg,         only: chidg_t
     use type_svector,       only: svector_t
-    use mod_wall_distance,  only: wall_distance_driver
+    !use mod_wall_distance,  only: wall_distance_driver
     use mpi_f08,            only: MPI_Reduce, MPI_LOGICAL, MPI_LOR
     implicit none
 
@@ -75,7 +75,7 @@ contains
 
 
         if (all_have_wall_distance) then
-            call wall_distance_driver(chidg,'wall_distance.h5')
+            !call wall_distance_driver(chidg,'wall_distance.h5')
         end if
 
 

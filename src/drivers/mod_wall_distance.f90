@@ -1,11 +1,11 @@
-module mod_wall_distance
+submodule (type_chidg) mod_wall_distance
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: ZERO
     use eqn_wall_distance,      only: set_p_poisson_parameter
     use mod_function,           only: create_function
     use type_function,          only: function_t
-    use type_chidg,             only: chidg_t
+    !use type_chidg,             only: chidg_t
     use type_bc_state,          only: bc_state_t
     use type_dict,              only: dict_t
     use mod_chidg_post,         only: chidg_post,chidg_post_vtk
@@ -18,6 +18,7 @@ module mod_wall_distance
 
 
 
+!module mod_wall_distance
 
 
 contains
@@ -334,4 +335,4 @@ contains
 
 
 
-end module mod_wall_distance
+end submodule 

@@ -244,8 +244,8 @@ contains
         type(face_info_t)   :: iface_info
         type(recv_t)        :: recv_info
 
-        !type(AD_D)                      :: var_gq(mesh%domain(face_info%idomain_l)%elems(face_info%ielement_l)%gq%face%nnodes)
-        type(AD_D),         allocatable :: qdiff(:), var_gq(:), var_gq_chimera(:)
+        type(AD_D)                      :: var_gq(mesh%domain(face_info%idomain_l)%elems(face_info%ielement_l)%gq%face%nnodes)
+        type(AD_D),         allocatable :: qdiff(:)
         real(rk),           allocatable :: qtmp(:)
         real(rk),           allocatable :: interpolator(:,:)
         character(:),       allocatable :: interpolation_style
@@ -257,7 +257,7 @@ contains
         ! Chimera data
         integer(ik)                 :: ndonors, idonor
         logical,    allocatable     :: mask(:)          ! node mask for distributing Chimera quadrature points
-        !type(AD_D), allocatable     :: var_gq_chimera(:)
+        type(AD_D), allocatable     :: var_gq_chimera(:)
 
 
         !

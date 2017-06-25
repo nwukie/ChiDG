@@ -1,14 +1,12 @@
-submodule (type_chidg) mod_wall_distance
+submodule (type_chidg:type_chidg_driver) driver_wall_distance
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: ZERO
     use eqn_wall_distance,      only: set_p_poisson_parameter
     use mod_function,           only: create_function
     use type_function,          only: function_t
-    !use type_chidg,             only: chidg_t
     use type_bc_state,          only: bc_state_t
     use type_dict,              only: dict_t
-    use mod_chidg_post,         only: chidg_post,chidg_post_vtk
     use mod_bc,                 only: create_bc
     use mod_io,                 only: gridfile
     use mod_hdf_utilities,      only: get_properties_hdf, check_file_exists_hdf
@@ -18,26 +16,10 @@ submodule (type_chidg) mod_wall_distance
 
 
 
-!module mod_wall_distance
 
 
 contains
 
-
-
-    module subroutine auxiliary_driver(chidg,case,file_name)
-        class(chidg_t), intent(inout)   :: chidg
-        character(*),   intent(in)      :: case
-        character(*),   intent(in)      :: file_name
-
-        select case(trim(case))
-            case('Wall Distance')
-                call wall_distance_driver(chidg,file_name)
-
-        end select
-
-
-    end subroutine auxiliary_driver
 
 
     !>  Solve for wall distance using a PDE-based approach.
@@ -54,14 +36,14 @@ contains
     !!  @param[in]  order           Polynomial order, the field will be computed with.
     !!
     !-------------------------------------------------------------------------------------
-    subroutine wall_distance_driver(chidg,fileout)
+    subroutine wall_distance_driver(chidg,wall_distance,file_name)
         type(chidg_t),  intent(inout)   :: chidg
-        character(*),   intent(in)      :: fileout
+        type(chidg_t),  intent(inout)   :: wall_distance
+        character(*),   intent(in)      :: file_name
 
         character(:), allocatable   :: user_msg
         integer(ik)                 :: order
 
-        type(chidg_t)                   :: wall_distance
         type(dict_t)                    :: noptions, loptions
         class(bc_state_t),  allocatable :: dirichlet_zero, neumann_zero
         class(function_t),  allocatable :: constant
@@ -155,9 +137,9 @@ contains
         do iproc = 0,NRANK-1
             if (iproc == IRANK) then
 
-                wd_file_exists = check_file_exists_hdf(fileout)
+                wd_file_exists = check_file_exists_hdf(file_name)
                 if (wd_file_exists) then
-                    wd_props = get_properties_hdf(fileout)
+                    wd_props = get_properties_hdf(file_name)
                     wd_nterms_s = wd_props%nterms_s(1)
 
                     have_wd_field = (wd_nterms_s >= chidg%nterms_s)
@@ -176,7 +158,7 @@ contains
         !
         if (wd_file_exists .and. have_wd_field) then
 
-            call wall_distance%read_fields(fileout)
+            call wall_distance%read_fields(file_name)
             wall_distance%data%sdata%q = wall_distance%data%sdata%q_in
 
         !
@@ -187,7 +169,7 @@ contains
             !
             ! Store grid to file
             !
-            call wall_distance%write_mesh(fileout)
+            call wall_distance%write_mesh(file_name)
 
             ! Get wall-distance approximation for p-Poisson equation using a low-order
             ! polynomial expansion. We are going in steps of 'p' here to make sure
@@ -232,7 +214,7 @@ contains
                     call wall_distance%data%sdata%q_in%project(wall_distance%data%mesh,constant,1)
 
                 else
-                    call wall_distance%read_fields(fileout)
+                    call wall_distance%read_fields(file_name)
                 end if
 
 
@@ -247,7 +229,7 @@ contains
                 !
                 ! Write wall distance to auxiliary field
                 !
-                call wall_distance%write_fields(fileout)
+                call wall_distance%write_fields(file_name)
 
 
             end do
@@ -294,7 +276,7 @@ contains
                 !
                 ! Read solution if it exists.
                 !
-                call wall_distance%read_fields(fileout)
+                call wall_distance%read_fields(file_name)
 
 
                 !
@@ -308,7 +290,7 @@ contains
                 !
                 ! Write wall distance to auxiliary field
                 !
-                call wall_distance%write_fields(fileout)
+                call wall_distance%write_fields(file_name)
 
 
             end do
@@ -323,8 +305,6 @@ contains
         ! Try to find 'Wall Distance' auxiliary field storage.
         !
         aux_field_index = chidg%data%sdata%get_auxiliary_field_index('Wall Distance : p-Poisson')
-
-
 
 
         !
@@ -351,4 +331,4 @@ contains
 
 
 
-end submodule mod_wall_distance
+end submodule driver_wall_distance

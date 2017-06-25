@@ -109,7 +109,7 @@ module type_chidg
         procedure   :: init
 
         ! Run
-        procedure   :: prerun
+        procedure   :: process
         procedure   :: run
         procedure   :: report
 
@@ -129,8 +129,9 @@ module type_chidg
 
 
     interface
-        module subroutine auxiliary_driver(chidg,case,file_name)
-            class(chidg_t), intent(inout)   :: chidg
+        module subroutine auxiliary_driver(chidg,chidg_aux,case,file_name)
+            type(chidg_t),  intent(inout)   :: chidg
+            type(chidg_t),  intent(inout)   :: chidg_aux
             character(*),   intent(in)      :: case
             character(*),   intent(in)      :: file_name
         end subroutine auxiliary_driver
@@ -1203,7 +1204,12 @@ contains
 
 
 
-    !>
+    !>  Handle prerun activities, such as initializing auxiliary fields and
+    !!  calling auxiliary drivers.
+    !!
+    !!  Checks:
+    !!  ----------------------------
+    !!      1: Check if 'Wall Distance : p-Poisson' is required. Yes => call auxiliary_driver
     !!
     !!
     !!  @author Nathan A. Wukie
@@ -1211,7 +1217,7 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------
-    subroutine prerun(self)
+    subroutine process(self)
         class(chidg_t), intent(inout)   :: self
 
 
@@ -1221,14 +1227,17 @@ contains
         type(string_t)              :: field_name
         logical                     :: has_wall_distance, all_have_wall_distance
 
-        auxiliary_fields_local = self%data%get_auxiliary_field_names()
 
+        auxiliary_fields_local = self%data%get_auxiliary_field_names()
 
 
         !
         ! Rule for 'Wall Distance'
+        !   1: Detect if proc requires auxiliary field 'Wall Distance : p-Poisson' be provided.
+        !   2: Detect if all procs require 'Wall Distance : p-Poisson'. MPI_AllReduce
+        !   3: If all procs require auxiliary field, call auxiliary_driver for 'Wall Distance'
         !
-        !----------------------------------------------------------------
+        !-------------------------------------------------------------------------------------
         has_wall_distance = .false.
         do ifield = 1,auxiliary_fields_local%size()
             field_name = auxiliary_fields_local%at(ifield)
@@ -1239,14 +1248,16 @@ contains
         call MPI_AllReduce(has_wall_distance, all_have_wall_distance, 1, MPI_LOGICAL, MPI_LOR, ChiDG_COMM, ierr)
 
         if (all_have_wall_distance) then
-            call auxiliary_driver(self,'Wall Distance','wall_distance.h5')
+            allocate(self%auxiliary_environment, stat=ierr)
+            if (ierr /= 0) call AllocationError
+            call auxiliary_driver(self,self%auxiliary_environment,'Wall Distance','wall_distance.h5')
         end if
-        !*****************************************************************
+        !*************************************************************************************
 
 
 
 
-    end subroutine prerun
+    end subroutine process
     !*******************************************************************************************
 
 
@@ -1289,8 +1300,9 @@ contains
 
         !
         ! Prerun processing
+        !   : Getting/computing auxiliary fields etc.
         !
-        call self%prerun()
+        call self%process()
 
 
 

@@ -165,6 +165,7 @@ contains
             iface   = XI_MAX    ! given face
             itime   = 1
 
+
             !
             ! A seed element, this is a neighbor for this test - so all derivative arrays 
             ! should be seeded to zero
@@ -179,6 +180,7 @@ contains
                                recv_comm    = 0,     &
                                recv_domain  = 0,     &
                                recv_element = 0)
+
 
 
             !
@@ -201,11 +203,12 @@ contains
             allocate(u_gq(ngq))
             allocate(u_ref(ngq))
             
+
             
             !
             ! PROCEDURE BEING TESTED
             !
-            u_gq =  interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value',NEIGHBOR)
+            u_gq = interpolate_face_autodiff(self%chidg%data%mesh,q,face,fcn,ivar,itime,'value',NEIGHBOR)
             
             
             ! Initialize reference

@@ -84,24 +84,18 @@ program driver
 
         !
         ! Initialize solution
+        !   1: 'none', init fields with values from mod_io module variable initial_fields(:)
+        !   2: read initial solution from ChiDG hdf5 file
         !
         if (solutionfile_in == 'none') then
-
             call create_function(constant,'constant')
-
             do ifield = 1,chidg%data%mesh%domain(1)%neqns
                 call constant%set_option('val',initial_fields(ifield))
                 call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,ifield)
             end do
 
-
         else
-
-            !
-            ! TODO: put in check that solutionfile actually contains solution
-            !
             call chidg%read_fields(solutionfile_in)
-
         end if
 
 
@@ -109,13 +103,8 @@ program driver
         ! Run ChiDG simulation
         !
         call chidg%report('before')
-
         call chidg%run(write_initial=initial_write, write_final=final_write)
-
         call chidg%report('after')
-
-
-
 
 
         !
@@ -123,9 +112,6 @@ program driver
         !
         call chidg%shut_down('core')
         call chidg%shut_down('mpi')
-
-
-
 
 
 
@@ -143,29 +129,64 @@ program driver
         ! Select 'action'
         ! 
         select case (trim(chidg_action))
-            case ('edit')
-                if (narg /= 2) call chidg_signal(FATAL,"The 'edit' action expects: chidg edit filename.h5")
-                call get_command_argument(2,filename)
-                call chidg_edit(trim(filename))
-
+            !>  ChiDG:convert   src/actions/convert
+            !!
+            !!  Convert Multi-block, Unformatted, Double-Precision, Plot3D grids to
+            !!  ChiDG-formatted HDF5 file.
+            !!
+            !!  NOTE: this routine handles agglomeration of linear elements to form 
+            !!  higher-order elements.
+            !!
+            !!  Command-Line:
+            !!  --------------------
+            !!  chidg convert myfile.x
+            !!
+            !!  Produces:
+            !!  --------------------
+            !!  myfile.h5
+            !!
+            !----------------------------------------------------------------------------
             case ('convert')
                 if (narg /= 2) call chidg_signal(FATAL,"The 'convert' action expects: chidg convert filename.x")
                 call get_command_argument(2,filename)
                 call chidg_convert(trim(filename))
 
+            !*****************************************************************************
+
+
+
+            !>  ChiDG:edit  src/actions/edit
+            !!
+            !!  Edit a ChiDG HDF5 file. Edit equations, boundary conditions + settings,
+            !!  and patches.
+            !!
+            !!  Command-Line:
+            !!  ---------------------
+            !!  chidg edit myfile.h5
+            !!
+            !----------------------------------------------------------------------------
+            case ('edit')
+                if (narg /= 2) call chidg_signal(FATAL,"The 'edit' action expects: chidg edit filename.h5")
+                call get_command_argument(2,filename)
+                call chidg_edit(trim(filename))
+
+            !*****************************************************************************
+
+
+
             case ('post')
-            !>  ChiDG:post
+            !>  ChiDG:post  src/actions/post
             !!
             !!  Post-process solution files for visualization.
             !!
-            !!  MODE 1: Single-file
-            !!  -------------------
+            !!  Command-Line MODE 1: Single-file
+            !!  --------------------------------
             !!
             !!     Command-line:                    Output:
             !!  chidg post myfile.h5       myfile.plt (Tecplot-readable)
             !!
-            !!  MODE 1: Multi-file
-            !!  -------------------
+            !!  Command-Line MODE 2: Multi-file
+            !!  --------------------------------
             !!  In the case where there are several files that need processed,
             !!  wildcards can be passed in, but must be wrapped in quotes " ".
             !!
@@ -176,8 +197,7 @@ program driver
             !!                              myfile_0.2000.plt
             !!                              myfile_0.3000.plt
             !!
-            !!---------------------------------------------------------------------
-
+            !!---------------------------------------------------------------------------
                 if (narg /= 2) call chidg_signal(FATAL,"The 'post' action expects: chidg post file.h5")
 
                 call get_command_argument(2,pattern)
@@ -194,7 +214,33 @@ program driver
                 close(7)
 
                 call delete_file('chidg_post_files.txt')
-            !***********************************************************************
+            !*****************************************************************************
+
+
+    
+            !>  ChiDG:clone src/actions/clone
+            !!
+            !!  Clone a ChiDG-file configuration from one file to another.
+            !!
+            !!  Command-Line:
+            !!  ------------------------
+            !!  chidg clone source.h5 target.h5
+            !!
+            !!  MODE1: Copy boundary condition state groups AND patch attributes 
+            !!         (assumes the grid domain/topology/names match from source to target.
+            !!  MODE2: Copy boundary condition state groups ONLY
+            !!  MODE3: Copy patch attributes ONLY
+            !!         (assumes the grid domain/topology/names match from source to target.
+            !!
+            !-----------------------------------------------------------------------------
+            case ('clone')
+                if (narg /= 3) call chidg_signal(FATAL,"The 'clone' action expects: chidg clone source_file.h5 target_file.h5")
+                call get_command_argument(2,file_a)
+                call get_command_argument(3,file_b)
+                call chidg_clone(trim(file_a),trim(file_b))
+
+            !*****************************************************************************
+
 
 
 
@@ -209,11 +255,6 @@ program driver
                 call get_command_argument(2,solution_file)
                 call chidg_airfoil(trim(solution_file))
 
-            case ('clone')
-                if (narg /= 3) call chidg_signal(FATAL,"The 'clone' action expects: chidg clone source_file.h5 target_file.h5")
-                call get_command_argument(2,file_a)
-                call get_command_argument(3,file_b)
-                call chidg_clone(trim(file_a),trim(file_b))
 
             case default
                 call chidg_signal(FATAL,"We didn't understand the way chidg was called. Available chidg 'actions' are: 'edit' 'convert' 'post' 'matplotlib' and 'airfoil'.")

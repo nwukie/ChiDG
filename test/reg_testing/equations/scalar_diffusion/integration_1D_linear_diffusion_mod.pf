@@ -614,7 +614,8 @@ contains
         !
         ! Initialize ChiDG environment
         !
-        call this%chidg%start_up('core',this%ChiDG_COMM)
+        call this%chidg%start_up('mpi',this%ChiDG_COMM)
+        call this%chidg%start_up('core')
 
 
         !

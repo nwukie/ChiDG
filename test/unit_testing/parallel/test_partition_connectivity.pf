@@ -19,6 +19,7 @@ subroutine test_partition_connectivity__onedomain_twopartitions()
     NRANK = 2
 
 
+    call chidg%start_up('mpi')
     call chidg%start_up('core')
 
 

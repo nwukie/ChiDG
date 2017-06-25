@@ -79,25 +79,26 @@ contains
     !!  @param[in]  itime - Index for the time step in solution
     !!
     !-----------------------------------------------------------------------------------------
-    function interpolate_element_autodiff(mesh,q,elem_info,fcn_info,ieqn,itime,interpolation_type,Pmin,Pmax) result(var_gq)
-        type(mesh_t),       intent(in)              :: mesh
-        type(chidg_vector_t),   intent(in)              :: q
+    function interpolate_element_autodiff(mesh,vector,elem_info,fcn_info,ifield,itime,interpolation_type,mode_min,mode_max) result(var_gq)
+        type(mesh_t),           intent(in)              :: mesh
+        type(chidg_vector_t),   intent(in)              :: vector
         type(element_info_t),   intent(in)              :: elem_info
         type(function_info_t),  intent(in)              :: fcn_info
-        integer(ik),            intent(in)              :: ieqn
+        integer(ik),            intent(in)              :: ifield
         integer(ik),            intent(in)              :: itime
         character(*),           intent(in)              :: interpolation_type
-        integer(ik),            intent(in), optional    :: Pmin
-        integer(ik),            intent(in), optional    :: Pmax
+        integer(ik),            intent(in), optional    :: mode_min
+        integer(ik),            intent(in), optional    :: mode_max
 
 
         character(:),   allocatable :: user_msg
 
-        type(AD_D)              :: var_gq(mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%nnodes)
-        type(AD_D)              :: qdiff(mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%nterms_s)
+        !type(AD_D)              :: var_gq(mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%nnodes)
+        !type(AD_D)              :: qdiff(mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%nterms_s)
+        type(AD_D), allocatable :: qdiff(:), var_gq(:)
         real(rk),   allocatable :: qtmp(:)
 
-        integer(ik) :: nderiv, set_deriv, iterm, mode_min, mode_max
+        integer(ik) :: nderiv, set_deriv, iterm, nterms, ierr
         logical     :: differentiate_me
 
         associate( idom => elem_info%idomain_l, ielem => elem_info%ielement_l )
@@ -109,30 +110,33 @@ contains
 
 
         !
-        ! Allocate derivative arrays for temporary solution variable
+        ! Determine nterms from interpolator matrix
         !
-        do iterm = 1,mesh%domain(idom)%elems(ielem)%nterms_s
+        nterms = size(mesh%domain(idom)%elems(ielem)%gq%vol%val,2)
+
+        ! Allocate qdiff buffer and initialize derivative allocations + zero
+        allocate(qdiff(nterms), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        do iterm = 1,nterms
             qdiff(iterm) = AD_D(nderiv)
         end do
-
-
-        !
-        ! Copy the solution variables from 'q' to 'qtmp'
-        !
-        qtmp = q%dom(idom)%vecs(ielem)%getvar(ieqn,itime)
-
-        !
-        ! If Pmin,Pmax are present, use a subset of the expansion modes.
-        !
-        ! If not present, use the entire expansion.
-        !
         qdiff = ZERO
-        if (present(Pmin) .and. present(Pmax)) then
-            mode_min = (Pmin+1)*(Pmin+1)*(Pmin+1)
-            mode_max = (Pmax+1)*(Pmax+1)*(Pmax+1)
+
+
+        !
+        ! Retrieve modal coefficients representing ifield in vector to 'qtmp'
+        !
+        qtmp = vector%dom(idom)%vecs(ielem)%getvar(ifield,itime)
+
+
+        !
+        ! 1: If mode_min,mode_max are present, use a subset of the expansion modes.
+        ! 2: If not present, use the entire expansion.
+        !
+        if (present(mode_min) .and. present(mode_max)) then
             qdiff(mode_min:mode_max) = qtmp(mode_min:mode_max)
         else
-            qdiff = qtmp
+            qdiff(1:nterms) = qtmp(1:nterms)
         end if
 
 
@@ -146,7 +150,7 @@ contains
         if (differentiate_me) then
             ! Differentiating element, initialize appropriate derivatives to ONE
             do iterm = 1,size(qdiff)
-                set_deriv = (ieqn - 1)*mesh%domain(idom)%elems(ielem)%nterms_s + iterm
+                set_deriv = (ifield - 1)*mesh%domain(idom)%elems(ielem)%nterms_s + iterm
                 qdiff(iterm)%xp_ad_(set_deriv) = ONE
             end do
         else
@@ -215,8 +219,8 @@ contains
     !!
     !!  @param[in]      mesh                    Array of mesh instances.
     !!  @param[in]      face                    Face indices for locating the face in mesh.
-    !!  @param[in]      q                       Solution vector
-    !!  @param[in]      ieqn                    Index of field being interpolated
+    !!  @param[in]      vector                  A chidg_vector containing a modal representation of fields on mesh
+    !!  @param[in]      ifield                  Index of field being interpolated
     !!  @param[inout]   var_gq                  Autodiff values of field evaluated at gq points
     !!  @param[in]      interpolation_type      Interpolate 'value', 'grad1', 'grad2', 'grad3'
     !!  @param[in]      interpolation_source    ME/NEIGHBOR indicating element to interpolate from
@@ -227,12 +231,12 @@ contains
     !!  @param[in]      itime                   Index for time step in solution
     !!
     !------------------------------------------------------------------------------------------
-    function interpolate_face_autodiff(mesh,q,face_info,fcn_info, ieqn, itime, interpolation_type, interpolation_source) result(var_gq)
-        type(mesh_t),       intent(in)              :: mesh
-        type(chidg_vector_t),   intent(in)              :: q
+    function interpolate_face_autodiff(mesh,vector,face_info,fcn_info, ifield, itime, interpolation_type, interpolation_source) result(var_gq)
+        type(mesh_t),           intent(in)              :: mesh
+        type(chidg_vector_t),   intent(in)              :: vector
         type(face_info_t),      intent(in)              :: face_info
         type(function_info_t),  intent(in)              :: fcn_info
-        integer(ik),            intent(in)              :: ieqn
+        integer(ik),            intent(in)              :: ifield
         integer(ik),            intent(in)              :: itime
         character(*),           intent(in)              :: interpolation_type
         integer(ik),            intent(in)              :: interpolation_source
@@ -240,8 +244,8 @@ contains
         type(face_info_t)   :: iface_info
         type(recv_t)        :: recv_info
 
-        type(AD_D)                      :: var_gq(mesh%domain(face_info%idomain_l)%elems(face_info%ielement_l)%gq%face%nnodes)
-        type(AD_D),         allocatable :: qdiff(:)
+        !type(AD_D)                      :: var_gq(mesh%domain(face_info%idomain_l)%elems(face_info%ielement_l)%gq%face%nnodes)
+        type(AD_D),         allocatable :: qdiff(:), var_gq(:), var_gq_chimera(:)
         real(rk),           allocatable :: qtmp(:)
         real(rk),           allocatable :: interpolator(:,:)
         character(:),       allocatable :: interpolation_style
@@ -253,7 +257,7 @@ contains
         ! Chimera data
         integer(ik)                 :: ndonors, idonor
         logical,    allocatable     :: mask(:)          ! node mask for distributing Chimera quadrature points
-        type(AD_D), allocatable     :: var_gq_chimera(:)
+        !type(AD_D), allocatable     :: var_gq_chimera(:)
 
 
         !
@@ -298,11 +302,16 @@ contains
             !
             ! Allocate AD array to store a copy of the solution which starts the differentiation
             !
-            if (parallel_interpolation) then
-                nterms_s = q%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%nterms()
-            else
-                nterms_s = mesh%domain(iface_info%idomain_l)%elems(iface_info%ielement_l)%nterms_s
-            end if
+            !if (parallel_interpolation) then
+            !    nterms_s = vector%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%nterms()
+            !else
+            !    nterms_s = mesh%domain(iface_info%idomain_l)%elems(iface_info%ielement_l)%nterms_s
+            !end if
+
+            !
+            ! Deduce nterms from interpolator matrix
+            !
+            nterms_s = size(interpolator,2)
 
 
             !
@@ -318,12 +327,12 @@ contains
 
 
             !
-            ! Copy the solution variables from 'q' to 'qdiff'
+            ! Retrieve modal coefficients for ifield from vector
             !
             if (parallel_interpolation) then
-                qtmp = q%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%getvar(ieqn,itime)
+                qtmp = vector%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%getvar(ifield,itime)
             else
-                qtmp = q%dom(iface_info%idomain_l)%vecs(iface_info%ielement_l)%getvar(ieqn,itime)
+                qtmp = vector%dom(iface_info%idomain_l)%vecs(iface_info%ielement_l)%getvar(ifield,itime)
             end if
 
 
@@ -333,7 +342,7 @@ contains
             ! if wall distance was computed for P1, and we are running Navier Stokes P0.
             ! So we take only up to the modes that we need.
             !
-            qdiff = qtmp(1:nterms_s)
+            qdiff(1:nterms_s) = qtmp(1:nterms_s)
 
 
 
@@ -348,7 +357,7 @@ contains
                 ! Loop through the terms in qdiff, seed appropriate derivatives to ONE
                 do iterm = 1,size(qdiff)
                     ! For the given term, seed its appropriate derivative
-                    set_deriv = (ieqn - 1)*nterms_s + iterm
+                    set_deriv = (ifield - 1)*nterms_s + iterm
                     qdiff(iterm)%xp_ad_(set_deriv) = ONE
                 end do
 
@@ -410,12 +419,12 @@ contains
     !!  @date   11/5/2016
     !!
     !----------------------------------------------------------------------------------------
-    function interpolate_element_standard(mesh,q,idomain_l,ielement_l,ieqn,itime,interpolation_type) result(var_gq)
-        type(mesh_t),       intent(in)      :: mesh
+    function interpolate_element_standard(mesh,q,idomain_l,ielement_l,ifield,itime,interpolation_type) result(var_gq)
+        type(mesh_t),           intent(in)      :: mesh
         type(chidg_vector_t),   intent(in)      :: q
         integer(ik),            intent(in)      :: idomain_l
         integer(ik),            intent(in)      :: ielement_l
-        integer(ik),            intent(in)      :: ieqn
+        integer(ik),            intent(in)      :: ifield
         integer(ik),            intent(in)      :: itime
         character(len=*),       intent(in)      :: interpolation_type
 
@@ -429,13 +438,13 @@ contains
         !
         select case (interpolation_type)
             case('value')
-                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%gq%vol%val, q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
+                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%gq%vol%val, q%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime))
             case('grad1')
-                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad1,      q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
+                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad1,      q%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime))
             case('grad2')
-                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad2,      q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
+                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad2,      q%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime))
             case('grad3')
-                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad3,      q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
+                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad3,      q%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime))
             case default
                 call chidg_signal(FATAL,"interpolate_element_standard: invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
         end select
@@ -460,10 +469,10 @@ contains
     !!  @date   11/5/2016
     !!
     !-----------------------------------------------------------------------------------------
-    function interpolate_face_standard(mesh,q,idomain_l,ielement_l,iface,ieqn,itime) result(var_gq)
-        type(mesh_t),       intent(in)      :: mesh
+    function interpolate_face_standard(mesh,q,idomain_l,ielement_l,iface,ifield,itime) result(var_gq)
+        type(mesh_t),           intent(in)      :: mesh
         type(chidg_vector_t),   intent(in)      :: q
-        integer(ik),            intent(in)      :: idomain_l, ielement_l, iface, ieqn
+        integer(ik),            intent(in)      :: idomain_l, ielement_l, iface, ifield
         integer(ik),            intent(in)      :: itime
 
         real(rk),   dimension(mesh%domain(idomain_l)%elems(ielement_l)%gq%face%nnodes) :: var_gq
@@ -473,7 +482,7 @@ contains
         ! This takes the form of a matrix multiplication of the face quadrature matrix
         ! with the array of modes for the given variable
         !
-        var_gq = matmul(mesh%domain(idomain_l)%faces(ielement_l,iface)%gq%face%val(:,:,iface), q%dom(idomain_l)%vecs(ielement_l)%getvar(ieqn,itime))
+        var_gq = matmul(mesh%domain(idomain_l)%faces(ielement_l,iface)%gq%face%val(:,:,iface), q%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime))
 
 
     end function interpolate_face_standard
@@ -738,7 +747,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function get_face_interpolation_info(mesh,face_info,interpolation_source,idonor) result(iface_info)
-        type(mesh_t),   intent(in)                  :: mesh
+        type(mesh_t),       intent(in)                  :: mesh
         type(face_info_t),  intent(in)                  :: face_info
         integer(ik),        intent(in)                  :: interpolation_source
         integer(ik),        intent(in)                  :: idonor
@@ -964,7 +973,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function get_face_interpolation_mask(mesh,face_info,interpolation_source,idonor) result(mask)
-        type(mesh_t),   intent(in)                  :: mesh
+        type(mesh_t),       intent(in)                  :: mesh
         type(face_info_t),  intent(in)                  :: face_info
         integer(ik),        intent(in)                  :: interpolation_source
         integer(ik),        intent(in)                  :: idonor
@@ -1044,7 +1053,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function get_face_interpolation_comm(mesh,face_info,interpolation_source,idonor) result(recv_info)
-        type(mesh_t),   intent(in)                  :: mesh
+        type(mesh_t),       intent(in)                  :: mesh
         type(face_info_t),  intent(in)                  :: face_info
         integer(ik),        intent(in)                  :: interpolation_source
         integer(ik),        intent(in)                  :: idonor
@@ -1132,7 +1141,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function get_face_interpolation_ndonors(mesh,face_info,interpolation_source) result(ndonors)
-        type(mesh_t),   intent(in)  :: mesh
+        type(mesh_t),       intent(in)  :: mesh
         type(face_info_t),  intent(in)  :: face_info
         integer(ik),        intent(in)  :: interpolation_source
 
@@ -1200,7 +1209,7 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     function get_face_interpolation_style(mesh,face_info,interpolation_source) result(interpolation_style)
-        type(mesh_t),   intent(in)  :: mesh
+        type(mesh_t),       intent(in)  :: mesh
         type(face_info_t),  intent(in)  :: face_info
         integer(ik),        intent(in)  :: interpolation_source
 
@@ -1250,7 +1259,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     function get_interpolation_nderiv(mesh,function_info) result(nderiv)
-        type(mesh_t),       intent(in)  :: mesh
+        type(mesh_t),           intent(in)  :: mesh
         type(function_info_t),  intent(in)  :: function_info
 
         integer(ik) :: nderiv, neqns_seed, nterms_s_seed

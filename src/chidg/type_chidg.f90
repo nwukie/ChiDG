@@ -154,7 +154,7 @@ contains
         character(*),   intent(in)              :: activity
         type(mpi_comm), intent(in), optional    :: comm
 
-        integer(ik) :: ierr
+        integer(ik) :: ierr, iread
 
         select case (trim(activity))
 
@@ -162,7 +162,7 @@ contains
             ! Start up MPI
             !
             case ('mpi')
-                call chidg_mpi_init()
+                call chidg_mpi_init(comm)
 
 
             !
@@ -170,12 +170,12 @@ contains
             !
             case ('core')
 
-                ! Default communicator for 'communication' is MPI_COMM_WORLD
-                if ( present(comm) ) then
-                    ChiDG_COMM = comm
-                else
-                    ChiDG_COMM = MPI_COMM_WORLD
-                end if
+                !! Default communicator for 'communication' is MPI_COMM_WORLD
+                !if ( present(comm) ) then
+                !    ChiDG_COMM = comm
+                !else
+                !    ChiDG_COMM = MPI_COMM_WORLD
+                !end if
 
                 ! Call environment initialization routines by default on first init call
                 if (.not. self%envInitialized ) then
@@ -213,7 +213,18 @@ contains
             ! Start up Namelist
             !
             case ('namelist')
-                call read_input()
+
+
+                !call read_input()
+                ! Read data from 'chidg.nml'
+                do iread = 0,NRANK-1
+                    if ( iread == IRANK ) then
+                        call read_input()
+                    end if
+                    call MPI_Barrier(ChiDG_COMM,ierr)
+                end do
+
+
 
             case default
                 call chidg_signal_one(WARN,'chidg%start_up: Invalid start-up string.',trim(activity))
@@ -669,8 +680,8 @@ contains
 
                 call partition_connectivity(connectivities, weights, partitions)
 
-                call send_partitions(partitions,MPI_COMM_WORLD)
-                !call send_partitions(partitions,ChiDG_COMM)
+                !call send_partitions(partitions,MPI_COMM_WORLD)
+                call send_partitions(partitions,ChiDG_COMM)
             end if
 
 
@@ -678,8 +689,8 @@ contains
             ! All ranks: Receive partition from GLOBAL_MASTER
             !
             call write_line("   distributing partitions...", ltrim=.false., io_proc=GLOBAL_MASTER)
-            call recv_partition(self%partition,MPI_COMM_WORLD)
-            !call recv_partition(self%partition,ChiDG_COMM)
+            !call recv_partition(self%partition,MPI_COMM_WORLD)
+            call recv_partition(self%partition,ChiDG_COMM)
 
 
         end if ! partitions in from user

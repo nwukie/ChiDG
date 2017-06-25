@@ -63,7 +63,8 @@ contains
         this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
 
 
-        call this%chidg%start_up('core',this%ChiDG_COMM)
+        call this%chidg%start_up('mpi',this%ChiDG_COMM)
+        call this%chidg%start_up('core')
 
 
         IO_DESTINATION = 'file'

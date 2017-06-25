@@ -52,7 +52,8 @@ contains
         !
         ! Initialize ChiDG
         !
-        call chidg%start_up('core',ChiDG_COMM)
+        call chidg%start_up('mpi',ChiDG_COMM)
+        call chidg%start_up('core')
 
 
         !

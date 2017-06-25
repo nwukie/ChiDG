@@ -128,6 +128,13 @@ module type_chidg
     !*****************************************************************************************
 
 
+    interface
+        module subroutine auxiliary_driver(chidg,case,file_name)
+            class(chidg_t), intent(inout)   :: chidg
+            character(*),   intent(in)      :: case
+            character(*),   intent(in)      :: file_name
+        end subroutine auxiliary_driver
+    end interface
 
 
 
@@ -1216,6 +1223,12 @@ contains
 
         auxiliary_fields_local = self%data%get_auxiliary_field_names()
 
+
+
+        !
+        ! Rule for 'Wall Distance'
+        !
+        !----------------------------------------------------------------
         has_wall_distance = .false.
         do ifield = 1,auxiliary_fields_local%size()
             field_name = auxiliary_fields_local%at(ifield)
@@ -1226,8 +1239,9 @@ contains
         call MPI_AllReduce(has_wall_distance, all_have_wall_distance, 1, MPI_LOGICAL, MPI_LOR, ChiDG_COMM, ierr)
 
         if (all_have_wall_distance) then
-            !call wall_distance_driver(chidg,'wall_distance.h5')
+            call auxiliary_driver(self,'Wall Distance','wall_distance.h5')
         end if
+        !*****************************************************************
 
 
 
@@ -1271,6 +1285,13 @@ contains
         call write_line("           Running ChiDG simulation...             ", io_proc=GLOBAL_MASTER, delimiter='none')
         call write_line("                                                   ", io_proc=GLOBAL_MASTER, delimiter='none')
         call write_line("---------------------------------------------------", io_proc=GLOBAL_MASTER)
+
+
+        !
+        ! Prerun processing
+        !
+        call self%prerun()
+
 
 
         !

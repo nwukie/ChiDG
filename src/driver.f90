@@ -14,7 +14,6 @@ program driver
 #include <messenger.h>
     use mod_kinds,                  only: rk, ik
     use type_chidg,                 only: chidg_t
-    use type_chidg_manager,         only: chidg_manager_t
     use type_function,              only: function_t
     use mod_function,               only: create_function
     use mod_chidg_mpi,              only: GLOBAL_MASTER, ChiDG_COMM, IRANK
@@ -33,7 +32,6 @@ program driver
     ! Variable declarations
     !
     implicit none
-    type(chidg_manager_t)                       :: manager
     type(chidg_t)                               :: chidg
 
 
@@ -81,11 +79,6 @@ program driver
         ! Read grid and boundary condition data
         !
         call chidg%read_mesh(gridfile)
-
-        !
-        ! Initialize communication, storage, auxiliary fields
-        !
-        call manager%process(chidg)
 
 
 

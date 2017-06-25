@@ -24,6 +24,22 @@ submodule (type_chidg) mod_wall_distance
 contains
 
 
+
+    module subroutine auxiliary_driver(chidg,case,file_name)
+        class(chidg_t), intent(inout)   :: chidg
+        character(*),   intent(in)      :: case
+        character(*),   intent(in)      :: file_name
+
+        select case(trim(case))
+            case('Wall Distance')
+                call wall_distance_driver(chidg,file_name)
+
+        end select
+
+
+    end subroutine auxiliary_driver
+
+
     !>  Solve for wall distance using a PDE-based approach.
     !!
     !!  Solve a p-Poisson equation for the approximate distance field. As 'p' goes to 
@@ -39,8 +55,8 @@ contains
     !!
     !-------------------------------------------------------------------------------------
     subroutine wall_distance_driver(chidg,fileout)
-        type(chidg_t),  intent(inout)           :: chidg
-        character(*),   intent(in), optional    :: fileout
+        type(chidg_t),  intent(inout)   :: chidg
+        character(*),   intent(in)      :: fileout
 
         character(:), allocatable   :: user_msg
         integer(ik)                 :: order
@@ -335,4 +351,4 @@ contains
 
 
 
-end submodule 
+end submodule mod_wall_distance

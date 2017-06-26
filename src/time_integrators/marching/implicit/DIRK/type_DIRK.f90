@@ -209,7 +209,6 @@ contains
         q_n = data%sdata%q
         t_n = data%time_manager%t
 
-        call update_grid(data)
         select type(associate_name => self%system)
             type is (assemble_DIRK_t)
                 associate_name%q_n = data%sdata%q

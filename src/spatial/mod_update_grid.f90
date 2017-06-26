@@ -3,6 +3,7 @@ module mod_update_grid
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES, DIAG, CHIMERA, INTERIOR, NO_PMM_ASSIGNED
     use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM, GLOBAL_MASTER
+    use mod_io,                 only: verbosity
     use mpi_f08,                only: MPI_Barrier
 
 
@@ -12,7 +13,6 @@ module mod_update_grid
     use type_chidg_cache,       only: chidg_cache_t
     use type_cache_handler,     only: cache_handler_t
     use type_element_info,      only: element_info_t
-    use type_face_info,         only: face_info_t
     use type_timer,             only: timer_t
     implicit none
 
@@ -45,13 +45,10 @@ contains
         logical                     :: chimera_face 
         logical                     :: compute_face 
 
-        logical                     :: compute_function
-        logical                     :: linearize_function
 
 
         type(chidg_worker_t)        :: worker
         type(element_info_t)        :: elem_info
-        type(face_info_t)           :: face_info
 
         type(chidg_cache_t)         :: cache
         type(cache_handler_t)       :: cache_handler
@@ -99,10 +96,11 @@ contains
         ! Loop through given element compute the residual functions and also the linearization of those functions
         !
     
-        !print *, IRANK
         call write_line('Updating grid according to mesh motion...', io_proc=GLOBAL_MASTER)
 
 
+        worker%itime = data%time_manager%itime
+        worker%t     = data%time_manager%t
         ! Loop through domains
         do idom = 1,data%mesh%ndomains()
             associate ( mesh => data%mesh, eqnset => data%eqnset(idom))
@@ -131,7 +129,6 @@ contains
         !
         ! Synchronize
         !
-        !print *, 'Waiting in update_grid...'
         call MPI_Barrier(ChiDG_COMM,ierr)
 
 

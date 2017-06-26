@@ -1,7 +1,7 @@
 module mod_gridgen_uniform_flow_pmm
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: PI, ZERO, ONE, TWO, THREE, HALF, &
+    use mod_constants,          only: PI, ZERO, ONE, TWO, THREE, FOUR, HALF, &
                                       XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use mod_string,             only: string_t
     use mod_bc,                 only: create_bc
@@ -224,7 +224,7 @@ contains
         call create_pmmfo_group_hdf(file_id,'sin_pmm','L_X')
         call set_pmmfo_val_hdf(file_id,'sin_pmm','L_X',10._rk)
         call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_FREQ_X')
-        call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_FREQ_X',TWO*PI)
+        call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_FREQ_X',FOUR*PI)
         call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_AMP_X')
         call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_AMP_X',0.05_rk)
         call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_AMP_Y')
@@ -327,8 +327,8 @@ contains
                 do ipt_x = 1,npt_x
 
                     x = ZERO + real(ipt_x-1,kind=rk)*(10._rk / real(npt_x-1,kind=rk))
-                    y = ZERO + real(ipt_y-1,kind=rk)*(ONE )/real(npt_y-1,kind=rk)
-                    z = ZERO + real(ipt_z-1,kind=rk)*(ONE / real(npt_z-1,kind=rk))
+                    y = ZERO + real(ipt_y-1,kind=rk)*(10._rk )/real(npt_y-1,kind=rk)
+                    z = ZERO + real(ipt_z-1,kind=rk)*(10._rk / real(npt_z-1,kind=rk))
 
                     xcoords(ipt_x,ipt_y,ipt_z) = x
                     ycoords(ipt_x,ipt_y,ipt_z) = y

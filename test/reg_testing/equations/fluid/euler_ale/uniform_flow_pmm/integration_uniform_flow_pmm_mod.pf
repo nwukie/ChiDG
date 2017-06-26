@@ -249,7 +249,6 @@ contains
         
         tol = 1.e-6_rk
 
-        print *, '1'
         !------------------------------------------------------------------------------
         !
         ! Define input data here that is normally read through the namelist input file
@@ -258,18 +257,17 @@ contains
         !
         !------------------------------------------------------------------------------
         basis            = 'legendre'
-        gq_rule          = 3 
+        gq_rule          = 2 
         time_integrator  = 'DIRK'
-        nonlinear_solver = 'newton'
-        linear_solver    = 'fgmres'
+        nonlinear_solver = 'quasi_newton'
+        linear_solver    = 'fgmres_cgs'
         preconditioner   = 'RASILU0'
         IO_DESTINATION   = 'file'
-        dt               = 0.00001_rk
-        time_steps       = 10
+        dt               = 0.0001_rk
+        time_steps       = 20
         !------------------------------------------------------------------------------
 
 
-        print *, '2'
         !
         ! Get MPI communicator information from pFUnit
         !
@@ -278,7 +276,6 @@ contains
         this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
 
 
-        print *, '3'
 
         ! Set timescheme options to pass during initialization
         !call toptions%set('dt', 0.1_rk) ! means nothing here
@@ -295,7 +292,6 @@ contains
         call noptions%set('cfl0',1.0_rk)
         call noptions%set('nsteps',100)
 
-        print *, '4'
 
 
         !
@@ -304,7 +300,6 @@ contains
         call this%chidg%start_up('core',this%ChiDG_COMM)
 
 
-        print *, '5'
 
 
         !
@@ -337,7 +332,6 @@ contains
                                 string_t('Walls') ]
 
 
-        print *, '6'
             call create_mesh_file('Uniform Flow PMM',this%gridfile, &
                                                               equation_sets=[string_t('Euler ALE')], &
                                                               group_names     = group_names,     &
@@ -348,7 +342,6 @@ contains
                                                               
         end if
 
-        print *, '7'
 
         !
         ! Set ChiDG components
@@ -363,13 +356,11 @@ contains
         !
         ! Read grid
         !
-        print *, '8'
 
         call this%chidg%read_mesh(this%gridfile)
 
 
 
-        print *, '9'
 
         !
         ! Initialize solution
@@ -388,7 +379,6 @@ contains
         call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,5)
 
 
-        print *, '10'
 
     end subroutine SetUp
     !*******************************************************************************************
@@ -432,7 +422,7 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------
-    @Test(npes=[2])
+    @Test(npes=[8])
     subroutine test_entropy_error_rate(self)
         class(uniform_flow_pmm),  intent(inout)   :: self
 
@@ -585,7 +575,6 @@ contains
                     !
                     x_gq = mesh%domain(idom)%elems(ielem)%quad_pts(:,1)
                     det_jacobian_grid_gq = mesh%domain(idom)%elems(ielem)%det_jacobian_grid
-                    !print *, det_jacobian_grid_gq
                     u_analytical = ZERO*x_gq
                     u_analytical = 1.225_rk
 

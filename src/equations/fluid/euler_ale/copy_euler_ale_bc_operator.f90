@@ -199,9 +199,9 @@ contains
         !=================================================
         ! Mass flux
         !=================================================
-        flux_x = (rho_bc * u_bc) 
-        flux_y = (rho_bc * v_bc) 
-        flux_z = (rho_bc * w_bc) 
+        flux_x = (rho_bc * u_bc) - rho_bc*u_grid
+        flux_y = (rho_bc * v_bc) - rho_bc*v_grid
+        flux_z = (rho_bc * w_bc) - rho_bc*w_grid
 
         flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
         flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
@@ -215,9 +215,9 @@ contains
         !=================================================
         ! x-momentum flux
         !=================================================
-        flux_x = (rho_bc * u_bc * u_bc)  + p_bc
-        flux_y = (rho_bc * u_bc * v_bc) 
-        flux_z = (rho_bc * u_bc * w_bc) 
+        flux_x = (rho_bc * u_bc * u_bc) - rhou_bc*u_grid + p_bc
+        flux_y = (rho_bc * u_bc * v_bc) - rhou_bc*v_grid
+        flux_z = (rho_bc * u_bc * w_bc) - rhou_bc*w_grid
         flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
         flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
         flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
@@ -230,9 +230,9 @@ contains
         !=================================================
         ! y-momentum flux
         !=================================================
-        flux_x = (rho_bc * v_bc * u_bc) 
-        flux_y = (rho_bc * v_bc * v_bc)  + p_bc
-        flux_z = (rho_bc * v_bc * w_bc) 
+        flux_x = (rho_bc * v_bc * u_bc) - rhov_bc*u_grid
+        flux_y = (rho_bc * v_bc * v_bc) - rhov_bc*v_grid + p_bc
+        flux_z = (rho_bc * v_bc * w_bc) - rhov_bc*w_grid
         flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
         flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
         flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
@@ -245,9 +245,9 @@ contains
         !=================================================
         ! z-momentum flux
         !=================================================
-        flux_x = (rho_bc * w_bc * u_bc) 
-        flux_y = (rho_bc * w_bc * v_bc) 
-        flux_z = (rho_bc * w_bc * w_bc)  + p_bc
+        flux_x = (rho_bc * w_bc * u_bc) - rhow_bc*u_grid
+        flux_y = (rho_bc * w_bc * v_bc) - rhow_bc*v_grid
+        flux_z = (rho_bc * w_bc * w_bc) - rhow_bc*w_grid + p_bc
         flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
         flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
         flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
@@ -260,9 +260,9 @@ contains
         !=================================================
         ! Energy flux
         !=================================================
-        flux_x = (rho_bc * u_bc * H_bc) 
-        flux_y = (rho_bc * v_bc * H_bc) 
-        flux_z = (rho_bc * w_bc * H_bc) 
+        flux_x = (rho_bc * u_bc * H_bc) - rhoE_bc*u_grid
+        flux_y = (rho_bc * v_bc * H_bc) - rhoE_bc*v_grid
+        flux_z = (rho_bc * w_bc * H_bc) - rhoE_bc*w_grid
 
         flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
         flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)

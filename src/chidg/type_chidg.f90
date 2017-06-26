@@ -573,7 +573,6 @@ contains
         !
         ! Read domain geometry. Also performs partitioning.
         !
-        print *, 'a'
         call self%read_mesh_grids(gridfile,equation_set,partitions_in)
 
 
@@ -584,7 +583,6 @@ contains
         !
         ! Read boundary conditions.
         !
-        print *, 'b'
         call self%read_mesh_boundary_conditions(gridfile, bc_wall,        &
                                                           bc_inlet,       &
                                                           bc_outlet,      &
@@ -594,17 +592,14 @@ contains
 
 
                                                       
-        print *, 'c'
         call self%read_prescribedmeshmotions(gridfile)
 
-        print *, 'd'
         !
         ! Initialize data
         !
         call self%init('all')
 
 
-        print *, 'e'
         call write_line('Done reading mesh.', io_proc=GLOBAL_MASTER)
         call write_line(' ', ltrim=.false.,   io_proc=GLOBAL_MASTER)
 
@@ -658,7 +653,6 @@ contains
         !
         if ( present(partitions_in) ) then
 
-            print *, 'A'
             self%partition = partitions_in(IRANK+1)
 
 
@@ -673,7 +667,6 @@ contains
             call write_line("   partitioning...", ltrim=.false., io_proc=GLOBAL_MASTER)
             if ( IRANK == GLOBAL_MASTER ) then
 
-            print *, 'B'
                 call read_global_connectivity_hdf(gridfile,connectivities)
                 call read_weights_hdf(gridfile,weights)
 
@@ -700,9 +693,7 @@ contains
         do iread = 0,NRANK-1
             if ( iread == IRANK ) then
 
-            print *, 'C'
                 call read_equations_hdf(self%data, gridfile)
-            print *, 'CC'
                 call read_grids_hdf(gridfile,self%partition,meshdata)
 
             end if
@@ -715,7 +706,6 @@ contains
         ! Add domains to ChiDG%data
         !
         call write_line("   processing...", ltrim=.false., io_proc=GLOBAL_MASTER)
-            print *, 'D'
         do idom = 1,size(meshdata)
 
 
@@ -728,7 +718,6 @@ contains
             end if
 
 
-            print *, 'E'
 
             ! Get the equation set identifier
             eqn_ID = self%data%get_equation_set_id(domain_equation_set)
@@ -742,7 +731,6 @@ contains
                                             meshdata(idom)%coord_system, &
                                             eqn_ID )
 
-            print *, 'F'
 
 
         end do !idom

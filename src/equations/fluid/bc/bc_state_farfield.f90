@@ -120,10 +120,13 @@ contains
             unorm_1, unorm_2, unorm_3, r,                   &
             rho_input, p_input, u_input, v_input, w_input, T_input, c_input
 
+        real(rk), allocatable, dimension(:) ::      &
+           u_grid, v_grid, w_grid, det_jacobian_grid
 
         logical, allocatable, dimension(:)  :: inflow, outflow
 
 
+        det_jacobian_grid = worker%get_det_jacobian_grid_face()
         !
         ! Get boundary condition input parameters
         !
@@ -146,6 +149,12 @@ contains
         mom2_m    = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
         mom3_m    = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
         energy_m  = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
+
+        density_m = density_m/det_jacobian_grid
+        mom1_m = mom1_m/det_jacobian_grid
+        mom2_m = mom2_m/det_jacobian_grid
+        mom3_m = mom3_m/det_jacobian_grid
+        energy_m = energy_m/det_jacobian_grid
 
 
 

@@ -8,6 +8,7 @@ module type_chidg
     use mod_function,               only: register_functions
     use mod_prescribed_mesh_motion_function, only: register_prescribed_mesh_motion_functions
     use mod_grid,                   only: initialize_grid
+    use type_svector,               only: svector_t
     use mod_string,                 only: get_file_extension, string_t, get_file_prefix
 
     use type_chidg_data,            only: chidg_data_t
@@ -108,6 +109,7 @@ module type_chidg
         procedure   :: init
 
         ! Run
+        procedure   :: process
         procedure   :: run
         procedure   :: report
 
@@ -126,6 +128,14 @@ module type_chidg
     !*****************************************************************************************
 
 
+    interface
+        module subroutine auxiliary_driver(chidg,chidg_aux,case,file_name)
+            type(chidg_t),  intent(inout)   :: chidg
+            type(chidg_t),  intent(inout)   :: chidg_aux
+            character(*),   intent(in)      :: case
+            character(*),   intent(in)      :: file_name
+        end subroutine auxiliary_driver
+    end interface
 
 
 
@@ -154,7 +164,7 @@ contains
         character(*),   intent(in)              :: activity
         type(mpi_comm), intent(in), optional    :: comm
 
-        integer(ik) :: ierr
+        integer(ik) :: ierr, iread
 
         select case (trim(activity))
 
@@ -162,7 +172,7 @@ contains
             ! Start up MPI
             !
             case ('mpi')
-                call chidg_mpi_init()
+                call chidg_mpi_init(comm)
 
 
             !
@@ -170,12 +180,12 @@ contains
             !
             case ('core')
 
-                ! Default communicator for 'communication' is MPI_COMM_WORLD
-                if ( present(comm) ) then
-                    ChiDG_COMM = comm
-                else
-                    ChiDG_COMM = MPI_COMM_WORLD
-                end if
+                !! Default communicator for 'communication' is MPI_COMM_WORLD
+                !if ( present(comm) ) then
+                !    ChiDG_COMM = comm
+                !else
+                !    ChiDG_COMM = MPI_COMM_WORLD
+                !end if
 
                 ! Call environment initialization routines by default on first init call
                 if (.not. self%envInitialized ) then
@@ -213,7 +223,18 @@ contains
             ! Start up Namelist
             !
             case ('namelist')
-                call read_input()
+
+
+                !call read_input()
+                ! Read data from 'chidg.nml'
+                do iread = 0,NRANK-1
+                    if ( iread == IRANK ) then
+                        call read_input()
+                    end if
+                    call MPI_Barrier(ChiDG_COMM,ierr)
+                end do
+
+
 
             case default
                 call chidg_signal_one(WARN,'chidg%start_up: Invalid start-up string.',trim(activity))
@@ -672,7 +693,8 @@ contains
 
                 call partition_connectivity(connectivities, weights, partitions)
 
-                call send_partitions(partitions,MPI_COMM_WORLD)
+                !call send_partitions(partitions,MPI_COMM_WORLD)
+                call send_partitions(partitions,ChiDG_COMM)
             end if
 
 
@@ -680,7 +702,8 @@ contains
             ! All ranks: Receive partition from GLOBAL_MASTER
             !
             call write_line("   distributing partitions...", ltrim=.false., io_proc=GLOBAL_MASTER)
-            call recv_partition(self%partition,MPI_COMM_WORLD)
+            !call recv_partition(self%partition,MPI_COMM_WORLD)
+            call recv_partition(self%partition,ChiDG_COMM)
 
 
         end if ! partitions in from user
@@ -1018,6 +1041,7 @@ contains
 !!            ! Check which domains use the auxiliary field
 !!            !
 !!            do idom = 1,self%data%ndomains()
+!!                  ! NOTE: If anyone uncomments this, eqnset(idom) should probably be replaced with eqn_ID
 !!                domain_uses_field(idom) = self%data%eqnset(idom)%uses_auxiliary_field(aux_fields(iaux))
 !!            end do !idom
 !!
@@ -1185,6 +1209,63 @@ contains
 
 
 
+    !>  Handle prerun activities, such as initializing auxiliary fields and
+    !!  calling auxiliary drivers.
+    !!
+    !!  Checks:
+    !!  ----------------------------
+    !!      1: Check if 'Wall Distance : p-Poisson' is required. Yes => call auxiliary_driver
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   6/24/2017
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    subroutine process(self)
+        class(chidg_t), intent(inout)   :: self
+
+
+        character(:),   allocatable :: user_msg
+        integer(ik)                 :: ifield, ierr, iproc
+        type(svector_t)             :: auxiliary_fields_local
+        type(string_t)              :: field_name
+        logical                     :: has_wall_distance, all_have_wall_distance
+
+
+        auxiliary_fields_local = self%data%get_auxiliary_field_names()
+
+
+        !
+        ! Rule for 'Wall Distance'
+        !   1: Detect if proc requires auxiliary field 'Wall Distance : p-Poisson' be provided.
+        !   2: Detect if all procs require 'Wall Distance : p-Poisson'. MPI_AllReduce
+        !   3: If all procs require auxiliary field, call auxiliary_driver for 'Wall Distance'
+        !
+        !-------------------------------------------------------------------------------------
+        has_wall_distance = .false.
+        do ifield = 1,auxiliary_fields_local%size()
+            field_name = auxiliary_fields_local%at(ifield)
+            has_wall_distance = (field_name%get() == 'Wall Distance : p-Poisson')
+            if (has_wall_distance) exit
+        end do !ifield
+
+        call MPI_AllReduce(has_wall_distance, all_have_wall_distance, 1, MPI_LOGICAL, MPI_LOR, ChiDG_COMM, ierr)
+
+        if (all_have_wall_distance) then
+            allocate(self%auxiliary_environment, stat=ierr)
+            if (ierr /= 0) call AllocationError
+            call auxiliary_driver(self,self%auxiliary_environment,'Wall Distance','wall_distance.h5')
+        end if
+        !*************************************************************************************
+
+
+
+
+    end subroutine process
+    !*******************************************************************************************
+
+
 
 
 
@@ -1220,6 +1301,14 @@ contains
         call write_line("           Running ChiDG simulation...             ", io_proc=GLOBAL_MASTER, delimiter='none')
         call write_line("                                                   ", io_proc=GLOBAL_MASTER, delimiter='none')
         call write_line("---------------------------------------------------", io_proc=GLOBAL_MASTER)
+
+
+        !
+        ! Prerun processing
+        !   : Getting/computing auxiliary fields etc.
+        !
+        call self%process()
+
 
 
         !
@@ -1296,7 +1385,6 @@ contains
             ! Write solution every nwrite steps
             !
             if (wcount == self%data%time_manager%nwrite) then
-                !write(filename, "(A,I7.7,A3)") trim(prefix)//'_', istep, '.h5'
                 if (self%data%time_manager%t < 1.) then
                     write(filename, "(A,F8.6,A3)") trim(prefix)//'_', self%data%time_manager%t, '.h5'
                 else

@@ -230,7 +230,7 @@ contains
         integer(HID_T)                  :: fid, domain_id
         integer(HSIZE_T)                :: adim
         integer(ik)                     :: idom, ieqn, neqns, time, &
-                                           field_index, iproc, nelements_g, ielem
+                                           field_index, iproc, nelements_g, ielem, eqn_ID
         integer                         :: ierr, order_s
         logical                         :: file_exists
         integer(ik)                     :: itime, mapping, connectivity_size
@@ -280,7 +280,8 @@ contains
 
 
             ! Write equation set attribute
-            call set_domain_equation_set_hdf(domain_id,trim(data%eqnset(idom)%name))
+            eqn_ID = data%mesh%domain(idom)%eqn_ID
+            call set_domain_equation_set_hdf(domain_id,trim(data%eqnset(eqn_ID)%name))
 
 
 

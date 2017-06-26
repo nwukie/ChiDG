@@ -19,7 +19,6 @@ module mod_chidg_airfoil
     use type_element_info,      only: element_info_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_chidg_cache,       only: chidg_cache_t
-    use type_chidg_manager,     only: chidg_manager_t
     use type_cache_handler,     only: cache_handler_t
     use mod_io
     use DNAD_D
@@ -46,7 +45,7 @@ contains
     subroutine chidg_airfoil(filename)
         character(*)    :: filename
     
-    type(chidg_manager_t)                       :: manager
+!    type(chidg_manager_t)                       :: manager
         type(chidg_t)               :: chidg
         type(file_properties_t)     :: file_props
         integer(ik)                 :: nterms_s, solution_order, group_ID, &
@@ -127,8 +126,11 @@ contains
         gridfile = filename
         call chidg%read_mesh(filename)
 
-        call manager%process(chidg)
-
+        
+        !
+        ! Process for getting wall distance
+        !
+        call chidg%process()
 
 
         !

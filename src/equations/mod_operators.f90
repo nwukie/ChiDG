@@ -62,6 +62,16 @@ module mod_operators
     use spalart_allmaras_volume_diffusion,          only: spalart_allmaras_volume_diffusion_operator_t
     use spalart_allmaras_bc_diffusion,              only: spalart_allmaras_bc_diffusion_operator_t
 
+
+    ! RANS Low-Cache operators
+    use RANS_volume_advection,                      only: RANS_volume_advection_t
+    use RANS_boundary_advection,                    only: RANS_boundary_advection_t
+    use RANS_bc_advection,                          only: RANS_bc_advection_t
+    use RANS_volume_diffusion,                      only: RANS_volume_diffusion_t
+    use RANS_boundary_diffusion,                    only: RANS_boundary_diffusion_t
+    use RANS_bc_diffusion,                          only: RANS_bc_diffusion_t
+    use RANS_source,                                only: RANS_source_t
+
     ! Artificial Viscosity Operators
     use artificial_viscosity_boundary_average_operator, only: artificial_viscosity_boundary_average_operator_t
     use artificial_viscosity_volume_operator,           only: artificial_viscosity_volume_operator_t
@@ -247,6 +257,14 @@ contains
         type(spalart_allmaras_volume_diffusion_operator_t)      :: spalart_allmaras_volume_diffusion_operator
         type(spalart_allmaras_bc_diffusion_operator_t)          :: spalart_allmaras_bc_diffusion_operator
 
+        type(RANS_volume_advection_t)                           :: rans_volume_advection
+        type(RANS_boundary_advection_t)                         :: rans_boundary_advection
+        type(RANS_bc_advection_t)                               :: rans_bc_advection
+        type(RANS_volume_diffusion_t)                           :: rans_volume_diffusion
+        type(RANS_boundary_diffusion_t)                         :: rans_boundary_diffusion
+        type(RANS_bc_diffusion_t)                               :: rans_bc_diffusion
+        type(RANS_source_t)                                     :: rans_source
+
 
         ! Artificial Viscosity Operators
         type(artificial_viscosity_boundary_average_operator_t)  :: artificial_viscosity_boundary_average_operator
@@ -315,6 +333,18 @@ contains
             call operator_factory%register(spalart_allmaras_boundary_diffusion_operator)
             call operator_factory%register(spalart_allmaras_volume_diffusion_operator)
             call operator_factory%register(spalart_allmaras_bc_diffusion_operator)
+
+
+            ! Register RANS Low-Cache operators
+            call operator_factory%register(rans_volume_advection)
+            call operator_factory%register(rans_volume_diffusion)
+            call operator_factory%register(rans_boundary_advection)
+            call operator_factory%register(rans_boundary_diffusion)
+            call operator_factory%register(rans_bc_advection)
+            call operator_factory%register(rans_bc_diffusion)
+            call operator_factory%register(rans_source)
+
+
 
             ! Register Artificial Viscosity
             call operator_factory%register(artificial_viscosity_boundary_average_operator)

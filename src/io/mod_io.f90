@@ -58,6 +58,8 @@ module mod_io
 !    integer(ik),         save    :: output_res       = 10
      
 
+    ! initial field values: function = constant
+    real(rk),               save    :: initial_fields(100) = ZERO
 
 
 contains
@@ -79,6 +81,7 @@ contains
         use mod_ordering,   only: MAX_POLY_ORDER
 
         logical :: file_exists
+        integer :: file_unit, msg
 
         namelist /files/                    gridfile,              &
                                             gridtype,              &
@@ -116,6 +119,8 @@ contains
                                             final_write,           &
                                             verbosity
 
+        namelist /initial/                  initial_fields
+
 
         !
         ! Check that input file exists
@@ -128,14 +133,24 @@ contains
         !
         ! Read namelist input for parameter initialization
         !
-        open(unit=7,form='formatted',file="chidg.nml")
-        read(7,nml=files)
-        read(7,nml=space)
-        read(7,nml=quadrature)
-        read(7,nml=time)
-        read(7,nml=nonlinear_solve)
-        read(7,nml=linear_solve)
-        read(7,nml=io)
+        open(newunit=file_unit,form='formatted',file="chidg.nml")
+        read(file_unit,nml=files,           iostat=msg)
+        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'files' namelist from 'chidg.nml'.")
+        read(file_unit,nml=space,           iostat=msg)
+        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'space' namelist from 'chidg.nml'.")
+        read(file_unit,nml=quadrature,      iostat=msg)
+        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'quadrature' namelist from 'chidg.nml'.")
+        read(file_unit,nml=time,            iostat=msg)
+        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'time' namelist from 'chidg.nml'.")
+        read(file_unit,nml=nonlinear_solve, iostat=msg)
+        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'nonlinear_solve' namelist from 'chidg.nml'.")
+        read(file_unit,nml=linear_solve,    iostat=msg)
+        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'linear_solve' namelist from 'chidg.nml'.")
+        read(file_unit,nml=io,              iostat=msg)
+        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'io' namelist from 'chidg.nml'.")
+        read(file_unit,nml=initial,         iostat=msg)
+        if (msg /= 0) call chidg_signal(FATAL,"read_input: error reading 'initial' namelist from 'chidg.nml'.")
+        close(file_unit)
 
 
 

@@ -84,10 +84,11 @@ contains
         type(AD_D), allocatable, dimension(:)   :: &
             density_m, mom1_m, mom2_m, mom3_m, normal_momentum, &
             density_nutilde_m, density_nutilde_bc,              &
-            grad1_density_nutilde_m, grad2_density_nutilde_m, grad3_density_nutilde_m
+            grad1_density_nutilde_m, grad2_density_nutilde_m, grad3_density_nutilde_m, mu_m, nu_m
 
-        real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3, nutilde_nu
+        real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3, nutilde_over_nu
         logical,    allocatable, dimension(:)   :: inflow, outflow
+
 
 
         !
@@ -115,7 +116,7 @@ contains
         !
         ! Get User incoming boundary condition viscosity ratio
         !
-        nutilde_nu = self%bcproperties%compute('Turbulent Viscosity Ratio', worker%time(), worker%coords() )
+        nutilde_over_nu = self%bcproperties%compute('Turbulent Viscosity Ratio', worker%time(), worker%coords() )
 
 
         !
@@ -142,9 +143,12 @@ contains
         !   1: Extrapolate all values (assuming outflow)
         !   2: Where inflow is detected, set from user specified parameter
         !
+        mu_m = worker%get_model_field_face('Laminar Viscosity', 'value', 'face interior')
+        nu_m = mu_m/density_m
         density_nutilde_bc = density_nutilde_m
         where(inflow)
-            density_nutilde_bc = density_m * (nutilde_nu * 0.00018_rk)
+            !density_nutilde_bc = density_m * (nutilde_over_nu * 0.00018_rk)
+            density_nutilde_bc = density_m * (nutilde_over_nu * nu_m)
         end where
 
 

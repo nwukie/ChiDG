@@ -1,5 +1,5 @@
 project(chidg Fortran)
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.7.1)
 
 
 #-----------------------------------------------------------------------------------
@@ -66,6 +66,13 @@ if (CMAKE_Fortran_COMPILER_ID MATCHES Intel)
     #set (CMAKE_LINKER xild)    # for -ipo
     
 elseif (CMAKE_Fortran_COMPILER_ID MATCHES GNU)
+
+    # Enforce gfortran minimum version requirement
+    if (CMAKE_Fortran_COMPILER_VERSION VERSION_LESS 6.0.0)
+        message(FATAL_ERROR "Require at least gfortran 6.0.0.")
+    endif()
+
+    # Set compile/link flags
     set (USER_COMPILE_FLAGS_DEBUG   "-O0 -cpp --coverage -ffree-form \
                                      -ffree-line-length-none -fbacktrace \
                                      -fstack-protector -fcheck=bounds \

@@ -11,16 +11,35 @@ module type_constant_viscosity
     
 
 
-    !>  Constant Viscosity for Laminary Viscosity.
+    !>  Constant Viscosity for Laminar Viscosity.
     !!
     !!  Model Fields:
-    !!      - Viscosity
+    !!  ------------------------------
+    !!      : Laminar Viscosity
+    !!
+    !!  User-Input:
+    !!  ------------------------------
+    !!  The user can set a constant viscosity to be used at run-time by
+    !!  placing a 'viscosity' namelist with a variable 'mu' in the file 
+    !!  'models.nml' in the working directory.
+    !!
+    !!  Example 'models.nml' contents:
+    !!  ------------------------------
+    !!
+    !!  &viscosity
+    !!      mu = 1.e-5
+    !!  /
+    !!
+    !!
     !!
     !!  @author Nathan A. Wukie
     !!  @date   01/26/2017
     !!
     !---------------------------------------------------------------------------------------
     type, extends(model_t)  :: constant_viscosity_t
+
+        ! Default viscosity value. Can be reset by using 'models.nml'
+        real(rk)    :: mu = 1.6e-5_rk
 
     contains
 
@@ -48,10 +67,35 @@ contains
     subroutine init(self)   
         class(constant_viscosity_t), intent(inout)   :: self
 
+        real(rk)            :: mu
+        integer             :: unit, msg
+        logical             :: file_exists
+
+        namelist /viscosity/    mu
+
+
+
+        !
+        ! Initialize model object
+        !
         call self%set_name('Constant Viscosity')
         call self%set_dependency('f(Q-)')
-
         call self%add_model_field('Laminar Viscosity')
+
+
+        !
+        ! Check if input from 'models.nml' is available.
+        !   1: if available, read and set self%mu
+        !   2: if not available, do nothing and mu retains default value
+        !
+        inquire(file='models.nml', exist=file_exists)
+        if (file_exists) then
+            open(newunit=unit,form='formatted',file='models.nml')
+            read(unit,nml=viscosity,iostat=msg)
+            if (msg == 0) self%mu = mu
+            close(unit)
+        end if
+
 
     end subroutine init
     !***************************************************************************************
@@ -76,7 +120,8 @@ contains
 
         !real(rk) :: mu0 = 2.0831e-5_rk  ! [kg/(m*s)]
         !real(rk) :: mu0 = 1.6343e-5_rk  ! [kg/(m*s)]
-        real(rk)    :: mu0 = 0.408166_rk    ! [kg/(m*s)]
+        !real(rk)    :: mu0 = 0.408166_rk    ! [kg/(m*s)]
+        !real(rk)    :: mu0 = 1.6343e-5_rk
 
         !
         ! Interpolate solution to quadrature nodes
@@ -89,7 +134,7 @@ contains
         !   - initialize derivatives first...
         !
         viscosity = T
-        viscosity = mu0
+        viscosity = self%mu
 
 
         !

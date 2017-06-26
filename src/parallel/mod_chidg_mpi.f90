@@ -48,7 +48,8 @@ contains
     !!  @date   6/17/2016
     !!
     !----------------------------------------------------------------------------------
-    subroutine chidg_mpi_init()
+    subroutine chidg_mpi_init(comm)
+        type(mpi_comm), intent(in), optional    :: comm
         integer :: ierr
 
 
@@ -68,8 +69,14 @@ contains
         !
         ! Initialize IRANK, NRANK
         !
-        call MPI_Comm_Size(MPI_COMM_WORLD,NRANK,ierr)
-        call MPI_Comm_Rank(MPI_COMM_WORLD,IRANK,ierr)
+        if (present(comm)) then
+            ChiDG_COMM = comm
+        else
+            ChiDG_COMM = MPI_COMM_WORLD
+        end if
+
+        call MPI_Comm_Size(ChiDG_COMM,NRANK,ierr)
+        call MPI_Comm_Rank(ChiDG_COMM,IRANK,ierr)
 
 
     end subroutine chidg_mpi_init

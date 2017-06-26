@@ -1,6 +1,7 @@
 module type_chidg_matrix
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
+    use mod_constants,          only: NO_ID
     use mod_chidg_mpi,          only: IRANK
     use type_domain_matrix,     only: domain_matrix_t
     use type_mesh,              only: mesh_t
@@ -31,7 +32,7 @@ module type_chidg_matrix
         logical     :: local_initialized = .false.      ! Has the matrix processor-local data been initialized
         logical     :: recv_initialized  = .false.      ! Has matrix been initialized with information about chidg_vector%recv
 
-        integer     :: stamp(8) = -1                    ! Stamp from date_and_time that gets updated when store routines are called
+        integer     :: stamp(8) = NO_ID                 ! Stamp from date_and_time that gets updated when store routines are called
 
     contains
         ! Initializers

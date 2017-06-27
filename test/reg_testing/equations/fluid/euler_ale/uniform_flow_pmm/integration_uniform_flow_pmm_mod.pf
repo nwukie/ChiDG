@@ -265,7 +265,7 @@ contains
         IO_DESTINATION   = 'both'
         dt               = 5.6512e-5_rk
         time_steps       = 2
-        verbosity        = 3 
+        verbosity        = 4 
         nwrite           = 1
         solutionfile_out = 'testout.h5'
         !------------------------------------------------------------------------------
@@ -291,7 +291,7 @@ contains
         call loptions%set('tol',1.e-10_rk)
 
         ! Set nonlinear solver options
-        call noptions%set('tol',1.e-9_rk)
+        call noptions%set('tol',1.e-4_rk)
         call noptions%set('cfl0',2.0_rk)
         call noptions%set('nsteps',20)
 
@@ -317,7 +317,7 @@ contains
             call create_bc('Farfield', bc_state)
             call bc_state%set_fcn_option('Density',   'val', 1.225_rk)
             call bc_state%set_fcn_option('Pressure','val', 101325._rk   )
-            call bc_state%set_fcn_option('Velocity-1','val',102.0881632653_rk)
+            call bc_state%set_fcn_option('Velocity-1','val',102.0882_rk)
             call bc_state%set_fcn_option('Velocity-2','val',ZERO)
             call bc_state%set_fcn_option('Velocity-3','val',ZERO)
             call bc_state_groups(1)%add_bc_state(bc_state)

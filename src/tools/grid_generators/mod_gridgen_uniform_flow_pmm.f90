@@ -226,7 +226,7 @@ contains
         call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_FREQ_X')
         call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_FREQ_X',FOUR*PI)
         call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_AMP_X')
-        call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_AMP_X',0.0_rk)
+        call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_AMP_X',0.05_rk)
         call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_AMP_Y')
         call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_AMP_Y',ZERO)
         call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_AMP_Z')

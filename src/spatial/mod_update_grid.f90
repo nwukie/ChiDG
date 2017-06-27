@@ -84,9 +84,9 @@ contains
         ! Communicate solution vector
         !
         !call comm_timer%start()
-        call data%sdata%q%comm_send()
-        call data%sdata%q%comm_recv()
-        call data%sdata%q%comm_wait()
+        !call data%sdata%q%comm_send()
+        !call data%sdata%q%comm_recv()
+        !call data%sdata%q%comm_wait()
         !call comm_timer%stop()
 
 
@@ -103,11 +103,14 @@ contains
         worker%t     = data%time_manager%t
         ! Loop through domains
         do idom = 1,data%mesh%ndomains()
-            associate ( mesh => data%mesh, eqnset => data%eqnset(idom))
+            associate ( mesh => data%mesh)
             pmm_ID = mesh%domain(idom)%pmm_ID
 
             if (pmm_ID /= NO_PMM_ASSIGNED) then
 
+                print *, 'updating grid'
+                print *, 'time'
+                print *, data%time_manager%t
                 do inode = 1, size(mesh%domain(idom)%nodes,1)
                     mesh%domain(idom)%dnodes(inode,:) = &
                         data%pmm(pmm_ID)%pmmf%compute_pos(data%time_manager%t, mesh%domain(idom)%nodes(inode,:)) - &

@@ -210,6 +210,7 @@ program driver
                     read(7,fmt='(a)', iostat=ierr) solution_file
                     if (ierr /= 0) exit
                     call chidg_post(trim(solution_file), trim(solution_file))
+                    call chidg_post_vtk(trim(solution_file), trim(solution_file))
                 end do
                 close(7)
 

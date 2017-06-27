@@ -92,8 +92,6 @@ contains
         call chidg%time_integrator%initialize_state(chidg%data)
 
 
-
-
         !
         ! Read grid/solution modes and time integrator options from HDF5
         !
@@ -101,6 +99,8 @@ contains
         call chidg%read_fields(solution_file)
         call chidg%time_integrator%read_time_options(chidg%data,solution_file)
 
+
+      
 
         !
         ! Get post processing data (q_out)
@@ -111,6 +111,8 @@ contains
         grid_file_prefix     = get_file_prefix(grid_file,'.h5')
         solution_file_prefix = get_file_prefix(solution_file,'.h5')
         step_str             = solution_file_prefix(len(grid_file_prefix)+2:)
+
+
 
 !        if (trim(step_str) == '') then
 !            plt_filename = '0.plt'

@@ -53,7 +53,7 @@ module integration_uniform_flow_pmm_mod
     use mod_test_utilities,     only: create_mesh_file
     use mod_file_utilities,     only: delete_file
 
-    use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM
+    use mod_chidg_mpi,          only: IRANK, NRANK
     use mpi_f08,                only: MPI_COMM, MPI_REAL8, MPI_SUM
     use mod_io
     use type_chidg_worker,      only: chidg_worker_t
@@ -257,14 +257,17 @@ contains
         !
         !------------------------------------------------------------------------------
         basis            = 'legendre'
-        gq_rule          = 2 
+        gq_rule          = 3 
         time_integrator  = 'DIRK'
-        nonlinear_solver = 'quasi_newton'
+        nonlinear_solver = 'newton'
         linear_solver    = 'fgmres_cgs'
         preconditioner   = 'RASILU0'
-        IO_DESTINATION   = 'file'
-        dt               = 0.0001_rk
-        time_steps       = 20
+        IO_DESTINATION   = 'both'
+        dt               = 5.6512e-5_rk
+        time_steps       = 2
+        verbosity        = 3 
+        nwrite           = 1
+        solutionfile_out = 'testout.h5'
         !------------------------------------------------------------------------------
 
 
@@ -285,19 +288,20 @@ contains
         call this%chidg%data%time_manager%init()
 
         ! Set linear solver options to pass during initialization
-        call loptions%set('tol',1.e-9_rk)
+        call loptions%set('tol',1.e-10_rk)
 
         ! Set nonlinear solver options
-        call noptions%set('tol',3.e-5_rk)
-        call noptions%set('cfl0',1.0_rk)
-        call noptions%set('nsteps',100)
+        call noptions%set('tol',1.e-9_rk)
+        call noptions%set('cfl0',2.0_rk)
+        call noptions%set('nsteps',20)
 
 
 
         !
         ! Initialize ChiDG environment
         !
-        call this%chidg%start_up('core',this%ChiDG_COMM)
+        call this%chidg%start_up('mpi',this%ChiDG_COMM)
+        call this%chidg%start_up('core')
 
 
 
@@ -313,7 +317,7 @@ contains
             call create_bc('Farfield', bc_state)
             call bc_state%set_fcn_option('Density',   'val', 1.225_rk)
             call bc_state%set_fcn_option('Pressure','val', 101325._rk   )
-            call bc_state%set_fcn_option('Velocity-1','val',102.0882_rk)
+            call bc_state%set_fcn_option('Velocity-1','val',102.0881632653_rk)
             call bc_state%set_fcn_option('Velocity-2','val',ZERO)
             call bc_state%set_fcn_option('Velocity-3','val',ZERO)
             call bc_state_groups(1)%add_bc_state(bc_state)
@@ -422,7 +426,7 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------
-    @Test(npes=[8])
+    @Test(npes=[2])
     subroutine test_entropy_error_rate(self)
         class(uniform_flow_pmm),  intent(inout)   :: self
 
@@ -590,13 +594,16 @@ contains
                     !                    
                     gq_error_squared = (u_analytical - u_dg)**TWO
 
+        
 
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%gq%vol%weights)
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%gq%vol%weights)
 
 
+                    print *, 'density error squared'
+                    print *, element_error_squared
                     !
                     ! Accumulate error from each element
                     !
@@ -626,8 +633,10 @@ contains
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%gq%vol%weights)
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%gq%vol%weights)
 
+                    print *, 'mom1 error squared'
+                    print *, element_error_squared
 
                     !
                     ! Accumulate error from each element
@@ -657,8 +666,10 @@ contains
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%gq%vol%weights)
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%gq%vol%weights)
 
+                    print *, 'mom2 error squared'
+                    print *, element_error_squared
 
                     !
                     ! Accumulate error from each element
@@ -687,9 +698,11 @@ contains
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%gq%vol%weights)
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%gq%vol%weights)
 
 
+                    print *, 'mom3 error squared'
+                    print *, element_error_squared
                     !
                     ! Accumulate error from each element
                     !
@@ -718,8 +731,10 @@ contains
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%gq%vol%weights)
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%gq%vol%weights)
 
+                    print *, 'energy error squared'
+                    print *, element_error_squared
 
                     !
                     ! Accumulate error from each element
@@ -772,7 +787,7 @@ contains
         real(rk), allocatable   :: reference_convergence(:), test_convergence(:)
 
 
-        do inpes = 1,5
+        do inpes = 1,1
             do igrid = 1,2
                 do iorder = 1,4
 
@@ -864,7 +879,7 @@ contains
 !                inpes = 3
 !            case(7)
 !                inpes = 4
-            case(10)
+            case(2)
                 inpes = 1 
 
         end select

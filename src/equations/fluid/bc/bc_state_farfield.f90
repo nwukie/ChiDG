@@ -171,8 +171,10 @@ contains
         !
         ! Get Pressure, Temperature from interior
         !
-        p_m = worker%get_model_field_face('Pressure',    'value', 'face interior')
-        T_m = worker%get_model_field_face('Temperature', 'value', 'face interior')
+        !p_m = worker%get_model_field_face('Pressure',    'value', 'face interior')
+        !T_m = worker%get_model_field_face('Temperature', 'value', 'face interior')
+        p_m = (1.4_rk-ONE)*(energy_m-0.5_rk*(mom1_m**TWO+mom2_m**TWO+mom3_m**TWO)/density_m)
+        T_m = p_m/(density_m*287.15_rk)
 
 
         c_m = sqrt(1.4_rk*287.15_rk*T_m)

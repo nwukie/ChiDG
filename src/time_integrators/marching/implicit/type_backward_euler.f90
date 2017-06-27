@@ -4,6 +4,7 @@ module type_backward_euler
     use mod_kinds,                      only: rk,ik
     use mod_constants,                  only: ONE
     use mod_spatial,                    only: update_space
+    use mod_update_grid,                only: update_grid
 
     use type_time_integrator_marching,  only: time_integrator_marching_t
     use type_system_assembler,          only: system_assembler_t
@@ -143,6 +144,8 @@ contains
         ! Solve assembled nonlinear system, the nonlinear update is the step in time
         ! System assembled in subroutine assemble
         !
+        data%time_manager%t = data%time_manager%t + data%time_manager%dt
+        call update_grid(data)
         call nonlinear_solver%solve(data,self%system,linear_solver,preconditioner)
 
         !

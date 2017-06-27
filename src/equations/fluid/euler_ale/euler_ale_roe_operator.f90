@@ -176,8 +176,8 @@ contains
         gam_m = 1.4_rk
         gam_p = 1.4_rk
 
-        p_m = (1.4_rk-ONE)*(rhoE_m - HALF*(rhou_m**2+rhov_m**2+rhow_m**2)/rho_m)
-        p_p = (1.4_rk-ONE)*(rhoE_p - HALF*(rhou_p**2+rhov_p**2+rhow_p**2)/rho_p)
+        p_m = (1.4_rk-ONE)*(rhoE_m - HALF*(rhou_m**TWO+rhov_m**TWO+rhow_m**TWO)/rho_m)
+        p_p = (1.4_rk-ONE)*(rhoE_p - HALF*(rhou_p**TWO+rhov_p**TWO+rhow_p**TWO)/rho_p)
 
         invrho_m = ONE/rho_m
         invrho_p = ONE/rho_p

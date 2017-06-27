@@ -78,10 +78,10 @@ contains
                 !call euler_ale_eqns%add_operator('Euler ALE LaxFriedrichs Flux')
                 call euler_ale_eqns%add_operator('Euler ALE BC Flux')
 
-                call euler_ale_eqns%add_pseudo_timestep(fluid_pseudo_time)
+             !   call euler_ale_eqns%add_pseudo_timestep(fluid_pseudo_time)
 
-                call euler_ale_eqns%add_model('Ideal Gas')
-                call euler_ale_eqns%add_model('Fluid Advection Velocity')
+            !    call euler_ale_eqns%add_model('Ideal Gas')
+            !    call euler_ale_eqns%add_model('Fluid Advection Velocity')
 
 
 

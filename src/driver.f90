@@ -174,10 +174,54 @@ program driver
 
 
 
-            case ('post')
+!            case ('post')
+!            !>  ChiDG:post  src/actions/post
+!            !!
+!            !!  Post-process solution files for visualization.
+!            !!
+!            !!  Command-Line MODE 1: Single-file
+!            !!  --------------------------------
+!            !!
+!            !!     Command-line:                    Output:
+!            !!  chidg post myfile.h5       myfile.plt (Tecplot-readable)
+!            !!
+!            !!  Command-Line MODE 2: Multi-file
+!            !!  --------------------------------
+!            !!  In the case where there are several files that need processed,
+!            !!  wildcards can be passed in, but must be wrapped in quotes " ".
+!            !!
+!            !!  Files: myfile_0.1000.h5, myfile_0.2000.h5, myfile_0.3000.h5
+!            !!
+!            !!     Command-line:                Output:
+!            !!  chidg post "myfile*"        myfile_0.1000.plt
+!            !!                              myfile_0.2000.plt
+!            !!                              myfile_0.3000.plt
+!            !!
+!            !!---------------------------------------------------------------------------
+!                if (narg /= 2) call chidg_signal(FATAL,"The 'post' action expects: chidg post file.h5")
+!
+!                call get_command_argument(2,pattern)
+!                command = 'ls '//trim(pattern)//' > chidg_post_files.txt'
+!                call system(command)
+!            
+!
+!                open(7,file='chidg_post_files.txt',action='read')
+!                do
+!                    read(7,fmt='(a)', iostat=ierr) solution_file
+!                    if (ierr /= 0) exit
+!                    call chidg_post(trim(solution_file), trim(solution_file))
+!                end do
+!                close(7)
+!
+!                call delete_file('chidg_post_files.txt')
+!            !*****************************************************************************
+
+
+
+            case ('2tec')
             !>  ChiDG:post  src/actions/post
             !!
-            !!  Post-process solution files for visualization.
+            !!  Post-process solution files for visualization (tecplot format)
             !!
             !!  Command-Line MODE 1: Single-file
             !!  --------------------------------
@@ -198,23 +242,66 @@ program driver
             !!                              myfile_0.3000.plt
             !!
             !!---------------------------------------------------------------------------
-                if (narg /= 2) call chidg_signal(FATAL,"The 'post' action expects: chidg post file.h5")
+                if (narg /= 2) call chidg_signal(FATAL,"The '2tec' action expects: chidg 2tec file.h5")
 
                 call get_command_argument(2,pattern)
-                command = 'ls '//trim(pattern)//' > chidg_post_files.txt'
+                command = 'ls '//trim(pattern)//' > chidg_post_tec_files.txt'
                 call system(command)
             
 
-                open(7,file='chidg_post_files.txt',action='read')
+                open(7,file='chidg_post_tec_files.txt',action='read')
                 do
                     read(7,fmt='(a)', iostat=ierr) solution_file
                     if (ierr /= 0) exit
                     call chidg_post(trim(solution_file), trim(solution_file))
+                end do
+                close(7)
+
+                call delete_file('chidg_post_tec_files.txt')
+            !*****************************************************************************
+
+
+
+            case ('2vtk')
+            !>  ChiDG:post  src/actions/post
+            !!
+            !!  Post-process solution files for visualization (vtk format).
+            !!
+            !!  Command-Line MODE 1: Single-file
+            !!  --------------------------------
+            !!
+            !!     Command-line:                    Output:
+            !!  chidg post myfile.h5       myfile_itime_idom_itimestep.vtu (Paraview-readable)
+            !!
+            !!  Command-Line MODE 2: Multi-file
+            !!  --------------------------------
+            !!  In the case where there are several files that need processed,
+            !!  wildcards can be passed in, but must be wrapped in quotes " ".
+            !!
+            !!  Files: myfile_0.1000.h5, myfile_0.2000.h5, myfile_0.3000.h5
+            !!
+            !!     Command-line:                Output:
+            !!  chidg post "myfile*"        myfile_0_0_1.vtu
+            !!                              myfile_0_0_2.vtu
+            !!                              myfile_0_0_3.vtu
+            !!
+            !!---------------------------------------------------------------------------
+                if (narg /= 2) call chidg_signal(FATAL,"The '2vtk' action expects: chidg 2vtk file.h5")
+
+                call get_command_argument(2,pattern)
+                command = 'ls '//trim(pattern)//' > chidg_post_vtk_files.txt'
+                call system(command)
+            
+
+                open(7,file='chidg_post_vtk_files.txt',action='read')
+                do
+                    read(7,fmt='(a)', iostat=ierr) solution_file
+                    if (ierr /= 0) exit
                     call chidg_post_vtk(trim(solution_file), trim(solution_file))
                 end do
                 close(7)
 
-                call delete_file('chidg_post_files.txt')
+                call delete_file('chidg_post_vtk_files.txt')
             !*****************************************************************************
 
 

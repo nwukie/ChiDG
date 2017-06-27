@@ -436,7 +436,7 @@ contains
         call self%compute_quadrature_normals()
         call self%compute_quadrature_gradients()
 
-        call self%update_ale()
+        call self%update_face_ale()
 
         !
         ! Compute BR2 matrix

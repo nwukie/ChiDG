@@ -184,10 +184,10 @@ contains
         type(chidg_t)                               :: chidg
         type(meshdata_t),   allocatable             :: meshdata(:)
         type(string_t)                              :: eqnset(1)
-        integer(ik)                                 :: nterms_s, ielem, itime, ierr, imat
-        real(rk),           dimension(8)            :: vals
-        real(rk),           dimension(8)            :: vref_a, ref_a, ref_b, ref_c, ref_d, ref_e, ref_f
-        real(rk),           dimension(8,8)          :: vref_1, vref_2, ref_1, ref_2, ref_3
+        integer(ik)                                 :: nterms_s, ierr, imat
+        real(rk),           dimension(8)            :: vals1, vals3, vals6
+        real(rk),           dimension(8)            :: ref_a, ref_b, ref_c, ref_d, ref_e, ref_f
+        real(rk),           dimension(8,8)          :: ref_1, ref_2, ref_3
         real(rk)                                    :: tol
         character(:),       allocatable             :: filename
 
@@ -234,25 +234,17 @@ contains
 
 
         !
-        ! Set equation sert string
-        !
-        call eqnset(1)%set("Test Blank Equation Set")
-
-
-        !
         ! Create grid file
         !
+        call eqnset(1)%set("Test Blank Equation Set")
         filename = 'D1_2x2x2_singleblock.h5'
         call create_mesh_file("D1 NxNxN", filename, equation_sets = eqnset, &
                                                     nelem_xi = 2, nelem_eta = 2, nelem_zeta = 2)
 
-
         !
-        ! Get grid points
+        ! Read grid, initialize time integrator
         !
         call chidg%read_mesh(filename)
-
-
         call chidg%time_integrator%init(chidg%data)
 
 
@@ -260,49 +252,17 @@ contains
                     lhs => chidg%data%sdata%lhs, &
                     rhs => chidg%data%sdata%rhs)
 
-            !
-            ! Set residual linearizations
-            !
-            imat = lhs%dom(1)%lblks(1,1)%get_diagonal()
-            lhs%dom(1)%lblks(1,1)%data_(imat)%mat = ONE
-
-            imat = lhs%dom(1)%lblks(3,1)%get_diagonal()
-            lhs%dom(1)%lblks(3,1)%data_(imat)%mat = THREE
-
-            imat = lhs%dom(1)%lblks(7,1)%get_diagonal()
-            lhs%dom(1)%lblks(7,1)%data_(imat)%mat = SEVEN
-
-
-            !
-            ! Set spatial residual contributions
-            !
-            vals = 0.2_rk
-            call rhs%dom(1)%vecs(1)%settime(1,vals)
-
-            vals = 0.6_rk
-            call rhs%dom(1)%vecs(3)%settime(1,vals)
-
-            vals = 0.7_rk
-            call rhs%dom(1)%vecs(5)%settime(1,vals)
-
-            vals = 0.9_rk
-            call rhs%dom(1)%vecs(7)%settime(1,vals)
-
-            vals = 0.1_rk
-            call rhs%dom(1)%vecs(8)%settime(1,vals)
-
 
             !
             ! Set solution vector
             !
-            vals = 0.1_rk
-            call q%dom(1)%vecs(1)%settime(1,vals)
+            vals1 = 0.1_rk
+            vals3 = 0.4_rk
+            vals6 = 0.8_rk
 
-            vals = 0.4_rk
-            call q%dom(1)%vecs(3)%settime(1,vals)
-
-            vals = 0.8_rk
-            call q%dom(1)%vecs(6)%settime(1,vals)
+            call q%dom(1)%vecs(1)%settime(1,vals1)
+            call q%dom(1)%vecs(3)%settime(1,vals3)
+            call q%dom(1)%vecs(6)%settime(1,vals6)
 
 
             !
@@ -328,32 +288,26 @@ contains
                 !
                 ! Compute lhs reference values
                 !
-                vref_1 = ONE; vref_2 = (ONE/dt)*(domain%elems(1)%mass)
-                ref_1  = vref_1 + vref_2
-                vref_1 = THREE; vref_2 = (ONE/dt)*(domain%elems(3)%mass)
-                ref_2  = vref_1 + vref_2
-                vref_1 = SEVEN; vref_2 = (ONE/dt)*(domain%elems(7)%mass)
-                ref_3  = vref_1 + vref_2
+                ref_1  = (ONE/dt)*(domain%elems(1)%mass)
+                ref_2  = (ONE/dt)*(domain%elems(3)%mass)
+                ref_3  = (ONE/dt)*(domain%elems(7)%mass)
 
 
                 !
                 ! Compute rhs reference values
                 ! 
-                vref_a = 0.1_rk
-                ref_a  = 0.2_rk + (ONE/dt)*matmul(domain%elems(1)%mass,vref_a)
-                vref_a = 0.4_rk
-                ref_b  = 0.6_rk + (ONE/dt)*matmul(domain%elems(3)%mass,vref_a)
-                ref_c  = 0.7_rk
-                vref_a = 0.8_rk
-                ref_d  = (ONE/dt)*matmul(domain%elems(6)%mass,vref_a)
-                ref_e  = 0.9_rk
-                ref_f  = 0.1_rk
+                ref_a = (ONE/dt)*matmul(domain%elems(1)%mass,q%dom(1)%vecs(1)%getvar(1,1))
+                ref_b = (ONE/dt)*matmul(domain%elems(3)%mass,q%dom(1)%vecs(3)%getvar(1,1))
+                ref_c = ZERO
+                ref_d = (ONE/dt)*matmul(domain%elems(6)%mass,q%dom(1)%vecs(6)%getvar(1,1))
+                ref_e = ZERO
+                ref_f = ZERO
 
             end associate
 
 
             !
-            ! Test assemble operation
+            ! Test LHS contributions from assemble operation
             !
             imat = lhs%dom(1)%lblks(1,1)%get_diagonal()
             @assertEqual(ref_1,lhs%dom(1)%lblks(1,1)%data_(imat)%mat)
@@ -361,6 +315,11 @@ contains
             @assertEqual(ref_2,lhs%dom(1)%lblks(3,1)%data_(imat)%mat)
             imat = lhs%dom(1)%lblks(7,1)%get_diagonal()
             @assertEqual(ref_3,lhs%dom(1)%lblks(7,1)%data_(imat)%mat)
+
+
+            !
+            ! Test RHS contributions from assemble operation
+            !
             @assertEqual(ref_a,rhs%dom(1)%vecs(1)%gettime(1),tol)
             @assertEqual(ref_b,rhs%dom(1)%vecs(3)%gettime(1),tol)
             @assertEqual(ref_c,rhs%dom(1)%vecs(5)%gettime(1),tol)

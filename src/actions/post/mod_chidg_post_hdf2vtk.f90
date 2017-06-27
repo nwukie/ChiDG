@@ -104,14 +104,18 @@ contains
         solution_file_prefix = get_file_prefix(solution_file,'.h5')
         step_str = solution_file_prefix(len(grid_file_prefix) + 2:)
 
-        if (trim(step_str) == '') then
-            istep = chidg%data%time_manager%nwrite
-            itimestep = 1
-        else 
-            read(step_str,*) istep
-            itimestep = int(real(istep)/real(chidg%data%time_manager%nwrite))
+
+        !
+        ! Compute itimestep which is used in the .pvd collevtion file
+        ! Set .pvd filename
+        !        
+        if (chidg%data%time_manager%nwrite == 0) then
+            itimestep = 0
+        else
+            itimestep = int(chidg%data%time_manager%t/(chidg%data%time_manager%dt*&
+                            chidg%data%time_manager%nwrite))
         end if
-       
+
         pvd_filename = 'chidg_results.pvd'
         
 

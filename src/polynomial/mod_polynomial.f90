@@ -28,17 +28,17 @@ contains
         integer(ik),    intent(in)  :: spacedim
         integer(ik),    intent(in)  :: nterms
         integer(ik),    intent(in)  :: mode
-        type(point_t),  intent(in)  :: node
+        real(rk),       intent(in)  :: node(3)
 
-        real(rk)    :: xi, eta, zeta
+        !real(rk)    :: xi, eta, zeta
         real(rk)    :: polyval
 
 
-        xi   = node%c1_
-        eta  = node%c2_
-        zeta = node%c3_
+        !xi   = node%c1_
+        !eta  = node%c2_
+        !zeta = node%c3_
 
-        polyval = LegendreVal(spacedim,mode,xi,eta,zeta)
+        polyval = LegendreVal(spacedim,mode,node(1),node(2),node(3))
 
     end function PolynomialVal
     !*****************************************************************************************
@@ -66,17 +66,17 @@ contains
         integer(ik),    intent(in)  :: spacedim
         integer(ik),    intent(in)  :: nterms
         integer(ik),    intent(in)  :: mode
-        type(point_t),  intent(in)  :: node
+        real(rk),       intent(in)  :: node(3)
         integer(ik),    intent(in)  :: dir
 
-        real(rk)    :: xi, eta, zeta
+        !real(rk)    :: xi, eta, zeta
         real(rk)    :: dpolyval
 
-        xi   = node%c1_
-        eta  = node%c2_
-        zeta = node%c3_
+        !xi   = node%c1_
+        !eta  = node%c2_
+        !zeta = node%c3_
 
-        dpolyval = DLegendreVal(spacedim,mode,xi,eta,zeta,dir)
+        dpolyval = DLegendreVal(spacedim,mode,node(1),node(2),node(3),dir)
 
     end function DPolynomialVal
     !****************************************************************************************

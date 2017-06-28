@@ -168,14 +168,16 @@ contains
             if ( spacedim == THREE_DIM ) then
                 do iterm = 1,npts_3d(imap)
                     do inode = 1,npts_3d(imap)
-                        ELEM_MAP_3D(imap)%mat(inode,iterm) = polynomialVal(3,npts_3d(imap),iterm,nodes(inode))
+                        !ELEM_MAP_3D(imap)%mat(inode,iterm) = polynomialVal(3,npts_3d(imap),iterm,nodes(inode))
+                        ELEM_MAP_3D(imap)%mat(inode,iterm) = polynomialVal(3,npts_3d(imap),iterm,[nodes(inode)%c1_, nodes(inode)%c2_, nodes(inode)%c3_])
                     end do
                 end do
 
             else if ( spacedim == TWO_DIM ) then
                 do iterm = 1,npts_2d(imap)
                     do inode = 1,npts_2d(imap)
-                        ELEM_MAP_2D(imap)%mat(inode,iterm) = polynomialVal(2,npts_2d(imap),iterm,nodes(inode))
+                        !ELEM_MAP_2D(imap)%mat(inode,iterm) = polynomialVal(2,npts_2d(imap),iterm,nodes(inode))
+                        ELEM_MAP_2D(imap)%mat(inode,iterm) = polynomialVal(2,npts_2d(imap),iterm,[nodes(inode)%c1_, nodes(inode)%c2_, nodes(inode)%c3_])
                     end do
                 end do
 

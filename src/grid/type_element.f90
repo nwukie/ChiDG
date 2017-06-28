@@ -1009,7 +1009,7 @@ contains
         !
         do iterm = 1,self%nterms_c
 
-            polyvals(iterm)  = polynomialVal(spacedim,self%nterms_c,iterm,node)
+            polyvals(iterm)  = polynomialVal(spacedim,self%nterms_c,iterm,[xi,eta,zeta])
 
         end do
 
@@ -1055,7 +1055,7 @@ contains
         !
         do iterm = 1,self%nterms_c
 
-            polyvals(iterm)  = polynomialVal(spacedim,self%nterms_c,iterm,node)
+            polyvals(iterm)  = polynomialVal(spacedim,self%nterms_c,iterm,[xi,eta,zeta])
 
         end do
 
@@ -1100,7 +1100,7 @@ contains
         !
         do iterm = 1,self%nterms_c
 
-            polyvals(iterm)  = polynomialVal(spacedim,self%nterms_c,iterm,node)
+            polyvals(iterm)  = polynomialVal(spacedim,self%nterms_c,iterm,[xi,eta,zeta])
 
         end do
 
@@ -1142,9 +1142,7 @@ contains
         ! Evaluate polynomial modes at node location
         !
         do iterm = 1,self%nterms_c
-
-            polyvals(iterm)  = polynomialVal(spacedim,self%nterms_c,iterm,point)
-
+            polyvals(iterm)  = polynomialVal(spacedim,self%nterms_c,iterm,[xi,eta,zeta])
         end do
 
         
@@ -1215,7 +1213,7 @@ contains
         ! Evaluate polynomial modes at node location
         !
         do iterm = 1,self%nterms_c
-                polyvals(iterm) = polynomialVal(spacedim,self%nterms_c,iterm,node)
+                polyvals(iterm) = polynomialVal(spacedim,self%nterms_c,iterm,[xi,eta,zeta])
         end do
 
 
@@ -1281,7 +1279,7 @@ contains
         ! Evaluate polynomial modes at node location
         !
         do iterm = 1,self%nterms_c
-            polyvals(iterm) = dpolynomialVal(spacedim,self%nterms_c,iterm,node,comp_dir)
+            polyvals(iterm) = dpolynomialVal(spacedim,self%nterms_c,iterm,[xi,eta,zeta],comp_dir)
         end do
 
 
@@ -1359,7 +1357,7 @@ contains
         ! Evaluate polynomial modes at node location
         !
         do iterm = 1,q%nterms()
-            polyvals(iterm)  = polynomialVal(spacedim,q%nterms(),iterm,node)
+            polyvals(iterm)  = polynomialVal(spacedim,q%nterms(),iterm,[xi,eta,zeta])
         end do
 
 
@@ -1419,9 +1417,9 @@ contains
         ! Evaluate polynomial mode derivatives at node location
         !
         do iterm = 1,q%nterms()
-            ddxi(iterm)   = DpolynomialVal(spacedim,q%nterms(),iterm,node,XI_DIR)
-            ddeta(iterm)  = DpolynomialVal(spacedim,q%nterms(),iterm,node,ETA_DIR)
-            ddzeta(iterm) = DpolynomialVal(spacedim,q%nterms(),iterm,node,ZETA_DIR)
+            ddxi(iterm)   = DpolynomialVal(spacedim,q%nterms(),iterm,[xi,eta,zeta],XI_DIR)
+            ddeta(iterm)  = DpolynomialVal(spacedim,q%nterms(),iterm,[xi,eta,zeta],ETA_DIR)
+            ddzeta(iterm) = DpolynomialVal(spacedim,q%nterms(),iterm,[xi,eta,zeta],ZETA_DIR)
         end do
 
 

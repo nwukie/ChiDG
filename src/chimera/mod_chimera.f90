@@ -902,15 +902,15 @@ contains
                             ! Compute value interpolator
                             !
                             spacedim = 3
-                            interpolator(ipt,iterm) = polynomialVal(spacedim,donor_nterms_s,iterm,node)
+                            interpolator(ipt,iterm) = polynomialVal(spacedim,donor_nterms_s,iterm,[node%c1_,node%c2_,node%c3_])
 
                             
                             !
                             ! Compute gradient interpolators, grad1, grad2, grad3
                             !
-                            ddxi   = DPolynomialVal(spacedim,donor_nterms_s,iterm,node,XI_DIR  )
-                            ddeta  = DPolynomialVal(spacedim,donor_nterms_s,iterm,node,ETA_DIR )
-                            ddzeta = DPolynomialVal(spacedim,donor_nterms_s,iterm,node,ZETA_DIR)
+                            ddxi   = DPolynomialVal(spacedim,donor_nterms_s,iterm,[node%c1_,node%c2_,node%c3_],XI_DIR  )
+                            ddeta  = DPolynomialVal(spacedim,donor_nterms_s,iterm,[node%c1_,node%c2_,node%c3_],ETA_DIR )
+                            ddzeta = DPolynomialVal(spacedim,donor_nterms_s,iterm,[node%c1_,node%c2_,node%c3_],ZETA_DIR)
 
                             ! Get metrics for element mapping
                             metric = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_metrics(idonor)%at(ipt)

@@ -5,7 +5,7 @@ module type_faceQuadrature
                                       XI_DIR,ETA_DIR,ZETA_DIR, TWO_DIM, THREE_DIM, ZERO, ONE
     use mod_polynomial,         only: polynomialVal,dpolynomialVal
     use mod_quadrature_tools,   only: compute_nnodes1d_face
-    use mod_gaussLegendre,      only: gl_nodes, gl_weights
+    use mod_gauss_legendre,     only: gl_nodes, gl_weights
     use mod_inv,                only: inv
 
     use type_point,             only: point_t
@@ -346,10 +346,10 @@ contains
                     ! on the xi_min face
                     !
                     node = self%nodes(inode,cface)
-                    self%val(   inode,iterm,cface) =  polynomialVal(spacedim,nterms,iterm,node)
-                    self%ddxi(  inode,iterm,cface) = dpolynomialVal(spacedim,nterms,iterm,node,XI_DIR)
-                    self%ddeta( inode,iterm,cface) = dpolynomialVal(spacedim,nterms,iterm,node,ETA_DIR)
-                    self%ddzeta(inode,iterm,cface) = dpolynomialVal(spacedim,nterms,iterm,node,ZETA_DIR)
+                    self%val(   inode,iterm,cface) =  polynomialVal(spacedim,nterms,iterm,[node%c1_, node%c2_, node%c3_])
+                    self%ddxi(  inode,iterm,cface) = dpolynomialVal(spacedim,nterms,iterm,[node%c1_, node%c2_, node%c3_],XI_DIR)
+                    self%ddeta( inode,iterm,cface) = dpolynomialVal(spacedim,nterms,iterm,[node%c1_, node%c2_, node%c3_],ETA_DIR)
+                    self%ddzeta(inode,iterm,cface) = dpolynomialVal(spacedim,nterms,iterm,[node%c1_, node%c2_, node%c3_],ZETA_DIR)
 
                 end do
             end do

@@ -24,6 +24,7 @@ module mod_test_utilities
     use mod_gridgen_smoothbump,     only: create_mesh_file__smoothbump
 
     use mod_gridgen_uniform_flow_pmm, only: create_mesh_file__uniform_flow_pmm
+    use mod_gridgen_scalar_advection_pmm, only: create_mesh_file__scalar_advection_pmm
     use type_point,                 only: point_t
     use type_bc_state_group,        only: bc_state_group_t
     use type_domain_connectivity,   only: domain_connectivity_t
@@ -169,7 +170,15 @@ contains
                                                            group_names     = group_names,     &
                                                            bc_state_groups = bc_state_groups)
 
- 
+             case("Scalar Advection PMM")
+                call create_mesh_file__scalar_advection_pmm(filename,nelem_xi        = nelem_xi,        &
+                                                           nelem_eta       = nelem_eta,       &
+                                                           nelem_zeta      = nelem_zeta,      &
+                                                           equation_sets   = equation_sets,   &
+                                                           group_names     = group_names,     &
+                                                           bc_state_groups = bc_state_groups)
+
+
             case default
                 user_msg = "create_mesh_file: There was no valid case that matched the incoming string"
                 call chidg_signal(FATAL,user_msg)

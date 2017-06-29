@@ -10,6 +10,13 @@ module mod_operators
     use SA_LaxFriedrichs_operator,                  only: SA_LaxFriedrichs_operator_t
     use SA_bc_operator,                             only: SA_bc_operator_t
 
+    ! Linear Advection Operators
+    use SA_ale_volume_advective_operator,               only: SA_ale_volume_advective_operator_t
+    use SA_ale_boundary_average_advective_operator,     only: SA_ale_boundary_average_advective_operator_t
+    use SA_ale_LaxFriedrichs_operator,                  only: SA_ale_LaxFriedrichs_operator_t
+    use SA_ale_bc_operator,                             only: SA_ale_bc_operator_t
+
+
     ! Dual Linear Advection Operators
     use DLA_volume_advective_flux,                  only: DLA_volume_advective_flux_t
     use DLA_boundary_average_advective_flux,        only: DLA_boundary_average_advective_flux_t
@@ -203,6 +210,11 @@ contains
         type(SA_LaxFriedrichs_operator_t)               :: SA_laxfriedrichs_operator
         type(SA_bc_operator_t)                          :: SA_bc_operator
         
+         ! Linear Advection Operators
+        type(SA_ale_volume_advective_operator_t)            :: SA_ale_volume_operator
+        type(SA_ale_boundary_average_advective_operator_t)  :: SA_ale_average_operator
+        type(SA_ale_LaxFriedrichs_operator_t)               :: SA_ale_laxfriedrichs_operator
+        type(SA_ale_bc_operator_t)                          :: SA_ale_bc_operator
         ! Linear Diffusion Operators
         type(SD_volume_operator_t)                      :: SD_volume_operator
         type(SD_boundary_operator_t)                    :: SD_boundary_operator
@@ -281,6 +293,13 @@ contains
             call operator_factory%register(SA_laxfriedrichs_operator)
             call operator_factory%register(SA_bc_operator)
 
+            ! Register Linear Advection
+            call operator_factory%register(SA_ale_volume_operator)
+            call operator_factory%register(SA_ale_average_operator)
+            call operator_factory%register(SA_ale_laxfriedrichs_operator)
+            call operator_factory%register(SA_ale_bc_operator)
+
+ 
             ! Register Linear Diffusion
             call operator_factory%register(SD_volume_operator)
             call operator_factory%register(SD_boundary_operator)

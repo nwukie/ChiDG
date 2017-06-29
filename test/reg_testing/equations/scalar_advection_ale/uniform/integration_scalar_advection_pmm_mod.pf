@@ -3,11 +3,11 @@
 !     Euler ALE equation set uniform flow prescribed mesh motion regression test
 !
 !   This test suite runs a series of tests solving the euler equations on a quartic
-!   uniform_flow_pmm grid of varying resolution for varying orders of solution accuracy.
+!   scalar_advection_pmm grid of varying resolution for varying orders of solution accuracy.
 !   At the end of each case, the L2 error is computed for the domain using the 
 !   analytical solution.
 !
-!   This suite runs the uniform_flow_pmm case with 6x1x1, 12x1x1, and 24x1x1 grids with
+!   This suite runs the scalar_advection_pmm case with 6x1x1, 12x1x1, and 24x1x1 grids with
 !   quartic elements. Each grid is run from 1st to 4th order accuracy. Each 
 !   configuration is run on 1, 2, 7, and 10 processors. The nonlinear convergence
 !   for each case is stored in a module global variable that is used to compare
@@ -33,7 +33,7 @@
 !   @date  6/21/2017 
 !
 !--------------------------------------------------------------------------------
-module integration_uniform_flow_pmm_mod
+module integration_scalar_advection_pmm_mod
 #include <messenger.h>
     use pfunit_mod
     use mod_kinds,              only: rk, ik
@@ -84,7 +84,7 @@ module integration_uniform_flow_pmm_mod
     real(rk)        :: error(1,3,4)                         ! nprocs, ngrids, norders
 
 
-    public  :: uniform_flow_pmm
+    public  :: scalar_advection_pmm
 
 
 
@@ -120,7 +120,7 @@ module integration_uniform_flow_pmm_mod
     !!
     !-------------------------------------------------------------------------------
     @TestCase(testParameters={getParameters()}, constructor=newTest)
-    type, extends(MpiTestCase) :: uniform_flow_pmm
+    type, extends(MpiTestCase) :: scalar_advection_pmm
 
         integer(ik)     :: nelem_xi
         character(100)  :: gridfile
@@ -132,7 +132,7 @@ module integration_uniform_flow_pmm_mod
     contains
         procedure   :: setUp
         procedure   :: tearDown
-    end type uniform_flow_pmm
+    end type scalar_advection_pmm
     !*******************************************************************************
 
 
@@ -149,7 +149,7 @@ contains
     !------------------------------------------------------------------------------
     function newTest(test_parameter) result(test)
         type(case_grid_order),  intent(in)          :: test_parameter
-        type(uniform_flow_pmm)    :: test
+        type(scalar_advection_pmm)    :: test
 
         test%nelem_xi    = test_parameter%nelem_xi
         test%gridfile    = test_parameter%gridfile
@@ -176,14 +176,14 @@ contains
                      40, 40, 40, 40, &
                      80, 80, 80, 80]
 
-        files = [  string_t('uniform_flow_pmm_40x1x1.h5'), &
-                   string_t('uniform_flow_pmm_40x1x1.h5'), &
-                   string_t('uniform_flow_pmm_40x1x1.h5'), &
-                   string_t('uniform_flow_pmm_40x1x1.h5'), &
-                   string_t('uniform_flow_pmm_80x1x1.h5'), &
-                   string_t('uniform_flow_pmm_80x1x1.h5'), &
-                   string_t('uniform_flow_pmm_80x1x1.h5'), &
-                   string_t('uniform_flow_pmm_80x1x1.h5')  &
+        files = [  string_t('scalar_advection_pmm_40x1x1.h5'), &
+                   string_t('scalar_advection_pmm_40x1x1.h5'), &
+                   string_t('scalar_advection_pmm_40x1x1.h5'), &
+                   string_t('scalar_advection_pmm_40x1x1.h5'), &
+                   string_t('scalar_advection_pmm_80x1x1.h5'), &
+                   string_t('scalar_advection_pmm_80x1x1.h5'), &
+                   string_t('scalar_advection_pmm_80x1x1.h5'), &
+                   string_t('scalar_advection_pmm_80x1x1.h5')  &
                     ]
 
         orders = [  &
@@ -238,14 +238,17 @@ contains
     !!
     !--------------------------------------------------------------------------------------------
     subroutine setUp(this)
-        class(uniform_flow_pmm),  intent(inout)   :: this
+        class(scalar_advection_pmm),  intent(inout)   :: this
 
         class(bc_state_t),  allocatable :: bc_state
         type(bc_state_group_t)          :: bc_state_groups(2)
         type(string_t)                  :: group_names(1,6)
         class(function_t),  allocatable :: fcn
-        real(rk)                        :: tol 
+        real(rk)                        :: tol, sim_time
 
+        sim_time = ONE/(FOUR*PI)
+
+        
         
         tol = 1.e-6_rk
 
@@ -258,15 +261,15 @@ contains
         !------------------------------------------------------------------------------
         basis            = 'legendre'
         gq_rule          = 3 
-        time_integrator  = 'DIRK'
+        time_integrator  = 'forward_euler'
         nonlinear_solver = 'newton'
         linear_solver    = 'fgmres_cgs'
         preconditioner   = 'RASILU0'
         IO_DESTINATION   = 'both'
-        dt               = 5.6512e-6_rk
-        time_steps       = 2
+        time_steps       = 360 
+        dt               = real(sim_time/time_steps, rk)
         verbosity        = 4 
-        nwrite           = 1
+        nwrite           = 10
         solutionfile_out = 'testout.h5'
         !------------------------------------------------------------------------------
 
@@ -310,34 +313,30 @@ contains
         ! Create mesh
         !
         if (IRANK == GLOBAL_MASTER) then
-            bc_state_groups(1)%name = 'Farfield'
-            bc_state_groups(2)%name = 'Walls'
+            bc_state_groups(1)%name = 'Value'
+            bc_state_groups(2)%name = 'Extrapolate'
 
 
-            call create_bc('Farfield', bc_state)
-            call bc_state%set_fcn_option('Density',   'val', 1.225_rk)
-            call bc_state%set_fcn_option('Pressure','val', 101325._rk   )
-            call bc_state%set_fcn_option('Velocity-1','val',102.0882_rk)
-            call bc_state%set_fcn_option('Velocity-2','val',ZERO)
-            call bc_state%set_fcn_option('Velocity-3','val',ZERO)
+            call create_bc('Scalar ALE Value', bc_state)
+            call bc_state%set_fcn_option('Value',   'val', 1.0_rk)
             call bc_state_groups(1)%add_bc_state(bc_state)
 
-            call create_bc('Wall', bc_state)
+            call create_bc('Scalar ALE Extrapolate', bc_state)
             call bc_state_groups(2)%add_bc_state(bc_state)
 
 
 
             ! Define patch group names
-            group_names(1,:) = [string_t('Farfield') , &
-                                string_t('Farfield'), &
-                                string_t('Walls') , &
-                                string_t('Walls') , &
-                                string_t('Walls') , &
-                                string_t('Walls') ]
+            group_names(1,:) = [string_t('Value') , &
+                                string_t('Value'), &
+                                string_t('Extrapolate') , &
+                                string_t('Extrapolate') , &
+                                string_t('Extrapolate') , &
+                                string_t('Extrapolate') ]
 
 
-            call create_mesh_file('Uniform Flow PMM',this%gridfile, &
-                                                              equation_sets=[string_t('Euler ALE')], &
+            call create_mesh_file('Scalar Advection PMM',this%gridfile, &
+                                                              equation_sets=[string_t('Scalar Advection ALE')], &
                                                               group_names     = group_names,     &
                                                               bc_state_groups = bc_state_groups, &
                                                               nelem_xi        = this%nelem_xi,   &
@@ -371,16 +370,8 @@ contains
         !
         call create_function(fcn,'constant')
 
-        call fcn%set_option('val',1.225_rk)
+        call fcn%set_option('val',1.0_rk)
         call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
-        call fcn%set_option('val',125.058_rk)
-        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,2)
-        call fcn%set_option('val',ZERO)
-        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,3)
-        call fcn%set_option('val',ZERO)
-        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,4)
-        call fcn%set_option('val',259695.975_rk)
-        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,5)
 
 
 
@@ -394,7 +385,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine tearDown(this)
-        class(uniform_flow_pmm),  intent(inout)   :: this
+        class(scalar_advection_pmm),  intent(inout)   :: this
 
         ! Close ChiDG
         call this%chidg%shut_down('core')
@@ -428,7 +419,7 @@ contains
     !-------------------------------------------------------------------------------------------
     @Test(npes=[2])
     subroutine test_entropy_error_rate(self)
-        class(uniform_flow_pmm),  intent(inout)   :: self
+        class(scalar_advection_pmm),  intent(inout)   :: self
 
         real(rk)    :: tol
         integer(ik) :: npes_index, grid_index, order_index
@@ -452,7 +443,7 @@ contains
         !
         nonlinear_convergence(npes_index,grid_index,order_index) = self%chidg%nonlinear_solver%residual_norm
 
-        computed_error = compute_uniform_flow_pmm_error(self%chidg%data,self%ChiDG_COMM)
+        computed_error = compute_scalar_advection_pmm_error(self%chidg%data,self%ChiDG_COMM)
 
 
         print *, 'computed error'
@@ -479,7 +470,7 @@ contains
     !-----------------------------------------------------------------------------------------
     @Test(npes=[1])
     subroutine test_err_conforming(self)
-        class(uniform_flow_pmm),  intent(inout)   :: self
+        class(scalar_advection_pmm),  intent(inout)   :: self
 
         integer(ik) :: inpes, igrid, iorder
         real(rk)    :: error_previous, error_current, mesh_parameter_previous, mesh_parameter_current, convergence_rate, tol
@@ -530,7 +521,7 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------
-    function compute_uniform_flow_pmm_error(data,ChiDG_COMM) result(error)
+    function compute_scalar_advection_pmm_error(data,ChiDG_COMM) result(error)
         type(chidg_data_t), intent(inout)   :: data
         type(mpi_comm),     intent(in)      :: ChiDG_COMM
 
@@ -538,7 +529,7 @@ contains
             u_dg, u_analytical, x_gq, gq_error_squared, det_jacobian_grid_gq
 
 
-        integer(ik) :: idens, imom1, imom2, imom3, ienergy
+        integer(ik) :: iu
         integer(ik) :: ielem, idom, ierr, itime
         real(rk)    :: error_squared_sum, error_squared_sum_reduced, element_error_squared, error
 
@@ -552,12 +543,7 @@ contains
             !
             ! Get equation indices
             !
-            idens = prop%get_primary_field_index("Density")
-            imom1 = prop%get_primary_field_index("Momentum-1")
-            imom2 = prop%get_primary_field_index("Momentum-2")
-            imom3 = prop%get_primary_field_index("Momentum-3")
-            ienergy = prop%get_primary_field_index("Energy")
-
+            iu = prop%get_primary_field_index("u")
 
             !
             ! Zero error accumulator
@@ -580,12 +566,12 @@ contains
                     x_gq = mesh%domain(idom)%elems(ielem)%quad_pts(:,1)
                     det_jacobian_grid_gq = mesh%domain(idom)%elems(ielem)%det_jacobian_grid
                     u_analytical = ZERO*x_gq
-                    u_analytical = 1.225_rk
+                    u_analytical = 1.0_rk
 
                     !
                     ! Interpolate DG numerical solution
                     !
-                    u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,idens,itime,'value')
+                    u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,iu,itime,'value')
 
 
                     u_dg = u_dg/det_jacobian_grid_gq
@@ -609,141 +595,6 @@ contains
                     !
                     error_squared_sum = error_squared_sum + element_error_squared
 
-
-                    !
-                    ! Momentum-1
-                    !
-
-                    u_analytical = ZERO*x_gq
-                    u_analytical = 125.058_rk
-
-                    !
-                    ! Interpolate DG numerical solution
-                    !
-                    u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,imom1,itime,'value')
-
-
-                    u_dg = u_dg/det_jacobian_grid_gq
-                    !
-                    ! Compute error
-                    !                    
-                    gq_error_squared = (u_analytical - u_dg)**TWO
-
-
-                    !
-                    ! Integrate error
-                    !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%gq%vol%weights)
-
-                    print *, 'mom1 error squared'
-                    print *, element_error_squared
-
-                    !
-                    ! Accumulate error from each element
-                    !
-                    error_squared_sum = error_squared_sum + element_error_squared
-
-
-                    !
-                    ! Momentum-2
-                    !
-
-                    u_analytical = ZERO*x_gq
-
-                    !
-                    ! Interpolate DG numerical solution
-                    !
-                    u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,imom2,itime,'value')
-
-
-                    u_dg = u_dg/det_jacobian_grid_gq
-                    !
-                    ! Compute error
-                    !                    
-                    gq_error_squared = (u_analytical - u_dg)**TWO
-
-
-                    !
-                    ! Integrate error
-                    !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%gq%vol%weights)
-
-                    print *, 'mom2 error squared'
-                    print *, element_error_squared
-
-                    !
-                    ! Accumulate error from each element
-                    !
-                    error_squared_sum = error_squared_sum + element_error_squared
-
-                    !
-                    ! Momentum-3
-                    !
-
-                    u_analytical = ZERO*x_gq
-
-                    !
-                    ! Interpolate DG numerical solution
-                    !
-                    u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,imom3,itime,'value')
-
-
-                    u_dg = u_dg/det_jacobian_grid_gq
-                    !
-                    ! Compute error
-                    !                    
-                    gq_error_squared = (u_analytical - u_dg)**TWO
-
-
-                    !
-                    ! Integrate error
-                    !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%gq%vol%weights)
-
-
-                    print *, 'mom3 error squared'
-                    print *, element_error_squared
-                    !
-                    ! Accumulate error from each element
-                    !
-                    error_squared_sum = error_squared_sum + element_error_squared
-
-
-                    !
-                    ! Energy 
-                    !
-
-                    u_analytical = 259695.975_rk 
-
-                    !
-                    ! Interpolate DG numerical solution
-                    !
-                    u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,ienergy,itime,'value')
-
-
-                    u_dg = u_dg/det_jacobian_grid_gq
-                    !
-                    ! Compute error
-                    !                    
-                    gq_error_squared = (u_analytical - u_dg)**TWO
-
-
-                    !
-                    ! Integrate error
-                    !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%gq%vol%weights)
-
-                    print *, 'energy error squared'
-                    print *, element_error_squared
-
-                    !
-                    ! Accumulate error from each element
-                    !
-                    error_squared_sum = error_squared_sum + element_error_squared
-
-
-
-
                 end do ! ielem
             end do ! idom
 
@@ -758,7 +609,7 @@ contains
         ! Sqrt of the reduced error
         error = sqrt(error_squared_sum_reduced)
 
-    end function compute_uniform_flow_pmm_error
+    end function compute_scalar_advection_pmm_error
     !*****************************************************************************************
 
 
@@ -781,7 +632,7 @@ contains
     !-------------------------------------------------------------------------------------------
     @Test(npes=[1])
     subroutine test_nonlinear_convergence(self)
-        class(uniform_flow_pmm),  intent(inout)   :: self
+        class(scalar_advection_pmm),  intent(inout)   :: self
 
         integer(ik)             :: inpes, igrid, iorder
         real(rk), allocatable   :: reference_convergence(:), test_convergence(:)
@@ -896,11 +747,11 @@ contains
         integer(ik)         :: igrid
 
         select case (trim(grid))
-            case('uniform_flow_pmm_40x1x1.h5')
+            case('scalar_advection_pmm_40x1x1.h5')
                 igrid = 1
-            case('uniform_flow_pmm_80x1x1.h5')
+            case('scalar_advection_pmm_80x1x1.h5')
                 igrid = 2 
-            case('uniform_flow_pmm_24x1x1.h5')
+            case('scalar_advection_pmm_24x1x1.h5')
                 igrid = 3
         end select
 
@@ -934,4 +785,4 @@ contains
 
 
 
-end module integration_uniform_flow_pmm_mod
+end module integration_scalar_advection_pmm_mod

@@ -257,7 +257,7 @@ contains
         flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
         flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
 
-!        if (worker%element_info%ielement_g == 1) then
+!        if (worker%element_info%ielement_g == 3) then
 !            testx = worker%x('volume')
 !            print *, 'time'
 !            print *, worker%t

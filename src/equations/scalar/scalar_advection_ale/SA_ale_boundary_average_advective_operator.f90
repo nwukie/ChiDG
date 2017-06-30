@@ -119,6 +119,8 @@ contains
         u_m = worker%get_primary_field_face('u','value' , 'face interior')
         u_p = worker%get_primary_field_face('u','value' , 'face exterior')
 
+        u_m = u_m/det_jacobian_grid
+        u_p = u_p/det_jacobian_grid
         
         !
         ! Get model coefficients

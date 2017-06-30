@@ -80,8 +80,8 @@ module integration_scalar_advection_pmm_mod
     !
     ! Procs: 1, 2, 4, 7, 10
     !
-    type(rvector_t) :: nonlinear_convergence(1,3,4) ! nprocs, ngrids, norders
-    real(rk)        :: error(1,3,4)                         ! nprocs, ngrids, norders
+    type(rvector_t) :: nonlinear_convergence(1,2,4) ! nprocs, ngrids, norders
+    real(rk)        :: error(1,2,4)                         ! nprocs, ngrids, norders
 
 
     public  :: scalar_advection_pmm
@@ -176,14 +176,14 @@ contains
                      40, 40, 40, 40, &
                      80, 80, 80, 80]
 
-        files = [  string_t('scalar_advection_pmm_40x1x1.h5'), &
-                   string_t('scalar_advection_pmm_40x1x1.h5'), &
-                   string_t('scalar_advection_pmm_40x1x1.h5'), &
-                   string_t('scalar_advection_pmm_40x1x1.h5'), &
-                   string_t('scalar_advection_pmm_80x1x1.h5'), &
-                   string_t('scalar_advection_pmm_80x1x1.h5'), &
-                   string_t('scalar_advection_pmm_80x1x1.h5'), &
-                   string_t('scalar_advection_pmm_80x1x1.h5')  &
+        files = [  string_t('1scalar_advection_pmm_40x1x1.h5'), &
+                   string_t('2scalar_advection_pmm_40x1x1.h5'), &
+                   string_t('3scalar_advection_pmm_40x1x1.h5'), &
+                   string_t('4scalar_advection_pmm_40x1x1.h5'), &
+                   string_t('1scalar_advection_pmm_80x1x1.h5'), &
+                   string_t('2scalar_advection_pmm_80x1x1.h5'), &
+                   string_t('3scalar_advection_pmm_80x1x1.h5'), &
+                   string_t('4scalar_advection_pmm_80x1x1.h5')  &
                     ]
 
         orders = [  &
@@ -266,11 +266,11 @@ contains
         linear_solver    = 'fgmres_cgs'
         preconditioner   = 'RASILU0'
         IO_DESTINATION   = 'both'
-        time_steps       = 120 
+        time_steps       = 720 
         dt               = real(sim_time/time_steps, rk)
-        verbosity        = 4 
-        nwrite           = 10
-        solutionfile_out = 'testout.h5'
+        verbosity        = 3 
+        nwrite           = 72 
+        solutionfile_out = trim(this%gridfile) 
         !------------------------------------------------------------------------------
 
 
@@ -294,7 +294,7 @@ contains
         call loptions%set('tol',1.e-10_rk)
 
         ! Set nonlinear solver options
-        call noptions%set('tol',1.e-4_rk)
+        call noptions%set('tol',1.e-9_rk)
         call noptions%set('cfl0',2.0_rk)
         call noptions%set('nsteps',20)
 
@@ -328,7 +328,7 @@ contains
 
             ! Define patch group names
             group_names(1,:) = [string_t('Value') , &
-                                string_t('Value'), &
+                                string_t('Extrapolate'), &
                                 string_t('Extrapolate') , &
                                 string_t('Extrapolate') , &
                                 string_t('Extrapolate') , &
@@ -417,7 +417,7 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------
-    @Test(npes=[2])
+    @Test(npes=[8])
     subroutine test_entropy_error_rate(self)
         class(scalar_advection_pmm),  intent(inout)   :: self
 
@@ -478,7 +478,7 @@ contains
         tol = 0.1_rk
 
 
-        do inpes = 1,2
+        do inpes = 1,1
             do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
                 do iorder = 1,4
 
@@ -617,46 +617,46 @@ contains
 
 
 
-    !>  Access the stored nonlinear convergence data(module global variable) and compare 
-    !!  the parallel convergence to the serial convergence for each (grid,order) combination.
-    !!
-    !!  This assumes that the 'test_entropy_error_rate' has already been executed for all cases
-    !!  and numbers of processors to that the 'nonlinear_convergence' variable has been 
-    !!  populated.
-    !!  So, we are relying on pFUnit to do things in order here. Works now, but I don't think
-    !!  there is a guaruntee that this can't change.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @author Nathan A. Wukie (AFRL)
-    !!
-    !-------------------------------------------------------------------------------------------
-    @Test(npes=[1])
-    subroutine test_nonlinear_convergence(self)
-        class(scalar_advection_pmm),  intent(inout)   :: self
-
-        integer(ik)             :: inpes, igrid, iorder
-        real(rk), allocatable   :: reference_convergence(:), test_convergence(:)
-
-
-        do inpes = 1,1
-            do igrid = 1,2
-                do iorder = 1,4
-
-                    ! Get the serial convergence for this (igrid,iorder)
-                    reference_convergence = nonlinear_convergence(1,igrid,iorder)%data()
-
-                    ! Test that the current convergence for the processor count matches the serial convergence
-                    test_convergence = nonlinear_convergence(inpes,igrid,iorder)%data()
-
-                    @assertEqual(reference_convergence, test_convergence, 1.e-5_rk)
-
-                end do
-            end do
-        end do
-
-
-    end subroutine test_nonlinear_convergence
-    !*******************************************************************************************
+!    !>  Access the stored nonlinear convergence data(module global variable) and compare 
+!    !!  the parallel convergence to the serial convergence for each (grid,order) combination.
+!    !!
+!    !!  This assumes that the 'test_entropy_error_rate' has already been executed for all cases
+!    !!  and numbers of processors to that the 'nonlinear_convergence' variable has been 
+!    !!  populated.
+!    !!  So, we are relying on pFUnit to do things in order here. Works now, but I don't think
+!    !!  there is a guaruntee that this can't change.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!
+!    !-------------------------------------------------------------------------------------------
+!    @Test(npes=[1])
+!    subroutine test_nonlinear_convergence(self)
+!        class(scalar_advection_pmm),  intent(inout)   :: self
+!
+!        integer(ik)             :: inpes, igrid, iorder
+!        real(rk), allocatable   :: reference_convergence(:), test_convergence(:)
+!
+!
+!        do inpes = 1,1
+!            do igrid = 1,2
+!                do iorder = 1,4
+!
+!                    ! Get the serial convergence for this (igrid,iorder)
+!                    reference_convergence = nonlinear_convergence(1,igrid,iorder)%data()
+!
+!                    ! Test that the current convergence for the processor count matches the serial convergence
+!                    test_convergence = nonlinear_convergence(inpes,igrid,iorder)%data()
+!
+!                    @assertEqual(reference_convergence, test_convergence, 1.e-5_rk)
+!
+!                end do
+!            end do
+!        end do
+!
+!
+!    end subroutine test_nonlinear_convergence
+!    !*******************************************************************************************
 
 
 
@@ -730,7 +730,7 @@ contains
 !                inpes = 3
 !            case(7)
 !                inpes = 4
-            case(2)
+            case(8)
                 inpes = 1 
 
         end select

@@ -107,6 +107,9 @@ contains
         u_m    = worker%get_primary_field_face('u', 'value', 'face interior')
         u_p    = worker%get_primary_field_face('u', 'value', 'face exterior')
 
+        u_m = u_m/det_jacobian_grid
+        u_p = u_p/det_jacobian_grid
+
 
         !
         ! Get model coefficients
@@ -134,9 +137,9 @@ contains
         !
         ! Compute boundary upwind flux
         !
-        flux_1 = max(abs(c1_m),abs(c1_p))*HALF*(u_m - u_p)
-        flux_2 = max(abs(c2_m),abs(c2_p))*HALF*(u_m - u_p)
-        flux_3 = max(abs(c3_m),abs(c3_p))*HALF*(u_m - u_p)
+        flux_1 = max(abs(c1_m)+abs(u_grid),abs(c1_p)+abs(u_grid))*HALF*(u_m - u_p)
+        flux_2 = max(abs(c2_m)+abs(v_grid),abs(c2_p)+abs(v_grid))*HALF*(u_m - u_p)
+        flux_3 = max(abs(c3_m)+abs(w_grid),abs(c3_p)+abs(w_grid))*HALF*(u_m - u_p)
 
         !flux_1 = flux_1 - HALF*(u_m+u_p)*u_grid 
         !flux_2 = flux_2 - HALF*(u_m+u_p)*v_grid

@@ -142,9 +142,9 @@ contains
         !=================================================
         ! Mass flux
         !=================================================
-        flux_1 = c1*u
-        flux_2 = c2*u
-        flux_3 = c3*u
+        flux_1 = (c1-u_grid)*u
+        flux_2 = (c2-v_grid)*u
+        flux_3 = (c3-w_grid)*u
         flux_1_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_1 + jacobian_grid(:,1,2)*flux_2 + jacobian_grid(:,1,3)*flux_3)
         flux_2_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_1 + jacobian_grid(:,2,2)*flux_2 + jacobian_grid(:,2,3)*flux_3)
         flux_3_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_1 + jacobian_grid(:,3,2)*flux_2 + jacobian_grid(:,3,3)*flux_3)

@@ -138,9 +138,9 @@ contains
         flux_2 = max(abs(c2_m),abs(c2_p))*HALF*(u_m - u_p)
         flux_3 = max(abs(c3_m),abs(c3_p))*HALF*(u_m - u_p)
 
-        flux_1 = flux_1 - HALF*(u_m+u_p)*u_grid 
-        flux_2 = flux_2 - HALF*(u_m+u_p)*v_grid
-        flux_3 = flux_3 - HALF*(u_m+u_p)*w_grid
+        !flux_1 = flux_1 - HALF*(u_m+u_p)*u_grid 
+        !flux_2 = flux_2 - HALF*(u_m+u_p)*v_grid
+        !flux_3 = flux_3 - HALF*(u_m+u_p)*w_grid
 
         flux_1_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_1 + jacobian_grid(:,1,2)*flux_2 + jacobian_grid(:,1,3)*flux_3)
         flux_2_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_1 + jacobian_grid(:,2,2)*flux_2 + jacobian_grid(:,2,3)*flux_3)

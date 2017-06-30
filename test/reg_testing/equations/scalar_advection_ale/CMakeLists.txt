@@ -1,4 +1,4 @@
-add_subdirectory(uniform)
+add_subdirectory(sinusoidal)
 
 add_test_sources(equations_scalar_advection_ale)
 add_test_target(equations_scalar_advection_ale reg_parallel ${equations_scalar_advection_ale_sources})

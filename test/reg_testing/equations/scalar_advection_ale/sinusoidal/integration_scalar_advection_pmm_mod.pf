@@ -246,7 +246,7 @@ contains
         class(function_t),  allocatable :: fcn
         real(rk)                        :: tol, sim_time
 
-        sim_time = ONE/(FOUR*PI)
+        sim_time = 0.5
 
         
         
@@ -261,12 +261,12 @@ contains
         !------------------------------------------------------------------------------
         basis            = 'legendre'
         gq_rule          = 3 
-        time_integrator  = 'forward_euler'
+        time_integrator  = 'DIRK'
         nonlinear_solver = 'newton'
         linear_solver    = 'fgmres_cgs'
         preconditioner   = 'RASILU0'
         IO_DESTINATION   = 'both'
-        time_steps       = 360 
+        time_steps       = 120 
         dt               = real(sim_time/time_steps, rk)
         verbosity        = 4 
         nwrite           = 10

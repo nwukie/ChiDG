@@ -137,7 +137,7 @@ contains
         !
 
 
-        call worker%integrate_volume('Density',flux_1_ref,flux_2_ref,flux_3_ref)
+        call worker%integrate_volume('u',flux_1_ref,flux_2_ref,flux_3_ref)
 
     end subroutine compute
     !****************************************************************************************************

@@ -33,7 +33,6 @@ module mod_interpolate
     use mod_constants,      only: CHIMERA, INTERIOR, BOUNDARY, &
                                   ME, NEIGHBOR, ONE, ZERO
                                   
-    use mod_polynomial,     only: polynomialVal
     use mod_chidg_mpi,      only: IRANK
     use mod_DNAD_tools,     only: compute_neighbor_face
     use DNAD_D
@@ -642,7 +641,7 @@ contains
 !            if (ierr /= 0) call AllocationError
 !
 !            do iterm = 1,nterms
-!                interpolator(1,iterm) = polynomialVal(3,nterms,iterm,node)
+!                interpolator(1,iterm) = polynomial_val(3,nterms,iterm,node)
 !            end do ! imode
 !
 !

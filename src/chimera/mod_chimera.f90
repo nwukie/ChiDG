@@ -31,7 +31,7 @@ module mod_chimera
     use type_pvector,           only: pvector_t
     use type_mvector,           only: mvector_t
 
-    use mod_polynomial,         only: polynomialVal, dpolynomialVal
+    use mod_polynomial,         only: polynomial_val, dpolynomial_val
     use mod_periodic,           only: get_periodic_offset
     use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM
     use mpi_f08,                only: MPI_BCast, MPI_Send, MPI_Recv, MPI_INTEGER4, MPI_REAL8, &
@@ -902,15 +902,15 @@ contains
                             ! Compute value interpolator
                             !
                             spacedim = 3
-                            interpolator(ipt,iterm) = polynomialVal(spacedim,donor_nterms_s,iterm,[node%c1_,node%c2_,node%c3_])
+                            interpolator(ipt,iterm) = polynomial_val(spacedim,donor_nterms_s,iterm,[node%c1_,node%c2_,node%c3_])
 
                             
                             !
                             ! Compute gradient interpolators, grad1, grad2, grad3
                             !
-                            ddxi   = DPolynomialVal(spacedim,donor_nterms_s,iterm,[node%c1_,node%c2_,node%c3_],XI_DIR  )
-                            ddeta  = DPolynomialVal(spacedim,donor_nterms_s,iterm,[node%c1_,node%c2_,node%c3_],ETA_DIR )
-                            ddzeta = DPolynomialVal(spacedim,donor_nterms_s,iterm,[node%c1_,node%c2_,node%c3_],ZETA_DIR)
+                            ddxi   = dpolynomial_val(spacedim,donor_nterms_s,iterm,[node%c1_,node%c2_,node%c3_],XI_DIR  )
+                            ddeta  = dpolynomial_val(spacedim,donor_nterms_s,iterm,[node%c1_,node%c2_,node%c3_],ETA_DIR )
+                            ddzeta = dpolynomial_val(spacedim,donor_nterms_s,iterm,[node%c1_,node%c2_,node%c3_],ZETA_DIR)
 
                             ! Get metrics for element mapping
                             metric = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_metrics(idonor)%at(ipt)

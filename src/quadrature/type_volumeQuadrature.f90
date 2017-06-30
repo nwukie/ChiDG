@@ -5,7 +5,7 @@ module type_volumeQuadrature
                                       XI_DIR,ETA_DIR,ZETA_DIR,ZERO, TWO_DIM, THREE_DIM, ONE
 
     use mod_gauss_legendre,      only: gl_nodes, gl_weights
-    use mod_polynomial,         only: polynomialVal, dpolynomialVal
+    use mod_polynomial,         only: polynomial_val, dpolynomial_val
     use mod_quadrature_tools,   only: compute_nnodes1d_volume
     use type_point,             only: point_t
 
@@ -163,10 +163,10 @@ contains
         do iterm = 1,nterms
             do inode = 1,nnodes
                     node = self%nodes(inode)
-                    self%val(   inode,iterm) =  polynomialVal(spacedim,nterms,iterm,[node%c1_,node%c2_,node%c3_])
-                    self%ddxi(  inode,iterm) = dpolynomialVal(spacedim,nterms,iterm,[node%c1_,node%c2_,node%c3_],XI_DIR)
-                    self%ddeta( inode,iterm) = dpolynomialVal(spacedim,nterms,iterm,[node%c1_,node%c2_,node%c3_],ETA_DIR)
-                    self%ddzeta(inode,iterm) = dpolynomialVal(spacedim,nterms,iterm,[node%c1_,node%c2_,node%c3_],ZETA_DIR)
+                    self%val(   inode,iterm) =  polynomial_val(spacedim,nterms,iterm,[node%c1_,node%c2_,node%c3_])
+                    self%ddxi(  inode,iterm) = dpolynomial_val(spacedim,nterms,iterm,[node%c1_,node%c2_,node%c3_],XI_DIR)
+                    self%ddeta( inode,iterm) = dpolynomial_val(spacedim,nterms,iterm,[node%c1_,node%c2_,node%c3_],ETA_DIR)
+                    self%ddzeta(inode,iterm) = dpolynomial_val(spacedim,nterms,iterm,[node%c1_,node%c2_,node%c3_],ZETA_DIR)
             end do
         end do
 

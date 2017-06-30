@@ -3,7 +3,7 @@ module type_faceQuadrature
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES,XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, &
                                       XI_DIR,ETA_DIR,ZETA_DIR, TWO_DIM, THREE_DIM, ZERO, ONE
-    use mod_polynomial,         only: polynomialVal,dpolynomialVal
+    use mod_polynomial,         only: polynomial_val,dpolynomial_val
     use mod_quadrature_tools,   only: compute_nnodes1d_face
     use mod_gauss_legendre,     only: gl_nodes, gl_weights
     use mod_inv,                only: inv
@@ -346,10 +346,10 @@ contains
                     ! on the xi_min face
                     !
                     node = self%nodes(inode,cface)
-                    self%val(   inode,iterm,cface) =  polynomialVal(spacedim,nterms,iterm,[node%c1_, node%c2_, node%c3_])
-                    self%ddxi(  inode,iterm,cface) = dpolynomialVal(spacedim,nterms,iterm,[node%c1_, node%c2_, node%c3_],XI_DIR)
-                    self%ddeta( inode,iterm,cface) = dpolynomialVal(spacedim,nterms,iterm,[node%c1_, node%c2_, node%c3_],ETA_DIR)
-                    self%ddzeta(inode,iterm,cface) = dpolynomialVal(spacedim,nterms,iterm,[node%c1_, node%c2_, node%c3_],ZETA_DIR)
+                    self%val(   inode,iterm,cface) =  polynomial_val(spacedim,nterms,iterm,[node%c1_, node%c2_, node%c3_])
+                    self%ddxi(  inode,iterm,cface) = dpolynomial_val(spacedim,nterms,iterm,[node%c1_, node%c2_, node%c3_],XI_DIR)
+                    self%ddeta( inode,iterm,cface) = dpolynomial_val(spacedim,nterms,iterm,[node%c1_, node%c2_, node%c3_],ETA_DIR)
+                    self%ddzeta(inode,iterm,cface) = dpolynomial_val(spacedim,nterms,iterm,[node%c1_, node%c2_, node%c3_],ZETA_DIR)
 
                 end do
             end do

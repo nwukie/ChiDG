@@ -24,23 +24,17 @@ contains
     !!  @param[in]  node        point_t containing (xi,eta,zeta) location on reference element.
     !!
     !-----------------------------------------------------------------------------------------
-    function PolynomialVal(spacedim,nterms,mode,node) result(polyval)
+    function polynomial_val(spacedim,nterms,mode,node) result(polyval)
         integer(ik),    intent(in)  :: spacedim
         integer(ik),    intent(in)  :: nterms
         integer(ik),    intent(in)  :: mode
         real(rk),       intent(in)  :: node(3)
 
-        !real(rk)    :: xi, eta, zeta
         real(rk)    :: polyval
 
+        polyval = legendre_val(spacedim,mode,node(1),node(2),node(3))
 
-        !xi   = node%c1_
-        !eta  = node%c2_
-        !zeta = node%c3_
-
-        polyval = LegendreVal(spacedim,mode,node(1),node(2),node(3))
-
-    end function PolynomialVal
+    end function polynomial_val
     !*****************************************************************************************
 
 
@@ -62,23 +56,18 @@ contains
     !!  @param[in]  dir         Integer indicating direction of the derivative (xi, eta, zeta).
     !!
     !----------------------------------------------------------------------------------------
-    function DPolynomialVal(spacedim,nterms,mode,node,dir) result(dpolyval)
+    function dpolynomial_val(spacedim,nterms,mode,node,dir) result(dpolyval)
         integer(ik),    intent(in)  :: spacedim
         integer(ik),    intent(in)  :: nterms
         integer(ik),    intent(in)  :: mode
         real(rk),       intent(in)  :: node(3)
         integer(ik),    intent(in)  :: dir
 
-        !real(rk)    :: xi, eta, zeta
         real(rk)    :: dpolyval
 
-        !xi   = node%c1_
-        !eta  = node%c2_
-        !zeta = node%c3_
+        dpolyval = dlegendre_val(spacedim,mode,node(1),node(2),node(3),dir)
 
-        dpolyval = DLegendreVal(spacedim,mode,node(1),node(2),node(3),dir)
-
-    end function DPolynomialVal
+    end function dpolynomial_val
     !****************************************************************************************
 
 

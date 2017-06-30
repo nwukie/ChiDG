@@ -109,8 +109,10 @@ module type_face
 
 
         ! Quadrature matrices
-        type(quadrature_t),  pointer    :: gq     => null()     ! Pointer to solution quadrature instance
-        type(quadrature_t),  pointer    :: gqmesh => null()     ! Pointer to mesh quadrature instance
+        integer(ik)                     :: ref_ID_s
+        integer(ik)                     :: ref_ID_c
+!        type(quadrature_t),  pointer    :: gq     => null()     ! Pointer to solution quadrature instance
+!        type(quadrature_t),  pointer    :: gqmesh => null()     ! Pointer to mesh quadrature instance
 
 
         ! BR2 matrix
@@ -369,11 +371,13 @@ contains
         self%neqns      = elem%neqns
         self%nterms_s   = elem%nterms_s
         self%ntime      = elem%ntime
-        self%gq         => elem%gq
-        self%gqmesh     => elem%gqmesh
+        self%ref_ID_s   = elem%ref_ID_s
+        self%ref_ID_c   = elem%ref_ID_c
+        !self%gq         => elem%gq
+        !self%gqmesh     => elem%gqmesh
 
-        nnodes = self%gq%face%nnodes
-
+        !nnodes = self%gq%face%nnodes
+        nnodes = ref_elems(self%ref_ID_s)%nnodes_i(self%iface)
 
         !
         ! (Re)Allocate storage for face data structures.
@@ -441,9 +445,17 @@ contains
         !
         ! Compute BR2 matrix
         !
-        tmp = matmul(elem%invmass,self%gq%face%val_trans(:,:,self%iface))
-        self%br2_face = matmul(self%gq%face%val(:,:,self%iface),tmp)
-        self%br2_vol  = matmul(self%gq%vol%val(:,:),tmp)
+        !tmp = matmul(elem%invmass,self%gq%face%val_trans(:,:,self%iface))
+        !self%br2_face = matmul(self%gq%face%val(:,:,self%iface),tmp)
+        !self%br2_vol  = matmul(self%gq%vol%val(:,:),tmp)
+
+        val_e = ref_elems(self%ref_ID_s)%interpolator('Value')
+        val_f = ref_elems(self%ref_ID_s)%interpolator('Value',self%iface)
+
+        tmp = matmul(elem%invmass,transpose(val_f))
+        self%br2_face = matmul(val_f,tmp)
+        self%br2_vol  = matmul(val_e,tmp)
+
 
 
         !
@@ -475,33 +487,52 @@ contains
         integer(ik)                 :: nnodes
         character(:),   allocatable :: coordinate_system
 
-        real(rk),   dimension(self%gq%face%nnodes)  :: &
-            d1dxi, d1deta, d1dzeta, &
-            d2dxi, d2deta, d2dzeta, &
-            d3dxi, d3deta, d3dzeta, &
+        !real(rk),   dimension(self%gq%face%nnodes)  :: &
+        real(rk),   dimension(:),   allocatable ::  &
+            d1dxi, d1deta, d1dzeta,                 &
+            d2dxi, d2deta, d2dzeta,                 &
+            d3dxi, d3deta, d3dzeta,                 &
             scaling_12, scaling_13, scaling_23, scaling_123, &
-            invjac
+            invjac, weights
 
+        real(rk),   dimension(:,:), allocatable :: val, ddxi, ddeta, ddzeta
 
         iface  = self%iface
-        nnodes = self%gq%face%nnodes
+        !nnodes = self%gq%face%nnodes
+        nnodes  = ref_elems(self%ref_ID_s)%nnodes_i(self%iface)
+        weights = ref_elems(self%ref_ID_s)%weights()
+        val     = ref_elems(self%ref_ID_s)%interpolator('Value', self%iface)
+        ddxi    = ref_elems(self%ref_ID_s)%interpolator('ddxi',  self%iface)
+        ddeta   = ref_elems(self%ref_ID_s)%interpolator('ddeta', self%iface)
+        ddzeta  = ref_elems(self%ref_ID_s)%interpolator('ddzeta',self%iface)
 
         !
         ! Evaluate directional derivatives of coordinates at quadrature nodes.
         !
-        associate (gq_f => self%gqmesh%face)
-            d1dxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords%getvar(1,itime = 1))
-            d1deta  = matmul(gq_f%ddeta( :,:,iface), self%coords%getvar(1,itime = 1))
-            d1dzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords%getvar(1,itime = 1))
+        !associate (gq_f => self%gqmesh%face)
+        !    d1dxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords%getvar(1,itime = 1))
+        !    d1deta  = matmul(gq_f%ddeta( :,:,iface), self%coords%getvar(1,itime = 1))
+        !    d1dzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords%getvar(1,itime = 1))
 
-            d2dxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords%getvar(2,itime = 1))
-            d2deta  = matmul(gq_f%ddeta( :,:,iface), self%coords%getvar(2,itime = 1))
-            d2dzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords%getvar(2,itime = 1))
+        !    d2dxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords%getvar(2,itime = 1))
+        !    d2deta  = matmul(gq_f%ddeta( :,:,iface), self%coords%getvar(2,itime = 1))
+        !    d2dzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords%getvar(2,itime = 1))
 
-            d3dxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords%getvar(3,itime = 1))
-            d3deta  = matmul(gq_f%ddeta( :,:,iface), self%coords%getvar(3,itime = 1))
-            d3dzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords%getvar(3,itime = 1))
-        end associate
+        !    d3dxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords%getvar(3,itime = 1))
+        !    d3deta  = matmul(gq_f%ddeta( :,:,iface), self%coords%getvar(3,itime = 1))
+        !    d3dzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords%getvar(3,itime = 1))
+        !end associate
+        d1dxi   = matmul(ddxi,   self%coords%getvar(1,itime = 1))
+        d1deta  = matmul(ddeta,  self%coords%getvar(1,itime = 1))
+        d1dzeta = matmul(ddzeta, self%coords%getvar(1,itime = 1))
+
+        d2dxi   = matmul(ddxi,   self%coords%getvar(2,itime = 1))
+        d2deta  = matmul(ddeta,  self%coords%getvar(2,itime = 1))
+        d2dzeta = matmul(ddzeta, self%coords%getvar(2,itime = 1))
+
+        d3dxi   = matmul(ddxi,   self%coords%getvar(3,itime = 1))
+        d3deta  = matmul(ddeta,  self%coords%getvar(3,itime = 1))
+        d3dzeta = matmul(ddzeta, self%coords%getvar(3,itime = 1))
 
 
 
@@ -513,6 +544,9 @@ contains
         !   Cylindrical
         !       12 = r-theta  ;  13 = r-z      ;  23 = theta-z
         !
+        allocate(scaling_12(nnodes), scaling_13(nnodes), scaling_23(nnodes), scaling_123(nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
         select case (self%coordinate_system)
             case ('Cartesian')
                 scaling_12  = ONE
@@ -614,33 +648,61 @@ contains
         integer(ik)                 :: inode, iface, nnodes
         character(:),   allocatable :: coordinate_system
 
-        real(rk)    :: d1dxi(self%gq%face%nnodes), d1deta(self%gq%face%nnodes), d1dzeta(self%gq%face%nnodes)
-        real(rk)    :: d2dxi(self%gq%face%nnodes), d2deta(self%gq%face%nnodes), d2dzeta(self%gq%face%nnodes)
-        real(rk)    :: d3dxi(self%gq%face%nnodes), d3deta(self%gq%face%nnodes), d3dzeta(self%gq%face%nnodes)
-        real(rk)    :: norm_mag(self%gq%face%nnodes)
-        real(rk)    :: scaling_12(self%gq%face%nnodes), scaling_13(self%gq%face%nnodes), &
-                       scaling_23(self%gq%face%nnodes), scaling_123(self%gq%face%nnodes)
+        real(rk),   dimension(:),   allocatable ::              &
+            d1dxi, d1deta, d1dzeta,                             &
+            d2dxi, d2deta, d2dzeta,                             &
+            d3dxi, d3deta, d3dzeta,                             &
+            scaling_12, scaling_13, scaling_23, scaling_123,    &
+            norm_mag, weights
 
-        iface = self%iface
-        nnodes = self%gq%face%nnodes
+        real(rk),   dimension(:,:),   allocatable ::  &
+            val, ddxi, ddeta, ddzeta
+
+!        real(rk)    :: d1dxi(self%gq%face%nnodes), d1deta(self%gq%face%nnodes), d1dzeta(self%gq%face%nnodes)
+!        real(rk)    :: d2dxi(self%gq%face%nnodes), d2deta(self%gq%face%nnodes), d2dzeta(self%gq%face%nnodes)
+!        real(rk)    :: d3dxi(self%gq%face%nnodes), d3deta(self%gq%face%nnodes), d3dzeta(self%gq%face%nnodes)
+!        real(rk)    :: norm_mag(self%gq%face%nnodes)
+!        real(rk)    :: scaling_12(self%gq%face%nnodes), scaling_13(self%gq%face%nnodes), &
+!                       scaling_23(self%gq%face%nnodes), scaling_123(self%gq%face%nnodes)
+
+        !nnodes = self%gq%face%nnodes
+        iface   = self%iface
+        nnodes  = ref_elems(self%ref_ID_s)%nnodes_i(iface)
+        weights = ref_elems(self%ref_ID_s)%weights(iface)
+        val     = ref_elems(self%ref_ID_s)%interpolator('Value', iface)
+        ddxi    = ref_elems(self%ref_ID_s)%interpolator('ddxi',  iface)
+        ddeta   = ref_elems(self%ref_ID_s)%interpolator('ddeta', iface)
+        ddzeta  = ref_elems(self%ref_ID_s)%interpolator('ddzeta',iface)
+
 
         
         !
         ! Evaluate directional derivatives of coordinates at quadrature nodes.
         !
-        associate (gq_f => self%gqmesh%face)
-            d1dxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%getvar(1,itime = 1))
-            d1deta  = matmul(gq_f%ddeta(:,:,iface), self%coords%getvar(1,itime = 1))
-            d1dzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%getvar(1,itime = 1))
+        !associate (gq_f => self%gqmesh%face)
+        !    d1dxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%getvar(1,itime = 1))
+        !    d1deta  = matmul(gq_f%ddeta(:,:,iface), self%coords%getvar(1,itime = 1))
+        !    d1dzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%getvar(1,itime = 1))
 
-            d2dxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%getvar(2,itime = 1))
-            d2deta  = matmul(gq_f%ddeta(:,:,iface), self%coords%getvar(2,itime = 1))
-            d2dzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%getvar(2,itime = 1))
+        !    d2dxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%getvar(2,itime = 1))
+        !    d2deta  = matmul(gq_f%ddeta(:,:,iface), self%coords%getvar(2,itime = 1))
+        !    d2dzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%getvar(2,itime = 1))
 
-            d3dxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%getvar(3,itime = 1))
-            d3deta  = matmul(gq_f%ddeta(:,:,iface), self%coords%getvar(3,itime = 1))
-            d3dzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%getvar(3,itime = 1))
-        end associate
+        !    d3dxi   = matmul(gq_f%ddxi(:,:,iface),  self%coords%getvar(3,itime = 1))
+        !    d3deta  = matmul(gq_f%ddeta(:,:,iface), self%coords%getvar(3,itime = 1))
+        !    d3dzeta = matmul(gq_f%ddzeta(:,:,iface),self%coords%getvar(3,itime = 1))
+        !end associate
+        d1dxi   = matmul(ddxi,   self%coords%getvar(1,itime=1))
+        d1deta  = matmul(ddeta,  self%coords%getvar(1,itime=1))
+        d1dzeta = matmul(ddzeta, self%coords%getvar(1,itime=1))
+
+        d2dxi   = matmul(ddxi,   self%coords%getvar(2,itime=1))
+        d2deta  = matmul(ddeta,  self%coords%getvar(2,itime=1))
+        d2dzeta = matmul(ddzeta, self%coords%getvar(2,itime=1))
+
+        d3dxi   = matmul(ddxi,   self%coords%getvar(3,itime=1))
+        d3deta  = matmul(ddeta,  self%coords%getvar(3,itime=1))
+        d3dzeta = matmul(ddzeta, self%coords%getvar(3,itime=1))
 
 
 
@@ -652,6 +714,9 @@ contains
         !   Cylindrical
         !       12 = r-theta  ;  13 = r-z      ;  23 = theta-z
         !
+        allocate(scaling_12(nnodes), scaling_13(nnodes), scaling_23(nnodes), scaling_123(nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
         select case (self%coordinate_system)
             case ('Cartesian')
                 scaling_12  = ONE
@@ -666,7 +731,6 @@ contains
             case default
                 call chidg_signal(FATAL,"face%compute_quadrature_normals: Invalid coordinate system. Choose 'Cartesian' or 'Cylindrical'.")
         end select
-
 
 
 
@@ -736,7 +800,8 @@ contains
         !
         ! Compute the total face area by integrating the differential areas over the face
         !
-        self%total_area = sum(abs(self%differential_areas * self%gq%face%weights(:,iface)))
+        !self%total_area = sum(abs(self%differential_areas * self%gq%face%weights(:,iface)))
+        self%total_area = sum(abs(self%differential_areas * weights))
 
 
     end subroutine compute_quadrature_normals
@@ -766,26 +831,43 @@ contains
         integer(ik)                         :: iterm,inode,iface,nnodes
 
         iface  = self%iface
-        nnodes = self%gq%face%nnodes
+        !nnodes = self%gq%face%nnodes
+        nnodes = ref_elems(self%ref_ID_s)%nnodes_i(iface)
+        ddxi   = ref_elems(self%ref_ID_s)%interpolator('ddxi',  iface)
+        ddeta  = ref_elems(self%ref_ID_s)%interpolator('ddeta', iface)
+        ddzeta = ref_elems(self%ref_ID_s)%interpolator('ddzeta',iface)
 
 
 
         do iterm = 1,self%nterms_s
             do inode = 1,nnodes
-                self%grad1(inode,iterm) = &
-                    self%metric(1,1,inode) * self%gq%face%ddxi(inode,iterm,iface)   + &
-                    self%metric(2,1,inode) * self%gq%face%ddeta(inode,iterm,iface)  + &
-                    self%metric(3,1,inode) * self%gq%face%ddzeta(inode,iterm,iface) 
+                !self%grad1(inode,iterm) = &
+                !    self%metric(1,1,inode) * self%gq%face%ddxi(inode,iterm,iface)   + &
+                !    self%metric(2,1,inode) * self%gq%face%ddeta(inode,iterm,iface)  + &
+                !    self%metric(3,1,inode) * self%gq%face%ddzeta(inode,iterm,iface) 
 
-                self%grad2(inode,iterm) = &
-                    self%metric(1,2,inode) * self%gq%face%ddxi(inode,iterm,iface)   + &
-                    self%metric(2,2,inode) * self%gq%face%ddeta(inode,iterm,iface)  + &
-                    self%metric(3,2,inode) * self%gq%face%ddzeta(inode,iterm,iface) 
+                !self%grad2(inode,iterm) = &
+                !    self%metric(1,2,inode) * self%gq%face%ddxi(inode,iterm,iface)   + &
+                !    self%metric(2,2,inode) * self%gq%face%ddeta(inode,iterm,iface)  + &
+                !    self%metric(3,2,inode) * self%gq%face%ddzeta(inode,iterm,iface) 
 
-                self%grad3(inode,iterm) = &
-                    self%metric(1,3,inode) * self%gq%face%ddxi(inode,iterm,iface)   + &
-                    self%metric(2,3,inode) * self%gq%face%ddeta(inode,iterm,iface)  + &
-                    self%metric(3,3,inode) * self%gq%face%ddzeta(inode,iterm,iface) 
+                !self%grad3(inode,iterm) = &
+                !    self%metric(1,3,inode) * self%gq%face%ddxi(inode,iterm,iface)   + &
+                !    self%metric(2,3,inode) * self%gq%face%ddeta(inode,iterm,iface)  + &
+                !    self%metric(3,3,inode) * self%gq%face%ddzeta(inode,iterm,iface) 
+
+                self%grad1(inode,iterm) = self%metric(1,1,inode) * ddxi(inode,iterm)   + &
+                                          self%metric(2,1,inode) * ddeta(inode,iterm)  + &
+                                          self%metric(3,1,inode) * ddzeta(inode,iterm)
+
+                self%grad2(inode,iterm) = self%metric(1,2,inode) * ddxi(inode,iterm)   + &
+                                          self%metric(2,2,inode) * ddeta(inode,iterm)  + &
+                                          self%metric(3,2,inode) * ddzeta(inode,iterm)
+
+                self%grad3(inode,iterm) = self%metric(1,3,inode) * ddxi(inode,iterm)   + &
+                                          self%metric(2,3,inode) * ddeta(inode,iterm)  + &
+                                          self%metric(3,3,inode) * ddzeta(inode,iterm)
+
             end do
         end do
 
@@ -809,31 +891,36 @@ contains
     !------------------------------------------------------------------------------------------
     subroutine compute_quadrature_coords(self)
         class(face_t),  intent(inout)   :: self
-        integer(ik)                     :: iface, inode
-        real(rk)                        :: c1(self%gq%face%nnodes), &
-                                           c2(self%gq%face%nnodes), &
-                                           c3(self%gq%face%nnodes)
+
+        integer(ik) :: iface, inode
+        real(rk),   allocatable, dimension(:)   :: c1, c2, c3
+        real(rk),   allocatable, dimension(:,:) :: val
 
         iface = self%iface
 
         !
         ! compute real coordinates associated with quadrature points
         !
-        associate(gq_f => self%gqmesh%face)
-            c1 = matmul(gq_f%val(:,:,iface),self%coords%getvar(1,itime = 1))
-            c2 = matmul(gq_f%val(:,:,iface),self%coords%getvar(2,itime = 1))
-            c3 = matmul(gq_f%val(:,:,iface),self%coords%getvar(3,itime = 1))
-        end associate
+        !associate(gq_f => self%gqmesh%face)
+        !    c1 = matmul(gq_f%val(:,:,iface),self%coords%getvar(1,itime = 1))
+        !    c2 = matmul(gq_f%val(:,:,iface),self%coords%getvar(2,itime = 1))
+        !    c3 = matmul(gq_f%val(:,:,iface),self%coords%getvar(3,itime = 1))
+        !end associate
+        val = ref_elems(self%ref_ID_c)%interpolator('Value',iface)
+        c1 = matmul(val,self%coords%getvar(1,itime = 1))
+        c2 = matmul(val,self%coords%getvar(2,itime = 1))
+        c3 = matmul(val,self%coords%getvar(3,itime = 1))
 
         
         !
         ! For each quadrature node, store real coordinates
         !
-        do inode = 1,self%gq%face%nnodes
-            self%quad_pts(inode,1) = c1(inode)
-            self%quad_pts(inode,2) = c2(inode)
-            self%quad_pts(inode,3) = c3(inode)
-        end do
+        !do inode = 1,self%gq%face%nnodes
+        do inode = 1,ref_elems(self%ref_ID_s)%nnodes_i(iface)
+            self%quad_pts(inode,1:3) = [c1(inode), c2(inode), c3(inode)]
+            !self%quad_pts(inode,2) = c2(inode)
+            !self%quad_pts(inode,3) = c3(inode)
+        end do !inode
 
     end subroutine compute_quadrature_coords
     !******************************************************************************************
@@ -844,12 +931,11 @@ contains
 
 
 
-    !> Return neighbor element index
+    !>  Return neighbor element index
+    !!
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
-    !!
-    !!
     !!
     !------------------------------------------------------------------------------------------
     function get_neighbor_element_l(self) result(neighbor_e)
@@ -871,10 +957,9 @@ contains
 
     !> Return neighbor element index
     !!
+    !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
-    !!
-    !!
     !!
     !------------------------------------------------------------------------------------------
     function get_neighbor_element_g(self) result(neighbor_e)
@@ -967,27 +1052,32 @@ contains
 
     subroutine compute_quadrature_coords_ale(self)
         class(face_t),   intent(inout)   :: self
-        integer(ik)                         :: nnodes
-        real(rk)                            :: x(self%gq%face%nnodes),y(self%gq%face%nnodes),z(self%gq%face%nnodes)
-        real(rk)                            :: vg1(self%gq%face%nnodes),vg2(self%gq%face%nnodes),vg3(self%gq%face%nnodes)
-        integer(ik)                         :: inode
 
-        nnodes = self%gq%face%nnodes
+
+        !real(rk)                            :: x(self%gq%face%nnodes),y(self%gq%face%nnodes),z(self%gq%face%nnodes)
+        !real(rk)                            :: vg1(self%gq%face%nnodes),vg2(self%gq%face%nnodes),vg3(self%gq%face%nnodes)
+        integer(ik)                             :: nnodes, inode
+        real(rk),   allocatable, dimension(:)   :: x, y, z, vg1, vg2, vg3
+
+        !nnodes = self%gq%face%nnodes
+        nnodes = ref_elems(self%ref_ID_s)%nnodes_i()
+        val    = ref_elems(self%ref_ID_c)%interpolator('Value',self%iface)
+
         !
         ! compute cartesian coordinates associated with quadrature points
         !
-        x = matmul(self%gqmesh%face%val(:,:,self%iface),self%ale_coords%getvar(1,itime = 1))
-        y = matmul(self%gqmesh%face%val(:,:,self%iface),self%ale_coords%getvar(2,itime = 1))
-        z = matmul(self%gqmesh%face%val(:,:,self%iface),self%ale_coords%getvar(3,itime = 1))
-
+        !x = matmul(self%gqmesh%face%val(:,:,self%iface),self%ale_coords%getvar(1,itime = 1))
+        !y = matmul(self%gqmesh%face%val(:,:,self%iface),self%ale_coords%getvar(2,itime = 1))
+        !z = matmul(self%gqmesh%face%val(:,:,self%iface),self%ale_coords%getvar(3,itime = 1))
+        x = matmul(val,self%ale_coords%getvar(1,itime = 1))
+        y = matmul(val,self%ale_coords%getvar(2,itime = 1))
+        z = matmul(val,self%ale_coords%getvar(3,itime = 1))
 
         !
         ! Initialize each point with cartesian coordinates
         !
         do inode = 1,nnodes
-            self%ale_quad_pts(inode,1) = x(inode)
-            self%ale_quad_pts(inode,2) = y(inode)
-            self%ale_quad_pts(inode,3) = z(inode)
+            self%ale_quad_pts(inode,1:3) = [x(inode), y(inode), z(inode)]
         end do
 
 
@@ -995,9 +1085,9 @@ contains
 
         ! compute cartesian coordinates associated with quadrature points
         !
-        vg1 = matmul(self%gqmesh%face%val(:,:,self%iface),self%ale_vel_coords%getvar(1,itime = 1))
-        vg2 = matmul(self%gqmesh%face%val(:,:,self%iface),self%ale_vel_coords%getvar(2,itime = 1))
-        vg3 = matmul(self%gqmesh%face%val(:,:,self%iface),self%ale_vel_coords%getvar(3,itime = 1))
+        vg1 = matmul(val,self%ale_vel_coords%getvar(1,itime = 1))
+        vg2 = matmul(val,self%ale_vel_coords%getvar(2,itime = 1))
+        vg3 = matmul(val,self%ale_vel_coords%getvar(3,itime = 1))
 
 
         !

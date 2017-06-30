@@ -2,10 +2,16 @@ module mod_gauss_legendre
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: PI, ONE, TWO, THREE, FOUR, EIGHT, ZERO
-    use mod_legendre,       only: LegendreVal1D, DLegendreVal1D
+    use mod_legendre,       only: legendre_val1D, dlegendre_val1D
     implicit none
 
 contains
+
+
+
+
+
+
 
 
     !>
@@ -14,42 +20,82 @@ contains
     !!  @date   6/28/2017
     !!
     !------------------------------------------------------------------------
-    function quadrature_nodes(level,dim) result(nodes_)
+    function quadrature_nodes(nterms,level,dim) result(nodes_)
+        integer(ik),    intent(in)  :: nterms
         integer(ik),    intent(in)  :: level
         integer(ik),    intent(in)  :: dim
 
         ! Level for quadrature nodes corresponds to the number of nodes
         ! in the 1D tensor construction of the node set.
-        real(rk),   dimension(level)            :: xi_nodes, eta_nodes, zeta_nodes
-        integer(ik)                             :: ixi, ieta, izeta, inode, nnodes, ierr
+        real(rk),   allocatable, dimension(:)   :: xi_nodes, eta_nodes, zeta_nodes
+        integer(ik)                             :: ixi, ieta, izeta, inode, nnodes, ierr, nterms1d, nnodes1d
         integer(ik)                             :: nnodes_xi, nnodes_eta, nnodes_zeta
         real(rk),   allocatable, dimension(:)   :: nodes_(:,:)
+
+
+        !
+        ! Compute number of terms in 1D polynomial expansion
+        !
+        nterms1d = 0
+        do while (nterms1d*nterms1d*nterms1d < nterms)
+            nterms1d = nterms1d + 1
+        end do
+
+
+        !
+        ! Compute number of nodes in quadrature set
+        !
+        select case (level)
+            case(1)
+                nnodes1d = nterms1d         ! Collocation quadrature
+            case(2)
+                nnodes1d = ceiling(3._rk*real(nterms1d,rk)/2._rk)
+            case(3)
+                nnodes1d = 2*nterms1d + 1
+            case(4)
+                nnodes1d = 3*nterms1d + 1
+            case(5)
+                nnodes1d = 5*nterms1d + 1
+            case default
+                call chidg_signal(FATAL, "compute_nnodes_integration: Value for gq_rule, specifying the rule for selecting number of quadrature points was not valid. Recognized values are gq_rule = (1, 2, 3)")
+        end select
+
+
+
+        !
+        ! Allocate 1d arrays
+        !
+        allocate(xi_nodes(nnodes1d), eta_nodes(nnodes1d), zeta_nodes(nnodes1d), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+
 
         !
         ! Get 1D nodes
         !
         select case(dim)
             case(1)
-                nnodes_xi   = level
+                nnodes_xi   = nnodes1d
                 nnodes_eta  = 1
                 nnodes_zeta = 1
-                call gl_nodes(level,xi_nodes)
+                call gl_nodes(nnodes1d,xi_nodes)
                 eta_nodes  = ZERO
                 zeta_nodes = ZERO
             case(2)
-                nnodes_xi   = level
-                nnodes_eta  = level
+                nnodes_xi   = nnodes1d
+                nnodes_eta  = nnodes1d
                 nnodes_zeta = 1
-                call gl_nodes(level,xi_nodes)
-                call gl_nodes(level,eta_nodes)
+                call gl_nodes(nnodes1d,xi_nodes)
+                call gl_nodes(nnodes1d,eta_nodes)
                 zeta_nodes = ZERO
             case(3)
-                nnodes_xi   = level
-                nnodes_eta  = level
-                nnodes_zeta = level
-                call gl_nodes(level,xi_nodes)
-                call gl_nodes(level,eta_nodes)
-                call gl_nodes(level,zeta_nodes)
+                nnodes_xi   = nnodes1d
+                nnodes_eta  = nnodes1d
+                nnodes_zeta = nnodes1d
+                call gl_nodes(nnodes1d,xi_nodes)
+                call gl_nodes(nnodes1d,eta_nodes)
+                call gl_nodes(nnodes1d,zeta_nodes)
             case default
                 call chidg_signal_one(FATAL,"quadrature_nodes: invalid dimension.",dim)
         end select
@@ -95,16 +141,50 @@ contains
     !!  @date   6/28/2017
     !!
     !------------------------------------------------------------------------
-    function quadrature_weights(level,dim) result(weights_)
+    function quadrature_weights(nterms,level,dim) result(weights_)
+        integer(ik),    intent(in)  :: nterms
         integer(ik),    intent(in)  :: level
         integer(ik),    intent(in)  :: dim
 
         ! Level for quadrature weights corresponds to the number of weights
         ! in the 1D tensor construction of the node set.
         real(rk),   dimension(level)            :: xi_weights, eta_weights, zeta_weights
-        integer(ik)                             :: ixi, ieta, izeta, inode, nweights, ierr
+        integer(ik)                             :: ixi, ieta, izeta, inode, nweights, ierr, nnodes1d, nterms1d
         integer(ik)                             :: nweights_xi, nweights_eta, nweights_zeta
         real(rk),   allocatable, dimension(:)   :: weights_(:)
+
+
+        !
+        ! Compute number of terms in 1D polynomial expansion
+        !
+        nterms1d = 0
+        do while (nterms1d*nterms1d*nterms1d < nterms)
+            nterms1d = nterms1d + 1
+        end do
+
+
+        !
+        ! Compute number of nodes in quadrature set
+        !
+        select case (level)
+            case(1)
+                nnodes1d = nterms1d         ! Collocation quadrature
+            case(2)
+                nnodes1d = ceiling(3._rk*real(nterms1d,rk)/2._rk)
+            case(3)
+                nnodes1d = 2*nterms1d + 1
+            case(4)
+                nnodes1d = 3*nterms1d + 1
+            case(5)
+                nnodes1d = 5*nterms1d + 1
+            case default
+                call chidg_signal(FATAL, "compute_nnodes_integration: Value for gq_rule, specifying the rule for selecting number of quadrature points was not valid. Recognized values are gq_rule = (1, 2, 3)")
+        end select
+
+
+
+
+
 
 
         !
@@ -112,26 +192,26 @@ contains
         !
         select case(dim)
             case(1)
-                nweights_xi   = level
+                nweights_xi   = nnodes1d
                 nweights_eta  = 1
                 nweights_zeta = 1
-                call gl_weights(level,xi_weights)
+                call gl_weights(nnodes1d,xi_weights)
                 eta_weights  = ONE
                 zeta_weights = ONE
             case(2)
-                nweights_xi   = level
-                nweights_eta  = level
+                nweights_xi   = nnodes1d
+                nweights_eta  = nnodes1d
                 nweights_zeta = 1
-                call gl_weights(level,xi_weights)
-                call gl_weights(level,eta_weights)
+                call gl_weights(nnodes1d,xi_weights)
+                call gl_weights(nnodes1d,eta_weights)
                 zeta_weights = ONE
             case(3)
-                nweights_xi   = level
-                nweights_eta  = level
-                nweights_zeta = level
-                call gl_weights(level,xi_weights)
-                call gl_weights(level,eta_weights)
-                call gl_weights(level,zeta_weights)
+                nweights_xi   = nnodes1d
+                nweights_eta  = nnodes1d
+                nweights_zeta = nnodes1d
+                call gl_weights(nnodes1d,xi_weights)
+                call gl_weights(nnodes1d,eta_weights)
+                call gl_weights(nnodes1d,zeta_weights)
             case default
                 call chidg_signal_one(FATAL,"quadrature_weights: invalid dimension.",dim)
         end select
@@ -227,7 +307,7 @@ contains
             ! Newton iteration to desired tolerance
             !
             do while (resid > tol)
-                xnew = x - LegendreVal1D(polyterm,x)/DLegendreVal1D(polyterm,x)
+                xnew = x - legendre_val1D(polyterm,x)/dlegendre_val1D(polyterm,x)
                 resid = abs(xnew-x)
                 x = xnew
             end do
@@ -284,7 +364,7 @@ contains
             ! Get quadrature node and polynomial derivative
             !
             xi = nodes(i)
-            DPoly = DLegendreVal1D(polyterm,xi)
+            DPoly = dlegendre_val1D(polyterm,xi)
 
             !
             ! Compute weight

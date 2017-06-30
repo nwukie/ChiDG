@@ -53,7 +53,7 @@ subroutine testElementMapping_reversability_linear()
     use mod_grid,               only: compute_element_mappings, ELEM_MAP_3D
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, TENTH, THREE_DIM
-    use mod_polynomial,         only: polynomialVal
+    use mod_polynomial,         only: polynomial_val
     use type_point,             only: point_t
     use type_densevector,       only: densevector_t
 
@@ -136,7 +136,7 @@ subroutine testElementMapping_reversability_linear()
     ! Compute matrix of polynomial values for reverse calculation
     do iterm = 1,8
         do inode = 1,8
-            mat(inode,iterm) = polynomialVal(3,8,iterm,pts_ref(inode))
+            mat(inode,iterm) = polynomial_val(3,8,iterm,[pts_ref(inode)%c1_,pts_ref(inode)%c2_,pts_ref(inode)%c3_])
         end do
     end do
     
@@ -168,7 +168,7 @@ subroutine testElementMapping_reversability_quadratic()
     use mod_grid,               only: compute_element_mappings, ELEM_MAP_3D
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, THREE, TENTH, THREE_DIM
-    use mod_polynomial,         only: polynomialVal
+    use mod_polynomial,         only: polynomial_val
     use type_point,             only: point_t
     use type_densevector,       only: densevector_t
 
@@ -252,7 +252,7 @@ subroutine testElementMapping_reversability_quadratic()
     ! Compute matrix of polynomial values for reverse calculation
     do iterm = 1,27
         do inode = 1,27
-            mat(inode,iterm) = polynomialVal(3,27,iterm,pts_ref(inode))
+            mat(inode,iterm) = polynomial_val(3,27,iterm,[pts_ref(inode)%c1_,pts_ref(inode)%c2_,pts_ref(inode)%c3_])
         end do
     end do
     
@@ -283,7 +283,7 @@ subroutine testElementMapping_reversability_cubic()
     use mod_grid,               only: compute_element_mappings, ELEM_MAP_3D
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, THREE, FOUR, TENTH, THREE_DIM
-    use mod_polynomial,         only: polynomialVal
+    use mod_polynomial,         only: polynomial_val
     use type_point,             only: point_t
     use type_densevector,       only: densevector_t
 
@@ -367,7 +367,7 @@ subroutine testElementMapping_reversability_cubic()
     ! Compute matrix of polynomial values for reverse calculation
     do iterm = 1,64
         do inode = 1,64
-            mat(inode,iterm) = polynomialVal(3,64,iterm,pts_ref(inode))
+            mat(inode,iterm) = polynomial_val(3,64,iterm,[pts_ref(inode)%c1_,pts_ref(inode)%c2_,pts_ref(inode)%c3_])
         end do
     end do
     
@@ -398,7 +398,7 @@ subroutine testElementMapping_reversability_quartic()
     use mod_grid,               only: compute_element_mappings, ELEM_MAP_3D
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, THREE, FOUR, TENTH, THREE_DIM
-    use mod_polynomial,         only: polynomialVal
+    use mod_polynomial,         only: polynomial_val
     use type_point,             only: point_t
     use type_densevector,       only: densevector_t
 
@@ -482,7 +482,7 @@ subroutine testElementMapping_reversability_quartic()
     ! Compute matrix of polynomial values for reverse calculation
     do iterm = 1,125
         do inode = 1,125
-            mat(inode,iterm) = polynomialVal(3,125,iterm,pts_ref(inode))
+            mat(inode,iterm) = polynomial_val(3,125,iterm,[pts_ref(inode)%c1_,pts_ref(inode)%c2_,pts_ref(inode)%c3_])
         end do
     end do
     

@@ -1,0 +1,724 @@
+!--------------------------------------------------------------------------------
+!
+!           Test a 1D linear advection-diffusion problem with a source term.
+!
+!   div( vec(c)*u - mu(u)*grad(u) ) = 0
+!
+!   Fluxes:
+!       Advective Flux: F_a(u) = vec(c)*u
+!       Diffusive Flux: F_d(u) = -mu*dudx
+!
+!
+!   Boundary conditions are:
+!       Dirichlet U(x=0) = 1
+!       Dirichlet U(x=1) = 0
+!
+!
+!   Analytical Solution is:
+!       numerator   = 1 - exp( (x-1) * cx/mu )
+!       denominator = 1 - exp(-cx/mu)
+!
+!       U(x) = numerator/denominator    for x in [0,1]
+!
+!
+!   Scalar coefficient models are:
+!       vec(c) = [1.0, 0.0, 0.0]
+!        mu    = 0.05
+!
+!
+!   Tests that are being run here:
+!       - Run the calculation on multiple grids with order of accuracy 2-5
+!       - Test for convergence in 1 Newton iteration (linear problem)
+!       - Test convergence rates for spatial orders of accuracy
+!
+!   @author Nathan A. Wukie
+!   @date   10/23/2016
+!
+!--------------------------------------------------------------------------------
+module radial_equilibrium_mod
+#include <messenger.h>
+    use pfunit_mod
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: ZERO, THREE, IO_DESTINATION, ONE, TWO, PI, FOUR, &
+                                      XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use mod_string,             only: string_t
+    use type_chidg,             only: chidg_t
+    use type_chidg_data,        only: chidg_data_t
+    use mod_bc,                 only: create_bc
+    use type_bc_state,          only: bc_state_t
+    use type_bc_state_group,          only: bc_state_group_t
+    use type_function,          only: function_t
+    use type_ivector,           only: ivector_t
+    use mod_function,           only: create_function
+    use mod_interpolate,        only: interpolate_element_standard
+    use mod_test_utilities,     only: create_mesh_file
+    use mod_file_utilities,     only: delete_file
+    use mod_chidg_post,         only: chidg_post
+
+    use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM
+    use mpi_f08,                only: MPI_COMM, MPI_REAL8, MPI_SUM
+    use mod_io
+
+    use type_chidg_worker,      only: chidg_worker_t
+    use type_properties,        only: properties_t
+    use DNAD_D
+
+    ! Imports for defining a new operator
+    use mod_operators,          only: operator_factory
+    use type_operator,          only: operator_t
+    use mod_models,             only: model_factory
+    use type_model,             only: model_t
+
+    ! Imports for defining a new equation builder
+    use mod_equations,                  only: equation_builder_factory
+    use type_equation_builder,          only: equation_builder_t
+    use type_equation_set,              only: equation_set_t
+    implicit none
+
+
+
+    public  :: req_case
+
+
+
+    real(rk), parameter :: cr     = ONE
+    real(rk), parameter :: ctheta = ZERO
+    real(rk), parameter :: cz     = ZERO
+
+
+
+
+    !>  The advection-diffusion coefficient model.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/3/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    type, extends(model_t), public :: radial_equilibrium_model_t
+
+    contains
+
+        procedure   :: init    => init_model
+        procedure   :: compute => compute_model
+
+    end type radial_equilibrium_model_t
+    !***************************************************************************************
+
+
+    !>  The advection-diffusion coefficient model.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/3/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    type, extends(operator_t), public :: radial_equilibrium_source_t
+
+    contains
+
+        procedure   :: init    => init_source
+        procedure   :: compute => compute_source
+
+    end type radial_equilibrium_source_t
+    !***************************************************************************************
+
+
+
+
+
+    !>  A new equation set builder to build a linear diffusion equation set with the 
+    !!  new custom volume source.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/19/2016
+    !!
+    !-----------------------------------------------------------------------------------------
+    type, extends(equation_builder_t), public :: req_builder_t
+
+
+    contains
+
+        procedure   :: init => init_builder
+        procedure   :: build
+
+    end type req_builder_t
+    !*****************************************************************************************
+
+
+
+
+
+
+
+    !>  This parameter initialize the state for each test
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie (AFRL)
+    !!
+    !----------------------------------------------------------------------------------------
+    @TestParameter
+    type, extends(MpiTestParameter) :: case_grid_order
+
+        integer(ik)                 :: nelem_xi
+        character(:),   allocatable :: gridfile
+        character(:),   allocatable :: gridtype     ! singleblock, chimera
+        integer(ik)                 :: order
+
+    contains
+
+        procedure   :: toString
+
+    end type case_grid_order
+    !****************************************************************************************
+
+
+
+
+
+
+
+    !>  Main testing fixture with test components that get initialized for each test
+    !!
+    !!  @author Nathan A. Wukie 
+    !!  @author Nathan A. Wukie (AFRL)
+    !!
+    !----------------------------------------------------------------------------------------
+    @TestCase(testParameters={getParameters()}, constructor=newTest)
+    type, extends(MpiTestCase) :: req_case
+
+        integer(ik)                 :: nelem_xi
+        character(:),   allocatable :: gridfile
+        character(:),   allocatable :: gridtype     ! singleblock, chimera
+        integer(ik)                 :: order
+
+        type(chidg_t)   :: chidg
+        type(mpi_comm)  :: ChiDG_COMM
+
+    contains
+        procedure   :: setUp
+        procedure   :: tearDown
+    end type req_case
+    !****************************************************************************************
+
+
+
+
+contains
+
+
+
+    !-------------------------------------------------------------------------------
+    !                           Volume Source Methods
+    !-------------------------------------------------------------------------------
+
+    !>  Initialize the new volume source operator.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/29/2016
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine init_source(self)
+        class(radial_equilibrium_source_t),   intent(inout)      :: self
+
+        ! Set operator name
+        call self%set_name("Radial Equilibrium Source")
+
+        ! Set operator type
+        call self%set_operator_type("Volume Advective Flux")
+
+        ! Set operator equations
+        call self%add_primary_field("u")
+
+    end subroutine init_source
+    !********************************************************************************
+
+
+
+    !>  Implement the volume source definition.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/19/2016
+    !!
+    !!
+    !------------------------------------------------------------------------------------
+    subroutine compute_source(self,worker,prop)
+        class(radial_equilibrium_source_t),     intent(inout)   :: self
+        type(chidg_worker_t),               intent(inout)   :: worker
+        class(properties_t),                intent(inout)   :: prop
+
+        type(AD_D), allocatable, dimension(:)   :: source, p
+        real(rk),   allocatable, dimension(:)   :: r, v_theta
+        real(rk)                                :: omega = 10._rk
+
+
+        !
+        ! Interpolate solution to quadrature nodes
+        !
+        p      = worker%get_primary_field_element('u','value')
+        source = worker%get_primary_field_element('u','value')
+
+
+        r = worker%x('volume')
+        !v_theta = omega*r
+        v_theta = omega/r
+        source = (1.19_rk*v_theta*v_theta/r) + p/r
+
+
+
+        !
+        ! Integrate volume flux
+        !
+        call worker%integrate_volume('u',source)
+
+
+    end subroutine compute_source
+    !***************************************************************************************
+
+
+
+
+
+
+    !----------------------------------------------------------------------------------------
+    !                       Scalar Diffusion Coefficient Model Methods
+    !----------------------------------------------------------------------------------------
+
+    !>  Initialize scalar diffusion coefficient model with name and model field being 
+    !!  provided.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/3/2016
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine init_model(self)
+        class(radial_equilibrium_model_t),    intent(inout)   :: self
+
+        call self%set_name('Radial Equilibrium :: Coefficient Model')
+        call self%set_dependency('f(Q-)')
+
+        call self%add_model_field('Scalar Advection Velocity-1')
+        call self%add_model_field('Scalar Advection Velocity-2')
+        call self%add_model_field('Scalar Advection Velocity-3')
+
+    end subroutine init_model
+    !****************************************************************************************
+
+
+
+    !>  Implement the function for providing the scalar diffusion coefficient field.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/3/2016
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine compute_model(self,worker)
+        class(radial_equilibrium_model_t),  intent(in)      :: self
+        type(chidg_worker_t),                       intent(inout)   :: worker
+
+        type(AD_D), allocatable, dimension(:)   :: u, cr_model,ctheta_model,cz_model
+
+
+        u = worker%get_primary_field_general('u', 'value')
+
+        ! Initialize derivative arrays
+        cr_model     = u
+        ctheta_model = u
+        cz_model     = u
+
+        cr_model     = cr
+        ctheta_model = ctheta
+        cz_model     = cz
+
+        call worker%store_model_field('Scalar Advection Velocity-1',  'value', cr_model)
+        call worker%store_model_field('Scalar Advection Velocity-2',  'value', ctheta_model)
+        call worker%store_model_field('Scalar Advection Velocity-3',  'value', cz_model)
+
+    end subroutine compute_model
+    !****************************************************************************************
+
+
+
+
+
+    
+    !-------------------------------------------------------------------------------
+    !                           Builder Methods for new equation set
+    !-------------------------------------------------------------------------------
+
+
+    !>  Initialize the new linear diffusion builder.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/30/2016
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine init_builder(self)
+        class(req_builder_t),   intent(inout)  :: self
+
+        call self%set_name('Radial Equilibrium')
+
+    end subroutine init_builder
+    !*****************************************************************************************
+
+    
+
+
+
+    !>  Implement the linear diffusion builder definition.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/19/2016
+    !!
+    !-----------------------------------------------------------------------------------------
+    function build(self,blueprint) result(req_eqn)
+        class(req_builder_t),    intent(in)  :: self
+        character(*),                                           intent(in)  :: blueprint
+
+        type(equation_set_t)    :: req_eqn
+        
+
+        !
+        ! Set equationset name.
+        !
+        call req_eqn%set_name("Radial Equilibrium")
+
+
+        !
+        ! Add spatial operators
+        !
+        call req_eqn%add_operator("Scalar Advection Boundary Average Operator")
+        call req_eqn%add_operator("Scalar Advection LaxFriedrichs Operator")
+        call req_eqn%add_operator("Scalar Advection Volume Operator")
+        call req_eqn%add_operator("Scalar Advection BC Operator")
+        call req_eqn%add_operator("Radial Equilibrium Source")
+
+        !
+        ! Add model for advection velocity
+        !
+        call req_eqn%add_model('Radial Equilibrium :: Coefficient Model')
+
+    end function build
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !-------------------------------------------------------------------------------
+    !                               Test methods
+    !-------------------------------------------------------------------------------
+
+
+
+    !> Parameter constructors
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------
+    function newTest(test_parameter) result(test)
+        type(case_grid_order),  intent(in)          :: test_parameter
+        type(req_case)    :: test
+
+        test%nelem_xi = test_parameter%nelem_xi
+        test%gridfile = test_parameter%gridfile
+        test%gridtype = test_parameter%gridtype
+        test%order    = test_parameter%order
+
+    end function newTest
+    !******************************************************************************
+
+
+    !> Parameter initialization
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------
+    function getParameters() result(params)
+        type(case_grid_order), allocatable :: params(:)
+    
+        integer(ik),        allocatable :: nelem_xi(:)
+        type(string_t),     allocatable :: files(:)
+        type(string_t),     allocatable :: gridtype(:)
+        integer(ik),        allocatable :: orders(:)
+        integer(ik) :: icase
+
+
+        nelem_xi = [1]
+        files    = [ string_t('req.h5') ]
+        gridtype = [ string_t("singleblock") ]
+        orders   = [ 4 ]
+
+
+        !Initialize the test case container with the parameter
+        allocate(params(size(files)))
+        do icase = 1,size(files)
+            params(icase)%nelem_xi = nelem_xi(icase)
+            params(icase)%gridfile = files(icase)%str
+            params(icase)%gridtype = gridtype(icase)%str
+            params(icase)%order    = orders(icase)
+        end do
+
+    end function getParameters
+    !*****************************************************************************************
+
+
+
+    !>  Reporting the parameters of the test
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function toString(this) result(string)
+        class (case_grid_order),    intent(in)  :: this
+        character(:), allocatable   :: string
+
+        character(len=200) :: buffer
+
+        write(buffer,'( "(gridfile, order)=","(", A30,",", I2, ")" )') this%gridfile, this%order
+        string = trim(buffer)
+
+    end function toString
+    !****************************************************************************************
+
+
+
+
+
+
+
+    !>  Set up test routine.
+    !!
+    !!  This routine reads the grid file, sets up boundary conditions, initializes storage
+    !!  and sets the appropriate configuration options.
+    !!  This routine also gets the numer of processors and the correct MPI communicator for 
+    !!  the test.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie (AFRL)
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(req_case),  intent(inout)   :: this
+
+        class(bc_state_t),  allocatable :: bc_state
+        type(bc_state_group_t)          :: bc_state_groups(3)
+        type(string_t)                  :: group_names(2,6)
+        class(function_t),  allocatable :: fcn
+
+        
+        type(req_builder_t)                 :: builder_req
+        type(radial_equilibrium_model_t)    :: req_model
+        type(radial_equilibrium_source_t)   :: req_source
+
+
+
+
+        !-------------------------------------------------------------------------------
+        !               Initialize and register the diffusion coefficient model
+        !-------------------------------------------------------------------------------
+        call req_model%init()
+        call model_factory%register(req_model)
+
+        call req_source%init()
+        call operator_factory%register(req_source)
+
+
+
+        !-------------------------------------------------------------------------------
+        !                 Initialize and register equation set builder
+        !-------------------------------------------------------------------------------
+        call builder_req%init()
+        call equation_builder_factory%register(builder_req)
+
+
+        !------------------------------------------------------------------------------
+        !
+        ! Define input data here that is normally read through the namelist input file
+        !
+        ! As a result, we don't call chidg%init('io')
+        !
+        !------------------------------------------------------------------------------
+        basis            = 'legendre'
+        gq_rule          = 1
+        time_integrator  = 'steady'
+        nonlinear_solver = 'newton'
+        linear_solver    = 'fgmres'
+        preconditioner   = 'ILU0'
+        IO_DESTINATION   = 'file'
+        !------------------------------------------------------------------------------
+
+        !
+        ! Get MPI communicator information from pFUnit
+        !
+        IRANK                   = this%getProcessRank()
+        NRANK                   = this%getNumProcessesRequested()
+        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+
+
+
+        ! Set timescheme options to pass during initialization
+        !call toptions%set('dt', 0.1_rk) ! means nothing here
+        !call toptions%set('nsteps',100)
+        !call toptions%set('nwrite',0)
+
+
+        ! Set linear solver options to pass during initialization
+        call loptions%set('tol',1.e-14_rk)
+
+        ! Set nonlinear solver options
+        call noptions%set('tol',5.e-10_rk)
+        call noptions%set('cfl0',1.0_rk)
+        call noptions%set('nsteps',100)
+
+
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call this%chidg%start_up('mpi',this%ChiDG_COMM)
+        call this%chidg%start_up('core')
+
+
+
+        !
+        ! Create mesh
+        !
+        if (IRANK == GLOBAL_MASTER) then
+
+            !
+            ! Set boundary condition function groups
+            !
+            bc_state_groups(1)%name = "Left Boundary"
+            bc_state_groups(2)%name = "Extrapolate"
+            bc_state_groups(3)%name = "YZ Boundaries"
+
+            call create_bc("Scalar Value", bc_state)
+            call bc_state%set_fcn_option("Value","val",100000._rk)
+            call bc_state_groups(1)%add_bc_state(bc_state)
+
+
+            call create_bc("Scalar Extrapolate", bc_state)
+            call bc_state_groups(2)%add_bc_state(bc_state)
+
+
+            call create_bc("Scalar Extrapolate", bc_state)
+            call bc_state_groups(3)%add_bc_state(bc_state)
+
+
+                group_names(1,:) = [string_t("Left Boundary")  , &
+                                    string_t("Extrapolate") , &
+                                    string_t("YZ Boundaries")  , &
+                                    string_t("YZ Boundaries")  , &
+                                    string_t("YZ Boundaries")  , &
+                                    string_t("YZ Boundaries") ]
+
+                call create_mesh_file('D1 NxNxN',this%gridfile,equation_sets   = [string_t("Radial Equilibrium")],  &
+                                                               group_names     = group_names,                       &
+                                                               bc_state_groups = bc_state_groups,                   &
+                                                               nelem_xi        = this%nelem_xi,                     &
+                                                               nelem_eta       = 1,                                 &
+                                                               nelem_zeta      = 1,                                 &
+                                                               x_min_in        = 10.0_rk,                           &
+                                                               x_max_in        = 13.0_rk)
+        end if !GLOBAL_MASTER
+
+
+        !
+        ! Set ChiDG components
+        !
+        call this%chidg%set('Solution Order',   integer_input=this%order)
+        call this%chidg%set('Time Integrator',  algorithm=time_integrator)
+        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
+
+
+        !
+        ! Read grid
+        !
+        call this%chidg%read_mesh(this%gridfile)
+
+
+
+        !
+        ! Initialize solution
+        !
+        call create_function(fcn,'constant')
+        call fcn%set_option('val',100000.1_rk)
+        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
+
+
+    end subroutine SetUp
+    !*****************************************************************************************
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(req_case),  intent(inout)   :: this
+
+        ! Close ChiDG
+        call this%chidg%shut_down('core')
+
+        if (IRANK == GLOBAL_MASTER) then
+            !call delete_file(this%gridfile)
+        end if
+
+    end subroutine tearDown
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Run the simulation.
+    !!
+    !!      - compute the entropy error, test against the reference values.
+    !!      - store the nonlinear convergence to the module variable so it can 
+    !!        be used by a test for nonlinear convergence.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie (AFRL)
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    @Test(npes=[1])
+    subroutine run_calculations(self)
+        class(req_case),  intent(inout)   :: self
+
+
+        !
+        ! Run ChiDG simulation
+        !
+        call self%chidg%run(write_initial=.false., write_final=.false.)
+
+        call self%chidg%write_mesh(self%gridfile)
+        call self%chidg%write_fields(self%gridfile)
+
+        call chidg_post(self%gridfile,self%gridfile)
+
+    end subroutine run_calculations
+    !*****************************************************************************************
+
+
+
+
+
+
+
+end module radial_equilibrium_mod

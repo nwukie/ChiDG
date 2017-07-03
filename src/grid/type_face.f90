@@ -5,6 +5,7 @@ module type_face
                                       ZETA_MIN, ZETA_MAX, XI_DIR, ETA_DIR, ZETA_DIR,    &
                                       NO_INTERIOR_NEIGHBOR, NO_PROC,                    &
                                       ZERO, ONE, TWO, ORPHAN, NO_PMM_ASSIGNED
+    use type_reference_element, only: reference_element_t
 
     use type_point,             only: point_t
     use type_element,           only: element_t
@@ -48,7 +49,7 @@ module type_face
         integer(ik)        :: face_ID    = 0  ! Index for bc patch face
 
 
-        integer(ik)                 :: pmm_ID = NO_PMM_ASSIGNED
+        integer(ik)        :: pmm_ID = NO_PMM_ASSIGNED
 
         ! Owner-element information
         integer(ik)        :: idomain_g       ! Global index of the parent domain
@@ -109,10 +110,12 @@ module type_face
 
 
         ! Quadrature matrices
-        integer(ik)                     :: ref_ID_s
-        integer(ik)                     :: ref_ID_c
+        !integer(ik)                     :: ref_ID_s
+        !integer(ik)                     :: ref_ID_c
 !        type(quadrature_t),  pointer    :: gq     => null()     ! Pointer to solution quadrature instance
 !        type(quadrature_t),  pointer    :: gqmesh => null()     ! Pointer to mesh quadrature instance
+        type(reference_element_t), pointer  :: ref_s => null()
+        type(reference_element_t), pointer  :: ref_c => null()
 
 
         ! BR2 matrix
@@ -363,7 +366,7 @@ contains
         type(element_t),    intent(in), target  :: elem
 
         integer(ik)             :: ierr, nnodes
-        real(rk), allocatable   :: tmp(:,:)
+        real(rk), allocatable   :: tmp(:,:), val_e(:,:), val_f(:,:)
 
         !
         ! Set indices and associate quadrature instances.
@@ -371,13 +374,16 @@ contains
         self%neqns      = elem%neqns
         self%nterms_s   = elem%nterms_s
         self%ntime      = elem%ntime
-        self%ref_ID_s   = elem%ref_ID_s
-        self%ref_ID_c   = elem%ref_ID_c
+        self%ref_s      => elem%ref_s
+        self%ref_c      => elem%ref_c
+        !self%ref_ID_s   = elem%ref_ID_s
+        !self%ref_ID_c   = elem%ref_ID_c
         !self%gq         => elem%gq
         !self%gqmesh     => elem%gqmesh
 
+
         !nnodes = self%gq%face%nnodes
-        nnodes = ref_elems(self%ref_ID_s)%nnodes_i(self%iface)
+        nnodes = self%ref_s%nnodes_if()
 
         !
         ! (Re)Allocate storage for face data structures.
@@ -449,8 +455,8 @@ contains
         !self%br2_face = matmul(self%gq%face%val(:,:,self%iface),tmp)
         !self%br2_vol  = matmul(self%gq%vol%val(:,:),tmp)
 
-        val_e = ref_elems(self%ref_ID_s)%interpolator('Value')
-        val_f = ref_elems(self%ref_ID_s)%interpolator('Value',self%iface)
+        val_e = self%ref_s%interpolator('Value')
+        val_f = self%ref_s%interpolator('Value',self%iface)
 
         tmp = matmul(elem%invmass,transpose(val_f))
         self%br2_face = matmul(val_f,tmp)
@@ -483,8 +489,7 @@ contains
     subroutine compute_quadrature_metrics(self)
         class(face_t),  intent(inout)   :: self
 
-        integer(ik)                 :: inode, iface
-        integer(ik)                 :: nnodes
+        integer(ik)                 :: inode, iface, nnodes, ierr
         character(:),   allocatable :: coordinate_system
 
         !real(rk),   dimension(self%gq%face%nnodes)  :: &
@@ -499,12 +504,12 @@ contains
 
         iface  = self%iface
         !nnodes = self%gq%face%nnodes
-        nnodes  = ref_elems(self%ref_ID_s)%nnodes_i(self%iface)
-        weights = ref_elems(self%ref_ID_s)%weights()
-        val     = ref_elems(self%ref_ID_s)%interpolator('Value', self%iface)
-        ddxi    = ref_elems(self%ref_ID_s)%interpolator('ddxi',  self%iface)
-        ddeta   = ref_elems(self%ref_ID_s)%interpolator('ddeta', self%iface)
-        ddzeta  = ref_elems(self%ref_ID_s)%interpolator('ddzeta',self%iface)
+        nnodes  = self%ref_s%nnodes_if()
+        weights = self%ref_s%weights()
+        val     = self%ref_c%interpolator('Value', self%iface)
+        ddxi    = self%ref_c%interpolator('ddxi',  self%iface)
+        ddeta   = self%ref_c%interpolator('ddeta', self%iface)
+        ddzeta  = self%ref_c%interpolator('ddzeta',self%iface)
 
         !
         ! Evaluate directional derivatives of coordinates at quadrature nodes.
@@ -559,7 +564,7 @@ contains
                 scaling_23  = self%quad_pts(:,1)
                 scaling_123 = self%quad_pts(:,1)
             case default
-                call chidg_signal(FATAL,"face%compute_quadrature_metrics: Invalid coordinate system. Choose 'Cartesian' or 'Cylindrical'.")
+                call chidg_signal_one(FATAL,"face%compute_quadrature_metrics: Invalid coordinate system. Choose 'Cartesian' or 'Cylindrical'.",self%coordinate_system)
         end select
 
         !
@@ -645,7 +650,7 @@ contains
     subroutine compute_quadrature_normals(self)
         class(face_t),  intent(inout)   :: self
 
-        integer(ik)                 :: inode, iface, nnodes
+        integer(ik)                 :: inode, iface, nnodes, ierr
         character(:),   allocatable :: coordinate_system
 
         real(rk),   dimension(:),   allocatable ::              &
@@ -667,12 +672,12 @@ contains
 
         !nnodes = self%gq%face%nnodes
         iface   = self%iface
-        nnodes  = ref_elems(self%ref_ID_s)%nnodes_i(iface)
-        weights = ref_elems(self%ref_ID_s)%weights(iface)
-        val     = ref_elems(self%ref_ID_s)%interpolator('Value', iface)
-        ddxi    = ref_elems(self%ref_ID_s)%interpolator('ddxi',  iface)
-        ddeta   = ref_elems(self%ref_ID_s)%interpolator('ddeta', iface)
-        ddzeta  = ref_elems(self%ref_ID_s)%interpolator('ddzeta',iface)
+        nnodes  = self%ref_s%nnodes_if()
+        weights = self%ref_s%weights(iface)
+        val     = self%ref_c%interpolator('Value', iface)
+        ddxi    = self%ref_c%interpolator('ddxi',  iface)
+        ddeta   = self%ref_c%interpolator('ddeta', iface)
+        ddzeta  = self%ref_c%interpolator('ddzeta',iface)
 
 
         
@@ -828,14 +833,15 @@ contains
     subroutine compute_quadrature_gradients(self)
         class(face_t),      intent(inout)   :: self
 
-        integer(ik)                         :: iterm,inode,iface,nnodes
+        integer(ik)                                 :: iterm,inode,iface,nnodes
+        real(rk),   allocatable,    dimension(:,:)  :: ddxi, ddeta, ddzeta
 
         iface  = self%iface
         !nnodes = self%gq%face%nnodes
-        nnodes = ref_elems(self%ref_ID_s)%nnodes_i(iface)
-        ddxi   = ref_elems(self%ref_ID_s)%interpolator('ddxi',  iface)
-        ddeta  = ref_elems(self%ref_ID_s)%interpolator('ddeta', iface)
-        ddzeta = ref_elems(self%ref_ID_s)%interpolator('ddzeta',iface)
+        nnodes = self%ref_s%nnodes_if()
+        ddxi   = self%ref_s%interpolator('ddxi',  iface)
+        ddeta  = self%ref_s%interpolator('ddeta', iface)
+        ddzeta = self%ref_s%interpolator('ddzeta',iface)
 
 
 
@@ -906,7 +912,7 @@ contains
         !    c2 = matmul(gq_f%val(:,:,iface),self%coords%getvar(2,itime = 1))
         !    c3 = matmul(gq_f%val(:,:,iface),self%coords%getvar(3,itime = 1))
         !end associate
-        val = ref_elems(self%ref_ID_c)%interpolator('Value',iface)
+        val = self%ref_c%interpolator('Value',iface)
         c1 = matmul(val,self%coords%getvar(1,itime = 1))
         c2 = matmul(val,self%coords%getvar(2,itime = 1))
         c3 = matmul(val,self%coords%getvar(3,itime = 1))
@@ -916,7 +922,7 @@ contains
         ! For each quadrature node, store real coordinates
         !
         !do inode = 1,self%gq%face%nnodes
-        do inode = 1,ref_elems(self%ref_ID_s)%nnodes_i(iface)
+        do inode = 1,self%ref_s%nnodes_if()
             self%quad_pts(inode,1:3) = [c1(inode), c2(inode), c3(inode)]
             !self%quad_pts(inode,2) = c2(inode)
             !self%quad_pts(inode,3) = c3(inode)
@@ -1058,10 +1064,11 @@ contains
         !real(rk)                            :: vg1(self%gq%face%nnodes),vg2(self%gq%face%nnodes),vg3(self%gq%face%nnodes)
         integer(ik)                             :: nnodes, inode
         real(rk),   allocatable, dimension(:)   :: x, y, z, vg1, vg2, vg3
+        real(rk),   allocatable, dimension(:,:) :: val
 
         !nnodes = self%gq%face%nnodes
-        nnodes = ref_elems(self%ref_ID_s)%nnodes_i()
-        val    = ref_elems(self%ref_ID_c)%interpolator('Value',self%iface)
+        nnodes = self%ref_s%nnodes_if()
+        val    = self%ref_c%interpolator('Value',self%iface)
 
         !
         ! compute cartesian coordinates associated with quadrature points
@@ -1118,11 +1125,11 @@ contains
         integer(ik) :: inode, iface
         integer(ik) :: nnodes
 
-        real(rk)    :: dxdxi(self%gq%face%nnodes), dxdeta(self%gq%face%nnodes), dxdzeta(self%gq%face%nnodes)
-        real(rk)    :: dydxi(self%gq%face%nnodes), dydeta(self%gq%face%nnodes), dydzeta(self%gq%face%nnodes)
-        real(rk)    :: dzdxi(self%gq%face%nnodes), dzdeta(self%gq%face%nnodes), dzdzeta(self%gq%face%nnodes)
-        real(rk)    :: invjac_ale(self%gq%face%nnodes)
-
+!        real(rk)    :: dxdxi(self%gq%face%nnodes), dxdeta(self%gq%face%nnodes), dxdzeta(self%gq%face%nnodes)
+!        real(rk)    :: dydxi(self%gq%face%nnodes), dydeta(self%gq%face%nnodes), dydzeta(self%gq%face%nnodes)
+!        real(rk)    :: dzdxi(self%gq%face%nnodes), dzdeta(self%gq%face%nnodes), dzdzeta(self%gq%face%nnodes)
+!        real(rk)    :: invjac_ale(self%gq%face%nnodes)
+!
 !        iface  = self%iface
 !        nnodes = self%gq%face%nnodes
 !

@@ -1,7 +1,7 @@
 !>  Test init_element
 !!
 !!  element_type = 1
-!!  Testing that self%rnodes(reference nodes), which represents 
+!!  Testing that self%nodes_r(reference nodes), which represents 
 !!  the .'s in the diagram below are initialized and computed
 !!  correctly.
 !!
@@ -17,7 +17,7 @@
 !!
 !-----------------------------------------------------------------------
 @Test
-subroutine test_reference_element__rnodes1()
+subroutine test_reference_element__nodes_r1()
     use pfunit_mod
     use mod_kinds,              only: rk
     use mod_constants,          only: ZERO, ONE, TWO
@@ -31,18 +31,18 @@ subroutine test_reference_element__rnodes1()
     call ref_elem%init_element(element_type = 1)
 
     @assertEqual(ref_elem%element_type, 1)
-    @assertEqual(ref_elem%rnodes(:,1), [-ONE,  ONE, -ONE, ONE, -ONE,  ONE, -ONE, ONE],   1.e-8_rk)
-    @assertEqual(ref_elem%rnodes(:,2), [-ONE, -ONE,  ONE, ONE, -ONE, -ONE,  ONE, ONE],   1.e-8_rk)
-    @assertEqual(ref_elem%rnodes(:,3), [-ONE, -ONE, -ONE,-ONE,  ONE,  ONE,  ONE, ONE],   1.e-8_rk)
+    @assertEqual(ref_elem%nodes_r(:,1), [-ONE,  ONE, -ONE, ONE, -ONE,  ONE, -ONE, ONE],   1.e-8_rk)
+    @assertEqual(ref_elem%nodes_r(:,2), [-ONE, -ONE,  ONE, ONE, -ONE, -ONE,  ONE, ONE],   1.e-8_rk)
+    @assertEqual(ref_elem%nodes_r(:,3), [-ONE, -ONE, -ONE,-ONE,  ONE,  ONE,  ONE, ONE],   1.e-8_rk)
 
-end subroutine test_reference_element__rnodes1
+end subroutine test_reference_element__nodes_r1
 !***********************************************************************
 
 
 !>  Test init_element
 !!
 !!  element_type = 2
-!!  Testing that self%rnodes(reference nodes), which represents 
+!!  Testing that self%nodes_r(reference nodes), which represents 
 !!  the .'s in the diagram below are initialized and computed
 !!  correctly.
 !!
@@ -59,7 +59,7 @@ end subroutine test_reference_element__rnodes1
 !!
 !-----------------------------------------------------------------------
 @Test
-subroutine test_reference_element__rnodes2()
+subroutine test_reference_element__nodes_r2()
     use pfunit_mod
     use mod_kinds,              only: rk
     use mod_constants,          only: ZERO, ONE, TWO
@@ -78,21 +78,21 @@ subroutine test_reference_element__rnodes2()
     ref_nodes = [-ONE, ZERO,  ONE, -ONE, ZERO,  ONE, -ONE, ZERO, ONE, &
                  -ONE, ZERO,  ONE, -ONE, ZERO,  ONE, -ONE, ZERO, ONE, &
                  -ONE, ZERO,  ONE, -ONE, ZERO,  ONE, -ONE, ZERO, ONE]
-    @assertEqual(ref_elem%rnodes(:,1), ref_nodes, 1.e-8_rk)
+    @assertEqual(ref_elem%nodes_r(:,1), ref_nodes, 1.e-8_rk)
 
 
     ref_nodes = [-ONE, -ONE, -ONE, ZERO, ZERO, ZERO,  ONE,  ONE, ONE, & 
                  -ONE, -ONE, -ONE, ZERO, ZERO, ZERO,  ONE,  ONE, ONE, &
                  -ONE, -ONE, -ONE, ZERO, ZERO, ZERO,  ONE,  ONE, ONE]
-    @assertEqual(ref_elem%rnodes(:,2), ref_nodes, 1.e-8_rk)
+    @assertEqual(ref_elem%nodes_r(:,2), ref_nodes, 1.e-8_rk)
 
 
     ref_nodes = [-ONE, -ONE, -ONE, -ONE, -ONE, -ONE, -ONE, -ONE, -ONE, & 
                  ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, &
                   ONE,  ONE,  ONE,  ONE,  ONE,  ONE,  ONE,  ONE,  ONE]
-    @assertEqual(ref_elem%rnodes(:,3), ref_nodes, 1.e-8_rk)
+    @assertEqual(ref_elem%nodes_r(:,3), ref_nodes, 1.e-8_rk)
 
-end subroutine test_reference_element__rnodes2
+end subroutine test_reference_element__nodes_r2
 !***********************************************************************
 
 

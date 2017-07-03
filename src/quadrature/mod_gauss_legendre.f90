@@ -79,23 +79,23 @@ contains
                 nnodes_xi   = nnodes1d
                 nnodes_eta  = 1
                 nnodes_zeta = 1
-                call gl_nodes(nnodes1d,xi_nodes)
+                xi_nodes = gl_nodes(nnodes1d)
                 eta_nodes  = ZERO
                 zeta_nodes = ZERO
             case(2)
                 nnodes_xi   = nnodes1d
                 nnodes_eta  = nnodes1d
                 nnodes_zeta = 1
-                call gl_nodes(nnodes1d,xi_nodes)
-                call gl_nodes(nnodes1d,eta_nodes)
+                xi_nodes  = gl_nodes(nnodes1d)
+                eta_nodes = gl_nodes(nnodes1d)
                 zeta_nodes = ZERO
             case(3)
                 nnodes_xi   = nnodes1d
                 nnodes_eta  = nnodes1d
                 nnodes_zeta = nnodes1d
-                call gl_nodes(nnodes1d,xi_nodes)
-                call gl_nodes(nnodes1d,eta_nodes)
-                call gl_nodes(nnodes1d,zeta_nodes)
+                xi_nodes   = gl_nodes(nnodes1d)
+                eta_nodes  = gl_nodes(nnodes1d)
+                zeta_nodes = gl_nodes(nnodes1d)
             case default
                 call chidg_signal_one(FATAL,"quadrature_nodes: invalid dimension.",dim)
         end select
@@ -141,17 +141,16 @@ contains
     !!  @date   6/28/2017
     !!
     !------------------------------------------------------------------------
-    function quadrature_weights(nterms,level,dim) result(weights_)
+    function quadrature_weights(nterms,level,dim) result(weights)
         integer(ik),    intent(in)  :: nterms
         integer(ik),    intent(in)  :: level
         integer(ik),    intent(in)  :: dim
 
         ! Level for quadrature weights corresponds to the number of weights
         ! in the 1D tensor construction of the node set.
-        real(rk),   dimension(level)            :: xi_weights, eta_weights, zeta_weights
+        real(rk),   allocatable, dimension(:)   :: xi_weights, eta_weights, zeta_weights, weights
         integer(ik)                             :: ixi, ieta, izeta, inode, nweights, ierr, nnodes1d, nterms1d
         integer(ik)                             :: nweights_xi, nweights_eta, nweights_zeta
-        real(rk),   allocatable, dimension(:)   :: weights_(:)
 
 
         !
@@ -190,28 +189,31 @@ contains
         !
         ! Get 1D weights
         !
+        allocate(xi_weights(nnodes1d), eta_weights(nnodes1d), zeta_weights(nnodes1d), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
         select case(dim)
             case(1)
                 nweights_xi   = nnodes1d
                 nweights_eta  = 1
                 nweights_zeta = 1
-                call gl_weights(nnodes1d,xi_weights)
+                xi_weights = gl_weights(nnodes1d)
                 eta_weights  = ONE
                 zeta_weights = ONE
             case(2)
                 nweights_xi   = nnodes1d
                 nweights_eta  = nnodes1d
                 nweights_zeta = 1
-                call gl_weights(nnodes1d,xi_weights)
-                call gl_weights(nnodes1d,eta_weights)
+                xi_weights   = gl_weights(nnodes1d)
+                eta_weights  = gl_weights(nnodes1d)
                 zeta_weights = ONE
             case(3)
                 nweights_xi   = nnodes1d
                 nweights_eta  = nnodes1d
                 nweights_zeta = nnodes1d
-                call gl_weights(nnodes1d,xi_weights)
-                call gl_weights(nnodes1d,eta_weights)
-                call gl_weights(nnodes1d,zeta_weights)
+                xi_weights   = gl_weights(nnodes1d)
+                eta_weights  = gl_weights(nnodes1d)
+                zeta_weights = gl_weights(nnodes1d)
             case default
                 call chidg_signal_one(FATAL,"quadrature_weights: invalid dimension.",dim)
         end select
@@ -221,7 +223,7 @@ contains
         ! Allocate weights_
         !
         nweights = nweights_xi*nweights_eta*nweights_zeta
-        allocate(weights_(nweights), stat=ierr)
+        allocate(weights(nweights), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
@@ -232,7 +234,7 @@ contains
         do izeta = 1,nweights_zeta
             do ieta = 1,nweights_eta
                 do ixi = 1,nweights_xi
-                    weights_(inode) = xi_weights(ixi)*eta_weights(ieta)*zeta_weights(izeta)
+                    weights(inode) = xi_weights(ixi)*eta_weights(ieta)*zeta_weights(izeta)
                     inode = inode + 1
                 end do
             end do
@@ -259,12 +261,12 @@ contains
     !!   @param[out] nodes    Gauss-Legendre quadrature node locations
     !!
     !----------------------------------------------------------------------------------------
-    subroutine gl_nodes(nnodes,nodes)
+    function gl_nodes(nnodes) result(nodes)
         integer(ik),    intent(in)      :: nnodes
-        real(rk),       intent(inout)   :: nodes(:)
 
-        integer(ik)                     :: i,j,polyterm
-        real(rk)                        :: resid,tol,x,xnew,theta,n
+        real(rk)    :: nodes(nnodes)
+        integer(ik) :: i,j,polyterm
+        real(rk)    :: resid,tol,x,xnew,theta,n
 
 
         !
@@ -316,7 +318,7 @@ contains
 
         end do
 
-    end subroutine gl_nodes
+    end function gl_nodes
     !*****************************************************************************************
 
 
@@ -337,18 +339,17 @@ contains
     !!  @param[out] weights     quadrature weights associated with Gauss-Legendre nodes
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine gl_weights(nweights,weights)
+    function gl_weights(nweights) result(weights)
         integer(ik),    intent(in)    :: nweights
-        real(rk),       intent(inout) :: weights(:)
 
-        real(rk)        :: nodes(nweights)
+        real(rk)        :: nodes(nweights), weights(nweights)
         integer(ik)     :: i,polyterm
         real(rk)        :: xi,DPoly
 
         !
         ! Get quadrature nodes
         !
-        call gl_nodes(nweights,nodes)
+        nodes = gl_nodes(nweights)
 
         
         !
@@ -360,21 +361,17 @@ contains
 
         do i=1,nweights
 
-            !
             ! Get quadrature node and polynomial derivative
-            !
             xi = nodes(i)
             DPoly = dlegendre_val1D(polyterm,xi)
 
-            !
             ! Compute weight
-            !
             weights(i) = TWO/((ONE - xi*xi)*(DPoly*DPoly))
 
         end do
 
 
-    end subroutine gl_weights
+    end function gl_weights
     !******************************************************************************************
 
 

@@ -19,6 +19,7 @@ module type_element
     use type_quadrature,            only: quadrature_t
     use type_function,              only: function_t
     use type_element_connectivity,  only: element_connectivity_t
+    use type_reference_element,     only: reference_element_t
     use DNAD_D
     implicit none
 
@@ -61,7 +62,7 @@ module type_element
         integer(ik)     :: neqns                            ! Number of equations being solved
         integer(ik)     :: nterms_s                         ! Number of terms in solution expansion.  
         integer(ik)     :: nterms_c                         ! Number of terms in coordinate expansion. 
-        integer(ik)     :: nterms_c_1d                      ! N-terms in 1d coordinate expansion.
+!        integer(ik)     :: nterms_c_1d                      ! N-terms in 1d coordinate expansion.
         integer(ik)     :: ntime                            ! Number of time levels in solution
 
         ! Element quadrature points, mesh points and modes
@@ -111,10 +112,12 @@ module type_element
         real(rk), allocatable           :: grad3_trans(:,:)     ! transpose grad3
 
         ! Reference element and interpolators
-        integer(ik)                     :: ref_ID_s
-        integer(ik)                     :: ref_ID_c
+        !integer(ik)                     :: ref_ID_s
+        !integer(ik)                     :: ref_ID_c
         !type(quadrature_t), pointer     :: gq     => null()     ! Pointer to instance for solution expansion
         !type(quadrature_t), pointer     :: gqmesh => null()     ! Pointer to instance for coordinate expansion
+        type(reference_element_t),  pointer :: ref_s => null()
+        type(reference_element_t),  pointer :: ref_c => null()
 
         ! Element-local mass, inverse mass matrices
         real(rk), allocatable           :: mass(:,:)        
@@ -225,7 +228,7 @@ contains
                                        ymin, ymax, ywidth,  &
                                        zmin, zmax, zwidth
         integer(ik)                 :: ierr, nterms_c, ipt, npts_1d, npts, &
-                                       mapping, inode, idomain_g, ielem_g, spacedim
+                                       mapping, inode, idomain_g, ielem_g, spacedim, ref_ID_c
         integer(ik)                 :: ntime = 1
 
 
@@ -245,7 +248,8 @@ contains
         ! Get reference element (reference nodes only, no interpolators)
         !
         self%element_type = mapping
-        self%ref_ID_c     = get_reference_element(element_type = mapping)
+        ref_ID_c          = get_reference_element(element_type = mapping)
+        self%ref_c => ref_elems(ref_ID_c)
 
 
 
@@ -255,7 +259,8 @@ contains
         !npts_1d          = mapping+1
         !npts             = npts_1d * npts_1d * npts_1d
         !self%nterms_c_1d = npts_1d
-        npts = ref_elems(self%ref_ID_c)%nnodes_r()
+        !npts = ref_elems(self%ref_ID_c)%nnodes_r()
+        npts = self%ref_c%nnodes_r()
         allocate(nodes_l(npts,3), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -278,7 +283,8 @@ contains
         !
         spacedim=3
         !self%nodes_to_modes = get_element_mapping(spacedim,mapping)
-        self%nodes_to_modes = ref_elems(self%ref_ID_c)%nodes_to_modes
+        !self%nodes_to_modes = ref_elems(self%ref_ID_c)%nodes_to_modes
+        self%nodes_to_modes = self%ref_c%nodes_to_modes
         nterms_c = size(self%nodes_to_modes,1)
         self%nterms_c = nterms_c
 
@@ -353,6 +359,7 @@ contains
         dnodes = ZERO
         vnodes = ZERO
         call self%init_ale(dnodes,vnodes)
+
 
 
 
@@ -487,15 +494,17 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine init_sol(self,neqns,nterms_s,ntime)
+    subroutine init_sol(self,interpolation,level,nterms_s,neqns,ntime)
         class(element_t),   intent(inout) :: self
-        integer(ik),        intent(in)    :: neqns
+        character(*),       intent(in)    :: interpolation
+        integer(ik),        intent(in)    :: level
         integer(ik),        intent(in)    :: nterms_s
+        integer(ik),        intent(in)    :: neqns
         integer(ik),        intent(in)    :: ntime
 
         integer(ik) :: ierr
         integer(ik) :: nnodes
-
+        integer(ik) :: ref_ID_s, ref_ID_c
         
 
         self%nterms_s    = nterms_s     ! number of terms in solution expansion
@@ -510,20 +519,28 @@ contains
         !
         !call self%assign_quadrature()
         !nnodes = self%gq%vol%nnodes
-        self%ref_ID_s = get_reference_element(element_type = self%element_type,  &
-                                              polynomial   = 'Legendre',         &
-                                              nterms       = nterms_s,           &
-                                              node_set     = 'Quadrature',       &
-                                              level        = gq_rule,            &
-                                              nterms_rule  = nterms_s)
-        self%ref_ID_c = get_reference_element(element_type = self%element_type,  &
-                                              polynomial   = 'Legendre',         &
-                                              nterms       = self%nterms_c,      &
-                                              node_set     = 'Quadrature',       &
-                                              level        = gq_rule,            &
-                                              nterms_rule  = nterms_s)
+        ref_ID_s = get_reference_element(element_type = self%element_type,  &
+                                         polynomial   = 'Legendre',         &
+                                         nterms       = nterms_s,           &
+                                         !node_set     = 'Quadrature',       &
+                                         node_set     = interpolation,      &
+                                         !level        = gq_rule,            &
+                                         level        = level,            &
+                                         nterms_rule  = nterms_s)
+        ref_ID_c = get_reference_element(element_type = self%element_type,  &
+                                         polynomial   = 'Legendre',         &
+                                         nterms       = self%nterms_c,      &
+                                         !node_set     = 'Quadrature',       &
+                                         node_set     = interpolation,      &
+                                         !level        = gq_rule,            &
+                                         level        = level,            &
+                                         nterms_rule  = nterms_s)
 
-        nnodes = ref_elems(self%ref_ID_s)%nnodes_i()
+
+        self%ref_s => ref_elems(ref_ID_s)
+        self%ref_c => ref_elems(ref_ID_c)
+
+        nnodes = ref_elems(ref_ID_s)%nnodes_ie()
 
 
         !
@@ -738,12 +755,12 @@ contains
         real(rk),   dimension(:,:), allocatable :: val, ddxi, ddeta, ddzeta
 
         !nnodes = self%gq%vol%nnodes
-        nnodes  = ref_elems(self%ref_ID_s)%nnodes_i()
-        weights = ref_elems(self%ref_ID_s)%weights()
-        val     = ref_elems(self%ref_ID_s)%interpolator('Value')
-        ddxi    = ref_elems(self%ref_ID_s)%interpolator('ddxi')
-        ddeta   = ref_elems(self%ref_ID_s)%interpolator('ddeta')
-        ddzeta  = ref_elems(self%ref_ID_s)%interpolator('ddzeta')
+        nnodes  = self%ref_s%nnodes_ie()
+        weights = self%ref_s%weights()
+        val     = self%ref_c%interpolator('Value')
+        ddxi    = self%ref_c%interpolator('ddxi')
+        ddeta   = self%ref_c%interpolator('ddeta')
+        ddzeta  = self%ref_c%interpolator('ddzeta')
 
         !
         ! Compute element metric terms
@@ -797,7 +814,7 @@ contains
                 scaling_23  = self%quad_pts(:,1)
                 scaling_123 = self%quad_pts(:,1)
             case default
-                call chidg_signal(FATAL,"element%compute_quadrature_metrics: Invalid coordinate system. Choose 'Cartesian' or 'Cylindrical'.")
+                call chidg_signal_one(FATAL,"element%compute_quadrature_metrics: Invalid coordinate system. Choose 'Cartesian' or 'Cylindrical'.",self%coordinate_system)
         end select
 
 
@@ -892,10 +909,14 @@ contains
         integer(ik)                                 :: nnodes
         real(rk),   allocatable,    dimension(:,:)  :: ddxi, ddeta, ddzeta
 
-        nnodes = ref_elems(self%ref_ID_s)%nnodes_i()
-        ddxi   = ref_elems(self%ref_ID_s)%interpolator('ddxi')
-        ddeta  = ref_elems(self%ref_ID_s)%interpolator('ddeta')
-        ddzeta = ref_elems(self%ref_ID_s)%interpolator('ddzeta')
+        !nnodes = ref_elems(self%ref_ID_s)%nnodes_i()
+        !ddxi   = ref_elems(self%ref_ID_s)%interpolator('ddxi')
+        !ddeta  = ref_elems(self%ref_ID_s)%interpolator('ddeta')
+        !ddzeta = ref_elems(self%ref_ID_s)%interpolator('ddzeta')
+        nnodes = self%ref_s%nnodes_ie()
+        ddxi   = self%ref_s%interpolator('ddxi')
+        ddeta  = self%ref_s%interpolator('ddeta')
+        ddzeta = self%ref_s%interpolator('ddzeta')
 
         do iterm = 1,self%nterms_s
             do inode = 1,nnodes
@@ -962,7 +983,7 @@ contains
         integer(ik)                             :: inode
 
         !nnodes = self%gq%vol%nnodes
-        nnodes = ref_elems(self%ref_ID_c)%nnodes_i()
+        nnodes = self%ref_c%nnodes_ie()
 
         !
         ! compute coordinates associated with quadrature points
@@ -970,9 +991,9 @@ contains
         !coord1 = matmul(self%gqmesh%vol%val,self%coords%getvar(1,itime = 1))
         !coord2 = matmul(self%gqmesh%vol%val,self%coords%getvar(2,itime = 1))
         !coord3 = matmul(self%gqmesh%vol%val,self%coords%getvar(3,itime = 1))
-        coord1 = matmul(ref_elems(self%ref_ID_c)%interpolator('Value'),self%coords%getvar(1,itime = 1))
-        coord2 = matmul(ref_elems(self%ref_ID_c)%interpolator('Value'),self%coords%getvar(2,itime = 1))
-        coord3 = matmul(ref_elems(self%ref_ID_c)%interpolator('Value'),self%coords%getvar(3,itime = 1))
+        coord1 = matmul(self%ref_c%interpolator('Value'),self%coords%getvar(1,itime = 1))
+        coord2 = matmul(self%ref_c%interpolator('Value'),self%coords%getvar(2,itime = 1))
+        coord3 = matmul(self%ref_c%interpolator('Value'),self%coords%getvar(3,itime = 1))
 
 
         !
@@ -1015,7 +1036,7 @@ contains
         self%mass    = ZERO
 
         !temp = transpose(self%gq%vol%val)
-        temp = transpose(ref_elems(self%ref_ID_s)%interpolator('Value'))
+        temp = transpose(self%ref_s%interpolator('Value'))
 
 
         !
@@ -1023,7 +1044,7 @@ contains
         !
         do iterm = 1,self%nterms_s
             !temp(iterm,:) = temp(iterm,:)*(self%gq%vol%weights)*(self%jinv)
-            temp(iterm,:) = temp(iterm,:)*(ref_elems(self%ref_ID_s)%weights())*(self%jinv)
+            temp(iterm,:) = temp(iterm,:)*(self%ref_s%weights())*(self%jinv)
         end do
 
 
@@ -1032,7 +1053,7 @@ contains
         ! the standard matrix. This produces the mass matrix. I think...
         !
         !self%mass = matmul(temp,self%gq%vol%val)
-        self%mass = matmul(temp,ref_elems(self%ref_ID_s)%interpolator('Value'))
+        self%mass = matmul(temp,self%ref_s%interpolator('Value'))
 
 
 
@@ -1737,14 +1758,14 @@ contains
         !
         time  = 0._rk
         !fvals = fcn%compute(time,point_t(self%quad_pts)) * self%gq%vol%weights * self%jinv
-        fvals = fcn%compute(time,point_t(self%quad_pts)) * ref_elems(self%ref_ID_s)%weights() * self%jinv
+        fvals = fcn%compute(time,point_t(self%quad_pts)) * self%ref_s%weights() * self%jinv
 
 
         !
         ! Project
         !
         !temp = matmul(transpose(self%gq%vol%val),fvals)
-        temp = matmul(transpose(ref_elems(self%ref_ID_s)%interpolator('Value')),fvals)
+        temp = matmul(transpose(self%ref_s%interpolator('Value')),fvals)
         fmodes = matmul(self%invmass,temp)
 
 
@@ -1811,7 +1832,8 @@ contains
         !
         do iface_test = 1,NFACES
 
-            face_indices = face_corners(iface_test,:,self%nterms_c_1d - 1)
+            !face_indices = face_corners(iface_test,:,self%nterms_c_1d - 1)
+            face_indices = face_corners(iface_test,:,self%element_type)
             corner_one_in_face   = any(face_indices == corner_position(1))
             corner_two_in_face   = any(face_indices == corner_position(2))
             corner_three_in_face = any(face_indices == corner_position(3))
@@ -1932,7 +1954,7 @@ contains
         !
         ! Retrieve interpolator
         !
-        val = ref_elems(self%ref_ID_c)%interpolator('Value')
+        val = self%ref_c%interpolator('Value')
 
         !
         ! compute cartesian coordinates associated with quadrature points
@@ -1991,12 +2013,11 @@ contains
         ! Retrieve interpolators
         !
         !nnodes = self%gq%vol%nnodes
-        nnodes  = ref_elems(self%ref_ID_s)%nnodes_i()
-        weights = ref_elems(self%ref_ID_s)%weights()
-        val     = ref_elems(self%ref_ID_s)%interpolator('Value')
-        ddxi    = ref_elems(self%ref_ID_s)%interpolator('ddxi')
-        ddeta   = ref_elems(self%ref_ID_s)%interpolator('ddeta')
-        ddzeta  = ref_elems(self%ref_ID_s)%interpolator('ddzeta')
+        nnodes  = self%ref_s%nnodes_ie()
+        weights = self%ref_s%weights()
+        ddxi    = self%ref_c%interpolator('ddxi')
+        ddeta   = self%ref_c%interpolator('ddeta')
+        ddzeta  = self%ref_c%interpolator('ddzeta')
 
         !d1dxi   = matmul(self%gqmesh%vol%ddxi,  self%ale_coords%getvar(1,itime = 1))
         !d1deta  = matmul(self%gqmesh%vol%ddeta, self%ale_coords%getvar(1,itime = 1))
@@ -2124,6 +2145,7 @@ contains
         ! Project
         !
         !temp = matmul(transpose(self%gq%vol%val),fvals)
+        val  = self%ref_s%interpolator('Value')
         temp = matmul(transpose(val),fvals)
         self%det_jacobian_grid_modes = matmul(self%invmass,temp)
 

@@ -730,8 +730,10 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine initialize_solution_domains(self,nterms_s)
+    subroutine initialize_solution_domains(self,interpolation,level,nterms_s)
         class(chidg_data_t),    intent(inout)   :: self
+        character(*),           intent(in)      :: interpolation
+        integer(ik),            intent(in)      :: level
         integer(ik),            intent(in)      :: nterms_s
 
         integer(ik) :: idomain, nfields, eqn_ID
@@ -745,7 +747,7 @@ contains
             nfields = self%eqnset(eqn_ID)%prop%nprimary_fields()
 
             self%mesh%ntime_ = self%time_manager%ntime
-            call self%mesh%domain(idomain)%init_sol(nfields,nterms_s,self%time_manager%ntime)
+            call self%mesh%domain(idomain)%init_sol(interpolation,level,nterms_s,nfields,self%time_manager%ntime)
         end do
 
 

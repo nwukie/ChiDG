@@ -249,9 +249,18 @@ contains
                             end do ! ipt_eta
                         end do ! ipt_zeta
 
-
-
                     end do !ielem
+
+
+                    !
+                    !do inode = 1,size(data%mesh%domain(idom)%elems(ielem)%quad_pts,1)
+                    !
+                    !   val = real(data%mesh%domain(idom)%elems(ielem)%quad_pts(inode,icoord),rdouble)
+                    !   tecstat = TECDAT142(1,valeq,1)
+                    !   if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to TECDAT142")
+                    !
+                    !end do !inode
+                    !
 
 
                 end do ! coords

@@ -21,6 +21,7 @@ module mod_chimera
                                       XI_DIR, ETA_DIR, ZETA_DIR, &
                                       ONE, ZERO, TWO, TWO_DIM, THREE_DIM, &
                                       INVALID_POINT, VALID_POINT, NO_PROC
+    use mod_reference_elements, only: ref_elems
 
     use type_point
     use type_mesh,              only: mesh_t
@@ -285,7 +286,8 @@ contains
                         !
                         ! Loop through quadrature nodes on Chimera face and find donors
                         !
-                        do igq = 1,mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface)%gq%face%nnodes
+                        !do igq = 1,mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface)%gq%face%nnodes
+                        do igq = 1,mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface)%ref_s%nnodes_if()
 
                             !
                             ! Get node coordinates

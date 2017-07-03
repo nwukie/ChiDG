@@ -5,7 +5,7 @@ module mod_reference_elements
     use type_reference_element, only: reference_element_t
     implicit none
 
-    type(reference_element_t),  allocatable :: ref_elems(:)
+    type(reference_element_t),  allocatable, target :: ref_elems(:)
 
 contains
 
@@ -26,58 +26,70 @@ contains
         integer(ik),    intent(in), optional    :: nterms_rule
 
         character(:),   allocatable :: user_msg
-        integer(ik)                 :: iref_elem, ref_elem_ID
+        integer(ik)                 :: iref_elem, ref_elem_ID, nrefs
         logical                     :: polynomial_matches, nterms_matches, node_set_matches, &
                                        level_matches, element_matches, rule_matches
 
+        !
+        ! Get number of reference elements available
+        !
+        if (allocated(ref_elems)) then
+            nrefs = size(ref_elems)
+        else
+            nrefs = 0
+        end if
+
+        
 
         !
         ! First, try to find an existing reference object to provide
         !
         ref_elem_ID = NO_ID
-        do iref_elem = 1,size(ref_elems)
+        do iref_elem = 1,nrefs
 
             !
             ! Try to find fully initialized reference element: (reference nodes + interpolation nodes)
             !
-            if (present(polynomial) .and. present(nterms) .and. present(node_set) .and. present(level) .and. present(nterms_rule) ) then
-                element_matches    = ( ref_elems(iref_elem)%element_type == element_type     )
-                polynomial_matches = ( ref_elems(iref_elem)%polynomial   == trim(polynomial) )
-                nterms_matches     = ( ref_elems(iref_elem)%nterms_i()   == nterms           )
-                node_set_matches   = ( ref_elems(iref_elem)%node_set     == trim(node_set)   )
-                level_matches      = ( ref_elems(iref_elem)%level        == level            )
-                rule_matches       = ( ref_elems(iref_elem)%nterms_rule  == nterms_rule      )
+                if (present(polynomial) .and. present(nterms) .and. present(node_set) .and. present(level) .and. present(nterms_rule) ) then
+                    if (ref_elems(iref_elem)%interpolation_initialized) then
+                        element_matches    = ( ref_elems(iref_elem)%element_type == element_type     )
+                        polynomial_matches = ( ref_elems(iref_elem)%polynomial   == trim(polynomial) )
+                        nterms_matches     = ( ref_elems(iref_elem)%nterms_i()   == nterms           )
+                        node_set_matches   = ( ref_elems(iref_elem)%node_set     == trim(node_set)   )
+                        level_matches      = ( ref_elems(iref_elem)%level        == level            )
+                        rule_matches       = ( ref_elems(iref_elem)%nterms_rule  == nterms_rule      )
 
-                if (element_matches     .and. &
-                    polynomial_matches  .and. &
-                    nterms_matches      .and. &
-                    node_set_matches    .and. &
-                    level_matches       .and. &
-                    rule_matches) then
-                    ref_elem_ID = iref_elem
-                    exit
+                        if (element_matches     .and. &
+                            polynomial_matches  .and. &
+                            nterms_matches      .and. &
+                            node_set_matches    .and. &
+                            level_matches       .and. &
+                            rule_matches) then
+                            ref_elem_ID = iref_elem
+                            exit
+                        end if
+                    end if !interpolation_initialized
+
+                !
+                ! Try to find reference element only: (reference nodes)
+                !
+                else if ( (.not. present(polynomial)) .and. &
+                          (.not. present(nterms))     .and. &
+                          (.not. present(node_set))   .and. &
+                          (.not. present(level))      .and. &
+                          (.not. present(nterms_rule)) ) then
+
+                    element_matches = ref_elems(iref_elem)%element_type == element_type
+                    if ( element_matches ) then
+                        ref_elem_ID = iref_elem
+                        exit
+                    end if
+
+                else
+                    user_msg = "get_reference_element: Invalid combination of optional parameters &
+                                was passed to try and retrieve a reference element object."
+                    call chidg_signal(FATAL,user_msg)
                 end if
-
-            !
-            ! Try to find reference element only: (reference nodes)
-            !
-            else if ( (.not. present(polynomial)) .and. &
-                      (.not. present(nterms))     .and. &
-                      (.not. present(node_set))   .and. &
-                      (.not. present(level))      .and. &
-                      (.not. present(nterms_rule)) ) then
-
-                element_matches = ref_elems(iref_elem)%element_type == element_type
-                if ( element_matches ) then
-                    ref_elem_ID = iref_elem
-                    exit
-                end if
-
-            else
-                user_msg = "get_reference_element: Invalid combination of optional parameters &
-                            was passed to try and retrieve a reference element object."
-                call chidg_signal(FATAL,user_msg)
-            end if
 
         end do !iref_elem
 

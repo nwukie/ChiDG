@@ -97,12 +97,12 @@ contains
         allocate(xi_weights(nnodes1d),eta_weights(nnodes1d),zeta_weights(nnodes1d))
 
 
-        call gl_nodes(nnodes1d,xi_vals)
-        call gl_nodes(nnodes1d,eta_vals)
-        call gl_nodes(nnodes1d,zeta_vals)
-        call gl_weights(nnodes1d,xi_weights)
-        call gl_weights(nnodes1d,eta_weights)
-        call gl_weights(nnodes1d,zeta_weights)
+        xi_vals      = gl_nodes(nnodes1d)
+        eta_vals     = gl_nodes(nnodes1d)
+        zeta_vals    = gl_nodes(nnodes1d)
+        xi_weights   = gl_weights(nnodes1d)
+        eta_weights  = gl_weights(nnodes1d)
+        zeta_weights = gl_weights(nnodes1d)
 
 
 

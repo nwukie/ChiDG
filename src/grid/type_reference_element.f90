@@ -18,7 +18,7 @@ module type_reference_element
     !!
     !!  
     !!
-    !! rnodes(.'s) for P1 element     rnodes(.'s) for P2 element
+    !! nodes_r(.'s) for P1 element     nodes_r(.'s) for P2 element
     !!        .-----------.                  .-----.-----.
     !!       /           /|                 /     /     /|
     !!      /           / |                .-----.-----. |
@@ -35,7 +35,7 @@ module type_reference_element
     !!  
     !!  Example of quadrature interpolation nodes(x's) on faces. Note,
     !!  the interpolation nodes are independent of the element reference 
-    !!  nodes, self%rnodes.
+    !!  nodes, self%nodes_r.
     !!
     !!        .-----------.                  .-----.-----.
     !!       /  x    x   /|                 /  x  /  x  /|
@@ -56,12 +56,12 @@ module type_reference_element
     !!      values_{at inodes} = matmul(val_e, modes)
     !!
     !!  The nodes_to_modes projector matrix, acts on values at the reference
-    !!  nodes(rnodes, .'s). When the nodes_to_modes projector matrix,
-    !!  acting on values located at rnodes, computes modal coefficients
+    !!  nodes(nodes_r, .'s). When the nodes_to_modes projector matrix,
+    !!  acting on values located at nodes_r, computes modal coefficients
     !!  representing the original quantity as a polynomial expansion on 
     !!  the reference element.
     !!
-    !!      modes = matmul(nodes_to_modes, values_{at rnodes})
+    !!      modes = matmul(nodes_to_modes, values_{at nodes_r})
     !!
     !!
     !!
@@ -73,8 +73,8 @@ module type_reference_element
 
         ! Reference element type/nodes
         integer(ik)                 :: element_type
-        real(rk),       allocatable :: rnodes(:,:)          ! Nodes defining the parametric reference element.
-        real(rk),       allocatable :: nodes_to_modes(:,:)  ! linear projector. Takes values at 'rnodes' and computes modal coefficients
+        real(rk),       allocatable :: nodes_r(:,:)          ! Nodes defining the parametric reference element.
+        real(rk),       allocatable :: nodes_to_modes(:,:)  ! linear projector. Takes values at 'nodes_r' and computes modal coefficients
                                                             ! NOTE: nterms of the nodes_to_mdoes projector does not correspond to
                                                             !       the number of terms in the interpolator matrices. The number of
                                                             !       terms in the projector is equal to the number of reference
@@ -87,9 +87,9 @@ module type_reference_element
         integer(ik)                 :: nterms_rule
 
         ! Interpolation nodes/weights
-        real(rk),       allocatable :: inodes_e(:,:)        ! nodes_3d(nnodes, 3). xi = nodes(:,1), eta = nodes(:,2), zeta = nodes(:,3)
+        real(rk),       allocatable :: nodes_ie(:,:)        ! nodes_3d(nnodes, 3). xi = nodes(:,1), eta = nodes(:,2), zeta = nodes(:,3)
         real(rk),       allocatable :: iweights_e(:)        ! weights_3d(nnodes)
-        real(rk),       allocatable :: inodes_f(:,:,:)      ! nodes_2d(nnodes, 3, nfaces). xi = nodes(:,1,iface), eta = nodes(:,2,iface), zeta = nodes(:,3,iface)
+        real(rk),       allocatable :: nodes_if(:,:,:)      ! nodes_2d(nnodes, 3, nfaces). xi = nodes(:,1,iface), eta = nodes(:,2,iface), zeta = nodes(:,3,iface)
         real(rk),       allocatable :: iweights_f(:)        ! weights_2d(nnodes)
 
 
@@ -130,10 +130,9 @@ module type_reference_element
         procedure, private  :: interpolate_face
         
         ! Query
-        procedure   :: nnodes_r                                     ! number of nodes in the reference node set
-        generic     :: nnodes_i => nnodes_i_element, nnodes_i_face  ! number of nodes in the interpolator node set
-        procedure   :: nnodes_i_element
-        procedure   :: nnodes_i_face
+        procedure   :: nnodes_r     ! number of nodes in the reference node set
+        procedure   :: nnodes_ie    ! Number of interpolation nodes in the element set
+        procedure   :: nnodes_if    ! Number of interpolation nodes in the face set
 
         procedure   :: nterms_r     ! number of terms in the reference node data
         procedure   :: nterms_i     ! number of terms in the interpolator node data
@@ -168,7 +167,7 @@ contains
         ! Set element type, initialize reference nodes.
         !
         self%element_type = element_type
-        self%rnodes       = uniform_nodes(element_type,dim=3)
+        self%nodes_r      = uniform_nodes(element_type,dim=3)
 
 
 
@@ -178,14 +177,15 @@ contains
         !
         ! Compute the values of each mapping term at each mesh point
         !
-        nnodes = size(self%rnodes,1)
+        !nnodes = size(self%nodes_r,1)
+        nnodes = self%nnodes_r()
         if (allocated(temp)) deallocate(temp)
         allocate(temp(nnodes,nnodes), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         do iterm = 1,nnodes
             do inode = 1,nnodes
-                temp(inode,iterm) = polynomial_val(3,nnodes,iterm,[self%rnodes(inode,1),self%rnodes(inode,2),self%rnodes(inode,3)])
+                temp(inode,iterm) = polynomial_val(3,nnodes,iterm,[self%nodes_r(inode,1),self%nodes_r(inode,2),self%nodes_r(inode,3)])
             end do
         end do
         ! Invert matrix so that it can multiply a vector of
@@ -234,6 +234,8 @@ contains
 
         call self%init_interpolator_matrices(polynomial,nterms)
 
+        self%interpolation_initialized = .true.
+
     end subroutine init_interpolator
     !*******************************************************************
 
@@ -245,9 +247,9 @@ contains
 
     !>  Initialize the interpolation node set.
     !!
-    !!  inodes_e
+    !!  nodes_ie
     !!  iweights_e (maybe)
-    !!  inodes_f
+    !!  nodes_if
     !!  iweights_f (maybe)
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -303,45 +305,46 @@ contains
         !
         if (allocated(nodes_3d) .and. allocated(nodes_2d)) then
             ! Set 3D element nodes
-            self%inodes_e = nodes_3d
+            self%nodes_ie = nodes_3d
 
             ! Set 2D face nodes
-            if (allocated(self%inodes_f)) deallocate(self%inodes_f)
-            allocate(self%inodes_f(size(nodes_2d,1),3,NFACES), stat=ierr)
+            if (allocated(self%nodes_if)) deallocate(self%nodes_if)
+            allocate(self%nodes_if(size(nodes_2d,1),3,NFACES), stat=ierr)
             if (ierr /= 0) call AllocationError
 
             iface = 1
-            self%inodes_f(:,1,iface) = -ONE
-            self%inodes_f(:,2,iface) = nodes_2d(:,1)
-            self%inodes_f(:,3,iface) = nodes_2d(:,2)
+            self%nodes_if(:,1,iface) = -ONE
+            self%nodes_if(:,2,iface) = nodes_2d(:,1)
+            self%nodes_if(:,3,iface) = nodes_2d(:,2)
 
             iface = 2
-            self%inodes_f(:,1,iface) = ONE
-            self%inodes_f(:,2,iface) = nodes_2d(:,1)
-            self%inodes_f(:,3,iface) = nodes_2d(:,2)
+            self%nodes_if(:,1,iface) = ONE
+            self%nodes_if(:,2,iface) = nodes_2d(:,1)
+            self%nodes_if(:,3,iface) = nodes_2d(:,2)
 
             iface = 3
-            self%inodes_f(:,1,iface) = nodes_2d(:,1)
-            self%inodes_f(:,2,iface) = -ONE
-            self%inodes_f(:,3,iface) = nodes_2d(:,2)
+            self%nodes_if(:,1,iface) = nodes_2d(:,1)
+            self%nodes_if(:,2,iface) = -ONE
+            self%nodes_if(:,3,iface) = nodes_2d(:,2)
 
             iface = 4
-            self%inodes_f(:,1,iface) = nodes_2d(:,1)
-            self%inodes_f(:,2,iface) = ONE
-            self%inodes_f(:,3,iface) = nodes_2d(:,2)
+            self%nodes_if(:,1,iface) = nodes_2d(:,1)
+            self%nodes_if(:,2,iface) = ONE
+            self%nodes_if(:,3,iface) = nodes_2d(:,2)
 
             iface = 5
-            self%inodes_f(:,1,iface) = nodes_2d(:,1)
-            self%inodes_f(:,2,iface) = nodes_2d(:,2)
-            self%inodes_f(:,3,iface) = -ONE
+            self%nodes_if(:,1,iface) = nodes_2d(:,1)
+            self%nodes_if(:,2,iface) = nodes_2d(:,2)
+            self%nodes_if(:,3,iface) = -ONE
 
             iface = 6
-            self%inodes_f(:,1,iface) = nodes_2d(:,1)
-            self%inodes_f(:,2,iface) = nodes_2d(:,2)
-            self%inodes_f(:,3,iface) = ONE
+            self%nodes_if(:,1,iface) = nodes_2d(:,1)
+            self%nodes_if(:,2,iface) = nodes_2d(:,2)
+            self%nodes_if(:,3,iface) = ONE
 
 
             self%nodes_initialized = .true.
+
 
         end if !nodes
 
@@ -407,17 +410,17 @@ contains
         if (allocated(self%ddxi_e))   deallocate(self%ddxi_e)
         if (allocated(self%ddeta_e))  deallocate(self%ddeta_e)
         if (allocated(self%ddzeta_e)) deallocate(self%ddzeta_e)
-        allocate(self%val_e(   size(self%inodes_e), nterms), &
-                 self%ddxi_e(  size(self%inodes_e), nterms), &
-                 self%ddeta_e( size(self%inodes_e), nterms), &
-                 self%ddzeta_e(size(self%inodes_e), nterms), stat=ierr)
+        allocate(self%val_e(   self%nnodes_ie(), nterms), &
+                 self%ddxi_e(  self%nnodes_ie(), nterms), &
+                 self%ddeta_e( self%nnodes_ie(), nterms), &
+                 self%ddzeta_e(self%nnodes_ie(), nterms), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         do iterm = 1,nterms
-            do inode = 1,size(self%inodes_e)
-                xi   = self%inodes_e(inode,1)
-                eta  = self%inodes_e(inode,2)
-                zeta = self%inodes_e(inode,3)
+            do inode = 1,self%nnodes_ie()
+                xi   = self%nodes_ie(inode,1)
+                eta  = self%nodes_ie(inode,2)
+                zeta = self%nodes_ie(inode,3)
                 self%val_e(   inode,iterm) =  polynomial_val(3,nterms,iterm,[xi,eta,zeta])
                 self%ddxi_e(  inode,iterm) = dpolynomial_val(3,nterms,iterm,[xi,eta,zeta],XI_DIR)
                 self%ddeta_e( inode,iterm) = dpolynomial_val(3,nterms,iterm,[xi,eta,zeta],ETA_DIR)
@@ -434,18 +437,18 @@ contains
         if (allocated(self%ddxi_f))   deallocate(self%ddxi_f)
         if (allocated(self%ddeta_f))  deallocate(self%ddeta_f)
         if (allocated(self%ddzeta_f)) deallocate(self%ddzeta_f)
-        allocate(self%val_f(   size(self%inodes_f), nterms, NFACES), &
-                 self%ddxi_f(  size(self%inodes_f), nterms, NFACES), &
-                 self%ddeta_f( size(self%inodes_f), nterms, NFACES), &
-                 self%ddzeta_f(size(self%inodes_f), nterms, NFACES), stat=ierr)
+        allocate(self%val_f(   self%nnodes_if(), nterms, NFACES), &
+                 self%ddxi_f(  self%nnodes_if(), nterms, NFACES), &
+                 self%ddeta_f( self%nnodes_if(), nterms, NFACES), &
+                 self%ddzeta_f(self%nnodes_if(), nterms, NFACES), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         do iface = 1,NFACES
             do iterm = 1,nterms
-                do inode = 1,size(self%inodes_f)
-                    xi   = self%inodes_f(inode,1,iface)
-                    eta  = self%inodes_f(inode,2,iface)
-                    zeta = self%inodes_f(inode,3,iface)
+                do inode = 1,self%nnodes_if()
+                    xi   = self%nodes_if(inode,1,iface)
+                    eta  = self%nodes_if(inode,2,iface)
+                    zeta = self%nodes_if(inode,3,iface)
                     self%val_f(   inode,iterm,iface) =  polynomial_val(spacedim,nterms,iterm,[xi,eta,zeta])
                     self%ddxi_f(  inode,iterm,iface) = dpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],XI_DIR)
                     self%ddeta_f( inode,iterm,iface) = dpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],ETA_DIR)
@@ -485,7 +488,7 @@ contains
                     initialized. Make sure init_nodes is getting called."
         if (.not. self%nodes_initialized) call chidg_signal(FATAL,user_msg)
 
-        nodes_ = self%inodes_e
+        nodes_ = self%nodes_ie
 
     end function nodes_element
     !*******************************************************************
@@ -508,7 +511,7 @@ contains
                     initialized. Make sure init_nodes is getting called."
         if (.not. self%nodes_initialized) call chidg_signal(FATAL,user_msg)
 
-        nodes_ = self%inodes_f(:,:,iface)
+        nodes_ = self%nodes_if(:,:,iface)
 
     end function nodes_face
     !*******************************************************************
@@ -645,14 +648,14 @@ contains
     !!  @date   6/30/2017
     !!
     !-------------------------------------------------------------------
-    function nnodes_r(self) result(nnodes)
+    pure function nnodes_r(self) result(nnodes)
         class(reference_element_t), intent(in)  :: self
 
         integer(ik) :: nnodes
 
-        if (.not. self%element_initialized) call chidg_signal(FATAL,"reference_element%nnodes_r: reference element has not been initialized.")
+        !if (.not. self%element_initialized) call chidg_signal(FATAL,"reference_element%nnodes_r: reference element has not been initialized.")
 
-        nnodes = size(self%rnodes,1)
+        nnodes = size(self%nodes_r,1)
 
     end function nnodes_r
     !*******************************************************************
@@ -666,16 +669,17 @@ contains
     !!  @date   6/30/2017
     !!
     !-------------------------------------------------------------------
-    function nnodes_i_element(self) result(nnodes)
+    pure function nnodes_ie(self) result(nnodes)
         class(reference_element_t), intent(in)  :: self
 
         integer(ik) :: nnodes
 
-        if (.not. self%interpolation_initialized) call chidg_signal(FATAL,"reference_element%nnodes_i: interpolation has not been initialized.")
+        !if (.not. self%interpolation_initialized) call chidg_signal(FATAL,"reference_element%nnodes_i: interpolation has not been initialized.")
 
-        nnodes = size(self%val_e,1)
+        !nnodes = size(self%val_e,1)
+        nnodes = size(self%nodes_ie,1)
 
-    end function nnodes_i_element
+    end function nnodes_ie
     !*******************************************************************
 
 
@@ -685,17 +689,17 @@ contains
     !!  @date   6/30/2017
     !!
     !-------------------------------------------------------------------
-    function nnodes_i_face(self,iface) result(nnodes)
+    pure function nnodes_if(self) result(nnodes)
         class(reference_element_t), intent(in)  :: self
-        integer(ik),                intent(in)  :: iface
 
         integer(ik) :: nnodes
 
-        if (.not. self%interpolation_initialized) call chidg_signal(FATAL,"reference_element%nnodes_i: interpolation has not been initialized.")
+        !if (.not. self%interpolation_initialized) call chidg_signal(FATAL,"reference_element%nnodes_i: interpolation has not been initialized.")
 
-        nnodes = size(self%val_f,1)
+        !nnodes = size(self%val_f,1)
+        nnodes = size(self%nodes_if,1)
 
-    end function nnodes_i_face
+    end function nnodes_if
     !*******************************************************************
 
 

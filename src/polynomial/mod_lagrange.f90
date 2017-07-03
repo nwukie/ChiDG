@@ -1,7 +1,7 @@
 module mod_lagrange
-    use mod_kinds,      only: rk,ik
+    use mod_kinds,          only: rk,ik
     use mod_constants
-    use mod_GaussLegendre, only: gl_nodes
+    use mod_gauss_legendre, only: gl_nodes
 
     implicit none
 
@@ -42,7 +42,7 @@ contains
         real(kind=rk)                               :: xi,xj
 
         ! Get Gauss-Legendre nodes
-        call gl_nodes(nterms,nodes)
+        nodes = gl_nodes(nterms)
 
         polyval = 1._rk
         xi = nodes(currentnode)
@@ -172,7 +172,7 @@ contains
         real(kind=rk)                           :: dpolyval
         real(kind=rk)                           :: prod,xi_i,xi_j,xk
 
-        call gl_nodes(nterms1d,nodes)
+        nodes = gl_nodes(nterms1d)
 
         dpolyval = 0._rk
         xi_i = nodes(currentmode)

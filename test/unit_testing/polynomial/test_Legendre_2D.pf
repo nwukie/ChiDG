@@ -1,14 +1,14 @@
 !-------------------------------------------------
-!   Test LegendreVal - 2D - against analytical solutions
+!   Test legendre_val - 2D - against analytical solutions
 !-------------------------------------------------
 
 @Test
-subroutine test_LegendreVal_2D_11()
+subroutine test_legendre_val_2D_11()
     use pfunit_mod
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO
     use mod_ordering,   only: xi_order_2d, eta_order_2d
-    use mod_legendre,   only: LegendreVal
+    use mod_legendre,   only: legendre_val
     
     implicit none
     real(rk), dimension(5)  :: polyval_known,polyval_test,x,y
@@ -30,11 +30,11 @@ subroutine test_LegendreVal_2D_11()
     
 
     polyval_known = [1._rk, 1._rk, 1._rk, 1._rk, 1._rk]
-    polyval_test(1) = LegendreVal(spacedim,mode,x(1),y(1),ZERO)
-    polyval_test(2) = LegendreVal(spacedim,mode,x(2),y(2),ZERO)
-    polyval_test(3) = LegendreVal(spacedim,mode,x(3),y(3),ZERO)
-    polyval_test(4) = LegendreVal(spacedim,mode,x(4),y(4),ZERO)
-    polyval_test(5) = LegendreVal(spacedim,mode,x(5),y(5),ZERO)
+    polyval_test(1) = legendre_val(spacedim,mode,x(1),y(1),ZERO)
+    polyval_test(2) = legendre_val(spacedim,mode,x(2),y(2),ZERO)
+    polyval_test(3) = legendre_val(spacedim,mode,x(3),y(3),ZERO)
+    polyval_test(4) = legendre_val(spacedim,mode,x(4),y(4),ZERO)
+    polyval_test(5) = legendre_val(spacedim,mode,x(5),y(5),ZERO)
     
     @assertEqual(polyval_known,polyval_test)
     
@@ -46,12 +46,12 @@ end subroutine
 
 
 @Test
-subroutine test_LegendreVal_2D_24()
+subroutine test_legendre_val_2D_24()
     use pfunit_mod
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO
     use mod_ordering,   only: xi_order_2d, eta_order_2d
-    use mod_legendre,   only: LegendreVal
+    use mod_legendre,   only: legendre_val
     
     implicit none
     real(rk), dimension(5)  :: polyval_known,polyval_test,x,y
@@ -73,11 +73,11 @@ subroutine test_LegendreVal_2D_24()
     
 
     polyval_known = [-0.21875_rk, 0.21875_rk, 0.21875_rk, -0.21875_rk, 0.0_rk]
-    polyval_test(1) = LegendreVal(spacedim,mode,x(1),y(1),ZERO)
-    polyval_test(2) = LegendreVal(spacedim,mode,x(2),y(2),ZERO)
-    polyval_test(3) = LegendreVal(spacedim,mode,x(3),y(3),ZERO)
-    polyval_test(4) = LegendreVal(spacedim,mode,x(4),y(4),ZERO)
-    polyval_test(5) = LegendreVal(spacedim,mode,x(5),y(5),ZERO)
+    polyval_test(1) = legendre_val(spacedim,mode,x(1),y(1),ZERO)
+    polyval_test(2) = legendre_val(spacedim,mode,x(2),y(2),ZERO)
+    polyval_test(3) = legendre_val(spacedim,mode,x(3),y(3),ZERO)
+    polyval_test(4) = legendre_val(spacedim,mode,x(4),y(4),ZERO)
+    polyval_test(5) = legendre_val(spacedim,mode,x(5),y(5),ZERO)
     
     @assertEqual(polyval_known,polyval_test)
     
@@ -87,12 +87,12 @@ end subroutine
 
 
 @Test
-subroutine test_LegendreVal_2D_33()
+subroutine test_legendre_val_2D_33()
     use pfunit_mod
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO
     use mod_ordering,   only: xi_order_2d, eta_order_2d
-    use mod_legendre,   only: LegendreVal
+    use mod_legendre,   only: legendre_val
     
     implicit none
     real(rk), dimension(5)  :: polyval_known,polyval_test,x,y
@@ -114,11 +114,11 @@ subroutine test_LegendreVal_2D_33()
     
 
     polyval_known = [0.015625_rk, 0.015625_rk, 0.015625_rk, 0.015625_rk, 0.25_rk]
-    polyval_test(1) = LegendreVal(spacedim,mode,x(1),y(1),ZERO)
-    polyval_test(2) = LegendreVal(spacedim,mode,x(2),y(2),ZERO)
-    polyval_test(3) = LegendreVal(spacedim,mode,x(3),y(3),ZERO)
-    polyval_test(4) = LegendreVal(spacedim,mode,x(4),y(4),ZERO)
-    polyval_test(5) = LegendreVal(spacedim,mode,x(5),y(5),ZERO)
+    polyval_test(1) = legendre_val(spacedim,mode,x(1),y(1),ZERO)
+    polyval_test(2) = legendre_val(spacedim,mode,x(2),y(2),ZERO)
+    polyval_test(3) = legendre_val(spacedim,mode,x(3),y(3),ZERO)
+    polyval_test(4) = legendre_val(spacedim,mode,x(4),y(4),ZERO)
+    polyval_test(5) = legendre_val(spacedim,mode,x(5),y(5),ZERO)
     
     @assertEqual(polyval_known,polyval_test)
     
@@ -129,12 +129,12 @@ end subroutine
 
 
 @Test
-subroutine test_LegendreVal_2D_44()
+subroutine test_legendre_val_2D_44()
     use pfunit_mod
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO
     use mod_ordering,   only: xi_order_2d, eta_order_2d
-    use mod_legendre,   only: LegendreVal
+    use mod_legendre,   only: legendre_val
     
     implicit none
     real(rk), dimension(5)  :: polyval_known,polyval_test,x,y
@@ -156,11 +156,11 @@ subroutine test_LegendreVal_2D_44()
     
 
     polyval_known = [0.19140625_rk, -0.19140625_rk, -0.19140625_rk, 0.19140625_rk, 0.0_rk]
-    polyval_test(1) = LegendreVal(spacedim,mode,x(1),y(1),ZERO)
-    polyval_test(2) = LegendreVal(spacedim,mode,x(2),y(2),ZERO)
-    polyval_test(3) = LegendreVal(spacedim,mode,x(3),y(3),ZERO)
-    polyval_test(4) = LegendreVal(spacedim,mode,x(4),y(4),ZERO)
-    polyval_test(5) = LegendreVal(spacedim,mode,x(5),y(5),ZERO)
+    polyval_test(1) = legendre_val(spacedim,mode,x(1),y(1),ZERO)
+    polyval_test(2) = legendre_val(spacedim,mode,x(2),y(2),ZERO)
+    polyval_test(3) = legendre_val(spacedim,mode,x(3),y(3),ZERO)
+    polyval_test(4) = legendre_val(spacedim,mode,x(4),y(4),ZERO)
+    polyval_test(5) = legendre_val(spacedim,mode,x(5),y(5),ZERO)
     
     @assertEqual(polyval_known,polyval_test)
     
@@ -170,17 +170,17 @@ end subroutine
 
 
 !-------------------------------------------------
-!   Test DLegendreVal - 2D - against analytical solutions
+!   Test dlegendre_val - 2D - against analytical solutions
 !-------------------------------------------------
 
 
 @Test
-subroutine test_DLegendreVal_2D_11_DXI()
+subroutine test_dlegendre_val_2D_11_DXI()
     use pfunit_mod
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO
     use mod_ordering,   only: xi_order_2d, eta_order_2d
-    use mod_legendre,   only: DLegendreVal
+    use mod_legendre,   only: dlegendre_val
     
     implicit none
     real(rk), dimension(5)  :: polyval_known,polyval_test,x,y
@@ -203,11 +203,11 @@ subroutine test_DLegendreVal_2D_11_DXI()
     
 
     polyval_known = [0.0_rk, 0.0_rk, 0.0_rk, 0.0_rk, 0.0_rk]
-    polyval_test(1) = DLegendreVal(spacedim,mode,x(1),y(1),ZERO,partial_dir)
-    polyval_test(2) = DLegendreVal(spacedim,mode,x(2),y(2),ZERO,partial_dir)
-    polyval_test(3) = DLegendreVal(spacedim,mode,x(3),y(3),ZERO,partial_dir)
-    polyval_test(4) = DLegendreVal(spacedim,mode,x(4),y(4),ZERO,partial_dir)
-    polyval_test(5) = DLegendreVal(spacedim,mode,x(5),y(5),ZERO,partial_dir)
+    polyval_test(1) = dlegendre_val(spacedim,mode,x(1),y(1),ZERO,partial_dir)
+    polyval_test(2) = dlegendre_val(spacedim,mode,x(2),y(2),ZERO,partial_dir)
+    polyval_test(3) = dlegendre_val(spacedim,mode,x(3),y(3),ZERO,partial_dir)
+    polyval_test(4) = dlegendre_val(spacedim,mode,x(4),y(4),ZERO,partial_dir)
+    polyval_test(5) = dlegendre_val(spacedim,mode,x(5),y(5),ZERO,partial_dir)
     
     @assertEqual(polyval_known,polyval_test)
     
@@ -217,12 +217,12 @@ end subroutine
 
 
 @Test
-subroutine test_DLegendreVal_2D_11_DETA()
+subroutine test_dlegendre_val_2D_11_DETA()
     use pfunit_mod
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO
     use mod_ordering,   only: xi_order_2d, eta_order_2d
-    use mod_legendre,   only: DLegendreVal
+    use mod_legendre,   only: dlegendre_val
     
     implicit none
     real(rk), dimension(5)  :: polyval_known,polyval_test,x,y
@@ -245,11 +245,11 @@ subroutine test_DLegendreVal_2D_11_DETA()
     
 
     polyval_known = [0.0_rk, 0.0_rk, 0.0_rk, 0.0_rk, 0.0_rk]
-    polyval_test(1) = DLegendreVal(spacedim,mode,x(1),y(1),ZERO,partial_dir)
-    polyval_test(2) = DLegendreVal(spacedim,mode,x(2),y(2),ZERO,partial_dir)
-    polyval_test(3) = DLegendreVal(spacedim,mode,x(3),y(3),ZERO,partial_dir)
-    polyval_test(4) = DLegendreVal(spacedim,mode,x(4),y(4),ZERO,partial_dir)
-    polyval_test(5) = DLegendreVal(spacedim,mode,x(5),y(5),ZERO,partial_dir)
+    polyval_test(1) = dlegendre_val(spacedim,mode,x(1),y(1),ZERO,partial_dir)
+    polyval_test(2) = dlegendre_val(spacedim,mode,x(2),y(2),ZERO,partial_dir)
+    polyval_test(3) = dlegendre_val(spacedim,mode,x(3),y(3),ZERO,partial_dir)
+    polyval_test(4) = dlegendre_val(spacedim,mode,x(4),y(4),ZERO,partial_dir)
+    polyval_test(5) = dlegendre_val(spacedim,mode,x(5),y(5),ZERO,partial_dir)
     
     @assertEqual(polyval_known,polyval_test)
     
@@ -263,12 +263,12 @@ end subroutine
 
 
 @Test
-subroutine test_DLegendreVal_2D_24_DXI()
+subroutine test_dlegendre_val_2D_24_DXI()
     use pfunit_mod
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO
     use mod_ordering,   only: xi_order_2d, eta_order_2d
-    use mod_legendre,   only: DLegendreVal
+    use mod_legendre,   only: dlegendre_val
     
     implicit none
     real(rk), dimension(5)  :: polyval_known,polyval_test,x,y
@@ -291,11 +291,11 @@ subroutine test_DLegendreVal_2D_24_DXI()
     
 
     polyval_known = [0.4375_rk, 0.4375_rk, -0.4375_rk, -0.4375_rk, 0.0_rk]
-    polyval_test(1) = DLegendreVal(spacedim,mode,x(1),y(1),ZERO,partial_dir)
-    polyval_test(2) = DLegendreVal(spacedim,mode,x(2),y(2),ZERO,partial_dir)
-    polyval_test(3) = DLegendreVal(spacedim,mode,x(3),y(3),ZERO,partial_dir)
-    polyval_test(4) = DLegendreVal(spacedim,mode,x(4),y(4),ZERO,partial_dir)
-    polyval_test(5) = DLegendreVal(spacedim,mode,x(5),y(5),ZERO,partial_dir)
+    polyval_test(1) = dlegendre_val(spacedim,mode,x(1),y(1),ZERO,partial_dir)
+    polyval_test(2) = dlegendre_val(spacedim,mode,x(2),y(2),ZERO,partial_dir)
+    polyval_test(3) = dlegendre_val(spacedim,mode,x(3),y(3),ZERO,partial_dir)
+    polyval_test(4) = dlegendre_val(spacedim,mode,x(4),y(4),ZERO,partial_dir)
+    polyval_test(5) = dlegendre_val(spacedim,mode,x(5),y(5),ZERO,partial_dir)
     
     @assertEqual(polyval_known,polyval_test)
     
@@ -305,12 +305,12 @@ end subroutine
 
 
 @Test
-subroutine test_DLegendreVal_2D_24_DETA()
+subroutine test_dlegendre_val_2D_24_DETA()
     use pfunit_mod
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO
     use mod_ordering,   only: xi_order_2d, eta_order_2d
-    use mod_legendre,   only: DLegendreVal
+    use mod_legendre,   only: dlegendre_val
     
     implicit none
     real(rk), dimension(5)  :: polyval_known,polyval_test,x,y
@@ -333,11 +333,11 @@ subroutine test_DLegendreVal_2D_24_DETA()
     
 
     polyval_known = [-0.1875_rk, 0.1875_rk, -0.1875_rk, 0.1875_rk, 0.0_rk]
-    polyval_test(1) = DLegendreVal(spacedim,mode,x(1),y(1),ZERO,partial_dir)
-    polyval_test(2) = DLegendreVal(spacedim,mode,x(2),y(2),ZERO,partial_dir)
-    polyval_test(3) = DLegendreVal(spacedim,mode,x(3),y(3),ZERO,partial_dir)
-    polyval_test(4) = DLegendreVal(spacedim,mode,x(4),y(4),ZERO,partial_dir)
-    polyval_test(5) = DLegendreVal(spacedim,mode,x(5),y(5),ZERO,partial_dir)
+    polyval_test(1) = dlegendre_val(spacedim,mode,x(1),y(1),ZERO,partial_dir)
+    polyval_test(2) = dlegendre_val(spacedim,mode,x(2),y(2),ZERO,partial_dir)
+    polyval_test(3) = dlegendre_val(spacedim,mode,x(3),y(3),ZERO,partial_dir)
+    polyval_test(4) = dlegendre_val(spacedim,mode,x(4),y(4),ZERO,partial_dir)
+    polyval_test(5) = dlegendre_val(spacedim,mode,x(5),y(5),ZERO,partial_dir)
     
     @assertEqual(polyval_known,polyval_test)
     
@@ -349,12 +349,12 @@ end subroutine
 
 
 @Test
-subroutine test_DLegendreVal_2D_33_DXI()
+subroutine test_dlegendre_val_2D_33_DXI()
     use pfunit_mod
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO
     use mod_ordering,   only: xi_order_2d, eta_order_2d
-    use mod_legendre,   only: DLegendreVal
+    use mod_legendre,   only: dlegendre_val
     
     implicit none
     real(rk), dimension(5)  :: polyval_known,polyval_test,x,y
@@ -377,11 +377,11 @@ subroutine test_DLegendreVal_2D_33_DXI()
     
 
     polyval_known = [0.1875_rk, -0.1875_rk, 0.1875_rk, -0.1875_rk, 0.0_rk]
-    polyval_test(1) = DLegendreVal(spacedim,mode,x(1),y(1),ZERO,partial_dir)
-    polyval_test(2) = DLegendreVal(spacedim,mode,x(2),y(2),ZERO,partial_dir)
-    polyval_test(3) = DLegendreVal(spacedim,mode,x(3),y(3),ZERO,partial_dir)
-    polyval_test(4) = DLegendreVal(spacedim,mode,x(4),y(4),ZERO,partial_dir)
-    polyval_test(5) = DLegendreVal(spacedim,mode,x(5),y(5),ZERO,partial_dir)
+    polyval_test(1) = dlegendre_val(spacedim,mode,x(1),y(1),ZERO,partial_dir)
+    polyval_test(2) = dlegendre_val(spacedim,mode,x(2),y(2),ZERO,partial_dir)
+    polyval_test(3) = dlegendre_val(spacedim,mode,x(3),y(3),ZERO,partial_dir)
+    polyval_test(4) = dlegendre_val(spacedim,mode,x(4),y(4),ZERO,partial_dir)
+    polyval_test(5) = dlegendre_val(spacedim,mode,x(5),y(5),ZERO,partial_dir)
     
     @assertEqual(polyval_known,polyval_test)
     
@@ -391,12 +391,12 @@ end subroutine
 
 
 @Test
-subroutine test_DLegendreVal_2D_33_DETA()
+subroutine test_dlegendre_val_2D_33_DETA()
     use pfunit_mod
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO
     use mod_ordering,   only: xi_order_2d, eta_order_2d
-    use mod_legendre,   only: DLegendreVal
+    use mod_legendre,   only: dlegendre_val
     
     implicit none
     real(rk), dimension(5)  :: polyval_known,polyval_test,x,y
@@ -419,11 +419,11 @@ subroutine test_DLegendreVal_2D_33_DETA()
     
 
     polyval_known = [0.1875_rk, 0.1875_rk, -0.1875_rk, -0.1875_rk, 0.0_rk]
-    polyval_test(1) = DLegendreVal(spacedim,mode,x(1),y(1),ZERO,partial_dir)
-    polyval_test(2) = DLegendreVal(spacedim,mode,x(2),y(2),ZERO,partial_dir)
-    polyval_test(3) = DLegendreVal(spacedim,mode,x(3),y(3),ZERO,partial_dir)
-    polyval_test(4) = DLegendreVal(spacedim,mode,x(4),y(4),ZERO,partial_dir)
-    polyval_test(5) = DLegendreVal(spacedim,mode,x(5),y(5),ZERO,partial_dir)
+    polyval_test(1) = dlegendre_val(spacedim,mode,x(1),y(1),ZERO,partial_dir)
+    polyval_test(2) = dlegendre_val(spacedim,mode,x(2),y(2),ZERO,partial_dir)
+    polyval_test(3) = dlegendre_val(spacedim,mode,x(3),y(3),ZERO,partial_dir)
+    polyval_test(4) = dlegendre_val(spacedim,mode,x(4),y(4),ZERO,partial_dir)
+    polyval_test(5) = dlegendre_val(spacedim,mode,x(5),y(5),ZERO,partial_dir)
     
     @assertEqual(polyval_known,polyval_test)
     
@@ -437,12 +437,12 @@ end subroutine
 
 
 @Test
-subroutine test_DLegendreVal_2D_44_DXI()
+subroutine test_dlegendre_val_2D_44_DXI()
     use pfunit_mod
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO
     use mod_ordering,   only: xi_order_2d, eta_order_2d
-    use mod_legendre,   only: DLegendreVal
+    use mod_legendre,   only: dlegendre_val
     
     implicit none
     real(rk), dimension(5)  :: polyval_known,polyval_test,x,y
@@ -465,11 +465,11 @@ subroutine test_DLegendreVal_2D_44_DXI()
     
 
     polyval_known = [0.1640625_rk, 0.1640625_rk, -0.1640625_rk, -0.1640625_rk, 0.0_rk]
-    polyval_test(1) = DLegendreVal(spacedim,mode,x(1),y(1),ZERO,partial_dir)
-    polyval_test(2) = DLegendreVal(spacedim,mode,x(2),y(2),ZERO,partial_dir)
-    polyval_test(3) = DLegendreVal(spacedim,mode,x(3),y(3),ZERO,partial_dir)
-    polyval_test(4) = DLegendreVal(spacedim,mode,x(4),y(4),ZERO,partial_dir)
-    polyval_test(5) = DLegendreVal(spacedim,mode,x(5),y(5),ZERO,partial_dir)
+    polyval_test(1) = dlegendre_val(spacedim,mode,x(1),y(1),ZERO,partial_dir)
+    polyval_test(2) = dlegendre_val(spacedim,mode,x(2),y(2),ZERO,partial_dir)
+    polyval_test(3) = dlegendre_val(spacedim,mode,x(3),y(3),ZERO,partial_dir)
+    polyval_test(4) = dlegendre_val(spacedim,mode,x(4),y(4),ZERO,partial_dir)
+    polyval_test(5) = dlegendre_val(spacedim,mode,x(5),y(5),ZERO,partial_dir)
     
     @assertEqual(polyval_known,polyval_test)
     
@@ -482,12 +482,12 @@ end subroutine
 
 
 @Test
-subroutine test_DLegendreVal_2D_44_DETA()
+subroutine test_dlegendre_val_2D_44_DETA()
     use pfunit_mod
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO
     use mod_ordering,   only: xi_order_2d, eta_order_2d
-    use mod_legendre,   only: DLegendreVal
+    use mod_legendre,   only: dlegendre_val
     
     implicit none
     real(rk), dimension(5)  :: polyval_known,polyval_test,x,y
@@ -510,11 +510,11 @@ subroutine test_DLegendreVal_2D_44_DETA()
     
 
     polyval_known = [0.1640625_rk, -0.1640625_rk, 0.1640625_rk, -0.1640625_rk, 0.0_rk]
-    polyval_test(1) = DLegendreVal(spacedim,mode,x(1),y(1),ZERO,partial_dir)
-    polyval_test(2) = DLegendreVal(spacedim,mode,x(2),y(2),ZERO,partial_dir)
-    polyval_test(3) = DLegendreVal(spacedim,mode,x(3),y(3),ZERO,partial_dir)
-    polyval_test(4) = DLegendreVal(spacedim,mode,x(4),y(4),ZERO,partial_dir)
-    polyval_test(5) = DLegendreVal(spacedim,mode,x(5),y(5),ZERO,partial_dir)
+    polyval_test(1) = dlegendre_val(spacedim,mode,x(1),y(1),ZERO,partial_dir)
+    polyval_test(2) = dlegendre_val(spacedim,mode,x(2),y(2),ZERO,partial_dir)
+    polyval_test(3) = dlegendre_val(spacedim,mode,x(3),y(3),ZERO,partial_dir)
+    polyval_test(4) = dlegendre_val(spacedim,mode,x(4),y(4),ZERO,partial_dir)
+    polyval_test(5) = dlegendre_val(spacedim,mode,x(5),y(5),ZERO,partial_dir)
     
     @assertEqual(polyval_known,polyval_test)
     

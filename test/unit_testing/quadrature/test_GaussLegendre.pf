@@ -4,9 +4,9 @@
 !
 !---------------------------------------------------------------
 @Test
-subroutine test_GaussLegendre_Nodes_1()
+subroutine test_gauss_legendre_Nodes_1()
     use pfunit_mod
-    use mod_GaussLegendre, only: gl_nodes
+    use mod_gauss_legendre, only: gl_nodes
     use mod_kinds, only: rk,ik
     
     implicit none
@@ -20,15 +20,15 @@ subroutine test_GaussLegendre_Nodes_1()
     allocate(nodes(nnodes),nodesKnown(nnodes))
     nodesKnown = [0._rk]
     
-    call gl_nodes(nnodes,nodes)
+    nodes = gl_nodes(nnodes)
     @assertEqual(nodesKnown,nodes,tol)
     
-end subroutine
+end subroutine test_gauss_legendre_Nodes_1
 
 @Test
-subroutine test_GaussLegendre_Nodes_2()
+subroutine test_gauss_legendre_Nodes_2()
     use pfunit_mod
-    use mod_GaussLegendre, only: gl_nodes
+    use mod_gauss_legendre, only: gl_nodes
     use mod_kinds, only: rk,ik
     
     implicit none
@@ -42,15 +42,15 @@ subroutine test_GaussLegendre_Nodes_2()
     allocate(nodes(nnodes),nodesKnown(nnodes))
     nodesKnown = [-sqrt(1._rk/3._rk), sqrt(1._rk/3._rk)]
     
-    call gl_nodes(nnodes,nodes)
+    nodes = gl_nodes(nnodes)
     @assertEqual(nodesKnown,nodes,tol)
     
-end subroutine
+end subroutine test_gauss_legendre_Nodes_2
 
 @Test
-subroutine test_GaussLegendre_Nodes_3()
+subroutine test_gauss_legendre_Nodes_3()
     use pfunit_mod
-    use mod_GaussLegendre, only: gl_nodes
+    use mod_gauss_legendre, only: gl_nodes
     use mod_kinds, only: rk,ik
     
     implicit none
@@ -64,15 +64,15 @@ subroutine test_GaussLegendre_Nodes_3()
     allocate(nodes(nnodes),nodesKnown(nnodes))
     nodesKnown = [-sqrt(3._rk/5._rk), 0._rk, sqrt(3._rk/5._rk)]
     
-    call gl_nodes(nnodes,nodes)
+    nodes = gl_nodes(nnodes)
     @assertEqual(nodesKnown,nodes,tol)
     
-end subroutine
+end subroutine test_gauss_legendre_Nodes_3
 
 @Test
-subroutine test_GaussLegendre_Nodes_4()
+subroutine test_gauss_legendre_Nodes_4()
     use pfunit_mod
-    use mod_GaussLegendre, only: gl_nodes
+    use mod_gauss_legendre, only: gl_nodes
     use mod_kinds, only: rk,ik
     
     implicit none
@@ -89,10 +89,10 @@ subroutine test_GaussLegendre_Nodes_4()
                    sqrt((3._rk/7._rk) - (2._rk/7._rk)*sqrt(6._rk/5._rk)), &
                    sqrt((3._rk/7._rk) + (2._rk/7._rk)*sqrt(6._rk/5._rk))  ]
     
-    call gl_nodes(nnodes,nodes)
+    nodes = gl_nodes(nnodes)
     @assertEqual(nodesKnown,nodes,tol)
     
-end subroutine
+end subroutine test_gauss_legendre_Nodes_4
 
 !------------------------------------------------------------
 !
@@ -100,9 +100,9 @@ end subroutine
 !
 !------------------------------------------------------------
 @Test
-subroutine test_GaussLegendre_Weights_1()
+subroutine test_gauss_legendre_Weights_1()
     use pfunit_mod
-    use mod_GaussLegendre, only: gl_weights
+    use mod_gauss_legendre, only: gl_weights
     use mod_kinds, only: rk,ik
     
     implicit none
@@ -116,15 +116,15 @@ subroutine test_GaussLegendre_Weights_1()
     allocate(weights(nweights),weightsKnown(nweights))
     weightsKnown = [2._rk]
     
-    call gl_weights(nweights,weights)
+    weights = gl_weights(nweights)
     @assertEqual(weightsKnown,weights,tol)
     
-end subroutine
+end subroutine test_gauss_legendre_Weights_1
 
 @Test
-subroutine test_GaussLegendre_Weights_2()
+subroutine test_gauss_legendre_Weights_2()
     use pfunit_mod
-    use mod_GaussLegendre, only: gl_weights
+    use mod_gauss_legendre, only: gl_weights
     use mod_kinds, only: rk,ik
     
     implicit none
@@ -138,15 +138,15 @@ subroutine test_GaussLegendre_Weights_2()
     allocate(weights(nweights),weightsKnown(nweights))
     weightsKnown = [1._rk, 1._rk]
     
-    call gl_weights(nweights,weights)
+    weights = gl_weights(nweights)
     @assertEqual(weightsKnown,weights,tol)
     
-end subroutine
+end subroutine test_gauss_legendre_Weights_2
 
 @Test
-subroutine test_GaussLegendre_Weights_3()
+subroutine test_gauss_legendre_Weights_3()
     use pfunit_mod
-    use mod_GaussLegendre, only: gl_weights
+    use mod_gauss_legendre, only: gl_weights
     use mod_kinds, only: rk,ik
     
     implicit none
@@ -160,15 +160,15 @@ subroutine test_GaussLegendre_Weights_3()
     allocate(weights(nweights),weightsKnown(nweights))
     weightsKnown = [5._rk/9._rk, 8._rk/9._rk, 5._rk/9._rk]
     
-    call gl_weights(nweights,weights)
+    weights = gl_weights(nweights)
     @assertEqual(weightsKnown,weights,tol)
     
-end subroutine
+end subroutine test_gauss_legendre_Weights_3
 
 @Test
-subroutine test_GaussLegendre_Weights_4()
+subroutine test_gauss_legendre_Weights_4()
     use pfunit_mod
-    use mod_GaussLegendre, only: gl_weights
+    use mod_gauss_legendre, only: gl_weights
     use mod_kinds, only: rk,ik
     
     implicit none
@@ -185,10 +185,10 @@ subroutine test_GaussLegendre_Weights_4()
                     (18._rk+sqrt(30._rk))/(36._rk), &
                     (18._rk-sqrt(30._rk))/(36._rk)  ]
     
-    call gl_weights(nweights,weights)
+    weights = gl_weights(nweights)
     @assertEqual(weightsKnown,weights,tol)
     
-end subroutine
+end subroutine test_gauss_legendre_Weights_4
 
 
 !-----------------------------------------------------------------------
@@ -198,9 +198,9 @@ end subroutine
 !-----------------------------------------------------------------------
 !> Test integrating a first-order polynomial
 @Test
-subroutine test_GaussLegendre_Integrate_P1()
+subroutine test_gauss_legendre_Integrate_P1()
     use pfunit_mod
-    use mod_GaussLegendre,  only: gl_weights, gl_nodes
+    use mod_gauss_legendre,  only: gl_weights, gl_nodes
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ONE, TWO
     
@@ -213,23 +213,23 @@ subroutine test_GaussLegendre_Integrate_P1()
     tol           = 1.e-15_rk
     integralKnown = TWO
 
-    call gl_weights(nnodes,weights)
-    call gl_nodes(nnodes,nodes)
+    weights = gl_weights(nnodes)
+    nodes   = gl_nodes(nnodes)
 
     f = nodes + ONE               ! f = x + 1
     integral = sum(f*weights)
 
     @assertEqual(integralKnown,integral,tol)
     
-end subroutine
+end subroutine test_gauss_legendre_Integrate_P1
 
 
 
 !> Test integrating a second-order polynomial
 @Test
-subroutine test_GaussLegendre_Integrate_P2()
+subroutine test_gauss_legendre_Integrate_P2()
     use pfunit_mod
-    use mod_GaussLegendre,  only: gl_weights, gl_nodes
+    use mod_gauss_legendre,  only: gl_weights, gl_nodes
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: TWO, SEVEN, TWO_THR
     
@@ -242,23 +242,23 @@ subroutine test_GaussLegendre_Integrate_P2()
     tol           = 1.e-15_rk
     integralKnown = 14._rk + TWO_THR           ! 14.666666666
 
-    call gl_weights(nnodes,weights)
-    call gl_nodes(nnodes,nodes)
+    weights = gl_weights(nnodes)
+    nodes   = gl_nodes(nnodes)
 
     f = nodes*nodes + TWO*nodes + SEVEN        ! f = x**2  +  2x  +  7
     integral = sum(f*weights)
 
     @assertEqual(integralKnown,integral,tol)
     
-end subroutine
+end subroutine test_gauss_legendre_Integrate_P2
 
 
 
 !> Test integrating a third order polynomial
 @Test
-subroutine test_GaussLegendre_Integrate_P3()
+subroutine test_gauss_legendre_Integrate_P3()
     use pfunit_mod
-    use mod_GaussLegendre,  only: gl_weights, gl_nodes
+    use mod_gauss_legendre,  only: gl_weights, gl_nodes
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: TWO, THREE, FIVE
     
@@ -271,23 +271,23 @@ subroutine test_GaussLegendre_Integrate_P3()
     tol           = 1.e-15_rk
     integralKnown = 12.0_rk                                      ! 12.0
 
-    call gl_weights(nnodes,weights)
-    call gl_nodes(nnodes,nodes)
+    weights =  gl_weights(nnodes)
+    nodes   =  gl_nodes(nnodes)
 
     f = nodes*nodes*nodes/THREE + THREE*nodes*nodes + FIVE        ! f = (x**3)/3  +  3*(x**2)  +  5
     integral = sum(f*weights)
 
     @assertEqual(integralKnown,integral,tol)
     
-end subroutine
+end subroutine test_gauss_legendre_Integrate_P3
 
 
 
 !> Test integrating a tenth order polynomial
 @Test
-subroutine test_GaussLegendre_Integrate_P10()
+subroutine test_gauss_legendre_Integrate_P10()
     use pfunit_mod
-    use mod_GaussLegendre,  only: gl_weights, gl_nodes
+    use mod_gauss_legendre,  only: gl_weights, gl_nodes
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: TWO, SEVEN, TEN
     
@@ -300,15 +300,15 @@ subroutine test_GaussLegendre_Integrate_P10()
     tol           = 2.e-15_rk
     integralKnown = (2._rk/11._rk) + (4._rk/3._rk)                                     
 
-    call gl_weights(nnodes,weights)
-    call gl_nodes(nnodes,nodes)
+    weights = gl_weights(nnodes)
+    nodes   = gl_nodes(nnodes)
 
     f = (nodes**TEN) + (nodes**SEVEN) + TWO*(nodes**TWO)
     integral = sum(f*weights)
 
     @assertEqual(integralKnown,integral,tol)
     
-end subroutine
+end subroutine test_gauss_legendre_Integrate_P10
 
 
 

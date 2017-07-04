@@ -3,7 +3,7 @@ module mod_grid
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ONE, TWO, ZERO, TWO_DIM, THREE_DIM, NFACES, &
                                   XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NO_PROC
-    use mod_polynomial,     only: polynomialVal
+    use mod_polynomial,     only: polynomial_val
     use type_densematrix,   only: densematrix_t
     use mod_inv
     implicit none
@@ -168,14 +168,16 @@ contains
             if ( spacedim == THREE_DIM ) then
                 do iterm = 1,npts_3d(imap)
                     do inode = 1,npts_3d(imap)
-                        ELEM_MAP_3D(imap)%mat(inode,iterm) = polynomialVal(3,npts_3d(imap),iterm,nodes(inode))
+                        !ELEM_MAP_3D(imap)%mat(inode,iterm) = polynomial_val(3,npts_3d(imap),iterm,nodes(inode))
+                        ELEM_MAP_3D(imap)%mat(inode,iterm) = polynomial_val(3,npts_3d(imap),iterm,[nodes(inode)%c1_, nodes(inode)%c2_, nodes(inode)%c3_])
                     end do
                 end do
 
             else if ( spacedim == TWO_DIM ) then
                 do iterm = 1,npts_2d(imap)
                     do inode = 1,npts_2d(imap)
-                        ELEM_MAP_2D(imap)%mat(inode,iterm) = polynomialVal(2,npts_2d(imap),iterm,nodes(inode))
+                        !ELEM_MAP_2D(imap)%mat(inode,iterm) = polynomial_val(2,npts_2d(imap),iterm,nodes(inode))
+                        ELEM_MAP_2D(imap)%mat(inode,iterm) = polynomial_val(2,npts_2d(imap),iterm,[nodes(inode)%c1_, nodes(inode)%c2_, nodes(inode)%c3_])
                     end do
                 end do
 

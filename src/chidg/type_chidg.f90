@@ -101,26 +101,26 @@ module type_chidg
     contains
 
         ! Open/Close
-        procedure   :: start_up
-        procedure   :: shut_down
+        procedure       :: start_up
+        procedure       :: shut_down
 
         ! Initialization
-        procedure   :: set
-        procedure   :: init
+        procedure       :: set
+        procedure       :: init
 
         ! Run
-        procedure   :: process
-        procedure   :: run
-        procedure   :: report
+        procedure       :: process
+        procedure       :: run
+        procedure       :: report
 
         ! IO
-        procedure            :: read_mesh
-        procedure            :: read_mesh_grids
-        procedure            :: read_mesh_boundary_conditions
-        procedure            :: read_prescribedmeshmotions
-        procedure            :: write_mesh
-        procedure            :: read_fields
-        procedure            :: write_fields
+        procedure       :: read_mesh
+        procedure       :: read_mesh_grids
+        procedure       :: read_mesh_boundary_conditions
+        procedure       :: read_prescribedmeshmotions
+        procedure       :: write_mesh
+        procedure       :: read_fields
+        procedure       :: write_fields
 
 
 
@@ -317,11 +317,15 @@ contains
     !!  @param[in]  activity   Initialization activity specification.
     !!
     !-----------------------------------------------------------------------------------------
-    recursive subroutine init(self,activity)
+    recursive subroutine init(self,activity,interpolation,level)
         class(chidg_t), intent(inout)           :: self
         character(*),   intent(in)              :: activity
+        character(*),   intent(in), optional    :: interpolation
+        integer(ik),    intent(in), optional    :: level
 
         character(:),   allocatable :: user_msg
+        character(:),   allocatable :: interpolation_in
+        integer(ik)                 :: level_in
 
         select case (trim(activity))
 
@@ -330,7 +334,7 @@ contains
             !
             case ('all')
                 ! geometry
-                call self%init('domains')
+                call self%init('domains',interpolation,level)
                 call self%init('bc')
 
                 ! communication
@@ -353,8 +357,26 @@ contains
                             where my_order=1-7 indicates the solution order-of-accuracy."
                 if (self%nterms_s == 0) call chidg_signal(FATAL,user_msg)
 
-                call self%data%initialize_solution_domains(self%nterms_s)
+                ! Default interpolation set = 'Quadrature'
+                if (present(interpolation)) then
+                    interpolation_in = interpolation
+                else 
+                    interpolation_in = 'Quadrature'
+                end if
 
+                ! Default interpolation level = gq_rule  (from mod_io)
+                if (present(level)) then
+                    level_in = level
+                else
+                    level_in = gq_rule
+                end if
+
+                call self%data%initialize_solution_domains(interpolation,level,self%nterms_s)
+
+
+            !
+            ! Initialize boundary condition space
+            !
             case ('bc')
                 call self%data%initialize_solution_bc()
 
@@ -574,7 +596,7 @@ contains
     !!  boundar functions are overridden with neumann boundary conditions.
     !!
     !------------------------------------------------------------------------------------------
-    subroutine read_mesh(self,gridfile,equation_set, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield, bc_periodic, partitions_in)
+    subroutine read_mesh(self,gridfile,equation_set, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield, bc_periodic, partitions_in, interpolation, level)
         class(chidg_t),     intent(inout)               :: self
         character(*),       intent(in)                  :: gridfile
         character(*),       intent(in),     optional    :: equation_set
@@ -585,6 +607,8 @@ contains
         class(bc_state_t),  intent(in),     optional    :: bc_farfield
         class(bc_state_t),  intent(in),     optional    :: bc_periodic
         type(partition_t),  intent(in),     optional    :: partitions_in(:)
+        character(*),       intent(in),     optional    :: interpolation
+        integer(ik),        intent(in),     optional    :: level
 
 
         call write_line(' ', ltrim=.false., io_proc=GLOBAL_MASTER)
@@ -615,7 +639,8 @@ contains
         !
         ! Initialize data
         !
-        call self%init('all')
+        call self%init('all',interpolation,level)
+
 
 
         call write_line('Done reading mesh.', io_proc=GLOBAL_MASTER)
@@ -1501,9 +1526,9 @@ contains
                 local_error_val = ZERO
                 do ieqn = 1, neqns
                     temp = &
-                        matmul(self%data%mesh%domain(idom)%elems(ielem)%gq%vol%val,&
+                        matmul(self%data%mesh%domain(idom)%elems(ielem)%ref_s%interpolator('Value'),&
                     q_diff%dom(idom)%vecs(ielem)%vec((ieqn-1)*nterms+1:ieqn*nterms))
-                    temp = temp**TWO*self%data%mesh%domain(idom)%elems(ielem)%gq%vol%weights*&
+                    temp = temp**TWO*self%data%mesh%domain(idom)%elems(ielem)%ref_s%weights()*&
                         self%data%mesh%domain(idom)%elems(ielem)%jinv
                     local_error_val = local_error_val + sum(temp)
                 end do

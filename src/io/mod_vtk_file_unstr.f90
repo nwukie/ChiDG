@@ -607,7 +607,7 @@ contains
                     select case (trim(time_str))
                         
                         case ('steady', 'Steady', 'STEADY')
-                            write(funit,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itimestep - 1,'" part="',ifile - 1,'" file="',&
+                            write(funit,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itime - 1,'" part="',ifile - 1,'" file="',&
                                                             trim(file_arr(d + ifile)),'"/>'
                         case ('forward_euler','Forward_Euler','FORWARD_EULER','forward euler','Forward Euler')
                             write(funit,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itimestep - 1,'" part="',ifile - 1,'" file="',&
@@ -705,7 +705,7 @@ contains
                     select case (trim(time_str))
                         
                         case ('steady', 'Steady', 'STEADY')
-                            write(funit_1,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itimestep - 1,'" part="',ifile - 1,'" file="',&
+                            write(funit_1,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itime - 1,'" part="',ifile - 1,'" file="',&
                                                             trim(file_arr(d + ifile)),'"/>'
                         case ('forward_euler','Forward_Euler','FORWARD_EULER','forward euler','Forward Euler')
                             write(funit_1,'(A,I15,A,I15,3A)') '        <DataSet timestep="',itimestep - 1,'" part="',ifile - 1,'" file="',&

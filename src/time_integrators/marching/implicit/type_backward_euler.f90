@@ -2,7 +2,7 @@ module type_backward_euler
 #include <messenger.h>
     use messenger,                      only: write_line
     use mod_kinds,                      only: rk,ik
-    use mod_constants,                  only: ONE
+    use mod_constants,                  only: ONE, NO_ID
     use mod_spatial,                    only: update_space
 
     use type_time_integrator_marching,  only: time_integrator_marching_t
@@ -12,7 +12,9 @@ module type_backward_euler
     use type_nonlinear_solver,          only: nonlinear_solver_t
     use type_linear_solver,             only: linear_solver_t
     use type_preconditioner,            only: preconditioner_t
+    use type_solver_controller,         only: solver_controller_t
     use type_chidg_vector,              only: chidg_vector_t, sub_chidg_vector_chidg_vector
+    use type_chidg_matrix,              only: chidg_matrix_t
 
     implicit none
     private
@@ -56,6 +58,41 @@ module type_backward_euler
 
     end type assemble_backward_euler_t
     !************************************************************************************************
+
+
+
+
+    !>  Control the lhs update inside the nonlinear solver.
+    !!
+    !!  Reference:
+    !!  Persson, P.-O., "High-Order Navier-Stokes Simulations using a Sparse 
+    !!  Line-Based Discontinuous Galerkin Method", AIAA-2012-0456
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/22/2017
+    !!
+    !--------------------------------------------------------------------------------
+    type, extends(solver_controller_t), public :: backwardeuler_solver_controller_t
+
+    contains
+
+        procedure   :: update_lhs
+
+    end type backwardeuler_solver_controller_t
+    !********************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -126,6 +163,8 @@ contains
 
         class(*),   allocatable     :: assemble_type
 
+        type(backwardeuler_solver_controller_t),    save    :: solver_controller
+
 
         select type(associate_name => self%system)
             type is (assemble_backward_euler_t)
@@ -143,6 +182,7 @@ contains
         ! Solve assembled nonlinear system, the nonlinear update is the step in time
         ! System assembled in subroutine assemble
         !
+        !call nonlinear_solver%solve(data,self%system,linear_solver,preconditioner,solver_controller)
         call nonlinear_solver%solve(data,self%system,linear_solver,preconditioner)
 
         !
@@ -184,16 +224,23 @@ contains
         real(rk),   allocatable     :: temp_1(:), temp_2(:)
 
 
+        associate ( q   => data%sdata%q,   &
+                    dq  => data%sdata%dq,  &
+                    lhs => data%sdata%lhs, &
+                    rhs => data%sdata%rhs)
+
+        !
+        ! Clear data containers
+        !
+        call rhs%clear()
+        if (differentiate) call lhs%clear()
+
+
         !
         ! Get spatial update
         !
         call update_space(data,differentiate,timing)
 
-
-        associate ( q   => data%sdata%q,   &
-                    dq  => data%sdata%dq,  &
-                    lhs => data%sdata%lhs, &
-                    rhs => data%sdata%rhs)
 
             !
             ! Get no. of time levels ( = 1 for time marching) and time step
@@ -257,6 +304,55 @@ contains
     !************************************************************************************************
 
 
+
+
+
+
+
+    !>  Control algorithm for selectively updating the lhs matrix in the
+    !!  nonlinear solver.
+    !!
+    !!  Reference:
+    !!  Persson, P.-O., "High-Order Navier-Stokes Simulations using a Sparse 
+    !!  Line-Based Discontinuous Galerkin Method", AIAA-2012-0456
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   6/22/2017
+    !!
+    !!  @param[in]  niter               Number of newton iterations
+    !!  @param[in]  residual_ratio      R_{i}/R_{i-1}
+    !!
+    !----------------------------------------------------------------------------
+    function update_lhs(self,A,niter,residual_ratio) result(update)
+        class(backwardeuler_solver_controller_t),   intent(inout)   :: self
+        type(chidg_matrix_t),                       intent(in)      :: A
+        integer(ik),                                intent(in)      :: niter
+        real(rk),                                   intent(in)      :: residual_ratio
+
+        logical :: update
+
+        ! Update lhs if:
+        !   1: If matrix(lhs/A) hasn't been updated before
+        !   2: number of newton iterations > 10
+        !   3: residual norm increases by factor of 10 (divergence)
+        !   4: being forced
+        if ( all(A%stamp == NO_ID)      .or. &
+            (niter > 10)                .or. &
+            (residual_ratio > 10._rk)   .or. &
+            (self%force_update_lhs) ) then
+            update = .true.
+        else
+            update = .false.
+        end if
+
+        ! Store action
+        self%lhs_updated = update
+
+        ! Turn off forced update
+        self%force_update_lhs = .false.
+
+    end function update_lhs
+    !****************************************************************************
 
 
 

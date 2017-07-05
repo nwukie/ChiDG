@@ -266,10 +266,10 @@ contains
         linear_solver    = 'fgmres_cgs'
         preconditioner   = 'RASILU0'
         IO_DESTINATION   = 'both'
-        time_steps       = 720 
+        time_steps       = 720
         dt               = real(sim_time/time_steps, rk)
         verbosity        = 3 
-        nwrite           = 72 
+        nwrite           = 20 
         solutionfile_out = trim(this%gridfile) 
         !------------------------------------------------------------------------------
 
@@ -438,11 +438,13 @@ contains
         !
         call self%chidg%run(write_initial=.false., write_final=.false.)
 
+        print *, 'chidg run complete'
         !
         ! Store the nonlinear convergence of the calculation
         !
-        nonlinear_convergence(npes_index,grid_index,order_index) = self%chidg%nonlinear_solver%residual_norm
+        !nonlinear_convergence(npes_index,grid_index,order_index) = self%chidg%nonlinear_solver%residual_norm
 
+        print *, 'computing error'
         computed_error = compute_scalar_advection_pmm_error(self%chidg%data,self%ChiDG_COMM)
 
 

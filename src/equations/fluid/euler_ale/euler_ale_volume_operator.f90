@@ -1,4 +1,4 @@
-module euler_volume_ale_operator
+module euler_ale_volume_operator
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ONE,TWO,HALF
 
@@ -18,7 +18,7 @@ module euler_volume_ale_operator
     !!
     !!
     !------------------------------------------------------------------------------
-    type, extends(operator_t), public :: euler_volume_ale_operator_t
+    type, extends(operator_t), public :: euler_ale_volume_operator_t
 
 
     contains
@@ -26,7 +26,7 @@ module euler_volume_ale_operator
         procedure   :: init
         procedure   :: compute
 
-    end type euler_volume_ale_operator_t
+    end type euler_ale_volume_operator_t
     !******************************************************************************
 
 
@@ -48,7 +48,7 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(euler_volume_ale_operator_t),   intent(inout)      :: self
+        class(euler_ale_volume_operator_t),   intent(inout)      :: self
 
         ! Set operator name
         call self%set_name("Euler ALE Volume Flux")
@@ -76,7 +76,7 @@ contains
     !!
     !!------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(euler_volume_ale_operator_t), intent(inout)   :: self
+        class(euler_ale_volume_operator_t), intent(inout)   :: self
         type(chidg_worker_t),           intent(inout)   :: worker
         class(properties_t),            intent(inout)   :: prop
 
@@ -90,7 +90,7 @@ contains
             flux_x, flux_y, flux_z, invrho, u
 
         real(rk), allocatable, dimension(:) ::      &
-           u_grid, v_grid, w_grid, det_jacobian_grid
+           u_grid, v_grid, w_grid, det_jacobian_grid, testx
 
 
         real(rk), allocatable, dimension(:,:,:) ::      &
@@ -191,6 +191,17 @@ contains
         flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
         flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
 
+!        if (worker%element_info%ielement_g == 1) then
+!            print *, 'time'
+!            print *, worker%t
+!            print *, worker%x('volume')
+!            print *, 'det_jacobian_grid'
+!            print *, det_jacobian_grid(1)
+!            print *, 'u-grid'
+!            print *, u_grid(1)
+!            print *, 'Mom-1 flux sample'
+!            print *, flux_x_ref(1)%x_ad_
+!        end if
 
         call worker%integrate_volume('Momentum-1',flux_x_ref,flux_y_ref,flux_z_ref)
 
@@ -246,6 +257,20 @@ contains
         flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
         flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
 
+!        if (worker%element_info%ielement_g == 3) then
+!            testx = worker%x('volume')
+!            print *, 'time'
+!            print *, worker%t
+!            print *, 'node x position'
+!            print *, testx(1) 
+!            print *, 'det_jacobian_grid'
+!            print *, det_jacobian_grid(1)
+!            print *, 'u-grid'
+!            print *, u_grid(1)
+!            print *, 'Energy flux sample'
+!            print *, flux_x_ref(1)%x_ad_
+!        end if
+
 
         call worker%integrate_volume('Energy',flux_x_ref,flux_y_ref,flux_z_ref)
 
@@ -257,4 +282,4 @@ contains
 
 
 
-end module euler_volume_ale_operator
+end module euler_ale_volume_operator

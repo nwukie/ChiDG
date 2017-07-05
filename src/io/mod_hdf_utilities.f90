@@ -6430,6 +6430,7 @@ contains
         
 
         call h5gclose_f(pmmfo_id,ierr)
+        call h5gclose_f(pmmgroup_id,ierr)
 
     end subroutine create_pmmfo_group_hdf
     !****************************************************************************************
@@ -6484,6 +6485,7 @@ contains
         
 
         call h5gclose_f(pmmfo_id,ierr)
+        call h5gclose_f(pmmgroup_id,ierr)
 
     end subroutine set_pmmfo_val_hdf
     !****************************************************************************************

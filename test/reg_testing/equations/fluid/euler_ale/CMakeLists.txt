@@ -1,0 +1,6 @@
+add_subdirectory(uniform_flow_pmm)
+
+add_test_sources(equations_fluid_euler_ale)
+add_test_target(equations_fluid_euler_ale reg_parallel ${equations_fluid_euler_ale_sources})
+
+

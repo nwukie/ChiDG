@@ -1,4 +1,4 @@
-module euler_boundary_average_ale_operator
+module euler_ale_boundary_average_operator
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ONE, TWO, HALF
     use type_operator,          only: operator_t
@@ -20,14 +20,14 @@ module euler_boundary_average_ale_operator
     !!  @date   1/28/2016
     !!
     !--------------------------------------------------------------------------------
-    type, extends(operator_t), public :: euler_boundary_average_ale_operator_t
+    type, extends(operator_t), public :: euler_ale_boundary_average_operator_t
 
     contains
 
         procedure   :: init
         procedure   :: compute
 
-    end type euler_boundary_average_ale_operator_t
+    end type euler_ale_boundary_average_operator_t
     !********************************************************************************
 
 
@@ -50,7 +50,7 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(euler_boundary_average_ale_operator_t),   intent(inout) :: self
+        class(euler_ale_boundary_average_operator_t),   intent(inout) :: self
         
         !
         ! Set operator name
@@ -83,7 +83,7 @@ contains
     !!
     !!-------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(euler_boundary_average_ale_operator_t),   intent(inout)   :: self
+        class(euler_ale_boundary_average_operator_t),   intent(inout)   :: self
         type(chidg_worker_t),                       intent(inout)   :: worker
         class(properties_t),                        intent(inout)   :: prop
 
@@ -112,7 +112,7 @@ contains
             normx, normy, normz
         
         real(rk), allocatable, dimension(:) ::      &
-           u_grid, v_grid, w_grid, det_jacobian_grid
+           u_grid, v_grid, w_grid, det_jacobian_grid, testx
 
 
         real(rk), allocatable, dimension(:,:,:) ::      &
@@ -342,6 +342,20 @@ contains
         flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
         flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
         flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
+        if ((worker%element_info%ielement_g == 3) .and. (worker%iface ==2)) then
+            testx = worker%x('boundary')
+            print *, 'time'
+            print *, worker%t
+            print *, 'node x position'
+            print *, testx(1) 
+            print *, 'det_jacobian_grid'
+            print *, det_jacobian_grid(1)
+            print *, 'u-grid'
+            print *, u_grid(1)
+            print *, 'Energy flux sample'
+            print *, flux_x_ref(1)%x_ad_
+        end if
+
 
 
         ! dot with normal vector
@@ -364,4 +378,4 @@ contains
 
 
 
-end module euler_boundary_average_ale_operator
+end module euler_ale_boundary_average_operator

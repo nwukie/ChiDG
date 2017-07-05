@@ -1,0 +1,515 @@
+module test_element_ale_pmm_dilation_linearA_mod
+    use pfunit_mod
+    use mod_kinds,                  only: rk,ik
+    use mod_constants,              only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
+                                          XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use type_chidg,                 only: chidg_t
+    use type_element,               only: element_t
+    use type_face,                  only: face_t
+    use type_element_connectivity,  only: element_connectivity_t
+    use type_point,                 only: point_t
+    use type_prescribed_mesh_motion
+    use mod_io,                     only: gq_rule
+    implicit none
+
+    public  :: test_element_ale_pmm_dilation_linearA
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !--------------------------------------------------------------------------
+    @TestCase
+    type, extends(TestCase) ::  test_element_ale_pmm_dilation_linearA
+
+        type(chidg_t)               :: chidg
+        type(element_t)             :: elem
+        type(face_t),   allocatable :: faces(:)
+        real(rk),       allocatable :: nodes(:,:)
+
+    contains
+
+        procedure   ::  setUp
+        procedure   ::  tearDown
+
+    end type test_element_ale_pmm_dilation_linearA
+    !***************************************************************************
+
+
+contains
+
+    !> NOTE: make sure to use 'this' instead of 'self' since these are over-writting a 
+    !! derived type procedure. The argument names have to match
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: this
+        
+        integer(ik), parameter          :: npt = 8
+        integer(ik)                     :: ipt
+        class(prescribed_mesh_motion_t),    allocatable :: pmm
+        real(rk)                        :: nodes(npt,3), dnodes(npt,3),vnodes(npt,3)
+        type(element_connectivity_t)    :: connectivity
+        integer(ik)                     :: ftype, mapping, ielem, idomain,              &
+                                           ntime, neqns, nterms_s,                      &
+                                           ineighbor_domain_g,  ineighbor_domain_l,     &
+                                           ineighbor_element_g, ineighbor_element_l,    &
+                                           ineighbor_face, ineighbor_proc,              &
+                                           ineighbor_neqns, ineighbor_nterms_s
+        
+        
+       
+        
+        ! Set collocation quadrature for testing coordinates at quadrature nodes
+        gq_rule = 1
+        
+        
+        call this%chidg%start_up('core')
+        allocate(this%faces(6))
+        
+        ! (x = 0-5 :: y = 0-1 :: z = 0-1)
+        !          *------*
+        !         /      /|
+        !    x=5 /      / |
+        !       /      /  *
+        !      *------*  /
+        !      |      | /
+        !  z=1 |      |/
+        !      *------*
+        !         y=1
+        !
+        nodes(1,:) = [0._rk, 0._rk, 0._rk]
+        nodes(2,:) = [5._rk, 0._rk, 0._rk]
+        nodes(3,:) = [0._rk, 1._rk, 0._rk]
+        nodes(4,:) = [5._rk, 1._rk, 0._rk]
+        nodes(5,:) = [0._rk, 0._rk, 1._rk]
+        nodes(6,:) = [5._rk, 0._rk, 1._rk]
+        nodes(7,:) = [0._rk, 1._rk, 1._rk]
+        nodes(8,:) = [5._rk, 1._rk, 1._rk]
+        this%nodes = nodes
+
+        mapping = 1
+        call connectivity%init(mapping)
+        call connectivity%set_domain_index(1)
+        call connectivity%set_element_index(1)
+        call connectivity%set_element_nodes([1, 2, 3, 4, 5, 6, 7, 8])
+        
+
+        
+        !
+        ! Initialize Element geometry and Numerics
+        !
+        idomain  = 1
+        ielem    = 1
+        neqns    = 2
+        nterms_s = 8
+        ntime    = 1
+        call this%elem%init_geom(nodes,connectivity,idomain,ielem,'Cartesian')
+        call this%elem%init_sol(neqns,nterms_s,ntime)
+        
+        
+        !
+        ! Initialize face geometries
+        !
+        call this%faces(XI_MIN)%init_geom(XI_MIN,this%elem)
+        call this%faces(XI_MAX)%init_geom(XI_MAX,this%elem)
+        call this%faces(ETA_MIN)%init_geom(ETA_MIN,this%elem)
+        call this%faces(ETA_MAX)%init_geom(ETA_MAX,this%elem)
+        call this%faces(ZETA_MIN)%init_geom(ZETA_MIN,this%elem)
+        call this%faces(ZETA_MAX)%init_geom(ZETA_MAX,this%elem)
+
+        
+        !
+        ! Initialize face neighbors
+        !
+        ftype = 0
+        ineighbor_domain_g  = 0
+        ineighbor_domain_l  = 0
+        ineighbor_element_g = 0
+        ineighbor_element_l = 0
+        ineighbor_face      = 0
+        ineighbor_neqns     = 2
+        ineighbor_nterms_s  = 8
+        ineighbor_proc      = 0
+        call this%faces(XI_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,      &
+                                                    ineighbor_element_g,ineighbor_element_l,    &
+                                                    ineighbor_face,ineighbor_neqns,             &
+                                                    ineighbor_nterms_s,ineighbor_proc)
+        call this%faces(XI_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,      &
+                                                    ineighbor_element_g,ineighbor_element_l,    &
+                                                    ineighbor_face,ineighbor_neqns,             &
+                                                    ineighbor_nterms_s,ineighbor_proc)
+        call this%faces(ETA_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,     &
+                                                     ineighbor_element_g,ineighbor_element_l,   &
+                                                     ineighbor_face,ineighbor_neqns,            &
+                                                     ineighbor_nterms_s,ineighbor_proc)
+        call this%faces(ETA_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,     &
+                                                     ineighbor_element_g,ineighbor_element_l,   &
+                                                     ineighbor_face,ineighbor_neqns,            &
+                                                     ineighbor_nterms_s,ineighbor_proc)
+        call this%faces(ZETA_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,    &
+                                                      ineighbor_element_g,ineighbor_element_l,  &
+                                                      ineighbor_face,ineighbor_neqns,           &
+                                                      ineighbor_nterms_s,ineighbor_proc)
+        call this%faces(ZETA_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,    &
+                                                      ineighbor_element_g,ineighbor_element_l,  &
+                                                      ineighbor_face,ineighbor_neqns,           &
+                                                      ineighbor_nterms_s,ineighbor_proc)
+
+        
+        call this%faces(XI_MIN)%init_sol(this%elem)
+        call this%faces(XI_MAX)%init_sol(this%elem)
+        call this%faces(ETA_MIN)%init_sol(this%elem)
+        call this%faces(ETA_MAX)%init_sol(this%elem)
+        call this%faces(ZETA_MIN)%init_sol(this%elem)
+        call this%faces(ZETA_MAX)%init_sol(this%elem)
+
+        !
+        ! Set up the PMM and use it to compute ALE grid quantities
+        !
+
+        allocate(pmm)
+        call pmm%add_pmmf("isotropic_dilation")
+        call pmm%pmmf%set_option("isotropic_dilation_factor",TWO)
+        
+        !Compute nodal displacements and velocities using the PMM
+        do ipt = 1, npt
+            dnodes(ipt, :) = pmm%pmmf%compute_pos(ONE, this%nodes(ipt, :))-this%nodes(ipt,:)
+            vnodes(ipt, :) = pmm%pmmf%compute_vel(ONE, this%nodes(ipt, :))
+        end do
+
+        call this%elem%init_ale(dnodes,vnodes)
+        call this%elem%update_element_ale()
+        call this%faces(XI_MIN)%init_ale(this%elem)
+        call this%faces(XI_MAX)%init_ale(this%elem)
+        call this%faces(ETA_MIN)%init_ale(this%elem)
+        call this%faces(ETA_MAX)%init_ale(this%elem)
+        call this%faces(ZETA_MIN)%init_ale(this%elem)
+        call this%faces(ZETA_MAX)%init_ale(this%elem)
+
+        call this%faces(XI_MIN)%update_face_ale()
+        call this%faces(XI_MAX)%update_face_ale()
+        call this%faces(ETA_MIN)%update_face_ale()
+        call this%faces(ETA_MAX)%update_face_ale()
+        call this%faces(ZETA_MIN)%update_face_ale()
+        call this%faces(ZETA_MAX)%update_face_ale()
+
+
+    end subroutine setUp
+    !************************************************************************************
+    
+
+    !>
+    !!
+    !!
+    !-------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: this
+
+
+        !
+        ! Close ChiDG interface
+        !
+        call this%chidg%shut_down('core')
+
+    end subroutine tearDown
+    !**************************************************************************************
+
+
+
+
+
+    !> Test element grid velocities entries at quadrature points
+    !!
+    !!
+    !!-------------------------------------------------------------------------------------
+    @Test
+    subroutine testElement_grid_velocities(self)
+        class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: self
+
+        real(rk)    :: vg1(self%elem%gq%vol%nnodes), &
+                        vg2(self%elem%gq%vol%nnodes), &
+                        vg3(self%elem%gq%vol%nnodes)
+
+
+        vg1 = TWO*self%elem%quad_pts(:,1)
+        vg2 = TWO*self%elem%quad_pts(:,2)
+        vg3 = TWO*self%elem%quad_pts(:,3)
+
+        @assertEqual(vg1,self%elem%grid_vel1, 1.e-14_rk)
+        @assertEqual(vg2,self%elem%grid_vel2, 1.e-14_rk)
+        @assertEqual(vg3,self%elem%grid_vel3, 1.e-14_rk)
+        
+    end subroutine testElement_grid_velocities
+    !***************************************************************************************
+
+    !> Test element element positions entries at quadrature points
+    !!
+    !!
+    !!-------------------------------------------------------------------------------------
+    @Test
+    subroutine testElement_grid_positions(self)
+        class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: self
+
+        real(rk)    :: pg(self%elem%gq%vol%nnodes,3)
+
+
+        pg(:,1) =  THREE*self%elem%quad_pts(:,1)
+        pg(:,2) =  THREE*self%elem%quad_pts(:,2)
+        pg(:,3) =  THREE*self%elem%quad_pts(:,3)
+
+        @assertEqual(pg,self%elem%ale_quad_pts, 1.e-14_rk)
+        
+    end subroutine testElement_grid_positions
+    !***************************************************************************************
+
+
+
+    !> Test inverse element jacobian entries at quadrature points
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    @Test
+    subroutine testElement_jinv_ale(self)
+        class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: self
+        real(rk)    :: test_det_jac_grid(self%elem%gq%vol%nnodes)
+        
+        test_det_jac_grid = 27.0_rk 
+        @assertEqual(self%elem%jinv_ale,27.0_rk*self%elem%jinv)
+        @assertEqual(self%elem%det_jacobian_grid,test_det_jac_grid)
+
+    end subroutine testElement_jinv_ale
+    !****************************************************************************************
+
+    
+    !> Test element metric entries at quadrature points
+    !!
+    !!
+    !!-------------------------------------------------------------------------------------
+    @Test
+    subroutine testElement_jacobian_grid(self)
+        class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: self
+
+        real(rk)    :: test_metric(self%elem%gq%vol%nnodes,3,3)
+        
+        test_metric(:,1,1) = 3.0_rk 
+        test_metric(:,2,1) = 0._rk  
+        test_metric(:,3,1) = 0._rk  
+        test_metric(:,1,2) = 0._rk  
+        test_metric(:,2,2) = 3.0_rk 
+        test_metric(:,3,2) = 0._rk  
+        test_metric(:,1,3) = 0._rk  
+        test_metric(:,2,3) = 0._rk  
+        test_metric(:,3,3) = 3.0_rk 
+
+        @assertEqual(test_metric,self%elem%jacobian_grid, 1.e-14_rk)
+        
+    end subroutine testElement_jacobian_grid
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+!------------------------------------------------------------------------------
+!                                Face tests
+!------------------------------------------------------------------------------
+
+    !> Test element grid velocities entries at quadrature points
+    !!
+    !!
+    !!-------------------------------------------------------------------------------------
+    @Test
+    subroutine testElement_face_grid_velocities(self)
+        class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: self
+
+        real(rk)    :: vg1(self%faces(XI_MAX)%gq%face%nnodes), &
+                        vg2(self%faces(XI_MAX)%gq%face%nnodes), &
+                        vg3(self%faces(XI_MAX)%gq%face%nnodes)
+
+        vg1 = TWO*self%faces(XI_MIN)%quad_pts(:,1)
+        vg2 = TWO*self%faces(XI_MIN)%quad_pts(:,2)
+        vg3 = TWO*self%faces(XI_MIN)%quad_pts(:,3)
+
+
+
+
+        @assertEqual(vg1,self%faces(XI_MIN)%grid_vel1, 1.e-14_rk)
+        @assertEqual(vg2,self%faces(XI_MIN)%grid_vel2, 1.e-14_rk)
+        @assertEqual(vg3,self%faces(XI_MIN)%grid_vel3, 1.e-14_rk)
+        
+        vg1 = TWO*self%faces(XI_MAX)%quad_pts(:,1)
+        vg2 = TWO*self%faces(XI_MAX)%quad_pts(:,2)
+        vg3 = TWO*self%faces(XI_MAX)%quad_pts(:,3)
+
+        @assertEqual(vg1,self%faces(XI_MAX)%grid_vel1, 1.e-14_rk)
+        @assertEqual(vg2,self%faces(XI_MAX)%grid_vel2, 1.e-14_rk)
+        @assertEqual(vg3,self%faces(XI_MAX)%grid_vel3, 1.e-14_rk)
+
+        vg1 = TWO*self%faces(ETA_MIN)%quad_pts(:,1)
+        vg2 = TWO*self%faces(ETA_MIN)%quad_pts(:,2)
+        vg3 = TWO*self%faces(ETA_MIN)%quad_pts(:,3)
+        
+        @assertEqual(vg1,self%faces(ETA_MIN)%grid_vel1, 1.e-14_rk)
+        @assertEqual(vg2,self%faces(ETA_MIN)%grid_vel2, 1.e-14_rk)
+        @assertEqual(vg3,self%faces(ETA_MIN)%grid_vel3, 1.e-14_rk)
+
+        vg1 = TWO*self%faces(ETA_MAX)%quad_pts(:,1)
+        vg2 = TWO*self%faces(ETA_MAX)%quad_pts(:,2)
+        vg3 = TWO*self%faces(ETA_MAX)%quad_pts(:,3)
+        
+        @assertEqual(vg1,self%faces(ETA_MAX)%grid_vel1, 1.e-14_rk)
+        @assertEqual(vg2,self%faces(ETA_MAX)%grid_vel2, 1.e-14_rk)
+        @assertEqual(vg3,self%faces(ETA_MAX)%grid_vel3, 1.e-14_rk)
+
+        vg1 = TWO*self%faces(ZETA_MIN)%quad_pts(:,1)
+        vg2 = TWO*self%faces(ZETA_MIN)%quad_pts(:,2)
+        vg3 = TWO*self%faces(ZETA_MIN)%quad_pts(:,3)
+        
+        @assertEqual(vg1,self%faces(ZETA_MIN)%grid_vel1, 1.e-14_rk)
+        @assertEqual(vg2,self%faces(ZETA_MIN)%grid_vel2, 1.e-14_rk)
+        @assertEqual(vg3,self%faces(ZETA_MIN)%grid_vel3, 1.e-14_rk)
+
+        vg1 = TWO*self%faces(ZETA_MAX)%quad_pts(:,1)
+        vg2 = TWO*self%faces(ZETA_MAX)%quad_pts(:,2)
+        vg3 = TWO*self%faces(ZETA_MAX)%quad_pts(:,3)
+        
+        @assertEqual(vg1,self%faces(ZETA_MAX)%grid_vel1, 1.e-14_rk)
+        @assertEqual(vg2,self%faces(ZETA_MAX)%grid_vel2, 1.e-14_rk)
+        @assertEqual(vg3,self%faces(ZETA_MAX)%grid_vel3, 1.e-14_rk)
+    end subroutine testElement_face_grid_velocities
+    !***************************************************************************************
+
+    !> Test element element positions entries at quadrature points
+    !!
+    !!
+    !!-------------------------------------------------------------------------------------
+    @Test
+    subroutine testElement_face_grid_positions(self)
+        class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: self
+
+        real(rk)    :: pg(self%faces(XI_MAX)%gq%face%nnodes,3,6)
+
+
+        pg(:,1,XI_MIN) = THREE*self%faces(XI_MIN)%quad_pts(:,1)
+        pg(:,2,XI_MIN) = THREE*self%faces(XI_MIN)%quad_pts(:,2)
+        pg(:,3,XI_MIN) = THREE*self%faces(XI_MIN)%quad_pts(:,3)
+
+        pg(:,1,XI_MAX) = THREE*self%faces(XI_MAX)%quad_pts(:,1)
+        pg(:,2,XI_MAX) = THREE*self%faces(XI_MAX)%quad_pts(:,2)
+        pg(:,3,XI_MAX) = THREE*self%faces(XI_MAX)%quad_pts(:,3)
+
+        pg(:,1,ETA_MIN) = THREE*self%faces(ETA_MIN)%quad_pts(:,1)
+        pg(:,2,ETA_MIN) = THREE*self%faces(ETA_MIN)%quad_pts(:,2)
+        pg(:,3,ETA_MIN) = THREE*self%faces(ETA_MIN)%quad_pts(:,3)
+
+        pg(:,1,ETA_MAX) = THREE*self%faces(ETA_MAX)%quad_pts(:,1)
+        pg(:,2,ETA_MAX) = THREE*self%faces(ETA_MAX)%quad_pts(:,2)
+        pg(:,3,ETA_MAX) = THREE*self%faces(ETA_MAX)%quad_pts(:,3)
+
+        pg(:,1,ZETA_MIN) = THREE*self%faces(ZETA_MIN)%quad_pts(:,1)
+        pg(:,2,ZETA_MIN) = THREE*self%faces(ZETA_MIN)%quad_pts(:,2)
+        pg(:,3,ZETA_MIN) = THREE*self%faces(ZETA_MIN)%quad_pts(:,3)
+
+        pg(:,1,ZETA_MAX) = THREE*self%faces(ZETA_MAX)%quad_pts(:,1)
+        pg(:,2,ZETA_MAX) = THREE*self%faces(ZETA_MAX)%quad_pts(:,2)
+        pg(:,3,ZETA_MAX) = THREE*self%faces(ZETA_MAX)%quad_pts(:,3)
+
+
+        @assertEqual(pg(:,:,XI_MIN),self%faces(XI_MIN)%ale_quad_pts, 1.e-14_rk)
+        @assertEqual(pg(:,:,XI_MAX),self%faces(XI_MAX)%ale_quad_pts, 1.e-14_rk)
+        
+        @assertEqual(pg(:,:,ETA_MIN),self%faces(ETA_MIN)%ale_quad_pts, 1.e-14_rk)
+        @assertEqual(pg(:,:,ETA_MAX),self%faces(ETA_MAX)%ale_quad_pts, 1.e-14_rk)
+        
+        @assertEqual(pg(:,:,ZETA_MIN),self%faces(ZETA_MIN)%ale_quad_pts, 1.e-14_rk)
+        @assertEqual(pg(:,:,ZETA_MAX),self%faces(ZETA_MAX)%ale_quad_pts, 1.e-14_rk)
+        
+    end subroutine testElement_face_grid_positions
+    !***************************************************************************************
+
+
+
+    !> Test inverse element jacobian entries at quadrature points
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    @Test
+    subroutine testElement_face_jinv_ale(self)
+        class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: self
+        real(rk)    :: test_det_jac_grid(self%faces(XI_MAX)%gq%face%nnodes)
+        
+        test_det_jac_grid = 27.0_rk 
+
+        @assertEqual(self%faces(XI_MIN)%jinv_ale,27.0_rk*self%faces(XI_MIN)%jinv)
+        @assertEqual(self%faces(XI_MIN)%det_jacobian_grid,test_det_jac_grid)
+
+        @assertEqual(self%faces(XI_MAX)%jinv_ale,27.0_rk*self%faces(XI_MAX)%jinv)
+        @assertEqual(self%faces(XI_MAX)%det_jacobian_grid,test_det_jac_grid)
+
+        @assertEqual(self%faces(ETA_MIN)%jinv_ale,27.0_rk*self%faces(ETA_MIN)%jinv)
+        @assertEqual(self%faces(ETA_MIN)%det_jacobian_grid,test_det_jac_grid)
+
+        @assertEqual(self%faces(ETA_MAX)%jinv_ale,27.0_rk*self%faces(ETA_MAX)%jinv)
+        @assertEqual(self%faces(ETA_MAX)%det_jacobian_grid,test_det_jac_grid)
+
+        @assertEqual(self%faces(ZETA_MIN)%jinv_ale,27.0_rk*self%faces(ZETA_MIN)%jinv)
+        @assertEqual(self%faces(ZETA_MIN)%det_jacobian_grid,test_det_jac_grid)
+
+        @assertEqual(self%faces(ZETA_MAX)%jinv_ale,27.0_rk*self%faces(ZETA_MAX)%jinv)
+        @assertEqual(self%faces(ZETA_MAX)%det_jacobian_grid,test_det_jac_grid)
+
+    end subroutine testElement_face_jinv_ale
+    !****************************************************************************************
+
+
+    !>
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    @Test
+    subroutine testElement_face_metrics(self)
+        class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: self
+        real(rk)    :: test_metric(self%faces(XI_MAX)%gq%face%nnodes,3,3)
+        real(rk)    :: tol
+        
+        tol = 1.e-14_rk
+        
+        test_metric(:,1,1) = 3.0_rk 
+        test_metric(:,2,1) = 0._rk   
+        test_metric(:,3,1) = 0._rk   
+        test_metric(:,1,2) = 0._rk   
+        test_metric(:,2,2) = 3.0_rk 
+        test_metric(:,3,2) = 0._rk   
+        test_metric(:,1,3) = 0._rk   
+        test_metric(:,2,3) = 0._rk   
+        test_metric(:,3,3) = 3.0_rk 
+        
+        @assertEqual(test_metric,self%faces(XI_MIN)%jacobian_grid,tol)
+        @assertEqual(test_metric,self%faces(XI_MAX)%jacobian_grid,tol)
+        @assertEqual(test_metric,self%faces(ETA_MIN)%jacobian_grid,tol)
+        @assertEqual(test_metric,self%faces(ETA_MAX)%jacobian_grid,tol)
+        @assertEqual(test_metric,self%faces(ZETA_MIN)%jacobian_grid,tol)
+        @assertEqual(test_metric,self%faces(ZETA_MAX)%jacobian_grid,tol)
+
+    end subroutine testElement_face_metrics
+    !*******************************************************************************************
+
+
+
+
+
+end module test_element_ale_pmm_dilation_linearA_mod

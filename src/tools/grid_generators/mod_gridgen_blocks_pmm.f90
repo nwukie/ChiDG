@@ -210,6 +210,7 @@ contains
 
         ! Close file
         call close_domain_hdf(dom_id)
+        call close_file_hdf(file_id)
         call close_hdf()
 
     end subroutine create_mesh_file__pmm__singleblock

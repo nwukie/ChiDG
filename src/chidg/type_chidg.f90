@@ -624,6 +624,7 @@ contains
 
 
 
+
         !
         ! Read boundary conditions.
         !
@@ -635,6 +636,8 @@ contains
                                                           bc_periodic )
 
 
+                                                      
+        call self%read_prescribedmeshmotions(gridfile)
 
         !
         ! Initialize data
@@ -963,6 +966,7 @@ contains
         !
         ! Add boundary condition patches
         !
+        if (npmm_groups>0) then
         ndomains = size(pmm_domain_data)
         do idom = 1,ndomains
             
@@ -971,6 +975,7 @@ contains
                                         pmm_group_name%get())
 
         end do !ipatch
+        end if
 
 
 
@@ -1394,7 +1399,7 @@ contains
             ! 1: Update time t. Compute as t = t + dt. This way we can restart time-marching and start from t /= 0.
             ! 2: Call time integrator to take a step
             !
-            self%data%time_manager%t = self%data%time_manager%t + self%data%time_manager%dt
+            !self%data%time_manager%t = self%data%time_manager%t + self%data%time_manager%dt
             call self%time_integrator%step(self%data,self%nonlinear_solver, &
                                                      self%linear_solver,    &
                                                      self%preconditioner)

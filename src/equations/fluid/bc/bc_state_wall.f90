@@ -105,7 +105,10 @@ contains
         real(rk)                                :: gam = 1.4_rk
     
 
+        real(rk), allocatable, dimension(:) ::      &
+           u_grid, v_grid, w_grid, det_jacobian_grid
 
+        det_jacobian_grid = worker%get_det_jacobian_grid_face()
         !
         ! Interpolate interior solution to quadrature nodes
         !
@@ -114,6 +117,12 @@ contains
         mom2_m    = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
         mom3_m    = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
         energy_m  = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
+
+        density_m = density_m/det_jacobian_grid
+        mom1_m = mom1_m/det_jacobian_grid
+        mom2_m = mom2_m/det_jacobian_grid
+        mom3_m = mom3_m/det_jacobian_grid
+        energy_m = energy_m/det_jacobian_grid
 
 
 

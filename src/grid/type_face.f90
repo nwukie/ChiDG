@@ -166,7 +166,6 @@ module type_face
         
         ! ALE procedures
         procedure, public   :: update_face_ale
-        procedure           :: update_coords_ale
         procedure           :: compute_quadrature_coords_ale
         procedure           :: compute_quadrature_metrics_ale
 
@@ -429,6 +428,7 @@ contains
         call self%compute_quadrature_normals()
         call self%compute_quadrature_gradients()
 
+        call self%update_face_ale()
 
         !
         ! Compute BR2 matrix
@@ -955,24 +955,13 @@ contains
     !******************************************************************************************
 
 
-    subroutine update_face_ale(self,elem)
+    subroutine update_face_ale(self)
         class(face_t),       intent(inout)      :: self
-        type(element_t),        intent(in)         :: elem
 
-        call self%update_coords_ale(elem)
         call self%compute_quadrature_coords_ale()
         call self%compute_quadrature_metrics_ale()
 
     end subroutine update_face_ale
-
-    subroutine update_coords_ale(self,elem)
-        class(face_t),      intent(inout)       :: self
-        type(element_t),       intent(in)          :: elem
-
-        self%ale_coords = elem%ale_coords
-        self%ale_vel_coords = elem%ale_vel_coords
-
-    end subroutine update_coords_ale
 
     subroutine compute_quadrature_coords_ale(self)
         class(face_t),   intent(inout)   :: self
@@ -1034,6 +1023,7 @@ contains
     subroutine compute_quadrature_metrics_ale(self)
         class(face_t),  intent(inout)   :: self
 
+<<<<<<< HEAD
         integer(ik) :: inode, iface
         integer(ik) :: nnodes
 
@@ -1137,6 +1127,84 @@ contains
 !!            print *, 'boundary face jinv'
 !!            print *, self%jacobian_grid(1,:,:)
 !!        end if
+=======
+        integer(ik)                 :: inode, iface
+        integer(ik)                 :: nnodes
+
+        real(rk),   dimension(self%gq%face%nnodes)  :: &
+            d1dxi, d1deta, d1dzeta, &
+            d2dxi, d2deta, d2dzeta, &
+            d3dxi, d3deta, d3dzeta, &
+            invjac_ale
+
+
+        iface  = self%iface
+        nnodes = self%gq%face%nnodes
+
+        !
+        ! Evaluate directional derivatives of coordinates at quadrature nodes.
+        !
+        associate (gq_f => self%gqmesh%face)
+            d1dxi   = matmul(gq_f%ddxi(  :,:,iface), self%ale_coords%getvar(1,itime = 1))
+            d1deta  = matmul(gq_f%ddeta( :,:,iface), self%ale_coords%getvar(1,itime = 1))
+            d1dzeta = matmul(gq_f%ddzeta(:,:,iface), self%ale_coords%getvar(1,itime = 1))
+
+            d2dxi   = matmul(gq_f%ddxi(  :,:,iface), self%ale_coords%getvar(2,itime = 1))
+            d2deta  = matmul(gq_f%ddeta( :,:,iface), self%ale_coords%getvar(2,itime = 1))
+            d2dzeta = matmul(gq_f%ddzeta(:,:,iface), self%ale_coords%getvar(2,itime = 1))
+
+            d3dxi   = matmul(gq_f%ddxi(  :,:,iface), self%ale_coords%getvar(3,itime = 1))
+            d3deta  = matmul(gq_f%ddeta( :,:,iface), self%ale_coords%getvar(3,itime = 1))
+            d3dzeta = matmul(gq_f%ddzeta(:,:,iface), self%ale_coords%getvar(3,itime = 1))
+        end associate
+
+
+
+        do inode = 1,nnodes
+            self%jacobian_matrix_ale(inode,1,1) = d1dxi(inode)
+            self%jacobian_matrix_ale(inode,1,2) = d1deta(inode)
+            self%jacobian_matrix_ale(inode,1,3) = d1dzeta(inode)
+                                              
+            self%jacobian_matrix_ale(inode,2,1) = d2dxi(inode)
+            self%jacobian_matrix_ale(inode,2,2) = d2deta(inode)
+            self%jacobian_matrix_ale(inode,2,3) = d2dzeta(inode)
+                                              
+            self%jacobian_matrix_ale(inode,3,1) = d3dxi(inode)
+            self%jacobian_matrix_ale(inode,3,2) = d3deta(inode)
+            self%jacobian_matrix_ale(inode,3,3) = d3dzeta(inode)
+
+            !print *, '2'
+            !self%inv_jacobian_matrix_ale(inode,:,:) = inv(self%jacobian_matrix_ale(inode,:,:))
+        end do
+
+
+
+        do inode = 1, nnodes
+            self%jacobian_grid(inode,:,:) = matmul(self%jacobian_matrix_ale(inode,:,:),self%inv_jacobian_matrix(inode,:,:))
+!            self%jacobian_grid(inode,:,:) = matmul(self%inv_jacobian_matrix(inode,:,:),self%jacobian_matrix_ale(inode,:,:))
+            self%inv_jacobian_grid(inode,:,:) = inv(self%jacobian_grid(inode,:,:))
+        end do
+
+
+        !
+        ! compute inverse cell mapping jacobian terms
+        !
+        invjac_ale = d1dxi*d2deta*d3dzeta - d1deta*d2dxi*d3dzeta - &
+                 d1dxi*d2dzeta*d3deta + d1dzeta*d2dxi*d3deta + &
+                 d1deta*d2dzeta*d3dxi - d1dzeta*d2deta*d3dxi
+
+
+
+        self%jinv_ale = invjac_ale
+
+        !
+        ! Check for negative jacobians
+        !
+        if (any(self%jinv_ale < ZERO)) call chidg_signal(FATAL,"face%compute_quadrature_metrics_ale: Negative element jacobians detected. Check element quality and orientation.")
+
+
+        self%det_jacobian_grid = self%jinv_ale/self%jinv
+
     end subroutine compute_quadrature_metrics_ale
     !*****************************************************************************************************
 

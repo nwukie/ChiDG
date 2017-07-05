@@ -82,7 +82,6 @@ program driver
         call chidg%read_mesh(gridfile)
 
 
-
         !
         ! Initialize solution
         !   1: 'none', init fields with values from mod_io module variable initial_fields(:)

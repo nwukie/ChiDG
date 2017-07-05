@@ -2,7 +2,6 @@ module pmmf_static
 #include <messenger.h>
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO, HALF, ONE, TWO, THREE, FIVE, EIGHT, PI
-    use type_point,     only: point_t
     use type_prescribed_mesh_motion_function,  only: prescribed_mesh_motion_function_t
     implicit none
     private
@@ -57,18 +56,7 @@ contains
         call self%set_name("static")
 
 
-        !
-        ! Set function options to default settings
-        !
-!        call self%dict%set('uinf',2._rk/sqrt(5._rk))
-!        call self%dict%set('vinf',1._rk/sqrt(5._rk))
-!        call self%dict%set('winf',0._rk)
-!        call self%dict%set('Minf',1._rk*sqrt(
-!        call self%dict%set('beta',0._rk)
-!        call self%dict%set('xo',1._rk)
-!        call self%dict%set('yo',1._rk)
-!        call self%dict%set('zo',1._rk)
-!
+
 
     end subroutine init
     !*************************************************************************
@@ -82,15 +70,15 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    impure  elemental function compute_pos(self,time,coord) result(val)
-        class(static_pmmf),     intent(inout)  :: self
-        real(rk),                       intent(in)  :: time
-        type(point_t),                  intent(in)  :: coord
+    function compute_pos(self,time,node) result(val)
+        class(static_pmmf),     intent(inout)   :: self
+        real(rk),               intent(in)      :: time
+        real(rk),               intent(in)      :: node(3)
 
-        integer(ik)                                 :: ivar
-        type(point_t)                                    :: val
+        integer(ik)                             :: ivar
+        real(rk)                                :: val(3)
 
-        val = coord
+        val = node
         
     end function compute_pos
     !**********************************************************************************
@@ -107,17 +95,17 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    impure  elemental function compute_vel(self,time,coord) result(val)
-        class(static_pmmf),     intent(inout)  :: self
-        real(rk),                       intent(in)  :: time
-        type(point_t),                  intent(in)  :: coord
+    function compute_vel(self,time,node) result(val)
+        class(static_pmmf),     intent(inout)   :: self
+        real(rk),               intent(in)      :: time
+        real(rk),               intent(in)      :: node(3)
 
-        integer(ik)                                 :: ivar
-        type(point_t)                                   :: val
+        integer(ik)                             :: ivar
+        real(rk)                                :: val(3)
 
-        val%c1_ = ZERO
-        val%c2_ = ZERO
-        val%c3_ = ZERO
+        val(1) = ZERO
+        val(2) = ZERO
+        val(3) = ZERO
         
     end function compute_vel
     !**********************************************************************************

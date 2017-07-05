@@ -59,9 +59,9 @@ contains
         ! Set operator equations
         !
         call self%add_primary_field("Density"   )
-        call self%add_primary_field("X-Momentum")
-        call self%add_primary_field("Y-Momentum")
-        call self%add_primary_field("Z-Momentum")
+        call self%add_primary_field("Momentum-1")
+        call self%add_primary_field("Momentum-2")
+        call self%add_primary_field("Momentum-3")
         call self%add_primary_field("Energy"    )
 
     end subroutine init
@@ -108,7 +108,7 @@ contains
         real(rk) :: gam_bc
 
         real(rk), allocatable, dimension(:) ::      &
-           u_grid, v_grid, w_grid, det_jacobian_grid
+           u_grid, v_grid, w_grid, det_jacobian_grid, testx
 
 
         real(rk), allocatable, dimension(:,:,:) ::      &
@@ -119,9 +119,9 @@ contains
         ! Get equation indices
         !
         irho  = prop%get_primary_field_index("Density"   )
-        irhou = prop%get_primary_field_index("X-Momentum")
-        irhov = prop%get_primary_field_index("Y-Momentum")
-        irhow = prop%get_primary_field_index("Z-Momentum")
+        irhou = prop%get_primary_field_index("Momentum-1")
+        irhov = prop%get_primary_field_index("Momentum-2")
+        irhow = prop%get_primary_field_index("Momentum-3")
         irhoE = prop%get_primary_field_index("Energy"    )
 
 
@@ -130,12 +130,15 @@ contains
         ! Interpolate boundary condition state to face quadrature nodes
         !
         rho_bc  = worker%get_primary_field_face("Density"   ,'value', 'boundary')
-        rhou_bc = worker%get_primary_field_face("X-Momentum",'value', 'boundary')
-        rhov_bc = worker%get_primary_field_face("Y-Momentum",'value', 'boundary')
-        rhow_bc = worker%get_primary_field_face("Z-Momentum",'value', 'boundary')
+        rhou_bc = worker%get_primary_field_face("Momentum-1",'value', 'boundary')
+        rhov_bc = worker%get_primary_field_face("Momentum-2",'value', 'boundary')
+        rhow_bc = worker%get_primary_field_face("Momentum-3",'value', 'boundary')
         rhoE_bc = worker%get_primary_field_face("Energy"    ,'value', 'boundary')
 
 
+        u_grid = worker%get_grid_velocity_face("u_grid")
+        v_grid = worker%get_grid_velocity_face("v_grid")
+        w_grid = worker%get_grid_velocity_face("w_grid")
         jacobian_grid = worker%get_inv_jacobian_grid_face()
         det_jacobian_grid = worker%get_det_jacobian_grid_face()
 
@@ -196,9 +199,9 @@ contains
         !=================================================
         ! Mass flux
         !=================================================
-        flux_x = (rho_bc * u_bc)
-        flux_y = (rho_bc * v_bc)
-        flux_z = (rho_bc * w_bc)
+        flux_x = (rho_bc * u_bc) - u_grid*rho_bc 
+        flux_y = (rho_bc * v_bc) - v_grid*rho_bc 
+        flux_z = (rho_bc * w_bc) - w_grid*rho_bc 
 
         flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
         flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
@@ -212,9 +215,9 @@ contains
         !=================================================
         ! x-momentum flux
         !=================================================
-        flux_x = (rho_bc * u_bc * u_bc) + p_bc
-        flux_y = (rho_bc * u_bc * v_bc)
-        flux_z = (rho_bc * u_bc * w_bc)
+        flux_x = (rho_bc * u_bc * u_bc) - u_grid*rhou_bc  + p_bc
+        flux_y = (rho_bc * u_bc * v_bc) - v_grid*rhou_bc 
+        flux_z = (rho_bc * u_bc * w_bc) - w_grid*rhou_bc 
         flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
         flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
         flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
@@ -222,14 +225,14 @@ contains
 
         integrand = flux_x_ref*normx + flux_y_ref*normy + flux_z_ref*normz
 
-        call worker%integrate_boundary('X-Momentum',integrand)
+        call worker%integrate_boundary('Momentum-1',integrand)
 
         !=================================================
         ! y-momentum flux
         !=================================================
-        flux_x = (rho_bc * v_bc * u_bc)
-        flux_y = (rho_bc * v_bc * v_bc) + p_bc
-        flux_z = (rho_bc * v_bc * w_bc)
+        flux_x = (rho_bc * v_bc * u_bc) - u_grid*rhov_bc 
+        flux_y = (rho_bc * v_bc * v_bc) - v_grid*rhov_bc  + p_bc
+        flux_z = (rho_bc * v_bc * w_bc) - w_grid*rhov_bc 
         flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
         flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
         flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
@@ -237,14 +240,14 @@ contains
 
         integrand = flux_x_ref*normx + flux_y_ref*normy + flux_z_ref*normz
 
-        call worker%integrate_boundary('Y-Momentum',integrand)
+        call worker%integrate_boundary('Momentum-2',integrand)
 
         !=================================================
         ! z-momentum flux
         !=================================================
-        flux_x = (rho_bc * w_bc * u_bc)
-        flux_y = (rho_bc * w_bc * v_bc)
-        flux_z = (rho_bc * w_bc * w_bc) + p_bc
+        flux_x = (rho_bc * w_bc * u_bc) - u_grid*rhow_bc 
+        flux_y = (rho_bc * w_bc * v_bc) - v_grid*rhow_bc 
+        flux_z = (rho_bc * w_bc * w_bc) - w_grid*rhow_bc  + p_bc
         flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
         flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
         flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
@@ -252,18 +255,32 @@ contains
 
         integrand = flux_x_ref*normx + flux_y_ref*normy + flux_z_ref*normz
 
-        call worker%integrate_boundary('Z-Momentum',integrand)
+        call worker%integrate_boundary('Momentum-3',integrand)
 
         !=================================================
         ! Energy flux
         !=================================================
-        flux_x = (rho_bc * u_bc * H_bc)
-        flux_y = (rho_bc * v_bc * H_bc)
-        flux_z = (rho_bc * w_bc * H_bc)
+        flux_x = (rho_bc * u_bc * H_bc) - u_grid*rhoE_bc 
+        flux_y = (rho_bc * v_bc * H_bc) - v_grid*rhoE_bc 
+        flux_z = (rho_bc * w_bc * H_bc) - w_grid*rhoE_bc 
 
         flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
         flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
         flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
+!        if ((worker%element_info%ielement_g == 1) .and. (worker%iface ==3)) then
+!            testx = worker%x('boundary')
+!            print *, 'time'
+!            print *, worker%t
+!            print *, 'node x position'
+!            print *, testx(1) 
+!            print *, 'det_jacobian_grid'
+!            print *, det_jacobian_grid(1)
+!            !print *, 'u-grid'
+!            !print *, u_grid(1)
+!            print *, 'Energy flux sample'
+!            print *, flux_x_ref(1)%x_ad_
+!        end if
+
 
 
         integrand = flux_x_ref*normx + flux_y_ref*normy + flux_z_ref*normz

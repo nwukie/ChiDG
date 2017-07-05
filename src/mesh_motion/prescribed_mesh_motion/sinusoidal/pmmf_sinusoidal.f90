@@ -2,7 +2,6 @@ module pmmf_sinusoidal
 #include <messenger.h>
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO, HALF, ONE, TWO, THREE, FIVE, EIGHT, PI
-    use type_point,     only: point_t
     use type_prescribed_mesh_motion_function,  only: prescribed_mesh_motion_function_t
     implicit none
     private
@@ -68,9 +67,9 @@ contains
         call self%add_option('GRID_FREQ_X',1._rk)
         call self%add_option('GRID_FREQ_Y',1._rk)
         call self%add_option('GRID_FREQ_Z',1._rk)
-        call self%add_option('GRID_AMP_X',1._rk)
-        call self%add_option('GRID_AMP_Y',1._rk)
-        call self%add_option('GRID_AMP_Z',1._rk)
+        call self%add_option('GRID_AMP_X',0._rk)
+        call self%add_option('GRID_AMP_Y',0._rk)
+        call self%add_option('GRID_AMP_Z',0._rk)
 
 
     end subroutine init
@@ -85,13 +84,13 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    impure  elemental function compute_pos(self,time,coord) result(val)
-        class(sinusoidal_pmmf),     intent(inout)  :: self
-        real(rk),                       intent(in)  :: time
-        type(point_t),                  intent(in)  :: coord
+    function compute_pos(self,time,node) result(val)
+        class(sinusoidal_pmmf),     intent(inout)   :: self
+        real(rk),                   intent(in)      :: time
+        real(rk),                   intent(in)      :: node(3)
 
         integer(ik)                                 :: ivar
-        type(point_t)                                    :: val
+        real(rk)                                    :: val(3)
 
         real(rk)                                    :: L_X, L_Y, L_Z, &
                                                         GRID_MODE_X, GRID_MODE_Y, GRID_MODE_Z, &
@@ -109,27 +108,34 @@ contains
         GRID_AMP_X = self%get_option_value('GRID_AMP_X')
         GRID_AMP_Y = self%get_option_value('GRID_AMP_Y')
         GRID_AMP_Z = self%get_option_value('GRID_AMP_Z')
-        
-        val%c1_ = coord%c1_ + &
+
+        val(1) = node(1) + &
             GRID_AMP_X* &
-            sin(GRID_MODE_X*TWO*PI*coord%c1_/L_X)* &
-            sin(GRID_MODE_Y*TWO*PI*coord%c2_/L_Y)* &
-            sin(GRID_MODE_Z*TWO*PI*coord%c3_/L_Z)* &
+            sin(GRID_MODE_X*TWO*PI*node(1)/L_X)* &
             sin(GRID_FREQ_X*time)
         
-        val%c2_ = coord%c2_ + &
-            GRID_AMP_Y* &
-            sin(GRID_MODE_X*TWO*PI*coord%c1_/L_X)* &
-            sin(GRID_MODE_Y*TWO*PI*coord%c2_/L_Y)* &
-            sin(GRID_MODE_Z*TWO*PI*coord%c3_/L_Z)* &
-            sin(GRID_FREQ_Y*time)
-        
-        val%c3_ = coord%c3_ + &
-            GRID_AMP_Z* &
-            sin(GRID_MODE_X*TWO*PI*coord%c1_/L_X)* &
-            sin(GRID_MODE_Y*TWO*PI*coord%c2_/L_Y)* &
-            sin(GRID_MODE_Z*TWO*PI*coord%c3_/L_Z)* &
-            sin(GRID_FREQ_Z*time)
+        val(2) = node(2)
+        val(3) = node(3)
+!        val(1) = node(1) + &
+!            GRID_AMP_X* &
+!            sin(GRID_MODE_X*TWO*PI*node(1)/L_X)* &
+!            sin(GRID_MODE_Y*TWO*PI*node(2)/L_Y)* &
+!            sin(GRID_MODE_Z*TWO*PI*node(3)/L_Z)* &
+!            sin(GRID_FREQ_X*time)
+!        
+!        val(2) = node(2) + &
+!            GRID_AMP_Y* &
+!            sin(GRID_MODE_X*TWO*PI*node(1)/L_X)* &
+!            sin(GRID_MODE_Y*TWO*PI*node(2)/L_Y)* &
+!            sin(GRID_MODE_Z*TWO*PI*node(3)/L_Z)* &
+!            sin(GRID_FREQ_Y*time)
+!        
+!        val(3) = node(3) + &
+!            GRID_AMP_Z* &
+!            sin(GRID_MODE_X*TWO*PI*node(1)/L_X)* &
+!            sin(GRID_MODE_Y*TWO*PI*node(2)/L_Y)* &
+!            sin(GRID_MODE_Z*TWO*PI*node(3)/L_Z)* &
+!            sin(GRID_FREQ_Z*time)
         
     end function compute_pos
     !**********************************************************************************
@@ -146,13 +152,13 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    impure  elemental function compute_vel(self,time,coord) result(val)
-        class(sinusoidal_pmmf),     intent(inout)  :: self
-        real(rk),                       intent(in)  :: time
-        type(point_t),                  intent(in)  :: coord
+    function compute_vel(self,time,node) result(val)
+        class(sinusoidal_pmmf),     intent(inout)   :: self
+        real(rk),                   intent(in)      :: time
+        real(rk),                   intent(in)      :: node(3)
 
         integer(ik)                                 :: ivar
-        type(point_t)                                   :: val
+        real(rk)                                    :: val(3)
         real(rk)                                    :: L_X, L_Y, L_Z, &
                                                         GRID_MODE_X, GRID_MODE_Y, GRID_MODE_Z, &
                                                         GRID_FREQ_X, GRID_FREQ_Y, GRID_FREQ_Z, &
@@ -169,27 +175,34 @@ contains
         GRID_AMP_X = self%get_option_value('GRID_AMP_X')
         GRID_AMP_Y = self%get_option_value('GRID_AMP_Y')
         GRID_AMP_Z = self%get_option_value('GRID_AMP_Z')
-        
-        val%c1_ =  &
+
+        val(1) =  &
             GRID_AMP_X* &
-            sin(GRID_MODE_X*TWO*PI*coord%c1_/L_X)* &
-            sin(GRID_MODE_Y*TWO*PI*coord%c2_/L_Y)* &
-            sin(GRID_MODE_Z*TWO*PI*coord%c3_/L_Z)* &
+            sin(GRID_MODE_X*TWO*PI*node(1)/L_X)* &
             GRID_FREQ_X*cos(GRID_FREQ_X*time)
         
-        val%c2_ =  &
-            GRID_AMP_Y* &
-            sin(GRID_MODE_X*TWO*PI*coord%c1_/L_X)* &
-            sin(GRID_MODE_Y*TWO*PI*coord%c2_/L_Y)* &
-            sin(GRID_MODE_Z*TWO*PI*coord%c3_/L_Z)* &
-            GRID_FREQ_Y*cos(GRID_FREQ_Y*time)
+        !val(1) =  &
+        !    GRID_AMP_X* &
+        !    sin(GRID_MODE_X*TWO*PI*node(1)/L_X)* &
+        !    sin(GRID_MODE_Y*TWO*PI*node(2)/L_Y)* &
+        !    sin(GRID_MODE_Z*TWO*PI*node(3)/L_Z)* &
+        !    GRID_FREQ_X*cos(GRID_FREQ_X*time)
         
-        val%c3_ =  &
-            GRID_AMP_Z* &
-            sin(GRID_MODE_X*TWO*PI*coord%c1_/L_X)* &
-            sin(GRID_MODE_Y*TWO*PI*coord%c2_/L_Y)* &
-            sin(GRID_MODE_Z*TWO*PI*coord%c3_/L_Z)* &
-            GRID_FREQ_Z*cos(GRID_FREQ_Z*time)
+        val(2) = ZERO
+        val(3) = ZERO
+!        val(2) =  &
+!            GRID_AMP_Y* &
+!            sin(GRID_MODE_X*TWO*PI*node(1)/L_X)* &
+!            sin(GRID_MODE_Y*TWO*PI*node(2)/L_Y)* &
+!            sin(GRID_MODE_Z*TWO*PI*node(3)/L_Z)* &
+!            GRID_FREQ_Y*cos(GRID_FREQ_Y*time)
+!        
+!        val(3) =  &
+!            GRID_AMP_Z* &
+!            sin(GRID_MODE_X*TWO*PI*node(1)/L_X)* &
+!            sin(GRID_MODE_Y*TWO*PI*node(2)/L_Y)* &
+!            sin(GRID_MODE_Z*TWO*PI*node(3)/L_Z)* &
+!            GRID_FREQ_Z*cos(GRID_FREQ_Z*time)
  
         
     end function compute_vel

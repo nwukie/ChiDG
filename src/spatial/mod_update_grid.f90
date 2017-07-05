@@ -1,8 +1,9 @@
 module mod_update_grid
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: NFACES, DIAG, CHIMERA, INTERIOR
+    use mod_constants,          only: NFACES, DIAG, CHIMERA, INTERIOR, NO_PMM_ASSIGNED
     use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM, GLOBAL_MASTER
+    use mod_io,                 only: verbosity
     use mpi_f08,                only: MPI_Barrier
 
 
@@ -12,7 +13,6 @@ module mod_update_grid
     use type_chidg_cache,       only: chidg_cache_t
     use type_cache_handler,     only: cache_handler_t
     use type_element_info,      only: element_info_t
-    use type_face_info,         only: face_info_t
     use type_timer,             only: timer_t
     implicit none
 
@@ -34,25 +34,21 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------------------------------
-    subroutine update_grid(data,current_time,timing,info)
+    subroutine update_grid(data,timing,info)
         type(chidg_data_t), intent(inout), target :: data
-        real(rk),           intent(in)            :: current_time
         real(rk),           optional        :: timing
         integer(ik),        optional        :: info
 
         type(timer_t)               :: timer, comm_timer
-        integer(ik)                 :: idom, ielem, iface, idiff, ifcn, ibc, ierr, nelem
+        integer(ik)                 :: inode, pmm_ID, idom, ielem, iface, idiff, ifcn, ibc, ierr, nelem
         logical                     :: interior_face
         logical                     :: chimera_face 
         logical                     :: compute_face 
 
-        logical                     :: compute_function
-        logical                     :: linearize_function
 
 
         type(chidg_worker_t)        :: worker
         type(element_info_t)        :: elem_info
-        type(face_info_t)           :: face_info
 
         type(chidg_cache_t)         :: cache
         type(cache_handler_t)       :: cache_handler
@@ -100,49 +96,32 @@ contains
         ! Loop through given element compute the residual functions and also the linearization of those functions
         !
     
-        print *, IRANK
         call write_line('Updating grid according to mesh motion...', io_proc=GLOBAL_MASTER)
 
 
+        worker%itime = data%time_manager%itime
+        worker%t     = data%time_manager%t
         ! Loop through domains
         do idom = 1,data%mesh%ndomains()
-            associate ( mesh => data%mesh, eqnset => data%eqnset(idom) )
-            nelem = mesh%domain(idom)%nelem
+            associate ( mesh => data%mesh)
+            pmm_ID = mesh%domain(idom)%pmm_ID
 
-            ! Loop through elements in the current domain
-            do ielem = 1,nelem
-                !Update element mesh motion quantities
+            if (pmm_ID /= NO_PMM_ASSIGNED) then
 
-                call mesh%domain(idom)%elems(ielem)%update_element_ale()
+                print *, 'updating grid'
+                print *, 'time'
+                print *, data%time_manager%t
+                do inode = 1, size(mesh%domain(idom)%nodes,1)
+                    mesh%domain(idom)%dnodes(inode,:) = &
+                        data%pmm(pmm_ID)%pmmf%compute_pos(data%time_manager%t, mesh%domain(idom)%nodes(inode,:)) - &
+                        mesh%domain(idom)%nodes(inode,:)
+                    mesh%domain(idom)%vnodes(inode,:) = data%pmm(pmm_ID)%pmmf%compute_vel(data%time_manager%t, mesh%domain(idom)%nodes(inode,:))
 
-!                elem_info%idomain_g  = mesh(idom)%elems(ielem)%idomain_g
-!                elem_info%idomain_l  = mesh(idom)%elems(ielem)%idomain_l
-!                elem_info%ielement_g = mesh(idom)%elems(ielem)%ielement_g
-!                elem_info%ielement_l = mesh(idom)%elems(ielem)%ielement_l
-!                call worker%set_element(elem_info)
-!
-!
-!
-!                ! Update the element cache
-!                call cache_handler%update(worker,data%eqnset,data%bcset)
+                end do
 
-
-
-               ! Faces loop. For the current element, compute the contributions from boundary integrals
-                do iface = 1,NFACES
-
-                    !Update mesh mesh motion quantities on each face
-                    call mesh%domain(idom)%faces(ielem, iface)%update_face_ale(mesh%domain(idom)%elems(ielem))
-
-!                    call worker%set_face(iface)
-!
-!                    call eqnset%compute_boundary_advective_operators(worker, idiff)
-!                    call eqnset%compute_boundary_diffusive_operators(worker, idiff)
-!                    call eqnset%compute_bc_operators(worker,data%bcset,idiff)
-
-                end do  ! faces loop
-                        
-            end do  ! ielem
+                call mesh%domain(idom)%init_ale(mesh%domain(idom)%dnodes, mesh%domain(idom)%vnodes)
+                call mesh%domain(idom)%update_ale()
+            end if
             end associate
         end do  ! idom
 
@@ -153,19 +132,18 @@ contains
         !
         ! Synchronize
         !
-        print *, 'Waiting in update_grid...'
         call MPI_Barrier(ChiDG_COMM,ierr)
 
 
 
 
 
-        call timer%stop()
-        call timer%report('Grid Update Time')
-        !call comm_timer%report('    - Grid update comm time:')
-        if (present(timing)) then
-            timing = timer%elapsed()
-        end if
+!        call timer%stop()
+!        call timer%report('Grid Update Time')
+!        !call comm_timer%report('    - Grid update comm time:')
+!        if (present(timing)) then
+!            timing = timer%elapsed()
+!        end if
 
 
     end subroutine update_grid

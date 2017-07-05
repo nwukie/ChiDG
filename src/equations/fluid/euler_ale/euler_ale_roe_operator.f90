@@ -1,4 +1,4 @@
-module euler_roe_ale_operator
+module euler_ale_roe_operator
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO,ONE,TWO,HALF
     use type_operator,          only: operator_t
@@ -18,14 +18,14 @@ module euler_roe_ale_operator
     !!  @date   1/28/2016
     !!
     !------------------------------------------------------------------------------
-    type, extends(operator_t), public :: euler_roe_ale_operator_t
+    type, extends(operator_t), public :: euler_ale_roe_operator_t
 
     contains
 
         procedure   :: init
         procedure   :: compute
 
-    end type euler_roe_ale_operator_t
+    end type euler_ale_roe_operator_t
     !*******************************************************************************
 
 
@@ -47,7 +47,7 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(euler_roe_ale_operator_t),   intent(inout)    :: self
+        class(euler_ale_roe_operator_t),   intent(inout)    :: self
 
         ! Set operator name
         call self%set_name("Euler ALE Roe Flux")
@@ -59,7 +59,7 @@ contains
         call self%add_primary_field("Density"   )
         call self%add_primary_field("Momentum-1")
         call self%add_primary_field("Momentum-2")
-        call self%add_primary_field("Z-Momentum")
+        call self%add_primary_field("Momentum-3")
         call self%add_primary_field("Energy"    )
 
     end subroutine init
@@ -75,7 +75,7 @@ contains
     !!
     !!---------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(euler_roe_ale_operator_t),    intent(inout)   :: self
+        class(euler_ale_roe_operator_t),    intent(inout)   :: self
         type(chidg_worker_t),           intent(inout)   :: worker
         class(properties_t),            intent(inout)   :: prop
 
@@ -136,8 +136,8 @@ contains
         rhov_m = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
         rhov_p = worker%get_primary_field_face('Momentum-2', 'value', 'face exterior')
 
-        rhow_m = worker%get_primary_field_face('Z-Momentum', 'value', 'face interior')
-        rhow_p = worker%get_primary_field_face('Z-Momentum', 'value', 'face exterior')
+        rhow_m = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
+        rhow_p = worker%get_primary_field_face('Momentum-3', 'value', 'face exterior')
 
         rhoE_m = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
         rhoE_p = worker%get_primary_field_face('Energy'    , 'value', 'face exterior')
@@ -176,8 +176,8 @@ contains
         gam_m = 1.4_rk
         gam_p = 1.4_rk
 
-        p_m = (1.4_rk-ONE)*(rhoE_m - HALF*(rhou_m**2+rhov_m**2+rhow_m**2)/rho_m)
-        p_p = (1.4_rk-ONE)*(rhoE_p - HALF*(rhou_p**2+rhov_p**2+rhow_p**2)/rho_p)
+        p_m = (1.4_rk-ONE)*(rhoE_m - HALF*(rhou_m**TWO+rhov_m**TWO+rhow_m**TWO)/rho_m)
+        p_p = (1.4_rk-ONE)*(rhoE_p - HALF*(rhou_p**TWO+rhov_p**TWO+rhow_p**TWO)/rho_p)
 
         invrho_m = ONE/rho_m
         invrho_p = ONE/rho_p
@@ -310,7 +310,7 @@ contains
 
         integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)
 
-        call worker%integrate_boundary('Z-Momentum',integrand)
+        call worker%integrate_boundary('Momentum-3',integrand)
 
         !================================
         !          ENERGY FLUX
@@ -337,4 +337,4 @@ contains
 
 
 
-end module euler_roe_ale_operator
+end module euler_ale_roe_operator

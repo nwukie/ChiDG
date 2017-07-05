@@ -1,0 +1,790 @@
+!--------------------------------------------------------------------------------
+!
+!     Euler ALE equation set uniform flow prescribed mesh motion regression test
+!
+!   This test suite runs a series of tests solving the euler equations on a quartic
+!   scalar_advection_pmm grid of varying resolution for varying orders of solution accuracy.
+!   At the end of each case, the L2 error is computed for the domain using the 
+!   analytical solution.
+!
+!   This suite runs the scalar_advection_pmm case with 6x1x1, 12x1x1, and 24x1x1 grids with
+!   quartic elements. Each grid is run from 1st to 4th order accuracy. Each 
+!   configuration is run on 1, 2, 7, and 10 processors. The nonlinear convergence
+!   for each case is stored in a module global variable that is used to compare
+!   convergence.
+!
+!   After the simulation for each case has been run, an additional test
+!   compares the nonlinear convergence of the Newton solver from the parallel
+!   simulations to the same case run in serial.
+!
+!   The boundary condition settings are:
+!
+!       Farfield:  euler_farfield  
+!               Density     = 1.225 (kg/m^3)
+!               Pressure    = 101325 (Pa) 
+!               Velocity-1  = 102.0882 (m/s)
+!               Velocity-2  = 0 (m/s)
+!               Velocity-3  = 0 (m/s)
+!
+!
+!       Walls: euler_wall
+!
+!   @author Eric Wolf 
+!   @date  6/21/2017 
+!
+!--------------------------------------------------------------------------------
+module integration_scalar_advection_pmm_mod
+#include <messenger.h>
+    use pfunit_mod
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: ZERO, THREE, IO_DESTINATION, ONE, TWO, PI, FOUR, &
+                                      XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+    use mod_string,             only: string_t
+    use type_chidg,             only: chidg_t
+    use type_chidg_data,        only: chidg_data_t
+    use mod_bc,                 only: create_bc
+    use type_bc_state,          only: bc_state_t
+    use type_bc_state_group,    only: bc_state_group_t
+    use type_function,          only: function_t
+    use type_rvector,           only: rvector_t
+    use type_ivector,           only: ivector_t
+    use mod_function,           only: create_function
+    use mod_interpolate,        only: interpolate_element_standard
+    use mod_test_utilities,     only: create_mesh_file
+    use mod_file_utilities,     only: delete_file
+
+    use mod_chidg_mpi,          only: IRANK, NRANK
+    use mpi_f08,                only: MPI_COMM, MPI_REAL8, MPI_SUM
+    use mod_io
+    use type_chidg_worker,      only: chidg_worker_t
+    use type_properties,        only: properties_t
+    use DNAD_D
+
+    ! Imports for defining a new operator and model
+    use mod_operators,          only: operator_factory
+    use type_operator,          only: operator_t
+    use mod_models,             only: model_factory
+    use type_model,             only: model_t
+
+    ! Imports for defining a new equation builder
+    use mod_equations,                  only: equation_builder_factory
+    use type_equation_builder,          only: equation_builder_t
+    use type_equation_set,              only: equation_set_t
+
+    implicit none
+
+
+    ! Store the nonlinear convergence for each test case. This is used 
+    ! to test the nonlinear convergence between a case running on
+    ! a different number of procs.
+    !
+    ! Procs: 1, 2, 4, 7, 10
+    !
+    type(rvector_t) :: nonlinear_convergence(1,2,4) ! nprocs, ngrids, norders
+    real(rk)        :: error(1,2,4)                         ! nprocs, ngrids, norders
+
+
+    public  :: scalar_advection_pmm
+
+
+
+
+    !>  This parameter initialize the state for each test
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie (AFRL)
+    !!
+    !-------------------------------------------------------------------------------
+    @TestParameter
+    type, extends(MpiTestParameter) :: case_grid_order
+
+        integer(ik)     :: nelem_xi
+        character(100)  :: gridfile
+        integer(ik)     :: order
+
+    contains
+        procedure   :: toString
+    end type case_grid_order
+    !*******************************************************************************
+
+
+
+
+
+
+
+    !>  Main testing fixture with test components that get initialized for each test
+    !!
+    !!  @author Nathan A. Wukie 
+    !!  @author Nathan A. Wukie (AFRL)
+    !!
+    !-------------------------------------------------------------------------------
+    @TestCase(testParameters={getParameters()}, constructor=newTest)
+    type, extends(MpiTestCase) :: scalar_advection_pmm
+
+        integer(ik)     :: nelem_xi
+        character(100)  :: gridfile
+        integer(ik)     :: order
+
+        type(chidg_t)   :: chidg
+        type(mpi_comm)  :: ChiDG_COMM
+
+    contains
+        procedure   :: setUp
+        procedure   :: tearDown
+    end type scalar_advection_pmm
+    !*******************************************************************************
+
+
+
+
+
+contains
+
+
+    !> Parameter constructors
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------
+    function newTest(test_parameter) result(test)
+        type(case_grid_order),  intent(in)          :: test_parameter
+        type(scalar_advection_pmm)    :: test
+
+        test%nelem_xi    = test_parameter%nelem_xi
+        test%gridfile    = test_parameter%gridfile
+        test%order       = test_parameter%order
+
+    end function newTest
+    !******************************************************************************
+
+
+    !> Parameter initialization
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------
+    function getParameters() result(params)
+        type(case_grid_order), allocatable :: params(:)
+    
+        integer(ik),        allocatable :: nelem_xi(:)
+        type(string_t),     allocatable :: files(:)
+        integer(ik),        allocatable :: orders(:)
+        integer(ik) :: icase
+
+        nelem_xi  = [ &
+                     40, 40, 40, 40, &
+                     80, 80, 80, 80]
+
+        files = [  string_t('1scalar_advection_pmm_40x1x1.h5'), &
+                   string_t('2scalar_advection_pmm_40x1x1.h5'), &
+                   string_t('3scalar_advection_pmm_40x1x1.h5'), &
+                   string_t('4scalar_advection_pmm_40x1x1.h5'), &
+                   string_t('1scalar_advection_pmm_80x1x1.h5'), &
+                   string_t('2scalar_advection_pmm_80x1x1.h5'), &
+                   string_t('3scalar_advection_pmm_80x1x1.h5'), &
+                   string_t('4scalar_advection_pmm_80x1x1.h5')  &
+                    ]
+
+        orders = [  &
+                   1, 2, 3, 4, &
+                   1, 2, 3, 4 ]
+
+        !Initialize the test case container with the parameter
+        allocate(params(size(files)))
+        do icase = 1,size(files)
+            params(icase)%nelem_xi    = nelem_xi(icase)
+            params(icase)%gridfile    = files(icase)%str
+            params(icase)%order       = orders(icase)
+        end do
+
+    end function getParameters
+    !*******************************************************************************************
+
+
+
+    !>  Reporting the parameters of the test
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    function toString(this) result(string)
+        class (case_grid_order),    intent(in)  :: this
+        character(:), allocatable   :: string
+
+        character(len=200) :: buffer
+
+        write(buffer,"( '(nelem_xi,  order)=','(', I2,',', I2,',', I2, ')' )") this%nelem_xi, this%order
+        string = trim(buffer)
+
+    end function toString
+    !********************************************************************************************
+
+
+
+
+
+
+
+    !>  Set up test routine.
+    !!
+    !!  This routine reads the grid file, sets up boundary conditions, initializes storage
+    !!  and sets the appropriate configuration options.
+    !!  This routine also gets the numer of processors and the correct MPI communicator for 
+    !!  the test.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie (AFRL)
+    !!
+    !!
+    !--------------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(scalar_advection_pmm),  intent(inout)   :: this
+
+        class(bc_state_t),  allocatable :: bc_state
+        type(bc_state_group_t)          :: bc_state_groups(2)
+        type(string_t)                  :: group_names(1,6)
+        class(function_t),  allocatable :: fcn
+        real(rk)                        :: tol, sim_time
+
+        sim_time = 0.5
+
+        
+        
+        tol = 1.e-6_rk
+
+        !------------------------------------------------------------------------------
+        !
+        ! Define input data here that is normally read through the namelist input file
+        !
+        ! As a result, we don't call chidg%init('io')
+        !
+        !------------------------------------------------------------------------------
+        basis            = 'legendre'
+        gq_rule          = 3 
+        time_integrator  = 'DIRK'
+        nonlinear_solver = 'newton'
+        linear_solver    = 'fgmres_cgs'
+        preconditioner   = 'RASILU0'
+        IO_DESTINATION   = 'both'
+        time_steps       = 720
+        dt               = real(sim_time/time_steps, rk)
+        verbosity        = 3 
+        nwrite           = 20 
+        solutionfile_out = trim(this%gridfile) 
+        !------------------------------------------------------------------------------
+
+
+        !
+        ! Get MPI communicator information from pFUnit
+        !
+        IRANK                   = this%getProcessRank()
+        NRANK                   = this%getNumProcessesRequested()
+        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+
+
+
+        ! Set timescheme options to pass during initialization
+        !call toptions%set('dt', 0.1_rk) ! means nothing here
+        !call toptions%set('nsteps',100)
+        !call toptions%set('nwrite',0)
+
+        call this%chidg%data%time_manager%init()
+
+        ! Set linear solver options to pass during initialization
+        call loptions%set('tol',1.e-10_rk)
+
+        ! Set nonlinear solver options
+        call noptions%set('tol',1.e-9_rk)
+        call noptions%set('cfl0',2.0_rk)
+        call noptions%set('nsteps',20)
+
+
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call this%chidg%start_up('mpi',this%ChiDG_COMM)
+        call this%chidg%start_up('core')
+
+
+
+
+        !
+        ! Create mesh
+        !
+        if (IRANK == GLOBAL_MASTER) then
+            bc_state_groups(1)%name = 'Value'
+            bc_state_groups(2)%name = 'Extrapolate'
+
+
+            call create_bc('Scalar ALE Value', bc_state)
+            call bc_state%set_fcn_option('Value',   'val', 1.0_rk)
+            call bc_state_groups(1)%add_bc_state(bc_state)
+
+            call create_bc('Scalar ALE Extrapolate', bc_state)
+            call bc_state_groups(2)%add_bc_state(bc_state)
+
+
+
+            ! Define patch group names
+            group_names(1,:) = [string_t('Value') , &
+                                string_t('Extrapolate'), &
+                                string_t('Extrapolate') , &
+                                string_t('Extrapolate') , &
+                                string_t('Extrapolate') , &
+                                string_t('Extrapolate') ]
+
+
+            call create_mesh_file('Scalar Advection PMM',this%gridfile, &
+                                                              equation_sets=[string_t('Scalar Advection ALE')], &
+                                                              group_names     = group_names,     &
+                                                              bc_state_groups = bc_state_groups, &
+                                                              nelem_xi        = this%nelem_xi,   &
+                                                              nelem_eta       = 1,  &
+                                                              nelem_zeta      = 1) 
+                                                              
+        end if
+
+
+        !
+        ! Set ChiDG components
+        !
+        call this%chidg%set('Solution Order',   integer_input=this%order)
+        call this%chidg%set('Time Integrator',  algorithm=time_integrator)
+        call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
+        call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
+        call this%chidg%set('Preconditioner',   algorithm=preconditioner)
+
+
+        !
+        ! Read grid
+        !
+
+        call this%chidg%read_mesh(this%gridfile)
+
+
+
+
+        !
+        ! Initialize solution
+        !
+        call create_function(fcn,'constant')
+
+        call fcn%set_option('val',1.0_rk)
+        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
+
+
+
+    end subroutine SetUp
+    !*******************************************************************************************
+
+
+    !>
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(scalar_advection_pmm),  intent(inout)   :: this
+
+        ! Close ChiDG
+        call this%chidg%shut_down('core')
+
+        if (IRANK == GLOBAL_MASTER) then
+            call delete_file(this%gridfile)
+        end if
+
+    end subroutine tearDown
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Run the simulation.
+    !!
+    !!      - compute the entropy error, test against the reference values.
+    !!      - store the nonlinear convergence to the module variable so it can 
+    !!        be used by a test for nonlinear convergence.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie (AFRL)
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    @Test(npes=[8])
+    subroutine test_entropy_error_rate(self)
+        class(scalar_advection_pmm),  intent(inout)   :: self
+
+        real(rk)    :: tol
+        integer(ik) :: npes_index, grid_index, order_index
+        real(rk)    :: computed_error
+
+
+        npes_index  = get_npes_index(NRANK)
+        grid_index  = get_grid_index(self%gridfile)
+        order_index = get_order_index(self%order)
+
+
+        print *, 'order'
+        print *, self%order
+        !
+        ! Run ChiDG simulation
+        !
+        call self%chidg%run(write_initial=.false., write_final=.false.)
+
+        print *, 'chidg run complete'
+        !
+        ! Store the nonlinear convergence of the calculation
+        !
+        !nonlinear_convergence(npes_index,grid_index,order_index) = self%chidg%nonlinear_solver%residual_norm
+
+        print *, 'computing error'
+        computed_error = compute_scalar_advection_pmm_error(self%chidg%data,self%ChiDG_COMM)
+
+
+        print *, 'computed error'
+        print *, computed_error
+
+        !
+        ! Store the computed error for the current case
+        !
+        error(npes_index,grid_index,order_index)         = computed_error
+
+
+    end subroutine test_entropy_error_rate
+    !*******************************************************************************************
+
+
+    !>
+    !!
+    !!
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/16/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    @Test(npes=[1])
+    subroutine test_err_conforming(self)
+        class(scalar_advection_pmm),  intent(inout)   :: self
+
+        integer(ik) :: inpes, igrid, iorder
+        real(rk)    :: error_previous, error_current, mesh_parameter_previous, mesh_parameter_current, convergence_rate, tol
+
+        tol = 0.1_rk
+
+
+        do inpes = 1,1
+            do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
+                do iorder = 1,4
+
+                    error_previous = error(inpes,igrid-1,iorder)
+                    error_current  = error(inpes,igrid  ,iorder)
+
+                    mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
+                    mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
+
+                    
+                    !
+                    ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
+                    !
+                    convergence_rate = (log10(error_previous)-log10(error_current)) / &
+                                       (log10(mesh_parameter_previous)-log10(mesh_parameter_current))
+
+                
+                    @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
+                    @assertLessThan(convergence_rate, real(iorder+1,rk)+tol)
+
+                end do
+            end do
+        end do
+
+
+    end subroutine test_err_conforming
+    !*****************************************************************************************
+
+
+
+
+
+    !>  Function to compute the error in the 1D scalar diffusion equation.
+    !!
+    !!  The error is computed as the L2-Norm of the difference in the analytical and
+    !!  numerical solutions integrated over the domain.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/16/2016
+    !!
+    !!
+    !------------------------------------------------------------------------------------
+    function compute_scalar_advection_pmm_error(data,ChiDG_COMM) result(error)
+        type(chidg_data_t), intent(inout)   :: data
+        type(mpi_comm),     intent(in)      :: ChiDG_COMM
+
+        real(rk), allocatable, dimension(:) :: &
+            u_dg, u_analytical, x_gq, gq_error_squared, det_jacobian_grid_gq
+
+
+        integer(ik) :: iu
+        integer(ik) :: ielem, idom, ierr, itime
+        real(rk)    :: error_squared_sum, error_squared_sum_reduced, element_error_squared, error
+
+
+        associate (mesh   => data%mesh,     &
+                   sdata  => data%sdata,    &
+                   eqnset => data%eqnset,   &
+                   prop   => data%eqnset(1)%prop)
+
+
+            !
+            ! Get equation indices
+            !
+            iu = prop%get_primary_field_index("u")
+
+            !
+            ! Zero error accumulator
+            !
+            error_squared_sum = ZERO
+
+
+
+            !
+            ! Loop over elements and accumulate error
+            !
+            itime = 1
+            do idom = 1,data%mesh%ndomains()
+                do ielem = 1,data%mesh%domain(idom)%nelem
+
+
+                    !
+                    ! Compute the analytical solution at the quadrature nodes
+                    !
+                    x_gq = mesh%domain(idom)%elems(ielem)%quad_pts(:,1)
+                    det_jacobian_grid_gq = mesh%domain(idom)%elems(ielem)%det_jacobian_grid
+                    u_analytical = ZERO*x_gq
+                    u_analytical = 1.0_rk
+
+                    !
+                    ! Interpolate DG numerical solution
+                    !
+                    u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,iu,itime,'value')
+
+
+                    u_dg = u_dg/det_jacobian_grid_gq
+                    !
+                    ! Compute error
+                    !                    
+                    gq_error_squared = (u_analytical - u_dg)**TWO
+
+        
+
+                    !
+                    ! Integrate error
+                    !
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%gq%vol%weights)
+
+
+                    print *, 'density error squared'
+                    print *, element_error_squared
+                    !
+                    ! Accumulate error from each element
+                    !
+                    error_squared_sum = error_squared_sum + element_error_squared
+
+                end do ! ielem
+            end do ! idom
+
+
+        end associate
+
+
+
+        ! Reduce the total error across processors
+        call MPI_AllReduce(error_squared_sum,error_squared_sum_reduced,1,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+
+        ! Sqrt of the reduced error
+        error = sqrt(error_squared_sum_reduced)
+
+    end function compute_scalar_advection_pmm_error
+    !*****************************************************************************************
+
+
+
+
+
+
+!    !>  Access the stored nonlinear convergence data(module global variable) and compare 
+!    !!  the parallel convergence to the serial convergence for each (grid,order) combination.
+!    !!
+!    !!  This assumes that the 'test_entropy_error_rate' has already been executed for all cases
+!    !!  and numbers of processors to that the 'nonlinear_convergence' variable has been 
+!    !!  populated.
+!    !!  So, we are relying on pFUnit to do things in order here. Works now, but I don't think
+!    !!  there is a guaruntee that this can't change.
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!
+!    !-------------------------------------------------------------------------------------------
+!    @Test(npes=[1])
+!    subroutine test_nonlinear_convergence(self)
+!        class(scalar_advection_pmm),  intent(inout)   :: self
+!
+!        integer(ik)             :: inpes, igrid, iorder
+!        real(rk), allocatable   :: reference_convergence(:), test_convergence(:)
+!
+!
+!        do inpes = 1,1
+!            do igrid = 1,2
+!                do iorder = 1,4
+!
+!                    ! Get the serial convergence for this (igrid,iorder)
+!                    reference_convergence = nonlinear_convergence(1,igrid,iorder)%data()
+!
+!                    ! Test that the current convergence for the processor count matches the serial convergence
+!                    test_convergence = nonlinear_convergence(inpes,igrid,iorder)%data()
+!
+!                    @assertEqual(reference_convergence, test_convergence, 1.e-5_rk)
+!
+!                end do
+!            end do
+!        end do
+!
+!
+!    end subroutine test_nonlinear_convergence
+!    !*******************************************************************************************
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/16/2016
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    function mesh_parameter(igrid,iorder) result(param)
+        integer(ik),    intent(in)  :: igrid
+        integer(ik),    intent(in)  :: iorder
+
+        integer(ik) :: nelem, nterms_1d
+        real(rk)    :: param
+
+        select case (igrid)
+            case(1)
+                nelem = 40 
+            case(2)
+                nelem = 80 
+            case default
+                call chidg_signal(FATAL,"integration_1D_linear_diffusion_mod%mesh_parameter: invalid igrid")
+        end select
+
+
+        select case (iorder)
+            case(1) ! iorder = 1  =>  order = 2
+                nterms_1d = (iorder+1)
+            case(2)
+                nterms_1d = (iorder+1)
+            case(3)
+                nterms_1d = (iorder+1)
+            case(4)
+                nterms_1d = (iorder+1)
+            case default
+                call chidg_signal(FATAL,"integration_1D_linear_diffusion_mod%mesh_parameter: invalid iorder")
+        end select
+
+
+        param = ONE/(real(nelem,rk)*real(nterms_1d,rk))
+
+    end function mesh_parameter
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+    ! Utility for returning the index associated with a certain number of procs
+    !------------------------------------------------------------------------------
+    function get_npes_index(numproc) result(inpes)
+        integer(ik) :: numproc
+        integer(ik) :: inpes
+
+        select case (numproc)
+!            case(1)
+!                inpes = 1
+!            case(2)
+!                inpes = 2
+!            case(4)
+!                inpes = 3
+!            case(7)
+!                inpes = 4
+            case(8)
+                inpes = 1 
+
+        end select
+
+    end function get_npes_index
+    !******************************************************************************
+
+
+
+    ! Utility for returning the index associated with a certain grid file
+    !------------------------------------------------------------------------------
+    function get_grid_index(grid) result(igrid)
+        character(len=*)    :: grid
+        integer(ik)         :: igrid
+
+        select case (trim(grid))
+            case('scalar_advection_pmm_40x1x1.h5')
+                igrid = 1
+            case('scalar_advection_pmm_80x1x1.h5')
+                igrid = 2 
+            case('scalar_advection_pmm_24x1x1.h5')
+                igrid = 3
+        end select
+
+    end function get_grid_index
+    !******************************************************************************
+
+
+
+    ! Utility for returning the index associated with a certain order of accuracy
+    !------------------------------------------------------------------------------
+    function get_order_index(order) result(iorder)
+        integer(ik) :: order
+        integer(ik) :: iorder
+
+        select case (order)
+            case(1)
+                iorder = 1
+            case(2)
+                iorder = 2
+            case(3)
+                iorder = 3
+            case(4)
+                iorder = 4
+        end select
+
+    end function get_order_index
+    !******************************************************************************
+
+
+
+
+
+
+end module integration_scalar_advection_pmm_mod

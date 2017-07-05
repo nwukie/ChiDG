@@ -1,0 +1,278 @@
+module test_scalar_advection_ale_mod
+    use pfunit_mod
+    use mod_kinds,                  only: rk,ik
+    use mod_constants,              only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
+                                          XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, &
+                                          NFACES, IO_DESTINATION
+
+    use type_chidg,                 only: chidg_t
+    use type_point,                 only: point_t
+    use type_function,              only: function_t
+    use type_domain_connectivity,   only: domain_connectivity_t
+    use mod_function,               only: create_function
+    use type_densematrix,           only: densematrix_t
+    use mod_test_utilities,         only: create_mesh
+    use type_prescribed_mesh_motion
+    use mod_check_jacobian
+    implicit none
+
+    public  :: test_eq_SA_ale
+
+
+
+
+    !> This parameter is used to test the linearization for different blocks.
+    !! iblk = [XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, DIAG]
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    @TestParameter(constructor=newBlock)
+    type, extends (AbstractTestParameter) :: blockParam
+
+        integer(ik) :: iblk
+
+    contains
+
+        procedure :: toString
+        
+    end type blockParam
+    !*******************************************************************************************
+    
+    
+
+
+
+    
+    !>  This holds an initialized test case.
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    @TestCase(constructor=newTest)
+    type, extends(ParameterizedTestCase) ::  test_eq_SA_ale
+
+        type(chidg_t)       :: chidg
+        integer(ik)         :: iblk
+
+    contains
+
+        procedure   ::  setUp
+        procedure   ::  tearDown
+
+    end type test_eq_SA_ale
+    !*******************************************************************************************
+
+
+
+
+
+
+
+
+contains
+
+
+    !>  NOTE: make sure to use 'this' instead of 'self' since these are over-writting a derived 
+    !!  type procedure. The argument names have to match
+    !!
+    !!  This tests up the test case. Initializes chidg, reads grid, initialize data. 
+    !!
+    !-------------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(test_eq_SA_ale),    intent(inout)   :: this
+        
+        integer(ik), parameter      :: npt = 64
+        type(point_t),  allocatable :: nodes(:)
+        type(domain_connectivity_t) :: connectivity
+        integer(ik)                 :: neqns, nterms_c, spacedim
+        real(rk), dimension(npt)    :: x,y,z
+        class(function_t), allocatable  :: fcn
+        class(prescribed_mesh_motion_t), allocatable :: pmm_in
+
+        !
+        ! Send log to file
+        !
+        IO_DESTINATION = 'file'
+        
+
+        !
+        ! Initialize chidg environment
+        !
+        call this%chidg%start_up('core')
+
+
+        !
+        ! Generate points array for 3x3x3 mesh
+        !
+        call create_mesh('3x3x3_unit',nodes,connectivity)
+
+
+        !
+        ! Initialize domain
+        !
+        spacedim = 3
+        nterms_c = 8
+        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection ALE')
+
+        allocate(pmm_in)
+        call pmm_in%add_pmmf('isotropic_dilation')
+        call pmm_in%set_option('isotropic_dilation_factor',TWO)
+
+        pmm_ID =  this%chidg%data%new_pmm
+        call this%chidg%data%pmm(pmm_ID)%init_pmm_group(pmm_in)
+        call this%chidg%data%pmm(pmm_ID)%init_pmm_domain(this%chidg%data%mesh%domain(1))
+
+        call this%chidg%set('Solution Order', integer_input=2)
+        call this%chidg%init('domains')
+        call this%chidg%init('communication')
+        call this%chidg%init('solvers')
+
+
+        !
+        ! Initialize solution
+        !
+        call create_function(fcn,'gaussian')
+        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,1)
+
+    end subroutine setUp
+    !*****************************************************************************************
+    
+    
+    !>
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(test_eq_SA_ale),    intent(inout)   :: this
+
+
+        ! Close ChiDG interface
+        call this%chidg%shut_down('core')
+
+    end subroutine tearDown
+    !*****************************************************************************************
+
+
+    !--------------------------
+    ! PARAMETER CONSTRUCTORS
+    !--------------------------
+    
+    !-----------------------------------------------------------------------------------------
+    !> Function for setting the correct parameter value in the constructor
+    function newBlock(iblk) result(param)
+        type(blockParam)        :: param
+        integer(ik), intent(in) :: iblk
+        
+        param%iblk = iblk
+
+    end function newBlock
+    
+    !> TestCase constructor for parameter specification
+    function newTest(param)
+        type(test_eq_SA_ale)    :: newTest
+        type(blockParam)    :: param
+        
+        newTest%iblk = param%iblk
+
+    end function newTest
+ 
+    !> ToString
+    function toString(this) result(string)
+        class(blockParam), intent(in)   :: this
+        character(:), allocatable       :: string
+        character(len=3)                :: str
+         
+        write(str,'(i0)') this%iblk
+        string = str
+
+    end function toString
+    !****************************************************************************************
+ 
+
+
+    !----------------------------------------------------------------------------------------
+    !                                        TESTS
+    !----------------------------------------------------------------------------------------
+
+
+    !> Test Volume Flux jacobian calclation
+    !!
+    !!
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    @Test(cases = [1, 2, 3, 4, 5, 6, 7])
+    subroutine test_SA_ale_jacobian_volume_advective_flux(self)
+        class(test_eq_SA_ale),    intent(inout)   :: self
+        
+        type(densematrix_t) :: blk_dnad, blk_fd
+        integer(ik) :: ielem, ivar, iblk, irow
+        real(rk)    :: tol
+        
+        tol   = 1.0e-5_rk
+        ielem = 14
+        
+        ! Block Parameter from cases = []
+        iblk = self%iblk
+        
+
+        ! Compute Automatic and Finite Difference jacobians
+        call check_jacobian_volume_advective_flux(self%chidg%data,ielem,iblk,blk_dnad,blk_fd)
+        
+
+        @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
+        
+    end subroutine test_SA_ale_jacobian_volume_advective_flux
+    !****************************************************************************************
+    
+    
+    
+     
+
+
+    !> Test Boundary Average Flux jacobian calculation
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !-----------------------------------------------------------------------------------------
+    @Test(cases = [1, 2, 3, 4, 5, 6, 7])
+    subroutine test_SA_ale_jacobian_boundary_advective_flux(self)
+        class(test_eq_SA_ale),    intent(inout)   :: self
+        
+        type(densematrix_t) :: blk_dnad, blk_fd
+        integer(ik) :: ielem, iface, ivar, iblk, irow
+        real(rk)    :: tol
+        
+        tol = 1.0e-5_rk
+        
+        ielem = 14
+        iface = 1
+        ivar  = 1
+        
+        ! Block Parameter from cases = []
+        iblk = self%iblk
+        
+
+        ! Compute Automatic and Finite Difference jacobians
+        call check_jacobian_boundary_advective_flux(self%chidg%data,ielem,iblk,blk_dnad,blk_fd)
+        
+        
+        @assertEqual(blk_fd%mat, blk_dnad%mat, tol)
+        
+    end subroutine test_SA_ale_jacobian_boundary_advective_flux
+    !*****************************************************************************************
+    
+    
+    
+    
+    
+    
+    
+    
+
+end module test_scalar_advection_ale_mod

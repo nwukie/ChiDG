@@ -10,6 +10,13 @@ module mod_operators
     use SA_LaxFriedrichs_operator,                  only: SA_LaxFriedrichs_operator_t
     use SA_bc_operator,                             only: SA_bc_operator_t
 
+    ! Linear Advection Operators
+    use SA_ale_volume_advective_operator,               only: SA_ale_volume_advective_operator_t
+    use SA_ale_boundary_average_advective_operator,     only: SA_ale_boundary_average_advective_operator_t
+    use SA_ale_LaxFriedrichs_operator,                  only: SA_ale_LaxFriedrichs_operator_t
+    use SA_ale_bc_operator,                             only: SA_ale_bc_operator_t
+
+
     ! Dual Linear Advection Operators
     use DLA_volume_advective_flux,                  only: DLA_volume_advective_flux_t
     use DLA_boundary_average_advective_flux,        only: DLA_boundary_average_advective_flux_t
@@ -38,6 +45,14 @@ module mod_operators
     use euler_roe_operator,                         only: euler_roe_operator_t
     use euler_laxfriedrichs_operator,               only: euler_laxfriedrichs_operator_t
     use euler_bc_operator,                          only: euler_bc_operator_t
+
+    ! Fluid Inviscid ALE Operators
+    use euler_ale_volume_operator,                      only: euler_ale_volume_operator_t
+    use euler_ale_boundary_average_operator,            only: euler_ale_boundary_average_operator_t
+    use euler_ale_roe_operator,                         only: euler_ale_roe_operator_t
+    use euler_ale_laxfriedrichs_operator,               only: euler_ale_laxfriedrichs_operator_t
+    use euler_ale_bc_operator,                          only: euler_ale_bc_operator_t
+
 
     ! Fluid Viscous Operators
     use fluid_viscous_volume_operator,              only: fluid_viscous_volume_operator_t
@@ -195,6 +210,11 @@ contains
         type(SA_LaxFriedrichs_operator_t)               :: SA_laxfriedrichs_operator
         type(SA_bc_operator_t)                          :: SA_bc_operator
         
+         ! Linear Advection Operators
+        type(SA_ale_volume_advective_operator_t)            :: SA_ale_volume_operator
+        type(SA_ale_boundary_average_advective_operator_t)  :: SA_ale_average_operator
+        type(SA_ale_LaxFriedrichs_operator_t)               :: SA_ale_laxfriedrichs_operator
+        type(SA_ale_bc_operator_t)                          :: SA_ale_bc_operator
         ! Linear Diffusion Operators
         type(SD_volume_operator_t)                      :: SD_volume_operator
         type(SD_boundary_operator_t)                    :: SD_boundary_operator
@@ -224,6 +244,14 @@ contains
         type(euler_roe_operator_t)                      :: euler_roe_operator
         type(euler_laxfriedrichs_operator_t)            :: euler_laxfriedrichs_operator
         type(euler_bc_operator_t)                       :: euler_bc_operator
+
+        ! Fluid Inviscid Operators
+        type(euler_ale_volume_operator_t)                   :: euler_ale_volume_operator
+        type(euler_ale_boundary_average_operator_t)         :: euler_ale_average_operator
+        type(euler_ale_roe_operator_t)                      :: euler_ale_roe_operator
+        type(euler_ale_laxfriedrichs_operator_t)            :: euler_ale_laxfriedrichs_operator
+        type(euler_ale_bc_operator_t)                       :: euler_ale_bc_operator
+
 
         ! Fluid Viscous Operators
         type(fluid_viscous_volume_operator_t)           :: fluid_viscous_volume_operator
@@ -265,6 +293,13 @@ contains
             call operator_factory%register(SA_laxfriedrichs_operator)
             call operator_factory%register(SA_bc_operator)
 
+            ! Register Linear Advection
+            call operator_factory%register(SA_ale_volume_operator)
+            call operator_factory%register(SA_ale_average_operator)
+            call operator_factory%register(SA_ale_laxfriedrichs_operator)
+            call operator_factory%register(SA_ale_bc_operator)
+
+ 
             ! Register Linear Diffusion
             call operator_factory%register(SD_volume_operator)
             call operator_factory%register(SD_boundary_operator)
@@ -294,6 +329,14 @@ contains
             call operator_factory%register(euler_roe_operator)
             call operator_factory%register(euler_laxfriedrichs_operator)
             call operator_factory%register(euler_bc_operator)
+            
+            ! Register Fluid Inviscid
+            call operator_factory%register(euler_ale_volume_operator)
+            call operator_factory%register(euler_ale_average_operator)
+            call operator_factory%register(euler_ale_roe_operator)
+            call operator_factory%register(euler_ale_laxfriedrichs_operator)
+            call operator_factory%register(euler_ale_bc_operator)
+
 
             ! Register Fluid Viscous
             call operator_factory%register(fluid_viscous_boundary_average_operator)

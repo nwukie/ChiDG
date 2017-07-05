@@ -1,5 +1,6 @@
 add_subdirectory(Euler)
 add_subdirectory(scalar_advection)
+add_subdirectory(scalar_advection_ale)
 add_subdirectory(DualLinearAdvection)
 #add_subdirectory(Acoustics)
 

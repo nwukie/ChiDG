@@ -1526,9 +1526,9 @@ contains
                 local_error_val = ZERO
                 do ieqn = 1, neqns
                     temp = &
-                        matmul(self%data%mesh%domain(idom)%elems(ielem)%ref_s%interpolator('Value'),&
+                        matmul(self%data%mesh%domain(idom)%elems(ielem)%basis_s%interpolator('Value'),&
                     q_diff%dom(idom)%vecs(ielem)%vec((ieqn-1)*nterms+1:ieqn*nterms))
-                    temp = temp**TWO*self%data%mesh%domain(idom)%elems(ielem)%ref_s%weights()*&
+                    temp = temp**TWO*self%data%mesh%domain(idom)%elems(ielem)%basis_s%weights()*&
                         self%data%mesh%domain(idom)%elems(ielem)%jinv
                     local_error_val = local_error_val + sum(temp)
                 end do

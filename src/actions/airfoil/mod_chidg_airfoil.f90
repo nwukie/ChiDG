@@ -11,7 +11,7 @@
 module mod_chidg_airfoil
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: ZERO, TWO
+    use mod_constants,          only: ZERO, TWO, NO_ID
     use type_chidg,             only: chidg_t
     use type_dict,              only: dict_t
     use type_file_properties,   only: file_properties_t
@@ -200,7 +200,7 @@ contains
                 !
                 ! Update the element cache and all models so they are available
                 !
-                call cache_handler%update(worker,chidg%data%eqnset,chidg%data%bc_state_group, differentiate=.false.)
+                call cache_handler%update(worker,chidg%data%eqnset,chidg%data%bc_state_group, differentiate=.false., components='all', face=NO_ID)
 
 
 
@@ -268,7 +268,7 @@ contains
                 !
                 ! Integrate
                 !
-                weights = worker%mesh%domain(idomain_g)%faces(ielement_g,iface)%ref_s%weights(iface)
+                weights = worker%mesh%domain(idomain_g)%faces(ielement_g,iface)%basis_s%weights(iface)
                 areas   = sqrt(norm_1*norm_1 + norm_2*norm_2 + norm_3*norm_3)
 
                 lift = lift + sum( stress_y * weights * areas)

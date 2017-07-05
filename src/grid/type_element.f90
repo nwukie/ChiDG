@@ -62,7 +62,6 @@ module type_element
         integer(ik)     :: neqns                            ! Number of equations being solved
         integer(ik)     :: nterms_s                         ! Number of terms in solution expansion.  
         integer(ik)     :: nterms_c                         ! Number of terms in coordinate expansion. 
-!        integer(ik)     :: nterms_c_1d                      ! N-terms in 1d coordinate expansion.
         integer(ik)     :: ntime                            ! Number of time levels in solution
 
         ! Element quadrature points, mesh points and modes
@@ -112,12 +111,8 @@ module type_element
         real(rk), allocatable           :: grad3_trans(:,:)     ! transpose grad3
 
         ! Reference element and interpolators
-        !integer(ik)                     :: ref_ID_s
-        !integer(ik)                     :: ref_ID_c
-        !type(quadrature_t), pointer     :: gq     => null()     ! Pointer to instance for solution expansion
-        !type(quadrature_t), pointer     :: gqmesh => null()     ! Pointer to instance for coordinate expansion
-        type(reference_element_t),  pointer :: ref_s => null()
-        type(reference_element_t),  pointer :: ref_c => null()
+        type(reference_element_t),  pointer :: basis_s => null()  ! Pointer to reference element and interpolation for solution expansion
+        type(reference_element_t),  pointer :: basis_c => null()  ! Pointer to reference element and interpolation for coordinate expansion
 
         ! Element-local mass, inverse mass matrices
         real(rk), allocatable           :: mass(:,:)        
@@ -171,7 +166,6 @@ module type_element
         procedure           :: compute_quadrature_gradients
         procedure           :: compute_quadrature_metrics
         procedure           :: compute_quadrature_coords
-        !procedure           :: assign_quadrature
 
 
         ! ALE procedures
@@ -249,18 +243,14 @@ contains
         !
         self%element_type = mapping
         ref_ID_c          = get_reference_element(element_type = mapping)
-        self%ref_c => ref_elems(ref_ID_c)
+        self%basis_c => ref_elems(ref_ID_c)
 
 
 
         !
         ! Accumulate coordinates for current element from node list.
         !
-        !npts_1d          = mapping+1
-        !npts             = npts_1d * npts_1d * npts_1d
-        !self%nterms_c_1d = npts_1d
-        !npts = ref_elems(self%ref_ID_c)%nnodes_r()
-        npts = self%ref_c%nnodes_r()
+        npts = self%basis_c%nnodes_r()
         allocate(nodes_l(npts,3), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -282,9 +272,7 @@ contains
         ! Get element mapping
         !
         spacedim=3
-        !self%nodes_to_modes = get_element_mapping(spacedim,mapping)
-        !self%nodes_to_modes = ref_elems(self%ref_ID_c)%nodes_to_modes
-        self%nodes_to_modes = self%ref_c%nodes_to_modes
+        self%nodes_to_modes = self%basis_c%nodes_to_modes
         nterms_c = size(self%nodes_to_modes,1)
         self%nterms_c = nterms_c
 
@@ -469,16 +457,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
     !>  Initialize element numerics
     !!      - Allocate storage for solution and supporting matrices
     !!      - Compute element-local matrices (cartesian gradients, mass matrices)
@@ -517,26 +495,21 @@ contains
         !   - assign quadrature instance
         !   - get number of quadrature nodes
         !
-        !call self%assign_quadrature()
-        !nnodes = self%gq%vol%nnodes
         ref_ID_s = get_reference_element(element_type = self%element_type,  &
                                          polynomial   = 'Legendre',         &
                                          nterms       = nterms_s,           &
                                          node_set     = interpolation,      &
-                                         level        = level,            &
+                                         level        = level,              &
                                          nterms_rule  = nterms_s)
         ref_ID_c = get_reference_element(element_type = self%element_type,  &
                                          polynomial   = 'Legendre',         &
                                          nterms       = self%nterms_c,      &
                                          node_set     = interpolation,      &
-                                         level        = level,            &
+                                         level        = level,              &
                                          nterms_rule  = nterms_s)
+        self%basis_s => ref_elems(ref_ID_s)
+        self%basis_c => ref_elems(ref_ID_c)
 
-
-        self%ref_s => ref_elems(ref_ID_s)
-        self%ref_c => ref_elems(ref_ID_c)
-
-        nnodes = ref_elems(ref_ID_s)%nnodes_ie()
 
 
         !
@@ -572,6 +545,7 @@ contains
                         )
             
 
+        nnodes = ref_elems(ref_ID_s)%nnodes_ie()
         allocate(self%jinv(nnodes),                         &
                  self%metric(3,3,nnodes),                   &
                  self%quad_pts(nnodes,3),                   &
@@ -740,8 +714,6 @@ contains
         integer(ik)                 :: inode, nnodes, ierr
         character(:),   allocatable :: coordinate_system
 
-        !real(rk),   dimension(self%gq%vol%nnodes)   ::  &
-        !real(rk),   dimension(ref_elems(self%ref_ID_s)%nnodes_i())  ::  &
         real(rk),   dimension(:),   allocatable             ::  &
             d1dxi, d1deta, d1dzeta,                             &
             d2dxi, d2deta, d2dzeta,                             &
@@ -750,13 +722,12 @@ contains
 
         real(rk),   dimension(:,:), allocatable :: val, ddxi, ddeta, ddzeta
 
-        !nnodes = self%gq%vol%nnodes
-        nnodes  = self%ref_s%nnodes_ie()
-        weights = self%ref_s%weights()
-        val     = self%ref_c%interpolator('Value')
-        ddxi    = self%ref_c%interpolator('ddxi')
-        ddeta   = self%ref_c%interpolator('ddeta')
-        ddzeta  = self%ref_c%interpolator('ddzeta')
+        nnodes  = self%basis_c%nnodes_ie()
+        weights = self%basis_c%weights()
+        val     = self%basis_c%interpolator('Value')
+        ddxi    = self%basis_c%interpolator('ddxi')
+        ddeta   = self%basis_c%interpolator('ddeta')
+        ddzeta  = self%basis_c%interpolator('ddzeta')
 
         !
         ! Compute element metric terms
@@ -888,10 +859,10 @@ contains
         integer(ik)                                 :: nnodes
         real(rk),   allocatable,    dimension(:,:)  :: ddxi, ddeta, ddzeta
 
-        nnodes = self%ref_s%nnodes_ie()
-        ddxi   = self%ref_s%interpolator('ddxi')
-        ddeta  = self%ref_s%interpolator('ddeta')
-        ddzeta = self%ref_s%interpolator('ddzeta')
+        nnodes = self%basis_s%nnodes_ie()
+        ddxi   = self%basis_s%interpolator('ddxi')
+        ddeta  = self%basis_s%interpolator('ddeta')
+        ddzeta = self%basis_s%interpolator('ddzeta')
 
         do iterm = 1,self%nterms_s
             do inode = 1,nnodes
@@ -943,14 +914,14 @@ contains
         real(rk),   dimension(:),   allocatable :: coord1, coord2, coord3
         integer(ik)                             :: inode
 
-        nnodes = self%ref_c%nnodes_ie()
+        nnodes = self%basis_c%nnodes_ie()
 
         !
         ! compute coordinates associated with quadrature points
         !
-        coord1 = matmul(self%ref_c%interpolator('Value'),self%coords%getvar(1,itime = 1))
-        coord2 = matmul(self%ref_c%interpolator('Value'),self%coords%getvar(2,itime = 1))
-        coord3 = matmul(self%ref_c%interpolator('Value'),self%coords%getvar(3,itime = 1))
+        coord1 = matmul(self%basis_c%interpolator('Value'),self%coords%getvar(1,itime = 1))
+        coord2 = matmul(self%basis_c%interpolator('Value'),self%coords%getvar(2,itime = 1))
+        coord3 = matmul(self%basis_c%interpolator('Value'),self%coords%getvar(3,itime = 1))
 
 
         !
@@ -966,6 +937,108 @@ contains
 
 
 
+
+
+
+
+
+!    !>  Compute element volume.
+!    !!
+!    !!  Approach: 
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   7/5/2017
+!    !!
+!    !!
+!    !-----------------------------------------------------------------------------------------
+!    subroutine compute_volume(self,ref_ID)
+!        class(element_t),   intent(inout)   :: self
+!        integer(ik),        intent(in)      :: ref_ID
+!
+!
+!        integer(ik)                 :: inode, nnodes, ierr
+!        character(:),   allocatable :: coordinate_system
+!
+!        real(rk),   dimension(:),   allocatable             ::  &
+!            d1dxi, d1deta, d1dzeta,                             &
+!            d2dxi, d2deta, d2dzeta,                             &
+!            d3dxi, d3deta, d3dzeta,                             &
+!            scaling_12, scaling_13, scaling_23, scaling_123, weights
+!
+!        real(rk),   dimension(:,:), allocatable :: ddxi, ddeta, ddzeta
+!
+!        nnodes  = self%basis_c%nnodes_ie()
+!        weights = self%basis_c%weights()
+!        ddxi    = self%basis_c%interpolator('ddxi')
+!        ddeta   = self%basis_c%interpolator('ddeta')
+!        ddzeta  = self%basis_c%interpolator('ddzeta')
+!
+!        !
+!        ! Compute element metric terms
+!        !
+!        d1dxi   = matmul(ddxi,   self%coords%getvar(1,itime = 1))
+!        d1deta  = matmul(ddeta,  self%coords%getvar(1,itime = 1))
+!        d1dzeta = matmul(ddzeta, self%coords%getvar(1,itime = 1))
+!
+!        d2dxi   = matmul(ddxi,   self%coords%getvar(2,itime = 1))
+!        d2deta  = matmul(ddeta,  self%coords%getvar(2,itime = 1))
+!        d2dzeta = matmul(ddzeta, self%coords%getvar(2,itime = 1))
+!
+!        d3dxi   = matmul(ddxi,   self%coords%getvar(3,itime = 1))
+!        d3deta  = matmul(ddeta,  self%coords%getvar(3,itime = 1))
+!        d3dzeta = matmul(ddzeta, self%coords%getvar(3,itime = 1))
+!
+!
+!
+!        !
+!        ! Define area/volume scaling for coordinate system
+!        !   Cartesian:
+!        !       12 = x-y  ;  13 = x-z  ;  23 = y-z
+!        !
+!        !   Cylindrical
+!        !       12 = r-theta  ;  13 = r-z      ;  23 = theta-z
+!        !
+!        allocate(scaling_12(nnodes), scaling_13(nnodes), scaling_23(nnodes), scaling_123(nnodes), stat=ierr)
+!        if (ierr /= 0) call AllocationError
+!
+!        select case (self%coordinate_system)
+!            case ('Cartesian')
+!                scaling_12  = ONE
+!                scaling_13  = ONE
+!                scaling_23  = ONE
+!                scaling_123 = ONE
+!            case ('Cylindrical')
+!                scaling_12  = self%quad_pts(:,1)
+!                scaling_13  = ONE
+!                scaling_23  = self%quad_pts(:,1)
+!                scaling_123 = self%quad_pts(:,1)
+!            case default
+!                call chidg_signal_one(FATAL,"element%compute_quadrature_metrics: Invalid coordinate system. Choose 'Cartesian' or 'Cylindrical'.",self%coordinate_system)
+!        end select
+!
+!
+!        !
+!        ! Compute inverse cell mapping jacobian
+!        !
+!        self%jinv = scaling_123*(d1dxi*d2deta*d3dzeta  -  d1deta*d2dxi*d3dzeta - &
+!                                 d1dxi*d2dzeta*d3deta  +  d1dzeta*d2dxi*d3deta + &
+!                                 d1deta*d2dzeta*d3dxi  -  d1dzeta*d2deta*d3dxi)
+!
+!        !
+!        ! Check for negative jacobians
+!        !
+!        if (any(self%jinv < ZERO)) call chidg_signal(FATAL,"element%compute_quadrature_metrics: Negative element jacobians. Check element quality and orientation.")
+!
+!
+!        !
+!        ! Compute element volume
+!        !
+!        self%vol = abs(sum(self%jinv * weights))
+!
+!
+!
+!    end subroutine compute_volume
+!    !*****************************************************************************************
 
 
 
@@ -991,15 +1064,14 @@ contains
         self%invmass = ZERO
         self%mass    = ZERO
 
-        temp = transpose(self%ref_s%interpolator('Value'))
+        temp = transpose(self%basis_s%interpolator('Value'))
 
 
         !
         ! Multiply rows by quadrature weights and cell jacobians
         !
         do iterm = 1,self%nterms_s
-            !temp(iterm,:) = temp(iterm,:)*(self%gq%vol%weights)*(self%jinv)
-            temp(iterm,:) = temp(iterm,:)*(self%ref_s%weights())*(self%jinv)
+            temp(iterm,:) = temp(iterm,:)*(self%basis_s%weights())*(self%jinv)
         end do
 
 
@@ -1007,9 +1079,7 @@ contains
         ! Perform the matrix multiplication of the transpose val matrix by
         ! the standard matrix. This produces the mass matrix. I think...
         !
-        !self%mass = matmul(temp,self%gq%vol%val)
-        self%mass = matmul(temp,self%ref_s%interpolator('Value'))
-
+        self%mass = matmul(temp,self%basis_s%interpolator('Value'))
 
 
         !
@@ -1654,11 +1724,11 @@ contains
 
         ! Call function for evaluation at quadrature nodes and multiply by quadrature weights
         time  = 0._rk
-        fvals = fcn%compute(time,point_t(self%quad_pts)) * self%ref_s%weights() * self%jinv
+        fvals = fcn%compute(time,point_t(self%quad_pts)) * self%basis_s%weights() * self%jinv
 
 
         ! Project
-        temp = matmul(transpose(self%ref_s%interpolator('Value')),fvals)
+        temp = matmul(transpose(self%basis_s%interpolator('Value')),fvals)
         fmodes = matmul(self%invmass,temp)
 
 
@@ -1785,15 +1855,6 @@ contains
 
         real(rk),   allocatable :: xmodes(:), ymodes(:), zmodes(:)
 
-
-
-        !mapping = nint((self%nterms_c)**THIRD-ONE,ik)
-        !spacedim = 3 
-        !!
-        !! Get element mapping
-        !!
-        !element_mapping = get_element_mapping(spacedim,mapping)
-    
         ! We are assuming that the ale_elem_pts have already been updated according to mesh motion
         ! A worker has a pointer to the mesh, which it has used to update this field
 
@@ -1846,7 +1907,7 @@ contains
         !
         ! Retrieve interpolator
         !
-        val = self%ref_c%interpolator('Value')
+        val = self%basis_c%interpolator('Value')
 
         !
         ! compute cartesian coordinates associated with quadrature points
@@ -1896,11 +1957,11 @@ contains
         !
         ! Retrieve interpolators
         !
-        nnodes  = self%ref_s%nnodes_ie()
-        weights = self%ref_s%weights()
-        ddxi    = self%ref_c%interpolator('ddxi')
-        ddeta   = self%ref_c%interpolator('ddeta')
-        ddzeta  = self%ref_c%interpolator('ddzeta')
+        nnodes  = self%basis_c%nnodes_ie()
+        weights = self%basis_c%weights()
+        ddxi    = self%basis_c%interpolator('ddxi')
+        ddeta   = self%basis_c%interpolator('ddeta')
+        ddzeta  = self%basis_c%interpolator('ddzeta')
 
         d1dxi   = matmul(ddxi,  self%ale_coords%getvar(1,itime = 1))
         d1deta  = matmul(ddeta, self%ale_coords%getvar(1,itime = 1))
@@ -1939,7 +2000,7 @@ contains
                 scaling_23  = self%quad_pts(:,1)
                 scaling_123 = self%quad_pts(:,1)
             case default
-                call chidg_signal(FATAL,"element%compute_quadrature_metrics: Invalid coordinate system. Choose 'Cartesian' or 'Cylindrical'.")
+                call chidg_signal(FATAL,"element%compute_quadrature_metrics_ale: Invalid coordinate system. Choose 'Cartesian' or 'Cylindrical'.")
         end select
 
 
@@ -1953,14 +2014,12 @@ contains
         !
         ! Check for negative jacobians
         !
-        if (any(self%jinv_ale < ZERO)) call chidg_signal(FATAL,"element%compute_quadrature_metrics: Negative element jacobians. Check element quality and orientation.")
+        if (any(self%jinv_ale < ZERO)) call chidg_signal(FATAL,"element%compute_quadrature_metrics_ale: Negative element jacobians. Check element quality and orientation.")
 
 
-        self%det_jacobian_grid = self%jinv_ale/self%jinv
         !
         ! Compute element volume
         !
-        !self%vol_ale = abs(sum(self%jinv_ale * self%gq%vol%weights))
         self%vol_ale = abs(sum(self%jinv_ale * weights))
 
 
@@ -2007,15 +2066,16 @@ contains
             self%inv_jacobian_grid(inode,:,:) = inv(self%jacobian_grid(inode,:,:))
         end do
         
-        !fvals = self%det_jacobian_grid * self%gq%vol%weights * self%jinv
+
+
+        self%det_jacobian_grid = self%jinv_ale/self%jinv
         fvals = self%det_jacobian_grid * weights * self%jinv
 
 
         !
         ! Project
         !
-        !temp = matmul(transpose(self%gq%vol%val),fvals)
-        val  = self%ref_s%interpolator('Value')
+        val  = self%basis_s%interpolator('Value')
         temp = matmul(transpose(val),fvals)
         self%det_jacobian_grid_modes = matmul(self%invmass,temp)
 

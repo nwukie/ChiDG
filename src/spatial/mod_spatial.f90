@@ -1,7 +1,7 @@
 module mod_spatial
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: NFACES, DIAG, CHIMERA, INTERIOR
+    use mod_constants,          only: NFACES, DIAG, CHIMERA, INTERIOR, NO_ID
     use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM, GLOBAL_MASTER
     use mod_io,                 only: verbosity
     use mpi_f08,                only: MPI_Barrier
@@ -130,7 +130,7 @@ contains
 
 
                 ! Update the element cache
-                call cache_handler%update(worker,data%eqnset, data%bc_state_group, differentiate)
+                call cache_handler%update(worker,data%eqnset, data%bc_state_group, differentiate, components='all',face=NO_ID)
 
 
                 ! Faces loop. For the current element, compute the 

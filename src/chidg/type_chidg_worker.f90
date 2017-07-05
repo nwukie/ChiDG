@@ -1620,18 +1620,10 @@ contains
 
         real(rk),   allocatable,    dimension(:)    :: weights
 
-
-
         if (source == 'face') then
-
-            !weights = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%gq%face%weights(:,self%iface)
-            weights = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ref_s%weights(self%iface)
-
+            weights = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%basis_s%weights(self%iface)
         else if (source == 'element') then
-
-            !weights = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%gq%vol%weights
-            weights = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ref_s%weights()
-
+            weights = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%basis_s%weights()
         else
             call chidg_signal(FATAL,"chidg_worker%quadrature_weights(source): Invalid value for 'source'. Options are 'face', 'element'")
         end if

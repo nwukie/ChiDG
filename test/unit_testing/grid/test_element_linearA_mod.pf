@@ -198,7 +198,7 @@ contains
     subroutine testElement_metric(self)
         class(test_element_linearA),    intent(inout)   :: self
 
-        real(rk)    :: test_metric(3,3,self%elem%ref_s%nnodes_ie())
+        real(rk)    :: test_metric(3,3,self%elem%basis_s%nnodes_ie())
         
         test_metric(1,1,:) = 0.25_rk / 0.625
         test_metric(2,1,:) = 0._rk   / 0.625
@@ -225,7 +225,7 @@ contains
     @Test
     subroutine testElement_jinv(self)
         class(test_element_linearA),    intent(inout)   :: self
-        real(rk)    :: test_jinv(self%elem%ref_s%nnodes_ie())
+        real(rk)    :: test_jinv(self%elem%basis_s%nnodes_ie())
         
         test_jinv = 0.625_rk
         @assertEqual(test_jinv,self%elem%jinv)
@@ -329,8 +329,8 @@ contains
     @Test
     subroutine testElement_grad1(self)
         class(test_element_linearA),    intent(inout)   :: self
-        real(rk), dimension(self%elem%ref_s%nnodes_ie(), 8) :: test
-        real(rk), dimension(self%elem%ref_s%nnodes_ie())    :: xi, eta, zeta
+        real(rk), dimension(self%elem%basis_s%nnodes_ie(), 8) :: test
+        real(rk), dimension(self%elem%basis_s%nnodes_ie())    :: xi, eta, zeta
         
         real(rk) :: tol
         real(rk),   allocatable :: nodes(:,:)
@@ -340,7 +340,7 @@ contains
         !xi   = self%elem%gq%vol%nodes(:)%c1_
         !eta  = self%elem%gq%vol%nodes(:)%c2_
         !zeta = self%elem%gq%vol%nodes(:)%c3_
-        nodes = self%elem%ref_s%nodes()
+        nodes = self%elem%basis_s%nodes()
         xi   = nodes(:,1)
         eta  = nodes(:,2)
         zeta = nodes(:,3)
@@ -372,15 +372,15 @@ contains
     @Test
     subroutine testElement_grad2(self)
        class(test_element_linearA),    intent(inout)   :: self
-       real(rk), dimension(self%elem%ref_s%nnodes_ie(), 8) :: test
-       real(rk), dimension(self%elem%ref_s%nnodes_ie())    :: xi, eta, zeta
+       real(rk), dimension(self%elem%basis_s%nnodes_ie(), 8) :: test
+       real(rk), dimension(self%elem%basis_s%nnodes_ie())    :: xi, eta, zeta
        
        real(rk)                 :: tol
        real(rk),    allocatable :: nodes(:,:)
        
        tol = 1.e-14_rk
        
-       nodes = self%elem%ref_s%nodes()
+       nodes = self%elem%basis_s%nodes()
        xi   = nodes(:,1)
        eta  = nodes(:,2)
        zeta = nodes(:,3)
@@ -414,15 +414,15 @@ contains
     @Test
     subroutine testElement_grad3(self)
        class(test_element_linearA),    intent(inout)   :: self
-       real(rk), dimension(self%elem%ref_s%nnodes_ie(), 8) :: test
-       real(rk), dimension(self%elem%ref_s%nnodes_ie())    :: xi, eta, zeta
+       real(rk), dimension(self%elem%basis_s%nnodes_ie(), 8) :: test
+       real(rk), dimension(self%elem%basis_s%nnodes_ie())    :: xi, eta, zeta
        
        real(rk)                 :: tol
        real(rk),    allocatable :: nodes(:,:)
        
        tol = 1.e-14_rk
        
-       nodes = self%elem%ref_s%nodes()
+       nodes = self%elem%basis_s%nodes()
        xi    = nodes(:,1)
        eta   = nodes(:,2)
        zeta  = nodes(:,3)
@@ -469,7 +469,7 @@ contains
     @Test
     subroutine testElement_face_metrics(self)
         class(test_element_linearA),    intent(inout)   :: self
-        real(rk)    :: test_metric(3,3,self%faces(XI_MAX)%ref_s%nnodes_if())
+        real(rk)    :: test_metric(3,3,self%faces(XI_MAX)%basis_s%nnodes_if())
         real(rk)    :: tol
         
         tol = 1.e-14_rk
@@ -509,7 +509,7 @@ contains
     subroutine testelement_face_normals(self)
         class(test_element_lineara),    intent(inout)   :: self
 
-        real(rk), dimension(self%faces(XI_MAX)%ref_s%nnodes_if()) :: &
+        real(rk), dimension(self%faces(XI_MAX)%basis_s%nnodes_if()) :: &
                 test_norm_x, test_norm_y, test_norm_z
 
         real(rk)    :: tol
@@ -589,7 +589,7 @@ contains
     @Test
     subroutine testElement_face_unit_normals(self)
         class(test_element_linearA),    intent(inout)   :: self
-        real(rk), dimension(self%faces(XI_MAX)%ref_s%nnodes_if()) :: test_norm_x, test_norm_y, test_norm_z
+        real(rk), dimension(self%faces(XI_MAX)%basis_s%nnodes_if()) :: test_norm_x, test_norm_y, test_norm_z
         real(rk)    :: tol
         
         tol = 1.e-15_rk

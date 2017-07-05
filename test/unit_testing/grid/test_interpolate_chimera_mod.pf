@@ -198,7 +198,7 @@ contains
 
             tol  = 1.e-13_rk
             ivar = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-            ngq  = faces(ielem,iface)%ref_s%nnodes_if()
+            ngq  = faces(ielem,iface)%basis_s%nnodes_if()
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
             allocate(u_gq(ngq))
@@ -286,7 +286,7 @@ contains
 
             tol    = 1.e-13_rk
             ivar   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-            ngq    = faces(ielem,iface)%ref_s%nnodes_if()
+            ngq    = faces(ielem,iface)%basis_s%nnodes_if()
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
@@ -375,7 +375,7 @@ contains
 
             tol  = 1.e-13_rk
             ivar = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-            ngq  = faces(ielem,iface)%ref_s%nnodes_if()
+            ngq  = faces(ielem,iface)%basis_s%nnodes_if()
             
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
             ! not yet allocated
@@ -470,7 +470,7 @@ contains
             
             tol    = 1.e-13_rk
             ivar   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-            ngq    = faces(ielem,iface)%ref_s%nnodes_if()
+            ngq    = faces(ielem,iface)%basis_s%nnodes_if()
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 

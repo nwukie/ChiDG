@@ -20,11 +20,11 @@ module type_chidg_data
     use mod_string,                     only: string_t
 
     ! Factory methods
-    use mod_equations,                  only: equation_builder_factory
+    use mod_equations,                      only: equation_builder_factory
 
     !Mesh motion
-    use type_prescribed_mesh_motion,               only: prescribed_mesh_motion_t
-    use type_prescribed_mesh_motion_group,               only: prescribed_mesh_motion_group_t
+    use type_prescribed_mesh_motion,        only: prescribed_mesh_motion_t
+    use type_prescribed_mesh_motion_group,  only: prescribed_mesh_motion_group_t
 
 
     implicit none

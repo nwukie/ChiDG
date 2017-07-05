@@ -498,7 +498,7 @@ contains
             ! Get weights + areas
             !
             !weights   = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%gq%face%weights(:,iface_coupled)
-            weights   = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ref_s%weights(iface_coupled)
+            weights   = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%weights(iface_coupled)
             areas     = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%data(icoupled)%areas
             face_area = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%data(icoupled)%total_area
 

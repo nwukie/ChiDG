@@ -1,3 +1,16 @@
+!>  Gauss-Legendre quadrature rule.
+!!
+!!  Procedures:
+!!  ------------------------------
+!!  quadrature_nodes        ! general rule, needs (nterms, level, (1,2,3)-dim)
+!!  quadrature_weights      ! general rule, needs (nterms, level, (1,2,3)-dim)
+!!
+!!  gl_nodes                ! 1D rule, only needs nnodes
+!!  gl_weights              ! 1D rule, only needs nnodes
+!!
+!!  @author Nathan A. Wukie
+!!
+!---------------------------------------------------------------------------------------------
 module mod_gauss_legendre
 #include <messenger.h>
     use mod_kinds,          only: rk,ik

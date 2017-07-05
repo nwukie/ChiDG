@@ -286,8 +286,7 @@ contains
                         !
                         ! Loop through quadrature nodes on Chimera face and find donors
                         !
-                        !do igq = 1,mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface)%gq%face%nnodes
-                        do igq = 1,mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface)%ref_s%nnodes_if()
+                        do igq = 1,mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface)%basis_s%nnodes_if()
 
                             !
                             ! Get node coordinates
@@ -298,12 +297,8 @@ contains
                             !
                             ! Get offset coordinates from face for potential periodic offset.
                             !
-                            !call get_periodic_offset(mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface), gq_node, offset_1, offset_2, offset_3)
                             offset = get_periodic_offset(mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface))
 
-                            !call gq_node%add_x(offset_1)
-                            !call gq_node%add_y(offset_2)
-                            !call gq_node%add_z(offset_3)
                             gq_node = gq_node + offset
 
 
@@ -311,10 +306,6 @@ contains
                             call MPI_BCast(searching,1,MPI_LOGICAL, iproc, ChiDG_COMM, ierr)
 
                             ! Send gq node physical coordinates
-                            !gq_coords(1) = gq_node%c1_
-                            !gq_coords(2) = gq_node%c2_
-                            !gq_coords(3) = gq_node%c3_
-                            !call MPI_BCast(gq_coords,3,MPI_REAL8, iproc, ChiDG_COMM, ierr)
                             call MPI_BCast(gq_node,3,MPI_REAL8, iproc, ChiDG_COMM, ierr)
 
                             ! Send receiver indices

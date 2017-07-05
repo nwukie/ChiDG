@@ -3,7 +3,7 @@ module type_reference_element
     use mod_kinds,          only: rk, ik
     use mod_constants,      only: NFACES, ZERO, ONE, XI_DIR, ETA_DIR, ZETA_DIR
     use mod_gauss_legendre, only: quadrature_nodes, quadrature_weights
-    use mod_nodes_uniform,  only: uniform_nodes
+    use mod_nodes_uniform,  only: uniform_nodes, uniform_weights
     use mod_polynomial,     only: polynomial_val, dpolynomial_val
     use mod_inv,            only: inv
     implicit none
@@ -177,7 +177,6 @@ contains
         !
         ! Compute the values of each mapping term at each mesh point
         !
-        !nnodes = size(self%nodes_r,1)
         nnodes = self%nnodes_r()
         if (allocated(temp)) deallocate(temp)
         allocate(temp(nnodes,nnodes), stat=ierr)
@@ -284,8 +283,10 @@ contains
         !
         select case(trim(node_set))
             case('Uniform')
-                nodes_3d = uniform_nodes(level,dim=3)
-                nodes_2d = uniform_nodes(level,dim=2)
+                nodes_3d   = uniform_nodes(level,dim=3)
+                nodes_2d   = uniform_nodes(level,dim=2)
+                weights_3d = uniform_weights(level,dim=3)
+                weights_2d = uniform_weights(level,dim=2)
 
 
             case('Quadrature')

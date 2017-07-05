@@ -501,9 +501,8 @@ contains
 
 
                 ! For each coordinate, compute it's value pointwise and save
+                ! For each face in each patch, create a sub-sampling of faces to resolve solution variation
                 do icoord = 1,3
-
-                    ! For each face in each patch, create a sub-sampling of faces to resolve solution variation
                     do ipatch = 1,data%mesh%bc_patch_group(isurface)%npatches()
                         do ibc_face = 1,data%mesh%bc_patch_group(isurface)%patch(ipatch)%nfaces()
                             
@@ -529,7 +528,6 @@ contains
                                 else
                                     val = real(data%mesh%domain(idom)%faces(ielem,iface)%ale_quad_pts(inode,icoord),rdouble)
                                 end if
-                                print*, val
 
                                 tecstat = TECDAT142(1,valeq,1)
                                 if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to TECDAT142")
@@ -538,108 +536,10 @@ contains
 
 
 
-!                            !
-!                            ! Set parameters based on element face
-!                            ! 
-!                            select case(iface)
-!                                case(XI_MIN)
-!                                    xi      = -ONE
-!                                    xilim   = 1
-!                                    etalim  = npts
-!                                    zetalim = npts
-!
-!                                case(XI_MAX)
-!                                    xi      = ONE
-!                                    xilim   = 1
-!                                    etalim  = npts
-!                                    zetalim = npts
-!
-!                                case(ETA_MIN)
-!                                    eta     = -ONE
-!                                    xilim   = npts
-!                                    etalim  = 1
-!                                    zetalim = npts
-!                                    
-!
-!                                case(ETA_MAX)
-!                                    eta     = ONE
-!                                    xilim   = npts
-!                                    etalim  = 1
-!                                    zetalim = npts
-!
-!                                case(ZETA_MIN)
-!                                    zeta    = -ONE
-!                                    xilim   = npts
-!                                    etalim  = npts
-!                                    zetalim = 1
-!
-!                                case(ZETA_MAX)
-!                                    zeta    = ONE
-!                                    xilim   = npts
-!                                    etalim  = npts
-!                                    zetalim = 1
-!
-!                                case default
-!                                    call chidg_signal(FATAL,"write_tecio_surfaces: Invalid face index.")
-!
-!                            end select
-!
-!
-!                            !
-!                            ! Write sub-sampling for current element
-!                            !   Note: don't vary xi/eta/zeta if that is the face we are writing
-!                            !
-!                            do ipt_zeta = 1,zetalim
-!                                if ((iface /= ZETA_MIN) .and. (iface /= ZETA_MAX)) then
-!                                    zeta = (((real(ipt_zeta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
-!                                end if
-!
-!                                do ipt_eta = 1,etalim
-!                                    if ((iface /= ETA_MIN) .and. (iface /= ETA_MAX)) then
-!                                        eta = (((real(ipt_eta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
-!                                    end if
-!
-!                                    do ipt_xi = 1,xilim
-!                                        if ((iface /= XI_MIN) .and. (iface /= XI_MAX)) then
-!                                            xi = (((real(ipt_xi,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
-!                                        end if
-!
-!                                        ! Get coordinate value at point
-!                                        if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
-!
-!                                            r     = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',1,xi,eta,zeta),rdouble)
-!                                            theta = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',2,xi,eta,zeta),rdouble)
-!                                            z     = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',3,xi,eta,zeta),rdouble)
-!
-!                                            if (icoord == 1) then
-!                                                val = r*cos(theta)
-!                                            else if (icoord == 2) then
-!                                                val = r*sin(theta)
-!                                            else if (icoord == 3) then
-!                                                val = z
-!                                            end if
-!
-!                                        else
-!
-!                                            val = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',icoord,xi,eta,zeta),rdouble)
-!
-!                                        end if
-!
-!
-!
-!                                        tecstat = TECDAT142(1,valeq,1)
-!                                        if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_surfaces: Error in call to TECDAT142")
-!
-!                                    end do ! ipt_xi
-!                                end do ! ipt_eta
-!                            end do ! ipt_zeta
-
 
 
                         end do !ibc_face
                     end do !ipatch
-
-
                 end do ! coords
 
 
@@ -687,91 +587,10 @@ contains
                             end do !inode
 
 
-!                            !
-!                            ! Set parameters based on element face
-!                            ! 
-!                            select case(iface)
-!                                case(XI_MIN)
-!                                    xi      = -ONE
-!                                    xilim   = 1
-!                                    etalim  = npts
-!                                    zetalim = npts
-!
-!                                case(XI_MAX)
-!                                    xi      = ONE
-!                                    xilim   = 1
-!                                    etalim  = npts
-!                                    zetalim = npts
-!
-!                                case(ETA_MIN)
-!                                    eta     = -ONE
-!                                    xilim   = npts
-!                                    etalim  = 1
-!                                    zetalim = npts
-!                                    
-!
-!                                case(ETA_MAX)
-!                                    eta     = ONE
-!                                    xilim   = npts
-!                                    etalim  = 1
-!                                    zetalim = npts
-!
-!                                case(ZETA_MIN)
-!                                    zeta    = -ONE
-!                                    xilim   = npts
-!                                    etalim  = npts
-!                                    zetalim = 1
-!
-!                                case(ZETA_MAX)
-!                                    zeta    = ONE
-!                                    xilim   = npts
-!                                    etalim  = npts
-!                                    zetalim = 1
-!
-!                                case default
-!                                    call chidg_signal(FATAL,"write_tecio_surfaces: Invalid face index.")
-!
-!                            end select
-!
-!
-!
-!
-!
-!                            !
-!                            ! Write sub-sampling for current element
-!                            !   Note: don't vary xi/eta/zeta if that is the face we are writing
-!                            !
-!                            do ipt_zeta = 1,zetalim
-!                                if ((iface /= ZETA_MIN) .and. (iface /= ZETA_MAX)) then
-!                                    zeta = (((real(ipt_zeta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
-!                                end if
-!
-!                                do ipt_eta = 1,etalim
-!                                    if ((iface /= ETA_MIN) .and. (iface /= ETA_MAX)) then
-!                                        eta = (((real(ipt_eta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
-!                                    end if
-!
-!                                    do ipt_xi = 1,xilim
-!                                        if ((iface /= XI_MIN) .and. (iface /= XI_MAX)) then
-!                                            xi = (((real(ipt_xi,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
-!                                        end if
-!
-!                                        !
-!                                        ! Get solution value at point
-!                                        !   
-!                                        val = real(data%mesh%domain(idom)%elems(ielem)%solution_point(data%sdata%q_out%dom(idom)%vecs(ielem),ivar,itime,xi,eta,zeta),rdouble)
-!                                        tecstat = TECDAT142(1,valeq,1)
-!                                        if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_surfaces: Error in call to TECDAT142")
-!                                            
-!
-!                                    end do
-!                                end do
-!                            end do
 
 
                         end do !ibc_face
                     end do !ipatch
-
                 end do ! ivar
 
 

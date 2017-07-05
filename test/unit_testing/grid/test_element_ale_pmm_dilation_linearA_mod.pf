@@ -110,7 +110,7 @@ contains
         nterms_s = 8
         ntime    = 1
         call this%elem%init_geom(nodes,connectivity,idomain,ielem,'Cartesian')
-        call this%elem%init_sol(neqns,nterms_s,ntime)
+        call this%elem%init_sol('Quadrature',1,nterms_s,neqns,ntime)
         
         
         !
@@ -232,10 +232,7 @@ contains
     subroutine testElement_grid_velocities(self)
         class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: self
 
-        real(rk)    :: vg1(self%elem%gq%vol%nnodes), &
-                        vg2(self%elem%gq%vol%nnodes), &
-                        vg3(self%elem%gq%vol%nnodes)
-
+        real(rk), allocatable, dimension(:) :: vg1, vg2, vg3
 
         vg1 = TWO*self%elem%quad_pts(:,1)
         vg2 = TWO*self%elem%quad_pts(:,2)
@@ -256,12 +253,13 @@ contains
     subroutine testElement_grid_positions(self)
         class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: self
 
-        real(rk)    :: pg(self%elem%gq%vol%nnodes,3)
+        real(rk),   allocatable, dimension(:,:) :: pg(:,:)
 
 
-        pg(:,1) =  THREE*self%elem%quad_pts(:,1)
-        pg(:,2) =  THREE*self%elem%quad_pts(:,2)
-        pg(:,3) =  THREE*self%elem%quad_pts(:,3)
+        !pg(:,1) =  THREE*self%elem%quad_pts(:,1)
+        !pg(:,2) =  THREE*self%elem%quad_pts(:,2)
+        !pg(:,3) =  THREE*self%elem%quad_pts(:,3)
+        pg = THREE*self%elem%quad_pts
 
         @assertEqual(pg,self%elem%ale_quad_pts, 1.e-14_rk)
         
@@ -278,7 +276,8 @@ contains
     @Test
     subroutine testElement_jinv_ale(self)
         class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: self
-        real(rk)    :: test_det_jac_grid(self%elem%gq%vol%nnodes)
+        !real(rk)    :: test_det_jac_grid(self%elem%gq%vol%nnodes)
+        real(rk)    :: test_det_jac_grid(self%elem%basis_s%nnodes_ie())
         
         test_det_jac_grid = 27.0_rk 
         @assertEqual(self%elem%jinv_ale,27.0_rk*self%elem%jinv)
@@ -296,7 +295,8 @@ contains
     subroutine testElement_jacobian_grid(self)
         class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: self
 
-        real(rk)    :: test_metric(self%elem%gq%vol%nnodes,3,3)
+        !real(rk)    :: test_metric(self%elem%gq%vol%nnodes,3,3)
+        real(rk)    :: test_metric(self%elem%basis_s%nnodes_ie(),3,3)
         
         test_metric(:,1,1) = 3.0_rk 
         test_metric(:,2,1) = 0._rk  
@@ -335,9 +335,7 @@ contains
     subroutine testElement_face_grid_velocities(self)
         class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: self
 
-        real(rk)    :: vg1(self%faces(XI_MAX)%gq%face%nnodes), &
-                        vg2(self%faces(XI_MAX)%gq%face%nnodes), &
-                        vg3(self%faces(XI_MAX)%gq%face%nnodes)
+        real(rk),   allocatable, dimension(:)   :: vg1, vg2, vg3 
 
         vg1 = TWO*self%faces(XI_MIN)%quad_pts(:,1)
         vg2 = TWO*self%faces(XI_MIN)%quad_pts(:,2)
@@ -400,7 +398,7 @@ contains
     subroutine testElement_face_grid_positions(self)
         class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: self
 
-        real(rk)    :: pg(self%faces(XI_MAX)%gq%face%nnodes,3,6)
+        real(rk)    :: pg(self%faces(XI_MAX)%basis_s%nnodes_if(),3,6)
 
 
         pg(:,1,XI_MIN) = THREE*self%faces(XI_MIN)%quad_pts(:,1)
@@ -450,7 +448,7 @@ contains
     @Test
     subroutine testElement_face_jinv_ale(self)
         class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: self
-        real(rk)    :: test_det_jac_grid(self%faces(XI_MAX)%gq%face%nnodes)
+        real(rk)    :: test_det_jac_grid(self%faces(XI_MAX)%basis_s%nnodes_if())
         
         test_det_jac_grid = 27.0_rk 
 
@@ -483,7 +481,7 @@ contains
     @Test
     subroutine testElement_face_metrics(self)
         class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: self
-        real(rk)    :: test_metric(self%faces(XI_MAX)%gq%face%nnodes,3,3)
+        real(rk)    :: test_metric(self%faces(XI_MAX)%basis_s%nnodes_if(),3,3)
         real(rk)    :: tol
         
         tol = 1.e-14_rk

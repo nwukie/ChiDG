@@ -16,6 +16,7 @@
 module mod_chidg_post_hdf2tec
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
+    use mod_constants,          only: OUTPUT_RES
     use type_chidg,             only: chidg_t
     use type_dict,              only: dict_t
     use mod_tecio,              only: write_tecio
@@ -89,7 +90,7 @@ contains
         !
         ! Read grid/solution modes and time integrator options from HDF5
         !
-        call chidg%read_mesh(grid_file, interpolation='Uniform', level=5)
+        call chidg%read_mesh(grid_file, interpolation='Uniform', level=OUTPUT_RES)
         call chidg%read_fields(solution_file)
 
 

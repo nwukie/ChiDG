@@ -241,7 +241,6 @@ contains
         !
         self%coords = elem%coords
         call self%init_ale(elem)
-        call self%update_face_ale(elem)
 
 
         !
@@ -480,8 +479,8 @@ contains
         real(rk),   dimension(:,:), allocatable :: val, ddxi, ddeta, ddzeta
 
         iface  = self%iface
-        nnodes  = self%basis_s%nnodes_if()
-        weights = self%basis_s%weights()
+        nnodes  = self%basis_c%nnodes_if()
+        weights = self%basis_c%weights()
         val     = self%basis_c%interpolator('Value', self%iface)
         ddxi    = self%basis_c%interpolator('ddxi',  self%iface)
         ddeta   = self%basis_c%interpolator('ddeta', self%iface)
@@ -628,8 +627,8 @@ contains
 
 
         iface   = self%iface
-        nnodes  = self%basis_s%nnodes_if()
-        weights = self%basis_s%weights(iface)
+        nnodes  = self%basis_c%nnodes_if()
+        weights = self%basis_c%weights(iface)
         val     = self%basis_c%interpolator('Value', iface)
         ddxi    = self%basis_c%interpolator('ddxi',  iface)
         ddeta   = self%basis_c%interpolator('ddeta', iface)
@@ -867,9 +866,7 @@ contains
 
         integer(ik) :: neighbor_e
 
-
         neighbor_e = self%ineighbor_element_l
-
 
     end function get_neighbor_element_l
     !******************************************************************************************
@@ -891,9 +888,7 @@ contains
 
         integer(ik) :: neighbor_e
 
-
         neighbor_e = self%ineighbor_element_g
-
 
     end function get_neighbor_element_g
     !******************************************************************************************
@@ -922,9 +917,7 @@ contains
         integer(ik) :: neighbor_f
 
 
-
         neighbor_e = self%get_neighbor_element_l()
-
 
 
         if ( neighbor_e == NO_INTERIOR_NEIGHBOR ) then
@@ -955,6 +948,12 @@ contains
     !******************************************************************************************
 
 
+    !>
+    !!
+    !!  @author Eric Wolf (AFRL)
+    !!  @date   7/5/2017
+    !!
+    !------------------------------------------------------------------------------------------
     subroutine update_face_ale(self)
         class(face_t),       intent(inout)      :: self
 
@@ -962,7 +961,17 @@ contains
         call self%compute_quadrature_metrics_ale()
 
     end subroutine update_face_ale
+    !******************************************************************************************
 
+
+
+    !>
+    !!
+    !!
+    !!  @author Eric Wolf (AFRL)
+    !!  @date   7/5/2017
+    !!
+    !------------------------------------------------------------------------------------------
     subroutine compute_quadrature_coords_ale(self)
         class(face_t),   intent(inout)   :: self
 
@@ -1009,7 +1018,7 @@ contains
 
 
     end subroutine compute_quadrature_coords_ale
-    !**************************************************************************************************************
+    !****************************************************************************************
 
 
     !> Compute metric terms and cell jacobians at face quadrature nodes
@@ -1019,144 +1028,57 @@ contains
     !!
     !!  TODO: Generalize 2D physical coordinates. Currently assumes x-y.
     !!
-    !---------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine compute_quadrature_metrics_ale(self)
         class(face_t),  intent(inout)   :: self
 
-<<<<<<< HEAD
-        integer(ik) :: inode, iface
-        integer(ik) :: nnodes
-
-!        real(rk)    :: dxdxi(self%gq%face%nnodes), dxdeta(self%gq%face%nnodes), dxdzeta(self%gq%face%nnodes)
-!        real(rk)    :: dydxi(self%gq%face%nnodes), dydeta(self%gq%face%nnodes), dydzeta(self%gq%face%nnodes)
-!        real(rk)    :: dzdxi(self%gq%face%nnodes), dzdeta(self%gq%face%nnodes), dzdzeta(self%gq%face%nnodes)
-!        real(rk)    :: invjac_ale(self%gq%face%nnodes)
-!
-!        iface  = self%iface
-!        nnodes = self%gq%face%nnodes
-!
-!        !
-!        ! Evaluate directional derivatives of coordinates at quadrature nodes.
-!        !
-!        associate (gq_f => self%gqmesh%face)
-!            dxdxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords_ale%getvar(1))
-!            dxdeta  = matmul(gq_f%ddeta( :,:,iface), self%coords_ale%getvar(1))
-!            dxdzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords_ale%getvar(1))
-!
-!            dydxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords_ale%getvar(2))
-!            dydeta  = matmul(gq_f%ddeta( :,:,iface), self%coords_ale%getvar(2))
-!            dydzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords_ale%getvar(2))
-!
-!            dzdxi   = matmul(gq_f%ddxi(  :,:,iface), self%coords_ale%getvar(3))
-!            dzdeta  = matmul(gq_f%ddeta( :,:,iface), self%coords_ale%getvar(3))
-!            dzdzeta = matmul(gq_f%ddzeta(:,:,iface), self%coords_ale%getvar(3))
-!        end associate
-!
-!        
-!
-!        !
-!        ! TODO: Generalize 2D physical coordinates. Currently assumes x-y.
-!        !
-!        if ( self%spacedim == TWO_DIM ) then
-!            dzdxi   = ZERO
-!            dzdeta  = ZERO
-!            dzdzeta = ONE
-!        end if
-!
-!
-!
-!        !
-!        ! At each quadrature node, compute metric terms.
-!        !
-!        do inode = 1,nnodes
-!            self%metric_ale(1,1,inode) = dydeta(inode)*dzdzeta(inode) - dydzeta(inode)*dzdeta(inode)
-!            self%metric_ale(2,1,inode) = dydzeta(inode)*dzdxi(inode)  - dydxi(inode)*dzdzeta(inode)
-!            self%metric_ale(3,1,inode) = dydxi(inode)*dzdeta(inode)   - dydeta(inode)*dzdxi(inode)
-!
-!            self%metric_ale(1,2,inode) = dxdzeta(inode)*dzdeta(inode) - dxdeta(inode)*dzdzeta(inode)
-!            self%metric_ale(2,2,inode) = dxdxi(inode)*dzdzeta(inode)  - dxdzeta(inode)*dzdxi(inode)
-!            self%metric_ale(3,2,inode) = dxdeta(inode)*dzdxi(inode)   - dxdxi(inode)*dzdeta(inode)
-!
-!            self%metric_ale(1,3,inode) = dxdeta(inode)*dydzeta(inode) - dxdzeta(inode)*dydeta(inode)
-!            self%metric_ale(2,3,inode) = dxdzeta(inode)*dydxi(inode)  - dxdxi(inode)*dydzeta(inode)
-!            self%metric_ale(3,3,inode) = dxdxi(inode)*dydeta(inode)   - dxdeta(inode)*dydxi(inode)
-!        end do
-!
-!        do inode = 1,nnodes
-!            self%jacobian_matrix_ale(inode,1,1) = dxdxi(inode)
-!            self%jacobian_matrix_ale(inode,1,2) = dxdeta(inode)
-!            self%jacobian_matrix_ale(inode,1,3) = dxdzeta(inode)
-!                                              
-!            self%jacobian_matrix_ale(inode,2,1) = dydxi(inode)
-!            self%jacobian_matrix_ale(inode,2,2) = dydeta(inode)
-!            self%jacobian_matrix_ale(inode,2,3) = dydzeta(inode)
-!                                              
-!            self%jacobian_matrix_ale(inode,3,1) = dzdxi(inode)
-!            self%jacobian_matrix_ale(inode,3,2) = dzdeta(inode)
-!            self%jacobian_matrix_ale(inode,3,3) = dzdzeta(inode)
-!
-!            !print *, '2'
-!            !self%inv_jacobian_matrix_ale(inode,:,:) = inv(self%jacobian_matrix_ale(inode,:,:))
-!        end do
-!
-!
-!
-!        do inode = 1, nnodes
-!            self%jacobian_grid(inode,:,:) = matmul(self%jacobian_matrix_ale(inode,:,:),self%inv_jacobian_matrix(inode,:,:))
-!!            self%jacobian_grid(inode,:,:) = matmul(self%inv_jacobian_matrix(inode,:,:),self%jacobian_matrix_ale(inode,:,:))
-!            self%inv_jacobian_grid(inode,:,:) = inv(self%jacobian_grid(inode,:,:))
-!        end do
-!
-!!        if (self%ineighbor_face == NO_INTERIOR_NEIGHBOR) then
-!!            print *, self%jacobian_grid(1,:,:)
-!!        end if
-!
-!        !
-!        ! compute inverse cell mapping jacobian terms
-!        !
-!        invjac_ale = dxdxi*dydeta*dzdzeta - dxdeta*dydxi*dzdzeta - &
-!                 dxdxi*dydzeta*dzdeta + dxdzeta*dydxi*dzdeta + &
-!                 dxdeta*dydzeta*dzdxi - dxdzeta*dydeta*dzdxi
-!
-!
-!
-!        self%jinv_ale = invjac_ale
-!
-!        self%det_jacobian_grid = self%jinv_ale/self%jinv
-!!        if ((self%ineighbor_face .eq. NO_INTERIOR_NEIGHBOR) ) then
-!!            print *, 'boundary face jinv'
-!!            print *, self%jacobian_grid(1,:,:)
-!!        end if
-=======
         integer(ik)                 :: inode, iface
         integer(ik)                 :: nnodes
 
-        real(rk),   dimension(self%gq%face%nnodes)  :: &
+        !real(rk),   dimension(self%gq%face%nnodes)  :: &
+        real(rk),   allocatable, dimension(:)  :: &
             d1dxi, d1deta, d1dzeta, &
             d2dxi, d2deta, d2dzeta, &
             d3dxi, d3deta, d3dzeta, &
             invjac_ale
 
+        real(rk),   allocatable, dimension(:,:) :: ddxi, ddeta, ddzeta
+
 
         iface  = self%iface
-        nnodes = self%gq%face%nnodes
+        !nnodes = self%gq%face%nnodes
+        nnodes = self%basis_c%nnodes_if()
+        ddxi   = self%basis_c%interpolator('ddxi',  iface)
+        ddeta  = self%basis_c%interpolator('ddeta', iface)
+        ddzeta = self%basis_c%interpolator('ddzeta',iface)
 
         !
         ! Evaluate directional derivatives of coordinates at quadrature nodes.
         !
-        associate (gq_f => self%gqmesh%face)
-            d1dxi   = matmul(gq_f%ddxi(  :,:,iface), self%ale_coords%getvar(1,itime = 1))
-            d1deta  = matmul(gq_f%ddeta( :,:,iface), self%ale_coords%getvar(1,itime = 1))
-            d1dzeta = matmul(gq_f%ddzeta(:,:,iface), self%ale_coords%getvar(1,itime = 1))
+        !associate (gq_f => self%gqmesh%face)
+        !    d1dxi   = matmul(gq_f%ddxi(  :,:,iface), self%ale_coords%getvar(1,itime = 1))
+        !    d1deta  = matmul(gq_f%ddeta( :,:,iface), self%ale_coords%getvar(1,itime = 1))
+        !    d1dzeta = matmul(gq_f%ddzeta(:,:,iface), self%ale_coords%getvar(1,itime = 1))
 
-            d2dxi   = matmul(gq_f%ddxi(  :,:,iface), self%ale_coords%getvar(2,itime = 1))
-            d2deta  = matmul(gq_f%ddeta( :,:,iface), self%ale_coords%getvar(2,itime = 1))
-            d2dzeta = matmul(gq_f%ddzeta(:,:,iface), self%ale_coords%getvar(2,itime = 1))
+        !    d2dxi   = matmul(gq_f%ddxi(  :,:,iface), self%ale_coords%getvar(2,itime = 1))
+        !    d2deta  = matmul(gq_f%ddeta( :,:,iface), self%ale_coords%getvar(2,itime = 1))
+        !    d2dzeta = matmul(gq_f%ddzeta(:,:,iface), self%ale_coords%getvar(2,itime = 1))
 
-            d3dxi   = matmul(gq_f%ddxi(  :,:,iface), self%ale_coords%getvar(3,itime = 1))
-            d3deta  = matmul(gq_f%ddeta( :,:,iface), self%ale_coords%getvar(3,itime = 1))
-            d3dzeta = matmul(gq_f%ddzeta(:,:,iface), self%ale_coords%getvar(3,itime = 1))
-        end associate
+        !    d3dxi   = matmul(gq_f%ddxi(  :,:,iface), self%ale_coords%getvar(3,itime = 1))
+        !    d3deta  = matmul(gq_f%ddeta( :,:,iface), self%ale_coords%getvar(3,itime = 1))
+        !    d3dzeta = matmul(gq_f%ddzeta(:,:,iface), self%ale_coords%getvar(3,itime = 1))
+        !end associate
+        d1dxi   = matmul(ddxi,   self%ale_coords%getvar(1,itime = 1))
+        d1deta  = matmul(ddeta,  self%ale_coords%getvar(1,itime = 1))
+        d1dzeta = matmul(ddzeta, self%ale_coords%getvar(1,itime = 1))
+
+        d2dxi   = matmul(ddxi,   self%ale_coords%getvar(2,itime = 1))
+        d2deta  = matmul(ddeta,  self%ale_coords%getvar(2,itime = 1))
+        d2dzeta = matmul(ddzeta, self%ale_coords%getvar(2,itime = 1))
+
+        d3dxi   = matmul(ddxi,   self%ale_coords%getvar(3,itime = 1))
+        d3deta  = matmul(ddeta,  self%ale_coords%getvar(3,itime = 1))
+        d3dzeta = matmul(ddzeta, self%ale_coords%getvar(3,itime = 1))
 
 
 
@@ -1190,8 +1112,8 @@ contains
         ! compute inverse cell mapping jacobian terms
         !
         invjac_ale = d1dxi*d2deta*d3dzeta - d1deta*d2dxi*d3dzeta - &
-                 d1dxi*d2dzeta*d3deta + d1dzeta*d2dxi*d3deta + &
-                 d1deta*d2dzeta*d3dxi - d1dzeta*d2deta*d3dxi
+                     d1dxi*d2dzeta*d3deta + d1dzeta*d2dxi*d3deta + &
+                     d1deta*d2dzeta*d3dxi - d1dzeta*d2deta*d3dxi
 
 
 

@@ -167,7 +167,7 @@ contains
 
 
         real(rk)                    :: xi,eta,zeta,p, sumsqr, d_normalization, grad1_d, grad2_d, grad3_d
-        integer(ik)                 :: eqn_ID
+        integer(ik)                 :: eqn_ID, inode
         character(:),   allocatable :: zonestring
 
 
@@ -212,56 +212,56 @@ contains
                         
 
                         ! Write sampling for current element
-                        do ipt_zeta = 1,zetalim
-                            zeta = (((real(ipt_zeta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
-                            do ipt_eta = 1,etalim
-                                eta = (((real(ipt_eta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
-                                do ipt_xi = 1,xilim
-                                    xi = (((real(ipt_xi,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
+                        !do ipt_zeta = 1,zetalim
+                        !    zeta = (((real(ipt_zeta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
+                        !    do ipt_eta = 1,etalim
+                        !        eta = (((real(ipt_eta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
+                        !        do ipt_xi = 1,xilim
+                        !            xi = (((real(ipt_xi,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
 
-                                    ! Get coordinate value at point
-                                    if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
+                        !            ! Get coordinate value at point
+                        !            if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
 
-                                        r     = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',1,xi,eta,zeta),rdouble)
-                                        theta = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',2,xi,eta,zeta),rdouble)
-                                        z     = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',3,xi,eta,zeta),rdouble)
+                        !                r     = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',1,xi,eta,zeta),rdouble)
+                        !                theta = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',2,xi,eta,zeta),rdouble)
+                        !                z     = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',3,xi,eta,zeta),rdouble)
 
-                                        if (icoord == 1) then
-                                            val = r*cos(theta)
-                                        else if (icoord == 2) then
-                                            val = r*sin(theta)
-                                        else if (icoord == 3) then
-                                            val = z
-                                        end if
+                        !                if (icoord == 1) then
+                        !                    val = r*cos(theta)
+                        !                else if (icoord == 2) then
+                        !                    val = r*sin(theta)
+                        !                else if (icoord == 3) then
+                        !                    val = z
+                        !                end if
 
-                                    else
+                        !            else
 
-                                        val = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',icoord,xi,eta,zeta),rdouble)
+                        !                val = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',icoord,xi,eta,zeta),rdouble)
 
-                                    end if
+                        !            end if
 
 
 
-                                    tecstat = TECDAT142(1,valeq,1)
-                                    if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to TECDAT142")
+                        !            tecstat = TECDAT142(1,valeq,1)
+                        !            if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to TECDAT142")
 
-                                end do ! ipt_xi
-                            end do ! ipt_eta
-                        end do ! ipt_zeta
+                        !        end do ! ipt_xi
+                        !    end do ! ipt_eta
+                        !end do ! ipt_zeta
+
+
+
+                        
+                        do inode = 1,size(data%mesh%domain(idom)%elems(ielem)%quad_pts,1)
+                        
+                           val = real(data%mesh%domain(idom)%elems(ielem)%quad_pts(inode,icoord),rdouble)
+                           tecstat = TECDAT142(1,valeq,1)
+                           if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to TECDAT142")
+                        
+                        end do !inode
+                        
 
                     end do !ielem
-
-
-                    !
-                    !do inode = 1,size(data%mesh%domain(idom)%elems(ielem)%quad_pts,1)
-                    !
-                    !   val = real(data%mesh%domain(idom)%elems(ielem)%quad_pts(inode,icoord),rdouble)
-                    !   tecstat = TECDAT142(1,valeq,1)
-                    !   if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to TECDAT142")
-                    !
-                    !end do !inode
-                    !
-
 
                 end do ! coords
 

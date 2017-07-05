@@ -100,7 +100,7 @@ contains
         nterms_s = 8
         ntime    = 1
         call this%elem%init_geom(nodes,connectivity,idomain,ielem,'Cartesian')
-        call this%elem%init_sol(neqns,nterms_s,ntime)
+        call this%elem%init_sol('Quadrature',1,nterms_s,neqns,ntime)
         
 
 

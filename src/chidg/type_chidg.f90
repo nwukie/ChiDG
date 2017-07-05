@@ -371,7 +371,7 @@ contains
                     level_in = gq_rule
                 end if
 
-                call self%data%initialize_solution_domains(interpolation,level,self%nterms_s)
+                call self%data%initialize_solution_domains(interpolation_in,level_in,self%nterms_s)
 
 
             !

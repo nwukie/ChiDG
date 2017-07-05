@@ -522,17 +522,13 @@ contains
         ref_ID_s = get_reference_element(element_type = self%element_type,  &
                                          polynomial   = 'Legendre',         &
                                          nterms       = nterms_s,           &
-                                         !node_set     = 'Quadrature',       &
                                          node_set     = interpolation,      &
-                                         !level        = gq_rule,            &
                                          level        = level,            &
                                          nterms_rule  = nterms_s)
         ref_ID_c = get_reference_element(element_type = self%element_type,  &
                                          polynomial   = 'Legendre',         &
                                          nterms       = self%nterms_c,      &
-                                         !node_set     = 'Quadrature',       &
                                          node_set     = interpolation,      &
-                                         !level        = gq_rule,            &
                                          level        = level,            &
                                          nterms_rule  = nterms_s)
 
@@ -765,18 +761,6 @@ contains
         !
         ! Compute element metric terms
         !
-        !d1dxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%getvar(1,itime = 1))
-        !d1deta  = matmul(self%gqmesh%vol%ddeta, self%coords%getvar(1,itime = 1))
-        !d1dzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%getvar(1,itime = 1))
-
-        !d2dxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%getvar(2,itime = 1))
-        !d2deta  = matmul(self%gqmesh%vol%ddeta, self%coords%getvar(2,itime = 1))
-        !d2dzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%getvar(2,itime = 1))
-
-        !d3dxi   = matmul(self%gqmesh%vol%ddxi,  self%coords%getvar(3,itime = 1))
-        !d3deta  = matmul(self%gqmesh%vol%ddeta, self%coords%getvar(3,itime = 1))
-        !d3dzeta = matmul(self%gqmesh%vol%ddzeta,self%coords%getvar(3,itime = 1))
-
         d1dxi   = matmul(ddxi,   self%coords%getvar(1,itime = 1))
         d1deta  = matmul(ddeta,  self%coords%getvar(1,itime = 1))
         d1dzeta = matmul(ddzeta, self%coords%getvar(1,itime = 1))
@@ -834,7 +818,6 @@ contains
         !
         ! Compute element volume
         !
-        !self%vol = abs(sum(self%jinv * self%gq%vol%weights))
         self%vol = abs(sum(self%jinv * weights))
 
 
@@ -856,10 +839,6 @@ contains
             self%metric(1,3,inode) = ONE/self%jinv(inode) * scaling_12(inode) * (d1deta(inode)*d2dzeta(inode) - d1dzeta(inode)*d2deta(inode))
             self%metric(2,3,inode) = ONE/self%jinv(inode) * scaling_12(inode) * (d1dzeta(inode)*d2dxi(inode)  - d1dxi(inode)*d2dzeta(inode) )
             self%metric(3,3,inode) = ONE/self%jinv(inode) * scaling_12(inode) * (d1dxi(inode)*d2deta(inode)   - d1deta(inode)*d2dxi(inode)  )
-        
-
-
-
         end do
 
         do inode = 1,nnodes
@@ -909,10 +888,6 @@ contains
         integer(ik)                                 :: nnodes
         real(rk),   allocatable,    dimension(:,:)  :: ddxi, ddeta, ddzeta
 
-        !nnodes = ref_elems(self%ref_ID_s)%nnodes_i()
-        !ddxi   = ref_elems(self%ref_ID_s)%interpolator('ddxi')
-        !ddeta  = ref_elems(self%ref_ID_s)%interpolator('ddeta')
-        !ddzeta = ref_elems(self%ref_ID_s)%interpolator('ddzeta')
         nnodes = self%ref_s%nnodes_ie()
         ddxi   = self%ref_s%interpolator('ddxi')
         ddeta  = self%ref_s%interpolator('ddeta')
@@ -920,19 +895,6 @@ contains
 
         do iterm = 1,self%nterms_s
             do inode = 1,nnodes
-
-!                self%grad1(inode,iterm) = self%metric(1,1,inode) * self%gq%vol%ddxi(inode,iterm)   + &
-!                                          self%metric(2,1,inode) * self%gq%vol%ddeta(inode,iterm)  + &
-!                                          self%metric(3,1,inode) * self%gq%vol%ddzeta(inode,iterm) 
-!
-!                self%grad2(inode,iterm) = self%metric(1,2,inode) * self%gq%vol%ddxi(inode,iterm)   + &
-!                                          self%metric(2,2,inode) * self%gq%vol%ddeta(inode,iterm)  + &
-!                                          self%metric(3,2,inode) * self%gq%vol%ddzeta(inode,iterm) 
-!
-!                self%grad3(inode,iterm) = self%metric(1,3,inode) * self%gq%vol%ddxi(inode,iterm)   + &
-!                                          self%metric(2,3,inode) * self%gq%vol%ddeta(inode,iterm)  + &
-!                                          self%metric(3,3,inode) * self%gq%vol%ddzeta(inode,iterm) 
-
                 self%grad1(inode,iterm) = self%metric(1,1,inode) * ddxi(inode,iterm) + &
                                           self%metric(2,1,inode) * ddeta(inode,iterm) + &
                                           self%metric(3,1,inode) * ddzeta(inode,iterm)
@@ -944,7 +906,6 @@ contains
                 self%grad3(inode,iterm) = self%metric(1,3,inode) * ddxi(inode,iterm) + &
                                           self%metric(2,3,inode) * ddeta(inode,iterm) + &
                                           self%metric(3,3,inode) * ddzeta(inode,iterm)
-
             end do
         end do
 
@@ -982,15 +943,11 @@ contains
         real(rk),   dimension(:),   allocatable :: coord1, coord2, coord3
         integer(ik)                             :: inode
 
-        !nnodes = self%gq%vol%nnodes
         nnodes = self%ref_c%nnodes_ie()
 
         !
         ! compute coordinates associated with quadrature points
         !
-        !coord1 = matmul(self%gqmesh%vol%val,self%coords%getvar(1,itime = 1))
-        !coord2 = matmul(self%gqmesh%vol%val,self%coords%getvar(2,itime = 1))
-        !coord3 = matmul(self%gqmesh%vol%val,self%coords%getvar(3,itime = 1))
         coord1 = matmul(self%ref_c%interpolator('Value'),self%coords%getvar(1,itime = 1))
         coord2 = matmul(self%ref_c%interpolator('Value'),self%coords%getvar(2,itime = 1))
         coord3 = matmul(self%ref_c%interpolator('Value'),self%coords%getvar(3,itime = 1))
@@ -1028,14 +985,12 @@ contains
     subroutine compute_mass_matrix(self)
         class(element_t), intent(inout) :: self
 
-        integer(ik)  :: iterm
-        !real(rk)     :: temp(self%nterms_s,self%gq%vol%nnodes)
+        integer(ik)             :: iterm
         real(rk),   allocatable :: temp(:,:)
 
         self%invmass = ZERO
         self%mass    = ZERO
 
-        !temp = transpose(self%gq%vol%val)
         temp = transpose(self%ref_s%interpolator('Value'))
 
 
@@ -1096,27 +1051,16 @@ contains
         real(rk),      intent(in)  :: xi,eta,zeta
         real(rk)                   :: xval
 
-        type(point_t)              :: node
         real(rk)                   :: polyvals(self%nterms_c)
         integer(ik)                :: iterm, spacedim
 
-        call node%set(xi,eta,zeta)
-
-        spacedim = self%spacedim
-
-        !
         ! Evaluate polynomial modes at node location
-        !
+        spacedim = self%spacedim
         do iterm = 1,self%nterms_c
-
             polyvals(iterm)  = polynomial_val(spacedim,self%nterms_c,iterm,[xi,eta,zeta])
-
         end do
-
         
-        !
         ! Evaluate x from dot product of modes and polynomial values
-        !
         xval = dot_product(self%coords%getvar(1,itime = 1),polyvals)
 
     end function x
@@ -1142,27 +1086,18 @@ contains
         real(rk),           intent(in)  :: xi,eta,zeta
         real(rk)                        :: yval
 
-        type(point_t)              :: node
         real(rk)                   :: polyvals(self%nterms_c)
         integer(ik)                :: iterm, spacedim
 
-        call node%set(xi,eta,zeta)
 
-        spacedim = self%spacedim
-
-        !
         ! Evaluate polynomial modes at node location
-        !
+        spacedim = self%spacedim
         do iterm = 1,self%nterms_c
-
             polyvals(iterm)  = polynomial_val(spacedim,self%nterms_c,iterm,[xi,eta,zeta])
-
         end do
 
 
-        !
         ! Evaluate x from dot product of modes and polynomial values
-        !
         yval = dot_product(self%coords%getvar(2,itime = 1),polyvals)
 
     end function y
@@ -1187,27 +1122,18 @@ contains
         real(rk),           intent(in)  :: xi,eta,zeta
         real(rk)                        :: zval
 
-        type(point_t)              :: node
         real(rk)                   :: polyvals(self%nterms_c)
         integer(ik)                :: iterm, spacedim
 
-        call node%set(xi,eta,zeta)
 
-        spacedim = self%spacedim
-
-        !
         ! Evaluate polynomial modes at node location
-        !
+        spacedim = self%spacedim
         do iterm = 1,self%nterms_c
-
             polyvals(iterm)  = polynomial_val(spacedim,self%nterms_c,iterm,[xi,eta,zeta])
-
         end do
 
 
-        !
         ! Evaluate x from dot product of modes and polynomial values
-        !
         zval = dot_product(self%coords%getvar(3,itime = 1),polyvals)
 
     end function z
@@ -1230,17 +1156,16 @@ contains
         real(rk),           intent(in)  :: xi,eta,zeta
 
         real(rk)                   :: val1, val2, val3
-        type(point_t)              :: point, phys_point
+        type(point_t)              :: phys_point
         real(rk)                   :: polyvals(self%nterms_c)
         integer(ik)                :: iterm, spacedim
 
-        call point%set(xi,eta,zeta)
 
-        spacedim = self%spacedim
 
         !
         ! Evaluate polynomial modes at node location
         !
+        spacedim = self%spacedim
         do iterm = 1,self%nterms_c
             polyvals(iterm)  = polynomial_val(spacedim,self%nterms_c,iterm,[xi,eta,zeta])
         end do
@@ -1296,7 +1221,6 @@ contains
         real(rk),           intent(in)  :: xi, eta, zeta
 
         real(rk)        :: val
-        type(point_t)   :: node
         real(rk)        :: polyvals(self%nterms_c)
         integer(ik)     :: iterm, spacedim
 
@@ -1304,22 +1228,14 @@ contains
         if (.not. self%geom_initialized) call chidg_signal(FATAL,"element%grid_point: geometry not initialized")
 
 
-        call node%set(xi,eta,zeta)
-
-        spacedim = self%spacedim
-
-
-        !
         ! Evaluate polynomial modes at node location
-        !
+        spacedim = self%spacedim
         do iterm = 1,self%nterms_c
                 polyvals(iterm) = polynomial_val(spacedim,self%nterms_c,iterm,[xi,eta,zeta])
         end do
 
 
-        !
         ! Evaluate mesh point from dot product of modes and polynomial values
-        !
         if (type == 'Reference') then
             val = dot_product(self%coords%getvar(icoord,itime = 1), polyvals)
         else if (type == 'ALE') then
@@ -1363,7 +1279,6 @@ contains
         logical,            intent(in), optional    :: scale
         
         real(rk)        :: val, r
-        type(point_t)   :: node
         real(rk)        :: polyvals(self%nterms_c)
         integer(ik)     :: iterm, spacedim
 
@@ -1371,13 +1286,12 @@ contains
         if (phys_dir > 3) call chidg_signal(FATAL,"element%metric_point: phys_dir exceeded 3 physical coordinates")
         if (comp_dir > 3) call chidg_signal(FATAL,"element%metric_point: comp_dir exceeded 3 physical coordinates")
 
-        call node%set(xi,eta,zeta)
 
-        spacedim = self%spacedim
 
         !
         ! Evaluate polynomial modes at node location
         !
+        spacedim = self%spacedim
         do iterm = 1,self%nterms_c
             polyvals(iterm) = dpolynomial_val(spacedim,self%nterms_c,iterm,[xi,eta,zeta],comp_dir)
         end do
@@ -1443,27 +1357,18 @@ contains
         real(rk),               intent(in)      :: xi,eta,zeta
 
         real(rk)                   :: temp,val
-        type(point_t)              :: node
         real(rk)                   :: polyvals(q%nterms())
         integer(ik)                :: iterm, spacedim
 
 
-        call node%set(xi,eta,zeta)
-
-        spacedim = self%spacedim
-
-
-        !
         ! Evaluate polynomial modes at node location
-        !
+        spacedim = self%spacedim
         do iterm = 1,q%nterms()
             polyvals(iterm)  = polynomial_val(spacedim,q%nterms(),iterm,[xi,eta,zeta])
         end do
 
 
-        !
         ! Evaluate x from dot product of modes and polynomial values
-        !
         temp = dot_product(q%getvar(ivar,itime),polyvals)
         val = temp/dot_product(self%det_jacobian_grid_modes,polyvals)
 
@@ -1499,7 +1404,6 @@ contains
         integer(ik),            intent(in)      :: dir
 
         real(rk)        :: val
-        type(point_t)   :: node
         real(rk)        :: ddxi(q%nterms()), ddeta(q%nterms()), ddzeta(q%nterms()), &
                            deriv(q%nterms())
         real(rk)        :: metric(3,3), jinv, dxi_dx, dxi_dy, dxi_dz, &
@@ -1507,15 +1411,10 @@ contains
         integer(ik)     :: iterm, spacedim
 
 
-        call node%set(xi,eta,zeta)
-
-        spacedim = self%spacedim
-
-
-
         !
         ! Evaluate polynomial mode derivatives at node location
         !
+        spacedim = self%spacedim
         do iterm = 1,q%nterms()
             ddxi(iterm)   = dpolynomial_val(spacedim,q%nterms(),iterm,[xi,eta,zeta],XI_DIR)
             ddeta(iterm)  = dpolynomial_val(spacedim,q%nterms(),iterm,[xi,eta,zeta],ETA_DIR)
@@ -1753,18 +1652,12 @@ contains
         real(rk)                        :: time
 
 
-        !
         ! Call function for evaluation at quadrature nodes and multiply by quadrature weights
-        !
         time  = 0._rk
-        !fvals = fcn%compute(time,point_t(self%quad_pts)) * self%gq%vol%weights * self%jinv
         fvals = fcn%compute(time,point_t(self%quad_pts)) * self%ref_s%weights() * self%jinv
 
 
-        !
         ! Project
-        !
-        !temp = matmul(transpose(self%gq%vol%val),fvals)
         temp = matmul(transpose(self%ref_s%interpolator('Value')),fvals)
         fmodes = matmul(self%invmass,temp)
 
@@ -1832,7 +1725,6 @@ contains
         !
         do iface_test = 1,NFACES
 
-            !face_indices = face_corners(iface_test,:,self%nterms_c_1d - 1)
             face_indices = face_corners(iface_test,:,self%element_type)
             corner_one_in_face   = any(face_indices == corner_position(1))
             corner_two_in_face   = any(face_indices == corner_position(2))
@@ -1959,9 +1851,6 @@ contains
         !
         ! compute cartesian coordinates associated with quadrature points
         !
-        !self%ale_quad_pts(:,1) = matmul(self%gqmesh%vol%val,self%ale_coords%getvar(1,itime = 1))
-        !self%ale_quad_pts(:,2) = matmul(self%gqmesh%vol%val,self%ale_coords%getvar(2,itime = 1))
-        !self%ale_quad_pts(:,3) = matmul(self%gqmesh%vol%val,self%ale_coords%getvar(3,itime = 1))
         self%ale_quad_pts(:,1) = matmul(val,self%ale_coords%getvar(1,itime = 1))
         self%ale_quad_pts(:,2) = matmul(val,self%ale_coords%getvar(2,itime = 1))
         self%ale_quad_pts(:,3) = matmul(val,self%ale_coords%getvar(3,itime = 1))
@@ -1971,10 +1860,6 @@ contains
         ! Grid velocity
         ! compute cartesian coordinates associated with quadrature points
         !
-        !self%grid_vel1 = matmul(self%gqmesh%vol%val,self%ale_vel_coords%getvar(1,itime = 1))
-        !self%grid_vel2 = matmul(self%gqmesh%vol%val,self%ale_vel_coords%getvar(2,itime = 1))
-        !self%grid_vel3 = matmul(self%gqmesh%vol%val,self%ale_vel_coords%getvar(3,itime = 1))
-
         self%grid_vel1 = matmul(val,self%ale_vel_coords%getvar(1,itime = 1))
         self%grid_vel2 = matmul(val,self%ale_vel_coords%getvar(2,itime = 1))
         self%grid_vel3 = matmul(val,self%ale_vel_coords%getvar(3,itime = 1))
@@ -1998,7 +1883,6 @@ contains
         integer(ik)             :: nnodes
         character(:),   allocatable :: coordinate_system
 
-        !real(rk),   dimension(self%gq%vol%nnodes)   ::  &
         integer(ik)                             :: ierr
         real(rk),   dimension(:),   allocatable ::  &
             d1dxi, d1deta, d1dzeta,                 &
@@ -2012,25 +1896,11 @@ contains
         !
         ! Retrieve interpolators
         !
-        !nnodes = self%gq%vol%nnodes
         nnodes  = self%ref_s%nnodes_ie()
         weights = self%ref_s%weights()
         ddxi    = self%ref_c%interpolator('ddxi')
         ddeta   = self%ref_c%interpolator('ddeta')
         ddzeta  = self%ref_c%interpolator('ddzeta')
-
-        !d1dxi   = matmul(self%gqmesh%vol%ddxi,  self%ale_coords%getvar(1,itime = 1))
-        !d1deta  = matmul(self%gqmesh%vol%ddeta, self%ale_coords%getvar(1,itime = 1))
-        !d1dzeta = matmul(self%gqmesh%vol%ddzeta,self%ale_coords%getvar(1,itime = 1))
-
-        !d2dxi   = matmul(self%gqmesh%vol%ddxi,  self%ale_coords%getvar(2,itime = 1))
-        !d2deta  = matmul(self%gqmesh%vol%ddeta, self%ale_coords%getvar(2,itime = 1))
-        !d2dzeta = matmul(self%gqmesh%vol%ddzeta,self%ale_coords%getvar(2,itime = 1))
-
-        !d3dxi   = matmul(self%gqmesh%vol%ddxi,  self%ale_coords%getvar(3,itime = 1))
-        !d3deta  = matmul(self%gqmesh%vol%ddeta, self%ale_coords%getvar(3,itime = 1))
-        !d3dzeta = matmul(self%gqmesh%vol%ddzeta,self%ale_coords%getvar(3,itime = 1))
-
 
         d1dxi   = matmul(ddxi,  self%ale_coords%getvar(1,itime = 1))
         d1deta  = matmul(ddeta, self%ale_coords%getvar(1,itime = 1))

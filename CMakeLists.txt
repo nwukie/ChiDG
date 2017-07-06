@@ -232,8 +232,10 @@ message(STATUS "Tecplot Summary: ")
 # Select TecIO library based on detected OS
 if ( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" ) 
     set(TEC_ROOT ${CMAKE_SOURCE_DIR}/tecio/mac)
+    install(FILES ${TEC_ROOT}/lib/libtecio.dylib DESTINATION /usr/local/chidg/lib)
 elseif( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )
     set(TEC_ROOT ${CMAKE_SOURCE_DIR}/tecio/linux)
+    install(FILES ${TEC_ROOT}/lib/libtecio.so DESTINATION /usr/local/chidg/lib)
 else()
     message(SEND_ERROR "Invalid operating system detected for TecIO")
 endif()
@@ -313,9 +315,8 @@ install(TARGETS chidg coredg
         LIBRARY DESTINATION /usr/local/chidg/lib
         ARCHIVE DESTINATION /usr/local/chidg/lib)
 
+
 install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/ DESTINATION /usr/local/chidg/include)
-
-
 
 
 #----------------------------------------------------------------------------------------------

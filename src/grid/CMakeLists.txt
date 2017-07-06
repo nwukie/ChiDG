@@ -6,9 +6,10 @@ add_lib_sources(
                 type_mesh.f90 
                 type_meshdata.f90
                 type_seed.f90
+                type_reference_element.f90
                 mod_interpolate.f90
                 mod_grid.f90 
-#                mod_geometry.f90
+                mod_reference_elements.f90
                 mod_DNAD_tools.f90
                 type_domain_connectivity.f90
                 type_element_connectivity.f90

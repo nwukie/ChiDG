@@ -1,10 +1,10 @@
 module type_cache_data_field
 #include <messenger.h>
-    use mod_kinds,          only: ik
-    use mod_constants,      only: INTERIOR, BOUNDARY, CHIMERA, NFACES, ZERO
-    use type_mesh,      only: mesh_t
-    use type_properties,    only: properties_t
-    use type_seed,          only: seed_t
+    use mod_kinds,              only: ik
+    use mod_constants,          only: INTERIOR, BOUNDARY, CHIMERA, NFACES, ZERO
+    use type_mesh,              only: mesh_t
+    use type_properties,        only: properties_t
+    use type_seed,              only: seed_t
     use DNAD_D
     implicit none
 
@@ -72,7 +72,7 @@ contains
         class(cache_data_field_t),  intent(inout)           :: self
         character(*),               intent(in)              :: field
         character(*),               intent(in)              :: cache_component
-        type(mesh_t),           intent(in)              :: mesh
+        type(mesh_t),               intent(in)              :: mesh
         type(properties_t),         intent(in)              :: prop(:)
         integer(ik),                intent(in)              :: idomain_l
         integer(ik),                intent(in)              :: ielement_l
@@ -101,9 +101,9 @@ contains
 
 
             case('element')
-                nnodes      = mesh%domain(idomain_l)%elems(ielement_l)%gq%vol%nnodes
-                nnodes_vol  = mesh%domain(idomain_l)%elems(ielement_l)%gq%vol%nnodes
-                nnodes_face = mesh%domain(idomain_l)%elems(ielement_l)%gq%face%nnodes
+                nnodes      = mesh%domain(idomain_l)%elems(ielement_l)%basis_s%nnodes_ie()
+                nnodes_vol  = mesh%domain(idomain_l)%elems(ielement_l)%basis_s%nnodes_ie()
+                nnodes_face = mesh%domain(idomain_l)%elems(ielement_l)%basis_s%nnodes_if()
 
                 ! Interior element
                 !ndepend_value = 1
@@ -123,9 +123,9 @@ contains
 
             case('face interior')
 
-                nnodes      = mesh%domain(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
-                nnodes_vol  = mesh%domain(idomain_l)%faces(ielement_l,iface)%gq%vol%nnodes
-                nnodes_face = mesh%domain(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
+                nnodes      = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_if()
+                nnodes_vol  = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_ie()
+                nnodes_face = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_if()
 
                 ! Interior element + Face Exterior Elements
                 !ndepend_value = 1
@@ -138,12 +138,11 @@ contains
 
             case('face exterior')
 
-                nnodes      = mesh%domain(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
-                nnodes_vol  = mesh%domain(idomain_l)%faces(ielement_l,iface)%gq%vol%nnodes
-                nnodes_face = mesh%domain(idomain_l)%faces(ielement_l,iface)%gq%face%nnodes
+                nnodes      = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_if()
+                nnodes_vol  = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_ie()
+                nnodes_face = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_if()
 
                 ! Exterior Elements
-                !ndepend_value = self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface)
                 ndepend_value = 1 + self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface)
 
                 ! Interior element + Face Exterior Elements

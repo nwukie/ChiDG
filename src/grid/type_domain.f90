@@ -289,10 +289,12 @@ contains
     !!  @date   11/9/2016
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine init_sol(self,neqns,nterms_s,ntime)
+    subroutine init_sol(self,interpolation,level,nterms_s,neqns,ntime)
         class(domain_t),    intent(inout)   :: self
-        integer(ik),        intent(in)      :: neqns
+        character(*),       intent(in)      :: interpolation
+        integer(ik),        intent(in)      :: level
         integer(ik),        intent(in)      :: nterms_s
+        integer(ik),        intent(in)      :: neqns
         integer(ik),        intent(in)      :: ntime
 
         !
@@ -305,7 +307,7 @@ contains
         !
         ! Call numerics initialization for elements and faces
         !
-        call self%init_elems_sol(neqns,nterms_s,ntime)
+        call self%init_elems_sol(interpolation,level,nterms_s,neqns,ntime)
         call self%init_faces_sol()               
 
         call self%update_ale()
@@ -428,12 +430,14 @@ contains
     !!  @date   11/5/2016
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine init_elems_sol(self,neqns,nterms_s,ntime)
-        class(domain_t),  intent(inout)   :: self
-        integer(ik),    intent(in)      :: neqns
-        integer(ik),    intent(in)      :: nterms_s
-        integer(ik),    intent(in)      :: ntime
-        integer(ik)                     :: ielem
+    subroutine init_elems_sol(self,interpolation,level,nterms_s,neqns,ntime)
+        class(domain_t),    intent(inout)   :: self
+        character(*),       intent(in)      :: interpolation
+        integer(ik),        intent(in)      :: level
+        integer(ik),        intent(in)      :: nterms_s
+        integer(ik),        intent(in)      :: neqns
+        integer(ik),        intent(in)      :: ntime
+        integer(ik)                         :: ielem
 
 
         !
@@ -447,9 +451,7 @@ contains
         ! Call the numerics initialization procedure for each element
         !
         do ielem = 1,self%nelem
-
-            call self%elems(ielem)%init_sol(self%neqns,self%nterms_s,ntime) 
-
+            call self%elems(ielem)%init_sol(interpolation,level,self%nterms_s,self%neqns,ntime) 
         end do
 
 

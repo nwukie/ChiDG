@@ -600,7 +600,7 @@ contains
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%gq%vol%weights)
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%basis_s%weights())
 
 
                     print *, 'density error squared'
@@ -634,7 +634,7 @@ contains
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%gq%vol%weights)
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%basis_s%weights())
 
                     print *, 'mom1 error squared'
                     print *, element_error_squared
@@ -667,7 +667,7 @@ contains
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%gq%vol%weights)
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%basis_s%weights())
 
                     print *, 'mom2 error squared'
                     print *, element_error_squared
@@ -699,7 +699,7 @@ contains
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%gq%vol%weights)
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%basis_s%weights())
 
 
                     print *, 'mom3 error squared'
@@ -732,7 +732,7 @@ contains
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%gq%vol%weights)
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%basis_s%weights())
 
                     print *, 'energy error squared'
                     print *, element_error_squared

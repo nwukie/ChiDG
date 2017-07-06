@@ -18,7 +18,7 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    function LegendreVal(space_dim,currentmode,xpos,ypos,zpos) result(polyval)
+    function legendre_val(space_dim,currentmode,xpos,ypos,zpos) result(polyval)
         integer(ik),    intent(in)  :: space_dim
         integer(ik),    intent(in)  :: currentmode
         real(rk),       intent(in)  :: xpos
@@ -29,17 +29,17 @@ contains
 
         select case (space_dim)
             case (1)    ! 1D
-                polyval = LegendreVal1D(currentmode,xpos)
+                polyval = legendre_val1D(currentmode,xpos)
             case (2)    ! 2D
-                polyval = LegendreVal2D(currentmode,xpos,ypos)
+                polyval = legendre_val2D(currentmode,xpos,ypos)
             case (3)    ! 3D
-                polyval = LegendreVal3D(currentmode,xpos,ypos,zpos)
+                polyval = legendre_val3D(currentmode,xpos,ypos,zpos)
             case default
-                print*, "Error - LegendreVal: valid space dimensions are (1,2,3)"
+                print*, "Error - legendre_val: valid space dimensions are (1,2,3)"
                 stop
         end select
 
-    end function LegendreVal
+    end function legendre_val
     !*****************************************************************************************
 
 
@@ -58,7 +58,7 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    recursive function LegendreVal1D(nterm,pos) result(polyval)
+    recursive function legendre_val1D(nterm,pos) result(polyval)
     !   Compute the value of the nterm
     !   legendre polynomial at the location pos
     !   between -1 and 1
@@ -76,14 +76,14 @@ contains
                 polyval = pos
             case (3 :)
                 ! Recursive definition for norder >= 2
-                polyval_nm1=LegendreVal1D(nterm-1,pos)
-                polyval_nm2=LegendreVal1D(nterm-2,pos)
+                polyval_nm1=legendre_val1D(nterm-1,pos)
+                polyval_nm2=legendre_val1D(nterm-2,pos)
                 polyval = ((TWO*real(nterm-1,rk)-ONE)*pos*polyval_nm1 - &
                           ((real(nterm-1,rk)-ONE))*polyval_nm2)/real(nterm-1,rk)
         end select
 
 
-    end function LegendreVal1D
+    end function legendre_val1D
     !****************************************************************************************
 
 
@@ -105,7 +105,7 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    function LegendreVal2D(currentmode,xi,eta) result(polyval)
+    function legendre_val2D(currentmode,xi,eta) result(polyval)
         integer(ik),    intent(in)  :: currentmode
         real(rk),       intent(in)  :: xi
         real(rk),       intent(in)  ::eta
@@ -119,12 +119,12 @@ contains
         xi_mode  = xi_order_2d( currentmode)
         eta_mode = eta_order_2d(currentmode)
 
-        xi_polyval  = LegendreVal1D(xi_mode,  xi)
-        eta_polyval = LegendreVal1D(eta_mode,eta)
+        xi_polyval  = legendre_val1D(xi_mode,  xi)
+        eta_polyval = legendre_val1D(eta_mode,eta)
 
         polyval = xi_polyval*eta_polyval
 
-    end function LegendreVal2D
+    end function legendre_val2D
     !*****************************************************************************************
 
 
@@ -145,7 +145,7 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    function LegendreVal3D(currentmode,xi,eta,zeta) result(polyval)
+    function legendre_val3D(currentmode,xi,eta,zeta) result(polyval)
         integer(ik),    intent(in)  :: currentmode
         real(rk),       intent(in)  :: xi
         real(rk),       intent(in)  :: eta
@@ -161,13 +161,13 @@ contains
         eta_mode  = eta_order_3d( currentmode)
         zeta_mode = zeta_order_3d(currentmode)
 
-        xi_polyval   = LegendreVal1D(xi_mode,  xi)
-        eta_polyval  = LegendreVal1D(eta_mode, eta)
-        zeta_polyval = LegendreVal1D(zeta_mode,zeta)
+        xi_polyval   = legendre_val1D(xi_mode,  xi)
+        eta_polyval  = legendre_val1D(eta_mode, eta)
+        zeta_polyval = legendre_val1D(zeta_mode,zeta)
 
         polyval = xi_polyval*eta_polyval*zeta_polyval
 
-    end function LegendreVal3D
+    end function legendre_val3D
     !*****************************************************************************************
 
 
@@ -187,7 +187,7 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    function dlegendreVal(space_dim,currentmode,xi,eta,zeta,dir) result(dpolyval)
+    function dlegendre_val(space_dim,currentmode,xi,eta,zeta,dir) result(dpolyval)
         integer(ik),    intent(in)  :: space_dim
         integer(ik),    intent(in)  :: currentmode
         real(rk),       intent(in)  :: xi
@@ -199,17 +199,17 @@ contains
 
         select case (space_dim)
             case (1)    ! 1D
-                dpolyval = DLegendreVal1D(currentmode,xi)
+                dpolyval = dlegendre_val1D(currentmode,xi)
             case (2)    ! 2D
-                dpolyval = DLegendreVal2D(currentmode,xi,eta,dir)
+                dpolyval = dlegendre_val2D(currentmode,xi,eta,dir)
             case (3)    ! 3D
-                dpolyval = DLegendreVal3D(currentmode,xi,eta,zeta,dir)
+                dpolyval = dlegendre_val3D(currentmode,xi,eta,zeta,dir)
             case default
                 print*, "Error - DLegendreVal: Valid space dimensions are (1,2,3)"
                 stop
         end select
 
-    end function dlegendreVal
+    end function dlegendre_val
     !*****************************************************************************************
 
 
@@ -227,7 +227,7 @@ contains
     !!  @date   3/20/2016
     !!
     !-----------------------------------------------------------------------------------------
-    recursive function DLegendreVal1D(nterm,pos) result(dpolyval)
+    recursive function dlegendre_val1D(nterm,pos) result(dpolyval)
         integer(ik), intent(in)    :: nterm
         real(rk),    intent(in)    :: pos
 
@@ -241,11 +241,11 @@ contains
                 dpolyval = ONE
             case (3 :)
                 ! Recursive definition
-                dpolyval = real(nterm-1,rk)*LegendreVal1D(nterm-1,pos) + pos*DLegendreVal1D(nterm-1,pos)
+                dpolyval = real(nterm-1,rk)*legendre_val1D(nterm-1,pos) + pos*dlegendre_val1D(nterm-1,pos)
 
         end select
 
-    end function DLegendreVal1D
+    end function dlegendre_val1D
     !*****************************************************************************************
 
 
@@ -267,7 +267,7 @@ contains
     !!  @date   3/20/2016
     !!
     !-----------------------------------------------------------------------------------------
-    function DLegendreVal2D(currentmode,xi,eta,dir) result(dpolyval)
+    function dlegendre_val2D(currentmode,xi,eta,dir) result(dpolyval)
         integer(ik),    intent(in)  :: currentmode
         real(rk),       intent(in)  :: xi
         real(rk),       intent(in)  :: eta
@@ -282,14 +282,14 @@ contains
 
         select case (dir)
             case (XI_DIR)
-                dxi_val = DLegendreVal1D(xi_mode,xi)
-                eta_val = LegendreVal1D(eta_mode,eta)
+                dxi_val = dlegendre_val1D(xi_mode,xi)
+                eta_val = legendre_val1D(eta_mode,eta)
 
                 dpolyval = dxi_val*eta_val
 
             case (ETA_DIR)
-                xi_val   = LegendreVal1D(xi_mode,xi)
-                deta_val = DLegendreVal1D(eta_mode,eta)
+                xi_val   = legendre_val1D(xi_mode,xi)
+                deta_val = dlegendre_val1D(eta_mode,eta)
 
                 dpolyval = xi_val*deta_val
 
@@ -302,7 +302,7 @@ contains
                 stop
         end select
 
-    end function DLegendreVal2D
+    end function dlegendre_val2D
     !*****************************************************************************************
 
 
@@ -319,7 +319,7 @@ contains
     !!  @date   3/20/2016
     !!
     !----------------------------------------------------------------------------------------
-    function DLegendreVal3D(currentmode,xi,eta,zeta,dir) result(dpolyval)
+    function dlegendre_val3D(currentmode,xi,eta,zeta,dir) result(dpolyval)
         integer(ik),    intent(in)  :: currentmode
         real(rk),       intent(in)  :: xi
         real(rk),       intent(in)  :: eta
@@ -338,21 +338,21 @@ contains
 
         select case (dir)
             case (XI_DIR)
-                dxi_val   = DLegendreVal1D(xi_mode,xi)
-                eta_val   = LegendreVal1D(eta_mode,eta)
-                zeta_val  = LegendreVal1D(zeta_mode,zeta)
+                dxi_val   = dlegendre_val1D(xi_mode,xi)
+                eta_val   = legendre_val1D(eta_mode,eta)
+                zeta_val  = legendre_val1D(zeta_mode,zeta)
 
                 dpolyval  = dxi_val*eta_val*zeta_val
             case (ETA_DIR)
-                xi_val    = LegendreVal1D(xi_mode,xi)
-                deta_val  = DLegendreVal1D(eta_mode,eta)
-                zeta_val  = LegendreVal1D(zeta_mode,zeta)
+                xi_val    = legendre_val1D(xi_mode,xi)
+                deta_val  = dlegendre_val1D(eta_mode,eta)
+                zeta_val  = legendre_val1D(zeta_mode,zeta)
 
                 dpolyval  = xi_val*deta_val*zeta_val
             case (ZETA_DIR)
-                xi_val    = LegendreVal1D(xi_mode,xi)
-                eta_val   = LegendreVal1D(eta_mode,eta)
-                dzeta_val = DLegendreVal1D(zeta_mode,zeta)
+                xi_val    = legendre_val1D(xi_mode,xi)
+                eta_val   = legendre_val1D(eta_mode,eta)
+                dzeta_val = dlegendre_val1D(zeta_mode,zeta)
 
                 dpolyval  = xi_val*eta_val*dzeta_val
             case default
@@ -360,7 +360,7 @@ contains
                 stop
         end select
 
-    end function DLegendreVal3D
+    end function dlegendre_val3D
     !*****************************************************************************************
 
 

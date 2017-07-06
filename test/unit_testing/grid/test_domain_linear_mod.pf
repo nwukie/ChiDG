@@ -94,7 +94,7 @@ contains
         ntime       = 1
         nelements_g = 27
         call this%domain%init_geom(idomain,nelements_g,nodes,connectivity,'Cartesian')
-        call this%domain%init_sol(neqns,nterms_s,ntime)
+        call this%domain%init_sol('Quadrature',1,nterms_s,neqns,ntime)
         call this%domain%init_comm_local()
 
     end subroutine setUp

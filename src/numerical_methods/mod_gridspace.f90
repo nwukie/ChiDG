@@ -22,9 +22,9 @@ contains
     !!  @date   4/14/2016
     !!
     !------------------------------------------------------------------------
-    function linspace(xstart,xstop,nvals) result(vals)
-        real(rk),       intent(in)  :: xstart
-        real(rk),       intent(in)  :: xstop
+    function linspace(xmin,xmax,nvals) result(vals)
+        real(rk),       intent(in)  :: xmin
+        real(rk),       intent(in)  :: xmax
         integer(ik),    intent(in)  :: nvals
 
         real(rk), dimension(nvals)  :: vals
@@ -36,12 +36,12 @@ contains
         !
         ! Compute linear interval
         !
-        interval = xstop-xstart
+        interval = xmax-xmin
         dval     = interval/real((nvals-1),rk)
 
         
         do ival = 1,nvals
-            vals(ival) = xstart + real((ival-1),rk)*dval
+            vals(ival) = xmin + real((ival-1),rk)*dval
         end do
 
     end function linspace

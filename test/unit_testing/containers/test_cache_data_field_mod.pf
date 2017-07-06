@@ -189,8 +189,8 @@ contains
         !
         ! Test that the cache allocated the correct component
         !
-        nnodes_face = self%chidg%data%mesh%domain(idomain)%faces(ielem,iface)%gq%face%nnodes
-        nnodes_vol  = self%chidg%data%mesh%domain(idomain)%faces(ielem,iface)%gq%vol%nnodes
+        nnodes_vol  = self%chidg%data%mesh%domain(idomain)%faces(ielem,iface)%basis_s%nnodes_ie()
+        nnodes_face = self%chidg%data%mesh%domain(idomain)%faces(ielem,iface)%basis_s%nnodes_if()
 
         ! TEST 'value' ALLOCATION
         ! Number of nodes
@@ -307,8 +307,8 @@ contains
         !
         ! Test that the cache allocated the correct component
         !
-        nnodes_face = self%chidg%data%mesh%domain(idomain)%faces(ielem,iface)%gq%face%nnodes
-        nnodes_vol  = self%chidg%data%mesh%domain(idomain)%faces(ielem,iface)%gq%vol%nnodes
+        nnodes_vol  = self%chidg%data%mesh%domain(idomain)%faces(ielem,iface)%basis_s%nnodes_ie()
+        nnodes_face = self%chidg%data%mesh%domain(idomain)%faces(ielem,iface)%basis_s%nnodes_if()
 
         ! Number of nodes
         @assertEqual(size(cache_data_field%value,1), nnodes_face)
@@ -420,8 +420,8 @@ contains
         !
         ! Test that the cache allocated the correct component
         !
-        nnodes_face = self%chidg%data%mesh%domain(idomain)%elems(ielem)%gq%face%nnodes
-        nnodes_vol  = self%chidg%data%mesh%domain(idomain)%elems(ielem)%gq%vol%nnodes
+        nnodes_vol  = self%chidg%data%mesh%domain(idomain)%elems(ielem)%basis_s%nnodes_ie()
+        nnodes_face = self%chidg%data%mesh%domain(idomain)%elems(ielem)%basis_s%nnodes_if()
 
         ! Number of nodes
         @assertEqual(size(cache_data_field%value,1), nnodes_vol)

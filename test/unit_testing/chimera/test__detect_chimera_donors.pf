@@ -93,7 +93,7 @@ subroutine test__detect_chimera_donors()
 
     ielem    = chidg%data%mesh%domain(idom)%chimera%recv%data(ChiID)%receiver_element_l
     iface    = chidg%data%mesh%domain(idom)%chimera%recv%data(ChiID)%receiver_face
-    ngq      = chiDG%data%mesh%domain(idom)%faces(ielem,iface)%gq%face%nnodes
+    ngq      = chiDG%data%mesh%domain(idom)%faces(ielem,iface)%basis_s%nnodes_if()
 
     @assertEqual(1, ndonors_component)
     @assertEqual(1, ndonors_size)
@@ -126,7 +126,7 @@ subroutine test__detect_chimera_donors()
 
     ielem    = chidg%data%mesh%domain(idom)%chimera%recv%data(ChiID)%receiver_element_l
     iface    = chidg%data%mesh%domain(idom)%chimera%recv%data(ChiID)%receiver_face
-    ngq      = chiDG%data%mesh%domain(idom)%faces(ielem,iface)%gq%face%nnodes
+    ngq      = chiDG%data%mesh%domain(idom)%faces(ielem,iface)%basis_s%nnodes_if()
 
     @assertEqual(1, ndonors_component)
     @assertEqual(1, ndonors_size)
@@ -160,7 +160,7 @@ subroutine test__detect_chimera_donors()
 
     ielem    = chidg%data%mesh%domain(idom)%chimera%recv%data(ChiID)%receiver_element_l
     iface    = chidg%data%mesh%domain(idom)%chimera%recv%data(ChiID)%receiver_face
-    ngq      = chiDG%data%mesh%domain(idom)%faces(ielem,iface)%gq%face%nnodes
+    ngq      = chiDG%data%mesh%domain(idom)%faces(ielem,iface)%basis_s%nnodes_if()
 
     @assertEqual(1, ndonors_component)
     @assertEqual(1, ndonors_size)
@@ -194,7 +194,7 @@ subroutine test__detect_chimera_donors()
 
     ielem    = chidg%data%mesh%domain(idom)%chimera%recv%data(ChiID)%receiver_element_l
     iface    = chidg%data%mesh%domain(idom)%chimera%recv%data(ChiID)%receiver_face
-    ngq      = chiDG%data%mesh%domain(idom)%faces(ielem,iface)%gq%face%nnodes
+    ngq      = chiDG%data%mesh%domain(idom)%faces(ielem,iface)%basis_s%nnodes_if()
 
     @assertEqual(1, ndonors_component)
     @assertEqual(1, ndonors_size)

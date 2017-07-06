@@ -31,11 +31,18 @@ module mod_tecio
 #include <messenger.h>
     use mod_kinds,              only: rk,ik,rdouble,TEC
     use mod_constants,          only: ONE, HALF, TWO, OUTPUT_RES, XI_MIN, XI_MAX, &
-                                      ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+                                      ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NO_ID
 
     use type_chidg_data,        only: chidg_data_t
     use type_domain,            only: domain_t
     use type_bc_patch_group,    only: bc_patch_group_t
+
+    use type_chidg_worker,      only: chidg_worker_t
+    use type_chidg_cache,       only: chidg_cache_t
+    use type_cache_handler,     only: cache_handler_t
+    use type_element_info,      only: element_info_t
+    use type_timer,             only: timer_t
+    use DNAD_D
     implicit none
 
 #include "tecio.f90"
@@ -74,7 +81,9 @@ contains
 
         integer(ik)     :: ierr, ieq, eqn_ID
         character(100)  :: varstring
+        type(timer_t)   :: timer
 
+        call timer%start()
 
         !
         ! Assemble variables string.
@@ -118,6 +127,8 @@ contains
         !
         call close_tecio_file()
 
+        call timer%stop()
+        call timer%report('Time:')
 
     end subroutine write_tecio
     !***********************************************************************************
@@ -166,12 +177,30 @@ contains
         integer(4),     allocatable :: connectivity(:,:)
 
 
+        integer(ik)                 :: eqn_ID, inode
         real(rk)                    :: xi,eta,zeta,p, sumsqr, d_normalization, grad1_d, grad2_d, grad3_d
-        integer(ik)                 :: eqn_ID
-        character(:),   allocatable :: zonestring
+        type(AD_D),     allocatable :: var(:)
+        character(:),   allocatable :: zone_string, var_string
+
+        type(chidg_worker_t)        :: worker
+        type(chidg_cache_t)         :: cache
+        type(cache_handler_t)       :: cache_handler
+        type(element_info_t)        :: elem_info
+
 
 
         call write_line("   TECIO: Writing domains...")
+
+
+        !
+        ! Initialize Chidg Worker references
+        !
+        call worker%init(data%mesh, data%eqnset(:)%prop, data%sdata, cache)
+
+
+
+
+
 
         ! using (output_res+1) so that the skip number used in tecplot to
         ! correctly display the element surfaces is the same as the number
@@ -186,6 +215,9 @@ contains
         do itime = 1,data%sdata%q_out%get_ntime()
 
 
+            worker%itime = itime
+
+
             !
             ! Loop domains
             !
@@ -196,64 +228,33 @@ contains
                 !
                 ! Initialize new zone in the TecIO file for the current domain
                 !
-                zonestring = 'Domain '//data%mesh%domain(idom)%name
-                call init_tecio_volume_zone(zonestring,data%mesh%domain(idom),data%time_manager%times(itime))
-
-
-                xilim   = npts
-                etalim  = npts
-                zetalim = npts
+                zone_string = 'Domain '//data%mesh%domain(idom)%name
+                call init_tecio_volume_zone(zone_string,data%mesh%domain(idom),data%time_manager%times(itime))
 
                 ! For each coordinate, compute it's value pointwise and save
+                ! For each actual element, create a sub-sampling of elements to resolve solution variation
                 do icoord = 1,3
-
-                    ! For each actual element, create a sub-sampling of elements to resolve solution variation
                     do ielem = 1,nelem
-                        
+                        do inode = 1,size(data%mesh%domain(idom)%elems(ielem)%ale_quad_pts,1)
 
-                        ! Write sampling for current element
-                        do ipt_zeta = 1,zetalim
-                            zeta = (((real(ipt_zeta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
-                            do ipt_eta = 1,etalim
-                                eta = (((real(ipt_eta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
-                                do ipt_xi = 1,xilim
-                                    xi = (((real(ipt_xi,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
+                            ! Get coordinate value at point
+                            if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
+                                r     = real(data%mesh%domain(idom)%elems(ielem)%ale_quad_pts(inode,1),rdouble)
+                                theta = real(data%mesh%domain(idom)%elems(ielem)%ale_quad_pts(inode,2),rdouble)
+                                z     = real(data%mesh%domain(idom)%elems(ielem)%ale_quad_pts(inode,3),rdouble)
+                                if (icoord == 1) val = r*cos(theta)
+                                if (icoord == 2) val = r*sin(theta)
+                                if (icoord == 3) val = z
 
-                                    ! Get coordinate value at point
-                                    if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
+                            else
+                                val = real(data%mesh%domain(idom)%elems(ielem)%ale_quad_pts(inode,icoord),rdouble)
+                            end if
 
-                                        r     = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',1,xi,eta,zeta),rdouble)
-                                        theta = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',2,xi,eta,zeta),rdouble)
-                                        z     = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',3,xi,eta,zeta),rdouble)
+                            tecstat = TECDAT142(1,valeq,1)
+                            if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to TECDAT142")
 
-                                        if (icoord == 1) then
-                                            val = r*cos(theta)
-                                        else if (icoord == 2) then
-                                            val = r*sin(theta)
-                                        else if (icoord == 3) then
-                                            val = z
-                                        end if
-
-                                    else
-
-                                        val = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',icoord,xi,eta,zeta),rdouble)
-
-                                    end if
-
-
-
-                                    tecstat = TECDAT142(1,valeq,1)
-                                    if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to TECDAT142")
-
-                                end do ! ipt_xi
-                            end do ! ipt_eta
-                        end do ! ipt_zeta
-
-
-
+                        end do !inode
                     end do !ielem
-
-
                 end do ! coords
 
 
@@ -263,38 +264,68 @@ contains
                 ! For each variable in equation set, compute value pointwise and save
                 eqn_ID = data%mesh%domain(idom)%eqn_ID
                 do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
-
                     ! For each actual element, create a sub-sampling of elements to resolve solution variation
                     do ielem = 1,nelem
+
+                        ! Update location
+                        elem_info%idomain_g  = data%mesh%domain(idom)%elems(ielem)%idomain_g
+                        elem_info%idomain_l  = data%mesh%domain(idom)%elems(ielem)%idomain_l
+                        elem_info%ielement_g = data%mesh%domain(idom)%elems(ielem)%ielement_g
+                        elem_info%ielement_l = data%mesh%domain(idom)%elems(ielem)%ielement_l
+                        call worker%set_element(elem_info)
+
+                        ! Update the element cache
+                        call cache_handler%update(worker,data%eqnset, data%bc_state_group, differentiate=.false., components='element', face=NO_ID)
+
+
+                        ! Retrieve name of current field, retrieve interpolation
+                        var_string = data%eqnset(eqn_ID)%prop%get_primary_field_name(ivar)
+                        var = worker%get_primary_field_element(var_string, 'value')
+
+                        ! Write each node
+                        do inode = 1,size(var,1)
+                            val = real(var(inode)%x_ad_,rdouble)
+                            tecstat = TECDAT142(1,valeq,1)
+                            if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to TECDAT142")
+                        end do !inode
                         
-                        ! Write sampling for current element
-                        do ipt_zeta = 1,zetalim
-                            zeta = (((real(ipt_zeta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
-                            do ipt_eta = 1,etalim
-                                eta = (((real(ipt_eta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
-                                do ipt_xi = 1,xilim
-                                    xi = (((real(ipt_xi,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
-
-
-                                    !
-                                    ! Get solution value at point
-                                    !   
-                                    val = real(data%mesh%domain(idom)%elems(ielem)%solution_point(data%sdata%q_out%dom(idom)%vecs(ielem),ivar,itime,xi,eta,zeta),rdouble)
-                                    tecstat = TECDAT142(1,valeq,1)
-                                    if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to TECDAT142")
-                                        
-
-                                end do
-                            end do
-                        end do
-
-
-                    end do
-
+                    end do ! ielem
                 end do ! ivar
 
 
 
+!                ! For each variable in equation set, compute value pointwise and save
+!                eqn_ID = data%mesh%domain(idom)%eqn_ID
+!                do imodel = 1,data%eqnset(eqn_ID)%prop%io_fields()
+!                    ! For each actual element, create a sub-sampling of elements to resolve solution variation
+!                    do ielem = 1,nelem
+!
+!                        ! Update location
+!                        elem_info%idomain_g  = data%mesh%domain(idom)%elems(ielem)%idomain_g
+!                        elem_info%idomain_l  = data%mesh%domain(idom)%elems(ielem)%idomain_l
+!                        elem_info%ielement_g = data%mesh%domain(idom)%elems(ielem)%ielement_g
+!                        elem_info%ielement_l = data%mesh%domain(idom)%elems(ielem)%ielement_l
+!                        call worker%set_element(elem_info)
+!
+!                        ! Update the element cache
+!                        call cache_handler%update(worker,data%eqnset, data%bc_state_group, differentiate=.false., update_faces=.false.)
+!
+!
+!                        ! Retrieve name of current field, retrieve interpolation
+!                        var_string = data%eqnset(eqn_ID)%prop%get_primary_field_name(ivar)
+!                        var = worker%get_primary_field_element(var_string, 'value')
+!
+!                        ! Write each node
+!                        do inode = 1,size(var,1)
+!                            val = real(var(inode)%x_ad_,rdouble)
+!                            tecstat = TECDAT142(1,valeq,1)
+!                            if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to TECDAT142")
+!                        end do !inode
+!
+!                        
+!
+!                    end do ! ielem
+!                end do ! ivar
 
 
 
@@ -403,10 +434,11 @@ contains
                               npts_element, nsub_per_element,   &
                               nsub_elements, npts, ierr,        &
                               nelem, istart, ielem_start,       &
-                              ivar, idom, isurface, itime, icoord, nfaces, ibc_face, current_face, iface, ipatch
+                              ivar, idom, isurface, itime, icoord, nfaces, ibc_face, current_face, iface, ipatch, inode
 
-        real(rdouble)      :: val(1), r, theta, z
-        real(TEC)          :: valeq(1)
+        type(AD_D), allocatable :: var(:)
+        real(rdouble)           :: val(1), r, theta, z
+        real(TEC)               :: valeq(1)
         equivalence           (valeq(1), val(1))
 
     
@@ -416,7 +448,14 @@ contains
 
         real(rk)                    :: xi,eta,zeta,p, sumsqr, d_normalization, grad1_d, grad2_d, grad3_d
         integer(ik)                 :: eqn_ID
-        character(:),   allocatable :: zonestring
+        character(:),   allocatable :: zone_string, var_string
+
+        type(chidg_worker_t)        :: worker
+        type(chidg_cache_t)         :: cache
+        type(cache_handler_t)       :: cache_handler
+        type(element_info_t)        :: elem_info
+
+
 
 
         call write_line("   TECIO: Writing surfaces...")
@@ -427,11 +466,19 @@ contains
         npts = OUTPUT_RES+1
 
 
+        !
+        ! Initialize Chidg Worker references
+        !
+        call worker%init(data%mesh, data%eqnset(:)%prop, data%sdata, cache)
+
 
         !
         ! Loop time instances
         !
         do itime = 1,data%sdata%q_out%get_ntime()
+
+
+            worker%itime = itime
 
 
             !
@@ -448,15 +495,14 @@ contains
                 !
                 ! Initialize new zone in the TecIO file for the current domain
                 !
-                zonestring = data%mesh%bc_patch_group(isurface)%name
-                call init_tecio_surface_zone(zonestring,data%mesh%bc_patch_group(isurface),data%time_manager%times(itime))
+                zone_string = data%mesh%bc_patch_group(isurface)%name
+                call init_tecio_surface_zone(zone_string,data%mesh%bc_patch_group(isurface),data%time_manager%times(itime))
 
 
 
                 ! For each coordinate, compute it's value pointwise and save
+                ! For each face in each patch, create a sub-sampling of faces to resolve solution variation
                 do icoord = 1,3
-
-                    ! For each face in each patch, create a sub-sampling of faces to resolve solution variation
                     do ipatch = 1,data%mesh%bc_patch_group(isurface)%npatches()
                         do ibc_face = 1,data%mesh%bc_patch_group(isurface)%patch(ipatch)%nfaces()
                             
@@ -468,108 +514,32 @@ contains
                             iface = data%mesh%bc_patch_group(isurface)%patch(ipatch)%iface_%at(ibc_face)
 
 
-                            !
-                            ! Set parameters based on element face
-                            ! 
-                            select case(iface)
-                                case(XI_MIN)
-                                    xi      = -ONE
-                                    xilim   = 1
-                                    etalim  = npts
-                                    zetalim = npts
+                            do inode = 1,size(data%mesh%domain(idom)%faces(ielem,iface)%ale_quad_pts,1)
 
-                                case(XI_MAX)
-                                    xi      = ONE
-                                    xilim   = 1
-                                    etalim  = npts
-                                    zetalim = npts
+                                ! Get coordinate value at point
+                                if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
+                                    r     = real(data%mesh%domain(idom)%faces(ielem,iface)%ale_quad_pts(inode,1),rdouble)
+                                    theta = real(data%mesh%domain(idom)%faces(ielem,iface)%ale_quad_pts(inode,2),rdouble)
+                                    z     = real(data%mesh%domain(idom)%faces(ielem,iface)%ale_quad_pts(inode,3),rdouble)
+                                    if (icoord == 1) val = r*cos(theta)
+                                    if (icoord == 2) val = r*sin(theta)
+                                    if (icoord == 3) val = z
 
-                                case(ETA_MIN)
-                                    eta     = -ONE
-                                    xilim   = npts
-                                    etalim  = 1
-                                    zetalim = npts
-                                    
-
-                                case(ETA_MAX)
-                                    eta     = ONE
-                                    xilim   = npts
-                                    etalim  = 1
-                                    zetalim = npts
-
-                                case(ZETA_MIN)
-                                    zeta    = -ONE
-                                    xilim   = npts
-                                    etalim  = npts
-                                    zetalim = 1
-
-                                case(ZETA_MAX)
-                                    zeta    = ONE
-                                    xilim   = npts
-                                    etalim  = npts
-                                    zetalim = 1
-
-                                case default
-                                    call chidg_signal(FATAL,"write_tecio_surfaces: Invalid face index.")
-
-                            end select
-
-
-                            !
-                            ! Write sub-sampling for current element
-                            !   Note: don't vary xi/eta/zeta if that is the face we are writing
-                            !
-                            do ipt_zeta = 1,zetalim
-                                if ((iface /= ZETA_MIN) .and. (iface /= ZETA_MAX)) then
-                                    zeta = (((real(ipt_zeta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
+                                else
+                                    val = real(data%mesh%domain(idom)%faces(ielem,iface)%ale_quad_pts(inode,icoord),rdouble)
                                 end if
 
-                                do ipt_eta = 1,etalim
-                                    if ((iface /= ETA_MIN) .and. (iface /= ETA_MAX)) then
-                                        eta = (((real(ipt_eta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
-                                    end if
+                                tecstat = TECDAT142(1,valeq,1)
+                                if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to TECDAT142")
 
-                                    do ipt_xi = 1,xilim
-                                        if ((iface /= XI_MIN) .and. (iface /= XI_MAX)) then
-                                            xi = (((real(ipt_xi,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
-                                        end if
-
-                                        ! Get coordinate value at point
-                                        if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
-
-                                            r     = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',1,xi,eta,zeta),rdouble)
-                                            theta = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',2,xi,eta,zeta),rdouble)
-                                            z     = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',3,xi,eta,zeta),rdouble)
-
-                                            if (icoord == 1) then
-                                                val = r*cos(theta)
-                                            else if (icoord == 2) then
-                                                val = r*sin(theta)
-                                            else if (icoord == 3) then
-                                                val = z
-                                            end if
-
-                                        else
-
-                                            val = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',icoord,xi,eta,zeta),rdouble)
-
-                                        end if
+                            end do !inode
 
 
-
-                                        tecstat = TECDAT142(1,valeq,1)
-                                        if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_surfaces: Error in call to TECDAT142")
-
-                                    end do ! ipt_xi
-                                end do ! ipt_eta
-                            end do ! ipt_zeta
 
 
 
                         end do !ibc_face
                     end do !ipatch
-
-
                 end do ! coords
 
 
@@ -592,90 +562,35 @@ contains
                             iface = data%mesh%bc_patch_group(isurface)%patch(ipatch)%iface_%at(ibc_face)
 
 
-                            !
-                            ! Set parameters based on element face
-                            ! 
-                            select case(iface)
-                                case(XI_MIN)
-                                    xi      = -ONE
-                                    xilim   = 1
-                                    etalim  = npts
-                                    zetalim = npts
 
-                                case(XI_MAX)
-                                    xi      = ONE
-                                    xilim   = 1
-                                    etalim  = npts
-                                    zetalim = npts
+                            ! Update location
+                            elem_info%idomain_g  = data%mesh%domain(idom)%elems(ielem)%idomain_g
+                            elem_info%idomain_l  = data%mesh%domain(idom)%elems(ielem)%idomain_l
+                            elem_info%ielement_g = data%mesh%domain(idom)%elems(ielem)%ielement_g
+                            elem_info%ielement_l = data%mesh%domain(idom)%elems(ielem)%ielement_l
+                            call worker%set_element(elem_info)
+                            call worker%set_face(iface)
 
-                                case(ETA_MIN)
-                                    eta     = -ONE
-                                    xilim   = npts
-                                    etalim  = 1
-                                    zetalim = npts
-                                    
-
-                                case(ETA_MAX)
-                                    eta     = ONE
-                                    xilim   = npts
-                                    etalim  = 1
-                                    zetalim = npts
-
-                                case(ZETA_MIN)
-                                    zeta    = -ONE
-                                    xilim   = npts
-                                    etalim  = npts
-                                    zetalim = 1
-
-                                case(ZETA_MAX)
-                                    zeta    = ONE
-                                    xilim   = npts
-                                    etalim  = npts
-                                    zetalim = 1
-
-                                case default
-                                    call chidg_signal(FATAL,"write_tecio_surfaces: Invalid face index.")
-
-                            end select
+                            ! Update the element cache
+                            call cache_handler%update(worker,data%eqnset, data%bc_state_group, differentiate=.false., components='interior faces', face=iface)
 
 
+                            ! Retrieve name of current field, retrieve interpolation
+                            var_string = data%eqnset(eqn_ID)%prop%get_primary_field_name(ivar)
+                            var = worker%get_primary_field_face(var_string, 'value', 'face interior')
+
+                            ! Write each node
+                            do inode = 1,size(var,1)
+                                val = real(var(inode)%x_ad_,rdouble)
+                                tecstat = TECDAT142(1,valeq,1)
+                                if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to TECDAT142")
+                            end do !inode
 
 
-                            !
-                            ! Write sub-sampling for current element
-                            !   Note: don't vary xi/eta/zeta if that is the face we are writing
-                            !
-                            do ipt_zeta = 1,zetalim
-                                if ((iface /= ZETA_MIN) .and. (iface /= ZETA_MAX)) then
-                                    zeta = (((real(ipt_zeta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
-                                end if
-
-                                do ipt_eta = 1,etalim
-                                    if ((iface /= ETA_MIN) .and. (iface /= ETA_MAX)) then
-                                        eta = (((real(ipt_eta,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
-                                    end if
-
-                                    do ipt_xi = 1,xilim
-                                        if ((iface /= XI_MIN) .and. (iface /= XI_MAX)) then
-                                            xi = (((real(ipt_xi,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
-                                        end if
-
-                                        !
-                                        ! Get solution value at point
-                                        !   
-                                        val = real(data%mesh%domain(idom)%elems(ielem)%solution_point(data%sdata%q_out%dom(idom)%vecs(ielem),ivar,itime,xi,eta,zeta),rdouble)
-                                        tecstat = TECDAT142(1,valeq,1)
-                                        if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_surfaces: Error in call to TECDAT142")
-                                            
-
-                                    end do
-                                end do
-                            end do
 
 
                         end do !ibc_face
                     end do !ipatch
-
                 end do ! ivar
 
 

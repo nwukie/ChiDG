@@ -20,11 +20,11 @@ module type_chidg_data
     use mod_string,                     only: string_t
 
     ! Factory methods
-    use mod_equations,                  only: equation_builder_factory
+    use mod_equations,                      only: equation_builder_factory
 
     !Mesh motion
-    use type_prescribed_mesh_motion,               only: prescribed_mesh_motion_t
-    use type_prescribed_mesh_motion_group,               only: prescribed_mesh_motion_group_t
+    use type_prescribed_mesh_motion,        only: prescribed_mesh_motion_t
+    use type_prescribed_mesh_motion_group,  only: prescribed_mesh_motion_group_t
 
 
     implicit none
@@ -730,8 +730,10 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine initialize_solution_domains(self,nterms_s)
+    subroutine initialize_solution_domains(self,interpolation,level,nterms_s)
         class(chidg_data_t),    intent(inout)   :: self
+        character(*),           intent(in)      :: interpolation
+        integer(ik),            intent(in)      :: level
         integer(ik),            intent(in)      :: nterms_s
 
         integer(ik) :: idomain, nfields, eqn_ID
@@ -745,7 +747,7 @@ contains
             nfields = self%eqnset(eqn_ID)%prop%nprimary_fields()
 
             self%mesh%ntime_ = self%time_manager%ntime
-            call self%mesh%domain(idomain)%init_sol(nfields,nterms_s,self%time_manager%ntime)
+            call self%mesh%domain(idomain)%init_sol(interpolation,level,nterms_s,nfields,self%time_manager%ntime)
         end do
 
 

@@ -18,7 +18,7 @@ subroutine test_find_gq_donor_cylinder_abutting()
 
     type(chidg_t)                   :: chidgA
     class(function_t),  allocatable :: constant, gaussian
-    real(rk),           allocatable :: density_residual_D4_E31(:), density_residual_D4_E36(:)
+    real(rk),           allocatable :: density_residual_D4_E31(:), density_residual_D4_E36(:), nodes(:,:)
     integer(ik)                     :: idom, ielem, ChiID, idom_d, ielem_d, iface, ndonors, &
                                        gq_index, igq, ngq
     real(rk)                        :: chi_xi, chi_eta, chi_zeta, ref_xi, ref_eta, ref_zeta
@@ -86,9 +86,10 @@ subroutine test_find_gq_donor_cylinder_abutting()
         chi_eta  = chimera_node%c2_
         chi_zeta = chimera_node%c3_
 
-        ref_xi   = chidgA%data%mesh%domain(idom_d)%faces(ielem_d,XI_MAX)%gq%face%nodes(gq_index,XI_MAX)%c1_
-        ref_eta  = chidgA%data%mesh%domain(idom_d)%faces(ielem_d,XI_MAX)%gq%face%nodes(gq_index,XI_MAX)%c2_
-        ref_zeta = chidgA%data%mesh%domain(idom_d)%faces(ielem_d,XI_MAX)%gq%face%nodes(gq_index,XI_MAX)%c3_
+        nodes = chidgA%data%mesh%domain(idom_d)%faces(ielem_d,XI_MAX)%basis_s%nodes(XI_MAX)
+        ref_xi   = nodes(igq,1)
+        ref_eta  = nodes(igq,2)
+        ref_zeta = nodes(igq,3)
 
 
 

@@ -28,22 +28,22 @@
 !-------------------------------------------------------------------------------------
 module type_chidg_worker
 #include <messenger.h>
-    use mod_kinds,          only: ik, rk
-    use mod_constants,      only: NFACES, ME, NEIGHBOR, BC, ZERO, CHIMERA, ONE, THIRD, TWO
+    use mod_kinds,              only: ik, rk
+    use mod_constants,          only: NFACES, ME, NEIGHBOR, BC, ZERO, CHIMERA, ONE, THIRD, TWO
 
-    use mod_interpolate,    only: interpolate_element_autodiff
-    use mod_integrate,      only: integrate_boundary_scalar_flux, &
-                                  integrate_volume_vector_flux,   &
-                                  integrate_volume_scalar_source
+    use mod_interpolate,        only: interpolate_element_autodiff
+    use mod_integrate,          only: integrate_boundary_scalar_flux, &
+                                      integrate_volume_vector_flux,   &
+                                      integrate_volume_scalar_source
 
-    use type_point,         only: point_t
-    use type_mesh,          only: mesh_t
-    use type_solverdata,    only: solverdata_t
-    use type_element_info,  only: element_info_t
-    use type_face_info,     only: face_info_t
-    use type_function_info, only: function_info_t
-    use type_chidg_cache,   only: chidg_cache_t
-    use type_properties,    only: properties_t
+    use type_point,             only: point_t
+    use type_mesh,              only: mesh_t
+    use type_solverdata,        only: solverdata_t
+    use type_element_info,      only: element_info_t
+    use type_face_info,         only: face_info_t
+    use type_function_info,     only: function_info_t
+    use type_chidg_cache,       only: chidg_cache_t
+    use type_properties,        only: properties_t
     use DNAD_D
     implicit none
 
@@ -1620,16 +1620,10 @@ contains
 
         real(rk),   allocatable,    dimension(:)    :: weights
 
-
-
         if (source == 'face') then
-
-            weights = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%gq%face%weights(:,self%iface)
-
+            weights = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%basis_s%weights(self%iface)
         else if (source == 'element') then
-
-            weights = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%gq%vol%weights
-
+            weights = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%basis_s%weights()
         else
             call chidg_signal(FATAL,"chidg_worker%quadrature_weights(source): Invalid value for 'source'. Options are 'face', 'element'")
         end if

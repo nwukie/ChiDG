@@ -4,6 +4,9 @@ The ChiDG grid is organized hierarchically:
         :: domain_t
             ::: element_t
             ::: face_t
+        :: domain_t
+            ::: element_t
+            ::: face_t
 
 
 

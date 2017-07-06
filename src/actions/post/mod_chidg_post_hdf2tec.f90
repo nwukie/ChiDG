@@ -16,6 +16,7 @@
 module mod_chidg_post_hdf2tec
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
+    use mod_constants,          only: OUTPUT_RES
     use type_chidg,             only: chidg_t
     use type_dict,              only: dict_t
     use mod_tecio,              only: write_tecio
@@ -49,8 +50,7 @@ contains
         type(chidg_t)                       :: chidg
         type(file_properties_t)             :: file_props
         character(:),           allocatable :: eqnset
-        character(:),           allocatable :: time_string, grid_file_prefix, solution_file_prefix, step_str, &
-                                               plt_filename
+        character(:),           allocatable :: time_string, solution_file_prefix, plt_filename
         integer(ik)                         :: nterms_s, solution_order, istep, itimestep
 
 
@@ -67,16 +67,10 @@ contains
         !
         ! Get nterms_s and eqnset.
         !
-        file_props = get_properties_hdf(solution_file)
-
+        file_props  = get_properties_hdf(solution_file)
         nterms_s    = file_props%nterms_s(1)
         eqnset      = file_props%eqnset(1)
         time_string = file_props%time_integrator
-
-
-
-
-
 
         solution_order = 0
         do while (solution_order*solution_order*solution_order < nterms_s)
@@ -84,48 +78,40 @@ contains
         end do
 
 
+
         !
         ! Initialize solution data storage
         !
         call chidg%set('Solution Order', integer_input=solution_order)
         call chidg%set('Time Integrator', algorithm=trim(time_string))
-        call chidg%time_integrator%initialize_state(chidg%data)
+
 
 
         !
         ! Read grid/solution modes and time integrator options from HDF5
         !
-        call chidg%read_mesh(grid_file)
+        call chidg%read_mesh(grid_file, interpolation='Uniform', level=OUTPUT_RES)
         call chidg%read_fields(solution_file)
-        call chidg%time_integrator%read_time_options(chidg%data,solution_file)
 
 
-      
 
         !
         ! Get post processing data (q_out)
         !
+        call chidg%time_integrator%initialize_state(chidg%data)
+        call chidg%time_integrator%read_time_options(chidg%data,solution_file)
         call chidg%time_integrator%process_data_for_output(chidg%data)
 
-        
-        grid_file_prefix     = get_file_prefix(grid_file,'.h5')
-        solution_file_prefix = get_file_prefix(solution_file,'.h5')
-        step_str             = solution_file_prefix(len(grid_file_prefix)+2:)
 
-
-
-!        if (trim(step_str) == '') then
-!            plt_filename = '0.plt'
-!        else
-!            plt_filename = step_str//'.plt'
-!        end if
-        plt_filename = solution_file_prefix//'.plt'
 
         !
         ! Write solution
         !
+        solution_file_prefix = get_file_prefix(solution_file,'.h5')
+        plt_filename = solution_file_prefix//'.plt'
         call write_tecio(chidg%data,plt_filename, write_domains=.true., write_surfaces=.true.)
         
+
 
         !
         ! Close ChiDG

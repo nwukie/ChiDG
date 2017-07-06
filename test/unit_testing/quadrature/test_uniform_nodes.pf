@@ -1,0 +1,114 @@
+!> Confirm a uniform 2-node set produces the Trapezoid Rule
+!!
+!!  @author Nathan A. Wukie (AFRL)
+!!  @date   7/5/2017
+!!
+!-----------------------------------------------------------------------
+@Test
+subroutine test_uniform_weights_1d_nnodes2()
+    use pfunit_mod
+    use mod_kinds,              only: rk
+    use mod_constants,          only: ONE
+    use mod_nodes_uniform,      only: uniform_weights_1d
+    implicit none
+
+    real(rk),   allocatable :: weights(:), ref_weights(:)
+
+
+
+    ref_weights = [ONE, ONE]
+    weights     = uniform_weights_1d(2)
+
+    @assertEqual(ref_weights, weights, 1.e-8_rk)
+
+end subroutine test_uniform_weights_1d_nnodes2
+!***********************************************************************
+
+
+
+!> Confirm a uniform 4-node set produces the Composite Trapezoid Rule
+!!
+!!  @author Nathan A. Wukie (AFRL)
+!!  @date   7/5/2017
+!!
+!-----------------------------------------------------------------------
+@Test
+subroutine test_uniform_weights_1d_nnodes4()
+    use pfunit_mod
+    use mod_kinds,              only: rk
+    use mod_constants,          only: ONE, TWO
+    use mod_nodes_uniform,      only: uniform_weights_1d
+    implicit none
+
+    real(rk),   allocatable :: weights(:), ref_weights(:)
+
+
+
+    ref_weights = [ONE, TWO, TWO, ONE]
+    weights     = uniform_weights_1d(4)
+
+    @assertEqual(ref_weights, weights, 1.e-8_rk)
+
+end subroutine test_uniform_weights_1d_nnodes4
+!***********************************************************************
+
+
+
+
+!>  Confirm a uniform 3-node set produces Simpson's Rule.
+!!
+!!  @author Nathan A. Wukie (AFRL)
+!!  @date   7/5/2017
+!!
+!-----------------------------------------------------------------------
+@Test
+subroutine test_uniform_weights_1d_nnodes3()
+    use pfunit_mod
+    use mod_kinds,              only: rk
+    use mod_constants,          only: TWO, THREE, EIGHT
+    use mod_nodes_uniform,      only: uniform_weights_1d
+    implicit none
+
+    real(rk),   allocatable :: weights(:), ref_weights(:)
+
+
+    ref_weights = [TWO/THREE, EIGHT/THREE, TWO/THREE]
+    weights     = uniform_weights_1d(3)
+
+    @assertEqual(ref_weights, weights, 1.e-8_rk)
+
+end subroutine test_uniform_weights_1d_nnodes3
+!***********************************************************************
+
+
+
+
+
+
+
+!>  Confirm a uniform 5-node set produces Composite Simpson's Rule.
+!!
+!!  @author Nathan A. Wukie (AFRL)
+!!  @date   7/5/2017
+!!
+!-----------------------------------------------------------------------
+@Test
+subroutine test_uniform_weights_1d_nnodes5()
+    use pfunit_mod
+    use mod_kinds,              only: rk
+    use mod_constants,          only: TWO, THREE, FOUR, EIGHT
+    use mod_nodes_uniform,      only: uniform_weights_1d
+    implicit none
+
+    real(rk),   allocatable :: weights(:), ref_weights(:)
+
+
+    ref_weights = [TWO/THREE, EIGHT/THREE, FOUR/THREE, EIGHT/THREE, TWO/THREE]
+    weights     = uniform_weights_1d(5)
+
+    @assertEqual(ref_weights, weights, 1.e-8_rk)
+
+end subroutine test_uniform_weights_1d_nnodes5
+!***********************************************************************
+
+

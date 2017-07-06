@@ -21,6 +21,7 @@ module mod_chimera
                                       XI_DIR, ETA_DIR, ZETA_DIR, &
                                       ONE, ZERO, TWO, TWO_DIM, THREE_DIM, &
                                       INVALID_POINT, VALID_POINT, NO_PROC
+    use mod_reference_elements, only: ref_elems
 
     use type_point
     use type_mesh,              only: mesh_t
@@ -31,7 +32,7 @@ module mod_chimera
     use type_pvector,           only: pvector_t
     use type_mvector,           only: mvector_t
 
-    use mod_polynomial,         only: polynomialVal, dpolynomialVal
+    use mod_polynomial,         only: polynomial_val, dpolynomial_val
     use mod_periodic,           only: get_periodic_offset
     use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM
     use mpi_f08,                only: MPI_BCast, MPI_Send, MPI_Recv, MPI_INTEGER4, MPI_REAL8, &
@@ -285,7 +286,7 @@ contains
                         !
                         ! Loop through quadrature nodes on Chimera face and find donors
                         !
-                        do igq = 1,mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface)%gq%face%nnodes
+                        do igq = 1,mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface)%basis_s%nnodes_if()
 
                             !
                             ! Get node coordinates
@@ -296,12 +297,8 @@ contains
                             !
                             ! Get offset coordinates from face for potential periodic offset.
                             !
-                            !call get_periodic_offset(mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface), gq_node, offset_1, offset_2, offset_3)
                             offset = get_periodic_offset(mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface))
 
-                            !call gq_node%add_x(offset_1)
-                            !call gq_node%add_y(offset_2)
-                            !call gq_node%add_z(offset_3)
                             gq_node = gq_node + offset
 
 
@@ -309,10 +306,6 @@ contains
                             call MPI_BCast(searching,1,MPI_LOGICAL, iproc, ChiDG_COMM, ierr)
 
                             ! Send gq node physical coordinates
-                            !gq_coords(1) = gq_node%c1_
-                            !gq_coords(2) = gq_node%c2_
-                            !gq_coords(3) = gq_node%c3_
-                            !call MPI_BCast(gq_coords,3,MPI_REAL8, iproc, ChiDG_COMM, ierr)
                             call MPI_BCast(gq_node,3,MPI_REAL8, iproc, ChiDG_COMM, ierr)
 
                             ! Send receiver indices
@@ -902,15 +895,15 @@ contains
                             ! Compute value interpolator
                             !
                             spacedim = 3
-                            interpolator(ipt,iterm) = polynomialVal(spacedim,donor_nterms_s,iterm,node)
+                            interpolator(ipt,iterm) = polynomial_val(spacedim,donor_nterms_s,iterm,[node%c1_,node%c2_,node%c3_])
 
                             
                             !
                             ! Compute gradient interpolators, grad1, grad2, grad3
                             !
-                            ddxi   = DPolynomialVal(spacedim,donor_nterms_s,iterm,node,XI_DIR  )
-                            ddeta  = DPolynomialVal(spacedim,donor_nterms_s,iterm,node,ETA_DIR )
-                            ddzeta = DPolynomialVal(spacedim,donor_nterms_s,iterm,node,ZETA_DIR)
+                            ddxi   = dpolynomial_val(spacedim,donor_nterms_s,iterm,[node%c1_,node%c2_,node%c3_],XI_DIR  )
+                            ddeta  = dpolynomial_val(spacedim,donor_nterms_s,iterm,[node%c1_,node%c2_,node%c3_],ETA_DIR )
+                            ddzeta = dpolynomial_val(spacedim,donor_nterms_s,iterm,[node%c1_,node%c2_,node%c3_],ZETA_DIR)
 
                             ! Get metrics for element mapping
                             metric = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_metrics(idonor)%at(ipt)

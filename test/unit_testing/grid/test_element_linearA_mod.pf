@@ -106,7 +106,7 @@ contains
         nterms_s = 8
         ntime    = 1
         call this%elem%init_geom(nodes,connectivity,idomain,ielem,'Cartesian')
-        call this%elem%init_sol(neqns,nterms_s,ntime)
+        call this%elem%init_sol('Quadrature',1,nterms_s,neqns,ntime)
         
         
         !
@@ -119,6 +119,7 @@ contains
         call this%faces(ZETA_MIN)%init_geom(ZETA_MIN,this%elem)
         call this%faces(ZETA_MAX)%init_geom(ZETA_MAX,this%elem)
 
+        
         
         !
         ! Initialize face neighbors
@@ -197,7 +198,7 @@ contains
     subroutine testElement_metric(self)
         class(test_element_linearA),    intent(inout)   :: self
 
-        real(rk)    :: test_metric(3,3,self%elem%gq%vol%nnodes)
+        real(rk)    :: test_metric(3,3,self%elem%basis_s%nnodes_ie())
         
         test_metric(1,1,:) = 0.25_rk / 0.625
         test_metric(2,1,:) = 0._rk   / 0.625
@@ -224,7 +225,7 @@ contains
     @Test
     subroutine testElement_jinv(self)
         class(test_element_linearA),    intent(inout)   :: self
-        real(rk)    :: test_jinv(self%elem%gq%vol%nnodes)
+        real(rk)    :: test_jinv(self%elem%basis_s%nnodes_ie())
         
         test_jinv = 0.625_rk
         @assertEqual(test_jinv,self%elem%jinv)
@@ -243,7 +244,7 @@ contains
     subroutine testElement_mass(self)
         class(test_element_linearA),    intent(inout)   :: self
 
-        real(rk)    :: test_mass(self%elem%nterms_s,self%elem%nterms_s)
+        real(rk)    :: test_mass(8,8)
         real(rk)    :: tol
         
         tol = 1.e-14_rk
@@ -261,6 +262,7 @@ contains
         test_mass = 0.625_rk * test_mass
         
         @assertEqual(test_mass,self%elem%mass,tol)
+
     end subroutine testElement_mass
     !*****************************************************************************************
 
@@ -294,7 +296,7 @@ contains
     @Test
     subroutine testElement_quadpts(self)
         class(test_element_linearA),    intent(inout)   :: self
-        real(rk), dimension(self%elem%gq%vol%nnodes)    :: test_x, test_y, test_z
+        real(rk), dimension(:), allocatable    :: test_x, test_y, test_z
         real(rk)                                        :: x1,x2,y1,y2,z1,z2
 
         x1 = 2.5_rk*(ONE - sqrt(ONE/THREE))
@@ -327,16 +329,21 @@ contains
     @Test
     subroutine testElement_grad1(self)
         class(test_element_linearA),    intent(inout)   :: self
-        real(rk), dimension(self%elem%gq%vol%nnodes, 8) :: test
-        real(rk), dimension(self%elem%gq%vol%nnodes)    :: xi, eta, zeta
+        real(rk), dimension(self%elem%basis_s%nnodes_ie(), 8) :: test
+        real(rk), dimension(self%elem%basis_s%nnodes_ie())    :: xi, eta, zeta
         
         real(rk) :: tol
+        real(rk),   allocatable :: nodes(:,:)
         
         tol = 1.e-14_rk
         
-        xi   = self%elem%gq%vol%nodes(:)%c1_
-        eta  = self%elem%gq%vol%nodes(:)%c2_
-        zeta = self%elem%gq%vol%nodes(:)%c3_
+        !xi   = self%elem%gq%vol%nodes(:)%c1_
+        !eta  = self%elem%gq%vol%nodes(:)%c2_
+        !zeta = self%elem%gq%vol%nodes(:)%c3_
+        nodes = self%elem%basis_s%nodes()
+        xi   = nodes(:,1)
+        eta  = nodes(:,2)
+        zeta = nodes(:,3)
         
         
         
@@ -365,16 +372,21 @@ contains
     @Test
     subroutine testElement_grad2(self)
        class(test_element_linearA),    intent(inout)   :: self
-       real(rk), dimension(self%elem%gq%vol%nnodes, 8) :: test
-       real(rk), dimension(self%elem%gq%vol%nnodes)    :: xi, eta, zeta
+       real(rk), dimension(self%elem%basis_s%nnodes_ie(), 8) :: test
+       real(rk), dimension(self%elem%basis_s%nnodes_ie())    :: xi, eta, zeta
        
-       real(rk) :: tol
+       real(rk)                 :: tol
+       real(rk),    allocatable :: nodes(:,:)
        
        tol = 1.e-14_rk
        
-       xi   = self%elem%gq%vol%nodes(:)%c1_
-       eta  = self%elem%gq%vol%nodes(:)%c2_
-       zeta = self%elem%gq%vol%nodes(:)%c3_
+       nodes = self%elem%basis_s%nodes()
+       xi   = nodes(:,1)
+       eta  = nodes(:,2)
+       zeta = nodes(:,3)
+       !xi   = self%elem%gq%vol%nodes(:)%c1_
+       !eta  = self%elem%gq%vol%nodes(:)%c2_
+       !zeta = self%elem%gq%vol%nodes(:)%c3_
        
        
        test(:,1) = ZERO                ! Mode 1
@@ -402,16 +414,21 @@ contains
     @Test
     subroutine testElement_grad3(self)
        class(test_element_linearA),    intent(inout)   :: self
-       real(rk), dimension(self%elem%gq%vol%nnodes, 8) :: test
-       real(rk), dimension(self%elem%gq%vol%nnodes)    :: xi, eta, zeta
+       real(rk), dimension(self%elem%basis_s%nnodes_ie(), 8) :: test
+       real(rk), dimension(self%elem%basis_s%nnodes_ie())    :: xi, eta, zeta
        
-       real(rk) :: tol
+       real(rk)                 :: tol
+       real(rk),    allocatable :: nodes(:,:)
        
        tol = 1.e-14_rk
        
-       xi   = self%elem%gq%vol%nodes(:)%c1_
-       eta  = self%elem%gq%vol%nodes(:)%c2_
-       zeta = self%elem%gq%vol%nodes(:)%c3_
+       nodes = self%elem%basis_s%nodes()
+       xi    = nodes(:,1)
+       eta   = nodes(:,2)
+       zeta  = nodes(:,3)
+       !xi   = self%elem%gq%vol%nodes(:)%c1_
+       !eta  = self%elem%gq%vol%nodes(:)%c2_
+       !zeta = self%elem%gq%vol%nodes(:)%c3_
        
        
        
@@ -452,7 +469,7 @@ contains
     @Test
     subroutine testElement_face_metrics(self)
         class(test_element_linearA),    intent(inout)   :: self
-        real(rk)    :: test_metric(3,3,self%faces(XI_MAX)%gq%face%nnodes)
+        real(rk)    :: test_metric(3,3,self%faces(XI_MAX)%basis_s%nnodes_if())
         real(rk)    :: tol
         
         tol = 1.e-14_rk
@@ -492,7 +509,7 @@ contains
     subroutine testelement_face_normals(self)
         class(test_element_lineara),    intent(inout)   :: self
 
-        real(rk), dimension(self%faces(xi_max)%gq%face%nnodes) :: &
+        real(rk), dimension(self%faces(XI_MAX)%basis_s%nnodes_if()) :: &
                 test_norm_x, test_norm_y, test_norm_z
 
         real(rk)    :: tol
@@ -572,7 +589,7 @@ contains
     @Test
     subroutine testElement_face_unit_normals(self)
         class(test_element_linearA),    intent(inout)   :: self
-        real(rk), dimension(self%faces(XI_MAX)%gq%face%nnodes) :: test_norm_x, test_norm_y, test_norm_z
+        real(rk), dimension(self%faces(XI_MAX)%basis_s%nnodes_if()) :: test_norm_x, test_norm_y, test_norm_z
         real(rk)    :: tol
         
         tol = 1.e-15_rk

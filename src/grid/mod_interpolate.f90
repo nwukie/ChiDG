@@ -29,21 +29,20 @@
 !---------------------------------------------------------------------------------------------
 module mod_interpolate
 #include <messenger.h>
-    use mod_kinds,          only: rk,ik
-    use mod_constants,      only: CHIMERA, INTERIOR, BOUNDARY, &
-                                  ME, NEIGHBOR, ONE, ZERO
+    use mod_kinds,              only: rk,ik
+    use mod_constants,          only: CHIMERA, INTERIOR, BOUNDARY, &
+                                      ME, NEIGHBOR, ONE, ZERO
                                   
-    use mod_polynomial,     only: polynomialVal
-    use mod_chidg_mpi,      only: IRANK
-    use mod_DNAD_tools,     only: compute_neighbor_face
+    use mod_chidg_mpi,          only: IRANK
+    use mod_DNAD_tools,         only: compute_neighbor_face
     use DNAD_D
 
-    use type_mesh,          only: mesh_t
-    use type_element_info,  only: element_info_t
-    use type_face_info,     only: face_info_t
-    use type_function_info, only: function_info_t
-    use type_recv,          only: recv_t
-    use type_chidg_vector,  only: chidg_vector_t
+    use type_mesh,              only: mesh_t
+    use type_element_info,      only: element_info_t
+    use type_face_info,         only: face_info_t
+    use type_function_info,     only: function_info_t
+    use type_recv,              only: recv_t
+    use type_chidg_vector,      only: chidg_vector_t
     implicit none
 
 
@@ -93,8 +92,6 @@ contains
 
         character(:),   allocatable :: user_msg
 
-        !type(AD_D)              :: var_gq(mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%gq%vol%nnodes)
-        !type(AD_D)              :: qdiff(mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%nterms_s)
         type(AD_D), allocatable :: qdiff(:), var_gq(:)
         real(rk),   allocatable :: qtmp(:)
 
@@ -112,7 +109,7 @@ contains
         !
         ! Determine nterms from interpolator matrix
         !
-        nterms = size(mesh%domain(idom)%elems(ielem)%gq%vol%val,2)
+        nterms = mesh%domain(idom)%elems(ielem)%basis_s%nterms_i()
 
         ! Allocate qdiff buffer and initialize derivative allocations + zero
         allocate(qdiff(nterms), stat=ierr)
@@ -167,7 +164,7 @@ contains
         !
         select case (interpolation_type)
             case('value')
-                var_gq = matmul(mesh%domain(idom)%elems(ielem)%gq%vol%val,qdiff)
+                var_gq = matmul(mesh%domain(idom)%elems(ielem)%basis_s%interpolator('Value'),qdiff)
 
             case('grad1')
                 var_gq = matmul(mesh%domain(idom)%elems(ielem)%grad1,qdiff)
@@ -244,13 +241,12 @@ contains
         type(face_info_t)   :: iface_info
         type(recv_t)        :: recv_info
 
-        type(AD_D)                      :: var_gq(mesh%domain(face_info%idomain_l)%elems(face_info%ielement_l)%gq%face%nnodes)
-        type(AD_D),         allocatable :: qdiff(:)
+        type(AD_D),         allocatable :: qdiff(:), var_gq(:)
         real(rk),           allocatable :: qtmp(:)
         real(rk),           allocatable :: interpolator(:,:)
         character(:),       allocatable :: interpolation_style
 
-        integer(ik) :: nderiv, set_deriv, iterm, igq, nterms_s, ierr
+        integer(ik) :: nderiv, set_deriv, iterm, igq, nterms_s, ierr, nnodes
         logical     :: differentiate_me, conforming_interpolation, chimera_interpolation, parallel_interpolation
 
 
@@ -259,6 +255,14 @@ contains
         logical,    allocatable     :: mask(:)          ! node mask for distributing Chimera quadrature points
         type(AD_D), allocatable     :: var_gq_chimera(:)
 
+        
+        !
+        ! Allocate output array
+        !
+        nnodes   = mesh%domain(face_info%idomain_l)%elems(face_info%ielement_l)%basis_s%nnodes_if()
+        nterms_s = mesh%domain(face_info%idomain_l)%elems(face_info%ielement_l)%basis_s%nterms_i()
+        allocate(var_gq(nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
 
         !
         ! Get number of donors for the interpolation
@@ -280,6 +284,8 @@ contains
         nderiv = get_interpolation_nderiv(mesh,fcn_info)
 
 
+
+
         !
         ! For each donor element to the interpolation. 
         ! (ndonors could be > 1 for Chimera interpolations)
@@ -299,14 +305,6 @@ contains
 
         
 
-            !
-            ! Allocate AD array to store a copy of the solution which starts the differentiation
-            !
-            !if (parallel_interpolation) then
-            !    nterms_s = vector%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%nterms()
-            !else
-            !    nterms_s = mesh%domain(iface_info%idomain_l)%elems(iface_info%ielement_l)%nterms_s
-            !end if
 
             !
             ! Deduce nterms from interpolator matrix
@@ -426,9 +424,9 @@ contains
         integer(ik),            intent(in)      :: ielement_l
         integer(ik),            intent(in)      :: ifield
         integer(ik),            intent(in)      :: itime
-        character(len=*),       intent(in)      :: interpolation_type
+        character(*),           intent(in)      :: interpolation_type
 
-        real(rk),   dimension(mesh%domain(idomain_l)%elems(ielement_l)%gq%vol%nnodes) :: var_gq
+        real(rk),   allocatable :: var_gq(:)
 
 
         !
@@ -438,7 +436,7 @@ contains
         !
         select case (interpolation_type)
             case('value')
-                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%gq%vol%val, q%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime))
+                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator('Value'), q%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime))
             case('grad1')
                 var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad1,      q%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime))
             case('grad2')
@@ -475,14 +473,14 @@ contains
         integer(ik),            intent(in)      :: idomain_l, ielement_l, iface, ifield
         integer(ik),            intent(in)      :: itime
 
-        real(rk),   dimension(mesh%domain(idomain_l)%elems(ielement_l)%gq%face%nnodes) :: var_gq
+        real(rk),   allocatable :: var_gq(:)
 
         !
         ! Use quadrature instance to compute variable at quadrature nodes.
         ! This takes the form of a matrix multiplication of the face quadrature matrix
         ! with the array of modes for the given variable
         !
-        var_gq = matmul(mesh%domain(idomain_l)%faces(ielement_l,iface)%gq%face%val(:,:,iface), q%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime))
+        var_gq = matmul(mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%interpolator('Value',iface), q%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime))
 
 
     end function interpolate_face_standard
@@ -642,7 +640,7 @@ contains
 !            if (ierr /= 0) call AllocationError
 !
 !            do iterm = 1,nterms
-!                interpolator(1,iterm) = polynomialVal(3,nterms,iterm,node)
+!                interpolator(1,iterm) = polynomial_val(3,nterms,iterm,node)
 !            end do ! imode
 !
 !
@@ -861,7 +859,8 @@ contains
         if ( interpolation_source == ME ) then
             select case(interpolation_type)
                 case('value')
-                    interpolator = mesh%domain(idom)%faces(ielem,iface)%gq%face%val(:,:,iface)
+                    !interpolator = mesh%domain(idom)%faces(ielem,iface)%gq%face%val(:,:,iface)
+                    interpolator = mesh%domain(idom)%faces(ielem,iface)%basis_s%interpolator('Value',iface)
                 case('grad1')
                     interpolator = mesh%domain(idom)%faces(ielem,iface)%grad1
                 case('grad2')
@@ -890,7 +889,8 @@ contains
                 if (parallel_interpolation) then
                     select case(interpolation_type)
                         case('value')
-                            interpolator = mesh%domain(idom)%faces(ielem,iface)%gq%face%val(:,:,donor_face%iface)    ! THIS PROBABLY NEEDS IMPROVED
+                            !interpolator = mesh%domain(idom)%faces(ielem,iface)%gq%face%val(:,:,donor_face%iface)    ! THIS PROBABLY NEEDS IMPROVED
+                            interpolator = mesh%domain(idom)%faces(ielem,iface)%basis_s%interpolator('Value',donor_face%iface)    ! THIS PROBABLY NEEDS IMPROVED
                         case('grad1')
                             interpolator = mesh%domain(idom)%faces(ielem,iface)%neighbor_grad1
                         case('grad2')
@@ -903,7 +903,8 @@ contains
                 else
                     select case(interpolation_type)
                         case('value')
-                            interpolator = mesh%domain(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%gq%face%val(:,:,donor_face%iface)
+                            !interpolator = mesh%domain(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%gq%face%val(:,:,donor_face%iface)
+                            interpolator = mesh%domain(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%basis_s%interpolator('Value',donor_face%iface)
                         case('grad1')
                             interpolator = mesh%domain(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%grad1
                         case('grad2')
@@ -991,7 +992,7 @@ contains
         if ( interpolation_source == NEIGHBOR ) then
 
 
-            nnodes = mesh%domain(idom)%faces(ielem,iface)%gq%face%nnodes
+            nnodes = mesh%domain(idom)%faces(ielem,iface)%basis_s%nnodes_if()
             allocate(mask(nnodes), stat=ierr) 
             mask = .false.
             if (ierr /= 0) call AllocationError

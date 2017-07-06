@@ -31,7 +31,8 @@ contains
         real(rk), allocatable, dimension(:) :: &
             rho, rhou, rhov, rhow, rhoE, p, entropy
 
-        real(rk), dimension(data%mesh%domain(1)%elems(1)%gq%vol%nnodes)    :: entropy_rise
+        !real(rk), dimension(data%mesh%domain(1)%elems(1)%gq%vol%nnodes)    :: entropy_rise
+        real(rk), allocatable :: entropy_rise(:)
 
         integer(ik) :: irho, irhou, irhov, irhow, irhoE
         integer(ik) :: ielem, iface, nelem, iseed, idom, ierr
@@ -117,13 +118,13 @@ contains
                     !
                     ! Integrate entropy error
                     !
-                    error = sum(entropy_rise * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%gq%vol%weights)
+                    error = sum(entropy_rise * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%basis_s%weights())
 
 
                     !
                     ! Compute element volume
                     !
-                    vol = abs(sum(mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%gq%vol%weights))
+                    vol = abs(sum(mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%basis_s%weights()))
 
 
                     error_sum = error_sum + error

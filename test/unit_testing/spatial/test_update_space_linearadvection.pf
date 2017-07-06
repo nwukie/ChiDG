@@ -127,16 +127,16 @@ subroutine test_update_space_linearadvection()
     ! Compare interpolation matrices between standard interior and the chimera faces
     !
     ChiID = chidgB%data%mesh%domain(2)%faces(1,XI_MIN)%ChiID
-    @assertEqual(chidgA%data%mesh%domain(1)%faces(2,XI_MAX)%gq%face%val(:,:,XI_MAX), chidgB%data%mesh%domain(2)%chimera%recv%data(ChiID)%donor_interpolator%at(1), tol)
+    @assertEqual(chidgA%data%mesh%domain(1)%faces(2,XI_MAX)%basis_s%interpolator('Value',XI_MAX), chidgB%data%mesh%domain(2)%chimera%recv%data(ChiID)%donor_interpolator%at(1), tol)
 
     ChiID = chidgB%data%mesh%domain(2)%faces(3,XI_MIN)%ChiID
-    @assertEqual(chidgA%data%mesh%domain(1)%faces(6,XI_MAX)%gq%face%val(:,:,XI_MAX), chidgB%data%mesh%domain(2)%chimera%recv%data(ChiID)%donor_interpolator%at(1), tol)
+    @assertEqual(chidgA%data%mesh%domain(1)%faces(6,XI_MAX)%basis_s%interpolator('Value',XI_MAX), chidgB%data%mesh%domain(2)%chimera%recv%data(ChiID)%donor_interpolator%at(1), tol)
 
     ChiID = chidgB%data%mesh%domain(1)%faces(2,XI_MAX)%ChiID
-    @assertEqual(chidgA%data%mesh%domain(1)%faces(3,XI_MIN)%gq%face%val(:,:,XI_MIN), chidgB%data%mesh%domain(1)%chimera%recv%data(ChiID)%donor_interpolator%at(1), tol)
+    @assertEqual(chidgA%data%mesh%domain(1)%faces(3,XI_MIN)%basis_s%interpolator('Value',XI_MIN), chidgB%data%mesh%domain(1)%chimera%recv%data(ChiID)%donor_interpolator%at(1), tol)
 
     ChiID = chidgB%data%mesh%domain(1)%faces(4,XI_MAX)%ChiID
-    @assertEqual(chidgA%data%mesh%domain(1)%faces(7,XI_MIN)%gq%face%val(:,:,XI_MIN), chidgB%data%mesh%domain(1)%chimera%recv%data(ChiID)%donor_interpolator%at(1), tol)
+    @assertEqual(chidgA%data%mesh%domain(1)%faces(7,XI_MIN)%basis_s%interpolator('Value',XI_MIN), chidgB%data%mesh%domain(1)%chimera%recv%data(ChiID)%donor_interpolator%at(1), tol)
 
 
     !

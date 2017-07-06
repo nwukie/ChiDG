@@ -8,7 +8,7 @@ module test__project_function_xyz__mod
     use type_domain_connectivity,   only: domain_connectivity_t
     use mod_function,               only: create_function
     use mod_grid,                   only: compute_element_mappings
-    use mod_polynomial,             only: PolynomialVal
+    use mod_polynomial,             only: polynomial_val
     
     implicit none
 
@@ -180,7 +180,7 @@ contains
             !
             do iterm = 1,size(fmodes)
                 do ipt = 1,npt
-                    pvals(ipt,iterm) = PolynomialVal(3,size(fmodes),iterm,rpts(ipt))
+                    pvals(ipt,iterm) = polynomial_val(3,size(fmodes),iterm,[rpts(ipt)%c1_,rpts(ipt)%c2_,rpts(ipt)%c3_])
                 end do
             end do
     
@@ -194,7 +194,7 @@ contains
             !
             ! Compute integral of function
             !
-            fintegral = sum(matmul(elem%gq%vol%val, fmodes)  *  elem%gq%vol%weights  *  elem%jinv)
+            fintegral = sum(matmul(elem%basis_s%interpolator('Value'), fmodes)  *  elem%basis_s%weights()  *  elem%jinv)
             
         end associate
 
@@ -272,7 +272,7 @@ contains
         !
         do iterm = 1,size(fmodes)
             do ipt = 1,npt
-                pvals(ipt,iterm) = PolynomialVal(3,size(fmodes),iterm,rpts(ipt))
+                pvals(ipt,iterm) = polynomial_val(3,size(fmodes),iterm,[rpts(ipt)%c1_,rpts(ipt)%c2_,rpts(ipt)%c3_])
             end do
         end do
 
@@ -286,7 +286,7 @@ contains
         !
         ! Compute integral of function
         !
-        fintegral = sum(matmul(elem%gq%vol%val, fmodes)  *  elem%gq%vol%weights  *  elem%jinv)
+        fintegral = sum(matmul(elem%basis_s%interpolator('Value'), fmodes)  *  elem%basis_s%weights()  *  elem%jinv)
         
         end associate
 
@@ -363,7 +363,7 @@ contains
         !
         do iterm = 1,size(fmodes)
             do ipt = 1,npt
-                pvals(ipt,iterm) = PolynomialVal(3,size(fmodes),iterm,rpts(ipt))
+                pvals(ipt,iterm) = polynomial_val(3,size(fmodes),iterm,[rpts(ipt)%c1_,rpts(ipt)%c2_,rpts(ipt)%c3_])
             end do
         end do
 
@@ -377,7 +377,7 @@ contains
         !
         ! Compute integral of function
         !
-        fintegral = sum(matmul(elem%gq%vol%val, fmodes)  *  elem%gq%vol%weights  *  elem%jinv)
+        fintegral = sum(matmul(elem%basis_s%interpolator('Value'), fmodes)  *  elem%basis_s%weights()  *  elem%jinv)
         
         end associate
 
@@ -464,7 +464,7 @@ contains
         !
         do iterm = 1,size(fmodes)
             do ipt = 1,npt
-                pvals(ipt,iterm) = PolynomialVal(3,size(fmodes),iterm,rpts(ipt))
+                pvals(ipt,iterm) = polynomial_val(3,size(fmodes),iterm,[rpts(ipt)%c1_,rpts(ipt)%c2_,rpts(ipt)%c3_])
             end do
         end do
 
@@ -478,7 +478,7 @@ contains
         !
         ! Compute integral of function
         !
-        fintegral = sum(matmul(elem%gq%vol%val, fmodes)  *  elem%gq%vol%weights  *  elem%jinv)
+        fintegral = sum(matmul(elem%basis_s%interpolator('Value'), fmodes)  *  elem%basis_s%weights()  *  elem%jinv)
         
         end associate
 

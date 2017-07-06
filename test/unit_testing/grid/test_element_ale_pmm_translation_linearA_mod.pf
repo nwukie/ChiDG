@@ -110,7 +110,7 @@ contains
         nterms_s = 8
         ntime    = 1
         call this%elem%init_geom(nodes,connectivity,idomain,ielem,'Cartesian')
-        call this%elem%init_sol(neqns,nterms_s,ntime)
+        call this%elem%init_sol('Quadrature',1,nterms_s,neqns,ntime)
         
         
         !
@@ -232,9 +232,9 @@ contains
     subroutine testElement_grid_velocities(self)
         class(test_element_ale_pmm_translation_linearA),    intent(inout)   :: self
 
-        real(rk)    :: vg1(self%elem%gq%vol%nnodes), &
-                        vg2(self%elem%gq%vol%nnodes), &
-                        vg3(self%elem%gq%vol%nnodes)
+        real(rk)    :: vg1(self%elem%basis_s%nnodes_ie()), &
+                       vg2(self%elem%basis_s%nnodes_ie()), &
+                       vg3(self%elem%basis_s%nnodes_ie())
 
 
         vg1 = ONE
@@ -256,7 +256,7 @@ contains
     subroutine testElement_grid_positions(self)
         class(test_element_ale_pmm_translation_linearA),    intent(inout)   :: self
 
-        real(rk)    :: pg(self%elem%gq%vol%nnodes,3)
+        real(rk)    :: pg(self%elem%basis_s%nnodes_ie(),3)
 
 
         pg(:,1) = ONE + self%elem%quad_pts(:,1)
@@ -278,7 +278,7 @@ contains
     @Test
     subroutine testElement_jinv_ale(self)
         class(test_element_ale_pmm_translation_linearA),    intent(inout)   :: self
-        real(rk)    :: test_det_jac_grid(self%elem%gq%vol%nnodes)
+        real(rk)    :: test_det_jac_grid(self%elem%basis_s%nnodes_ie())
         
         test_det_jac_grid = ONE
         @assertEqual(self%elem%jinv_ale,self%elem%jinv)
@@ -296,7 +296,7 @@ contains
     subroutine testElement_jacobian_grid(self)
         class(test_element_ale_pmm_translation_linearA),    intent(inout)   :: self
 
-        real(rk)    :: test_metric(self%elem%gq%vol%nnodes,3,3)
+        real(rk)    :: test_metric(self%elem%basis_s%nnodes_ie(),3,3)
         
         test_metric(:,1,1) = 1.0_rk 
         test_metric(:,2,1) = 0._rk  
@@ -335,9 +335,9 @@ contains
     subroutine testElement_face_grid_velocities(self)
         class(test_element_ale_pmm_translation_linearA),    intent(inout)   :: self
 
-        real(rk)    :: vg1(self%faces(XI_MAX)%gq%face%nnodes), &
-                        vg2(self%faces(XI_MAX)%gq%face%nnodes), &
-                        vg3(self%faces(XI_MAX)%gq%face%nnodes)
+        real(rk)    :: vg1(self%faces(XI_MAX)%basis_s%nnodes_if()), &
+                       vg2(self%faces(XI_MAX)%basis_s%nnodes_if()), &
+                       vg3(self%faces(XI_MAX)%basis_s%nnodes_if())
 
 
         vg1 = ONE
@@ -378,7 +378,7 @@ contains
     subroutine testElement_face_grid_positions(self)
         class(test_element_ale_pmm_translation_linearA),    intent(inout)   :: self
 
-        real(rk)    :: pg(self%faces(XI_MAX)%gq%face%nnodes,3,6)
+        real(rk)    :: pg(self%faces(XI_MAX)%basis_s%nnodes_if(),3,6)
 
 
         pg(:,1,XI_MIN) = ONE +  self%faces(XI_MIN)%quad_pts(:,1)
@@ -428,7 +428,7 @@ contains
     @Test
     subroutine testElement_face_jinv_ale(self)
         class(test_element_ale_pmm_translation_linearA),    intent(inout)   :: self
-        real(rk)    :: test_det_jac_grid(self%faces(XI_MAX)%gq%face%nnodes)
+        real(rk)    :: test_det_jac_grid(self%faces(XI_MAX)%basis_s%nnodes_if())
         
         test_det_jac_grid = ONE
 
@@ -461,7 +461,7 @@ contains
     @Test
     subroutine testElement_face_metrics(self)
         class(test_element_ale_pmm_translation_linearA),    intent(inout)   :: self
-        real(rk)    :: test_metric(self%faces(XI_MAX)%gq%face%nnodes,3,3)
+        real(rk)    :: test_metric(self%faces(XI_MAX)%basis_s%nnodes_if(),3,3)
         real(rk)    :: tol
         
         tol = 1.e-14_rk

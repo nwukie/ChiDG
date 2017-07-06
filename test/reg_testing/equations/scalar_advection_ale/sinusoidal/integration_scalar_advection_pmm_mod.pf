@@ -176,14 +176,14 @@ contains
                      40, 40, 40, 40, &
                      80, 80, 80, 80]
 
-        files = [  string_t('1scalar_advection_pmm_40x1x1.h5'), &
-                   string_t('2scalar_advection_pmm_40x1x1.h5'), &
-                   string_t('3scalar_advection_pmm_40x1x1.h5'), &
-                   string_t('4scalar_advection_pmm_40x1x1.h5'), &
-                   string_t('1scalar_advection_pmm_80x1x1.h5'), &
-                   string_t('2scalar_advection_pmm_80x1x1.h5'), &
-                   string_t('3scalar_advection_pmm_80x1x1.h5'), &
-                   string_t('4scalar_advection_pmm_80x1x1.h5')  &
+        files = [  string_t('scalar_advection_pmm_40x1x1.h5'), &
+                   string_t('scalar_advection_pmm_40x1x1.h5'), &
+                   string_t('scalar_advection_pmm_40x1x1.h5'), &
+                   string_t('scalar_advection_pmm_40x1x1.h5'), &
+                   string_t('scalar_advection_pmm_80x1x1.h5'), &
+                   string_t('scalar_advection_pmm_80x1x1.h5'), &
+                   string_t('scalar_advection_pmm_80x1x1.h5'), &
+                   string_t('scalar_advection_pmm_80x1x1.h5')  &
                     ]
 
         orders = [  &
@@ -753,8 +753,6 @@ contains
                 igrid = 1
             case('scalar_advection_pmm_80x1x1.h5')
                 igrid = 2 
-            case('scalar_advection_pmm_24x1x1.h5')
-                igrid = 3
         end select
 
     end function get_grid_index

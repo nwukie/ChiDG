@@ -108,7 +108,7 @@ contains
         real(rk), allocatable, dimension(:) ::      &
            u_grid, v_grid, w_grid, det_jacobian_grid
 
-        det_jacobian_grid = worker%get_det_jacobian_grid_face()
+        det_jacobian_grid = worker%get_det_jacobian_grid_face('value')
         !
         ! Interpolate interior solution to quadrature nodes
         !

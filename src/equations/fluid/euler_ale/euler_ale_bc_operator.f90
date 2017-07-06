@@ -140,7 +140,7 @@ contains
         v_grid = worker%get_grid_velocity_face("v_grid")
         w_grid = worker%get_grid_velocity_face("w_grid")
         jacobian_grid = worker%get_inv_jacobian_grid_face()
-        det_jacobian_grid = worker%get_det_jacobian_grid_face()
+        det_jacobian_grid = worker%get_det_jacobian_grid_face('value')
 
 
         normx = worker%normal(1)

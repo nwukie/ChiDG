@@ -110,7 +110,7 @@ contains
 !        print *, 'w_grid'
 !        print *, w_grid
         jacobian_grid = worker%get_inv_jacobian_grid_face()
-        det_jacobian_grid = worker%get_det_jacobian_grid_face()
+        det_jacobian_grid = worker%get_det_jacobian_grid_face('value')
 
        
         !

@@ -91,7 +91,7 @@ contains
            u_grid, v_grid, w_grid, det_jacobian_grid
 
 
-        det_jacobian_grid = worker%get_det_jacobian_grid_face()
+        det_jacobian_grid = worker%get_det_jacobian_grid_face('value')
         !
         ! Get equation index
         !

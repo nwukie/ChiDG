@@ -126,7 +126,7 @@ contains
         logical, allocatable, dimension(:)  :: inflow, outflow
 
 
-        det_jacobian_grid = worker%get_det_jacobian_grid_face()
+        det_jacobian_grid = worker%get_det_jacobian_grid_face('value')
         !
         ! Get boundary condition input parameters
         !

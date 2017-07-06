@@ -89,9 +89,7 @@ module type_element
         real(rk), allocatable           :: ale_vel_elem_pts(:,:)
         type(densevector_t)             :: ale_coords               ! Modal representation of cartesian coordinates (nterms_var,(x,y,z))
         type(densevector_t)             :: ale_vel_coords           ! Modal representation of cartesian coordinates (nterms_var,(x,y,z))
-        real(rk), allocatable           :: grid_vel1(:)
-        real(rk), allocatable           :: grid_vel2(:)
-        real(rk), allocatable           :: grid_vel3(:)
+        real(rk), allocatable           :: grid_vel(:,:)
         real(rk), allocatable           :: jacobian_grid(:,:,:)
         real(rk), allocatable           :: inv_jacobian_grid(:,:,:)
         real(rk), allocatable           :: det_jacobian_grid(:)
@@ -117,6 +115,8 @@ module type_element
         ! Element-local mass, inverse mass matrices
         real(rk), allocatable           :: mass(:,:)        
         real(rk), allocatable           :: invmass(:,:)
+        real(rk), allocatable           :: mass_c(:,:)        
+        real(rk), allocatable           :: invmass_c(:,:)
 
         ! Element volume, approx. size of bounding box
         real(rk)                        :: vol
@@ -163,6 +163,7 @@ module type_element
         ! Private utility procedure
         procedure           :: compute_element_matrices
         procedure           :: compute_mass_matrix
+        procedure           :: compute_mass_matrix_c
         procedure           :: compute_quadrature_gradients
         procedure           :: compute_quadrature_metrics
         procedure           :: compute_quadrature_coords
@@ -528,11 +529,11 @@ contains
                         self%grad3_trans,               &
                         self%mass,                      &
                         self%invmass,                   &
+                        self%mass_c,                      &
+                        self%invmass_c,                   &
                         self%jinv_ale,                  &
                         self%metric_ale,                &
-                        self%grid_vel1,                 &
-                        self%grid_vel2,                 &
-                        self%grid_vel3,                 &
+                        self%grid_vel,                 &
                         self%jacobian_grid,             &
                         self%inv_jacobian_grid,         &
                         self%det_jacobian_grid,         &
@@ -558,15 +559,15 @@ contains
                  self%grad3_trans(nterms_s,nnodes),         &
                  self%mass(nterms_s,nterms_s),              &
                  self%invmass(nterms_s,nterms_s),           &
+                 self%mass_c(self%nterms_c,self%nterms_c),              &
+                 self%invmass_c(self%nterms_c,self%nterms_c),         &
                  self%jinv_ale(nnodes),                     &
                  self%metric_ale(3,3,nnodes),               &
-                 self%grid_vel1(nnodes),                    &
-                 self%grid_vel2(nnodes),                    &
-                 self%grid_vel3(nnodes),                    &
+                 self%grid_vel(nnodes,3),                    &
                  self%jacobian_grid(nnodes,3,3),            &
                  self%inv_jacobian_grid(nnodes,3,3),        &
                  self%det_jacobian_grid(nnodes),            &
-                 self%det_jacobian_grid_modes(nterms_s),    &
+                 self%det_jacobian_grid_modes(self%nterms_c),    &
                  self%jacobian_matrix(nnodes,3,3),          &
                  self%inv_jacobian_matrix(nnodes,3,3),      &
                  self%jacobian_matrix_ale(nnodes,3,3),      &
@@ -679,6 +680,7 @@ contains
         ! Call to compute mass matrix
         !
         call self%compute_mass_matrix()
+        call self%compute_mass_matrix_c()
 
         !
         ! Call to compute matrices of gradients at each quadrature node
@@ -1091,6 +1093,55 @@ contains
 
     end subroutine compute_mass_matrix
     !******************************************************************************************
+
+
+
+
+
+    !>  Compute element-local mass matrix for coordinate expansion
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine compute_mass_matrix_c(self)
+        class(element_t), intent(inout) :: self
+
+        integer(ik)             :: iterm
+        real(rk),   allocatable :: temp(:,:)
+
+        self%invmass_c = ZERO
+        self%mass_c    = ZERO
+
+        temp = transpose(self%basis_c%interpolator('Value'))
+
+
+        !
+        ! Multiply rows by quadrature weights and cell jacobians
+        !
+        do iterm = 1,self%nterms_c
+            temp(iterm,:) = temp(iterm,:)*(self%basis_c%weights())*(self%jinv)
+        end do
+
+
+        !
+        ! Perform the matrix multiplication of the transpose val matrix by
+        ! the standard matrix. This produces the mass matrix. I think...
+        !
+        self%mass_c = matmul(temp,self%basis_c%interpolator('Value'))
+
+
+        !
+        ! Compute and store the inverted mass matrix
+        !
+        self%invmass_c = inv(self%mass_c)
+
+
+
+    end subroutine compute_mass_matrix_c
+    !******************************************************************************************
+
 
 
 
@@ -1921,9 +1972,9 @@ contains
         ! Grid velocity
         ! compute cartesian coordinates associated with quadrature points
         !
-        self%grid_vel1 = matmul(val,self%ale_vel_coords%getvar(1,itime = 1))
-        self%grid_vel2 = matmul(val,self%ale_vel_coords%getvar(2,itime = 1))
-        self%grid_vel3 = matmul(val,self%ale_vel_coords%getvar(3,itime = 1))
+        self%grid_vel(:,1) = matmul(val,self%ale_vel_coords%getvar(1,itime = 1))
+        self%grid_vel(:,2) = matmul(val,self%ale_vel_coords%getvar(2,itime = 1))
+        self%grid_vel(:,3) = matmul(val,self%ale_vel_coords%getvar(3,itime = 1))
 
     end subroutine compute_quadrature_coords_ale
     !****************************************************************************************
@@ -2075,9 +2126,9 @@ contains
         !
         ! Project
         !
-        val  = self%basis_s%interpolator('Value')
+        val  = self%basis_c%interpolator('Value')
         temp = matmul(transpose(val),fvals)
-        self%det_jacobian_grid_modes = matmul(self%invmass,temp)
+        self%det_jacobian_grid_modes = matmul(self%invmass_c,temp)
 
 
     end subroutine compute_quadrature_metrics_ale

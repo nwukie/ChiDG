@@ -129,9 +129,7 @@ module type_face
         real(rk),   allocatable         :: ale_elem_pts(:,:)
         type(densevector_t)             :: ale_coords                   ! Modal representation of cartesian coordinates (nterms_var,(x,y,z))
         type(densevector_t)             :: ale_vel_coords               ! Modal representation of cartesian coordinates (nterms_var,(x,y,z))
-        real(rk), allocatable           :: grid_vel1(:)
-        real(rk), allocatable           :: grid_vel2(:)
-        real(rk), allocatable           :: grid_vel3(:)
+        real(rk), allocatable           :: grid_vel(:,:)
         real(rk), allocatable           :: jacobian_grid(:,:,:)
         real(rk), allocatable           :: inv_jacobian_grid(:,:,:)
         real(rk), allocatable           :: det_jacobian_grid(:)
@@ -383,9 +381,7 @@ contains
                        self%jacobian_grid,              &
                        self%inv_jacobian_grid,          &
                        self%det_jacobian_grid,          &
-                       self%grid_vel1,                  &
-                       self%grid_vel2,                  &
-                       self%grid_vel3,                  &
+                       self%grid_vel,                  &
                        self%grad1,                      &
                        self%grad2,                      &
                        self%grad3                       &
@@ -409,9 +405,7 @@ contains
                  self%jacobian_grid(nnodes,3,3),                    &
                  self%inv_jacobian_grid(nnodes,3,3),                &
                  self%det_jacobian_grid(nnodes),                    &
-                 self%grid_vel1(nnodes),                            &
-                 self%grid_vel2(nnodes),                            &
-                 self%grid_vel3(nnodes),                            &
+                 self%grid_vel(nnodes,3),                            &
                  self%grad1(nnodes,self%nterms_s),                  &
                  self%grad2(nnodes,self%nterms_s),                  &
                  self%grad3(nnodes,self%nterms_s), stat=ierr) 
@@ -1011,9 +1005,9 @@ contains
         ! Initialize each point with cartesian coordinates
         !
         do inode = 1,nnodes
-            self%grid_vel1(inode) = vg1(inode)
-            self%grid_vel2(inode) = vg2(inode)
-            self%grid_vel3(inode) = vg3(inode)
+            self%grid_vel(inode,1) = vg1(inode)
+            self%grid_vel(inode,2) = vg2(inode)
+            self%grid_vel(inode,3) = vg3(inode)
         end do 
 
 
@@ -1126,6 +1120,8 @@ contains
 
 
         self%det_jacobian_grid = self%jinv_ale/self%jinv
+
+
 
     end subroutine compute_quadrature_metrics_ale
     !*****************************************************************************************************

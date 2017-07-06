@@ -121,7 +121,7 @@ contains
         !
         ! Write surface data from 'mesh%domains'
         !
-        !if (write_surfaces) call write_tecio_surfaces(data)
+        if (write_surfaces) call write_tecio_surfaces(handle,data)
 
 
         !
@@ -162,28 +162,19 @@ contains
 
         integer(ik)        :: nelem_xi, nelem_eta, nelem_zeta,  &
                               ielem_xi, ielem_eta, ielem_zeta,  &
-                              npts_xi,  npts_eta,  npts_zeta,   &
-                              ipt_xi,   ipt_eta,   ipt_zeta,    &
-                              xilim,    etalim,    zetalim,     &
                               ielem, ielem_global, ielem_offset,&
                               npts_element, nsub_per_element,   &
-                              nsub_elements, npts, ierr,        &
+                              nsub_elements, ierr,              &
                               nelem, istart, ielem_start,       &
                               idom, itime, icoord, inode, ifield
 
-        real(rdouble)      :: val(1), r, theta, z
-        real(TEC)          :: valeq(1)
-        equivalence           (valeq(1), val(1))
-
-        integer(TEC)        :: zone_index
-        integer(c_int64_t)  :: nwrite
-    
-        integer(4)                  :: tecstat
-        integer(4),     allocatable :: connectivity(:,:)
+        integer(TEC)                                :: zone_index
+        integer(TEC)                                :: tecstat
+        integer(TEC),   allocatable                 :: connectivity(:,:)
+        real(rdouble),  allocatable, dimension(:)   :: val, r, theta, z
 
 
         integer(ik)                 :: eqn_ID, numvars
-        real(rk)                    :: xi,eta,zeta,p, sumsqr, d_normalization, grad1_d, grad2_d, grad3_d
         type(AD_D),     allocatable :: var(:)
         character(:),   allocatable :: zone_string, var_string
 
@@ -203,18 +194,9 @@ contains
         call worker%init(data%mesh, data%eqnset(:)%prop, data%sdata, cache)
 
 
-
-
-
-
-        ! using (output_res+1) so that the skip number used in tecplot to
-        ! correctly display the element surfaces is the same as the number
-        ! specified in the input file
-        npts = OUTPUT_RES+1
-
-
         eqn_ID = data%mesh%domain(1)%eqn_ID
         numvars = 3 + data%eqnset(eqn_ID)%prop%nprimary_fields()
+
 
         !
         ! Loop time instances
@@ -242,26 +224,24 @@ contains
                 ! For each actual element, create a sub-sampling of elements to resolve solution variation
                 do ielem = 1,nelem
                     do icoord = 1,3
-                        do inode = 1,size(data%mesh%domain(idom)%elems(ielem)%ale_quad_pts,1)
 
-                            ! Get coordinate value at point
-                            if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
-                                r     = real(data%mesh%domain(idom)%elems(ielem)%ale_quad_pts(inode,1),rdouble)
-                                theta = real(data%mesh%domain(idom)%elems(ielem)%ale_quad_pts(inode,2),rdouble)
-                                z     = real(data%mesh%domain(idom)%elems(ielem)%ale_quad_pts(inode,3),rdouble)
-                                if (icoord == 1) val = r*cos(theta)
-                                if (icoord == 2) val = r*sin(theta)
-                                if (icoord == 3) val = z
+                        ! Get coordinate value at point
+                        if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
+                            r     = real(data%mesh%domain(idom)%elems(ielem)%ale_quad_pts(:,1),rdouble)
+                            theta = real(data%mesh%domain(idom)%elems(ielem)%ale_quad_pts(:,2),rdouble)
+                            z     = real(data%mesh%domain(idom)%elems(ielem)%ale_quad_pts(:,3),rdouble)
+                            if (icoord == 1) val = r*cos(theta)
+                            if (icoord == 2) val = r*sin(theta)
+                            if (icoord == 3) val = z
 
-                            else
-                                val = real(data%mesh%domain(idom)%elems(ielem)%ale_quad_pts(inode,icoord),rdouble)
-                            end if
+                        else
+                            val = real(data%mesh%domain(idom)%elems(ielem)%ale_quad_pts(:,icoord),rdouble)
+                        end if
 
-                            nwrite = 1
-                            tecstat = tecZoneVarWriteDoubleValues(handle, zone_index, icoord, 0, nwrite, [val])
-                            if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to tecZoneVarWriteDoubleValues")
+                        tecstat = tecZoneVarWriteDoubleValues(handle, zone_index, icoord, 0, int(size(val),c_int64_t), val)
+                        if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to tecZoneVarWriteDoubleValues")
 
-                        end do !inode
+
                     end do ! coords
                 end do !ielem
 
@@ -272,33 +252,25 @@ contains
                 ! For each variable in equation set, compute value pointwise and save
                 eqn_ID = data%mesh%domain(idom)%eqn_ID
                 do ielem = 1,nelem
+
+                    ! Update location
+                    elem_info%idomain_g  = data%mesh%domain(idom)%elems(ielem)%idomain_g
+                    elem_info%idomain_l  = data%mesh%domain(idom)%elems(ielem)%idomain_l
+                    elem_info%ielement_g = data%mesh%domain(idom)%elems(ielem)%ielement_g
+                    elem_info%ielement_l = data%mesh%domain(idom)%elems(ielem)%ielement_l
+                    call worker%set_element(elem_info)
+
+                    ! Update the element cache
+                    call cache_handler%update(worker,data%eqnset, data%bc_state_group, differentiate=.false., components='element', face=NO_ID)
+
+                    ! Retrieve name of current field, retrieve interpolation, write interpolation to file
                     do ifield = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
-                    ! For each actual element, create a sub-sampling of elements to resolve solution variation
-
-                        ! Update location
-                        elem_info%idomain_g  = data%mesh%domain(idom)%elems(ielem)%idomain_g
-                        elem_info%idomain_l  = data%mesh%domain(idom)%elems(ielem)%idomain_l
-                        elem_info%ielement_g = data%mesh%domain(idom)%elems(ielem)%ielement_g
-                        elem_info%ielement_l = data%mesh%domain(idom)%elems(ielem)%ielement_l
-                        call worker%set_element(elem_info)
-
-                        ! Update the element cache
-                        call cache_handler%update(worker,data%eqnset, data%bc_state_group, differentiate=.false., components='element', face=NO_ID)
-
-
-                        ! Retrieve name of current field, retrieve interpolation
                         var_string = data%eqnset(eqn_ID)%prop%get_primary_field_name(ifield)
                         var = worker%get_primary_field_element(var_string, 'value')
-
-                        ! Write each node
-                        do inode = 1,size(var,1)
-                            val = real(var(inode)%x_ad_,rdouble)
-                            nwrite = 1
-                            tecstat = tecZoneVarWriteDoubleValues(handle, zone_index, 3+ifield, 0, nwrite, [val])
-                            if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to tecZoneVarWriteDoubleValues")
-                        end do !inode
-                        
+                        tecstat = tecZoneVarWriteDoubleValues(handle, zone_index, 3+ifield, 0, int(size(var),c_int64_t), real(var(:)%x_ad_,rdouble))
+                        if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to tecZoneVarWriteDoubleValues")
                     end do ! ifield
+
                 end do ! ielem
 
 
@@ -382,9 +354,9 @@ contains
                                 connectivity(8,ielem_global) = istart + (OUTPUT_RES+1)        +  (OUTPUT_RES+1)*(OUTPUT_RES+1)      +  ielem_offset
 
 
-                            end do
-                        end do
-                    end do
+                            end do !ielem_xi
+                        end do !ielem_eta
+                    end do !ielem_zeta
                     
 
                 end do ! ielem
@@ -428,34 +400,30 @@ contains
     !!  @date   5/24/2017
     !!
     !-----------------------------------------------------------------------------------
-    subroutine write_tecio_surfaces(data)
+    subroutine write_tecio_surfaces(handle,data)
+        type(c_ptr),        intent(in)      :: handle
         type(chidg_data_t), intent(inout)   :: data
 
 
         integer(ik)        :: nelem_xi, nelem_eta, nelem_zeta,  &
                               ielem_xi, ielem_eta, ielem_zeta,  &
-                              npts_xi,  npts_eta,  npts_zeta,   &
-                              ipt_xi,   ipt_eta,   ipt_zeta,    &
-                              xilim,    etalim,    zetalim,     &
                               ielem, ielem_global, ielem_offset,&
                               npts_element, nsub_per_element,   &
-                              nsub_elements, npts, ierr,        &
+                              nsub_elements, ierr,              &
                               nelem, istart, ielem_start,       &
                               idom, isurface, itime, icoord,    &
                               nfaces, ibc_face, current_face,   &
                               iface, ipatch, inode, ifield
 
-        type(AD_D), allocatable :: var(:)
-        real(rdouble)           :: val(1), r, theta, z
-        real(TEC)               :: valeq(1)
-        equivalence           (valeq(1), val(1))
+        type(AD_D),     allocatable                 :: var(:)
+        integer(TEC),   allocatable                 :: connectivity(:,:)
+        real(rdouble),  allocatable, dimension(:)   :: val, r, theta, z
 
     
-        integer(4)                  :: tecstat
-        integer(4),     allocatable :: connectivity(:,:)
+        integer(TEC)                :: zone_index
+        integer(TEC)                :: tecstat, numvars
 
 
-        real(rk)                    :: xi,eta,zeta,p, sumsqr, d_normalization, grad1_d, grad2_d, grad3_d
         integer(ik)                 :: eqn_ID
         character(:),   allocatable :: zone_string, var_string
 
@@ -469,17 +437,15 @@ contains
 
         call write_line("   TECIO: Writing surfaces...")
 
-        ! using (output_res+1) so that the skip number used in tecplot to
-        ! correctly display the element surfaces is the same as the number
-        ! specified in the input file
-        npts = OUTPUT_RES+1
-
-
         !
         ! Initialize Chidg Worker references
         !
         call worker%init(data%mesh, data%eqnset(:)%prop, data%sdata, cache)
 
+
+
+        eqn_ID = data%mesh%domain(1)%eqn_ID
+        numvars = 3 + data%eqnset(eqn_ID)%prop%nprimary_fields()
 
         !
         ! Loop time instances
@@ -505,51 +471,42 @@ contains
                 ! Initialize new zone in the TecIO file for the current domain
                 !
                 zone_string = data%mesh%bc_patch_group(isurface)%name
-                call init_tecio_surface_zone(zone_string,data%mesh%bc_patch_group(isurface),data%time_manager%times(itime))
+                zone_index = init_tecio_surface_zone(handle,zone_string,data%mesh%bc_patch_group(isurface),data%time_manager%times(itime),numvars)
 
 
 
                 ! For each coordinate, compute it's value pointwise and save
                 ! For each face in each patch, create a sub-sampling of faces to resolve solution variation
-                do icoord = 1,3
-                    do ipatch = 1,data%mesh%bc_patch_group(isurface)%npatches()
-                        do ibc_face = 1,data%mesh%bc_patch_group(isurface)%patch(ipatch)%nfaces()
+                do ipatch = 1,data%mesh%bc_patch_group(isurface)%npatches()
+                    do ibc_face = 1,data%mesh%bc_patch_group(isurface)%patch(ipatch)%nfaces()
+                        do icoord = 1,3
                             
-                            !
                             ! Get face index from the current element
-                            !
                             idom  = data%mesh%bc_patch_group(isurface)%patch(ipatch)%idomain_l()
                             ielem = data%mesh%bc_patch_group(isurface)%patch(ipatch)%ielement_l_%at(ibc_face)
                             iface = data%mesh%bc_patch_group(isurface)%patch(ipatch)%iface_%at(ibc_face)
 
 
-                            do inode = 1,size(data%mesh%domain(idom)%faces(ielem,iface)%ale_quad_pts,1)
 
-                                ! Get coordinate value at point
-                                if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
-                                    r     = real(data%mesh%domain(idom)%faces(ielem,iface)%ale_quad_pts(inode,1),rdouble)
-                                    theta = real(data%mesh%domain(idom)%faces(ielem,iface)%ale_quad_pts(inode,2),rdouble)
-                                    z     = real(data%mesh%domain(idom)%faces(ielem,iface)%ale_quad_pts(inode,3),rdouble)
-                                    if (icoord == 1) val = r*cos(theta)
-                                    if (icoord == 2) val = r*sin(theta)
-                                    if (icoord == 3) val = z
+                            ! Get coordinate value at point
+                            if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
+                                r     = real(data%mesh%domain(idom)%faces(ielem,iface)%ale_quad_pts(:,1),rdouble)
+                                theta = real(data%mesh%domain(idom)%faces(ielem,iface)%ale_quad_pts(:,2),rdouble)
+                                z     = real(data%mesh%domain(idom)%faces(ielem,iface)%ale_quad_pts(:,3),rdouble)
+                                if (icoord == 1) val = r*cos(theta)
+                                if (icoord == 2) val = r*sin(theta)
+                                if (icoord == 3) val = z
 
-                                else
-                                    val = real(data%mesh%domain(idom)%faces(ielem,iface)%ale_quad_pts(inode,icoord),rdouble)
-                                end if
+                            else
+                                val = real(data%mesh%domain(idom)%faces(ielem,iface)%ale_quad_pts(:,icoord),rdouble)
+                            end if
 
-                                tecstat = TECDAT142(1,valeq,1)
-                                if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to TECDAT142")
+                            tecstat = tecZoneVarWriteDoubleValues(handle, zone_index, icoord, 0, int(size(val),c_int64_t), val)
+                            if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to tecZoneVarWriteDoubleValues")
 
-                            end do !inode
-
-
-
-
-
-                        end do !ibc_face
-                    end do !ipatch
-                end do ! coords
+                        end do ! coords
+                    end do !ibc_face
+                end do !ipatch
 
 
 
@@ -557,50 +514,42 @@ contains
 
                 ! For each variable in equation set, compute value pointwise and save
                 eqn_ID = data%mesh%domain(idom)%eqn_ID
-                do ifield = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
-                    ! For each actual face, create a sub-sampling of faces to resolve solution variation
-                    do ipatch = 1,data%mesh%bc_patch_group(isurface)%npatches()
-                        do ibc_face = 1,data%mesh%bc_patch_group(isurface)%patch(ipatch)%nfaces()
-                            
-                            !
-                            ! Get face index from the current element
-                            !
-                            idom  = data%mesh%bc_patch_group(isurface)%patch(ipatch)%idomain_l()
-                            ielem = data%mesh%bc_patch_group(isurface)%patch(ipatch)%ielement_l_%at(ibc_face)
-                            iface = data%mesh%bc_patch_group(isurface)%patch(ipatch)%iface_%at(ibc_face)
+                ! For each actual face, create a sub-sampling of faces to resolve solution variation
+                do ipatch = 1,data%mesh%bc_patch_group(isurface)%npatches()
+                    do ibc_face = 1,data%mesh%bc_patch_group(isurface)%patch(ipatch)%nfaces()
 
+                        !
+                        ! Get face index from the current element
+                        !
+                        idom  = data%mesh%bc_patch_group(isurface)%patch(ipatch)%idomain_l()
+                        ielem = data%mesh%bc_patch_group(isurface)%patch(ipatch)%ielement_l_%at(ibc_face)
+                        iface = data%mesh%bc_patch_group(isurface)%patch(ipatch)%iface_%at(ibc_face)
 
 
-                            ! Update location
-                            elem_info%idomain_g  = data%mesh%domain(idom)%elems(ielem)%idomain_g
-                            elem_info%idomain_l  = data%mesh%domain(idom)%elems(ielem)%idomain_l
-                            elem_info%ielement_g = data%mesh%domain(idom)%elems(ielem)%ielement_g
-                            elem_info%ielement_l = data%mesh%domain(idom)%elems(ielem)%ielement_l
-                            call worker%set_element(elem_info)
-                            call worker%set_face(iface)
+                        ! Update location
+                        elem_info%idomain_g  = data%mesh%domain(idom)%elems(ielem)%idomain_g
+                        elem_info%idomain_l  = data%mesh%domain(idom)%elems(ielem)%idomain_l
+                        elem_info%ielement_g = data%mesh%domain(idom)%elems(ielem)%ielement_g
+                        elem_info%ielement_l = data%mesh%domain(idom)%elems(ielem)%ielement_l
+                        call worker%set_element(elem_info)
+                        call worker%set_face(iface)
 
-                            ! Update the element cache
-                            call cache_handler%update(worker,data%eqnset, data%bc_state_group, differentiate=.false., components='interior faces', face=iface)
+                        ! Update the element cache
+                        call cache_handler%update(worker,data%eqnset, data%bc_state_group, differentiate=.false., components='interior faces', face=iface)
 
 
-                            ! Retrieve name of current field, retrieve interpolation
+                        ! Retrieve name of current field, retrieve interpolation, write interpolation to file
+                        do ifield = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
                             var_string = data%eqnset(eqn_ID)%prop%get_primary_field_name(ifield)
                             var = worker%get_primary_field_face(var_string, 'value', 'face interior')
 
-                            ! Write each node
-                            do inode = 1,size(var,1)
-                                val = real(var(inode)%x_ad_,rdouble)
-                                tecstat = TECDAT142(1,valeq,1)
-                                if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to TECDAT142")
-                            end do !inode
+                            tecstat = tecZoneVarWriteDoubleValues(handle, zone_index, 3+ifield, 0, int(size(var),c_int64_t), real(var(:)%x_ad_,rdouble))
+                            if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to tecZoneVarWriteDoubleValues")
+                        end do ! ifield
 
-
-
-
-                        end do !ibc_face
-                    end do !ipatch
-                end do ! ifield
+                    end do !ibc_face
+                end do !ipatch
 
 
 
@@ -654,9 +603,8 @@ contains
                     end do !ibc_face
                 end do ! ipatch
 
-                tecstat = TECNOD142(connectivity)
-                if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to TECNOD142")
-
+                tecstat = tecZoneNodeMapWrite32(handle,zone_index,0,1,int(size(connectivity),c_int64_t),reshape(connectivity,[size(connectivity)]))
+                if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to tecZoneNodeMapWrite32")
                 
 
             end do ! idom
@@ -721,8 +669,6 @@ contains
                                     handle)
         if (tecstat /= 0) call chidg_signal(FATAL,"init_tecio_file: Error in TecIO file initialization.")
 
-!        tecstat = tecFileSetDiagnosticsLevel(handle, debug)
-!        if (tecstat /= 0) call chidg_signal(FATAL,"init_tecio_file: Error in TecIO file initialization.")
 
         ! Reset strandID count. Gets incremented every time a new zone is added.
         strandID = 0
@@ -759,39 +705,20 @@ contains
         real(rk),       intent(in)  :: solutiontime
         integer(ik),    intent(in)  :: numvars
 
-        integer(TEC)    :: zonetype                      = 5    ! 5 = FEBRICK
-        !integer(TEC)    :: numnodes
-        !integer(TEC)    :: numelements
+        integer(TEC)        :: zonetype         = 5    ! 5 = FEBRICK
+        integer(TEC)        :: fnmode           = 0
+        integer(TEC)        :: sharconnfrom     = 0
+        integer(c_int64_t)  :: nfconns          = 0
         integer(c_int64_t)  :: numnodes
         integer(c_int64_t)  :: numelements
-        integer(c_int64_t)  :: numfaces                  = 0    ! not used
-        integer(TEC)        :: icellmax                  = 0    ! not used
-        integer(TEC)        :: jcellmax                  = 0    ! not used
-        integer(TEC)        :: kcellmax                  = 0    ! not used
-        integer(TEC)        :: parentzone                = 0
-        integer(TEC)        :: isblock                   = 1
-        integer(c_int64_t)  :: nfconns                   = 0
-        integer(TEC)        :: fnmode                    = 0
-        integer(TEC)        :: totalnumfacenodes         = 1
-        integer(TEC)        :: totalnumbndryfaces        = 1
-        integer(TEC)        :: totalnumbndryconnections  = 1
-        integer(TEC)        :: sharconnfrom              = 0
+
         integer(TEC),   allocatable :: datatypes(:)
         integer(TEC),   allocatable :: locations(:)
         integer(TEC),   allocatable :: sharevars(:)
         integer(TEC),   allocatable :: passivevars(:)
-        !integer(TEC)    :: passivevars(3)            = 0    ! null = all vars active
-        !integer(TEC)    :: vallocation(3)            = 1    ! null = all vars node-centered
-        !integer(TEC)    :: sharvarfrom(3)            = 0    ! null = zones share no data
-
-        !integer(c_int32_t), allocatable :: passiveVarList(:)
-        !integer(c_int32_t), allocatable :: valueLocation(:)
-        !integer(c_int32_t), allocatable :: shareVarFromZone(:)
-
 
 
         integer(TEC)            :: zoneindex
-        !integer(TEC)            :: num_vars
         integer(4)              :: tecstat, ierr
         integer(TEC),   pointer :: NullPtr(:) => null()    ! Null pointer array
 
@@ -841,32 +768,6 @@ contains
         if(tecstat /= 0) call chidg_signal(FATAL,"init_tecio_volume_zone: Error in TecIO zone initialization.")
 
 
-
-
-!            tecstat = TECZNE142(trim(zonetitle)//char(0),   &
-!                                zonetype,                   &
-!                                numnodes,                   &
-!                                numelements,                &
-!                                numfaces,                   &
-!                                icellmax,                   &
-!                                jcellmax,                   &
-!                                kcellmax,                   &
-!                                real(solutiontime,rdouble), &
-!                                strandid,                   &
-!                                parentzone,                 &
-!                                isblock,                    &
-!                                nfconns,                    &
-!                                fnmode,                     &
-!                                totalnumfacenodes,          &
-!                                totalnumbndryfaces,         &
-!                                totalnumbndryconnections,   &
-!                                NullPtr,                    &
-!                                NullPtr,                    &
-!                                NullPtr,                    &
-!                                sharconnfrom)
-!
-!        if(tecstat /= 0) call chidg_signal(FATAL,"init_tecio_volume_zone: Error in TecIO zone initialization.")
-
     end function init_tecio_volume_zone
     !****************************************************************************************
 
@@ -884,82 +785,82 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/6/2017    Updated to new TecIO API for .szplt
     !!
     !!  @param[in]  zonetitle   Name for the zone being initialized.
     !!  @param[in]  domain      domain_t containing the domain description to be initialized.
     !!  @param[in]  timeindex   Integer index of time strand.
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine init_tecio_surface_zone(zonetitle,patch_group,solutiontime)
-            character(*),           intent(in)  :: zonetitle
-            type(bc_patch_group_t), intent(in)  :: patch_group
-            real(rk),               intent(in)  :: solutiontime
+    function init_tecio_surface_zone(handle,zonetitle,patch_group,solutiontime,numvars) result(zoneindex)
+        type(c_ptr),            intent(in)  :: handle
+        character(*),           intent(in)  :: zonetitle
+        type(bc_patch_group_t), intent(in)  :: patch_group
+        real(rk),               intent(in)  :: solutiontime
+        integer(ik),            intent(in)  :: numvars
 
-            integer(TEC)   :: zonetype                  = 3    ! 3 = FEQUADRILATERAL
-            integer(TEC)   :: numpts
-            integer(TEC)   :: numelements
-            integer(TEC)   :: numfaces                  = 0    ! not used
-            integer(TEC)   :: icellmax                  = 0    ! not used
-            integer(TEC)   :: jcellmax                  = 0    ! not used
-            integer(TEC)   :: kcellmax                  = 0    ! not used
-!            real(rk)       :: solutiontime              = 0._rk
-!            integer(TEC)   :: strandid                  = 0    ! strandID is now a module variable
-            integer(TEC)   :: parentzone                = 0
-            integer(TEC)   :: isblock                   = 1
-            integer(TEC)   :: nfconns                   = 0
-            integer(TEC)   :: fnmode                    = 0
-            integer(TEC)   :: totalnumfacenodes         = 1
-            integer(TEC)   :: totalnumbndryfaces        = 1
-            integer(TEC)   :: totalnumbndryconnections  = 1
-            integer(TEC)   :: passivevars(3)            = 0    ! null = all vars active
-            integer(TEC)   :: vallocation(3)            = 1    ! null = all vars node-centered
-            integer(TEC)   :: sharvarfrom(3)            = 0    ! null = zones share no data
-            integer(TEC)   :: sharconnfrom              = 0
+        integer(ik)         :: ierr
+        integer(TEC)        :: zoneindex
+        integer(TEC)        :: tecstat
+        integer(TEC)        :: zonetype         = 3    ! 3 = FEQUADRILATERAL
+        integer(TEC)        :: fnmode           = 0
+        integer(TEC)        :: sharconnfrom     = 0
+        integer(c_int64_t)  :: nfconns          = 0
+        integer(c_int64_t)  :: numnodes
+        integer(c_int64_t)  :: numelements
 
-            integer(4)              :: tecstat
-            integer(TEC),   pointer :: NullPtr(:) => null()    ! Null pointer array
+        integer(TEC),   allocatable :: datatypes(:)
+        integer(TEC),   allocatable :: locations(:)
+        integer(TEC),   allocatable :: sharevars(:)
+        integer(TEC),   allocatable :: passivevars(:)
 
 
-            !
-            ! Handle time index
-            !
-            strandID = strandID + 1
-            !solutiontime = real(timeindex,rk)
+        !
+        ! Handle time index
+        !
+        strandID = strandID + 1
 
 
-            !
-            ! Accumulate total number of points to be written on the surface
-            !
-            numpts      = (OUTPUT_RES+1)*(OUTPUT_RES+1) * patch_group%nfaces()
-            numelements = (OUTPUT_RES*OUTPUT_RES)       * patch_group%nfaces()
+        !
+        ! Accumulate total number of points to be written on the surface
+        !
+        numnodes    = (OUTPUT_RES+1)*(OUTPUT_RES+1) * patch_group%nfaces()
+        numelements = (OUTPUT_RES*OUTPUT_RES)       * patch_group%nfaces()
 
 
+        allocate(datatypes(numvars), sharevars(numvars), locations(numvars), passivevars(numvars), stat=ierr)
+        if (ierr /= 0) call AllocationError
 
-            tecstat = TECZNE142(trim(zonetitle)//char(0),   &
-                                zonetype,                   &
-                                numpts,                     &
-                                numelements,                &
-                                numfaces,                   &
-                                icellmax,                   &
-                                jcellmax,                   &
-                                kcellmax,                   &
-                                real(solutiontime,rdouble), &
-                                strandid,                   &
-                                parentzone,                 &
-                                isblock,                    &
-                                nfconns,                    &
-                                fnmode,                     &
-                                totalnumfacenodes,          &
-                                totalnumbndryfaces,         &
-                                totalnumbndryconnections,   &
-                                NullPtr,                    &
-                                NullPtr,                    &
-                                NullPtr,                    &
-                                sharconnfrom)
+        datatypes   = 1
+        locations   = 1
+        sharevars   = 0
+        passivevars = 0
 
-            if(tecstat /= 0) call chidg_signal(FATAL,"init_tecio_surface_zone: Error in TecIO zone initialization.")
+        ! Create zone
+        tecstat = tecZoneCreateFE(handle,                   &
+                                  trim(zonetitle)//char(0), &
+                                  zonetype,                 &
+                                  numnodes,                 &
+                                  numelements,              &
+                                  datatypes,                &
+                                  sharevars,                &
+                                  locations,                &
+                                  passivevars,              &
+                                  sharconnfrom,             &
+                                  nfconns,                  &
+                                  fnmode,                   &
+                                  zoneindex)
 
-    end subroutine init_tecio_surface_zone
+        if(tecstat /= 0) call chidg_signal(FATAL,"init_tecio_surface_zone: Error in TecIO zone initialization.")
+
+
+        ! Set time 
+        tecstat = tecZoneSetUnsteadyOptions(handle,zoneindex,real(solutiontime,rdouble), strandid)
+        if(tecstat /= 0) call chidg_signal(FATAL,"init_tecio_surface_zone: Error in TecIO zone initialization.")
+
+
+    end function init_tecio_surface_zone
     !****************************************************************************************
 
 
@@ -982,14 +883,10 @@ contains
     subroutine close_tecio_file(handle)
         type(c_ptr),    intent(inout)  :: handle
 
-        integer(kind=TEC) :: tecstat
-
+        integer(TEC) :: tecstat
 
         tecstat = tecFileWriterClose(handle)
         if (tecstat /= 0) call chidg_signal(FATAL,"close_tecio: Error in TecIO file end.")
-
-        !tecstat = TECEND142()
-        !if (tecstat /= 0) call chidg_signal(FATAL,"close_tecio: Error in TecIO file end.")
 
     end subroutine close_tecio_file
     !*****************************************************************************************

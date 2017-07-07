@@ -91,40 +91,20 @@ contains
         type(AD_D), allocatable, dimension(:)   ::  &
             grad1_u, grad2_u, grad3_u,              &
             flux_1,  flux_2,  flux_3,               &
-            integrand, mu,                          &
-            flux_1_ref, flux_2_ref, flux_3_ref
+            integrand, mu
 
         real(rk),   allocatable, dimension(:)   ::  &
             norm_1, norm_2, norm_3
 
-
-        real(rk), allocatable, dimension(:) ::      &
-           u_grid, v_grid, w_grid, det_jacobian_grid, &
-            det_jacobian_grid_grad1, det_jacobian_grid_grad2, det_jacobian_grid_grad3
-
-        real(rk), allocatable, dimension(:,:,:) ::      &
-            jacobian_grid
-
-        u_grid = worker%get_grid_velocity_face("u_grid")
-        v_grid = worker%get_grid_velocity_face("v_grid")
-        w_grid = worker%get_grid_velocity_face("w_grid")
-
-        jacobian_grid = worker%get_inv_jacobian_grid_face()
-        det_jacobian_grid = worker%get_det_jacobian_grid_face('value')
-        det_jacobian_grid_grad1 = worker%get_det_jacobian_grid_face('grad1')
-        det_jacobian_grid_grad2 = worker%get_det_jacobian_grid_face('grad2')
-        det_jacobian_grid_grad3 = worker%get_det_jacobian_grid_face('grad3')
+        type(AD_D), allocatable, dimension(:,:)   ::  &
+            gradu, &
+            flux_ref
 
 
 
-        !
-        ! Interpolate boundary condition state to face quadrature nodes
-        !
-        grad1_u = worker%get_primary_field_face('u','grad1 + lift', 'boundary')
-        grad2_u = worker%get_primary_field_face('u','grad2 + lift', 'boundary')
-        grad3_u = worker%get_primary_field_face('u','grad3 + lift', 'boundary')
+       
 
-
+        gradu = worker%get_primary_field_grad_ale_face('u', 'boundary')
         norm_1 = worker%normal(1)
         norm_2 = worker%normal(2)
         norm_3 = worker%normal(3)
@@ -140,16 +120,17 @@ contains
         !=================================================
         ! Mass flux
         !=================================================
-        flux_1 = -mu*grad1_u
-        flux_2 = -mu*grad2_u
-        flux_3 = -mu*grad3_u
+        flux_1 = -mu*gradu(:,1)
+        flux_2 = -mu*gradu(:,2)
+        flux_3 = -mu*gradu(:,3)
 
-        flux_1_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_1 + jacobian_grid(:,1,2)*flux_2 + jacobian_grid(:,1,3)*flux_3)
-        flux_2_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_1 + jacobian_grid(:,2,2)*flux_2 + jacobian_grid(:,2,3)*flux_3)
-        flux_3_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_1 + jacobian_grid(:,3,2)*flux_2 + jacobian_grid(:,3,3)*flux_3)
+        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3)
+        !
+        ! Compute boundary average flux
+        !
+        integrand = flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3
 
 
-        integrand = flux_1_ref*norm_1 + flux_2_ref*norm_2 + flux_3_ref*norm_3
 
 
         if (any(ieee_is_nan(integrand(:)%x_ad_))) then

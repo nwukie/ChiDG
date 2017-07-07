@@ -1,6 +1,7 @@
 add_subdirectory(euler)
 add_subdirectory(euler_ale)
 add_subdirectory(viscous)
+add_subdirectory(viscous_ale)
 add_subdirectory(rans_lowcache)
 add_subdirectory(bc)
 add_subdirectory(spalart_allmaras)

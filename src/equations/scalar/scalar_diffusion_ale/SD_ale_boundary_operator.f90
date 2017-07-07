@@ -89,21 +89,15 @@ contains
 
 
         type(AD_D), allocatable, dimension(:)   ::  &
-            grad1_u_m, grad2_u_m, grad3_u_m,        &
-            grad1_u_p, grad2_u_p, grad3_u_p,        &
             flux_1, flux_2, flux_3,                 &
-            flux_m, flux_p, flux, integrand,        &
-            mu_m, mu_p,                             &
-            u_m, u_p,                             &
-            grad1_phys_u_m, grad2_phys_u_m, grad3_phys_u_m,&
-            grad1_phys_u_p, grad2_phys_u_p, grad3_phys_u_p,&
-            flux_1_ref, flux_2_ref, flux_3_ref
+            flux_m, flux_p, integrand,        &
+            mu_m, mu_p
 
         real(rk),   allocatable, dimension(:)   :: &
             norm_1, norm_2, norm_3
 
         type(AD_D), allocatable, dimension(:,:)   ::  &
-            gradu_m, gradu_m &
+            gradu_m, gradu_p, &
             flux_ref
 
 

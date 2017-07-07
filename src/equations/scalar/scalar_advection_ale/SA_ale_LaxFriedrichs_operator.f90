@@ -73,43 +73,25 @@ contains
             u_m,  u_p,                              &
             c1_m, c2_m, c3_m,                       &
             c1_p, c2_p, c3_p,                       &
-            flux_1, flux_2, flux_3, integrand, flux_1_ref, flux_2_ref, flux_3_ref
+            flux_1, flux_2, flux_3, integrand
 
-        real(rk), allocatable, dimension(:) ::      &
-           u_grid, v_grid, w_grid, det_jacobian_grid, testx
+        type(AD_D), allocatable, dimension(:,:)   :: flux_ref
 
-
-        real(rk), allocatable, dimension(:,:,:) ::      &
-            jacobian_grid
-
-
-        real(rk),   dimension(:), allocatable   ::  &
-            norm_1, norm_2, norm_3, unorm_1, unorm_2, unorm_3
+        real(rk), allocatable                       :: u_grid(:), v_grid(:), w_grid(:)
+        
+        real(rk),   allocatable, dimension(:)   ::  &
+            norm_1, norm_2, norm_3
 
 
-        u_grid = worker%get_grid_velocity_face("u_grid")
-        v_grid = worker%get_grid_velocity_face("v_grid")
-        w_grid = worker%get_grid_velocity_face("w_grid")
-
-!        print *, 'u_grid'
-!        print *, u_grid
-!        print *, 'v_grid'
-!        print *, v_grid
-!        print *, 'w_grid'
-!        print *, w_grid
-        jacobian_grid = worker%get_inv_jacobian_grid_face()
-        det_jacobian_grid = worker%get_det_jacobian_grid_face('value')
-
+        u_grid = worker%get_grid_velocity_face('u_grid')
+        v_grid = worker%get_grid_velocity_face('v_grid')
+        w_grid = worker%get_grid_velocity_face('w_grid')
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        u_m    = worker%get_primary_field_face('u', 'value', 'face interior')
-        u_p    = worker%get_primary_field_face('u', 'value', 'face exterior')
-
-        u_m = u_m/det_jacobian_grid
-        u_p = u_p/det_jacobian_grid
-
+        u_m = worker%get_primary_field_value_ale_face('u', 'face interior')
+        u_p = worker%get_primary_field_value_ale_face('u', 'face exterior')
 
         !
         ! Get model coefficients
@@ -129,11 +111,7 @@ contains
         norm_2  = worker%normal(2)
         norm_3  = worker%normal(3)
 
-        unorm_1 = worker%unit_normal(1)
-        unorm_2 = worker%unit_normal(2)
-        unorm_3 = worker%unit_normal(3)
-
-
+        
         !
         ! Compute boundary upwind flux
         !
@@ -141,21 +119,13 @@ contains
         flux_2 = max(abs(c2_m)+abs(v_grid),abs(c2_p)+abs(v_grid))*HALF*(u_m - u_p)
         flux_3 = max(abs(c3_m)+abs(w_grid),abs(c3_p)+abs(w_grid))*HALF*(u_m - u_p)
 
-        !flux_1 = flux_1 - HALF*(u_m+u_p)*u_grid 
-        !flux_2 = flux_2 - HALF*(u_m+u_p)*v_grid
-        !flux_3 = flux_3 - HALF*(u_m+u_p)*w_grid
-
-        flux_1_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_1 + jacobian_grid(:,1,2)*flux_2 + jacobian_grid(:,1,3)*flux_3)
-        flux_2_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_1 + jacobian_grid(:,2,2)*flux_2 + jacobian_grid(:,2,3)*flux_3)
-        flux_3_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_1 + jacobian_grid(:,3,2)*flux_2 + jacobian_grid(:,3,3)*flux_3)
-
-
-
+        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3)
+        
         !
         ! Dot with normal vector
         ! 
-        integrand = flux_1_ref*norm_1 + flux_2_ref*norm_2 + flux_3_ref*norm_3
 
+        integrand = flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3
 
 
 

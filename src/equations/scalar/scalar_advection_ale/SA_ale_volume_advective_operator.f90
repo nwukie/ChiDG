@@ -80,37 +80,15 @@ contains
 
 
         type(AD_D), allocatable, dimension(:)   ::  &
-            u, flux_1, flux_2, flux_3, c1, c2, c3, flux_1_ref, flux_2_ref, flux_3_ref
+            u, flux_1, flux_2, flux_3, c1, c2, c3
 
-        real(rk), allocatable, dimension(:) ::      &
-           u_grid, v_grid, w_grid, det_jacobian_grid, testx
+        type(AD_D), allocatable, dimension(:,:)   :: flux_ref
 
-
-        real(rk), allocatable, dimension(:,:,:) ::      &
-            jacobian_grid
-
-        u_grid = worker%get_grid_velocity_element("u_grid")
-        v_grid = worker%get_grid_velocity_element("v_grid")
-        w_grid = worker%get_grid_velocity_element("w_grid")
-
-!        print *, 'u_grid'
-!        print *, u_grid
-!        print *, 'v_grid'
-!        print *, v_grid
-!        print *, 'w_grid'
-!        print *, w_grid
-        jacobian_grid = worker%get_inv_jacobian_grid_element()
-        det_jacobian_grid = worker%get_det_jacobian_grid_element('value')
+        real(rk),   allocatable, dimension(:)   ::  &
+            norm_1, norm_2, norm_3
 
 
-
-        !
-        ! Interpolate solution to quadrature nodes
-        !
-        u  = worker%get_primary_field_element('u','value')
-
-        u = u/det_jacobian_grid
-
+        u = worker%get_primary_field_value_ale_element('u')
         !
         ! Get model coefficients
         !
@@ -122,14 +100,11 @@ contains
         !
         ! Compute volume flux at quadrature nodes
         !
-        flux_1 = (c1 - u_grid ) * u
-        flux_2 = (c2 - v_grid ) * u
-        flux_3 = (c3 - w_grid ) * u
+        flux_1 = c1 * u
+        flux_2 = c2 * u
+        flux_3 = c3 * u
 
-        flux_1_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_1 + jacobian_grid(:,1,2)*flux_2 + jacobian_grid(:,1,3)*flux_3)
-        flux_2_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_1 + jacobian_grid(:,2,2)*flux_2 + jacobian_grid(:,2,3)*flux_3)
-        flux_3_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_1 + jacobian_grid(:,3,2)*flux_2 + jacobian_grid(:,3,3)*flux_3)
-
+        flux_ref = worker%post_process_volume_advective_flux_ale(flux_1, flux_2, flux_3, u)
 
 
         !
@@ -137,7 +112,7 @@ contains
         !
 
 
-        call worker%integrate_volume('u',flux_1_ref,flux_2_ref,flux_3_ref)
+        call worker%integrate_volume('u',flux_ref(:,1),flux_ref(:,3),flux_ref(:,3))
 
     end subroutine compute
     !****************************************************************************************************

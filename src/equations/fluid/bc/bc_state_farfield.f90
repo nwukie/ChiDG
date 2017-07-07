@@ -1,6 +1,7 @@
 module bc_state_farfield
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: TWO, HALF, ZERO, ONE, RKTOL, FOUR
+    use mod_fluid,              only: R, gam
 
     use type_bc_state,          only: bc_state_t
     use type_chidg_worker,      only: chidg_worker_t
@@ -136,8 +137,8 @@ contains
         v_input   = self%bcproperties%compute('Velocity-2', worker%time(), worker%coords())
         w_input   = self%bcproperties%compute('Velocity-3', worker%time(), worker%coords())
 
-        T_input = p_input/(rho_input*287.15_rk)
-        c_input = sqrt(1.4_rk*287.15_rk*T_input)
+        T_input = p_input/(rho_input*R)
+        c_input = sqrt(gam*R*T_input)
 
 
 
@@ -173,11 +174,11 @@ contains
         !
         !p_m = worker%get_model_field_face('Pressure',    'value', 'face interior')
         !T_m = worker%get_model_field_face('Temperature', 'value', 'face interior')
-        p_m = (1.4_rk-ONE)*(energy_m-0.5_rk*(mom1_m**TWO+mom2_m**TWO+mom3_m**TWO)/density_m)
-        T_m = p_m/(density_m*287.15_rk)
+        p_m = (gam-ONE)*(energy_m-HALF*(mom1_m**TWO+mom2_m**TWO+mom3_m**TWO)/density_m)
+        T_m = p_m/(density_m*R)
 
 
-        c_m = sqrt(1.4_rk*287.15_rk*T_m)
+        c_m = sqrt(gam*R*T_m)
 
 
 
@@ -257,14 +258,14 @@ contains
         !
         ! Compute Riemann invariants
         !
-        R_inf          = (u_input*unorm_1 + v_input*unorm_2 + w_input*unorm_3) - TWO*c_input/(1.4_rk - ONE)
-        R_extrapolated = (u_m*unorm_1     + v_m*unorm_2     + w_m*unorm_3    ) + TWO*c_m/(1.4_rk - ONE)
+        R_inf          = (u_input*unorm_1 + v_input*unorm_2 + w_input*unorm_3) - TWO*c_input/(gam - ONE)
+        R_extrapolated = (u_m*unorm_1     + v_m*unorm_2     + w_m*unorm_3    ) + TWO*c_m/(gam - ONE)
 
 
         !
         ! Compute boundary velocities
         !
-        c_bc = ((1.4_rk - ONE)/FOUR)*(R_extrapolated - R_inf)
+        c_bc = ((gam - ONE)/FOUR)*(R_extrapolated - R_inf)
 
         u_bc_norm = HALF*(R_extrapolated + R_inf)*unorm_1
         v_bc_norm = HALF*(R_extrapolated + R_inf)*unorm_2
@@ -281,7 +282,7 @@ contains
             v_bc_tang = v_input - (u_input*unorm_1 + v_input*unorm_2 + w_input*unorm_3)*unorm_2
             w_bc_tang = w_input - (u_input*unorm_1 + v_input*unorm_2 + w_input*unorm_3)*unorm_3
 
-            entropy_bc = p_input/(rho_input**1.4_rk)
+            entropy_bc = p_input/(rho_input**gam)
 
         elsewhere !outflow
 
@@ -289,7 +290,7 @@ contains
             v_bc_tang = v_m - (u_m*unorm_1 + v_m*unorm_2 + w_m*unorm_3)*unorm_2
             w_bc_tang = w_m - (u_m*unorm_1 + v_m*unorm_2 + w_m*unorm_3)*unorm_3
 
-            entropy_bc = p_m/(density_m**1.4_rk)
+            entropy_bc = p_m/(density_m**gam)
 
         end where
 
@@ -298,13 +299,13 @@ contains
         !
         ! Compute boundary state
         !
-        density_bc  = (c_bc*c_bc/(entropy_bc*1.4_rk))**(ONE/(1.4_rk-ONE))
+        density_bc  = (c_bc*c_bc/(entropy_bc*gam))**(ONE/(gam-ONE))
         mom1_bc = (u_bc_norm + u_bc_tang)*density_bc
         mom2_bc = (v_bc_norm + v_bc_tang)*density_bc
         mom3_bc = (w_bc_norm + w_bc_tang)*density_bc
 
-        p_bc   = (density_bc**1.4_rk)*entropy_bc
-        energy_bc = (p_bc/(1.4_rk - ONE)) + HALF*(mom1_bc*mom1_bc + mom2_bc*mom2_bc + mom3_bc*mom3_bc)/density_bc
+        p_bc   = (density_bc**gam)*entropy_bc
+        energy_bc = (p_bc/(gam - ONE)) + HALF*(mom1_bc*mom1_bc + mom2_bc*mom2_bc + mom3_bc*mom3_bc)/density_bc
 
 
 

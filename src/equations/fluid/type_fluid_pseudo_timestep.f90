@@ -1,7 +1,7 @@
 module type_fluid_pseudo_timestep
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: THIRD, ONE, HALF
-    use mod_fluid,              only: omega
+    use mod_fluid,              only: omega, gam
     use type_pseudo_timestep,   only: pseudo_timestep_t
     use type_mesh,          only: mesh_t
     use type_properties,        only: properties_t
@@ -61,7 +61,7 @@ contains
                 p, vmag, c, r
 
 
-        real(rk)    ::  h, lam, gam
+        real(rk)    ::  h, lam
 
         
         !
@@ -99,7 +99,6 @@ contains
             !
             ! Compute pressure
             !
-            gam = 1.4_rk
             p = (gam - ONE)*(rhoE - HALF*(rhou*rhou + rhov*rhov + rhow*rhow)/rho )
 
             

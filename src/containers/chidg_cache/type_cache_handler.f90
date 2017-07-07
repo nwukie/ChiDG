@@ -1685,7 +1685,7 @@ contains
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
+        type(bc_state_group_t),     intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
 
         character(:),   allocatable :: field
@@ -1723,10 +1723,6 @@ contains
 
 
 
-            !associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%face%weights(:,iface),      &
-            !            val_face_trans   => worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%face%val_trans(:,:,iface),  &
-            !            val_face         => worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%face%val(:,:,iface),        &
-            !            val_vol          => worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%vol%val,                    &
             associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights(iface),                           &
                         val_face_trans   => transpose(worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator('Value',iface)),   &
                         val_face         => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator('Value',iface),              &
@@ -1956,7 +1952,7 @@ contains
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
+        type(bc_state_group_t),     intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
 
         integer(ik) :: idomain_l, ielement_l, iface, idepend, ieqn, &
@@ -2099,7 +2095,7 @@ contains
     subroutine handle_external_lift__interior_face(worker,equation_set,bc_state_group,ieqn)
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
+        type(bc_state_group_t),     intent(inout)   :: bc_state_group(:)
         integer(ik),                intent(in)      :: ieqn
 
         integer(ik) :: idomain_l, ielement_l, iface, idomain_l_n, ielement_l_n, iface_n, iproc_n, eqn_ID
@@ -2147,10 +2143,6 @@ contains
 
 
         if ( local_neighbor ) then
-        !    weights          = worker%mesh%domain(idomain_l_n)%elems(ielement_l_n)%gq%face%weights(:,iface_n)
-        !    val_face_trans   = worker%mesh%domain(idomain_l_n)%elems(ielement_l_n)%gq%face%val_trans(:,:,iface_n)
-        !    val_face         = worker%mesh%domain(idomain_l_n)%elems(ielement_l_n)%gq%face%val(:,:,iface_n)
-        !    val_vol          = worker%mesh%domain(idomain_l_n)%elems(ielement_l_n)%gq%vol%val
             weights          = worker%mesh%domain(idomain_l_n)%elems(ielement_l_n)%basis_s%weights(iface_n)
             val_face_trans   = transpose(worker%mesh%domain(idomain_l_n)%elems(ielement_l_n)%basis_s%interpolator('Value',iface_n))
             val_face         = worker%mesh%domain(idomain_l_n)%elems(ielement_l_n)%basis_s%interpolator('Value',iface_n)
@@ -2161,10 +2153,6 @@ contains
 
         else if ( remote_neighbor ) then
             ! User local element gq instance. Assumes same order of accuracy.
-            !weights          = worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%face%weights(:,iface_n)
-            !val_face_trans   = worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%face%val_trans(:,:,iface_n)
-            !val_face         = worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%face%val(:,:,iface_n)
-            !val_vol          = worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%vol%val
             weights          = worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights(iface_n)
             val_face_trans   = transpose(worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator('Value',iface_n))
             val_face         = worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator('Value',iface_n)
@@ -2259,7 +2247,7 @@ contains
     subroutine handle_external_lift__boundary_face(worker,equation_set,bc_state_group,ieqn)
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
+        type(bc_state_group_t),     intent(inout)   :: bc_state_group(:)
         integer(ik),                intent(in)      :: ieqn
 
         integer(ik) :: idomain_l, ielement_l, iface, idomain_l_n, ielement_l_n, iface_n, eqn_ID
@@ -2314,9 +2302,6 @@ contains
         ielement_l_n = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
 
 
-        !associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%face%weights(:,iface_n),        &
-        !            val_face_trans   => worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%face%val_trans(:,:,iface_n),    &
-        !            val_face         => worker%mesh%domain(idomain_l)%elems(ielement_l)%gq%face%val(:,:,iface_n),          &
         associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights(iface_n),                         &
                     val_face_trans   => transpose(worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator('Value',iface_n)), &
                     val_face         => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator('Value',iface_n),            &
@@ -2415,7 +2400,7 @@ contains
     subroutine handle_external_lift__chimera_face(worker,equation_set,bc_state_group,ieqn)
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
+        type(bc_state_group_t),     intent(inout)   :: bc_state_group(:)
         integer(ik),                intent(in)      :: ieqn
 
         integer(ik) :: idomain_l, ielement_l, iface, idomain_l_n, ielement_l_n, iface_n, eqn_ID
@@ -2541,7 +2526,7 @@ contains
     function get_ndepend_exterior(worker,equation_set,bc_state_group,differentiate) result(ndepend)
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
-        type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
+        type(bc_state_group_t),     intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
 
         integer(ik) :: ndepend, idomain_l, ielement_l, iface, &

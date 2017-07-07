@@ -26,8 +26,6 @@ module type_shear_stress
     !---------------------------------------------------------------------------------------
     type, extends(model_t)  :: shear_stress_t
 
-        real(rk)    :: gam = 1.4_rk     ! ratio of specific heats
-        real(rk)    :: R   = 287.15_rk  ! ideal gas constant [J/(kg*K)]
 
     contains
 

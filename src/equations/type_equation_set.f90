@@ -69,7 +69,7 @@ module type_equation_set
         type(model_wrapper_t),      allocatable :: models(:)
 
         ! IO fields
-        type(model_wrapper_t),      allocatable :: io_fields(:)
+        type(model_wrapper_t),      allocatable :: io_models(:)
 
         ! Pseudo time-step calculator
         class(pseudo_timestep_t),   allocatable :: pseudo_timestep
@@ -395,6 +395,7 @@ contains
         ! Turn on primary fields from the new operator
         do ifield = 1,new_operator%nprimary_fields()
             call self%prop%add_primary_field(new_operator%get_primary_field(ifield))
+            call self%prop%add_io_field(new_operator%get_primary_field(ifield))
         end do
 
         ! Turn on auxiliary fields from the new operator

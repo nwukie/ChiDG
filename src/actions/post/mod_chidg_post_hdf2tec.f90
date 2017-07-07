@@ -49,9 +49,8 @@ contains
     
         type(chidg_t)                       :: chidg
         type(file_properties_t)             :: file_props
-        character(:),           allocatable :: eqnset
         character(:),           allocatable :: time_string, solution_file_prefix, plt_filename
-        integer(ik)                         :: nterms_s, solution_order, istep, itimestep
+        integer(ik)                         :: nterms_s, solution_order
 
 
 
@@ -65,11 +64,10 @@ contains
 
 
         !
-        ! Get nterms_s and eqnset.
+        ! Get nterms_s 
         !
         file_props  = get_properties_hdf(solution_file)
         nterms_s    = file_props%nterms_s(1)
-        eqnset      = file_props%eqnset(1)
         time_string = file_props%time_integrator
 
         solution_order = 0
@@ -108,8 +106,8 @@ contains
         ! Write solution
         !
         solution_file_prefix = get_file_prefix(solution_file,'.h5')
-        plt_filename = solution_file_prefix//'.plt'
-        call write_tecio(chidg%data,plt_filename, write_domains=.true., write_surfaces=.true.)
+        !plt_filename = solution_file_prefix//'.plt'
+        call write_tecio(chidg%data,solution_file_prefix, write_domains=.true., write_surfaces=.true.)
         
 
 

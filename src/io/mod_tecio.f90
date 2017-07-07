@@ -7,24 +7,18 @@
 !!  discrete points and elements/faces are sub-divided to resolve polynomial
 !!  variation within these entities.
 !!
-!!  High-level procedures:
+!!  Procedure hierarchy:
 !!  ----------------------
 !!  write_tecio
+!!      : init_tecio_file
+!!      : write_tecio_domains
+!!          : init_tecio_volume_zone
+!!      : write_tecio_surfaces
+!!          : init_tecio_surface_zone
+!!      : close_tecio_file
 !!
 !!
-!!  Mid-level procedures:
-!!  ---------------------
-!!  write_tecio_domains
-!!  write_tecio_surfaces
-!!
-!!
-!!  Low-level procedures:
-!!  ---------------------
-!!  init_tecio_file
-!!  init_tecio_volume_zone
-!!  init_tecio_surface_zone
-!!  close_tecio_file
-!!
+!!  @author Nathan A. Wukie
 !!
 !--------------------------------------------------------------------------------------
 module mod_tecio
@@ -64,7 +58,7 @@ contains
     !!  NOTE: This processes solution data from data%sdata%q_out. As such, q_out shall
     !!        have been initialized appropriately.
     !!
-    !!  @param[inout]   data            chidg_data instance containing initialized mesh/solution data.
+    !!  @param[inout]   data            chidg_data instance containing initialized mesh/solution.
     !!  @param[in]      filename        String for the name of the file being written to.
     !!  @param[in]      write_domains   logical controlling if volume domain data is written.
     !!  @param[in]      write_surfaces  logical controlling if surface bc data is written.
@@ -92,16 +86,11 @@ contains
         !
         !   Default: Grid coordinates
         !
-        varstring = "X,Y,Z"
-
-
-        !
-        ! TODO: Generalized TECIO for different equation set in each domain.
-        !
         ieq = 1
+        varstring = "X,Y,Z"
         eqn_ID = data%mesh%domain(1)%eqn_ID
-        do while (ieq <= data%eqnset(eqn_ID)%prop%nprimary_fields())
-            varstring = trim(varstring)//","//trim(data%eqnset(1)%prop%get_primary_field_name(ieq))
+        do while (ieq <= data%eqnset(eqn_ID)%prop%nio_fields())
+            varstring = trim(varstring)//","//trim(data%eqnset(1)%prop%get_io_field_name(ieq))
             ieq = ieq + 1
         end do
 
@@ -195,24 +184,18 @@ contains
 
 
         eqn_ID = data%mesh%domain(1)%eqn_ID
-        numvars = 3 + data%eqnset(eqn_ID)%prop%nprimary_fields()
+        numvars = 3 + data%eqnset(eqn_ID)%prop%nio_fields()
+        !io_ID = data%mesh%domain(1)%io_ID
+        !numvars = data%io(io_ID)%prop%nio_fields()
 
 
         !
-        ! Loop time instances
+        ! Loop time/domains/elements/fields
         !
         do itime = 1,data%sdata%q_out%get_ntime()
-
-
             worker%itime = itime
-
-
-            !
-            ! Loop domains
-            !
             do idom = 1,data%mesh%ndomains()
 
-                nelem    = data%mesh%domain(idom)%nelem
 
                 !
                 ! Initialize new zone in the TecIO file for the current domain
@@ -222,6 +205,7 @@ contains
 
                 ! For each coordinate, compute it's value pointwise and save
                 ! For each actual element, create a sub-sampling of elements to resolve solution variation
+                nelem = data%mesh%domain(idom)%nelem
                 do ielem = 1,nelem
                     do icoord = 1,3
 
@@ -264,9 +248,9 @@ contains
                     call cache_handler%update(worker,data%eqnset, data%bc_state_group, differentiate=.false., components='element', face=NO_ID)
 
                     ! Retrieve name of current field, retrieve interpolation, write interpolation to file
-                    do ifield = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
-                        var_string = data%eqnset(eqn_ID)%prop%get_primary_field_name(ifield)
-                        var = worker%get_primary_field_element(var_string, 'value')
+                    do ifield = 1,data%eqnset(eqn_ID)%prop%nio_fields()
+                        var_string = data%eqnset(eqn_ID)%prop%get_io_field_name(ifield)
+                        var = worker%get_io_field_element(var_string, 'value')
                         tecstat = tecZoneVarWriteDoubleValues(handle, zone_index, 3+ifield, 0, int(size(var),c_int64_t), real(var(:)%x_ad_,rdouble))
                         if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to tecZoneVarWriteDoubleValues")
                     end do ! ifield
@@ -293,8 +277,8 @@ contains
 !
 !
 !                        ! Retrieve name of current field, retrieve interpolation
-!                        var_string = data%eqnset(eqn_ID)%prop%get_primary_field_name(ifield)
-!                        var = worker%get_primary_field_element(var_string, 'value')
+!                        var_string = data%eqnset(eqn_ID)%prop%get_io_field_name(ifield)
+!                        var = worker%get_io_field_element(var_string, 'value')
 !
 !                        ! Write each node
 !                        do inode = 1,size(var,1)
@@ -445,7 +429,7 @@ contains
 
 
         eqn_ID = data%mesh%domain(1)%eqn_ID
-        numvars = 3 + data%eqnset(eqn_ID)%prop%nprimary_fields()
+        numvars = 3 + data%eqnset(eqn_ID)%prop%nio_fields()
 
         !
         ! Loop time instances
@@ -540,9 +524,9 @@ contains
 
 
                         ! Retrieve name of current field, retrieve interpolation, write interpolation to file
-                        do ifield = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
-                            var_string = data%eqnset(eqn_ID)%prop%get_primary_field_name(ifield)
-                            var = worker%get_primary_field_face(var_string, 'value', 'face interior')
+                        do ifield = 1,data%eqnset(eqn_ID)%prop%nio_fields()
+                            var_string = data%eqnset(eqn_ID)%prop%get_io_field_name(ifield)
+                            var = worker%get_io_field_face(var_string, 'value', 'face interior')
 
                             tecstat = tecZoneVarWriteDoubleValues(handle, zone_index, 3+ifield, 0, int(size(var),c_int64_t), real(var(:)%x_ad_,rdouble))
                             if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to tecZoneVarWriteDoubleValues")

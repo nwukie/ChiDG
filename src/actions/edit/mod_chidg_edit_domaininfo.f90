@@ -55,7 +55,7 @@ contains
             !
             ! Print command options, accept user selection.
             !
-            bc_commands = "Enter a domain to edit(Enter blank to exit):"
+            bc_commands = "Enter a domain name to edit(Enter blank to exit):"
             call write_line(' ')
             call write_line(bc_commands,color='blue')
 

@@ -13,20 +13,23 @@ module type_properties
     !!  @author Nathan A. Wukie
     !!  @date   2/25/2016
     !!  @date   11/18/2016  auxiliary fields
+    !!  @date   7/6/2017    io fields
     !!
     !---------------------------------------------------------------------------------------------
     type, public :: properties_t
         
         ! Fields
-        type(field_t),   allocatable :: primary_fields(:)
-        type(field_t),   allocatable :: auxiliary_fields(:)
-        type(field_t),   allocatable :: model_fields(:)
+        type(field_t),  allocatable :: primary_fields(:)
+        type(field_t),  allocatable :: auxiliary_fields(:)
+        type(field_t),  allocatable :: model_fields(:)
+        type(field_t),  allocatable :: io_fields(:)
 
     contains
 
         procedure   :: add_primary_field
         procedure   :: add_auxiliary_field
         procedure   :: add_model_field
+        procedure   :: add_io_field
 
         procedure   :: get_primary_field_name
         procedure   :: get_primary_field_index
@@ -34,10 +37,13 @@ module type_properties
         procedure   :: get_auxiliary_field_index
         procedure   :: get_model_field_name
         procedure   :: get_model_field_index
+        procedure   :: get_io_field_name
+        procedure   :: get_io_field_index
 
         procedure   :: nprimary_fields
         procedure   :: nauxiliary_fields
         procedure   :: nmodel_fields
+        procedure   :: nio_fields
 
     end type properties_t
     !*********************************************************************************************
@@ -280,6 +286,91 @@ contains
 
 
 
+    !>  Add a io field to the list.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/6/2017
+    !!
+    !--------------------------------------------------------------------------------------------
+    subroutine add_io_field(self,field_string)
+        class(properties_t),    intent(inout)   :: self
+        character(*),           intent(in)      :: field_string
+
+        type(field_t),   allocatable    :: temp_fields(:)
+        integer(ik)                     :: ifield, ierr, ind
+        logical                         :: already_added
+
+
+        !
+        ! Check if equation was already added by another function
+        !
+        ind = self%get_io_field_index(field_string)
+        already_added = (ind /= 0)
+
+
+        !
+        ! Add equation if necessary
+        !
+        if (.not. already_added) then
+
+
+            !
+            ! If there are already equations allocated, reallocate and add new equation
+            !
+            if (allocated(self%io_fields)) then
+
+                ! Allocate temp field array with one extra slot for new field
+                allocate(temp_fields(self%nio_fields() + 1), stat=ierr)
+                if (ierr /= 0) call AllocationError
+
+                ! Copy current fields to first temp slots
+                do ifield = 1,self%nio_fields()
+                    temp_fields(ifield) = self%io_fields(ifield)
+                end do
+
+
+            !
+            ! If there are no equations allocated, allocate one slot and set data
+            !
+            else
+                allocate(temp_fields(1), stat=ierr)
+                if (ierr /= 0) call AllocationError
+            end if
+
+
+            !
+            ! Set new field at end
+            !
+            call temp_fields(size(temp_fields))%set_name(field_string)
+
+            !
+            ! Move temporary allocation
+            !
+            call move_alloc(from=temp_fields, to=self%io_fields)
+
+        end if
+
+
+    end subroutine add_io_field
+    !*******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -377,6 +468,34 @@ contains
     !*******************************************************************************************
 
 
+
+
+
+
+    !>  Given a io field index, return the io field name.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/6/2017
+    !!
+    !-------------------------------------------------------------------------------------------
+    function get_io_field_name(self,field_index) result(field_name)
+        class(properties_t),    intent(in)  :: self
+        integer(ik),            intent(in)  :: field_index
+
+        character(:),   allocatable :: user_msg, field_name
+
+        ! Check bounds
+        user_msg = "properties%get_io_field_name: Incoming index to return an auxiliary &
+                    field is out of bounds."
+        if (field_index > self%nio_fields()) call chidg_signal_one(FATAL,user_msg,field_index)
+
+
+        ! Get name
+        field_name = self%io_fields(field_index)%get_name()
+
+
+    end function get_io_field_name
+    !*******************************************************************************************
 
 
 
@@ -511,6 +630,41 @@ contains
 
 
 
+    !>  Search for a field string in the self%io_fields list. If found, return index of the field.
+    !!  A set of fields could be stored in any order. So, when a field is initialized, it
+    !!  is initialized with an index indicating its location in the set. That index is used to 
+    !!  access the correct solution data values.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/6/2017
+    !!
+    !!  @param[in]  field_string   Character string identifying the desired variable
+    !!
+    !------------------------------------------------------------------------------------------
+    function get_io_field_index(self,field_string) result(field_index)
+        class(properties_t),    intent(in)  :: self
+        character(*),           intent(in)  :: field_string
+
+        integer(ik) :: field_index, ifield
+        logical     :: found = .false.
+
+
+        field_index = 0
+
+
+        ! Search for character string in self%auxiliary_fields array. If found set index
+        do ifield = 1,self%nio_fields()
+            if (field_string == self%io_fields(ifield)%name) then
+                field_index = ifield
+                found = .true.
+                exit
+            end if
+        end do
+
+
+    end function get_io_field_index
+    !******************************************************************************************
+
 
 
 
@@ -597,6 +751,25 @@ contains
 
 
 
+    !>  Return number of io fields that have been added.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/30/2016
+    !!
+    !------------------------------------------------------------------------------------------
+    function nio_fields(self) result(nfields)
+        class(properties_t),    intent(in)  :: self
+
+        integer(ik) :: nfields
+
+        if (allocated(self%io_fields)) then
+            nfields = size(self%io_fields)
+        else
+            nfields = 0
+        end if
+
+    end function nio_fields
+    !******************************************************************************************
 
 
 

@@ -132,22 +132,6 @@ endif()
 
 
 
-#----------------------------------------------------------------------------------------------
-#                                         Find Lapack
-#----------------------------------------------------------------------------------------------
-message(STATUS " ")
-message(STATUS "BLAS/LAPACK Summary:")
-find_package(LAPACK REQUIRED)
-
-if (LAPACK_FOUND)
-    message(STATUS "    LAPACK Libraries: ")
-    foreach (L ${LAPACK_LIBRARIES})
-        message(STATUS "        " ${L})
-    endforeach()
-endif()
-
-
-
 
 
 #----------------------------------------------------------------------------------------------
@@ -188,6 +172,78 @@ endif()
 
 
 
+#----------------------------------------------------------------------------------------------
+#                                         Find Lapack
+#----------------------------------------------------------------------------------------------
+message(STATUS " ")
+message(STATUS "BLAS/LAPACK Summary:")
+find_package(LAPACK REQUIRED)
+
+if (LAPACK_FOUND)
+    message(STATUS "    LAPACK Libraries: ")
+    foreach (L ${LAPACK_LIBRARIES})
+        message(STATUS "        " ${L})
+    endforeach()
+
+
+    # Write test program to file.
+    set(test_lapack_file ${CMAKE_CURRENT_BINARY_DIR}/test_lapack.f90)
+    file(WRITE ${test_lapack_file}
+        "program main\n"
+        "    implicit none\n"
+        "    external DGETRI\n"
+        "    external DGETRF\n"
+        "    real(8), dimension(:,:),    allocatable :: A(:,:), Ainv(:,:)\n"
+        "    real(8), dimension(:),      allocatable :: work\n"
+        "    integer,  dimension(:),     allocatable :: ipiv\n"
+        "    integer :: n, info\n"
+        "    allocate(A(20,20))\n"
+        "    allocate(Ainv(20,20), work(20), ipiv(20))\n"
+        "    Ainv = A\n"
+        "    n = size(A,1)\n"
+        "    call DGETRF(n, n, Ainv, n, ipiv, info)\n"
+        "    call DGETRI(n, Ainv, n, ipiv, work, n, info)\n"
+        "end program main\n")
+
+
+    # Try compiling and running test program that uses BLAS/LAPACK routines.
+    # We are checking here to make sure that the detected libraries actually
+    # work on the current machine. 
+    try_run(RUN_RESULTS COMPILE_RESULTS
+            ${CMAKE_CURRENT_BINARY_DIR} ${test_lapack_file}
+            LINK_LIBRARIES ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} 
+            OUTPUT_VARIABLE out_var)
+
+    # Interpret RUN/COMPILE results as good/bad
+    set(COMPILED_OKAY ${COMPILE_RESULTS})
+    if (${RUN_RESULTS} EQUAL 0)
+        set(RAN_OKAY TRUE)
+    else()
+        set(RAN_OKAY FALSE)
+    endif()
+
+    # Handle RUN/COMPILE results
+    if (NOT ${COMPILED_OKAY})
+        message(SEND_ERROR "We couldn't compile a test program using the BLAS/LAPACK \
+                            Libraries that were detected. You can try and influence \
+                            the BLAS library that is detected using the configuration\
+                            parameter -DBLA_VENDOR. For example, to explicitly try\
+                            to use the Apple Accelerate Framework you can pass\
+                            -DBLA_VENDOR=Apple during configuration.")
+    elseif(NOT ${RAN_OKAY} )
+        message(SEND_ERROR "A test program failed when trying to use the BLAS/LAPACK \
+                            Libraries that were detected. This could mean that they \
+                            are not compatible with your machine, which is possible \
+                            if you are using libraries from a network directory \
+                            managed by another user. You can try and influence the \
+                            BLAS library that is detected using the configuration \
+                            parameter -DBLA_VENDOR. For example to explicitly try  \
+                            to use the Apple Accelerate Framework you can pass \
+                            -DBLA_VENDOR=Apple during configuration.")
+    endif()
+
+
+endif()
 
 
 #----------------------------------------------------------------------------------------------
@@ -232,8 +288,10 @@ message(STATUS "Tecplot Summary: ")
 # Select TecIO library based on detected OS
 if ( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" ) 
     set(TEC_ROOT ${CMAKE_SOURCE_DIR}/tecio/mac)
+    install(FILES ${TEC_ROOT}/lib/libtecio.dylib DESTINATION /usr/local/chidg/lib)
 elseif( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )
     set(TEC_ROOT ${CMAKE_SOURCE_DIR}/tecio/linux)
+    install(FILES ${TEC_ROOT}/lib/libtecio.so DESTINATION /usr/local/chidg/lib)
 else()
     message(SEND_ERROR "Invalid operating system detected for TecIO")
 endif()
@@ -313,9 +371,8 @@ install(TARGETS chidg coredg
         LIBRARY DESTINATION /usr/local/chidg/lib
         ARCHIVE DESTINATION /usr/local/chidg/lib)
 
+
 install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/ DESTINATION /usr/local/chidg/include)
-
-
 
 
 #----------------------------------------------------------------------------------------------

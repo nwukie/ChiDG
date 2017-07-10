@@ -2,6 +2,7 @@ module bc_state_outlet_constant_pressure
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, HALF
+    use mod_fluid,              only: gam
 
     use type_bc_state,          only: bc_state_t
     use type_chidg_worker,      only: chidg_worker_t
@@ -94,7 +95,7 @@ contains
 
 
         integer(ik)                                 :: igq
-        real(rk)                                    :: time, gam_m
+        real(rk)                                    :: time
         type(point_t),  allocatable, dimension(:)   :: coords
         real(rk),       allocatable, dimension(:)   ::  &
             p_bc, norm_1, norm_2, norm_3, r
@@ -156,11 +157,6 @@ contains
         end if
 
 
-        !
-        ! Compute gamma
-        !
-        gam_m = 1.4_rk
-
 
         !
         ! Extrapolate density and momentum
@@ -182,7 +178,7 @@ contains
         !
         ! Compute boundary condition energy and enthalpy
         !
-        energy_bc = p_bc/(gam_m - ONE) + (density_bc*HALF)*(u_bc*u_bc + v_bc*v_bc + w_bc*w_bc)
+        energy_bc = p_bc/(gam - ONE) + (density_bc*HALF)*(u_bc*u_bc + v_bc*v_bc + w_bc*w_bc)
 
 
 

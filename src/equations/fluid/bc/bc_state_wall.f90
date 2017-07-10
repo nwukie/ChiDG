@@ -102,7 +102,6 @@ contains
             u_m, v_m, w_m, p_m, normal_velocity, normal_velocity_1, normal_velocity_2, normal_velocity_3
 
         real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3, r
-        real(rk)                                :: gam = 1.4_rk
     
 
         real(rk), allocatable, dimension(:) ::      &

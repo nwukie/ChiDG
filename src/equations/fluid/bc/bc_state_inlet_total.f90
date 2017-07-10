@@ -2,6 +2,7 @@ module bc_state_inlet_total
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ONE, TWO
+    use mod_fluid,              only: R, cp, gam
     use type_bc_state,          only: bc_state_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
@@ -112,7 +113,7 @@ contains
 
 
         integer(ik)                                 :: ierr, igq
-        real(rk)                                    :: gam_m, cp_m, M
+        real(rk)                                    :: M
         real(rk),       allocatable, dimension(:)   ::  &
             TT, n1, n2, n3, nmag, alpha, r, PT
             
@@ -224,18 +225,14 @@ contains
         !
         ! Compute boundary condition temperature and pressure
         !
-        gam_m = 1.4_rk
-        cp_m  = 287.15_rk*(gam_m/(gam_m-ONE))
-
-
-        T_bc = TT - (vmag2_m)/(TWO*cp_m)
-        p_bc = PT*((T_bc/TT)**(gam_m/(gam_m-ONE)))
+        T_bc = TT - (vmag2_m)/(TWO*cp)
+        p_bc = PT*((T_bc/TT)**(gam/(gam-ONE)))
 
 
         !
         ! Compute boundary condition density from ideal gas law
         !
-        density_bc = p_bc/(T_bc*287.15_rk)
+        density_bc = p_bc/(T_bc*R)
 
 
         !
@@ -249,7 +246,7 @@ contains
         !
         ! Compute bc energy
         !
-        energy_bc = p_bc/(gam_m - ONE) + (density_bc/TWO)*( (u_bc*u_bc) + (v_bc*v_bc) + (w_bc*w_bc) )
+        energy_bc = p_bc/(gam - ONE) + (density_bc/TWO)*( (u_bc*u_bc) + (v_bc*v_bc) + (w_bc*w_bc) )
 
 
         !

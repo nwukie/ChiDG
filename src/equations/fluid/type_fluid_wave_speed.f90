@@ -2,6 +2,7 @@ module type_fluid_wave_speed
 #include <messenger.h>
     use mod_kinds,          only: rk
     use mod_constants,      only: HALF, ONE, TWO
+    use mod_fluid,          only: R, gam
     use type_model,         only: model_t
     use type_chidg_worker,  only: chidg_worker_t
     use DNAD_D
@@ -22,8 +23,6 @@ module type_fluid_wave_speed
     !---------------------------------------------------------------------------------------
     type, extends(model_t)  :: fluid_wave_speed_t
 
-        real(rk)    :: gam = 1.4_rk     ! ratio of specific heats
-        real(rk)    :: R   = 287.15_rk  ! ideal gas constant [J/(kg*K)]
 
     contains
 
@@ -99,8 +98,8 @@ contains
         !   is undefined at zero.
         !
         !vmag = sqrt((rhou**TWO + rhov**TWO + rhow**TWO)/(rho*rho))
-        vmag = rhoE - (P/(self%gam - ONE))
-        sound_speed = sqrt(self%gam * self%R * T)
+        vmag = rhoE - (P/(gam - ONE))
+        sound_speed = sqrt(gam * R * T)
 
         
         !

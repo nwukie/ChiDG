@@ -2,6 +2,7 @@ module type_reynolds_analogy
 #include <messenger.h>
     use mod_kinds,          only: rk
     use mod_constants,      only: THREE, TWO
+    use mod_fluid,          only: cp
     use type_model,         only: model_t
     use type_chidg_worker,  only: chidg_worker_t
     use DNAD_D
@@ -22,8 +23,6 @@ module type_reynolds_analogy
     !---------------------------------------------------------------------------------------
     type, extends(model_t)  :: reynolds_analogy_t
 
-        real(rk)    :: Cp = 1003.0_rk
-        !real(rk)    :: Pr = 0.8_rk
         real(rk)    :: Pr = 0.72_rk
 
     contains
@@ -88,7 +87,7 @@ contains
         !
         ! Stokes' Hypothesis for the second coefficient of viscosity
         !
-        thermal_conductivity = self%Cp * viscosity / self%Pr
+        thermal_conductivity = cp * viscosity / self%Pr
 
 
         !

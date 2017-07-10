@@ -2,6 +2,7 @@ module type_temperature_gradient
 #include <messenger.h>
     use mod_kinds,          only: rk
     use mod_constants,      only: HALF, ONE, TWO
+    use mod_fluid,          only: gam
     use type_model,         only: model_t
     use type_chidg_worker,  only: chidg_worker_t
     use DNAD_D
@@ -24,8 +25,6 @@ module type_temperature_gradient
     !---------------------------------------------------------------------------------------
     type, extends(model_t)  :: temperature_gradient_t
 
-        real(rk)    :: gam = 1.4_rk     ! ratio of specific heats
-        real(rk)    :: R   = 287.15_rk  ! ideal gas constant [J/(kg*K)]
 
     contains
 
@@ -96,7 +95,7 @@ contains
 
 
         real(rk),   allocatable,    dimension(:) :: r
-        real(rk)    :: gam, const
+        real(rk)    :: const
 
 
         !
@@ -170,7 +169,6 @@ contains
         ! Get model field 'Pressure'
         !
         p = worker%get_model_field_general('Pressure', 'value')
-        gam = 1.4_rk
 
 
 

@@ -106,14 +106,16 @@ contains
         !
         ! Get 'u' value from face interior to extrapolate
         !
-        u_bc = worker%get_primary_field_face('u', 'value', 'face interior')
+        !u_bc = worker%get_primary_field_face('u', 'value', 'face interior')
+        u_bc = worker%get_field('u', 'value', 'face interior')
 
 
 
         !
         ! Initialize derivative arrays
         !
-        dudx_bc = ZERO*worker%get_primary_field_face('u', 'grad1','face interior')
+        !dudx_bc = ZERO*worker%get_primary_field_face('u', 'grad1','face interior')
+        dudx_bc = ZERO*worker%get_field('u', 'grad1','face interior')
         dudy_bc = ZERO*dudx_bc
         dudz_bc = ZERO*dudx_bc
 

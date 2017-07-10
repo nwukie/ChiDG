@@ -30,8 +30,10 @@ module type_chidg_cache
     type, public :: chidg_cache_t
 
         type(cache_data_t)              :: element
-        type(cache_data_t), allocatable :: faces(:,:) ! (nfaces, side). side=1(INTERIOR), size=2(EXTERIOR)
-        !type(cache_data_t)   :: faces(NFACES,2) ! Causes segfault due to incomplete compiler finalization support.
+        type(cache_data_t), allocatable :: faces(:,:)      ! (nfaces, side). side=1(INTERIOR), size=2(EXTERIOR)
+        !type(cache_data_t)             :: faces(NFACES,2) ! Causes segfault due to incomplete compiler finalization support.
+
+        logical :: lift
 
     contains
 
@@ -54,15 +56,24 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------
-    subroutine resize(self,mesh,prop,idomain_l,ielement_l,differentiate)
+    subroutine resize(self,mesh,prop,idomain_l,ielement_l,differentiate,lift)
         class(chidg_cache_t),   intent(inout)   :: self
-        type(mesh_t),       intent(in)      :: mesh
+        type(mesh_t),           intent(in)      :: mesh
         type(properties_t),     intent(in)      :: prop(:)
         integer(ik),            intent(in)      :: idomain_l
         integer(ik),            intent(in)      :: ielement_l
         logical,                intent(in)      :: differentiate
+        logical,                intent(in)      :: lift
 
         integer(ik) :: iface, ierr
+
+
+        !
+        ! Store logical indicating if lift is stored
+        !
+        self%lift = lift
+
+
 
         !
         ! Allocate face cache's. Fixes SegFault that occurs when these are declared as static 

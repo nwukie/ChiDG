@@ -2,7 +2,7 @@ module type_fluid_wave_speed
 #include <messenger.h>
     use mod_kinds,          only: rk
     use mod_constants,      only: HALF, ONE, TWO
-    use mod_fluid,          only: R, gam
+    use mod_fluid,          only: Rgas, gam
     use type_model,         only: model_t
     use type_chidg_worker,  only: chidg_worker_t
     use DNAD_D
@@ -99,7 +99,7 @@ contains
         !
         !vmag = sqrt((rhou**TWO + rhov**TWO + rhow**TWO)/(rho*rho))
         vmag = rhoE - (P/(gam - ONE))
-        sound_speed = sqrt(gam * R * T)
+        sound_speed = sqrt(gam * Rgas * T)
 
         
         !

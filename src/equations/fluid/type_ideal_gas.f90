@@ -2,7 +2,7 @@ module type_ideal_gas
 #include <messenger.h>
     use mod_kinds,          only: rk
     use mod_constants,      only: HALF, ONE
-    use mod_fluid,          only: R, gam
+    use mod_fluid,          only: Rgas, gam
     use type_model,         only: model_t
     use type_chidg_worker,  only: chidg_worker_t
     use DNAD_D
@@ -23,9 +23,6 @@ module type_ideal_gas
     !!
     !---------------------------------------------------------------------------------------
     type, extends(model_t)  :: ideal_gas_t
-
-!        real(rk)    :: gam = 1.4_rk     ! ratio of specific heats
-!        real(rk)    :: R   = 287.15_rk  ! ideal gas constant [J/(kg*K)]
 
     contains
 
@@ -105,7 +102,7 @@ contains
 
 
         pressure = (gam-ONE)*(energy - HALF*( (mom1*mom1) + (mom2*mom2) + (mom3*mom3) )/density )
-        temperature = pressure/(density*R)
+        temperature = pressure/(density*Rgas)
 
 
 

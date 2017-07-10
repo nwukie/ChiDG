@@ -98,15 +98,19 @@ contains
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
-        u  = worker%get_primary_field_face('u', 'value', 'boundary')
+        !u  = worker%get_primary_field_face('u', 'value', 'boundary')
+        u  = worker%get_field('u', 'value', 'boundary')
 
 
         !
         ! Get model coefficients
         !
-        c1 = worker%get_model_field_face('Scalar Advection Velocity-1', 'value', 'boundary')
-        c2 = worker%get_model_field_face('Scalar Advection Velocity-2', 'value', 'boundary')
-        c3 = worker%get_model_field_face('Scalar Advection Velocity-3', 'value', 'boundary')
+        !c1 = worker%get_model_field_face('Scalar Advection Velocity-1', 'value', 'boundary')
+        !c2 = worker%get_model_field_face('Scalar Advection Velocity-2', 'value', 'boundary')
+        !c3 = worker%get_model_field_face('Scalar Advection Velocity-3', 'value', 'boundary')
+        c1 = worker%get_field('Scalar Advection Velocity-1', 'value', 'boundary')
+        c2 = worker%get_field('Scalar Advection Velocity-2', 'value', 'boundary')
+        c3 = worker%get_field('Scalar Advection Velocity-3', 'value', 'boundary')
 
         
         !

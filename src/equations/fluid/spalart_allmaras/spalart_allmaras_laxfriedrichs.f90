@@ -2,7 +2,7 @@ module spalart_allmaras_laxfriedrichs
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO,ONE,TWO,HALF
-    use mod_fluid,              only: omega
+    use mod_fluid,              only: omega, gam, Rgas
     use type_operator,          only: operator_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
@@ -131,8 +131,10 @@ contains
 
         T_m = worker%get_model_field_face('Temperature','value','face interior')
         T_p = worker%get_model_field_face('Temperature','value','face exterior')
-        c_m = sqrt(1.4_rk * 287.15_rk * T_m)
-        c_p = sqrt(1.4_rk * 287.15_rk * T_p)
+        c_m = sqrt(gam * Rgas * T_m)
+        c_p = sqrt(gam * Rgas * T_p)
+        !c_m = sqrt(1.4_rk * 287.15_rk * T_m)
+        !c_p = sqrt(1.4_rk * 287.15_rk * T_p)
 
         diss_m = abs(un_m) + c_m
         diss_p = abs(un_p) + c_p

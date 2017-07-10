@@ -108,10 +108,14 @@ contains
         !
         ! Get u_m from face interior to initialize derivatives
         !
-        u_bc    = worker%get_primary_field_face('u','value', 'face interior')
-        dudx_bc = worker%get_primary_field_face('u','grad1', 'face interior')
-        dudy_bc = worker%get_primary_field_face('u','grad2', 'face interior')
-        dudz_bc = worker%get_primary_field_face('u','grad3', 'face interior')
+        !u_bc    = worker%get_primary_field_face('u','value', 'face interior')
+        !dudx_bc = worker%get_primary_field_face('u','grad1', 'face interior')
+        !dudy_bc = worker%get_primary_field_face('u','grad2', 'face interior')
+        !dudz_bc = worker%get_primary_field_face('u','grad3', 'face interior')
+        u_bc    = worker%get_field('u','value', 'face interior')
+        dudx_bc = worker%get_field('u','grad1', 'face interior')
+        dudy_bc = worker%get_field('u','grad2', 'face interior')
+        dudz_bc = worker%get_field('u','grad3', 'face interior')
 
 
         !

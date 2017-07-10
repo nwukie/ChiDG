@@ -100,7 +100,7 @@ contains
             nutilde, grad1_nutilde, grad2_nutilde, grad3_nutilde,           &
             source, dwall, vorticity_1, vorticity_2, vorticity_3
 
-        real(rk)    :: const, epsilon_vorticity, gam
+        real(rk)    :: const, epsilon_vorticity, eps
 
 
 
@@ -128,6 +128,7 @@ contains
         !
         ! Interpolate auxiliary field, Wall Distance
         !
+        eps = 1.e-6_rk
         dwall = worker%get_model_field_element('Wall Distance', 'value')
 
 
@@ -143,7 +144,6 @@ contains
         !
         ! Compute model values
         !
-        gam = 1.4_rk
         mu  = worker%get_model_field_element('Laminar Viscosity',   'value')
         nu  = mu*invrho
 
@@ -195,7 +195,7 @@ contains
 
 
         f_v2 = ONE - (chi/(ONE+chi*f_v1))
-        vorticity_bar = (nutilde/(SA_kappa*SA_kappa*dwall*dwall))*f_v2
+        vorticity_bar = (nutilde/(SA_kappa*SA_kappa*(dwall*dwall + eps)))*f_v2
 
 
         vorticity_mod = vorticity
@@ -211,7 +211,7 @@ contains
         !
         ! Compute f_t2, f_w, g, r
         !
-        rbar = nutilde/(vorticity_mod * SA_kappa * SA_kappa * dwall * dwall )
+        rbar = nutilde/(vorticity_mod * SA_kappa * SA_kappa * (dwall*dwall + eps) )
 
         !r = min(SA_rlim,rbar)
         r = SA_rlim - (SA_rlim - rbar)*(atan(SA_b * (SA_rlim - rbar))/PI  + HALF)  + atan(SA_b)/PI  -  HALF
@@ -237,9 +237,11 @@ contains
 
         destruction = vorticity_mod
         where ( nutilde >= ZERO )
-            destruction = (SA_c_w1*f_w - (SA_c_b1/(SA_kappa*SA_kappa))*f_t2) * (nutilde/dwall)**TWO
+            !destruction = (SA_c_w1*f_w - (SA_c_b1/(SA_kappa*SA_kappa))*f_t2) * (nutilde/dwall)**TWO
+            destruction = (SA_c_w1*f_w - (SA_c_b1/(SA_kappa*SA_kappa))*f_t2) * (nutilde*nutilde/(dwall*dwall + eps))
         else where
-            destruction = -SA_c_w1 * (nutilde/dwall)**TWO
+            !destruction = -SA_c_w1 * (nutilde/dwall)**TWO
+            destruction = -SA_c_w1 * (nutilde*nutilde/(dwall*dwall + eps))
         end where
 
 

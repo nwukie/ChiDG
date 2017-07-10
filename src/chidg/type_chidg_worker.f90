@@ -95,6 +95,9 @@ module type_chidg_worker
         procedure   :: get_auxiliary_field_face
         procedure   :: get_auxiliary_field_element
 
+        procedure   :: get_field
+        !procedure   :: get_field_gradient
+
         procedure   :: store_bc_state
         procedure   :: store_model_field
 
@@ -586,6 +589,141 @@ contains
 
     end function get_primary_field_element
     !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/10/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    function get_field(self,field,interp_type,interp_source) result(var_gq)
+        class(chidg_worker_t),  intent(in)              :: self
+        character(*),           intent(in)              :: field
+        character(*),           intent(in)              :: interp_type
+        character(*),           intent(in), optional    :: interp_source
+
+        type(AD_D),     allocatable :: var_gq(:), tmp_gq(:)
+        character(:),   allocatable :: cache_component, cache_type, lift_component, user_msg
+        integer(ik)                 :: lift_face_min, lift_face_max, idirection, iface
+        real(rk)                    :: stabilization
+
+
+        !
+        ! Set cache_component
+        !
+        if (present(interp_source)) then
+            select case(trim(interp_source))
+                case('face interior') 
+                    cache_component = 'face interior'
+                    lift_component  = 'lift face'
+                    lift_face_min   = self%iface
+                    lift_face_max   = self%iface
+                    stabilization   = real(NFACES,rk)
+                case('face exterior','boundary')
+                    cache_component = 'face exterior'
+                    lift_component  = 'lift face'
+                    lift_face_min   = self%iface
+                    lift_face_max   = self%iface
+                    stabilization   = real(NFACES,rk)
+                case('element')
+                    cache_component = 'element'
+                    lift_component  = 'lift element'
+                    lift_face_min   = 1
+                    lift_face_max   = NFACES
+                    stabilization   = ONE
+                case default
+                    user_msg = "chidg_worker%get_field_value: Invalid value for interpolation source. &
+                                Try 'face interior', 'face exterior', 'boundary', or 'element'"
+                    call chidg_signal_one(FATAL,user_msg,trim(interp_source))
+            end select
+        else
+            cache_component = self%interpolation_source
+        end if
+
+
+
+
+        !
+        ! Set cache_type
+        !
+        if (interp_type == 'value') then
+            cache_type = 'value'
+            idirection = 0
+        else if (interp_type == 'grad1') then
+            cache_type = 'gradient'
+            idirection = 1
+        else if (interp_type == 'grad2') then
+            cache_type = 'gradient'
+            idirection = 2
+        else if (interp_type == 'grad3') then
+            cache_type = 'gradient'
+            idirection = 3
+        else
+            user_msg = "chidg_worker%get_field: Invalid interpolation &
+                        type. 'value', 'grad1', 'grad2', 'grad3'"
+            call chidg_signal(FATAL,user_msg)
+        end if
+
+
+
+
+
+
+
+
+
+        !
+        ! Retrieve data from cache
+        !
+        if ( cache_type == 'value') then
+            var_gq = self%cache%get_data(field,cache_component,'value',idirection,self%function_info%seed)
+
+        else if (cache_type == 'gradient') then
+
+            if (self%cache%lift) then
+                var_gq = self%cache%get_data(field,cache_component,'gradient',idirection,self%function_info%seed)
+
+                ! Add lift contributions from each face
+                do iface = lift_face_min,lift_face_max
+                    tmp_gq = self%cache%get_data(field,'face interior', lift_component, idirection, self%function_info%seed,iface)
+                    var_gq = var_gq + stabilization*tmp_gq
+                end do
+
+            else
+                var_gq = self%cache%get_data(field,cache_component,'gradient',idirection,self%function_info%seed)
+            end if
+
+        else
+            user_msg = "chidg_worker%get_field: invalid cache_type."
+            call chidg_signal(FATAL,user_msg)
+
+        end if
+
+
+
+
+
+
+
+
+
+
+    end function get_field
+    !***************************************************************************************
+
+
+
+
 
 
 

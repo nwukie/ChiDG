@@ -1,7 +1,7 @@
 module bc_state_farfield
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: TWO, HALF, ZERO, ONE, RKTOL, FOUR
-    use mod_fluid,              only: R, gam
+    use mod_fluid,              only: Rgas, gam
 
     use type_bc_state,          only: bc_state_t
     use type_chidg_worker,      only: chidg_worker_t
@@ -136,9 +136,8 @@ contains
         u_input   = self%bcproperties%compute('Velocity-1', worker%time(), worker%coords())
         v_input   = self%bcproperties%compute('Velocity-2', worker%time(), worker%coords())
         w_input   = self%bcproperties%compute('Velocity-3', worker%time(), worker%coords())
-
-        T_input = p_input/(rho_input*R)
-        c_input = sqrt(gam*R*T_input)
+        T_input   = p_input/(rho_input*Rgas)
+        c_input   = sqrt(gam*Rgas*T_input)
 
 
 
@@ -150,6 +149,7 @@ contains
         mom2_m    = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
         mom3_m    = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
         energy_m  = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
+
 
         density_m = density_m/det_jacobian_grid
         mom1_m = mom1_m/det_jacobian_grid
@@ -175,10 +175,10 @@ contains
         !p_m = worker%get_model_field_face('Pressure',    'value', 'face interior')
         !T_m = worker%get_model_field_face('Temperature', 'value', 'face interior')
         p_m = (gam-ONE)*(energy_m-HALF*(mom1_m**TWO+mom2_m**TWO+mom3_m**TWO)/density_m)
-        T_m = p_m/(density_m*R)
+        T_m = p_m/(density_m*Rgas)
 
 
-        c_m = sqrt(gam*R*T_m)
+        c_m = sqrt(gam*Rgas*T_m)
 
 
 

@@ -2,7 +2,7 @@ module type_temperature_gradient
 #include <messenger.h>
     use mod_kinds,          only: rk
     use mod_constants,      only: HALF, ONE, TWO
-    use mod_fluid,          only: gam
+    use mod_fluid,          only: gam, Rgas
     use type_model,         only: model_t
     use type_chidg_worker,  only: chidg_worker_t
     use DNAD_D
@@ -198,7 +198,7 @@ contains
         !
         ! Compute Temperature Jacobians
         !
-        const = ONE/287.15_rk
+        const = ONE/Rgas
         dT_ddensity = const*invdensity*dp_ddensity  -  const*invdensity*invdensity*p
         dT_dmom1    = const*invdensity*dp_dmom1
         dT_dmom2    = const*invdensity*dp_dmom2

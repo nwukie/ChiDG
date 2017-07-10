@@ -200,7 +200,7 @@ contains
                 !
                 ! Update the element cache and all models so they are available
                 !
-                call cache_handler%update(worker,chidg%data%eqnset,chidg%data%bc_state_group, differentiate=.false., components='all', face=NO_ID)
+                call cache_handler%update(worker,chidg%data%eqnset,chidg%data%bc_state_group, components='all', face=NO_ID, differentiate=.false., lift=.false.)
 
 
 

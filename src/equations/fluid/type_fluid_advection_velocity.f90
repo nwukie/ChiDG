@@ -24,8 +24,6 @@ module type_fluid_advection_velocity
     !---------------------------------------------------------------------------------------
     type, extends(model_t)  :: fluid_advection_velocity_t
 
-        real(rk)    :: gam = 1.4_rk     ! ratio of specific heats
-        real(rk)    :: R   = 287.15_rk  ! ideal gas constant [J/(kg*K)]
 
     contains
 

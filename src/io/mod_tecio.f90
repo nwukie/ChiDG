@@ -90,7 +90,7 @@ contains
         varstring = "X,Y,Z"
         eqn_ID = data%mesh%domain(1)%eqn_ID
         do while (ieq <= data%eqnset(eqn_ID)%prop%nio_fields())
-            varstring = trim(varstring)//","//trim(data%eqnset(1)%prop%get_io_field_name(ieq))
+            varstring = trim(varstring)//","//trim(data%eqnset(eqn_ID)%prop%get_io_field_name(ieq))
             ieq = ieq + 1
         end do
 
@@ -245,8 +245,9 @@ contains
                     call worker%set_element(elem_info)
 
                     ! Update the element cache
-                    !call cache_handler%update(worker,data%eqnset, data%bc_state_group, differentiate=.false., components='element', face=NO_ID)
-                    call cache_handler%update(worker,data%eqnset, data%bc_state_group, differentiate=.false., components='all', face=NO_ID)
+                    !call cache_handler%update(worker,data%eqnset, data%bc_state_group, differentiate=.false., components='element', face=NO_ID, lift=.false.)
+                    !call cache_handler%update(worker,data%eqnset, data%bc_state_group, differentiate=.false., components='all', face=NO_ID)
+                    call cache_handler%update(worker,data%eqnset, data%bc_state_group, components='all', face=NO_ID, differentiate=.false., lift=.false.)
 
                     ! Retrieve name of current field, retrieve interpolation, write interpolation to file
                     do ifield = 1,data%eqnset(eqn_ID)%prop%nio_fields()
@@ -257,45 +258,6 @@ contains
                     end do ! ifield
 
                 end do ! ielem
-
-
-
-!                ! For each variable in equation set, compute value pointwise and save
-!                eqn_ID = data%mesh%domain(idom)%eqn_ID
-!                do imodel = 1,data%eqnset(eqn_ID)%prop%io_fields()
-!                    ! For each actual element, create a sub-sampling of elements to resolve solution variation
-!                    do ielem = 1,nelem
-!
-!                        ! Update location
-!                        elem_info%idomain_g  = data%mesh%domain(idom)%elems(ielem)%idomain_g
-!                        elem_info%idomain_l  = data%mesh%domain(idom)%elems(ielem)%idomain_l
-!                        elem_info%ielement_g = data%mesh%domain(idom)%elems(ielem)%ielement_g
-!                        elem_info%ielement_l = data%mesh%domain(idom)%elems(ielem)%ielement_l
-!                        call worker%set_element(elem_info)
-!
-!                        ! Update the element cache
-!                        call cache_handler%update(worker,data%eqnset, data%bc_state_group, differentiate=.false., update_faces=.false.)
-!
-!
-!                        ! Retrieve name of current field, retrieve interpolation
-!                        var_string = data%eqnset(eqn_ID)%prop%get_io_field_name(ifield)
-!                        var = worker%get_primary_field_element(var_string, 'value')
-!
-!                        ! Write each node
-!                        do inode = 1,size(var,1)
-!                            val = real(var(inode)%x_ad_,rdouble)
-!                            tecstat = TECDAT142(1,valeq,1)
-!                            if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to TECDAT142")
-!                        end do !inode
-!
-!                        
-!
-!                    end do ! ielem
-!                end do ! ifield
-
-
-
-
 
 
 
@@ -523,7 +485,8 @@ contains
                         ! Update the element cache
                         !call cache_handler%update(worker,data%eqnset, data%bc_state_group, differentiate=.false., components='interior faces', face=iface)
                         !call cache_handler%update(worker,data%eqnset, data%bc_state_group, differentiate=.false., components='all', face=iface)
-                        call cache_handler%update(worker,data%eqnset, data%bc_state_group, differentiate=.false., components='all', face=NO_ID)
+                        !call cache_handler%update(worker,data%eqnset, data%bc_state_group, differentiate=.false., components='all', face=NO_ID)
+                        call cache_handler%update(worker,data%eqnset, data%bc_state_group, components='all', face=NO_ID, differentiate=.false., lift=.false.)
 
 
                         ! Retrieve name of current field, retrieve interpolation, write interpolation to file

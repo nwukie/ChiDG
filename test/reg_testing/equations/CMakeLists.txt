@@ -3,6 +3,7 @@ add_subdirectory(scalar_diffusion)
 add_subdirectory(mesh_motion_diffusion)
 #add_subdirectory(mesh_motion_linear_elasticity)
 add_subdirectory(scalar_advection_diffusion)
+add_subdirectory(scalar_advection_diffusion_ale)
 add_subdirectory(scalar_advection_ale)
 add_subdirectory(fluid)
 

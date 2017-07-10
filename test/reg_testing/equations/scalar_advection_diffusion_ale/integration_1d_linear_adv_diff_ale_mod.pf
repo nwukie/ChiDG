@@ -646,8 +646,7 @@ contains
         !
         ! Initialize solution
         !
-        call create_function(fcn,'constant')
-        call fcn%set_option('val',0.1_rk)
+        call create_function(fcn,'scalar_adv_diff_bl_solution')
         call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
 
 

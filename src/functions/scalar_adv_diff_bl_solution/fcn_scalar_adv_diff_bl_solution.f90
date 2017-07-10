@@ -65,11 +65,8 @@ contains
         !
         ! Set function options to default settings
         !
-        call self%add_option('mu',1._rk)
-        call self%add_option('b_x',0._rk)
-        call self%add_option('b_y',0._rk)
-        call self%add_option('b_z',0._rk)
-        call self%add_option('c',1._rk)
+        call self%add_option('mu',0.05_rk)
+        call self%add_option('cx',1._rk)
 
 
     end subroutine init

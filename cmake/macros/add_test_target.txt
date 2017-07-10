@@ -165,12 +165,17 @@ macro (add_test_target target_subdirectory test_type)
 	#
     #-------------------------------------------------------------------------------------------------------
     if (${add_to_test})
-        #add_test(NAME ${target_name}
         add_test(NAME ${target_subdirectory}
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
                  COMMAND ${test_driver} $<TARGET_FILE:${target_name}> ${run_options})
+        if ( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" ) 
+            set_property(TEST ${target_subdirectory} PROPERTY ENVIRONMENT "DYLD_LIBRARY_PATH=${CMAKE_SOURCE_DIR}/tecio/mac/lib")
+        elseif( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )
+            set_property(TEST ${target_subdirectory} PROPERTY ENVIRONMENT "LD_LIBRARY_PATH=${CMAKE_SOURCE_DIR}/tecio/linux/lib")
+        else()
+            message(SEND_ERROR "Invalid operating system detected for TecIO")
+        endif()
     endif()
-			 
 			 
 
 

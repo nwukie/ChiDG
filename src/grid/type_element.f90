@@ -680,7 +680,7 @@ contains
         ! Call to compute mass matrix
         !
         call self%compute_mass_matrix()
-        call self%compute_mass_matrix_c()
+!        call self%compute_mass_matrix_c()
 
         !
         ! Call to compute matrices of gradients at each quadrature node
@@ -2126,9 +2126,9 @@ contains
         !
         ! Project
         !
-        val  = self%basis_c%interpolator('Value')
+        val  = self%basis_s%interpolator('Value')
         temp = matmul(transpose(val),fvals)
-        self%det_jacobian_grid_modes = matmul(self%invmass_c,temp)
+        self%det_jacobian_grid_modes = matmul(self%invmass,temp)
 
 
     end subroutine compute_quadrature_metrics_ale

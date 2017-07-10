@@ -84,7 +84,7 @@ contains
             u_m, u_p,                               &
             c1_m, c2_m, c3_m,                       &
             c1_p, c2_p, c3_p,                       &
-            flux_1, flux_2, flux_3, integrand
+            flux_1, flux_2, flux_3, integrand, advected_quantity
 
 
         real(rk),   allocatable, dimension(:)   ::  &
@@ -125,7 +125,8 @@ contains
         flux_2 = HALF*(c2_m*u_m + c2_p*u_p) 
         flux_3 = HALF*(c3_m*u_m + c3_p*u_p) 
 
-        flux_ref = worker%post_process_boundary_advective_flux_ale(flux_1, flux_2, flux_3, HALF*(u_m+u_p))
+        advected_quantity = HALF*(u_m+u_p)
+        flux_ref = worker%post_process_boundary_advective_flux_ale(flux_1, flux_2, flux_3, advected_quantity)
 
 
 

@@ -1941,10 +1941,10 @@ contains
         real(rk), dimension(:), allocatable :: det_jacobian_grid_gq
         real(rk), dimension(:,:), allocatable :: val 
 
-        det_jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%det_jacobian_grid(:)
+        !det_jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%det_jacobian_grid(:)
         ! Interpolate modes to nodes
         if (interp_type == 'value') then
-            val = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%basis_c%interpolator('Value')
+            val = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%basis_s%interpolator('Value')
         else if (interp_type == 'grad1') then
             val = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grad1
         else if (interp_type == 'grad2') then
@@ -1980,7 +1980,7 @@ contains
         ! Interpolate modes to nodes
         if (interp_type == 'value') then
             val = &
-            self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%basis_c%interpolator('Value',self%iface)
+            self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%basis_s%interpolator('Value',self%iface)
         else if (interp_type == 'grad1') then
             val = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%grad1
         else if (interp_type == 'grad2') then
@@ -2259,6 +2259,7 @@ contains
         type(AD_D), dimension(:), intent(inout)                                  :: flux_1, flux_2, flux_3
         type(AD_D), dimension(:), intent(in)                                  :: advected_quantity
 
+        type(AD_D),allocatable, dimension(:)                                  :: flux_1_tmp, flux_2_tmp, flux_3_tmp
         type(AD_D), allocatable                                 :: flux_ref(:,:)
         real(rk), allocatable                       :: det_jacobian_grid(:), u_grid(:), v_grid(:), w_grid(:)
         real(rk), allocatable                       :: jacobian_grid(:,:,:)
@@ -2271,14 +2272,14 @@ contains
         det_jacobian_grid = self%get_det_jacobian_grid_face('value')
         jacobian_grid = self%get_inv_jacobian_grid_face()
 
-        flux_1 = flux_1-u_grid*advected_quantity
-        flux_2 = flux_2-v_grid*advected_quantity
-        flux_3 = flux_3-w_grid*advected_quantity
+        flux_1_tmp = flux_1-u_grid*advected_quantity
+        flux_2_tmp = flux_2-v_grid*advected_quantity
+        flux_3_tmp = flux_3-w_grid*advected_quantity
        
         allocate(flux_ref(size(flux_1,1),3))
-        flux_ref(:,1) = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_1 + jacobian_grid(:,1,2)*flux_2 + jacobian_grid(:,1,3)*flux_3)
-        flux_ref(:,2) = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_1 + jacobian_grid(:,2,2)*flux_2 + jacobian_grid(:,2,3)*flux_3)
-        flux_ref(:,3) = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_1 + jacobian_grid(:,3,2)*flux_2 + jacobian_grid(:,3,3)*flux_3)
+        flux_ref(:,1) = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_1_tmp + jacobian_grid(:,1,2)*flux_2_tmp + jacobian_grid(:,1,3)*flux_3_tmp)
+        flux_ref(:,2) = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_1_tmp + jacobian_grid(:,2,2)*flux_2_tmp + jacobian_grid(:,2,3)*flux_3_tmp)
+        flux_ref(:,3) = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_1_tmp + jacobian_grid(:,3,2)*flux_2_tmp + jacobian_grid(:,3,3)*flux_3_tmp)
 
 
    end function post_process_boundary_advective_flux_ale

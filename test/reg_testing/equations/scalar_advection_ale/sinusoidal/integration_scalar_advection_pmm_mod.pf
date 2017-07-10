@@ -417,7 +417,7 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------
-    @Test(npes=[8])
+    @Test(npes=[10])
     subroutine test_entropy_error_rate(self)
         class(scalar_advection_pmm),  intent(inout)   :: self
 

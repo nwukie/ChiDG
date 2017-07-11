@@ -256,7 +256,8 @@ contains
                     do ifield = 1,data%eqnset(eqn_ID)%prop%nio_fields()
                         var_string = data%eqnset(eqn_ID)%prop%get_io_field_name(ifield)
                         !var = worker%get_primary_field_element(var_string, 'value')
-                        var = worker%get_field(var_string, 'value', 'element')
+                        !var = worker%get_field(var_string, 'value', 'element')
+                        var = worker%get_primary_field_value_ale_element(var_string)
                         tecstat = tecZoneVarWriteDoubleValues(handle, zone_index, 3+ifield, 0, int(size(var),c_int64_t), real(var(:)%x_ad_,rdouble))
                         if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to tecZoneVarWriteDoubleValues")
                     end do ! ifield
@@ -499,7 +500,8 @@ contains
                         ! Retrieve name of current field, retrieve interpolation, write interpolation to file
                         do ifield = 1,data%eqnset(eqn_ID)%prop%nio_fields()
                             var_string = data%eqnset(eqn_ID)%prop%get_io_field_name(ifield)
-                            var = worker%get_primary_field_face(var_string, 'value', 'face interior')
+                            !var = worker%get_primary_field_face(var_string, 'value', 'face interior')
+                            var = worker%get_primary_field_value_ale_face(var_string, 'face interior')
 
                             tecstat = tecZoneVarWriteDoubleValues(handle, zone_index, 3+ifield, 0, int(size(var),c_int64_t), real(var(:)%x_ad_,rdouble))
                             if (tecstat /= 0) call chidg_signal(FATAL,"write_tecio_domains: Error in call to tecZoneVarWriteDoubleValues")

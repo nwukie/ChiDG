@@ -419,7 +419,7 @@ contains
         else
             user_msg = "chidg_worker%get_primary_field_face: Invalid value for interpolation source. &
                         Try 'face interior', 'face exterior', or 'boundary'"
-            call chidg_signal_one(FATAL,user_msg,trim(interp_source))
+            call chidg_signal_two(FATAL,user_msg,trim(field),trim(interp_source))
         end if
 
 

@@ -97,14 +97,6 @@ contains
         type(point_t),  allocatable, dimension(:)   :: coords
 
 
-
-        !
-        ! Get equation index
-        !
-        iu = prop%get_primary_field_index("u")
-
-
-
         !
         ! Get u_m from face interior to initialize derivatives
         !

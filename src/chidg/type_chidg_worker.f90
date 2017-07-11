@@ -29,7 +29,8 @@
 module type_chidg_worker
 #include <messenger.h>
     use mod_kinds,              only: ik, rk
-    use mod_constants,          only: NFACES, ME, NEIGHBOR, BC, ZERO, CHIMERA, ONE, THIRD, TWO
+    use mod_constants,          only: NFACES, ME, NEIGHBOR, BC, ZERO, CHIMERA, &
+                                      ONE, THIRD, TWO, NOT_A_FACE, BOUNDARY
 
     use mod_interpolate,        only: interpolate_element_autodiff
     use mod_integrate,          only: integrate_boundary_scalar_flux, &
@@ -613,9 +614,10 @@ contains
         character(*),           intent(in), optional    :: interp_source
 
         type(AD_D),     allocatable :: var_gq(:), tmp_gq(:)
-        character(:),   allocatable :: cache_component, cache_type, lift_component, user_msg
+        character(:),   allocatable :: cache_component, cache_type, lift_source, lift_nodes, user_msg
         integer(ik)                 :: lift_face_min, lift_face_max, idirection, iface
         real(rk)                    :: stabilization
+        logical                     :: no_lift
 
 
         !
@@ -625,19 +627,22 @@ contains
             select case(trim(interp_source))
                 case('face interior') 
                     cache_component = 'face interior'
-                    lift_component  = 'lift face'
+                    lift_source     = 'face interior'
+                    lift_nodes      = 'lift face'
                     lift_face_min   = self%iface
                     lift_face_max   = self%iface
                     stabilization   = real(NFACES,rk)
                 case('face exterior','boundary')
                     cache_component = 'face exterior'
-                    lift_component  = 'lift face'
+                    lift_source     = 'face exterior'
+                    lift_nodes      = 'lift face'
                     lift_face_min   = self%iface
                     lift_face_max   = self%iface
                     stabilization   = real(NFACES,rk)
                 case('element')
                     cache_component = 'element'
-                    lift_component  = 'lift element'
+                    lift_source     = 'face interior'
+                    lift_nodes      = 'lift element'
                     lift_face_min   = 1
                     lift_face_max   = NFACES
                     stabilization   = ONE
@@ -676,31 +681,37 @@ contains
 
 
 
-
-
-
-
+        !
+        ! Determine when we do not want to lift
+        !
+        ! Do not lift gradient for a boundary state function. Boundary state functions
+        ! interpolate from the 'face interior'. Operators interpolate from 'boundary'.
+        ! So, if we are on a BOUNDARY face and interpolating from 'face interior', then
+        ! we don't want to lift because there is no lift for the boundary function to use
+        ! If we aren't on a face, face_type returns NOT_A_FACE, so this is still valid for 
+        ! returning element data.
+        no_lift = (self%face_type() == BOUNDARY) .and. (cache_component == 'face interior')
 
 
         !
         ! Retrieve data from cache
         !
         if ( cache_type == 'value') then
-            var_gq = self%cache%get_data(field,cache_component,'value',idirection,self%function_info%seed)
+            var_gq = self%cache%get_data(field,cache_component,'value',idirection,self%function_info%seed,self%iface)
 
         else if (cache_type == 'gradient') then
 
-            if (self%cache%lift) then
-                var_gq = self%cache%get_data(field,cache_component,'gradient',idirection,self%function_info%seed)
+            if (self%cache%lift .and. (.not. no_lift)) then
+                var_gq = self%cache%get_data(field,cache_component,'gradient',idirection,self%function_info%seed,self%iface)
 
                 ! Add lift contributions from each face
                 do iface = lift_face_min,lift_face_max
-                    tmp_gq = self%cache%get_data(field,'face interior', lift_component, idirection, self%function_info%seed,iface)
+                    tmp_gq = self%cache%get_data(field,lift_source, lift_nodes, idirection, self%function_info%seed,iface)
                     var_gq = var_gq + stabilization*tmp_gq
                 end do
 
             else
-                var_gq = self%cache%get_data(field,cache_component,'gradient',idirection,self%function_info%seed)
+                var_gq = self%cache%get_data(field,cache_component,'gradient',idirection,self%function_info%seed,self%iface)
             end if
 
         else
@@ -708,13 +719,6 @@ contains
             call chidg_signal(FATAL,user_msg)
 
         end if
-
-
-
-
-
-
-
 
 
 
@@ -1881,8 +1885,11 @@ contains
         ielem = self%element_info%ielement_l
         iface = self%iface
 
-
-        face_type_ = self%mesh%domain(idom)%faces(ielem,iface)%ftype
+        if ( (iface >= 1) .and. (iface <= NFACES) ) then
+            face_type_ = self%mesh%domain(idom)%faces(ielem,iface)%ftype
+        else
+            face_type_ = NOT_A_FACE
+        end if
 
 
     end function face_type

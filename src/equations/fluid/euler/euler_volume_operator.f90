@@ -90,12 +90,17 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        density = worker%get_primary_field_element('Density'   ,'value')
-        mom1    = worker%get_primary_field_element('Momentum-1','value')
-        mom2    = worker%get_primary_field_element('Momentum-2','value')
-        mom3    = worker%get_primary_field_element('Momentum-3','value')
-        energy  = worker%get_primary_field_element('Energy'    ,'value')
+        !density = worker%get_primary_field_element('Density'   ,'value')
+        !mom1    = worker%get_primary_field_element('Momentum-1','value')
+        !mom2    = worker%get_primary_field_element('Momentum-2','value')
+        !mom3    = worker%get_primary_field_element('Momentum-3','value')
+        !energy  = worker%get_primary_field_element('Energy'    ,'value')
 
+        density = worker%get_field('Density'   ,'value','element')
+        mom1    = worker%get_field('Momentum-1','value','element')
+        mom2    = worker%get_field('Momentum-2','value','element')
+        mom3    = worker%get_field('Momentum-3','value','element')
+        energy  = worker%get_field('Energy'    ,'value','element')
 
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
@@ -114,15 +119,20 @@ contains
         !
         ! Get fluid advection velocity
         !
-        u_a = worker%get_model_field_element('Advection Velocity-1', 'value')
-        v_a = worker%get_model_field_element('Advection Velocity-2', 'value')
-        w_a = worker%get_model_field_element('Advection Velocity-3', 'value')
+        !u_a = worker%get_model_field_element('Advection Velocity-1', 'value')
+        !v_a = worker%get_model_field_element('Advection Velocity-2', 'value')
+        !w_a = worker%get_model_field_element('Advection Velocity-3', 'value')
+
+        u_a = worker%get_field('Advection Velocity-1', 'value', 'element')
+        v_a = worker%get_field('Advection Velocity-2', 'value', 'element')
+        w_a = worker%get_field('Advection Velocity-3', 'value', 'element')
 
 
         !
         ! Get pressure
         !
-        p = worker%get_model_field_element('Pressure','value')
+        !p = worker%get_model_field_element('Pressure','value')
+        p = worker%get_field('Pressure','value','element')
 
 
         !

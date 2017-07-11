@@ -301,6 +301,7 @@ contains
 
             case('gradient')
 
+
                 ! Try to find gradient differentiated wrt seed.
                 seed_found = .false.
                 do iseed = 1,size(self%fields(field_index)%gradient_seeds)

@@ -115,10 +115,11 @@ module mod_constants
     ! Face types. These should be distinct from the above 'face directions'
     ! Correspond to face_t%face_type
     !
-    integer(ik), parameter :: INTERIOR  =  0     ! interior face
-    integer(ik), parameter :: BOUNDARY  = -1     ! boundary condition type
-    integer(ik), parameter :: CHIMERA   = -2     ! Chimera face
-    integer(ik), parameter :: ORPHAN    = -3     ! orphan face - has no identity. Every face needs an identity.
+    integer(ik), parameter :: INTERIOR   =  0     ! interior face
+    integer(ik), parameter :: BOUNDARY   = -1     ! boundary condition type
+    integer(ik), parameter :: CHIMERA    = -2     ! Chimera face
+    integer(ik), parameter :: ORPHAN     = -3     ! orphan face - has no identity. Every face needs an identity.
+    integer(ik), parameter :: NOT_A_FACE = -4     ! if chidg_worker is returning a face type without a face iface, could return NOT_A_FACE
 
 
 

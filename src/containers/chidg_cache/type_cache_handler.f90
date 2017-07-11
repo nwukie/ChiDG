@@ -218,7 +218,7 @@ contains
             !
             ! Update lifting operators for second-order pde's
             !
-            call self%update_primary_lift(worker,equation_set,bc_state_group,differentiate)
+            if (lift) call self%update_primary_lift(worker,equation_set,bc_state_group,differentiate)
 
 
             !

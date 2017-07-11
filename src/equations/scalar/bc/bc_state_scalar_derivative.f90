@@ -96,11 +96,6 @@ contains
         type(AD_D), allocatable, dimension(:)   :: u_bc, dudx_bc, dudy_bc, dudz_bc
 
 
-        !
-        ! Get equation index
-        !
-        iu = prop%get_primary_field_index("u")
-
 
 
         !
@@ -129,11 +124,6 @@ contains
         ! Get derivative value
         !
         dudx_bc = self%bcproperties%compute("Derivative",worker%time(),worker%coords())
-
-
-
-
-
 
 
 

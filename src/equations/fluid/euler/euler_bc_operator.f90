@@ -103,12 +103,17 @@ contains
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
-        density_bc = worker%get_primary_field_face('Density'   , 'value', 'boundary')
-        mom1_bc    = worker%get_primary_field_face('Momentum-1', 'value', 'boundary')
-        mom2_bc    = worker%get_primary_field_face('Momentum-2', 'value', 'boundary')
-        mom3_bc    = worker%get_primary_field_face('Momentum-3', 'value', 'boundary')
-        energy_bc  = worker%get_primary_field_face('Energy'    , 'value', 'boundary')
+        !density_bc = worker%get_primary_field_face('Density'   , 'value', 'boundary')
+        !mom1_bc    = worker%get_primary_field_face('Momentum-1', 'value', 'boundary')
+        !mom2_bc    = worker%get_primary_field_face('Momentum-2', 'value', 'boundary')
+        !mom3_bc    = worker%get_primary_field_face('Momentum-3', 'value', 'boundary')
+        !energy_bc  = worker%get_primary_field_face('Energy'    , 'value', 'boundary')
 
+        density_bc = worker%get_field('Density'   , 'value', 'boundary')
+        mom1_bc    = worker%get_field('Momentum-1', 'value', 'boundary')
+        mom2_bc    = worker%get_field('Momentum-2', 'value', 'boundary')
+        mom3_bc    = worker%get_field('Momentum-3', 'value', 'boundary')
+        energy_bc  = worker%get_field('Energy'    , 'value', 'boundary')
 
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
@@ -135,15 +140,18 @@ contains
         !
         ! Get fluid advection velocity
         !
-        u_a = worker%get_model_field_face('Advection Velocity-1', 'value', 'boundary')
-        v_a = worker%get_model_field_face('Advection Velocity-2', 'value', 'boundary')
-        w_a = worker%get_model_field_face('Advection Velocity-3', 'value', 'boundary')
-
+        !u_a = worker%get_model_field_face('Advection Velocity-1', 'value', 'boundary')
+        !v_a = worker%get_model_field_face('Advection Velocity-2', 'value', 'boundary')
+        !w_a = worker%get_model_field_face('Advection Velocity-3', 'value', 'boundary')
+        u_a = worker%get_field('Advection Velocity-1', 'value', 'boundary')
+        v_a = worker%get_field('Advection Velocity-2', 'value', 'boundary')
+        w_a = worker%get_field('Advection Velocity-3', 'value', 'boundary')
 
         !
         ! Get pressure
         !
-        p_bc = worker%get_model_field_face('Pressure','value','boundary')
+        !p_bc = worker%get_model_field_face('Pressure','value','boundary')
+        p_bc = worker%get_field('Pressure','value','boundary')
 
 
         !

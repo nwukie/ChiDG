@@ -143,7 +143,7 @@ contains
                     call worker%set_face(iface)
 
                     call eqnset%compute_boundary_advective_operators(worker, differentiate)
-                    call eqnset%compute_boundary_diffusive_operators(worker, differentiate)
+                    !call eqnset%compute_boundary_diffusive_operators(worker, differentiate)
                     call eqnset%compute_bc_operators(worker,data%bc_state_group, differentiate)
 
                 end do  ! faces loop
@@ -154,7 +154,7 @@ contains
                 ! Compute contributions from volume integrals
                 !
                 call eqnset%compute_volume_advective_operators(worker, differentiate)
-                call eqnset%compute_volume_diffusive_operators(worker, differentiate)
+!                call eqnset%compute_volume_diffusive_operators(worker, differentiate)
 
 
             end do  ! ielem

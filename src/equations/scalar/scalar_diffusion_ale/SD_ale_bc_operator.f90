@@ -1,9 +1,10 @@
-module SA_ale_bc_operator
+module SD_ale_bc_operator
     use mod_kinds,          only: ik, rk
     use type_operator,      only: operator_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
     use DNAD_D
+    use ieee_arithmetic
     implicit none
 
 
@@ -16,7 +17,7 @@ module SA_ale_bc_operator
     !!
     !!
     !------------------------------------------------------------------------------------------
-    type, public, extends(operator_t) :: SA_ale_bc_operator_t
+    type, public, extends(operator_t) :: SD_ale_bc_operator_t
 
 
     contains
@@ -24,7 +25,7 @@ module SA_ale_bc_operator
         procedure   :: init
         procedure   :: compute
 
-    end type SA_ale_bc_operator_t
+    end type SD_ale_bc_operator_t
     !*******************************************************************************************
 
 
@@ -44,12 +45,12 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(SA_ale_bc_operator_t),   intent(inout) :: self
+        class(SD_ale_bc_operator_t),   intent(inout) :: self
         
         !
         ! Set operator name
         !
-        call self%set_name('Scalar Advection ALE BC Operator')
+        call self%set_name('Scalar Diffusion ALE BC Operator')
 
         !
         ! Set operator type
@@ -81,53 +82,60 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(SA_ale_bc_operator_t),    intent(inout)   :: self
+        class(SD_ale_bc_operator_t),    intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         class(properties_t),        intent(inout)   :: prop
 
 
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   ::  &
-            u, c1, c2, c3,                          &
-            flux_1, flux_2, flux_3, integrand
+            grad1_u, grad2_u, grad3_u,              &
+            flux_1,  flux_2,  flux_3,               &
+            integrand, mu
 
         real(rk),   allocatable, dimension(:)   ::  &
             norm_1, norm_2, norm_3
 
-        type(AD_D), allocatable, dimension(:,:)   :: flux_ref
+        type(AD_D), allocatable, dimension(:,:)   ::  &
+            gradu, &
+            flux_ref
 
-        !
-        ! Interpolate boundary condition state to face quadrature nodes
-        !
 
-        u = worker%get_primary_field_face('u', 'value', 'boundary')
 
-        !
-        ! Get model coefficients
-        !
-        c1 = worker%get_model_field_face('Scalar Advection Velocity-1', 'value', 'boundary')
-        c2 = worker%get_model_field_face('Scalar Advection Velocity-2', 'value', 'boundary')
-        c3 = worker%get_model_field_face('Scalar Advection Velocity-3', 'value', 'boundary')
+       
 
-        
-        !
-        ! Get normal vectors
-        !
+        gradu = worker%get_primary_field_grad_ale_face('u', 'boundary')
         norm_1 = worker%normal(1)
         norm_2 = worker%normal(2)
         norm_3 = worker%normal(3)
 
 
+        !
+        ! Compute scalar coefficient
+        !
+        mu = worker%get_model_field_face('Scalar Diffusion Coefficient', 'value', 'boundary')
+
+
+
         !=================================================
         ! Mass flux
         !=================================================
-        flux_1 = c1*u
-        flux_2 = c2*u
-        flux_3 = c3*u
+        flux_1 = -mu*gradu(:,1)
+        flux_2 = -mu*gradu(:,2)
+        flux_3 = -mu*gradu(:,3)
 
-        flux_ref = worker%post_process_boundary_advective_flux_ale(flux_1, flux_2, flux_3, u)
-
+        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3)
+        !
+        ! Compute boundary average flux
+        !
         integrand = flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3
+
+
+
+
+        if (any(ieee_is_nan(integrand(:)%x_ad_))) then
+            print*, 'BC OP: ', integrand(:)%x_ad_
+        end if
 
 
         call worker%integrate_boundary('u',integrand)
@@ -145,4 +153,4 @@ contains
 
 
 
-end module SA_ale_bc_operator
+end module SD_ale_bc_operator

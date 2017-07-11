@@ -141,7 +141,17 @@ module type_chidg_worker
         procedure   :: get_det_jacobian_grid_face
 
 
+        procedure   :: get_primary_field_value_ale_element
+        procedure   :: get_primary_field_grad_ale_element
+        procedure   :: get_primary_field_value_ale_face
+        procedure   :: get_primary_field_grad_ale_face
+        procedure   :: get_primary_field_value_ale_general
+        procedure   :: get_primary_field_grad_ale_general
 
+        procedure   :: post_process_volume_advective_flux_ale
+        procedure   :: post_process_boundary_advective_flux_ale
+        procedure   :: post_process_volume_diffusive_flux_ale
+        procedure   :: post_process_boundary_diffusive_flux_ale
         final       :: destructor
     
     end type chidg_worker_t
@@ -1967,14 +1977,14 @@ contains
         real(rk), dimension(:), allocatable :: grid_vel_gq
 
         if (field == 'u_grid') then
-            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grid_vel1(:)
+            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grid_vel(:,1)
 
         else if (field == 'v_grid') then
 
-            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grid_vel2(:)
+            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grid_vel(:,2)
         else if (field == 'w_grid') then
 
-            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grid_vel3(:)
+            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grid_vel(:,3)
         else
             call chidg_signal(FATAL,"chidg_worker%get_grid_velocity_element(field): Invalid value for 'field'.")
         end if
@@ -1994,14 +2004,14 @@ contains
         real(rk), dimension(:), allocatable :: grid_vel_gq
 
         if (field == 'u_grid') then
-            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel1(:)
+            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel(:,1)
 
         else if (field == 'v_grid') then
 
-            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel2(:)
+            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel(:,2)
         else if (field == 'w_grid') then
 
-            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel3(:)
+            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel(:,3)
         else
             call chidg_signal(FATAL,"chidg_worker%get_grid_velocity_face(field): Invalid value for 'field'.")
         end if
@@ -2074,12 +2084,30 @@ contains
     !!  @date 1/9/2017
     !!
     !----------------------------------------------------------------------------------------------------
-    function get_det_jacobian_grid_element(self) result(det_jacobian_grid_gq)
+    function get_det_jacobian_grid_element(self,interp_type) result(det_jacobian_grid_gq)
         class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: interp_type
+
 
         real(rk), dimension(:), allocatable :: det_jacobian_grid_gq
+        real(rk), dimension(:,:), allocatable :: val 
 
-        det_jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%det_jacobian_grid(:)
+        !det_jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%det_jacobian_grid(:)
+        ! Interpolate modes to nodes
+        if (interp_type == 'value') then
+            val = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%basis_s%interpolator('Value')
+        else if (interp_type == 'grad1') then
+            val = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grad1
+        else if (interp_type == 'grad2') then
+            val = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grad2
+        else if (interp_type == 'grad3') then
+            val = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grad3
+        end if
+
+
+        det_jacobian_grid_gq = &
+        matmul(val,self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%det_jacobian_grid_modes)
+
 
         !det_jacobian_grid_gq = ONE/det_jacobian_grid_gq
     end function get_det_jacobian_grid_element
@@ -2090,18 +2118,365 @@ contains
     !!  @date 1/9/2017
     !!
     !----------------------------------------------------------------------------------------------------
-    function get_det_jacobian_grid_face(self) result(det_jacobian_grid_gq)
+    function get_det_jacobian_grid_face(self, interp_type) result(det_jacobian_grid_gq)
         class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: interp_type
 
         real(rk), dimension(:), allocatable :: det_jacobian_grid_gq
+        real(rk), dimension(:,:), allocatable :: val 
 
-        det_jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%det_jacobian_grid(:)
 
-        !det_jacobian_grid_gq = ONE/det_jacobian_grid_gq
+        !det_jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%det_jacobian_grid(:)
+
+        ! Interpolate modes to nodes
+        if (interp_type == 'value') then
+            val = &
+            self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%basis_s%interpolator('Value',self%iface)
+        else if (interp_type == 'grad1') then
+            val = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%grad1
+        else if (interp_type == 'grad2') then
+            val = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%grad2
+        else if (interp_type == 'grad3') then
+            val = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%grad3
+        end if
+
+
+        det_jacobian_grid_gq = &
+        matmul(val,self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%det_jacobian_grid_modes)
+
     end function get_det_jacobian_grid_face
 
 
+    !
+    ! ALE reference to physical variable conversions
+    !
 
+    !>  Return a primary field evaluated at a quadrature node set. The source here
+    !!  is determined by chidg_worker.
+    !!
+    !!  This routine is specifically for model_t's, because we want them to be evaluated
+    !!  on face and element sets the same way. So in a model implementation, we just
+    !!  want the model to get some quadrature node set to operate on. The chidg_worker
+    !!  handles what node set is currently being returned.
+    !!  
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/30/2016
+    !!
+    !--------------------------------------------------------------------------------------
+    function get_primary_field_value_ale_general(self,field) result(var_gq)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: field
+
+        type(AD_D), allocatable :: var_gq(:)
+
+
+        if (self%interpolation_source == 'element') then
+            var_gq = self%get_primary_field_value_ale_element(field) 
+        else if (self%interpolation_source == 'face interior') then
+            var_gq = self%get_primary_field_value_ale_face(field,'face interior')
+        else if (self%interpolation_source == 'face exterior') then
+            var_gq = self%get_primary_field_value_ale_face(field,'face exterior')
+        else if (self%interpolation_source == 'boundary') then
+            var_gq = self%get_primary_field_value_ale_face(field,'boundary')
+        end if
+
+    end function get_primary_field_value_ale_general
+    !**************************************************************************************
+
+    !>  Return a primary field evaluated at a quadrature node set. The source here
+    !!  is determined by chidg_worker.
+    !!
+    !!  This routine is specifically for model_t's, because we want them to be evaluated
+    !!  on face and element sets the same way. So in a model implementation, we just
+    !!  want the model to get some quadrature node set to operate on. The chidg_worker
+    !!  handles what node set is currently being returned.
+    !!  
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   11/30/2016
+    !!
+    !--------------------------------------------------------------------------------------
+    function get_primary_field_grad_ale_general(self,field) result(var_gq)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: field
+
+        type(AD_D), allocatable :: var_gq(:,:)
+
+
+        if (self%interpolation_source == 'element') then
+            var_gq = self%get_primary_field_grad_ale_element(field) 
+        else if (self%interpolation_source == 'face interior') then
+            var_gq = self%get_primary_field_grad_ale_face(field,'face interior')
+        else if (self%interpolation_source == 'face exterior') then
+            var_gq = self%get_primary_field_grad_ale_face(field,'face exterior')
+        else if (self%interpolation_source == 'boundary') then
+            var_gq = self%get_primary_field_grad_ale_face(field,'boundary')
+        end if
+
+    end function get_primary_field_grad_ale_general
+    !**************************************************************************************
+
+
+
+    !>  Returns physical space quantities by tranforming from the reference configuration.
+    !!
+    !!
+    !!  @author Eric M. Wolf
+    !!  @date 7/6/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------
+    function get_primary_field_value_ale_element(self, field) result(val_gq)
+        class(chidg_worker_t), intent(in)           :: self
+        character(*), intent(in)                    :: field
+
+        type(AD_D), allocatable                     :: val_ref(:), val_gq(:)
+        real(rk), allocatable                       :: det_jacobian_grid(:)
+
+        val_ref = self%get_primary_field_element(field,'value')
+        det_jacobian_grid = self%get_det_jacobian_grid_element('value')
+
+        val_gq = val_ref/det_jacobian_grid
+   end function get_primary_field_value_ale_element
+
+    
+    !>  Returns physical space quantities by tranforming from the reference configuration.
+    !!
+    !!
+    !!  @author Eric M. Wolf
+    !!  @date 7/6/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------
+    function get_primary_field_grad_ale_element(self, field) result(grad_u_gq)
+        class(chidg_worker_t), intent(in)           :: self
+        character(*), intent(in)                    :: field
+
+        type(AD_D), allocatable                     :: u(:), grad1_u(:), grad2_u(:), grad3_u(:), grad_u_gq(:,:)
+        real(rk), allocatable                       :: det_jacobian_grid(:), &
+                                                        det_jacobian_grid_grad1(:), &
+                                                        det_jacobian_grid_grad2(:), &
+                                                        det_jacobian_grid_grad3(:)
+        real(rk), allocatable                       :: jacobian_grid(:,:,:)
+
+
+        det_jacobian_grid = self%get_det_jacobian_grid_element('value')
+        det_jacobian_grid_grad1 = self%get_det_jacobian_grid_element('grad1')
+        det_jacobian_grid_grad2 = self%get_det_jacobian_grid_element('grad2')
+        det_jacobian_grid_grad3 = self%get_det_jacobian_grid_element('grad3')
+
+        u = self%get_primary_field_element(field,'value')
+        grad1_u = self%get_primary_field_element(field,'grad1 + lift')
+        grad2_u = self%get_primary_field_element(field,'grad2 + lift')
+        grad3_u = self%get_primary_field_element(field,'grad3 + lift')
+
+
+        grad1_u = grad1_u-u/det_jacobian_grid*det_jacobian_grid_grad1
+        grad2_u = grad2_u-u/det_jacobian_grid*det_jacobian_grid_grad2
+        grad3_u = grad3_u-u/det_jacobian_grid*det_jacobian_grid_grad3
+
+        allocate(grad_u_gq(size(grad1_u,1),3))
+        grad_u_gq(:,1) = (jacobian_grid(:,1,1)*grad1_u + jacobian_grid(:,2,1)*grad2_u + jacobian_grid(:,3,1)*grad3_u)/det_jacobian_grid
+        grad_u_gq(:,2) = (jacobian_grid(:,1,2)*grad1_u + jacobian_grid(:,2,2)*grad2_u + jacobian_grid(:,3,2)*grad3_u)/det_jacobian_grid
+        grad_u_gq(:,3) = (jacobian_grid(:,1,3)*grad1_u + jacobian_grid(:,2,3)*grad2_u + jacobian_grid(:,3,3)*grad3_u)/det_jacobian_grid
+
+
+   end function get_primary_field_grad_ale_element
+
+    !>  Returns physical space quantities by tranforming from the reference configuration.
+    !!
+    !!
+    !!  @author Eric M. Wolf
+    !!  @date 7/6/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------
+    function get_primary_field_value_ale_face(self, field, interp_source) result(val_gq)
+        class(chidg_worker_t), intent(in)           :: self
+        character(*),           intent(in)  :: field
+        character(*),           intent(in)  :: interp_source
+
+        type(AD_D), allocatable                     :: val_ref(:), val_gq(:)
+        real(rk), allocatable                       :: det_jacobian_grid(:)
+
+        val_ref = self%get_primary_field_face(field,'value', interp_source)
+        if (interp_source == 'boundary') then
+            ! In this case, the value supplied by the BC is already the physical value!
+
+            val_gq = val_ref
+        else
+            ! Otherwise, we need to convert the reference configuration value to the physical value.
+            det_jacobian_grid = self%get_det_jacobian_grid_face('value')
+
+            val_gq = val_ref/det_jacobian_grid
+
+        end if
+   end function get_primary_field_value_ale_face
+
+    
+    !>  Returns physical space quantities by tranforming from the reference configuration.
+    !!
+    !!
+    !!  @author Eric M. Wolf
+    !!  @date 7/6/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------------------
+    function get_primary_field_grad_ale_face(self, field, interp_source) result(grad_u_gq)
+        class(chidg_worker_t), intent(in)           :: self
+        character(*),           intent(in)  :: field
+        character(*),           intent(in)  :: interp_source
+
+        type(AD_D), allocatable                     :: u(:), grad1_u(:), grad2_u(:), grad3_u(:), grad_u_gq(:,:)
+        real(rk), allocatable                       :: det_jacobian_grid(:), &
+                                                        det_jacobian_grid_grad1(:), &
+                                                        det_jacobian_grid_grad2(:), &
+                                                        det_jacobian_grid_grad3(:)
+        real(rk), allocatable                       :: jacobian_grid(:,:,:)
+
+
+        grad1_u = self%get_primary_field_face(field,'grad1 + lift', interp_source)
+        grad2_u = self%get_primary_field_face(field,'grad2 + lift', interp_source)
+        grad3_u = self%get_primary_field_face(field,'grad3 + lift', interp_source)
+
+
+        allocate(grad_u_gq(size(grad1_u,1),3))
+        if (interp_source == 'boundary') then
+            ! In this case, the value supplied by the BC is already the physical value!
+            grad_u_gq(:,1) = grad1_u
+            grad_u_gq(:,2) = grad2_u
+            grad_u_gq(:,3) = grad3_u
+
+        else
+            ! Otherwise, we need to convert the reference configuration value to the physical value.
+            det_jacobian_grid = self%get_det_jacobian_grid_face('value')
+            det_jacobian_grid_grad1 = self%get_det_jacobian_grid_face('grad1')
+            det_jacobian_grid_grad2 = self%get_det_jacobian_grid_face('grad2')
+            det_jacobian_grid_grad3 = self%get_det_jacobian_grid_face('grad3')
+
+            u = self%get_primary_field_face(field,'value', interp_source)
+
+            grad1_u = grad1_u-u/det_jacobian_grid*det_jacobian_grid_grad1
+            grad2_u = grad2_u-u/det_jacobian_grid*det_jacobian_grid_grad2
+            grad3_u = grad3_u-u/det_jacobian_grid*det_jacobian_grid_grad3
+
+            grad_u_gq(:,1) = (jacobian_grid(:,1,1)*grad1_u + jacobian_grid(:,2,1)*grad2_u + jacobian_grid(:,3,1)*grad3_u)/det_jacobian_grid
+            grad_u_gq(:,2) = (jacobian_grid(:,1,2)*grad1_u + jacobian_grid(:,2,2)*grad2_u + jacobian_grid(:,3,2)*grad3_u)/det_jacobian_grid
+            grad_u_gq(:,3) = (jacobian_grid(:,1,3)*grad1_u + jacobian_grid(:,2,3)*grad2_u + jacobian_grid(:,3,3)*grad3_u)/det_jacobian_grid
+
+        end if
+
+   end function get_primary_field_grad_ale_face
+
+
+
+   !
+   ! ALE flux post-processing
+   !
+   
+   function post_process_volume_advective_flux_ale(self, flux_1, flux_2, flux_3, advected_quantity) result(flux_ref)
+        class(chidg_worker_t),                       intent(in) :: self
+        type(AD_D), dimension(:), intent(inout)                                  :: flux_1, flux_2, flux_3
+        type(AD_D), dimension(:), intent(in)                                  :: advected_quantity
+
+        type(AD_D), allocatable                                 :: flux_ref(:,:)
+        real(rk), allocatable                       :: det_jacobian_grid(:), u_grid(:), v_grid(:), w_grid(:)
+        real(rk), allocatable                       :: jacobian_grid(:,:,:)
+
+
+        u_grid = self%get_grid_velocity_element('u_grid')
+        v_grid = self%get_grid_velocity_element('v_grid')
+        w_grid = self%get_grid_velocity_element('w_grid')
+
+        det_jacobian_grid = self%get_det_jacobian_grid_element('value')
+        jacobian_grid = self%get_inv_jacobian_grid_element()
+
+        flux_1 = flux_1-u_grid*advected_quantity
+        flux_2 = flux_2-v_grid*advected_quantity
+        flux_3 = flux_3-w_grid*advected_quantity
+       
+        allocate(flux_ref(size(flux_1,1),3))
+        flux_ref(:,1) = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_1 + jacobian_grid(:,1,2)*flux_2 + jacobian_grid(:,1,3)*flux_3)
+        flux_ref(:,2) = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_1 + jacobian_grid(:,2,2)*flux_2 + jacobian_grid(:,2,3)*flux_3)
+        flux_ref(:,3) = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_1 + jacobian_grid(:,3,2)*flux_2 + jacobian_grid(:,3,3)*flux_3)
+
+
+   end function post_process_volume_advective_flux_ale
+
+
+   function post_process_boundary_advective_flux_ale(self, flux_1, flux_2, flux_3, advected_quantity) result(flux_ref)
+        class(chidg_worker_t),                       intent(in) :: self
+        type(AD_D), dimension(:), intent(inout)                                  :: flux_1, flux_2, flux_3
+        type(AD_D), dimension(:), intent(in)                                  :: advected_quantity
+
+        type(AD_D),allocatable, dimension(:)                                  :: flux_1_tmp, flux_2_tmp, flux_3_tmp
+        type(AD_D), allocatable                                 :: flux_ref(:,:)
+        real(rk), allocatable                       :: det_jacobian_grid(:), u_grid(:), v_grid(:), w_grid(:)
+        real(rk), allocatable                       :: jacobian_grid(:,:,:)
+
+        u_grid = self%get_grid_velocity_face('u_grid')
+        v_grid = self%get_grid_velocity_face('v_grid')
+        w_grid = self%get_grid_velocity_face('w_grid')
+
+
+        det_jacobian_grid = self%get_det_jacobian_grid_face('value')
+        jacobian_grid = self%get_inv_jacobian_grid_face()
+
+        flux_1_tmp = flux_1-u_grid*advected_quantity
+        flux_2_tmp = flux_2-v_grid*advected_quantity
+        flux_3_tmp = flux_3-w_grid*advected_quantity
+       
+        allocate(flux_ref(size(flux_1,1),3))
+        flux_ref(:,1) = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_1_tmp + jacobian_grid(:,1,2)*flux_2_tmp + jacobian_grid(:,1,3)*flux_3_tmp)
+        flux_ref(:,2) = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_1_tmp + jacobian_grid(:,2,2)*flux_2_tmp + jacobian_grid(:,2,3)*flux_3_tmp)
+        flux_ref(:,3) = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_1_tmp + jacobian_grid(:,3,2)*flux_2_tmp + jacobian_grid(:,3,3)*flux_3_tmp)
+
+
+   end function post_process_boundary_advective_flux_ale
+
+
+   function post_process_volume_diffusive_flux_ale(self, flux_1, flux_2, flux_3) result(flux_ref)
+        class(chidg_worker_t),                       intent(in) :: self
+        type(AD_D), dimension(:), intent(in)                                  :: flux_1, flux_2, flux_3
+
+        type(AD_D), allocatable                                 :: flux_ref(:,:)
+        real(rk), allocatable                       :: det_jacobian_grid(:)
+        real(rk), allocatable                       :: jacobian_grid(:,:,:)
+
+
+        det_jacobian_grid = self%get_det_jacobian_grid_element('value')
+        jacobian_grid = self%get_inv_jacobian_grid_element()
+
+       
+        allocate(flux_ref(size(flux_1,1),3))
+        flux_ref(:,1) = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_1 + jacobian_grid(:,1,2)*flux_2 + jacobian_grid(:,1,3)*flux_3)
+        flux_ref(:,2) = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_1 + jacobian_grid(:,2,2)*flux_2 + jacobian_grid(:,2,3)*flux_3)
+        flux_ref(:,3) = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_1 + jacobian_grid(:,3,2)*flux_2 + jacobian_grid(:,3,3)*flux_3)
+
+
+   end function post_process_volume_diffusive_flux_ale
+
+   function post_process_boundary_diffusive_flux_ale(self, flux_1, flux_2, flux_3) result(flux_ref)
+        class(chidg_worker_t),                       intent(in) :: self
+        type(AD_D), dimension(:), intent(in)                                  :: flux_1, flux_2, flux_3
+
+        type(AD_D), allocatable                                 :: flux_ref(:,:)
+        real(rk), allocatable                       :: det_jacobian_grid(:)
+        real(rk), allocatable                       :: jacobian_grid(:,:,:)
+
+
+        det_jacobian_grid = self%get_det_jacobian_grid_face('value')
+        jacobian_grid = self%get_inv_jacobian_grid_face()
+
+       
+        allocate(flux_ref(size(flux_1,1),3))
+        flux_ref(:,1) = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_1 + jacobian_grid(:,1,2)*flux_2 + jacobian_grid(:,1,3)*flux_3)
+        flux_ref(:,2) = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_1 + jacobian_grid(:,2,2)*flux_2 + jacobian_grid(:,2,3)*flux_3)
+        flux_ref(:,3) = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_1 + jacobian_grid(:,3,2)*flux_2 + jacobian_grid(:,3,3)*flux_3)
+
+
+   end function post_process_boundary_diffusive_flux_ale
 
 
 end module type_chidg_worker

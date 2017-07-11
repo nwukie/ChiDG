@@ -102,38 +102,46 @@ contains
         real(rk),   allocatable,    dimension(:) :: r
 
 
+        type(AD_D), allocatable, dimension(:,:) :: grad_density, grad_mom1, grad_mom2, grad_mom3, grad_energy
+
         !
         ! Interpolate solution to quadrature nodes
         !
-        density = worker%get_primary_field_general('Density',    'value')
-        mom1    = worker%get_primary_field_general('Momentum-1', 'value')
-        mom2    = worker%get_primary_field_general('Momentum-2', 'value')
-        mom3    = worker%get_primary_field_general('Momentum-3', 'value')
-        energy  = worker%get_primary_field_general('Energy',     'value')
+        density = worker%get_primary_field_value_ale_general('Density')
+        mom1    = worker%get_primary_field_value_ale_general('Momentum-1')
+        mom2    = worker%get_primary_field_value_ale_general('Momentum-2')
+        mom3    = worker%get_primary_field_value_ale_general('Momentum-3')
+        energy  = worker%get_primary_field_value_ale_general('Energy')
 
 
         !
         ! Interpolate gradient to quadrature nodes
         !
-        grad1_density = worker%get_primary_field_general('Density'   , 'grad1+lift')
-        grad2_density = worker%get_primary_field_general('Density'   , 'grad2+lift')
-        grad3_density = worker%get_primary_field_general('Density'   , 'grad3+lift')
+        grad_density    = worker%get_primary_field_grad_ale_general('Density'   )
+        grad_mom1       = worker%get_primary_field_grad_ale_general('Momentum-1')
+        grad_mom2       = worker%get_primary_field_grad_ale_general('Momentum-2')
+        grad_mom3       = worker%get_primary_field_grad_ale_general('Momentum-3')
+        grad_energy     = worker%get_primary_field_grad_ale_general('Energy    ')
 
-        grad1_mom1    = worker%get_primary_field_general('Momentum-1', 'grad1+lift')
-        grad2_mom1    = worker%get_primary_field_general('Momentum-1', 'grad2+lift')
-        grad3_mom1    = worker%get_primary_field_general('Momentum-1', 'grad3+lift')
+        grad1_density = grad_density(:,1)
+        grad2_density = grad_density(:,2)
+        grad3_density = grad_density(:,3)
 
-        grad1_mom2    = worker%get_primary_field_general('Momentum-2', 'grad1+lift')
-        grad2_mom2    = worker%get_primary_field_general('Momentum-2', 'grad2+lift')
-        grad3_mom2    = worker%get_primary_field_general('Momentum-2', 'grad3+lift')
+        grad1_mom1    = grad_mom1(:,1)
+        grad2_mom1    = grad_mom1(:,2)
+        grad3_mom1    = grad_mom1(:,3)
 
-        grad1_mom3    = worker%get_primary_field_general('Momentum-3', 'grad1+lift')
-        grad2_mom3    = worker%get_primary_field_general('Momentum-3', 'grad2+lift')
-        grad3_mom3    = worker%get_primary_field_general('Momentum-3', 'grad3+lift')
+        grad1_mom2    = grad_mom2(:,1)
+        grad2_mom2    = grad_mom2(:,2)
+        grad3_mom2    = grad_mom2(:,3)
 
-        grad1_energy  = worker%get_primary_field_general('Energy'    , 'grad1+lift')
-        grad2_energy  = worker%get_primary_field_general('Energy'    , 'grad2+lift')
-        grad3_energy  = worker%get_primary_field_general('Energy'    , 'grad3+lift')
+        grad1_mom3    = grad_mom3(:,1)
+        grad2_mom3    = grad_mom3(:,2)
+        grad3_mom3    = grad_mom3(:,3)
+
+        grad1_energy  = grad_energy(:,1)
+        grad2_energy  = grad_energy(:,2)
+        grad3_energy  = grad_energy(:,3)
 
 
 

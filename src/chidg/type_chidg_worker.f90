@@ -2267,6 +2267,7 @@ contains
         det_jacobian_grid_grad2 = self%get_det_jacobian_grid_element('grad2')
         det_jacobian_grid_grad3 = self%get_det_jacobian_grid_element('grad3')
 
+        jacobian_grid = self%get_inv_jacobian_grid_element()
         u = self%get_primary_field_element(field,'value')
         grad1_u = self%get_primary_field_element(field,'grad1 + lift')
         grad2_u = self%get_primary_field_element(field,'grad2 + lift')
@@ -2356,6 +2357,7 @@ contains
             det_jacobian_grid_grad2 = self%get_det_jacobian_grid_face('grad2')
             det_jacobian_grid_grad3 = self%get_det_jacobian_grid_face('grad3')
 
+            jacobian_grid = self%get_inv_jacobian_grid_face()
             u = self%get_primary_field_face(field,'value', interp_source)
 
             grad1_u = grad1_u-u/det_jacobian_grid*det_jacobian_grid_grad1

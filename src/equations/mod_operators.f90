@@ -60,6 +60,12 @@ module mod_operators
     use fluid_viscous_bc_operator,                  only: fluid_viscous_bc_operator_t
     use fluid_viscous_volume_cylindrical_source,    only: fluid_viscous_volume_cylindrical_source_t
 
+    ! Fluid Viscous Operators ALE
+    use fluid_viscous_ale_volume_operator,              only: fluid_viscous_ale_volume_operator_t
+    use fluid_viscous_ale_boundary_average_operator,    only: fluid_viscous_ale_boundary_average_operator_t
+    use fluid_viscous_ale_bc_operator,                  only: fluid_viscous_ale_bc_operator_t
+
+
     ! Fluid Turbulence Operators
     use spalart_allmaras_source,                    only: spalart_allmaras_source_operator_t
     use spalart_allmaras_laxfriedrichs,             only: spalart_allmaras_laxfriedrichs_operator_t
@@ -259,6 +265,11 @@ contains
         type(fluid_viscous_bc_operator_t)               :: fluid_viscous_bc_operator
         type(fluid_viscous_volume_cylindrical_source_t) :: fluid_viscous_volume_cylindrical_source
 
+        ! Fluid Viscous Operators ALE
+        type(fluid_viscous_ale_volume_operator_t)           :: fluid_viscous_ale_volume_operator
+        type(fluid_viscous_ale_boundary_average_operator_t) :: fluid_viscous_ale_boundary_average_operator
+        type(fluid_viscous_ale_bc_operator_t)               :: fluid_viscous_ale_bc_operator
+
 
         ! Fluid Turbulence Operators
         type(spalart_allmaras_source_operator_t)                :: spalart_allmaras_source_operator
@@ -343,6 +354,12 @@ contains
             call operator_factory%register(fluid_viscous_bc_operator)
             call operator_factory%register(fluid_viscous_volume_operator)
             call operator_factory%register(fluid_viscous_volume_cylindrical_source)
+
+            ! Register Fluid Viscous ALE
+            call operator_factory%register(fluid_viscous_ale_boundary_average_operator)
+            call operator_factory%register(fluid_viscous_ale_bc_operator)
+            call operator_factory%register(fluid_viscous_ale_volume_operator)
+
 
             ! Register Fluid Turbulence
             call operator_factory%register(spalart_allmaras_source_operator)

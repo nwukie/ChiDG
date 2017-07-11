@@ -612,7 +612,7 @@ contains
         else
 
 
-            user_msg = "chidg_data%add_pmm_patch: It looks like we didn't find a prescribed mesh motion  &
+            user_msg = "chidg_data%add_pmm_domain: It looks like we didn't find a prescribed mesh motion  &
                         group that matches with the string indicated in a pmm domain. Make &
                         sure that a pmm group with the correct name exists. Also make &
                         sure that the name set on the pmm domain corresponds to one of the &

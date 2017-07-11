@@ -480,7 +480,9 @@ contains
         type(testing_1D_linear_adv_diff_ale_model_t)            :: diffusion_coefficient_model
 
 
+        real(rk)                        :: sim_time
 
+        sim_time = 0.5
 
         !-------------------------------------------------------------------------------
         !               Initialize and register the diffusion coefficient model
@@ -506,12 +508,17 @@ contains
         !
         !------------------------------------------------------------------------------
         basis            = 'legendre'
-        gq_rule          = 1
-        time_integrator  = 'steady'
+        gq_rule          = 3 
+        time_integrator  = 'DIRK'
         nonlinear_solver = 'newton'
-        linear_solver    = 'fgmres'
-        preconditioner   = 'ILU0'
-        IO_DESTINATION   = 'file'
+        linear_solver    = 'fgmres_cgs'
+        preconditioner   = 'RASILU0'
+        IO_DESTINATION   = 'both'
+        time_steps       = 720
+        dt               = real(sim_time/time_steps, rk)
+        verbosity        = 3 
+        nwrite           = 20 
+        solutionfile_out = trim(this%gridfile) 
         !------------------------------------------------------------------------------
 
         !
@@ -593,7 +600,7 @@ contains
                                     string_t("YZ Boundaries") , &
                                     string_t("YZ Boundaries")]
 
-                call create_mesh_file('D2 NxNxN M1',this%gridfile,equation_sets   = [string_t("Test 1D Linear Advection Diffusion"),    &
+                call create_mesh_file('Scalar Advection Diffusion PMM Multiblock',this%gridfile,equation_sets   = [string_t("Test 1D Linear Advection Diffusion"),    &
                                                                                      string_t("Test 1D Linear Advection Diffusion")],   &
                                                                   group_names     = group_names,                                        &
                                                                   bc_state_groups = bc_state_groups,                                    &
@@ -615,7 +622,7 @@ contains
                                     string_t("YZ Boundaries")  , &
                                     string_t("YZ Boundaries") ]
 
-                call create_mesh_file('D1 NxNxN',this%gridfile,equation_sets   = [string_t("Test 1D Linear Advection Diffusion")],  &
+                call create_mesh_file('Scalar Advection Diffusion PMM',this%gridfile,equation_sets   = [string_t("Test 1D Linear Advection Diffusion")],  &
                                                                group_names     = group_names,                                       &
                                                                bc_state_groups = bc_state_groups,                                   &
                                                                nelem_xi        = this%nelem_xi,                                     &
@@ -646,8 +653,7 @@ contains
         !
         ! Initialize solution
         !
-        call create_function(fcn,'constant')
-        call fcn%set_option('val',0.1_rk)
+        call create_function(fcn,'scalar_adv_diff_bl_solution')
         call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
 
 
@@ -748,84 +754,6 @@ contains
 
 
 
-
-
-
-
-
-    !>  Access the stored number of steps convergence data(module global variable) and confirm
-    !!  that all simulations converged in 1 step.
-    !!
-    !!  This assumes that the 'run_calculations' routine has already been executed for all cases
-    !!  and numbers of processors to that the 'nsteps_convergence' variable has been populated.
-    !!  So, we are relying on pFUnit to do things in order here. Works now, but I don't think
-    !!  there is a guaruntee that this can't change.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @author Nathan A. Wukie (AFRL)
-    !!
-    !-----------------------------------------------------------------------------------------
-    @Test(npes=[1])
-    subroutine test_conv_conform(self)
-        class(linear_advection_diffusion_1D),  intent(inout)   :: self
-
-        integer(ik)             :: inpes, igrid, iorder, nsteps
-
-        do inpes = 1,3
-            do igrid = 1,2
-                do iorder = 1,3
-
-                    ! Test that the current convergence for the processor count matches 
-                    ! the serial convergence.
-                    nsteps = nsteps_convergence(inpes,igrid,iorder)%size()
-
-                    @assertEqual(1, nsteps)
-
-                end do
-            end do
-        end do
-
-
-    end subroutine test_conv_conform
-    !*****************************************************************************************
-
-
-
-
-
-    !>  Access the stored number of steps convergence data(module global variable) and confirm
-    !!  that all simulations converged in 1 step.
-    !!
-    !!  This assumes that the 'run_calculations' routine has already been executed for all cases
-    !!  and numbers of processors to that the 'nsteps_convergence' variable has been populated.
-    !!  So, we are relying on pFUnit to do things in order here. Works now, but I don't think
-    !!  there is a guaruntee that this can't change.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @author Nathan A. Wukie (AFRL)
-    !!
-    !-----------------------------------------------------------------------------------------
-    @Test(npes=[1])
-    subroutine test_conv_chimera(self)
-        class(linear_advection_diffusion_1D),  intent(inout)   :: self
-
-        integer(ik)             :: inpes, igrid, iorder, nsteps
-
-        do inpes = 1,3
-            do igrid = 1,2
-                do iorder = 1,3
-
-                    ! Test that the current convergence for the processor count matches the serial convergence
-                    nsteps = nsteps_convergence_chimera(inpes,igrid,iorder)%size()
-
-                    @assertEqual(1, nsteps)
-
-                end do
-            end do
-        end do
-
-    end subroutine test_conv_chimera
-    !*****************************************************************************************
 
 
 
@@ -951,7 +879,7 @@ contains
         type(mpi_comm),     intent(in)      :: ChiDG_COMM
 
         real(rk), allocatable, dimension(:) :: &
-            u_dg, u_analytical, x_gq, gq_error_squared
+            u_dg, u_analytical, x_gq, gq_error_squared, det_jacobian_grid_gq
 
 
         integer(ik) :: ielem, idom, ierr, itime, iu
@@ -981,6 +909,7 @@ contains
                     !
                     ! Compute the analytical solution at the quadrature nodes
                     !
+                    det_jacobian_grid_gq = mesh%domain(idom)%elems(ielem)%det_jacobian_grid
                     x_gq = mesh%domain(idom)%elems(ielem)%quad_pts(:,1)
                     u_analytical = (ONE - exp((x_gq-ONE)*(cx/mu))) / (ONE - exp(-cx/mu))
 
@@ -990,6 +919,7 @@ contains
                     !
                     u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,iu,itime,'value')
 
+                    u_dg = u_dg/det_jacobian_grid_gq
 
                     !
                     ! Compute error at GQ nodes
@@ -1000,7 +930,7 @@ contains
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%basis_s%weights())
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%basis_s%weights())
 
 
                     !

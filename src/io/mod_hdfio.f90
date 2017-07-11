@@ -1871,7 +1871,7 @@ contains
 
         type(svector_t)                     :: pmm_group_names, pmm_names
         type(string_t)                      :: group_name, pmm_name
-        class(prescribed_mesh_motion_t),  allocatable     :: pmm 
+        class(prescribed_mesh_motion_t),  allocatable     :: pmm, pmm_temp
 
         integer(HID_T)  :: group_id
         integer(ik)     :: igroup, ngroups, istate, ierr
@@ -1902,7 +1902,11 @@ contains
 
 
             if (allocated(pmm)) deallocate(pmm)
-            allocate(pmm, source = get_pmm_hdf(group_id, group_name%get()))
+            if (allocated(pmm_temp)) deallocate(pmm_temp)
+            
+            
+            call get_pmm_hdf_test(group_id, group_name%get(), pmm_temp)
+            allocate(pmm, source = pmm_temp)
 
             ! Save to pmm_group_t
             pmm_groups_wrapper%ngroups = pmm_groups_wrapper%ngroups+1

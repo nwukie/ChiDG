@@ -19,6 +19,7 @@ program driver
     use mod_chidg_mpi,              only: GLOBAL_MASTER, ChiDG_COMM, IRANK
     use mod_file_utilities,         only: delete_file
     use mod_io
+    use mod_hdf_utilities
 
     ! Actions
     use mod_chidg_edit,         only: chidg_edit
@@ -41,6 +42,7 @@ program driver
     class(function_t),              allocatable :: constant, monopole, fcn, polynomial
 
 
+    integer(HID_T) :: file_id, dom_id
 
 
 
@@ -74,6 +76,25 @@ program driver
         call chidg%set('Preconditioner'  , algorithm=preconditioner                    )
         call chidg%set('Solution Order'  , integer_input=solution_order                )
 
+
+        if (IRANK == GLOBAL_MASTER) then
+        file_id = open_file_hdf(gridfile)
+        call create_pmm_group_hdf(file_id,'hpaf_pmm')
+        call set_pmmf_name_hdf(file_id, 'hpaf_pmm','static')
+
+        !Assign pmm to domain
+        dom_id = open_domain_hdf(file_id,'01')
+        call set_pmm_domain_group_hdf(dom_id,'hpaf_pmm')
+        call close_domain_hdf(dom_id)
+
+        dom_id = open_domain_hdf(file_id,'02')
+        call set_pmm_domain_group_hdf(dom_id,'hpaf_pmm')
+        call close_domain_hdf(dom_id)
+
+        call close_file_hdf(file_id)
+        end if
+
+        call MPI_Barrier(ChiDG_COMM,ierr)
 
 
         !

@@ -342,19 +342,19 @@ contains
         flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
         flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
         flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
-        if ((worker%element_info%ielement_g == 3) .and. (worker%iface ==2)) then
-            testx = worker%x('boundary')
-            print *, 'time'
-            print *, worker%t
-            print *, 'node x position'
-            print *, testx(1) 
-            print *, 'det_jacobian_grid'
-            print *, det_jacobian_grid(1)
-            print *, 'u-grid'
-            print *, u_grid(1)
-            print *, 'Energy flux sample'
-            print *, flux_x_ref(1)%x_ad_
-        end if
+!        if ((worker%element_info%ielement_g == 3) .and. (worker%iface ==2)) then
+!            testx = worker%x('boundary')
+!            print *, 'time'
+!            print *, worker%t
+!            print *, 'node x position'
+!            print *, testx(1) 
+!            print *, 'det_jacobian_grid'
+!            print *, det_jacobian_grid(1)
+!            print *, 'u-grid'
+!            print *, u_grid(1)
+!            print *, 'Energy flux sample'
+!            print *, flux_x_ref(1)%x_ad_
+!        end if
 
 
 

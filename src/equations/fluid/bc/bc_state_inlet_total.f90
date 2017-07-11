@@ -2,7 +2,7 @@ module bc_state_inlet_total
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ONE, TWO
-    use mod_fluid,              only: R, cp, gam
+    use mod_fluid,              only: Rgas, cp, gam
     use type_bc_state,          only: bc_state_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
@@ -232,7 +232,7 @@ contains
         !
         ! Compute boundary condition density from ideal gas law
         !
-        density_bc = p_bc/(T_bc*R)
+        density_bc = p_bc/(T_bc*Rgas)
 
 
         !

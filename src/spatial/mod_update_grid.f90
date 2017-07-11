@@ -111,6 +111,9 @@ contains
                 print *, 'updating grid'
                 print *, 'time'
                 print *, data%time_manager%t
+                print *,data%pmm(pmm_ID)%pmm_name
+                print *,data%pmm(pmm_ID)%pmmf_name
+                print *,data%pmm(pmm_ID)%pmmf%get_name()
                 do inode = 1, size(mesh%domain(idom)%nodes,1)
                     mesh%domain(idom)%dnodes(inode,:) = &
                         data%pmm(pmm_ID)%pmmf%compute_pos(data%time_manager%t, mesh%domain(idom)%nodes(inode,:)) - &

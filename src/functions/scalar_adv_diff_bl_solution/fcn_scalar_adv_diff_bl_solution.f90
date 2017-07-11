@@ -94,7 +94,7 @@ contains
         
         integer(ik) :: fcn_dim
         real(rk)    :: x,   y,   z, &
-                       mu, cx &
+                       mu, cx 
 
         !
         ! Get inputs and function parameters
@@ -103,8 +103,8 @@ contains
         y = coord%c2_
         z = coord%c3_
 
-        mu       = self%get_option_value('mu')
-        cx       = self%get_option_value('cx')
+        mu = self%get_option_value('mu')
+        cx = self%get_option_value('cx')
 
 
 

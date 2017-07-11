@@ -6128,34 +6128,20 @@ contains
     !****************************************************************************************
 
 
-
-
-    
-
-    !>  Given the name of a bc_state on a face, return an initialized bc_state instance.
-    !!
-    !!  You may consider calling 'get_bc_state_names_hdf' first to get a list of 
-    !!  available bc_state's on a face. Then the names could be passed into this routine
-    !!  to return the bc_state instance.
-    !!
-    !!  @author Eric Wolf
-    !!  @date   3/30/2017
-    !!
-    !!
-    !----------------------------------------------------------------------------------------
-    function get_pmm_hdf(pmmgroup_id,pmm_name) result(pmm)
+    subroutine get_pmm_hdf_test(pmmgroup_id,pmm_name, pmm)
         integer(HID_T), intent(in)  :: pmmgroup_id
         character(*),   intent(in)  :: pmm_name
+        class(prescribed_mesh_motion_t), allocatable, intent(inout)  :: pmm
 
 
-        class(prescribed_mesh_motion_t),  allocatable :: pmm
         character(:),       allocatable :: pmmname, pname, oname
-        character(1024)                 :: fname
+        !character(1024)                 :: fname
+        character(:),   allocatable     :: fname, fname2
         integer(HID_T)                  :: pmm_id, pmmfo_id
         integer(ik)                     :: ierr, iprop, nprop, iopt, noptions
         real(rdouble), dimension(1)     :: buf
         real(rk)                        :: ovalue
-        logical                         :: group_exists
+        logical                         :: group_exists, function_exists
 
 
         !
@@ -6184,12 +6170,15 @@ contains
        
 
         ! Read the function name set for the property.
+        !fname = ''
+        allocate(character(1024) :: fname)
         call h5ltget_attribute_string_f(pmmgroup_id, ".", "Function", fname, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"get_pmm_hdf: error getting function name.")
 
         
+        fname2 = fname(1:10)
         ! Set/Create the function for the current property
-        call pmm%add_pmmf(trim(fname))
+        call pmm%add_pmmf(trim(fname2))
 
         
         ! Get number of options for the function
@@ -6198,6 +6187,7 @@ contains
 
 
         ! Get each option value
+        if (noptions>0) then
         do iopt = 1,noptions
             ! Get option name
             oname = pmm%pmmf%get_option_key(iopt)
@@ -6218,6 +6208,107 @@ contains
                 if (ierr /= 0) call chidg_signal(FATAL,"get_pmm_hdf: h5gclose")
             end if
         end do ! iopt
+        end if
+
+
+    end subroutine get_pmm_hdf_test
+    !*****************************************************************************************
+
+
+
+
+    
+
+    !>  Given the name of a bc_state on a face, return an initialized bc_state instance.
+    !!
+    !!  You may consider calling 'get_bc_state_names_hdf' first to get a list of 
+    !!  available bc_state's on a face. Then the names could be passed into this routine
+    !!  to return the bc_state instance.
+    !!
+    !!  @author Eric Wolf
+    !!  @date   3/30/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_pmm_hdf(pmmgroup_id,pmm_name) result(pmm)
+        integer(HID_T), intent(in)  :: pmmgroup_id
+        character(*),   intent(in)  :: pmm_name
+
+
+        class(prescribed_mesh_motion_t),  allocatable :: pmm
+        character(:),       allocatable :: pmmname, pname, oname
+        character(:), allocatable                 :: fname
+        integer(HID_T)                  :: pmm_id, pmmfo_id
+        integer(ik)                     :: ierr, iprop, nprop, iopt, noptions
+        real(rdouble), dimension(1)     :: buf
+        real(rk)                        :: ovalue
+        logical                         :: group_exists, function_exists
+
+
+        !
+        !   Prescribed mesh motion group structure
+        ! /PMM_pmm_name/...
+        !   ATTRIBUTE "Function"    - name of a registered pmmf
+        !   /PMMFO_oname/...        - oname is the name of an option for this pmmf
+        !       ATTRIBUTE "val"     - value of this option
+        !   ...                     - more options
+
+!        ! Open pmmf group 
+!               
+        ! Get boundary condition name string
+        if (pmm_name(1:4) == "PMM_") then
+            pmmname = trim(pmm_name(5:))
+        else
+            pmmname = trim(pmm_name)
+        end if
+
+
+        ! Create boundary condition state and get number of properties
+
+        allocate(pmm, stat=ierr)
+        if (ierr /=0) call AllocationError
+        call pmm%set_name(pmmname)
+       
+
+        ! Read the function name set for the property.
+        !fname = ''
+        allocate(character(1024) :: fname) 
+        call h5ltget_attribute_string_f(pmmgroup_id, ".", "Function", fname, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"get_pmm_hdf: error getting function name.")
+
+        
+        ! Set/Create the function for the current property
+        call pmm%add_pmmf(trim(fname))
+
+        
+        ! Get number of options for the function
+        noptions = pmm%pmmf%get_noptions()
+
+
+
+        ! Get each option value
+        if (noptions>0) then
+        do iopt = 1,noptions
+            ! Get option name
+            oname = pmm%pmmf%get_option_key(iopt)
+
+            ! Get option value from file
+            group_exists = check_link_exists_hdf(pmmgroup_id,"PMMFO_"//trim(oname))
+            if (group_exists) then
+                call h5gopen_f(pmmgroup_id, "PMMFO_"//trim(oname), pmmfo_id, ierr)
+                call h5ltget_attribute_double_f(pmmfo_id,".", "val", buf, ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"get_pmm_hdf: error getting option value")
+                ovalue = real(buf(1),rk)
+
+                ! Set boundary condition option
+                call pmm%pmmf%set_option(trim(oname), ovalue)
+
+                ! Close current property group
+                call h5gclose_f(pmmfo_id,ierr)
+                if (ierr /= 0) call chidg_signal(FATAL,"get_pmm_hdf: h5gclose")
+            end if
+        end do ! iopt
+        end if
 
 
     end function get_pmm_hdf
@@ -6313,14 +6404,18 @@ contains
 
         user_msg = "create_pmm_group_hdf: Boundary condition state group already exists. &
                     Cannot have two groups with the same name"
-        if (group_exists) call chidg_signal_one(FATAL,user_msg,trim(group_name))
+!        if (group_exists) call chidg_signal_one(FATAL,user_msg,trim(group_name))
 
 
         !
         ! Create a new group for the bc_state_t
         !
-        call h5gcreate_f(fid, "PMM_"//trim(group_name), pmmgroup_id, ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,'create_pmm_group_hdf: error creating new group for bc_state.')
+        if (.not. group_exists) then
+            call h5gcreate_f(fid, "PMM_"//trim(group_name), pmmgroup_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL,'create_pmm_group_hdf: error creating new group for bc_state.')
+        else
+            call h5gopen_f(fid, "PMM_"//trim(group_name), pmmgroup_id, ierr)
+        end if
 
 
         ! Set 'Family'

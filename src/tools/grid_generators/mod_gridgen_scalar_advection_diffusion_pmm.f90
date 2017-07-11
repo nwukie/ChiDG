@@ -1,4 +1,4 @@
-module mod_gridgen_scalar_advection_pmm
+module mod_gridgen_scalar_advection_diffusion_pmm
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: PI, ZERO, ONE, TWO, THREE, FOUR, HALF, &
@@ -494,8 +494,8 @@ contains
 
 
         !Assign pmm to domain
-        call set_pmm_domain_group_hdf(dom_id1,'sin_pmm')
-        call set_pmm_domain_group_hdf(dom_id2,'sin_pmm')
+        call set_pmm_domain_group_hdf(dom1_id,'sin_pmm')
+        call set_pmm_domain_group_hdf(dom2_id,'sin_pmm')
 
 
 
@@ -602,4 +602,4 @@ contains
 
 
 
-end module mod_gridgen_scalar_advection_pmm
+end module mod_gridgen_scalar_advection_diffusion_pmm

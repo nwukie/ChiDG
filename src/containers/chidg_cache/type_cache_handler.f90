@@ -765,6 +765,7 @@ contains
                     end if
 
                     eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+
                     call bc_state_group(bc_ID)%bc_state(istate)%state%compute_bc_state(worker,equation_set(eqn_ID)%prop, bc_state_group(bc_ID)%bc_COMM)
 
                 end do !idepend

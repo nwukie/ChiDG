@@ -2,7 +2,7 @@ module type_ideal_gas
 #include <messenger.h>
     use mod_kinds,          only: rk
     use mod_constants,      only: HALF, ONE
-    use mod_fluid,          only: R, gam
+    use mod_fluid,          only: Rgas, gam
     use type_model,         only: model_t
     use type_chidg_worker,  only: chidg_worker_t
     use DNAD_D
@@ -105,7 +105,7 @@ contains
 
 
         pressure = (gam-ONE)*(energy - HALF*( (mom1*mom1) + (mom2*mom2) + (mom3*mom3) )/density )
-        temperature = pressure/(density*R)
+        temperature = pressure/(density*Rgas)
 
 
 

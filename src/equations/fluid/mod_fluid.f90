@@ -5,9 +5,9 @@ module mod_fluid
     implicit none
 
     ! Gas Constants
-    real(rk), parameter :: R   = 287.15_rk
+    real(rk), parameter :: Rgas   = 287.15_rk
     real(rk), parameter :: gam = 1.4_rk
-    real(rk), parameter :: cp  = R*gam/(gam-ONE)
+    real(rk), parameter :: cp  = Rgas*gam/(gam-ONE)
 
 
     !real(rk)    :: omega = 366.5191_rk

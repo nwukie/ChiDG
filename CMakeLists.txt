@@ -433,7 +433,7 @@ if (PFUNIT_TAR)
     set(PFUNIT_SOURCE_DIR ${PROJECT_BINARY_DIR}/external/pfunit-src)
 
 else()
-    set(PFUNIT_DOWNLOAD_COMMAND "git submodule update")
+    set(PFUNIT_DOWNLOAD_COMMAND git submodule update)
     set(PFUNIT_DOWNLOAD_DIR "${PROJECT_SOURCE_DIR}")
     set(PFUNIT_SOURCE_DIR "${PROJECT_SOURCE_DIR}/external/pfunit")
 endif()

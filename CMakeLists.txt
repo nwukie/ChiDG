@@ -398,10 +398,46 @@ add_custom_target(
 #
 #   The following code is based on modifications of code by Randovan Bast. See file LICENSE, 
 #   section BAST for license.
+#
+#   pFUnit from git submodule:
+#   --------------------------
+#   This is already set-up. One only needs to run 'make check' to build pFUnit and ChiDG tests.
+#   This step requires internet access. If internet access is not available, one could provide
+#   the pFUnit source as a .tar archive as detailed in the next section.
 #   
+#   pFUnit from .tar:
+#   --------------------------
+#   If PFUNIT_TAR is defined during configure 
+#   cmake <other_stuff> -DPFUNIT_TAR=/home/user/pFUnit.tar <other_stuff>
+#   Then this will bypass the git submodule approach for obtaining the pFUnit source.
+#   This approach is useful if internet access is not available on the host machine.
 #
 #----------------------------------------------------------------------------------------------
 include(ExternalProject)
+
+
+if (PFUNIT_TAR)
+    execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory external
+                    WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+                    )
+    execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory pfunit-src
+                    WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/external
+                    )
+    execute_process(COMMAND tar xzf ${PFUNIT_TAR} -C ${PROJECT_BINARY_DIR}/external/pfunit-src --strip-components=1
+                    WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+                    )
+    set(PFUNIT_DOWNLOAD_COMMAND "")
+    set(PFUNIT_DOWNLOAD_DIR "")
+    set(PFUNIT_SOURCE_DIR ${PROJECT_BINARY_DIR}/external/pfunit-src)
+
+else()
+    set(PFUNIT_DOWNLOAD_COMMAND "git submodule update")
+    set(PFUNIT_DOWNLOAD_DIR "${PROJECT_SOURCE_DIR}")
+    set(PFUNIT_SOURCE_DIR "${PROJECT_SOURCE_DIR}/external/pfunit")
+endif()
+
+
+
 
 set(ExternalProjectCMakeArgs
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
@@ -411,11 +447,13 @@ set(ExternalProjectCMakeArgs
     -DINSTALL_PATH=${PROJECT_BINARY_DIR}/external/pfunit   # keeps pfunit from complaining
     )
 
+
+
 ExternalProject_Add(
     pfunit
-    DOWNLOAD_COMMAND git submodule update
-    DOWNLOAD_DIR ${PROJECT_SOURCE_DIR}
-    SOURCE_DIR ${PROJECT_SOURCE_DIR}/external/pfunit
+    DOWNLOAD_COMMAND ${PFUNIT_DOWNLOAD_COMMAND}
+    DOWNLOAD_DIR ${PFUNIT_DOWNLOAD_DIR}
+    SOURCE_DIR ${PFUNIT_SOURCE_DIR}
     BINARY_DIR ${PROJECT_BINARY_DIR}/external/pfunit-build
     STAMP_DIR ${PROJECT_BINARY_DIR}/external/pfunit-stamp
     TMP_DIR ${PROJECT_BINARY_DIR}/external/pfunit-tmp
@@ -425,7 +463,9 @@ ExternalProject_Add(
     )
 
 
-add_dependencies(pfunit git_update)
+if (NOT PFUNIT_TAR)
+    add_dependencies(pfunit git_update)
+endif()
 set(PF_ROOT ${PROJECT_BINARY_DIR}/external/pfunit)
 set(PFU_LIB ${PF_ROOT}/lib)
 set(MPIRUN_EXECUTABLE "mpirun")

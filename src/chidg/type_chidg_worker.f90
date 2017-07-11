@@ -647,12 +647,18 @@ contains
                     lift_face_max   = NFACES
                     stabilization   = ONE
                 case default
-                    user_msg = "chidg_worker%get_field_value: Invalid value for interpolation source. &
+                    user_msg = "chidg_worker%get_field: Invalid value for interpolation source. &
                                 Try 'face interior', 'face exterior', 'boundary', or 'element'"
                     call chidg_signal_one(FATAL,user_msg,trim(interp_source))
             end select
         else
             cache_component = self%interpolation_source
+            if ( (trim(cache_component) /= "face interior") .and. &
+                 (trim(cache_component) /= "face exterior") .and. &
+                 (trim(cache_component) /= "element") ) then
+            user_msg = "chidg_worker%get_field: chidg_worker implicit interpolation source is not valid."
+            call chidg_signal(FATAL,user_msg)
+            end if
         end if
 
 

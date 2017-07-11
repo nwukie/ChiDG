@@ -76,6 +76,7 @@ contains
             flux_1, flux_2, flux_3, grad1_u, grad2_u, grad3_u, mu
 
 
+
         !
         ! Interpolate solution to quadrature nodes
         !
@@ -85,6 +86,7 @@ contains
         grad1_u = worker%get_field('u','grad1','element')
         grad2_u = worker%get_field('u','grad2','element')
         grad3_u = worker%get_field('u','grad3','element')
+
 
 
         !

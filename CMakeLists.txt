@@ -411,6 +411,8 @@ add_custom_target(
 #   cmake <other_stuff> -DPFUNIT_TAR=/home/user/pFUnit.tar <other_stuff>
 #   Then this will bypass the git submodule approach for obtaining the pFUnit source.
 #   This approach is useful if internet access is not available on the host machine.
+#   
+#   An archive of pFUnit can be obtained at: https://sourceforge.net/projects/pfunit
 #
 #----------------------------------------------------------------------------------------------
 include(ExternalProject)

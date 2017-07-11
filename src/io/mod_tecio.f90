@@ -250,7 +250,7 @@ contains
                     call cache_handler%update(worker,data%eqnset, data%bc_state_group, components    = 'all',   &
                                                                                        face          = NO_ID,   &
                                                                                        differentiate = .false., &
-                                                                                       lift          = .false.)
+                                                                                       lift          = .true.)
 
                     ! Retrieve name of current field, retrieve interpolation, write interpolation to file
                     do ifield = 1,data%eqnset(eqn_ID)%prop%nio_fields()
@@ -493,7 +493,7 @@ contains
                         call cache_handler%update(worker,data%eqnset, data%bc_state_group, components    = 'all',   &
                                                                                            face          = NO_ID,   &
                                                                                            differentiate = .false., &
-                                                                                           lift          = .false.)
+                                                                                           lift          = .true.)
 
 
                         ! Retrieve name of current field, retrieve interpolation, write interpolation to file

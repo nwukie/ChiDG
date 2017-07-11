@@ -2203,6 +2203,7 @@ contains
 
         type(AD_D), allocatable :: var_gq(:,:)
 
+        
 
         if (self%interpolation_source == 'element') then
             var_gq = self%get_primary_field_grad_ale_element(field) 

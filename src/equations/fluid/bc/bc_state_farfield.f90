@@ -137,9 +137,8 @@ contains
         u_input   = self%bcproperties%compute('Velocity-1', worker%time(), worker%coords())
         v_input   = self%bcproperties%compute('Velocity-2', worker%time(), worker%coords())
         w_input   = self%bcproperties%compute('Velocity-3', worker%time(), worker%coords())
-
-        T_input = p_input/(rho_input*Rgas)
-        c_input = sqrt(gam*Rgas*T_input)
+        T_input   = p_input/(rho_input*Rgas)
+        c_input   = sqrt(gam*Rgas*T_input)
 
 
 
@@ -151,6 +150,7 @@ contains
         mom2_m    = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
         mom3_m    = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
         energy_m  = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
+
 
         density_m = density_m/det_jacobian_grid
         mom1_m = mom1_m/det_jacobian_grid

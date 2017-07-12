@@ -5,7 +5,13 @@ module mod_reference_elements
     use type_reference_element, only: reference_element_t
     implicit none
 
-    type(reference_element_t),  allocatable, target :: ref_elems(:)
+    ! We don't want this to be allocatable, target, because everytime
+    ! it gets extended all the memory locations change and then any
+    ! elements/faces that are pointing to those locations in memory
+    ! no longer have valid pointers.
+    !type(reference_element_t),  allocatable, target :: ref_elems(:)
+    type(reference_element_t),  target  :: ref_elems(100)
+    integer(ik)                         :: nref_elems = 0   ! number of ref_elem objects that have been initialized
 
 contains
 
@@ -26,18 +32,18 @@ contains
         integer(ik),    intent(in), optional    :: nterms_rule
 
         character(:),   allocatable :: user_msg
-        integer(ik)                 :: iref_elem, ref_elem_ID, nrefs
+        integer(ik)                 :: iref_elem, ref_elem_ID
         logical                     :: polynomial_matches, nterms_matches, node_set_matches, &
                                        level_matches, element_matches, rule_matches
 
-        !
-        ! Get number of reference elements available
-        !
-        if (allocated(ref_elems)) then
-            nrefs = size(ref_elems)
-        else
-            nrefs = 0
-        end if
+        !!
+        !! Get number of reference elements available
+        !!
+        !if (allocated(ref_elems)) then
+        !    nrefs = size(ref_elems)
+        !else
+        !    nrefs = 0
+        !end if
 
         
 
@@ -45,7 +51,7 @@ contains
         ! First, try to find an existing reference object to provide
         !
         ref_elem_ID = NO_ID
-        do iref_elem = 1,nrefs
+        do iref_elem = 1,nref_elems
 
             !
             ! Try to find fully initialized reference element: (reference nodes + interpolation nodes)
@@ -129,45 +135,14 @@ contains
 
 
         character(:),               allocatable :: user_msg
-        type(reference_element_t),  allocatable :: temp_elems(:)
-        integer(ik)                             :: ref_elem_ID, nref, ierr
-
-        
-
-        if (allocated(ref_elems)) then
-            nref = size(ref_elems)
-        else
-            nref = ZERO
-        end if
-
-
-        !
-        ! Resize ref_elems allocation
-        !
-        allocate(temp_elems(nref + 1), stat=ierr)
-        if (ierr /= 0) call AllocationError
-
-
-        !
-        ! Copy previously initialize objects to new allocation.
-        !
-        if (nref > 0) then
-            temp_elems(1:nref) = ref_elems(1:nref)
-        end if
-
-
-
-        !
-        ! Move resized allocation to module variable
-        !
-        call move_alloc(temp_elems,ref_elems)
-
+        integer(ik)                             :: ref_elem_ID, ierr
 
 
         !
         ! Initialize new object(last 
         !
-        ref_elem_ID = size(ref_elems)
+        ref_elem_ID = nref_elems + 1
+        nref_elems  = nref_elems + 1
 
 
         !

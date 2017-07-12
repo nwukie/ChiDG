@@ -88,14 +88,15 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine update(self,worker,equation_set,bc_state_group,differentiate,components,face)
+    subroutine update(self,worker,equation_set,bc_state_group,components,face,differentiate,lift)
         class(cache_handler_t),     intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(equation_set_t),       intent(inout)   :: equation_set(:)
         type(bc_state_group_t),     intent(inout)   :: bc_state_group(:)
-        logical,                    intent(in)      :: differentiate
         character(*),               intent(in)      :: components
         integer(ik),                intent(in)      :: face
+        logical,                    intent(in)      :: differentiate
+        logical,                    intent(in)      :: lift
 
         integer(ik) :: idomain_l, ielement_l, iface, eqn_ID, face_min, face_max
         logical     :: compute_gradients, valid_indices, update_interior_faces, update_exterior_faces, update_element
@@ -157,7 +158,7 @@ contains
         !
         idomain_l  = worker%element_info%idomain_l 
         ielement_l = worker%element_info%ielement_l 
-        call worker%cache%resize(worker%mesh,worker%prop,idomain_l,ielement_l,differentiate)
+        call worker%cache%resize(worker%mesh,worker%prop,idomain_l,ielement_l,differentiate,lift)
 
 
 
@@ -217,7 +218,7 @@ contains
             !
             ! Update lifting operators for second-order pde's
             !
-            call self%update_primary_lift(worker,equation_set,bc_state_group,differentiate)
+            if (lift) call self%update_primary_lift(worker,equation_set,bc_state_group,differentiate)
 
 
             !

@@ -79,8 +79,8 @@ module type_chidg
         integer(ik)     :: nterms_s_1d  = 0
 
         ! ChiDG Files
-        !type(chidg_file_t)        :: grid_file
-        !type(chidg_file_t)        :: solution_file_in
+        character(:),   allocatable :: grid_file
+        character(:),   allocatable :: solution_file_in
         !type(chidg_file_t)        :: solution_file_out
 
         ! Primary data container. Mesh, equations, bc's, vectors/matrices
@@ -129,11 +129,12 @@ module type_chidg
 
 
     interface
-        module subroutine auxiliary_driver(chidg,chidg_aux,case,file_name)
+        module subroutine auxiliary_driver(chidg,chidg_aux,case,grid_file,aux_file)
             type(chidg_t),  intent(inout)   :: chidg
             type(chidg_t),  intent(inout)   :: chidg_aux
             character(*),   intent(in)      :: case
-            character(*),   intent(in)      :: file_name
+            character(*),   intent(in)      :: grid_file
+            character(*),   intent(in)      :: aux_file
         end subroutine auxiliary_driver
     end interface
 
@@ -224,8 +225,6 @@ contains
             !
             case ('namelist')
 
-
-                !call read_input()
                 ! Read data from 'chidg.nml'
                 do iread = 0,NRANK-1
                     if ( iread == IRANK ) then
@@ -233,6 +232,10 @@ contains
                     end if
                     call MPI_Barrier(ChiDG_COMM,ierr)
                 end do
+
+                ! Assign from mod_io variables that were read from .nml
+                self%grid_file        = gridfile
+                self%solution_file_in = solutionfile_in
 
 
 
@@ -1280,7 +1283,8 @@ contains
         if (all_have_wall_distance) then
             allocate(self%auxiliary_environment, stat=ierr)
             if (ierr /= 0) call AllocationError
-            call auxiliary_driver(self,self%auxiliary_environment,'Wall Distance','wall_distance.h5')
+            call auxiliary_driver(self,self%auxiliary_environment,'Wall Distance', grid_file = trim(self%grid_file),    &
+                                                                                   aux_file  = 'wall_distance.h5')
         end if
         !*************************************************************************************
 

@@ -100,9 +100,12 @@ contains
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
-        grad1_u = worker%get_primary_field_face('u','grad1 + lift', 'boundary')
-        grad2_u = worker%get_primary_field_face('u','grad2 + lift', 'boundary')
-        grad3_u = worker%get_primary_field_face('u','grad3 + lift', 'boundary')
+        !grad1_u = worker%get_primary_field_face('u','grad1 + lift', 'boundary')
+        !grad2_u = worker%get_primary_field_face('u','grad2 + lift', 'boundary')
+        !grad3_u = worker%get_primary_field_face('u','grad3 + lift', 'boundary')
+        grad1_u = worker%get_field('u','grad1', 'boundary')
+        grad2_u = worker%get_field('u','grad2', 'boundary')
+        grad3_u = worker%get_field('u','grad3', 'boundary')
 
 
         norm_1 = worker%normal(1)
@@ -113,7 +116,8 @@ contains
         !
         ! Compute scalar coefficient
         !
-        mu = worker%get_model_field_face('Scalar Diffusion Coefficient', 'value', 'boundary')
+        !mu = worker%get_model_field_face('Scalar Diffusion Coefficient', 'value', 'boundary')
+        mu = worker%get_field('Scalar Diffusion Coefficient', 'value', 'boundary')
 
 
 
@@ -125,12 +129,6 @@ contains
         flux_3 = -mu*grad3_u
 
         integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-
-
-        if (any(ieee_is_nan(integrand(:)%x_ad_))) then
-            print*, 'BC OP: ', integrand(:)%x_ad_
-        end if
-
 
         call worker%integrate_boundary('u',integrand)
 

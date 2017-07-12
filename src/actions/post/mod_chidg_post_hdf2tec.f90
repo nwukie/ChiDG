@@ -61,6 +61,7 @@ contains
         call chidg%start_up('mpi')
 
 
+        
 
 
         !
@@ -82,7 +83,8 @@ contains
         !
         call chidg%set('Solution Order', integer_input=solution_order)
         call chidg%set('Time Integrator', algorithm=trim(time_string))
-
+        chidg%grid_file        = grid_file
+        chidg%solution_file_in = solution_file
 
 
         !
@@ -91,6 +93,10 @@ contains
         call chidg%read_mesh(grid_file, interpolation='Uniform', level=OUTPUT_RES)
         call chidg%read_fields(solution_file)
 
+        !
+        ! Process for getting wall distance
+        !
+        call chidg%process()
 
 
         !

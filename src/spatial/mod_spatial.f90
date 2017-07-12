@@ -130,7 +130,10 @@ contains
 
 
                 ! Update the element cache
-                call cache_handler%update(worker,data%eqnset, data%bc_state_group, differentiate, components='all',face=NO_ID)
+                call cache_handler%update(worker,data%eqnset, data%bc_state_group, components    = 'all',           &
+                                                                                   face          = NO_ID,           &
+                                                                                   differentiate = differentiate,   &
+                                                                                   lift          = .true.)
 
 
                 ! Faces loop. For the current element, compute the 

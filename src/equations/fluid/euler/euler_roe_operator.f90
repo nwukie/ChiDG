@@ -2,7 +2,7 @@ module euler_roe_operator
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO,ONE,TWO,HALF
-    use mod_fluid,              only: omega
+    use mod_fluid,              only: omega, gam
     use type_operator,          only: operator_t
     use type_properties,        only: properties_t
     use type_chidg_worker,      only: chidg_worker_t
@@ -108,27 +108,42 @@ contains
         real(rk), allocatable, dimension(:) :: &
             norm_1, norm_2, norm_3, unorm_1, unorm_2, unorm_3, r, area
 
-        real(rk) :: eps, gam_m, gam_p
+        real(rk) :: eps
 
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        density_m = worker%get_primary_field_face('Density'   , 'value', 'face interior')
-        density_p = worker%get_primary_field_face('Density'   , 'value', 'face exterior')
+        !density_m = worker%get_primary_field_face('Density'   , 'value', 'face interior')
+        !density_p = worker%get_primary_field_face('Density'   , 'value', 'face exterior')
 
-        mom1_m    = worker%get_primary_field_face('Momentum-1', 'value', 'face interior')
-        mom1_p    = worker%get_primary_field_face('Momentum-1', 'value', 'face exterior')
+        !mom1_m    = worker%get_primary_field_face('Momentum-1', 'value', 'face interior')
+        !mom1_p    = worker%get_primary_field_face('Momentum-1', 'value', 'face exterior')
 
-        mom2_m    = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
-        mom2_p    = worker%get_primary_field_face('Momentum-2', 'value', 'face exterior')
+        !mom2_m    = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
+        !mom2_p    = worker%get_primary_field_face('Momentum-2', 'value', 'face exterior')
 
-        mom3_m    = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
-        mom3_p    = worker%get_primary_field_face('Momentum-3', 'value', 'face exterior')
+        !mom3_m    = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
+        !mom3_p    = worker%get_primary_field_face('Momentum-3', 'value', 'face exterior')
 
-        energy_m  = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
-        energy_p  = worker%get_primary_field_face('Energy'    , 'value', 'face exterior')
+        !energy_m  = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
+        !energy_p  = worker%get_primary_field_face('Energy'    , 'value', 'face exterior')
+
+        density_m = worker%get_field('Density'   , 'value', 'face interior')
+        density_p = worker%get_field('Density'   , 'value', 'face exterior')
+
+        mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
+        mom1_p    = worker%get_field('Momentum-1', 'value', 'face exterior')
+
+        mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
+        mom2_p    = worker%get_field('Momentum-2', 'value', 'face exterior')
+
+        mom3_m    = worker%get_field('Momentum-3', 'value', 'face interior')
+        mom3_p    = worker%get_field('Momentum-3', 'value', 'face exterior')
+
+        energy_m  = worker%get_field('Energy'    , 'value', 'face interior')
+        energy_p  = worker%get_field('Energy'    , 'value', 'face exterior')
 
 
         !
@@ -162,11 +177,10 @@ contains
         !
         ! Compute pressure and gamma
         !
-        p_m = worker%get_model_field_face('Pressure', 'value', 'face interior')
-        p_p = worker%get_model_field_face('Pressure', 'value', 'face exterior')
-        gam_m = 1.4_rk
-        gam_p = 1.4_rk
-
+        !p_m = worker%get_model_field_face('Pressure', 'value', 'face interior')
+        !p_p = worker%get_model_field_face('Pressure', 'value', 'face exterior')
+        p_m = worker%get_field('Pressure', 'value', 'face interior')
+        p_p = worker%get_field('Pressure', 'value', 'face exterior')
 
 
         !
@@ -219,8 +233,7 @@ contains
         vmagtil_t = util*unorm_1 + vtil_t*unorm_2 + wtil*unorm_3
         qtil2     = util**TWO + vtil**TWO + wtil**TWO
 
-        !& HARDCODED GAMMA
-        ctil = sqrt((1.4_rk - ONE)*(Htil - HALF*qtil2))                   ! Roe-averaged speed of sound
+        ctil = sqrt((gam - ONE)*(Htil - HALF*qtil2))                   ! Roe-averaged speed of sound
         ctil2 = ctil**TWO
 
 

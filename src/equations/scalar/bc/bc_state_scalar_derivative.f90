@@ -96,24 +96,21 @@ contains
         type(AD_D), allocatable, dimension(:)   :: u_bc, dudx_bc, dudy_bc, dudz_bc
 
 
-        !
-        ! Get equation index
-        !
-        iu = prop%get_primary_field_index("u")
-
 
 
         !
         ! Get 'u' value from face interior to extrapolate
         !
-        u_bc = worker%get_primary_field_face('u', 'value', 'face interior')
+        !u_bc = worker%get_primary_field_face('u', 'value', 'face interior')
+        u_bc = worker%get_field('u', 'value', 'face interior')
 
 
 
         !
         ! Initialize derivative arrays
         !
-        dudx_bc = ZERO*worker%get_primary_field_face('u', 'grad1','face interior')
+        !dudx_bc = ZERO*worker%get_primary_field_face('u', 'grad1','face interior')
+        dudx_bc = ZERO*worker%get_field('u', 'grad1','face interior')
         dudy_bc = ZERO*dudx_bc
         dudz_bc = ZERO*dudx_bc
 
@@ -127,11 +124,6 @@ contains
         ! Get derivative value
         !
         dudx_bc = self%bcproperties%compute("Derivative",worker%time(),worker%coords())
-
-
-
-
-
 
 
 

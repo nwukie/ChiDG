@@ -113,20 +113,36 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        density_m = worker%get_primary_field_face('Density'   , 'value', 'face interior')
-        density_p = worker%get_primary_field_face('Density'   , 'value', 'face exterior')
+        !density_m = worker%get_primary_field_face('Density'   , 'value', 'face interior')
+        !density_p = worker%get_primary_field_face('Density'   , 'value', 'face exterior')
 
-        mom1_m    = worker%get_primary_field_face('Momentum-1', 'value', 'face interior')
-        mom1_p    = worker%get_primary_field_face('Momentum-1', 'value', 'face exterior')
+        !mom1_m    = worker%get_primary_field_face('Momentum-1', 'value', 'face interior')
+        !mom1_p    = worker%get_primary_field_face('Momentum-1', 'value', 'face exterior')
 
-        mom2_m    = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
-        mom2_p    = worker%get_primary_field_face('Momentum-2', 'value', 'face exterior')
+        !mom2_m    = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
+        !mom2_p    = worker%get_primary_field_face('Momentum-2', 'value', 'face exterior')
 
-        mom3_m    = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
-        mom3_p    = worker%get_primary_field_face('Momentum-3', 'value', 'face exterior')
+        !mom3_m    = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
+        !mom3_p    = worker%get_primary_field_face('Momentum-3', 'value', 'face exterior')
 
-        energy_m  = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
-        energy_p  = worker%get_primary_field_face('Energy'    , 'value', 'face exterior')
+        !energy_m  = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
+        !energy_p  = worker%get_primary_field_face('Energy'    , 'value', 'face exterior')
+
+        density_m = worker%get_field('Density'   , 'value', 'face interior')
+        density_p = worker%get_field('Density'   , 'value', 'face exterior')
+
+        mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
+        mom1_p    = worker%get_field('Momentum-1', 'value', 'face exterior')
+
+        mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
+        mom2_p    = worker%get_field('Momentum-2', 'value', 'face exterior')
+
+        mom3_m    = worker%get_field('Momentum-3', 'value', 'face interior')
+        mom3_p    = worker%get_field('Momentum-3', 'value', 'face exterior')
+
+        energy_m  = worker%get_field('Energy'    , 'value', 'face interior')
+        energy_p  = worker%get_field('Energy'    , 'value', 'face exterior')
+
 
 
         !
@@ -155,20 +171,29 @@ contains
         !
         ! Get fluid advection velocity
         !
-        u_a_m = worker%get_model_field_face('Advection Velocity-1', 'value', 'face interior')
-        v_a_m = worker%get_model_field_face('Advection Velocity-2', 'value', 'face interior')
-        w_a_m = worker%get_model_field_face('Advection Velocity-3', 'value', 'face interior')
+        !u_a_m = worker%get_model_field_face('Advection Velocity-1', 'value', 'face interior')
+        !v_a_m = worker%get_model_field_face('Advection Velocity-2', 'value', 'face interior')
+        !w_a_m = worker%get_model_field_face('Advection Velocity-3', 'value', 'face interior')
 
-        u_a_p = worker%get_model_field_face('Advection Velocity-1', 'value', 'face exterior')
-        v_a_p = worker%get_model_field_face('Advection Velocity-2', 'value', 'face exterior')
-        w_a_p = worker%get_model_field_face('Advection Velocity-3', 'value', 'face exterior')
+        !u_a_p = worker%get_model_field_face('Advection Velocity-1', 'value', 'face exterior')
+        !v_a_p = worker%get_model_field_face('Advection Velocity-2', 'value', 'face exterior')
+        !w_a_p = worker%get_model_field_face('Advection Velocity-3', 'value', 'face exterior')
 
+        u_a_m = worker%get_field('Advection Velocity-1', 'value', 'face interior')
+        v_a_m = worker%get_field('Advection Velocity-2', 'value', 'face interior')
+        w_a_m = worker%get_field('Advection Velocity-3', 'value', 'face interior')
+
+        u_a_p = worker%get_field('Advection Velocity-1', 'value', 'face exterior')
+        v_a_p = worker%get_field('Advection Velocity-2', 'value', 'face exterior')
+        w_a_p = worker%get_field('Advection Velocity-3', 'value', 'face exterior')
 
         !
         ! Compute pressure and total enthalpy
         !
-        p_m = worker%get_model_field_face('Pressure', 'value', 'face interior')
-        p_p = worker%get_model_field_face('Pressure', 'value', 'face exterior')
+        !p_m = worker%get_model_field_face('Pressure', 'value', 'face interior')
+        !p_p = worker%get_model_field_face('Pressure', 'value', 'face exterior')
+        p_m = worker%get_field('Pressure', 'value', 'face interior')
+        p_p = worker%get_field('Pressure', 'value', 'face exterior')
 
         enthalpy_m = (energy_m + p_m)/density_m
         enthalpy_p = (energy_p + p_p)/density_p

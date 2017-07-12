@@ -2,6 +2,7 @@ module type_spalart_allmaras_turbulent_model_fields
 #include <messenger.h>
     use mod_kinds,              only: rk
     use mod_constants,          only: ZERO, HALF, ONE, TWO, THREE
+    use mod_fluid,              only: cp
     use type_model,             only: model_t
     use type_chidg_worker,      only: chidg_worker_t
     use DNAD_D
@@ -25,7 +26,7 @@ module type_spalart_allmaras_turbulent_model_fields
     !---------------------------------------------------------------------------------------
     type, extends(model_t)  :: spalart_allmaras_turbulent_model_fields_t
 
-        real(rk)    :: Cp = 1003._rk
+        !real(rk)    :: Cp = 1003._rk
 
     contains
 
@@ -129,7 +130,7 @@ contains
         !   - Turbulent Thermal Conductivity, Reynolds' analogy.
         !
         lamda_t = (-TWO/THREE)*mu_t
-        k_t = self%Cp*mu_t/SA_Pr_t
+        k_t = cp*mu_t/SA_Pr_t
 
 
         call worker%store_model_field('Turbulent Viscosity',                       'value', mu_t   )

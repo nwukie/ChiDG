@@ -24,9 +24,6 @@ module type_ideal_gas
     !---------------------------------------------------------------------------------------
     type, extends(model_t)  :: ideal_gas_t
 
-!        real(rk)    :: gam = 1.4_rk     ! ratio of specific heats
-!        real(rk)    :: R   = 287.15_rk  ! ideal gas constant [J/(kg*K)]
-
     contains
 
         procedure   :: init

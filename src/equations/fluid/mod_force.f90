@@ -1,26 +1,22 @@
-!>  asdf
+!>  Compute
 !!
-!!  @author Nathan A. Wukie
-!!  @date   3/8/2017
-!!
-!!
-!! Usage:   chidg airfoil 'chidgfile'
+!!  @author Nathan A. Wukie (AFRL)
+!!  @date   7/12/2017
+!!  @note   Modified directly from 'chidg airfoil' action
 !!
 !!
 !---------------------------------------------------------------------------------------------
-module mod_chidg_airfoil
+module mod_force
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
     use mod_constants,          only: ZERO, TWO, NO_ID
-    use type_chidg,             only: chidg_t
-    use type_dict,              only: dict_t
-    use type_file_properties,   only: file_properties_t
-    use mod_hdf_utilities,      only: get_properties_hdf
+    use mod_chidg_mpi,          only: ChiDG_COMM
+    use type_chidg_data,        only: chidg_data_t
     use type_element_info,      only: element_info_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_chidg_cache,       only: chidg_cache_t
     use type_cache_handler,     only: cache_handler_t
-    use mod_io
+    use mpi_f08,                only: MPI_AllReduce, MPI_REAL8, MPI_SUM
     use DNAD_D
     implicit none
 
@@ -34,164 +30,100 @@ contains
 
 
 
-    !>  Post-processing tool for computing airfoil relevant quantities.
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   3/8/2017
+    !>  Compute force integrated over a specified patch group.
     !!
     !!
+    !!  F = int[ (tau-p) dot n ] dPatch
+    !!
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/12/2017
+    !!  @note   Modified directly from 'chidg airfoil' action
+    !!
+    !!
+    !!  @param[in]      data            chidg_data instance
+    !!  @param[in]      patch_group     Name of patch group over which the force will be integrated.
+    !!  @result[out]    force           Integrated force vector: force = [f1, f2, f3]
     !!
     !-----------------------------------------------------------------------------------
-    subroutine chidg_airfoil(filename)
-        character(*)    :: filename
+    function compute_force(data,patch_group) result(force_reduced)
+        type(chidg_data_t), intent(inout)   :: data
+        character(*),       intent(in)      :: patch_group
     
-        type(chidg_t)               :: chidg
-        type(file_properties_t)     :: file_props
-        integer(ik)                 :: nterms_s, solution_order, group_ID, &
-                                       ibc, patch_ID, face_ID, idomain_g, &
-                                       ielement_g, iface, itime
-        logical                     :: found_airfoil
+        integer(ik)                 :: group_ID, patch_ID, face_ID, &
+                                       idomain_g,  idomain_l,        &
+                                       ielement_g, ielement_l, iface
 
         type(chidg_worker_t)        :: worker
         type(chidg_cache_t)         :: cache
         type(cache_handler_t)       :: cache_handler
-
         type(element_info_t)        :: elem_info
+
+
+        real(rk)                                ::  &
+            force(3), force_reduced(3)
+
 
         real(rk),   allocatable, dimension(:)   ::  &
             norm_1,  norm_2,  norm_3,               &
             unorm_1, unorm_2, unorm_3,              &
             weights, areas
 
+
         type(AD_D), allocatable, dimension(:)   ::  &
             tau_11,     tau_12,     tau_13,         &
             tau_21,     tau_22,     tau_23,         &
             tau_31,     tau_32,     tau_33,         &
             stress_x,   stress_y,   stress_z,       &
-            pressure, normal_stress
+            pressure,   normal_stress
 
-        type(AD_D)  :: lift, drag
-
-        gq_rule = 3
-
-        !
-        ! Initialize ChiDG environment
-        !
-        call chidg%start_up('mpi')
-        call chidg%start_up('core')
-
-
-        !
-        ! Get nterms_s from file
-        !
-        file_props = get_properties_hdf(filename)
-        nterms_s   = file_props%nterms_s(1)
-
-        solution_order = 0
-        do while (solution_order*solution_order*solution_order < nterms_s)
-            solution_order = solution_order + 1
-        end do
-
-
-
-
-
-        ! Set linear solver options to pass during initialization
-        call loptions%set('tol',1.e-9_rk)
-
-        ! Set nonlinear solver options
-        call noptions%set('tol',3.e-5_rk)
-        call noptions%set('cfl0',1.0_rk)
-        call noptions%set('nsteps',100)
-
-
-
-
-        call chidg%set('Solution Order', integer_input=solution_order)
-        call chidg%set('Time Integrator' , algorithm=time_integrator)
-        call chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
-        call chidg%set('Linear Solver'   , algorithm=linear_solver,    options=loptions)
-        call chidg%set('Preconditioner'  , algorithm=preconditioner                    )
-
-
-
-
-        !
-        ! Initialize solution data storage
-        !
-        !
-        ! Read grid data from file
-        !
-        gridfile = filename
-        call chidg%read_mesh(filename)
-
-        
-        !
-        ! Process for getting wall distance
-        !
-        call chidg%process()
-
-
-        !
-        ! Read solution modes from HDF5
-        !
-        call chidg%read_fields(filename)
-        chidg%data%sdata%q = chidg%data%sdata%q_in
+        integer(ik) :: ierr
 
 
 
         !
         ! Initialize Chidg Worker references
         !
-        call worker%init(chidg%data%mesh, chidg%data%eqnset(:)%prop, chidg%data%sdata, cache)
-
-
-
-
-        !
-        ! Get 'Airfoil' boundary group ID
-        !
-        group_ID = chidg%data%mesh%get_bc_patch_group_id('Airfoil')
+        call worker%init(data%mesh, data%eqnset(:)%prop, data%sdata, cache)
 
 
         !
-        ! Check if an 'Airfoil' boundary was found
+        ! Get patch_group boundary group ID
+        !
+        group_ID = data%mesh%get_bc_patch_group_id(trim(patch_group))
+
+
+        !
+        ! Check if a group matching "patch_group" was found
         !
         if (group_ID == 0) call chidg_signal(FATAL,"chidg airfoil: No airfoil boundary was found.")
 
 
-
-
         !
-        ! Loop over domains/elements/faces for 'Airfoil' patches
+        ! Loop over domains/elements/faces for "patch_group" 
         !
-        lift = AD_D(1)
-        drag = AD_D(1)
-
-        lift = ZERO
-        drag = ZERO
-        do patch_ID = 1,size(chidg%data%mesh%bc_patch_group(group_ID)%patch)
+        force = ZERO
+        do patch_ID = 1,size(data%mesh%bc_patch_group(group_ID)%patch)
 
             !
             ! Loop over faces in the patch
             !
-            do face_ID = 1,chidg%data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
+            do face_ID = 1,data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
 
-                idomain_g  = chidg%data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g()
-                ielement_g = chidg%data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID)
-                iface      = chidg%data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
-
-
-                call write_line('Airfoil: ', idomain_g, ielement_g, iface)
+                idomain_g  = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g()
+                idomain_l  = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l()
+                ielement_g = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID)
+                ielement_l = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
+                iface      = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
 
 
                 !
                 ! Initialize element location object
                 ! 
                 elem_info%idomain_g  = idomain_g
-                elem_info%idomain_l  = idomain_g
+                elem_info%idomain_l  = idomain_l
                 elem_info%ielement_g = ielement_g
-                elem_info%ielement_l = ielement_g
+                elem_info%ielement_l = ielement_l
                 call worker%set_element(elem_info)
                 worker%itime = 1
 
@@ -199,7 +131,10 @@ contains
                 !
                 ! Update the element cache and all models so they are available
                 !
-                call cache_handler%update(worker,chidg%data%eqnset,chidg%data%bc_state_group, components='all', face=NO_ID, differentiate=.false., lift=.false.)
+                call cache_handler%update(worker,data%eqnset,data%bc_state_group, components    = 'all',   &
+                                                                                  face          = NO_ID,   &
+                                                                                  differentiate = .false., &
+                                                                                  lift          = .true.)
 
 
 
@@ -267,16 +202,12 @@ contains
                 !
                 ! Integrate
                 !
-                weights = worker%mesh%domain(idomain_g)%faces(ielement_g,iface)%basis_s%weights(iface)
+                weights = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%weights(iface)
                 areas   = sqrt(norm_1*norm_1 + norm_2*norm_2 + norm_3*norm_3)
 
-                lift = lift + sum( stress_y * weights * areas)
-                drag = drag + sum( stress_x * weights * areas)
-
-
-
-
-
+                force(1) = force(1) + sum( stress_x(:)%x_ad_ * weights * areas)
+                force(2) = force(2) + sum( stress_y(:)%x_ad_ * weights * areas)
+                force(3) = force(3) + sum( stress_z(:)%x_ad_ * weights * areas)
 
             end do !iface
 
@@ -284,19 +215,13 @@ contains
 
 
 
-        call write_line('Lift: ', lift%x_ad_)
-        call write_line('Drag: ', drag%x_ad_)
-
-
-
         !
-        ! Close ChiDG
+        ! Reduce result across processors
         !
-        call chidg%shut_down('core')
+        call MPI_AllReduce(force,force_reduced,3,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
 
 
-
-    end subroutine chidg_airfoil
+    end function compute_force
     !******************************************************************************************
 
 
@@ -304,4 +229,4 @@ contains
 
 
 
-end module mod_chidg_airfoil
+end module mod_force

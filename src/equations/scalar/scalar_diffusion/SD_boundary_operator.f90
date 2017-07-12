@@ -107,14 +107,20 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        grad1_u_m = worker%get_primary_field_face('u', 'grad1 + lift', 'face interior')
-        grad2_u_m = worker%get_primary_field_face('u', 'grad2 + lift', 'face interior')
-        grad3_u_m = worker%get_primary_field_face('u', 'grad3 + lift', 'face interior')
+        !grad1_u_m = worker%get_primary_field_face('u', 'grad1 + lift', 'face interior')
+        !grad2_u_m = worker%get_primary_field_face('u', 'grad2 + lift', 'face interior')
+        !grad3_u_m = worker%get_primary_field_face('u', 'grad3 + lift', 'face interior')
 
+        !grad1_u_p = worker%get_primary_field_face('u', 'grad1 + lift', 'face exterior')
+        !grad2_u_p = worker%get_primary_field_face('u', 'grad2 + lift', 'face exterior')
+        !grad3_u_p = worker%get_primary_field_face('u', 'grad3 + lift', 'face exterior')
+        grad1_u_m = worker%get_field('u', 'grad1', 'face interior')
+        grad2_u_m = worker%get_field('u', 'grad2', 'face interior')
+        grad3_u_m = worker%get_field('u', 'grad3', 'face interior')
 
-        grad1_u_p = worker%get_primary_field_face('u', 'grad1 + lift', 'face exterior')
-        grad2_u_p = worker%get_primary_field_face('u', 'grad2 + lift', 'face exterior')
-        grad3_u_p = worker%get_primary_field_face('u', 'grad3 + lift', 'face exterior')
+        grad1_u_p = worker%get_field('u', 'grad1', 'face exterior')
+        grad2_u_p = worker%get_field('u', 'grad2', 'face exterior')
+        grad3_u_p = worker%get_field('u', 'grad3', 'face exterior')
 
 
 
@@ -122,8 +128,10 @@ contains
         !
         ! Compute scalar coefficient
         !
-        mu_m = worker%get_model_field_face('Scalar Diffusion Coefficient', 'value', 'face interior')
-        mu_p = worker%get_model_field_face('Scalar Diffusion Coefficient', 'value', 'face exterior')
+        !mu_m = worker%get_model_field_face('Scalar Diffusion Coefficient', 'value', 'face interior')
+        !mu_p = worker%get_model_field_face('Scalar Diffusion Coefficient', 'value', 'face exterior')
+        mu_m = worker%get_field('Scalar Diffusion Coefficient', 'value', 'face interior')
+        mu_p = worker%get_field('Scalar Diffusion Coefficient', 'value', 'face exterior')
 
 
         flux_m = -mu_m*grad1_u_m

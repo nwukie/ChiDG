@@ -35,7 +35,7 @@
 !   @date   10/23/2016
 !
 !--------------------------------------------------------------------------------
-module integration_1D_linear_adv_diff_ale_mod
+module integration_1d_linear_adv_diff_ale_mod
 #include <messenger.h>
     use pfunit_mod
     use mod_kinds,              only: rk, ik
@@ -86,7 +86,7 @@ module integration_1D_linear_adv_diff_ale_mod
     real(rk)        :: error(3,2,3)                         ! nprocs, ngrids, norders
     real(rk)        :: error_chimera(3,2,3)                 ! nprocs, ngrids, norders
 
-    public  :: linear_advection_diffusion_1D
+    public  :: linear_advection_diffusion_1D_ale
 
 
 
@@ -127,7 +127,7 @@ module integration_1D_linear_adv_diff_ale_mod
     !!  @date   8/19/2016
     !!
     !-----------------------------------------------------------------------------------------
-    type, extends(equation_builder_t), public :: test_1D_linear_advection_diffusion_builder_t
+    type, extends(equation_builder_t), public :: test_1D_linear_advection_diffusion_ale_builder_t
 
 
     contains
@@ -135,7 +135,7 @@ module integration_1D_linear_adv_diff_ale_mod
         procedure   :: init => init_builder
         procedure   :: build
 
-    end type test_1D_linear_advection_diffusion_builder_t
+    end type test_1D_linear_advection_diffusion_ale_builder_t
     !*****************************************************************************************
 
 
@@ -151,7 +151,7 @@ module integration_1D_linear_adv_diff_ale_mod
     !!
     !----------------------------------------------------------------------------------------
     @TestParameter
-    type, extends(MpiTestParameter) :: case_grid_order
+    type, extends(MpiTestParameter) :: case_grid_order_ale
 
         integer(ik)                 :: nelem_xi
         character(:),   allocatable :: gridfile
@@ -162,7 +162,7 @@ module integration_1D_linear_adv_diff_ale_mod
 
         procedure   :: toString
 
-    end type case_grid_order
+    end type case_grid_order_ale
     !****************************************************************************************
 
 
@@ -178,7 +178,7 @@ module integration_1D_linear_adv_diff_ale_mod
     !!
     !----------------------------------------------------------------------------------------
     @TestCase(testParameters={getParameters()}, constructor=newTest)
-    type, extends(MpiTestCase) :: linear_advection_diffusion_1D
+    type, extends(MpiTestCase) :: linear_advection_diffusion_1D_ale
 
         integer(ik)                 :: nelem_xi
         character(:),   allocatable :: gridfile
@@ -191,7 +191,7 @@ module integration_1D_linear_adv_diff_ale_mod
     contains
         procedure   :: setUp
         procedure   :: tearDown
-    end type linear_advection_diffusion_1D
+    end type linear_advection_diffusion_1D_ale
     !****************************************************************************************
 
 
@@ -281,9 +281,9 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine init_builder(self)
-        class(test_1D_linear_advection_diffusion_builder_t),   intent(inout)  :: self
+        class(test_1D_linear_advection_diffusion_ale_builder_t),   intent(inout)  :: self
 
-        call self%set_name('Test 1D Linear Advection Diffusion')
+        call self%set_name('Test 1D Linear Advection Diffusion ALE')
 
     end subroutine init_builder
     !*****************************************************************************************
@@ -298,34 +298,34 @@ contains
     !!  @date   9/19/2016
     !!
     !-----------------------------------------------------------------------------------------
-    function build(self,blueprint) result(linear_advection_diffusion_eqn)
-        class(test_1D_linear_advection_diffusion_builder_t),    intent(in)  :: self
+    function build(self,blueprint) result(linear_advection_diffusion_ale_eqn)
+        class(test_1D_linear_advection_diffusion_ale_builder_t),    intent(in)  :: self
         character(*),                                           intent(in)  :: blueprint
 
-        type(equation_set_t)    :: linear_advection_diffusion_eqn
+        type(equation_set_t)    :: linear_advection_diffusion_ale_eqn
         
 
         !
         ! Set equationset name.
         !
-        call linear_advection_diffusion_eqn%set_name("Test 1D Linear Advection Diffusion")
+        call linear_advection_diffusion_ale_eqn%set_name("Test 1D Linear Advection Diffusion ALE")
 
 
         !
         ! Add spatial operators
         !
-        call linear_advection_diffusion_eqn%add_operator("Scalar Advection ALE Boundary Average Operator")
-        call linear_advection_diffusion_eqn%add_operator("Scalar Advection ALE LaxFriedrichs Operator")
-        call linear_advection_diffusion_eqn%add_operator("Scalar Advection ALE Volume Operator")
-        call linear_advection_diffusion_eqn%add_operator("Scalar Advection ALE BC Operator")
-        call linear_advection_diffusion_eqn%add_operator("Scalar Diffusion ALE Boundary Average Operator")
-        call linear_advection_diffusion_eqn%add_operator("Scalar Diffusion ALE Volume Operator")
-        call linear_advection_diffusion_eqn%add_operator("Scalar Diffusion ALE BC Operator")
+        call linear_advection_diffusion_ale_eqn%add_operator("Scalar Advection ALE Boundary Average Operator")
+        call linear_advection_diffusion_ale_eqn%add_operator("Scalar Advection ALE LaxFriedrichs Operator")
+        call linear_advection_diffusion_ale_eqn%add_operator("Scalar Advection ALE Volume Operator")
+        call linear_advection_diffusion_ale_eqn%add_operator("Scalar Advection ALE BC Operator")
+        call linear_advection_diffusion_ale_eqn%add_operator("Scalar Diffusion ALE Boundary Average Operator")
+        call linear_advection_diffusion_ale_eqn%add_operator("Scalar Diffusion ALE Volume Operator")
+        call linear_advection_diffusion_ale_eqn%add_operator("Scalar Diffusion ALE BC Operator")
 
         !
         ! Add model for 'compute_mu' scalar coefficient
         !
-        call linear_advection_diffusion_eqn%add_model('Testing 1D Linear Advection Diffusion :: Coefficient Model')
+        call linear_advection_diffusion_ale_eqn%add_model('Testing 1D Linear Advection Diffusion :: Coefficient Model')
 
     end function build
     !*****************************************************************************************
@@ -351,8 +351,8 @@ contains
     !!
     !------------------------------------------------------------------------------
     function newTest(test_parameter) result(test)
-        type(case_grid_order),  intent(in)          :: test_parameter
-        type(linear_advection_diffusion_1D)    :: test
+        type(case_grid_order_ale),  intent(in)          :: test_parameter
+        type(linear_advection_diffusion_1D_ale)    :: test
 
         test%nelem_xi    = test_parameter%nelem_xi
         test%gridfile    = test_parameter%gridfile
@@ -369,7 +369,7 @@ contains
     !!
     !------------------------------------------------------------------------------
     function getParameters() result(params)
-        type(case_grid_order), allocatable :: params(:)
+        type(case_grid_order_ale), allocatable :: params(:)
     
         integer(ik),        allocatable :: nelem_xi(:)
         type(string_t),     allocatable :: files(:)
@@ -438,7 +438,7 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     function toString(this) result(string)
-        class (case_grid_order),    intent(in)  :: this
+        class (case_grid_order_ale),    intent(in)  :: this
         character(:), allocatable   :: string
 
         character(len=200) :: buffer
@@ -468,7 +468,7 @@ contains
     !!
     !----------------------------------------------------------------------------------------
     subroutine setUp(this)
-        class(linear_advection_diffusion_1D),  intent(inout)   :: this
+        class(linear_advection_diffusion_1D_ale),  intent(inout)   :: this
 
         class(bc_state_t),  allocatable :: bc_state
         type(bc_state_group_t)                :: bc_state_groups(3)
@@ -476,7 +476,7 @@ contains
         class(function_t),  allocatable :: fcn
 
         
-        type(test_1D_linear_advection_diffusion_builder_t)  :: builder_test_linear_advection_diffusion
+        type(test_1D_linear_advection_diffusion_ale_builder_t)  :: builder_test_linear_advection_diffusion
         type(testing_1D_linear_adv_diff_ale_model_t)            :: diffusion_coefficient_model
 
 
@@ -668,7 +668,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine tearDown(this)
-        class(linear_advection_diffusion_1D),  intent(inout)   :: this
+        class(linear_advection_diffusion_1D_ale),  intent(inout)   :: this
 
         ! Close ChiDG
         call this%chidg%shut_down('core')
@@ -702,7 +702,7 @@ contains
     !-----------------------------------------------------------------------------------------
     @Test(npes=[1,2,3])
     subroutine run_calculations(self)
-        class(linear_advection_diffusion_1D),  intent(inout)   :: self
+        class(linear_advection_diffusion_1D_ale),  intent(inout)   :: self
 
         real(rk)    :: computed_error
         integer(ik) :: npes_index, grid_index, order_index
@@ -774,7 +774,7 @@ contains
     !----------------------------------------------------------------------------------------
     @Test(npes=[1])
     subroutine test_err_conforming(self)
-        class(linear_advection_diffusion_1D),  intent(inout)   :: self
+        class(linear_advection_diffusion_1D_ale),  intent(inout)   :: self
 
         integer(ik) :: inpes, igrid, iorder
         real(rk)    :: error_previous, error_current, mesh_parameter_previous, mesh_parameter_current, convergence_rate, tol
@@ -823,7 +823,7 @@ contains
     !-----------------------------------------------------------------------------------------
     @Test(npes=[1])
     subroutine test_err_chimera(self)
-        class(linear_advection_diffusion_1D),  intent(inout)   :: self
+        class(linear_advection_diffusion_1D_ale),  intent(inout)   :: self
 
         integer(ik) :: inpes, igrid, iorder
         real(rk)    :: error_previous, error_current, mesh_parameter_previous, mesh_parameter_current, convergence_rate, tol
@@ -1085,4 +1085,4 @@ contains
 
 
 
-end module integration_1D_linear_adv_diff_ale_mod
+end module integration_1d_linear_adv_diff_ale_mod

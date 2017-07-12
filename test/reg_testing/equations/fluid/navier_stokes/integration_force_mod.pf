@@ -53,7 +53,7 @@
 module integration_force_mod
     use pfunit_mod
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: ZERO, THREE, IO_DESTINATION, &
+    use mod_constants,          only: ZERO, HALF, ONE, THREE, IO_DESTINATION, &
                                       XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use mod_string,             only: string_t
     use mod_force,              only: compute_force
@@ -61,10 +61,10 @@ module integration_force_mod
     use mod_bc,                 only: create_bc
     use type_bc_state,          only: bc_state_t
     use type_bc_state_group,    only: bc_state_group_t
-    use type_function,          only: function_t
     use type_rvector,           only: rvector_t
-    use mod_function,           only: create_function
-    use mod_entropy,            only: compute_entropy_error
+    use type_function,          only: function_t
+    use type_point,             only: point_t
+    use mod_function,           only: create_function, registered_fcns
     use mod_test_utilities,     only: create_mesh_file
     use mod_file_utilities,     only: delete_file
 
@@ -88,11 +88,8 @@ module integration_force_mod
     @TestParameter
     type, extends(MpiTestParameter) :: case_grid_order
 
-        integer(ik)     :: nelem_xi
-        integer(ik)     :: nelem_eta
         character(100)  :: gridfile
         integer(ik)     :: order
-        real(rk)        :: entropy_ref
 
     contains
         procedure   :: toString
@@ -114,11 +111,8 @@ module integration_force_mod
     @TestCase(testParameters={getParameters()}, constructor=newTest)
     type, extends(MpiTestCase) :: force
 
-        integer(ik)     :: nelem_xi
-        integer(ik)     :: nelem_eta
         character(100)  :: gridfile
         integer(ik)     :: order
-        real(rk)        :: entropy_ref
 
         type(chidg_t)   :: chidg
         type(mpi_comm)  :: ChiDG_COMM
@@ -132,8 +126,154 @@ module integration_force_mod
 
 
 
+    !>  Function implementing an initial solution for fluid variables that 
+    !!  sets a linear velocity gradient and constant pressure
+    !!
+    !!  du/dy = 100
+    !   P     = 100000
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/12/2017
+    !!
+    !!
+    !-------------------------------------------------------------------------------
+    type, extends(function_t), public :: initial_solution_f
+
+
+    contains
+
+        procedure   :: init
+        procedure   :: compute
+
+    end type initial_solution_f
+    !********************************************************************************
+
+
 
 contains
+
+    !-------------------------------------------------------------------------------!
+    !                     Implement Initial Solution Function                       !
+    !-------------------------------------------------------------------------------!
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
+    !-------------------------------------------------------------------------
+    subroutine init(self)
+        class(initial_solution_f),  intent(inout)  :: self
+
+        !
+        ! Set function name
+        !
+        call self%set_name("Test Compute Force Initial Solution")
+
+        call self%add_option('ivar', ZERO)
+
+    end subroutine init
+    !*************************************************************************
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/2/2016
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    impure elemental function compute(self,time,coord) result(val)
+        class(initial_solution_f),  intent(inout)   :: self
+        real(rk),                   intent(in)      :: time
+        type(point_t),              intent(in)      :: coord
+
+        real(rk)    :: val, x, y, z, ivar, tol,             &
+                       velocity_1, velocity_2, velocity_3,  &
+                       momentum_1, momentum_2, momentum_3,  &
+                       dudy, density, pressure, energy, gam, vmag
+
+
+        tol = 1.e-5_rk
+        ivar = self%get_option_value('ivar')
+
+
+        x = coord%c1_
+        y = coord%c2_
+        z = coord%c3_
+
+
+        gam      = 1.4_rk
+        dudy     = 100._rk
+        pressure = 100000._rk
+
+        density    = 1.19_rk
+        velocity_1 = dudy*y
+        velocity_2 = ZERO
+        velocity_3 = ZERO
+        vmag       = sqrt(velocity_1*velocity_1 + velocity_2*velocity_2 + velocity_3*velocity_3)
+        momentum_1 = density*velocity_1
+        momentum_2 = density*velocity_2
+        momentum_3 = density*velocity_3
+        energy     = (pressure/(gam-ONE)) + HALF*density*vmag*vmag
+
+
+
+        if (     real(ivar-1) < tol) then
+            val = density
+        else if (real(ivar-2) < tol) then
+            val = momentum_1
+        else if (real(ivar-3) < tol) then
+            val = momentum_2
+        else if (real(ivar-4) < tol) then
+            val = momentum_3
+        else if (real(ivar-5) < tol) then
+            val = energy
+        else if (real(ivar-6) < tol) then
+            val = pressure
+        else if (real(ivar-7) < tol) then
+            val = velocity_1
+        else if (real(ivar-8) < tol) then
+            val = velocity_2
+        else if (real(ivar-9) < tol) then
+            val = velocity_3
+        else
+            print*, 'Bad function parameter!'
+        end if
+
+
+    end function compute
+    !**********************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
     !> Parameter constructors
@@ -145,11 +285,8 @@ contains
         type(case_grid_order),  intent(in)  :: test_parameter
         type(force)                         :: test
 
-        test%nelem_xi    = test_parameter%nelem_xi
-        test%nelem_eta   = test_parameter%nelem_eta
         test%gridfile    = test_parameter%gridfile
         test%order       = test_parameter%order
-        test%entropy_ref = test_parameter%entropy_ref
 
     end function newTest
     !******************************************************************************
@@ -163,60 +300,21 @@ contains
     function getParameters() result(params)
         type(case_grid_order), allocatable :: params(:)
     
-        integer(ik),        allocatable :: nelem_xi(:)
-        integer(ik),        allocatable :: nelem_eta(:)
         type(string_t),     allocatable :: files(:)
         integer(ik),        allocatable :: orders(:)
-        real(rk),           allocatable :: entropies(:)
         integer(ik) :: icase
 
-        nelem_xi  = [ 10,  6,  6,  6, &
-                     12, 12, 12, 12, &
-                     24, 24, 24, 24]
 
-        nelem_eta = [2, 2, 2, 2, &
-                     4, 4, 4, 4, &
-                     8, 8, 8, 8]
+        files = [  string_t('smoothbump_6x2x2.h5') ]
 
-        files = [  string_t('smoothbump_6x2x2.h5') , &
-                   string_t('smoothbump_6x2x2.h5') , &
-                   string_t('smoothbump_6x2x2.h5') , &
-                   string_t('smoothbump_6x2x2.h5') , &
-                   string_t('smoothbump_12x4x2.h5'), &
-                   string_t('smoothbump_12x4x2.h5'), &
-                   string_t('smoothbump_12x4x2.h5'), &
-                   string_t('smoothbump_12x4x2.h5'), &
-                   string_t('smoothbump_24x8x2.h5'), &
-                   string_t('smoothbump_24x8x2.h5'), &
-                   string_t('smoothbump_24x8x2.h5'), &
-                   string_t('smoothbump_24x8x2.h5')  &
-                    ]
+        orders = [ 3 ]
 
-        orders = [ 1, 2, 3, 4, &
-                   1, 2, 3, 4, &
-                   1, 2, 3, 4 ]
-
-        entropies = [ 2.761019163e-3_rk, &
-                      3.618440627e-3_rk, &
-                      1.116431012e-3_rk, &
-                      6.731678976e-4_rk, &
-                      3.807878665e-3_rk, &
-                      1.323352387e-3_rk, &
-                      3.940896088e-4_rk, &
-                      8.433932228e-5_rk, &
-                      4.038806838e-3_rk, &
-                      5.554687475e-4_rk, &
-                      5.367783209e-5_rk, &
-                      7.223333943e-6_rk ]
 
         !Initialize the test case container with the parameter
         allocate(params(size(files)))
         do icase = 1,size(files)
-            params(icase)%nelem_xi    = nelem_xi(icase)
-            params(icase)%nelem_eta   = nelem_eta(icase)
-            params(icase)%gridfile    = files(icase)%str
-            params(icase)%order       = orders(icase)
-            params(icase)%entropy_ref = entropies(icase)
+            params(icase)%gridfile = files(icase)%str
+            params(icase)%order    = orders(icase)
         end do
 
     end function getParameters
@@ -234,7 +332,7 @@ contains
 
         character(len=200) :: buffer
 
-        write(buffer,"( '(nelem_xi, nelem_eta, order)=','(', I2,',', I2,',', I2, ')' )") this%nelem_xi, this%nelem_eta, this%order
+        write(buffer,"( '(order)=','(', I2 ')' )") this%order
         string = trim(buffer)
 
     end function toString
@@ -261,11 +359,23 @@ contains
     subroutine setUp(this)
         class(force),  intent(inout)   :: this
 
+        type(initial_solution_f)        :: initial_solution
         class(bc_state_t),  allocatable :: bc_state
         type(bc_state_group_t)          :: bc_state_groups(3)
         type(string_t)                  :: group_names(1,6)
         class(function_t),  allocatable :: fcn
         real(rk)                        :: tol, entropy_error
+
+
+        !-------------------------------------------!
+        !     Register initial solution function    !
+        !-------------------------------------------!
+        call initial_solution%init()
+        call registered_fcns%push_back(initial_solution)
+
+
+
+
 
         
         tol = 1.e-6_rk
@@ -332,11 +442,16 @@ contains
 
 
             call create_bc('Farfield', bc_state)
-            call bc_state%set_fcn_option('Density',   'val', 1.19_rk   )
-            call bc_state%set_fcn_option('Pressure',  'val', 100000._rk)
-            call bc_state%set_fcn_option('Velocity-1','val', 300._rk   )
-            call bc_state%set_fcn_option('Velocity-2','val', 300._rk   )
-            call bc_state%set_fcn_option('Velocity-3','val', 300._rk   )
+            call bc_state%set_fcn('Density',    'Test Compute Force Initial Solution')
+            call bc_state%set_fcn('Pressure',   'Test Compute Force Initial Solution')
+            call bc_state%set_fcn('Velocity-1', 'Test Compute Force Initial Solution')
+            call bc_state%set_fcn('Velocity-2', 'Test Compute Force Initial Solution')
+            call bc_state%set_fcn('Velocity-3', 'Test Compute Force Initial Solution')
+            call bc_state%set_fcn_option('Density',   'ivar', 1._rk   )
+            call bc_state%set_fcn_option('Pressure',  'ivar', 6._rk   )
+            call bc_state%set_fcn_option('Velocity-1','ivar', 7._rk   )
+            call bc_state%set_fcn_option('Velocity-2','ivar', 8._rk   )
+            call bc_state%set_fcn_option('Velocity-3','ivar', 9._rk   )
             call bc_state_groups(1)%add_bc_state(bc_state)
 
             call create_bc('Symmetry', bc_state)
@@ -351,8 +466,8 @@ contains
             group_names(1,:) = [string_t('Farfield'), &
                                 string_t('Farfield'), &
                                 string_t('Walls')   , &
-                                string_t('Walls')   , &
-                                string_t('Symmetry')   , &
+                                string_t('Farfield'), &
+                                string_t('Symmetry'), &
                                 string_t('Symmetry') ]
 
 
@@ -386,18 +501,18 @@ contains
         !
         ! Initialize solution
         !
-        call create_function(fcn,'test force')
+        call create_function(fcn,'Test Compute Force Initial Solution')
 
-        call fcn%set_option('val',1.13262_rk)
-        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
-        call fcn%set_option('val',190.339029_rk)
-        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,2)
-        call fcn%set_option('val',ZERO)
-        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,3)
-        call fcn%set_option('val',ZERO)
-        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,4)
-        call fcn%set_option('val',248493.425_rk)
-        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,5)
+        call fcn%set_option('ivar',1._rk)
+        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,1)
+        call fcn%set_option('ivar',2._rk)
+        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,2)
+        call fcn%set_option('ivar',3._rk)
+        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,3)
+        call fcn%set_option('ivar',4._rk)
+        call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,4)
+        call fcn%set_option('ivar',5._rk)
+       call this%chidg%data%sdata%q%project(this%chidg%data%mesh,fcn,5)
 
 
 
@@ -439,7 +554,7 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------
-    @Test(npes=[1,2,4])
+    @Test(npes=[1,4,7])
     subroutine test_compute_force(self)
         class(force),  intent(inout)   :: self
 
@@ -449,12 +564,16 @@ contains
         !
         ! Compute force: THIS IS BEING TESTED
         !
-        force_computed = compute_force(self%chidg%data, 'Wall')
+        force_computed = compute_force(self%chidg%data, 'Walls')
+
 
 
         !
         ! Test that computed entropy error is the expected value
         !
+        print*, force_computed
+        print*, force_expected
+        force_expected = [100._rk, -100000._rk, ZERO]
         tol = 1.e-6_rk
         @assertEqual(force_expected,force_computed,tol)
 

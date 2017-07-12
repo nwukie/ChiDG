@@ -96,7 +96,7 @@ contains
         !
         ! Check if a group matching "patch_group" was found
         !
-        if (group_ID == 0) call chidg_signal(FATAL,"chidg airfoil: No airfoil boundary was found.")
+        if (group_ID == NO_ID) call chidg_signal(FATAL,"chidg airfoil: No airfoil boundary was found.")
 
 
         !

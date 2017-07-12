@@ -21,6 +21,7 @@ add_lib_sources(
                 eqn_laminar_navier_stokes_ale.f90
                 eqn_rans_lowcache.f90
                 mod_fluid.f90
+                mod_force.f90
                 type_fluid_pseudo_timestep.f90
                 type_ideal_gas.f90
                 type_fluid_advection_velocity.f90

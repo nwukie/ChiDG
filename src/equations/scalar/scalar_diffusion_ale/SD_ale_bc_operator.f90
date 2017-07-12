@@ -104,7 +104,7 @@ contains
 
        
 
-        gradu = worker%get_primary_field_grad_ale_face('u', 'boundary')
+        gradu = worker%get_primary_field_grad_ale_face('u', 'gradient + lift', 'boundary')
         norm_1 = worker%normal(1)
         norm_2 = worker%normal(2)
         norm_3 = worker%normal(3)

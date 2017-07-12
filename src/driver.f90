@@ -77,21 +77,26 @@ program driver
         call chidg%set('Solution Order'  , integer_input=solution_order                )
 
 
+        !
+        ! Specify prescribed mesh motions by creating PMM entries in the grid file
+        !
         if (IRANK == GLOBAL_MASTER) then
-        file_id = open_file_hdf(gridfile)
-        call create_pmm_group_hdf(file_id,'hpaf_pmm')
-        call set_pmmf_name_hdf(file_id, 'hpaf_pmm','static')
+            file_id = open_file_hdf(gridfile)
+            !Create PMM group
+            call create_pmm_group_hdf(file_id,'hpaf_pmm')
+            call set_pmmf_name_hdf(file_id, 'hpaf_pmm','static')
+            !call set_pmmf_name_hdf(file_id, 'hpaf_pmm','hpaf_case1')
 
-        !Assign pmm to domain
-        dom_id = open_domain_hdf(file_id,'01')
-        call set_pmm_domain_group_hdf(dom_id,'hpaf_pmm')
-        call close_domain_hdf(dom_id)
+            !Assign PMMs to domains
+            dom_id = open_domain_hdf(file_id,'01')
+            call set_pmm_domain_group_hdf(dom_id,'hpaf_pmm')
+            call close_domain_hdf(dom_id)
 
-        dom_id = open_domain_hdf(file_id,'02')
-        call set_pmm_domain_group_hdf(dom_id,'hpaf_pmm')
-        call close_domain_hdf(dom_id)
+            dom_id = open_domain_hdf(file_id,'02')
+            call set_pmm_domain_group_hdf(dom_id,'hpaf_pmm')
+            call close_domain_hdf(dom_id)
 
-        call close_file_hdf(file_id)
+            call close_file_hdf(file_id)
         end if
 
         call MPI_Barrier(ChiDG_COMM,ierr)

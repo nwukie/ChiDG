@@ -2046,21 +2046,22 @@ contains
     !!  @date   11/30/2016
     !!
     !--------------------------------------------------------------------------------------
-    function get_primary_field_grad_ale_general(self,field) result(var_gq)
+    function get_primary_field_grad_ale_general(self,field,gradient_type) result(var_gq)
         class(chidg_worker_t),  intent(in)  :: self
         character(*),           intent(in)  :: field
+        character(*),           intent(in)  :: gradient_type
 
         type(AD_D), allocatable :: var_gq(:,:)
 
 
         if (self%interpolation_source == 'element') then
-            var_gq = self%get_primary_field_grad_ale_element(field) 
+            var_gq = self%get_primary_field_grad_ale_element(field,gradient_type) 
         else if (self%interpolation_source == 'face interior') then
-            var_gq = self%get_primary_field_grad_ale_face(field,'face interior')
+            var_gq = self%get_primary_field_grad_ale_face(field,gradient_type,'face interior')
         else if (self%interpolation_source == 'face exterior') then
-            var_gq = self%get_primary_field_grad_ale_face(field,'face exterior')
+            var_gq = self%get_primary_field_grad_ale_face(field,gradient_type,'face exterior')
         else if (self%interpolation_source == 'boundary') then
-            var_gq = self%get_primary_field_grad_ale_face(field,'boundary')
+            var_gq = self%get_primary_field_grad_ale_face(field,gradient_type,'boundary')
         end if
 
     end function get_primary_field_grad_ale_general
@@ -2098,9 +2099,10 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------------------
-    function get_primary_field_grad_ale_element(self, field) result(grad_u_gq)
+    function get_primary_field_grad_ale_element(self, field, gradient_type) result(grad_u_gq)
         class(chidg_worker_t), intent(in)           :: self
         character(*), intent(in)                    :: field
+        character(*), intent(in)                    :: gradient_type
 
         type(AD_D), allocatable                     :: u(:), grad1_u(:), grad2_u(:), grad3_u(:), grad_u_gq(:,:)
         real(rk), allocatable                       :: det_jacobian_grid(:), &
@@ -2110,6 +2112,8 @@ contains
         real(rk), allocatable                       :: jacobian_grid(:,:,:)
 
 
+        character(:), allocatable                   :: user_msg
+
         det_jacobian_grid = self%get_det_jacobian_grid_element('value')
         det_jacobian_grid_grad1 = self%get_det_jacobian_grid_element('grad1')
         det_jacobian_grid_grad2 = self%get_det_jacobian_grid_element('grad2')
@@ -2117,9 +2121,20 @@ contains
 
         jacobian_grid = self%get_inv_jacobian_grid_element()
         u = self%get_primary_field_element(field,'value')
-        grad1_u = self%get_primary_field_element(field,'grad1 + lift')
-        grad2_u = self%get_primary_field_element(field,'grad2 + lift')
-        grad3_u = self%get_primary_field_element(field,'grad3 + lift')
+
+        if (gradient_type == 'gradient + lift') then
+            grad1_u = self%get_primary_field_element(field,'grad1 + lift')
+            grad2_u = self%get_primary_field_element(field,'grad2 + lift')
+            grad3_u = self%get_primary_field_element(field,'grad3 + lift')
+        elseif (gradient_type == 'gradient') then
+            grad1_u = self%get_primary_field_element(field,'grad1')
+            grad2_u = self%get_primary_field_element(field,'grad2')
+            grad3_u = self%get_primary_field_element(field,'grad3')
+        else
+            user_msg = "chidg_worker%get_primary_field_grad_ale_element: Invalid interpolation &
+                        type. 'gradient' or 'gradient + lift'"
+            call chidg_signal(FATAL,user_msg)
+        end if
 
 
         grad1_u = grad1_u-u/det_jacobian_grid*det_jacobian_grid_grad1
@@ -2173,9 +2188,10 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------------------
-    function get_primary_field_grad_ale_face(self, field, interp_source) result(grad_u_gq)
+    function get_primary_field_grad_ale_face(self, field, gradient_type, interp_source) result(grad_u_gq)
         class(chidg_worker_t), intent(in)           :: self
         character(*),           intent(in)  :: field
+        character(*), intent(in)                    :: gradient_type
         character(*),           intent(in)  :: interp_source
 
         type(AD_D), allocatable                     :: u(:), grad1_u(:), grad2_u(:), grad3_u(:), grad_u_gq(:,:)
@@ -2185,10 +2201,22 @@ contains
                                                         det_jacobian_grid_grad3(:)
         real(rk), allocatable                       :: jacobian_grid(:,:,:)
 
+        character(:), allocatable                   :: user_msg
 
-        grad1_u = self%get_primary_field_face(field,'grad1 + lift', interp_source)
-        grad2_u = self%get_primary_field_face(field,'grad2 + lift', interp_source)
-        grad3_u = self%get_primary_field_face(field,'grad3 + lift', interp_source)
+        if (gradient_type == 'gradient + lift') then
+            grad1_u = self%get_primary_field_face(field,'grad1 + lift', interp_source)
+            grad2_u = self%get_primary_field_face(field,'grad2 + lift', interp_source)
+            grad3_u = self%get_primary_field_face(field,'grad3 + lift', interp_source)
+        elseif (gradient_type == 'gradient') then
+            grad1_u = self%get_primary_field_face(field,'grad1', interp_source)
+            grad2_u = self%get_primary_field_face(field,'grad2', interp_source)
+            grad3_u = self%get_primary_field_face(field,'grad3', interp_source)
+        else
+            user_msg = "chidg_worker%get_primary_field_grad_ale_face: Invalid interpolation &
+                        type. 'gradient' or 'gradient + lift'"
+            call chidg_signal(FATAL,user_msg)
+        end if
+
 
 
         allocate(grad_u_gq(size(grad1_u,1),3))

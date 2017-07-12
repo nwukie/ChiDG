@@ -100,35 +100,64 @@ contains
 
         integer(ik) :: igq
 
+        type(AD_D), allocatable, dimension(:,:) :: grad_density, grad_mom1, grad_mom2, grad_mom3, grad_energy
         !
         ! Interpolate interior solution to quadrature nodes
         !
-        density_m = worker%get_primary_field_face("Density"   , 'value', 'face interior')
-        mom1_m    = worker%get_primary_field_face("Momentum-1", 'value', 'face interior')
-        mom2_m    = worker%get_primary_field_face("Momentum-2", 'value', 'face interior')
-        mom3_m    = worker%get_primary_field_face("Momentum-3", 'value', 'face interior')
-        energy_m  = worker%get_primary_field_face("Energy"    , 'value', 'face interior')
+        density_m = worker%get_primary_field_value_ale_face("Density"   , 'face interior')
+        mom1_m    = worker%get_primary_field_value_ale_face("Momentum-1", 'face interior')
+        mom2_m    = worker%get_primary_field_value_ale_face("Momentum-2", 'face interior')
+        mom3_m    = worker%get_primary_field_value_ale_face("Momentum-3", 'face interior')
+        energy_m  = worker%get_primary_field_value_ale_face("Energy"    , 'face interior')
+
+        grad_density    = worker%get_primary_field_grad_ale_face('Density'   , 'gradient', 'face interior')
+        grad_mom1       = worker%get_primary_field_grad_ale_face('Momentum-1', 'gradient', 'face interior')
+        grad_mom2       = worker%get_primary_field_grad_ale_face('Momentum-2', 'gradient', 'face interior')
+        grad_mom3       = worker%get_primary_field_grad_ale_face('Momentum-3', 'gradient', 'face interior')
+        grad_energy     = worker%get_primary_field_grad_ale_face('Energy'    , 'gradient', 'face interior')
 
 
-        drho_dx_m  = worker%get_primary_field_face("Density"   , 'grad1', 'face interior')
-        drho_dy_m  = worker%get_primary_field_face("Density"   , 'grad2', 'face interior')
-        drho_dz_m  = worker%get_primary_field_face("Density"   , 'grad3', 'face interior')
 
-        drhou_dx_m = worker%get_primary_field_face("Momentum-1", 'grad1', 'face interior')
-        drhou_dy_m = worker%get_primary_field_face("Momentum-1", 'grad2', 'face interior')
-        drhou_dz_m = worker%get_primary_field_face("Momentum-1", 'grad3', 'face interior')
+        drho_dx_m  = grad_density(:,1) !worker%get_primary_field_face('Density'   , 'grad1', 'face interior')
+        drho_dy_m  = grad_density(:,2) !worker%get_primary_field_face('Density'   , 'grad2', 'face interior')
+        drho_dz_m  = grad_density(:,3) !worker%get_primary_field_face('Density'   , 'grad3', 'face interior')
 
-        drhov_dx_m = worker%get_primary_field_face("Momentum-2", 'grad1', 'face interior')
-        drhov_dy_m = worker%get_primary_field_face("Momentum-2", 'grad2', 'face interior')
-        drhov_dz_m = worker%get_primary_field_face("Momentum-2", 'grad3', 'face interior')
+        drhou_dx_m = grad_mom1(:,1)!worker%get_primary_field_face('Momentum-1', 'grad1', 'face interior')
+        drhou_dy_m = grad_mom1(:,2)!worker%get_primary_field_face('Momentum-1', 'grad2', 'face interior')
+        drhou_dz_m = grad_mom1(:,3)!worker%get_primary_field_face('Momentum-1', 'grad3', 'face interior')
 
-        drhow_dx_m = worker%get_primary_field_face("Momentum-3", 'grad1', 'face interior')
-        drhow_dy_m = worker%get_primary_field_face("Momentum-3", 'grad2', 'face interior')
-        drhow_dz_m = worker%get_primary_field_face("Momentum-3", 'grad3', 'face interior')
+        drhov_dx_m = grad_mom2(:,1)!worker%get_primary_field_face('Momentum-2', 'grad1', 'face interior')
+        drhov_dy_m = grad_mom2(:,2)!worker%get_primary_field_face('Momentum-2', 'grad2', 'face interior')
+        drhov_dz_m = grad_mom2(:,3)!worker%get_primary_field_face('Momentum-2', 'grad3', 'face interior')
+
+        drhow_dx_m = grad_mom3(:,1)!worker%get_primary_field_face('Momentum-3', 'grad1', 'face interior')
+        drhow_dy_m = grad_mom3(:,2)!worker%get_primary_field_face('Momentum-3', 'grad2', 'face interior')
+        drhow_dz_m = grad_mom3(:,3)!worker%get_primary_field_face('Momentum-3', 'grad3', 'face interior')
         
-        drhoE_dx_m = worker%get_primary_field_face("Energy"    , 'grad1', 'face interior')
-        drhoE_dy_m = worker%get_primary_field_face("Energy"    , 'grad2', 'face interior')
-        drhoE_dz_m = worker%get_primary_field_face("Energy"    , 'grad3', 'face interior')
+        drhoE_dx_m = grad_energy(:,1)!worker%get_primary_field_face('Energy'    , 'grad1', 'face interior')
+        drhoE_dy_m = grad_energy(:,2)!worker%get_primary_field_face('Energy'    , 'grad2', 'face interior')
+        drhoE_dz_m = grad_energy(:,3)!worker%get_primary_field_face('Energy'    , 'grad3', 'face interior')
+
+
+       ! drho_dx_m  = worker%get_primary_field_face("Density"   , 'grad1', 'face interior')
+       ! drho_dy_m  = worker%get_primary_field_face("Density"   , 'grad2', 'face interior')
+       ! drho_dz_m  = worker%get_primary_field_face("Density"   , 'grad3', 'face interior')
+
+       ! drhou_dx_m = worker%get_primary_field_face("Momentum-1", 'grad1', 'face interior')
+       ! drhou_dy_m = worker%get_primary_field_face("Momentum-1", 'grad2', 'face interior')
+       ! drhou_dz_m = worker%get_primary_field_face("Momentum-1", 'grad3', 'face interior')
+
+       ! drhov_dx_m = worker%get_primary_field_face("Momentum-2", 'grad1', 'face interior')
+       ! drhov_dy_m = worker%get_primary_field_face("Momentum-2", 'grad2', 'face interior')
+       ! drhov_dz_m = worker%get_primary_field_face("Momentum-2", 'grad3', 'face interior')
+
+       ! drhow_dx_m = worker%get_primary_field_face("Momentum-3", 'grad1', 'face interior')
+       ! drhow_dy_m = worker%get_primary_field_face("Momentum-3", 'grad2', 'face interior')
+       ! drhow_dz_m = worker%get_primary_field_face("Momentum-3", 'grad3', 'face interior')
+       ! 
+       ! drhoE_dx_m = worker%get_primary_field_face("Energy"    , 'grad1', 'face interior')
+       ! drhoE_dy_m = worker%get_primary_field_face("Energy"    , 'grad2', 'face interior')
+       ! drhoE_dz_m = worker%get_primary_field_face("Energy"    , 'grad3', 'face interior')
 
 
         !

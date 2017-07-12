@@ -117,11 +117,11 @@ contains
         !
         ! Interpolate gradient to quadrature nodes
         !
-        grad_density    = worker%get_primary_field_grad_ale_general('Density'   )
-        grad_mom1       = worker%get_primary_field_grad_ale_general('Momentum-1')
-        grad_mom2       = worker%get_primary_field_grad_ale_general('Momentum-2')
-        grad_mom3       = worker%get_primary_field_grad_ale_general('Momentum-3')
-        grad_energy     = worker%get_primary_field_grad_ale_general('Energy    ')
+        grad_density    = worker%get_primary_field_grad_ale_general('Density'   , 'gradient + lift')
+        grad_mom1       = worker%get_primary_field_grad_ale_general('Momentum-1', 'gradient + lift')
+        grad_mom2       = worker%get_primary_field_grad_ale_general('Momentum-2', 'gradient + lift')
+        grad_mom3       = worker%get_primary_field_grad_ale_general('Momentum-3', 'gradient + lift')
+        grad_energy     = worker%get_primary_field_grad_ale_general('Energy    ', 'gradient + lift')
 
         grad1_density = grad_density(:,1)
         grad2_density = grad_density(:,2)

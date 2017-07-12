@@ -84,7 +84,7 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        gradu = worker%get_primary_field_grad_ale_element('u')
+        gradu = worker%get_primary_field_grad_ale_element('u','gradient + lift')
 
 
         !

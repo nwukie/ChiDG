@@ -105,8 +105,8 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        gradu_m = worker%get_primary_field_grad_ale_face('u', 'face interior')
-        gradu_p = worker%get_primary_field_grad_ale_face('u', 'face exterior')
+        gradu_m = worker%get_primary_field_grad_ale_face('u', 'gradient + lift','face interior')
+        gradu_p = worker%get_primary_field_grad_ale_face('u', 'gradient + lift','face exterior')
 
 
         norm_1 = worker%normal(1)

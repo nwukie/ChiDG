@@ -11,6 +11,6 @@ contains
 
         b = 10.0_rk*s**THREE - 15.0_rk*s**FOUR + 6.0_rk*x**FIVE
 
-    end function transition_polynomial
+    end function transition_polynomial_order5
 
 end module mod_blending_functions

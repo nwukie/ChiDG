@@ -84,7 +84,7 @@ program driver
             file_id = open_file_hdf(gridfile)
             !Create PMM group
             call create_pmm_group_hdf(file_id,'hpaf_pmm')
-            call set_pmmf_name_hdf(file_id, 'hpaf_pmm','static')
+            call set_pmmf_name_hdf(file_id, 'hpaf_pmm','hpaf_case1')
             !call set_pmmf_name_hdf(file_id, 'hpaf_pmm','hpaf_case1')
 
             !Assign PMMs to domains

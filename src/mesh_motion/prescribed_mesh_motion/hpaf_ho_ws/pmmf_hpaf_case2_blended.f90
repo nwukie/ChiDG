@@ -89,8 +89,8 @@ contains
                                                         blend_dist, blend_val
 
 
-        blend_rigid_radius = self%get_option('blend_rigid_radius')
-        blend_transition_lenght = self%get_option('blend_transition_length')
+        blend_rigid_radius = self%get_option_value('blend_rigid_radius')
+        blend_transition_length = self%get_option_value('blend_transition_length')
 
 
         blend_dist = sqrt(val(1)**TWO+val(2)**TWO)-blend_rigid_radius
@@ -171,8 +171,8 @@ contains
                                                         blend_dist, blend_val
 
 
-        blend_rigid_radius = self%get_option('blend_rigid_radius')
-        blend_transition_lenght = self%get_option('blend_transition_length')
+        blend_rigid_radius = self%get_option_value('blend_rigid_radius')
+        blend_transition_length = self%get_option_value('blend_transition_length')
 
 
         blend_dist = sqrt(val(1)**TWO+val(2)**TWO)-blend_rigid_radius

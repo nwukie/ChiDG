@@ -106,7 +106,7 @@ contains
         !
         ! Get 'u' value from face interior to extrapolate
         !
-        u_bc = worker%get_primary_field_face('u', 'value', 'face interior')
+        u_bc = worker%get_primary_field_value_ale_face('u',  'face interior')
 
 
 

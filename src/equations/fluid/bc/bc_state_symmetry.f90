@@ -110,11 +110,11 @@ contains
         mom3_m    = worker%get_primary_field_value_ale_face("Momentum-3", 'face interior')
         energy_m  = worker%get_primary_field_value_ale_face("Energy"    , 'face interior')
 
-        grad_density    = worker%get_primary_field_grad_ale_face('Density'   ,'face_interior')
-        grad_mom1       = worker%get_primary_field_grad_ale_face('Momentum-1','face_interior')
-        grad_mom2       = worker%get_primary_field_grad_ale_face('Momentum-2','face_interior')
-        grad_mom3       = worker%get_primary_field_grad_ale_face('Momentum-3','face_interior')
-        grad_energy     = worker%get_primary_field_grad_ale_face('Energy    ','face_interior')
+        grad_density    = worker%get_primary_field_grad_ale_face('Density'   , 'gradient', 'face interior')
+        grad_mom1       = worker%get_primary_field_grad_ale_face('Momentum-1', 'gradient', 'face interior')
+        grad_mom2       = worker%get_primary_field_grad_ale_face('Momentum-2', 'gradient', 'face interior')
+        grad_mom3       = worker%get_primary_field_grad_ale_face('Momentum-3', 'gradient', 'face interior')
+        grad_energy     = worker%get_primary_field_grad_ale_face('Energy'    , 'gradient', 'face interior')
 
 
 

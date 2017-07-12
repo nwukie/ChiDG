@@ -90,6 +90,8 @@ contains
         real(rk), allocatable, dimension(:) ::      &
            u_grid, v_grid, w_grid, det_jacobian_grid
 
+        type(AD_D), allocatable, dimension(:,:)   ::  &
+            gradu
 
         det_jacobian_grid = worker%get_det_jacobian_grid_face('value')
         !
@@ -101,12 +103,13 @@ contains
         !
         ! Get u and grad(u) from face interior to extrapolate
         !
-        u_bc    = worker%get_primary_field_face('u','value', 'face interior')
-        dudx_bc = worker%get_primary_field_face('u','grad1', 'face interior')
-        dudy_bc = worker%get_primary_field_face('u','grad2', 'face interior')
-        dudz_bc = worker%get_primary_field_face('u','grad3', 'face interior')
+        u_bc    = worker%get_primary_field_value_ale_face('u', 'face interior')
+        gradu = worker%get_primary_field_grad_ale_face('u', 'gradient', 'boundary')
 
-        u_bc = u_bc/det_jacobian_grid
+        dudx_bc = gradu(:,1)
+        dudy_bc = gradu(:,2)
+        dudz_bc = gradu(:,3)
+
 
         !
         ! Store as extrpolated boundary condition value and gradient

@@ -58,7 +58,13 @@ module integration_force_mod
     use mod_string,             only: string_t
     use mod_force,              only: compute_force
     use type_chidg,             only: chidg_t
+    use type_chidg_worker,      only: chidg_worker_t
     use mod_bc,                 only: create_bc
+    use mod_models,             only: model_factory
+    use mod_equations,          only: equation_builder_factory
+    use type_model,             only: model_t
+    use type_equation_set,      only: equation_set_t
+    use type_equation_builder,  only: equation_builder_t
     use type_bc_state,          only: bc_state_t
     use type_bc_state_group,    only: bc_state_group_t
     use type_rvector,           only: rvector_t
@@ -67,10 +73,12 @@ module integration_force_mod
     use mod_function,           only: create_function, registered_fcns
     use mod_test_utilities,     only: create_mesh_file
     use mod_file_utilities,     only: delete_file
+    use type_fluid_pseudo_timestep, only: fluid_pseudo_timestep_t
 
     use mod_chidg_mpi,          only: IRANK, NRANK
     use mpi_f08,                only: MPI_COMM
     use mod_io
+    use DNAD_D
     implicit none
 
 
@@ -142,11 +150,57 @@ module integration_force_mod
 
     contains
 
-        procedure   :: init
-        procedure   :: compute
+        procedure   :: init => init_initial_solution
+        procedure   :: compute => compute_initial_solution
 
     end type initial_solution_f
     !********************************************************************************
+
+
+
+
+    !>  A new equation set builder to build a Navier Stokes equation set with the 
+    !!  appropriate viscosity model.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/13/2017
+    !!
+    !----------------------------------------------------------------------------------------
+    type, extends(equation_builder_t), public :: test_force_equation_builder_t
+
+
+    contains
+
+        procedure   :: init => init_builder
+        procedure   :: build
+
+    end type test_force_equation_builder_t
+    !****************************************************************************************
+
+
+
+    !>  Constant Viscosity for Laminar Viscosity.
+    !!
+    !!  Model Fields:
+    !!  ------------------------------
+    !!      : Laminar Viscosity
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/13/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    type, extends(model_t)  :: test_force_constant_viscosity_t
+
+    contains
+
+        procedure   :: init => init_constant_viscosity
+        procedure   :: compute => compute_constant_viscosity
+
+    end type test_force_constant_viscosity_t
+    !***************************************************************************************
+
+
+
 
 
 
@@ -164,7 +218,7 @@ contains
     !!  @date   2/2/2016
     !!
     !-------------------------------------------------------------------------
-    subroutine init(self)
+    subroutine init_initial_solution(self)
         class(initial_solution_f),  intent(inout)  :: self
 
         !
@@ -174,7 +228,7 @@ contains
 
         call self%add_option('ivar', ZERO)
 
-    end subroutine init
+    end subroutine init_initial_solution
     !*************************************************************************
 
 
@@ -190,7 +244,7 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    impure elemental function compute(self,time,coord) result(val)
+    impure elemental function compute_initial_solution(self,time,coord) result(val)
         class(initial_solution_f),  intent(inout)   :: self
         real(rk),                   intent(in)      :: time
         type(point_t),              intent(in)      :: coord
@@ -249,7 +303,7 @@ contains
         end if
 
 
-    end function compute
+    end function compute_initial_solution
     !**********************************************************************************
 
 
@@ -258,6 +312,148 @@ contains
 
 
 
+    !----------------------------------------------------------------------------------------
+    !                           Builder Methods for new equation set
+    !----------------------------------------------------------------------------------------
+
+
+    !>  Initialize the new linear diffusion builder.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/30/2016
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine init_builder(self)
+        class(test_force_equation_builder_t),   intent(inout)  :: self
+
+        call self%set_name("Test Force Navier Stokes")
+
+    end subroutine init_builder
+    !****************************************************************************************
+
+    
+
+
+
+    !>  Implement the linear diffusion builder definition.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   9/19/2016
+    !!
+    !----------------------------------------------------------------------------------------
+    function build(self,blueprint) result(eqn)
+        class(test_force_equation_builder_t), intent(in)  :: self
+        character(*),                           intent(in)  :: blueprint
+
+        type(equation_set_t)            :: eqn
+        type(fluid_pseudo_timestep_t)   :: fluid_pseudo_time
+        
+
+        !
+        ! Set equationset name.
+        !
+        call eqn%set_name("Test Force Navier Stokes")
+
+        call eqn%add_operator('Euler Volume Flux')
+        call eqn%add_operator('Euler Boundary Average Flux')
+        call eqn%add_operator('Euler Roe Flux')
+        call eqn%add_operator('Euler BC Flux')
+        call eqn%add_operator('Euler Volume Cylindrical Source')
+
+        call eqn%add_operator('Fluid Viscous Volume Operator')
+        call eqn%add_operator('Fluid Viscous Boundary Average Operator')
+        call eqn%add_operator('Fluid Viscous BC Operator')
+        call eqn%add_operator('Fluid Viscous Volume Cylindrical Source')
+
+        call eqn%add_model('Ideal Gas')
+        call eqn%add_model('Fluid Advection Velocity')
+        call eqn%add_model('Test Force Constant Viscosity')
+        call eqn%add_model('Stokes Hypothesis')
+        call eqn%add_model('Reynolds Analogy')
+        call eqn%add_model('Zero Turbulent Model Fields')
+        call eqn%add_model('Shear Stress')
+        call eqn%add_model('Temperature Gradient')
+
+
+        call eqn%add_pseudo_timestep(fluid_pseudo_time)
+
+
+
+    end function build
+    !***************************************************************************************
+
+
+
+
+
+
+
+    !----------------------------------------------------------------------------------------
+    !                           Implement viscosity model
+    !----------------------------------------------------------------------------------------
+
+
+
+    !>  Initialize the model with a name and the model fields it is contributing to.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/13/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine init_constant_viscosity(self)   
+        class(test_force_constant_viscosity_t), intent(inout)   :: self
+
+        !
+        ! Initialize model object
+        !
+        call self%set_name('Test Force Constant Viscosity')
+        call self%set_dependency('f(Q-)')
+        call self%add_model_field('Laminar Viscosity')
+
+
+    end subroutine init_constant_viscosity
+    !***************************************************************************************
+
+
+
+
+
+
+    !>  Routine for computing a viscosity contribution from Sutherland's Law.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/1/2016
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine compute_constant_viscosity(self,worker)
+        class(test_force_constant_viscosity_t),    intent(in)      :: self
+        type(chidg_worker_t),           intent(inout)   :: worker
+
+        type(AD_D), dimension(:),   allocatable :: &
+            viscosity, T
+
+        !
+        ! Interpolate solution to quadrature nodes
+        !
+        T = worker%get_model_field_general('Temperature','value')
+    
+
+        !
+        ! Constant Viscosity for Laminar Viscosity
+        !   - initialize derivatives first...
+        !
+        viscosity = T
+        viscosity = ONE
+
+
+        !
+        ! Contribute laminar viscosity
+        !
+        call worker%store_model_field('Laminar Viscosity', 'value', viscosity)
+
+
+    end subroutine compute_constant_viscosity
+    !***************************************************************************************
 
 
 
@@ -269,8 +465,9 @@ contains
 
 
 
-
-
+    !----------------------------------------------------------------------------------------
+    !                           pFUnit test infrastructure
+    !----------------------------------------------------------------------------------------
 
 
 
@@ -305,9 +502,11 @@ contains
         integer(ik) :: icase
 
 
-        files = [  string_t('smoothbump_6x2x2.h5') ]
+        files = [  string_t('file.h5'), &
+                   string_t('file.h5'), &
+                   string_t('file.h5') ]
 
-        orders = [ 3 ]
+        orders = [ 2, 3, 4 ]
 
 
         !Initialize the test case container with the parameter
@@ -359,7 +558,9 @@ contains
     subroutine setUp(this)
         class(force),  intent(inout)   :: this
 
-        type(initial_solution_f)        :: initial_solution
+        type(initial_solution_f)                :: initial_solution
+        type(test_force_constant_viscosity_t)   :: test_force_constant_viscosity
+        type(test_force_equation_builder_t)     :: test_force_equation_builder
         class(bc_state_t),  allocatable :: bc_state
         type(bc_state_group_t)          :: bc_state_groups(3)
         type(string_t)                  :: group_names(1,6)
@@ -375,6 +576,18 @@ contains
 
 
 
+        !-------------------------------------------!
+        !     Register viscosity model              !
+        !-------------------------------------------!
+        call test_force_constant_viscosity%init()
+        call model_factory%register(test_force_constant_viscosity)
+
+
+        !-------------------------------------------!
+        !     Register equation builder             !
+        !-------------------------------------------!
+        call test_force_equation_builder%init()
+        call equation_builder_factory%register(test_force_equation_builder)
 
 
         
@@ -471,7 +684,7 @@ contains
                                 string_t('Symmetry') ]
 
 
-            call create_mesh_file('D1 NxNxN',this%gridfile,equation_sets   = [string_t('Laminar Navier Stokes')], &
+            call create_mesh_file('D1 NxNxN',this%gridfile,equation_sets   = [string_t('Test Force Navier Stokes')], &
                                                            group_names     = group_names,     &
                                                            bc_state_groups = bc_state_groups, &
                                                            nelem_xi        = 10,              &
@@ -571,8 +784,6 @@ contains
         !
         ! Test that computed entropy error is the expected value
         !
-        print*, force_computed
-        print*, force_expected
         force_expected = [100._rk, -100000._rk, ZERO]
         tol = 1.e-6_rk
         @assertEqual(force_expected,force_computed,tol)

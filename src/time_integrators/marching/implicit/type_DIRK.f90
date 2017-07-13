@@ -250,7 +250,6 @@ contains
                         end select
                         q_temp = q_n
                         data%time_manager%t = t_n + alpha*dt
-                        call update_grid(data)
                     case(2)
                         select type(an => self%system)
                             type is (assemble_DIRK_t)
@@ -259,7 +258,6 @@ contains
                         end select
                         q_temp = q_n + (tau - alpha)*dq(1)
                         data%time_manager%t = t_n + tau*dt
-                        call update_grid(data)
                     case(3)
                         select type(an => self%system)
                             type is (assemble_DIRK_t)
@@ -268,7 +266,6 @@ contains
                         end select
                         q_temp = q_n + b1*dq(1) + b2*dq(2)
                         data%time_manager%t = t_n + dt
-                        call update_grid(data)
 
                 end select
 
@@ -276,6 +273,7 @@ contains
                 ! Solve assembled nonlinear system, the nonlinear update is the stagewise update
                 ! System assembled in subroutine assemble
                 !
+                call update_grid(data)
                 call nonlinear_solver%solve(data,self%system,linear_solver,preconditioner,solver_controller)
 
 

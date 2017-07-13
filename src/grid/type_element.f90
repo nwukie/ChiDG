@@ -501,13 +501,13 @@ contains
                                          nterms       = nterms_s,           &
                                          node_set     = interpolation,      &
                                          level        = level,              &
-                                         nterms_rule  = nterms_s)
+                                         nterms_rule  = max(self%nterms_c, nterms_s))
         ref_ID_c = get_reference_element(element_type = self%element_type,  &
                                          polynomial   = 'Legendre',         &
                                          nterms       = self%nterms_c,      &
                                          node_set     = interpolation,      &
                                          level        = level,              &
-                                         nterms_rule  = nterms_s)
+                                         nterms_rule  = max(self%nterms_c, nterms_s))
         self%basis_s => ref_elems(ref_ID_s)
         self%basis_c => ref_elems(ref_ID_c)
 
@@ -567,7 +567,7 @@ contains
                  self%jacobian_grid(nnodes,3,3),            &
                  self%inv_jacobian_grid(nnodes,3,3),        &
                  self%det_jacobian_grid(nnodes),            &
-                 self%det_jacobian_grid_modes(self%nterms_c),    &
+                 self%det_jacobian_grid_modes(self%nterms_s),    &
                  self%jacobian_matrix(nnodes,3,3),          &
                  self%inv_jacobian_matrix(nnodes,3,3),      &
                  self%jacobian_matrix_ale(nnodes,3,3),      &
@@ -680,7 +680,7 @@ contains
         ! Call to compute mass matrix
         !
         call self%compute_mass_matrix()
-!        call self%compute_mass_matrix_c()
+        !call self%compute_mass_matrix_c()
 
         !
         ! Call to compute matrices of gradients at each quadrature node
@@ -1135,6 +1135,16 @@ contains
         !
         ! Compute and store the inverted mass matrix
         !
+        if (self%ielement_g==1) then
+        do iterm = 1, self%nterms_c
+        print *, self%mass_c(iterm,iterm)
+        end do
+        print *, self%nterms_c
+        print *, size(self%jinv)
+        print *, size(self%basis_c%weights())
+        print *, size(temp,1)
+        print *, size(temp,2)
+        end if
         self%invmass_c = inv(self%mass_c)
 
 

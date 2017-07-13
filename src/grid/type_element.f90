@@ -501,13 +501,15 @@ contains
                                          nterms       = nterms_s,           &
                                          node_set     = interpolation,      &
                                          level        = level,              &
-                                         nterms_rule  = max(self%nterms_c, nterms_s))
+                                         !nterms_rule  = max(self%nterms_c, nterms_s))
+                                         nterms_rule  = nterms_s)
         ref_ID_c = get_reference_element(element_type = self%element_type,  &
                                          polynomial   = 'Legendre',         &
                                          nterms       = self%nterms_c,      &
                                          node_set     = interpolation,      &
                                          level        = level,              &
-                                         nterms_rule  = max(self%nterms_c, nterms_s))
+                                         !nterms_rule  = max(self%nterms_c, nterms_s))
+                                         nterms_rule  = nterms_s)
         self%basis_s => ref_elems(ref_ID_s)
         self%basis_c => ref_elems(ref_ID_c)
 

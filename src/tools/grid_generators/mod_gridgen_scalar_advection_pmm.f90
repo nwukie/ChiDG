@@ -288,6 +288,7 @@ contains
         !
         ! Generate coordinates
         !
+        !call meshgen_NxNxN_linear(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords)
         call meshgen_scalar_advection_pmm_quartic(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords)
 
     
@@ -436,11 +437,11 @@ contains
         call create_pmm_group_hdf(file_id,'sin_pmm')
         call set_pmmf_name_hdf(file_id, 'sin_pmm','sinusoidal')
         call create_pmmfo_group_hdf(file_id,'sin_pmm','L_X')
-        call set_pmmfo_val_hdf(file_id,'sin_pmm','L_X',10._rk)
+        call set_pmmfo_val_hdf(file_id,'sin_pmm','L_X',1._rk)
         call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_FREQ_X')
-        call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_FREQ_X',FOUR*PI)
+        call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_FREQ_X',TWO*PI)
         call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_AMP_X')
-        call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_AMP_X',1.0_rk)
+        call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_AMP_X',0.1_rk)
         call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_AMP_Y')
         call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_AMP_Y',ZERO)
         call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_AMP_Z')
@@ -540,9 +541,9 @@ contains
             do ipt_y = 1,npt_y
                 do ipt_x = 1,npt_x
 
-                    x = ZERO + real(ipt_x-1,kind=rk)*(10._rk / real(npt_x-1,kind=rk))
-                    y = ZERO + real(ipt_y-1,kind=rk)*(10._rk )/real(npt_y-1,kind=rk)
-                    z = ZERO + real(ipt_z-1,kind=rk)*(10._rk / real(npt_z-1,kind=rk))
+                    x = ZERO + real(ipt_x-1,kind=rk)*(1._rk / real(npt_x-1,kind=rk))
+                    y = ZERO + real(ipt_y-1,kind=rk)*(1._rk / real(npt_y-1,kind=rk))
+                    z = ZERO + real(ipt_z-1,kind=rk)*(1._rk / real(npt_z-1,kind=rk))
 
                     xcoords(ipt_x,ipt_y,ipt_z) = x
                     ycoords(ipt_x,ipt_y,ipt_z) = y
@@ -560,6 +561,91 @@ contains
     !**********************************************************************************
 
 
+
+    subroutine meshgen_NxNxN_linear(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords,clusterx,x_max_in,x_min_in)
+        integer(ik),    intent(in)                  :: nelem_xi
+        integer(ik),    intent(in)                  :: nelem_eta
+        integer(ik),    intent(in)                  :: nelem_zeta
+        real(rk),       intent(inout),  allocatable :: xcoords(:,:,:)
+        real(rk),       intent(inout),  allocatable :: ycoords(:,:,:)
+        real(rk),       intent(inout),  allocatable :: zcoords(:,:,:)
+        integer(ik),    intent(in),     optional    :: clusterx
+        real(rk),       intent(in),     optional    :: x_max_in
+        real(rk),       intent(in),     optional    :: x_min_in
+
+        integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ierr, &
+                       npts_xi, npts_eta, npts_zeta
+        real(rk)    :: x,y,z, x_max, x_min
+
+
+        npts_xi   = nelem_xi   + 1
+        npts_eta  = nelem_eta  + 1
+        npts_zeta = nelem_zeta + 1
+
+
+        allocate(xcoords(npts_xi,npts_eta,npts_zeta), ycoords(npts_xi,npts_eta,npts_zeta), &
+                 zcoords(npts_xi,npts_eta,npts_zeta), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        !
+        ! Set max/min X-Coordinate
+        !
+        if (present(x_max_in)) then
+            x_max = x_max_in
+        else
+            x_max = ONE
+        end if
+
+        if (present(x_min_in)) then
+            x_min = x_min_in
+        else
+            x_min = ZERO
+        end if
+
+
+
+
+        !
+        ! Generate points
+        !
+        do ipt_zeta = 1,npts_zeta
+            do ipt_eta = 1,npts_eta
+                do ipt_xi = 1,npts_xi
+
+                    if (present(clusterx)) then
+                        if ( clusterx == -1 ) then
+                            !x = ONE - tanh( (PI/TWO)*(ONE - real(ipt_xi-1,rk)/real(npts_xi-1,rk) ) )/tanh(PI/TWO)
+                            x = x_max - (x_max-x_min)*tanh( (PI/TWO)*(ONE - real(ipt_xi-1,rk)/real(npts_xi-1,rk) ) )/tanh(PI/TWO)
+                        else if ( clusterx == 1 ) then
+                            call chidg_signal(FATAL,"meshgen_NxNxN_linear: 'clusterx'=1 not yet implemented.")
+                        else
+                            call chidg_signal(FATAL,"meshgen_NxNxN_linear: Invalid value for 'clusterx'. -1,1.")
+                        end if
+                    else
+                        !x = real(ipt_xi-1,rk)/real(npts_xi-1,rk)
+                        x = x_min + (x_max - x_min)*real(ipt_xi-1,rk)/real(npts_xi-1,rk)
+                    end if
+
+                    if (ipt_xi == npts_xi) then
+                        !x = ONE
+                        x = x_max
+                    end if
+
+                    y = real(ipt_eta-1,rk)/real(npts_eta-1,rk)
+                    z = real(ipt_zeta-1,rk)/real(npts_zeta-1,rk)
+
+                    xcoords(ipt_xi,ipt_eta,ipt_zeta) = x
+                    ycoords(ipt_xi,ipt_eta,ipt_zeta) = y
+                    zcoords(ipt_xi,ipt_eta,ipt_zeta) = z
+
+                end do
+            end do
+        end do
+
+
+    end subroutine meshgen_NxNxN_linear
+    !**************************************************************************************
 
 
 

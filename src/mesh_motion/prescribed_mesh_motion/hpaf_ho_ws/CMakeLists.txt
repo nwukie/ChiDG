@@ -1,5 +1,9 @@
 add_lib_sources(
+    mod_blending_functions.f90
     pmmf_hpaf_case1.f90
     pmmf_hpaf_case2.f90
     pmmf_hpaf_case3.f90
+    pmmf_hpaf_case1_blended.f90
+    pmmf_hpaf_case2_blended.f90
+    pmmf_hpaf_case3_blended.f90
     )

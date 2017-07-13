@@ -93,7 +93,6 @@ contains
         type(AD_D), allocatable, dimension(:,:)   ::  &
             gradu
 
-        det_jacobian_grid = worker%get_det_jacobian_grid_face('value')
         !
         ! Get equation index
         !
@@ -104,7 +103,7 @@ contains
         ! Get u and grad(u) from face interior to extrapolate
         !
         u_bc    = worker%get_primary_field_value_ale_face('u', 'face interior')
-        gradu = worker%get_primary_field_grad_ale_face('u', 'gradient', 'boundary')
+        gradu = worker%get_primary_field_grad_ale_face('u', 'gradient', 'face interior')
 
         dudx_bc = gradu(:,1)
         dudy_bc = gradu(:,2)

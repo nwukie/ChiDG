@@ -59,6 +59,11 @@ module type_mesh
         ! Extra routines for testing private procedures
         procedure           :: stub_new_domain
 
+        ! Communication 
+        procedure           :: comm_send
+        procedure           :: comm_recv
+        procedure           :: comm_wait
+
     end type mesh_t
     !**********************************************************************************
 
@@ -586,6 +591,60 @@ contains
 
 
 
+
+
+    !>
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/13/2017
+    !!
+    !!
+    !---------------------------------------------------------------------------------
+    subroutine comm_send(self)
+        class(mesh_t),  intent(inout)   :: self
+
+
+    end subroutine comm_send
+    !*********************************************************************************
+
+
+
+
+
+    !>
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/13/2017
+    !!
+    !!
+    !---------------------------------------------------------------------------------
+    subroutine comm_recv(self)
+        class(mesh_t),  intent(inout)   :: self
+
+
+    end subroutine comm_recv
+    !*********************************************************************************
+
+
+
+
+
+    !>
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/13/2017
+    !!
+    !!
+    !---------------------------------------------------------------------------------
+    subroutine comm_wait(self)
+        class(mesh_t),  intent(inout)   :: self
+
+
+    end subroutine comm_wait
+    !*********************************************************************************
 
 
 

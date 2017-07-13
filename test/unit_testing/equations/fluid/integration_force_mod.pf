@@ -1,35 +1,76 @@
 !--------------------------------------------------------------------------------
 !
-!                Euler equation set entropy-error regression test
+!                           Fluid: compute_force
 !
-!   This test suite runs a series of tests solving the euler equations on a quartic
-!   smoothbump grid of varying resolution for varying orders of solution accuracy.
-!   At the end of each case, the entropy error is computed for the domain. The flow
-!   phenomena that are present for the smoothbump case should be isentropic. The 
-!   error metric then, is to compute the entropy generated from the numerical scheme.
+!   Test subroutine compute_force. We with to test both inviscid(pressure)
+!   and viscous(shear) contributions to the subroutine. We accomplish this
+!   by imposing an initial known solution with constant pressure, and a 
+!   linear velocity profile.
 !
-!   This suite runs the smoothbump case with 6x2x2, 12x4x2, and 24x8x2 grids with
-!   quartic elements. Each grid is run from 1st to 4th order accuracy. Each 
-!   configuration is run on 1, 2, 7, and 10 processors. The nonlinear convergence
-!   for each case is stored in a module global variable that is used to compare
-!   convergence.
+!   The constant pressure force contributes purely to force in the direction -Y
 !
-!   After the simulation for each case has been run, an additional test
-!   compares the nonlinear convergence of the Newton solver from the parallel
-!   simulations to the same case run in serial.
+!   The shear force contributes purely to force in the direction +X
 !
-!   The boundary condition settings are:
+!      +Y
+!       ^
+!       |
+!       |
+!       .------> +X
 !
-!       Inlet:  euler_totalinlet  
-!               Total Pressure    = 110000 (Pa) 
-!               Total Temperature = 300 (K)
+!   The initial condition is set as:
+!       Density    = 1.19
+!       Pressure   = 100000
+!       Velocity-1 = dudy*y (linear velocity profile)
 !
-!       Outlet: euler_pressureoutlet
-!               Static Pressure   = 93000 (Pa)
+!       where:
+!           dudy      = 100.0
+!           viscosity = 1.0
 !
-!       Walls: euler_wall
+!   The inviscid force in the direction -Y is constant over the plate
+!   and is computed as:
+!       Fy = Pressure * Area = 100000.0 * 1.0 = 100000.0
 !
 !
+!   The viscous force in the direction +X is constant over the plate 
+!   and is computed analytically as:
+!       Fx = viscosity * dudy * Area = 1.0 * 100.0 * 1.0 = 100.0
+!
+!
+!   The result we expect to obtain from the compute_force routine is then:
+!       F = [100.0, -100000.0, 0.0]
+!   
+!
+!================================================================================
+!   Boundary conditions
+!================================================================================
+!
+!                             Farfield
+!           |-------------------------------------------|
+!           |                                           |
+!  Farfield |                  ---->                    | Farfield
+!           |                                           |
+!           |                                           |
+!           |-------------------------------------------|
+!                               Wall
+!
+!
+!
+!
+!       Group Name = Farfield
+!       BC State   = Farfield 
+!           Density    = 1.19
+!           Pressure   = 100,000
+!           Velocity-1 = dudy*y
+!           Velocity-2 = 0.0
+!           Velocity-3 = 0.0
+!
+!
+!       Group Name = Walls
+!       BC State   = Wall
+!
+!================================================================================
+!   Initial condition:
+!================================================================================
 !
 !  Linear Velocity Profile:  du/dy = (100-0)/(1-0) = 100
 !                          --------->.
@@ -41,42 +82,73 @@
 !      |------------------------------------------|
 !
 !
+!================================================================================
 !
 !
+!         Constant Pressure:  pressure = 100,000
+!                          --------->.
+!                          --------->.
+!                          --------->.
+!                          --------->.
+!                          --------->.
+!                          --------->.
+!      |------------------------------------------|
 !
 !
+!================================================================================
 !
-!   @author Nathan A. Wukie
-!   @date   10/23/2016
+!
+!         Energy = P/(gam-1)  +  0.5*density*velocity**2
+!               NOTE: because velocity is linear and pressure is constant, 
+!                     energy varies quadratically. Because of this,
+!                     when we project the initial solution at low order, 
+!                     we will not get exactly the correct energy at the wall 
+!                     because of polynomial aliasing in the projection.
+!
+!                     For this reason, we only run this test for P2 and P3
+!                     because for these cases, our basis can exactly
+!                     represent the initial solution.
+
+!                          -------------->.
+!                          ------------->.
+!                          ----------->.
+!                          --------->.
+!                          ------>.
+!                          ->.
+!      |------------------------------------------|
+!
+!
+!================================================================================
+!
+!   @author Nathan A. Wukie (AFRL)
+!   @date   7/13/2017
 !
 !--------------------------------------------------------------------------------
 module integration_force_mod
     use pfunit_mod
-    use mod_kinds,              only: rk, ik
-    use mod_constants,          only: ZERO, HALF, ONE, THREE, IO_DESTINATION, &
-                                      XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
-    use mod_string,             only: string_t
-    use mod_force,              only: compute_force
-    use type_chidg,             only: chidg_t
-    use type_chidg_worker,      only: chidg_worker_t
-    use mod_bc,                 only: create_bc
-    use mod_models,             only: model_factory
-    use mod_equations,          only: equation_builder_factory
-    use type_model,             only: model_t
-    use type_equation_set,      only: equation_set_t
-    use type_equation_builder,  only: equation_builder_t
-    use type_bc_state,          only: bc_state_t
-    use type_bc_state_group,    only: bc_state_group_t
-    use type_rvector,           only: rvector_t
-    use type_function,          only: function_t
-    use type_point,             only: point_t
-    use mod_function,           only: create_function, registered_fcns
-    use mod_test_utilities,     only: create_mesh_file
-    use mod_file_utilities,     only: delete_file
+    use mod_kinds,                  only: rk, ik
+    use mod_constants,              only: ZERO, HALF, ONE, THREE, IO_DESTINATION
+    use mod_force,                  only: compute_force
+    use type_chidg,                 only: chidg_t
+    use type_chidg_worker,          only: chidg_worker_t
+    use type_model,                 only: model_t
+    use mod_models,                 only: model_factory
+    use type_equation_set,          only: equation_set_t
+    use type_equation_builder,      only: equation_builder_t
+    use mod_equations,              only: equation_builder_factory
+    use type_bc_state,              only: bc_state_t
+    use type_bc_state_group,        only: bc_state_group_t
+    use mod_bc,                     only: create_bc
+    use type_function,              only: function_t
+    use mod_function,               only: create_function, registered_fcns
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: delete_file
     use type_fluid_pseudo_timestep, only: fluid_pseudo_timestep_t
 
-    use mod_chidg_mpi,          only: IRANK, NRANK
-    use mpi_f08,                only: MPI_COMM
+    use mod_string,                 only: string_t
+    use type_point,                 only: point_t
+    use mod_chidg_mpi,              only: IRANK, NRANK
+    use mpi_f08,                    only: MPI_COMM
     use mod_io
     use DNAD_D
     implicit none
@@ -503,10 +575,9 @@ contains
 
 
         files = [  string_t('file.h5'), &
-                   string_t('file.h5'), &
                    string_t('file.h5') ]
 
-        orders = [ 2, 3, 4 ]
+        orders = [ 3, 4 ]
 
 
         !Initialize the test case container with the parameter
@@ -601,7 +672,7 @@ contains
         !
         !------------------------------------------------------------------------------
         basis            = 'legendre'
-        gq_rule          = 2
+        gq_rule          = 3
         time_integrator  = 'steady'
         nonlinear_solver = 'quasi_newton'
         linear_solver    = 'fgmres_cgs'

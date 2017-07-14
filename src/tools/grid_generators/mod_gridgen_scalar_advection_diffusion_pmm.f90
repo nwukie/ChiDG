@@ -107,7 +107,7 @@ contains
         do bcface = 1,6
 
             ! Get face node indices for boundary 'bcface'
-            faces = get_block_boundary_faces_plot3d(xcoords,ycoords,zcoords,mapping=4,bcface=bcface)
+            faces = get_block_boundary_faces_plot3d(xcoords,ycoords,zcoords,mapping=1,bcface=bcface)
 
             ! Create/Set patch face indices
             bc_face_string  = trim(bc_face_strings(bcface))

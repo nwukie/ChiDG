@@ -16,6 +16,7 @@ module mod_function
     use fcn_constant,                       only: constant_f
     use fcn_sine,                           only: sine_f
     use fcn_polynomial,                     only: polynomial_f
+    use fcn_scalar_adv_diff_bl_solution,    only: scalar_adv_diff_bl_solution_f
 !    use fcn_cylindricalduct_eigenfunction,  only: cylindricalduct_eigenfunction_f
     use fcn_monopole,                       only: monopole_f
     implicit none
@@ -56,6 +57,7 @@ contains
         type(constant_f)                        :: constant
         type(sine_f)                            :: sin_function
         type(polynomial_f)                      :: polynomial
+        type(scalar_adv_diff_bl_solution_f)     :: scalar_adv_diff_bl_solution
 
         !
         ! Acoustics
@@ -80,6 +82,7 @@ contains
             call registered_fcns%push_back(polynomial)
 !            call registered_fcns%push_back(cylindricalduct_eigenfunction)
             call registered_fcns%push_back(monopole)
+            call registered_fcns%push_back(scalar_adv_diff_bl_solution)
 
 
             !

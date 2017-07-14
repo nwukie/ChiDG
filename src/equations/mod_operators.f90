@@ -27,6 +27,12 @@ module mod_operators
     use SD_boundary_operator,                       only: SD_boundary_operator_t
     use SD_bc_operator,                             only: SD_bc_operator_t
 
+    ! Scalar Diffusion Operators
+    use SD_ale_volume_operator,                         only: SD_ale_volume_operator_t
+    use SD_ale_boundary_operator,                       only: SD_ale_boundary_operator_t
+    use SD_ale_bc_operator,                             only: SD_ale_bc_operator_t
+
+
     ! Mesh Motion Diffusion Operators
     use MMD_volume_operator,                         only: MMD_volume_operator_t
     use MMD_boundary_operator,                       only: MMD_boundary_operator_t
@@ -225,7 +231,13 @@ contains
         type(SD_volume_operator_t)                      :: SD_volume_operator
         type(SD_boundary_operator_t)                    :: SD_boundary_operator
         type(SD_bc_operator_t)                          :: SD_bc_operator
+
+        ! Linear Diffusion Operators
+        type(SD_ale_volume_operator_t)                      :: SD_ale_volume_operator
+        type(SD_ale_boundary_operator_t)                    :: SD_ale_boundary_operator
+        type(SD_ale_bc_operator_t)                          :: SD_ale_bc_operator
         
+
         ! Mesh Motion Diffusion Operators
         type(MMD_volume_operator_t)                      :: MMD_volume_operator
         type(MMD_boundary_operator_t)                    :: MMD_boundary_operator
@@ -315,6 +327,12 @@ contains
             call operator_factory%register(SD_volume_operator)
             call operator_factory%register(SD_boundary_operator)
             call operator_factory%register(SD_bc_operator)
+
+            ! Register Linear Diffusion
+            call operator_factory%register(SD_ale_volume_operator)
+            call operator_factory%register(SD_ale_boundary_operator)
+            call operator_factory%register(SD_ale_bc_operator)
+
 
             ! Register Mesh Motion Diffusion
             call operator_factory%register(MMD_volume_operator)

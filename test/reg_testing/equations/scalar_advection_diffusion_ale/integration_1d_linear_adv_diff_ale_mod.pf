@@ -516,7 +516,7 @@ contains
         IO_DESTINATION   = 'both'
         time_steps       = 720
         dt               = real(sim_time/time_steps, rk)
-        verbosity        = 3 
+        verbosity        = 2 
         nwrite           = 20 
         solutionfile_out = trim(this%gridfile) 
         !------------------------------------------------------------------------------
@@ -600,8 +600,8 @@ contains
                                     string_t("YZ Boundaries") , &
                                     string_t("YZ Boundaries")]
 
-                call create_mesh_file('Scalar Advection Diffusion PMM Multiblock',this%gridfile,equation_sets   = [string_t("Test 1D Linear Advection Diffusion"),    &
-                                                                                     string_t("Test 1D Linear Advection Diffusion")],   &
+                call create_mesh_file('Scalar Advection Diffusion PMM Multiblock',this%gridfile,equation_sets   = [string_t("Test 1D Linear Advection Diffusion ALE"),    &
+                                                                                     string_t("Test 1D Linear Advection Diffusion ALE")],   &
                                                                   group_names     = group_names,                                        &
                                                                   bc_state_groups = bc_state_groups,                                    &
                                                                   nelem_xi        = this%nelem_xi,                                      &
@@ -622,7 +622,7 @@ contains
                                     string_t("YZ Boundaries")  , &
                                     string_t("YZ Boundaries") ]
 
-                call create_mesh_file('Scalar Advection Diffusion PMM',this%gridfile,equation_sets   = [string_t("Test 1D Linear Advection Diffusion")],  &
+                call create_mesh_file('Scalar Advection Diffusion PMM',this%gridfile,equation_sets   = [string_t("Test 1D Linear Advection Diffusion ALE")],  &
                                                                group_names     = group_names,                                       &
                                                                bc_state_groups = bc_state_groups,                                   &
                                                                nelem_xi        = this%nelem_xi,                                     &

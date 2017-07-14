@@ -32,7 +32,8 @@ module type_DIRK_coupled_oscillator
     use mod_kinds,                      only: rk, ik
     use mod_constants,                  only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, NO_ID
     use mod_spatial,                    only: update_space
-    use mod_oscillating_cylinder_1
+    use mod_oscillating_cylinder_1,     only: oscillating_cylinder
+    use mod_force,                      only: compute_force
     use mod_update_grid,                only: update_grid
     use mod_io,                         only: verbosity
 
@@ -147,7 +148,7 @@ contains
         type(chidg_data_t),     intent(in)      :: data
 
         integer(ik)             :: ierr
-        type(assemble_DIRK_coupled_oscillator_t)   :: assemble_DIRK
+        type(assemble_DIRK_coupled_oscillator_t)   :: assemble_DIRK_coupled_oscillator
 
 
         if (allocated(self%system)) deallocate(self%system)
@@ -204,12 +205,18 @@ contains
 
         type(DIRK_coupled_oscillator_solver_controller_t),    save    :: solver_controller
 
+        real(rk) :: external_forces(3)
         !
         ! Store solution at nth time step to a separate vector for use in this subroutine
         ! Store the time at the current time step
         !
         q_n = data%sdata%q
         t_n = data%time_manager%t
+
+        external_forces = compute_force(data,'Oscillator Wall')
+        ! One DOF only
+        external_forces(2) = ZERO
+        external_forces(3) = ZERO
 
         call oscillating_cylinder%update_oscillator_step(data%time_manager%dt,t_n,external_forces)
         select type(associate_name => self%system)
@@ -462,7 +469,7 @@ contains
         self%lhs_updated = update
 
         ! Turn off forced update
-        self%force_update_lhs = .true.
+        self%force_update_lhs = .false.
 
     end function update_lhs
     !****************************************************************************

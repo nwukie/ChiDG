@@ -17,6 +17,7 @@ module mod_prescribed_mesh_motion_function
     use pmmf_hpaf_case1_blended,                        only: hpaf_case1_blended_pmmf
     use pmmf_hpaf_case2_blended,                        only: hpaf_case2_blended_pmmf
     use pmmf_hpaf_case3_blended,                        only: hpaf_case3_blended_pmmf
+    use pmmf_rigid_body_motion,                         only: rigid_body_motion_pmmf
     implicit none
 
 
@@ -56,6 +57,7 @@ contains
         type(hpaf_case1_blended_pmmf)                           :: hpaf_case1_blended
         type(hpaf_case2_blended_pmmf)                           :: hpaf_case2_blended
         type(hpaf_case3_blended_pmmf)                           :: hpaf_case3_blended
+        type(rigid_body_motion_pmmf)                            :: rigid_body_motion
 
         if ( .not. initialized ) then
             !
@@ -71,6 +73,7 @@ contains
             call registered_pmmfs%push_back(hpaf_case1_blended)
             call registered_pmmfs%push_back(hpaf_case2_blended)
             call registered_pmmfs%push_back(hpaf_case3_blended)
+            call registered_pmmfs%push_back(rigid_body_motion)
        
             !
             ! Initialize each boundary condition in set. Doesn't need modified.

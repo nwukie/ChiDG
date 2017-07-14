@@ -28,6 +28,7 @@ program driver
     use mod_chidg_airfoil,      only: chidg_airfoil
     use mod_chidg_clone,        only: chidg_clone
 
+    use mod_oscillating_cylinder_1, only: oscillating_cylinder
     
     !
     ! Variable declarations
@@ -81,22 +82,52 @@ program driver
         ! Specify prescribed mesh motions by creating PMM entries in the grid file
         !
         if (IRANK == GLOBAL_MASTER) then
+!            !
+!            ! Heaving and Pitching Airfoil
+!            !
+!
+!            file_id = open_file_hdf(gridfile)
+!            !Create PMM group
+!            call create_pmm_group_hdf(file_id,'hpaf_pmm')
+!            call set_pmmf_name_hdf(file_id, 'hpaf_pmm','hpaf_case1')
+!            !call set_pmmf_name_hdf(file_id, 'hpaf_pmm','hpaf_case1')
+!
+!            !Assign PMMs to domains
+!            dom_id = open_domain_hdf(file_id,'01')
+!            call set_pmm_domain_group_hdf(dom_id,'hpaf_pmm')
+!            call close_domain_hdf(dom_id)
+!
+!            dom_id = open_domain_hdf(file_id,'02')
+!            call set_pmm_domain_group_hdf(dom_id,'hpaf_pmm')
+!            call close_domain_hdf(dom_id)
+!
+!            call close_file_hdf(file_id)
+
+            !
+            ! VIV Cylinder with Rigid Body Mesh Motion
+            !
+
             file_id = open_file_hdf(gridfile)
             !Create PMM group
-            call create_pmm_group_hdf(file_id,'hpaf_pmm')
-            call set_pmmf_name_hdf(file_id, 'hpaf_pmm','hpaf_case1')
+            call create_pmm_group_hdf(file_id,'viv_rigid_body_pmm')
+            call set_pmmf_name_hdf(file_id, 'viv_rigid_body_pmm','rigid_body_motion')
             !call set_pmmf_name_hdf(file_id, 'hpaf_pmm','hpaf_case1')
 
             !Assign PMMs to domains
             dom_id = open_domain_hdf(file_id,'01')
-            call set_pmm_domain_group_hdf(dom_id,'hpaf_pmm')
+            call set_pmm_domain_group_hdf(dom_id,'viv_rigid_body_pmm')
             call close_domain_hdf(dom_id)
 
             dom_id = open_domain_hdf(file_id,'02')
-            call set_pmm_domain_group_hdf(dom_id,'hpaf_pmm')
+            call set_pmm_domain_group_hdf(dom_id,'viv_rigid_body_pmm')
             call close_domain_hdf(dom_id)
 
             call close_file_hdf(file_id)
+
+            !
+            ! Initialize the oscillating cylinder model
+            !
+            call oscillating_cylinder%init()
         end if
 
         call MPI_Barrier(ChiDG_COMM,ierr)

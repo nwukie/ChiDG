@@ -13,6 +13,7 @@ module mod_time_integrators
     use type_harmonic_balance,     only: harmonic_balance_t 
     use type_explicit_runge_kutta, only: explicit_runge_kutta_t
     use type_DIRK,                 only: DIRK_t
+    use type_DIRK_coupled_oscillator,                 only: DIRK_coupled_oscillator_t
     implicit none
 
 
@@ -24,6 +25,7 @@ module mod_time_integrators
     type(harmonic_balance_t)            :: HB 
     type(explicit_runge_kutta_t)        :: EXPLICIT_RK
     type(DIRK_t)                        :: DIRK
+    type(DIRK_coupled_oscillator_t)                        :: DIRK_coupled_oscillator
 
     logical :: initialized = .false.
 
@@ -71,6 +73,8 @@ contains
             case ('DIRK')
                 allocate(instance, source=DIRK)
 
+            case ('DIRK_coupled_oscillator')
+                allocate(instance, source=DIRK_coupled_oscillator)
             case default
                 user_msg = "We can't seem to find a time integrator that matches the input &
                             string. Maybe check that the time integrator string in the input &

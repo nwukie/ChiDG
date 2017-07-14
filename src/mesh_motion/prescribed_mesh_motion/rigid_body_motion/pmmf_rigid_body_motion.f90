@@ -2,7 +2,8 @@ module pmmf_rigid_body_motion
 #include <messenger.h>
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO, HALF, ONE, TWO, THREE, FIVE, EIGHT, PI
-    use mod_rigid_body_motion,      only: t0, t1, rigid_body_motion_disp_old, rigid_body_motion_disp_new, rigid_body_motion_vel
+    use mod_rigid_body_motion,      only: rigid_body_t0, rigid_body_t1, &
+                                 rigid_body_motion_disp_old, rigid_body_motion_disp_new, rigid_body_motion_vel
     use type_prescribed_mesh_motion_function,  only: prescribed_mesh_motion_function_t
     implicit none
     private
@@ -79,7 +80,8 @@ contains
         integer(ik)                             :: ivar
         real(rk)                                :: val(3)
 
-        val = node + (t1-time)/(t1-t0)*rigid_body_motion_disp_new + (time-t0)/(t1-t0)*rigid_body_motion_disp_new
+        val = node + (rigid_body_t1-time)/(rigid_body_t1-rigid_body_t0)*rigid_body_motion_disp_new +&
+            (time-rigid_body_t0)/(rigid_body_t1-rigid_body_t0)*rigid_body_motion_disp_new
         
 
         

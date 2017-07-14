@@ -323,7 +323,7 @@ contains
         type(chidg_vector_t)        :: delta_q 
         real(rk)                    :: dt
         integer(ik)                 :: ntime, itime, idom, ielem, ivar, imat, ierr, &       
-                                       nterms, rstart, rend, cstart, cend
+                                       nterms, rstart, rend, cstart, cend, eqn_ID
         real(rk),   allocatable     :: temp_1(:), temp_2(:)
 
         associate( q   => data%sdata%q,   &
@@ -372,8 +372,9 @@ contains
                     allocate(temp_1(data%mesh%domain(idom)%nterms_s), temp_2(data%mesh%domain(idom)%nterms_s), stat=ierr)
                     if (ierr /= 0) call AllocationError
 
+                    eqn_ID = data%mesh%domain(idom)%eqn_ID
                     do ielem = 1,data%mesh%domain(idom)%nelem
-                        do ivar = 1,data%eqnset(idom)%prop%nprimary_fields()
+                        do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
                             !
                             ! Assemble lhs
@@ -458,7 +459,8 @@ contains
         self%lhs_updated = update
 
         ! Turn off forced update
-        self%force_update_lhs = .true.
+        !self%force_update_lhs = .true.
+        self%force_update_lhs = .false.
 
     end function update_lhs
     !****************************************************************************

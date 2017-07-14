@@ -250,7 +250,6 @@ contains
                         end select
                         q_temp = q_n
                         data%time_manager%t = t_n + alpha*dt
-                        call update_grid(data)
                     case(2)
                         select type(an => self%system)
                             type is (assemble_DIRK_t)
@@ -259,7 +258,6 @@ contains
                         end select
                         q_temp = q_n + (tau - alpha)*dq(1)
                         data%time_manager%t = t_n + tau*dt
-                        call update_grid(data)
                     case(3)
                         select type(an => self%system)
                             type is (assemble_DIRK_t)
@@ -268,7 +266,6 @@ contains
                         end select
                         q_temp = q_n + b1*dq(1) + b2*dq(2)
                         data%time_manager%t = t_n + dt
-                        call update_grid(data)
 
                 end select
 
@@ -276,6 +273,7 @@ contains
                 ! Solve assembled nonlinear system, the nonlinear update is the stagewise update
                 ! System assembled in subroutine assemble
                 !
+                call update_grid(data)
                 call nonlinear_solver%solve(data,self%system,linear_solver,preconditioner,solver_controller)
 
 
@@ -325,7 +323,7 @@ contains
         type(chidg_vector_t)        :: delta_q 
         real(rk)                    :: dt
         integer(ik)                 :: ntime, itime, idom, ielem, ivar, imat, ierr, &       
-                                       nterms, rstart, rend, cstart, cend
+                                       nterms, rstart, rend, cstart, cend, eqn_ID
         real(rk),   allocatable     :: temp_1(:), temp_2(:)
 
         associate( q   => data%sdata%q,   &
@@ -374,8 +372,9 @@ contains
                     allocate(temp_1(data%mesh%domain(idom)%nterms_s), temp_2(data%mesh%domain(idom)%nterms_s), stat=ierr)
                     if (ierr /= 0) call AllocationError
 
+                    eqn_ID = data%mesh%domain(idom)%eqn_ID
                     do ielem = 1,data%mesh%domain(idom)%nelem
-                        do ivar = 1,data%eqnset(idom)%prop%nprimary_fields()
+                        do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
                             !
                             ! Assemble lhs
@@ -460,7 +459,8 @@ contains
         self%lhs_updated = update
 
         ! Turn off forced update
-        self%force_update_lhs = .true.
+        !self%force_update_lhs = .true.
+        self%force_update_lhs = .false.
 
     end function update_lhs
     !****************************************************************************

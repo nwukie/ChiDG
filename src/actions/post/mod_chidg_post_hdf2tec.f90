@@ -19,7 +19,7 @@ module mod_chidg_post_hdf2tec
     use mod_constants,          only: OUTPUT_RES
     use type_chidg,             only: chidg_t
     use type_dict,              only: dict_t
-    use mod_tecio,              only: write_tecio
+    use mod_tecio_old,          only: write_tecio_old
     use type_file_properties,   only: file_properties_t
     use mod_hdf_utilities,      only: get_properties_hdf
     use mod_string,             only: get_file_prefix
@@ -112,8 +112,8 @@ contains
         ! Write solution
         !
         solution_file_prefix = get_file_prefix(solution_file,'.h5')
-        !plt_filename = solution_file_prefix//'.plt'
-        call write_tecio(chidg%data,solution_file_prefix, write_domains=.true., write_surfaces=.true.)
+        plt_filename = solution_file_prefix//'.plt'
+        call write_tecio_old(chidg%data,plt_filename, write_domains=.true., write_surfaces=.true.)
         
 
 

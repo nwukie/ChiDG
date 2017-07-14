@@ -258,13 +258,13 @@ contains
         !
         !------------------------------------------------------------------------------
         basis            = 'legendre'
-        gq_rule          = 3 
+        gq_rule          = 2 
         time_integrator  = 'DIRK'
         nonlinear_solver = 'newton'
         linear_solver    = 'fgmres_cgs'
         preconditioner   = 'RASILU0'
         IO_DESTINATION   = 'both'
-        time_steps       = 120 
+        time_steps       = 720 
         dt               = real(sim_time/time_steps,rk)
         verbosity        = 4 
         nwrite           = 10
@@ -312,7 +312,7 @@ contains
         !
         if (IRANK == GLOBAL_MASTER) then
             bc_state_groups(1)%name = 'Farfield'
-            bc_state_groups(2)%name = 'Walls'
+            bc_state_groups(2)%name = 'Extrapolate'
 
 
             call create_bc('Farfield', bc_state)
@@ -323,7 +323,7 @@ contains
             call bc_state%set_fcn_option('Velocity-3','val',ZERO)
             call bc_state_groups(1)%add_bc_state(bc_state)
 
-            call create_bc('Wall', bc_state)
+            call create_bc('Extrapolate', bc_state)
             call bc_state_groups(2)%add_bc_state(bc_state)
 
 
@@ -331,10 +331,10 @@ contains
             ! Define patch group names
             group_names(1,:) = [string_t('Farfield') , &
                                 string_t('Farfield'), &
-                                string_t('Walls') , &
-                                string_t('Walls') , &
-                                string_t('Walls') , &
-                                string_t('Walls') ]
+                                string_t('Extrapolate') , &
+                                string_t('Extrapolate') , &
+                                string_t('Extrapolate') , &
+                                string_t('Extrapolate') ]
 
 
             call create_mesh_file('Uniform Flow PMM',this%gridfile, &

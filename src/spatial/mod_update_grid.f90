@@ -108,7 +108,7 @@ contains
 
             if (pmm_ID /= NO_PMM_ASSIGNED) then
 
-                        do inode = 1, size(mesh%domain(idom)%nodes,1)
+                do inode = 1, size(mesh%domain(idom)%nodes,1)
                     mesh%domain(idom)%dnodes(inode,:) = &
                         data%pmm(pmm_ID)%pmmf%compute_pos(data%time_manager%t, mesh%domain(idom)%nodes(inode,:)) - &
                         mesh%domain(idom)%nodes(inode,:)

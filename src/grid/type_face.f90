@@ -83,6 +83,7 @@ module type_face
         real(rk),           allocatable :: neighbor_br2_vol(:,:)   ! Matrix for computing/obtaining br2 modes at volume nodes
         real(rk),           allocatable :: neighbor_invmass(:,:)    
 
+        real(rk),           allocatable :: neighbor_det_jacobian_grid_modes(:)
 
         ! Chimera face offset. For periodic boundary condition.
         logical                         :: periodic_offset  = .false.
@@ -381,6 +382,7 @@ contains
                        self%jacobian_grid,              &
                        self%inv_jacobian_grid,          &
                        self%det_jacobian_grid,          &
+                       self%neighbor_det_jacobian_grid_modes,          &
                        self%grid_vel,                  &
                        self%grad1,                      &
                        self%grad2,                      &
@@ -405,6 +407,7 @@ contains
                  self%jacobian_grid(nnodes,3,3),                    &
                  self%inv_jacobian_grid(nnodes,3,3),                &
                  self%det_jacobian_grid(nnodes),                    &
+                 self%neighbor_det_jacobian_grid_modes(self%nterms_s), &
                  self%grid_vel(nnodes,3),                            &
                  self%grad1(nnodes,self%nterms_s),                  &
                  self%grad2(nnodes,self%nterms_s),                  &

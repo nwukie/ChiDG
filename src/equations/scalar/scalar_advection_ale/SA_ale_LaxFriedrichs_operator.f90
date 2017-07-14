@@ -77,7 +77,7 @@ contains
 
         type(AD_D), allocatable, dimension(:,:)   :: flux_ref
 
-        real(rk), allocatable                       :: u_grid(:), v_grid(:), w_grid(:)
+        real(rk), allocatable                       :: u_grid(:), v_grid(:), w_grid(:),wave_speed(:), area(:)
         
         real(rk),   allocatable, dimension(:)   ::  &
             norm_1, norm_2, norm_3
@@ -111,22 +111,25 @@ contains
         norm_2  = worker%normal(2)
         norm_3  = worker%normal(3)
 
-        
+               
         !
         ! Compute boundary upwind flux
         !
-        flux_1 = max(abs(c1_m)+abs(u_grid),abs(c1_p)+abs(u_grid))*HALF*(u_m - u_p)
-        flux_2 = max(abs(c2_m)+abs(v_grid),abs(c2_p)+abs(v_grid))*HALF*(u_m - u_p)
-        flux_3 = max(abs(c3_m)+abs(w_grid),abs(c3_p)+abs(w_grid))*HALF*(u_m - u_p)
+        !flux_1 = max(abs(c1_m)+abs(u_grid),abs(c1_p)+abs(u_grid))*HALF*(u_m - u_p)
+        !flux_2 = max(abs(c2_m)+abs(v_grid),abs(c2_p)+abs(v_grid))*HALF*(u_m - u_p)
+        !flux_3 = max(abs(c3_m)+abs(w_grid),abs(c3_p)+abs(w_grid))*HALF*(u_m - u_p)
 
-        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3)
+        !flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3)
         
         !
         ! Dot with normal vector
         ! 
 
-        integrand = flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3
-
+        !integrand = flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3
+        !max_grid_vel = max(abs(u_grid),abs(v_grid),abs(w_grid))
+        wave_speed = ONE + abs(u_grid)
+        area = sqrt(norm_1**TWO+norm_2**TWO+norm_3**TWO)
+        integrand = area*wave_speed*HALF*(u_m-u_p)
 
 
         !
@@ -137,7 +140,6 @@ contains
 
     end subroutine compute
     !*************************************************************************************************
-
 
 
 

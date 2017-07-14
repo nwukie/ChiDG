@@ -65,9 +65,14 @@ contains
 
 
         real(rk),   allocatable, dimension(:)   ::  &
-            norm_1,  norm_2,  norm_3,               &
-            unorm_1, unorm_2, unorm_3,              &
-            weights, areas
+            norm_1,      norm_2,      norm_3,       &
+            norm_1_phys, norm_2_phys, norm_3_phys,  &
+            !unorm_1, unorm_2, unorm_3,              &
+            !areas,                                  &
+            weights, det_jacobian_grid
+
+        real(rk),   allocatable                 ::  &
+            jacobian_grid(:,:,:)
 
 
         type(AD_D), allocatable, dimension(:)   ::  &
@@ -96,7 +101,7 @@ contains
         !
         ! Check if a group matching "patch_group" was found
         !
-        if (group_ID == 0) call chidg_signal(FATAL,"chidg airfoil: No airfoil boundary was found.")
+        if (group_ID == NO_ID) call chidg_signal(FATAL,"chidg airfoil: No airfoil boundary was found.")
 
 
         !
@@ -180,9 +185,20 @@ contains
                 norm_2  = -worker%normal(2)
                 norm_3  = -worker%normal(3)
 
-                unorm_1 = -worker%unit_normal(1)
-                unorm_2 = -worker%unit_normal(2)
-                unorm_3 = -worker%unit_normal(3)
+                !unorm_1 = -worker%unit_normal(1)
+                !unorm_2 = -worker%unit_normal(2)
+                !unorm_3 = -worker%unit_normal(3)
+
+
+                !
+                ! Hit normal vector with g*G^{-T} so our normal and Area correspond to physical ALE quantities
+                !
+                det_jacobian_grid = worker%get_det_jacobian_grid_face('value')
+                jacobian_grid     = worker%get_inv_jacobian_grid_face()
+                norm_1_phys = det_jacobian_grid*(jacobian_grid(:,1,1)*norm_1 + jacobian_grid(:,1,2)*norm_2 + jacobian_grid(:,1,3)*norm_3)
+                norm_2_phys = det_jacobian_grid*(jacobian_grid(:,2,1)*norm_1 + jacobian_grid(:,2,2)*norm_2 + jacobian_grid(:,2,3)*norm_3)
+                norm_3_phys = det_jacobian_grid*(jacobian_grid(:,3,1)*norm_1 + jacobian_grid(:,3,2)*norm_2 + jacobian_grid(:,3,3)*norm_3)
+
                 
 
                 !
@@ -193,21 +209,34 @@ contains
                 !stress_x = unorm_1*tau_11 + unorm_2*tau_21 + unorm_3*tau_31
                 !stress_y = unorm_1*tau_12 + unorm_2*tau_22 + unorm_3*tau_32
                 !stress_z = unorm_1*tau_13 + unorm_2*tau_23 + unorm_3*tau_33
-                stress_x = tau_11*unorm_1 + tau_12*unorm_2 + tau_13*unorm_3
-                stress_y = tau_21*unorm_1 + tau_22*unorm_2 + tau_23*unorm_3
-                stress_z = tau_31*unorm_1 + tau_32*unorm_2 + tau_33*unorm_3
 
+                ! Working: No ALE
+                !stress_x = tau_11*unorm_1 + tau_12*unorm_2 + tau_13*unorm_3
+                !stress_y = tau_21*unorm_1 + tau_22*unorm_2 + tau_23*unorm_3
+                !stress_z = tau_31*unorm_1 + tau_32*unorm_2 + tau_33*unorm_3
+
+
+                ! Testing: ALE
+                stress_x = tau_11*norm_1_phys + tau_12*norm_2_phys + tau_13*norm_3_phys
+                stress_y = tau_21*norm_1_phys + tau_22*norm_2_phys + tau_23*norm_3_phys
+                stress_z = tau_31*norm_1_phys + tau_32*norm_2_phys + tau_33*norm_3_phys
 
 
                 !
                 ! Integrate
                 !
                 weights = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%weights(iface)
-                areas   = sqrt(norm_1*norm_1 + norm_2*norm_2 + norm_3*norm_3)
+                !areas   = sqrt(norm_1*norm_1 + norm_2*norm_2 + norm_3*norm_3)
 
-                force(1) = force(1) + sum( stress_x(:)%x_ad_ * weights * areas)
-                force(2) = force(2) + sum( stress_y(:)%x_ad_ * weights * areas)
-                force(3) = force(3) + sum( stress_z(:)%x_ad_ * weights * areas)
+                ! Working: No ALE
+                !force(1) = force(1) + sum( stress_x(:)%x_ad_ * weights * areas)
+                !force(2) = force(2) + sum( stress_y(:)%x_ad_ * weights * areas)
+                !force(3) = force(3) + sum( stress_z(:)%x_ad_ * weights * areas)
+
+                ! Testing: ALE
+                force(1) = force(1) + sum( stress_x(:)%x_ad_ * weights)
+                force(2) = force(2) + sum( stress_y(:)%x_ad_ * weights)
+                force(3) = force(3) + sum( stress_z(:)%x_ad_ * weights)
 
             end do !iface
 

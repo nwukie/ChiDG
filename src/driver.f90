@@ -111,7 +111,6 @@ program driver
             !Create PMM group
             call create_pmm_group_hdf(file_id,'viv_rigid_body_pmm')
             call set_pmmf_name_hdf(file_id, 'viv_rigid_body_pmm','rigid_body_motion')
-            !call set_pmmf_name_hdf(file_id, 'hpaf_pmm','hpaf_case1')
 
             !Assign PMMs to domains
             dom_id = open_domain_hdf(file_id,'01')

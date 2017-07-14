@@ -112,8 +112,8 @@ contains
         ! Write solution
         !
         solution_file_prefix = get_file_prefix(solution_file,'.h5')
-        !plt_filename = solution_file_prefix//'.plt'
-        call write_tecio_old(chidg%data,solution_file_prefix, write_domains=.true., write_surfaces=.true.)
+        plt_filename = solution_file_prefix//'.plt'
+        call write_tecio_old(chidg%data,plt_filename, write_domains=.true., write_surfaces=.true.)
         
 
 

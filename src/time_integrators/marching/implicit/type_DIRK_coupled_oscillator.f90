@@ -213,6 +213,7 @@ contains
         q_n = data%sdata%q
         t_n = data%time_manager%t
 
+
         external_forces = compute_force(data,'Oscillator Wall')
         ! One DOF only
         external_forces(2) = ZERO

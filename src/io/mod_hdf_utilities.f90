@@ -6176,9 +6176,10 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,"get_pmm_hdf: error getting function name.")
 
         
-        fname2 = fname(1:10)
+        !fname2 = fname(1:10)
         ! Set/Create the function for the current property
-        call pmm%add_pmmf(trim(fname2))
+        !call pmm%add_pmmf(trim(fname2))
+        call pmm%add_pmmf(trim(fname))
 
         
         ! Get number of options for the function

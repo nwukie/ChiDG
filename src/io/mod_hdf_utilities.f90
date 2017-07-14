@@ -6136,7 +6136,7 @@ contains
 
         character(:),       allocatable :: pmmname, pname, oname
         !character(1024)                 :: fname
-        character(:),   allocatable     :: fname, fname2
+        character(:),   allocatable     :: fname
         integer(HID_T)                  :: pmm_id, pmmfo_id
         integer(ik)                     :: ierr, iprop, nprop, iopt, noptions
         real(rdouble), dimension(1)     :: buf
@@ -6176,9 +6176,8 @@ contains
         if (ierr /= 0) call chidg_signal(FATAL,"get_pmm_hdf: error getting function name.")
 
         
-        fname2 = fname(1:10)
         ! Set/Create the function for the current property
-        call pmm%add_pmmf(trim(fname2))
+        call pmm%add_pmmf(trim(fname))
 
         
         ! Get number of options for the function

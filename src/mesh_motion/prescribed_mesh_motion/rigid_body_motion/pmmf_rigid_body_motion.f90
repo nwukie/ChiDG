@@ -80,8 +80,7 @@ contains
         integer(ik)                             :: ivar
         real(rk)                                :: val(3)
 
-        val = node + (rigid_body_t1-time)/(rigid_body_t1-rigid_body_t0)*rigid_body_motion_disp_new +&
-            (time-rigid_body_t0)/(rigid_body_t1-rigid_body_t0)*rigid_body_motion_disp_new
+        val = node + (rigid_body_t1-time)/(rigid_body_t1-rigid_body_t0)*rigid_body_motion_disp_old + (time-rigid_body_t0)/(rigid_body_t1-rigid_body_t0)*rigid_body_motion_disp_new
         
 
         

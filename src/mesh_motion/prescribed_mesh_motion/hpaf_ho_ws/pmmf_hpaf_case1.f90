@@ -89,7 +89,8 @@ contains
         b3 = time**THREE*(-8._rk*time**THREE+51._rk*time**TWO-111._rk*time+84._rk)/16._rk
 
         !Case 1
-        height = b2
+        if (time <= TWO) height = b2
+        if (time >  TWO) height = ONE
         theta = ZERO
 
 !        !Case 2

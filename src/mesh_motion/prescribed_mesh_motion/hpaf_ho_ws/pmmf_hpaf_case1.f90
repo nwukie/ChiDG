@@ -115,7 +115,6 @@ contains
         x_ale =  cos(theta)*(x0-xc)+sin(theta)*(y0-yc) + xc
         y_ale = -sin(theta)*(x0-xc)+cos(theta)*(y0-yc) + yc
 
-
         !Translate vertically
         y_ale = y_ale + height
 

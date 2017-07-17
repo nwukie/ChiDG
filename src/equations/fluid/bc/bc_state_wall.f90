@@ -110,6 +110,12 @@ contains
         type(AD_D), allocatable, dimension(:,:) :: grad_density, grad_mom1, grad_mom2, grad_mom3, grad_energy
 
         det_jacobian_grid = worker%get_det_jacobian_grid_face('value')
+
+
+        u_grid = worker%get_grid_velocity_face('u_grid')
+        v_grid = worker%get_grid_velocity_face('v_grid')
+        w_grid = worker%get_grid_velocity_face('w_grid')
+
         !
         ! Interpolate interior solution to quadrature nodes
         !
@@ -211,11 +217,16 @@ contains
 
 
         ! Zero momentum
-        mom1_bc = ZERO
-        mom2_bc = ZERO
-        mom3_bc = ZERO
+        !mom1_bc = ZERO
+        !mom2_bc = ZERO
+        !mom3_bc = ZERO
 
 
+        ! Set relative velocity to zero, ie
+        ! set fluid velocity equal to grid/wall velocity.
+        mom1_bc = density_m*u_grid
+        mom2_bc = density_m*v_grid
+        mom3_bc = density_m*w_grid
         !
         ! We want:  W dot n = 0
         !

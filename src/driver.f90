@@ -39,7 +39,8 @@ program driver
 
     integer                                     :: iarg, narg, iorder, ierr, loc, ifield
     character(len=1024)                         :: chidg_action, filename, grid_file, solution_file, file_a, file_b, file_in, pattern
-    character(:),                   allocatable :: command
+    character(len=10)                           :: time
+    character(:),                   allocatable :: command, tmp_file
     class(function_t),              allocatable :: constant, monopole, fcn, polynomial
 
 
@@ -256,12 +257,14 @@ program driver
             !!---------------------------------------------------------------------------
                 if (narg /= 2) call chidg_signal(FATAL,"The 'post' action expects: chidg post file.h5")
 
+                call date_and_time(time=time)
+                tmp_file = 'chidg_post_files'//time//'.txt'
                 call get_command_argument(2,pattern)
-                command = 'ls '//trim(pattern)//' > chidg_post_files.txt'
+                command = 'ls '//trim(pattern)//' > '//tmp_file
                 call system(command)
             
 
-                open(7,file='chidg_post_files.txt',action='read')
+                open(7,file=tmp_file,action='read')
                 do
                     read(7,fmt='(a)', iostat=ierr) solution_file
                     if (ierr /= 0) exit
@@ -269,7 +272,7 @@ program driver
                 end do
                 close(7)
 
-                call delete_file('chidg_post_files.txt')
+                call delete_file(tmp_file)
             !*****************************************************************************
 
 

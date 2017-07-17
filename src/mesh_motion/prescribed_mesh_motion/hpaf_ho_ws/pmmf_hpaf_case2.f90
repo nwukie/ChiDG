@@ -93,7 +93,8 @@ contains
 !        theta = ZERO
 
         !Case 2
-        height = b2
+        if (time <= TWO) height = b2
+        if (time >  TWO) height = ONE
         A2 = (60._rk*PI/180._rk)
         theta = A2*b1
 !        

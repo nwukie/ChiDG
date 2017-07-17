@@ -86,6 +86,8 @@ contains
 
 
 
+        call write_line('Computing Force...')
+
         !
         ! Initialize Chidg Worker references
         !
@@ -101,14 +103,14 @@ contains
         !
         ! Check if a group matching "patch_group" was found
         !
-        if (group_ID == NO_ID) call chidg_signal(FATAL,"chidg airfoil: No airfoil boundary was found.")
+        if (group_ID == NO_ID) call chidg_signal_one(FATAL,"compute_force: No patch group was found matching the incoming string.",trim(patch_group))
 
 
         !
         ! Loop over domains/elements/faces for "patch_group" 
         !
         force = ZERO
-        do patch_ID = 1,size(data%mesh%bc_patch_group(group_ID)%patch)
+        do patch_ID = 1,data%mesh%bc_patch_group(group_ID)%npatches()
 
             !
             ! Loop over faces in the patch
@@ -162,6 +164,7 @@ contains
                 tau_12 = worker%get_model_field_face('Shear-12', 'value', 'face interior')
                 tau_13 = worker%get_model_field_face('Shear-13', 'value', 'face interior')
                 tau_23 = worker%get_model_field_face('Shear-23', 'value', 'face interior')
+
 
                 ! From symmetry
                 tau_21 = tau_12

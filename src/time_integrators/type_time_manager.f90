@@ -106,7 +106,7 @@ contains
                   'Fourth Order RK Method', 'RK4',                                       &
                   'Three-Eighth Rule', 'Fourth Order Kutta',                             &
                   'Backward_Euler', 'Backward Euler', 'backward euler', 'backward_euler',&
-                  'DIRK')
+                  'DIRK', 'DIRK_coupled_oscillator')
 
                 call self%set_name(time_integrator)
 

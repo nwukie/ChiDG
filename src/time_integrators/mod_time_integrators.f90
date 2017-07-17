@@ -75,6 +75,7 @@ contains
 
             case ('DIRK_coupled_oscillator')
                 allocate(instance, source=DIRK_coupled_oscillator)
+
             case default
                 user_msg = "We can't seem to find a time integrator that matches the input &
                             string. Maybe check that the time integrator string in the input &

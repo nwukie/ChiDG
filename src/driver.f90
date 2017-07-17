@@ -13,6 +13,7 @@
 program driver
 #include <messenger.h>
     use mod_kinds,                  only: rk, ik
+    use mod_constants,              only: ZERO, ONE, TWO, FOUR, PI
     use type_chidg,                 only: chidg_t
     use type_function,              only: function_t
     use mod_function,               only: create_function
@@ -46,6 +47,8 @@ program driver
 
     integer(HID_T) :: file_id, dom_id
 
+    !VIV problem parameters
+    real(rk)    :: reynolds_number, diam_cyl, mstar, freq_cyl, damping_coeff, stiffness_coeff, u_reduced, u_inf, rho_inf, mass
 
 
     !
@@ -108,6 +111,50 @@ program driver
             ! VIV Cylinder with Rigid Body Mesh Motion
             !
 
+            ! VIV parameters
+            !
+            ! Reference: Wang et al, 2013, "Vortex Induced Vibration of Circular Cylinder with Two Degrees of Freedom:
+            !                                   Computational Fluid Dynamics vs Reduced-Order Models", ASME
+            !                               
+            
+            !
+            ! NOTE: This reference considers an incompressible formulation. Check the Mach number in our simulation!
+            !
+            ! Prescribed quantities:
+            ! Farfield density: rho_inf = 1.19 (for our simulation)
+            ! Farfield velocity: u_inf = mom_1_inf/rho_inf
+            ! Cylinder diameter: diam_cyl = 2.0 (for our simulation)
+            ! Re = rho_inf*u_inf*diam_cyl/mu = 150
+            ! Mass ratio: mstar = 2.55 (ratio of fluid to cylinder mass/density)
+            ! Damping coefficient: damping_coeff = ZERO (to obtain maximal amplitude of oscillation)
+            ! Reduced velocity: u_reduced = 4.0 ( = u_inf/(freq_cyl*diam_cyl)),
+            !                       3.0 < u_reduced < 7.0, maximum oscillation amplitude at u_reduced = 4.0
+
+            ! Derived quantities:
+            ! Cylinder mass: mass = mstar*rho_inf*PI*diam_cyl**TWO/FOUR
+            ! Natural frequency of the cylinder: freq_cyl = u_inf/(u_reduced*diam_cyl)
+            ! Stiffness coefficient: stiffness_coeff  = TWO*pi*freq_cyl**TWO
+
+            !
+            ! Prescribed quantities: 
+            
+            !Fluid quantites: these must be consistent with the BC/IC and the viscosity parameter value.
+            reynolds_number = 150.0_rk !Not used here - set viscosity properly in models.nml!
+            rho_inf = 1.19_rk
+            u_inf = 1.0_rk
+
+            !Cylinder
+            diam_cyl = 2.0_rk
+            u_reduced = 4.0_rk
+            mstar = 2.55_rk
+            damping_coeff = ZERO
+            
+
+            ! Derived quantities:
+            mass = mstar*rho_inf*PI*diam_cyl**TWO/FOUR
+            freq_cyl = u_inf/(u_reduced*diam_cyl)
+            stiffness_coeff = TWO*PI*mass*freq_cyl**TWO
+
             file_id = open_file_hdf(gridfile)
             !Create PMM group
             call create_pmm_group_hdf(file_id,'viv_rigid_body_pmm')
@@ -127,7 +174,7 @@ program driver
             !
             ! Initialize the oscillating cylinder model
             !
-            call oscillating_cylinder%init()
+            call oscillating_cylinder%init(mass, damping_coeff, stiffness_coeff)
         end if
 
         call MPI_Barrier(ChiDG_COMM,ierr)

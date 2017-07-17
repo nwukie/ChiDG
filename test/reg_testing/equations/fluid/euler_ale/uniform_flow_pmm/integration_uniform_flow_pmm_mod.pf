@@ -837,13 +837,13 @@ contains
 
         select case (iorder)
             case(1) ! iorder = 1  =>  order = 2
-                nterms_1d = (iorder+1)
+                nterms_1d = (iorder)
             case(2)
-                nterms_1d = (iorder+1)
+                nterms_1d = (iorder)
             case(3)
-                nterms_1d = (iorder+1)
+                nterms_1d = (iorder)
             case(4)
-                nterms_1d = (iorder+1)
+                nterms_1d = (iorder)
             case default
                 call chidg_signal(FATAL,"integration_1D_linear_diffusion_mod%mesh_parameter: invalid iorder")
         end select
@@ -880,8 +880,8 @@ contains
 !                inpes = 3
 !            case(7)
 !                inpes = 4
-            case(2)
-                inpes = 1 
+            case(1)
+                inpes = 10
 
         end select
 

@@ -216,7 +216,7 @@ contains
 
         external_forces = compute_force(data,'Oscillator Wall')
         ! One DOF only
-        external_forces(2) = ZERO
+        external_forces(1) = ZERO
         external_forces(3) = ZERO
 
         call oscillating_cylinder%update_oscillator_step(data%time_manager%dt,t_n,external_forces)

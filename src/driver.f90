@@ -141,7 +141,7 @@ program driver
             !Fluid quantites: these must be consistent with the BC/IC and the viscosity parameter value.
             reynolds_number = 150.0_rk !Not used here - set viscosity properly in models.nml!
             rho_inf = 1.19_rk
-            u_inf = 1.0_rk
+            u_inf = 34.2997_rk
 
             !Cylinder
             diam_cyl = 2.0_rk

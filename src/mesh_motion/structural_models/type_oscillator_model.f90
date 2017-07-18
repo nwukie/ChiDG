@@ -3,6 +3,7 @@ module type_oscillator_model
     use mod_constants,      only: ZERO, ONE, TWO, PI
     use mod_rigid_body_motion, only: rigid_body_motion_disp_old, rigid_body_motion_disp_new, &
                                     rigid_body_motion_vel, rigid_body_t0, rigid_body_t1
+    use mod_chidg_mpi,      only: IRANK, GLOBAL_MASTER
     implicit none
 
     type    :: oscillator_model_t
@@ -162,28 +163,21 @@ contains
         integer(ik)             :: nsteps, istep, max_steps
 
 
+        integer(ik) :: myunit
+        logical :: exists
         !
         ! Write to files
         !
-        open(unit=1, file="viv_disp_x.txt")
-        write(1,*) rigid_body_motion_disp_new(1)
-        close(1)
-
-        open(unit=2, file="viv_disp_y.txt")
-        write(2,*) rigid_body_motion_disp_new(2)
-        close(2)
-
-        open(unit=3, file="viv_force_x.txt")
-        write(3,*) external_forces(1)
-        close(3)
-
-        open(unit=4, file="viv_force_y.txt")
-        write(4,*) external_forces(2)
-        close(4)
-        
-        open(unit=5, file="viv_time.txt")
-        write(5,*) t0_in
-        close(5)
+        if (IRANK == GLOBAL_MASTER) then
+        inquire(file="viv_output.txt", exist=exists)
+        if (exists) then
+            open(newunit=myunit, file="viv_output.txt", status="old", position="append",action="write")
+        else
+            open(newunit=myunit, file="viv_output.txt", status="new",action="write")
+        end if
+        write(myunit,*) t0_in, rigid_body_motion_disp_new(1), rigid_body_motion_disp_new(2),external_forces(1),external_forces(2)
+        close(myunit)
+        end if
 
         !
         ! Perform update

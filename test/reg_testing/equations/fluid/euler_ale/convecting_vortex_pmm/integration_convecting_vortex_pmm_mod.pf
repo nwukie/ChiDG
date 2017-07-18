@@ -3,11 +3,11 @@
 !     Euler ALE equation set uniform flow prescribed mesh motion regression test
 !
 !   This test suite runs a series of tests solving the euler equations on a quartic
-!   uniform_flow_pmm grid of varying resolution for varying orders of solution accuracy.
+!   convecting_vortex_pmm grid of varying resolution for varying orders of solution accuracy.
 !   At the end of each case, the L2 error is computed for the domain using the 
 !   analytical solution.
 !
-!   This suite runs the uniform_flow_pmm case with 6x1x1, 12x1x1, and 24x1x1 grids with
+!   This suite runs the convecting_vortex_pmm case with 6x1x1, 12x1x1, and 24x1x1 grids with
 !   quartic elements. Each grid is run from 1st to 4th order accuracy. Each 
 !   configuration is run on 1, 2, 7, and 10 processors. The nonlinear convergence
 !   for each case is stored in a module global variable that is used to compare
@@ -34,7 +34,7 @@
 !   @date  6/21/2017 
 !
 !--------------------------------------------------------------------------------
-module integration_uniform_flow_pmm_mod
+module integration_convecting_vortex_pmm_mod
 #include <messenger.h>
     use pfunit_mod
     use mod_kinds,              only: rk, ik
@@ -72,6 +72,7 @@ module integration_uniform_flow_pmm_mod
     use type_equation_builder,          only: equation_builder_t
     use type_equation_set,              only: equation_set_t
 
+    use type_point,                     only: point_t
     implicit none
 
 
@@ -84,7 +85,7 @@ module integration_uniform_flow_pmm_mod
     real(rk)        :: error(1,2,3)                         ! nprocs, ngrids, norders
 
 
-    public  :: uniform_flow_pmm
+    public  :: convecting_vortex_pmm
 
 
 
@@ -99,6 +100,7 @@ module integration_uniform_flow_pmm_mod
     type, extends(MpiTestParameter) :: case_grid_order
 
         integer(ik)     :: nelem_xi
+        integer(ik)     :: nelem_eta
         character(100)  :: gridfile
         integer(ik)     :: order
 
@@ -120,9 +122,10 @@ module integration_uniform_flow_pmm_mod
     !!
     !-------------------------------------------------------------------------------
     @TestCase(testParameters={getParameters()}, constructor=newTest)
-    type, extends(MpiTestCase) :: uniform_flow_pmm
+    type, extends(MpiTestCase) :: convecting_vortex_pmm
 
         integer(ik)     :: nelem_xi
+        integer(ik)     :: nelem_eta
         character(100)  :: gridfile
         integer(ik)     :: order
 
@@ -132,7 +135,7 @@ module integration_uniform_flow_pmm_mod
     contains
         procedure   :: setUp
         procedure   :: tearDown
-    end type uniform_flow_pmm
+    end type convecting_vortex_pmm
     !*******************************************************************************
 
 
@@ -149,9 +152,10 @@ contains
     !------------------------------------------------------------------------------
     function newTest(test_parameter) result(test)
         type(case_grid_order),  intent(in)          :: test_parameter
-        type(uniform_flow_pmm)    :: test
+        type(convecting_vortex_pmm)    :: test
 
         test%nelem_xi    = test_parameter%nelem_xi
+        test%nelem_eta   = test_parameter%nelem_eta
         test%gridfile    = test_parameter%gridfile
         test%order       = test_parameter%order
 
@@ -168,20 +172,25 @@ contains
         type(case_grid_order), allocatable :: params(:)
     
         integer(ik),        allocatable :: nelem_xi(:)
+        integer(ik),        allocatable :: nelem_eta(:)
         type(string_t),     allocatable :: files(:)
         integer(ik),        allocatable :: orders(:)
         integer(ik) :: icase
 
         nelem_xi  = [ &
-                     16, 16, 16,  &
-                     32, 32, 32 ]
+                     20, 20, 20,  &
+                     40, 40, 40 ]
 
-        files = [  string_t('uniform_flow_pmm_16x1x1.h5'), &
-                   string_t('uniform_flow_pmm_16x1x1.h5'), &
-                   string_t('uniform_flow_pmm_16x1x1.h5'), &
-                   string_t('uniform_flow_pmm_32x1x1.h5'), &
-                   string_t('uniform_flow_pmm_32x1x1.h5'), &
-                   string_t('uniform_flow_pmm_32x1x1.h5')  &
+        nelem_eta  = [ &
+                     15, 15, 15,  &
+                     30, 30, 30 ]
+
+        files = [  string_t('convecting_vortex_pmm_20x15x1.h5'), &
+                   string_t('convecting_vortex_pmm_20x15x1.h5'), &
+                   string_t('convecting_vortex_pmm_20x15x1.h5'), &
+                   string_t('convecting_vortex_pmm_40x30x1.h5'), &
+                   string_t('convecting_vortex_pmm_40x30x1.h5'), &
+                   string_t('convecting_vortex_pmm_40x30x1.h5')  &
                     ]
 
         orders = [  &
@@ -192,6 +201,7 @@ contains
         allocate(params(size(files)))
         do icase = 1,size(files)
             params(icase)%nelem_xi    = nelem_xi(icase)
+            params(icase)%nelem_eta   = nelem_eta(icase)
             params(icase)%gridfile    = files(icase)%str
             params(icase)%order       = orders(icase)
         end do
@@ -236,16 +246,16 @@ contains
     !!
     !--------------------------------------------------------------------------------------------
     subroutine setUp(this)
-        class(uniform_flow_pmm),  intent(inout)   :: this
+        class(convecting_vortex_pmm),  intent(inout)   :: this
 
         class(bc_state_t),  allocatable :: bc_state
-        type(bc_state_group_t)          :: bc_state_groups(2)
+        type(bc_state_group_t)          :: bc_state_groups(5)
         type(string_t)                  :: group_names(1,6)
         class(function_t),  allocatable :: fcn
         real(rk)                        :: tol, sim_time
 
         
-        sim_time = 1.0_rk
+        sim_time = 10.0_rk
         tol = 1.e-6_rk
 
         !------------------------------------------------------------------------------
@@ -262,7 +272,7 @@ contains
         linear_solver    = 'fgmres_cgs'
         preconditioner   = 'RASILU0'
         IO_DESTINATION   = 'both'
-        time_steps       = 360
+        time_steps       = 720 
         dt               = real(sim_time/time_steps,rk)
         verbosity        = 2 
         nwrite           = 1000
@@ -309,38 +319,49 @@ contains
         ! Create mesh
         !
         if (IRANK == GLOBAL_MASTER) then
-            bc_state_groups(1)%name = 'Farfield'
-            bc_state_groups(2)%name = 'Extrapolate'
+            bc_state_groups(1)%name = 'Periodic x-min'
+            bc_state_groups(2)%name = 'Periodic x-max'
+            bc_state_groups(3)%name = 'Periodic y-min'
+            bc_state_groups(4)%name = 'Periodic y-max'
+            bc_state_groups(5)%name = 'Symmetry'
 
 
-            call create_bc('Farfield', bc_state)
-            call bc_state%set_fcn_option('Density',   'val', 1.0_rk)
-            call bc_state%set_fcn_option('Pressure','val', 17.857143_rk   )
-            call bc_state%set_fcn_option('Velocity-1','val',1.0_rk)
-            call bc_state%set_fcn_option('Velocity-2','val',ZERO)
-            call bc_state%set_fcn_option('Velocity-3','val',ZERO)
+            call create_bc('Periodic', bc_state)
+            call bc_state%set_fcn_option('Offset-1',   'val', 20.0_rk)
             call bc_state_groups(1)%add_bc_state(bc_state)
 
-            call create_bc('Symmetry', bc_state)
+            call create_bc('Periodic', bc_state)
+            call bc_state%set_fcn_option('Offset-1',   'val', -20.0_rk)
             call bc_state_groups(2)%add_bc_state(bc_state)
+
+            call create_bc('Periodic', bc_state)
+            call bc_state%set_fcn_option('Offset-2',   'val', 15.0_rk)
+            call bc_state_groups(3)%add_bc_state(bc_state)
+
+            call create_bc('Periodic', bc_state)
+            call bc_state%set_fcn_option('Offset-2',   'val', -15.0_rk)
+            call bc_state_groups(4)%add_bc_state(bc_state)
+
+            call create_bc('Symmetry', bc_state)
+            call bc_state_groups(5)%add_bc_state(bc_state)
 
 
 
             ! Define patch group names
-            group_names(1,:) = [string_t('Farfield') , &
-                                string_t('Farfield'), &
-                                string_t('Extrapolate') , &
-                                string_t('Extrapolate') , &
-                                string_t('Extrapolate') , &
-                                string_t('Extrapolate') ]
+            group_names(1,:) = [string_t('Periodic x-min') , &
+                                string_t('Periodic x-max'), &
+                                string_t('Periodic y-min') , &
+                                string_t('Periodic y-max') , &
+                                string_t('Symmetry') , &
+                                string_t('Symmetry') ]
 
 
-            call create_mesh_file('Uniform Flow PMM',this%gridfile, &
+            call create_mesh_file('Convecting Vortex PMM',this%gridfile, &
                                                               equation_sets=[string_t('Euler ALE')], &
                                                               group_names     = group_names,     &
                                                               bc_state_groups = bc_state_groups, &
                                                               nelem_xi        = this%nelem_xi,   &
-                                                              nelem_eta       = 1,  &
+                                                              nelem_eta       = this%nelem_eta,  &
                                                               nelem_zeta      = 1) 
                                                               
         end if
@@ -368,17 +389,17 @@ contains
         !
         ! Initialize solution
         !
-        call create_function(fcn,'constant')
+        call create_function(fcn,'convecting_vortex_solution')
 
-        call fcn%set_option('val',1.0_rk)
+        call fcn%set_option('ivar',1.0_rk)
         call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
-        call fcn%set_option('val',1.0_rk)
+        call fcn%set_option('ivar',2.0_rk)
         call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,2)
-        call fcn%set_option('val',ZERO)
+        call fcn%set_option('ivar',3.0_rk)
         call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,3)
-        call fcn%set_option('val',ZERO)
+        call fcn%set_option('ivar',4.0_rk)
         call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,4)
-        call fcn%set_option('val',45.14285714_rk)
+        call fcn%set_option('ivar',5.0_rk)
         call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,5)
 
 
@@ -393,7 +414,7 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine tearDown(this)
-        class(uniform_flow_pmm),  intent(inout)   :: this
+        class(convecting_vortex_pmm),  intent(inout)   :: this
 
         ! Close ChiDG
         call this%chidg%shut_down('core')
@@ -425,9 +446,9 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------
-    @Test(npes=[8])
+    @Test(npes=[16])
     subroutine test_entropy_error_rate(self)
-        class(uniform_flow_pmm),  intent(inout)   :: self
+        class(convecting_vortex_pmm),  intent(inout)   :: self
 
         real(rk)    :: tol
         integer(ik) :: npes_index, grid_index, order_index
@@ -450,7 +471,7 @@ contains
         ! Store the nonlinear convergence of the calculation
         !
 
-        computed_error = compute_uniform_flow_pmm_error(self%chidg%data,self%ChiDG_COMM)
+        computed_error = compute_convecting_vortex_pmm_error(self%chidg%data,self%ChiDG_COMM)
 
 
         print *, 'computed error'
@@ -477,7 +498,7 @@ contains
     !-----------------------------------------------------------------------------------------
     @Test(npes=[1])
     subroutine test_err_conforming(self)
-        class(uniform_flow_pmm),  intent(inout)   :: self
+        class(convecting_vortex_pmm),  intent(inout)   :: self
 
         integer(ik) :: inpes, igrid, iorder
         real(rk)    :: error_previous, error_current, mesh_parameter_previous, mesh_parameter_current, convergence_rate, tol
@@ -536,18 +557,20 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------
-    function compute_uniform_flow_pmm_error(data,ChiDG_COMM) result(error)
+    function compute_convecting_vortex_pmm_error(data,ChiDG_COMM) result(error)
         type(chidg_data_t), intent(inout)   :: data
         type(mpi_comm),     intent(in)      :: ChiDG_COMM
 
         real(rk), allocatable, dimension(:) :: &
-            u_dg, u_analytical, x_gq, gq_error_squared, det_jacobian_grid_gq
+            u_dg, u_analytical, x_gq, y_gq, gq_error_squared, det_jacobian_grid_gq
 
 
         integer(ik) :: idens, imom1, imom2, imom3, ienergy
         integer(ik) :: ielem, idom, ierr, itime
         real(rk)    :: error_squared_sum, error_squared_sum_reduced, element_error_squared, error
 
+        class(function_t),  allocatable :: fcn
+        type(point_t), allocatable, dimension(:) :: test_points
 
         associate (mesh   => data%mesh,     &
                    sdata  => data%sdata,    &
@@ -571,6 +594,9 @@ contains
             error_squared_sum = ZERO
 
 
+            call create_function(fcn,'convecting_vortex_solution')
+
+
 
             !
             ! Loop over elements and accumulate error
@@ -584,9 +610,16 @@ contains
                     ! Compute the analytical solution at the quadrature nodes
                     !
                     x_gq = mesh%domain(idom)%elems(ielem)%quad_pts(:,1)
+                    y_gq = mesh%domain(idom)%elems(ielem)%quad_pts(:,2)
+                    test_points(:)%c1_ = x_gq
+                    test_points(:)%c2_ = y_gq
+
                     det_jacobian_grid_gq = mesh%domain(idom)%elems(ielem)%det_jacobian_grid
+
                     u_analytical = ZERO*x_gq
-                    u_analytical = 1.0_rk
+                    call fcn%set_option('ivar',1.0_rk)
+                    u_analytical = fcn%compute(10.0_rk, test_points)
+
 
                     !
                     ! Interpolate DG numerical solution
@@ -621,7 +654,8 @@ contains
                     !
 
                     u_analytical = ZERO*x_gq
-                    u_analytical = 1.0_rk
+                    call fcn%set_option('ivar',2.0_rk)
+                    u_analytical = fcn%compute(10.0_rk, test_points)
 
                     !
                     ! Interpolate DG numerical solution
@@ -655,6 +689,8 @@ contains
                     !
 
                     u_analytical = ZERO*x_gq
+                    call fcn%set_option('ivar',3.0_rk)
+                    u_analytical = fcn%compute(10.0_rk, test_points)
 
                     !
                     ! Interpolate DG numerical solution
@@ -687,6 +723,8 @@ contains
                     !
 
                     u_analytical = ZERO*x_gq
+                    call fcn%set_option('ivar',4.0_rk)
+                    u_analytical = fcn%compute(10.0_rk, test_points)
 
                     !
                     ! Interpolate DG numerical solution
@@ -719,7 +757,9 @@ contains
                     ! Energy 
                     !
 
-                    u_analytical = 45.14285714_rk
+                    u_analytical = ZERO*x_gq
+                    call fcn%set_option('ivar',5.0_rk)
+                    u_analytical = fcn%compute(10.0_rk, test_points)
 
                     !
                     ! Interpolate DG numerical solution
@@ -764,7 +804,7 @@ contains
         ! Sqrt of the reduced error
         error = sqrt(error_squared_sum_reduced)
 
-    end function compute_uniform_flow_pmm_error
+    end function compute_convecting_vortex_pmm_error
     !*****************************************************************************************
 
 
@@ -791,9 +831,9 @@ contains
 
         select case (igrid)
             case(1)
-                nelem = 16 
+                nelem = 20 
             case(2)
-                nelem = 32 
+                nelem = 40 
             case default
                 call chidg_signal(FATAL,"integration_1D_linear_diffusion_mod%mesh_parameter: invalid igrid")
         end select
@@ -844,7 +884,7 @@ contains
 !                inpes = 3
 !            case(7)
 !                inpes = 4
-            case(2)
+            case(16)
                 inpes = 1
 
         end select
@@ -861,9 +901,9 @@ contains
         integer(ik)         :: igrid
 
         select case (trim(grid))
-            case('uniform_flow_pmm_10x1x1.h5')
+            case('convecting_vortex_pmm_20x15x1.h5')
                 igrid = 1
-            case('uniform_flow_pmm_20x1x1.h5')
+            case('convecting_vortex_pmm_40x30x1.h5')
                 igrid = 2 
         end select
 
@@ -897,4 +937,4 @@ contains
 
 
 
-end module integration_uniform_flow_pmm_mod
+end module integration_convecting_vortex_pmm_mod

@@ -16,6 +16,7 @@ module mod_function
     use fcn_constant,                       only: constant_f
     use fcn_sine,                           only: sine_f
     use fcn_polynomial,                     only: polynomial_f
+    use fcn_convecting_vortex,              only: convecting_vortex_f
     use fcn_scalar_adv_diff_bl_solution,    only: scalar_adv_diff_bl_solution_f
 !    use fcn_cylindricalduct_eigenfunction,  only: cylindricalduct_eigenfunction_f
     use fcn_monopole,                       only: monopole_f
@@ -54,6 +55,7 @@ contains
         type(xyz_f)                             :: xyz
         type(radius_f)                          :: radius
         type(gaussian_f)                        :: gaussian
+        type(convecting_vortex_f)               :: convecting_vortex
         type(constant_f)                        :: constant
         type(sine_f)                            :: sin_function
         type(polynomial_f)                      :: polynomial
@@ -82,6 +84,7 @@ contains
             call registered_fcns%push_back(polynomial)
 !            call registered_fcns%push_back(cylindricalduct_eigenfunction)
             call registered_fcns%push_back(monopole)
+            call registered_fcns%push_back(convecting_vortex)
             call registered_fcns%push_back(scalar_adv_diff_bl_solution)
 
 

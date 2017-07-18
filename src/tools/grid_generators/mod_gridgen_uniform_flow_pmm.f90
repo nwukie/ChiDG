@@ -74,8 +74,8 @@ contains
         !
         ! Generate coordinates
         !
-        call meshgen_NxNxN_linear(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords)
-        !call meshgen_uniform_flow_pmm_quartic(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords)
+        !call meshgen_NxNxN_linear(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords)
+        call meshgen_uniform_flow_pmm_quartic(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords)
 
     
 
@@ -88,7 +88,7 @@ contains
         ! Get nodes/elements
         !
         nodes    = get_block_points_plot3d(xcoords,ycoords,zcoords)
-        elements = get_block_elements_plot3d(xcoords,ycoords,zcoords,mapping=1,idomain=1)
+        elements = get_block_elements_plot3d(xcoords,ycoords,zcoords,mapping=4,idomain=1)
 
 
 
@@ -112,7 +112,7 @@ contains
         do bcface = 1,6
 
             ! Get face node indices for boundary 'bcface'
-            faces = get_block_boundary_faces_plot3d(xcoords,ycoords,zcoords,mapping=1,bcface=bcface)
+            faces = get_block_boundary_faces_plot3d(xcoords,ycoords,zcoords,mapping=4,bcface=bcface)
 
             ! Create/Set patch face indices
             bc_face_string  = trim(bc_face_strings(bcface))
@@ -225,7 +225,7 @@ contains
         call create_pmmfo_group_hdf(file_id,'sin_pmm','L_X')
         call set_pmmfo_val_hdf(file_id,'sin_pmm','L_X',1._rk)
         call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_FREQ_X')
-        call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_FREQ_X',FOUR*PI)
+        call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_FREQ_X',TWO*PI)
         call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_AMP_X')
         call set_pmmfo_val_hdf(file_id,'sin_pmm','GRID_AMP_X',0.1_rk)
         call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_AMP_Y')
@@ -327,9 +327,9 @@ contains
             do ipt_y = 1,npt_y
                 do ipt_x = 1,npt_x
 
-                    x = ZERO + real(ipt_x-1,kind=rk)*(10._rk / real(npt_x-1,kind=rk))
-                    y = ZERO + real(ipt_y-1,kind=rk)*(10._rk )/real(npt_y-1,kind=rk)
-                    z = ZERO + real(ipt_z-1,kind=rk)*(10._rk / real(npt_z-1,kind=rk))
+                    x = ZERO + real(ipt_x-1,kind=rk)*(1._rk / real(npt_x-1,kind=rk))
+                    y = ZERO + real(ipt_y-1,kind=rk)*(1._rk )/real(npt_y-1,kind=rk)
+                    z = ZERO + real(ipt_z-1,kind=rk)*(1._rk / real(npt_z-1,kind=rk))
 
                     xcoords(ipt_x,ipt_y,ipt_z) = x
                     ycoords(ipt_x,ipt_y,ipt_z) = y

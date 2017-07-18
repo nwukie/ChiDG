@@ -162,6 +162,33 @@ contains
         integer(ik)             :: nsteps, istep, max_steps
 
 
+        !
+        ! Write to files
+        !
+        open(unit=1, file="viv_disp_x.txt")
+        write(1,*) rigid_body_motion_disp_new(1)
+        close(1)
+
+        open(unit=2, file="viv_disp_y.txt")
+        write(2,*) rigid_body_motion_disp_new(2)
+        close(2)
+
+        open(unit=3, file="viv_force_x.txt")
+        write(3,*) external_forces(1)
+        close(3)
+
+        open(unit=4, file="viv_force_y.txt")
+        write(4,*) external_forces(2)
+        close(4)
+        
+        open(unit=5, file="viv_time.txt")
+        write(5,*) t0_in
+        close(5)
+
+        !
+        ! Perform update
+        !
+
         rigid_body_t0 = t0_in
         rigid_body_t1 = t0_in+dt_fluid
         rigid_body_motion_disp_old = rigid_body_motion_disp_new
@@ -183,13 +210,14 @@ contains
         end do
 
         !Force one DOF motion
-        self%disp(1,2) = ZERO
+        self%disp(1,1) = ZERO
         self%disp(1,3) = ZERO
-        self%vel(1,2) = ZERO
+        self%vel(1,1) = ZERO
         self%vel(1,3) = ZERO
 
         rigid_body_motion_disp_new = self%disp(1,:)
         rigid_body_motion_vel = self%vel(1,:)
 
+        
     end subroutine update_oscillator_step
 end module type_oscillator_model

@@ -230,9 +230,9 @@ contains
         !
         ! We want:  W dot n = 0
         !
-        u_m = mom1_m/density_m
-        v_m = mom2_m/density_m
-        w_m = mom3_m/density_m
+        u_m = mom1_m/density_m-u_grid
+        v_m = mom2_m/density_m-v_grid
+        w_m = mom3_m/density_m-w_grid
 
 
         !

@@ -1,20 +1,13 @@
 module mod_gridgen_convecting_vortex_pmm
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: PI, ZERO, ONE, TWO, THREE, HALF, &
+    use mod_constants,          only: PI, ZERO, ONE, TWO, THREE,FOUR, HALF, &
                                       XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use mod_string,             only: string_t
     use mod_bc,                 only: create_bc
     use mod_plot3d_utilities,   only: get_block_points_plot3d, get_block_elements_plot3d, &
                                       get_block_boundary_faces_plot3d
-    use mod_hdf_utilities,      only: add_domain_hdf, initialize_file_hdf, open_domain_hdf,         &
-                                      close_domain_hdf, add_bc_state_hdf, close_file_hdf,           &
-                                      close_hdf, set_patch_hdf, set_contains_grid_hdf,              &
-                                      open_bc_group_hdf, close_bc_group_hdf, create_bc_state_group_hdf,   &
-                                      set_patch_group_hdf, open_file_hdf, create_patch_hdf,         &
-                                      open_patch_hdf, close_patch_hdf,                              &
-                                      create_pmm_group_hdf, set_pmm_domain_group_hdf, &
-                                      create_pmmfo_group_hdf, set_pmmf_name_hdf, set_pmmfo_val_hdf
+    use mod_hdf_utilities
     use hdf5
 
     use type_bc_state,          only: bc_state_t
@@ -75,6 +68,8 @@ contains
         real(rk),           allocatable, dimension(:,:,:)   :: xcoords, ycoords, zcoords
 
 
+        character(len=8)                            :: bc_face_strings(6)
+        character(:),   allocatable                 :: bc_face_string
 
         !
         ! Generate coordinates
@@ -112,13 +107,15 @@ contains
         !
         dom_id = open_domain_hdf(file_id,'01')
 
+        bc_face_strings = ["XI_MIN  ","XI_MAX  ","ETA_MIN ","ETA_MAX ","ZETA_MIN","ZETA_MAX"]
         do bcface = 1,6
 
             ! Get face node indices for boundary 'bcface'
             faces = get_block_boundary_faces_plot3d(xcoords,ycoords,zcoords,mapping=4,bcface=bcface)
 
             ! Create/Set patch face indices
-            patch_id = create_patch_hdf(dom_id,bcface)
+            bc_face_string  = trim(bc_face_strings(bcface))
+            patch_id = create_patch_hdf(dom_id,bc_face_string)
             call set_patch_hdf(patch_id,faces)
             call close_patch_hdf(patch_id)
 
@@ -138,12 +135,12 @@ contains
             do igroup = 1,size(bc_state_groups)
                 call create_bc_state_group_hdf(file_id,bc_state_groups(igroup)%name)
 
-                bcgroup_id = open_bc_group_hdf(file_id,bc_state_groups(igroup)%name)
+                bcgroup_id = open_bc_state_group_hdf(file_id,bc_state_groups(igroup)%name)
 
                 do istate = 1,bc_state_groups(igroup)%nbc_states()
                     call add_bc_state_hdf(bcgroup_id, bc_state_groups(igroup)%bc_state(istate)%state)
                 end do
-                call close_bc_group_hdf(bcgroup_id)
+                call close_bc_state_group_hdf(bcgroup_id)
             end do
         else
 

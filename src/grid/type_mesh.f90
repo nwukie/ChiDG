@@ -1,13 +1,17 @@
 module type_mesh
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik
-    use mod_constants,              only: NO_ID
+    use mod_constants,              only: NO_ID, INTERIOR, NFACES
     use type_domain,                only: domain_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use type_boundary_connectivity, only: boundary_connectivity_t
     use type_bc_patch,              only: bc_patch_t
     use type_bc_patch_group,        only: bc_patch_group_t
     use type_ivector,               only: ivector_t
+    use type_mpi_request_vector,    only: mpi_request_vector_t
+    use mpi_f08,                    only: mpi_isend, mpi_recv, mpi_integer4, mpi_real8, &
+                                          mpi_waitall, mpi_request, mpi_status_ignore,  &
+                                          mpi_statuses_ignore
     implicit none
     private
 
@@ -29,6 +33,8 @@ module type_mesh
 
         type(domain_t),         allocatable :: domain(:)
         type(bc_patch_group_t), allocatable :: bc_patch_group(:)
+
+        type(mpi_request_vector_t)          :: comm_requests
 
     contains
 
@@ -54,6 +60,10 @@ module type_mesh
         ! Parallel communication pattern
         procedure           :: get_recv_procs
         procedure           :: get_send_procs
+
+        procedure           :: get_proc_ninterior_neighbors
+        !procedure           :: get_proc_nchimera_donors
+        !procedure           :: get_proc_nchimera_receivers
 
 
         ! Extra routines for testing private procedures
@@ -593,6 +603,50 @@ contains
 
 
 
+
+
+
+
+    !>  Return the number of interior neighbor elements that live on processor, iproc.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/19/2017
+    !!
+    !---------------------------------------------------------------------------------
+    function get_proc_ninterior_neighbors(self,iproc) result(n)
+        class(mesh_t),  intent(in)  :: self
+        integer(ik),    intent(in)  :: iproc
+
+        integer(ik) :: idom, ielem, iface, n
+
+
+        !
+        ! Accumulate number of INTERIOR neighbors that live on iproc
+        !
+        n = 0
+        do idom = 1,self%ndomains()
+            do ielem = 1,self%domain(idom)%get_nelements_local()
+                do iface = 1,NFACES
+                    if (self%domain(idom)%faces(ielem,iface)%ineighbor_proc == iproc) n = n + 1
+                end do !iface
+            end do !ielem
+        end do !idom
+        
+
+
+    end function get_proc_ninterior_neighbors
+    !**********************************************************************************
+
+
+
+
+
+
+
+
+
+
+
     !>
     !!
     !!
@@ -603,6 +657,60 @@ contains
     !---------------------------------------------------------------------------------
     subroutine comm_send(self)
         class(mesh_t),  intent(inout)   :: self
+
+        integer(ik)         :: idom, ielem, iface, ierr,    &
+                               send_size_a, send_size_b, send_size_c, send_size_d
+        type(mpi_request)   :: request(4)
+
+
+        !
+        ! Send interior face data
+        !
+        do idom = 1,self%ndomains()
+            do ielem = 1,self%domain(idom)%nelem
+                do iface = 1,NFACES
+
+                    !
+                    ! For INTERIOR faces that have off-processor neighbors we need to communicate ALE data.
+                    !
+                    if ( (self%domain(idom)%faces(ielem,iface)%ftype == INTERIOR) .and. &
+                         (self%domain(idom)%faces(ielem,iface)%ineighbor_proc /= IRANK) ) then
+
+                        associate ( face => self%domain(idom)%faces(ielem,iface) ) 
+
+                        send_size_a = size(face%neighbor_location)
+                        send_size_b = size(face%grid_vel)
+                        send_size_c = size(face%det_jacobian_grid)
+                        send_size_d = size(face%inv_jacobian_matrix)
+
+                        ! First, send neighbor location. This way, the receiving processor knows where to put the data.
+                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%neighbor_location,   send_size_a, mpi_integer4, face%ineighbor_proc, 0, ChiDG_COMM, request(1), ierr)
+
+                        ! Now, send all ALE information
+                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%grid_vel,            send_size_b, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(2), ierr)
+                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%det_jacobian_grid,   send_size_c, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(3), ierr)
+                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%inv_jacobian_matrix, send_size_d, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(4), ierr)
+
+                        call self%comm_requests%push_back(request(1))
+                        call self%comm_requests%push_back(request(2))
+                        call self%comm_requests%push_back(request(3))
+                        call self%comm_requests%push_back(request(4))
+
+                        end associate
+
+                    end if
+
+
+                end do !iface
+            end do !ielem
+        end do !idom
+
+
+
+        !
+        ! Send chimera donors
+        !
+
 
 
     end subroutine comm_send
@@ -623,6 +731,45 @@ contains
     subroutine comm_recv(self)
         class(mesh_t),  intent(inout)   :: self
 
+        integer(ik) :: idom, ielem, iface, iproc, irecv, ierr, &
+                       recv_size_a, recv_size_b, recv_size_c, face_location(5)
+
+
+        !
+        ! Receive interior face data
+        !
+        do iproc = 1, size(self%get_recv_procs())
+            do irecv = 1,self%get_proc_ninterior_neighbors(iproc)
+
+                ! The sending proc sent its neighbor location, which is a face on our local processor 
+                ! now where we will store the incoming ALE data
+                call mpi_recv(face_location, 5, mpi_integer4, iproc, 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                idom  = face_location(2)
+                ielem = face_location(4)
+                iface = face_location(5)
+
+                recv_size_a = size(self%domain(idom)%faces(ielem,iface)%neighbor_grid_vel)
+                recv_size_b = size(self%domain(idom)%faces(ielem,iface)%neighbor_det_jacobian_grid)
+                recv_size_c = size(self%domain(idom)%faces(ielem,iface)%neighbor_inv_jacobian_matrix)
+
+                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_grid_vel,            recv_size_a, mpi_real8, iproc, 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_det_jacobian_grid,   recv_size_b, mpi_real8, iproc, 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_inv_jacobian_matrix, recv_size_c, mpi_real8, iproc, 0, ChiDG_COMM, mpi_status_ignore, ierr)
+
+            end do !irecv
+        end do !iproc
+
+
+
+
+
+        !
+        ! Receive chimera donors
+        !
+
+
+
+
 
     end subroutine comm_recv
     !*********************************************************************************
@@ -642,6 +789,17 @@ contains
     subroutine comm_wait(self)
         class(mesh_t),  intent(inout)   :: self
 
+        integer(ik) :: nwait, ierr
+
+        !
+        ! Wait on all outstanding requests
+        !
+        nwait = self%comm_requests%size()
+        call mpi_waitall(nwait, self%comm_requests%data(1:nwait), mpi_statuses_ignore, ierr)
+
+
+        ! Clear request storage
+        call self%comm_requests%clear()
 
     end subroutine comm_wait
     !*********************************************************************************

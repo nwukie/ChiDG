@@ -40,7 +40,6 @@ module type_face
 
         ! Self information
         integer(ik)        :: ftype           ! INTERIOR, BOUNDARY, CHIMERA, ORPHAN 
-        integer(ik)        :: iface           ! XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
         integer(ik)        :: ChiID = 0       ! Identifier for domain-local Chimera interfaces
 
         integer(ik)        :: bc_ID      = 0  ! Index for bc state group data%bc_state_group(bc_ID)
@@ -52,27 +51,30 @@ module type_face
         integer(ik)        :: pmm_ID = NO_PMM_ASSIGNED
 
         ! Owner-element information
+        integer(ik)        :: face_location(5)! [idomain_g, idomain_l, iparent_g, iparent_l, iface]
         integer(ik)        :: idomain_g       ! Global index of the parent domain
         integer(ik)        :: idomain_l       ! Processor-local index of the parent domain
         integer(ik)        :: iparent_g       ! Domain-global index of the parent element
         integer(ik)        :: iparent_l       ! Processor-local index of the parent element
+        integer(ik)        :: iface           ! XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, etc
         integer(ik)        :: neqns           ! Number of equations in equationset_t
         integer(ik)        :: nterms_s        ! Number of terms in solution polynomial expansion
         integer(ik)        :: ntime
 
 
         ! Neighbor information
-        integer(ik)        :: ineighbor_proc      = NO_PROC    ! MPI processor rank of the neighboring element
-        integer(ik)        :: ineighbor_domain_g  = 0          ! Global index of the neighboring element's domain
-        integer(ik)        :: ineighbor_domain_l  = 0          ! Processor-local index of the neighboring element's domain
-        integer(ik)        :: ineighbor_element_g = 0          ! Domain-global index of the neighboring element
-        integer(ik)        :: ineighbor_element_l = 0          ! Processor-local index of the neighboring element
-        integer(ik)        :: ineighbor_face      = 0
-        integer(ik)        :: ineighbor_neqns     = 0
-        integer(ik)        :: ineighbor_nterms_s  = 0
-        integer(ik)        :: recv_comm           = 0
-        integer(ik)        :: recv_domain         = 0
-        integer(ik)        :: recv_element        = 0
+        integer(ik)        :: neighbor_location(5) = 0
+        integer(ik)        :: ineighbor_proc       = NO_PROC    ! MPI processor rank of the neighboring element
+        integer(ik)        :: ineighbor_domain_g   = 0          ! Global index of the neighboring element's domain
+        integer(ik)        :: ineighbor_domain_l   = 0          ! Processor-local index of the neighboring element's domain
+        integer(ik)        :: ineighbor_element_g  = 0          ! Domain-global index of the neighboring element
+        integer(ik)        :: ineighbor_element_l  = 0          ! Processor-local index of the neighboring element
+        integer(ik)        :: ineighbor_face       = 0
+        integer(ik)        :: ineighbor_neqns      = 0
+        integer(ik)        :: ineighbor_nterms_s   = 0
+        integer(ik)        :: recv_comm            = 0
+        integer(ik)        :: recv_domain          = 0
+        integer(ik)        :: recv_element         = 0
 
         ! Neighbor information if neighbor is off-processor
         real(rk)                        :: neighbor_h(3)           ! Approximate size of neighbor bounding box
@@ -82,8 +84,10 @@ module type_face
         real(rk),           allocatable :: neighbor_br2_face(:,:)  ! Matrix for computing/obtaining br2 modes at face nodes
         real(rk),           allocatable :: neighbor_br2_vol(:,:)   ! Matrix for computing/obtaining br2 modes at volume nodes
         real(rk),           allocatable :: neighbor_invmass(:,:)    
-
-        real(rk),           allocatable :: neighbor_det_jacobian_grid_modes(:)
+        ! Neighbor ALE
+        real(rk),           allocatable :: neighbor_grid_vel(:,:)
+        real(rk),           allocatable :: neighbor_inv_jacobian_matrix(:,:,:)
+        real(rk),           allocatable :: neighbor_det_jacobian_grid(:)
 
         ! Chimera face offset. For periodic boundary condition.
         logical                         :: periodic_offset  = .false.
@@ -181,11 +185,7 @@ module type_face
 
 
 
-
-
 contains
-
-
 
 
 
@@ -202,14 +202,15 @@ contains
     !!
     !------------------------------------------------------------------------------------------
     subroutine init_geom(self,iface,elem)
-        class(face_t),      intent(inout)       :: self
-        integer(ik),        intent(in)          :: iface
-        type(element_t),    intent(in)          :: elem
+        class(face_t),      intent(inout), target   :: self
+        integer(ik),        intent(in)              :: iface
+        type(element_t),    intent(in)              :: elem
+
+
 
         !
         ! Set indices
         !
-        self%iface     = iface
         self%ftype     = ORPHAN
         self%spacedim  = elem%spacedim
 
@@ -217,10 +218,12 @@ contains
         !
         ! Set owner element
         !
-        self%idomain_g = elem%idomain_g
-        self%idomain_l = elem%idomain_l
-        self%iparent_g = elem%ielement_g
-        self%iparent_l = elem%ielement_l
+        self%idomain_g     = elem%idomain_g
+        self%idomain_l     = elem%idomain_l
+        self%iparent_g     = elem%ielement_g
+        self%iparent_l     = elem%ielement_l
+        self%iface         = iface
+        self%face_location = [elem%idomain_g, elem%idomain_l, elem%ielement_g, elem%ielement_l, iface]
 
 
         !
@@ -317,6 +320,7 @@ contains
         self%ineighbor_nterms_s  = ineighbor_nterms_s
         self%ineighbor_proc      = ineighbor_proc
 
+        self%neighbor_location = [ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l, ineighbor_face]
 
         self%neighborInitialized = .true.
 
@@ -367,26 +371,28 @@ contains
         ! (Re)Allocate storage for face data structures.
         !
         if (allocated(self%jinv)) &
-            deallocate(self%jinv,                       &
-                       self%quad_pts,                   &
-                       self%metric,                     &
-                       self%norm,                       &
-                       self%unorm,                      &
-                       self%ale_quad_pts,               &
-                       self%jinv_ale,                   &
-                       self%metric_ale,                 &
-                       self%jacobian_matrix,            &
-                       self%inv_jacobian_matrix,        &
-                       self%jacobian_matrix_ale,        &
-                       self%inv_jacobian_matrix_ale,    &
-                       self%jacobian_grid,              &
-                       self%inv_jacobian_grid,          &
-                       self%det_jacobian_grid,          &
-                       self%neighbor_det_jacobian_grid_modes,          &
-                       self%grid_vel,                  &
-                       self%grad1,                      &
-                       self%grad2,                      &
-                       self%grad3                       &
+            deallocate(self%jinv,                         &
+                       self%quad_pts,                     &
+                       self%metric,                       &
+                       self%norm,                         &
+                       self%unorm,                        &
+                       self%ale_quad_pts,                 &
+                       self%jinv_ale,                     &
+                       self%metric_ale,                   &
+                       self%jacobian_matrix,              &
+                       self%inv_jacobian_matrix,          &
+                       self%jacobian_matrix_ale,          &
+                       self%inv_jacobian_matrix_ale,      &
+                       self%jacobian_grid,                &
+                       self%inv_jacobian_grid,            &
+                       self%det_jacobian_grid,            &
+                       self%grid_vel,                     &
+                       self%grad1,                        &
+                       self%grad2,                        &
+                       self%grad3,                        &
+                       self%neighbor_inv_jacobian_matrix, &
+                       self%neighbor_det_jacobian_grid,   &
+                       self%neighbor_grid_vel             &
                        ) 
 
 
@@ -407,11 +413,13 @@ contains
                  self%jacobian_grid(nnodes,3,3),                    &
                  self%inv_jacobian_grid(nnodes,3,3),                &
                  self%det_jacobian_grid(nnodes),                    &
-                 self%neighbor_det_jacobian_grid_modes(self%nterms_s), &
-                 self%grid_vel(nnodes,3),                            &
+                 self%grid_vel(nnodes,3),                           &
                  self%grad1(nnodes,self%nterms_s),                  &
                  self%grad2(nnodes,self%nterms_s),                  &
-                 self%grad3(nnodes,self%nterms_s), stat=ierr) 
+                 self%grad3(nnodes,self%nterms_s),                  &
+                 self%neighbor_inv_jacobian_matrix(nnodes,3,3),     &
+                 self%neighbor_det_jacobian_grid(nnodes),           &
+                 self%neighbor_grid_vel(nnodes,3), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 

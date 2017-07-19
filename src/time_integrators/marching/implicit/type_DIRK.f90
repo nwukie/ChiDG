@@ -459,8 +459,8 @@ contains
         self%lhs_updated = update
 
         ! Turn off forced update
-        self%force_update_lhs = .true.
-        !self%force_update_lhs = .false.
+        !self%force_update_lhs = .true.
+        self%force_update_lhs = .false.
 
     end function update_lhs
     !****************************************************************************

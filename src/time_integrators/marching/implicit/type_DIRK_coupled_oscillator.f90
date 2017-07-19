@@ -446,9 +446,9 @@ contains
     !----------------------------------------------------------------------------
     function update_lhs(self,A,niter,residual_ratio) result(update)
         class(DIRK_coupled_oscillator_solver_controller_t),    intent(inout)   :: self
-        type(chidg_matrix_t),               intent(in)      :: A
-        integer(ik),                        intent(in)      :: niter
-        real(rk),                           intent(in)      :: residual_ratio
+        type(chidg_matrix_t),                                  intent(in)      :: A
+        integer(ik),                                           intent(in)      :: niter
+        real(rk),                                              intent(in)      :: residual_ratio
 
         logical :: update
 
@@ -458,7 +458,7 @@ contains
         !   3: residual norm increases by factor of 10 (divergence)
         !   4: being forced
         if ( all(A%stamp == NO_ID)      .or. &
-            (niter > 10)                .or. &
+            (niter > 6)                 .or. &
             (residual_ratio > 10._rk)   .or. &
             (self%force_update_lhs) ) then
             update = .true.

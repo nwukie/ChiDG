@@ -199,6 +199,8 @@ contains
         y_ale = y_ale + dheightdt
 
 
+        if (time > TWO) x_ale = ZERO
+        if (time > TWO) y_ale = ZERO
 
         val(1) = x_ale
         val(2) = y_ale

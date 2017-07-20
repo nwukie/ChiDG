@@ -128,6 +128,7 @@ contains
         IO_DESTINATION = 'file'
         this%gridfile  = 'D1E4M1.h5'
 
+        print*, 'setup - 1'
         !
         ! Create mesh
         !
@@ -142,6 +143,7 @@ contains
         !
         call this%chidg%set('Solution Order', integer_input=this%solution_order)
 
+        print*, 'setup - 2'
 
 
         !
@@ -193,7 +195,7 @@ contains
             !
             ! Set information on element in partition
             call partitions(2)%init(1)
-            call partitions(2)%connectivities(1)%init('01',nelements=4,nnodes=18)
+            call partitions(2)%connectivities(1)%init('01',nelements=2,nnodes=12)
 
             ! element 3
             call partitions(2)%connectivities(1)%data(1)%init(1)                                            ! mapping
@@ -362,6 +364,7 @@ contains
 
 
 
+        print*, 'setup - 3'
 
         !
         ! Read partition data: grid, boundary conditions
@@ -370,6 +373,7 @@ contains
 
         
 
+        print*, 'setup - 4'
         
 
         !
@@ -382,6 +386,7 @@ contains
             call this%chidg%data%sdata%q%dom(1)%vecs(ielem)%setvar(ivar,itime,initial_vals)
         end do
 
+        print*, 'setup - 5'
 
     end subroutine setUp
     !******************************************************************************************
@@ -431,6 +436,7 @@ contains
 
         IRANK = self%getProcessRank()
 
+        print*, 'test - 1'
 
 
         !
@@ -464,9 +470,13 @@ contains
         !
         ! Test mesh communication for ALE data.
         !
+        print*, 'test - 2'
         call self%chidg%data%mesh%comm_send()
+        print*, 'test - 3'
         call self%chidg%data%mesh%comm_recv()
+        print*, 'test - 4'
         call self%chidg%data%mesh%comm_wait()
+        print*, 'test - 5'
 
 
 
@@ -502,6 +512,8 @@ contains
 
 
         end if
+
+        print*, 'test - 6'
 
     end subroutine test_interior_ale_comm
     !******************************************************************************************

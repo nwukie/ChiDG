@@ -52,6 +52,7 @@ module type_element
     type, public :: element_t
 
         ! Element info
+        integer(ik)     :: element_location(4)              ! [idomain_g, idomain_l, ielement_g, ielement_l], useful for nonblocking send
         integer(ik)     :: idomain_g                        ! Global index of parent domain
         integer(ik)     :: idomain_l                        ! Proc-local index of parent domain
         integer(ik)     :: ielement_g                       ! Domain-global index of element
@@ -68,6 +69,8 @@ module type_element
         type(element_connectivity_t)    :: connectivity         ! Integer indices of the associated nodes in block node list
         real(rk),       allocatable     :: quad_pts(:,:)        ! Coordinates of discrete quadrature points
         real(rk),       allocatable     :: elem_pts(:,:)        ! Coordinates of discrete points defining element
+        real(rk),       allocatable     :: dnodes_l(:,:)        ! Node displacements, local element ordering
+        real(rk),       allocatable     :: vnodes_l(:,:)        ! Node velocities,    local element ordering
         real(rk),       allocatable     :: nodes_to_modes(:,:)  ! Transformation matrix for converting nodal values to modal coefficients
         type(densevector_t)             :: coords               ! Modal expansion of coordinates (nterms_var,(x,y,z))
         character(:),   allocatable     :: coordinate_system    ! 'Cartesian', 'Cylindrical'
@@ -84,6 +87,8 @@ module type_element
         ! Grid motion inverse Jacobian
         ! Grid motion Jacobian determinant
         integer(ik)                     :: pmm_ID = NO_PMM_ASSIGNED
+
+
         real(rk), allocatable           :: ale_quad_pts(:,:)
         real(rk), allocatable           :: ale_elem_pts(:,:)
         real(rk), allocatable           :: ale_vel_elem_pts(:,:)
@@ -109,8 +114,8 @@ module type_element
         real(rk), allocatable           :: grad3_trans(:,:)     ! transpose grad3
 
         ! Reference element and interpolators
-        type(reference_element_t),  pointer :: basis_s => null()  ! Pointer to reference element and interpolation for solution expansion
-        type(reference_element_t),  pointer :: basis_c => null()  ! Pointer to reference element and interpolation for coordinate expansion
+        type(reference_element_t),  pointer :: basis_s => null()  ! Pointer to solution basis and interpolator
+        type(reference_element_t),  pointer :: basis_c => null()  ! Pointer to coordinate basis and interpolator
 
         ! Element-local mass, inverse mass matrices
         real(rk), allocatable           :: mass(:,:)        
@@ -287,13 +292,14 @@ contains
         !
         allocate(self%elem_pts(nterms_c,3),stat=ierr)
         call self%coords%init(nterms_c,3,ntime,idomain_g,idomain_l,ielem_g,ielem_l)
-        self%spacedim     = spacedim
-        self%idomain_g    = idomain_g
-        self%idomain_l    = idomain_l
-        self%ielement_g   = ielem_g
-        self%ielement_l   = ielem_l
-        self%elem_pts     = nodes_l
-        self%connectivity = connectivity
+        self%spacedim         = spacedim
+        self%idomain_g        = idomain_g
+        self%idomain_l        = idomain_l
+        self%ielement_g       = ielem_g
+        self%ielement_l       = ielem_l
+        self%elem_pts         = nodes_l
+        self%connectivity     = connectivity
+        self%element_location = [idomain_g, idomain_l, ielem_g, ielem_l]
 
         
         !
@@ -383,7 +389,7 @@ contains
 
         integer(ik)             :: ipt, npts, inode, ierr
         integer(ik), parameter  :: ntime = 1
-        real(rk),   allocatable :: dnodes_l(:,:), vnodes_l(:,:), modes1(:), modes2(:), modes3(:)
+        real(rk),   allocatable :: modes1(:), modes2(:), modes3(:)
 
 
         ! Check if reference geometry has been initialized
@@ -395,7 +401,8 @@ contains
         ! Accumulate local node displacements and velocities
         !
         npts = size(self%elem_pts,1)
-        allocate(dnodes_l(npts,3), vnodes_l(npts,3), stat=ierr)
+        if (allocated(self%dnodes_l)) deallocate(self%dnodes_l, self%vnodes_l)
+        allocate(self%dnodes_l(npts,3), self%vnodes_l(npts,3), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         do ipt = 1,npts
@@ -403,9 +410,11 @@ contains
             inode = self%connectivity%get_element_node(ipt)
 
             ! Assemble local node disp/vel from global
-            dnodes_l(ipt,:)  = dnodes(inode,:)
-            vnodes_l(ipt,:)  = vnodes(inode,:)
+            self%dnodes_l(ipt,:)  = dnodes(inode,:)
+            self%vnodes_l(ipt,:)  = vnodes(inode,:)
         end do !ipt
+
+
 
 
         !
@@ -420,7 +429,7 @@ contains
 
 
         ! Compute ALE grid nodes: (reference + perturbation)
-        self%ale_elem_pts = (self%elem_pts + dnodes_l)
+        self%ale_elem_pts = (self%elem_pts + self%dnodes_l)
 
         ! Compute ALE grid modes
         modes1 = matmul(self%nodes_to_modes,self%ale_elem_pts(:,1))
@@ -434,7 +443,7 @@ contains
 
 
         ! Set ALE velocities
-        self%ale_vel_elem_pts = vnodes_l
+        self%ale_vel_elem_pts = self%vnodes_l
 
         ! Compute ALE velocity modes
         modes1 = matmul(self%nodes_to_modes,self%ale_vel_elem_pts(:,1))

@@ -17,19 +17,8 @@ module type_chimera
         type(chimera_receiver_t)    :: recv
         type(chimera_donor_t)       :: send
 
-    contains
-
-
     end type chimera_t
     !*********************************************************************************************
-
-
-contains
-
-
-
-
-
 
 
 

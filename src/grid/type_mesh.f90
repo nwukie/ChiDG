@@ -658,7 +658,7 @@ contains
     subroutine comm_send(self)
         class(mesh_t),  intent(inout)   :: self
 
-        integer(ik)         :: idom, ielem, iface, ierr,    &
+        integer(ik)         :: idom, ielem, iface, idonor, iproc, ierr,    &
                                send_size_a, send_size_b, send_size_c, send_size_d
         type(mpi_request)   :: request(4)
 
@@ -684,9 +684,8 @@ contains
                         send_size_d = size(face%inv_jacobian_matrix)
 
                         ! First, send neighbor location. This way, the receiving processor knows where to put the data.
+                        ! Next, send all ALE information
                         call mpi_isend(self%domain(idom)%faces(ielem,iface)%neighbor_location,   send_size_a, mpi_integer4, face%ineighbor_proc, 0, ChiDG_COMM, request(1), ierr)
-
-                        ! Now, send all ALE information
                         call mpi_isend(self%domain(idom)%faces(ielem,iface)%grid_vel,            send_size_b, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(2), ierr)
                         call mpi_isend(self%domain(idom)%faces(ielem,iface)%det_jacobian_grid,   send_size_c, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(3), ierr)
                         call mpi_isend(self%domain(idom)%faces(ielem,iface)%inv_jacobian_matrix, send_size_d, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(4), ierr)
@@ -710,6 +709,37 @@ contains
         !
         ! Send chimera donors
         !
+        do idom = 1,self%ndomains()
+            do idonor = 1,self%domain(idom)%chimera%send%ndonors()
+
+                iproc = self%domain(idom)%chimera%send%receiver_proc%at(idonor)
+
+                ! If receiver is off-processor, send reference and physical nodes/velocities
+                if (iproc /= IRANK) then
+
+!                    idomain_l  = self%domain(idom)%chimera%send%donors(idonor)%idomain_l
+!                    ielement_l = self%domain(idom)%chimera%send%donors(idonor)%ielement_l
+!
+!                    send_size_a = size(self%domain(idomain_l)%elems(ielement_l)%elem_pts)
+!                    send_size_b = size(self%domain(idomain_l)%elems(ielement_l)%dnodes_l)
+!                    send_size_c = size(self%domain(idomain_l)%elems(ielement_l)%vnodes_l)
+!            
+!                    ! First send location of donor
+!                    call mpi_isend(receiver_location                                                    4, mpi_integer4, iproc, 0, ChiDG_COMM, request(1), ierr)
+!                    call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%element_location,           4, mpi_integer4, iproc, 0, ChiDG_COMM, request(1), ierr)
+!                    call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%elem_pts,         send_size_a, mpi_real8,    iproc, 0, ChiDG_COMM, request(2), ierr)
+!                    call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%dnodes_l,         send_size_b, mpi_real8,    iproc, 0, ChiDG_COMM, request(3), ierr)
+!                    call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%vnodes_l,         send_size_c, mpi_real8,    iproc, 0, ChiDG_COMM, request(4), ierr)
+!
+!                    call self%comm_requests%push_back(request(1))
+!                    call self%comm_requests%push_back(request(2))
+!                    call self%comm_requests%push_back(request(3))
+!                    call self%comm_requests%push_back(request(4))
+
+                end if 
+
+            end do !idonor
+        end do !idom
 
 
 
@@ -742,7 +772,8 @@ contains
             do irecv = 1,self%get_proc_ninterior_neighbors(iproc)
 
                 ! The sending proc sent its neighbor location, which is a face on our local processor 
-                ! now where we will store the incoming ALE data
+                ! here where we will store the incoming ALE data
+                ! face_location = [idomain_g, idomain_l, ielement_g, ielement_l, iface]
                 call mpi_recv(face_location, 5, mpi_integer4, iproc, 0, ChiDG_COMM, mpi_status_ignore, ierr)
                 idom  = face_location(2)
                 ielem = face_location(4)

@@ -20,12 +20,12 @@ module type_chimera_receiver_data
     !------------------------------------------------------------------------------------------
     type, public :: chimera_receiver_data_t
 
-        integer(ik)                     :: receiver_proc        ! Processor rank of receiver
         integer(ik)                     :: receiver_domain_g    ! ChiDG-global domain index of receiver
         integer(ik)                     :: receiver_domain_l    ! Proc-local domain index of receiver
         integer(ik)                     :: receiver_element_g   ! Domain-global element index of receiver
         integer(ik)                     :: receiver_element_l   ! Proc-local element index of receiver
         integer(ik)                     :: receiver_face        ! Face index of receiver
+        integer(ik)                     :: receiver_proc        ! Processor rank of receiver
 
 
         ! Access via data%donor_domain%at(idonor)

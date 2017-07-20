@@ -229,8 +229,6 @@ contains
 
         do ielem = 1,self%nelem
             call self%elems(ielem)%init_ale(dnodes,vnodes)
-
-
         end do !ielem
 
 

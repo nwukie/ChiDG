@@ -155,6 +155,8 @@ module type_element
         procedure, public   :: solution_point   
         procedure, public   :: derivative_point
 
+        procedure, public   :: metric_point_ale
+        procedure, public   :: ale_point
 
         ! Compute a projection of a function onto the solution basis
         procedure, public   :: project
@@ -2237,9 +2239,8 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine ale_point(self,xi,eta,zeta,det_jacobian_grid,inv_jacobian_grid,grid_vel) result(val)
+    subroutine ale_point(self,xi,eta,zeta,det_jacobian_grid,inv_jacobian_grid,grid_vel) 
         class(element_t),       intent(in)      :: self
-        integer(ik),            intent(in)      :: ivar
         real(rk),               intent(in)      :: xi,eta,zeta
         real(rk),               intent(inout)   :: det_jacobian_grid
         real(rk),               intent(inout)   :: inv_jacobian_grid(3,3)
@@ -2296,7 +2297,7 @@ contains
 
         ! evaluate polynomial modes at node location
         do iterm = 1,self%nterms_s
-            polyvals(iterm)  = polynomial_val(spacedim,self%nterms_s,iterm,[xi,eta,zeta])
+            polyval(iterm)  = polynomial_val(spacedim,self%nterms_s,iterm,[xi,eta,zeta])
         end do
 
 

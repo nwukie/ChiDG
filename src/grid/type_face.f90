@@ -398,7 +398,6 @@ contains
         ! (Re)Allocate storage for face data structures.
         !
         if (allocated(self%jinv)) &
-<<<<<<< HEAD
             deallocate(self%jinv,                       &
                        self%quad_pts,                   &
                        self%metric,                     &
@@ -426,30 +425,6 @@ contains
                        self%grad1,                      &
                        self%grad2,                      &
                        self%grad3                       &
-=======
-            deallocate(self%jinv,                         &
-                       self%quad_pts,                     &
-                       self%metric,                       &
-                       self%norm,                         &
-                       self%unorm,                        &
-                       self%ale_quad_pts,                 &
-                       self%jinv_ale,                     &
-                       self%metric_ale,                   &
-                       self%jacobian_matrix,              &
-                       self%inv_jacobian_matrix,          &
-                       self%jacobian_matrix_ale,          &
-                       self%inv_jacobian_matrix_ale,      &
-                       self%jacobian_grid,                &
-                       self%inv_jacobian_grid,            &
-                       self%det_jacobian_grid,            &
-                       self%grid_vel,                     &
-                       self%grad1,                        &
-                       self%grad2,                        &
-                       self%grad3,                        &
-                       self%neighbor_inv_jacobian_grid,   &
-                       self%neighbor_det_jacobian_grid,   &
-                       self%neighbor_grid_vel             &
->>>>>>> sulu/afrl
                        ) 
 
 
@@ -482,9 +457,7 @@ contains
                  self%grad1(nnodes,self%nterms_s),                  &
                  self%grad2(nnodes,self%nterms_s),                  &
                  self%grad3(nnodes,self%nterms_s),                  &
-                 self%neighbor_inv_jacobian_grid(nnodes,3,3),       &
-                 self%neighbor_det_jacobian_grid(nnodes),           &
-                 self%neighbor_grid_vel(nnodes,3), stat=ierr)
+                 stat=ierr)
         if (ierr /= 0) call AllocationError
 
 

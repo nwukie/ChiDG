@@ -5,6 +5,7 @@ module euler_ale_roe_operator
     use type_properties,        only: properties_t
     use type_chidg_worker,      only: chidg_worker_t
     use DNAD_D
+    use ieee_arithmetic,        only: ieee_is_nan
     implicit none
 
 
@@ -192,14 +193,14 @@ contains
         !
         ! Compute velocity components
         !
-        u_m = rhou_m*invrho_m - u_grid
-        v_m = rhov_m*invrho_m - v_grid
-        w_m = rhow_m*invrho_m - w_grid
+        u_m = rhou_m*invrho_m 
+        v_m = rhov_m*invrho_m 
+        w_m = rhow_m*invrho_m 
         vmag_m = u_m*unormx + v_m*unormy + w_m*unormz
 
-        u_p = rhou_p*invrho_p - u_grid
-        v_p = rhov_p*invrho_p - v_grid
-        w_p = rhow_p*invrho_p - w_grid
+        u_p = rhou_p*invrho_p 
+        v_p = rhov_p*invrho_p 
+        w_p = rhow_p*invrho_p 
         vmag_p = u_p*unormx + v_p*unormy + w_p*unormz
 
 
@@ -217,6 +218,7 @@ contains
 
         vmagtil = util*unormx + vtil*unormy + wtil*unormz  ! Magnitude of Roe-averaged velocity in the face normal direction
         qtil2   = util**TWO + vtil**TWO + wtil**TWO
+
 
         !& HARDCODED GAMMA
         ctil = sqrt((1.4_rk - ONE)*(Htil - HALF*qtil2))                   ! Roe-averaged speed of sound
@@ -238,9 +240,9 @@ contains
         !
         ! Limit wave speeds for entropy fix
         !
-        lamda1 = abs(vmagtil - ctil)
-        lamda2 = abs(vmagtil)
-        lamda3 = abs(vmagtil + ctil)
+        lamda1 = abs(vmagtil - ctil) + sqrt(u_grid**TWO+v_grid**TWO+w_grid**TWO)
+        lamda2 = abs(vmagtil) + sqrt(u_grid**TWO+v_grid**TWO+w_grid**TWO)
+        lamda3 = abs(vmagtil + ctil) + sqrt(u_grid**TWO+v_grid**TWO+w_grid**TWO)
 
         eps = 0.01_rk
         where ( (-eps*ctil < lamda1) .and. (lamda1 < eps*ctil) )
@@ -281,6 +283,7 @@ contains
 
         integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)
 
+
         call worker%integrate_boundary('Density',integrand)
 
 
@@ -290,6 +293,7 @@ contains
         upwind = C1*(util - ctil*unormx)  +  C2_a*util  +  C2_b*(delu - delvmag*unormx)  +  C3*(util + ctil*unormx)
 
         integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)
+
 
         call worker%integrate_boundary('Momentum-1',integrand)
 
@@ -301,6 +305,7 @@ contains
 
         integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)
 
+
         call worker%integrate_boundary('Momentum-2',integrand)
 
         !================================
@@ -310,6 +315,7 @@ contains
 
         integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)
 
+
         call worker%integrate_boundary('Momentum-3',integrand)
 
         !================================
@@ -318,6 +324,7 @@ contains
         upwind = C1*(Htil - ctil*vmagtil)  +  C2_a*(qtil2/TWO)  +  C2_b*(util*delu + vtil*delv + wtil*delw - vmagtil*delvmag)  +  C3*(Htil + ctil*vmagtil)
 
         integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)
+
 
         call worker%integrate_boundary('Energy',integrand)
 

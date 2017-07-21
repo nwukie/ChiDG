@@ -1,4 +1,4 @@
-add_subdirectory(uniform_flow_pmm)
+#add_subdirectory(uniform_flow_pmm)
 add_subdirectory(convecting_vortex_pmm)
 
 add_test_sources(equations_fluid_euler_ale)

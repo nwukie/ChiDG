@@ -216,7 +216,7 @@ contains
         !
 
         call create_pmm_group_hdf(file_id,'sin_pmm')
-        call set_pmmf_name_hdf(file_id, 'sin_pmm','sinusoidal')
+        call set_pmmf_name_hdf(file_id, 'sin_pmm','sinusoidal_1d')
         call create_pmmfo_group_hdf(file_id,'sin_pmm','L_X')
         call set_pmmfo_val_hdf(file_id,'sin_pmm','L_X',1._rk)
         call create_pmmfo_group_hdf(file_id,'sin_pmm','GRID_FREQ_X')

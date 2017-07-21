@@ -844,7 +844,7 @@ contains
 !                inpes = 3
 !            case(7)
 !                inpes = 4
-            case(2)
+            case(10)
                 inpes = 1
 
         end select
@@ -861,9 +861,9 @@ contains
         integer(ik)         :: igrid
 
         select case (trim(grid))
-            case('uniform_flow_pmm_10x1x1.h5')
+            case('uniform_flow_pmm_16x1x1.h5')
                 igrid = 1
-            case('uniform_flow_pmm_20x1x1.h5')
+            case('uniform_flow_pmm_32x1x1.h5')
                 igrid = 2 
         end select
 

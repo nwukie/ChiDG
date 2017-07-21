@@ -220,7 +220,7 @@ contains
         !
 
         call create_pmm_group_hdf(file_id,'sin_pmm')
-        call set_pmmf_name_hdf(file_id, 'sin_pmm','sinusoidal')
+        call set_pmmf_name_hdf(file_id, 'sin_pmm','sinusoidal_2d')
         call create_pmmfo_group_hdf(file_id,'sin_pmm','L_X')
         call set_pmmfo_val_hdf(file_id,'sin_pmm','L_X',20._rk)
         call create_pmmfo_group_hdf(file_id,'sin_pmm','L_Y')
@@ -302,7 +302,7 @@ contains
         integer(ik)             :: npt_x, npt_y, npt_z, &
                                    ierr, i, j, k, n, &
                                    ipt_x, ipt_y, ipt_z
-        real(rk)                :: x,y,z,alpha
+        real(rk)                :: x,y,z
 
 
         !
@@ -331,8 +331,8 @@ contains
                 do ipt_x = 1,npt_x
 
                     x = ZERO + real(ipt_x-1,kind=rk)*(20._rk / real(npt_x-1,kind=rk))
-                    y = ZERO + real(ipt_y-1,kind=rk)*(15._rk - alpha)/real(npt_y-1,kind=rk)
-                    z = ZERO + real(ipt_z-1,kind=rk)*(ONE / real(npt_z-1,kind=rk))
+                    y = ZERO + real(ipt_y-1,kind=rk)*(15._rk / real(npt_y-1,kind=rk))
+                    z = ZERO + real(ipt_z-1,kind=rk)*(ONE    / real(npt_z-1,kind=rk))
 
                     xcoords(ipt_x,ipt_y,ipt_z) = x
                     ycoords(ipt_x,ipt_y,ipt_z) = y

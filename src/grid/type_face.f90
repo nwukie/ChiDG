@@ -84,10 +84,20 @@ module type_face
         real(rk),           allocatable :: neighbor_br2_face(:,:)  ! Matrix for computing/obtaining br2 modes at face nodes
         real(rk),           allocatable :: neighbor_br2_vol(:,:)   ! Matrix for computing/obtaining br2 modes at volume nodes
         real(rk),           allocatable :: neighbor_invmass(:,:)    
+
         ! Neighbor ALE
-        real(rk),           allocatable :: neighbor_grid_vel(:,:)
         real(rk),           allocatable :: neighbor_inv_jacobian_matrix(:,:,:)
-        real(rk),           allocatable :: neighbor_det_jacobian_grid(:)
+
+        real(rk), allocatable           :: neighbor_grid_vel(:,:)
+        real(rk), allocatable           :: neighbor_jacobian_grid(:,:,:)
+        real(rk), allocatable           :: neighbor_inv_jacobian_grid(:,:,:)
+        real(rk), allocatable           :: neighbor_det_jacobian_grid(:)
+        real(rk), allocatable           :: neighbor_det_jacobian_grid_grad1(:)
+        real(rk), allocatable           :: neighbor_det_jacobian_grid_grad2(:)
+        real(rk), allocatable           :: neighbor_det_jacobian_grid_grad3(:)
+        real(rk), allocatable           :: neighbor_det_jacobian_grid_modes(:)
+        real(rk), allocatable           :: neighbor_jinv_ale(:)                      ! jacobian terms at quadrature nodes
+
 
         ! Chimera face offset. For periodic boundary condition.
         logical                         :: periodic_offset  = .false.
@@ -128,8 +138,6 @@ module type_face
         real(rk),           allocatable :: differential_areas(:)
 
         ! ALE
-        real(rk), allocatable           :: jacobian_matrix(:,:,:)       ! metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
-        real(rk), allocatable           :: inv_jacobian_matrix(:,:,:)   ! metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
         real(rk),   allocatable         :: ale_quad_pts(:,:)
         real(rk),   allocatable         :: ale_elem_pts(:,:)
         type(densevector_t)             :: ale_coords                   ! Modal representation of cartesian coordinates (nterms_var,(x,y,z))
@@ -138,10 +146,11 @@ module type_face
         real(rk), allocatable           :: jacobian_grid(:,:,:)
         real(rk), allocatable           :: inv_jacobian_grid(:,:,:)
         real(rk), allocatable           :: det_jacobian_grid(:)
+        real(rk), allocatable           :: det_jacobian_grid_grad1(:)
+        real(rk), allocatable           :: det_jacobian_grid_grad2(:)
+        real(rk), allocatable           :: det_jacobian_grid_grad3(:)
+        real(rk), allocatable           :: det_jacobian_grid_modes(:)
 
-        real(rk), allocatable           :: metric_ale(:,:,:)                ! metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
-        real(rk), allocatable           :: jacobian_matrix_ale(:,:,:)       ! metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
-        real(rk), allocatable           :: inv_jacobian_matrix_ale(:,:,:)   ! metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
         real(rk), allocatable           :: jinv_ale(:)                      ! jacobian terms at quadrature nodes
 
 
@@ -156,7 +165,7 @@ module type_face
     contains
 
         procedure           :: init_geom
-        procedure           :: init_ale
+        procedure           :: init_face_ale_coords
         procedure           :: init_sol
 
         procedure           :: init_neighbor
@@ -169,6 +178,8 @@ module type_face
         
         ! ALE procedures
         procedure, public   :: update_face_ale
+        procedure           :: update_face_ale_coords
+        procedure           :: update_face_ale_quadrature
         procedure           :: compute_quadrature_coords_ale
         procedure           :: compute_quadrature_metrics_ale
 
@@ -242,7 +253,7 @@ contains
         !   2: set default ALE (displacements, velocities)
         !
         self%coords = elem%coords
-        call self%init_ale(elem)
+        call self%init_face_ale_coords(elem)
 
 
         !
@@ -269,17 +280,34 @@ contains
     !!  @date   6/16/2017
     !!
     !--------------------------------------------------------------------------------------
-    subroutine init_ale(self,elem)
+    subroutine init_face_ale_coords(self,elem)
         class(face_t),      intent(inout)   :: self
         type(element_t),    intent(in)  :: elem
 
         self%ale_coords     = elem%ale_coords
         self%ale_vel_coords = elem%ale_vel_coords
 
-    end subroutine init_ale
+    end subroutine init_face_ale_coords 
     !**************************************************************************************
 
 
+
+    !>  Initialize ALE data from nodal displacements.
+    !!
+    !!  @author Eric Wolf (AFRL)
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/16/2017
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine update_face_ale_coords(self,elem)
+        class(face_t),      intent(inout)   :: self
+        type(element_t),    intent(in)  :: elem
+
+        call self%init_face_ale_coords(elem)
+        self%det_jacobian_grid_modes = elem%det_jacobian_grid_modes
+
+    end subroutine update_face_ale_coords
+    !**************************************************************************************
 
 
 
@@ -371,28 +399,33 @@ contains
         ! (Re)Allocate storage for face data structures.
         !
         if (allocated(self%jinv)) &
-            deallocate(self%jinv,                         &
-                       self%quad_pts,                     &
-                       self%metric,                       &
-                       self%norm,                         &
-                       self%unorm,                        &
-                       self%ale_quad_pts,                 &
-                       self%jinv_ale,                     &
-                       self%metric_ale,                   &
-                       self%jacobian_matrix,              &
-                       self%inv_jacobian_matrix,          &
-                       self%jacobian_matrix_ale,          &
-                       self%inv_jacobian_matrix_ale,      &
-                       self%jacobian_grid,                &
-                       self%inv_jacobian_grid,            &
-                       self%det_jacobian_grid,            &
-                       self%grid_vel,                     &
-                       self%grad1,                        &
-                       self%grad2,                        &
-                       self%grad3,                        &
-                       self%neighbor_inv_jacobian_matrix, &
-                       self%neighbor_det_jacobian_grid,   &
-                       self%neighbor_grid_vel             &
+            deallocate(self%jinv,                       &
+                       self%quad_pts,                   &
+                       self%metric,                     &
+                       self%norm,                       &
+                       self%unorm,                      &
+                       self%ale_quad_pts,               &
+                       self%jinv_ale,                   &
+                       self%jacobian_grid,              &
+                       self%inv_jacobian_grid,          &
+                       self%det_jacobian_grid,          &
+                       self%det_jacobian_grid_grad1,          &
+                       self%det_jacobian_grid_grad2,          &
+                       self%det_jacobian_grid_grad3,          &
+                       self%det_jacobian_grid_modes,          &
+                       self%grid_vel,                  &
+                       self%neighbor_jinv_ale,                   &
+                       self%neighbor_jacobian_grid,              &
+                       self%neighbor_inv_jacobian_grid,          &
+                       self%neighbor_det_jacobian_grid,          &
+                       self%neighbor_det_jacobian_grid_grad1,          &
+                       self%neighbor_det_jacobian_grid_grad2,          &
+                       self%neighbor_det_jacobian_grid_grad3,          &
+                       self%neighbor_det_jacobian_grid_modes,          &
+                       self%neighbor_grid_vel,                  &
+                       self%grad1,                      &
+                       self%grad2,                      &
+                       self%grad3                       &
                        ) 
 
 
@@ -405,15 +438,23 @@ contains
                  self%unorm(nnodes,3),                              &
                  self%ale_quad_pts(nnodes,3),                       &
                  self%jinv_ale(nnodes),                             &
-                 self%metric_ale(3,3,nnodes),                       &
-                 self%jacobian_matrix(nnodes,3,3),                  &
-                 self%inv_jacobian_matrix(nnodes,3,3),              &
-                 self%jacobian_matrix_ale(nnodes,3,3),              &
-                 self%inv_jacobian_matrix_ale(nnodes,3,3),          &
                  self%jacobian_grid(nnodes,3,3),                    &
                  self%inv_jacobian_grid(nnodes,3,3),                &
                  self%det_jacobian_grid(nnodes),                    &
-                 self%grid_vel(nnodes,3),                           &
+                 self%det_jacobian_grid_grad1(nnodes),          &
+                 self%det_jacobian_grid_grad2(nnodes),          &
+                 self%det_jacobian_grid_grad3(nnodes),          &
+                 self%det_jacobian_grid_modes(self%nterms_s),          &
+                 self%grid_vel(nnodes,3),                            &
+                 self%neighbor_jinv_ale(nnodes),                             &
+                 self%neighbor_jacobian_grid(nnodes,3,3),                    &
+                 self%neighbor_inv_jacobian_grid(nnodes,3,3),                &
+                 self%neighbor_det_jacobian_grid(nnodes),                    &
+                 self%neighbor_det_jacobian_grid_grad1(nnodes),          &
+                 self%neighbor_det_jacobian_grid_grad2(nnodes),          &
+                 self%neighbor_det_jacobian_grid_grad3(nnodes),          &
+                 self%neighbor_det_jacobian_grid_modes(self%nterms_s),          &
+                 self%neighbor_grid_vel(nnodes,3),                            &
                  self%grad1(nnodes,self%nterms_s),                  &
                  self%grad2(nnodes,self%nterms_s),                  &
                  self%grad3(nnodes,self%nterms_s),                  &
@@ -432,7 +473,7 @@ contains
         call self%compute_quadrature_normals()
         call self%compute_quadrature_gradients()
 
-        call self%update_face_ale()
+        call self%update_face_ale(elem)
 
         !
         ! Compute BR2 matrix
@@ -559,22 +600,6 @@ contains
             self%metric(1,3,inode) = ONE/self%jinv(inode) * scaling_12(inode) * (d1deta(inode)*d2dzeta(inode) - d1dzeta(inode)*d2deta(inode))
             self%metric(2,3,inode) = ONE/self%jinv(inode) * scaling_12(inode) * (d1dzeta(inode)*d2dxi(inode)  - d1dxi(inode)*d2dzeta(inode) )
             self%metric(3,3,inode) = ONE/self%jinv(inode) * scaling_12(inode) * (d1dxi(inode)*d2deta(inode)   - d1deta(inode)*d2dxi(inode)  )
-        end do
-
-        do inode = 1,nnodes
-            self%jacobian_matrix(inode,1,1) = d1dxi(inode)
-            self%jacobian_matrix(inode,1,2) = d1deta(inode)
-            self%jacobian_matrix(inode,1,3) = d1dzeta(inode)
-                                          
-            self%jacobian_matrix(inode,2,1) = d2dxi(inode)
-            self%jacobian_matrix(inode,2,2) = d2deta(inode)
-            self%jacobian_matrix(inode,2,3) = d2dzeta(inode)
-                                          
-            self%jacobian_matrix(inode,3,1) = d3dxi(inode)
-            self%jacobian_matrix(inode,3,2) = d3deta(inode)
-            self%jacobian_matrix(inode,3,3) = d3dzeta(inode)
-
-            self%inv_jacobian_matrix(inode,:,:) = inv(self%jacobian_matrix(inode,:,:))
         end do
 
 
@@ -952,6 +977,23 @@ contains
     end function get_neighbor_face
     !******************************************************************************************
 
+    !>  Initialize ALE data from nodal displacements.
+    !!
+    !!  @author Eric Wolf (AFRL)
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/16/2017
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine update_face_ale(self,elem)
+        class(face_t),      intent(inout)   :: self
+        type(element_t),    intent(in)  :: elem
+
+        call self%update_face_ale_coords(elem)
+        call self%update_face_ale_quadrature()
+
+    end subroutine update_face_ale
+    !**************************************************************************************
+
 
     !>
     !!
@@ -959,13 +1001,13 @@ contains
     !!  @date   7/5/2017
     !!
     !------------------------------------------------------------------------------------------
-    subroutine update_face_ale(self)
+    subroutine update_face_ale_quadrature(self)
         class(face_t),       intent(inout)      :: self
 
         call self%compute_quadrature_coords_ale()
         call self%compute_quadrature_metrics_ale()
 
-    end subroutine update_face_ale
+    end subroutine update_face_ale_quadrature
     !******************************************************************************************
 
 
@@ -1037,103 +1079,141 @@ contains
     subroutine compute_quadrature_metrics_ale(self)
         class(face_t),  intent(inout)   :: self
 
-        integer(ik)                 :: inode, iface
+        integer(ik)                 :: inode, iface, ierr
         integer(ik)                 :: nnodes
 
-        !real(rk),   dimension(self%gq%face%nnodes)  :: &
-        real(rk),   allocatable, dimension(:)  :: &
-            d1dxi, d1deta, d1dzeta, &
-            d2dxi, d2deta, d2dzeta, &
-            d3dxi, d3deta, d3dzeta, &
-            invjac_ale
+        real(rk),   dimension(:),   allocatable ::  &
+            d1dxi, d1deta, d1dzeta,                 &
+            d2dxi, d2deta, d2dzeta,                 &
+            d3dxi, d3deta, d3dzeta,                 &
+            d1dxi_ale, d1deta_ale, d1dzeta_ale,                 &
+            d2dxi_ale, d2deta_ale, d2dzeta_ale,                 &
+            d3dxi_ale, d3deta_ale, d3dzeta_ale,                 &
+            invjac_ale,                                         &
+            scaling_12, scaling_13, scaling_23, scaling_123,    &
+            fvals, temp, weights
 
-        real(rk),   allocatable, dimension(:,:) :: ddxi, ddeta, ddzeta
+        real(rk),   dimension(:,:), allocatable :: val, ddxi, ddeta, ddzeta, tempmat
+        real(rk), dimension(:,:,:), allocatable :: jacobian_matrix, jacobian_matrix_ale
 
-
+        !
+        ! Retrieve interpolators
+        !
         iface  = self%iface
-        !nnodes = self%gq%face%nnodes
-        nnodes = self%basis_c%nnodes_if()
-        ddxi   = self%basis_c%interpolator('ddxi',  iface)
-        ddeta  = self%basis_c%interpolator('ddeta', iface)
-        ddzeta = self%basis_c%interpolator('ddzeta',iface)
+        nnodes  = self%basis_c%nnodes_if()
+        weights = self%basis_c%weights()
+        ddxi    = self%basis_c%interpolator('ddxi',iface)
+        ddeta   = self%basis_c%interpolator('ddeta',iface)
+        ddzeta  = self%basis_c%interpolator('ddzeta',iface)
+
+        d1dxi   = matmul(ddxi,  self%coords%getvar(1,itime = 1))
+        d1deta  = matmul(ddeta, self%coords%getvar(1,itime = 1))
+        d1dzeta = matmul(ddzeta,self%coords%getvar(1,itime = 1))
+
+        d2dxi   = matmul(ddxi,  self%coords%getvar(2,itime = 1))
+        d2deta  = matmul(ddeta, self%coords%getvar(2,itime = 1))
+        d2dzeta = matmul(ddzeta,self%coords%getvar(2,itime = 1))
+
+        d3dxi   = matmul(ddxi,  self%coords%getvar(3,itime = 1))
+        d3deta  = matmul(ddeta, self%coords%getvar(3,itime = 1))
+        d3dzeta = matmul(ddzeta,self%coords%getvar(3,itime = 1))
+
+
+        d1dxi_ale   = matmul(ddxi,  self%ale_coords%getvar(1,itime = 1))
+        d1deta_ale  = matmul(ddeta, self%ale_coords%getvar(1,itime = 1))
+        d1dzeta_ale = matmul(ddzeta,self%ale_coords%getvar(1,itime = 1))
+
+        d2dxi_ale   = matmul(ddxi,  self%ale_coords%getvar(2,itime = 1))
+        d2deta_ale  = matmul(ddeta, self%ale_coords%getvar(2,itime = 1))
+        d2dzeta_ale = matmul(ddzeta,self%ale_coords%getvar(2,itime = 1))
+
+        d3dxi_ale   = matmul(ddxi,  self%ale_coords%getvar(3,itime = 1))
+        d3deta_ale  = matmul(ddeta, self%ale_coords%getvar(3,itime = 1))
+        d3dzeta_ale = matmul(ddzeta,self%ale_coords%getvar(3,itime = 1))
 
         !
-        ! Evaluate directional derivatives of coordinates at quadrature nodes.
+        ! Define area/volume scaling for coordinate system
+        !   Cartesian:
+        !       12 = x-y  ;  13 = x-z  ;  23 = y-z
         !
-        !associate (gq_f => self%gqmesh%face)
-        !    d1dxi   = matmul(gq_f%ddxi(  :,:,iface), self%ale_coords%getvar(1,itime = 1))
-        !    d1deta  = matmul(gq_f%ddeta( :,:,iface), self%ale_coords%getvar(1,itime = 1))
-        !    d1dzeta = matmul(gq_f%ddzeta(:,:,iface), self%ale_coords%getvar(1,itime = 1))
+        !   Cylindrical
+        !       12 = r-theta  ;  13 = r-z      ;  23 = theta-z
+        !
+        allocate(scaling_12(nnodes), scaling_13(nnodes), scaling_23(nnodes), scaling_123(nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
 
-        !    d2dxi   = matmul(gq_f%ddxi(  :,:,iface), self%ale_coords%getvar(2,itime = 1))
-        !    d2deta  = matmul(gq_f%ddeta( :,:,iface), self%ale_coords%getvar(2,itime = 1))
-        !    d2dzeta = matmul(gq_f%ddzeta(:,:,iface), self%ale_coords%getvar(2,itime = 1))
-
-        !    d3dxi   = matmul(gq_f%ddxi(  :,:,iface), self%ale_coords%getvar(3,itime = 1))
-        !    d3deta  = matmul(gq_f%ddeta( :,:,iface), self%ale_coords%getvar(3,itime = 1))
-        !    d3dzeta = matmul(gq_f%ddzeta(:,:,iface), self%ale_coords%getvar(3,itime = 1))
-        !end associate
-        d1dxi   = matmul(ddxi,   self%ale_coords%getvar(1,itime = 1))
-        d1deta  = matmul(ddeta,  self%ale_coords%getvar(1,itime = 1))
-        d1dzeta = matmul(ddzeta, self%ale_coords%getvar(1,itime = 1))
-
-        d2dxi   = matmul(ddxi,   self%ale_coords%getvar(2,itime = 1))
-        d2deta  = matmul(ddeta,  self%ale_coords%getvar(2,itime = 1))
-        d2dzeta = matmul(ddzeta, self%ale_coords%getvar(2,itime = 1))
-
-        d3dxi   = matmul(ddxi,   self%ale_coords%getvar(3,itime = 1))
-        d3deta  = matmul(ddeta,  self%ale_coords%getvar(3,itime = 1))
-        d3dzeta = matmul(ddzeta, self%ale_coords%getvar(3,itime = 1))
-
-
-
-        do inode = 1,nnodes
-            self%jacobian_matrix_ale(inode,1,1) = d1dxi(inode)
-            self%jacobian_matrix_ale(inode,1,2) = d1deta(inode)
-            self%jacobian_matrix_ale(inode,1,3) = d1dzeta(inode)
-                                              
-            self%jacobian_matrix_ale(inode,2,1) = d2dxi(inode)
-            self%jacobian_matrix_ale(inode,2,2) = d2deta(inode)
-            self%jacobian_matrix_ale(inode,2,3) = d2dzeta(inode)
-                                              
-            self%jacobian_matrix_ale(inode,3,1) = d3dxi(inode)
-            self%jacobian_matrix_ale(inode,3,2) = d3deta(inode)
-            self%jacobian_matrix_ale(inode,3,3) = d3dzeta(inode)
-
-            !print *, '2'
-            !self%inv_jacobian_matrix_ale(inode,:,:) = inv(self%jacobian_matrix_ale(inode,:,:))
-        end do
-
-
-
-        do inode = 1, nnodes
-            self%jacobian_grid(inode,:,:) = matmul(self%jacobian_matrix_ale(inode,:,:),self%inv_jacobian_matrix(inode,:,:))
-!            self%jacobian_grid(inode,:,:) = matmul(self%inv_jacobian_matrix(inode,:,:),self%jacobian_matrix_ale(inode,:,:))
-            self%inv_jacobian_grid(inode,:,:) = inv(self%jacobian_grid(inode,:,:))
-        end do
+        select case (self%coordinate_system)
+            case ('Cartesian')
+                scaling_12  = ONE
+                scaling_13  = ONE
+                scaling_23  = ONE
+                scaling_123 = ONE
+            case ('Cylindrical')
+                scaling_12  = self%quad_pts(:,1)
+                scaling_13  = ONE
+                scaling_23  = self%quad_pts(:,1)
+                scaling_123 = self%quad_pts(:,1)
+            case default
+                call chidg_signal(FATAL,"element%compute_quadrature_metrics_ale: Invalid coordinate system. Choose 'Cartesian' or 'Cylindrical'.")
+        end select
 
 
         !
-        ! compute inverse cell mapping jacobian terms
+        ! Compute inverse cell mapping jacobian
         !
-        invjac_ale = d1dxi*d2deta*d3dzeta - d1deta*d2dxi*d3dzeta - &
-                     d1dxi*d2dzeta*d3deta + d1dzeta*d2dxi*d3deta + &
-                     d1deta*d2dzeta*d3dxi - d1dzeta*d2deta*d3dxi
-
-
-
-        self%jinv_ale = invjac_ale
+        self%jinv_ale = scaling_123*(d1dxi_ale*d2deta_ale*d3dzeta_ale  -  d1deta_ale*d2dxi_ale*d3dzeta_ale - &
+                                     d1dxi_ale*d2dzeta_ale*d3deta_ale  +  d1dzeta_ale*d2dxi_ale*d3deta_ale + &
+                                     d1deta_ale*d2dzeta_ale*d3dxi_ale  -  d1dzeta_ale*d2deta_ale*d3dxi_ale)
 
         !
         ! Check for negative jacobians
         !
-        if (any(self%jinv_ale < ZERO)) call chidg_signal(FATAL,"face%compute_quadrature_metrics_ale: Negative element jacobians detected. Check element quality and orientation.")
+        if (any(self%jinv_ale < ZERO)) call chidg_signal(FATAL,"element%compute_quadrature_metrics_ale: Negative element jacobians. Check element quality and orientation.")
 
 
-        self%det_jacobian_grid = self%jinv_ale/self%jinv
+        !
+        ! Compute element volume
+        !
 
 
+        allocate(jacobian_matrix(nnodes,3,3), jacobian_matrix_ale(nnodes,3,3), tempmat(3,3))
+        do inode = 1,nnodes
+            jacobian_matrix(inode,1,1) = d1dxi(inode)
+            jacobian_matrix(inode,1,2) = d1deta(inode)
+            jacobian_matrix(inode,1,3) = d1dzeta(inode)
+                                     
+            jacobian_matrix(inode,2,1) = d2dxi(inode)
+            jacobian_matrix(inode,2,2) = d2deta(inode)
+            jacobian_matrix(inode,2,3) = d2dzeta(inode)
+                                     
+            jacobian_matrix(inode,3,1) = d3dxi(inode)
+            jacobian_matrix(inode,3,2) = d3deta(inode)
+            jacobian_matrix(inode,3,3) = d3dzeta(inode)
 
+            tempmat = inv(jacobian_matrix(inode,:,:))
+            jacobian_matrix(inode,:,:) = tempmat 
+
+            jacobian_matrix_ale(inode,1,1) = d1dxi_ale(inode)
+            jacobian_matrix_ale(inode,1,2) = d1deta_ale(inode)
+            jacobian_matrix_ale(inode,1,3) = d1dzeta_ale(inode)
+                                         
+            jacobian_matrix_ale(inode,2,1) = d2dxi_ale(inode)
+            jacobian_matrix_ale(inode,2,2) = d2deta_ale(inode)
+            jacobian_matrix_ale(inode,2,3) = d2dzeta_ale(inode)
+                                         
+            jacobian_matrix_ale(inode,3,1) = d3dxi_ale(inode)
+            jacobian_matrix_ale(inode,3,2) = d3deta_ale(inode)
+            jacobian_matrix_ale(inode,3,3) = d3dzeta_ale(inode)
+
+
+            self%jacobian_grid(inode,:,:) = matmul(jacobian_matrix_ale(inode,:,:),jacobian_matrix(inode,:,:))
+            self%inv_jacobian_grid(inode,:,:) = inv(self%jacobian_grid(inode,:,:))
+        end do
+
+
+        self%det_jacobian_grid_grad1 = matmul(self%grad1,self%det_jacobian_grid_modes)
+        self%det_jacobian_grid_grad2 = matmul(self%grad2,self%det_jacobian_grid_modes)
+        self%det_jacobian_grid_grad3 = matmul(self%grad3,self%det_jacobian_grid_modes)
     end subroutine compute_quadrature_metrics_ale
     !*****************************************************************************************************
 

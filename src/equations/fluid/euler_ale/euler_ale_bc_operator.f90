@@ -5,6 +5,7 @@ module euler_ale_bc_operator
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
     use DNAD_D
+    use ieee_arithmetic,        only: ieee_is_nan
     implicit none
 
 
@@ -210,6 +211,8 @@ contains
 
         integrand = flux_x_ref*normx + flux_y_ref*normy + flux_z_ref*normz
 
+
+
         call worker%integrate_boundary('Density',integrand)
 
         !=================================================
@@ -284,6 +287,7 @@ contains
 
 
         integrand = flux_x_ref*normx + flux_y_ref*normy + flux_z_ref*normz
+
 
         call worker%integrate_boundary('Energy',integrand)
 

@@ -54,6 +54,22 @@ module type_chimera_receiver_data
         type(mvector_t), allocatable    :: donor_metrics(:)         ! For each donor, matrices of metric terms for each donor GQ node
         type(rvector_t), allocatable    :: donor_jinv(:)            ! For each donor, inverse element jacobian term for each donor GQ node
 
+        !
+        ! ALE Data
+        !
+
+        !type(mvector_t), allocatable    :: donor_jacobian_grid(:)           ! For each donor, a 3x3 matrix
+        !type(mvector_t), allocatable    :: donor_inv_jacobian_grid(:)       ! For each donor, a 3x3 matrix
+        !type(rvector_t), allocatable    :: donor_grid_vel(:)                ! For each donor, a length 3 vector  
+        !type(rvector_t), allocatable    :: donor_det_jacobian_grid_modes(:) ! For each donor, a length nterms vector
+        ! OR...
+        !type(rvector_t), allocatable    :: donor_det_jacobian_grid(:)             ! For each donor, a length 1 vector
+        !type(rvector_t), allocatable    :: donor_det_jacobian_grid_grad1(:)       ! For each donor, a length 1 vector
+        !type(rvector_t), allocatable    :: donor_det_jacobian_grid_grad2(:)       ! For each donor, a length 1 vector
+        !type(rvector_t), allocatable    :: donor_det_jacobian_grid_grad3(:)       ! For each donor, a length 1 vector
+        ! ???
+        
+
     contains
 
         procedure   :: ndonors

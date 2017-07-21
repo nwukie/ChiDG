@@ -298,19 +298,19 @@ contains
                             ! Get ChiID and number of donor elements
                             !
                             ChiID   = mesh%domain(idom)%faces(ielem,iface)%ChiID
-                            ndonors = mesh%domain(idom)%chimera%recv%data(ChiID)%ndonors()
+                            ndonors = mesh%domain(idom)%chimera%recv(ChiID)%ndonors()
 
                             !
                             ! Call block initialization for each Chimera donor
                             !
                             do idonor = 1,ndonors
-                                neqns       = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_neqns%at(idonor)
-                                nterms_s    = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_nterms_s%at(idonor)
-                                dparent_g   = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_domain_g%at(idonor)
-                                dparent_l   = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
-                                eparent_g   = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_element_g%at(idonor)
-                                eparent_l   = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
-                                parent_proc = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_proc%at(idonor)
+                                neqns       = mesh%domain(idom)%chimera%recv(ChiID)%donor_neqns%at(idonor)
+                                nterms_s    = mesh%domain(idom)%chimera%recv(ChiID)%donor_nterms_s%at(idonor)
+                                dparent_g   = mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_g%at(idonor)
+                                dparent_l   = mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_l%at(idonor)
+                                eparent_g   = mesh%domain(idom)%chimera%recv(ChiID)%donor_element_g%at(idonor)
+                                eparent_l   = mesh%domain(idom)%chimera%recv(ChiID)%donor_element_l%at(idonor)
+                                parent_proc = mesh%domain(idom)%chimera%recv(ChiID)%donor_proc%at(idonor)
 
                                 size1d = neqns * nterms_s
 

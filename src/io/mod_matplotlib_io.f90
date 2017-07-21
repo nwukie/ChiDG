@@ -6,7 +6,7 @@ module mod_matplotlib_io
     use type_chidg_data,    only: chidg_data_t
     use type_chidg_vector,  only: chidg_vector_t
     use mod_chimera,        only: find_gq_donor
-    use type_face_info,     only: face_info_t
+    use type_face_info,     only: face_info_t, face_info
     use type_element_info,  only: element_info_t
     use mod_HB_matrices,    only: calc_E
     use mod_HB_post,        only: get_Fourier_coeff_vector
@@ -96,11 +96,8 @@ contains
         ! Generate donor point coordinates
         !
         do ipt = 1,npts
-
-            ! Set receiver face indices to zero
-            call receivers(ipt)%init(0_ik,0_ik,0_ik,0_ik,0_ik)
+            receivers(ipt) = face_info(0_ik,0_ik,0_ik,0_ik,0_ik)
             call find_gq_donor(data%mesh,gq_nodes(ipt),receivers(ipt),donors(ipt),donor_coords(ipt))
-
         end do
 
 
@@ -198,10 +195,6 @@ contains
         !
         ! Compute Fourier coefficient modes
         !
-        !associate ( ntimes   => data%time_manager%time_lev%size(),    &
-        !            nfreq    => data%time_manager%freq_data%size(),   &
-        !            time_lev => data%time_manager%time_lev%data(),    &
-        !            freq     => data%time_manager%freq_data%data())
         associate ( ntimes   => size(data%time_manager%times),  &
                     nfreq    => size(data%time_manager%freqs),  &
                     time_lev => data%time_manager%times,        &

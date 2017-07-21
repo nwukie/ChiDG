@@ -75,7 +75,7 @@ contains
 
         integer(ik)                 :: idom, ielem, iface, idom_send, ndom_send, ierr,  &
                                        loc, neighbor_proc, ielem_send, ChiID, idonor,   &
-                                       receiver_proc, proc_coupled, idom_coupled,       &
+                                       receiver_proc, proc_coupled, idom_coupled, irec, &
                                        group_ID, patch_ID, face_ID, elem_ID
         integer(ik),    allocatable :: comm_procs_dom(:), comm_procs_bc(:)
         logical                     :: already_added, proc_has_domain, proc_has_group,  &
@@ -200,19 +200,20 @@ contains
             !
             ! Register elements to send to off-processor CHIMERA receivers 
             !
-            do idonor = 1,mesh%domain(idom)%chimera%send%ndonors()
+            do idonor = 1,mesh%domain(idom)%chimera%ndonors()
+                do irec = 1,mesh%domain(idom)%chimera%donor(idonor)%nrecipients()
 
-                ! Get proc of receiver
-                receiver_proc = mesh%domain(idom)%chimera%send%receiver_proc%at(idonor)
-                send_element  = (proc == receiver_proc)
-                ielem = mesh%domain(idom)%chimera%send%donor_element_l%at(idonor)
+                    ! Get proc of receiver
+                    receiver_proc = mesh%domain(idom)%chimera%donor(idonor)%receiver_procs%at(idonor)
+                    send_element  = (proc == receiver_proc)
+                    ielem = mesh%domain(idom)%chimera%donor(idonor)%donor_element_l
 
-                !
-                ! If element should be sent, add to list
-                !
-                if (send_element) call self%elems_send(idom_send)%push_back_unique(ielem)
+                    !
+                    ! If element should be sent, add to list
+                    !
+                    if (send_element) call self%elems_send(idom_send)%push_back_unique(ielem)
 
-
+                end do !irec
             end do !idonor
 
 

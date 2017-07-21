@@ -647,10 +647,16 @@ contains
 
 
 
-    !>
+    !>  Initialiate parallel communication of mesh quantities.
     !!
+    !!  Currently communicates just ALE quantities.
     !!
-    !!  @author Nathan A. Wukie
+    !!  Order of operations:
+    !!      1: mesh%comm_send()
+    !!      2: mesh%comm_recv()
+    !!      3: mesh%comm_wait()
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
     !!  @date   7/13/2017
     !!
     !!
@@ -753,10 +759,14 @@ contains
 
 
 
-    !>
+    !>  Initiates parallel recieve of mesh quantities.
     !!
+    !!  Order of operations:
+    !!      1: mesh%comm_send()
+    !!      2: mesh%comm_recv()
+    !!      3: mesh%comm_wait()
     !!
-    !!  @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie (AFRL)
     !!  @date   7/13/2017
     !!
     !!
@@ -817,6 +827,10 @@ contains
     !>  Wait until all outstanding requests initiated by mesh%comm_send() have
     !!  been completed.
     !!
+    !!  Order of operations:
+    !!      1: mesh%comm_send()
+    !!      2: mesh%comm_recv()
+    !!      3: mesh%comm_wait()
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   7/13/2017

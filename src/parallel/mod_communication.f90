@@ -197,13 +197,14 @@ contains
 
         !
         ! In case establish_chimera_communication is being called as a reinitialization 
-        ! procedure. Calling clear on chimera%send, chimera%recv to wipe out previous data 
+        ! procedure. Calling chimera%clear to wipe out previous data 
         ! and redetect all chimera faces, donors and reinitialize donor data.
         !
         call write_line("Initialize: chimera communication...", io_proc=GLOBAL_MASTER)
         do idom = 1,mesh%ndomains()
-            call mesh%domain(idom)%chimera%send%clear()
-            call mesh%domain(idom)%chimera%recv%clear()
+            !call mesh%domain(idom)%chimera%send%clear()
+            !call mesh%domain(idom)%chimera%recv%clear()
+            call mesh%domain(idom)%chimera%clear()
         end do !idom
         call MPI_Barrier(ChiDG_COMM,ierr)   ! not sure if this is needed.
 

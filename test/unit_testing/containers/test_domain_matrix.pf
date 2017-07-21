@@ -21,7 +21,7 @@ subroutine test_domain_matrix__store_1eq_8terms()
     use type_point,                 only: point_t
     use type_domain_matrix,         only: domain_matrix_t
     use type_domain_connectivity,   only: domain_connectivity_t
-    use type_face_info,             only: face_info_t
+    use type_face_info,             only: face_info_t, face_info
     use type_seed,                  only: seed_t
     use mod_test_utilities,         only: create_mesh_file
     use mod_file_utilities,         only: delete_file
@@ -34,7 +34,7 @@ subroutine test_domain_matrix__store_1eq_8terms()
     type(domain_connectivity_t) :: connectivity
     type(domain_matrix_t)       :: bmat
     type(AD_D)                  :: integral(8)
-    type(face_info_t)           :: face_info
+    type(face_info_t)           :: face_location
     type(seed_t)                :: seed
     integer(ik)                 :: ielement_l, ivar, nderiv, i, neqns, imat,  &
                                    nterms_c, idomain, spacedim, itime, ntime, &
@@ -123,10 +123,10 @@ subroutine test_domain_matrix__store_1eq_8terms()
     ielement_l = 14
     ivar       = 1
     itime      = 1
-    call face_info%init(idomain_g=1,idomain_l=1,ielement_g=14,ielement_l=14,iface=0)
+    face_location = face_info(idomain_g=1,idomain_l=1,ielement_g=14,ielement_l=14,iface=0)
     call seed%init(     idomain_g=1,idomain_l=1,ielement_g=13,ielement_l=13, &
                         neqns=neqns,nterms_s=nterms_s,iproc=0,recv_comm=0,recv_domain=0,recv_element=0)
-    call bmat%store(integral,face_info,seed,ivar,itime)
+    call bmat%store(integral,face_location,seed,ivar,itime)
 
 
     !
@@ -175,7 +175,7 @@ subroutine test_domain_matrix__store_2eq_8terms()
     use type_point,                 only: point_t
     use type_domain_matrix,         only: domain_matrix_t
     use type_domain_connectivity,   only: domain_connectivity_t
-    use type_face_info,             only: face_info_t
+    use type_face_info,             only: face_info_t, face_info
     use type_seed,                  only: seed_t
     use mod_test_utilities,         only: create_mesh_file
     use mod_file_utilities,         only: delete_file
@@ -187,7 +187,7 @@ subroutine test_domain_matrix__store_2eq_8terms()
     type(point_t),  allocatable :: nodes(:)
     type(domain_connectivity_t) :: connectivity
     type(domain_matrix_t)         :: bmat
-    type(face_info_t)           :: face_info
+    type(face_info_t)           :: face_location
     type(seed_t)                :: seed
     type(AD_D)                  :: integral(8)
     integer(ik)                 :: ivar, nderiv, i, neqns, imat, idomain, ielem, &
@@ -268,14 +268,14 @@ subroutine test_domain_matrix__store_2eq_8terms()
     !
     ! PROCEDURE BEING TESTED, bmat%store
     !
-    call face_info%init(idomain_g=1,idomain_l=1,ielement_g=14,ielement_l=14,iface=0)
+    face_location = face_info(idomain_g=1,idomain_l=1,ielement_g=14,ielement_l=14,iface=0)
     call seed%init(idomain_g=1,idomain_l=1,ielement_g=13,ielement_l=13, &
                    neqns=neqns,nterms_s=nterms_s,iproc=0,recv_comm=0,recv_domain=0,recv_element=0)
 
     ielem = 14
     itime = 1
     ivar  = 2
-    call bmat%store(integral,face_info,seed,ivar,itime)
+    call bmat%store(integral,face_location,seed,ivar,itime)
 
 
     !
@@ -325,7 +325,7 @@ subroutine test_domain_matrix__clear_1eq_8terms()
     use type_point,                 only: point_t
     use type_domain_matrix,         only: domain_matrix_t
     use type_domain_connectivity,   only: domain_connectivity_t
-    use type_face_info,             only: face_info_t
+    use type_face_info,             only: face_info_t, face_info
     use type_seed,                  only: seed_t
     use mod_test_utilities,         only: create_mesh_file
     use mod_file_utilities,         only: delete_file
@@ -338,7 +338,7 @@ subroutine test_domain_matrix__clear_1eq_8terms()
     type(domain_connectivity_t) :: connectivity
     type(domain_matrix_t)       :: bmat
     type(AD_D)                  :: integral(8)
-    type(face_info_t)           :: face_info
+    type(face_info_t)           :: face_location
     type(seed_t)                :: seed
     integer(ik)                 :: ielement_l, ivar, nderiv, i, neqns, imat, ielem, &
                                    nterms_c, idomain, spacedim, ntime, itime, nelements_g, nterms_s
@@ -421,12 +421,12 @@ subroutine test_domain_matrix__clear_1eq_8terms()
     !
     ! Store Derivatives
     !
-    call face_info%init(idomain_g=1,idomain_l=1,ielement_g=14,ielement_l=14,iface=0)
+    face_location = face_info(idomain_g=1,idomain_l=1,ielement_g=14,ielement_l=14,iface=0)
     call seed%init(     idomain_g=1,idomain_l=1,ielement_g=13,ielement_l=13, &
                         neqns=neqns,nterms_s=nterms_s,iproc=0,recv_comm=0,recv_domain=0,recv_element=0)
     ivar  = 1
     itime = 1
-    call bmat%store(integral,face_info,seed,ivar,itime)
+    call bmat%store(integral,face_location,seed,ivar,itime)
 
 
 

@@ -1472,14 +1472,14 @@ contains
         integer(ik)                :: iterm, spacedim
 
 
-        ! Evaluate polynomial modes at node location
+        ! evaluate polynomial modes at node location
         spacedim = self%spacedim
         do iterm = 1,q%nterms()
             polyvals(iterm)  = polynomial_val(spacedim,q%nterms(),iterm,[xi,eta,zeta])
         end do
 
 
-        ! Evaluate x from dot product of modes and polynomial values
+        ! evaluate x from dot product of modes and polynomial values
         temp = dot_product(q%getvar(ivar,itime),polyvals)
         val = temp/dot_product(self%det_jacobian_grid_modes,polyvals)
 
@@ -2140,6 +2140,165 @@ contains
 
 
 
+
+
+    !> Compute ALE coordinate metric term at a given point in computational space
+    !!
+    !!  @author Eric Wolf
+    !!  @date   7/21/2017
+    !!
+    !!  @param[in]  elem        element_t containing the geometry definition and data
+    !!  @param[in]  phys_dir    physical coordinate being differentiated
+    !!  @param[in]  comp_dir    Computational coordinate being differentiated with respect to
+    !!  @param[in]  xi          Computational coordinate - xi
+    !!  @param[in]  eta         Computational coordinate - eta
+    !!  @param[in]  zeta        Computational coordinate - zeta
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    function metric_point_ale(self,phys_dir,comp_dir,xi,eta,zeta,scale) result(val)
+        class(element_t),   intent(in)              :: self
+        integer(ik),        intent(in)              :: phys_dir
+        integer(ik),        intent(in)              :: comp_dir
+        real(rk),           intent(in)              :: xi, eta, zeta
+        logical,            intent(in), optional    :: scale
+        
+        real(rk)        :: val, r
+        real(rk)        :: polyvals(self%nterms_c)
+        integer(ik)     :: iterm, spacedim
+
+
+        if (phys_dir > 3) call chidg_signal(FATAL,"element%metric_point: phys_dir exceeded 3 physical coordinates")
+        if (comp_dir > 3) call chidg_signal(FATAL,"element%metric_point: comp_dir exceeded 3 physical coordinates")
+
+
+
+        !
+        ! Evaluate polynomial modes at node location
+        !
+        spacedim = self%spacedim
+        do iterm = 1,self%nterms_c
+            polyvals(iterm) = dpolynomial_val(spacedim,self%nterms_c,iterm,[xi,eta,zeta],comp_dir)
+        end do
+
+
+        !
+        ! Evaluate mesh point from dot product of modes and polynomial values
+        !
+        val = dot_product(self%ale_coords%getvar(phys_dir, itime=1), polyvals)
+
+
+
+        !
+        ! Apply scaling due to coordinate system.
+        !
+        if (present(scale)) then
+            if (scale) then
+                if (self%coordinate_system == 'Cartesian') then
+
+                else if (self%coordinate_system == 'Cylindrical') then
+                    if (phys_dir == DIR_THETA) then
+                        r = self%grid_point('Reference',1,xi,eta,zeta)
+                        val = val * r
+                    end if
+                end if
+            end if
+        end if
+
+
+
+    end function metric_point_ale
+    !*****************************************************************************************
+
+
+
+
+    !>  Compute ALE grid quantities, based on the location in reference space (xi, eta, zeta)
+    !!
+    !!  @author Eric Wolf
+    !!  @date   7/21/2017
+    !!
+    !!  @param[in]  elem    Element that the solution expansion is associated with.
+    !!  @param[in]  xi      Real value for xi-coordinate.
+    !!  @param[in]  eta     Real value for eta-coordinate.
+    !!  @param[in]  zeta    Real value for zeta-coordinate.
+    !!  @param[inout]  det_jacobian_grid       Determinant of grid Jacobian
+    !!  @param[inout]  inv_jacobian_grid       Inverse of grid Jacobian
+    !!  @param[inout]  grid_vel                Grid velocities
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine ale_point(self,xi,eta,zeta,det_jacobian_grid,inv_jacobian_grid,grid_vel) result(val)
+        class(element_t),       intent(in)      :: self
+        integer(ik),            intent(in)      :: ivar
+        real(rk),               intent(in)      :: xi,eta,zeta
+        real(rk),               intent(inout)   :: det_jacobian_grid
+        real(rk),               intent(inout)   :: inv_jacobian_grid(3,3)
+        real(rk),               intent(inout)   :: grid_vel(3)
+
+        real(rk)        :: metric(3,3), jinv, metric_ale(3,3), jinv_ale, polyval(self%nterms_s)
+        integer(ik)     :: iterm, spacedim, itime
+
+
+        !
+        ! Evaluate polynomial mode derivatives at node location
+        !
+        spacedim = self%spacedim
+        
+        !
+        ! Compute metrics at node
+        !
+        metric(1,1) = self%metric_point(DIR_1,XI_DIR,  xi,eta,zeta)
+        metric(2,1) = self%metric_point(DIR_2,XI_DIR,  xi,eta,zeta)
+        metric(3,1) = self%metric_point(DIR_3,XI_DIR,  xi,eta,zeta)
+        metric(1,2) = self%metric_point(DIR_1,ETA_DIR, xi,eta,zeta)
+        metric(2,2) = self%metric_point(DIR_2,ETA_DIR, xi,eta,zeta)
+        metric(3,2) = self%metric_point(DIR_3,ETA_DIR, xi,eta,zeta)
+        metric(1,3) = self%metric_point(DIR_1,ZETA_DIR,xi,eta,zeta)
+        metric(2,3) = self%metric_point(DIR_2,ZETA_DIR,xi,eta,zeta)
+        metric(3,3) = self%metric_point(DIR_3,ZETA_DIR,xi,eta,zeta)
+
+        metric_ale(1,1) = self%metric_point_ale(DIR_1,XI_DIR,  xi,eta,zeta)
+        metric_ale(2,1) = self%metric_point_ale(DIR_2,XI_DIR,  xi,eta,zeta)
+        metric_ale(3,1) = self%metric_point_ale(DIR_3,XI_DIR,  xi,eta,zeta)
+        metric_ale(1,2) = self%metric_point_ale(DIR_1,ETA_DIR, xi,eta,zeta)
+        metric_ale(2,2) = self%metric_point_ale(DIR_2,ETA_DIR, xi,eta,zeta)
+        metric_ale(3,2) = self%metric_point_ale(DIR_3,ETA_DIR, xi,eta,zeta)
+        metric_ale(1,3) = self%metric_point_ale(DIR_1,ZETA_DIR,xi,eta,zeta)
+        metric_ale(2,3) = self%metric_point_ale(DIR_2,ZETA_DIR,xi,eta,zeta)
+        metric_ale(3,3) = self%metric_point_ale(DIR_3,ZETA_DIR,xi,eta,zeta)
+
+
+        !
+        ! Compute inverse cell mapping jacobian
+        !
+        jinv = metric(1,1)*metric(2,2)*metric(3,3) - metric(1,2)*metric(2,1)*metric(3,3) - &
+               metric(1,1)*metric(2,3)*metric(3,2) + metric(1,3)*metric(2,1)*metric(3,2) + &
+               metric(1,2)*metric(2,3)*metric(3,1) - metric(1,3)*metric(2,2)*metric(3,1)
+
+
+        jinv_ale = metric_ale(1,1)*metric_ale(2,2)*metric_ale(3,3) - metric_ale(1,2)*metric_ale(2,1)*metric_ale(3,3) - &
+                   metric_ale(1,1)*metric_ale(2,3)*metric_ale(3,2) + metric_ale(1,3)*metric_ale(2,1)*metric_ale(3,2) + &
+                   metric_ale(1,2)*metric_ale(2,3)*metric_ale(3,1) - metric_ale(1,3)*metric_ale(2,2)*metric_ale(3,1)
+
+        det_jacobian_grid = jinv_ale/jinv
+
+        inv_jacobian_grid = matmul(inv(metric_ale),metric)
+
+        ! evaluate polynomial modes at node location
+        do iterm = 1,self%nterms_s
+            polyvals(iterm)  = polynomial_val(spacedim,self%nterms_s,iterm,[xi,eta,zeta])
+        end do
+
+
+        ! evaluate grid velocities from dot product of modes and polynomial values
+        grid_vel(1) = dot_product(polyval,self%ale_vel_coords%getvar(1,itime = 1))
+        grid_vel(2) = dot_product(polyval,self%ale_vel_coords%getvar(2,itime = 1))
+        grid_vel(3) = dot_product(polyval,self%ale_vel_coords%getvar(3,itime = 1))
+
+
+    end subroutine ale_point
+    !*****************************************************************************************
 
 
 

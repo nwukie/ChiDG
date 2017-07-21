@@ -75,8 +75,6 @@ module type_element
         ! Element metric terms
         real(rk), allocatable           :: metric(:,:,:)                ! metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
         real(rk), allocatable           :: jinv(:)                      ! volume jacobian at quadrature nodes
-        real(rk), allocatable           :: jacobian_matrix(:,:,:)       ! metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
-        real(rk), allocatable           :: inv_jacobian_matrix(:,:,:)   ! metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
 
         !ALE mesh motion terms - to be computed and updated according to a TBD mesh motion algorithm 
         ! Grid displacements/new Cartesian coordinates analogous to elem_pts
@@ -93,11 +91,11 @@ module type_element
         real(rk), allocatable           :: jacobian_grid(:,:,:)
         real(rk), allocatable           :: inv_jacobian_grid(:,:,:)
         real(rk), allocatable           :: det_jacobian_grid(:)
+        real(rk), allocatable           :: det_jacobian_grid_grad1(:)
+        real(rk), allocatable           :: det_jacobian_grid_grad2(:)
+        real(rk), allocatable           :: det_jacobian_grid_grad3(:)
         real(rk), allocatable           :: det_jacobian_grid_modes(:)
 
-        real(rk), allocatable           :: metric_ale(:,:,:)                ! metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
-        real(rk), allocatable           :: jacobian_matrix_ale(:,:,:)       ! metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
-        real(rk), allocatable           :: inv_jacobian_matrix_ale(:,:,:)   ! metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
         real(rk), allocatable           :: jinv_ale(:)                      ! jacobian terms at quadrature nodes
 
         ! Matrices of physical gradients of basis/test functions
@@ -534,16 +532,14 @@ contains
                         self%mass_c,                      &
                         self%invmass_c,                   &
                         self%jinv_ale,                  &
-                        self%metric_ale,                &
                         self%grid_vel,                 &
                         self%jacobian_grid,             &
                         self%inv_jacobian_grid,         &
                         self%det_jacobian_grid,         &
+                        self%det_jacobian_grid_grad1,            &
+                        self%det_jacobian_grid_grad2,            &
+                        self%det_jacobian_grid_grad3,            &
                         self%det_jacobian_grid_modes,   &
-                        self%jacobian_matrix,           &
-                        self%inv_jacobian_matrix,       &
-                        self%jacobian_matrix_ale,       &
-                        self%inv_jacobian_matrix_ale,   &
                         self%dtau                       &
                         )
             
@@ -564,16 +560,14 @@ contains
                  self%mass_c(self%nterms_c,self%nterms_c),              &
                  self%invmass_c(self%nterms_c,self%nterms_c),         &
                  self%jinv_ale(nnodes),                     &
-                 self%metric_ale(3,3,nnodes),               &
                  self%grid_vel(nnodes,3),                    &
                  self%jacobian_grid(nnodes,3,3),            &
                  self%inv_jacobian_grid(nnodes,3,3),        &
                  self%det_jacobian_grid(nnodes),            &
+                 self%det_jacobian_grid_grad1(nnodes),            &
+                 self%det_jacobian_grid_grad2(nnodes),            &
+                 self%det_jacobian_grid_grad3(nnodes),            &
                  self%det_jacobian_grid_modes(self%nterms_s),    &
-                 self%jacobian_matrix(nnodes,3,3),          &
-                 self%inv_jacobian_matrix(nnodes,3,3),      &
-                 self%jacobian_matrix_ale(nnodes,3,3),      &
-                 self%inv_jacobian_matrix_ale(nnodes,3,3),  &
                  self%dtau(neqns), stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -814,22 +808,6 @@ contains
             self%metric(1,3,inode) = ONE/self%jinv(inode) * scaling_12(inode) * (d1deta(inode)*d2dzeta(inode) - d1dzeta(inode)*d2deta(inode))
             self%metric(2,3,inode) = ONE/self%jinv(inode) * scaling_12(inode) * (d1dzeta(inode)*d2dxi(inode)  - d1dxi(inode)*d2dzeta(inode) )
             self%metric(3,3,inode) = ONE/self%jinv(inode) * scaling_12(inode) * (d1dxi(inode)*d2deta(inode)   - d1deta(inode)*d2dxi(inode)  )
-        end do
-
-        do inode = 1,nnodes
-            self%jacobian_matrix(inode,1,1) = d1dxi(inode)
-            self%jacobian_matrix(inode,1,2) = d1deta(inode)
-            self%jacobian_matrix(inode,1,3) = d1dzeta(inode)
-                                          
-            self%jacobian_matrix(inode,2,1) = d2dxi(inode)
-            self%jacobian_matrix(inode,2,2) = d2deta(inode)
-            self%jacobian_matrix(inode,2,3) = d2dzeta(inode)
-                                          
-            self%jacobian_matrix(inode,3,1) = d3dxi(inode)
-            self%jacobian_matrix(inode,3,2) = d3deta(inode)
-            self%jacobian_matrix(inode,3,3) = d3dzeta(inode)
-
-            self%inv_jacobian_matrix(inode,:,:) = inv(self%jacobian_matrix(inode,:,:))
         end do
 
 
@@ -2012,10 +1990,14 @@ contains
             d1dxi, d1deta, d1dzeta,                 &
             d2dxi, d2deta, d2dzeta,                 &
             d3dxi, d3deta, d3dzeta,                 &
+            d1dxi_ale, d1deta_ale, d1dzeta_ale,                 &
+            d2dxi_ale, d2deta_ale, d2dzeta_ale,                 &
+            d3dxi_ale, d3deta_ale, d3dzeta_ale,                 &
             scaling_12, scaling_13, scaling_23, scaling_123,    &
             fvals, temp, weights
 
-        real(rk),   dimension(:,:), allocatable :: val, ddxi, ddeta, ddzeta
+        real(rk),   dimension(:,:), allocatable :: val, ddxi, ddeta, ddzeta, tempmat
+        real(rk), dimension(:,:,:), allocatable :: jacobian_matrix, jacobian_matrix_ale
 
         !
         ! Retrieve interpolators
@@ -2026,19 +2008,30 @@ contains
         ddeta   = self%basis_c%interpolator('ddeta')
         ddzeta  = self%basis_c%interpolator('ddzeta')
 
-        d1dxi   = matmul(ddxi,  self%ale_coords%getvar(1,itime = 1))
-        d1deta  = matmul(ddeta, self%ale_coords%getvar(1,itime = 1))
-        d1dzeta = matmul(ddzeta,self%ale_coords%getvar(1,itime = 1))
+        d1dxi   = matmul(ddxi,  self%coords%getvar(1,itime = 1))
+        d1deta  = matmul(ddeta, self%coords%getvar(1,itime = 1))
+        d1dzeta = matmul(ddzeta,self%coords%getvar(1,itime = 1))
 
-        d2dxi   = matmul(ddxi,  self%ale_coords%getvar(2,itime = 1))
-        d2deta  = matmul(ddeta, self%ale_coords%getvar(2,itime = 1))
-        d2dzeta = matmul(ddzeta,self%ale_coords%getvar(2,itime = 1))
+        d2dxi   = matmul(ddxi,  self%coords%getvar(2,itime = 1))
+        d2deta  = matmul(ddeta, self%coords%getvar(2,itime = 1))
+        d2dzeta = matmul(ddzeta,self%coords%getvar(2,itime = 1))
 
-        d3dxi   = matmul(ddxi,  self%ale_coords%getvar(3,itime = 1))
-        d3deta  = matmul(ddeta, self%ale_coords%getvar(3,itime = 1))
-        d3dzeta = matmul(ddzeta,self%ale_coords%getvar(3,itime = 1))
+        d3dxi   = matmul(ddxi,  self%coords%getvar(3,itime = 1))
+        d3deta  = matmul(ddeta, self%coords%getvar(3,itime = 1))
+        d3dzeta = matmul(ddzeta,self%coords%getvar(3,itime = 1))
 
 
+        d1dxi_ale   = matmul(ddxi,  self%ale_coords%getvar(1,itime = 1))
+        d1deta_ale  = matmul(ddeta, self%ale_coords%getvar(1,itime = 1))
+        d1dzeta_ale = matmul(ddzeta,self%ale_coords%getvar(1,itime = 1))
+
+        d2dxi_ale   = matmul(ddxi,  self%ale_coords%getvar(2,itime = 1))
+        d2deta_ale  = matmul(ddeta, self%ale_coords%getvar(2,itime = 1))
+        d2dzeta_ale = matmul(ddzeta,self%ale_coords%getvar(2,itime = 1))
+
+        d3dxi_ale   = matmul(ddxi,  self%ale_coords%getvar(3,itime = 1))
+        d3deta_ale  = matmul(ddeta, self%ale_coords%getvar(3,itime = 1))
+        d3dzeta_ale = matmul(ddzeta,self%ale_coords%getvar(3,itime = 1))
 
         !
         ! Define area/volume scaling for coordinate system
@@ -2070,9 +2063,9 @@ contains
         !
         ! Compute inverse cell mapping jacobian
         !
-        self%jinv_ale = scaling_123*(d1dxi*d2deta*d3dzeta  -  d1deta*d2dxi*d3dzeta - &
-                                     d1dxi*d2dzeta*d3deta  +  d1dzeta*d2dxi*d3deta + &
-                                     d1deta*d2dzeta*d3dxi  -  d1dzeta*d2deta*d3dxi)
+        self%jinv_ale = scaling_123*(d1dxi_ale*d2deta_ale*d3dzeta_ale  -  d1deta_ale*d2dxi_ale*d3dzeta_ale - &
+                                     d1dxi_ale*d2dzeta_ale*d3deta_ale  +  d1dzeta_ale*d2dxi_ale*d3deta_ale + &
+                                     d1deta_ale*d2dzeta_ale*d3dxi_ale  -  d1dzeta_ale*d2deta_ale*d3dxi_ale)
 
         !
         ! Check for negative jacobians
@@ -2086,49 +2079,41 @@ contains
         self%vol_ale = abs(sum(self%jinv_ale * weights))
 
 
-        !
-        ! Loop through quadrature nodes and compute metric terms. This is the explicit formula
-        ! for inverting a 3x3 matrix.
-        !
-        !   See: http://mathworld.wolfram.com/MatrixInverse.html 
-        !
+        allocate(jacobian_matrix(nnodes,3,3), jacobian_matrix_ale(nnodes,3,3), tempmat(3,3))
         do inode = 1,nnodes
-            self%metric_ale(1,1,inode) = ONE/self%jinv_ale(inode) * scaling_23(inode) * (d2deta(inode)*d3dzeta(inode) - d2dzeta(inode)*d3deta(inode))
-            self%metric_ale(2,1,inode) = ONE/self%jinv_ale(inode) * scaling_23(inode) * (d2dzeta(inode)*d3dxi(inode)  - d2dxi(inode)*d3dzeta(inode) )
-            self%metric_ale(3,1,inode) = ONE/self%jinv_ale(inode) * scaling_23(inode) * (d2dxi(inode)*d3deta(inode)   - d2deta(inode)*d3dxi(inode)  )
-
-            self%metric_ale(1,2,inode) = ONE/self%jinv_ale(inode) * scaling_13(inode) * (d1dzeta(inode)*d3deta(inode) - d1deta(inode)*d3dzeta(inode))
-            self%metric_ale(2,2,inode) = ONE/self%jinv_ale(inode) * scaling_13(inode) * (d1dxi(inode)*d3dzeta(inode)  - d1dzeta(inode)*d3dxi(inode) )
-            self%metric_ale(3,2,inode) = ONE/self%jinv_ale(inode) * scaling_13(inode) * (d1deta(inode)*d3dxi(inode)   - d1dxi(inode)*d3deta(inode)  )
-
-            self%metric_ale(1,3,inode) = ONE/self%jinv_ale(inode) * scaling_12(inode) * (d1deta(inode)*d2dzeta(inode) - d1dzeta(inode)*d2deta(inode))
-            self%metric_ale(2,3,inode) = ONE/self%jinv_ale(inode) * scaling_12(inode) * (d1dzeta(inode)*d2dxi(inode)  - d1dxi(inode)*d2dzeta(inode) )
-            self%metric_ale(3,3,inode) = ONE/self%jinv_ale(inode) * scaling_12(inode) * (d1dxi(inode)*d2deta(inode)   - d1deta(inode)*d2dxi(inode)  )
-        end do
-
-
-        do inode = 1,nnodes
-            self%jacobian_matrix_ale(inode,1,1) = d1dxi(inode)
-            self%jacobian_matrix_ale(inode,1,2) = d1deta(inode)
-            self%jacobian_matrix_ale(inode,1,3) = d1dzeta(inode)
-                                              
-            self%jacobian_matrix_ale(inode,2,1) = d2dxi(inode)
-            self%jacobian_matrix_ale(inode,2,2) = d2deta(inode)
-            self%jacobian_matrix_ale(inode,2,3) = d2dzeta(inode)
-                                              
-            self%jacobian_matrix_ale(inode,3,1) = d3dxi(inode)
-            self%jacobian_matrix_ale(inode,3,2) = d3deta(inode)
-            self%jacobian_matrix_ale(inode,3,3) = d3dzeta(inode)
-
-            self%inv_jacobian_matrix_ale(inode,:,:) = inv(self%jacobian_matrix_ale(inode,:,:))
-        end do
+            jacobian_matrix(inode,1,1) = d1dxi(inode)
+            jacobian_matrix(inode,1,2) = d1deta(inode)
+            jacobian_matrix(inode,1,3) = d1dzeta(inode)
+                                     
+            jacobian_matrix(inode,2,1) = d2dxi(inode)
+            jacobian_matrix(inode,2,2) = d2deta(inode)
+            jacobian_matrix(inode,2,3) = d2dzeta(inode)
+                                     
+            jacobian_matrix(inode,3,1) = d3dxi(inode)
+            jacobian_matrix(inode,3,2) = d3deta(inode)
+            jacobian_matrix(inode,3,3) = d3dzeta(inode)
 
 
-        do inode = 1, nnodes
-            self%jacobian_grid(inode,:,:) = matmul(self%jacobian_matrix_ale(inode,:,:),self%inv_jacobian_matrix(inode,:,:))
+            tempmat = inv(jacobian_matrix(inode,:,:))
+            jacobian_matrix(inode,:,:) = tempmat 
+
+            jacobian_matrix_ale(inode,1,1) = d1dxi_ale(inode)
+            jacobian_matrix_ale(inode,1,2) = d1deta_ale(inode)
+            jacobian_matrix_ale(inode,1,3) = d1dzeta_ale(inode)
+                                         
+            jacobian_matrix_ale(inode,2,1) = d2dxi_ale(inode)
+            jacobian_matrix_ale(inode,2,2) = d2deta_ale(inode)
+            jacobian_matrix_ale(inode,2,3) = d2dzeta_ale(inode)
+                                         
+            jacobian_matrix_ale(inode,3,1) = d3dxi_ale(inode)
+            jacobian_matrix_ale(inode,3,2) = d3deta_ale(inode)
+            jacobian_matrix_ale(inode,3,3) = d3dzeta_ale(inode)
+
+
+            self%jacobian_grid(inode,:,:) = matmul(jacobian_matrix_ale(inode,:,:),jacobian_matrix(inode,:,:))
             self%inv_jacobian_grid(inode,:,:) = inv(self%jacobian_grid(inode,:,:))
         end do
-        
+
 
 
         self%det_jacobian_grid = self%jinv_ale/self%jinv
@@ -2143,6 +2128,9 @@ contains
         self%det_jacobian_grid_modes = matmul(self%invmass,temp)
 
 
+        self%det_jacobian_grid_grad1 = matmul(self%grad1,self%det_jacobian_grid_modes)
+        self%det_jacobian_grid_grad2 = matmul(self%grad2,self%det_jacobian_grid_modes)
+        self%det_jacobian_grid_grad3 = matmul(self%grad3,self%det_jacobian_grid_modes)
     end subroutine compute_quadrature_metrics_ale
     !********************************************************************************************************
 

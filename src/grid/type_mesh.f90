@@ -661,6 +661,7 @@ contains
         integer(ik)         :: idom, ielem, iface, idonor, iproc, ierr,    &
                                send_size_a, send_size_b, send_size_c, send_size_d
         type(mpi_request)   :: request(4)
+        logical             :: interior_face, parallel_neighbor
 
 
         !
@@ -670,25 +671,27 @@ contains
             do ielem = 1,self%domain(idom)%nelem
                 do iface = 1,NFACES
 
+                    interior_face     = (self%domain(idom)%faces(ielem,iface)%ftype == INTERIOR)
+                    parallel_neighbor = (self%domain(idom)%faces(ielem,iface)%ineighbor_proc /= IRANK)
+
                     !
                     ! For INTERIOR faces that have off-processor neighbors we need to communicate ALE data.
                     !
-                    if ( (self%domain(idom)%faces(ielem,iface)%ftype == INTERIOR) .and. &
-                         (self%domain(idom)%faces(ielem,iface)%ineighbor_proc /= IRANK) ) then
+                    if ( interior_face .and. parallel_neighbor ) then
 
                         associate ( face => self%domain(idom)%faces(ielem,iface) ) 
 
                         send_size_a = size(face%neighbor_location)
                         send_size_b = size(face%grid_vel)
                         send_size_c = size(face%det_jacobian_grid)
-                        send_size_d = size(face%inv_jacobian_matrix)
+                        send_size_d = size(face%inv_jacobian_grid)
 
                         ! First, send neighbor location. This way, the receiving processor knows where to put the data.
                         ! Next, send all ALE information
-                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%neighbor_location,   send_size_a, mpi_integer4, face%ineighbor_proc, 0, ChiDG_COMM, request(1), ierr)
-                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%grid_vel,            send_size_b, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(2), ierr)
-                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%det_jacobian_grid,   send_size_c, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(3), ierr)
-                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%inv_jacobian_matrix, send_size_d, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(4), ierr)
+                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%neighbor_location, send_size_a, mpi_integer4, face%ineighbor_proc, 0, ChiDG_COMM, request(1), ierr)
+                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%grid_vel,          send_size_b, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(2), ierr)
+                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%det_jacobian_grid, send_size_c, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(3), ierr)
+                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%inv_jacobian_grid, send_size_d, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(4), ierr)
 
                         call self%comm_requests%push_back(request(1))
                         call self%comm_requests%push_back(request(2))
@@ -706,17 +709,17 @@ contains
 
 
 
-        !
-        ! Send chimera donors
-        !
-        do idom = 1,self%ndomains()
-            do idonor = 1,self%domain(idom)%chimera%send%ndonors()
-
-                iproc = self%domain(idom)%chimera%send%receiver_proc%at(idonor)
-
-                ! If receiver is off-processor, send reference and physical nodes/velocities
-                if (iproc /= IRANK) then
-
+!        !
+!        ! Send chimera donors
+!        !
+!        do idom = 1,self%ndomains()
+!            do idonor = 1,self%domain(idom)%chimera%send%ndonors()
+!
+!                iproc = self%domain(idom)%chimera%send%receiver_proc%at(idonor)
+!
+!                ! If receiver is off-processor, send reference and physical nodes/velocities
+!                if (iproc /= IRANK) then
+!
 !                    idomain_l  = self%domain(idom)%chimera%send%donors(idonor)%idomain_l
 !                    ielement_l = self%domain(idom)%chimera%send%donors(idonor)%ielement_l
 !
@@ -735,11 +738,11 @@ contains
 !                    call self%comm_requests%push_back(request(2))
 !                    call self%comm_requests%push_back(request(3))
 !                    call self%comm_requests%push_back(request(4))
-
-                end if 
-
-            end do !idonor
-        end do !idom
+!
+!                end if 
+!
+!            end do !idonor
+!        end do !idom
 
 
 
@@ -761,31 +764,33 @@ contains
     subroutine comm_recv(self)
         class(mesh_t),  intent(inout)   :: self
 
-        integer(ik) :: idom, ielem, iface, iproc, irecv, ierr, &
-                       recv_size_a, recv_size_b, recv_size_c, face_location(5)
+        integer(ik),    allocatable :: recv_procs(:)
+        integer(ik)                 :: idom, ielem, iface, iproc, irecv, ierr, &
+                                       recv_size_a, recv_size_b, recv_size_c, face_location(5)
 
 
         !
         ! Receive interior face data
         !
-        do iproc = 1, size(self%get_recv_procs())
-            do irecv = 1,self%get_proc_ninterior_neighbors(iproc)
+        recv_procs = self%get_recv_procs()
+        do iproc = 1,size(recv_procs)
+            do irecv = 1,self%get_proc_ninterior_neighbors(recv_procs(iproc))
 
                 ! The sending proc sent its neighbor location, which is a face on our local processor 
                 ! here where we will store the incoming ALE data
                 ! face_location = [idomain_g, idomain_l, ielement_g, ielement_l, iface]
-                call mpi_recv(face_location, 5, mpi_integer4, iproc, 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(face_location, 5, mpi_integer4, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
                 idom  = face_location(2)
                 ielem = face_location(4)
                 iface = face_location(5)
 
                 recv_size_a = size(self%domain(idom)%faces(ielem,iface)%neighbor_grid_vel)
                 recv_size_b = size(self%domain(idom)%faces(ielem,iface)%neighbor_det_jacobian_grid)
-                recv_size_c = size(self%domain(idom)%faces(ielem,iface)%neighbor_inv_jacobian_matrix)
+                recv_size_c = size(self%domain(idom)%faces(ielem,iface)%neighbor_inv_jacobian_grid)
 
-                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_grid_vel,            recv_size_a, mpi_real8, iproc, 0, ChiDG_COMM, mpi_status_ignore, ierr)
-                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_det_jacobian_grid,   recv_size_b, mpi_real8, iproc, 0, ChiDG_COMM, mpi_status_ignore, ierr)
-                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_inv_jacobian_matrix, recv_size_c, mpi_real8, iproc, 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_grid_vel,          recv_size_a, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_det_jacobian_grid, recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_inv_jacobian_grid, recv_size_c, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
 
             end do !irecv
         end do !iproc
@@ -809,10 +814,11 @@ contains
 
 
 
-    !>
+    !>  Wait until all outstanding requests initiated by mesh%comm_send() have
+    !!  been completed.
     !!
     !!
-    !!  @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie (AFRL)
     !!  @date   7/13/2017
     !!
     !!
@@ -822,14 +828,8 @@ contains
 
         integer(ik) :: nwait, ierr
 
-        !
-        ! Wait on all outstanding requests
-        !
         nwait = self%comm_requests%size()
         call mpi_waitall(nwait, self%comm_requests%data(1:nwait), mpi_statuses_ignore, ierr)
-
-
-        ! Clear request storage
         call self%comm_requests%clear()
 
     end subroutine comm_wait

@@ -48,8 +48,26 @@ contains
 
 
 
-    !>  This test reads a 4x1x1 element grid using 1, 2, 3, and 4 processors and tests 
-    !!  communication data.
+    !>  This test reads a 4x1x1 element grid using 2, 3, and 4 processors and tests 
+    !!  parallel communication of ALE quantities for mesh_t.
+    !!
+    !!  We want to test the communication of ALE quantities by mesh_t
+    !!  so we impose a grid deformation and velocity at the interface 
+    !!  between elements 2 and 3.
+    !!
+    !!  Interface displacement = 0.125
+    !!  Interface velocity     = 0.125/0.01 = 12.5
+    !!
+    !!     Initial Grid            Deformed Grid
+    !!  .---.---.---.---.        .---.----.--.---.  
+    !!  | 1 | 2 | 3 | 4 |        | 1 | 2  |3 | 4 |
+    !!  .---.---.---.---.        .---.----.--.---.  
+    !!                           
+    !!
+    !!
+    !!
+    !!
+    !!
     !!
     !!  For reference, the partitions from METIS are as follows. NOTE: This could change
     !!  if the settings for METIS partitioning were changed. In that case, the partitions
@@ -128,7 +146,6 @@ contains
         IO_DESTINATION = 'file'
         this%gridfile  = 'D1E4M1.h5'
 
-        print*, 'setup - 1'
         !
         ! Create mesh
         !
@@ -143,7 +160,6 @@ contains
         !
         call this%chidg%set('Solution Order', integer_input=this%solution_order)
 
-        print*, 'setup - 2'
 
 
         !
@@ -364,7 +380,6 @@ contains
 
 
 
-        print*, 'setup - 3'
 
         !
         ! Read partition data: grid, boundary conditions
@@ -372,22 +387,6 @@ contains
         call this%chidg%read_mesh(this%gridfile, partitions_in=partitions)
 
         
-
-        print*, 'setup - 4'
-        
-
-        !
-        ! Initialize solution vector
-        !
-        initial_vals = 1.2_rk
-        ivar = 1
-        itime = 1
-        do ielem = 1,this%chidg%data%mesh%domain(1)%nelem
-            call this%chidg%data%sdata%q%dom(1)%vecs(ielem)%setvar(ivar,itime,initial_vals)
-        end do
-
-        print*, 'setup - 5'
-
     end subroutine setUp
     !******************************************************************************************
 
@@ -419,14 +418,18 @@ contains
 
 
 
-    !>  Test the parallel computation of the chidgVector norm. 
-    !!  This tests the routine: chidgVector%norm_comm
+    !>  Test the parallel computation of mesh_t
+    !!
+    !!  Testing:
+    !!      mesh%comm_send()
+    !!      mesh%comm_recv()
+    !!      mesh%comm_wait()
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/23/2016
     !!
     !------------------------------------------------------------------------------------------
-    @Test(npes=[2])
+    @Test(npes=[2,3,4])
     subroutine test_interior_ale_comm(self)
         class(test_mesh_comm_interior), intent(inout) :: self
 
@@ -436,7 +439,6 @@ contains
 
         IRANK = self%getProcessRank()
 
-        print*, 'test - 1'
 
 
         !
@@ -470,13 +472,9 @@ contains
         !
         ! Test mesh communication for ALE data.
         !
-        print*, 'test - 2'
         call self%chidg%data%mesh%comm_send()
-        print*, 'test - 3'
         call self%chidg%data%mesh%comm_recv()
-        print*, 'test - 4'
         call self%chidg%data%mesh%comm_wait()
-        print*, 'test - 5'
 
 
 
@@ -505,15 +503,51 @@ contains
                 @assertEqual(expected_data, communicated_data, 1.e-6_rk)
             end if
 
+
+
+
+
         else if (NRANK == 3) then
+
+            if (IRANK == 1) then
+                communicated_data = self%chidg%data%mesh%domain(1)%faces(1,2)%neighbor_grid_vel
+                expected_data = communicated_data
+                expected_data(:,1) = 12.5_rk
+                expected_data(:,2) = ZERO
+                expected_data(:,3) = ZERO
+                @assertEqual(expected_data, communicated_data, 1.e-6_rk)
+            else if (IRANK == 2) then
+                communicated_data = self%chidg%data%mesh%domain(1)%faces(1,1)%neighbor_grid_vel
+                expected_data = communicated_data
+                expected_data(:,1) = 12.5_rk
+                expected_data(:,2) = ZERO
+                expected_data(:,3) = ZERO
+                @assertEqual(expected_data, communicated_data, 1.e-6_rk)
+            end if
+
+
 
 
         else if (NRANK == 4) then
 
+            if (IRANK == 1) then
+                communicated_data = self%chidg%data%mesh%domain(1)%faces(1,2)%neighbor_grid_vel
+                expected_data = communicated_data
+                expected_data(:,1) = 12.5_rk
+                expected_data(:,2) = ZERO
+                expected_data(:,3) = ZERO
+                @assertEqual(expected_data, communicated_data, 1.e-6_rk)
+            else if (IRANK == 2) then
+                communicated_data = self%chidg%data%mesh%domain(1)%faces(1,1)%neighbor_grid_vel
+                expected_data = communicated_data
+                expected_data(:,1) = 12.5_rk
+                expected_data(:,2) = ZERO
+                expected_data(:,3) = ZERO
+                @assertEqual(expected_data, communicated_data, 1.e-6_rk)
+            end if
 
         end if
 
-        print*, 'test - 6'
 
     end subroutine test_interior_ale_comm
     !******************************************************************************************

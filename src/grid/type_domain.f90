@@ -1390,8 +1390,9 @@ contains
 
                     ! Loop through donor elements. If off-processor, add to list uniquely
                     ChiID = self%faces(ielem,iface)%ChiID
-                    do idonor = 1,self%chimera%recv%data(ChiID)%ndonors()
-                        donor_rank = self%chimera%recv%data(ChiID)%donor_proc%at(idonor)
+                    !do idonor = 1,self%chimera%recv%data(ChiID)%ndonors()
+                    do idonor = 1,self%chimera%recv(ChiID)%ndonors()
+                        donor_rank = self%chimera%recv(ChiID)%donor_proc%at(idonor)
                         comm_donor = ( myrank /= donor_rank )
                         if ( comm_donor ) call comm_procs_vector%push_back_unique(donor_rank)
                     end do !idonor
@@ -1570,7 +1571,7 @@ contains
 
         type(ivector_t)             :: comm_procs_vector
         integer(ik),    allocatable :: comm_procs(:)
-        integer(ik)                 :: myrank, idonor, donor_rank
+        integer(ik)                 :: myrank, idonor, irec, receiver_rank
         logical                     :: comm_donor
         character(:),   allocatable :: user_msg
 
@@ -1590,13 +1591,15 @@ contains
         !
         ! Collect processors that we are sending chimera donor elements to
         !
-        do idonor = 1,self%chimera%send%ndonors()
+        do idonor = 1,self%chimera%ndonors()
+            do irec = 1,self%chimera%donor(idonor)%nrecipients()
 
-            ! Get donor rank. If off-processor, add to list uniquely.
-            donor_rank = self%chimera%send%receiver_proc%at(idonor)
-            comm_donor = (myrank /= donor_rank)
-            if ( comm_donor ) call comm_procs_vector%push_back_unique(donor_rank)
+                ! Get donor rank. If off-processor, add to list uniquely.
+                receiver_rank = self%chimera%donor(idonor)%receiver_procs%at(irec)
+                comm_donor = (myrank /= receiver_rank)
+                if ( comm_donor ) call comm_procs_vector%push_back_unique(receiver_rank)
 
+            end do !irec
         end do !idonor
 
 

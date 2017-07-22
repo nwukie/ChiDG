@@ -52,7 +52,7 @@ contains
     subroutine resize(self,cache_component,mesh,prop,idomain_l,ielement_l,iface,differentiate)
         class(cache_data_t),    intent(inout)           :: self
         character(*),           intent(in)              :: cache_component
-        type(mesh_t),       intent(in)              :: mesh
+        type(mesh_t),           intent(in)              :: mesh
         type(properties_t),     intent(in)              :: prop(:)
         integer(ik),            intent(in)              :: idomain_l
         integer(ik),            intent(in)              :: ielement_l
@@ -112,7 +112,7 @@ contains
                     ! we will have to store the properties_t of the chimera donors so
                     ! we can query them here. For now, just use the source domain
                     ! and assume they have the same fields.
-                    nprimary_fields   = mesh%domain(idomain_l)%chimera%recv%data(ChiID)%donor_neqns%at(1)
+                    nprimary_fields   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor_neqns%at(1)
                     nauxiliary_fields = prop(eqn_ID)%nauxiliary_fields()
                     nmodel_fields     = prop(eqn_ID)%nmodel_fields()
                 else

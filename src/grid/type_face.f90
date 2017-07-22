@@ -86,8 +86,8 @@ module type_face
         real(rk),           allocatable :: neighbor_invmass(:,:)    
         ! Neighbor ALE
         real(rk),           allocatable :: neighbor_grid_vel(:,:)
-        real(rk),           allocatable :: neighbor_inv_jacobian_matrix(:,:,:)
         real(rk),           allocatable :: neighbor_det_jacobian_grid(:)
+        real(rk),           allocatable :: neighbor_inv_jacobian_grid(:,:,:)
 
         ! Chimera face offset. For periodic boundary condition.
         logical                         :: periodic_offset  = .false.
@@ -390,7 +390,7 @@ contains
                        self%grad1,                        &
                        self%grad2,                        &
                        self%grad3,                        &
-                       self%neighbor_inv_jacobian_matrix, &
+                       self%neighbor_inv_jacobian_grid,   &
                        self%neighbor_det_jacobian_grid,   &
                        self%neighbor_grid_vel             &
                        ) 
@@ -417,7 +417,7 @@ contains
                  self%grad1(nnodes,self%nterms_s),                  &
                  self%grad2(nnodes,self%nterms_s),                  &
                  self%grad3(nnodes,self%nterms_s),                  &
-                 self%neighbor_inv_jacobian_matrix(nnodes,3,3),     &
+                 self%neighbor_inv_jacobian_grid(nnodes,3,3),       &
                  self%neighbor_det_jacobian_grid(nnodes),           &
                  self%neighbor_grid_vel(nnodes,3), stat=ierr)
         if (ierr /= 0) call AllocationError

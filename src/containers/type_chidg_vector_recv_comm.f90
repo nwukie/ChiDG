@@ -163,14 +163,14 @@ contains
                     else if (is_chimera) then
                         
                         ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
-                        do idonor = 1,mesh%domain(idom)%chimera%recv%data(ChiID)%ndonors()
+                        do idonor = 1,mesh%domain(idom)%chimera%recv(ChiID)%ndonors()
 
-                            comm_donor = (proc == mesh%domain(idom)%chimera%recv%data(ChiID)%donor_proc%at(idonor) )
+                            comm_donor = (proc == mesh%domain(idom)%chimera%recv(ChiID)%donor_proc%at(idonor) )
 
                             donor_recv_found = .false.
                             if (comm_donor) then
-                                donor_domain_g  = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_domain_g%at(idonor)
-                                donor_element_g = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_element_g%at(idonor)
+                                donor_domain_g  = mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_g%at(idonor)
+                                donor_element_g = mesh%domain(idom)%chimera%recv(ChiID)%donor_element_g%at(idonor)
 
 
                                 ! Loop through domains being received to find the right domain
@@ -185,9 +185,9 @@ contains
 
                                             ! Set the location where a face can find its off-processor neighbor 
                                             if (recv_element == donor_element_g) then
-                                                mesh%domain(idom)%chimera%recv%data(ChiID)%donor_recv_comm%data_(idonor)    = comm
-                                                mesh%domain(idom)%chimera%recv%data(ChiID)%donor_recv_domain%data_(idonor)  = idom_recv
-                                                mesh%domain(idom)%chimera%recv%data(ChiID)%donor_recv_element%data_(idonor) = ielem_recv
+                                                mesh%domain(idom)%chimera%recv(ChiID)%donor_recv_comm%data_(idonor)    = comm
+                                                mesh%domain(idom)%chimera%recv(ChiID)%donor_recv_domain%data_(idonor)  = idom_recv
+                                                mesh%domain(idom)%chimera%recv(ChiID)%donor_recv_element%data_(idonor) = ielem_recv
                                                 donor_recv_found = .true.
                                                 exit
                                             end if

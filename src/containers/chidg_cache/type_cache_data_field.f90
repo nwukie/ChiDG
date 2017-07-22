@@ -466,7 +466,7 @@ contains
 
         else if (chimera_face) then
             ChiID   = mesh%domain(idomain_l)%faces(ielement_l,iface)%ChiID
-            ndepend = mesh%domain(idomain_l)%chimera%recv%data(ChiID)%ndonors()
+            ndepend = mesh%domain(idomain_l)%chimera%recv(ChiID)%ndonors()
 
 
         else if (boundary_face) then

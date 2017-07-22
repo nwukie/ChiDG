@@ -74,14 +74,14 @@ subroutine test_find_gq_donor_cylinder_abutting()
     iface = XI_MIN
 
     ChiID   = chidgA%data%mesh%domain(idom)%faces(ielem,iface)%ChiID
-    idom_d  = chidgA%data%mesh%domain(idom)%chimera%recv%data(ChiID)%donor_domain_l%at(1)
-    ielem_d = chidgA%data%mesh%domain(idom)%chimera%recv%data(ChiID)%donor_element_l%at(1)
-    ngq     = chidgA%data%mesh%domain(idom)%chimera%recv%data(ChiID)%donor_gq_indices(1)%size()
+    idom_d  = chidgA%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_l%at(1)
+    ielem_d = chidgA%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_element_l%at(1)
+    ngq     = chidgA%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_gq_indices(1)%size()
 
     do igq = 1,ngq
 
-        gq_index     = chidgA%data%mesh%domain(idom)%chimera%recv%data(ChiID)%donor_gq_indices(1)%at(igq)
-        chimera_node = chidgA%data%mesh%domain(idom)%chimera%recv%data(ChiID)%donor_coords(1)%at(igq)
+        gq_index     = chidgA%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_gq_indices(1)%at(igq)
+        chimera_node = chidgA%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_coords(1)%at(igq)
         chi_xi   = chimera_node%c1_
         chi_eta  = chimera_node%c2_
         chi_zeta = chimera_node%c3_

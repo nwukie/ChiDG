@@ -2549,7 +2549,7 @@ contains
                 
             else if ( worker%face_type() == CHIMERA ) then
                 ChiID   = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ChiID
-                ndepend = worker%mesh%domain(idomain_l)%chimera%recv%data(ChiID)%ndonors()
+                ndepend = worker%mesh%domain(idomain_l)%chimera%recv(ChiID)%ndonors()
 
             else if ( worker%face_type() == BOUNDARY ) then
                 group_ID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%group_ID

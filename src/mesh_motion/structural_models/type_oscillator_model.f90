@@ -10,13 +10,13 @@ module type_oscillator_model
         ! Linearly damped oscillator ODE model
         ! mass*x'' + damping_coeff*x' + stiffness_coeff*x = external_force
         real(rk)    :: mass = ONE
-        real(rk)    :: damping_coeff = ONE
-        real(rk)    :: stiffness_coeff = ONE              
+        real(rk)    :: damping_coeff(3) = ONE
+        real(rk)    :: stiffness_coeff(3) = ONE              
         real(rk)    :: external_forces(3) = ZERO
 
-        real(rk)    :: undamped_angular_frequency
-        real(rk)    :: undamped_natural_frequency
-        real(rk)    :: damping_factor
+        real(rk)    :: undamped_angular_frequency(3)
+        real(rk)    :: undamped_natural_frequency(3)
+        real(rk)    :: damping_factor(3)
         real(rk)    :: minimum_stable_timestep
 
         character(:), allocatable :: damping_type
@@ -47,8 +47,8 @@ contains
     subroutine init(self, mass, damping_coeff, stiffness_coeff)
         class(oscillator_model_t), intent(inout)    :: self
         real(rk),intent(in),optional         :: mass
-        real(rk),intent(in),optional         :: damping_coeff
-        real(rk),intent(in),optional         :: stiffness_coeff
+        real(rk),intent(in),optional         :: damping_coeff(3)
+        real(rk),intent(in),optional         :: stiffness_coeff(3)
 
         real(rk) :: tol
 
@@ -80,11 +80,11 @@ contains
         ! dt < 2/ang_freq
         !
 
-        self%minimum_stable_timestep = TWO/(self%undamped_angular_frequency)
+        self%minimum_stable_timestep = TWO/(maxval(self%undamped_angular_frequency))
 
-        if (self%damping_factor > ONE + tol) then
+        if (maxval(self%damping_factor) > ONE + tol) then
             self%damping_type = 'overdamped'
-        else if (self%damping_factor < ONE-tol) then
+        else if (maxval(self%damping_factor) < ONE-tol) then
             self%damping_type = 'underdamped'
         else
             self%damping_type = 'critically damped'
@@ -123,7 +123,7 @@ contains
 
         
 
-        real(rk) :: gam, mass
+        real(rk) :: gam(3), mass
         !
         ! Special version of the Leapfrog algorithm for linear damping
         !

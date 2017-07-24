@@ -13,6 +13,7 @@ module mod_linear_solver
 !    use type_gmres,         only: gmres_t
     use type_fgmres,            only: fgmres_t
     use type_fgmres_cgs,        only: fgmres_cgs_t
+    use type_fgmres_cgs_mg,     only: fgmres_cgs_mg_t
     
 
     
@@ -26,6 +27,7 @@ module mod_linear_solver
 !    type(gmres_t)           :: GMRES
     type(fgmres_t)          :: FGMRES
     type(fgmres_cgs_t)      :: FGMRES_CGS
+    type(fgmres_cgs_mg_t)   :: FGMRES_CGS_MG
 
 
 
@@ -76,6 +78,9 @@ contains
 
             case ('fgmres_cgs', 'FGMRES_CGS')
                 allocate(lsolver, source=FGMRES_CGS, stat=ierr)
+
+            case ('fgmres_cgs_mg', 'FGMRES_CGS_MG')
+                allocate(lsolver, source=FGMRES_CGS_MG, stat=ierr)
 
 
             case default

@@ -56,6 +56,7 @@ module type_domain_vector
         procedure,  public  :: dump
 
         procedure,  public  :: restrict
+        procedure,  public  :: prolong
 
         final :: destructor
 
@@ -611,6 +612,37 @@ contains
     end function restrict
     !******************************************************************************
 
+
+
+
+
+
+    !>  Return a domain_vector_t prolonged to the basis defined by nterms_p.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/24/2017
+    !!
+    !-----------------------------------------------------------------------------
+    function prolong(self,nterms_p) result(prolonged)
+        class(domain_vector_t), intent(in)  :: self
+        integer(ik),            intent(in)  :: nterms_p
+
+        type(domain_vector_t)   :: prolonged
+        integer(ik)             :: ierr, ielem
+
+
+        ! Alocate storage on restricted domain_vector
+        allocate(prolonged%vecs(self%nelements()), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        ! Copy restricted densevector for each element
+        do ielem = 1,self%nelements()
+            prolonged%vecs(ielem) = self%vecs(ielem)%prolong(nterms_p)
+        end do !ielem
+
+
+    end function prolong
+    !******************************************************************************
 
 
 

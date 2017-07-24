@@ -28,6 +28,7 @@ module type_chidg_vector_recv_comm
         procedure,  public  :: clear
         procedure,  public  :: ndomains
         procedure,  public  :: restrict
+        procedure,  public  :: prolong
 
     end type chidg_vector_recv_comm_t
     !********************************************************************************
@@ -370,6 +371,45 @@ contains
 
     end function restrict
     !**********************************************************************************
+
+
+
+
+
+
+    !>  Return a prolonged copy of the chidg_vector_recv_comm_t object.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/24/2017
+    !!
+    !----------------------------------------------------------------------------------
+    function prolong(self,nterms_p) result(prolonged)
+        class(chidg_vector_recv_comm_t),    intent(in)  :: self
+        integer(ik),                        intent(in)  :: nterms_p
+
+        integer(ik)                     :: ierr, idom
+        type(chidg_vector_recv_comm_t)  :: prolonged
+
+        prolonged%proc = self%proc
+
+        ! Allocate storage for each recv domain
+        allocate(prolonged%dom(self%ndomains()), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        ! For each block return a restricted version
+        do idom = 1,self%ndomains()
+            prolonged%dom(idom) = self%dom(idom)%prolong(nterms_p)
+        end do
+
+
+    end function prolong
+    !**********************************************************************************
+
+
+
+
+
+
 
 
 

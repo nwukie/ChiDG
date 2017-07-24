@@ -64,6 +64,7 @@ module type_densevector
         procedure, public :: clear
 
         procedure, public :: restrict
+        procedure, public :: prolong
 
     end type densevector_t
     !******************************************************************************************
@@ -748,6 +749,79 @@ contains
 
     end function restrict
     !********************************************************************************
+
+
+
+
+
+
+
+    !>
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/21/2017
+    !!
+    !!  @param[in]  nterms_p    Number of terms in the restricted basis.
+    !!
+    !--------------------------------------------------------------------------------
+    function prolong(self,nterms_p) result(prolonged)
+        class(densevector_t),   intent(in)  :: self
+        integer(ik),            intent(in)  :: nterms_p
+
+        integer(ik)             :: nterms, nvars, ntime, dparent_g, dparent_l,  &
+                                   eparent_g, eparent_l, ivar, itime, ierr
+        real(rk),   allocatable :: field(:)
+        type(densevector_t)     :: prolonged
+
+
+        ! Get parameters from initial vector
+        nterms    = self%nterms()
+        nvars     = self%nvars()
+        ntime     = self%ntime()
+        dparent_g = self%dparent_g()
+        dparent_l = self%dparent_l()
+        eparent_g = self%eparent_g()
+        eparent_l = self%eparent_l()
+
+
+        ! Size to restricted basis
+        call prolonged%init(nterms_p,nvars,ntime,dparent_g,dparent_l,eparent_g,eparent_l)
+
+
+        ! Copy restricted fields
+        allocate(field(nterms_p), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        field = ZERO
+
+        do ivar = 1,nvars
+            do itime = 1,ntime
+                field(1:nterms) = self%getvar(ivar,itime)
+                call prolonged%setvar(ivar,itime,field)
+            end do
+        end do
+
+    end function prolong
+    !********************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

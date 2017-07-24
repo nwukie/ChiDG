@@ -7,7 +7,7 @@ module test_chidg_vector_restrict_mod
     use mod_test_utilities,         only: create_mesh_file
     use mod_file_utilities,         only: delete_file
     use mod_string,                 only: string_t
-    use type_chidg_vector
+    use type_chidg_vector,          only: chidg_vector_t
     implicit none
 
 

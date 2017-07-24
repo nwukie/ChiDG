@@ -66,6 +66,7 @@ module type_chidg_vector
         procedure,  public  :: ndomains
 
         procedure,  public  :: restrict
+        procedure,  public  :: prolong
                                                                     
 
 !        generic :: assignment(=) => 
@@ -263,9 +264,11 @@ contains
 
 
         ! Call clear procedure for each domain_vector_t
-        do idom = 1,size(self%dom)
-            call self%dom(idom)%clear()
-        end do
+        if (allocated(self%dom)) then
+            do idom = 1,size(self%dom)
+                call self%dom(idom)%clear()
+            end do
+        end if
 
         ! Call clear on recv storage
         call self%recv%clear()
@@ -807,6 +810,54 @@ contains
 
     end function restrict
     !***************************************************************************************
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/21/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    function prolong(self,nterms_p) result(prolonged)
+        class(chidg_vector_t),  intent(inout)   :: self
+        integer(ik),            intent(in)      :: nterms_p
+
+        type(chidg_vector_t)    :: prolonged
+        integer(ik)             :: idom, ierr
+        
+
+        prolonged%send = self%send                     ! Copy self%send directly
+        prolonged%recv = self%recv%prolong(nterms_p)   ! Get prolonged copy of self%recv
+
+
+        ! Allocate storage for each domain
+        allocate(prolonged%dom(self%ndomains()), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        ! Return restricted domain_vector objects for each domain
+        do idom = 1,self%ndomains()
+            prolonged%dom(idom) = self%dom(idom)%prolong(nterms_p)
+        end do !idom
+
+        ! Set ntime
+        prolonged%ntime_ = self%ntime_
+
+    end function prolong
+    !***************************************************************************************
+
+
+
+
+
+
+
+
+
 
 
 

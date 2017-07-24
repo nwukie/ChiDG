@@ -798,32 +798,40 @@ contains
         !
         ! Allocate storage for primary data on restricted object
         !
-        allocate(restricted%lblks(size(self%lblks,1),size(self%lblks,2)), &
-                 restricted%chi_blks(size(self%chi_blks,1),size(self%chi_blks,2)), &
-                 restricted%bc_blks(size(self%bc_blks,1),size(self%bc_blks,2)), stat=ierr)
-        if (ierr /= 0) call AllocationError
+        if (allocated(self%lblks)) then
+            allocate(restricted%lblks(size(self%lblks,1),size(self%lblks,2)), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+            do ielem = 1,size(self%lblks,1)
+                do itime = 1,size(self%lblks,2)
+                    restricted%lblks(ielem,itime) = self%lblks(ielem,itime)%restrict(nterms_r)
+                end do !itime
+            end do !ielem
+        end if
 
 
-        !
-        ! Copy restricted data
-        !
-        do ielem = 1,size(self%lblks,1)
-            do itime = 1,size(self%lblks,2)
-                restricted%lblks(ielem,itime) = self%lblks(ielem,itime)%restrict(nterms_r)
-            end do !itime
-        end do !ielem
+        if (allocated(self%chi_blks)) then
+            allocate(restricted%chi_blks(size(self%chi_blks,1),size(self%chi_blks,2)), stat=ierr)
+            if (ierr /= 0) call AllocationError
 
-        do ielem = 1,size(self%chi_blks,1)
-            do itime = 1,size(self%chi_blks,2)
-                restricted%chi_blks(ielem,itime) = self%chi_blks(ielem,itime)%restrict(nterms_r)
-            end do !itime
-        end do !ielem
+            do ielem = 1,size(self%chi_blks,1)
+                do itime = 1,size(self%chi_blks,2)
+                    restricted%chi_blks(ielem,itime) = self%chi_blks(ielem,itime)%restrict(nterms_r)
+                end do !itime
+            end do !ielem
+        end if
 
-        do ielem = 1,size(self%bc_blks,1)
-            do itime = 1,size(self%bc_blks,2)
-                restricted%bc_blks(ielem,itime) = self%bc_blks(ielem,itime)%restrict(nterms_r)
-            end do !itime
-        end do !ielem
+
+        if (allocated(self%bc_blks)) then
+            allocate(restricted%bc_blks(size(self%bc_blks,1),size(self%bc_blks,2)), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+            do ielem = 1,size(self%bc_blks,1)
+                do itime = 1,size(self%bc_blks,2)
+                    restricted%bc_blks(ielem,itime) = self%bc_blks(ielem,itime)%restrict(nterms_r)
+                end do !itime
+            end do !ielem
+        end if
 
 
 

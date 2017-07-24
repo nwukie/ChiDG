@@ -8,8 +8,8 @@ module precon_ILU0
 
     use type_preconditioner,    only: preconditioner_t
     use type_chidg_data,        only: chidg_data_t
-    use type_chidg_matrix,       only: chidg_matrix_t
-    use type_chidg_vector
+    use type_chidg_matrix,      only: chidg_matrix_t
+    use type_chidg_vector,      only: chidg_vector_t
     implicit none
 
 
@@ -29,6 +29,8 @@ module precon_ILU0
         procedure   :: init
         procedure   :: update
         procedure   :: apply
+
+        procedure   :: restrict
 
     end type precon_ILU0_t
     !*******************************************************************************************
@@ -314,6 +316,24 @@ contains
 
 
 
+    !>  Produce a restricted version of the current preconditioner.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/24/2017
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    function restrict(self,nterms_r) result(restricted)
+        class(precon_ILU0_t),   intent(in)  :: self
+        integer(ik),            intent(in)  :: nterms_r
+
+        type(precon_ILU0_t) :: restricted
+
+        restricted%LD = self%LD%restrict(nterms_r)
+        restricted%initialized = .true.
+
+    end function restrict
+    !****************************************************************************************
 
 
 

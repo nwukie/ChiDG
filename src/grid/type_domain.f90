@@ -254,8 +254,7 @@ contains
 
             call self%elems(ielem)%update_element_ale()
             do iface = 1,NFACES
-                call self%faces(ielem,iface)%init_ale(self%elems(ielem))
-                call self%faces(ielem,iface)%update_face_ale()
+                call self%faces(ielem,iface)%update_face_ale(self%elems(ielem))
             end do !iface
 
         end do !ielem

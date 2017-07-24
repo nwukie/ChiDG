@@ -19,16 +19,8 @@
 !
 !   The boundary condition settings are:
 !
-!       Farfield:  euler_farfield  
-!               Mach number = 0.2
-!               Density     = 1.0 (kg/m^3)
-!               Pressure    = (1/1.4)*1/0.04 = 17.857143 (Pa) 
-!               Velocity-1  = 1.0 (m/s)
-!               Velocity-2  = 0 (m/s)
-!               Velocity-3  = 0 (m/s)
+
 !
-!
-!       Walls: euler_wall
 !
 !   @author Eric Wolf 
 !   @date  6/21/2017 
@@ -272,7 +264,7 @@ contains
         linear_solver    = 'fgmres_cgs'
         preconditioner   = 'RASILU0'
         IO_DESTINATION   = 'both'
-        time_steps       = 720 
+        time_steps       = 3200 
         dt               = real(sim_time/time_steps,rk)
         verbosity        = 2 
         nwrite           = 1000
@@ -389,7 +381,7 @@ contains
         !
         ! Initialize solution
         !
-        call create_function(fcn,'convecting_vortex_solution')
+        call create_function(fcn,'convecting_vortex')
 
         call fcn%set_option('ivar',1.0_rk)
         call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
@@ -401,6 +393,19 @@ contains
         call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,4)
         call fcn%set_option('ivar',5.0_rk)
         call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,5)
+
+        call create_function(fcn,'constant')
+!
+!        call fcn%set_option('val',1.0_rk)
+!        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
+!        call fcn%set_option('val',1.0_rk)
+!        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,2)
+!        call fcn%set_option('val',0.0_rk)
+!        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,3)
+!        call fcn%set_option('val',0.0_rk)
+!        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,4)
+!        call fcn%set_option('val',50._rk)
+!        call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,5)
 
 
 
@@ -466,11 +471,14 @@ contains
         ! Run ChiDG simulation
         !
         call self%chidg%run(write_initial=.false., write_final=.false.)
+        
+        print *, 'run complete'
 
         !
         ! Store the nonlinear convergence of the calculation
         !
 
+        print *, 'compute error'
         computed_error = compute_convecting_vortex_pmm_error(self%chidg%data,self%ChiDG_COMM)
 
 
@@ -566,7 +574,7 @@ contains
 
 
         integer(ik) :: idens, imom1, imom2, imom3, ienergy
-        integer(ik) :: ielem, idom, ierr, itime
+        integer(ik) :: ielem, idom, ierr, itime, igq
         real(rk)    :: error_squared_sum, error_squared_sum_reduced, element_error_squared, error
 
         class(function_t),  allocatable :: fcn
@@ -594,7 +602,7 @@ contains
             error_squared_sum = ZERO
 
 
-            call create_function(fcn,'convecting_vortex_solution')
+            call create_function(fcn,'convecting_vortex')
 
 
 
@@ -611,8 +619,10 @@ contains
                     !
                     x_gq = mesh%domain(idom)%elems(ielem)%quad_pts(:,1)
                     y_gq = mesh%domain(idom)%elems(ielem)%quad_pts(:,2)
-                    test_points(:)%c1_ = x_gq
-                    test_points(:)%c2_ = y_gq
+                    do igq = 1, size(x_gq)
+                        test_points(igq)%c1_ = x_gq(igq)
+                        test_points(igq)%c2_ = y_gq(igq)
+                    end do
 
                     det_jacobian_grid_gq = mesh%domain(idom)%elems(ielem)%det_jacobian_grid
 

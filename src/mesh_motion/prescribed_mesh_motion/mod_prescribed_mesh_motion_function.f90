@@ -9,6 +9,8 @@ module mod_prescribed_mesh_motion_function
     !
     use pmmf_static,                            only: static_pmmf
     use pmmf_sinusoidal,                        only: sinusoidal_pmmf
+    use pmmf_sinusoidal_1d,                        only: sinusoidal_1d_pmmf
+    use pmmf_sinusoidal_2d,                        only: sinusoidal_2d_pmmf
     use pmmf_isotropic_dilation,                only: isotropic_dilation_pmmf
     use pmmf_constant_motion_1d_x,              only: constant_motion_1d_x_pmmf
     use pmmf_hpaf_case1,                        only: hpaf_case1_pmmf
@@ -49,6 +51,8 @@ contains
         !
         type(static_pmmf)                               :: static
         type(sinusoidal_pmmf)                           :: sinusoidal
+        type(sinusoidal_1d_pmmf)                           :: sinusoidal_1d
+        type(sinusoidal_2d_pmmf)                           :: sinusoidal_2d
         type(isotropic_dilation_pmmf)                   :: isotropic_dilation
         type(constant_motion_1d_x_pmmf)                 :: constant_motion_1d_x
         type(hpaf_case1_pmmf)                           :: hpaf_case1
@@ -65,6 +69,8 @@ contains
             !
             call registered_pmmfs%push_back(static)
             call registered_pmmfs%push_back(sinusoidal)
+            call registered_pmmfs%push_back(sinusoidal_1d)
+            call registered_pmmfs%push_back(sinusoidal_2d)
             call registered_pmmfs%push_back(isotropic_dilation)
             call registered_pmmfs%push_back(constant_motion_1d_x)
             call registered_pmmfs%push_back(hpaf_case1)

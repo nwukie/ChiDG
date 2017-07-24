@@ -2095,18 +2095,26 @@ contains
         !det_jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%det_jacobian_grid(:)
         ! Interpolate modes to nodes
         if (interp_type == 'value') then
-            val = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%basis_s%interpolator('Value')
+            det_jacobian_grid_gq = &
+                self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%det_jacobian_grid
+            !val = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%basis_s%interpolator('Value')
         else if (interp_type == 'grad1') then
-            val = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grad1
+            det_jacobian_grid_gq = &
+                self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%det_jacobian_grid_grad1
+            !val = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grad1
         else if (interp_type == 'grad2') then
-            val = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grad2
+            det_jacobian_grid_gq = &
+                self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%det_jacobian_grid_grad2
+            !val = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grad2
         else if (interp_type == 'grad3') then
-            val = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grad3
+            det_jacobian_grid_gq = &
+                self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%det_jacobian_grid_grad3
+            !val = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grad3
         end if
 
 
-        det_jacobian_grid_gq = &
-        matmul(val,self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%det_jacobian_grid_modes)
+!        det_jacobian_grid_gq = &
+!        matmul(val,self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%det_jacobian_grid_modes)
 
 
         !det_jacobian_grid_gq = ONE/det_jacobian_grid_gq

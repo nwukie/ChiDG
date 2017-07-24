@@ -6,6 +6,7 @@ module euler_ale_volume_operator
     use type_properties,        only: properties_t
     use type_chidg_worker,      only: chidg_worker_t
     use DNAD_D
+    use ieee_arithmetic,        only: ieee_is_nan
     implicit none
 
     private
@@ -143,6 +144,7 @@ contains
         rhoE = rhoE/det_jacobian_grid
 
         invrho = ONE/rho
+    
 
 !        u = invrho*rhou
 !        print *, 'u'
@@ -172,6 +174,7 @@ contains
         flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
         flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
         flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
+
 
         call worker%integrate_volume('Density',flux_x_ref,flux_y_ref,flux_z_ref)
 
@@ -270,6 +273,7 @@ contains
 !            print *, 'Energy flux sample'
 !            print *, flux_x_ref(1)%x_ad_
 !        end if
+
 
 
         call worker%integrate_volume('Energy',flux_x_ref,flux_y_ref,flux_z_ref)

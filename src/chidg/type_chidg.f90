@@ -181,12 +181,6 @@ contains
             !
             case ('core')
 
-                !! Default communicator for 'communication' is MPI_COMM_WORLD
-                !if ( present(comm) ) then
-                !    ChiDG_COMM = comm
-                !else
-                !    ChiDG_COMM = MPI_COMM_WORLD
-                !end if
 
                 ! Call environment initialization routines by default on first init call
                 if (.not. self%envInitialized ) then
@@ -212,6 +206,7 @@ contains
                     if (ierr /= 0) call AllocationError
                 end if
 
+                self%envInitialized = .true.
                 call self%data%time_manager%init()
 
                 !

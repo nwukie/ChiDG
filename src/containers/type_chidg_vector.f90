@@ -61,9 +61,12 @@ module type_chidg_vector
 
         procedure,  public  :: release                          ! Release allocated resources
         procedure,  public  :: get_ntime                        ! Return ntime associated with
-                                                                ! densevctors
         procedure,  public  :: set_ntime                        ! Set ntime in the associated
                                                                 ! densevectors
+        procedure,  public  :: ndomains
+
+        procedure,  public  :: restrict
+                                                                    
 
 !        generic :: assignment(=) => 
         
@@ -725,6 +728,7 @@ contains
 
         integer(ik)     :: idom, ielem
 
+        self%ntime_ = ntime
 
         ! 
         ! Set ntime
@@ -739,6 +743,71 @@ contains
 
     end subroutine set_ntime
     !****************************************************************************************
+
+
+
+
+
+    !>
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/21/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    function ndomains(self) result(ndomains_)
+        class(chidg_vector_t),  intent(in)  :: self
+
+        integer(ik) :: ndomains_
+
+        if (allocated(self%dom)) then
+            ndomains_ = size(self%dom)
+        else
+            ndomains_ = 0
+        end if
+
+
+    end function ndomains
+    !***************************************************************************************
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/21/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    function restrict(self,nterms_r) result(restricted)
+        class(chidg_vector_t),  intent(inout)   :: self
+        integer(ik),            intent(in)      :: nterms_r
+
+        type(chidg_vector_t)    :: restricted
+        integer(ik)             :: idom, ierr
+        
+
+        restricted%send = self%send                     ! Copy self%send directly
+        restricted%recv = self%recv%restrict(nterms_r)  ! Get restricted copy of self%recv
+
+
+        ! Allocate storage for each domain
+        if (allocated(restricted%dom)) deallocate(restricted%dom)
+        allocate(restricted%dom(self%ndomains()), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        ! Return restricted domain_vector objects for each domain
+        do idom = 1,self%ndomains()
+            restricted%dom(idom) = self%dom(idom)%restrict(nterms_r)
+        end do !idom
+
+        ! Set ntime
+        restricted%ntime_ = self%ntime_
+
+    end function restrict
+    !***************************************************************************************
+
 
 
 

@@ -23,8 +23,10 @@ module type_chidg_vector_recv
 
     contains
 
-        procedure, public :: init
-        procedure, public :: clear
+        procedure, public   :: init
+        procedure, public   :: clear
+        procedure, public   :: ncomm
+        procedure, public   :: restrict
 
     end type chidg_vector_recv_t
     !*****************************************************************************************
@@ -114,6 +116,56 @@ contains
 
     end subroutine clear
     !********************************************************************************************
+
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    function ncomm(self) result(ncomm_)
+        class(chidg_vector_recv_t), intent(in)  :: self
+
+        integer(ik) :: ncomm_
+
+        if (allocated(self%comm)) then
+            ncomm_ = size(self%comm)
+        else 
+            ncomm_ = 0
+        end if
+
+    end function ncomm
+    !*******************************************************************************************
+
+
+
+    !>
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/21/2017
+    !!
+    !------------------------------------------------------------------------------------------
+    function restrict(self, nterms_r) result(restricted)
+        class(chidg_vector_recv_t), intent(in)  :: self
+        integer(ik),                intent(in)  :: nterms_r
+
+        type(chidg_vector_recv_t)   :: restricted
+        integer(ik)                 :: ierr, icomm
+
+        allocate(restricted%comm(self%ncomm()), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        do icomm = 1,self%ncomm()
+            restricted%comm(icomm) = self%comm(icomm)%restrict(nterms_r)
+        end do !icomm
+
+    end function restrict
+    !******************************************************************************************
 
 
 

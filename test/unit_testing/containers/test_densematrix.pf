@@ -7,19 +7,21 @@
 @Test
 subroutine test_densematrix__init() 
     use pfunit_mod
-    use mod_kinds, only: rk,ik
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: TWO
     use type_densematrix
     
     implicit none
     type(densematrix_t)  :: blk
-    integer(ik)          :: idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,nentries, parent_proc
+    integer(ik)          :: nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l, &
+                            nentries, parent_proc
     
     !    
     ! Test initialization procedure
     !
-    idim   = 4
-    jdim   = 10
-    nentries    = idim*jdim
+    nterms  = 8
+    nfields = 10
+    nentries    = (nterms*nfields)**TWO
     dparent_g   = 1
     dparent_l   = 2
     eparent_g   = 60
@@ -29,10 +31,11 @@ subroutine test_densematrix__init()
     !
     ! Call initialization procedure. THIS IS BEING TESTED.
     !
-    call blk%init(idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+    !call blk%init(idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+    call blk%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
     
-    @assertEqual(idim,blk%idim())
-    @assertEqual(jdim,blk%jdim())
+    @assertEqual(nterms*nfields,blk%idim())
+    @assertEqual(nterms*nfields,blk%jdim())
     @assertEqual(nentries,blk%nentries())
     @assertEqual(dparent_g,blk%dparent_g())
     @assertEqual(dparent_l,blk%dparent_l())
@@ -55,28 +58,30 @@ end subroutine test_densematrix__init
 @Test
 subroutine test_densematrix__reinit() 
     use pfunit_mod
-    use mod_kinds, only: rk,ik
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: TWO
     use type_densematrix
     
     implicit none
     type(densematrix_t)  :: blk
-    integer(ik)          :: idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,nentries, parent_proc
+    integer(ik)          :: nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l, &
+                            nentries, parent_proc
 
 
 
     !    
     ! Initialize matrix
     !
-    idim   = 4
-    jdim   = 10
-    nentries    = idim*jdim
+    nterms  = 8
+    nfields = 2
+    nentries    = (nterms*nfields)**TWO
     dparent_g   = 1
     dparent_l   = 2
     eparent_g   = 60
     eparent_l   = 55
     parent_proc = 3
     
-    call blk%init(idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+    call blk%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
 
 
 
@@ -84,19 +89,19 @@ subroutine test_densematrix__reinit()
     !
     ! Test reinitialization procedure. THIS IS BEING TESTED.
     !
-    idim   = 6
-    jdim   = 12
-    nentries = idim*jdim
+    nterms  = 1
+    nfields = 3
+    nentries = (nterms*nfields)**TWO
     dparent_g   = 2
     dparent_l   = 3
     eparent_g   = 66
     eparent_l   = 65
     parent_proc = 2
     
-    call blk%init(idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+    call blk%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
     
-    @assertEqual(idim,blk%idim())
-    @assertEqual(jdim,blk%jdim())
+    @assertEqual(nterms*nfields,blk%idim())
+    @assertEqual(nterms*nfields,blk%jdim())
     @assertEqual(nentries,blk%nentries())
     @assertEqual(dparent_g,blk%dparent_g())
     @assertEqual(dparent_l,blk%dparent_l())
@@ -124,25 +129,27 @@ end subroutine test_densematrix__reinit
 @Test
 subroutine test_densematrix__resize()
     use pfunit_mod
-    use mod_kinds, only: rk,ik
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: TWO
     use type_densematrix
     
     implicit none
-    type(densematrix_t)   :: blk
-    integer(ik)          :: idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc,nentries
+    type(densematrix_t) :: blk
+    integer(ik)         :: nterms,nfields,idim,jdim,dparent_g,dparent_l,eparent_g,  &
+                           eparent_l,parent_proc,nentries
     
     
     !
     ! Initialize matrix
     !
-    idim   = 4
-    jdim   = 7
+    nterms  = 8
+    nfields = 2
     dparent_g   = 2
     dparent_l   = 3
     eparent_g   = 66
     eparent_l   = 65
     parent_proc = 2
-    call blk%init(idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+    call blk%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
     
     !
     ! Test resize procedure
@@ -164,4 +171,86 @@ subroutine test_densematrix__resize()
 
 end subroutine test_densematrix__resize
 !*******************************************************************************************
+
+
+
+
+
+
+
+!>  Test 'restrict' procedure for producing a matrix restricted to a lower
+!!  polynomial space.
+!!
+!!  @author Nathan A. Wukie
+!!  @date   7/23/2017
+!!
+!!
+!----------------------------------------------------------------------------------------
+@Test
+subroutine test_densematrix__restrict()
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: TWO
+    use type_densematrix
+    implicit none
+
+    
+    type(densematrix_t) :: dmatrix, restricted
+    real(rk)            :: tol
+    integer(ik)         :: nterms,nfields,idim,jdim,dparent_g,dparent_l,eparent_g,  &
+                           eparent_l,parent_proc,nentries
+
+    tol = 1.e-6_rk
+    
+    !
+    ! Initialize matrix
+    !
+    nterms      = 8
+    nfields     = 2
+    dparent_g   = 2
+    dparent_l   = 3
+    eparent_g   = 66
+    eparent_l   = 65
+    parent_proc = 2
+    call dmatrix%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+
+
+    !
+    ! Seed initial matrix with random numbers
+    !
+    call random_number(dmatrix%mat)
+
+    
+    !
+    ! Test restrict procedure
+    !
+    restricted = dmatrix%restrict(nterms_r=1)
+    
+    
+
+    @assertEqual(2,           size(restricted%mat,1)   )
+    @assertEqual(2,           size(restricted%mat,2)   )
+    @assertEqual(dparent_g,   restricted%dparent_g()   )
+    @assertEqual(dparent_l,   restricted%dparent_l()   )
+    @assertEqual(eparent_g,   restricted%eparent_g()   )
+    @assertEqual(eparent_l,   restricted%eparent_l()   )
+    @assertEqual(parent_proc, restricted%parent_proc() )
+
+    ! Check values of restricted matrix
+    @assertEqual(dmatrix%mat(1,1), restricted%mat(1,1), tol)
+    @assertEqual(dmatrix%mat(9,1), restricted%mat(2,1), tol)
+    @assertEqual(dmatrix%mat(1,9), restricted%mat(1,2), tol)
+    @assertEqual(dmatrix%mat(9,9), restricted%mat(2,2), tol)
+
+end subroutine test_densematrix__restrict
+!*******************************************************************************************
+
+
+
+
+
+
+
+
+
 

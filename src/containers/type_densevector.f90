@@ -27,26 +27,26 @@ module type_densevector
         integer(ik)             :: eparent_l_
 
         ! Storage size and equation information
-        integer(ik), private    :: nterms_                  !< Number of terms in an expansion
-        integer(ik), private    :: nvars_                   !< Number of equations included
-        integer(ik), private    :: ntime_                   !< Number of time instances stored
+        integer(ik), private    :: nterms_              ! Number of terms in an expansion
+        integer(ik), private    :: nvars_               ! Number of equations included
+        integer(ik), private    :: ntime_               ! Number of time instances stored
 
         ! Vector storage
-        real(rk),  dimension(:), allocatable :: vec         !< Vector storage
+        real(rk),  dimension(:), allocatable :: vec     ! Vector storage
 
     contains
 
-        procedure, public :: init           !< Initialize vector storage
+        procedure, public :: init           ! Initialize vector storage
 
         procedure, public :: dparent_g
         procedure, public :: dparent_l
         procedure, public :: eparent_g
         procedure, public :: eparent_l
-        procedure, public :: nentries       !< return number of vector entries
-        procedure, public :: nterms         !< return nterms_
-        procedure, public :: nvars          !< return nvars_
-        procedure, public :: ntime          !< return ntime_
-        procedure, public :: set_ntime      !< procedure for changing ntime 
+        procedure, public :: nentries       ! return number of vector entries
+        procedure, public :: nterms         ! return nterms_
+        procedure, public :: nvars          ! return nvars_
+        procedure, public :: ntime          ! return ntime_
+        procedure, public :: set_ntime      ! procedure for changing ntime 
 
         procedure, public :: settime
         procedure, public :: gettime
@@ -62,6 +62,8 @@ module type_densevector
         procedure, public :: sumsqr_fields
 
         procedure, public :: clear
+
+        procedure, public :: restrict
 
     end type densevector_t
     !******************************************************************************************
@@ -106,22 +108,18 @@ module type_densevector
     end interface
 
 
-
-
-
-
-
-
-
-
-
     private
+
+
+
+
+
 contains
 
 
 
 
-    !> Subroutine for initializing dense-vector storage
+    !>  Subroutine for initializing dense-vector storage.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -455,9 +453,9 @@ contains
     !!  @author Matteo Ugolotti + Sharma Mayank
     !!  @date   11/14/2016
     !!
-    !!  @param[in]  itime       Integer index of the time level, for which modes will be set
+    !!  @param[in]  itime       Integer index of time level, for which modes will be set
     !!
-    !-----------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------
     subroutine setterm(self,ivar,iterm,itime,mode_in)
         class(densevector_t),   intent(inout)   :: self
         integer(ik),            intent(in)      :: ivar, iterm, itime
@@ -478,7 +476,7 @@ contains
         self%vec(iterm_g) = mode_in
 
     end subroutine setterm
-    !****************************************************************************************
+    !********************************************************************************
 
 
 
@@ -495,7 +493,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !-----------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------
     function nentries(self) result(n)
         class(densevector_t),   intent(in)      :: self
         integer(ik)                             :: n
@@ -503,7 +501,7 @@ contains
         n = size(self%vec)
 
     end function nentries
-    !****************************************************************************************
+    !********************************************************************************
 
 
 
@@ -518,7 +516,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !-----------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------
     pure function nterms(self) result(nterms_out)
         class(densevector_t),   intent(in)  :: self
         integer(ik)                         :: nterms_out
@@ -526,7 +524,7 @@ contains
         nterms_out = self%nterms_
 
     end function nterms
-    !****************************************************************************************
+    !********************************************************************************
 
 
 
@@ -540,7 +538,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !----------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------
     pure function nvars(self) result(nvars_out)
         class(densevector_t),   intent(in)  :: self
         integer(ik)                         :: nvars_out
@@ -548,7 +546,7 @@ contains
         nvars_out = self%nvars_
 
     end function nvars
-    !****************************************************************************************
+    !********************************************************************************
 
 
 
@@ -562,7 +560,7 @@ contains
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   11/03/2016
     !!
-    !---------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------
     pure function ntime(self) result(ntime_out)
         class(densevector_t),  intent(in)  :: self
 
@@ -571,7 +569,7 @@ contains
         ntime_out = self%ntime_
         
     end function ntime
-    !***************************************************************************************
+    !********************************************************************************
   
     
 
@@ -586,7 +584,7 @@ contains
     !!  @author Mayank Sharma
     !!  @date   3/9/2017
     !!
-    !---------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------
     subroutine set_ntime(self,ntime_in)
         class(densevector_t),   intent(inout)   :: self
         integer(ik),            intent(in)      :: ntime_in
@@ -606,7 +604,7 @@ contains
 
 
     end subroutine set_ntime
-    !***************************************************************************************
+    !********************************************************************************
   
     
 
@@ -621,7 +619,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   6/30/2016
     !!
-    !---------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------
     function dparent_g(self) result(par)
         class(densevector_t),   intent(in)      :: self
         integer(ik)                             :: par
@@ -629,7 +627,7 @@ contains
         par = self%dparent_g_
 
     end function dparent_g
-    !***************************************************************************************
+    !********************************************************************************
 
 
 
@@ -638,7 +636,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   6/30/2016
     !!
-    !---------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------
     function dparent_l(self) result(par)
         class(densevector_t),   intent(in)      :: self
         integer(ik)                             :: par
@@ -646,7 +644,7 @@ contains
         par = self%dparent_l_
 
     end function dparent_l
-    !***************************************************************************************
+    !********************************************************************************
 
 
 
@@ -655,7 +653,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   6/30/2016
     !!
-    !---------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------
     function eparent_g(self) result(par)
         class(densevector_t),   intent(in)      :: self
         integer(ik)                             :: par
@@ -663,7 +661,7 @@ contains
         par = self%eparent_g_
 
     end function eparent_g
-    !***************************************************************************************
+    !********************************************************************************
 
 
     !> Function that returns index of block parent
@@ -671,7 +669,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   6/30/2016
     !!
-    !---------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------
     function eparent_l(self) result(par)
         class(densevector_t),   intent(in)      :: self
         integer(ik)                             :: par
@@ -679,7 +677,7 @@ contains
         par = self%eparent_l_
 
     end function eparent_l
-    !***************************************************************************************
+    !********************************************************************************
 
 
 
@@ -695,18 +693,61 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !---------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------
     subroutine clear(self)
         class(densevector_t),   intent(inout)   :: self
-
 
         self%vec = ZERO
 
     end subroutine clear
-    !***************************************************************************************
+    !********************************************************************************
 
 
 
+
+
+    !>
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/21/2017
+    !!
+    !!  @param[in]  nterms_r    Number of terms in the restricted basis.
+    !!
+    !--------------------------------------------------------------------------------
+    function restrict(self,nterms_r) result(restricted)
+        class(densevector_t),   intent(in)  :: self
+        integer(ik),            intent(in)  :: nterms_r
+
+        integer(ik)             :: nvars, ntime, dparent_g, dparent_l, eparent_g, eparent_l, &
+                                   ivar, itime
+        real(rk),   allocatable :: field(:)
+        type(densevector_t)     :: restricted
+
+
+        ! Get parameters from initial vector
+        nvars     = self%nvars()
+        ntime     = self%ntime()
+        dparent_g = self%dparent_g()
+        dparent_l = self%dparent_l()
+        eparent_g = self%eparent_g()
+        eparent_l = self%eparent_l()
+
+
+        ! Size to restricted basis
+        call restricted%init(nterms_r,nvars,ntime,dparent_g,dparent_l,eparent_g,eparent_l)
+
+
+        ! Copy restricted fields
+        do ivar = 1,nvars
+            do itime = 1,ntime
+                field   = self%getvar(ivar,itime)
+                call restricted%setvar(ivar,itime,field(1:nterms_r) )
+            end do
+        end do
+
+    end function restrict
+    !********************************************************************************
 
 
 

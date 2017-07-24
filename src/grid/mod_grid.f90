@@ -95,9 +95,11 @@ contains
             ! Initialize mapping for reference element.
             !
             if ( spacedim == THREE_DIM ) then
-                call ELEM_MAP_3D(imap)%init(npts_3d(imap),npts_3d(imap),0,0,0,0,NO_PROC)
+                !call ELEM_MAP_3D(imap)%init(npts_3d(imap),npts_3d(imap),0,0,0,0,NO_PROC)
+                call ELEM_MAP_3D(imap)%init(npts_3d(imap),1,0,0,0,0,NO_PROC)
             else if ( spacedim == TWO_DIM ) then
-                call ELEM_MAP_2D(imap)%init(npts_2d(imap),npts_2d(imap),0,0,0,0,NO_PROC)
+                !call ELEM_MAP_2D(imap)%init(npts_2d(imap),npts_2d(imap),0,0,0,0,NO_PROC)
+                call ELEM_MAP_2D(imap)%init(npts_2d(imap),1,0,0,0,0,NO_PROC)
             end if
 
 

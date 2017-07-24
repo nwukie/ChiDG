@@ -61,6 +61,9 @@ module type_domain_matrix
         procedure :: store_bc                                           ! Store linearization data for boundary condition blocks
         procedure :: clear                                              ! Zero all data storage
 
+        ! Processors
+        procedure :: restrict
+
         final :: destructor
 
     end type domain_matrix_t
@@ -94,7 +97,7 @@ contains
 
         character(:),   allocatable :: user_msg
         integer(ik),    allocatable :: blocks(:)
-        integer(ik)                 :: nelem, ierr, ielem, iblk, size1d, parent,        &
+        integer(ik)                 :: nelem, ierr, ielem, iblk, parent,                &
                                        block_index, neqns, nterms_s, ntime,             &
                                        nchimera_elements, maxdonors, idonor, iface,     &
                                        itime, dparent_g, dparent_l, eparent_g,          &
@@ -212,7 +215,9 @@ contains
                 !--------------------------------------------
                 do block_index = 1,size(blocks)
                     iblk = blocks(block_index)
-                    size1d = mesh%domain(idom)%elems(ielem)%neqns  *  mesh%domain(idom)%elems(ielem)%nterms_s
+                    nterms_s = mesh%domain(idom)%elems(ielem)%nterms_s
+                    neqns    = mesh%domain(idom)%elems(ielem)%neqns
+                    !size1d = mesh%domain(idom)%elems(ielem)%neqns  *  mesh%domain(idom)%elems(ielem)%nterms_s
 
                     !
                     ! Parent is the element with respect to which the linearization is computed
@@ -240,7 +245,7 @@ contains
                     if (eparent_l /= NO_INTERIOR_NEIGHBOR) then
 
                         ! Initialize dense block
-                        call temp_blk%init(size1d,size1d,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+                        call temp_blk%init(nterms_s,neqns,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
                         call self%lblks(ielem,itime)%push_back(temp_blk)
 
                         ! Store data about number of equations and number of terms in solution expansion
@@ -312,7 +317,6 @@ contains
                                 eparent_l   = mesh%domain(idom)%chimera%recv(ChiID)%donor_element_l%at(idonor)
                                 parent_proc = mesh%domain(idom)%chimera%recv(ChiID)%donor_proc%at(idonor)
 
-                                size1d = neqns * nterms_s
 
                                 !
                                 ! Check if block initialization was already called for current donor
@@ -340,7 +344,7 @@ contains
                                     !
                                     ! Call block initialization, store
                                     !
-                                    call temp_blk%init(size1d,size1d,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+                                    call temp_blk%init(nterms_s,neqns,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
                                     call self%chi_blks(ielem,itime)%push_back(temp_blk)
 
                                 end if
@@ -401,7 +405,6 @@ contains
                                     !
                                     neqns    = mesh%domain(idomain_l)%elems(ielement_l)%neqns
                                     nterms_s = mesh%domain(idomain_l)%elems(ielement_l)%nterms_s
-                                    size1d   = neqns * nterms_s
 
 
                                     !
@@ -439,7 +442,7 @@ contains
                                     ! Call initialization, store initialized matrix to bc_blks
                                     !
                                     if (.not. already_added) then
-                                        call temp_blk%init(size1d,size1d,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+                                        call temp_blk%init(nterms_s,neqns,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
                                         call self%bc_blks(ielement_l,itime)%push_back(temp_blk)
                                     end if
 
@@ -645,13 +648,13 @@ contains
     !!  @author Matteo Ugolotti
     !!  @date   11/14/2016
     !!
-    !!  @param[in]  integral    Array of modes with embedded partial derivatives for the linearization matrix
+    !!  @param[in]  integral    Array of modes with embedded partial derivatives 
     !!  @param[in]  face        face_info_t containing indices for the location of the face being linearized.
     !!  @param[in]  seed        seed_t containing indices of the element against which the linearization was computed.
     !!  @param[in]  ivar        Index of the variable
     !!  @param[in]  itime       Index of a time level for the linearization of the given element
     !!
-    !------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------
     subroutine store_bc(self,integral,face,seed,ivar,itime)
         class(domain_matrix_t),       intent(inout)   :: self
         type(AD_D),                 intent(in)      :: integral(:)
@@ -703,7 +706,7 @@ contains
 
 
     end subroutine store_bc
-    !******************************************************************************************
+    !********************************************************************************
 
 
 
@@ -723,7 +726,7 @@ contains
     !!  @author Matteo Ugolotti + Mayank Sharma
     !!  @date   11/14/2016
     !!
-    !------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------
     subroutine clear(self)
         class(domain_matrix_t),   intent(inout)   :: self
 
@@ -761,8 +764,80 @@ contains
 
 
     end subroutine clear
-    !******************************************************************************************
+    !*******************************************************************************
 
+
+
+
+
+    !>  Return a domain_matrix instance that is restricted to the specified
+    !!  polynomial space.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/23/2017
+    !!
+    !!
+    !------------------------------------------------------------------------------
+    function restrict(self,nterms_r) result(restricted)
+        class(domain_matrix_t), intent(in)  :: self
+        integer(ik),            intent(in)  :: nterms_r
+
+        type(domain_matrix_t)   :: restricted
+        integer(ik)             :: ierr, ielem, itime
+
+
+        !
+        ! Copy auxiliary data
+        !
+        restricted%ldata = self%ldata
+        restricted%local_lower_blocks = self%local_lower_blocks
+        restricted%local_upper_blocks = self%local_upper_blocks
+
+
+
+        !
+        ! Allocate storage for primary data on restricted object
+        !
+        allocate(restricted%lblks(size(self%lblks,1),size(self%lblks,2)), &
+                 restricted%chi_blks(size(self%chi_blks,1),size(self%chi_blks,2)), &
+                 restricted%bc_blks(size(self%bc_blks,1),size(self%bc_blks,2)), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        !
+        ! Copy restricted data
+        !
+        do ielem = 1,size(self%lblks,1)
+            do itime = 1,size(self%lblks,2)
+                restricted%lblks(ielem,itime) = self%lblks(ielem,itime)%restrict(nterms_r)
+            end do !itime
+        end do !ielem
+
+        do ielem = 1,size(self%chi_blks,1)
+            do itime = 1,size(self%chi_blks,2)
+                restricted%chi_blks(ielem,itime) = self%chi_blks(ielem,itime)%restrict(nterms_r)
+            end do !itime
+        end do !ielem
+
+        do ielem = 1,size(self%bc_blks,1)
+            do itime = 1,size(self%bc_blks,2)
+                restricted%bc_blks(ielem,itime) = self%bc_blks(ielem,itime)%restrict(nterms_r)
+            end do !itime
+        end do !ielem
+
+
+
+        !
+        ! Update ldata with correct number of terms
+        !
+        do ielem = 1,size(self%ldata,1)
+            restricted%ldata(ielem,2) = nterms_r
+        end do !ielem
+
+
+
+    end function restrict
+    !******************************************************************************
 
 
 

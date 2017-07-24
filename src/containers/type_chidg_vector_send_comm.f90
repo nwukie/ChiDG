@@ -336,23 +336,17 @@ contains
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   7/1/2016
     !!
-    !!
-    !!
     !---------------------------------------------------------------------------------------
     function nsends(self) result(nsend)
         class(chidg_vector_send_comm_t), intent(in)  :: self
 
         integer(ik) :: nsend, idom_send, ielem_send
 
-        !
-        ! Loop through domains
-        !
+        ! Loop through domains, accumulate number of elements being sent from 
+        ! each sending domain.
         nsend = 0
         do idom_send = 1,self%dom_send%size()
-
-            ! Accumulate number of elements being sent from each sending domain
             nsend = nsend + self%elems_send(idom_send)%size()
-
         end do
 
     end function nsends

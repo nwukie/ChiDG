@@ -47,6 +47,7 @@ contains
         type(domain_connectivity_t) :: connectivity
         
         IO_DESTINATION = 'file'
+
         
         !
         ! Initialize ChiDG environment

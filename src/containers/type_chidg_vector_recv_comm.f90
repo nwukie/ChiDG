@@ -26,6 +26,8 @@ module type_chidg_vector_recv_comm
 
         procedure,  public  :: init
         procedure,  public  :: clear
+        procedure,  public  :: ndomains
+        procedure,  public  :: restrict
 
     end type chidg_vector_recv_comm_t
     !********************************************************************************
@@ -289,11 +291,6 @@ contains
 
 
 
-
-
-
-
-
     !>  Zero all entries.
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -314,6 +311,65 @@ contains
     !**********************************************************************************
 
 
+
+    
+
+    !>  Return number of domains being received from a given processor.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/21/2017
+    !!
+    !----------------------------------------------------------------------------------
+    function ndomains(self) result(ndomains_)
+        class(chidg_vector_recv_comm_t),    intent(in)  :: self
+
+        integer(ik) :: ndomains_
+
+        if (allocated(self%dom)) then
+            ndomains_ = size(self%dom)
+        else
+            ndomains_ = 0
+        end if
+
+    end function ndomains
+    !***********************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Return a restricted copy of the chidg_vector_recv_comm_t object.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/21/2017
+    !!
+    !----------------------------------------------------------------------------------
+    function restrict(self,nterms_r) result(restricted)
+        class(chidg_vector_recv_comm_t),    intent(in)  :: self
+        integer(ik),                        intent(in)  :: nterms_r
+
+        integer(ik)                     :: ierr, idom
+        type(chidg_vector_recv_comm_t)  :: restricted
+
+        restricted%proc = self%proc
+
+        ! Allocate storage for each recv domain
+        allocate(restricted%dom(self%ndomains()), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        ! For each block return a restricted version
+        do idom = 1,self%ndomains()
+            restricted%dom(idom) = self%dom(idom)%restrict(nterms_r)
+        end do
+
+
+    end function restrict
+    !**********************************************************************************
 
 
 

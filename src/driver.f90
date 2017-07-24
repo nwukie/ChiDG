@@ -48,7 +48,7 @@ program driver
     integer(HID_T) :: file_id, dom_id
 
     !VIV problem parameters
-    real(rk)    :: reynolds_number, diam_cyl, mstar, freq_cyl(3), damping_coeff(3), stiffness_coeff(3), u_reduced, u_inf, rho_inf, mass
+    real(rk)    :: freq_ratio, reynolds_number, diam_cyl, mstar, freq_cyl(3), damping_coeff(3), stiffness_coeff(3), u_reduced, u_inf, rho_inf, mass
 
 
     !

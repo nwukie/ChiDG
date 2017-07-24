@@ -1,6 +1,7 @@
 module type_chimera_donor
     use mod_kinds,      only: ik
     use type_ivector,   only: ivector_t
+    use type_element,   only: element_t
     use mod_chidg_mpi,  only: IRANK
     implicit none
 
@@ -28,6 +29,10 @@ module type_chimera_donor
 
         ! Processors receiver faces are located on
         type(ivector_t) :: receiver_procs
+
+
+        ! If donor is from off-processor, locally constructed version located here
+        type(element_t) :: parallel_donor
 
     contains
 

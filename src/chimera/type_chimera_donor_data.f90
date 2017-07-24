@@ -16,10 +16,16 @@ module type_chimera_donor_data
 
         ! Donor information
         integer(ik)                 :: donor_ID             ! ID in chimera%donors(donor_ID)
+        integer(ik)                 :: donor_domain_g
+        integer(ik)                 :: donor_domain_l
+        integer(ik)                 :: donor_element_g
+        integer(ik)                 :: donor_element_l
         integer(ik)                 :: donor_proc           ! host processor rank
+
         integer(ik)                 :: donor_recv_comm      ! location of donor solution
         integer(ik)                 :: donor_recv_domain    ! location of donor solution
         integer(ik)                 :: donor_recv_element   ! location of donor solution
+
 
         ! Node information
         integer(ik),    allocatable :: donor_gq_indices(:)    ! index in a node set the donor is providing data for

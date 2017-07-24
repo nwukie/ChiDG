@@ -810,8 +810,54 @@ contains
 
 
         !
-        ! Receive chimera donors
+        ! Receive/constrict parallel chimera donors
         !
+
+        ! call mesh%parallel_element(pelem_ID)%init_ale()
+        ! call mesh%parallel_element(pelem_ID)%update_ale()
+
+
+
+
+
+
+
+
+
+        
+        !
+        ! Construct receiver interpolations
+        !
+        !
+        !do idom = 1,mesh%ndomains()
+        !   do ChiID = 1,size(mesh%dom(idom)%chimera%recv)
+        !      do idonor = 1,size(mesh%dom(idom)%chimera%recv(ChiID)%donor_data)
+        !
+        !          ! Get donor location
+        !          mesh%dom(idom)%chimera%recv(ChiID)%donor_data(idonor)%donor_proc
+        !
+        !          parallel_donor = (donor_proc /= IRANK)
+        !
+        !          if (parallel_donor) then
+        !
+        !              pelem_ID    = mesh%dom(idom)%chimera%recv(ChiID)%donor_data(idonor)%pelem_ID
+        !              xi_eta_zeta = mesh%dom(idom)%chimera%recv(ChiID)%donor_data(idonor)%donor_coords
+        !              mesh%parallel_elements(pelem_ID)%metric_point_ale(xi_eta_zeta)
+        !
+        !           else
+        !
+        !              idomain_l   = mesh%dom(idom)%chimera%recv(ChiID)%donor_data(idonor)%idomain_l
+        !              ielement_l  = mesh%dom(idom)%chimera%recv(ChiID)%donor_data(idonor)%ielement_l
+        !              xi_eta_zeta = mesh%dom(idom)%chimera%recv(ChiID)%donor_data(idonor)%donor_coords
+        !              mesh%domain(idomain_l)%elems(ielement_l)%metric_point_ale(xi_eta_zeta)
+        !
+        !
+        !      end do !idonor
+        !   end do !ChiID
+        !end do !idom
+        !
+
+
 
 
 

@@ -4,7 +4,7 @@ module type_RASILU0_send_comm
     use mod_constants,              only: NFACES, DIAG, INTERIOR
     use mod_chidg_mpi,              only: ChiDG_COMM, IRANK
     use type_ivector,               only: ivector_t
-    use type_mesh,              only: mesh_t
+    use type_mesh,                  only: mesh_t
     use type_chidg_matrix,          only: chidg_matrix_t
     use type_mpi_request_vector,    only: mpi_request_vector_t
     use type_RASILU0_send_comm_dom, only: RASILU0_send_comm_dom_t
@@ -65,7 +65,7 @@ contains
     !-------------------------------------------------------------------------------------------
     subroutine init(self,mesh,A,proc)
         class(RASILU0_send_comm_t), intent(inout)   :: self
-        type(mesh_t),           intent(in)      :: mesh
+        type(mesh_t),               intent(in)      :: mesh
         type(chidg_matrix_t),       intent(in)      :: A
         integer(ik),                intent(in)      :: proc
 

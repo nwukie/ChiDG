@@ -112,13 +112,13 @@ module type_domain
                                                         ! check if current processor contains neighbor
 
 
-        procedure,  public  :: get_recv_procs           ! Return proc ranks mesh receiving from (neighbor+chimera)
-        procedure,  public  :: get_recv_procs_local     ! Return proc ranks mesh receiving neighbor data from
-        procedure,  public  :: get_recv_procs_chimera   ! Return proc ranks mesh receiving chimera data from 
+        procedure,  public  :: get_recv_procs           ! Return proc ranks receiving from (neighbor+chimera)
+        procedure,  public  :: get_recv_procs_local     ! Return proc ranks receiving neighbor data from
+        procedure,  public  :: get_recv_procs_chimera   ! Return proc ranks receiving chimera data from 
 
-        procedure,  public  :: get_send_procs           ! Return proc ranks mesh sending to (neighbor+chimera)
-        procedure,  public  :: get_send_procs_local     ! Return proc ranks mesh sending neighbor data to
-        procedure,  public  :: get_send_procs_chimera   ! Return proc ranks mesh sending chimera data to
+        procedure,  public  :: get_send_procs           ! Return proc ranks sending to (neighbor+chimera)
+        procedure,  public  :: get_send_procs_local     ! Return proc ranks sending neighbor data to
+        procedure,  public  :: get_send_procs_chimera   ! Return proc ranks sending chimera data to
 
         procedure,  public  :: get_nelements_global
         procedure,  public  :: get_nelements_local

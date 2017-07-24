@@ -1,7 +1,7 @@
-module type_fgmres_cgs
+module type_fgmres_cgs_mg
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: ZERO
+    use mod_constants,          only: ZERO, ONE, TWO, THREE
     use mod_inv,                only: inv
     use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER
     use mod_io,                 only: verbosity
@@ -11,6 +11,9 @@ module type_fgmres_cgs
     use type_linear_solver,     only: linear_solver_t 
     use type_preconditioner,    only: preconditioner_t
     use type_solver_controller, only: solver_controller_t
+    use type_fgmres_cgs,        only: fgmres_cgs_t
+    use precon_ILU0,            only: precon_ILU0_t
+    use precon_jacobi,          only: precon_jacobi_t
     use type_chidg_vector
     use type_chidg_matrix
 
@@ -30,7 +33,7 @@ module type_fgmres_cgs
     !!  @date   5/11/2016
     !!
     !---------------------------------------------------------------------------------------------
-    type, public, extends(linear_solver_t) :: fgmres_cgs_t
+    type, public, extends(linear_solver_t) :: fgmres_cgs_mg_t
 
         integer(ik) :: m = 2000
 
@@ -38,7 +41,7 @@ module type_fgmres_cgs
 
         procedure   :: solve
 
-    end type fgmres_cgs_t
+    end type fgmres_cgs_mg_t
     !*********************************************************************************************
 
 
@@ -59,7 +62,7 @@ contains
     !!
     !---------------------------------------------------------------------------------------------
     subroutine solve(self,A,x,b,M,solver_controller)
-        class(fgmres_cgs_t),        intent(inout)               :: self
+        class(fgmres_cgs_mg_t),     intent(inout)               :: self
         type(chidg_matrix_t),       intent(inout)               :: A
         type(chidg_vector_t),       intent(inout)               :: x
         type(chidg_vector_t),       intent(inout)               :: b
@@ -75,13 +78,27 @@ contains
         real(rk),               allocatable :: p(:), y(:), c(:), s(:), p_dim(:), y_dim(:)
         real(rk)                            :: pj, pjp, h_ij, h_ipj, norm_before, norm_after, L_crit, crit
 
-        integer(ik) :: iparent, ierr, ivec, isol, nvecs, ielem
+        integer(ik) :: iparent, ierr, ivec, isol, nvecs, ielem, nmg, ismooth
         integer(ik) :: i, j, k, l, ii, ih                 ! Loop counters
         real(rk)    :: res, err, r0norm, gam, delta 
 
         logical :: converged = .false.
         logical :: max_iter  = .false.
         logical :: reorthogonalize = .false.
+
+
+        ! Multi-grid data
+        type(fgmres_cgs_t)      :: mg_linear_solver
+        type(precon_ILU0_t)     :: mg_M
+        !type(precon_jacobi_t)   :: mg_M
+        type(chidg_matrix_t)    :: mg_A
+        type(chidg_vector_t)    :: mg_r
+        type(chidg_vector_t)    :: mg_v
+        type(chidg_vector_t)    :: mg_err
+        type(chidg_vector_t)    :: mg_err_precon
+        type(chidg_vector_t)    :: mg_err_prolonged
+        type(chidg_vector_t)    :: mg_err_smoothed
+        type(chidg_vector_t)    :: r_sm
 
 
 
@@ -122,7 +139,6 @@ contains
             call v(ivec)%clear()
             call z(ivec)%clear()
         end do
-
 
 
 
@@ -199,17 +215,132 @@ contains
             ! Inner GMRES restart loop
             !
             nvecs = 0
+            nmg   = 0
             do j = 1,self%m
-
-
                 nvecs = nvecs + 1
+
+
+
+
+                
+                !************************************************
+                ! Multigrid: coarse-scale correction
+                !************************************************
+                if (nmg >= 2) then
+
+                    !!
+                    !! Reconstruct solution
+                    !!
+                    !    !
+                    !    ! Solve upper-triangular system y = hinv * p
+                    !    !
+                    !    if (allocated(h_square)) deallocate(h_square,p_dim,y_dim)
+                    !    allocate(h_square(nvecs,nvecs), &
+                    !             p_dim(nvecs),          &
+                    !             y_dim(nvecs), stat=ierr)
+                    !    if (ierr /= 0) call AllocationError
+
+
+
+
+                    !    !
+                    !    ! Store h and p values to appropriately sized matrices
+                    !    !
+                    !    do l=1,nvecs
+                    !        do k=1,nvecs
+                    !            h_square(k,l) = h(k,l)
+                    !        end do
+                    !        p_dim(l) = p(l)
+                    !    end do
+
+
+
+                    !    !
+                    !    ! Solve the system
+                    !    !
+                    !    h_square = inv(h_square)
+                    !    y_dim = matmul(h_square,p_dim)
+
+                    !    !
+                    !    ! Reconstruct solution
+                    !    !
+                    !    x = x0
+                    !    do isol = 1,nvecs
+                    !        x = x + y_dim(isol)*z(isol)
+                    !    end do
+
+                
+                    !
+                    ! Apply ILU0 Smoother
+                    !
+                    !r    = b - chidg_mv(A,v(j))     ! compute current residual
+                    !mg_r = r%restrict(nterms_r=1)
+                    mg_r = v(j)%restrict(nterms_r=1)
+                    mg_A = A%restrict(nterms_r=1)
+                    select type(M)
+                        type is (precon_ILU0_t)
+                            mg_M = M%restrict(nterms_r=1)
+                        !type is (precon_jacobi_t)
+                        !    mg_M = M%restrict(nterms_r=1)
+                    end select
+
+                    !
+                    ! Presmoother
+                    !
+                    
+
+                    !
+                    ! Solve for coarse-scale error: mg_err
+                    !   [mg_A][mg_err] = [mg_r]
+                    !
+                    call write_line('solving for coarse-scale correction', io_proc=GLOBAL_MASTER, silence=(verbosity<4))
+                    mg_err = mg_r
+                    call mg_err%clear()
+                    call mg_linear_solver%solve(mg_A,mg_err,mg_r,mg_M)
+
+                    !
+                    ! Post smoother
+                    !
+                    !mg_err = (ONE-TWO/THREE)*mg_err + (TWO/THREE)*mg_M%apply(mg_A,mg_r)
+
+
+                    !
+                    ! Prolong error and apply as coarse-scale correction
+                    !
+                    call write_line('applying coarse-scale correction', io_proc=GLOBAL_MASTER, silence=(verbosity<4))
+                    mg_err_smoothed = mg_err%prolong(nterms_p=v(j)%dom(1)%vecs(1)%nterms())
+                    !do ismooth = 1,10
+                    !    r_sm = r - chidg_mv(A,mg_err_smoothed)
+                    !    mg_err_smoothed = mg_err_smoothed + M%apply(A,r_sm)
+                    !end do
+                    !r_sm = r - chidg_mv(A,mg_err_smoothed)
+                    r_sm = v(j) - chidg_mv(A,mg_err_smoothed)
+                    mg_err_smoothed = mg_err_smoothed + M%apply(A,r_sm)
+                    mg_v = v(j) + mg_err_smoothed
+                    !mg_v = mg_err_smoothed
+                    nmg  = 0
+
+                else
+                    mg_v = v(j)
+                end if
+                nmg = nmg + 1
+
+                !************************************************
+                ! End multigrid
+                !************************************************
            
                 !
-                ! Apply preconditioner:  z(j) = Minv * v(j)
+                ! Apply fine-scale preconditioner:  z(j) = Minv * v(j)
                 !
                 call timer_precon%start()
-                z(j) = M%apply(A,v(j))
+                !z(j) = M%apply(A,v(j))
+                !z(j) = M%apply(A,mg_v)
+                z(j) = mg_v
                 call timer_precon%stop()
+
+
+
+
 
 
                 !
@@ -388,10 +519,7 @@ contains
             !
             ! Solve upper-triangular system y = hinv * p
             !
-            if (allocated(h_square)) then
-                deallocate(h_square,p_dim,y_dim)
-            end if
-            
+            if (allocated(h_square)) deallocate(h_square,p_dim,y_dim)
             allocate(h_square(nvecs,nvecs), &
                      p_dim(nvecs),          &
                      y_dim(nvecs), stat=ierr)
@@ -489,4 +617,4 @@ contains
 
 
 
-end module type_fgmres_cgs
+end module type_fgmres_cgs_mg

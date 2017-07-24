@@ -37,49 +37,54 @@ module type_densematrix
 
         ! zero value indicates unassigned
         integer(ik)     :: parent_proc_ = NO_PROC
-        integer(ik)     :: dparent_g_   = 0   !< Global domain index of the element matrix was linearized with respect to
-        integer(ik)     :: dparent_l_   = 0   !< Local domain index of the element matrix was linearized with respect to
-        integer(ik)     :: eparent_g_   = 0   !< Global element index of the element matrix was linearized with respect to
-        integer(ik)     :: eparent_l_   = 0   !< Local element index of the element matrix was linearized with respect to
+        integer(ik)     :: dparent_g_   = 0   ! Global domain index of the element matrix was linearized with respect to
+        integer(ik)     :: dparent_l_   = 0   ! Local domain index of the element matrix was linearized with respect to
+        integer(ik)     :: eparent_g_   = 0   ! Global element index of the element matrix was linearized with respect to
+        integer(ik)     :: eparent_l_   = 0   ! Local element index of the element matrix was linearized with respect to
 
         ! imat index of transposed densematrix
         integer(ik)     :: itranspose_  = 0
 
-        ! If associated parent data is being received from another processor, location in chidgVector%recv to find it
+        ! If associated parent data is being received from another processor, location in chidg_vector%recv to find it
         integer(ik)     :: recv_comm    = 0
         integer(ik)     :: recv_domain  = 0
         integer(ik)     :: recv_element = 0
 
         ! Block storage
+        integer(ik)             :: nterms
+        integer(ik)             :: nfields
         integer(ik)             :: nrows_
         integer(ik)             :: ncols_
         real(rk),   allocatable :: mat(:,:)
 
     contains
         ! Initializers
-        procedure :: init               !< Initialize block with general-sized matrix storage
+        procedure :: init               ! Initialize block with general-sized matrix storage
 
         ! Getters
-        procedure :: dparent_g          !< return parent domain
-        procedure :: dparent_l          !< return parent domain
-        procedure :: eparent_g          !< return parent element
-        procedure :: eparent_l          !< return parent element
-        procedure :: parent_proc        !< return the processor rank of the parent
-        procedure :: itranspose         !< return imat index of transposed densematrix
-        procedure :: nentries           !< return number of matrix entries
-        procedure :: idim               !< return i-dimension of matrix storage
-        procedure :: jdim               !< return j-dimension of matrix storage
-        procedure :: dump               !< print out matrix contents
+        procedure :: dparent_g          ! return parent domain
+        procedure :: dparent_l          ! return parent domain
+        procedure :: eparent_g          ! return parent element
+        procedure :: eparent_l          ! return parent element
+        procedure :: parent_proc        ! return the processor rank of the parent
+        procedure :: itranspose         ! return imat index of transposed densematrix
+        procedure :: nentries           ! return number of matrix entries
+        procedure :: idim               ! return i-dimension of matrix storage
+        procedure :: jdim               ! return j-dimension of matrix storage
+        procedure :: dump               ! print out matrix contents
         procedure :: get_recv_comm
         procedure :: get_recv_domain
         procedure :: get_recv_element
 
         ! Setters
-        procedure :: resize             !< resize matrix storage
+        procedure :: resize             ! resize matrix storage
         procedure :: set_recv_comm
         procedure :: set_recv_domain
         procedure :: set_recv_element
         procedure :: set_itranspose
+
+        ! Processors
+        procedure   :: restrict
 
 
     end type densematrix_t
@@ -109,17 +114,26 @@ contains
     !!  @param[in]  eparent     Integer index of parent element
     !!
     !------------------------------------------------------------------------------------------
-    subroutine init(self,idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+    !subroutine init(self,idim,jdim,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+    subroutine init(self,nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
         class(densematrix_t),   intent(inout)   :: self
-        integer(ik),            intent(in)      :: idim
-        integer(ik),            intent(in)      :: jdim
+        integer(ik),            intent(in)      :: nterms
+        integer(ik),            intent(in)      :: nfields
         integer(ik),            intent(in)      :: dparent_g
         integer(ik),            intent(in)      :: dparent_l
         integer(ik),            intent(in)      :: eparent_g
         integer(ik),            intent(in)      :: eparent_l
         integer(ik),            intent(in)      :: parent_proc
 
-        integer(ik) :: ierr
+        integer(ik) :: ierr, idim, jdim
+
+        !
+        ! Compute size
+        !
+        self%nterms  = nterms
+        self%nfields = nfields
+        idim = nterms * nfields
+        jdim = nterms * nfields
 
         !
         ! Set parents
@@ -365,9 +379,9 @@ contains
 
 
 
-    !> Resize dense-block storage
+    !>  Resize dense-block storage
     !!
-    !! @author Nathan A. Wukie
+    !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
     !------------------------------------------------------------------------------------------
@@ -409,10 +423,10 @@ contains
 
     !>  Set recv_comm component.
     !!
-    !!  recv_comm is the comm index in a chidgVector that information coming from the parent
+    !!  recv_comm is the comm index in a chidg_vector that information coming from the parent
     !!  element can be found.
     !!
-    !!  chidgVector%recv%comm(recv_comm)%dom(recv_domain)%vec(recv_element)
+    !!  chidg_vector%recv%comm(recv_comm)%dom(recv_domain)%vec(recv_element)
     !!
     !!  @author Nathan A. Wukie
     !!  @date   11/15/2016
@@ -433,10 +447,10 @@ contains
 
     !>  Set recv_domain component.
     !!
-    !!  recv_domain is the comm index in a chidgVector that information coming from the parent
+    !!  recv_domain is the comm index in a chidg_vector that information coming from the parent
     !!  element can be found.
     !!
-    !!  chidgVector%recv%comm(recv_comm)%dom(recv_domain)%vec(recv_element)
+    !!  chidg_vector%recv%comm(recv_comm)%dom(recv_domain)%vec(recv_element)
     !!
     !!  @author Nathan A. Wukie
     !!  @date   11/15/2016
@@ -458,10 +472,10 @@ contains
 
     !>  Set recv_element component.
     !!
-    !!  recv_element is the comm index in a chidgVector that information coming from the parent
+    !!  recv_element is the comm index in a chidg_vector that information coming from the parent
     !!  element can be found.
     !!
-    !!  chidgVector%recv%comm(recv_comm)%dom(recv_domain)%vec(recv_element)
+    !!  chidg_vector%recv%comm(recv_comm)%dom(recv_domain)%vec(recv_element)
     !!
     !!  @author Nathan A. Wukie
     !!  @date   11/15/2016
@@ -483,10 +497,10 @@ contains
 
     !>  Get recv_comm component.
     !!
-    !!  recv_comm is the comm index in a chidgVector that information coming from the parent
+    !!  recv_comm is the comm index in a chidg_vector that information coming from the parent
     !!  element can be found.
     !!
-    !!  chidgVector%recv%comm(recv_comm)%dom(recv_domain)%vec(recv_element)
+    !!  chidg_vector%recv%comm(recv_comm)%dom(recv_domain)%vec(recv_element)
     !!
     !!  @author Nathan A. Wukie
     !!  @date   11/15/2016
@@ -510,10 +524,10 @@ contains
 
     !>  Get recv_domain component.
     !!
-    !!  recv_domain is the domain index in a chidgVector that information coming from the parent
+    !!  recv_domain is the domain index in a chidg_vector that information coming from the parent
     !!  element can be found.
     !!
-    !!  chidgVector%recv%comm(recv_comm)%dom(recv_domain)%vec(recv_element)
+    !!  chidg_vector%recv%comm(recv_comm)%dom(recv_domain)%vec(recv_element)
     !!
     !!  @author Nathan A. Wukie
     !!  @date   11/15/2016
@@ -537,10 +551,10 @@ contains
 
     !>  Get recv_element component.
     !!
-    !!  recv_element is the element index in a chidgVector that information coming from the parent
+    !!  recv_element is the element index in a chidg_vector that information coming from the parent
     !!  element can be found.
     !!
-    !!  chidgVector%recv%comm(recv_comm)%dom(recv_domain)%vec(recv_element)
+    !!  chidg_vector%recv%comm(recv_comm)%dom(recv_domain)%vec(recv_element)
     !!
     !!  @author Nathan A. Wukie
     !!  @date   11/15/2016
@@ -575,7 +589,80 @@ contains
         self%itranspose_ = itranspose
 
     end subroutine set_itranspose
-    !******************************************************************************************
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie 
+    !!  @date   7/23/2017
+    !!
+    !----------------------------------------------------------------------------------------
+    function restrict(self,nterms_r) result(restricted)
+        class(densematrix_t),   intent(in)  :: self
+        integer(ik),            intent(in)  :: nterms_r
+
+        type(densematrix_t)     :: restricted
+        integer(ik)             :: ierr, ifield_outer, ifield_inner, size1d,                    &
+                                   istart_inner,   iend_inner,   istart_outer,   iend_outer,    &
+                                   istart_inner_r, iend_inner_r, istart_outer_r, iend_outer_r
+        real(rk),   allocatable :: mat_r(:,:)
+
+        ! Direct copy of all parameters
+        restricted = self
+
+
+        ! Allocate matrix
+        size1d = nterms_r * self%nfields
+        allocate(mat_r(size1d,size1d), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        ! Copy restricted entries from original
+        do ifield_outer = 1,self%nfields
+            do ifield_inner = 1,self%nfields
+                ! Access indices for original matrix
+                istart_inner = (ifield_inner-1)*self%nterms + 1
+                iend_inner   = istart_inner + (nterms_r-1)
+                istart_outer = (ifield_outer-1)*self%nterms + 1
+                iend_outer   = istart_outer + (nterms_r-1)
+
+                ! Access indices for restricted matrix
+                istart_inner_r = (ifield_inner-1)*nterms_r + 1
+                iend_inner_r   = istart_inner_r + (nterms_r-1)
+                istart_outer_r = (ifield_outer-1)*nterms_r + 1
+                iend_outer_r   = istart_outer_r + (nterms_r-1)
+
+                ! Store restricted data to restricted matrix
+                mat_r(istart_inner_r:iend_inner_r, istart_outer_r:iend_outer_r) = self%mat(istart_inner:iend_inner, istart_outer:iend_outer)
+            end do
+        end do
+
+        ! Move allocation to result matrix
+        call move_alloc(mat_r, restricted%mat)
+
+
+        ! Set object components
+        restricted%nrows_ = size(restricted%mat,1)
+        restricted%ncols_ = size(restricted%mat,2)
+
+
+
+    end function restrict
+    !****************************************************************************************
+
+
+
+
+
+
 
 
 

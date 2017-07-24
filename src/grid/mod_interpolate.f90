@@ -785,10 +785,10 @@ contains
             ! Interpolate from CHIMERA donor element
             elseif ( chimera_interpolation ) then
                 ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
-                iface_info%idomain_g  = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_domain_g%at(idonor)
-                iface_info%idomain_l  = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_domain_l%at(idonor)
-                iface_info%ielement_g = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_element_g%at(idonor)
-                iface_info%ielement_l = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_element_l%at(idonor)
+                iface_info%idomain_g  = mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_g%at(idonor)
+                iface_info%idomain_l  = mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_l%at(idonor)
+                iface_info%ielement_g = mesh%domain(idom)%chimera%recv(ChiID)%donor_element_g%at(idonor)
+                iface_info%ielement_l = mesh%domain(idom)%chimera%recv(ChiID)%donor_element_l%at(idonor)
             else
                 call chidg_signal(FATAL,"get_face_interpolation_info: neighbor conforming_interpolation nor chimera_interpolation were detected")
             end if
@@ -922,13 +922,13 @@ contains
                 ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
                     select case(interpolation_type)
                         case('value')
-                            interpolator = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_interpolator%at(idonor)
+                            interpolator = mesh%domain(idom)%chimera%recv(ChiID)%donor_interpolator%at(idonor)
                         case('grad1')
-                            interpolator = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_interpolator_grad1%at(idonor)
+                            interpolator = mesh%domain(idom)%chimera%recv(ChiID)%donor_interpolator_grad1%at(idonor)
                         case('grad2')
-                            interpolator = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_interpolator_grad2%at(idonor)
+                            interpolator = mesh%domain(idom)%chimera%recv(ChiID)%donor_interpolator_grad2%at(idonor)
                         case('grad3')
-                            interpolator = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_interpolator_grad3%at(idonor)
+                            interpolator = mesh%domain(idom)%chimera%recv(ChiID)%donor_interpolator_grad3%at(idonor)
                         case default
                             call chidg_signal(FATAL,"get_face_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
                     end select
@@ -1006,7 +1006,7 @@ contains
             !
             if ( chimera_interpolation ) then
                 ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
-                gq_node_indices = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_gq_indices(idonor)%data()
+                gq_node_indices = mesh%domain(idom)%chimera%recv(ChiID)%donor_gq_indices(idonor)%data()
 
                 ! Create mask over full GQ vector of only those nodes that are filled by the current element
                 do inode = 1,size(gq_node_indices)
@@ -1097,13 +1097,13 @@ contains
             ! Interpolate from CHIMERA donor element
             elseif ( chimera_interpolation ) then
                 ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
-                donor_proc = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_proc%at(idonor)
+                donor_proc = mesh%domain(idom)%chimera%recv(ChiID)%donor_proc%at(idonor)
 
                 parallel_interpolation = (IRANK /= donor_proc)
                 if (parallel_interpolation) then
-                     recv_info%comm    = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_recv_comm%at(idonor)
-                     recv_info%domain  = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_recv_domain%at(idonor)
-                     recv_info%element = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_recv_element%at(idonor)
+                     recv_info%comm    = mesh%domain(idom)%chimera%recv(ChiID)%donor_recv_comm%at(idonor)
+                     recv_info%domain  = mesh%domain(idom)%chimera%recv(ChiID)%donor_recv_domain%at(idonor)
+                     recv_info%element = mesh%domain(idom)%chimera%recv(ChiID)%donor_recv_element%at(idonor)
                 end if
 
             else
@@ -1177,7 +1177,7 @@ contains
             ! Test for chimera interpolation from neighbor
             elseif ( chimera_interpolation ) then
                 ChiID   = mesh%domain(idom)%faces(ielem,iface)%ChiID
-                ndonors = mesh%domain(idom)%chimera%recv%data(ChiID)%ndonors()
+                ndonors = mesh%domain(idom)%chimera%recv(ChiID)%ndonors()
 
 
             else

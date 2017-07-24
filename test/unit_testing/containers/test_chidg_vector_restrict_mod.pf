@@ -1,0 +1,167 @@
+module test_chidg_vector_restrict_mod
+    use pfunit_mod
+    use mod_kinds,                  only: rk, ik
+    use mod_constants,              only: ZERO, HALF, ONE, TWO, THREE, FOUR, FIVE, SIX, &
+                                          SEVEN, EIGHT, IO_DESTINATION
+    use type_chidg,                 only: chidg_t
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: delete_file
+    use mod_string,                 only: string_t
+    use type_chidg_vector,          only: chidg_vector_t
+    implicit none
+
+
+
+
+    public :: test_chidg_vector_restrict
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!
+    !!
+    !-------------------------------------------------------------------
+    @TestCase
+    type, extends(TestCase) :: test_chidg_vector_restrict
+
+        type(chidg_t)               :: chidg
+
+        integer(ik)                 :: solution_order = 2
+        integer(ik)                 :: nterms_s = 8
+        type(chidg_vector_t)        :: vec
+        character(:),   allocatable :: file_name
+
+    contains
+        procedure   :: setUp
+        procedure   :: tearDown
+    end type test_chidg_vector_restrict
+    !*******************************************************************
+
+
+contains
+
+
+    !>
+    !!  @author Nathan A. Wukie
+    !!  @date   7/23/2017
+    !!
+    !-------------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(test_chidg_vector_restrict),    intent(inout)   :: this
+
+        real(rk),   allocatable :: vals(:)
+
+
+        !
+        ! Initialize ChiDG environment
+        !
+        IO_DESTINATION = 'file'
+        call this%chidg%start_up('core')
+
+
+        !
+        ! Set accuracy for the solution expansion
+        !
+        call this%chidg%set('Solution Order', integer_input=this%solution_order)
+
+
+        !
+        ! Create grid file
+        !
+        this%file_name = 'file.h5'
+        call create_mesh_file('D1 NxNxN', this%file_name, equation_sets=[string_t('Scalar Advection')], &
+                                                     nelem_xi=2, nelem_eta=2, nelem_zeta=2)
+
+        
+        !
+        ! Read grid file
+        !
+        call this%chidg%read_mesh(this%file_name)
+
+
+
+        !
+        ! Initialize solution data containers
+        !
+        call this%vec%init(this%chidg%data%mesh,this%chidg%data%mesh%domain(1)%ntime)
+
+
+
+        !
+        ! Set vector values
+        !
+        vals = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]
+        this%vec%dom(1)%vecs(1)%vec = vals + ONE
+        this%vec%dom(1)%vecs(2)%vec = vals + TWO
+        this%vec%dom(1)%vecs(3)%vec = vals + THREE
+        this%vec%dom(1)%vecs(4)%vec = vals + FOUR
+        this%vec%dom(1)%vecs(5)%vec = vals + FIVE
+        this%vec%dom(1)%vecs(6)%vec = vals + SIX
+        this%vec%dom(1)%vecs(7)%vec = vals + SEVEN
+        this%vec%dom(1)%vecs(8)%vec = vals + EIGHT
+
+
+    end subroutine setUp
+    !*****************************************************************************************
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(test_chidg_vector_restrict),    intent(inout)   :: this
+
+        ! Close ChiDG interface
+        call this%chidg%shut_down('core')
+
+        ! Clean up
+        call delete_file(this%file_name)
+
+    end subroutine
+    !*****************************************************************************************
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/23/2017
+    !!
+    !-----------------------------------------------------------------------
+    @Test
+    subroutine test_chidg_vector__restrict(self)
+        class(test_chidg_vector_restrict),    intent(inout)   :: self
+
+        type(chidg_vector_t)    :: res
+        real(rk)                :: tol
+        real(rk),   allocatable :: vals(:)
+
+        tol = 1.e-6_rk        
+
+        res = self%vec%restrict(nterms_r=1)
+
+        @assertEqual(size(res%dom(1)%vecs(1)%vec), 1)
+
+        vals = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT] 
+        @assertEqual(vals(1) + ONE,   res%dom(1)%vecs(1)%vec, tol)
+        @assertEqual(vals(1) + TWO,   res%dom(1)%vecs(2)%vec, tol)
+        @assertEqual(vals(1) + THREE, res%dom(1)%vecs(3)%vec, tol)
+        @assertEqual(vals(1) + FOUR,  res%dom(1)%vecs(4)%vec, tol)
+        @assertEqual(vals(1) + FIVE,  res%dom(1)%vecs(5)%vec, tol)
+        @assertEqual(vals(1) + SIX,   res%dom(1)%vecs(6)%vec, tol)
+        @assertEqual(vals(1) + SEVEN, res%dom(1)%vecs(7)%vec, tol)
+        @assertEqual(vals(1) + EIGHT, res%dom(1)%vecs(8)%vec, tol)
+
+    end subroutine test_chidg_vector__restrict
+    !***********************************************************************
+
+
+
+
+
+end module test_chidg_vector_restrict_mod

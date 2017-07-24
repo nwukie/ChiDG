@@ -26,6 +26,9 @@ module type_chidg_vector_recv_comm
 
         procedure,  public  :: init
         procedure,  public  :: clear
+        procedure,  public  :: ndomains
+        procedure,  public  :: restrict
+        procedure,  public  :: prolong
 
     end type chidg_vector_recv_comm_t
     !********************************************************************************
@@ -163,14 +166,14 @@ contains
                     else if (is_chimera) then
                         
                         ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
-                        do idonor = 1,mesh%domain(idom)%chimera%recv%data(ChiID)%ndonors()
+                        do idonor = 1,mesh%domain(idom)%chimera%recv(ChiID)%ndonors()
 
-                            comm_donor = (proc == mesh%domain(idom)%chimera%recv%data(ChiID)%donor_proc%at(idonor) )
+                            comm_donor = (proc == mesh%domain(idom)%chimera%recv(ChiID)%donor_proc%at(idonor) )
 
                             donor_recv_found = .false.
                             if (comm_donor) then
-                                donor_domain_g  = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_domain_g%at(idonor)
-                                donor_element_g = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_element_g%at(idonor)
+                                donor_domain_g  = mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_g%at(idonor)
+                                donor_element_g = mesh%domain(idom)%chimera%recv(ChiID)%donor_element_g%at(idonor)
 
 
                                 ! Loop through domains being received to find the right domain
@@ -185,9 +188,9 @@ contains
 
                                             ! Set the location where a face can find its off-processor neighbor 
                                             if (recv_element == donor_element_g) then
-                                                mesh%domain(idom)%chimera%recv%data(ChiID)%donor_recv_comm%data_(idonor)    = comm
-                                                mesh%domain(idom)%chimera%recv%data(ChiID)%donor_recv_domain%data_(idonor)  = idom_recv
-                                                mesh%domain(idom)%chimera%recv%data(ChiID)%donor_recv_element%data_(idonor) = ielem_recv
+                                                mesh%domain(idom)%chimera%recv(ChiID)%donor_recv_comm%data_(idonor)    = comm
+                                                mesh%domain(idom)%chimera%recv(ChiID)%donor_recv_domain%data_(idonor)  = idom_recv
+                                                mesh%domain(idom)%chimera%recv(ChiID)%donor_recv_element%data_(idonor) = ielem_recv
                                                 donor_recv_found = .true.
                                                 exit
                                             end if
@@ -289,11 +292,6 @@ contains
 
 
 
-
-
-
-
-
     !>  Zero all entries.
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -312,6 +310,104 @@ contains
 
     end subroutine clear
     !**********************************************************************************
+
+
+
+    
+
+    !>  Return number of domains being received from a given processor.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/21/2017
+    !!
+    !----------------------------------------------------------------------------------
+    function ndomains(self) result(ndomains_)
+        class(chidg_vector_recv_comm_t),    intent(in)  :: self
+
+        integer(ik) :: ndomains_
+
+        if (allocated(self%dom)) then
+            ndomains_ = size(self%dom)
+        else
+            ndomains_ = 0
+        end if
+
+    end function ndomains
+    !***********************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Return a restricted copy of the chidg_vector_recv_comm_t object.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/21/2017
+    !!
+    !----------------------------------------------------------------------------------
+    function restrict(self,nterms_r) result(restricted)
+        class(chidg_vector_recv_comm_t),    intent(in)  :: self
+        integer(ik),                        intent(in)  :: nterms_r
+
+        integer(ik)                     :: ierr, idom
+        type(chidg_vector_recv_comm_t)  :: restricted
+
+        restricted%proc = self%proc
+
+        ! Allocate storage for each recv domain
+        allocate(restricted%dom(self%ndomains()), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        ! For each block return a restricted version
+        do idom = 1,self%ndomains()
+            restricted%dom(idom) = self%dom(idom)%restrict(nterms_r)
+        end do
+
+
+    end function restrict
+    !**********************************************************************************
+
+
+
+
+
+
+    !>  Return a prolonged copy of the chidg_vector_recv_comm_t object.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/24/2017
+    !!
+    !----------------------------------------------------------------------------------
+    function prolong(self,nterms_p) result(prolonged)
+        class(chidg_vector_recv_comm_t),    intent(in)  :: self
+        integer(ik),                        intent(in)  :: nterms_p
+
+        integer(ik)                     :: ierr, idom
+        type(chidg_vector_recv_comm_t)  :: prolonged
+
+        prolonged%proc = self%proc
+
+        ! Allocate storage for each recv domain
+        allocate(prolonged%dom(self%ndomains()), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        ! For each block return a restricted version
+        do idom = 1,self%ndomains()
+            prolonged%dom(idom) = self%dom(idom)%prolong(nterms_p)
+        end do
+
+
+    end function prolong
+    !**********************************************************************************
+
+
+
+
 
 
 

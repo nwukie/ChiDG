@@ -705,7 +705,7 @@ contains
 
             ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
             eqn_m = self%eqn_ID
-            eqn_p = mesh%domain(idom)%chimera%recv%data(ChiID)%donor_eqn_ID%at(1)
+            eqn_p = mesh%domain(idom)%chimera%recv(ChiID)%donor_eqn_ID%at(1)
             skip = (eqn_m /= eqn_p)
 
         end if
@@ -1191,7 +1191,7 @@ contains
 
             if ( chimera_face ) then
                 ChiID    = mesh%domain(idom)%faces(ielem,iface)%ChiID
-                ncompute = mesh%domain(idom)%chimera%recv%data(ChiID)%ndonors()
+                ncompute = mesh%domain(idom)%chimera%recv(ChiID)%ndonors()
 
             else if ( bc_face ) then
                 group_ID = mesh%domain(idom)%faces(ielem,iface)%group_ID
@@ -1264,7 +1264,7 @@ contains
                 ! only need to compute multiple times when we need the linearization of 
                 ! the chimera neighbors
                 ChiID  = mesh%domain(idom)%faces(ielem,iface)%ChiID
-                ncompute = mesh%domain(idom)%chimera%recv%data(ChiID)%ndonors()
+                ncompute = mesh%domain(idom)%chimera%recv(ChiID)%ndonors()
             else
                 ! Standard conforming neighbor, only one dependent element.
                 ncompute = 1

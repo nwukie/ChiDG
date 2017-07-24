@@ -28,7 +28,6 @@ module type_densematrix_vector
         integer(ik)                 :: buffer_    = 7
 
         type(densematrix_t),    allocatable :: data_(:)
-
         real (rk),              allocatable :: mass(:,:)
 
     contains
@@ -74,6 +73,10 @@ module type_densematrix_vector
         procedure, public   :: get_ielement_g   ! return the global element index which the densematrix vector is associated with
         procedure, public   :: get_idomain_l    ! return the local domain index which the densematrix_vector is associated with
         procedure, public   :: get_ielement_l   ! return the local element indexwhich the densematrix vector is associated with
+
+
+        ! Process
+        procedure, public   :: restrict
 
     end type densematrix_vector_t
     !*****************************************************************************************
@@ -929,16 +932,11 @@ contains
         type(densematrix_t), allocatable    :: res(:)
         integer(ik)                         :: size
         
-        !
         ! Get number of stored elements
-        !
         size = self%size()
 
-        !
         ! Allocate result
-        !
         res = self%data_(1:size)
-
 
     end function data
     !*****************************************************************************************
@@ -1011,6 +1009,52 @@ contains
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/23/2017
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    function restrict(self,nterms_r) result(restricted)
+        class(densematrix_vector_t),    intent(in)  :: self
+        integer(ik),                    intent(in)  :: nterms_r
+
+        type(densematrix_vector_t)  :: restricted
+        type(densematrix_t)         :: dmatrix
+        integer(ik)                 :: imat
+
+
+        !
+        ! Restrict mass matrix
+        !
+        restricted%mass = self%mass(1:nterms_r,1:nterms_r)
+
+
+        !
+        ! Store element identifier
+        !
+        restricted%idomain_g  = self%idomain_g
+        restricted%idomain_l  = self%idomain_l
+        restricted%ielement_g = self%ielement_g
+        restricted%ielement_l = self%ielement_l
+
+
+        !
+        ! Loop through self%data_, for each block, restrict and add to new restricted object
+        !
+        do imat = 1,self%size()
+            ! Get matrix
+            dmatrix = self%at(imat)
+
+            ! Push back restricted densematrix onto restricted densematrix_vector
+            call restricted%push_back(dmatrix%restrict(nterms_r))
+        end do
+
+
+
+    end function restrict
+    !*****************************************************************************************
 
 
 

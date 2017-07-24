@@ -47,6 +47,9 @@ module type_chidg_matrix
         procedure   :: store_bc                         ! Store boundary condition coupling
         procedure   :: clear                            ! Zero matrix-values
 
+        ! Processors
+        procedure   :: restrict
+
 
         procedure   :: release
         final       :: destructor
@@ -541,7 +544,7 @@ contains
     !!  @date   2/1/2016
     !! 
     !! 
-    !-------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------
     subroutine clear(self)
         class(chidg_matrix_t),   intent(inout)   :: self
 
@@ -557,7 +560,55 @@ contains
     
     
     end subroutine clear
-    !*******************************************************************************************
+    !**********************************************************************************
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/23/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------
+    function restrict(self,nterms_r) result(restricted)
+        class(chidg_matrix_t),  intent(in)  :: self
+        integer(ik),            intent(in)  :: nterms_r
+
+        type(chidg_matrix_t)    :: restricted
+        integer(ik)             :: ierr, idom
+
+
+        !
+        ! Allocate storage
+        !
+        allocate(restricted%dom(size(self%dom)), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        !
+        ! Copy restricted versions of domain_matrix_t's
+        !
+        do idom = 1,size(self%dom)
+            restricted%dom(idom) = self%dom(idom)%restrict(nterms_r)
+        end do !idom
+
+
+        restricted%local_initialized = self%local_initialized
+        restricted%recv_initialized  = self%recv_initialized
+        restricted%stamp             = self%stamp
+
+
+    end function restrict
+    !**********************************************************************************
+
+
+
+
+
 
 
 
@@ -570,14 +621,14 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   3/3/2017
     !!
-    !-------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------
     subroutine release(self)
         class(chidg_matrix_t),  intent(inout)   :: self
 
         if (allocated(self%dom)) deallocate(self%dom)
 
     end subroutine release
-    !*******************************************************************************************
+    !**********************************************************************************
 
 
 
@@ -589,12 +640,12 @@ contains
     !!  @date   2/1/2016
     !!
     !!
-    !------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------
     subroutine destructor(self)
         type(chidg_matrix_t),    intent(inout)   :: self
 
     end subroutine destructor
-    !******************************************************************************************
+    !*********************************************************************************
 
 
 

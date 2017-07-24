@@ -34,7 +34,7 @@ module type_domain_vector
     !!  @date   2/1/2016
     !!
     !!
-    !----------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     type, public :: domain_vector_t
 
         type(densevector_t), allocatable :: vecs(:)     ! Local element vectors
@@ -52,12 +52,16 @@ module type_domain_vector
         procedure,  public  :: sumsqr           ! Return the sum of the squared block-vector entries.
         procedure,  public  :: sumsqr_fields    ! Return the sum of squared entries for fields independently.
         procedure,  public  :: nentries
+        procedure,  public  :: nelements
         procedure,  public  :: dump
+
+        procedure,  public  :: restrict
+        procedure,  public  :: prolong
 
         final :: destructor
 
     end type domain_vector_t
-    !*********************************************************************************************
+    !**************************************************************************************
 
 
 
@@ -98,18 +102,11 @@ module type_domain_vector
         module procedure add_bv_bv     ! blockvector + blockvector
     end interface
 
-
-
-
-
-
-
-
-
-
-
-
     private
+
+
+
+
 contains
 
 
@@ -508,30 +505,53 @@ contains
 
 
 
-    !> Compute number of entries in the block vector
+    !>  Compute number of entries in the block vector
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
     !!
-    !-----------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------
     function nentries(self) result(res)
         class(domain_vector_t),   intent(in)  :: self
 
         integer(ik) :: res, ielem
 
-        res = ZERO
-        !
         ! Loop through block vectors and compute contribution to number of entries
-        !
+        res = ZERO
         do ielem = 1,size(self%vecs)
-
             res = res + self%vecs(ielem)%nentries()
-
         end do
 
     end function nentries
-    !*****************************************************************************************
+    !******************************************************************************
+
+
+
+
+
+    !>  Return number of densevector_t instances, one for each finite-element.
+    !!
+    !!  @author Nathan A. Wukie 
+    !!  @date   7/21/2017
+    !!
+    !------------------------------------------------------------------------------
+    function nelements(self) result(nelem)
+        class(domain_vector_t), intent(in)  :: self
+
+        integer(ik) :: nelem
+
+        if (allocated(self%vecs)) then
+            nelem = size(self%vecs)
+        else
+            nelem = 0
+        end if
+
+    end function nelements
+    !******************************************************************************
+
+
+
 
 
 
@@ -543,7 +563,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !------------------------------------------------
+    !------------------------------------------------------------------------------
     subroutine dump(self)
         class(domain_vector_t),   intent(in)  :: self
         integer(ik) :: ielem, ientry
@@ -556,11 +576,73 @@ contains
         end do
 
 
-    end subroutine
-    !************************************************
+    end subroutine dump
+    !******************************************************************************
 
 
 
+
+
+
+
+    !>  Return a domain_vector_t restricted to the basis defined by nterms_r.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/21/2017
+    !!
+    !-----------------------------------------------------------------------------
+    function restrict(self,nterms_r) result(restricted)
+        class(domain_vector_t), intent(in)  :: self
+        integer(ik),            intent(in)  :: nterms_r
+
+        type(domain_vector_t)   :: restricted
+        integer(ik)             :: ierr, ielem
+
+
+        ! Alocate storage on restricted domain_vector
+        allocate(restricted%vecs(self%nelements()), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        ! Copy restricted densevector for each element
+        do ielem = 1,self%nelements()
+            restricted%vecs(ielem) = self%vecs(ielem)%restrict(nterms_r)
+        end do !ielem
+
+
+    end function restrict
+    !******************************************************************************
+
+
+
+
+
+
+    !>  Return a domain_vector_t prolonged to the basis defined by nterms_p.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   7/24/2017
+    !!
+    !-----------------------------------------------------------------------------
+    function prolong(self,nterms_p) result(prolonged)
+        class(domain_vector_t), intent(in)  :: self
+        integer(ik),            intent(in)  :: nterms_p
+
+        type(domain_vector_t)   :: prolonged
+        integer(ik)             :: ierr, ielem
+
+
+        ! Alocate storage on restricted domain_vector
+        allocate(prolonged%vecs(self%nelements()), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        ! Copy restricted densevector for each element
+        do ielem = 1,self%nelements()
+            prolonged%vecs(ielem) = self%vecs(ielem)%prolong(nterms_p)
+        end do !ielem
+
+
+    end function prolong
+    !******************************************************************************
 
 
 

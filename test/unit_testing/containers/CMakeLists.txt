@@ -14,6 +14,7 @@ add_test_sources(containers
                 test_mvector.pf
                 test_pvector.pf
                 test_chidg_vector_operators_mod.pf
+                test_chidg_vector_restrict_mod.pf
                 test_chidg_matrix_operator_mv.pf
                 test_chidg_matrix_operator_chimera_mv.pf
                 test_chidg_matrix_operator_HB_mv.pf

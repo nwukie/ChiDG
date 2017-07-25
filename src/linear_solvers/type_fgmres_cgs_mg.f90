@@ -226,56 +226,20 @@ contains
                 !************************************************
                 ! Multigrid: coarse-scale correction
                 !************************************************
-                if (nmg >= 2) then
-
-                    !!
-                    !! Reconstruct solution
-                    !!
-                    !    !
-                    !    ! Solve upper-triangular system y = hinv * p
-                    !    !
-                    !    if (allocated(h_square)) deallocate(h_square,p_dim,y_dim)
-                    !    allocate(h_square(nvecs,nvecs), &
-                    !             p_dim(nvecs),          &
-                    !             y_dim(nvecs), stat=ierr)
-                    !    if (ierr /= 0) call AllocationError
+                if (nmg >= 1) then
 
 
 
 
-                    !    !
-                    !    ! Store h and p values to appropriately sized matrices
-                    !    !
-                    !    do l=1,nvecs
-                    !        do k=1,nvecs
-                    !            h_square(k,l) = h(k,l)
-                    !        end do
-                    !        p_dim(l) = p(l)
-                    !    end do
-
-
-
-                    !    !
-                    !    ! Solve the system
-                    !    !
-                    !    h_square = inv(h_square)
-                    !    y_dim = matmul(h_square,p_dim)
-
-                    !    !
-                    !    ! Reconstruct solution
-                    !    !
-                    !    x = x0
-                    !    do isol = 1,nvecs
-                    !        x = x + y_dim(isol)*z(isol)
-                    !    end do
 
                 
                     !
                     ! Apply ILU0 Smoother
                     !
                     !r    = b - chidg_mv(A,v(j))     ! compute current residual
-                    !mg_r = r%restrict(nterms_r=1)
-                    mg_r = v(j)%restrict(nterms_r=1)
+                    r    = v(j) - chidg_mv(A,x(j))     ! compute current residual
+                    mg_r = r%restrict(nterms_r=1)
+                    !mg_r = v(j)%restrict(nterms_r=1)
                     mg_A = A%restrict(nterms_r=1)
                     select type(M)
                         type is (precon_ILU0_t)
@@ -284,10 +248,6 @@ contains
                         !    mg_M = M%restrict(nterms_r=1)
                     end select
 
-                    !
-                    ! Presmoother
-                    !
-                    
 
                     !
                     ! Solve for coarse-scale error: mg_err
@@ -298,22 +258,12 @@ contains
                     call mg_err%clear()
                     call mg_linear_solver%solve(mg_A,mg_err,mg_r,mg_M)
 
-                    !
-                    ! Post smoother
-                    !
-                    !mg_err = (ONE-TWO/THREE)*mg_err + (TWO/THREE)*mg_M%apply(mg_A,mg_r)
-
 
                     !
                     ! Prolong error and apply as coarse-scale correction
                     !
                     call write_line('applying coarse-scale correction', io_proc=GLOBAL_MASTER, silence=(verbosity<4))
                     mg_err_smoothed = mg_err%prolong(nterms_p=v(j)%dom(1)%vecs(1)%nterms())
-                    !do ismooth = 1,10
-                    !    r_sm = r - chidg_mv(A,mg_err_smoothed)
-                    !    mg_err_smoothed = mg_err_smoothed + M%apply(A,r_sm)
-                    !end do
-                    !r_sm = r - chidg_mv(A,mg_err_smoothed)
                     r_sm = v(j) - chidg_mv(A,mg_err_smoothed)
                     mg_err_smoothed = mg_err_smoothed + M%apply(A,r_sm)
                     mg_v = v(j) + mg_err_smoothed

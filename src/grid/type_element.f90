@@ -66,7 +66,7 @@ module type_element
         integer(ik)     :: ntime                            ! Number of time levels in solution
 
         ! Element quadrature points, mesh points and modes
-        type(element_connectivity_t)    :: connectivity         ! Integer indices of the associated nodes in block node list
+        integer(ik),    allocatable     :: connectivity(:)      ! Integer indices of the associated nodes in block node list
         real(rk),       allocatable     :: quad_pts(:,:)        ! Coordinates of discrete quadrature points
         real(rk),       allocatable     :: elem_pts(:,:)        ! Coordinates of discrete points defining element
         real(rk),       allocatable     :: dnodes_l(:,:)        ! Node displacements, local element ordering
@@ -213,12 +213,12 @@ contains
     !!  @date   11/5/2016
     !!
     !---------------------------------------------------------------------------------------
-    subroutine init_geom(self,nodes,connectivity,idomain_l,ielem_l,coord_system)
+    subroutine init_geom(self,nodes,connectivity,etype,location,coord_system)
         class(element_t),               intent(inout)   :: self
         real(rk),                       intent(in)      :: nodes(:,:)
-        type(element_connectivity_t),   intent(in)      :: connectivity
-        integer(ik),                    intent(in)      :: idomain_l
-        integer(ik),                    intent(in)      :: ielem_l
+        integer(ik),                    intent(in)      :: connectivity(:)
+        integer(ik),                    intent(in)      :: etype
+        integer(ik),                    intent(in)      :: location(4)
         character(*),                   intent(in)      :: coord_system
 
         character(:),   allocatable :: user_msg
@@ -228,7 +228,7 @@ contains
                                        ymin, ymax, ywidth,  &
                                        zmin, zmax, zwidth
         integer(ik)                 :: ierr, nterms_c, ipt, npts_1d, npts, &
-                                       mapping, inode, idomain_g, ielem_g, spacedim, ref_ID_c
+                                       mapping, inode, spacedim, ref_ID_c
         integer(ik)                 :: ntime = 1
 
 
@@ -239,9 +239,14 @@ contains
         !
         ! Get connectivity info
         !
-        idomain_g = connectivity%get_domain_index()
-        ielem_g   = connectivity%get_element_index()
-        mapping   = connectivity%get_element_mapping()
+        mapping               = etype
+        self%idomain_g        = location(1)
+        self%ielement_g       = location(2)
+        self%idomain_l        = location(3)
+        self%ielement_l       = location(4)
+        self%element_location = location
+        self%connectivity     = connectivity
+
 
 
         !
@@ -266,7 +271,7 @@ contains
         !
         do ipt = 1,npts
             ! Get node index
-            inode = connectivity%get_element_node(ipt)
+            inode = connectivity(ipt)
 
             ! Assemble local node list from global
             ! Default node coordinate delta's = zero
@@ -291,15 +296,9 @@ contains
         ! Allocate storage
         !
         allocate(self%elem_pts(nterms_c,3),stat=ierr)
-        call self%coords%init(nterms_c,3,ntime,idomain_g,idomain_l,ielem_g,ielem_l)
-        self%spacedim         = spacedim
-        self%idomain_g        = idomain_g
-        self%idomain_l        = idomain_l
-        self%ielement_g       = ielem_g
-        self%ielement_l       = ielem_l
-        self%elem_pts         = nodes_l
-        self%connectivity     = connectivity
-        self%element_location = [idomain_g, idomain_l, ielem_g, ielem_l]
+        call self%coords%init(nterms_c,3,ntime,self%idomain_g,self%idomain_l,self%ielement_g,self%ielement_l)
+        self%spacedim = spacedim
+        self%elem_pts = nodes_l
 
         
         !
@@ -407,7 +406,8 @@ contains
 
         do ipt = 1,npts
             ! Get node index
-            inode = self%connectivity%get_element_node(ipt)
+            !inode = self%connectivity%get_element_node(ipt)
+            inode = self%connectivity(ipt)
 
             ! Assemble local node disp/vel from global
             self%dnodes_l(ipt,:)  = dnodes(inode,:)
@@ -482,12 +482,12 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine init_sol(self,interpolation,level,nterms_s,neqns,ntime)
+    subroutine init_sol(self,interpolation,level,nterms_s,nfields,ntime)
         class(element_t),   intent(inout) :: self
         character(*),       intent(in)    :: interpolation
         integer(ik),        intent(in)    :: level
         integer(ik),        intent(in)    :: nterms_s
-        integer(ik),        intent(in)    :: neqns
+        integer(ik),        intent(in)    :: nfields
         integer(ik),        intent(in)    :: ntime
 
         integer(ik) :: ierr
@@ -496,7 +496,7 @@ contains
         
 
         self%nterms_s    = nterms_s     ! number of terms in solution expansion
-        self%neqns       = neqns        ! number of equations being solved
+        self%neqns       = nfields      ! number of equations being solved
         self%ntime       = ntime        ! number of time steps in solution
 
 
@@ -540,46 +540,46 @@ contains
                         self%grad3_trans,               &
                         self%mass,                      &
                         self%invmass,                   &
-                        self%mass_c,                      &
-                        self%invmass_c,                   &
+                        self%mass_c,                    &
+                        self%invmass_c,                 &
                         self%jinv_ale,                  &
-                        self%grid_vel,                 &
+                        self%grid_vel,                  &
                         self%jacobian_grid,             &
                         self%inv_jacobian_grid,         &
                         self%det_jacobian_grid,         &
-                        self%det_jacobian_grid_grad1,            &
-                        self%det_jacobian_grid_grad2,            &
-                        self%det_jacobian_grid_grad3,            &
+                        self%det_jacobian_grid_grad1,   &
+                        self%det_jacobian_grid_grad2,   &
+                        self%det_jacobian_grid_grad3,   &
                         self%det_jacobian_grid_modes,   &
                         self%dtau                       &
                         )
             
 
         nnodes = ref_elems(ref_ID_s)%nnodes_ie()
-        allocate(self%jinv(nnodes),                         &
-                 self%metric(3,3,nnodes),                   &
-                 self%quad_pts(nnodes,3),                   &
-                 self%ale_quad_pts(nnodes,3),               &
-                 self%grad1(nnodes,nterms_s),               &
-                 self%grad2(nnodes,nterms_s),               &
-                 self%grad3(nnodes,nterms_s),               &
-                 self%grad1_trans(nterms_s,nnodes),         &
-                 self%grad2_trans(nterms_s,nnodes),         &
-                 self%grad3_trans(nterms_s,nnodes),         &
-                 self%mass(nterms_s,nterms_s),              &
-                 self%invmass(nterms_s,nterms_s),           &
-                 self%mass_c(self%nterms_c,self%nterms_c),              &
-                 self%invmass_c(self%nterms_c,self%nterms_c),         &
-                 self%jinv_ale(nnodes),                     &
-                 self%grid_vel(nnodes,3),                    &
-                 self%jacobian_grid(nnodes,3,3),            &
-                 self%inv_jacobian_grid(nnodes,3,3),        &
-                 self%det_jacobian_grid(nnodes),            &
-                 self%det_jacobian_grid_grad1(nnodes),            &
-                 self%det_jacobian_grid_grad2(nnodes),            &
-                 self%det_jacobian_grid_grad3(nnodes),            &
-                 self%det_jacobian_grid_modes(self%nterms_s),    &
-                 self%dtau(neqns), stat=ierr)
+        allocate(self%jinv(nnodes),                             &
+                 self%metric(3,3,nnodes),                       &
+                 self%quad_pts(nnodes,3),                       &
+                 self%ale_quad_pts(nnodes,3),                   &
+                 self%grad1(nnodes,nterms_s),                   &
+                 self%grad2(nnodes,nterms_s),                   &
+                 self%grad3(nnodes,nterms_s),                   &
+                 self%grad1_trans(nterms_s,nnodes),             &
+                 self%grad2_trans(nterms_s,nnodes),             &
+                 self%grad3_trans(nterms_s,nnodes),             &
+                 self%mass(nterms_s,nterms_s),                  &
+                 self%invmass(nterms_s,nterms_s),               &
+                 self%mass_c(self%nterms_c,self%nterms_c),      &
+                 self%invmass_c(self%nterms_c,self%nterms_c),   &
+                 self%jinv_ale(nnodes),                         &
+                 self%grid_vel(nnodes,3),                       &
+                 self%jacobian_grid(nnodes,3,3),                &
+                 self%inv_jacobian_grid(nnodes,3,3),            &
+                 self%det_jacobian_grid(nnodes),                &
+                 self%det_jacobian_grid_grad1(nnodes),          &
+                 self%det_jacobian_grid_grad2(nnodes),          &
+                 self%det_jacobian_grid_grad3(nnodes),          &
+                 self%det_jacobian_grid_modes(self%nterms_s),   &
+                 self%dtau(nfields), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
@@ -1806,7 +1806,7 @@ contains
         integer(ik), dimension(size(corner_indices))   :: corner_position
 
         character(:),   allocatable :: user_msg
-        integer(ik),    allocatable :: element_indices(:), face_indices(:)
+        integer(ik),    allocatable :: face_indices(:)
         integer(ik)                 :: face_index, cindex, eindex, iface_test
         logical                     :: node_matches, face_match, &
                                        corner_one_in_face, corner_two_in_face, &
@@ -1822,13 +1822,11 @@ contains
         !       corner_position = [1, 2, 5, 6]
         !   
         !
-        element_indices = self%connectivity%get_element_nodes()
-
         do cindex = 1,size(corner_indices)
-            do eindex = 1,size(element_indices)
+            do eindex = 1,size(self%connectivity)
 
 
-                node_matches = (corner_indices(cindex) == element_indices(eindex))
+                node_matches = (corner_indices(cindex) == self%connectivity(eindex))
 
                 if (node_matches) then
                     corner_position(cindex) = eindex

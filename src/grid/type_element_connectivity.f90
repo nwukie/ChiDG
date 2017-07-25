@@ -19,10 +19,10 @@ module type_element_connectivity
     type, public :: element_connectivity_t
 
         ! Static data. Useful for sending MPI information about the connectivity
-        integer(ik)                 :: header_size = 3          !< idomain_g, ielement_g, mapping
-        integer(ik)                 :: nodes_size  = 0          !< Number of nodes in the element connectivity
-        integer(ik)                 :: connectivity_size = 3    !< Total data size
-        integer(ik)                 :: partition                !< MPI Rank that owns the element
+        integer(ik)                 :: header_size = 3          ! idomain_g, ielement_g, mapping
+        integer(ik)                 :: nodes_size  = 0          ! Number of nodes in the element connectivity
+        integer(ik)                 :: connectivity_size = 3    ! Total data size
+        integer(ik)                 :: partition                ! MPI Rank that owns the element
 
         integer(ik),    allocatable :: data(:)
 
@@ -31,21 +31,21 @@ module type_element_connectivity
         procedure   :: init
 
 
-        procedure   :: set_domain_index         !< Set global domain index
-        procedure   :: set_element_index        !< Set domain-global index
-        procedure   :: set_element_mapping      !< Set the mapping
-        procedure   :: set_element_partition    !< Set partition index that owns the element
-        procedure   :: set_element_node         !< Set the nodes indices defining the element connectivity
-        procedure   :: set_element_nodes        !< Set the nodes indices defining the element connectivity
+        procedure   :: set_domain_index         ! Set global domain index
+        procedure   :: set_element_index        ! Set domain-global index
+        procedure   :: set_element_mapping      ! Set the mapping
+        procedure   :: set_element_partition    ! Set partition index that owns the element
+        procedure   :: set_element_node         ! Set the nodes indices defining the element connectivity
+        procedure   :: set_element_nodes        ! Set the nodes indices defining the element connectivity
 
-        procedure   :: get_domain_index         !< Return the global domain index                   
-                                                !  (index within the unpartitioned group of domains)
-        procedure   :: get_element_index        !< Return the domain-global index of the element    
-                                                !  (index within the unpartitioned domain)
-        procedure   :: get_element_mapping      !< Return the element mapping 
-        procedure   :: get_element_partition    !< Return the partition index that owns the element
-        procedure   :: get_element_node         !< Return an individual node index
-        procedure   :: get_element_nodes        !< Return array of node indices
+        procedure   :: get_domain_index         ! Return the global domain index                   
+                                                ! (index within the unpartitioned group of domains)
+        procedure   :: get_element_index        ! Return the domain-global index of the element    
+                                                ! (index within the unpartitioned domain)
+        procedure   :: get_element_mapping      ! Return the element mapping 
+        procedure   :: get_element_partition    ! Return the partition index that owns the element
+        procedure   :: get_element_node         ! Return an individual node index
+        procedure   :: get_element_nodes        ! Return array of node indices
 
     end type element_connectivity_t
     !*******************************************************************************
@@ -89,6 +89,21 @@ contains
 
 
 
+    !>  Set the global domain index
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/10/2016
+    !!
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine set_domain_index(self,idomain_g)
+        class(element_connectivity_t),  intent(inout)   :: self
+        integer(ik)                                     :: idomain_g
+
+        self%data(1) = idomain_g
+
+    end subroutine set_domain_index
+    !********************************************************************************
 
 
 
@@ -111,26 +126,28 @@ contains
 
 
 
-    !>  Set the global domain index
+
+
+
+
+
+
+    !>  Set the global element index
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/10/2016
     !!
     !!
+    !!
     !--------------------------------------------------------------------------------
-    subroutine set_domain_index(self,idomain_g)
+    subroutine set_element_index(self,ielement_g)
         class(element_connectivity_t),  intent(inout)   :: self
-        integer(ik)                                     :: idomain_g
+        integer(ik),                    intent(in)      :: ielement_g
 
-        self%data(1) = idomain_g
+        self%data(2) = ielement_g
 
-    end subroutine set_domain_index
+    end subroutine set_element_index
     !********************************************************************************
-
-
-
-
-
 
 
 
@@ -157,7 +174,12 @@ contains
 
 
 
-    !>  Set the global element index
+
+
+
+
+
+    !>  Set the element mapping from a connectivity
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/10/2016
@@ -165,17 +187,15 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------
-    subroutine set_element_index(self,ielement_g)
+    subroutine set_element_mapping(self,mapping)
         class(element_connectivity_t),  intent(inout)   :: self
-        integer(ik),                    intent(in)      :: ielement_g
+        integer(ik),                    intent(in)      :: mapping
 
-        self%data(2) = ielement_g
 
-    end subroutine set_element_index
+        self%data(3) = mapping
+
+    end subroutine set_element_mapping
     !********************************************************************************
-
-
-
 
 
 
@@ -210,30 +230,29 @@ contains
 
 
 
-    !>  Set the element mapping from a connectivity
+
+
+
+
+
+
+
+    !>  Return the element mapping from a connectivity
     !!
     !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   6/10/2016
+    !!  @date   5/23/2016
     !!
     !!
     !!
     !--------------------------------------------------------------------------------
-    subroutine set_element_mapping(self,mapping)
+    subroutine set_element_partition(self,ipartition)
         class(element_connectivity_t),  intent(inout)   :: self
-        integer(ik),                    intent(in)      :: mapping
+        integer(ik),                    intent(in)      :: ipartition
 
+        self%partition = ipartition
 
-        self%data(3) = mapping
-
-    end subroutine set_element_mapping
+    end subroutine set_element_partition
     !********************************************************************************
-
-
-
-
-
-
-
 
 
 
@@ -263,27 +282,32 @@ contains
 
 
 
-    !>  Return the element mapping from a connectivity
+
+
+
+
+
+    !>  Return an individual node index from the element connectivity
     !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   5/23/2016
+    !!  @author Nathan A. Wukie
+    !!  @date   6/10/2016
     !!
     !!
     !!
     !--------------------------------------------------------------------------------
-    subroutine set_element_partition(self,ipartition)
+    subroutine set_element_node(self,idx,node)
         class(element_connectivity_t),  intent(inout)   :: self
-        integer(ik),                    intent(in)      :: ipartition
+        integer(ik),                    intent(in)      :: idx
+        integer(ik),                    intent(in)      :: node
 
-        self%partition = ipartition
+        integer(ik) :: header
 
-    end subroutine set_element_partition
+        header = self%header_size 
+
+        self%data(header+idx) = node
+
+    end subroutine set_element_node
     !********************************************************************************
-
-
-
-
-
 
 
 
@@ -323,27 +347,29 @@ contains
 
 
 
-    !>  Return an individual node index from the element connectivity
+
+
+
+    !>  Set the array of element node indices
     !!
     !!  @author Nathan A. Wukie
     !!  @date   6/10/2016
     !!
     !!
-    !!
     !--------------------------------------------------------------------------------
-    subroutine set_element_node(self,idx,node)
-        class(element_connectivity_t),  intent(inout)   :: self
-        integer(ik),                    intent(in)      :: idx
-        integer(ik),                    intent(in)      :: node
+    subroutine set_element_nodes(self,nodes)
+        class(element_connectivity_t),  intent(inout)  :: self
+        integer(ik),                    intent(in)  :: nodes(:)
 
-        integer(ik) :: header
+        integer(ik)                 :: header
 
         header = self%header_size 
 
-        self%data(header+idx) = node
+        self%data((header+1):) = nodes
 
-    end subroutine set_element_node
+    end subroutine set_element_nodes
     !********************************************************************************
+
 
 
 
@@ -353,7 +379,6 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!  @date   6/10/2016
-    !!
     !!
     !!
     !--------------------------------------------------------------------------------
@@ -371,26 +396,6 @@ contains
     !********************************************************************************
 
 
-    !>  Set the array of element node indices
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   6/10/2016
-    !!
-    !!
-    !!
-    !--------------------------------------------------------------------------------
-    subroutine set_element_nodes(self,nodes)
-        class(element_connectivity_t),  intent(inout)  :: self
-        integer(ik),                    intent(in)  :: nodes(:)
-
-        integer(ik)                 :: header
-
-        header = self%header_size 
-
-        self%data((header+1):) = nodes
-
-    end subroutine set_element_nodes
-    !********************************************************************************
 
 
 

@@ -237,7 +237,7 @@ contains
                     ! Apply ILU0 Smoother
                     !
                     !r    = b - chidg_mv(A,v(j))     ! compute current residual
-                    r    = v(j) - chidg_mv(A,x(j))     ! compute current residual
+                    !r    = v(j) - chidg_mv(A,x(j))     ! compute current residual
                     mg_r = r%restrict(nterms_r=1)
                     !mg_r = v(j)%restrict(nterms_r=1)
                     mg_A = A%restrict(nterms_r=1)

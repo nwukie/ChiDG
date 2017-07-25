@@ -20,11 +20,12 @@ module mod_chimera
     use mod_constants,          only: NFACES, ORPHAN, CHIMERA, &
                                       XI_DIR, ETA_DIR, ZETA_DIR, &
                                       ONE, ZERO, TWO, TWO_DIM, THREE_DIM, &
-                                      INVALID_POINT, VALID_POINT, NO_PROC
+                                      INVALID_POINT, VALID_POINT, NO_PROC, NO_ID
     use mod_reference_elements, only: ref_elems
 
     use type_point
     use type_mesh,              only: mesh_t
+    use type_chimera_send,      only: chimera_send
     use type_element_info,      only: element_info_t
     use type_face_info,         only: face_info_t, face_info
     use type_ivector,           only: ivector_t
@@ -159,7 +160,7 @@ contains
                        idonor_domain_g, idonor_element_g, idonor_domain_l, idonor_element_l,    &
                        idomain_g_list, idomain_l_list, ielement_g_list, ielement_l_list,        &
                        neqns_list, nterms_s_list, nterms_c_list, iproc_list, eqn_ID_list,       &
-                       local_domain_g, parallel_domain_g, donor_domain_g, donor_index, donor_ID
+                       local_domain_g, parallel_domain_g, donor_domain_g, donor_index, donor_ID, send_ID
         integer(ik), allocatable    :: domains_g(:)
         integer(ik)                 :: receiver_indices(5), parallel_indices(9)
 
@@ -227,11 +228,11 @@ contains
                         !
                         ! Get location of the face receiving Chimera data
                         !
-                        receiver%idomain_g  = mesh%domain(idom)%chimera%recv(ichimera_face)%receiver_domain_g
-                        receiver%idomain_l  = mesh%domain(idom)%chimera%recv(ichimera_face)%receiver_domain_l
-                        receiver%ielement_g = mesh%domain(idom)%chimera%recv(ichimera_face)%receiver_element_g
-                        receiver%ielement_l = mesh%domain(idom)%chimera%recv(ichimera_face)%receiver_element_l
-                        receiver%iface      = mesh%domain(idom)%chimera%recv(ichimera_face)%receiver_face
+                        receiver%idomain_g  = mesh%domain(idom)%chimera%recv(ichimera_face)%idomain_g
+                        receiver%idomain_l  = mesh%domain(idom)%chimera%recv(ichimera_face)%idomain_l
+                        receiver%ielement_g = mesh%domain(idom)%chimera%recv(ichimera_face)%ielement_g
+                        receiver%ielement_l = mesh%domain(idom)%chimera%recv(ichimera_face)%ielement_l
+                        receiver%iface      = mesh%domain(idom)%chimera%recv(ichimera_face)%iface
 
                         call write_line('   Face ', ichimera_face,' of ',mesh%domain(idom)%chimera%nreceivers(), delimiter='  ')
 
@@ -396,11 +397,11 @@ contains
                                     call MPI_Send(get_donor,1,MPI_LOGICAL, idonor_proc, 0, ChiDG_COMM, ierr)
                                 end do
 
-                                ! Add donor to the chimera collection
-                                donor_ID = mesh%domain(donor%idomain_l)%chimera%add_donor(donor%idomain_g, donor%idomain_l, donor%ielement_g, donor%ielement_l, IRANK)
-
-                                ! Register local processor as receiver rank
-                                call mesh%domain(donor%idomain_l)%chimera%donor(donor_ID)%receiver_procs%push_back(IRANK)
+                                ! Add donor to the receiver face
+!                                donor_ID = mesh%domain(donor%idomain_l)%chimera%add_donor(donor%idomain_g, donor%idomain_l, donor%ielement_g, donor%ielement_l, IRANK)
+!
+!                                ! Register local processor as receiver rank
+!                                call mesh%domain(donor%idomain_l)%chimera%donor(donor_ID)%receiver_procs%push_back(IRANK)
 
 
 
@@ -440,7 +441,12 @@ contains
 
                             end if
 
-
+                            !
+                            ! Add donor
+                            !
+                            donor_ID = mesh%domain(idom)%chimera%recv(ichimera_face)%add_donor(donor%idomain_g, donor%idomain_l, donor%ielement_g, donor%ielement_l, donor%iproc)
+                            call mesh%domain(idom)%chimera%recv(ichimera_face)%donor(donor_ID)%set_properties(donor%nterms_c,donor%nterms_s,donor%neqns,donor%eqn_ID)
+                            call mesh%domain(idom)%chimera%recv(ichimera_face)%donor(donor_ID)%add_node(igq,donor_coord)
 
 
                             !
@@ -473,121 +479,122 @@ contains
 
 
 
-                        !
-                        ! Count number of unique donors to the current face and 
-                        ! add to chimera donor data 
-                        !
-                        ndonors = 0
-                        do igq = 1,ddomain_g%size()
-
-                            idomain_g_list  = ddomain_g%at(igq)
-                            idomain_l_list  = ddomain_l%at(igq)
-                            ielement_g_list = delement_g%at(igq)
-                            ielement_l_list = delement_l%at(igq)
-                            iproc_list      = dproc%at(igq)
-                            eqn_ID_list     = deqn_ID%at(igq)
-                            neqns_list      = dneqns%at(igq)
-                            nterms_s_list   = dnterms_s%at(igq)
-                            nterms_c_list   = dnterms_c%at(igq)
-
-
-                            !
-                            ! Check if domain/element pair has already been added to the chimera donor data
-                            !
-                            already_added = .false.
-                            do idonor = 1,mesh%domain(idom)%chimera%recv(ichimera_face)%donor_domain_g%size()
-
-                                idonor_domain_g  = mesh%domain(idom)%chimera%recv(ichimera_face)%donor_domain_g%at(idonor)
-                                idonor_domain_l  = mesh%domain(idom)%chimera%recv(ichimera_face)%donor_domain_l%at(idonor)
-                                idonor_element_g = mesh%domain(idom)%chimera%recv(ichimera_face)%donor_element_g%at(idonor)
-                                idonor_element_l = mesh%domain(idom)%chimera%recv(ichimera_face)%donor_element_l%at(idonor)
-                                idonor_proc      = mesh%domain(idom)%chimera%recv(ichimera_face)%donor_proc%at(idonor)
-
-                                already_added = ( (idomain_g_list == idonor_domain_g)   .and. &
-                                                  (idomain_l_list == idonor_domain_l)   .and. & 
-                                                  (ielement_g_list == idonor_element_g) .and. &
-                                                  (ielement_l_list == idonor_element_l)       &
-                                                )
-                                if (already_added) exit
-                            end do
-                            
-
-                            !
-                            ! If the current domain/element pair was not found in the chimera donor data, then add it
-                            !
-                            if (.not. already_added) then
-                                call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_domain_g%push_back(idomain_g_list)
-                                call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_domain_l%push_back(idomain_l_list)
-                                call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_element_g%push_back(ielement_g_list)
-                                call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_element_l%push_back(ielement_l_list)
-
-                                call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_proc%push_back(iproc_list)
-                                call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_eqn_ID%push_back(eqn_ID_list)
-                                call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_neqns%push_back(neqns_list)
-                                call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_nterms_s%push_back(nterms_s_list)
-
-                                ! Initialize storage
-                                call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_recv_comm%push_back(0)
-                                call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_recv_domain%push_back(0)
-                                call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_recv_element%push_back(0)
-                                ndonors = ndonors + 1
-                            end if
-
-                        end do ! igq
+!                        !
+!                        ! Count number of unique donors to the current face and 
+!                        ! add to chimera donor data 
+!                        !
+!                        ndonors = 0
+!                        do igq = 1,ddomain_g%size()
+!
+!                            idomain_g_list  = ddomain_g%at(igq)
+!                            idomain_l_list  = ddomain_l%at(igq)
+!                            ielement_g_list = delement_g%at(igq)
+!                            ielement_l_list = delement_l%at(igq)
+!                            iproc_list      = dproc%at(igq)
+!                            eqn_ID_list     = deqn_ID%at(igq)
+!                            neqns_list      = dneqns%at(igq)
+!                            nterms_s_list   = dnterms_s%at(igq)
+!                            nterms_c_list   = dnterms_c%at(igq)
+!
+!
+!                            !
+!                            ! Check if domain/element pair has already been added to the chimera donor data
+!                            !
+!                            already_added = .false.
+!                            do idonor = 1,mesh%domain(idom)%chimera%recv(ichimera_face)%donor_domain_g%size()
+!
+!                                idonor_domain_g  = mesh%domain(idom)%chimera%recv(ichimera_face)%donor_domain_g%at(idonor)
+!                                idonor_domain_l  = mesh%domain(idom)%chimera%recv(ichimera_face)%donor_domain_l%at(idonor)
+!                                idonor_element_g = mesh%domain(idom)%chimera%recv(ichimera_face)%donor_element_g%at(idonor)
+!                                idonor_element_l = mesh%domain(idom)%chimera%recv(ichimera_face)%donor_element_l%at(idonor)
+!                                idonor_proc      = mesh%domain(idom)%chimera%recv(ichimera_face)%donor_proc%at(idonor)
+!
+!                                already_added = ( (idomain_g_list == idonor_domain_g)   .and. &
+!                                                  (idomain_l_list == idonor_domain_l)   .and. & 
+!                                                  (ielement_g_list == idonor_element_g) .and. &
+!                                                  (ielement_l_list == idonor_element_l)       &
+!                                                )
+!                                if (already_added) exit
+!                            end do
+!                            
+!
+!                            !
+!                            ! If the current domain/element pair was not found in the chimera donor data, then add it
+!                            !
+!                            if (.not. already_added) then
+!                                call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_domain_g%push_back(idomain_g_list)
+!                                call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_domain_l%push_back(idomain_l_list)
+!                                call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_element_g%push_back(ielement_g_list)
+!                                call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_element_l%push_back(ielement_l_list)
+!
+!                                call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_proc%push_back(iproc_list)
+!                                call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_eqn_ID%push_back(eqn_ID_list)
+!                                call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_neqns%push_back(neqns_list)
+!                                call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_nterms_s%push_back(nterms_s_list)
+!
+!                                ! Initialize storage
+!                                call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_recv_comm%push_back(0)
+!                                call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_recv_domain%push_back(0)
+!                                call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_recv_element%push_back(0)
+!                                ndonors = ndonors + 1
+!                            end if
+!
+!                        end do ! igq
 
 
 
                         !
                         ! Allocate chimera donor coordinate and quadrature index arrays. One list for each donor
                         !
-                        allocate( mesh%domain(idom)%chimera%recv(ichimera_face)%donor_coords(ndonors),        &
-                                  mesh%domain(idom)%chimera%recv(ichimera_face)%donor_metrics(ndonors),       &
-                                  mesh%domain(idom)%chimera%recv(ichimera_face)%donor_jinv(ndonors),          &
-                                  mesh%domain(idom)%chimera%recv(ichimera_face)%donor_gq_indices(ndonors), stat=ierr)
-                        if (ierr /= 0) call AllocationError
+                        ndonors = mesh%domain(idom)%chimera%recv(ichimera_face)%ndonors()
+!                        allocate( mesh%domain(idom)%chimera%recv(ichimera_face)%donor_coords(ndonors),        &
+!                                  mesh%domain(idom)%chimera%recv(ichimera_face)%donor_metrics(ndonors),       &
+!                                  mesh%domain(idom)%chimera%recv(ichimera_face)%donor_jinv(ndonors),          &
+!                                  mesh%domain(idom)%chimera%recv(ichimera_face)%donor_gq_indices(ndonors), stat=ierr)
+!                        if (ierr /= 0) call AllocationError
 
 
 
 
 
-                        !
-                        ! Now save donor coordinates and gq indices to their appropriate donor list
-                        !
-                        do igq = 1,ddomain_g%size()
-
-
-                            idomain_g_list  = ddomain_g%at(igq)
-                            idomain_l_list  = ddomain_l%at(igq)
-                            ielement_g_list = delement_g%at(igq)
-                            ielement_l_list = delement_l%at(igq)
-
-
-                            !
-                            ! Check if domain/element pair has already been added to the chimera donor data
-                            !
-                            donor_match = .false.
-                            do idonor = 1,mesh%domain(idom)%chimera%recv(ichimera_face)%donor_domain_g%size()
-
-                                idonor_domain_g  = mesh%domain(idom)%chimera%recv(ichimera_face)%donor_domain_g%at(idonor)
-                                idonor_domain_l  = mesh%domain(idom)%chimera%recv(ichimera_face)%donor_domain_l%at(idonor)
-                                idonor_element_g = mesh%domain(idom)%chimera%recv(ichimera_face)%donor_element_g%at(idonor)
-                                idonor_element_l = mesh%domain(idom)%chimera%recv(ichimera_face)%donor_element_l%at(idonor)
-
-                                donor_match = ( (idomain_g_list == idonor_domain_g)   .and. &
-                                                (idomain_l_list == idonor_domain_l)   .and. & 
-                                                (ielement_g_list == idonor_element_g) .and. &
-                                                (ielement_l_list == idonor_element_l) )
-
-                                if (donor_match) then
-                                    call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_gq_indices(idonor)%push_back(igq)
-                                    call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_coords(idonor)%push_back(dcoordinate%at(igq))
-                                    call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_metrics(idonor)%push_back(dmetric%at(igq))
-                                    call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_jinv(idonor)%push_back(djinv%at(igq))
-                                    exit
-                                end if
-                            end do
-                            
-                        end do
+!                        !
+!                        ! Now save donor coordinates and gq indices to their appropriate donor list
+!                        !
+!                        do igq = 1,ddomain_g%size()
+!
+!
+!                            idomain_g_list  = ddomain_g%at(igq)
+!                            idomain_l_list  = ddomain_l%at(igq)
+!                            ielement_g_list = delement_g%at(igq)
+!                            ielement_l_list = delement_l%at(igq)
+!
+!
+!                            !
+!                            ! Check if domain/element pair has already been added to the chimera donor data
+!                            !
+!                            donor_match = .false.
+!                            do idonor = 1,mesh%domain(idom)%chimera%recv(ichimera_face)%donor_domain_g%size()
+!
+!                                idonor_domain_g  = mesh%domain(idom)%chimera%recv(ichimera_face)%donor_domain_g%at(idonor)
+!                                idonor_domain_l  = mesh%domain(idom)%chimera%recv(ichimera_face)%donor_domain_l%at(idonor)
+!                                idonor_element_g = mesh%domain(idom)%chimera%recv(ichimera_face)%donor_element_g%at(idonor)
+!                                idonor_element_l = mesh%domain(idom)%chimera%recv(ichimera_face)%donor_element_l%at(idonor)
+!
+!                                donor_match = ( (idomain_g_list == idonor_domain_g)   .and. &
+!                                                (idomain_l_list == idonor_domain_l)   .and. & 
+!                                                (ielement_g_list == idonor_element_g) .and. &
+!                                                (ielement_l_list == idonor_element_l) )
+!
+!                                if (donor_match) then
+!                                    call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_gq_indices(idonor)%push_back(igq)
+!                                    call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_coords(idonor)%push_back(dcoordinate%at(igq))
+!                                    call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_metrics(idonor)%push_back(dmetric%at(igq))
+!                                    call mesh%domain(idom)%chimera%recv(ichimera_face)%donor_jinv(idonor)%push_back(djinv%at(igq))
+!                                    exit
+!                                end if
+!                            end do
+!                            
+!                        end do
 
 
 
@@ -685,8 +692,14 @@ contains
                         if (still_need_donor) then
 
                             ! Add donor to the chimera collection + register receiver processor rank with donor
-                            donor_ID = mesh%domain(donor%idomain_l)%chimera%add_donor(donor%idomain_g, donor%idomain_l, donor%ielement_g, donor%ielement_l, donor%iproc)
-                            call mesh%domain(donor%idomain_l)%chimera%donor(donor_ID)%receiver_procs%push_back(iproc)
+                            !donor_ID = mesh%domain(donor%idomain_l)%chimera%add_donor(donor%idomain_g, donor%idomain_l, donor%ielement_g, donor%ielement_l, donor%iproc)
+                            !call mesh%domain(donor%idomain_l)%chimera%donor(donor_ID)%receiver_procs%push_back(iproc)
+
+                            ! Add donor to the chimera send collection
+                            send_ID = mesh%domain(donor%idomain_l)%chimera%find_send(donor%idomain_g, donor%ielement_g)
+                            if (send_ID == NO_ID) send_ID = mesh%domain(donor%idomain_l)%chimera%new_send()
+                            mesh%domain(donor%idomain_l)%chimera%send(send_ID) = chimera_send(donor%idomain_g, donor%idomain_l, donor%ielement_g, donor%ielement_l)
+                            call mesh%domain(donor%idomain_l)%chimera%send(send_ID)%send_procs%push_back(iproc)
 
 
 
@@ -796,7 +809,8 @@ contains
         integer(ik)     :: idom, ChiID, idonor, ierr, ipt, iterm,   &
                            donor_idomain_g, donor_idomain_l, donor_ielement_g, donor_ielement_l, &
                            npts, donor_nterms_s, spacedim
-        type(point_t)   :: node
+        !type(point_t)   :: node
+        real(rk)        :: node(3)
 
         real(rk)        :: jinv, ddxi, ddeta, ddzeta
         real(rk), allocatable, dimension(:,:)   ::  &
@@ -821,16 +835,22 @@ contains
                 !
                 do idonor = 1,mesh%domain(idom)%chimera%recv(ChiID)%ndonors()
 
-                    donor_idomain_g  = mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_g%at(idonor)
-                    donor_idomain_l  = mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_l%at(idonor)
-                    donor_ielement_g = mesh%domain(idom)%chimera%recv(ChiID)%donor_element_g%at(idonor)
-                    donor_ielement_l = mesh%domain(idom)%chimera%recv(ChiID)%donor_element_l%at(idonor)
-                    donor_nterms_s   = mesh%domain(idom)%chimera%recv(ChiID)%donor_nterms_s%at(idonor)
+                    !donor_idomain_g  = mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_g%at(idonor)
+                    !donor_idomain_l  = mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_l%at(idonor)
+                    !donor_ielement_g = mesh%domain(idom)%chimera%recv(ChiID)%donor_element_g%at(idonor)
+                    !donor_ielement_l = mesh%domain(idom)%chimera%recv(ChiID)%donor_element_l%at(idonor)
+                    !donor_nterms_s   = mesh%domain(idom)%chimera%recv(ChiID)%donor_nterms_s%at(idonor)
+                    donor_idomain_g  = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g
+                    donor_idomain_l  = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_l
+                    donor_ielement_g = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_g
+                    donor_ielement_l = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_l
+                    donor_nterms_s   = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%nterms_s
 
                     !
                     ! Get number of GQ points this donor is responsible for
                     !
-                    npts   = mesh%domain(idom)%chimera%recv(ChiID)%donor_coords(idonor)%size()
+                    !npts   = mesh%domain(idom)%chimera%recv(ChiID)%donor_coords(idonor)%size()
+                    npts   = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%nnodes()
 
                     !
                     ! Allocate interpolator matrix
@@ -851,21 +871,26 @@ contains
                     do iterm = 1,donor_nterms_s
                         do ipt = 1,npts
 
-                            node = mesh%domain(idom)%chimera%recv(ChiID)%donor_coords(idonor)%at(ipt)
+                            !node = mesh%domain(idom)%chimera%recv(ChiID)%donor_coords(idonor)%at(ipt)
+                            node = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%coords(ipt,:)
 
                             !
                             ! Compute value interpolator
                             !
                             spacedim = 3
-                            interpolator(ipt,iterm) = polynomial_val(spacedim,donor_nterms_s,iterm,[node%c1_,node%c2_,node%c3_])
+                            !interpolator(ipt,iterm) = polynomial_val(spacedim,donor_nterms_s,iterm,[node%c1_,node%c2_,node%c3_])
+                            interpolator(ipt,iterm) = polynomial_val(spacedim,donor_nterms_s,iterm,node)
 
                             
                             !
                             ! Compute gradient interpolators, grad1, grad2, grad3
                             !
-                            ddxi   = dpolynomial_val(spacedim,donor_nterms_s,iterm,[node%c1_,node%c2_,node%c3_],XI_DIR  )
-                            ddeta  = dpolynomial_val(spacedim,donor_nterms_s,iterm,[node%c1_,node%c2_,node%c3_],ETA_DIR )
-                            ddzeta = dpolynomial_val(spacedim,donor_nterms_s,iterm,[node%c1_,node%c2_,node%c3_],ZETA_DIR)
+                            !ddxi   = dpolynomial_val(spacedim,donor_nterms_s,iterm,[node%c1_,node%c2_,node%c3_],XI_DIR  )
+                            !ddeta  = dpolynomial_val(spacedim,donor_nterms_s,iterm,[node%c1_,node%c2_,node%c3_],ETA_DIR )
+                            !ddzeta = dpolynomial_val(spacedim,donor_nterms_s,iterm,[node%c1_,node%c2_,node%c3_],ZETA_DIR)
+                            ddxi   = dpolynomial_val(spacedim,donor_nterms_s,iterm,node,XI_DIR  )
+                            ddeta  = dpolynomial_val(spacedim,donor_nterms_s,iterm,node,ETA_DIR )
+                            ddzeta = dpolynomial_val(spacedim,donor_nterms_s,iterm,node,ZETA_DIR)
 
                             ! Get metrics for element mapping
                             metric = mesh%domain(idom)%chimera%recv(ChiID)%donor_metrics(idonor)%at(ipt)

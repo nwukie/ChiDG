@@ -130,7 +130,7 @@ contains
                 !
                 ! Get nodes from element being tested
                 !
-                element_nodes = domain%elems(ielem)%connectivity%get_element_nodes()
+                element_nodes = domain%elems(ielem)%connectivity
 
 
                 !
@@ -200,10 +200,10 @@ contains
                         !
                         ! For the element, get the global indices of the corner nodes for face, try_face
                         !
-                        corner_indices(1) = domain%elems(ielem)%connectivity%get_element_node(corner_one)
-                        corner_indices(2) = domain%elems(ielem)%connectivity%get_element_node(corner_two)
-                        corner_indices(3) = domain%elems(ielem)%connectivity%get_element_node(corner_three)
-                        corner_indices(4) = domain%elems(ielem)%connectivity%get_element_node(corner_four)
+                        corner_indices(1) = domain%elems(ielem)%connectivity(corner_one)
+                        corner_indices(2) = domain%elems(ielem)%connectivity(corner_two)
+                        corner_indices(3) = domain%elems(ielem)%connectivity(corner_three)
+                        corner_indices(4) = domain%elems(ielem)%connectivity(corner_four)
 
 
                         !

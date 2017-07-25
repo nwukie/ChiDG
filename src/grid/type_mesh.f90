@@ -2,6 +2,7 @@ module type_mesh
 #include <messenger.h>
     use mod_kinds,                  only: rk,ik
     use mod_constants,              only: NO_ID, INTERIOR, NFACES
+    use type_element,               only: element_t
     use type_domain,                only: domain_t
     use type_domain_connectivity,   only: domain_connectivity_t
     use type_boundary_connectivity, only: boundary_connectivity_t
@@ -31,9 +32,12 @@ module type_mesh
 
         integer(ik)                         :: ntime_
 
+        ! Local data
         type(domain_t),         allocatable :: domain(:)
         type(bc_patch_group_t), allocatable :: bc_patch_group(:)
 
+        ! Parallel data
+        type(element_t),        allocatable :: parallel_element(:)
         type(mpi_request_vector_t)          :: comm_requests
 
     contains
@@ -64,6 +68,10 @@ module type_mesh
         procedure           :: get_proc_ninterior_neighbors
         !procedure           :: get_proc_nchimera_donors
         !procedure           :: get_proc_nchimera_receivers
+
+        procedure           :: find_parallel_element
+        procedure           :: new_parallel_element
+        procedure           :: nparallel_elements
 
 
         ! Extra routines for testing private procedures
@@ -642,6 +650,148 @@ contains
 
 
 
+!    !>
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   7/25/2017
+!    !!
+!    !!
+!    !---------------------------------------------------------------------------------
+!    function add_parallel_element(self, nodes, connectivity, coord_system, idomain_g, ielement_g, idomain_l, ielement_l) result(pelem_ID)
+!        class(mesh_t),                  intent(inout)   :: self
+!        real(rk),                       intent(in)      :: nodes(:,:)
+!        type(element_connectivity_t),   intent(in)      :: connectivity
+!        character(*),                   intent(in)      :: coord_system
+!        integer(ik),                    intent(in)      :: idomain_g
+!        integer(ik),                    intent(in)      :: ielement_g
+!        integer(ik),                    intent(in)      :: idomain_l
+!        integer(ik),                    intent(in)      :: ielement_l
+!
+!        integer(ik) :: pelem_ID
+!
+!        !
+!        ! Check for existing parallel element. If one does not
+!        ! exist, get an identifier for a new parallel element.
+!        !
+!        pelem_ID = self%find_parallel_element(idomain_g,ielement_g)
+!        if (pelem_ID == NO_ID) pelem_ID = self%new_parallel_element()
+!
+!
+!        !
+!        ! Initialize element geometry
+!        !
+!        call self%parallel_element(pelem_ID)%init_geom(nodes,connectivity,idomain_l,ielement_l,coord_system)
+!
+!
+!
+!    end function add_parallel_element
+!    !**********************************************************************************
+
+
+
+    !>  Try to locate an element in self%parallel_element(:). If found, return valid
+    !!  pelem_ID for self%parallel_element(pelem_ID). If not found, return NO_ID.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/25/2017
+    !!
+    !-----------------------------------------------------------------------------------
+    function find_parallel_element(self,idomain_g, ielement_g) result(pelem_ID)
+        class(mesh_t),  intent(in)  :: self
+        integer(ik),    intent(in)  :: idomain_g
+        integer(ik),    intent(in)  :: ielement_g
+
+        integer(ik) :: ielem, pelem_ID
+
+        pelem_ID = NO_ID
+        do ielem = 1,self%nparallel_elements()
+
+            if ( (self%parallel_element(ielem)%idomain_g == idomain_g) .and.    &
+                 (self%parallel_element(ielem)%ielement_g == ielement_g) ) then
+                pelem_ID = ielem
+                exit
+            end if
+
+        end do !ielem
+
+    end function find_parallel_element
+    !***********************************************************************************
+
+
+
+
+
+    !>  Extend allocation for parallel_element and return new identifier, pelem_ID.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/25/2017
+    !!
+    !----------------------------------------------------------------------------------
+    function new_parallel_element(self) result(pelem_ID)
+        class(mesh_t),  intent(inout)   :: self
+
+        integer(ik)                     :: pelem_ID, ierr
+        type(element_t),    allocatable :: temp(:)
+
+        
+        !
+        ! Resize array storage
+        !
+        allocate(temp(self%nparallel_elements() + 1), stat=ierr)
+
+
+
+        ! Copy previously initialized instances to new array. Be careful about pointers 
+        ! components here. For example, a pointer from a face to an element would no 
+        ! longer be valid in the new array.
+        if (self%nparallel_elements() > 0) then
+            temp(1:size(self%parallel_element)) = self%parallel_element(1:size(self%parallel_element))
+        end if
+
+
+
+        !
+        ! Move resized temp allocation back to mesh container. 
+        ! Be careful about pointer components here! Their location in memory has changed.
+        !
+        call move_alloc(temp,self%parallel_element)
+        
+
+
+        !
+        ! Set domain identifier of newly allocated domain that will be returned
+        !
+        pelem_ID = self%nparallel_elements()
+
+
+    end function new_parallel_element
+    !**********************************************************************************
+
+
+
+
+
+    !>  Return number of parallel elements on the mesh.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/25/2017
+    !!
+    !---------------------------------------------------------------------------------
+    function nparallel_elements(self) result(n)
+        class(mesh_t),  intent(in)  :: self
+
+        integer(ik) :: n
+
+        if (allocated(self%parallel_element)) then
+            n = size(self%parallel_element)
+        else
+            n = 0
+        end if
+
+    end function nparallel_elements
+    !**********************************************************************************
+
+
 
 
 
@@ -666,7 +816,7 @@ contains
 
         integer(ik)         :: idom, ielem, iface, idonor, iproc, ierr,    &
                                send_size_a, send_size_b, send_size_c, send_size_d
-        type(mpi_request)   :: request(4)
+        type(mpi_request)   :: request(5)
         logical             :: interior_face, parallel_neighbor
 
 
@@ -719,7 +869,7 @@ contains
 !        ! Send chimera donors
 !        !
 !        do idom = 1,self%ndomains()
-!            do idonor = 1,self%domain(idom)%chimera%send%ndonors()
+!            do idonor = 1,self%domain(idom)%chimera%send%nsend()
 !
 !                iproc = self%domain(idom)%chimera%send%receiver_proc%at(idonor)
 !
@@ -735,15 +885,16 @@ contains
 !            
 !                    ! First send location of donor
 !                    call mpi_isend(receiver_location                                                    4, mpi_integer4, iproc, 0, ChiDG_COMM, request(1), ierr)
-!                    call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%element_location,           4, mpi_integer4, iproc, 0, ChiDG_COMM, request(1), ierr)
-!                    call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%elem_pts,         send_size_a, mpi_real8,    iproc, 0, ChiDG_COMM, request(2), ierr)
-!                    call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%dnodes_l,         send_size_b, mpi_real8,    iproc, 0, ChiDG_COMM, request(3), ierr)
-!                    call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%vnodes_l,         send_size_c, mpi_real8,    iproc, 0, ChiDG_COMM, request(4), ierr)
+!                    call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%element_location,           4, mpi_integer4, iproc, 0, ChiDG_COMM, request(2), ierr)
+!                    call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%elem_pts,         send_size_a, mpi_real8,    iproc, 0, ChiDG_COMM, request(3), ierr)
+!                    call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%dnodes_l,         send_size_b, mpi_real8,    iproc, 0, ChiDG_COMM, request(4), ierr)
+!                    call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%vnodes_l,         send_size_c, mpi_real8,    iproc, 0, ChiDG_COMM, request(5), ierr)
 !
 !                    call self%comm_requests%push_back(request(1))
 !                    call self%comm_requests%push_back(request(2))
 !                    call self%comm_requests%push_back(request(3))
 !                    call self%comm_requests%push_back(request(4))
+!                    call self%comm_requests%push_back(request(5))
 !
 !                end if 
 !
@@ -812,16 +963,58 @@ contains
         !
         ! Receive/constrict parallel chimera donors
         !
-
-        ! call mesh%parallel_element(pelem_ID)%init_ale()
-        ! call mesh%parallel_element(pelem_ID)%update_ale()
-
-
-
-
-
-
-
+!
+!        call mpi_recv(location, 4, mpi_integer4, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+!        idomain_g  = location(1)
+!        ielement_g = location(3)
+!
+!
+!        call mpi_recv(element_data,     6, mpi_integer4, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+!        etype               = element_data(1)
+!        nnodes              = element_data(2)
+!        nterms_s            = element_data(3)
+!        nfields             = element_data(4)
+!        ntime               = element_data(5)
+!        eqn_ID              = element_data(6)
+!        interpolation_level = element_data(7)
+!        
+!
+!
+!        if (allocated(nodes)) deallocate(nodes, dnodes, vnodes, connectivity)
+!        allocate(nodes(       nnodes,3), &
+!                 dnodes(      nnodes,3), &
+!                 vnodes(      nnodes,3), &
+!                 connectivity(nnodes  ), stat=ierr)
+!        if (ierr /= 0) call AllocationError
+!
+!        call mpi_recv(nodes,        nnodes*3, mpi_real8,    recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+!        call mpi_recv(dnodes,       nnodes*3, mpi_real8,    recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+!        call mpi_recv(vnodes,       nnodes*3, mpi_real8,    recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+!        call mpi_recv(connectivity, nnodes,   mpi_integer4, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+!
+!
+!        !
+!        ! Check for existing parallel element. If one does not
+!        ! exist, get an identifier for a new parallel element.
+!        !
+!        pelem_ID = self%find_parallel_element(idomain_g,ielement_g)
+!        if (pelem_ID == NO_ID) pelem_ID = self%new_parallel_element()
+!
+!
+!        !
+!        ! Initialize element geometry
+!        !
+!        call self%parallel_element(pelem_ID)%init_geom(nodes,connectivity,etype,location,coord_system)
+!        call self%parallel_element(pelem_ID)%init_sol('Quadrature',interpolation_level,nterms_s,nfields,ntime)
+!        call mesh%parallel_element(pelem_ID)%init_ale(dnodes,vnodes)
+!        call mesh%parallel_element(pelem_ID)%update_element_ale()
+!
+!
+!
+!
+!
+!
+!
 
 
         

@@ -2205,7 +2205,7 @@ contains
                 self%mesh%domain(self%element_info%idomain_l)%&
                 faces(self%element_info%ielement_l,self%iface)%det_jacobian_grid_grad3
             end if
-        else if (interp_source == 'face_exterior') then
+        else if (interp_source == 'face exterior') then
             if (self%face_type() == INTERIOR) then
                 if (interp_type == 'value') then
                     val = &
@@ -2289,7 +2289,6 @@ contains
 !        real(rk), dimension(:,:), allocatable :: val 
 !
 !
-!        !det_jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%det_jacobian_grid(:)
 !
 !        allocate(val(self%nnodesf(),3))
 !        ! Interpolate modes to nodes

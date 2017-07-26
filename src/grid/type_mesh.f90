@@ -834,24 +834,51 @@ contains
         !      do idonor = 1,size(mesh%dom(idom)%chimera%recv(ChiID)%donor_data)
         !
         !          ! Get donor location
-        !          mesh%dom(idom)%chimera%recv(ChiID)%donor_data(idonor)%donor_proc
+        !          mesh%domain(idom)%chimera%recv(ChiID)%donor_data(idonor)%donor_proc
+        !          ref_coord = mesh%domain(idom)%chimera%recv(ChiID)%donor_data(idonor)%donor_coords
+        !          npoints = size(ref_coord,1)
         !
         !          parallel_donor = (donor_proc /= IRANK)
         !
         !          if (parallel_donor) then
         !
-        !              pelem_ID    = mesh%dom(idom)%chimera%recv(ChiID)%donor_data(idonor)%pelem_ID
-        !              xi_eta_zeta = mesh%dom(idom)%chimera%recv(ChiID)%donor_data(idonor)%donor_coords
-        !              mesh%parallel_elements(pelem_ID)%metric_point_ale(xi_eta_zeta)
+        !              pelem_ID    = mesh%domain(idom)%chimera%recv(ChiID)%donor_data(idonor)%pelem_ID
+        !              do ipt = 1, npoints
+        !                  igq  = mesh%domain(idom)%chimera%recv(ChiID)%donor_data(idonor)%donor_gq_indices(ipt)
+        !                  xi   = ref_coords(ipt,1)
+        !                  eta  = ref_coords(ipt,2)
+        !                  zeta = ref_coords(ipt,3)
+        !                  call mesh%parallel_elements(pelem_ID)%ale_point(xi, eta, &
+        !                  zeta,det_jacobian_grid_pt,det_jacobian_grid_grad_pt,inv_jacobian_grid_pt,grid_vel_pt)
+        !                  mesh%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid(igq) = det_jacobian_grid_pt
+        !                  mesh%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid_grad1(igq) = det_jacobian_grid_grad_pt(1)
+        !                  mesh%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid_grad2(igq) = det_jacobian_grid_grad_pt(2)
+        !                  mesh%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid_grad3(igq) = det_jacobian_grid_grad_pt(3)
+        !                  mesh%domain(idom)%chimera%recv(ChiID)%inv_jacobian_grid(igq) = inv_jacobian_grid_pt
+        !                  mesh%domain(idom)%chimera%recv(ChiID)%grid_vel(igq,:) = grid_vel_pt
+        !              end do
         !
         !           else
         !
-        !              idomain_l   = mesh%dom(idom)%chimera%recv(ChiID)%donor_data(idonor)%idomain_l
-        !              ielement_l  = mesh%dom(idom)%chimera%recv(ChiID)%donor_data(idonor)%ielement_l
-        !              xi_eta_zeta = mesh%dom(idom)%chimera%recv(ChiID)%donor_data(idonor)%donor_coords
-        !              mesh%domain(idomain_l)%elems(ielement_l)%metric_point_ale(xi_eta_zeta)
-        !
-        !
+        !              idomain_l   = mesh%domain(idom)%chimera%recv(ChiID)%donor_data(idonor)%idomain_l
+        !              ielement_l  = mesh%domain(idom)%chimera%recv(ChiID)%donor_data(idonor)%ielement_l
+        
+        !              do ipt = 1, npoints
+        !                  igq  = mesh%domain(idom)%chimera%recv(ChiID)%donor_data(idonor)%donor_gq_indices(ipt)
+        !                  xi   = ref_coords(ipt,1)
+        !                  eta  = ref_coords(ipt,2)
+        !                  zeta = ref_coords(ipt,3)
+        !                  call mesh%domain(idomain_l)%elems(ielement_t)%ale_point(xi, eta, &
+        !                  zeta,det_jacobian_grid_pt,det_jacobian_grid_grad_pt,inv_jacobian_grid_pt,grid_vel_pt)
+        !                  mesh%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid(igq) = det_jacobian_grid_pt
+        !                  mesh%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid_grad1(igq) = det_jacobian_grid_grad_pt(1)
+        !                  mesh%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid_grad2(igq) = det_jacobian_grid_grad_pt(2)
+        !                  mesh%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid_grad3(igq) = det_jacobian_grid_grad_pt(3)
+        !                  mesh%domain(idom)%chimera%recv(ChiID)%inv_jacobian_grid(igq) = inv_jacobian_grid_pt
+        !                  mesh%domain(idom)%chimera%recv(ChiID)%grid_vel(igq,:) = grid_vel_pt
+        !              end do
+        !           end if
+        ! 
         !      end do !idonor
         !   end do !ChiID
         !end do !idom

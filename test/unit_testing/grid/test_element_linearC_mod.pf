@@ -49,9 +49,8 @@ contains
         
         integer(ik), parameter          :: npt = 8
         real(rk)                        :: nodes(npt,3)
-        type(element_connectivity_t)    :: connectivity
         real(rk)                        :: sqrt_two, inv_sqrt_two
-        integer(ik)                     :: ftype, ineighbor, mapping, ielem,            &
+        integer(ik)                     :: ftype, ineighbor, ielem,                     &
                                            idomain, neqns, nterms_s, ntime,             &
                                            ineighbor_domain_g,  ineighbor_domain_l,     &
                                            ineighbor_element_g, ineighbor_element_l,    &
@@ -87,11 +86,6 @@ contains
         nodes(8,:) = [sqrt_two,      1._rk,  0._rk       ]
 
 
-        mapping = 1
-        call connectivity%init(mapping)
-        call connectivity%set_domain_index(1)
-        call connectivity%set_element_index(1)
-        call connectivity%set_element_nodes([1, 2, 3, 4, 5, 6, 7, 8])
         
         ! Initialize Element geometry and Numerics
         idomain  = 1
@@ -99,7 +93,13 @@ contains
         neqns    = 2
         nterms_s = 8
         ntime    = 1
-        call this%elem%init_geom(nodes,connectivity,idomain,ielem,'Cartesian')
+        call this%elem%init_geom(nodes        = nodes,                          &
+                                 connectivity = [1, 2, 3, 4, 5, 6, 7, 8],       &
+                                 etype        = 1,                              &
+                                 location     = [idomain,idomain,ielem,ielem],  &
+                                 coord_system = 'Cartesian')
+
+
         call this%elem%init_sol('Quadrature',1,nterms_s,neqns,ntime)
         
 

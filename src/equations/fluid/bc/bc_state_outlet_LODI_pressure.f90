@@ -1,7 +1,7 @@
 module bc_state_outlet_LODI_pressure
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE, HALF, TWO, NO_PROC, ME
+    use mod_constants,          only: ZERO, ONE, HALF, TWO, NO_PROC, ME, CYLINDRICAL
 
     use type_mesh,              only: mesh_t
     use type_bc_state,          only: bc_state_t
@@ -470,8 +470,7 @@ contains
             mom_3   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom3,    itime, 'value', ME)
             energy  = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, ienergy,  itime, 'value', ME)
 
-            if (worker%mesh%domain(idomain_l_coupled)%elems(ielement_l_coupled)%coordinate_system == 'Cylindrical') then
-                !mom_2 = mom_2 / worker%mesh%domain(idomain_l_coupled)%elems(ielement_l_coupled)%quad_pts(:)%c1_
+            if (worker%mesh%domain(idomain_l_coupled)%elems(ielement_l_coupled)%coordinate_system == CYLINDRICAL) then
                 mom_2 = mom_2 / worker%mesh%domain(idomain_l_coupled)%elems(ielement_l_coupled)%quad_pts(:,1)
             end if
 

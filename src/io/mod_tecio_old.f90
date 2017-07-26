@@ -31,7 +31,7 @@ module mod_tecio_old
 #include <messenger.h>
     use mod_kinds,              only: rk,ik,rdouble,TEC
     use mod_constants,          only: ONE, HALF, TWO, OUTPUT_RES, XI_MIN, XI_MAX, &
-                                      ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
+                                      ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, CYLINDRICAL
 
     use type_chidg_data,        only: chidg_data_t
     use type_domain,            only: domain_t
@@ -220,7 +220,7 @@ contains
                                     xi = (((real(ipt_xi,rk)-ONE)/(real(npts,rk)-ONE)) - HALF)*TWO
 
                                     ! Get coordinate value at point
-                                    if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
+                                    if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == CYLINDRICAL ) then
 
                                         r     = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',1,xi,eta,zeta),rdouble)
                                         theta = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',2,xi,eta,zeta),rdouble)
@@ -535,7 +535,7 @@ contains
                                         end if
 
                                         ! Get coordinate value at point
-                                        if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
+                                        if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == CYLINDRICAL ) then
 
                                             r     = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',1,xi,eta,zeta),rdouble)
                                             theta = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',2,xi,eta,zeta),rdouble)

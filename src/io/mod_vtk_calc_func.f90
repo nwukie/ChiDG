@@ -5,7 +5,7 @@
 module mod_vtk_calc_func
 #include <messenger.h>
     use mod_kinds,           only: rk,ik,rdouble
-    use mod_constants,       only: ONE,HALF,TWO,OUTPUT_RES
+    use mod_constants,       only: ONE,HALF,TWO,OUTPUT_RES, CYLINDRICAL
     use type_chidg_data,     only: chidg_data_t
     use type_chidg_vector,   only: chidg_vector_t
 
@@ -159,7 +159,7 @@ contains
 
 
                                     ! Get coordinate value at point
-                                    if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
+                                    if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == CYLINDRICAL ) then
                                         r_coord     = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',1,xi,eta,zeta),rdouble)
                                         theta_coord = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',2,xi,eta,zeta),rdouble)
                                         z_coord     = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',3,xi,eta,zeta),rdouble)

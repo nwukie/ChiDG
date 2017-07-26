@@ -74,6 +74,8 @@ contains
         type(point_t),      allocatable     :: gq_nodes(:)
         type(face_info_t),  allocatable     :: receivers(:)
         integer(ik)                         :: npts, ipt, ierr
+        real(rk)                            :: donor_coord(3)
+        logical                             :: donor_found
 
 
         !
@@ -97,7 +99,12 @@ contains
         !
         do ipt = 1,npts
             receivers(ipt) = face_info(0_ik,0_ik,0_ik,0_ik,0_ik)
-            call find_gq_donor(data%mesh,gq_nodes(ipt),receivers(ipt),donors(ipt),donor_coords(ipt))
+            !call find_gq_donor(data%mesh,gq_nodes(ipt),receivers(ipt),donors(ipt),donor_coords(ipt))
+            call find_gq_donor(data%mesh,gq_nodes(ipt),receivers(ipt),donors(ipt),donor_coord, donor_found)
+            donor_coords(ipt)%c1_ = donor_coord(1)
+            donor_coords(ipt)%c2_ = donor_coord(2)
+            donor_coords(ipt)%c3_ = donor_coord(3)
+            if (.not. donor_found) call chidg_signal(FATAL,"matplotlib_io::get_donors: interpolation donor not found.")
         end do
 
 

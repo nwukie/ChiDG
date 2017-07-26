@@ -28,11 +28,10 @@ subroutine test__detect_chimera_donors()
 
 
     type(chidg_t)                   :: chidg
-    type(point_t)                   :: coord
+    real(rk)                        :: coord(3)
     character(len=100)              :: filename = "D2E8M1_overlapping_matching.h5"
     real(rk)                        :: tol
     integer(ik)                     :: ndom, ChiID, ddomain, delement, ndonors, ngq
-    integer(ik)                     :: ndonors_component, ndonors_size
     integer(ik)                     :: idom, ielem, igq, idonor, iface
 
 
@@ -85,27 +84,25 @@ subroutine test__detect_chimera_donors()
     !
     idom  = 1
     ChiID = 1
-    ndonors_component = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%ndonors()
-    ndonors_size      = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_g%size()
+    ndonors = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%ndonors()
     idonor   = 1
     ddomain  = 2
     delement = 1
 
-    ielem    = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%receiver_element_l
-    iface    = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%receiver_face
+    ielem    = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%ielement_l
+    iface    = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%iface
     ngq      = chiDG%data%mesh%domain(idom)%faces(ielem,iface)%basis_s%nnodes_if()
 
-    @assertEqual(1, ndonors_component)
-    @assertEqual(1, ndonors_size)
-    @assertEqual(ddomain,  chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_g%at(1))
-    @assertEqual(ddomain,  chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_l%at(1))
-    @assertEqual(delement, chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_element_g%at(1))
-    @assertEqual(delement, chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_element_l%at(1))
-    @assertEqual(ngq,      chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_coords(idonor)%size())
+    @assertEqual(1, ndonors)
+    @assertEqual(ddomain,  chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g)
+    @assertEqual(ddomain,  chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_l)
+    @assertEqual(delement, chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_g)
+    @assertEqual(delement, chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_l)
+    @assertEqual(ngq,      size(chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%coords,1) )
 
-    do igq = 1,chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_coords(idonor)%size()
-        coord = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_coords(idonor)%at(igq)
-        @assertEqual(-0.6_rk, coord%c1_, tol)
+    do igq = 1,size(chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%coords,1)
+        coord = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%coords(igq,:)
+        @assertEqual(-0.6_rk, coord(1), tol)
     end do
 
 
@@ -118,29 +115,27 @@ subroutine test__detect_chimera_donors()
     !
     idom  = 1
     ChiID = 2
-    ndonors_component = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%ndonors()
-    ndonors_size      = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_g%size()
+    ndonors = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%ndonors()
     idonor   = 1
     ddomain  = 2
     delement = 3
 
-    ielem    = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%receiver_element_l
-    iface    = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%receiver_face
+    ielem    = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%ielement_l
+    iface    = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%iface
     ngq      = chiDG%data%mesh%domain(idom)%faces(ielem,iface)%basis_s%nnodes_if()
 
-    @assertEqual(1, ndonors_component)
-    @assertEqual(1, ndonors_size)
-    @assertEqual(ddomain,  chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_g%at(1))
-    @assertEqual(ddomain,  chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_l%at(1))
-    @assertEqual(delement, chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_element_g%at(1))
-    @assertEqual(delement, chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_element_l%at(1))
-    @assertEqual(ngq,      chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_coords(idonor)%size())
+    @assertEqual(1, ndonors)
+    @assertEqual(ddomain,  chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g)
+    @assertEqual(ddomain,  chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_l)
+    @assertEqual(delement, chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_g)
+    @assertEqual(delement, chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_l)
+    @assertEqual(ngq,      size(chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%coords,1) )
 
-    do igq = 1,chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_coords(idonor)%size()
-        coord = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_coords(idonor)%at(igq)
-        @assertEqual(-0.6_rk, coord%c1_, tol)
+
+    do igq = 1,size(chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%coords,1)
+        coord = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%coords(igq,:)
+        @assertEqual(-0.6_rk, coord(1), tol)
     end do
-
 
 
 
@@ -152,29 +147,27 @@ subroutine test__detect_chimera_donors()
     !
     idom  = 2
     ChiID = 1
-    ndonors_component = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%ndonors()
-    ndonors_size      = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_g%size()
+    ndonors = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%ndonors()
     idonor   = 1
     ddomain  = 1
     delement = 2
 
-    ielem    = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%receiver_element_l
-    iface    = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%receiver_face
+    ielem    = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%ielement_l
+    iface    = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%iface
     ngq      = chiDG%data%mesh%domain(idom)%faces(ielem,iface)%basis_s%nnodes_if()
 
-    @assertEqual(1, ndonors_component)
-    @assertEqual(1, ndonors_size)
-    @assertEqual(ddomain,  chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_g%at(1))
-    @assertEqual(ddomain,  chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_l%at(1))
-    @assertEqual(delement, chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_element_g%at(1))
-    @assertEqual(delement, chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_element_l%at(1))
-    @assertEqual(ngq,      chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_coords(idonor)%size())
+    @assertEqual(1, ndonors)
+    @assertEqual(ddomain,  chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g)
+    @assertEqual(ddomain,  chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_l)
+    @assertEqual(delement, chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_g)
+    @assertEqual(delement, chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_l)
+    @assertEqual(ngq,      size(chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%coords,1) )
 
-    do igq = 1,chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_coords(idonor)%size()
-        coord = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_coords(idonor)%at(igq)
-        @assertEqual(0.6_rk, coord%c1_, tol)
+
+    do igq = 1,size(chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%coords,1)
+        coord = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%coords(igq,:)
+        @assertEqual(0.6_rk, coord(1), tol)
     end do
-
 
 
 
@@ -186,27 +179,25 @@ subroutine test__detect_chimera_donors()
     !
     idom  = 2
     ChiID = 2
-    ndonors_component = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%ndonors()
-    ndonors_size      = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_g%size()
+    ndonors = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%ndonors()
     idonor   = 1
     ddomain  = 1
     delement = 4
 
-    ielem    = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%receiver_element_l
-    iface    = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%receiver_face
+    ielem    = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%ielement_l
+    iface    = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%iface
     ngq      = chiDG%data%mesh%domain(idom)%faces(ielem,iface)%basis_s%nnodes_if()
 
-    @assertEqual(1, ndonors_component)
-    @assertEqual(1, ndonors_size)
-    @assertEqual(ddomain,  chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_g%at(1))
-    @assertEqual(ddomain,  chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_l%at(1))
-    @assertEqual(delement, chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_element_g%at(1))
-    @assertEqual(delement, chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_element_l%at(1))
-    @assertEqual(ngq,      chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_coords(idonor)%size())
+    @assertEqual(1, ndonors)
+    @assertEqual(ddomain,  chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g )
+    @assertEqual(ddomain,  chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g )
+    @assertEqual(delement, chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_g )
+    @assertEqual(delement, chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_g )
+    @assertEqual(ngq,      size(chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%coords,1) )
 
-    do igq = 1,chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_coords(idonor)%size()
-        coord = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_coords(idonor)%at(igq)
-        @assertEqual(0.6_rk, coord%c1_, tol)
+    do igq = 1,size(chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%coords,1)
+        coord = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%coords(igq,:)
+        @assertEqual(0.6_rk, coord(1), tol)
     end do
 
 

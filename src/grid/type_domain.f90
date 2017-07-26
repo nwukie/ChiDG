@@ -367,22 +367,23 @@ contains
     !!  @param[in]  points_g    Rank-3 matrix of coordinate points defining a block mesh
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine init_elems_geom(self,nodes,connectivity,coord_system)
+    subroutine init_elems_geom(self,nodes,domain_connectivity,coord_system)
         class(domain_t),                intent(inout)   :: self
         real(rk),                       intent(in)      :: nodes(:,:)
-        type(domain_connectivity_t),    intent(in)      :: connectivity
+        type(domain_connectivity_t),    intent(in)      :: domain_connectivity
         character(*),                   intent(in)      :: coord_system
 
 
         type(element_connectivity_t)    :: element_connectivity
-
-        integer(ik) :: ierr, ielem_l, nelem, nterms_s, nnodes, idomain_l
+        integer(ik)                     :: ierr, nelem, location(4), etype,             &
+                                           idomain_g, ielement_g, idomain_l, ielement_l
+        integer(ik),    allocatable     :: connectivity(:)
 
 
         !
         ! Store total number of elements
         !
-        nelem      = connectivity%get_nelements()
+        nelem      = domain_connectivity%get_nelements()
         self%nelem = nelem
 
 
@@ -397,10 +398,16 @@ contains
         ! Call geometry initialization for each element
         !
         idomain_l = self%idomain_l
-        do ielem_l = 1,nelem
+        do ielement_l = 1,nelem
 
-            element_connectivity = connectivity%get_element_connectivity(ielem_l)
-            call self%elems(ielem_l)%init_geom(nodes,element_connectivity,idomain_l,ielem_l,coord_system)
+            element_connectivity = domain_connectivity%get_element_connectivity(ielement_l)
+            connectivity = element_connectivity%get_element_nodes()
+            idomain_g    = element_connectivity%get_domain_index()
+            ielement_g   = element_connectivity%get_element_index()
+            location     = [idomain_g, ielement_g, idomain_l, ielement_l]
+            etype        = element_connectivity%get_element_mapping()
+
+            call self%elems(ielement_l)%init_geom(nodes,connectivity,etype,location,coord_system)
 
         end do ! ielem
 
@@ -881,10 +888,14 @@ contains
         ! also contained in an element, then they are neighbors.
         neighbor_element = .false.
         do ielem_l = 1,self%nelem
-            includes_corner_one   = any( self%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(1) )
-            includes_corner_two   = any( self%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(2) )
-            includes_corner_three = any( self%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(3) )
-            includes_corner_four  = any( self%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(4) )
+            !includes_corner_one   = any( self%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(1) )
+            !includes_corner_two   = any( self%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(2) )
+            !includes_corner_three = any( self%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(3) )
+            !includes_corner_four  = any( self%elems(ielem_l)%connectivity%get_element_nodes() == corner_indices(4) )
+            includes_corner_one   = any( self%elems(ielem_l)%connectivity == corner_indices(1) )
+            includes_corner_two   = any( self%elems(ielem_l)%connectivity == corner_indices(2) )
+            includes_corner_three = any( self%elems(ielem_l)%connectivity == corner_indices(3) )
+            includes_corner_four  = any( self%elems(ielem_l)%connectivity == corner_indices(4) )
             neighbor_element = ( includes_corner_one   .and. &
                                  includes_corner_two   .and. &
                                  includes_corner_three .and. &
@@ -894,9 +905,9 @@ contains
                 !
                 ! Get indices for neighbor element
                 !
-                ineighbor_domain_g  = self%elems(ielem_l)%connectivity%get_domain_index()
+                ineighbor_domain_g  = self%elems(ielem_l)%idomain_g
                 ineighbor_domain_l  = self%elems(ielem_l)%idomain_l
-                ineighbor_element_g = self%elems(ielem_l)%connectivity%get_element_index()
+                ineighbor_element_g = self%elems(ielem_l)%ielement_g
                 ineighbor_element_l = self%elems(ielem_l)%ielement_l
                 ineighbor_neqns     = self%elems(ielem_l)%neqns
                 ineighbor_nterms_s  = self%elems(ielem_l)%nterms_s
@@ -1004,7 +1015,8 @@ contains
         ! Get the element-local node indices of the corner nodes that correspond 
         ! to the current face in an element connectivity list
         !
-        mapping = self%elems(ielem_l)%connectivity%get_element_mapping()
+        !mapping = self%elems(ielem_l)%connectivity%get_element_mapping()
+        mapping = self%elems(ielem_l)%element_type
         corner_one   = FACE_CORNERS(iface,1,mapping)
         corner_two   = FACE_CORNERS(iface,2,mapping)
         corner_three = FACE_CORNERS(iface,3,mapping)
@@ -1015,10 +1027,14 @@ contains
         ! For the current face, get the global-indices of the coordinate nodes 
         ! for the corners
         !
-        corner_indices(1) = self%elems(ielem_l)%connectivity%get_element_node(corner_one)
-        corner_indices(2) = self%elems(ielem_l)%connectivity%get_element_node(corner_two)
-        corner_indices(3) = self%elems(ielem_l)%connectivity%get_element_node(corner_three)
-        corner_indices(4) = self%elems(ielem_l)%connectivity%get_element_node(corner_four)
+        !corner_indices(1) = self%elems(ielem_l)%connectivity%get_element_node(corner_one)
+        !corner_indices(2) = self%elems(ielem_l)%connectivity%get_element_node(corner_two)
+        !corner_indices(3) = self%elems(ielem_l)%connectivity%get_element_node(corner_three)
+        !corner_indices(4) = self%elems(ielem_l)%connectivity%get_element_node(corner_four)
+        corner_indices(1) = self%elems(ielem_l)%connectivity(corner_one)
+        corner_indices(2) = self%elems(ielem_l)%connectivity(corner_two)
+        corner_indices(3) = self%elems(ielem_l)%connectivity(corner_three)
+        corner_indices(4) = self%elems(ielem_l)%connectivity(corner_four)
 
         
         !
@@ -1029,7 +1045,8 @@ contains
         do ielem_neighbor = 1,self%nelem
             if (ielem_neighbor /= ielem_l) then
 
-                element_nodes = self%elems(ielem_neighbor)%connectivity%get_element_nodes()
+                !element_nodes = self%elems(ielem_neighbor)%connectivity%get_element_nodes()
+                element_nodes = self%elems(ielem_neighbor)%connectivity
                 includes_corner_one   = any( element_nodes == corner_indices(1) )
                 includes_corner_two   = any( element_nodes == corner_indices(2) )
                 includes_corner_three = any( element_nodes == corner_indices(3) )
@@ -1041,12 +1058,13 @@ contains
                                      includes_corner_four )
 
                 if ( neighbor_element ) then
-                    ineighbor_domain_g  = self%elems(ielem_neighbor)%connectivity%get_domain_index()
-                    ineighbor_domain_l  = self%idomain_l
-                    ineighbor_element_g = self%elems(ielem_neighbor)%connectivity%get_element_index()
-                    ineighbor_element_l = ielem_neighbor
+                    ineighbor_domain_g  = self%elems(ielem_neighbor)%idomain_g
+                    ineighbor_domain_l  = self%elems(ielem_neighbor)%idomain_l
+                    ineighbor_element_g = self%elems(ielem_neighbor)%ielement_g
+                    ineighbor_element_l = self%elems(ielem_neighbor)%ielement_l
                     ineighbor_face      = self%elems(ielem_neighbor)%get_face_from_corners(corner_indices)
-                    ineighbor_proc      = self%elems(ielem_neighbor)%connectivity%get_element_partition()
+                    !ineighbor_proc      = self%elems(ielem_neighbor)%connectivity%get_element_partition()
+                    ineighbor_proc      = IRANK
                     neighbor_status     = NEIGHBOR_FOUND
                     exit
                 end if
@@ -1120,7 +1138,7 @@ contains
 
         ! Get the indices of the corner nodes that correspond to the current face 
         ! in an element connectivity list.
-        mapping      = self%elems(ielem_l)%connectivity%get_element_mapping()
+        mapping      = self%elems(ielem_l)%element_type
         corner_one   = FACE_CORNERS(iface,1,mapping)
         corner_two   = FACE_CORNERS(iface,2,mapping)
         corner_three = FACE_CORNERS(iface,3,mapping)
@@ -1129,10 +1147,10 @@ contains
 
         ! For the current face, get the indices of the coordinate nodes for 
         ! the corners defining a face
-        corner_indices(1) = self%elems(ielem_l)%connectivity%get_element_node(corner_one)
-        corner_indices(2) = self%elems(ielem_l)%connectivity%get_element_node(corner_two)
-        corner_indices(3) = self%elems(ielem_l)%connectivity%get_element_node(corner_three)
-        corner_indices(4) = self%elems(ielem_l)%connectivity%get_element_node(corner_four)
+        corner_indices(1) = self%elems(ielem_l)%connectivity(corner_one)
+        corner_indices(2) = self%elems(ielem_l)%connectivity(corner_two)
+        corner_indices(3) = self%elems(ielem_l)%connectivity(corner_three)
+        corner_indices(4) = self%elems(ielem_l)%connectivity(corner_four)
 
         
         ! Test the face nodes against other elements, if all face nodes are also 
@@ -1145,7 +1163,7 @@ contains
             if ( iproc /= IRANK ) then
 
                 ! send global domain index of mesh being searched
-                idomain_g = self%elems(ielem_l)%connectivity%get_domain_index()
+                idomain_g = self%elems(ielem_l)%idomain_g
                 call MPI_Send(idomain_g,1,MPI_INTEGER4,iproc,0,ChiDG_COMM,ierr)
 
 
@@ -1389,9 +1407,9 @@ contains
 
                     ! Loop through donor elements. If off-processor, add to list uniquely
                     ChiID = self%faces(ielem,iface)%ChiID
-                    !do idonor = 1,self%chimera%recv%data(ChiID)%ndonors()
                     do idonor = 1,self%chimera%recv(ChiID)%ndonors()
-                        donor_rank = self%chimera%recv(ChiID)%donor_proc%at(idonor)
+                        !donor_rank = self%chimera%recv(ChiID)%donor_proc%at(idonor)
+                        donor_rank = self%chimera%recv(ChiID)%donor(idonor)%iproc
                         comm_donor = ( myrank /= donor_rank )
                         if ( comm_donor ) call comm_procs_vector%push_back_unique(donor_rank)
                     end do !idonor
@@ -1570,7 +1588,7 @@ contains
 
         type(ivector_t)             :: comm_procs_vector
         integer(ik),    allocatable :: comm_procs(:)
-        integer(ik)                 :: myrank, idonor, irec, receiver_rank
+        integer(ik)                 :: myrank, isend_elem, isend_proc, send_rank
         logical                     :: comm_donor
         character(:),   allocatable :: user_msg
 
@@ -1590,16 +1608,19 @@ contains
         !
         ! Collect processors that we are sending chimera donor elements to
         !
-        do idonor = 1,self%chimera%ndonors()
-            do irec = 1,self%chimera%donor(idonor)%nrecipients()
+        do isend_elem = 1,self%chimera%nsend()
+            do isend_proc = 1,self%chimera%send(isend_elem)%nsend_procs()
 
                 ! Get donor rank. If off-processor, add to list uniquely.
-                receiver_rank = self%chimera%donor(idonor)%receiver_procs%at(irec)
-                comm_donor = (myrank /= receiver_rank)
-                if ( comm_donor ) call comm_procs_vector%push_back_unique(receiver_rank)
+                send_rank = self%chimera%send(isend_elem)%send_procs%at(isend_proc)
+                comm_donor = (myrank /= send_rank)
+                if ( comm_donor ) call comm_procs_vector%push_back_unique(send_rank)
 
-            end do !irec
-        end do !idonor
+            end do !isend_proc
+        end do !isend_elem
+
+
+
 
 
         !

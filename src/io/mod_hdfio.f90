@@ -263,14 +263,17 @@ contains
             !
             ! Assemble element connectivities
             !
-            connectivity_size = size(data%mesh%domain(idom)%elems(1)%connectivity%data)
+            connectivity_size = size(data%mesh%domain(idom)%elems(1)%connectivity)
             
             if (allocated(elements)) deallocate(elements)
-            allocate(elements(data%mesh%domain(idom)%nelem, connectivity_size), stat=ierr)
+            allocate(elements(data%mesh%domain(idom)%nelem, connectivity_size+3), stat=ierr)
             if (ierr /= 0) call AllocationError
 
             do ielem = 1,data%mesh%domain(idom)%nelem
-                elements(ielem,:) = data%mesh%domain(idom)%elems(ielem)%connectivity%data
+                elements(ielem,1)  = data%mesh%domain(idom)%elems(ielem)%idomain_g
+                elements(ielem,2)  = data%mesh%domain(idom)%elems(ielem)%ielement_g
+                elements(ielem,3)  = data%mesh%domain(idom)%elems(ielem)%element_type
+                elements(ielem,4:) = data%mesh%domain(idom)%elems(ielem)%connectivity
             end do
 
 

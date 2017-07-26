@@ -1,6 +1,6 @@
 module type_fluid_pseudo_timestep
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: THIRD, ONE, HALF
+    use mod_constants,          only: THIRD, ONE, HALF, CYLINDRICAL
     use mod_fluid,              only: omega, gam
     use type_pseudo_timestep,   only: pseudo_timestep_t
     use type_mesh,              only: mesh_t
@@ -91,8 +91,7 @@ contains
             !
             ! Account for Cylindrical coordinates. Get tangential momentum from angular momentum
             !
-            if ( mesh%domain(idomain)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
-                !rhov = rhov / mesh%domain(idomain)%elems(ielem)%quad_pts(:,1)%c1_
+            if ( mesh%domain(idomain)%elems(ielem)%coordinate_system == CYLINDRICAL ) then
                 rhov = rhov / mesh%domain(idomain)%elems(ielem)%quad_pts(:,1)
             end if
 

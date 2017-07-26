@@ -306,7 +306,6 @@ contains
 
 
 
-
                         ! Compute and store the contribution to the lower-triangular part of A comm, since A comm shouldn't 
                         ! get used anywhere else
                         if ( parent_proc /= IRANK ) then

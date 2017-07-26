@@ -62,14 +62,15 @@ contains
         type(domain_matrix_t),          intent(in)      :: a
         integer(ik),                    intent(in)      :: proc
 
-        integer(ik)                 :: ielem_recv, nelem_recv, nblk_recv, idomain_g, iblk,  &
-                                       ierr, nrows, ncols, dparent_g, dparent_l, eparent_g, &
-                                       eparent_l, parent_proc, iblk_diag, iblk_recv,        &
-                                       parent_proc_diag, parent_proc_offdiag_loop,          &
-                                       ielem_loop, iblk_loop, eparent_l_diag,               &
-                                       eparent_l_diag_loop, eparent_l_offdiag_loop,         &
-                                       iblk_diag_loop, eparent_g_diag, eparent_g_diag_loop, &
-                                       eparent_g_offdiag_loop, test_elem, test_blk, idomain_g_recv, ielement_g_recv
+        integer(ik)                 :: ielem_recv, nelem_recv, nblk_recv, idomain_g, iblk,      &
+                                       ierr, nterms, nfields, dparent_g, dparent_l, eparent_g,  &
+                                       eparent_l, parent_proc, iblk_diag, iblk_recv,            &
+                                       parent_proc_diag, parent_proc_offdiag_loop,              &
+                                       ielem_loop, iblk_loop, eparent_l_diag,                   &
+                                       eparent_l_diag_loop, eparent_l_offdiag_loop,             &
+                                       iblk_diag_loop, eparent_g_diag, eparent_g_diag_loop,     &
+                                       eparent_g_offdiag_loop, test_elem, test_blk,             &
+                                       idomain_g_recv, ielement_g_recv
         integer(ik)                 :: block_data(7)
         integer(ik), allocatable    :: blk_indices(:)
         logical                     :: lower_block, upper_block, overlap_element, transpose_found, diagonal
@@ -127,8 +128,8 @@ contains
             do iblk = 1,nblk_recv
 
                 ! Receive block integer data
-                call MPI_Recv(nrows,       1, MPI_INTEGER4, proc, idomain_g, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-                call MPI_Recv(ncols,       1, MPI_INTEGER4, proc, idomain_g, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                call MPI_Recv(nterms,      1, MPI_INTEGER4, proc, idomain_g, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                call MPI_Recv(nfields,     1, MPI_INTEGER4, proc, idomain_g, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
                 call MPI_Recv(dparent_g,   1, MPI_INTEGER4, proc, idomain_g, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
                 call MPI_Recv(dparent_l,   1, MPI_INTEGER4, proc, idomain_g, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
                 call MPI_Recv(eparent_g,   1, MPI_INTEGER4, proc, idomain_g, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
@@ -138,8 +139,9 @@ contains
                 if (eparent_g == 0) call chidg_signal(FATAL, "RASILU0_recv_dom_comm: bad element index received in initialization")
 
                 ! Initialize densematrix
-                if ( (nrows == 0) .or. (ncols == 0) ) call chidg_signal(FATAL, "nrows/ncols == 0")
-                call self%elem(ielem_recv)%blks(iblk)%init(nrows,ncols,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+                if ( (nterms == 0) .or. (nfields == 0) ) call chidg_signal(FATAL, "nrows/ncols == 0")
+                !call self%elem(ielem_recv)%blks(iblk)%init(nrows,ncols,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
+                call self%elem(ielem_recv)%blks(iblk)%init(nterms,nfields,dparent_g,dparent_l,eparent_g,eparent_l,parent_proc)
 
                
                 ! Detect diagonal block

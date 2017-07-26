@@ -492,8 +492,10 @@ contains
             iface_n = compute_neighbor_face(   self%chidg%data%mesh,idomain,ielem,iface,idonor)
 
 
-            mat = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor_interpolator%at(idonor)
-            ndonor_nodes = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor_gq_indices(idonor)%size()
+            !mat = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor_interpolator%at(idonor)
+            mat = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor(idonor)%value
+            !ndonor_nodes = self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor_gq_indices(idonor)%size()
+            ndonor_nodes = size(self%chidg%data%mesh%domain(idomain)%chimera%recv(ChiID)%donor(idonor)%node_index)
 
             do igq = 1,ndonor_nodes
                 ! Set expected derivatives

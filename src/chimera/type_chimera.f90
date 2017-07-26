@@ -3,7 +3,7 @@ module type_chimera
     use mod_kinds,              only: ik, rk
     use mod_constants,          only: NO_ID
     use type_chimera_receiver,  only: chimera_receiver_t
-    use type_chimera_donor,     only: chimera_donor_t
+    use type_chimera_send,      only: chimera_send_t
     implicit none
 
 
@@ -17,12 +17,8 @@ module type_chimera
     !---------------------------------------------------------------------------------------------
     type, public :: chimera_t
     
-        !type(chimera_receiver_t)    :: recv
-        !type(chimera_donor_t)       :: send
-
-        type(chimera_receiver_t),   allocatable :: recv(:)
-        type(chimera_donor_t),      allocatable :: donor(:)
-
+        type(chimera_receiver_t),   allocatable :: recv(:)  ! receiver face instances. One for each Chimera receiver on a domain
+        type(chimera_send_t),       allocatable :: send(:)  ! one chimera send instance for each donor on a domain being sent off-processor
 
     contains
 
@@ -32,10 +28,10 @@ module type_chimera
         procedure   :: nreceivers
         procedure   :: find_receiver
 
-        procedure   :: add_donor
-        procedure   :: new_donor
-        procedure   :: ndonors
-        procedure   :: find_donor
+
+        procedure   :: new_send
+        procedure   :: find_send
+        procedure   :: nsend
 
         procedure   :: clear
 
@@ -78,12 +74,11 @@ contains
         if ( self%find_receiver(idomain_g, ielement_g, iface) == NO_ID ) then
             recv_ID = self%new_receiver()
 
-            self%recv(recv_ID)%receiver_domain_g  = idomain_g
-            self%recv(recv_ID)%receiver_domain_l  = idomain_l
-            self%recv(recv_ID)%receiver_element_g = ielement_g
-            self%recv(recv_ID)%receiver_element_l = ielement_l
-            self%recv(recv_ID)%receiver_face      = iface
-            self%recv(recv_ID)%receiver_proc      = iproc
+            self%recv(recv_ID)%idomain_g  = idomain_g
+            self%recv(recv_ID)%idomain_l  = idomain_l
+            self%recv(recv_ID)%ielement_g = ielement_g
+            self%recv(recv_ID)%ielement_l = ielement_l
+            self%recv(recv_ID)%iface      = iface
 
         else
             recv_ID = self%find_receiver(idomain_g,ielement_g,iface)
@@ -91,49 +86,6 @@ contains
 
     end function add_receiver
     !*****************************************************************************************
-
-
-
-
-    !>  Add chimera donor element to the chimera collection.
-    !!
-    !!  If donor element matching the incoming element already exists, return its ID instead of
-    !!  creating a new instance.
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   7/21/2016
-    !!
-    !----------------------------------------------------------------------------------------
-    function add_donor(self, donor_domain_g, donor_domain_l, donor_element_g, donor_element_l, donor_proc) result(donor_ID)
-        class(chimera_t),   intent(inout)   :: self
-        integer(ik),        intent(in)      :: donor_domain_g
-        integer(ik),        intent(in)      :: donor_domain_l
-        integer(ik),        intent(in)      :: donor_element_g
-        integer(ik),        intent(in)      :: donor_element_l
-        integer(ik),        intent(in)      :: donor_proc
-
-        integer(ik) :: donor_ID
-
-
-        !
-        ! Check if receiver matching the incoming face already exists
-        !
-        if ( self%find_donor(donor_domain_g, donor_element_g) == NO_ID ) then
-            donor_ID = self%new_donor()
-
-            self%donor(donor_ID)%donor_domain_g  = donor_domain_g
-            self%donor(donor_ID)%donor_domain_l  = donor_domain_l
-            self%donor(donor_ID)%donor_element_g = donor_element_g
-            self%donor(donor_ID)%donor_element_l = donor_element_l
-            self%donor(donor_ID)%donor_proc      = donor_proc
-
-        else
-            donor_ID = self%find_donor(donor_domain_g,donor_element_g)
-        end if
-
-    end function add_donor
-    !*****************************************************************************************
-
 
 
 
@@ -181,50 +133,6 @@ contains
 
 
 
-    !>  Extend allocation of donor instances, return identifier for new instance.
-    !!
-    !!  Returns donor_ID for chimera_donor_t in domain%chimera%donor(donor_ID)
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   7/21/2017
-    !!
-    !-----------------------------------------------------------------------------------------
-    function new_donor(self) result(donor_ID)
-        class(chimera_t),   intent(inout)   :: self
-
-
-        type(chimera_donor_t),  allocatable :: temp(:)
-        integer(ik)                         :: ierr, donor_ID
-
-
-
-        ! Resize array storage
-        allocate(temp(self%ndonors() + 1), stat=ierr)
-
-
-        ! Copy previously initialized instances to new array.
-        if (self%ndonors() > 0) then
-            temp(1:size(self%donor)) = self%donor(1:size(self%donor))
-        end if
-
-
-        ! Move resized temp allocation back to parent. 
-        call move_alloc(temp,self%donor)
-
-
-        ! Set domain identifier of newly allocated domain that will be returned
-        donor_ID = self%ndonors()
-
-
-    end function new_donor
-    !*****************************************************************************************
-
-
-
-
-
-
-
 
 
 
@@ -251,24 +159,25 @@ contains
 
 
 
-    !>  Return number of donor elements currently exist in the chimera collection.
+
+    !>  Return number of send elements currently exist in the chimera collection.
     !!
     !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   7/21/2017
+    !!  @date   7/25/2017
     !!
     !-----------------------------------------------------------------------------------------
-    function ndonors(self) result(ndonors_)
+    function nsend(self) result(nsend_)
         class(chimera_t),   intent(in)  :: self
 
-        integer(ik) :: ndonors_
+        integer(ik) :: nsend_
 
-        if (allocated(self%donor)) then
-            ndonors_ = size(self%donor)
+        if (allocated(self%send)) then
+            nsend_ = size(self%send)
         else
-            ndonors_ = 0
+            nsend_ = 0
         end if
 
-    end function ndonors
+    end function nsend
     !*****************************************************************************************
 
 
@@ -296,10 +205,11 @@ contains
 
         recv_ID = NO_ID
         do irecv = 1,self%nreceivers()
-            if ( (self%recv(irecv)%receiver_domain_g == idomain_g) .and. &
-                 (self%recv(irecv)%receiver_element_g == ielement_g) .and. &
-                 (self%recv(irecv)%receiver_face == iface) ) then
+            if ( (self%recv(irecv)%idomain_g  == idomain_g ) .and. &
+                 (self%recv(irecv)%ielement_g == ielement_g) .and. &
+                 (self%recv(irecv)%iface      == iface     ) ) then
                  recv_ID = irecv
+                 exit
             end if
         end do !irecv
 
@@ -310,36 +220,80 @@ contains
 
 
 
-
-
-
-    !>  Given a global element location, return the index of a chimera_donor instance 
+    !>  Given a global element location, return the index of a chimera_send instance 
     !!  corresponding to the element, if one exists in the chimera collection.
     !!
-    !!  If no chimera_donor instance can be found that matches the incoming description
+    !!  If no chimera_send instance can be found that matches the incoming description
     !!  the return NO_ID.
     !!
     !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   7/21/2017
+    !!  @date   7/25/2017
     !!
     !------------------------------------------------------------------------------------------
-    function find_donor(self,idomain_g,ielement_g) result(donor_ID)
+    function find_send(self,idomain_g,ielement_g) result(send_ID)
         class(chimera_t),   intent(in)  :: self
         integer(ik),        intent(in)  :: idomain_g
         integer(ik),        intent(in)  :: ielement_g
 
-        integer(ik) :: donor_ID, idonor
+        integer(ik) :: send_ID, isend
 
-        donor_ID = NO_ID
-        do idonor = 1,self%ndonors()
-            if ( (self%donor(idonor)%donor_domain_g == idomain_g) .and. &
-                 (self%donor(idonor)%donor_element_g == ielement_g) ) then
-                 donor_ID = idonor
+        send_ID = NO_ID
+        do isend = 1,self%nsend()
+            if ( (self%send(isend)%idomain_g == idomain_g) .and. &
+                 (self%send(isend)%ielement_g == ielement_g) ) then
+                 send_ID = isend
+                 exit
             end if
-        end do !idonor
+        end do !isend
 
-    end function find_donor
+    end function find_send
     !******************************************************************************************
+
+
+
+
+
+
+
+    !>  Extend allocation of send instances, return identifier for new instance.
+    !!
+    !!  Returns send_ID for chimera_send_t in domain%chimera%send(send_ID)
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/25/2017
+    !!
+    !-----------------------------------------------------------------------------------------
+    function new_send(self) result(send_ID)
+        class(chimera_t),   intent(inout)   :: self
+
+
+        type(chimera_send_t),  allocatable :: temp(:)
+        integer(ik)                         :: ierr, send_ID
+
+
+
+        ! Resize array storage
+        allocate(temp(self%nsend() + 1), stat=ierr)
+
+
+        ! Copy previously initialized instances to new array.
+        if (self%nsend() > 0) then
+            temp(1:size(self%send)) = self%send(1:size(self%send))
+        end if
+
+
+        ! Move resized temp allocation back to parent. 
+        call move_alloc(temp,self%send)
+
+
+        ! Set domain identifier of newly allocated domain that will be returned
+        send_ID = self%nsend()
+
+
+    end function new_send
+    !*****************************************************************************************
+
+
 
 
 
@@ -354,8 +308,8 @@ contains
     subroutine clear(self)
         class(chimera_t),   intent(inout)  :: self
 
-        if (allocated(self%recv)) deallocate(self%recv)
-        if (allocated(self%donor)) deallocate(self%donor)
+        if (allocated(self%recv )) deallocate(self%recv )
+        if (allocated(self%send )) deallocate(self%send )
 
     end subroutine clear
     !******************************************************************************************

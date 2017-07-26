@@ -112,7 +112,8 @@ contains
                     ! we will have to store the properties_t of the chimera donors so
                     ! we can query them here. For now, just use the source domain
                     ! and assume they have the same fields.
-                    nprimary_fields   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor_neqns%at(1)
+                    !nprimary_fields   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor_neqns%at(1)
+                    nprimary_fields   = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(1)%nfields
                     nauxiliary_fields = prop(eqn_ID)%nauxiliary_fields()
                     nmodel_fields     = prop(eqn_ID)%nmodel_fields()
                 else

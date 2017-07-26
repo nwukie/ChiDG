@@ -21,8 +21,7 @@ subroutine test_find_gq_donor_cylinder_abutting()
     real(rk),           allocatable :: density_residual_D4_E31(:), density_residual_D4_E36(:), nodes(:,:)
     integer(ik)                     :: idom, ielem, ChiID, idom_d, ielem_d, iface, ndonors, &
                                        gq_index, igq, ngq
-    real(rk)                        :: chi_xi, chi_eta, chi_zeta, ref_xi, ref_eta, ref_zeta
-    type(point_t)                   :: chimera_node
+    real(rk)                        :: chi_xi, chi_eta, chi_zeta, ref_xi, ref_eta, ref_zeta, chimera_node(3)
     real(rk)                        :: tol
     character(1024)                 :: filename = "cylinder_chimera_matching.h5"
 
@@ -74,17 +73,22 @@ subroutine test_find_gq_donor_cylinder_abutting()
     iface = XI_MIN
 
     ChiID   = chidgA%data%mesh%domain(idom)%faces(ielem,iface)%ChiID
-    idom_d  = chidgA%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_l%at(1)
-    ielem_d = chidgA%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_element_l%at(1)
-    ngq     = chidgA%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_gq_indices(1)%size()
+    !idom_d  = chidgA%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_l%at(1)
+    !ielem_d = chidgA%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_element_l%at(1)
+    !ngq     = chidgA%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_gq_indices(1)%size()
+    idom_d  = chidgA%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(1)%idomain_l
+    ielem_d = chidgA%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(1)%ielement_l
+    ngq     = size(chidgA%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(1)%node_index)
 
     do igq = 1,ngq
 
-        gq_index     = chidgA%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_gq_indices(1)%at(igq)
-        chimera_node = chidgA%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_coords(1)%at(igq)
-        chi_xi   = chimera_node%c1_
-        chi_eta  = chimera_node%c2_
-        chi_zeta = chimera_node%c3_
+        !gq_index     = chidgA%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_gq_indices(1)%at(igq)
+        !chimera_node = chidgA%data%mesh%domain(idom)%chimera%recv(ChiID)%donor_coords(1)%at(igq)
+        gq_index     = chidgA%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(1)%node_index(igq)
+        chimera_node = chidgA%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(1)%coords(igq,:)
+        chi_xi   = chimera_node(1)
+        chi_eta  = chimera_node(2)
+        chi_zeta = chimera_node(3)
 
         nodes = chidgA%data%mesh%domain(idom_d)%faces(ielem_d,XI_MAX)%basis_s%nodes(XI_MAX)
         ref_xi   = nodes(igq,1)

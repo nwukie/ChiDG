@@ -4,7 +4,7 @@ module type_face
     use mod_constants,          only: XI_MIN, XI_MAX, ETA_MIN, ETA_MAX,                 &
                                       ZETA_MIN, ZETA_MAX, XI_DIR, ETA_DIR, ZETA_DIR,    &
                                       NO_INTERIOR_NEIGHBOR, NO_PROC,                    &
-                                      ZERO, ONE, TWO, ORPHAN, NO_PMM_ASSIGNED
+                                      ZERO, ONE, TWO, ORPHAN, NO_PMM_ASSIGNED, CARTESIAN, CYLINDRICAL
     use type_reference_element, only: reference_element_t
 
     use type_point,             only: point_t
@@ -60,6 +60,7 @@ module type_face
         integer(ik)        :: neqns           ! Number of equations in equationset_t
         integer(ik)        :: nterms_s        ! Number of terms in solution polynomial expansion
         integer(ik)        :: ntime
+        integer(ik)        :: coordinate_system    ! CARTESIAN, CYLINDRICAL. parameters from mod_constants.f90
 
 
         ! Neighbor information
@@ -108,7 +109,6 @@ module type_face
         ! Geometry
         type(densevector_t)             :: coords               ! Modal expansion of coordinates 
         real(rk),           allocatable :: quad_pts(:,:)        ! Discrete coordinates at quadrature nodes
-        character(:),       allocatable :: coordinate_system    ! 'Cartesian' or 'Cylindrical'
 
         ! Metric terms
         real(rk),           allocatable :: jinv(:)              ! array of inverse element jacobians on the face
@@ -558,12 +558,12 @@ contains
         if (ierr /= 0) call AllocationError
 
         select case (self%coordinate_system)
-            case ('Cartesian')
+            case (CARTESIAN)
                 scaling_12  = ONE
                 scaling_13  = ONE
                 scaling_23  = ONE
                 scaling_123 = ONE
-            case ('Cylindrical')
+            case (CYLINDRICAL)
                 scaling_12  = self%quad_pts(:,1)
                 scaling_13  = ONE
                 scaling_23  = self%quad_pts(:,1)
@@ -692,12 +692,12 @@ contains
         if (ierr /= 0) call AllocationError
 
         select case (self%coordinate_system)
-            case ('Cartesian')
+            case (CARTESIAN)
                 scaling_12  = ONE
                 scaling_13  = ONE
                 scaling_23  = ONE
                 scaling_123 = ONE
-            case ('Cylindrical')
+            case (CYLINDRICAL)
                 scaling_12  = self%quad_pts(:,1)
                 scaling_13  = ONE
                 scaling_23  = self%quad_pts(:,1)
@@ -1140,12 +1140,12 @@ contains
         if (ierr /= 0) call AllocationError
 
         select case (self%coordinate_system)
-            case ('Cartesian')
+            case (CARTESIAN)
                 scaling_12  = ONE
                 scaling_13  = ONE
                 scaling_23  = ONE
                 scaling_123 = ONE
-            case ('Cylindrical')
+            case (CYLINDRICAL)
                 scaling_12  = self%quad_pts(:,1)
                 scaling_13  = ONE
                 scaling_23  = self%quad_pts(:,1)

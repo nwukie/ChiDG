@@ -1,49 +1,70 @@
 module type_chimera_donor
-    use mod_kinds,      only: ik
-    use type_ivector,   only: ivector_t
-    use type_element,   only: element_t
-    use mod_chidg_mpi,  only: IRANK
+#include <messenger.h>
+    use mod_kinds,      only: rk, ik
+    use mod_constants,  only: NO_ID
     implicit none
 
 
 
-    !>  A Chimera donor container for sending element data to Chimera receivers
-    !!  across domains.
-    !!
-    !!  Contains a list of elements being donated. On and Off-processor
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/1/2016
+    !>  
     !!
     !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   7/12/2016
+    !!  @date   7/21/2017
     !!
-    !-----------------------------------------------------------------------------------
+    !!
+    !---------------------------------------------------------------
     type, public :: chimera_donor_t
 
-        integer(ik) :: donor_domain_g
-        integer(ik) :: donor_domain_l
-        integer(ik) :: donor_element_g
-        integer(ik) :: donor_element_l
-        integer(ik) :: donor_proc
+        ! Donor location
+        integer(ik)                 :: idomain_g
+        integer(ik)                 :: idomain_l
+        integer(ik)                 :: ielement_g
+        integer(ik)                 :: ielement_l
+        integer(ik)                 :: iproc            ! donor processor rank
 
-        ! Processors receiver faces are located on
-        type(ivector_t) :: receiver_procs
+        ! Donor properties
+        integer(ik)                 :: nfields  = 0     ! Number of equations in donor element
+        integer(ik)                 :: nterms_s = 0     ! Number of terms in donor expansion
+        integer(ik)                 :: nterms_c = 0     ! Number of terms in donor expansion
+        integer(ik)                 :: eqn_ID   = NO_ID ! Equation set identifier
 
 
-        ! If donor is from off-processor, locally constructed version located here
-        type(element_t) :: parallel_donor
+        ! Parallel access information
+        integer(ik)                 :: pelem_ID     = NO_ID ! ID in mesh%parallel_elements(pelem_ID) (only if off-processor)
+        integer(ik)                 :: recv_comm    = NO_ID ! location of donor solution
+        integer(ik)                 :: recv_domain  = NO_ID ! location of donor solution
+        integer(ik)                 :: recv_element = NO_ID ! location of donor solution
+
+
+        ! Node information
+        integer(ik),    allocatable :: node_index(:)    ! index in a node set the donor is providing data for
+        real(rk),       allocatable :: coords(:,:)      ! donor-local node coordinate(xi,eta,zeta)
+        real(rk),       allocatable :: metric(:,:,:)    ! For each node, a matrix of metric terms
+        real(rk),       allocatable :: jinv(:)          ! For each node, inverse element jacobian
+
+
+        ! Interpolators
+        real(rk),       allocatable :: value(:,:)
+        real(rk),       allocatable :: grad1(:,:)
+        real(rk),       allocatable :: grad2(:,:)
+        real(rk),       allocatable :: grad3(:,:)
+
 
     contains
 
-        procedure   :: nrecipients
+        procedure   :: set_properties
 
+        procedure   :: add_node
+        procedure   :: nnodes
+
+    
     end type chimera_donor_t
-    !***********************************************************************************
+    !***************************************************************
 
 
-
-
+    interface chimera_donor
+        module procedure chimera_donor
+    end interface
 
 
 contains
@@ -51,133 +72,176 @@ contains
 
 
 
-    !>
+    !>  Contructor for chimera_donor_t
     !!
     !!
     !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   7/21/2017
+    !!  @date   7/25/2017
     !!
-    !-----------------------------------------------------------------------------------
-    function nrecipients(self) result(nrec)
-        class(chimera_donor_t), intent(in)  :: self
+    !------------------------------------------------------------------
+    function chimera_donor(idomain_g, idomain_l, ielement_g, ielement_l, iproc) result(instance)
+        integer(ik),    intent(in)  :: idomain_g
+        integer(ik),    intent(in)  :: idomain_l
+        integer(ik),    intent(in)  :: ielement_g
+        integer(ik),    intent(in)  :: ielement_l
+        integer(ik),    intent(in)  :: iproc
 
-        integer(ik) :: nrec
+        type(chimera_donor_t)   :: instance
 
-        nrec = self%receiver_procs%size()
+        instance%idomain_g  = idomain_g
+        instance%idomain_l  = idomain_l
+        instance%ielement_g = ielement_g
+        instance%ielement_l = ielement_l
+        instance%iproc      = iproc
 
-    end function nrecipients
-    !***********************************************************************************
+    end function chimera_donor
+    !******************************************************************
 
 
 
 
-!    !>  For a domain, add an element to the list of elements registered as Chimera donors.
-!    !!
-!    !!  @author Nathan A. Wukie (AFRL)
-!    !!  @date   7/12/2016
-!    !!
-!    !!
-!    !-------------------------------------------------------------------------------------------
-!    subroutine add_donor(self,domain_g,domain_l,element_g,element_l,receiver_proc)
-!        class(chimera_donor_t),     intent(inout)   :: self
-!        integer(ik),                intent(in)      :: domain_g
-!        integer(ik),                intent(in)      :: domain_l
-!        integer(ik),                intent(in)      :: element_g
-!        integer(ik),                intent(in)      :: element_l
-!        integer(ik),                intent(in)      :: receiver_proc
-!
-!        integer(ik) :: idonor, ndonors
-!        integer(ik) :: idonor_domain_g, idonor_element_g, ireceiver_proc
-!        logical     :: already_added
-!
-!        ndonors = self%donor_domain_g%size()
-!
-!        !
-!        ! Check if the donor was already added
-!        !
-!        already_added = .false.
-!        do idonor = 1,ndonors
-!
-!            idonor_domain_g  = self%donor_domain_g%at(idonor)
-!            idonor_element_g = self%donor_element_g%at(idonor)
-!            ireceiver_proc   = self%receiver_proc%at(idonor)
-!
-!            already_added = ( (idonor_domain_g == domain_g)   .and. &
-!                              (idonor_element_g == element_g) .and. &
-!                              (ireceiver_proc == receiver_proc) )
-!
-!
-!            if (already_added) then
-!                exit
-!            end if
-!
-!        end do
-!
-!
-!
-!        !
-!        ! If we got all the way through the list above without exiting with an 'already_added' status, add the donor to the list.
-!        !
-!        if ( .not. already_added ) then
-!            call self%donor_domain_g%push_back(domain_g)
-!            call self%donor_domain_l%push_back(domain_l)
-!            call self%donor_element_g%push_back(element_g)
-!            call self%donor_element_l%push_back(element_l)
-!            call self%receiver_proc%push_back(receiver_proc)
-!        end if
-!
-!
-!
-!
-!    end subroutine add_donor
-!    !*******************************************************************************************
-!
-!
-!
-!
-!
-!
-!    !>  Return the number of donor elements in the list
-!    !!
-!    !!  @author Nathan A. Wukie (AFRL)
-!    !!  @date   7/13/2016
-!    !!
-!    !!
-!    !!
-!    !-------------------------------------------------------------------------------------------
-!    function ndonors(self) result(res)
-!        class(chimera_donor_t),     intent(in)  :: self
-!
-!        integer(ik) :: res
-!
-!        res = self%donor_domain_g%size()
-!
-!    end function ndonors
-!    !********************************************************************************************
-!
-!
-!
-!
-!
-!
-!    !>  Clear the list of registered Chimera donor elements.
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   3/11/2016
-!    !!
-!    !!
-!    !-------------------------------------------------------------------------------------------
-!    subroutine clear(self)
-!        class(chimera_donor_t), intent(inout)   :: self
-!
-!        call self%donor_domain_g%clear()
-!        call self%donor_domain_l%clear()
-!        call self%donor_element_g%clear()
-!        call self%donor_element_l%clear()
-!        call self%receiver_proc%clear()
-!
-!    end subroutine clear
-!    !*******************************************************************************************
+    !>  Set the properties of the donor.
+    !!
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/25/2017
+    !!
+    !------------------------------------------------------------------
+    subroutine set_properties(self,nterms_c,nterms_s,nfields,eqn_ID)
+        class(chimera_donor_t), intent(inout)   :: self
+        integer(ik),            intent(in)      :: nterms_c
+        integer(ik),            intent(in)      :: nterms_s
+        integer(ik),            intent(in)      :: nfields
+        integer(ik),            intent(in)      :: eqn_ID
+
+        self%nterms_c = nterms_c
+        self%nterms_s = nterms_s
+        self%nfields  = nfields
+        self%eqn_ID   = eqn_ID
+
+    end subroutine set_properties
+    !******************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !>  Add a node to the donor.
+    !!
+    !!  For some node set on the receiver face:
+    !!
+    !!      |--o---o-----o-----o---o--|
+    !!         1   2     3     4   5
+    !!
+    !!  We are adding one of the nodes that is being provided 
+    !!  by the current donor object.
+    !!
+    !!
+    !!  For example, inode is the index of the node as it exists
+    !!  in the face node set. This way, we know where to distribute
+    !!  data to.
+    !!
+    !!  So, if the node was the 4th in the face node set, inode would
+    !!  equal 4.
+    !!
+    !!                       inode
+    !!      |--o---o-----o-----o---o--|
+    !!         1   2     3     4   5
+    !!
+    !!
+    !!  coord(3) is the [xi,eta,zeta] location of where the node exists 
+    !!  within the donor element. In this way, we can evaluate quantities
+    !!  on the donor element at [xi,eta,zeta] that correspond to the 
+    !!  physical location on the receiver face.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/25/2017
+    !!
+    !----------------------------------------------------------------
+    subroutine add_node(self,inode,coord,metric,jinv)
+        class(chimera_donor_t), intent(inout)   :: self
+        integer(ik),            intent(in)      :: inode
+        real(rk),               intent(in)      :: coord(3)
+        real(rk),               intent(in)      :: metric(:,:)
+        real(rk),               intent(in)      :: jinv
+
+        integer(ik)                 :: ierr
+        integer(ik),    allocatable :: tmp_nodes(:)
+        real(rk),       allocatable :: tmp_coords(:,:)
+        real(rk),       allocatable :: tmp_metric(:,:,:)
+        real(rk),       allocatable :: tmp_jinv(:)
+
+
+        
+        !
+        ! Extend allocations
+        !
+        allocate(tmp_nodes( self%nnodes() + 1),         &
+                 tmp_coords(self%nnodes() + 1, 3),      &
+                 tmp_jinv(  self%nnodes() + 1),         &
+                 tmp_metric(3,3, self%nnodes() + 1), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        !
+        ! Copy existing data
+        !
+        if (self%nnodes() > 0 ) then
+            tmp_nodes(1:self%nnodes())      = self%node_index(1:self%nnodes())
+            tmp_coords(1:self%nnodes(),:)   = self%coords(1:self%nnodes(),:)
+            tmp_jinv(1:self%nnodes())       = self%jinv(1:self%nnodes())
+            tmp_metric(:,:,1:self%nnodes()) = self%metric(:,:,1:self%nnodes())
+        end if
+
+
+        !
+        ! Move allocation
+        !
+        call move_alloc(tmp_nodes,  self%node_index)
+        call move_alloc(tmp_coords, self%coords)
+        call move_alloc(tmp_metric, self%metric)
+        call move_alloc(tmp_jinv,   self%jinv)
+
+
+        !
+        ! Add new data to end
+        !
+        self%node_index(self%nnodes()) = inode
+        self%coords(self%nnodes(),:)   = coord
+        self%metric(:,:,self%nnodes()) = metric
+        self%jinv(self%nnodes())       = jinv
+
+
+    end subroutine add_node
+    !****************************************************************
+
+
+    !>  Return the number of nodes this donor is responsible for.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/25/2017
+    !!
+    !----------------------------------------------------------------
+    function nnodes(self) result(n)
+        class(chimera_donor_t),    intent(in)  :: self
+
+        integer(ik) :: n
+
+        if (allocated(self%node_index)) then
+            n = size(self%node_index)
+        else
+            n = 0
+        end if
+
+    end function nnodes
+    !****************************************************************
+
 
 
 

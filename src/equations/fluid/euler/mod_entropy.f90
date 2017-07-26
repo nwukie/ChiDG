@@ -1,6 +1,6 @@
 module mod_entropy
     use mod_kinds,          only: rk,ik
-    use mod_constants,      only: ZERO, HALF, ONE, TWO, THREE
+    use mod_constants,      only: ZERO, HALF, ONE, TWO, THREE, CYLINDRICAL
     use mod_interpolate,    only: interpolate_element_standard
     use mod_chidg_mpi,      only: ChiDG_COMM
     use mpi_f08,            only: MPI_AllReduce, MPI_REAL8, MPI_SUM
@@ -96,7 +96,7 @@ contains
                     rhow = interpolate_element_standard(mesh,sdata%q,idom,ielem,irhow,1, 'value')
                     rhoE = interpolate_element_standard(mesh,sdata%q,idom,ielem,irhoE,1, 'value')
 
-                    if (mesh%domain(idom)%elems(ielem)%coordinate_system == 'Cylindrical') then
+                    if (mesh%domain(idom)%elems(ielem)%coordinate_system == CYLINDRICAL) then
                         rhov = rhov / mesh%domain(idom)%elems(ielem)%quad_pts(:,1)
                     end if
 

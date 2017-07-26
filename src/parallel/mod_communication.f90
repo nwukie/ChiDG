@@ -202,8 +202,6 @@ contains
         !
         call write_line("Initialize: chimera communication...", io_proc=GLOBAL_MASTER)
         do idom = 1,mesh%ndomains()
-            !call mesh%domain(idom)%chimera%send%clear()
-            !call mesh%domain(idom)%chimera%recv%clear()
             call mesh%domain(idom)%chimera%clear()
         end do !idom
         call MPI_Barrier(ChiDG_COMM,ierr)   ! not sure if this is needed.

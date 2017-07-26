@@ -705,7 +705,8 @@ contains
 
             ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
             eqn_m = self%eqn_ID
-            eqn_p = mesh%domain(idom)%chimera%recv(ChiID)%donor_eqn_ID%at(1)
+            !eqn_p = mesh%domain(idom)%chimera%recv(ChiID)%donor_eqn_ID%at(1)
+            eqn_p = mesh%domain(idom)%chimera%recv(ChiID)%donor(1)%eqn_ID
             skip = (eqn_m /= eqn_p)
 
         end if

@@ -200,21 +200,11 @@ contains
             !
             ! Register elements to send to off-processor CHIMERA receivers 
             !
-            do idonor = 1,mesh%domain(idom)%chimera%ndonors()
-                do irec = 1,mesh%domain(idom)%chimera%donor(idonor)%nrecipients()
-
-                    ! Get proc of receiver
-                    receiver_proc = mesh%domain(idom)%chimera%donor(idonor)%receiver_procs%at(idonor)
-                    send_element  = (proc == receiver_proc)
-                    ielem = mesh%domain(idom)%chimera%donor(idonor)%donor_element_l
-
-                    !
-                    ! If element should be sent, add to list
-                    !
-                    if (send_element) call self%elems_send(idom_send)%push_back_unique(ielem)
-
-                end do !irec
-            end do !idonor
+            do ielem_send = 1,mesh%domain(idom)%chimera%nsend()
+                ielem = mesh%domain(idom)%chimera%send(ielem_send)%ielement_l
+                call self%elems_send(idom_send)%push_back_unique(ielem)
+            end do !ielem_send
+            
 
 
 

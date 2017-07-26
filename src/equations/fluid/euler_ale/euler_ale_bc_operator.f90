@@ -137,11 +137,11 @@ contains
         rhoE_bc = worker%get_primary_field_face("Energy"    ,'value', 'boundary')
 
 
-        u_grid = worker%get_grid_velocity_face("u_grid")
-        v_grid = worker%get_grid_velocity_face("v_grid")
-        w_grid = worker%get_grid_velocity_face("w_grid")
-        jacobian_grid = worker%get_inv_jacobian_grid_face()
-        det_jacobian_grid = worker%get_det_jacobian_grid_face('value')
+        u_grid = worker%get_grid_velocity_face("u_grid",'face interior')
+        v_grid = worker%get_grid_velocity_face("v_grid",'face interior')
+        w_grid = worker%get_grid_velocity_face("w_grid",'face interior')
+        jacobian_grid = worker%get_inv_jacobian_grid_face('face interior')
+        det_jacobian_grid = worker%get_det_jacobian_grid_face('value', 'face interior')
 
 
         normx = worker%normal(1)

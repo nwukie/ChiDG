@@ -2096,6 +2096,7 @@ contains
 
         real(rk), dimension(:,:,:), allocatable :: jacobian_grid_gq
 
+        integer(ik) :: ChiID
         if ((interp_source == 'face interior') .or. (interp_source == 'boundary')) then
             jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%&
                 faces(self%element_info%ielement_l, self%iface)%inv_jacobian_grid
@@ -2174,13 +2175,14 @@ contains
         character(*),           intent(in)  :: interp_source
 
         real(rk), dimension(:), allocatable :: det_jacobian_grid_gq
-        real(rk), dimension(:,:), allocatable :: val 
+        real(rk), dimension(:), allocatable :: val 
 
+        integer(ik) :: ChiID
 
         !det_jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%det_jacobian_grid(:)
 
         ! Interpolate modes to nodes
-        if ((interp_source == 'face interior') .or. (interp_source = 'boundary') )then
+        if ((interp_source == 'face interior') .or. (interp_source == 'boundary') )then
             if (interp_type == 'value') then
                 val = &
                 self%mesh%domain(self%element_info%idomain_l)%&

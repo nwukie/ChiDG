@@ -128,7 +128,7 @@ contains
 
         type(AD_D), allocatable, dimension(:,:) :: grad_density, grad_mom1, grad_mom2, grad_mom3, grad_energy
 
-        det_jacobian_grid = worker%get_det_jacobian_grid_face('value')
+        det_jacobian_grid = worker%get_det_jacobian_grid_face('value', 'face interior')
         !
         ! Get boundary condition input parameters
         !

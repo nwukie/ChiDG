@@ -109,12 +109,12 @@ contains
 
         type(AD_D), allocatable, dimension(:,:) :: grad_density, grad_mom1, grad_mom2, grad_mom3, grad_energy
 
-        det_jacobian_grid = worker%get_det_jacobian_grid_face('value')
+        det_jacobian_grid = worker%get_det_jacobian_grid_face('value','face_interior')
 
 
-        u_grid = worker%get_grid_velocity_face('u_grid')
-        v_grid = worker%get_grid_velocity_face('v_grid')
-        w_grid = worker%get_grid_velocity_face('w_grid')
+        u_grid = worker%get_grid_velocity_face('u_grid','face_interior')
+        v_grid = worker%get_grid_velocity_face('v_grid','face_interior')
+        w_grid = worker%get_grid_velocity_face('w_grid','face_interior')
 
         !
         ! Interpolate interior solution to quadrature nodes

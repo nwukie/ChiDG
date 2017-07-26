@@ -196,7 +196,7 @@ contains
         flux_2 = -tau_12
         flux_3 = -tau_13
 
-        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3)
+        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3,'face interior')
         ! dot with normal vector
         integrand = HALF*(flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3)
 
@@ -210,7 +210,7 @@ contains
         flux_2 = -tau_22
         flux_3 = -tau_23
 
-        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3)
+        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3,'face interior')
         ! dot with normal vector
         integrand = HALF*(flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3)
 
@@ -237,7 +237,7 @@ contains
         flux_2 = -tau_23
         flux_3 = -tau_33
         
-        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3)
+        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3,'face interior')
         ! dot with normal vector
         integrand = HALF*(flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3)
 
@@ -252,7 +252,7 @@ contains
         flux_2 = -k*grad2_T  -  (u*tau_12 + v*tau_22 + w*tau_23)
         flux_3 = -k*grad3_T  -  (u*tau_13 + v*tau_23 + w*tau_33)
 
-        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3)
+        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3,'face interior')
         ! dot with normal vector
         integrand = HALF*(flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3)
 

@@ -1,0 +1,605 @@
+module test_mesh_comm_chimera_mod
+#include <messenger.h>
+    use mod_kinds,                  only: rk, ik
+    use mod_constants,              only: XI_MIN, XI_MAX, DIAG, BOUNDARY, IO_DESTINATION, &
+                                          ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, &
+                                          NINE, TEN, ZERO
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: delete_file
+    use type_chidg,                 only: chidg_t
+    use type_chidg_matrix,          only: chidg_matrix_t
+    use type_chidg_vector,          only: chidg_vector_t
+    use type_partition,             only: partition_t
+    use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
+    use operator_chidg_dot,         only: dot
+    use operator_chidg_mv,          only: chidg_mv
+    use mpi_f08,                    only: MPI_COMM
+    use pfunit_mod
+    implicit none
+
+
+
+    !>  
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/23/2016
+    !!
+    !-----------------------------------------------------------------------------------------
+    @TestCase
+    type, extends(MpiTestCase) :: test_mesh_comm_chimera
+
+        type(chidg_t)   :: chidg
+
+        character(:),   allocatable :: gridfile
+        integer(ik)                 :: nterms_s = 27
+        integer(ik)                 :: solution_order = 3
+        type(mpi_comm)              :: ChiDG_COMM
+
+    contains
+        procedure       :: setUp
+        procedure       :: tearDown
+    end type test_mesh_comm_chimera
+    !*****************************************************************************************
+
+
+
+
+contains
+
+
+
+    !>  This test reads a (2x1x1) x 2 element grid using 2, 3, and 4 processors and tests 
+    !!  parallel communication of ALE quantities for mesh_t.
+    !!
+    !!  We want to test the communication of ALE quantities by mesh_t
+    !!  so we impose a grid deformation and velocity at the interface 
+    !!  between (domain,element) 1,2 and (domain,element) 2,1.
+    !!
+    !!  Interface displacement = 0.125
+    !!  Interface velocity     = 0.125/0.01 = 12.5
+    !!
+    !!     Initial Grid            Deformed Grid
+    !!  .---.---..---.---.        .---.----..--.---.  
+    !!  | 1 | 2 || 1 | 2 |        | 1 | 2  ||1 | 2 |
+    !!  .---.---..---.---.        .---.----..--.---.  
+    !!    dom 1    dom 2            dom 1     dom 2
+    !!
+    !!
+    !!
+    !!
+    !!
+    !!
+    !!  For reference, the partitions from METIS are as follows. NOTE: This could change
+    !!  if the settings for METIS partitioning were changed. In that case, the partitions
+    !!  here and corresponding tests would need updated with the correct indices.
+    !!
+    !!  Legend:
+    !!  --------------------------------------------------------------------
+    !!  Interior numbers = global indices
+    !!  Exterior numbers = local indices
+    !!
+    !!  Numbers in matrix diagram indicate what entry in the 
+    !!  vector they are multiplied with.
+    !!
+    !!  Cases:
+    !!  ---------------------------------------------------------------------
+    !!
+    !!
+    !!  NRANK = 2
+    !!
+    !!  IRANK = 0      IRANK = 1                          [ 1 2     ]   [ 1 ]
+    !!  .---.---.      .---.---.                          [ 1 2 3   ] * [ 2 ]
+    !!  | 1 | 2 |      | 3 | 4 |
+    !!  .---.---.      .---.---.                          [   2 3 4 ]   [ 3 ]
+    !!    1   2          1   2                            [     3 4 ]   [ 4 ]
+    !!
+    !!
+    !!
+    !!  NRANK = 3
+    !!
+    !!  IRANK = 0   IRANK = 1   IRANK = 2                 [ 1 2     ]   [ 1 ]
+    !!    .---.       .---.     .---.---.     
+    !!    | 1 |       | 2 |     | 3 | 4 |                 [ 1 2 3   ] * [ 2 ]
+    !!    .---.       .---.     .---.---.     
+    !!      1           1         1   2                   [   2 3 4 ]   [ 3 ]
+    !!                                                    [     3 4 ]   [ 4 ]
+    !!
+    !!
+    !!  NRANK = 4
+    !!
+    !!  IRANK = 0   IRANK = 1   IRANK = 2   IRANK = 3     [ 1 2     ]   [ 1 ]
+    !!    .---.       .---.       .---.       .---.                          
+    !!    | 2 |       | 1 |       | 4 |       | 3 |       [ 1 2 3   ] * [ 2 ]
+    !!    .---.       .---.       .---.       .---.                          
+    !!      1           1           1           1         [   2 3 4 ]   [ 3 ]
+    !!
+    !!                                                    [     3 4 ]   [ 4 ]
+    !!
+    !!  ---------------------------------------------------------------------
+    !!
+    !!
+    !!  Using 1 processor, all communication(face neighbors) should be local. 
+    !!  Using 4 processors, all communication should occur globally, across 
+    !!  processors.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/21/2016
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine setUp(this)
+        class(test_mesh_comm_chimera), intent(inout) :: this
+
+        integer(ik)                     :: iread, ierr, ielem, ivar, itime, iproc
+        real(rk)                        :: initial_vals(this%nterms_s)
+        type(partition_t),  allocatable :: partitions(:)
+
+        
+        IRANK                   = this%getProcessRank()
+        NRANK                   = this%getNumProcessesRequested()
+        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+
+
+        call this%chidg%start_up('mpi',this%ChiDG_COMM)
+        call this%chidg%start_up('core')
+
+
+        IO_DESTINATION = 'file'
+        this%gridfile  = 'D2E2M1.h5'
+
+        !
+        ! Create mesh
+        !
+        if (IRANK == GLOBAL_MASTER) then
+            call create_mesh_file("D2 NxNxN M1",this%gridfile, nelem_xi=4, nelem_eta=1, nelem_zeta=1)
+            !call create_mesh_file("D1 NxNxN",this%gridfile,nelem_xi=4,nelem_eta=1,nelem_zeta=1)
+        end if
+        call MPI_Barrier(this%ChiDG_COMM,ierr)
+
+
+        !
+        ! Set accuracy for the solution expansion
+        !
+        call this%chidg%set('Solution Order', integer_input=this%solution_order)
+
+
+
+        !
+        ! Allocate partition descriptors for each rank
+        !
+        allocate(partitions(NRANK), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        !
+        ! Define partitions 
+        !
+        if (NRANK == 2) then
+
+
+            !
+            ! Partition for IRANK == 0
+            !
+            !   IRANK = 0      IRANK = 1   
+            !   .---.---.      .---.---.   
+            !   | 1 | 2 |      | 1 | 2 |
+            !   .---.---.      .---.---.   
+            !     1   2          1   2     
+            ! 
+            ! Set information on element in partition
+            call partitions(1)%init(1)
+            call partitions(1)%connectivities(1)%init('01',nelements=2,nnodes=12)
+
+            ! element 1
+            call partitions(1)%connectivities(1)%data(1)%init(1)                                            ! mapping
+            call partitions(1)%connectivities(1)%data(1)%set_domain_index(1)                                ! idomain_g
+            call partitions(1)%connectivities(1)%data(1)%set_element_index(1)                               ! ielement_g
+            call partitions(1)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
+            call partitions(1)%connectivities(1)%data(1)%set_element_nodes([1, 2, 4, 5, 7, 8, 10, 11])    ! nodes
+            call partitions(1)%connectivities(1)%data(1)%set_element_partition(0)                           ! IRANK
+
+            ! element 2
+            call partitions(1)%connectivities(1)%data(2)%init(1)                                            ! mapping
+            call partitions(1)%connectivities(1)%data(2)%set_domain_index(1)                                ! idomain_g
+            call partitions(1)%connectivities(1)%data(2)%set_element_index(2)                               ! ielement_g
+            call partitions(1)%connectivities(1)%data(2)%set_element_mapping(1)                             ! mapping
+            call partitions(1)%connectivities(1)%data(2)%set_element_nodes([2, 3, 5, 6, 8, 9, 11, 12])      ! nodes
+            call partitions(1)%connectivities(1)%data(2)%set_element_partition(0)                           ! IRANK
+
+
+
+            !
+            ! Partition for IRANK == 1
+            !
+            ! Set information on element in partition
+            call partitions(2)%init(1)
+            call partitions(2)%connectivities(1)%init('02',nelements=2,nnodes=12)
+
+            ! element 3
+            call partitions(2)%connectivities(1)%data(1)%init(1)                                            ! mapping
+            call partitions(2)%connectivities(1)%data(1)%set_domain_index(2)                                ! idomain_g
+            call partitions(2)%connectivities(1)%data(1)%set_element_index(1)                               ! ielement_g
+            call partitions(2)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
+            call partitions(2)%connectivities(1)%data(1)%set_element_nodes([1, 2, 4, 5, 7, 8, 10, 11])    ! nodes
+            call partitions(2)%connectivities(1)%data(1)%set_element_partition(1)                           ! IRANK
+
+            ! element 4
+            call partitions(2)%connectivities(1)%data(2)%init(1)                                            ! mapping
+            call partitions(2)%connectivities(1)%data(2)%set_domain_index(2)                                ! idomain_g
+            call partitions(2)%connectivities(1)%data(2)%set_element_index(2)                               ! ielement_g
+            call partitions(2)%connectivities(1)%data(2)%set_element_mapping(1)                             ! mapping
+            call partitions(2)%connectivities(1)%data(2)%set_element_nodes([2, 3, 5, 6, 8, 9, 11, 12])   ! nodes
+            call partitions(2)%connectivities(1)%data(2)%set_element_partition(1)                           ! IRANK
+
+
+
+
+
+        else if (NRANK == 3) then
+
+            !
+            ! Partition for IRANK == 0
+            !
+            !  NRANK = 3
+            !
+            !  IRANK = 0   IRANK = 1   IRANK = 2                                    
+            !    .---.       .---.     .---.---.     
+            !    | 1 |       | 2 |     | 3 | 4 |                                    
+            !    .---.       .---.     .---.---.     
+            !      1           1         1   2                                      
+            !                                                                       
+            !
+
+            ! element 1
+            call partitions(1)%init(1)
+            call partitions(1)%connectivities(1)%init('01',nelements=1,nnodes=8)
+            call partitions(1)%connectivities(1)%data(1)%init(1)                                            ! mapping
+            call partitions(1)%connectivities(1)%data(1)%set_domain_index(1)                                ! idomain_g
+            call partitions(1)%connectivities(1)%data(1)%set_element_index(1)                               ! ielement_g
+            call partitions(1)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
+            call partitions(1)%connectivities(1)%data(1)%set_element_nodes([1, 2, 6, 7, 11, 12, 16, 17])    ! nodes
+            call partitions(1)%connectivities(1)%data(1)%set_element_partition(0)                           ! IRANK
+
+
+            !
+            ! Partition for IRANK == 1
+            !
+
+            ! element 2
+            call partitions(2)%init(1)
+            call partitions(2)%connectivities(1)%init('01',nelements=1,nnodes=8)
+            call partitions(2)%connectivities(1)%data(1)%init(1)                                            ! mapping
+            call partitions(2)%connectivities(1)%data(1)%set_domain_index(1)                                ! idomain_g
+            call partitions(2)%connectivities(1)%data(1)%set_element_index(2)                               ! ielement_g
+            call partitions(2)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
+            call partitions(2)%connectivities(1)%data(1)%set_element_nodes([2, 3, 7, 8, 12, 13, 17, 18])    ! nodes
+            call partitions(2)%connectivities(1)%data(1)%set_element_partition(1)                           ! IRANK
+
+
+
+            !
+            ! Partition for IRANK == 2
+            !
+            call partitions(3)%init(1)
+            call partitions(3)%connectivities(1)%init('01',nelements=2,nnodes=12)
+
+            ! element 3
+            call partitions(3)%connectivities(1)%data(1)%init(1)                                            ! mapping
+            call partitions(3)%connectivities(1)%data(1)%set_domain_index(1)                                ! idomain_g
+            call partitions(3)%connectivities(1)%data(1)%set_element_index(3)                               ! ielement_g
+            call partitions(3)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
+            call partitions(3)%connectivities(1)%data(1)%set_element_nodes([3, 4, 8, 9, 13, 14, 18, 19])    ! nodes
+            call partitions(3)%connectivities(1)%data(1)%set_element_partition(2)                           ! IRANK
+
+            ! element 4
+            call partitions(3)%connectivities(1)%data(2)%init(1)                                            ! mapping
+            call partitions(3)%connectivities(1)%data(2)%set_domain_index(1)                                ! idomain_g
+            call partitions(3)%connectivities(1)%data(2)%set_element_index(4)                               ! ielement_g
+            call partitions(3)%connectivities(1)%data(2)%set_element_mapping(1)                             ! mapping
+            call partitions(3)%connectivities(1)%data(2)%set_element_nodes([4, 5, 9, 10, 14, 15, 19, 20])   ! nodes
+            call partitions(3)%connectivities(1)%data(2)%set_element_partition(2)                           ! IRANK
+
+        else if (NRANK == 4) then
+
+
+            !
+            ! Partition for IRANK == 0
+            !
+            !   NRANK = 4
+            ! 
+            !   IRANK = 0   IRANK = 1   IRANK = 2   IRANK = 3     [ 1 2     ]   [ 1 ]
+            !     .---.       .---.       .---.       .---.                          
+            !     | 2 |       | 1 |       | 4 |       | 3 |       [ 1 2 3   ] * [ 2 ]
+            !     .---.       .---.       .---.       .---.                          
+            !       1           1           1           1         [   2 3 4 ]   [ 3 ]
+            ! 
+            !                                                     [     3 4 ]   [ 4 ]
+            !
+            ! Partition for IRANK == 0
+            !
+            call partitions(1)%init(1)
+            call partitions(1)%connectivities(1)%init('01',nelements=1,nnodes=8)
+
+            ! element 1
+            call partitions(1)%connectivities(1)%data(1)%init(1)                                            ! mapping
+            call partitions(1)%connectivities(1)%data(1)%set_domain_index(1)                                ! idomain_g
+            call partitions(1)%connectivities(1)%data(1)%set_element_index(1)                               ! ielement_g
+            call partitions(1)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
+            call partitions(1)%connectivities(1)%data(1)%set_element_nodes([1, 2, 6, 7, 11, 12, 16, 17])    ! nodes
+            call partitions(1)%connectivities(1)%data(1)%set_element_partition(0)                           ! IRANK
+
+
+            !
+            ! Partition for IRANK == 1
+            !
+            ! Set information on element in partition
+            call partitions(2)%init(1)
+            call partitions(2)%connectivities(1)%init('01',nelements=1,nnodes=8)
+
+            ! element 7
+            call partitions(2)%connectivities(1)%data(1)%init(1)                                            ! mapping
+            call partitions(2)%connectivities(1)%data(1)%set_domain_index(1)                                ! idomain_g
+            call partitions(2)%connectivities(1)%data(1)%set_element_index(2)                               ! ielement_g
+            call partitions(2)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
+            call partitions(2)%connectivities(1)%data(1)%set_element_nodes([2, 3, 7, 8, 12, 13, 17, 18])! nodes
+            call partitions(2)%connectivities(1)%data(1)%set_element_partition(1)                           ! IRANK
+
+
+            !
+            ! Partition for IRANK == 2
+            !
+            ! Set information on element in partition
+            call partitions(3)%init(1)
+            call partitions(3)%connectivities(1)%init('01',nelements=1,nnodes=8)
+
+            ! element 2
+            call partitions(3)%connectivities(1)%data(1)%init(1)                                            ! mapping
+            call partitions(3)%connectivities(1)%data(1)%set_domain_index(1)                                ! idomain_g
+            call partitions(3)%connectivities(1)%data(1)%set_element_index(3)                               ! ielement_g
+            call partitions(3)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
+            call partitions(3)%connectivities(1)%data(1)%set_element_nodes([3, 4, 8, 9, 13, 14, 18, 19])    ! nodes
+            call partitions(3)%connectivities(1)%data(1)%set_element_partition(2)                           ! IRANK
+
+
+            !
+            ! Partition for IRANK == 3
+            !
+            ! Set information on element in partition
+            call partitions(4)%init(1)
+            call partitions(4)%connectivities(1)%init('01',nelements=1,nnodes=8)
+
+            ! element 1
+            call partitions(4)%connectivities(1)%data(1)%init(1)                                            ! mapping
+            call partitions(4)%connectivities(1)%data(1)%set_domain_index(1)                                ! idomain_g
+            call partitions(4)%connectivities(1)%data(1)%set_element_index(4)                               ! ielement_g
+            call partitions(4)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
+            call partitions(4)%connectivities(1)%data(1)%set_element_nodes([4, 5, 9, 10, 14, 15, 19, 20])   ! nodes
+            call partitions(4)%connectivities(1)%data(1)%set_element_partition(3)                           ! IRANK
+
+
+
+        end if
+
+
+
+
+        !
+        ! Read partition data: grid, boundary conditions
+        !
+        !call this%chidg%read_mesh(this%gridfile, partitions_in=partitions)
+        call this%chidg%read_mesh(this%gridfile)
+
+        
+    end subroutine setUp
+    !******************************************************************************************
+
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine tearDown(this)
+        class(test_mesh_comm_chimera), intent(inout) :: this
+
+        call this%chidg%shut_down('core')
+
+        if (IRANK == GLOBAL_MASTER) then
+            call delete_file(this%gridfile)
+        end if
+
+    end subroutine tearDown
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>  Test the parallel computation of mesh_t
+    !!
+    !!  Testing:
+    !!      mesh%comm_send()
+    !!      mesh%comm_recv()
+    !!      mesh%comm_wait()
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/23/2016
+    !!
+    !------------------------------------------------------------------------------------------
+    @Test(npes=[2])
+    subroutine test_chimera_ale_comm(self)
+        class(test_mesh_comm_chimera), intent(inout) :: self
+
+        integer(ik)             :: nelem, ierr, idomain_g, ielement_g, nterms_s, neqns, &
+                                   nparallel_elements, pelem_ID, ChiID
+        real(rk)                :: computed_norm, expected_norm
+        real(rk),   allocatable :: dnodes(:,:), vnodes(:,:), communicated_data(:,:), expected_data(:,:)
+
+        IRANK = self%getProcessRank()
+
+
+
+        !
+        ! Set Global Displacements and Velocities
+        !
+        allocate(dnodes(12,3), vnodes(12,3), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        dnodes = ZERO
+        vnodes = ZERO
+        dnodes = ZERO
+        vnodes = ZERO
+
+
+        if (NRANK == 2) then
+
+            if (IRANK == 0) then
+                dnodes(:,1) = [ZERO, ZERO, 0.125_rk,    &
+                               ZERO, ZERO, 0.125_rk,    &
+                               ZERO, ZERO, 0.125_rk,    &
+                               ZERO, ZERO, 0.125_rk]
+                vnodes(:,1) = [ZERO, ZERO, 12.5_rk,     &
+                               ZERO, ZERO, 12.5_rk,     &
+                               ZERO, ZERO, 12.5_rk,     &
+                               ZERO, ZERO, 12.5_rk]
+                call self%chidg%data%mesh%domain(1)%init_ale(dnodes,vnodes)
+                call self%chidg%data%mesh%domain(1)%update_ale()
+            else if (IRANK == 1) then
+                dnodes(:,1) = [0.125_rk, ZERO, ZERO,    &
+                               0.125_rk, ZERO, ZERO,    &
+                               0.125_rk, ZERO, ZERO,    &
+                               0.125_rk, ZERO, ZERO]
+                vnodes(:,1) = [12.5_rk, ZERO, ZERO,     &
+                               12.5_rk, ZERO, ZERO,     &
+                               12.5_rk, ZERO, ZERO,     &
+                               12.5_rk, ZERO, ZERO]
+                call self%chidg%data%mesh%domain(1)%init_ale(dnodes,vnodes)
+                call self%chidg%data%mesh%domain(1)%update_ale()
+            end if
+
+        end if
+
+
+
+
+
+        !
+        ! Test mesh communication for ALE data.
+        !
+        call self%chidg%data%mesh%comm_send()
+        call self%chidg%data%mesh%comm_recv()
+        call self%chidg%data%mesh%comm_wait()
+
+
+
+
+
+
+
+        !
+        ! Compute vector norm across processors. THIS IS BEING TESTED
+        !
+        if (NRANK == 2) then
+
+            if (IRANK == 0) then
+
+                print*, 'run 1: ', IRANK
+                nparallel_elements = self%chidg%data%mesh%nparallel_elements()
+                ChiID              = self%chidg%data%mesh%domain(1)%faces(2,2)%ChiID
+                print*, 'ChiID: ', self%chidg%data%mesh%domain(1)%faces(2,1)%ChiID
+                print*, 'ChiID: ', self%chidg%data%mesh%domain(1)%faces(2,2)%ChiID
+                print*, 'ChiID: ', self%chidg%data%mesh%domain(1)%faces(2,3)%ChiID
+                print*, 'ChiID: ', self%chidg%data%mesh%domain(1)%faces(2,4)%ChiID
+                print*, 'ChiID: ', self%chidg%data%mesh%domain(1)%faces(2,5)%ChiID
+                print*, 'ChiID: ', self%chidg%data%mesh%domain(1)%faces(2,6)%ChiID
+                print*, 'ChiID: ', self%chidg%data%mesh%domain(1)%faces(1,1)%ChiID
+                print*, 'ChiID: ', self%chidg%data%mesh%domain(1)%faces(1,2)%ChiID
+                print*, 'ChiID: ', self%chidg%data%mesh%domain(1)%faces(1,3)%ChiID
+                print*, 'ChiID: ', self%chidg%data%mesh%domain(1)%faces(1,4)%ChiID
+                print*, 'ChiID: ', self%chidg%data%mesh%domain(1)%faces(1,5)%ChiID
+                print*, 'ChiID: ', self%chidg%data%mesh%domain(1)%faces(1,6)%ChiID
+                print*, 'run 1.1: ', IRANK, ChiID, size(self%chidg%data%mesh%domain(1)%faces,1)
+                idomain_g          = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%idomain_g
+                ielement_g         = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%ielement_g
+                pelem_ID           = self%chidg%data%mesh%find_parallel_element(idomain_g, ielement_g)
+                print*, 'run 1.2: ', IRANK, pelem_ID
+                nterms_s           = self%solution_order * self%solution_order * self%solution_order
+                neqns              = 1
+
+                print*, 'run 2: ', IRANK
+                @assertEqual(1,nparallel_elements)
+                @assertEqual(idomain_g,  self%chidg%data%mesh%parallel_element(pelem_ID)%idomain_g)
+                @assertEqual(ielement_g, self%chidg%data%mesh%parallel_element(pelem_ID)%ielement_g)
+                @assertEqual(nterms_s,   self%chidg%data%mesh%parallel_element(pelem_ID)%nterms_s)
+                @assertEqual(neqns,      self%chidg%data%mesh%parallel_element(pelem_ID)%neqns)
+
+
+            else if (IRANK == 1) then
+
+                print*, 'run 1: ', IRANK
+                nparallel_elements = self%chidg%data%mesh%nparallel_elements()
+                ChiID              = self%chidg%data%mesh%domain(1)%faces(1,1)%ChiID
+                print*, 'ChiID: ', self%chidg%data%mesh%domain(1)%faces(2,1)%ChiID
+                print*, 'ChiID: ', self%chidg%data%mesh%domain(1)%faces(2,2)%ChiID
+                print*, 'ChiID: ', self%chidg%data%mesh%domain(1)%faces(2,3)%ChiID
+                print*, 'ChiID: ', self%chidg%data%mesh%domain(1)%faces(2,4)%ChiID
+                print*, 'ChiID: ', self%chidg%data%mesh%domain(1)%faces(2,5)%ChiID
+                print*, 'ChiID: ', self%chidg%data%mesh%domain(1)%faces(2,6)%ChiID
+                print*, 'ChiID: ', self%chidg%data%mesh%domain(1)%faces(1,1)%ChiID
+                print*, 'ChiID: ', self%chidg%data%mesh%domain(1)%faces(1,2)%ChiID
+                print*, 'ChiID: ', self%chidg%data%mesh%domain(1)%faces(1,3)%ChiID
+                print*, 'ChiID: ', self%chidg%data%mesh%domain(1)%faces(1,4)%ChiID
+                print*, 'ChiID: ', self%chidg%data%mesh%domain(1)%faces(1,5)%ChiID
+                print*, 'ChiID: ', self%chidg%data%mesh%domain(1)%faces(1,6)%ChiID
+                print*, 'run 1.1: ', IRANK, ChiID
+                idomain_g          = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%idomain_g
+                ielement_g         = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%ielement_g
+                pelem_ID           = self%chidg%data%mesh%find_parallel_element(idomain_g, ielement_g)
+                print*, 'run 1.2: ', IRANK, pelem_ID
+                nterms_s           = self%solution_order * self%solution_order * self%solution_order
+                neqns              = 1
+
+                print*, 'run 2: ', IRANK
+                @assertEqual(1,nparallel_elements)
+                @assertEqual(idomain_g,  self%chidg%data%mesh%parallel_element(pelem_ID)%idomain_g)
+                @assertEqual(ielement_g, self%chidg%data%mesh%parallel_element(pelem_ID)%ielement_g)
+                @assertEqual(nterms_s,   self%chidg%data%mesh%parallel_element(pelem_ID)%nterms_s)
+                @assertEqual(neqns,      self%chidg%data%mesh%parallel_element(pelem_ID)%neqns)
+
+
+            end if
+
+        end if
+
+
+
+    end subroutine test_chimera_ale_comm
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+end module test_mesh_comm_chimera_mod

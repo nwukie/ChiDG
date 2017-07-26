@@ -900,6 +900,7 @@ contains
         end do !idom
 
 
+        print*, 'sending 1: ', IRANK
 
         !
         ! Send chimera donors
@@ -948,6 +949,7 @@ contains
         end do !idom
 
 
+        print*, 'sending 2: ', IRANK
 
     end subroutine comm_send
     !*********************************************************************************
@@ -1011,6 +1013,7 @@ contains
 
 
 
+        print*, 'receiving 1: ', IRANK
 
 
         !
@@ -1080,6 +1083,7 @@ contains
 
 
 
+        print*, 'receiving 2: ', IRANK
 
 
 

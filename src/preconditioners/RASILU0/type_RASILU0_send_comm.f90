@@ -242,10 +242,10 @@ contains
                 do iblk_send = 1,self%dom(idom_send)%blk_send(ielem_send)%size()
                     iblk = self%dom(idom_send)%blk_send(ielem_send)%at(iblk_send)
 
-                    call MPI_ISend(A%dom(idom)%lblks(ielem,1)%data_(iblk)%nrows_,       1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
+                    call MPI_ISend(A%dom(idom)%lblks(ielem,1)%data_(iblk)%nterms,       1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
                     call self%mpi_requests%push_back(request)
 
-                    call MPI_ISend(A%dom(idom)%lblks(ielem,1)%data_(iblk)%ncols_,       1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
+                    call MPI_ISend(A%dom(idom)%lblks(ielem,1)%data_(iblk)%nfields,      1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)
                     call self%mpi_requests%push_back(request)
 
                     call MPI_ISend(A%dom(idom)%lblks(ielem,1)%data_(iblk)%dparent_g_,   1, MPI_INTEGER4, proc, self%dom(idom_send)%idomain_g, ChiDG_COMM, request, ierr)

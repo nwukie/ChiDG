@@ -785,10 +785,10 @@ contains
             ! Interpolate from CHIMERA donor element
             elseif ( chimera_interpolation ) then
                 ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
-                iface_info%idomain_g  = mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_g%at(idonor)
-                iface_info%idomain_l  = mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_l%at(idonor)
-                iface_info%ielement_g = mesh%domain(idom)%chimera%recv(ChiID)%donor_element_g%at(idonor)
-                iface_info%ielement_l = mesh%domain(idom)%chimera%recv(ChiID)%donor_element_l%at(idonor)
+                iface_info%idomain_g  = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g
+                iface_info%idomain_l  = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_l
+                iface_info%ielement_g = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_g
+                iface_info%ielement_l = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_l
             else
                 call chidg_signal(FATAL,"get_face_interpolation_info: neighbor conforming_interpolation nor chimera_interpolation were detected")
             end if
@@ -859,7 +859,6 @@ contains
         if ( interpolation_source == ME ) then
             select case(interpolation_type)
                 case('value')
-                    !interpolator = mesh%domain(idom)%faces(ielem,iface)%gq%face%val(:,:,iface)
                     interpolator = mesh%domain(idom)%faces(ielem,iface)%basis_s%interpolator('Value',iface)
                 case('grad1')
                     interpolator = mesh%domain(idom)%faces(ielem,iface)%grad1
@@ -889,7 +888,6 @@ contains
                 if (parallel_interpolation) then
                     select case(interpolation_type)
                         case('value')
-                            !interpolator = mesh%domain(idom)%faces(ielem,iface)%gq%face%val(:,:,donor_face%iface)    ! THIS PROBABLY NEEDS IMPROVED
                             interpolator = mesh%domain(idom)%faces(ielem,iface)%basis_s%interpolator('Value',donor_face%iface)    ! THIS PROBABLY NEEDS IMPROVED
                         case('grad1')
                             interpolator = mesh%domain(idom)%faces(ielem,iface)%neighbor_grad1
@@ -903,7 +901,6 @@ contains
                 else
                     select case(interpolation_type)
                         case('value')
-                            !interpolator = mesh%domain(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%gq%face%val(:,:,donor_face%iface)
                             interpolator = mesh%domain(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%basis_s%interpolator('Value',donor_face%iface)
                         case('grad1')
                             interpolator = mesh%domain(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%grad1
@@ -922,13 +919,13 @@ contains
                 ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
                     select case(interpolation_type)
                         case('value')
-                            interpolator = mesh%domain(idom)%chimera%recv(ChiID)%donor_interpolator%at(idonor)
+                            interpolator = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%value
                         case('grad1')
-                            interpolator = mesh%domain(idom)%chimera%recv(ChiID)%donor_interpolator_grad1%at(idonor)
+                            interpolator = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%grad1
                         case('grad2')
-                            interpolator = mesh%domain(idom)%chimera%recv(ChiID)%donor_interpolator_grad2%at(idonor)
+                            interpolator = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%grad2
                         case('grad3')
-                            interpolator = mesh%domain(idom)%chimera%recv(ChiID)%donor_interpolator_grad3%at(idonor)
+                            interpolator = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%grad3
                         case default
                             call chidg_signal(FATAL,"get_face_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
                     end select
@@ -1006,7 +1003,8 @@ contains
             !
             if ( chimera_interpolation ) then
                 ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
-                gq_node_indices = mesh%domain(idom)%chimera%recv(ChiID)%donor_gq_indices(idonor)%data()
+                !gq_node_indices = mesh%domain(idom)%chimera%recv(ChiID)%donor_gq_indices(idonor)%data()
+                gq_node_indices = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%node_index(:)
 
                 ! Create mask over full GQ vector of only those nodes that are filled by the current element
                 do inode = 1,size(gq_node_indices)
@@ -1097,13 +1095,13 @@ contains
             ! Interpolate from CHIMERA donor element
             elseif ( chimera_interpolation ) then
                 ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
-                donor_proc = mesh%domain(idom)%chimera%recv(ChiID)%donor_proc%at(idonor)
+                donor_proc = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%iproc
 
                 parallel_interpolation = (IRANK /= donor_proc)
                 if (parallel_interpolation) then
-                     recv_info%comm    = mesh%domain(idom)%chimera%recv(ChiID)%donor_recv_comm%at(idonor)
-                     recv_info%domain  = mesh%domain(idom)%chimera%recv(ChiID)%donor_recv_domain%at(idonor)
-                     recv_info%element = mesh%domain(idom)%chimera%recv(ChiID)%donor_recv_element%at(idonor)
+                     recv_info%comm    = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%recv_comm
+                     recv_info%domain  = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%recv_domain
+                     recv_info%element = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%recv_element
                 end if
 
             else

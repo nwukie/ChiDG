@@ -27,40 +27,15 @@ module type_chimera_receiver
         integer(ik)                     :: ielement_l   ! Proc-local element index of receiver
         integer(ik)                     :: iface        ! Face index of receiver
 
-
-!        ! Access via data%donor_domain%at(idonor)
-!        type(ivector_t)                 :: donor_eqn_ID             ! Equation set identifier
-!        type(ivector_t)                 :: donor_neqns              ! Number of equations in donor element
-!        type(ivector_t)                 :: donor_nterms_s           ! Number of terms in donor expansion
-!        type(ivector_t)                 :: donor_proc               ! Vector of processor ranks
-!        type(ivector_t)                 :: donor_domain_g           ! Vector of domain indices
-!        type(ivector_t)                 :: donor_domain_l           ! Vector of domain indices
-!        type(ivector_t)                 :: donor_element_g          ! Vector of element indices for the location in the corresponding domain
-!        type(ivector_t)                 :: donor_element_l          ! Vector of element indices for the location in the corresponding domain
-!        type(mvector_t)                 :: donor_interpolator       ! Vector of matrices defining the Chimera interpolation
-!        type(mvector_t)                 :: donor_interpolator_grad1
-!        type(mvector_t)                 :: donor_interpolator_grad2
-!        type(mvector_t)                 :: donor_interpolator_grad3
-!
-!        ! For donor elements being comminucated from off-processor, their location in the recv container for accessing components
-!        type(ivector_t)                 :: donor_recv_comm          ! Indices of comm container
-!        type(ivector_t)                 :: donor_recv_domain        ! Domain index within comm
-!        type(ivector_t)                 :: donor_recv_element       ! Element index within domain
-!
-!        ! The access for this component is slightly different than the above components
-!        ! Access via data%donor_gq_indices(idonor)%data()
-!        type(ivector_t), allocatable    :: donor_gq_indices(:)      ! Array of integer vectors defining the GQ node indices associated with a given donor
-!        type(pvector_t), allocatable    :: donor_coords(:)          ! Array of points defining the local coordinates of the GQ nodes
-!        type(mvector_t), allocatable    :: donor_metrics(:)         ! For each donor, matrices of metric terms for each donor GQ node
-!        type(rvector_t), allocatable    :: donor_jinv(:)            ! For each donor, inverse element jacobian term for each donor GQ node
-
-
         !
-        ! NEW
+        ! Array of donors
         !
         type(chimera_donor_t), allocatable :: donor(:)
 
 
+        !
+        ! Data assembled from all donors to define the complete node set
+        !
         real(rk),   allocatable :: jinv(:)
         real(rk),   allocatable :: det_jacobian_grid(:)
         real(rk),   allocatable :: inv_jacobian_grid(:)
@@ -263,28 +238,6 @@ contains
         self%ielement_l   = 0
         self%iface        = 0
 
-
-!        call self%donor_eqn_ID%clear()
-!        call self%donor_neqns%clear()
-!        call self%donor_nterms_s%clear()
-!        call self%donor_proc%clear()               
-!        call self%donor_domain_g%clear()           
-!        call self%donor_domain_l%clear()           
-!        call self%donor_element_g%clear()         
-!        call self%donor_element_l%clear()         
-!        call self%donor_interpolator%clear()       
-!        call self%donor_interpolator_grad1%clear()
-!        call self%donor_interpolator_grad2%clear()
-!        call self%donor_interpolator_grad3%clear()
-!
-!        call self%donor_recv_comm%clear()
-!        call self%donor_recv_domain%clear()
-!        call self%donor_recv_element%clear()
-!
-!        if (allocated(self%donor_gq_indices))   deallocate(self%donor_gq_indices) 
-!        if (allocated(self%donor_coords))       deallocate(self%donor_coords) 
-!        if (allocated(self%donor_metrics))      deallocate(self%donor_metrics) 
-!        if (allocated(self%donor_jinv))         deallocate(self%donor_jinv) 
         if (allocated(self%donor))             deallocate(self%donor)
         if (allocated(self%jinv))              deallocate(self%jinv)
         if (allocated(self%det_jacobian_grid)) deallocate(self%det_jacobian_grid)

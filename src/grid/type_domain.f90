@@ -1608,17 +1608,6 @@ contains
         !
         ! Collect processors that we are sending chimera donor elements to
         !
-!        do idonor = 1,self%chimera%ndonors()
-!            do irec = 1,self%chimera%donor(idonor)%nrecipients()
-!
-!                ! Get donor rank. If off-processor, add to list uniquely.
-!                receiver_rank = self%chimera%donor(idonor)%receiver_procs%at(irec)
-!                comm_donor = (myrank /= receiver_rank)
-!                if ( comm_donor ) call comm_procs_vector%push_back_unique(receiver_rank)
-!
-!            end do !irec
-!        end do !idonor
-
         do isend_elem = 1,self%chimera%nsend()
             do isend_proc = 1,self%chimera%send(isend_elem)%nsend_procs()
 

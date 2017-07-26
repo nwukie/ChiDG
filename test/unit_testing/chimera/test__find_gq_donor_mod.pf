@@ -52,10 +52,10 @@ module test__find_gq_donor_mod
     !----------------------------------------------------------------------------
     @TestParameter
     type, extends(AbstractTestParameter) :: node_donor_coord
-        integer(ik)                 :: testNumber   ! Test index
-        type(point_t)               :: gqnode       ! input
-        type(element_info_t)        :: donor        ! expected output
-        type(point_t)               :: donor_coord  ! expected output
+        integer(ik)                 :: testNumber       ! Test index
+        type(point_t)               :: gqnode           ! input
+        type(element_info_t)        :: donor            ! expected output
+        real(rk)                    :: donor_coord(3)   ! expected output
     contains
         procedure   :: toString
     end type node_donor_coord
@@ -81,7 +81,7 @@ module test__find_gq_donor_mod
 
         type(point_t)           :: gqnode
         type(element_info_t)    :: donor
-        type(point_t)           :: donor_coord
+        real(rk)                :: donor_coord(3)
     contains
         procedure   :: setUp
         procedure   :: tearDown
@@ -203,7 +203,7 @@ contains
         integer(ik), parameter      :: ntests = 5
         type(point_t)               :: gqnode(ntests)
         type(element_info_t)        :: donor(ntests)
-        type(point_t)               :: donor_coords(ntests)
+        real(rk)                    :: donor_coords(ntests,3)
 
 
         ! Test 1
@@ -212,7 +212,7 @@ contains
         donor(1)%idomain_l  = 1
         donor(1)%ielement_g = 1
         donor(1)%ielement_l = 1
-        call donor_coords(1)%set(0._rk,0._rk,0._rk)
+        donor_coords(1,:) = [0._rk,0._rk,0._rk]
 
         ! Test 2
         call gqnode(2)%set(.75_rk,0.25_rk,0.25_rk)
@@ -220,7 +220,8 @@ contains
         donor(2)%idomain_l  = 1
         donor(2)%ielement_g = 2
         donor(2)%ielement_l = 2
-        call donor_coords(2)%set(0._rk,0._rk,0._rk)
+        !call donor_coords(2)%set(0._rk,0._rk,0._rk)
+        donor_coords(2,:) = [0._rk,0._rk,0._rk]
 
         ! Test 3
         call gqnode(3)%set(.75_rk,.75_rk,.75_rk)
@@ -228,7 +229,8 @@ contains
         donor(3)%idomain_l  = 1
         donor(3)%ielement_g = 8
         donor(3)%ielement_l = 8
-        call donor_coords(3)%set(0._rk,0._rk,0._rk)
+        !call donor_coords(3)%set(0._rk,0._rk,0._rk)
+        donor_coords(3,:) = [0._rk,0._rk,0._rk]
 
         ! Test 4
         call gqnode(4)%set(0.25_rk,0.25_rk,.75_rk)
@@ -236,7 +238,8 @@ contains
         donor(4)%idomain_l  = 1
         donor(4)%ielement_g = 5
         donor(4)%ielement_l = 5
-        call donor_coords(4)%set(0._rk,0._rk,0._rk)
+        !call donor_coords(4)%set(0._rk,0._rk,0._rk)
+        donor_coords(4,:) = [0._rk,0._rk,0._rk]
 
         ! Test 5
         call gqnode(5)%set(0.375_rk, 0.375_rk, 0.375_rk)
@@ -244,18 +247,19 @@ contains
         donor(5)%idomain_l  = 1
         donor(5)%ielement_g = 1
         donor(5)%ielement_l = 1
-        call donor_coords(5)%set(0.5_rk,0.5_rk,0.5_rk)
+        !call donor_coords(5)%set(0.5_rk,0.5_rk,0.5_rk)
+        donor_coords(5,:) = [0.5_rk,0.5_rk,0.5_rk]
 
 
 
 
 
         ! node_donor_coord
-        params = [ node_donor_coord(1,gqnode(1),donor(1),donor_coords(1)), &
-                   node_donor_coord(2,gqnode(2),donor(2),donor_coords(2)), &
-                   node_donor_coord(3,gqnode(3),donor(3),donor_coords(3)), &
-                   node_donor_coord(4,gqnode(4),donor(4),donor_coords(4)), &
-                   node_donor_coord(5,gqnode(5),donor(5),donor_coords(5))  &
+        params = [ node_donor_coord(1,gqnode(1),donor(1),donor_coords(1,:)), &
+                   node_donor_coord(2,gqnode(2),donor(2),donor_coords(2,:)), &
+                   node_donor_coord(3,gqnode(3),donor(3),donor_coords(3,:)), &
+                   node_donor_coord(4,gqnode(4),donor(4),donor_coords(4,:)), &
+                   node_donor_coord(5,gqnode(5),donor(5),donor_coords(5,:))  &
                    ]
 
 
@@ -301,9 +305,11 @@ contains
     subroutine test__find_gq_donor__point(self)
         class(test_find_gq_donor),  intent(inout)   :: self
 
-        type(point_t)           :: gq_node, donor_coord
+        type(point_t)           :: gq_node 
         type(element_info_t)    :: donor
         type(face_info_t)       :: receiver
+        real(rk)                :: donor_coord(3)
+        logical                 :: donor_found
 
 
         receiver%idomain_g  = 0
@@ -316,7 +322,7 @@ contains
         !
         ! Given some point, find a donor element in the grid. THIS IS BEING TESTED
         !
-        call find_gq_donor(self%chidg%data%mesh,self%gqnode,receiver,donor,donor_coord)
+        call find_gq_donor(self%chidg%data%mesh,self%gqnode,receiver,donor,donor_coord,donor_found)
 
 
         !
@@ -331,9 +337,9 @@ contains
         !
         ! Check that the local coordinates in the donor element are correct
         !
-        @assertEqual(self%donor_coord%c1_, donor_coord%c1_)
-        @assertEqual(self%donor_coord%c2_, donor_coord%c2_)
-        @assertEqual(self%donor_coord%c3_, donor_coord%c3_)
+        @assertEqual(self%donor_coord(1), donor_coord(1))
+        @assertEqual(self%donor_coord(2), donor_coord(2))
+        @assertEqual(self%donor_coord(3), donor_coord(3))
 
 
     end subroutine test__find_gq_donor__point

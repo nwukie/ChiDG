@@ -164,21 +164,28 @@ contains
     !!  @date   7/25/2017
     !!
     !----------------------------------------------------------------
-    subroutine add_node(self,inode,coord)
+    subroutine add_node(self,inode,coord,metric,jinv)
         class(chimera_donor_t), intent(inout)   :: self
         integer(ik),            intent(in)      :: inode
         real(rk),               intent(in)      :: coord(3)
+        real(rk),               intent(in)      :: metric(:,:)
+        real(rk),               intent(in)      :: jinv
 
         integer(ik)                 :: ierr
         integer(ik),    allocatable :: tmp_nodes(:)
         real(rk),       allocatable :: tmp_coords(:,:)
+        real(rk),       allocatable :: tmp_metric(:,:,:)
+        real(rk),       allocatable :: tmp_jinv(:)
 
 
         
         !
         ! Extend allocations
         !
-        allocate(tmp_nodes(self%nnodes() + 1), tmp_coords(self%nnodes() + 1, 3), stat=ierr)
+        allocate(tmp_nodes( self%nnodes() + 1),         &
+                 tmp_coords(self%nnodes() + 1, 3),      &
+                 tmp_jinv(  self%nnodes() + 1),         &
+                 tmp_metric(3,3, self%nnodes() + 1), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
@@ -186,16 +193,20 @@ contains
         ! Copy existing data
         !
         if (self%nnodes() > 0 ) then
-            tmp_nodes(1:self%nnodes())    = self%node_index(1:self%nnodes())
-            tmp_coords(1:self%nnodes(),:) = self%coords(1:self%nnodes(),:)
+            tmp_nodes(1:self%nnodes())      = self%node_index(1:self%nnodes())
+            tmp_coords(1:self%nnodes(),:)   = self%coords(1:self%nnodes(),:)
+            tmp_jinv(1:self%nnodes())       = self%jinv(1:self%nnodes())
+            tmp_metric(:,:,1:self%nnodes()) = self%metric(:,:,1:self%nnodes())
         end if
 
 
         !
         ! Move allocation
         !
-        call move_alloc(tmp_nodes, self%node_index)
-        call move_alloc(tmp_coords,self%coords)
+        call move_alloc(tmp_nodes,  self%node_index)
+        call move_alloc(tmp_coords, self%coords)
+        call move_alloc(tmp_metric, self%metric)
+        call move_alloc(tmp_jinv,   self%jinv)
 
 
         !
@@ -203,6 +214,8 @@ contains
         !
         self%node_index(self%nnodes()) = inode
         self%coords(self%nnodes(),:)   = coord
+        self%metric(:,:,self%nnodes()) = metric
+        self%jinv(self%nnodes())       = jinv
 
 
     end subroutine add_node

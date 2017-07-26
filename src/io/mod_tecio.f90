@@ -25,7 +25,7 @@ module mod_tecio
 #include <messenger.h>
     use mod_kinds,              only: rk,ik,rdouble,TEC
     use mod_constants,          only: ONE, HALF, TWO, OUTPUT_RES, XI_MIN, XI_MAX, &
-                                      ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NO_ID
+                                      ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NO_ID, CYLINDRICAL
 
     use type_chidg_data,        only: chidg_data_t
     use type_domain,            only: domain_t
@@ -210,7 +210,7 @@ contains
                     do icoord = 1,3
 
                         ! Get coordinate value at point
-                        if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
+                        if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == CYLINDRICAL ) then
                             r     = real(data%mesh%domain(idom)%elems(ielem)%ale_quad_pts(:,1),rdouble)
                             theta = real(data%mesh%domain(idom)%elems(ielem)%ale_quad_pts(:,2),rdouble)
                             z     = real(data%mesh%domain(idom)%elems(ielem)%ale_quad_pts(:,3),rdouble)
@@ -437,7 +437,7 @@ contains
 
 
                             ! Get coordinate value at point
-                            if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == 'Cylindrical' ) then
+                            if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == CYLINDRICAL ) then
                                 r     = real(data%mesh%domain(idom)%faces(ielem,iface)%ale_quad_pts(:,1),rdouble)
                                 theta = real(data%mesh%domain(idom)%faces(ielem,iface)%ale_quad_pts(:,2),rdouble)
                                 z     = real(data%mesh%domain(idom)%faces(ielem,iface)%ale_quad_pts(:,3),rdouble)

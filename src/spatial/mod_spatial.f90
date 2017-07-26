@@ -113,6 +113,7 @@ contains
 
 
 
+
         call loop_timer%start()
         do idom = 1,data%mesh%ndomains()
             eqn_ID = worker%mesh%domain(idom)%eqn_ID

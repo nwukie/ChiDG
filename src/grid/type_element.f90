@@ -5,7 +5,7 @@ module type_element
                                       ETA_MAX,ZETA_MIN,ZETA_MAX,ONE,ZERO,THIRD, &
                                       DIR_1, DIR_2, DIR_3, DIR_THETA, XI_DIR, ETA_DIR, ZETA_DIR, &
                                       TWO_DIM, THREE_DIM, RKTOL, VALID_POINT, INVALID_POINT, NO_PMM_ASSIGNED, &
-                                      ZERO
+                                      ZERO, CARTESIAN, CYLINDRICAL
     use mod_quadrature,         only: GQ, get_quadrature
     use mod_grid,               only: get_element_mapping, face_corners
     use mod_reference_elements, only: get_reference_element, ref_elems
@@ -21,6 +21,7 @@ module type_element
     use type_element_connectivity,  only: element_connectivity_t
     use type_reference_element,     only: reference_element_t
     use DNAD_D
+    use ieee_arithmetic,            only: ieee_value, ieee_quiet_nan
     implicit none
 
 
@@ -51,19 +52,23 @@ module type_element
     !-----------------------------------------------------------------------------------------
     type, public :: element_t
 
-        ! Element info
+        ! Element location
         integer(ik)     :: element_location(4)              ! [idomain_g, idomain_l, ielement_g, ielement_l], useful for nonblocking send
         integer(ik)     :: idomain_g                        ! Global index of parent domain
         integer(ik)     :: idomain_l                        ! Proc-local index of parent domain
         integer(ik)     :: ielement_g                       ! Domain-global index of element
         integer(ik)     :: ielement_l                       ! Proc-local index of the element
 
-        integer(ik)     :: element_type
+        ! Element data
+        integer(ik)     :: element_data(8)                  ! [element_type, spacedim, coordinate_system, neqns, nterms_s, nterms_c, ntime, interpolation_level]
+        integer(ik)     :: element_type                     ! 1=linear, 2=quadratic, 3=cubic, 4=quartic, etc.
         integer(ik)     :: spacedim                         ! Number of spatial dimensions for the element
+        integer(ik)     :: coordinate_system                ! CARTESIAN, CYLINDRICAL. parameters from mod_constants
         integer(ik)     :: neqns                            ! Number of equations being solved
         integer(ik)     :: nterms_s                         ! Number of terms in solution expansion.  
         integer(ik)     :: nterms_c                         ! Number of terms in coordinate expansion. 
         integer(ik)     :: ntime                            ! Number of time levels in solution
+        integer(ik)     :: interpolation_level              ! 1=lowest, 2-> are higher
 
         ! Element quadrature points, mesh points and modes
         integer(ik),    allocatable     :: connectivity(:)      ! Integer indices of the associated nodes in block node list
@@ -73,7 +78,8 @@ module type_element
         real(rk),       allocatable     :: vnodes_l(:,:)        ! Node velocities,    local element ordering
         real(rk),       allocatable     :: nodes_to_modes(:,:)  ! Transformation matrix for converting nodal values to modal coefficients
         type(densevector_t)             :: coords               ! Modal expansion of coordinates (nterms_var,(x,y,z))
-        character(:),   allocatable     :: coordinate_system    ! 'Cartesian', 'Cylindrical'
+        !character(:),   allocatable     :: coordinate_system    ! 'Cartesian', 'Cylindrical'
+        !character(100), allocatable     :: coordinate_system    ! 'Cartesian', 'Cylindrical'
 
         ! Element metric terms
         real(rk), allocatable           :: metric(:,:,:)                ! metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
@@ -338,7 +344,14 @@ contains
         !
         ! Set coordinate system and confirm initialization 
         !
-        self%coordinate_system = coord_system
+        select case(trim(coord_system))
+            case('Cartesian')
+                self%coordinate_system = CARTESIAN
+            case('Cylindrical')
+                self%coordinate_system = CYLINDRICAL
+            case default
+                call chidg_signal_one(FATAL,"element%init_geom: Invalid coordinate system.",trim(coord_system))
+        end select
         self%geom_initialized = .true.   
 
 
@@ -355,6 +368,12 @@ contains
         call self%init_ale(dnodes,vnodes)
 
 
+        !
+        ! Store element_data(1-2)
+        !
+        self%element_data(1) = self%element_type
+        self%element_data(2) = self%spacedim
+        self%element_data(3) = self%coordinate_system
 
 
 
@@ -594,6 +613,19 @@ contains
         !
         self%numInitialized = .true.    
 
+
+        !
+        ! Store element_data(3-7)
+        !
+        self%element_data(4) = self%neqns
+        self%element_data(5) = self%nterms_s
+        self%element_data(6) = self%nterms_c
+        self%element_data(7) = self%ntime
+        self%element_data(8) = level
+
+
+
+
     end subroutine init_sol
     !*****************************************************************************************
 
@@ -766,13 +798,14 @@ contains
         allocate(scaling_12(nnodes), scaling_13(nnodes), scaling_23(nnodes), scaling_123(nnodes), stat=ierr)
         if (ierr /= 0) call AllocationError
 
+        !select case (trim(self%coordinate_system))
         select case (self%coordinate_system)
-            case ('Cartesian')
+            case (CARTESIAN)
                 scaling_12  = ONE
                 scaling_13  = ONE
                 scaling_23  = ONE
                 scaling_123 = ONE
-            case ('Cylindrical')
+            case (CYLINDRICAL)
                 scaling_12  = self%quad_pts(:,1)
                 scaling_13  = ONE
                 scaling_23  = self%quad_pts(:,1)
@@ -1277,10 +1310,10 @@ contains
         class(element_t),   intent(in)  :: self
         real(rk),           intent(in)  :: xi,eta,zeta
 
-        real(rk)                   :: val1, val2, val3
-        type(point_t)              :: phys_point
-        real(rk)                   :: polyvals(self%nterms_c)
-        integer(ik)                :: iterm, spacedim
+        real(rk)                :: val1, val2, val3
+        real(rk)                :: phys_point(3)
+        real(rk)                :: polyvals(self%nterms_c)
+        integer(ik)             :: iterm, spacedim
 
 
 
@@ -1304,7 +1337,8 @@ contains
         !
         ! Set physical coordinates
         !
-        call phys_point%set(val1,val2,val3) 
+        !call phys_point%set(val1,val2,val3) 
+        phys_point = [val1,val2,val3]
 
 
     end function physical_point
@@ -1431,9 +1465,9 @@ contains
         !
         if (present(scale)) then
             if (scale) then
-                if (self%coordinate_system == 'Cartesian') then
+                if (self%coordinate_system == CARTESIAN) then
 
-                else if (self%coordinate_system == 'Cylindrical') then
+                else if (self%coordinate_system == CYLINDRICAL) then
                     if (phys_dir == DIR_THETA) then
                         r = self%grid_point('Reference',1,xi,eta,zeta)
                         val = val * r
@@ -1616,9 +1650,15 @@ contains
     !>  Compute a computational location(xi,eta,zeta), based on the location in 
     !!  physical space (x,y,z), (r,theta,z)
     !!
-    !!  NOTE: Will return a location, even if the newton solve did not converge. So make
-    !!        sure to check the 'status' component of the returned point_t to check if 
-    !!        the point is valid.
+    !!  NOTE: Will return a location, even if the newton solve did not converge. If the
+    !!        newton solve did not converge, the point values will be NaN, so the result
+    !!        should be checked for NaN's before being used. The recommended approach is:
+    !!       
+    !!      use ieee_arithmetic,    only: ieee_is_nan
+    !!      valid_point = (any(ieee_is_nan(result)))
+    !!        
+    !!
+    !!      
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   5/23/2016
@@ -1635,7 +1675,8 @@ contains
         real(rk),           intent(in)  :: coord2
         real(rk),           intent(in)  :: coord3
 
-        type(point_t)       :: loc, point_n
+        !type(point_t)       :: loc, point_n
+        real(rk)            :: loc(3), point_n(3)
         real(rk)            :: xi, eta, zeta
         integer(ik)         :: inewton
 
@@ -1669,9 +1710,9 @@ contains
             !
             ! Assemble residual vector
             !
-            R(1) = -(point_n%c1_ - coord1)
-            R(2) = -(point_n%c2_ - coord2)
-            R(3) = -(point_n%c3_ - coord3)
+            R(1) = -(point_n(1) - coord1)
+            R(2) = -(point_n(2) - coord2)
+            R(3) = -(point_n(3) - coord3)
 
 
             !
@@ -1718,8 +1759,9 @@ contains
             ! Exit if converged
             !
             if ( res < tol ) then
-                loc%status = VALID_POINT  ! point found
-                call loc%set(xi,eta,zeta)
+                !loc%status = VALID_POINT  ! point found
+                !call loc%set(xi,eta,zeta)
+                loc = [xi, eta, zeta]
                 exit
             end if
 
@@ -1736,7 +1778,8 @@ contains
 
 
             if ( inewton == 20 ) then
-                loc%status = INVALID_POINT  ! point not found
+                !loc%status = INVALID_POINT  ! point not found
+                loc = ieee_value(1._rk,ieee_quiet_nan)
             end if
 
         end do ! inewton
@@ -2054,12 +2097,12 @@ contains
         if (ierr /= 0) call AllocationError
 
         select case (self%coordinate_system)
-            case ('Cartesian')
+            case (CARTESIAN)
                 scaling_12  = ONE
                 scaling_13  = ONE
                 scaling_23  = ONE
                 scaling_123 = ONE
-            case ('Cylindrical')
+            case (CYLINDRICAL)
                 scaling_12  = self%quad_pts(:,1)
                 scaling_13  = ONE
                 scaling_23  = self%quad_pts(:,1)
@@ -2203,9 +2246,9 @@ contains
         !
         if (present(scale)) then
             if (scale) then
-                if (self%coordinate_system == 'Cartesian') then
+                if (self%coordinate_system == CARTESIAN) then
 
-                else if (self%coordinate_system == 'Cylindrical') then
+                else if (self%coordinate_system == CYLINDRICAL) then
                     if (phys_dir == DIR_THETA) then
                         r = self%grid_point('Reference',1,xi,eta,zeta)
                         val = val * r

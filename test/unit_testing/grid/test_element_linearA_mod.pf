@@ -830,15 +830,15 @@ contains
 
         real(rk), dimension(8)  :: ref_xi, ref_eta, ref_zeta
         real(rk), dimension(8)  :: check_xi, check_eta, check_zeta
-        type(point_t)           :: check_coords
+        real(rk)                :: check_coords(3)
         real(rk)                :: x, y, z
         integer(ik)             :: ipt
                         
 
 
-        ref_xi   = [-ONE, ONE, -ONE, ONE, -ONE, ONE, -ONE, ONE]
-        ref_eta  = [-ONE, -ONE, ONE, ONE, -ONE, -ONE, ONE, ONE]
-        ref_zeta = [-ONE, -ONE, -ONE, -ONE, ONE, ONE, ONE, ONE]
+        ref_xi   = [-ONE,  ONE, -ONE,  ONE, -ONE,  ONE, -ONE, ONE]
+        ref_eta  = [-ONE, -ONE,  ONE,  ONE, -ONE, -ONE,  ONE, ONE]
+        ref_zeta = [-ONE, -ONE, -ONE, -ONE,  ONE,  ONE,  ONE, ONE]
 
 
         do ipt = 1,size(self%nodes,1)
@@ -848,9 +848,9 @@ contains
 
             check_coords = self%elem%computational_point(x, y, z)
 
-            check_xi(ipt)   = check_coords%c1_
-            check_eta(ipt)  = check_coords%c2_
-            check_zeta(ipt) = check_coords%c3_
+            check_xi(ipt)   = check_coords(1)
+            check_eta(ipt)  = check_coords(2)
+            check_zeta(ipt) = check_coords(3)
         end do
 
         @assertEqual(ref_xi,   check_xi  )

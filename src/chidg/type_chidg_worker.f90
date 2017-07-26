@@ -29,8 +29,9 @@
 module type_chidg_worker
 #include <messenger.h>
     use mod_kinds,              only: ik, rk
-    use mod_constants,          only: NFACES, ME, NEIGHBOR, BC, ZERO, CHIMERA, &
-                                      ONE, THIRD, TWO, NOT_A_FACE, BOUNDARY
+    use mod_constants,          only: NFACES, ME, NEIGHBOR, BC, ZERO, CHIMERA,  &
+                                      ONE, THIRD, TWO, NOT_A_FACE, BOUNDARY,    &
+                                      CARTESIAN, CYLINDRICAL
 
     use mod_interpolate,        only: interpolate_element_autodiff
     use mod_integrate,          only: integrate_boundary_scalar_flux, &
@@ -1876,7 +1877,11 @@ contains
 
         character(:),   allocatable :: system
 
-        system = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%coordinate_system
+        if (self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%coordinate_system == CARTESIAN) then
+            system = 'Cartesian'
+        else if (self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%coordinate_system == CYLINDRICAL) then
+            system = 'Cylindrical'
+        end if
 
     end function coordinate_system
     !**************************************************************************************

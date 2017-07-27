@@ -483,7 +483,8 @@ contains
 
         integer(ik)             :: nelem, ierr, idomain_g, ielement_g, nterms_s, neqns, &
                                    nparallel_elements, pelem_ID, ChiID
-        real(rk)                :: computed_norm, expected_norm, det_jacobian_grid, inv_jacobian_grid(3,3), grid_velocity(3), &
+        real(rk)                :: computed_norm, expected_norm, det_jacobian_grid,     &
+                                   det_jacobian_grid_grad(3), inv_jacobian_grid(3,3), grid_velocity(3), &
                                    tol, xi, eta, zeta
         real(rk),   allocatable :: dnodes(:,:), vnodes(:,:), communicated_data(:,:), expected_data(:,:)
 
@@ -652,7 +653,7 @@ contains
                 xi   = -ONE
                 eta  = ZERO
                 zeta = ZERO
-                call self%chidg%data%mesh%parallel_element(pelem_ID)%ale_point(xi,eta,zeta, det_jacobian_grid, inv_jacobian_grid, grid_velocity)
+                call self%chidg%data%mesh%parallel_element(pelem_ID)%ale_point(xi,eta,zeta, det_jacobian_grid, det_jacobian_grid_grad, inv_jacobian_grid, grid_velocity)
 
                 @assertEqual(0.5_rk,                                                              det_jacobian_grid, tol)
                 @assertEqual([12.5_rk, 0._rk, 0._rk],                                             grid_velocity,     tol)
@@ -690,7 +691,7 @@ contains
                 xi   = ONE
                 eta  = ZERO
                 zeta = ZERO
-                call self%chidg%data%mesh%parallel_element(pelem_ID)%ale_point(xi,eta,zeta, det_jacobian_grid, inv_jacobian_grid, grid_velocity)
+                call self%chidg%data%mesh%parallel_element(pelem_ID)%ale_point(xi,eta,zeta, det_jacobian_grid, det_jacobian_grid_grad, inv_jacobian_grid, grid_velocity)
 
                 @assertEqual(1.5_rk,                                                                    det_jacobian_grid, tol)
                 @assertEqual([12.5_rk, 0._rk, 0._rk],                                                   grid_velocity,     tol)
@@ -743,7 +744,7 @@ contains
                 xi   = -ONE
                 eta  = ZERO
                 zeta = ZERO
-                call self%chidg%data%mesh%parallel_element(pelem_ID)%ale_point(xi,eta,zeta, det_jacobian_grid, inv_jacobian_grid, grid_velocity)
+                call self%chidg%data%mesh%parallel_element(pelem_ID)%ale_point(xi,eta,zeta, det_jacobian_grid, det_jacobian_grid_grad, inv_jacobian_grid, grid_velocity)
 
                 @assertEqual(0.5_rk,                                                              det_jacobian_grid, tol)
                 @assertEqual([12.5_rk, 0._rk, 0._rk],                                             grid_velocity,     tol)
@@ -777,7 +778,7 @@ contains
                 xi   = ONE
                 eta  = ZERO
                 zeta = ZERO
-                call self%chidg%data%mesh%parallel_element(pelem_ID)%ale_point(xi,eta,zeta, det_jacobian_grid, inv_jacobian_grid, grid_velocity)
+                call self%chidg%data%mesh%parallel_element(pelem_ID)%ale_point(xi,eta,zeta, det_jacobian_grid, det_jacobian_grid_grad, inv_jacobian_grid, grid_velocity)
 
                 @assertEqual(1.5_rk,                                                                    det_jacobian_grid, tol)
                 @assertEqual([12.5_rk, 0._rk, 0._rk],                                                   grid_velocity,     tol)
@@ -828,7 +829,7 @@ contains
                 xi   = -ONE
                 eta  = ZERO
                 zeta = ZERO
-                call self%chidg%data%mesh%parallel_element(pelem_ID)%ale_point(xi,eta,zeta, det_jacobian_grid, inv_jacobian_grid, grid_velocity)
+                call self%chidg%data%mesh%parallel_element(pelem_ID)%ale_point(xi,eta,zeta, det_jacobian_grid, det_jacobian_grid_grad, inv_jacobian_grid, grid_velocity)
 
                 @assertEqual(0.5_rk,                                                              det_jacobian_grid, tol)
                 @assertEqual([12.5_rk, 0._rk, 0._rk],                                             grid_velocity,     tol)
@@ -862,7 +863,7 @@ contains
                 xi   = ONE
                 eta  = ZERO
                 zeta = ZERO
-                call self%chidg%data%mesh%parallel_element(pelem_ID)%ale_point(xi,eta,zeta, det_jacobian_grid, inv_jacobian_grid, grid_velocity)
+                call self%chidg%data%mesh%parallel_element(pelem_ID)%ale_point(xi,eta,zeta, det_jacobian_grid, det_jacobian_grid_grad, inv_jacobian_grid, grid_velocity)
 
                 @assertEqual(1.5_rk,                                                                    det_jacobian_grid, tol)
                 @assertEqual([12.5_rk, 0._rk, 0._rk],                                                   grid_velocity,     tol)

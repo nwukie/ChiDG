@@ -36,6 +36,7 @@ module type_fgmres_cgs_mg
     type, public, extends(linear_solver_t) :: fgmres_cgs_mg_t
 
         integer(ik) :: m = 2000
+        integer(ik) :: mg = 2
 
     contains
 
@@ -88,7 +89,8 @@ contains
 
 
         ! Multi-grid data
-        type(fgmres_cgs_t)      :: mg_linear_solver
+        type(fgmres_cgs_t)      :: linear_solver
+        type(fgmres_cgs_mg_t)   :: mg_linear_solver
         type(precon_ILU0_t)     :: mg_M
         !type(precon_jacobi_t)   :: mg_M
         type(chidg_matrix_t)    :: mg_A
@@ -100,6 +102,10 @@ contains
         type(chidg_vector_t)    :: mg_err_smoothed
         type(chidg_vector_t)    :: r_sm
 
+        !
+        ! Set the multigrid recursion level
+        !
+        mg_linear_solver%mg = self%mg - 1
 
 
         !
@@ -226,24 +232,21 @@ contains
                 !************************************************
                 ! Multigrid: coarse-scale correction
                 !************************************************
-                if (nmg >= 1) then
+                if ( (nmg >= 40) .and. (self%mg > 1) ) then
 
 
 
-
-
-                
                     !
                     ! Apply ILU0 Smoother
                     !
-                    !r    = b - chidg_mv(A,v(j))     ! compute current residual
+                    !r    = b - chidg_mv(A,v(j))        ! compute current residual
                     !r    = v(j) - chidg_mv(A,x(j))     ! compute current residual
-                    mg_r = r%restrict(nterms_r=1)
-                    !mg_r = v(j)%restrict(nterms_r=1)
-                    mg_A = A%restrict(nterms_r=1)
+                    mg_r = v(j)%restrict(nterms_r=self%mg-1)
+                    mg_A = A%restrict(nterms_r=self%mg-1)
                     select type(M)
                         type is (precon_ILU0_t)
-                            mg_M = M%restrict(nterms_r=1)
+                            mg_M = M%restrict(nterms_r=self%mg-1)
+                            call mg_M%update(mg_A,mg_r)
                         !type is (precon_jacobi_t)
                         !    mg_M = M%restrict(nterms_r=1)
                     end select
@@ -256,22 +259,21 @@ contains
                     call write_line('solving for coarse-scale correction', io_proc=GLOBAL_MASTER, silence=(verbosity<4))
                     mg_err = mg_r
                     call mg_err%clear()
-                    call mg_linear_solver%solve(mg_A,mg_err,mg_r,mg_M)
 
+                    call mg_linear_solver%solve(mg_A,mg_err,mg_r,mg_M)
 
                     !
                     ! Prolong error and apply as coarse-scale correction
                     !
                     call write_line('applying coarse-scale correction', io_proc=GLOBAL_MASTER, silence=(verbosity<4))
-                    mg_err_smoothed = mg_err%prolong(nterms_p=v(j)%dom(1)%vecs(1)%nterms())
-                    r_sm = v(j) - chidg_mv(A,mg_err_smoothed)
-                    mg_err_smoothed = mg_err_smoothed + M%apply(A,r_sm)
-                    mg_v = v(j) + mg_err_smoothed
-                    !mg_v = mg_err_smoothed
+                    mg_v = v(j) + mg_err%prolong(nterms_p=v(j)%dom(1)%vecs(1)%nterms())
                     nmg  = 0
 
+                    z(j) = M%apply(A,mg_v)
+                    !z(j) = mg_v
+
                 else
-                    mg_v = v(j)
+                    z(j) = M%apply(A,v(j))
                 end if
                 nmg = nmg + 1
 
@@ -283,9 +285,7 @@ contains
                 ! Apply fine-scale preconditioner:  z(j) = Minv * v(j)
                 !
                 call timer_precon%start()
-                !z(j) = M%apply(A,v(j))
-                !z(j) = M%apply(A,mg_v)
-                z(j) = mg_v
+                !z(j) = mg_v
                 call timer_precon%stop()
 
 

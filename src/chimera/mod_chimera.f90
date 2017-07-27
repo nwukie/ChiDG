@@ -80,11 +80,8 @@ contains
         ! Loop through each element of each domain and look for ORPHAN face-types.
         ! If orphan is found, designate as CHIMERA 
         !
-        print*, 'detect_chimera_faces - 1: ', IRANK
         do idom = 1,ndom
-        print*, 'detect_chimera_faces - 2: ', IRANK
             do ielem = 1,mesh%domain(idom)%nelem
-        print*, 'detect_chimera_faces - 3: ', IRANK
 
 
                 !
@@ -97,7 +94,6 @@ contains
                     ! Test also if the current face is CHIMERA in case this is being 
                     ! called as a reinitialization procedure.
                     !
-                    print*, 'face type: ', mesh%domain(idom)%faces(ielem,iface)%ftype
                     orphan_face = ( mesh%domain(idom)%faces(ielem,iface)%ftype == ORPHAN .or. &
                                     mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA )
 
@@ -112,14 +108,12 @@ contains
 
                         ! Set domain-local Chimera identifier. Really, just the index order which they were detected in, starting from 1.
                         ! The n-th chimera face
-                        print*, 'before: ', mesh%domain(idom)%faces(ielem,iface)%ChiID
                         mesh%domain(idom)%faces(ielem,iface)%ChiID = mesh%domain(idom)%chimera%add_receiver(mesh%domain(idom)%idomain_g, &
                                                                                                             mesh%domain(idom)%idomain_l, &
                                                                                                             mesh%domain(idom)%elems(ielem)%ielement_g, &
                                                                                                             mesh%domain(idom)%elems(ielem)%ielement_l, &
                                                                                                             iface,                                     &
                                                                                                             IRANK)
-                        print*, 'after: ', mesh%domain(idom)%faces(ielem,iface)%ChiID
                     end if
 
 
@@ -127,7 +121,6 @@ contains
             end do ! ielem
         end do ! idom
 
-        print*, 'detect_chimera_faces - 4: ', IRANK
 
     end subroutine detect_chimera_faces
     !*********************************************************************************************************************

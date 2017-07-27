@@ -615,7 +615,7 @@ contains
 
 
         !
-        ! Store element_data(3-7)
+        ! Store element_data(4-8)
         !
         self%element_data(4) = self%neqns
         self%element_data(5) = self%nterms_s

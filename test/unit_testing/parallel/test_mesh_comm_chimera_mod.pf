@@ -158,6 +158,9 @@ contains
 
 
 
+        !
+        ! Create mesh
+        !
         if (IRANK == GLOBAL_MASTER) then
 
             bc_state_groups(1)%name = "Dirichlet"
@@ -197,29 +200,6 @@ contains
 
 
         end if
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        !!
-        !! Create mesh
-        !!
-        !if (IRANK == GLOBAL_MASTER) then
-        !    call create_mesh_file("D2 NxNxN M1",this%gridfile, nelem_xi=4, nelem_eta=1, nelem_zeta=1)
-        !    !call create_mesh_file("D1 NxNxN",this%gridfile,nelem_xi=4,nelem_eta=1,nelem_zeta=1)
-        !end if
         call MPI_Barrier(this%ChiDG_COMM,ierr)
 
 
@@ -303,9 +283,6 @@ contains
 
         else if (NRANK == 3) then
 
-            !
-            ! Partition for IRANK == 0
-            !
             !  NRANK = 3
             !
             !  IRANK = 0   IRANK = 1   IRANK = 2                                    
@@ -316,29 +293,33 @@ contains
             !                                                                       
             !
 
-            ! element 1
+            !
+            ! Partition for IRANK == 0
+            !
             call partitions(1)%init(1)
             call partitions(1)%connectivities(1)%init('01',nelements=1,nnodes=8)
+
+            ! element 1
             call partitions(1)%connectivities(1)%data(1)%init(1)                                            ! mapping
             call partitions(1)%connectivities(1)%data(1)%set_domain_index(1)                                ! idomain_g
             call partitions(1)%connectivities(1)%data(1)%set_element_index(1)                               ! ielement_g
             call partitions(1)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
-            call partitions(1)%connectivities(1)%data(1)%set_element_nodes([1, 2, 6, 7, 11, 12, 16, 17])    ! nodes
+            call partitions(1)%connectivities(1)%data(1)%set_element_nodes([1, 2, 4, 5, 7, 8, 10, 11])      ! nodes
             call partitions(1)%connectivities(1)%data(1)%set_element_partition(0)                           ! IRANK
 
 
             !
             ! Partition for IRANK == 1
             !
-
-            ! element 2
             call partitions(2)%init(1)
             call partitions(2)%connectivities(1)%init('01',nelements=1,nnodes=8)
+
+            ! element 2
             call partitions(2)%connectivities(1)%data(1)%init(1)                                            ! mapping
             call partitions(2)%connectivities(1)%data(1)%set_domain_index(1)                                ! idomain_g
             call partitions(2)%connectivities(1)%data(1)%set_element_index(2)                               ! ielement_g
             call partitions(2)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
-            call partitions(2)%connectivities(1)%data(1)%set_element_nodes([2, 3, 7, 8, 12, 13, 17, 18])    ! nodes
+            call partitions(2)%connectivities(1)%data(1)%set_element_nodes([2, 3, 5, 6, 8, 9, 11, 12])      ! nodes
             call partitions(2)%connectivities(1)%data(1)%set_element_partition(1)                           ! IRANK
 
 
@@ -347,22 +328,22 @@ contains
             ! Partition for IRANK == 2
             !
             call partitions(3)%init(1)
-            call partitions(3)%connectivities(1)%init('01',nelements=2,nnodes=12)
+            call partitions(3)%connectivities(1)%init('02',nelements=2,nnodes=12)
 
             ! element 3
             call partitions(3)%connectivities(1)%data(1)%init(1)                                            ! mapping
-            call partitions(3)%connectivities(1)%data(1)%set_domain_index(1)                                ! idomain_g
-            call partitions(3)%connectivities(1)%data(1)%set_element_index(3)                               ! ielement_g
+            call partitions(3)%connectivities(1)%data(1)%set_domain_index(2)                                ! idomain_g
+            call partitions(3)%connectivities(1)%data(1)%set_element_index(1)                               ! ielement_g
             call partitions(3)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
-            call partitions(3)%connectivities(1)%data(1)%set_element_nodes([3, 4, 8, 9, 13, 14, 18, 19])    ! nodes
+            call partitions(3)%connectivities(1)%data(1)%set_element_nodes([1, 2, 4, 5, 7, 8, 10, 11])      ! nodes
             call partitions(3)%connectivities(1)%data(1)%set_element_partition(2)                           ! IRANK
 
             ! element 4
             call partitions(3)%connectivities(1)%data(2)%init(1)                                            ! mapping
-            call partitions(3)%connectivities(1)%data(2)%set_domain_index(1)                                ! idomain_g
-            call partitions(3)%connectivities(1)%data(2)%set_element_index(4)                               ! ielement_g
+            call partitions(3)%connectivities(1)%data(2)%set_domain_index(2)                                ! idomain_g
+            call partitions(3)%connectivities(1)%data(2)%set_element_index(2)                               ! ielement_g
             call partitions(3)%connectivities(1)%data(2)%set_element_mapping(1)                             ! mapping
-            call partitions(3)%connectivities(1)%data(2)%set_element_nodes([4, 5, 9, 10, 14, 15, 19, 20])   ! nodes
+            call partitions(3)%connectivities(1)%data(2)%set_element_nodes([2, 3, 5, 6, 8, 9, 11, 12])      ! nodes
             call partitions(3)%connectivities(1)%data(2)%set_element_partition(2)                           ! IRANK
 
         else if (NRANK == 4) then
@@ -373,13 +354,12 @@ contains
             !
             !   NRANK = 4
             ! 
-            !   IRANK = 0   IRANK = 1   IRANK = 2   IRANK = 3     [ 1 2     ]   [ 1 ]
-            !     .---.       .---.       .---.       .---.                          
-            !     | 2 |       | 1 |       | 4 |       | 3 |       [ 1 2 3   ] * [ 2 ]
-            !     .---.       .---.       .---.       .---.                          
-            !       1           1           1           1         [   2 3 4 ]   [ 3 ]
+            !   IRANK = 0   IRANK = 1   IRANK = 2   IRANK = 3    
+            !     .---.       .---.       .---.       .---.      
+            !     | 1 |       | 2 |       | 1 |       | 2 |      
+            !     .---.       .---.       .---.       .---.      
+            !       1           1           1           1        
             ! 
-            !                                                     [     3 4 ]   [ 4 ]
             !
             ! Partition for IRANK == 0
             !
@@ -391,7 +371,7 @@ contains
             call partitions(1)%connectivities(1)%data(1)%set_domain_index(1)                                ! idomain_g
             call partitions(1)%connectivities(1)%data(1)%set_element_index(1)                               ! ielement_g
             call partitions(1)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
-            call partitions(1)%connectivities(1)%data(1)%set_element_nodes([1, 2, 6, 7, 11, 12, 16, 17])    ! nodes
+            call partitions(1)%connectivities(1)%data(1)%set_element_nodes([1, 2, 4, 5, 7, 8, 10, 11])      ! nodes
             call partitions(1)%connectivities(1)%data(1)%set_element_partition(0)                           ! IRANK
 
 
@@ -407,7 +387,7 @@ contains
             call partitions(2)%connectivities(1)%data(1)%set_domain_index(1)                                ! idomain_g
             call partitions(2)%connectivities(1)%data(1)%set_element_index(2)                               ! ielement_g
             call partitions(2)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
-            call partitions(2)%connectivities(1)%data(1)%set_element_nodes([2, 3, 7, 8, 12, 13, 17, 18])! nodes
+            call partitions(2)%connectivities(1)%data(1)%set_element_nodes([2, 3, 5, 6, 8, 9, 11, 12])      ! nodes
             call partitions(2)%connectivities(1)%data(1)%set_element_partition(1)                           ! IRANK
 
 
@@ -416,14 +396,14 @@ contains
             !
             ! Set information on element in partition
             call partitions(3)%init(1)
-            call partitions(3)%connectivities(1)%init('01',nelements=1,nnodes=8)
+            call partitions(3)%connectivities(1)%init('02',nelements=1,nnodes=8)
 
             ! element 2
             call partitions(3)%connectivities(1)%data(1)%init(1)                                            ! mapping
-            call partitions(3)%connectivities(1)%data(1)%set_domain_index(1)                                ! idomain_g
-            call partitions(3)%connectivities(1)%data(1)%set_element_index(3)                               ! ielement_g
+            call partitions(3)%connectivities(1)%data(1)%set_domain_index(2)                                ! idomain_g
+            call partitions(3)%connectivities(1)%data(1)%set_element_index(1)                               ! ielement_g
             call partitions(3)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
-            call partitions(3)%connectivities(1)%data(1)%set_element_nodes([3, 4, 8, 9, 13, 14, 18, 19])    ! nodes
+            call partitions(3)%connectivities(1)%data(1)%set_element_nodes([1, 2, 4, 5, 7, 8, 10, 11])      ! nodes
             call partitions(3)%connectivities(1)%data(1)%set_element_partition(2)                           ! IRANK
 
 
@@ -432,14 +412,14 @@ contains
             !
             ! Set information on element in partition
             call partitions(4)%init(1)
-            call partitions(4)%connectivities(1)%init('01',nelements=1,nnodes=8)
+            call partitions(4)%connectivities(1)%init('02',nelements=1,nnodes=8)
 
             ! element 1
             call partitions(4)%connectivities(1)%data(1)%init(1)                                            ! mapping
-            call partitions(4)%connectivities(1)%data(1)%set_domain_index(1)                                ! idomain_g
-            call partitions(4)%connectivities(1)%data(1)%set_element_index(4)                               ! ielement_g
+            call partitions(4)%connectivities(1)%data(1)%set_domain_index(2)                                ! idomain_g
+            call partitions(4)%connectivities(1)%data(1)%set_element_index(2)                               ! ielement_g
             call partitions(4)%connectivities(1)%data(1)%set_element_mapping(1)                             ! mapping
-            call partitions(4)%connectivities(1)%data(1)%set_element_nodes([4, 5, 9, 10, 14, 15, 19, 20])   ! nodes
+            call partitions(4)%connectivities(1)%data(1)%set_element_nodes([2, 3, 5, 6, 8, 9, 11, 12])      ! nodes
             call partitions(4)%connectivities(1)%data(1)%set_element_partition(3)                           ! IRANK
 
 
@@ -497,15 +477,17 @@ contains
     !!  @date   6/23/2016
     !!
     !------------------------------------------------------------------------------------------
-    @Test(npes=[2])
+    @Test(npes=[2,3,4])
     subroutine test_chimera_ale_comm(self)
         class(test_mesh_comm_chimera), intent(inout) :: self
 
         integer(ik)             :: nelem, ierr, idomain_g, ielement_g, nterms_s, neqns, &
                                    nparallel_elements, pelem_ID, ChiID
-        real(rk)                :: computed_norm, expected_norm
+        real(rk)                :: computed_norm, expected_norm, det_jacobian_grid, inv_jacobian_grid(3,3), grid_velocity(3), &
+                                   tol, xi, eta, zeta
         real(rk),   allocatable :: dnodes(:,:), vnodes(:,:), communicated_data(:,:), expected_data(:,:)
 
+        tol   = 1.e-6_rk
         IRANK = self%getProcessRank()
 
 
@@ -522,6 +504,18 @@ contains
         vnodes = ZERO
 
 
+        !  Centerplane interface displacement = 0.125
+        !  Centerplane interface velocity     = 0.125/0.01 = 12.5
+        !
+        !     Initial Grid            Deformed Grid
+        !  .---.---..---.---.        .---.----..--.---.  
+        !  | 1 | 2 || 1 | 2 |        | 1 | 2  ||1 | 2 |
+        !  .---.---..---.---.        .---.----..--.---.  
+        !    dom 1    dom 2            dom 1     dom 2
+        !
+        !                                   --> 0.125 units   displacement
+        !                                   --> 12.5  units/s velocity
+        !
         if (NRANK == 2) then
 
             if (IRANK == 0) then
@@ -548,6 +542,61 @@ contains
                 call self%chidg%data%mesh%domain(1)%update_ale()
             end if
 
+
+        else if (NRANK == 3) then
+
+            if ( (IRANK == 0) .or. (IRANK == 1) ) then
+                dnodes(:,1) = [ZERO, ZERO, 0.125_rk,    &
+                               ZERO, ZERO, 0.125_rk,    &
+                               ZERO, ZERO, 0.125_rk,    &
+                               ZERO, ZERO, 0.125_rk]
+                vnodes(:,1) = [ZERO, ZERO, 12.5_rk,     &
+                               ZERO, ZERO, 12.5_rk,     &
+                               ZERO, ZERO, 12.5_rk,     &
+                               ZERO, ZERO, 12.5_rk]
+                call self%chidg%data%mesh%domain(1)%init_ale(dnodes,vnodes)
+                call self%chidg%data%mesh%domain(1)%update_ale()
+            else if (IRANK == 2) then
+                dnodes(:,1) = [0.125_rk, ZERO, ZERO,    &
+                               0.125_rk, ZERO, ZERO,    &
+                               0.125_rk, ZERO, ZERO,    &
+                               0.125_rk, ZERO, ZERO]
+                vnodes(:,1) = [12.5_rk, ZERO, ZERO,     &
+                               12.5_rk, ZERO, ZERO,     &
+                               12.5_rk, ZERO, ZERO,     &
+                               12.5_rk, ZERO, ZERO]
+                call self%chidg%data%mesh%domain(1)%init_ale(dnodes,vnodes)
+                call self%chidg%data%mesh%domain(1)%update_ale()
+            end if
+
+
+        else if (NRANK == 4) then
+
+            if ( (IRANK == 0) .or. (IRANK == 1) ) then
+                dnodes(:,1) = [ZERO, ZERO, 0.125_rk,    &
+                               ZERO, ZERO, 0.125_rk,    &
+                               ZERO, ZERO, 0.125_rk,    &
+                               ZERO, ZERO, 0.125_rk]
+                vnodes(:,1) = [ZERO, ZERO, 12.5_rk,     &
+                               ZERO, ZERO, 12.5_rk,     &
+                               ZERO, ZERO, 12.5_rk,     &
+                               ZERO, ZERO, 12.5_rk]
+                call self%chidg%data%mesh%domain(1)%init_ale(dnodes,vnodes)
+                call self%chidg%data%mesh%domain(1)%update_ale()
+            else if ( (IRANK == 2) .or. (IRANK == 3) ) then
+                dnodes(:,1) = [0.125_rk, ZERO, ZERO,    &
+                               0.125_rk, ZERO, ZERO,    &
+                               0.125_rk, ZERO, ZERO,    &
+                               0.125_rk, ZERO, ZERO]
+                vnodes(:,1) = [12.5_rk, ZERO, ZERO,     &
+                               12.5_rk, ZERO, ZERO,     &
+                               12.5_rk, ZERO, ZERO,     &
+                               12.5_rk, ZERO, ZERO]
+                call self%chidg%data%mesh%domain(1)%init_ale(dnodes,vnodes)
+                call self%chidg%data%mesh%domain(1)%update_ale()
+            end if
+
+
         end if
 
 
@@ -555,7 +604,7 @@ contains
 
 
         !
-        ! Test mesh communication for ALE data.
+        ! Test mesh communication for ALE data. THIS IS BEING TESTED
         !
         call self%chidg%data%mesh%comm_send()
         call self%chidg%data%mesh%comm_recv()
@@ -568,11 +617,17 @@ contains
 
 
         !
-        ! Compute vector norm across processors. THIS IS BEING TESTED
+        ! Check mesh%parallel_element's are initialized correctly.
         !
         if (NRANK == 2) then
 
             if (IRANK == 0) then
+
+                !    Deformed Grid
+                !   .---.----..**.  
+                !   | 1 | 2  ||1 |
+                !   .---.----..**.  
+                !     dom 1    pelem_ID
 
                 nparallel_elements = self%chidg%data%mesh%nparallel_elements()
                 ChiID              = self%chidg%data%mesh%domain(1)%faces(2,2)%ChiID
@@ -590,9 +645,27 @@ contains
                 @assertEqual(neqns,      self%chidg%data%mesh%parallel_element(pelem_ID)%neqns)
 
                 ! Test element geometric/ALE quantities
+                !       .**.  
+                !       |1 |
+                !       .**.  
+                !     pelem_ID
+                xi   = -ONE
+                eta  = ZERO
+                zeta = ZERO
+                call self%chidg%data%mesh%parallel_element(pelem_ID)%ale_point(xi,eta,zeta, det_jacobian_grid, inv_jacobian_grid, grid_velocity)
+
+                @assertEqual(0.5_rk,                                                              det_jacobian_grid, tol)
+                @assertEqual([12.5_rk, 0._rk, 0._rk],                                             grid_velocity,     tol)
+                @assertEqual(reshape([TWO, ZERO, ZERO, ZERO, ONE, ZERO, ZERO, ZERO, ONE], [3,3]), inv_jacobian_grid, tol)
 
 
             else if (IRANK == 1) then
+
+                !    Deformed Grid
+                !       .****..--.---.
+                !       | 2  ||1 | 2 |
+                !       .****..--.---.
+                !     pelem_ID dom 2
 
                 nparallel_elements = self%chidg%data%mesh%nparallel_elements()
                 ChiID              = self%chidg%data%mesh%domain(1)%faces(1,1)%ChiID
@@ -610,8 +683,203 @@ contains
                 @assertEqual(neqns,      self%chidg%data%mesh%parallel_element(pelem_ID)%neqns)
 
                 ! Test element geometric/ALE quantities
+                !       .****.
+                !       | 2  |
+                !       .****.
+                !      pelem_ID
+                xi   = ONE
+                eta  = ZERO
+                zeta = ZERO
+                call self%chidg%data%mesh%parallel_element(pelem_ID)%ale_point(xi,eta,zeta, det_jacobian_grid, inv_jacobian_grid, grid_velocity)
+
+                @assertEqual(1.5_rk,                                                                    det_jacobian_grid, tol)
+                @assertEqual([12.5_rk, 0._rk, 0._rk],                                                   grid_velocity,     tol)
+                @assertEqual(reshape([TWO/THREE, ZERO, ZERO, ZERO, ONE, ZERO, ZERO, ZERO, ONE], [3,3]), inv_jacobian_grid, tol)
 
             end if
+
+
+
+
+
+
+
+
+
+
+
+
+        if (NRANK == 3) then
+
+            if (IRANK == 0) then
+
+                nparallel_elements = self%chidg%data%mesh%nparallel_elements()
+
+                ! Test indices
+                @assertEqual(0,nparallel_elements)
+
+            else if (IRANK == 1) then
+
+                nparallel_elements = self%chidg%data%mesh%nparallel_elements()
+                ChiID              = self%chidg%data%mesh%domain(1)%faces(1,2)%ChiID
+                idomain_g          = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%idomain_g
+                ielement_g         = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%ielement_g
+                pelem_ID           = self%chidg%data%mesh%find_parallel_element(idomain_g, ielement_g)
+                nterms_s           = self%solution_order * self%solution_order * self%solution_order
+                neqns              = 1
+
+                ! Test indices
+                @assertEqual(1,nparallel_elements)
+                @assertEqual(idomain_g,  self%chidg%data%mesh%parallel_element(pelem_ID)%idomain_g)
+                @assertEqual(ielement_g, self%chidg%data%mesh%parallel_element(pelem_ID)%ielement_g)
+                @assertEqual(nterms_s,   self%chidg%data%mesh%parallel_element(pelem_ID)%nterms_s)
+                @assertEqual(neqns,      self%chidg%data%mesh%parallel_element(pelem_ID)%neqns)
+
+                ! Test element geometric/ALE quantities
+                !       .**.  
+                !       |1 |
+                !       .**.  
+                !     pelem_ID
+                xi   = -ONE
+                eta  = ZERO
+                zeta = ZERO
+                call self%chidg%data%mesh%parallel_element(pelem_ID)%ale_point(xi,eta,zeta, det_jacobian_grid, inv_jacobian_grid, grid_velocity)
+
+                @assertEqual(0.5_rk,                                                              det_jacobian_grid, tol)
+                @assertEqual([12.5_rk, 0._rk, 0._rk],                                             grid_velocity,     tol)
+                @assertEqual(reshape([TWO, ZERO, ZERO, ZERO, ONE, ZERO, ZERO, ZERO, ONE], [3,3]), inv_jacobian_grid, tol)
+
+            end if
+
+
+            else if (IRANK == 2) then
+
+                nparallel_elements = self%chidg%data%mesh%nparallel_elements()
+                ChiID              = self%chidg%data%mesh%domain(1)%faces(1,1)%ChiID
+                idomain_g          = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%idomain_g
+                ielement_g         = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%ielement_g
+                pelem_ID           = self%chidg%data%mesh%find_parallel_element(idomain_g, ielement_g)
+                nterms_s           = self%solution_order * self%solution_order * self%solution_order
+                neqns              = 1
+
+                ! Test indices
+                @assertEqual(1,nparallel_elements)
+                @assertEqual(idomain_g,  self%chidg%data%mesh%parallel_element(pelem_ID)%idomain_g)
+                @assertEqual(ielement_g, self%chidg%data%mesh%parallel_element(pelem_ID)%ielement_g)
+                @assertEqual(nterms_s,   self%chidg%data%mesh%parallel_element(pelem_ID)%nterms_s)
+                @assertEqual(neqns,      self%chidg%data%mesh%parallel_element(pelem_ID)%neqns)
+
+                ! Test element geometric/ALE quantities
+                !       .****.
+                !       | 2  |
+                !       .****.
+                !      pelem_ID
+                xi   = ONE
+                eta  = ZERO
+                zeta = ZERO
+                call self%chidg%data%mesh%parallel_element(pelem_ID)%ale_point(xi,eta,zeta, det_jacobian_grid, inv_jacobian_grid, grid_velocity)
+
+                @assertEqual(1.5_rk,                                                                    det_jacobian_grid, tol)
+                @assertEqual([12.5_rk, 0._rk, 0._rk],                                                   grid_velocity,     tol)
+                @assertEqual(reshape([TWO/THREE, ZERO, ZERO, ZERO, ONE, ZERO, ZERO, ZERO, ONE], [3,3]), inv_jacobian_grid, tol)
+
+            end if
+
+
+
+
+
+
+
+
+
+
+        if (NRANK == 4) then
+
+            if (IRANK == 0) then
+
+                nparallel_elements = self%chidg%data%mesh%nparallel_elements()
+
+                ! Test indices
+                @assertEqual(0,nparallel_elements)
+
+            else if (IRANK == 1) then
+
+                nparallel_elements = self%chidg%data%mesh%nparallel_elements()
+                ChiID              = self%chidg%data%mesh%domain(1)%faces(1,2)%ChiID
+                idomain_g          = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%idomain_g
+                ielement_g         = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%ielement_g
+                pelem_ID           = self%chidg%data%mesh%find_parallel_element(idomain_g, ielement_g)
+                nterms_s           = self%solution_order * self%solution_order * self%solution_order
+                neqns              = 1
+
+                ! Test indices
+                @assertEqual(1,nparallel_elements)
+                @assertEqual(idomain_g,  self%chidg%data%mesh%parallel_element(pelem_ID)%idomain_g)
+                @assertEqual(ielement_g, self%chidg%data%mesh%parallel_element(pelem_ID)%ielement_g)
+                @assertEqual(nterms_s,   self%chidg%data%mesh%parallel_element(pelem_ID)%nterms_s)
+                @assertEqual(neqns,      self%chidg%data%mesh%parallel_element(pelem_ID)%neqns)
+
+                ! Test element geometric/ALE quantities
+                !       .**.  
+                !       |1 |
+                !       .**.  
+                !     pelem_ID
+                xi   = -ONE
+                eta  = ZERO
+                zeta = ZERO
+                call self%chidg%data%mesh%parallel_element(pelem_ID)%ale_point(xi,eta,zeta, det_jacobian_grid, inv_jacobian_grid, grid_velocity)
+
+                @assertEqual(0.5_rk,                                                              det_jacobian_grid, tol)
+                @assertEqual([12.5_rk, 0._rk, 0._rk],                                             grid_velocity,     tol)
+                @assertEqual(reshape([TWO, ZERO, ZERO, ZERO, ONE, ZERO, ZERO, ZERO, ONE], [3,3]), inv_jacobian_grid, tol)
+
+            end if
+
+
+            else if (IRANK == 2) then
+
+                nparallel_elements = self%chidg%data%mesh%nparallel_elements()
+                ChiID              = self%chidg%data%mesh%domain(1)%faces(1,1)%ChiID
+                idomain_g          = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%idomain_g
+                ielement_g         = self%chidg%data%mesh%domain(1)%chimera%recv(ChiID)%donor(1)%ielement_g
+                pelem_ID           = self%chidg%data%mesh%find_parallel_element(idomain_g, ielement_g)
+                nterms_s           = self%solution_order * self%solution_order * self%solution_order
+                neqns              = 1
+
+                ! Test indices
+                @assertEqual(1,nparallel_elements)
+                @assertEqual(idomain_g,  self%chidg%data%mesh%parallel_element(pelem_ID)%idomain_g)
+                @assertEqual(ielement_g, self%chidg%data%mesh%parallel_element(pelem_ID)%ielement_g)
+                @assertEqual(nterms_s,   self%chidg%data%mesh%parallel_element(pelem_ID)%nterms_s)
+                @assertEqual(neqns,      self%chidg%data%mesh%parallel_element(pelem_ID)%neqns)
+
+                ! Test element geometric/ALE quantities
+                !       .****.
+                !       | 2  |
+                !       .****.
+                !      pelem_ID
+                xi   = ONE
+                eta  = ZERO
+                zeta = ZERO
+                call self%chidg%data%mesh%parallel_element(pelem_ID)%ale_point(xi,eta,zeta, det_jacobian_grid, inv_jacobian_grid, grid_velocity)
+
+                @assertEqual(1.5_rk,                                                                    det_jacobian_grid, tol)
+                @assertEqual([12.5_rk, 0._rk, 0._rk],                                                   grid_velocity,     tol)
+                @assertEqual(reshape([TWO/THREE, ZERO, ZERO, ZERO, ONE, ZERO, ZERO, ZERO, ONE], [3,3]), inv_jacobian_grid, tol)
+
+
+            else if (IRANK == 3) then
+
+                nparallel_elements = self%chidg%data%mesh%nparallel_elements()
+
+                ! Test indices
+                @assertEqual(0,nparallel_elements)
+
+            end if
+
+
+
 
         end if
 

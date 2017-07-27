@@ -1051,12 +1051,14 @@ contains
         !
         do iproc = 1,size(recv_procs)
             do irecv = 1,self%get_proc_nchimera_donors(recv_procs(iproc))
-                call mpi_recv(element_location, 4, mpi_integer4,  recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-                call mpi_recv(element_data,     8, mpi_integer4,  recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
 
+                ! element_location = [idomain_g, idomain_l, ielement_g, ielement_l]
+                call mpi_recv(element_location, 4, mpi_integer4,  recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
                 idomain_g           = element_location(1)
                 ielement_g          = element_location(3)
 
+                ! element_data = [element_type, spacedim, coordinate_system, nfields, nterms_s, nterms_c, ntime, interpolation_level]
+                call mpi_recv(element_data,     8, mpi_integer4,  recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
                 etype               = element_data(1)
                 spacedim            = element_data(2)
                 coordinate_system   = element_data(3)
@@ -1069,6 +1071,9 @@ contains
                 
 
 
+                ! Allocate buffers and receive: nodes, displacements, and velocities. 
+                ! These quantities are located at the element support nodes, not interpolation
+                ! nodes.
                 if (allocated(nodes)) deallocate(nodes, dnodes, vnodes, connectivity)
                 allocate(nodes(       nnodes,3), &
                          dnodes(      nnodes,3), &
@@ -1083,11 +1088,18 @@ contains
 
                 !
                 ! Build local connectivity
+                !   : we construct the parallel element using just a local ordering
+                !   : so connectivity starts at 1 and goes to the number of nodes in 
+                !   : the element, nnodes.
+                !   :
+                !   :   connectivity = [1, 2, 3, 4, 5, 6, 7, 8 ...]
+                !   :
+                !   : We assume here that the displacements and velocities are ordered
+                !   : appropriately.
                 !
                 do inode = 1,nnodes
                     connectivity(inode) = inode
                 end do
-
 
 
 
@@ -1111,6 +1123,10 @@ contains
                         call chidg_signal(FATAL,"element%comm_recv: invalid coordinate system.")
                 end select
 
+                
+                !
+                ! Construct/initialize/reinitialize parallel element
+                !
                 if (.not. self%parallel_element(pelem_ID)%geom_initialized) then
                     call self%parallel_element(pelem_ID)%init_geom(nodes,connectivity,etype,element_location,trim(coord_system))
                 end if

@@ -123,13 +123,15 @@ contains
         end do  ! idom
 
 
-
+        call data%mesh%comm_send()
+        call data%mesh%comm_recv()
+        call data%mesh%comm_wait()
 
 
         !
         ! Synchronize
         !
-        call MPI_Barrier(ChiDG_COMM,ierr)
+        !call MPI_Barrier(ChiDG_COMM,ierr)
 
 
 

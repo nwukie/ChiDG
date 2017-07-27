@@ -53,9 +53,12 @@ module type_mesh
         procedure, private  :: new_bc_patch_group
         procedure           :: get_bc_patch_group_id
         procedure           :: nbc_patch_groups
-
-        ! Boundary patch procedures
         procedure           :: add_bc_patch
+
+
+        ! Chimera
+        procedure           :: assemble_chimera_data
+
 
         ! Resouce management
         procedure           :: release
@@ -475,6 +478,96 @@ contains
 
 
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/26/2017
+    !!
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine assemble_chimera_data(self)
+        class(mesh_t),  intent(inout)   :: self
+
+        integer(ik)             :: idom, ChiID, idonor, donor_proc, npts, ipt,      &
+                                   idomain_g, ielement_g, idomain_l, ielement_l,    &
+                                   pelem_ID, igq
+        real(rk),   allocatable :: ref_coords(:,:)
+        real(rk)                :: det_jacobian_grid_pt, det_jacobian_grid_grad_pt(3), &
+                                   inv_jacobian_grid_pt(3,3), grid_vel_pt(3), xi, eta, zeta
+        logical                 :: parallel_donor
+
+ 
+        !
+        ! Construct receiver interpolations
+        !
+        !
+        do idom = 1,self%ndomains()
+           do ChiID = 1,self%domain(idom)%chimera%nreceivers()
+              do idonor = 1,self%domain(idom)%chimera%recv(ChiID)%ndonors()
+               
+        
+                  ! Get donor location
+                  donor_proc = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%iproc
+                  ref_coords = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%coords
+                  npts = size(ref_coords,1)
+        
+                  parallel_donor = (donor_proc /= IRANK)
+        
+                  if (parallel_donor) then
+                      idomain_g   = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g
+                      ielement_g  = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_g
+                      pelem_ID    = self%find_parallel_element(idomain_g,ielement_g)
+                      if (pelem_ID == NO_ID) call chidg_signal(FATAL,"mesh%assemble_chimera_data: did not find parallel chimera element.")
+        
+                      do ipt = 1, npts
+                          igq  = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%node_index(ipt)
+                          xi   = ref_coords(ipt,1)
+                          eta  = ref_coords(ipt,2)
+                          zeta = ref_coords(ipt,3)
+                          call self%parallel_element(pelem_ID)%ale_point(xi, eta, zeta,det_jacobian_grid_pt,det_jacobian_grid_grad_pt,inv_jacobian_grid_pt,grid_vel_pt)
+                          self%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid(igq)       = det_jacobian_grid_pt
+                          self%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid_grad1(igq) = det_jacobian_grid_grad_pt(1)
+                          self%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid_grad2(igq) = det_jacobian_grid_grad_pt(2)
+                          self%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid_grad3(igq) = det_jacobian_grid_grad_pt(3)
+                          self%domain(idom)%chimera%recv(ChiID)%inv_jacobian_grid(igq,:,:)   = inv_jacobian_grid_pt
+                          self%domain(idom)%chimera%recv(ChiID)%grid_vel(igq,:)              = grid_vel_pt
+                      end do
+        
+                   else
+        
+                      idomain_l   = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_l
+                      ielement_l  = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_l
+        
+                      do ipt = 1, npts
+                          igq  = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%node_index(ipt)
+                          xi   = ref_coords(ipt,1)
+                          eta  = ref_coords(ipt,2)
+                          zeta = ref_coords(ipt,3)
+                          call self%domain(idomain_l)%elems(ielement_l)%ale_point(xi, eta, zeta,det_jacobian_grid_pt,det_jacobian_grid_grad_pt,inv_jacobian_grid_pt,grid_vel_pt)
+                          self%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid(igq)       = det_jacobian_grid_pt
+                          self%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid_grad1(igq) = det_jacobian_grid_grad_pt(1)
+                          self%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid_grad2(igq) = det_jacobian_grid_grad_pt(2)
+                          self%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid_grad3(igq) = det_jacobian_grid_grad_pt(3)
+                          self%domain(idom)%chimera%recv(ChiID)%inv_jacobian_grid(igq,:,:)   = inv_jacobian_grid_pt
+                          self%domain(idom)%chimera%recv(ChiID)%grid_vel(igq,:)              = grid_vel_pt
+                      end do
+                   end if
+
+         
+              end do !idonor
+           end do !ChiID
+        end do !idom
+
+
+
+
+    end subroutine assemble_chimera_data
+    !********************************************************************************
+
+
+
+
+
 
     !>  Release any allocated resource on the object.
     !!
@@ -888,7 +981,7 @@ contains
         integer(ik)         :: idom, ielem, iface, isend, isend_proc, iproc, ierr,  &
                                send_size_a, send_size_b, send_size_c, send_size_d,  &
                                idomain_l, ielement_l
-        type(mpi_request)   :: request(5)
+        type(mpi_request)   :: request(7)
         logical             :: interior_face, parallel_neighbor
 
 
@@ -916,15 +1009,21 @@ contains
 
                         ! First, send neighbor location. This way, the receiving processor knows where to put the data.
                         ! Next, send all ALE information
-                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%neighbor_location, send_size_a, mpi_integer4, face%ineighbor_proc, 0, ChiDG_COMM, request(1), ierr)
-                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%grid_vel,          send_size_b, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(2), ierr)
-                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%det_jacobian_grid, send_size_c, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(3), ierr)
-                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%inv_jacobian_grid, send_size_d, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(4), ierr)
+                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%neighbor_location,       send_size_a, mpi_integer4, face%ineighbor_proc, 0, ChiDG_COMM, request(1), ierr)
+                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%grid_vel,                send_size_b, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(2), ierr)
+                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%det_jacobian_grid,       send_size_c, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(3), ierr)
+                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%det_jacobian_grid_grad1, send_size_c, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(4), ierr)
+                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%det_jacobian_grid_grad2, send_size_c, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(5), ierr)
+                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%det_jacobian_grid_grad3, send_size_c, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(6), ierr)
+                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%inv_jacobian_grid,       send_size_d, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(7), ierr)
 
                         call self%comm_requests%push_back(request(1))
                         call self%comm_requests%push_back(request(2))
                         call self%comm_requests%push_back(request(3))
                         call self%comm_requests%push_back(request(4))
+                        call self%comm_requests%push_back(request(5))
+                        call self%comm_requests%push_back(request(6))
+                        call self%comm_requests%push_back(request(7))
 
                         end associate
 
@@ -1021,6 +1120,10 @@ contains
         real(rk) :: xi, eta, zeta, det_jacobian_grid_pt, det_jacobian_grid_grad_pt(3),&
             inv_jacobian_grid_pt(3,3), grid_vel_pt(3)
         integer(ik) :: npts, ipt, donor_proc, idonor, idomain_l, ielement_l,  igq, ChiID
+
+
+
+
         !
         ! Receive interior face data
         !
@@ -1040,9 +1143,12 @@ contains
                 recv_size_b = size(self%domain(idom)%faces(ielem,iface)%neighbor_det_jacobian_grid)
                 recv_size_c = size(self%domain(idom)%faces(ielem,iface)%neighbor_inv_jacobian_grid)
 
-                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_grid_vel,          recv_size_a, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_det_jacobian_grid, recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_inv_jacobian_grid, recv_size_c, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_grid_vel,                recv_size_a, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_det_jacobian_grid,       recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_det_jacobian_grid_grad1, recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_det_jacobian_grid_grad2, recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_det_jacobian_grid_grad3, recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_inv_jacobian_grid,       recv_size_c, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
 
             end do !irecv
         end do !iproc
@@ -1149,70 +1255,11 @@ contains
 
 
 
- 
-        !
-        ! Construct receiver interpolations
-        !
-        !
-        do idom = 1,self%ndomains()
-           do ChiID = 1,self%domain(idom)%chimera%nreceivers()
-              do idonor = 1,self%domain(idom)%chimera%recv(ChiID)%ndonors()
-               
-        
-                  ! Get donor location
-                  donor_proc = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%iproc
-                  ref_coords = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%coords
-                  npts = size(ref_coords,1)
-        
-                  parallel_donor = (donor_proc /= IRANK)
-        
-                  if (parallel_donor) then
-                      idomain_g   = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g
-                      ielement_g  = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_g
-                      pelem_ID    = self%find_parallel_element(idomain_g,ielement_g)
-        
-                      do ipt = 1, npts
-                          igq  = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%node_index(ipt)
-                          xi   = ref_coords(ipt,1)
-                          eta  = ref_coords(ipt,2)
-                          zeta = ref_coords(ipt,3)
-                          call self%parallel_element(pelem_ID)%ale_point(xi, eta, &
-                          zeta,det_jacobian_grid_pt,det_jacobian_grid_grad_pt,inv_jacobian_grid_pt,grid_vel_pt)
-                          self%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid(igq) = det_jacobian_grid_pt
-                          self%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid_grad1(igq) = det_jacobian_grid_grad_pt(1)
-                          self%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid_grad2(igq) = det_jacobian_grid_grad_pt(2)
-                          self%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid_grad3(igq) = det_jacobian_grid_grad_pt(3)
-                          self%domain(idom)%chimera%recv(ChiID)%inv_jacobian_grid(igq,:,:) = inv_jacobian_grid_pt
-                          self%domain(idom)%chimera%recv(ChiID)%grid_vel(igq,:) = grid_vel_pt
-                      end do
-        
-                   else
-        
-                      idomain_l   = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_l
-                      ielement_l  = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_l
-        
-                      do ipt = 1, npts
-                          igq  = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%node_index(ipt)
-                          xi   = ref_coords(ipt,1)
-                          eta  = ref_coords(ipt,2)
-                          zeta = ref_coords(ipt,3)
-                          call self%domain(idomain_l)%elems(ielement_l)%ale_point(xi, eta, &
-                          zeta,det_jacobian_grid_pt,det_jacobian_grid_grad_pt,inv_jacobian_grid_pt,grid_vel_pt)
-                          self%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid(igq) = det_jacobian_grid_pt
-                          self%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid_grad1(igq) = det_jacobian_grid_grad_pt(1)
-                          self%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid_grad2(igq) = det_jacobian_grid_grad_pt(2)
-                          self%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid_grad3(igq) = det_jacobian_grid_grad_pt(3)
-                          self%domain(idom)%chimera%recv(ChiID)%inv_jacobian_grid(igq,:,:) = inv_jacobian_grid_pt
-                          self%domain(idom)%chimera%recv(ChiID)%grid_vel(igq,:) = grid_vel_pt
-                      end do
-                   end if
-         
-              end do !idonor
-           end do !ChiID
-        end do !idom
-        
 
-
+        !
+        ! Assemble overset interpolations on receiver exterior state
+        !
+        call self%assemble_chimera_data()
 
 
 

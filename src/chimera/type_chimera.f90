@@ -2,7 +2,7 @@ module type_chimera
 #include <messenger.h>
     use mod_kinds,              only: ik, rk
     use mod_constants,          only: NO_ID
-    use type_chimera_receiver,  only: chimera_receiver_t
+    use type_chimera_receiver,  only: chimera_receiver_t, chimera_receiver
     use type_chimera_send,      only: chimera_send_t
     implicit none
 
@@ -56,32 +56,27 @@ contains
     !!  @date   7/21/2016
     !!
     !----------------------------------------------------------------------------------------
-    function add_receiver(self, idomain_g, idomain_l, ielement_g, ielement_l, iface, iproc) result(recv_ID)
+    function add_receiver(self, idomain_g, idomain_l, ielement_g, ielement_l, iface, nnodes) result(ChiID)
         class(chimera_t),   intent(inout)   :: self
         integer(ik),        intent(in)      :: idomain_g
         integer(ik),        intent(in)      :: idomain_l
         integer(ik),        intent(in)      :: ielement_g
         integer(ik),        intent(in)      :: ielement_l
         integer(ik),        intent(in)      :: iface
-        integer(ik),        intent(in)      :: iproc
+        integer(ik),        intent(in)      :: nnodes
 
-        integer(ik) :: recv_ID
+        integer(ik) :: ChiID
 
 
         !
         ! Check if receiver matching the incoming face already exists
         !
         if ( self%find_receiver(idomain_g, ielement_g, iface) == NO_ID ) then
-            recv_ID = self%new_receiver()
-
-            self%recv(recv_ID)%idomain_g  = idomain_g
-            self%recv(recv_ID)%idomain_l  = idomain_l
-            self%recv(recv_ID)%ielement_g = ielement_g
-            self%recv(recv_ID)%ielement_l = ielement_l
-            self%recv(recv_ID)%iface      = iface
+            ChiID = self%new_receiver()
+            self%recv(ChiID) = chimera_receiver(idomain_g, idomain_l, ielement_g, ielement_l, iface, nnodes)
 
         else
-            recv_ID = self%find_receiver(idomain_g,ielement_g,iface)
+            ChiID = self%find_receiver(idomain_g,ielement_g,iface)
         end if
 
     end function add_receiver

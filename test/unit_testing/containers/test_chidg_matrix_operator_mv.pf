@@ -1,4 +1,4 @@
-!>  Compute a matrix vector multiplication between chidgMatrix and chidgVector
+!>  Compute a matrix vector multiplication between chidg_matrix and chidg_vector
 !!  instances that have been initialized with Chimera grid blocks.
 !!
 !!  The grid block configurations are shown here: 
@@ -126,7 +126,7 @@ subroutine test_chidg_matrix_operator_mv()
 
 
     !
-    ! Initialize chidgMatrix and corresponding chidgVector data -- domain 1
+    ! Initialize chidg_matrix and corresponding chidg_vector data -- domain 1
     !
     ielem = 1
     itime = 1
@@ -156,7 +156,7 @@ subroutine test_chidg_matrix_operator_mv()
 
 
     !
-    ! Initialize chidgMatrix and corresponding chidgVector data -- domain 2
+    ! Initialize chidg_matrix and corresponding chidg_vector data -- domain 2
     !
     ielem = 1
     itime = 1

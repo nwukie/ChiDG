@@ -66,7 +66,7 @@ contains
     subroutine detect_chimera_faces(mesh)
         type(mesh_t),   intent(inout)   :: mesh
 
-        integer(ik) :: idom, ndom, ielem, iface, ierr, ChiID
+        integer(ik) :: idom, ndom, ielem, iface, nnodes, ierr, ChiID
         logical     :: orphan_face = .false.
         logical     :: chimera_face = .false.
 
@@ -82,11 +82,6 @@ contains
         !
         do idom = 1,ndom
             do ielem = 1,mesh%domain(idom)%nelem
-
-
-                !
-                ! Loop through each face
-                !
                 do iface = 1,NFACES
 
                     !
@@ -105,15 +100,16 @@ contains
 
                         ! Set face-type to CHIMERA
                         mesh%domain(idom)%faces(ielem,iface)%ftype = CHIMERA
+                        nnodes = size(mesh%domain(idom)%faces(ielem,iface)%jinv)
 
                         ! Set domain-local Chimera identifier. Really, just the index order which they were detected in, starting from 1.
                         ! The n-th chimera face
-                        mesh%domain(idom)%faces(ielem,iface)%ChiID = mesh%domain(idom)%chimera%add_receiver(mesh%domain(idom)%idomain_g, &
-                                                                                                            mesh%domain(idom)%idomain_l, &
-                                                                                                            mesh%domain(idom)%elems(ielem)%ielement_g, &
-                                                                                                            mesh%domain(idom)%elems(ielem)%ielement_l, &
-                                                                                                            iface,                                     &
-                                                                                                            IRANK)
+                        mesh%domain(idom)%faces(ielem,iface)%ChiID = mesh%domain(idom)%chimera%add_receiver(mesh%domain(idom)%idomain_g,                &
+                                                                                                            mesh%domain(idom)%idomain_l,                &
+                                                                                                            mesh%domain(idom)%elems(ielem)%ielement_g,  &
+                                                                                                            mesh%domain(idom)%elems(ielem)%ielement_l,  &
+                                                                                                            iface,                                      &
+                                                                                                            nnodes)
                     end if
 
 
@@ -639,7 +635,6 @@ contains
         !
         do idom = 1,mesh%ndomains()
 
-
             !
             ! Loop over each chimera face
             !
@@ -730,6 +725,17 @@ contains
 
             end do  ! ChiID
         end do  ! idom
+
+
+
+        
+        !
+        ! Communicate mesh
+        !
+        call mesh%comm_send()
+        call mesh%comm_recv()   ! also calls mesh%assemble_chimera_data to construct data on complete exterior node set.
+        call mesh%comm_wait()
+
 
 
     end subroutine compute_chimera_interpolators

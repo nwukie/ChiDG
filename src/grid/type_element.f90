@@ -78,8 +78,6 @@ module type_element
         real(rk),       allocatable     :: vnodes_l(:,:)        ! Node velocities,    local element ordering
         real(rk),       allocatable     :: nodes_to_modes(:,:)  ! Transformation matrix for converting nodal values to modal coefficients
         type(densevector_t)             :: coords               ! Modal expansion of coordinates (nterms_var,(x,y,z))
-        !character(:),   allocatable     :: coordinate_system    ! 'Cartesian', 'Cylindrical'
-        !character(100), allocatable     :: coordinate_system    ! 'Cartesian', 'Cylindrical'
 
         ! Element metric terms
         real(rk), allocatable           :: metric(:,:,:)                ! metric matrix for each quadrature node    (mat_i,mat_j,quad_pt)
@@ -247,8 +245,8 @@ contains
         !
         mapping               = etype
         self%idomain_g        = location(1)
-        self%ielement_g       = location(2)
-        self%idomain_l        = location(3)
+        self%idomain_l        = location(2)
+        self%ielement_g       = location(3)
         self%ielement_l       = location(4)
         self%element_location = location
         self%connectivity     = connectivity

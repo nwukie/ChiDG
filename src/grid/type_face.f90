@@ -77,7 +77,7 @@ module type_face
         integer(ik)        :: recv_domain          = 0
         integer(ik)        :: recv_element         = 0
 
-        ! Neighbor information if neighbor is off-processor
+        ! Neighbor information: if neighbor is off-processor
         real(rk)                        :: neighbor_h(3)           ! Approximate size of neighbor bounding box
         real(rk),           allocatable :: neighbor_grad1(:,:)     ! Grad of basis functions in at quadrature nodes
         real(rk),           allocatable :: neighbor_grad2(:,:)     ! Grad of basis functions in at quadrature nodes
@@ -86,17 +86,16 @@ module type_face
         real(rk),           allocatable :: neighbor_br2_vol(:,:)   ! Matrix for computing/obtaining br2 modes at volume nodes
         real(rk),           allocatable :: neighbor_invmass(:,:)    
 
-        ! Neighbor ALE
-
+        ! Neighbor ALE: if neighbor is off-processor
         real(rk), allocatable           :: neighbor_grid_vel(:,:)
-        real(rk), allocatable           :: neighbor_jacobian_grid(:,:,:)
         real(rk), allocatable           :: neighbor_inv_jacobian_grid(:,:,:)
         real(rk), allocatable           :: neighbor_det_jacobian_grid(:)
         real(rk), allocatable           :: neighbor_det_jacobian_grid_grad1(:)
         real(rk), allocatable           :: neighbor_det_jacobian_grid_grad2(:)
         real(rk), allocatable           :: neighbor_det_jacobian_grid_grad3(:)
-        real(rk), allocatable           :: neighbor_det_jacobian_grid_modes(:)
-        real(rk), allocatable           :: neighbor_jinv_ale(:)                      ! jacobian terms at quadrature nodes
+        !real(rk), allocatable           :: neighbor_jacobian_grid(:,:,:)
+        !real(rk), allocatable           :: neighbor_det_jacobian_grid_modes(:)
+        !real(rk), allocatable           :: neighbor_jinv_ale(:)                      ! jacobian terms at quadrature nodes
 
 
         ! Chimera face offset. For periodic boundary condition.
@@ -413,14 +412,14 @@ contains
                        self%det_jacobian_grid_grad3,          &
                        self%det_jacobian_grid_modes,          &
                        self%grid_vel,                  &
-                       self%neighbor_jinv_ale,                   &
-                       self%neighbor_jacobian_grid,              &
+                       !self%neighbor_jinv_ale,                   &
+                       !self%neighbor_jacobian_grid,              &
+                       !self%neighbor_det_jacobian_grid_modes,          &
                        self%neighbor_inv_jacobian_grid,          &
                        self%neighbor_det_jacobian_grid,          &
                        self%neighbor_det_jacobian_grid_grad1,          &
                        self%neighbor_det_jacobian_grid_grad2,          &
                        self%neighbor_det_jacobian_grid_grad3,          &
-                       self%neighbor_det_jacobian_grid_modes,          &
                        self%neighbor_grid_vel,                  &
                        self%grad1,                      &
                        self%grad2,                      &
@@ -445,14 +444,14 @@ contains
                  self%det_jacobian_grid_grad3(nnodes),          &
                  self%det_jacobian_grid_modes(self%nterms_s),          &
                  self%grid_vel(nnodes,3),                            &
-                 self%neighbor_jinv_ale(nnodes),                             &
-                 self%neighbor_jacobian_grid(nnodes,3,3),                    &
+                 !self%neighbor_jinv_ale(nnodes),                             &
+                 !self%neighbor_jacobian_grid(nnodes,3,3),                    &
+                 !self%neighbor_det_jacobian_grid_modes(self%nterms_s),          &
                  self%neighbor_inv_jacobian_grid(nnodes,3,3),                &
                  self%neighbor_det_jacobian_grid(nnodes),                    &
                  self%neighbor_det_jacobian_grid_grad1(nnodes),          &
                  self%neighbor_det_jacobian_grid_grad2(nnodes),          &
                  self%neighbor_det_jacobian_grid_grad3(nnodes),          &
-                 self%neighbor_det_jacobian_grid_modes(self%nterms_s),          &
                  self%neighbor_grid_vel(nnodes,3),                            &
                  self%grad1(nnodes,self%nterms_s),                  &
                  self%grad2(nnodes,self%nterms_s),                  &
@@ -1096,7 +1095,7 @@ contains
         !
         ! Retrieve interpolators
         !
-        iface  = self%iface
+        iface   = self%iface
         nnodes  = self%basis_c%nnodes_if()
         weights = self%basis_c%weights()
         ddxi    = self%basis_c%interpolator('ddxi',iface)
@@ -1207,10 +1206,11 @@ contains
             self%inv_jacobian_grid(inode,:,:) = inv(self%jacobian_grid(inode,:,:))
         end do
 
-
+        self%det_jacobian_grid       = matmul(self%basis_s%interpolator('Value',iface),self%det_jacobian_grid_modes)
         self%det_jacobian_grid_grad1 = matmul(self%grad1,self%det_jacobian_grid_modes)
         self%det_jacobian_grid_grad2 = matmul(self%grad2,self%det_jacobian_grid_modes)
         self%det_jacobian_grid_grad3 = matmul(self%grad3,self%det_jacobian_grid_modes)
+
     end subroutine compute_quadrature_metrics_ale
     !*****************************************************************************************************
 

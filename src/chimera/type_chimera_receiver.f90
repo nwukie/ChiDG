@@ -1,4 +1,5 @@
 module type_chimera_receiver
+#include <messenger.h>
     use mod_kinds,          only: ik, rk
     use mod_constants,      only: NO_PROC, NO_ID
     use type_ivector,       only: ivector_t
@@ -46,6 +47,7 @@ module type_chimera_receiver
 
     contains
 
+
         procedure   :: add_donor
         procedure   :: new_donor
         procedure   :: find_donor
@@ -58,8 +60,57 @@ module type_chimera_receiver
 
 
 
+    interface chimera_receiver
+        module procedure chimera_receiver
+    end interface chimera_receiver
+
+
+
 
 contains
+
+
+
+    !>  Constructor for chimera_receiver_t.
+    !!
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   7/27/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    function chimera_receiver(idomain_g, idomain_l, ielement_g, ielement_l, iface, nnodes) result(instance)
+        integer(ik),    intent(in)  :: idomain_g
+        integer(ik),    intent(in)  :: idomain_l
+        integer(ik),    intent(in)  :: ielement_g
+        integer(ik),    intent(in)  :: ielement_l
+        integer(ik),    intent(in)  :: iface
+        integer(ik),    intent(in)  :: nnodes
+
+        integer(ik)                 :: ierr
+        type(chimera_receiver_t)    :: instance
+
+
+        instance%idomain_g  = idomain_g
+        instance%idomain_l  = idomain_l
+        instance%ielement_g = ielement_g
+        instance%ielement_l = ielement_l
+        instance%iface      = iface
+
+
+        allocate(instance%jinv(nnodes),                     &
+                 instance%det_jacobian_grid(nnodes),        &
+                 instance%det_jacobian_grid_grad1(nnodes),  &
+                 instance%det_jacobian_grid_grad2(nnodes),  &
+                 instance%det_jacobian_grid_grad3(nnodes),  &
+                 instance%inv_jacobian_grid(nnodes,3,3),    &
+                 instance%grid_vel(nnodes,3), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+    end function chimera_receiver
+    !***************************************************************************************
+
+
 
 
 

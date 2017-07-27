@@ -404,7 +404,7 @@ contains
             connectivity = element_connectivity%get_element_nodes()
             idomain_g    = element_connectivity%get_domain_index()
             ielement_g   = element_connectivity%get_element_index()
-            location     = [idomain_g, ielement_g, idomain_l, ielement_l]
+            location     = [idomain_g, idomain_l, ielement_g, ielement_l]
             etype        = element_connectivity%get_element_mapping()
 
             call self%elems(ielement_l)%init_geom(nodes,connectivity,etype,location,coord_system)

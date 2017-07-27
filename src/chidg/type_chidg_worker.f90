@@ -31,7 +31,7 @@ module type_chidg_worker
     use mod_kinds,              only: ik, rk
     use mod_constants,          only: NFACES, ME, NEIGHBOR, BC, ZERO, CHIMERA,  &
                                       ONE, THIRD, TWO, NOT_A_FACE, BOUNDARY,    &
-                                      CARTESIAN, CYLINDRICAL
+                                      CARTESIAN, CYLINDRICAL, INTERIOR
 
     use mod_interpolate,        only: interpolate_element_autodiff
     use mod_integrate,          only: integrate_boundary_scalar_flux, &
@@ -2002,24 +2002,46 @@ contains
     !!  @date 1/9/2017
     !!
     !----------------------------------------------------------------------------------------------------
-    function get_grid_velocity_face(self,field) result(grid_vel_gq)
+    function get_grid_velocity_face(self,field,interp_source) result(grid_vel_comp_gq)
         class(chidg_worker_t),  intent(in)  :: self
         character(len=*),       intent(in)  :: field
+        character(*),           intent(in)  :: interp_source
 
-        real(rk), dimension(:), allocatable :: grid_vel_gq
+
+        real(rk), dimension(:), allocatable :: grid_vel_comp_gq
+        real(rk), dimension(:,:), allocatable :: grid_vel_gq
+        integer(ik)                         :: ChiID
+
+        if ((interp_source == 'face interior') .or. (interp_source == 'boundary')) then
+            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%&
+                faces(self%element_info%ielement_l, self%iface)%grid_vel
+        else if (interp_source == 'face exterior') then
+            if (self%face_type() == INTERIOR) then
+                grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%&
+                    faces(self%element_info%ielement_l, self%iface)%neighbor_grid_vel
+            else if (self%face_type() == CHIMERA) then
+                ChiID = self%mesh%domain(self%element_info%idomain_l)% &
+                    faces(self%element_info%ielement_l, self%iface)%ChiID
+                grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%&
+                    chimera%recv(ChiID)%grid_vel
+            else if (self%face_type() == BOUNDARY) then
+                grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%&
+                    faces(self%element_info%ielement_l, self%iface)%grid_vel
+            end if
+        else
+                call chidg_signal(FATAL,"chidg_worker%get_grid_velocity_face: Invalid value for 'interp_source'.")
+        end if
 
         if (field == 'u_grid') then
-            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel(:,1)
-
+            grid_vel_comp_gq = grid_vel_gq(:,1)
         else if (field == 'v_grid') then
-
-            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel(:,2)
+            grid_vel_comp_gq = grid_vel_gq(:,2)
         else if (field == 'w_grid') then
-
-            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel(:,3)
+            grid_vel_comp_gq = grid_vel_gq(:,3)
         else
-            call chidg_signal(FATAL,"chidg_worker%get_grid_velocity_face(field): Invalid value for 'field'.")
+            call chidg_signal(FATAL,"chidg_worker%get_grid_velocity_face: Invalid value for 'field'.")
         end if
+
     end function get_grid_velocity_face
 
     !>
@@ -2073,12 +2095,33 @@ contains
     !!  @date 1/9/2017
     !!
     !----------------------------------------------------------------------------------------------------
-    function get_inv_jacobian_grid_face(self) result(jacobian_grid_gq)
+    function get_inv_jacobian_grid_face(self,interp_source) result(jacobian_grid_gq)
         class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: interp_source
 
         real(rk), dimension(:,:,:), allocatable :: jacobian_grid_gq
 
-        jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%inv_jacobian_grid(:,:,:)
+        integer(ik) :: ChiID
+        if ((interp_source == 'face interior') .or. (interp_source == 'boundary')) then
+            jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%&
+                faces(self%element_info%ielement_l, self%iface)%inv_jacobian_grid
+        else if (interp_source == 'face exterior') then
+            if (self%face_type() == INTERIOR) then
+                 jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%&
+                    faces(self%element_info%ielement_l, self%iface)%neighbor_inv_jacobian_grid
+            else if (self%face_type() == CHIMERA) then
+                ChiID = self%mesh%domain(self%element_info%idomain_l)% &
+                    faces(self%element_info%ielement_l, self%iface)%ChiID
+                 jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%&
+                    chimera%recv(ChiID)%inv_jacobian_grid
+            else if (self%face_type() == BOUNDARY) then
+                 jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%&
+                    faces(self%element_info%ielement_l, self%iface)%inv_jacobian_grid
+            end if
+        else
+                call chidg_signal(FATAL,"chidg_worker%get_grid_velocity_face: Invalid value for 'interp_source'.")
+        end if
+
 
     end function get_inv_jacobian_grid_face
 
@@ -2131,33 +2174,182 @@ contains
     !!  @date 1/9/2017
     !!
     !----------------------------------------------------------------------------------------------------
-    function get_det_jacobian_grid_face(self, interp_type) result(det_jacobian_grid_gq)
+    function get_det_jacobian_grid_face(self, interp_type,interp_source) result(det_jacobian_grid_gq)
         class(chidg_worker_t),  intent(in)  :: self
         character(*),           intent(in)  :: interp_type
+        character(*),           intent(in)  :: interp_source
 
         real(rk), dimension(:), allocatable :: det_jacobian_grid_gq
-        real(rk), dimension(:,:), allocatable :: val 
+        real(rk), dimension(:), allocatable :: val 
 
+        integer(ik) :: ChiID
 
         !det_jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%det_jacobian_grid(:)
 
         ! Interpolate modes to nodes
-        if (interp_type == 'value') then
-            val = &
-            self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%basis_s%interpolator('Value',self%iface)
-        else if (interp_type == 'grad1') then
-            val = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%grad1
-        else if (interp_type == 'grad2') then
-            val = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%grad2
-        else if (interp_type == 'grad3') then
-            val = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%grad3
+        if ((interp_source == 'face interior') .or. (interp_source == 'boundary') )then
+            if (interp_type == 'value') then
+                val = &
+                self%mesh%domain(self%element_info%idomain_l)%&
+                faces(self%element_info%ielement_l,self%iface)%det_jacobian_grid
+            else if (interp_type == 'grad1') then
+                val = &
+                self%mesh%domain(self%element_info%idomain_l)%&
+                faces(self%element_info%ielement_l,self%iface)%det_jacobian_grid_grad1
+            else if (interp_type == 'grad2') then
+                val = &
+                self%mesh%domain(self%element_info%idomain_l)%&
+                faces(self%element_info%ielement_l,self%iface)%det_jacobian_grid_grad2
+            else if (interp_type == 'grad3') then
+                val = &
+                self%mesh%domain(self%element_info%idomain_l)%&
+                faces(self%element_info%ielement_l,self%iface)%det_jacobian_grid_grad3
+            end if
+        else if (interp_source == 'face exterior') then
+            if (self%face_type() == INTERIOR) then
+                if (interp_type == 'value') then
+                    val = &
+                    self%mesh%domain(self%element_info%idomain_l)%&
+                    faces(self%element_info%ielement_l,self%iface)%neighbor_det_jacobian_grid
+                else if (interp_type == 'grad1') then
+                    val = &
+                    self%mesh%domain(self%element_info%idomain_l)%&
+                    faces(self%element_info%ielement_l,self%iface)%neighbor_det_jacobian_grid_grad1
+                else if (interp_type == 'grad2') then
+                    val = &
+                    self%mesh%domain(self%element_info%idomain_l)%&
+                    faces(self%element_info%ielement_l,self%iface)%neighbor_det_jacobian_grid_grad2
+                else if (interp_type == 'grad3') then
+                    val = &
+                    self%mesh%domain(self%element_info%idomain_l)%&
+                    faces(self%element_info%ielement_l,self%iface)%neighbor_det_jacobian_grid_grad3
+                end if
+
+
+            else if (self%face_type() == CHIMERA) then
+                ChiID = self%mesh%domain(self%element_info%idomain_l)% &
+                    faces(self%element_info%ielement_l, self%iface)%ChiID
+                if (interp_type == 'value') then
+                    val = self%mesh%domain(self%element_info%idomain_l)%&
+                    chimera%recv(ChiID)%det_jacobian_grid
+                else if (interp_type == 'grad1') then
+                    val = self%mesh%domain(self%element_info%idomain_l)%&
+                    chimera%recv(ChiID)%det_jacobian_grid_grad1
+                else if (interp_type == 'grad2') then
+                    val = self%mesh%domain(self%element_info%idomain_l)%&
+                    chimera%recv(ChiID)%det_jacobian_grid_grad2
+                else if (interp_type == 'grad3') then
+                    val = self%mesh%domain(self%element_info%idomain_l)%&
+                    chimera%recv(ChiID)%det_jacobian_grid_grad3
+                end if
+
+
+            else if (self%face_type() == BOUNDARY) then
+                if (interp_type == 'value') then
+                    val = &
+                    self%mesh%domain(self%element_info%idomain_l)%&
+                    faces(self%element_info%ielement_l,self%iface)%det_jacobian_grid
+                else if (interp_type == 'grad1') then
+                    val = &
+                    self%mesh%domain(self%element_info%idomain_l)%&
+                    faces(self%element_info%ielement_l,self%iface)%det_jacobian_grid_grad1
+                else if (interp_type == 'grad2') then
+                    val = &
+                    self%mesh%domain(self%element_info%idomain_l)%&
+                    faces(self%element_info%ielement_l,self%iface)%det_jacobian_grid_grad2
+                else if (interp_type == 'grad3') then
+                    val = &
+                    self%mesh%domain(self%element_info%idomain_l)%&
+                    faces(self%element_info%ielement_l,self%iface)%det_jacobian_grid_grad3
+                end if
+
+            end if
+
+        else
+
+            call chidg_signal(FATAL,"chidg_worker%get_det_jacobian_grid_face: Invalid value for 'interp_source'.")
         end if
 
 
-        det_jacobian_grid_gq = &
-        matmul(val,self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%det_jacobian_grid_modes)
+        det_jacobian_grid_gq = val
 
     end function get_det_jacobian_grid_face
+
+!    !>
+!    !!
+!    !!  @author Eric M. Wolf
+!    !!  @date 1/9/2017
+!    !!
+!    !----------------------------------------------------------------------------------------------------
+!    function get_det_jacobian_grid_grad_face(self, interp_source) result(det_jacobian_grid_grad_gq)
+!        class(chidg_worker_t),  intent(in)  :: self
+!        character(*),           intent(in)  :: interp_source
+!
+!        real(rk), dimension(:,:), allocatable :: det_jacobian_grid_grad_gq
+!        real(rk), dimension(:,:), allocatable :: val 
+!
+!
+!
+!        allocate(val(self%nnodesf(),3))
+!        ! Interpolate modes to nodes
+!        if ((interp_source == 'face interior') .or. (interp_source = 'boundary') )then
+!                val(:,1) = &
+!                self%mesh%domain(self%element_info%idomain_l)%&
+!                faces(self%element_info%ielement_l,self%iface)%det_jacobian_grid_grad1
+!
+!                val(:,2) = &
+!                self%mesh%domain(self%element_info%idomain_l)%&
+!                faces(self%element_info%ielement_l,self%iface)%det_jacobian_grid_grad2
+!
+!                val(:,3) = &
+!                self%mesh%domain(self%element_info%idomain_l)%&
+!                faces(self%element_info%ielement_l,self%iface)%det_jacobian_grid_grad3
+!        else if (interp_source == 'face_exterior') then
+!            if (self%face_type() == INTERIOR) then
+!                val(:,1) = &
+!                self%mesh%domain(self%element_info%idomain_l)%&
+!                faces(self%element_info%ielement_l,self%iface)%neighbor_det_jacobian_grid_grad1
+!                val(:,2) = &
+!                self%mesh%domain(self%element_info%idomain_l)%&
+!                faces(self%element_info%ielement_l,self%iface)%neighbor_det_jacobian_grid_grad2
+!                val(:,3) = &
+!                self%mesh%domain(self%element_info%idomain_l)%&
+!                faces(self%element_info%ielement_l,self%iface)%neighbor_det_jacobian_grid_grad3
+!
+!
+!            else if (self%face_type() == CHIMERA) then
+!                ChiID = self%mesh%domain(self%element_info%idomain_l)% &
+!                    faces(self%element_info%ielement_l, self%iface)%ChiID
+!                val(:,1) = self%mesh%domain(self%element_info%idomain_l)%&
+!                chimera%recv(ChiID)%det_jacobian_grid_grad1
+!                val(:,2) = self%mesh%domain(self%element_info%idomain_l)%&
+!                chimera%recv(ChiID)%det_jacobian_grid_grad2
+!                val(:,3) = self%mesh%domain(self%element_info%idomain_l)%&
+!                chimera%recv(ChiID)%det_jacobian_grid_grad3
+!
+!
+!            else if (self%face_type() == BOUNDARY) then
+!                val(:,1) = &
+!                self%mesh%domain(self%element_info%idomain_l)%&
+!                faces(self%element_info%ielement_l,self%iface)%det_jacobian_grid_grad1
+!                val(:,2) = &
+!                self%mesh%domain(self%element_info%idomain_l)%&
+!                faces(self%element_info%ielement_l,self%iface)%det_jacobian_grid_grad2
+!                val(:,3) = &
+!                self%mesh%domain(self%element_info%idomain_l)%&
+!                faces(self%element_info%ielement_l,self%iface)%det_jacobian_grid_grad3
+!
+!            end if
+!
+!        else
+!
+!            call chidg_signal(FATAL,"chidg_worker%get_det_jacobian_grid_grad_face: Invalid value for 'interp_source'.")
+!        end if
+!
+!
+!        det_jacobian_grid_grad_gq = val
+!
+!    end function get_det_jacobian_grid_face
 
 
     !
@@ -2337,7 +2529,7 @@ contains
             val_gq = val_ref
         else
             ! Otherwise, we need to convert the reference configuration value to the physical value.
-            det_jacobian_grid = self%get_det_jacobian_grid_face('value')
+            det_jacobian_grid = self%get_det_jacobian_grid_face('value', interp_source)
 
             val_gq = val_ref/det_jacobian_grid
 
@@ -2393,12 +2585,12 @@ contains
 
         else
             ! Otherwise, we need to convert the reference configuration value to the physical value.
-            det_jacobian_grid = self%get_det_jacobian_grid_face('value')
-            det_jacobian_grid_grad1 = self%get_det_jacobian_grid_face('grad1')
-            det_jacobian_grid_grad2 = self%get_det_jacobian_grid_face('grad2')
-            det_jacobian_grid_grad3 = self%get_det_jacobian_grid_face('grad3')
+            det_jacobian_grid = self%get_det_jacobian_grid_face('value', interp_source)
+            det_jacobian_grid_grad1 = self%get_det_jacobian_grid_face('grad1', interp_source)
+            det_jacobian_grid_grad2 = self%get_det_jacobian_grid_face('grad2', interp_source)
+            det_jacobian_grid_grad3 = self%get_det_jacobian_grid_face('grad3', interp_source)
 
-            jacobian_grid = self%get_inv_jacobian_grid_face()
+            jacobian_grid = self%get_inv_jacobian_grid_face(interp_source)
             u = self%get_primary_field_face(field,'value', interp_source)
 
             grad1_u = grad1_u-u/det_jacobian_grid*det_jacobian_grid_grad1
@@ -2449,23 +2641,24 @@ contains
    end function post_process_volume_advective_flux_ale
 
 
-   function post_process_boundary_advective_flux_ale(self, flux_1, flux_2, flux_3, advected_quantity) result(flux_ref)
+   function post_process_boundary_advective_flux_ale(self, flux_1, flux_2, flux_3, advected_quantity, interp_source) result(flux_ref)
         class(chidg_worker_t),                       intent(in) :: self
         type(AD_D), dimension(:), intent(inout)                                  :: flux_1, flux_2, flux_3
         type(AD_D), dimension(:), intent(in)                                  :: advected_quantity
+        character(*),           intent(in)  :: interp_source
 
         type(AD_D),allocatable, dimension(:)                                  :: flux_1_tmp, flux_2_tmp, flux_3_tmp
         type(AD_D), allocatable                                 :: flux_ref(:,:)
         real(rk), allocatable                       :: det_jacobian_grid(:), u_grid(:), v_grid(:), w_grid(:)
         real(rk), allocatable                       :: jacobian_grid(:,:,:)
 
-        u_grid = self%get_grid_velocity_face('u_grid')
-        v_grid = self%get_grid_velocity_face('v_grid')
-        w_grid = self%get_grid_velocity_face('w_grid')
+        u_grid = self%get_grid_velocity_face('u_grid', interp_source)
+        v_grid = self%get_grid_velocity_face('v_grid', interp_source)
+        w_grid = self%get_grid_velocity_face('w_grid', interp_source)
 
 
-        det_jacobian_grid = self%get_det_jacobian_grid_face('value')
-        jacobian_grid = self%get_inv_jacobian_grid_face()
+        det_jacobian_grid = self%get_det_jacobian_grid_face('value', interp_source)
+        jacobian_grid = self%get_inv_jacobian_grid_face(interp_source)
 
         flux_1_tmp = flux_1-u_grid*advected_quantity
         flux_2_tmp = flux_2-v_grid*advected_quantity
@@ -2501,17 +2694,18 @@ contains
 
    end function post_process_volume_diffusive_flux_ale
 
-   function post_process_boundary_diffusive_flux_ale(self, flux_1, flux_2, flux_3) result(flux_ref)
+   function post_process_boundary_diffusive_flux_ale(self, flux_1, flux_2, flux_3, interp_source) result(flux_ref)
         class(chidg_worker_t),                       intent(in) :: self
         type(AD_D), dimension(:), intent(in)                                  :: flux_1, flux_2, flux_3
+        character(*),           intent(in)  :: interp_source
 
         type(AD_D), allocatable                                 :: flux_ref(:,:)
         real(rk), allocatable                       :: det_jacobian_grid(:)
         real(rk), allocatable                       :: jacobian_grid(:,:,:)
 
 
-        det_jacobian_grid = self%get_det_jacobian_grid_face('value')
-        jacobian_grid = self%get_inv_jacobian_grid_face()
+        det_jacobian_grid = self%get_det_jacobian_grid_face('value', interp_source)
+        jacobian_grid = self%get_inv_jacobian_grid_face(interp_source)
 
        
         allocate(flux_ref(size(flux_1,1),3))

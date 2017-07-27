@@ -83,9 +83,9 @@ contains
             norm_1, norm_2, norm_3
 
 
-        u_grid = worker%get_grid_velocity_face('u_grid')
-        v_grid = worker%get_grid_velocity_face('v_grid')
-        w_grid = worker%get_grid_velocity_face('w_grid')
+        u_grid = worker%get_grid_velocity_face('u_grid','face interior')
+        v_grid = worker%get_grid_velocity_face('v_grid','face interior')
+        w_grid = worker%get_grid_velocity_face('w_grid','face interior')
 
         !
         ! Interpolate solution to quadrature nodes

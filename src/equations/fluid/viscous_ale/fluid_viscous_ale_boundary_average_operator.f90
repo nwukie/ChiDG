@@ -245,7 +245,7 @@ contains
         flux_3 = (flux_3_m + flux_3_p)
 
 
-        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3)
+        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3, 'face interior')
         ! dot with normal vector
         integrand = HALF*(flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3)
 
@@ -267,7 +267,7 @@ contains
         flux_2 = (flux_2_m + flux_2_p)
         flux_3 = (flux_3_m + flux_3_p)
 
-        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3)
+        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3, 'face interior')
         ! dot with normal vector
         integrand = HALF*(flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3)
 
@@ -304,7 +304,7 @@ contains
         flux_3 = (flux_3_m + flux_3_p)
 
 
-        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3)
+        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3, 'face interior')
         ! dot with normal vector
         integrand = HALF*(flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3)
 
@@ -328,7 +328,7 @@ contains
         flux_3 = (flux_3_m + flux_3_p)
 
 
-        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3)
+        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3, 'face interior')
         ! dot with normal vector
         integrand = HALF*(flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3)
 

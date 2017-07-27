@@ -124,7 +124,7 @@ contains
         flux_2 = -mu*gradu(:,2)
         flux_3 = -mu*gradu(:,3)
 
-        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3)
+        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3, 'face interior')
         !
         ! Compute boundary average flux
         !

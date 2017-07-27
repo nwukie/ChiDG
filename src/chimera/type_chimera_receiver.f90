@@ -38,7 +38,11 @@ module type_chimera_receiver
         !
         real(rk),   allocatable :: jinv(:)
         real(rk),   allocatable :: det_jacobian_grid(:)
-        real(rk),   allocatable :: inv_jacobian_grid(:)
+        real(rk),   allocatable :: det_jacobian_grid_grad1(:)
+        real(rk),   allocatable :: det_jacobian_grid_grad2(:)
+        real(rk),   allocatable :: det_jacobian_grid_grad3(:)
+        real(rk),   allocatable :: inv_jacobian_grid(:,:,:)
+        real(rk),   allocatable :: grid_vel(:,:)
 
     contains
 

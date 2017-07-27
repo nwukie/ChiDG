@@ -2280,14 +2280,16 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine ale_point(self,xi,eta,zeta,det_jacobian_grid,inv_jacobian_grid,grid_vel) 
+    subroutine ale_point(self,xi,eta,zeta,det_jacobian_grid,det_jacobian_grid_grad,inv_jacobian_grid,grid_vel) 
         class(element_t),       intent(in)      :: self
         real(rk),               intent(in)      :: xi,eta,zeta
         real(rk),               intent(inout)   :: det_jacobian_grid
+        real(rk),               intent(inout)   :: det_jacobian_grid_grad(3)
         real(rk),               intent(inout)   :: inv_jacobian_grid(3,3)
         real(rk),               intent(inout)   :: grid_vel(3)
 
         real(rk)        :: metric(3,3), jinv, metric_ale(3,3), jinv_ale, polyval(self%nterms_s)
+        real(rk), dimension(self%nterms_s)  :: ddxi, ddeta, ddzeta, grad1, grad2, grad3
         integer(ik)     :: iterm, spacedim, itime
 
 
@@ -2346,6 +2348,30 @@ contains
         grid_vel(1) = dot_product(polyval,self%ale_vel_coords%getvar(1,itime = 1))
         grid_vel(2) = dot_product(polyval,self%ale_vel_coords%getvar(2,itime = 1))
         grid_vel(3) = dot_product(polyval,self%ale_vel_coords%getvar(3,itime = 1))
+
+        do iterm = 1,self%nterms_s
+            ddxi(iterm)   = dpolynomial_val(spacedim,self%nterms_s,iterm,[xi,eta,zeta],XI_DIR)
+            ddeta(iterm)  = dpolynomial_val(spacedim,self%nterms_s,iterm,[xi,eta,zeta],ETA_DIR)
+            ddzeta(iterm) = dpolynomial_val(spacedim,self%nterms_s,iterm,[xi,eta,zeta],ZETA_DIR)
+        end do
+
+        do iterm = 1,self%nterms_s
+                grad1(iterm) = metric(1,1) * ddxi(iterm) + &
+                                    metric(2,1) * ddeta(iterm) + &
+                                    metric(3,1) * ddzeta(iterm)
+
+                grad2(iterm) = metric(1,2) * ddxi(iterm) + &
+                                    metric(2,2) * ddeta(iterm) + &
+                                    metric(3,2) * ddzeta(iterm)
+
+                grad3(iterm) = metric(1,3) * ddxi(iterm) + &
+                                          metric(2,3) * ddeta(iterm) + &
+                                          metric(3,3) * ddzeta(iterm)
+        end do
+
+        det_jacobian_grid_grad(1) = dot_product(grad1, self%det_jacobian_grid_modes)
+        det_jacobian_grid_grad(2) = dot_product(grad2, self%det_jacobian_grid_modes)
+        det_jacobian_grid_grad(3) = dot_product(grad3, self%det_jacobian_grid_modes)
 
 
     end subroutine ale_point

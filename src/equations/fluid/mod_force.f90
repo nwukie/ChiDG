@@ -196,8 +196,8 @@ contains
                 !
                 ! Hit normal vector with g*G^{-T} so our normal and Area correspond to physical ALE quantities
                 !
-                det_jacobian_grid = worker%get_det_jacobian_grid_face('value')
-                jacobian_grid     = worker%get_inv_jacobian_grid_face()
+                det_jacobian_grid = worker%get_det_jacobian_grid_face('value', 'face interior')
+                jacobian_grid     = worker%get_inv_jacobian_grid_face('face interior')
                 norm_1_phys = det_jacobian_grid*(jacobian_grid(:,1,1)*norm_1 + jacobian_grid(:,1,2)*norm_2 + jacobian_grid(:,1,3)*norm_3)
                 norm_2_phys = det_jacobian_grid*(jacobian_grid(:,2,1)*norm_1 + jacobian_grid(:,2,2)*norm_2 + jacobian_grid(:,2,3)*norm_3)
                 norm_3_phys = det_jacobian_grid*(jacobian_grid(:,3,1)*norm_1 + jacobian_grid(:,3,2)*norm_2 + jacobian_grid(:,3,3)*norm_3)

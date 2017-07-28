@@ -35,7 +35,7 @@ module type_fgmres_cgs_mg
     !---------------------------------------------------------------------------------------------
     type, public, extends(linear_solver_t) :: fgmres_cgs_mg_t
 
-        integer(ik) :: m = 2000
+        integer(ik) :: m = 40
         integer(ik) :: mg = 2
 
     contains
@@ -89,7 +89,6 @@ contains
 
 
         ! Multi-grid data
-        type(fgmres_cgs_t)      :: linear_solver
         type(fgmres_cgs_mg_t)   :: mg_linear_solver
         type(precon_ILU0_t)     :: mg_M
         !type(precon_jacobi_t)   :: mg_M
@@ -101,11 +100,18 @@ contains
         type(chidg_vector_t)    :: mg_err_prolonged
         type(chidg_vector_t)    :: mg_err_smoothed
         type(chidg_vector_t)    :: r_sm
+        type(chidg_vector_t)    :: correction
 
         !
         ! Set the multigrid recursion level
         !
         mg_linear_solver%mg = self%mg - 1
+
+
+        !
+        ! If we are on the lowest level, increase restart parameter
+        !
+        if (self%mg == 1) self%m = 200
 
 
         !
@@ -207,6 +213,49 @@ contains
 
 
 
+
+
+
+
+            if ( (self%niter /= 0) .and. (self%mg > 1) ) then
+                print*, 'Entering multigrid level: ', mg_linear_solver%mg
+                !
+                ! Apply ILU0 Smoother
+                !
+                r0     = self%residual(A,x0,b)
+                mg_r = r0%restrict(nterms_r=self%mg-1)
+                mg_A = A%restrict( nterms_r=self%mg-1)
+                select type(M)
+                    type is (precon_ILU0_t)
+                        mg_M = M%restrict(nterms_r=self%mg-1)
+                        call mg_M%update(mg_A,mg_r)
+                    !type is (precon_jacobi_t)
+                    !    mg_M = M%restrict(nterms_r=1)
+                end select
+
+
+                !
+                ! Solve for coarse-scale error: mg_err
+                !   [mg_A][mg_err] = [mg_r]
+                !
+                call write_line('solving for coarse-scale correction', io_proc=GLOBAL_MASTER, silence=(verbosity<4))
+                mg_err = mg_r
+                call mg_err%clear()
+
+                call mg_linear_solver%solve(mg_A,mg_err,mg_r,mg_M)
+
+                !
+                ! Prolong error and apply as coarse-scale correction x0 = x0 + mg_err
+                !
+                call write_line('applying coarse-scale correction', io_proc=GLOBAL_MASTER, silence=(verbosity<4))
+                correction = M%apply(A,mg_err%prolong(nterms_p=x0%dom(1)%vecs(1)%nterms()))
+                x0 = x0 + correction
+
+            end if
+
+
+
+
             !
             ! Compute initial residual r0, residual norm, and normalized r0
             !
@@ -217,6 +266,10 @@ contains
 
 
 
+
+
+
+
             !
             ! Inner GMRES restart loop
             !
@@ -224,72 +277,14 @@ contains
             nmg   = 0
             do j = 1,self%m
                 nvecs = nvecs + 1
-
-
-
-
-                
-                !************************************************
-                ! Multigrid: coarse-scale correction
-                !************************************************
-                if ( (nmg >= 40) .and. (self%mg > 1) ) then
-
-
-
-                    !
-                    ! Apply ILU0 Smoother
-                    !
-                    !r    = b - chidg_mv(A,v(j))        ! compute current residual
-                    !r    = v(j) - chidg_mv(A,x(j))     ! compute current residual
-                    mg_r = v(j)%restrict(nterms_r=self%mg-1)
-                    mg_A = A%restrict(nterms_r=self%mg-1)
-                    select type(M)
-                        type is (precon_ILU0_t)
-                            mg_M = M%restrict(nterms_r=self%mg-1)
-                            call mg_M%update(mg_A,mg_r)
-                        !type is (precon_jacobi_t)
-                        !    mg_M = M%restrict(nterms_r=1)
-                    end select
-
-
-                    !
-                    ! Solve for coarse-scale error: mg_err
-                    !   [mg_A][mg_err] = [mg_r]
-                    !
-                    call write_line('solving for coarse-scale correction', io_proc=GLOBAL_MASTER, silence=(verbosity<4))
-                    mg_err = mg_r
-                    call mg_err%clear()
-
-                    call mg_linear_solver%solve(mg_A,mg_err,mg_r,mg_M)
-
-                    !
-                    ! Prolong error and apply as coarse-scale correction
-                    !
-                    call write_line('applying coarse-scale correction', io_proc=GLOBAL_MASTER, silence=(verbosity<4))
-                    mg_v = v(j) + mg_err%prolong(nterms_p=v(j)%dom(1)%vecs(1)%nterms())
-                    nmg  = 0
-
-                    z(j) = M%apply(A,mg_v)
-                    !z(j) = mg_v
-
-                else
-                    z(j) = M%apply(A,v(j))
-                end if
-                nmg = nmg + 1
-
-                !************************************************
-                ! End multigrid
-                !************************************************
            
+
                 !
                 ! Apply fine-scale preconditioner:  z(j) = Minv * v(j)
                 !
                 call timer_precon%start()
-                !z(j) = mg_v
+                z(j) = M%apply(A,v(j))
                 call timer_precon%stop()
-
-
-
 
 
 

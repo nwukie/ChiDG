@@ -33,7 +33,7 @@ module type_fgmres_cgs_boost
     !---------------------------------------------------------------------------------------------
     type, public, extends(linear_solver_t) :: fgmres_cgs_boost_t
 
-        integer(ik) :: m = 2000
+        integer(ik) :: m = 10
 
     contains
 
@@ -190,11 +190,19 @@ contains
             ! Compute initial residual r0, residual norm, and normalized r0
             !
             r0     = self%residual(A,x0,b)
+
+
+            if (self%niter == 0) then
+                r0 = boostconv(r0,.true.)
+            else
+                r0 = boostconv(r0,.false.)
+            end if
+
+
+
             r0norm = r0%norm(ChiDG_COMM)
             v(1)   = r0/r0norm
             p(1)   = r0norm
-
-
 
             !
             ! Inner GMRES restart loop
@@ -211,11 +219,11 @@ contains
                 call timer_precon%start()
                 z(j) = M%apply(A,v(j))
 
-                if (self%niter == 0) then
-                    z(j) = boostconv(z(j),.true.)
-                else
-                    z(j) = boostconv(z(j),.false.)
-                end if
+                !if (self%niter == 0) then
+                !    z(j) = boostconv(z(j),.true.)
+                !else
+                !    z(j) = boostconv(z(j),.false.)
+                !end if
                 call timer_precon%stop()
 
 

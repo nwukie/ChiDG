@@ -44,13 +44,22 @@ module type_oscillator_model
 
 contains
 
-    subroutine init(self, mass, damping_coeff, stiffness_coeff)
+    subroutine init(self, mass_in, damping_coeff_in, stiffness_coeff_in)
         class(oscillator_model_t), intent(inout)    :: self
-        real(rk),intent(in),optional         :: mass
-        real(rk),intent(in),optional         :: damping_coeff(3)
-        real(rk),intent(in),optional         :: stiffness_coeff(3)
+        real(rk),intent(in),optional         :: mass_in
+        real(rk),intent(in),optional         :: damping_coeff_in(3)
+        real(rk),intent(in),optional         :: stiffness_coeff_in(3)
 
         real(rk) :: tol
+        real(rk) :: mass, damping_coeff(3), stiffness_coeff(3)
+        integer             :: unit, msg
+        logical             :: file_exists
+
+        namelist /viv_cylinder/    mass,&
+                                    damping_coeff, &
+                                    stiffness_coeff
+
+
 
         tol = 1.0e-14
 
@@ -59,17 +68,33 @@ contains
         self%vel = ZERO
         self%external_forces = ZERO
 
-        if (present(mass)) then
-            self%mass = mass 
+        
+        if (present(mass_in)) then
+            self%mass = mass_in 
         end if
 
-        if (present(damping_coeff)) then
-            self%damping_coeff = damping_coeff 
+        if (present(damping_coeff_in)) then
+            self%damping_coeff = damping_coeff_in 
         end if
 
-        if (present(stiffness_coeff)) then
-            self%stiffness_coeff = stiffness_coeff 
+        if (present(stiffness_coeff_in)) then
+            self%stiffness_coeff = stiffness_coeff_in 
         end if
+        !
+        ! Check if input from 'models.nml' is available.
+        !   1: if available, read and set self%mu
+        !   2: if not available, do nothing and mu retains default value
+        !
+        inquire(file='models.nml', exist=file_exists)
+        if (file_exists) then
+            open(newunit=unit,form='formatted',file='models.nml')
+            read(unit,nml=viv_cylinder,iostat=msg)
+            if (msg == 0) self%mass = mass
+            if (msg == 0) self%damping_coeff = damping_coeff 
+            if (msg == 0) self%stiffness_coeff = stiffness_coeff 
+            close(unit)
+        end if
+
 
         self%undamped_angular_frequency = sqrt(self%stiffness_coeff/self%mass)
         self%undamped_natural_frequency = self%undamped_angular_frequency/(TWO*PI)

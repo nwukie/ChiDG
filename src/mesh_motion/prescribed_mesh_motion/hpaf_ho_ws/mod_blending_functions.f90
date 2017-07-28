@@ -1,6 +1,7 @@
 module mod_blending_functions 
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO, HALF, ONE, TWO, THREE, FOUR, FIVE, EIGHT, PI
+    implicit none
 
 
 contains

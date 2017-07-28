@@ -9,7 +9,7 @@ contains
         real(rk) :: s
         real(rk) :: b
 
-        b = 10.0_rk*s**THREE - 15.0_rk*s**FOUR + 6.0_rk*x**FIVE
+        b = 10.0_rk*s**THREE - 15.0_rk*s**FOUR + 6.0_rk*s**FIVE
 
     end function transition_polynomial_order5
 

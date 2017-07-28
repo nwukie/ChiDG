@@ -1,0 +1,557 @@
+module type_jacobi
+#include <messenger.h>
+    use mod_kinds,              only: rk, ik
+    use mod_constants,          only: ZERO
+    use mod_inv,                only: inv
+    use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER
+    use mod_io,                 only: verbosity
+    use mpi_f08
+
+    use type_timer,             only: timer_t
+    use type_linear_solver,     only: linear_solver_t 
+    use type_preconditioner,    only: preconditioner_t
+    use type_solver_controller, only: solver_controller_t
+    use type_chidg_vector
+    use type_chidg_matrix
+
+    use operator_chidg_dot,     only: dot
+    use operator_chidg_mv,      only: chidg_mv, timer_comm, timer_blas
+    implicit none
+        
+
+
+    logical :: first_boost = .true.
+
+
+
+
+    !> Generalized Minimum Residual linear system solver
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   5/11/2016
+    !!
+    !---------------------------------------------------------------------------------------------
+    type, public, extends(linear_solver_t) :: jacobi_t
+
+        integer(ik) :: m = 2000
+
+    contains
+
+        procedure   :: solve
+
+    end type jacobi_t
+    !*********************************************************************************************
+
+
+
+
+
+contains
+
+
+    !> Solution routine
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   5/11/2016
+    !!
+    !!  @author Nathan A. Wukie (AFRL) 
+    !!  @date   6/23/2016
+    !!  @note   parallelization
+    !!
+    !---------------------------------------------------------------------------------------------
+    subroutine solve(self,A,x,b,M,solver_controller)
+        class(jacobi_t),        intent(inout)               :: self
+        type(chidg_matrix_t),       intent(inout)               :: A
+        type(chidg_vector_t),       intent(inout)               :: x
+        type(chidg_vector_t),       intent(inout)               :: b
+        class(preconditioner_t),    intent(inout), optional     :: M
+        class(solver_controller_t), intent(inout), optional     :: solver_controller
+
+        type(timer_t)   :: timer_mv, timer_dot, timer_norm, timer_precon
+
+
+        type(chidg_vector_t)                :: r, r0, diff, xold, w, x0
+        type(chidg_vector_t),   allocatable :: v(:), z(:)
+        real(rk),               allocatable :: h(:,:), h_square(:,:), dot_tmp(:), htmp(:,:)
+        real(rk),               allocatable :: p(:), y(:), c(:), s(:), p_dim(:), y_dim(:)
+        real(rk)                            :: pj, pjp, h_ij, h_ipj, norm_before, norm_after, L_crit, crit
+
+        integer(ik) :: iparent, ierr, ivec, isol, nvecs, ielem
+        integer(ik) :: i, j, k, l, ii, ih                 ! Loop counters
+        real(rk)    :: res, err, r0norm, gam, delta 
+
+        logical :: converged = .false.
+        logical :: max_iter  = .false.
+        logical :: reorthogonalize = .false.
+
+
+        !
+        ! Allocate and initialize Krylov vectors V
+        !
+        allocate(v(self%m+1),  &
+                 z(self%m+1), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        do ivec = 1,size(v)
+            v(ivec) = b
+            z(ivec) = b
+            call v(ivec)%clear()
+            call z(ivec)%clear()
+        end do
+
+        !
+        ! Set initial solution x. ZERO
+        !
+        x0 = x
+        call x0%clear()
+        call x%clear()
+
+
+        self%niter = 0
+
+
+        res = huge(1._rk)
+        do while (res > self%tol)
+
+
+            !
+            ! Compute initial residual r0, residual norm, and normalized r0
+            !
+            r0     = self%residual(A,x0,b)
+            r0norm = r0%norm(ChiDG_COMM)
+            v(1)   = r0/r0norm
+            p(1)   = r0norm
+
+
+
+            !
+            ! Inner GMRES restart loop
+            !
+            nvecs = 0
+            do j = 1,self%m
+
+
+                nvecs = nvecs + 1
+           
+                !
+                ! Apply preconditioner:  z(j) = Minv * v(j)
+                !
+                call timer_precon%start()
+                z(j) = M%apply(A,v(j))
+
+                if (self%niter == 0) then
+                    z(j) = boostconv(z(j),.true.)
+                else
+                    z(j) = boostconv(z(j),.false.)
+                end if
+                call timer_precon%stop()
+
+
+                !
+                ! Compute w = Av for the current iteration
+                !
+                call timer_mv%start()
+                w = chidg_mv(A,z(j))
+                call timer_mv%stop()
+
+
+                norm_before = w%norm(ChiDG_COMM)
+
+
+
+                call timer_dot%start()
+                !
+                ! Orthogonalize once. Classical Gram-Schmidt
+                !
+                do i = 1,j
+                    ! Compute the local dot product
+                    dot_tmp(i) = dot(w,v(i))
+                end do
+
+                ! Reduce local dot-product values across processors, distribute result back to all
+                !call MPI_AllReduce(dot_tmp,h(:,j),j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+                call MPI_AllReduce(dot_tmp,h(1:j,j),j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+                
+
+                do i = 1,j
+                    w = w - h(i,j)*v(i)
+                end do
+                call timer_dot%stop()
+
+
+
+
+                call timer_norm%start()
+                h(j+1,j) = w%norm(ChiDG_COMM)
+                norm_after = h(j+1,j)
+                call timer_norm%stop()
+                !
+                ! End Orthogonalize once.
+                !
+
+
+
+                !
+                ! Selective reorthogonalization
+                !
+                ! Giraud and Langou
+                ! "A robust criterion for the modified Gram-Schmidt algorithm with selective reorthogonalization."
+                ! SIAM J. of Sci. Comp.     Vol. 25, No. 2, pp. 417-441.
+                !
+                ! They recommend L<1 for robustness, but it seems for these problems L can be increased.
+                !
+                L_crit = 1.0_rk
+                crit = sum(abs(h(1:j,j)))/norm_before
+
+                !
+                ! Orthogonalize twice. Classical Gram-Schmidt
+                !
+                reorthogonalize = (crit >= L_crit) 
+                if (reorthogonalize) then
+                    do i = 1,j
+                        ! Compute the local dot product
+                        dot_tmp(i) = dot(w,v(i))
+                    end do
+
+
+                    ! Reduce local dot-product values across processors, distribute result back to all
+                    !call MPI_AllReduce(dot_tmp,htmp(:,j),j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+                    call MPI_AllReduce(dot_tmp,htmp(1:j,j),j,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+                    !h(:,j) = h(:,j) + htmp(:,j)
+
+
+                    !htmp(1,1) = 5.0
+
+                    h = htmp + h
+                    !do ih = 1,size(h,2)
+                    !    h(:,ih) = h(:,ih) + htmp(:,ih)
+                    !end do
+
+
+                    do i = 1,j
+                        w = w - htmp(i,j)*v(i)
+                    end do
+
+
+
+                    call timer_norm%start()
+                    h(j+1,j) = w%norm(ChiDG_COMM)
+                    call timer_norm%stop()
+                end if
+                !
+                ! End Orthogonalize twice.
+                !
+                
+
+
+
+                !
+                ! Compute next Krylov vector
+                !
+                v(j+1) = w/h(j+1,j)
+
+
+
+                !
+                ! Previous Givens rotations on h
+                !
+                if (j /= 1) then
+                    do i = 1,j-1
+                        ! Need temp values here so we don't directly overwrite the h(i,j) and h(i+1,j) values 
+                        h_ij     =  c(i)*h(i,j)  +  s(i)*h(i+1,j)
+                        h_ipj    = -s(i)*h(i,j)  +  c(i)*h(i+1,j)
+
+
+                        h(i,j)   = h_ij
+                        h(i+1,j) = h_ipj
+                    end do
+                end if
+
+
+
+                !
+                ! Compute next rotation
+                !
+                gam  = sqrt( h(j,j)*h(j,j)  +  h(j+1,j)*h(j+1,j) )
+                c(j) = h(j,j)/gam
+                s(j) = h(j+1,j)/gam
+
+
+                !
+                ! Givens rotation on h
+                !
+                h(j,j)   = gam
+                h(j+1,j) = ZERO
+
+
+                !
+                ! Givens rotation on p. Need temp values here so we aren't directly overwriting the p(j) value until we want to
+                !
+                pj  =  c(j)*p(j)
+                pjp = -s(j)*p(j)
+
+                p(j)     = pj
+                p(j+1)   = pjp
+
+
+                
+                !
+                ! Update iteration counter
+                !
+                self%niter = self%niter + 1_ik
+
+
+
+                !
+                ! Test exit conditions
+                !
+                res = abs(p(j+1))
+                call write_line(res, io_proc=GLOBAL_MASTER, silence=(verbosity<4))
+                converged = (res < self%tol)
+                
+                if ( converged ) then
+                    exit
+                end if
+
+
+            end do  ! Outer GMRES Loop - restarts after m iterations
+
+
+
+
+
+            !
+            ! Solve upper-triangular system y = hinv * p
+            !
+            if (allocated(h_square)) then
+                deallocate(h_square,p_dim,y_dim)
+            end if
+            
+            allocate(h_square(nvecs,nvecs), &
+                     p_dim(nvecs),          &
+                     y_dim(nvecs), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+
+
+
+            !
+            ! Store h and p values to appropriately sized matrices
+            !
+            do l=1,nvecs
+                do k=1,nvecs
+                    h_square(k,l) = h(k,l)
+                end do
+                p_dim(l) = p(l)
+            end do
+
+
+
+            !
+            ! Solve the system
+            !
+            h_square = inv(h_square)
+            y_dim = matmul(h_square,p_dim)
+
+
+
+            !
+            ! Reconstruct solution
+            !
+            x = x0
+            do isol = 1,nvecs
+                x = x + y_dim(isol)*z(isol)
+            end do
+
+
+
+            !
+            ! Test exit condition
+            !
+            if ( converged ) then
+                exit
+            else
+                x0 = x
+            end if
+
+
+
+        end do   ! while
+
+
+
+
+
+
+
+        !
+        ! Report
+        !
+        err = self%error(A,x,b)
+        call self%timer%stop()
+        call write_line('   Linear Solver Error: ',         err,                  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<4))
+        call write_line('   Linear Solver compute time: ',  self%timer%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<4))
+        call write_line('   Linear Solver Iterations: ',    self%niter,           delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<4))
+
+        !call self%timer%report('Linear solver compute time: ')
+        !call timer_precon%report('Preconditioner time: ')
+        call write_line('   Preconditioner time: ',           timer_precon%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        call write_line('       Precon time per iteration: ', timer_precon%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+
+
+        !call timer_mv%report('MV time: ')
+        call write_line('   MV time: ',                   timer_mv%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        call write_line('       MV time per iteration: ', timer_mv%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+
+        !call timer_comm%report('MV comm time: ')
+        call write_line('   MV comm time: ',                   timer_comm%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        call write_line('       MV comm time per iteration: ', timer_comm%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        !call timer_blas%report('MV blas time: ')
+        call write_line('   MV blas time: ',                   timer_blas%elapsed(),                     delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        call write_line('       MV blas time per iteration: ', timer_blas%elapsed()/real(self%niter,rk), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        call timer_comm%reset()
+        call timer_blas%reset()
+
+        !call timer_dot%report('Dot time: ')
+        !call timer_norm%report('Norm time: ')
+        call write_line('   Dot time: ',  timer_dot%elapsed(),  delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+        call write_line('   Norm time: ', timer_norm%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
+
+
+
+    end subroutine solve
+    !************************************************************************************************************
+
+
+
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    function boostconv(r,clear) result(z)
+        type(chidg_vector_t),   intent(in)  :: r
+        logical,                intent(in)  :: clear
+
+        integer(ik),    parameter   :: N = 100
+        integer(ik)                 :: i, m, k
+
+        type(chidg_vector_t)            :: z
+        type(chidg_vector_t),   save    :: w(N), v(N), r_nm1, z_nm1
+        real(rk),               save    :: D(N,N)
+        integer(ik),            save    :: startup
+        real(rk)                        :: t(N), c(N)
+        real(rk),       allocatable     :: Dinv(:,:)
+
+
+        if (clear) then
+            first_boost = .true.
+        end if
+
+
+
+
+        if (first_boost) then
+            w(:) = r
+            v(:) = r
+            r_nm1 = r
+            z_nm1 = r
+            call z_nm1%clear()
+            do i = 1,N
+                call w(i)%clear()
+                call v(i)%clear()
+            end do
+            D = ZERO
+            startup = 1
+            first_boost = .false.
+        end if
+
+        !
+        ! Discard oldest vectors
+        !
+        do i = 1,N-1
+            v(i) = v(i+1)
+            w(i) = w(i+1)
+        end do
+
+
+        !
+        ! Update vector basis
+        !
+        v(N) = r_nm1 - r
+        w(N) = z_nm1 - v(N)
+        
+
+        !
+        ! Shift rows up, top row goes into the bottom row, but will be replaced by the update just below here
+        !
+        D = cshift(D,1,1)
+        D = cshift(D,1,2)
+
+
+        !
+        ! Update least squares matrix
+        !
+        do m = 1,N
+            D(N,m) = dot(v(N),v(m),ChiDG_COMM)
+        end do
+        D(:,N) = D(N,:)
+
+
+        !
+        ! Build rhs
+        !
+        do k = 1,N
+            t(k) = dot(v(k),r,ChiDG_COMM)
+        end do
+
+
+        z = r
+        if (startup > N) then
+
+            Dinv = inv(D(1:N,1:N))
+            c(1:N) = matmul(Dinv,t(1:N))
+
+            !print*, 'C:'
+            !print*, c
+            do i = 1,N
+                z = z + c(i)*w(i)
+            end do
+        end if
+        
+
+        !
+        ! 
+        !
+        startup = startup + 1
+
+
+        r_nm1 = r
+        z_nm1 = z
+
+
+    end function boostconv
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+end module type_jacobi

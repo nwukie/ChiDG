@@ -59,7 +59,7 @@ contains
         !
         ! Set function options to default settings
         !
-        call self%add_option('blend_rigid_radius', 50.0_rk) !Within this radius, the mesh is rigidly displaced
+        call self%add_option('blend_rigid_radius', 20.0_rk) !Within this radius, the mesh is rigidly displaced
         call self%add_option('blend_transition_length', 30.0_rk) !Length scale where the mesh is blended between RB and fixed
     
     end subroutine init
@@ -91,17 +91,18 @@ contains
 
         blend_rigid_radius = self%get_option_value('blend_rigid_radius')
         blend_transition_length = self%get_option_value('blend_transition_length')
-
-
-        blend_dist = sqrt(val(1)**TWO+val(2)**TWO)-blend_rigid_radius
+        
+        blend_dist = (sqrt(node(1)**TWO+node(2)**TWO)-blend_rigid_radius)/blend_transition_length
 
         if (blend_dist < ZERO) then
             blend_val = ZERO
-        else if (blend_val > ONE) then
+        else if (blend_dist > ONE) then
             blend_val = ONE
         else
             blend_val =  transition_polynomial_order5(blend_dist)
         end if
+
+
 
         b1 = time**TWO*(time**TWO-4._rk*time+4._rk)
         b2 = time**TWO*(3._rk-time)/4._rk
@@ -175,11 +176,11 @@ contains
         blend_transition_length = self%get_option_value('blend_transition_length')
 
 
-        blend_dist = sqrt(val(1)**TWO+val(2)**TWO)-blend_rigid_radius
+        blend_dist = (sqrt(node(1)**TWO+node(2)**TWO)-blend_rigid_radius)/blend_transition_length
 
         if (blend_dist < ZERO) then
             blend_val = ZERO
-        else if (blend_val > ONE) then
+        else if (blend_dist > ONE) then
             blend_val = ONE
         else
             blend_val =  transition_polynomial_order5(blend_dist)

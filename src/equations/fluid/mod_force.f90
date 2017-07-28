@@ -46,9 +46,12 @@ contains
     !!  @result[out]    force           Integrated force vector: force = [f1, f2, f3]
     !!
     !-----------------------------------------------------------------------------------
-    function compute_force(data,patch_group) result(force_reduced)
-        type(chidg_data_t), intent(inout)   :: data
-        character(*),       intent(in)      :: patch_group
+    !function compute_force(data,patch_group) result(force_reduced)
+    subroutine report_aerodynamics(data,patch_group,force,work)
+        type(chidg_data_t), intent(inout)               :: data
+        character(*),       intent(in)                  :: patch_group
+        real(rk),           intent(inout),  optional    :: force(3)
+        real(rk),           intent(inout),  optional    :: work
     
         integer(ik)                 :: group_ID, patch_ID, face_ID, &
                                        idomain_g,  idomain_l,        &
@@ -61,15 +64,13 @@ contains
 
 
         real(rk)                                ::  &
-            force(3), force_reduced(3)
+            force_local(3), work_local
 
 
         real(rk),   allocatable, dimension(:)   ::  &
             norm_1,      norm_2,      norm_3,       &
             norm_1_phys, norm_2_phys, norm_3_phys,  &
-            !unorm_1, unorm_2, unorm_3,              &
-            !areas,                                  &
-            weights, det_jacobian_grid
+            weights, det_jacobian_grid, u_grid, v_grid, w_grid
 
         real(rk),   allocatable                 ::  &
             jacobian_grid(:,:,:)
@@ -109,7 +110,8 @@ contains
         !
         ! Loop over domains/elements/faces for "patch_group" 
         !
-        force = ZERO
+        force_local = ZERO
+        work_local  = ZERO
         do patch_ID = 1,data%mesh%bc_patch_group(group_ID)%npatches()
 
             !
@@ -188,10 +190,6 @@ contains
                 norm_2  = -worker%normal(2)
                 norm_3  = -worker%normal(3)
 
-                !unorm_1 = -worker%unit_normal(1)
-                !unorm_2 = -worker%unit_normal(2)
-                !unorm_3 = -worker%unit_normal(3)
-
 
                 !
                 ! Hit normal vector with g*G^{-T} so our normal and Area correspond to physical ALE quantities
@@ -202,6 +200,9 @@ contains
                 norm_2_phys = det_jacobian_grid*(jacobian_grid(:,2,1)*norm_1 + jacobian_grid(:,2,2)*norm_2 + jacobian_grid(:,2,3)*norm_3)
                 norm_3_phys = det_jacobian_grid*(jacobian_grid(:,3,1)*norm_1 + jacobian_grid(:,3,2)*norm_2 + jacobian_grid(:,3,3)*norm_3)
 
+                u_grid = worker%get_grid_velocity_face('u_grid', 'face interior')
+                v_grid = worker%get_grid_velocity_face('v_grid', 'face interior')
+                w_grid = worker%get_grid_velocity_face('w_grid', 'face interior')
                 
 
                 !
@@ -209,15 +210,9 @@ contains
                 !   : These should produce the same result since the tensor is 
                 !   : symmetric. Not sure which is more correct.
                 !
-                !stress_x = unorm_1*tau_11 + unorm_2*tau_21 + unorm_3*tau_31
-                !stress_y = unorm_1*tau_12 + unorm_2*tau_22 + unorm_3*tau_32
-                !stress_z = unorm_1*tau_13 + unorm_2*tau_23 + unorm_3*tau_33
-
-                ! Working: No ALE
-                !stress_x = tau_11*unorm_1 + tau_12*unorm_2 + tau_13*unorm_3
-                !stress_y = tau_21*unorm_1 + tau_22*unorm_2 + tau_23*unorm_3
-                !stress_z = tau_31*unorm_1 + tau_32*unorm_2 + tau_33*unorm_3
-
+                !stress_x = norm_1_phys*tau_11 + norm_2_phys*tau_21 + norm_3_phys*tau_31
+                !stress_y = norm_1_phys*tau_12 + norm_2_phys*tau_22 + norm_3_phys*tau_32
+                !stress_z = norm_1_phys*tau_13 + norm_2_phys*tau_23 + norm_3_phys*tau_33
 
                 ! Testing: ALE
                 stress_x = tau_11*norm_1_phys + tau_12*norm_2_phys + tau_13*norm_3_phys
@@ -229,17 +224,18 @@ contains
                 ! Integrate
                 !
                 weights = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%weights(iface)
-                !areas   = sqrt(norm_1*norm_1 + norm_2*norm_2 + norm_3*norm_3)
 
-                ! Working: No ALE
-                !force(1) = force(1) + sum( stress_x(:)%x_ad_ * weights * areas)
-                !force(2) = force(2) + sum( stress_y(:)%x_ad_ * weights * areas)
-                !force(3) = force(3) + sum( stress_z(:)%x_ad_ * weights * areas)
+                if (present(force)) then
+                    force_local(1) = force_local(1) + sum( stress_x(:)%x_ad_ * weights)
+                    force_local(2) = force_local(2) + sum( stress_y(:)%x_ad_ * weights)
+                    force_local(3) = force_local(3) + sum( stress_z(:)%x_ad_ * weights)
+                end if
 
-                ! Testing: ALE
-                force(1) = force(1) + sum( stress_x(:)%x_ad_ * weights)
-                force(2) = force(2) + sum( stress_y(:)%x_ad_ * weights)
-                force(3) = force(3) + sum( stress_z(:)%x_ad_ * weights)
+                if (present(work)) then
+                    work_local = work_local + sum( (stress_x(:)%x_ad_ * weights * u_grid) + &
+                                                   (stress_y(:)%x_ad_ * weights * v_grid) + &
+                                                   (stress_z(:)%x_ad_ * weights * w_grid) )
+                end if
 
             end do !iface
 
@@ -250,10 +246,12 @@ contains
         !
         ! Reduce result across processors
         !
-        call MPI_AllReduce(force,force_reduced,3,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+        if (present(force)) call MPI_AllReduce(force_local,force,3,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+        if (present(work))  call MPI_AllReduce(work_local, work, 1,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
 
 
-    end function compute_force
+
+    end subroutine report_aerodynamics
     !******************************************************************************************
 
 

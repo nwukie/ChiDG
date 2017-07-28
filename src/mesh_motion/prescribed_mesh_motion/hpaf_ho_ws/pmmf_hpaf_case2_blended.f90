@@ -112,9 +112,11 @@ contains
 !        theta = ZERO
 !
         !Case 2
-        height = b2
+        if (time <= TWO) height = b2
+        if (time >  TWO) height = ONE
         A2 = (60._rk*PI/180._rk)
-        theta = A2*b1
+        if (time <= TWO) theta = A2*b1
+        if (time >  TWO) theta = ZERO
         
 !        !Case 3 
 !        height = b3
@@ -234,6 +236,8 @@ contains
         !Translate vertically
         y_ale = y_ale + dheightdt
 
+        if (time > TWO) x_ale = ZERO
+        if (time > TWO) y_ale = ZERO
 
 
         val(1) = (ONE-blend_val)*x_ale

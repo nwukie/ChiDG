@@ -198,9 +198,12 @@ contains
                     !
                     det_jacobian_grid = worker%get_det_jacobian_grid_face('value', 'face interior')
                     jacobian_grid     = worker%get_inv_jacobian_grid_face('face interior')
-                    norm_1_phys = det_jacobian_grid*(jacobian_grid(:,1,1)*norm_1 + jacobian_grid(:,1,2)*norm_2 + jacobian_grid(:,1,3)*norm_3)
-                    norm_2_phys = det_jacobian_grid*(jacobian_grid(:,2,1)*norm_1 + jacobian_grid(:,2,2)*norm_2 + jacobian_grid(:,2,3)*norm_3)
-                    norm_3_phys = det_jacobian_grid*(jacobian_grid(:,3,1)*norm_1 + jacobian_grid(:,3,2)*norm_2 + jacobian_grid(:,3,3)*norm_3)
+                    !norm_1_phys = det_jacobian_grid*(jacobian_grid(:,1,1)*norm_1 + jacobian_grid(:,1,2)*norm_2 + jacobian_grid(:,1,3)*norm_3)
+                    !norm_2_phys = det_jacobian_grid*(jacobian_grid(:,2,1)*norm_1 + jacobian_grid(:,2,2)*norm_2 + jacobian_grid(:,2,3)*norm_3)
+                    !norm_3_phys = det_jacobian_grid*(jacobian_grid(:,3,1)*norm_1 + jacobian_grid(:,3,2)*norm_2 + jacobian_grid(:,3,3)*norm_3)
+                    norm_1_phys = det_jacobian_grid*(jacobian_grid(:,1,1)*norm_1 + jacobian_grid(:,2,1)*norm_2 + jacobian_grid(:,3,1)*norm_3)
+                    norm_2_phys = det_jacobian_grid*(jacobian_grid(:,1,2)*norm_1 + jacobian_grid(:,2,2)*norm_2 + jacobian_grid(:,3,2)*norm_3)
+                    norm_3_phys = det_jacobian_grid*(jacobian_grid(:,1,3)*norm_1 + jacobian_grid(:,2,3)*norm_2 + jacobian_grid(:,3,3)*norm_3)
 
                     u_grid = worker%get_grid_velocity_face('u_grid', 'face interior')
                     v_grid = worker%get_grid_velocity_face('v_grid', 'face interior')

@@ -115,6 +115,12 @@ contains
             self%damping_type = 'critically damped'
         end if
         
+        print *, 'Oscillator mass'
+        print *, self%mass
+        print *, 'Oscillator damping coefficients'
+        print *, self%damping_coeff
+        print *, 'Oscillator stiffness coefficients'
+        print *, self%stiffness_coeff
         print *, 'Oscillaing cylinder damping type:'
         print *, self%damping_type
 

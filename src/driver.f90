@@ -85,7 +85,7 @@ program driver
         !
         ! Specify prescribed mesh motions by creating PMM entries in the grid file
         !
-!        if (IRANK == GLOBAL_MASTER) then
+        if (IRANK == GLOBAL_MASTER) then
 !            !
 !            ! Heaving and Pitching Airfoil
 !            !
@@ -93,7 +93,7 @@ program driver
 !            file_id = open_file_hdf(gridfile)
 !            !Create PMM group
 !            call create_pmm_group_hdf(file_id,'hpaf_pmm')
-!            call set_pmmf_name_hdf(file_id, 'hpaf_pmm','hpaf_case1')
+!            call set_pmmf_name_hdf(file_id, 'hpaf_pmm','hpaf_case3')
 !            !call set_pmmf_name_hdf(file_id, 'hpaf_pmm','hpaf_case1')
 !
 !            !Assign PMMs to domains
@@ -174,9 +174,9 @@ program driver
 !            ! Initialize the oscillating cylinder model
 !            !
 !            call oscillating_cylinder%init(mass, damping_coeff, stiffness_coeff)
-!        end if
-!
-!        call MPI_Barrier(ChiDG_COMM,ierr)
+        end if
+
+        call MPI_Barrier(ChiDG_COMM,ierr)
 
 
         !

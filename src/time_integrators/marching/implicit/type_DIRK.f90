@@ -34,6 +34,7 @@ module type_DIRK
     use mod_spatial,                    only: update_space
     use mod_update_grid,                only: update_grid
     use mod_io,                         only: verbosity
+    use mod_force,                      only: report_aerodynamics
 
     use type_time_integrator_marching,  only: time_integrator_marching_t
     use type_system_assembler,          only: system_assembler_t
@@ -198,10 +199,33 @@ contains
 
         integer(ik),    parameter   :: nstage = 3
         type(chidg_vector_t)        :: dq(nstage), q_temp, q_n, residual
-        real(rk)                    :: t_n
-        integer(ik)                 :: istage, jstage
+        real(rk)                    :: t_n, force(3), work
+        integer(ik)                 :: istage, jstage, myunit
+        logical                     :: exists
 
         type(DIRK_solver_controller_t),    save    :: solver_controller
+
+
+
+        !
+        ! Report to file.
+        !
+        call report_aerodynamics(data,'Airfoil',force=force, work=work)
+        if (IRANK == GLOBAL_MASTER) then
+            inquire(file="aero.txt", exist=exists)
+            if (exists) then
+                open(newunit=myunit, file="aero.txt", status="old", position="append",action="write")
+            else
+                open(newunit=myunit, file="aero.txt", status="new",action="write")
+                write(myunit,*) 'force-1', 'force-2', 'force-3', 'work'
+            end if
+            write(myunit,*) force(1), force(2), force(3), work
+            close(myunit)
+        end if
+
+
+
+
 
         !
         ! Store solution at nth time step to a separate vector for use in this subroutine

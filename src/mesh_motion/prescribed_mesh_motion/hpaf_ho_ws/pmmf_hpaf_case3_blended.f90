@@ -117,9 +117,11 @@ contains
 !        theta = A2*b1
 !        
         !Case 3 
-        height = b3
+        if (time <= TWO) height = b3
+        if (time >  TWO) height = ONE
         A3 = (80._rk*PI/180._rk)
-        theta = A3*b1
+        if (time <= TWO) theta = A3*b1
+        if (time >  TWO) theta = ZERO
 
         !Center of motion nodeinates
         xc = 1._rk/3._rk
@@ -234,6 +236,8 @@ contains
         !Translate vertically
         y_ale = y_ale + dheightdt
 
+        if (time > TWO) x_ale = ZERO
+        if (time > TWO) y_ale = ZERO
 
 
         val(1) = (ONE-blend_val)*x_ale

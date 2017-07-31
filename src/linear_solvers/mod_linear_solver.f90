@@ -13,7 +13,9 @@ module mod_linear_solver
 !    use type_gmres,         only: gmres_t
     use type_fgmres,            only: fgmres_t
     use type_fgmres_cgs,        only: fgmres_cgs_t
+    use type_fgmres_cgs_boost,  only: fgmres_cgs_boost_t
     use type_fgmres_cgs_mg,     only: fgmres_cgs_mg_t
+    use type_jacobi,            only: jacobi_t
     
 
     
@@ -25,9 +27,11 @@ module mod_linear_solver
 !    type(gaussseidel_t)     :: GAUSSSEIDEL
 !    type(sor_t)             :: SOR
 !    type(gmres_t)           :: GMRES
-    type(fgmres_t)          :: FGMRES
-    type(fgmres_cgs_t)      :: FGMRES_CGS
-    type(fgmres_cgs_mg_t)   :: FGMRES_CGS_MG
+    type(fgmres_t)              :: FGMRES
+    type(fgmres_cgs_t)          :: FGMRES_CGS
+    type(fgmres_cgs_boost_t)    :: FGMRES_CGS_BOOST
+    type(fgmres_cgs_mg_t)       :: FGMRES_CGS_MG
+    type(jacobi_t)              :: JACOBI
 
 
 
@@ -82,6 +86,11 @@ contains
             case ('fgmres_cgs_mg', 'FGMRES_CGS_MG')
                 allocate(lsolver, source=FGMRES_CGS_MG, stat=ierr)
 
+            case ('fgmres_cgs_boost', 'FGMRES_CGS_BOOST')
+                allocate(lsolver, source=FGMRES_CGS_BOOST, stat=ierr)
+
+            case ('jacobi', 'Jacobi')
+                allocate(lsolver, source=JACOBI, stat=ierr)
 
             case default
                 call chidg_signal(FATAL,"create_matrixsolver: matrix solver string did not match any valid type")

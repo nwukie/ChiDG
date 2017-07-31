@@ -46,9 +46,12 @@ contains
     !!  @result[out]    force           Integrated force vector: force = [f1, f2, f3]
     !!
     !-----------------------------------------------------------------------------------
-    function compute_force(data,patch_group) result(force_reduced)
-        type(chidg_data_t), intent(inout)   :: data
-        character(*),       intent(in)      :: patch_group
+    !function compute_force(data,patch_group) result(force_reduced)
+    subroutine report_aerodynamics(data,patch_group,force,work)
+        type(chidg_data_t), intent(inout)               :: data
+        character(*),       intent(in)                  :: patch_group
+        real(rk),           intent(inout),  optional    :: force(3)
+        real(rk),           intent(inout),  optional    :: work
     
         integer(ik)                 :: group_ID, patch_ID, face_ID, &
                                        idomain_g,  idomain_l,        &
@@ -61,15 +64,13 @@ contains
 
 
         real(rk)                                ::  &
-            force(3), force_reduced(3)
+            force_local(3), work_local
 
 
         real(rk),   allocatable, dimension(:)   ::  &
             norm_1,      norm_2,      norm_3,       &
             norm_1_phys, norm_2_phys, norm_3_phys,  &
-            !unorm_1, unorm_2, unorm_3,              &
-            !areas,                                  &
-            weights, det_jacobian_grid
+            weights, det_jacobian_grid, u_grid, v_grid, w_grid
 
         real(rk),   allocatable                 ::  &
             jacobian_grid(:,:,:)
@@ -103,157 +104,159 @@ contains
         !
         ! Check if a group matching "patch_group" was found
         !
-        if (group_ID == NO_ID) call chidg_signal_one(FATAL,"compute_force: No patch group was found matching the incoming string.",trim(patch_group))
+        !if (group_ID == NO_ID) call chidg_signal_one(FATAL,"compute_force: No patch group was found matching the incoming string.",trim(patch_group))
 
 
         !
         ! Loop over domains/elements/faces for "patch_group" 
         !
-        force = ZERO
-        do patch_ID = 1,data%mesh%bc_patch_group(group_ID)%npatches()
+        force_local = ZERO
+        work_local  = ZERO
 
-            !
-            ! Loop over faces in the patch
-            !
-            do face_ID = 1,data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
-
-                idomain_g  = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g()
-                idomain_l  = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l()
-                ielement_g = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID)
-                ielement_l = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
-                iface      = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
-
+        if (group_ID /= NO_ID) then
+            do patch_ID = 1,data%mesh%bc_patch_group(group_ID)%npatches()
 
                 !
-                ! Initialize element location object
-                ! 
-                elem_info%idomain_g  = idomain_g
-                elem_info%idomain_l  = idomain_l
-                elem_info%ielement_g = ielement_g
-                elem_info%ielement_l = ielement_l
-                call worker%set_element(elem_info)
-                worker%itime = 1
-
-
+                ! Loop over faces in the patch
                 !
-                ! Update the element cache and all models so they are available
-                !
-                call cache_handler%update(worker,data%eqnset,data%bc_state_group, components    = 'all',   &
-                                                                                  face          = NO_ID,   &
-                                                                                  differentiate = .false., &
-                                                                                  lift          = .true.)
+                do face_ID = 1,data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
+
+                    idomain_g  = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g()
+                    idomain_l  = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l()
+                    ielement_g = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID)
+                    ielement_l = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
+                    iface      = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
+
+
+                    !
+                    ! Initialize element location object
+                    ! 
+                    elem_info%idomain_g  = idomain_g
+                    elem_info%idomain_l  = idomain_l
+                    elem_info%ielement_g = ielement_g
+                    elem_info%ielement_l = ielement_l
+                    call worker%set_element(elem_info)
+                    worker%itime = 1
+
+
+                    !
+                    ! Update the element cache and all models so they are available
+                    !
+                    call cache_handler%update(worker,data%eqnset,data%bc_state_group, components    = 'all',   &
+                                                                                      face          = NO_ID,   &
+                                                                                      differentiate = .false., &
+                                                                                      lift          = .true.)
 
 
 
-                call worker%set_face(iface)
+                    call worker%set_face(iface)
 
 
-                !
-                ! Get pressure
-                !
-                pressure = worker%get_model_field_face('Pressure', 'value', 'face interior')
+                    !
+                    ! Get pressure
+                    !
+                    pressure = worker%get_model_field_face('Pressure', 'value', 'face interior')
 
 
-                
-                !
-                ! Get shear stress tensor
-                !
-                tau_11 = worker%get_model_field_face('Shear-11', 'value', 'face interior')
-                tau_22 = worker%get_model_field_face('Shear-22', 'value', 'face interior')
-                tau_33 = worker%get_model_field_face('Shear-33', 'value', 'face interior')
-                tau_12 = worker%get_model_field_face('Shear-12', 'value', 'face interior')
-                tau_13 = worker%get_model_field_face('Shear-13', 'value', 'face interior')
-                tau_23 = worker%get_model_field_face('Shear-23', 'value', 'face interior')
+                    
+                    !
+                    ! Get shear stress tensor
+                    !
+                    tau_11 = worker%get_model_field_face('Shear-11', 'value', 'face interior')
+                    tau_22 = worker%get_model_field_face('Shear-22', 'value', 'face interior')
+                    tau_33 = worker%get_model_field_face('Shear-33', 'value', 'face interior')
+                    tau_12 = worker%get_model_field_face('Shear-12', 'value', 'face interior')
+                    tau_13 = worker%get_model_field_face('Shear-13', 'value', 'face interior')
+                    tau_23 = worker%get_model_field_face('Shear-23', 'value', 'face interior')
 
 
-                ! From symmetry
-                tau_21 = tau_12
-                tau_31 = tau_13
-                tau_32 = tau_23
+                    ! From symmetry
+                    tau_21 = tau_12
+                    tau_31 = tau_13
+                    tau_32 = tau_23
 
-                
-                !
-                ! Add pressure component
-                !
-                tau_11 = tau_11 - pressure
-                tau_22 = tau_22 - pressure
-                tau_33 = tau_33 - pressure
-
-
-                !
-                ! Get normal vectors and reverse, because we want outward-facing vector from
-                ! the geometry.
-                !
-                norm_1  = -worker%normal(1)
-                norm_2  = -worker%normal(2)
-                norm_3  = -worker%normal(3)
-
-                !unorm_1 = -worker%unit_normal(1)
-                !unorm_2 = -worker%unit_normal(2)
-                !unorm_3 = -worker%unit_normal(3)
+                    
+                    !
+                    ! Add pressure component
+                    !
+                    tau_11 = tau_11 - pressure
+                    tau_22 = tau_22 - pressure
+                    tau_33 = tau_33 - pressure
 
 
-                !
-                ! Hit normal vector with g*G^{-T} so our normal and Area correspond to physical ALE quantities
-                !
-                det_jacobian_grid = worker%get_det_jacobian_grid_face('value', 'face interior')
-                jacobian_grid     = worker%get_inv_jacobian_grid_face('face interior')
-                norm_1_phys = det_jacobian_grid*(jacobian_grid(:,1,1)*norm_1 + jacobian_grid(:,1,2)*norm_2 + jacobian_grid(:,1,3)*norm_3)
-                norm_2_phys = det_jacobian_grid*(jacobian_grid(:,2,1)*norm_1 + jacobian_grid(:,2,2)*norm_2 + jacobian_grid(:,2,3)*norm_3)
-                norm_3_phys = det_jacobian_grid*(jacobian_grid(:,3,1)*norm_1 + jacobian_grid(:,3,2)*norm_2 + jacobian_grid(:,3,3)*norm_3)
-
-                
-
-                !
-                ! Compute \vector{n} dot \tensor{tau}
-                !   : These should produce the same result since the tensor is 
-                !   : symmetric. Not sure which is more correct.
-                !
-                !stress_x = unorm_1*tau_11 + unorm_2*tau_21 + unorm_3*tau_31
-                !stress_y = unorm_1*tau_12 + unorm_2*tau_22 + unorm_3*tau_32
-                !stress_z = unorm_1*tau_13 + unorm_2*tau_23 + unorm_3*tau_33
-
-                ! Working: No ALE
-                !stress_x = tau_11*unorm_1 + tau_12*unorm_2 + tau_13*unorm_3
-                !stress_y = tau_21*unorm_1 + tau_22*unorm_2 + tau_23*unorm_3
-                !stress_z = tau_31*unorm_1 + tau_32*unorm_2 + tau_33*unorm_3
+                    !
+                    ! Get normal vectors and reverse, because we want outward-facing vector from
+                    ! the geometry.
+                    !
+                    norm_1  = -worker%normal(1)
+                    norm_2  = -worker%normal(2)
+                    norm_3  = -worker%normal(3)
 
 
-                ! Testing: ALE
-                stress_x = tau_11*norm_1_phys + tau_12*norm_2_phys + tau_13*norm_3_phys
-                stress_y = tau_21*norm_1_phys + tau_22*norm_2_phys + tau_23*norm_3_phys
-                stress_z = tau_31*norm_1_phys + tau_32*norm_2_phys + tau_33*norm_3_phys
+                    !
+                    ! Hit normal vector with g*G^{-T} so our normal and Area correspond to physical ALE quantities
+                    !
+                    det_jacobian_grid = worker%get_det_jacobian_grid_face('value', 'face interior')
+                    jacobian_grid     = worker%get_inv_jacobian_grid_face('face interior')
+                    !norm_1_phys = det_jacobian_grid*(jacobian_grid(:,1,1)*norm_1 + jacobian_grid(:,1,2)*norm_2 + jacobian_grid(:,1,3)*norm_3)
+                    !norm_2_phys = det_jacobian_grid*(jacobian_grid(:,2,1)*norm_1 + jacobian_grid(:,2,2)*norm_2 + jacobian_grid(:,2,3)*norm_3)
+                    !norm_3_phys = det_jacobian_grid*(jacobian_grid(:,3,1)*norm_1 + jacobian_grid(:,3,2)*norm_2 + jacobian_grid(:,3,3)*norm_3)
+                    norm_1_phys = det_jacobian_grid*(jacobian_grid(:,1,1)*norm_1 + jacobian_grid(:,2,1)*norm_2 + jacobian_grid(:,3,1)*norm_3)
+                    norm_2_phys = det_jacobian_grid*(jacobian_grid(:,1,2)*norm_1 + jacobian_grid(:,2,2)*norm_2 + jacobian_grid(:,3,2)*norm_3)
+                    norm_3_phys = det_jacobian_grid*(jacobian_grid(:,1,3)*norm_1 + jacobian_grid(:,2,3)*norm_2 + jacobian_grid(:,3,3)*norm_3)
+
+                    u_grid = worker%get_grid_velocity_face('u_grid', 'face interior')
+                    v_grid = worker%get_grid_velocity_face('v_grid', 'face interior')
+                    w_grid = worker%get_grid_velocity_face('w_grid', 'face interior')
+                    
+
+                    !
+                    ! Compute \vector{n} dot \tensor{tau}
+                    !   : These should produce the same result since the tensor is 
+                    !   : symmetric. Not sure which is more correct.
+                    !
+                    !stress_x = norm_1_phys*tau_11 + norm_2_phys*tau_21 + norm_3_phys*tau_31
+                    !stress_y = norm_1_phys*tau_12 + norm_2_phys*tau_22 + norm_3_phys*tau_32
+                    !stress_z = norm_1_phys*tau_13 + norm_2_phys*tau_23 + norm_3_phys*tau_33
+
+                    ! Testing: ALE
+                    stress_x = tau_11*norm_1_phys + tau_12*norm_2_phys + tau_13*norm_3_phys
+                    stress_y = tau_21*norm_1_phys + tau_22*norm_2_phys + tau_23*norm_3_phys
+                    stress_z = tau_31*norm_1_phys + tau_32*norm_2_phys + tau_33*norm_3_phys
 
 
-                !
-                ! Integrate
-                !
-                weights = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%weights(iface)
-                !areas   = sqrt(norm_1*norm_1 + norm_2*norm_2 + norm_3*norm_3)
+                    !
+                    ! Integrate
+                    !
+                    weights = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%weights(iface)
 
-                ! Working: No ALE
-                !force(1) = force(1) + sum( stress_x(:)%x_ad_ * weights * areas)
-                !force(2) = force(2) + sum( stress_y(:)%x_ad_ * weights * areas)
-                !force(3) = force(3) + sum( stress_z(:)%x_ad_ * weights * areas)
+                    if (present(force)) then
+                        force_local(1) = force_local(1) + sum( stress_x(:)%x_ad_ * weights)
+                        force_local(2) = force_local(2) + sum( stress_y(:)%x_ad_ * weights)
+                        force_local(3) = force_local(3) + sum( stress_z(:)%x_ad_ * weights)
+                    end if
 
-                ! Testing: ALE
-                force(1) = force(1) + sum( stress_x(:)%x_ad_ * weights)
-                force(2) = force(2) + sum( stress_y(:)%x_ad_ * weights)
-                force(3) = force(3) + sum( stress_z(:)%x_ad_ * weights)
+                    if (present(work)) then
+                        work_local = work_local + sum( (stress_x(:)%x_ad_ * weights * u_grid) + &
+                                                       (stress_y(:)%x_ad_ * weights * v_grid) + &
+                                                       (stress_z(:)%x_ad_ * weights * w_grid) )
+                    end if
 
-            end do !iface
+                end do !iface
 
-        end do !ipatch
-
+            end do !ipatch
+        end if
 
 
         !
         ! Reduce result across processors
         !
-        call MPI_AllReduce(force,force_reduced,3,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+        if (present(force)) call MPI_AllReduce(force_local,force,3,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
+        if (present(work))  call MPI_AllReduce(work_local, work, 1,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
 
 
-    end function compute_force
+
+    end subroutine report_aerodynamics
     !******************************************************************************************
 
 

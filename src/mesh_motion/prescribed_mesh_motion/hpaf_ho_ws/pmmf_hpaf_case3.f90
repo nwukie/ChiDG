@@ -101,7 +101,8 @@ contains
         if (time <= TWO) height = b3
         if (time >  TWO) height = ONE
         A3 = (80._rk*PI/180._rk)
-        theta = A3*b1
+        if (time <= TWO) theta = A3*b1
+        if (time >  TWO) theta = ZERO
 
         !Center of motion nodeinates
         xc = 1._rk/3._rk

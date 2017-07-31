@@ -33,6 +33,7 @@ module type_fgmres_cgs
     type, public, extends(linear_solver_t) :: fgmres_cgs_t
 
         integer(ik) :: m = 2000
+        !integer(ik) :: m = 10
 
     contains
 

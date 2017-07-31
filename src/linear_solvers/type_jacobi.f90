@@ -1,7 +1,7 @@
-module type_fgmres_cgs_mg
+module type_jacobi
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: ZERO, ONE, TWO, THREE
+    use mod_constants,          only: ZERO
     use mod_inv,                only: inv
     use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER
     use mod_io,                 only: verbosity
@@ -11,9 +11,6 @@ module type_fgmres_cgs_mg
     use type_linear_solver,     only: linear_solver_t 
     use type_preconditioner,    only: preconditioner_t
     use type_solver_controller, only: solver_controller_t
-    use type_fgmres_cgs,        only: fgmres_cgs_t
-    use precon_ILU0,            only: precon_ILU0_t
-    use precon_jacobi,          only: precon_jacobi_t
     use type_chidg_vector
     use type_chidg_matrix
 
@@ -23,6 +20,7 @@ module type_fgmres_cgs_mg
         
 
 
+    logical :: first_boost = .true.
 
 
 
@@ -33,16 +31,15 @@ module type_fgmres_cgs_mg
     !!  @date   5/11/2016
     !!
     !---------------------------------------------------------------------------------------------
-    type, public, extends(linear_solver_t) :: fgmres_cgs_mg_t
+    type, public, extends(linear_solver_t) :: jacobi_t
 
-        integer(ik) :: m = 40
-        integer(ik) :: mg = 2
+        integer(ik) :: m = 2000
 
     contains
 
         procedure   :: solve
 
-    end type fgmres_cgs_mg_t
+    end type jacobi_t
     !*********************************************************************************************
 
 
@@ -63,7 +60,7 @@ contains
     !!
     !---------------------------------------------------------------------------------------------
     subroutine solve(self,A,x,b,M,solver_controller)
-        class(fgmres_cgs_mg_t),     intent(inout)               :: self
+        class(jacobi_t),        intent(inout)               :: self
         type(chidg_matrix_t),       intent(inout)               :: A
         type(chidg_vector_t),       intent(inout)               :: x
         type(chidg_vector_t),       intent(inout)               :: b
@@ -79,63 +76,13 @@ contains
         real(rk),               allocatable :: p(:), y(:), c(:), s(:), p_dim(:), y_dim(:)
         real(rk)                            :: pj, pjp, h_ij, h_ipj, norm_before, norm_after, L_crit, crit
 
-        integer(ik) :: iparent, ierr, ivec, isol, nvecs, ielem, nmg, ismooth
+        integer(ik) :: iparent, ierr, ivec, isol, nvecs, ielem
         integer(ik) :: i, j, k, l, ii, ih                 ! Loop counters
         real(rk)    :: res, err, r0norm, gam, delta 
 
         logical :: converged = .false.
         logical :: max_iter  = .false.
         logical :: reorthogonalize = .false.
-
-
-        ! Multi-grid data
-        type(fgmres_cgs_mg_t)   :: mg_linear_solver
-        type(precon_ILU0_t)     :: mg_M
-        !type(precon_jacobi_t)   :: mg_M
-        type(chidg_matrix_t)    :: mg_A
-        type(chidg_vector_t)    :: mg_r
-        type(chidg_vector_t)    :: mg_v
-        type(chidg_vector_t)    :: mg_err
-        type(chidg_vector_t)    :: mg_err_precon
-        type(chidg_vector_t)    :: mg_err_prolonged
-        type(chidg_vector_t)    :: mg_err_smoothed
-        type(chidg_vector_t)    :: r_sm
-        type(chidg_vector_t)    :: correction
-
-        !
-        ! Set the multigrid recursion level
-        !
-        mg_linear_solver%mg = self%mg - 1
-
-
-        !
-        ! If we are on the lowest level, increase restart parameter
-        !
-        if (self%mg == 1) self%m = 200
-
-
-        !
-        ! Reset/Start timers
-        !
-        call timer_comm%reset()
-        call timer_blas%reset()
-
-        call self%timer%reset()
-        call self%timer%start()
-        call write_line('           Linear Solver: ', io_proc=GLOBAL_MASTER, silence=(verbosity<4))
-
-
-
-        !
-        ! Update preconditioner
-        !
-        if (present(solver_controller)) then
-            if (solver_controller%update_preconditioner(A)) call M%update(A,b)
-        else
-            call M%update(A,b)
-        end if
-
-
 
 
         !
@@ -152,34 +99,6 @@ contains
             call z(ivec)%clear()
         end do
 
-
-
-        !
-        ! Allocate hessenberg matrix to store orthogonalization
-        !
-        allocate(h(self%m + 1, self%m), dot_tmp(self%m+1), htmp(self%m + 1, self%m), stat=ierr)
-        if (ierr /= 0) call AllocationError
-        h       = ZERO
-        htmp    = ZERO
-        dot_tmp = ZERO
-
-
-
-        !
-        ! Allocate vectors for solving hessenberg system
-        !
-        allocate(p(self%m+1), &
-                 y(self%m+1), &
-                 c(self%m+1), &
-                 s(self%m+1), stat=ierr)
-        if (ierr /= 0) call AllocationError
-        p = ZERO
-        y = ZERO
-        c = ZERO
-        s = ZERO
-
-
-
         !
         ! Set initial solution x. ZERO
         !
@@ -191,69 +110,8 @@ contains
         self%niter = 0
 
 
-        !res = 1000000000000._rk
         res = huge(1._rk)
         do while (res > self%tol)
-
-            !
-            ! Clear working variables
-            !
-            do ivec = 1,size(v)
-                call v(ivec)%clear()
-                call z(ivec)%clear()
-            end do
-
-
-            p    = ZERO
-            y    = ZERO
-            c    = ZERO
-            s    = ZERO
-            h    = ZERO
-            htmp = ZERO
-
-
-
-
-
-
-
-            if ( (self%niter /= 0) .and. (self%mg > 1) ) then
-                print*, 'Entering multigrid level: ', mg_linear_solver%mg
-                !
-                ! Apply ILU0 Smoother
-                !
-                r0     = self%residual(A,x0,b)
-                mg_r = r0%restrict(nterms_r=self%mg-1)
-                mg_A = A%restrict( nterms_r=self%mg-1)
-                select type(M)
-                    type is (precon_ILU0_t)
-                        mg_M = M%restrict(nterms_r=self%mg-1)
-                        call mg_M%update(mg_A,mg_r)
-                    !type is (precon_jacobi_t)
-                    !    mg_M = M%restrict(nterms_r=1)
-                end select
-
-
-                !
-                ! Solve for coarse-scale error: mg_err
-                !   [mg_A][mg_err] = [mg_r]
-                !
-                call write_line('solving for coarse-scale correction', io_proc=GLOBAL_MASTER, silence=(verbosity<4))
-                mg_err = mg_r
-                call mg_err%clear()
-
-                call mg_linear_solver%solve(mg_A,mg_err,mg_r,mg_M)
-
-                !
-                ! Prolong error and apply as coarse-scale correction x0 = x0 + mg_err
-                !
-                call write_line('applying coarse-scale correction', io_proc=GLOBAL_MASTER, silence=(verbosity<4))
-                correction = M%apply(A,mg_err%prolong(nterms_p=x0%dom(1)%vecs(1)%nterms()))
-                x0 = x0 + correction
-
-            end if
-
-
 
 
             !
@@ -266,26 +124,27 @@ contains
 
 
 
-
-
-
-
             !
             ! Inner GMRES restart loop
             !
             nvecs = 0
-            nmg   = 0
             do j = 1,self%m
+
+
                 nvecs = nvecs + 1
            
-
                 !
-                ! Apply fine-scale preconditioner:  z(j) = Minv * v(j)
+                ! Apply preconditioner:  z(j) = Minv * v(j)
                 !
                 call timer_precon%start()
                 z(j) = M%apply(A,v(j))
-                call timer_precon%stop()
 
+                if (self%niter == 0) then
+                    z(j) = boostconv(z(j),.true.)
+                else
+                    z(j) = boostconv(z(j),.false.)
+                end if
+                call timer_precon%stop()
 
 
                 !
@@ -464,7 +323,10 @@ contains
             !
             ! Solve upper-triangular system y = hinv * p
             !
-            if (allocated(h_square)) deallocate(h_square,p_dim,y_dim)
+            if (allocated(h_square)) then
+                deallocate(h_square,p_dim,y_dim)
+            end if
+            
             allocate(h_square(nvecs,nvecs), &
                      p_dim(nvecs),          &
                      y_dim(nvecs), stat=ierr)
@@ -562,4 +424,134 @@ contains
 
 
 
-end module type_fgmres_cgs_mg
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    function boostconv(r,clear) result(z)
+        type(chidg_vector_t),   intent(in)  :: r
+        logical,                intent(in)  :: clear
+
+        integer(ik),    parameter   :: N = 100
+        integer(ik)                 :: i, m, k
+
+        type(chidg_vector_t)            :: z
+        type(chidg_vector_t),   save    :: w(N), v(N), r_nm1, z_nm1
+        real(rk),               save    :: D(N,N)
+        integer(ik),            save    :: startup
+        real(rk)                        :: t(N), c(N)
+        real(rk),       allocatable     :: Dinv(:,:)
+
+
+        if (clear) then
+            first_boost = .true.
+        end if
+
+
+
+
+        if (first_boost) then
+            w(:) = r
+            v(:) = r
+            r_nm1 = r
+            z_nm1 = r
+            call z_nm1%clear()
+            do i = 1,N
+                call w(i)%clear()
+                call v(i)%clear()
+            end do
+            D = ZERO
+            startup = 1
+            first_boost = .false.
+        end if
+
+        !
+        ! Discard oldest vectors
+        !
+        do i = 1,N-1
+            v(i) = v(i+1)
+            w(i) = w(i+1)
+        end do
+
+
+        !
+        ! Update vector basis
+        !
+        v(N) = r_nm1 - r
+        w(N) = z_nm1 - v(N)
+        
+
+        !
+        ! Shift rows up, top row goes into the bottom row, but will be replaced by the update just below here
+        !
+        D = cshift(D,1,1)
+        D = cshift(D,1,2)
+
+
+        !
+        ! Update least squares matrix
+        !
+        do m = 1,N
+            D(N,m) = dot(v(N),v(m),ChiDG_COMM)
+        end do
+        D(:,N) = D(N,:)
+
+
+        !
+        ! Build rhs
+        !
+        do k = 1,N
+            t(k) = dot(v(k),r,ChiDG_COMM)
+        end do
+
+
+        z = r
+        if (startup > N) then
+
+            Dinv = inv(D(1:N,1:N))
+            c(1:N) = matmul(Dinv,t(1:N))
+
+            !print*, 'C:'
+            !print*, c
+            do i = 1,N
+                z = z + c(i)*w(i)
+            end do
+        end if
+        
+
+        !
+        ! 
+        !
+        startup = startup + 1
+
+
+        r_nm1 = r
+        z_nm1 = z
+
+
+    end function boostconv
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+end module type_jacobi

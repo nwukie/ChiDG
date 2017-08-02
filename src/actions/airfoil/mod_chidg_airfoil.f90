@@ -170,7 +170,7 @@ contains
 
         lift = ZERO
         drag = ZERO
-        do patch_ID = 1,size(chidg%data%mesh%bc_patch_group(group_ID)%patch)
+        do patch_ID = 1,chidg%data%mesh%bc_patch_group(group_ID)%npatches()
 
             !
             ! Loop over faces in the patch
@@ -199,7 +199,7 @@ contains
                 !
                 ! Update the element cache and all models so they are available
                 !
-                call cache_handler%update(worker,chidg%data%eqnset,chidg%data%bc_state_group, components='all', face=NO_ID, differentiate=.false., lift=.false.)
+                call cache_handler%update(worker,chidg%data%eqnset,chidg%data%bc_state_group, components='all', face=NO_ID, differentiate=.false., lift=.true.)
 
 
 

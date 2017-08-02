@@ -87,45 +87,24 @@ contains
 
         type(AD_D), allocatable, dimension(:) ::    &
             rho, rhou, rhov, rhow, rhoE, p, H,      &
-            flux_x_ref, flux_y_ref, flux_z_ref,     &
-            flux_x, flux_y, flux_z, invrho, u
-
-        real(rk), allocatable, dimension(:) ::      &
-           u_grid, v_grid, w_grid, det_jacobian_grid, testx
+            flux_x, flux_y, flux_z, invrho
 
 
-        real(rk), allocatable, dimension(:,:,:) ::      &
-            jacobian_grid
+        type(AD_D), allocatable, dimension(:,:)  :: flux
 
-        u_grid = worker%get_grid_velocity_element("u_grid")
-        v_grid = worker%get_grid_velocity_element("v_grid")
-        w_grid = worker%get_grid_velocity_element("w_grid")
-
-!        print *, 'u_grid'
-!        print *, u_grid
-!        print *, 'v_grid'
-!        print *, v_grid
-!        print *, 'w_grid'
-!        print *, w_grid
-        jacobian_grid = worker%get_inv_jacobian_grid_element()
-        det_jacobian_grid = worker%get_det_jacobian_grid_element('value')
-
-
-
-!        print *, 'jacobian_grid'
-!        print *, jacobian_grid(2,:,:)
-!        print *, 'det_jacobian_grid'
-!        print *, det_jacobian_grid
-
-        !
-        ! Get equation indices
-        !
-        irho  = prop%get_primary_field_index("Density"   )
-        irhou = prop%get_primary_field_index("Momentum-1")
-        irhov = prop%get_primary_field_index("Momentum-2")
-        irhow = prop%get_primary_field_index("Momentum-3")
-        irhoE = prop%get_primary_field_index("Energy"    )
-
+!        real(rk), allocatable, dimension(:) ::      &
+!           u_grid, v_grid, w_grid
+!
+!
+!        real(rk), allocatable, dimension(:,:,:) ::      &
+!            jacobian_grid
+!
+!        u_grid = worker%get_grid_velocity_element("u_grid")
+!        v_grid = worker%get_grid_velocity_element("v_grid")
+!        w_grid = worker%get_grid_velocity_element("w_grid")
+!
+!        jacobian_grid = worker%get_inv_jacobian_grid_element()
+!        det_jacobian_grid = worker%get_det_jacobian_grid_element('value')
 
 
         !
@@ -141,17 +120,13 @@ contains
         invrho = ONE/rho
     
 
-!        u = invrho*rhou
-!        print *, 'u'
-!        print *,  u(:)%x_ad_
-
 
         !
         ! Compute pressure and total enthalpy
         !
         !p = prop%fluid%compute_pressure(rho,rhou,rhov,rhow,rhoE)
-        !p = worker%get_model_field_element('Pressure','value')
-        p = (1.4_rk-ONE)*(rhoE-HALF*(rhou**TWO+rhov**TWO+rhow**TWO)/rho)
+        !p = (1.4_rk-ONE)*(rhoE-HALF*(rhou**TWO+rhov**TWO+rhow**TWO)/rho)
+        p = worker%get_model_field_element('Pressure','value')
 
         H = (rhoE + p)*invrho
 
@@ -161,17 +136,19 @@ contains
         flux_x = rhou
         flux_y = rhov
         flux_z = rhow
+        flux = worker%post_process_volume_advective_flux_ale(flux_x,flux_y,flux_z, advected_quantity=rho)
 
-        flux_x = flux_x - rho*u_grid
-        flux_y = flux_y - rho*v_grid
-        flux_z = flux_z - rho*w_grid
+!        flux_x = flux_x - rho*u_grid
+!        flux_y = flux_y - rho*v_grid
+!        flux_z = flux_z - rho*w_grid
+!
+!        flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
+!        flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
+!        flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
 
-        flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
-        flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
-        flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
 
-
-        call worker%integrate_volume('Density',flux_x_ref,flux_y_ref,flux_z_ref)
+        !call worker%integrate_volume('Density',flux_x_ref,flux_y_ref,flux_z_ref)
+        call worker%integrate_volume('Density',flux(:,1),flux(:,2),flux(:,3))
 
 
         !===========================
@@ -180,28 +157,19 @@ contains
         flux_x = (rhou*rhou)*invrho  +  p
         flux_y = (rhou*rhov)*invrho
         flux_z = (rhou*rhow)*invrho
+        flux = worker%post_process_volume_advective_flux_ale(flux_x,flux_y,flux_z, advected_quantity=rhou)
         
-        flux_x = flux_x - rhou*u_grid
-        flux_y = flux_y - rhou*v_grid
-        flux_z = flux_z - rhou*w_grid
+!        flux_x = flux_x - rhou*u_grid
+!        flux_y = flux_y - rhou*v_grid
+!        flux_z = flux_z - rhou*w_grid
+!
+!        flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
+!        flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
+!        flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
 
-        flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
-        flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
-        flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
 
-!        if (worker%element_info%ielement_g == 1) then
-!            print *, 'time'
-!            print *, worker%t
-!            print *, worker%x('volume')
-!            print *, 'det_jacobian_grid'
-!            print *, det_jacobian_grid(1)
-!            print *, 'u-grid'
-!            print *, u_grid(1)
-!            print *, 'Mom-1 flux sample'
-!            print *, flux_x_ref(1)%x_ad_
-!        end if
-
-        call worker%integrate_volume('Momentum-1',flux_x_ref,flux_y_ref,flux_z_ref)
+        !call worker%integrate_volume('Momentum-1',flux_x_ref,flux_y_ref,flux_z_ref)
+        call worker%integrate_volume('Momentum-1',flux(:,1),flux(:,2),flux(:,3))
 
 
         !============================
@@ -210,17 +178,19 @@ contains
         flux_x = (rhov*rhou)*invrho
         flux_y = (rhov*rhov)*invrho  +  p
         flux_z = (rhov*rhow)*invrho
+        flux = worker%post_process_volume_advective_flux_ale(flux_x,flux_y,flux_z, advected_quantity=rhov)
         
-        flux_x = flux_x - rhov*u_grid
-        flux_y = flux_y - rhov*v_grid
-        flux_z = flux_z - rhov*w_grid
+!        flux_x = flux_x - rhov*u_grid
+!        flux_y = flux_y - rhov*v_grid
+!        flux_z = flux_z - rhov*w_grid
+!
+!        flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
+!        flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
+!        flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
 
-        flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
-        flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
-        flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
 
-
-        call worker%integrate_volume('Momentum-2',flux_x_ref,flux_y_ref,flux_z_ref)
+        !call worker%integrate_volume('Momentum-2',flux_x_ref,flux_y_ref,flux_z_ref)
+        call worker%integrate_volume('Momentum-2',flux(:,1),flux(:,2),flux(:,3))
 
         !============================
         !     Z-MOMENTUM FLUX
@@ -228,17 +198,19 @@ contains
         flux_x = (rhow*rhou)*invrho
         flux_y = (rhow*rhov)*invrho
         flux_z = (rhow*rhow)*invrho  +  p
+        flux = worker%post_process_volume_advective_flux_ale(flux_x,flux_y,flux_z, advected_quantity=rhow)
 
-        flux_x = flux_x - rhow*u_grid
-        flux_y = flux_y - rhow*v_grid
-        flux_z = flux_z - rhow*w_grid
+!        flux_x = flux_x - rhow*u_grid
+!        flux_y = flux_y - rhow*v_grid
+!        flux_z = flux_z - rhow*w_grid
+!
+!        flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
+!        flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
+!        flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
 
-        flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
-        flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
-        flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
 
-
-        call worker%integrate_volume('Momentum-3',flux_x_ref,flux_y_ref,flux_z_ref)
+        !call worker%integrate_volume('Momentum-3',flux_x_ref,flux_y_ref,flux_z_ref)
+        call worker%integrate_volume('Momentum-3',flux(:,1),flux(:,2),flux(:,3))
 
         !============================
         !       ENERGY FLUX
@@ -246,32 +218,19 @@ contains
         flux_x = rhou*H
         flux_y = rhov*H
         flux_z = rhow*H
+        flux = worker%post_process_volume_advective_flux_ale(flux_x,flux_y,flux_z, advected_quantity=rhoE)
 
-        flux_x = flux_x - rhoE*u_grid
-        flux_y = flux_y - rhoE*v_grid
-        flux_z = flux_z - rhoE*w_grid
-
-        flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
-        flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
-        flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
-
-!        if (worker%element_info%ielement_g == 3) then
-!            testx = worker%x('volume')
-!            print *, 'time'
-!            print *, worker%t
-!            print *, 'node x position'
-!            print *, testx(1) 
-!            print *, 'det_jacobian_grid'
-!            print *, det_jacobian_grid(1)
-!            print *, 'u-grid'
-!            print *, u_grid(1)
-!            print *, 'Energy flux sample'
-!            print *, flux_x_ref(1)%x_ad_
-!        end if
+!        flux_x = flux_x - rhoE*u_grid
+!        flux_y = flux_y - rhoE*v_grid
+!        flux_z = flux_z - rhoE*w_grid
+!
+!        flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
+!        flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
+!        flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
 
 
-
-        call worker%integrate_volume('Energy',flux_x_ref,flux_y_ref,flux_z_ref)
+        !call worker%integrate_volume('Energy',flux_x_ref,flux_y_ref,flux_z_ref)
+        call worker%integrate_volume('Energy',flux(:,1),flux(:,2),flux(:,3))
 
     end subroutine compute
     !*********************************************************************************************************

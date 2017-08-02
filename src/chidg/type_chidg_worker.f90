@@ -2651,9 +2651,13 @@ contains
         real(rk), allocatable                       :: det_jacobian_grid(:), u_grid(:), v_grid(:), w_grid(:)
         real(rk), allocatable                       :: jacobian_grid(:,:,:)
 
-        u_grid = self%get_grid_velocity_face('u_grid', interp_source)
-        v_grid = self%get_grid_velocity_face('v_grid', interp_source)
-        w_grid = self%get_grid_velocity_face('w_grid', interp_source)
+        !u_grid = self%get_grid_velocity_face('u_grid', interp_source)
+        !v_grid = self%get_grid_velocity_face('v_grid', interp_source)
+        !w_grid = self%get_grid_velocity_face('w_grid', interp_source)
+        ! Always choose a consistent velocity
+        u_grid = self%get_grid_velocity_face('u_grid', 'face interior')
+        v_grid = self%get_grid_velocity_face('v_grid', 'face interior')
+        w_grid = self%get_grid_velocity_face('w_grid', 'face interior')
 
 
         det_jacobian_grid = self%get_det_jacobian_grid_face('value', interp_source)

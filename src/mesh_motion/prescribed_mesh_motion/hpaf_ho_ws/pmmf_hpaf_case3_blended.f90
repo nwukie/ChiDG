@@ -59,8 +59,8 @@ contains
         !
         ! Set function options to default settings
         !
-        call self%add_option('blend_rigid_radius', 20.0_rk) !Within this radius, the mesh is rigidly displaced
-        call self%add_option('blend_transition_length', 30.0_rk) !Length scale where the mesh is blended between RB and fixed
+        call self%add_option('blend_rigid_radius', 10.0_rk) !Within this radius, the mesh is rigidly displaced
+        call self%add_option('blend_transition_length', 50.0_rk) !Length scale where the mesh is blended between RB and fixed
     
     end subroutine init
     !*************************************************************************

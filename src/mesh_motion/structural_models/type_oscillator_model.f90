@@ -44,20 +44,22 @@ module type_oscillator_model
 
 contains
 
-    subroutine init(self, mass_in, damping_coeff_in, stiffness_coeff_in)
+    subroutine init(self, mass_in, damping_coeff_in, stiffness_coeff_in, initial_velocity_in)
         class(oscillator_model_t), intent(inout)    :: self
         real(rk),intent(in),optional         :: mass_in
         real(rk),intent(in),optional         :: damping_coeff_in(3)
         real(rk),intent(in),optional         :: stiffness_coeff_in(3)
+        real(rk),intent(in),optional         :: initial_velocity_in(3)
 
         real(rk) :: tol
-        real(rk) :: mass, damping_coeff(3), stiffness_coeff(3)
+        real(rk) :: mass, damping_coeff(3), stiffness_coeff(3), initial_velocity(3)
         integer             :: unit, msg
         logical             :: file_exists
 
         namelist /viv_cylinder/    mass,&
                                     damping_coeff, &
-                                    stiffness_coeff
+                                    stiffness_coeff, &
+                                    initial_velocity
 
 
 
@@ -80,6 +82,9 @@ contains
         if (present(stiffness_coeff_in)) then
             self%stiffness_coeff = stiffness_coeff_in 
         end if
+        if (present(initial_velocity_in)) then
+            self%vel(1,:) = initial_velocity_in 
+        end if
         !
         ! Check if input from 'models.nml' is available.
         !   1: if available, read and set self%mu
@@ -92,6 +97,7 @@ contains
             if (msg == 0) self%mass = mass
             if (msg == 0) self%damping_coeff = damping_coeff 
             if (msg == 0) self%stiffness_coeff = stiffness_coeff 
+            if (msg == 0) self%vel(1,:) = initial_velocity 
             close(unit)
         end if
 

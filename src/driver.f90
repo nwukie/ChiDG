@@ -158,8 +158,6 @@ program driver
 !            freq_cyl(1) = freq_ratio*freq_cyl(2)
 !            stiffness_coeff = TWO*PI*mass*freq_cyl**TWO
 !
-!            file_id = open_file_hdf(gridfile)
-!            !Create PMM group
 !            call create_pmm_group_hdf(file_id,'viv_rigid_body_pmm')
 !            call set_pmmf_name_hdf(file_id, 'viv_rigid_body_pmm','rigid_body_motion')
 !
@@ -173,7 +171,7 @@ program driver
 !            !
 !            ! Initialize the oscillating cylinder model
 !            !
-!            call oscillating_cylinder%init(mass, damping_coeff, stiffness_coeff)
+!            call oscillating_cylinder%init()
         end if
 
         call MPI_Barrier(ChiDG_COMM,ierr)

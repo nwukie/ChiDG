@@ -131,6 +131,7 @@ contains
 
 
                 ! Update the element cache
+                print *, 'update cache handler'
                 call cache_handler%update(worker,data%eqnset, data%bc_state_group, components    = 'all',           &
                                                                                    face          = NO_ID,           &
                                                                                    differentiate = differentiate,   &
@@ -139,6 +140,7 @@ contains
 
                 ! Faces loop. For the current element, compute the 
                 ! contributions from boundary integrals.
+                print *, 'update faces'
                 do iface = 1,NFACES
 
                     call worker%set_face(iface)
@@ -154,6 +156,7 @@ contains
                 !
                 ! Compute contributions from volume integrals
                 !
+                print *, 'update volume'
                 call eqnset%compute_volume_advective_operators(worker, differentiate)
                 call eqnset%compute_volume_diffusive_operators(worker, differentiate)
 

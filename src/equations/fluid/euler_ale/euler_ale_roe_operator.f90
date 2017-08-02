@@ -128,33 +128,20 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho_m  = worker%get_primary_field_face('Density'   , 'value', 'face interior')
-        rho_p  = worker%get_primary_field_face('Density'   , 'value', 'face exterior')
+        rho_m  = worker%get_primary_field_value_ale_face('Density'   , 'face interior')
+        rho_p  = worker%get_primary_field_value_ale_face('Density'   , 'face exterior')
 
-        rhou_m = worker%get_primary_field_face('Momentum-1', 'value', 'face interior')
-        rhou_p = worker%get_primary_field_face('Momentum-1', 'value', 'face exterior')
+        rhou_m = worker%get_primary_field_value_ale_face('Momentum-1', 'face interior')
+        rhou_p = worker%get_primary_field_value_ale_face('Momentum-1', 'face exterior')
 
-        rhov_m = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
-        rhov_p = worker%get_primary_field_face('Momentum-2', 'value', 'face exterior')
+        rhov_m = worker%get_primary_field_value_ale_face('Momentum-2', 'face interior')
+        rhov_p = worker%get_primary_field_value_ale_face('Momentum-2', 'face exterior')
 
-        rhow_m = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
-        rhow_p = worker%get_primary_field_face('Momentum-3', 'value', 'face exterior')
+        rhow_m = worker%get_primary_field_value_ale_face('Momentum-3', 'face interior')
+        rhow_p = worker%get_primary_field_value_ale_face('Momentum-3', 'face exterior')
 
-        rhoE_m = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
-        rhoE_p = worker%get_primary_field_face('Energy'    , 'value', 'face exterior')
-
-        rho_m = rho_m/det_jacobian_grid
-        rhou_m = rhou_m/det_jacobian_grid
-        rhov_m = rhov_m/det_jacobian_grid
-        rhow_m = rhow_m/det_jacobian_grid
-        rhoE_m = rhoE_m/det_jacobian_grid
-
-        rho_p = rho_p/det_jacobian_grid
-        rhou_p = rhou_p/det_jacobian_grid
-        rhov_p = rhov_p/det_jacobian_grid
-        rhow_p = rhow_p/det_jacobian_grid
-        rhoE_p = rhoE_p/det_jacobian_grid
-
+        rhoE_m = worker%get_primary_field_value_ale_face('Energy'    , 'face interior')
+        rhoE_p = worker%get_primary_field_value_ale_face('Energy'    , 'face exterior')
 
 
         normx  = worker%normal(1)

@@ -131,17 +131,12 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho  = worker%get_primary_field_element("Density"   ,'value')
-        rhou = worker%get_primary_field_element("Momentum-1",'value')
-        rhov = worker%get_primary_field_element("Momentum-2",'value')
-        rhow = worker%get_primary_field_element("Momentum-3",'value')
-        rhoE = worker%get_primary_field_element("Energy"    ,'value')
+        rho = worker%get_primary_field_value_ale_element('Density'   )
+        rhou    = worker%get_primary_field_value_ale_element('Momentum-1')
+        rhov    = worker%get_primary_field_value_ale_element('Momentum-2')
+        rhow    = worker%get_primary_field_value_ale_element('Momentum-3')
+        rhoE  = worker%get_primary_field_value_ale_element('Energy'    )
 
-        rho = rho/det_jacobian_grid
-        rhou = rhou/det_jacobian_grid
-        rhov = rhov/det_jacobian_grid
-        rhow = rhow/det_jacobian_grid
-        rhoE = rhoE/det_jacobian_grid
 
         invrho = ONE/rho
     

@@ -130,11 +130,11 @@ contains
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
-        rho_bc  = worker%get_primary_field_face("Density"   ,'value', 'boundary')
-        rhou_bc = worker%get_primary_field_face("Momentum-1",'value', 'boundary')
-        rhov_bc = worker%get_primary_field_face("Momentum-2",'value', 'boundary')
-        rhow_bc = worker%get_primary_field_face("Momentum-3",'value', 'boundary')
-        rhoE_bc = worker%get_primary_field_face("Energy"    ,'value', 'boundary')
+        rho_bc  = worker%get_primary_field_value_ale_face("Density"   , 'boundary')
+        rhou_bc = worker%get_primary_field_value_ale_face("Momentum-1", 'boundary')
+        rhov_bc = worker%get_primary_field_value_ale_face("Momentum-2", 'boundary')
+        rhow_bc = worker%get_primary_field_value_ale_face("Momentum-3", 'boundary')
+        rhoE_bc = worker%get_primary_field_value_ale_face("Energy"    , 'boundary')
 
 
         u_grid = worker%get_grid_velocity_face("u_grid",'face interior')

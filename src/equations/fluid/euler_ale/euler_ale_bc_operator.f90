@@ -99,21 +99,22 @@ contains
             rho_bc,  rhou_bc, rhov_bc, rhow_bc, rhoE_bc,    &
             u_bc,    v_bc,    w_bc,                         &
             H_bc,    p_bc,                                  &
-            flux_x_ref, flux_y_ref, flux_z_ref,     &
             flux_x,  flux_y,  flux_z,  integrand
+
+        type(AD_D), allocatable, dimension(:,:) :: flux
 
 
         real(rk),   allocatable, dimension(:)   ::          &
             normx, normy, normz
             
-        real(rk) :: gam_bc
-
-        real(rk), allocatable, dimension(:) ::      &
-           u_grid, v_grid, w_grid, det_jacobian_grid, testx
-
-
-        real(rk), allocatable, dimension(:,:,:) ::      &
-            jacobian_grid
+!        real(rk) :: gam_bc
+!
+!        real(rk), allocatable, dimension(:) ::      &
+!           u_grid, v_grid, w_grid, det_jacobian_grid, testx
+!
+!
+!        real(rk), allocatable, dimension(:,:,:) ::      &
+!            jacobian_grid
 
 
         !
@@ -137,11 +138,11 @@ contains
         rhoE_bc = worker%get_primary_field_value_ale_face("Energy"    , 'boundary')
 
 
-        u_grid = worker%get_grid_velocity_face("u_grid",'face interior')
-        v_grid = worker%get_grid_velocity_face("v_grid",'face interior')
-        w_grid = worker%get_grid_velocity_face("w_grid",'face interior')
-        jacobian_grid = worker%get_inv_jacobian_grid_face('face interior')
-        det_jacobian_grid = worker%get_det_jacobian_grid_face('value', 'face interior')
+!        u_grid = worker%get_grid_velocity_face("u_grid",'face interior')
+!        v_grid = worker%get_grid_velocity_face("v_grid",'face interior')
+!        w_grid = worker%get_grid_velocity_face("w_grid",'face interior')
+!        jacobian_grid = worker%get_inv_jacobian_grid_face('face interior')
+!        det_jacobian_grid = worker%get_det_jacobian_grid_face('value', 'face interior')
 
 
         normx = worker%normal(1)
@@ -172,11 +173,9 @@ contains
         !
         !gam_bc = prop%fluid%compute_gamma(rho_bc,rhou_bc,rhov_bc,rhow_bc,rhoE_bc)
         !p_bc   = prop%fluid%compute_pressure(rho_bc,rhou_bc,rhov_bc,rhow_bc,rhoE_bc)
-        gam_bc = 1.4_rk
-        !p_bc   = worker%get_model_field_face('Pressure','value','boundary')
-
-
-        p_bc = (1.4_rk-1.0_rk)*(rhoE_bc-HALF*(rhou_bc**TWO+rhov_bc**TWO+rhow_bc**TWO)/rho_bc)
+        p_bc   = worker%get_model_field_face('Pressure','value','boundary')
+        !gam_bc = 1.4_rk
+        !p_bc = (1.4_rk-1.0_rk)*(rhoE_bc-HALF*(rhou_bc**TWO+rhov_bc**TWO+rhow_bc**TWO)/rho_bc)
 
 
 
@@ -200,16 +199,22 @@ contains
         !=================================================
         ! Mass flux
         !=================================================
-        flux_x = (rho_bc * u_bc) - u_grid*rho_bc 
-        flux_y = (rho_bc * v_bc) - v_grid*rho_bc 
-        flux_z = (rho_bc * w_bc) - w_grid*rho_bc 
+        flux_x = (rho_bc * u_bc)
+        flux_y = (rho_bc * v_bc)
+        flux_z = (rho_bc * w_bc)
+        flux = worker%post_process_boundary_advective_flux_ale(flux_x,flux_y,flux_z, advected_quantity=rho_bc, interp_source='face interior')
 
-        flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
-        flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
-        flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
+!        flux_x = (rho_bc * u_bc) - u_grid*rho_bc 
+!        flux_y = (rho_bc * v_bc) - v_grid*rho_bc 
+!        flux_z = (rho_bc * w_bc) - w_grid*rho_bc 
+!
+!        flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
+!        flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
+!        flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
 
 
-        integrand = flux_x_ref*normx + flux_y_ref*normy + flux_z_ref*normz
+        !integrand = flux_x_ref*normx + flux_y_ref*normy + flux_z_ref*normz
+        integrand = flux(:,1)*normx + flux(:,2)*normy + flux(:,3)*normz
 
 
 
@@ -218,75 +223,85 @@ contains
         !=================================================
         ! x-momentum flux
         !=================================================
-        flux_x = (rho_bc * u_bc * u_bc) - u_grid*rhou_bc  + p_bc
-        flux_y = (rho_bc * u_bc * v_bc) - v_grid*rhou_bc 
-        flux_z = (rho_bc * u_bc * w_bc) - w_grid*rhou_bc 
-        flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
-        flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
-        flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
+        flux_x = (rho_bc * u_bc * u_bc) + p_bc
+        flux_y = (rho_bc * u_bc * v_bc) 
+        flux_z = (rho_bc * u_bc * w_bc) 
+        flux = worker%post_process_boundary_advective_flux_ale(flux_x,flux_y,flux_z, advected_quantity=rhou_bc, interp_source='face interior')
+
+!        flux_x = (rho_bc * u_bc * u_bc) - u_grid*rhou_bc  + p_bc
+!        flux_y = (rho_bc * u_bc * v_bc) - v_grid*rhou_bc 
+!        flux_z = (rho_bc * u_bc * w_bc) - w_grid*rhou_bc 
+!        flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
+!        flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
+!        flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
 
 
-        integrand = flux_x_ref*normx + flux_y_ref*normy + flux_z_ref*normz
+!        integrand = flux_x_ref*normx + flux_y_ref*normy + flux_z_ref*normz
+        integrand = flux(:,1)*normx + flux(:,2)*normy + flux(:,3)*normz
 
         call worker%integrate_boundary('Momentum-1',integrand)
 
         !=================================================
         ! y-momentum flux
         !=================================================
-        flux_x = (rho_bc * v_bc * u_bc) - u_grid*rhov_bc 
-        flux_y = (rho_bc * v_bc * v_bc) - v_grid*rhov_bc  + p_bc
-        flux_z = (rho_bc * v_bc * w_bc) - w_grid*rhov_bc 
-        flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
-        flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
-        flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
+        flux_x = (rho_bc * v_bc * u_bc) 
+        flux_y = (rho_bc * v_bc * v_bc) + p_bc
+        flux_z = (rho_bc * v_bc * w_bc) 
+        flux = worker%post_process_boundary_advective_flux_ale(flux_x,flux_y,flux_z, advected_quantity=rhov_bc, interp_source='face interior')
+
+!        flux_x = (rho_bc * v_bc * u_bc) - u_grid*rhov_bc 
+!        flux_y = (rho_bc * v_bc * v_bc) - v_grid*rhov_bc  + p_bc
+!        flux_z = (rho_bc * v_bc * w_bc) - w_grid*rhov_bc 
+!        flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
+!        flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
+!        flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
 
 
-        integrand = flux_x_ref*normx + flux_y_ref*normy + flux_z_ref*normz
+!        integrand = flux_x_ref*normx + flux_y_ref*normy + flux_z_ref*normz
+        integrand = flux(:,1)*normx + flux(:,2)*normy + flux(:,3)*normz
 
         call worker%integrate_boundary('Momentum-2',integrand)
 
         !=================================================
         ! z-momentum flux
         !=================================================
-        flux_x = (rho_bc * w_bc * u_bc) - u_grid*rhow_bc 
-        flux_y = (rho_bc * w_bc * v_bc) - v_grid*rhow_bc 
-        flux_z = (rho_bc * w_bc * w_bc) - w_grid*rhow_bc  + p_bc
-        flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
-        flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
-        flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
+        flux_x = (rho_bc * w_bc * u_bc) 
+        flux_y = (rho_bc * w_bc * v_bc) 
+        flux_z = (rho_bc * w_bc * w_bc) + p_bc
+        flux = worker%post_process_boundary_advective_flux_ale(flux_x,flux_y,flux_z, advected_quantity=rhow_bc, interp_source='face interior')
+
+!        flux_x = (rho_bc * w_bc * u_bc) - u_grid*rhow_bc 
+!        flux_y = (rho_bc * w_bc * v_bc) - v_grid*rhow_bc 
+!        flux_z = (rho_bc * w_bc * w_bc) - w_grid*rhow_bc  + p_bc
+!        flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
+!        flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
+!        flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
 
 
-        integrand = flux_x_ref*normx + flux_y_ref*normy + flux_z_ref*normz
+!        integrand = flux_x_ref*normx + flux_y_ref*normy + flux_z_ref*normz
+        integrand = flux(:,1)*normx + flux(:,2)*normy + flux(:,3)*normz
 
         call worker%integrate_boundary('Momentum-3',integrand)
 
         !=================================================
         ! Energy flux
         !=================================================
-        flux_x = (rho_bc * u_bc * H_bc) - u_grid*rhoE_bc 
-        flux_y = (rho_bc * v_bc * H_bc) - v_grid*rhoE_bc 
-        flux_z = (rho_bc * w_bc * H_bc) - w_grid*rhoE_bc 
+        flux_x = (rho_bc * u_bc * H_bc) 
+        flux_y = (rho_bc * v_bc * H_bc) 
+        flux_z = (rho_bc * w_bc * H_bc) 
+        flux = worker%post_process_boundary_advective_flux_ale(flux_x,flux_y,flux_z, advected_quantity=rhoE_bc, interp_source='face interior')
 
-        flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
-        flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
-        flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
-!        if ((worker%element_info%ielement_g == 1) .and. (worker%iface ==3)) then
-!            testx = worker%x('boundary')
-!            print *, 'time'
-!            print *, worker%t
-!            print *, 'node x position'
-!            print *, testx(1) 
-!            print *, 'det_jacobian_grid'
-!            print *, det_jacobian_grid(1)
-!            !print *, 'u-grid'
-!            !print *, u_grid(1)
-!            print *, 'Energy flux sample'
-!            print *, flux_x_ref(1)%x_ad_
-!        end if
+!        flux_x = (rho_bc * u_bc * H_bc) - u_grid*rhoE_bc 
+!        flux_y = (rho_bc * v_bc * H_bc) - v_grid*rhoE_bc 
+!        flux_z = (rho_bc * w_bc * H_bc) - w_grid*rhoE_bc 
+!
+!        flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
+!        flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
+!        flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
 
 
-
-        integrand = flux_x_ref*normx + flux_y_ref*normy + flux_z_ref*normz
+!        integrand = flux_x_ref*normx + flux_y_ref*normy + flux_z_ref*normz
+        integrand = flux(:,1)*normx + flux(:,2)*normy + flux(:,3)*normz
 
 
         call worker%integrate_boundary('Energy',integrand)

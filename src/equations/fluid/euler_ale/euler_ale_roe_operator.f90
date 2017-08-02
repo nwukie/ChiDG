@@ -107,22 +107,18 @@ contains
             normx, normy, normz, unormx, unormy, unormz
 
         real(rk), allocatable, dimension(:) ::      &
-           u_grid, v_grid, w_grid, det_jacobian_grid
+           u_grid, v_grid, w_grid
 
 
-        real(rk), allocatable, dimension(:,:,:) ::      &
-            jacobian_grid
+!        real(rk), allocatable, dimension(:,:,:) ::      &
+!            jacobian_grid
 
 
-        real(rk) :: eps, gam_m, gam_p
+        real(rk) :: eps
 
         u_grid = worker%get_grid_velocity_face("u_grid",'face interior')
         v_grid = worker%get_grid_velocity_face("v_grid",'face interior')
         w_grid = worker%get_grid_velocity_face("w_grid",'face interior')
-
-        jacobian_grid = worker%get_inv_jacobian_grid_face('face interior')
-        det_jacobian_grid = worker%get_det_jacobian_grid_face('value', 'face interior')
-
 
 
         !
@@ -159,13 +155,8 @@ contains
         !
         ! Compute pressure and gamma
         !
-        !p_m = worker%get_model_field_face('Pressure', 'value', 'face interior')
-        !p_p = worker%get_model_field_face('Pressure', 'value', 'face exterior')
-        gam_m = 1.4_rk
-        gam_p = 1.4_rk
-
-        p_m = (1.4_rk-ONE)*(rhoE_m - HALF*(rhou_m**TWO+rhov_m**TWO+rhow_m**TWO)/rho_m)
-        p_p = (1.4_rk-ONE)*(rhoE_p - HALF*(rhou_p**TWO+rhov_p**TWO+rhow_p**TWO)/rho_p)
+        p_m = worker%get_model_field_face('Pressure', 'value', 'face interior')
+        p_p = worker%get_model_field_face('Pressure', 'value', 'face exterior')
 
         invrho_m = ONE/rho_m
         invrho_p = ONE/rho_p

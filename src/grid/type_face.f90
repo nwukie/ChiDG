@@ -93,9 +93,6 @@ module type_face
         real(rk), allocatable           :: neighbor_det_jacobian_grid_grad1(:)
         real(rk), allocatable           :: neighbor_det_jacobian_grid_grad2(:)
         real(rk), allocatable           :: neighbor_det_jacobian_grid_grad3(:)
-        !real(rk), allocatable           :: neighbor_jacobian_grid(:,:,:)
-        !real(rk), allocatable           :: neighbor_det_jacobian_grid_modes(:)
-        !real(rk), allocatable           :: neighbor_jinv_ale(:)                      ! jacobian terms at quadrature nodes
 
 
         ! Chimera face offset. For periodic boundary condition.
@@ -396,34 +393,31 @@ contains
         !
         ! (Re)Allocate storage for face data structures.
         !
-        if (allocated(self%jinv)) &
-            deallocate(self%jinv,                       &
-                       self%quad_pts,                   &
-                       self%metric,                     &
-                       self%norm,                       &
-                       self%unorm,                      &
-                       self%ale_quad_pts,               &
-                       self%jinv_ale,                   &
-                       self%jacobian_grid,              &
-                       self%inv_jacobian_grid,          &
-                       self%det_jacobian_grid,          &
-                       self%det_jacobian_grid_grad1,          &
-                       self%det_jacobian_grid_grad2,          &
-                       self%det_jacobian_grid_grad3,          &
-                       self%det_jacobian_grid_modes,          &
-                       self%grid_vel,                  &
-                       !self%neighbor_jinv_ale,                   &
-                       !self%neighbor_jacobian_grid,              &
-                       !self%neighbor_det_jacobian_grid_modes,          &
-                       self%neighbor_inv_jacobian_grid,          &
-                       self%neighbor_det_jacobian_grid,          &
-                       self%neighbor_det_jacobian_grid_grad1,          &
-                       self%neighbor_det_jacobian_grid_grad2,          &
-                       self%neighbor_det_jacobian_grid_grad3,          &
+        if (allocated(self%jinv))                               &
+            deallocate(self%jinv,                               &
+                       self%quad_pts,                           &
+                       self%metric,                             &
+                       self%norm,                               &
+                       self%unorm,                              &
+                       self%ale_quad_pts,                       &
+                       self%jinv_ale,                           &
+                       self%jacobian_grid,                      &
+                       self%inv_jacobian_grid,                  &
+                       self%det_jacobian_grid,                  &
+                       self%det_jacobian_grid_grad1,            &
+                       self%det_jacobian_grid_grad2,            &
+                       self%det_jacobian_grid_grad3,            &
+                       self%det_jacobian_grid_modes,            &
+                       self%grid_vel,                           &
+                       self%neighbor_inv_jacobian_grid,         &
+                       self%neighbor_det_jacobian_grid,         &
+                       self%neighbor_det_jacobian_grid_grad1,   &
+                       self%neighbor_det_jacobian_grid_grad2,   &
+                       self%neighbor_det_jacobian_grid_grad3,   &
                        self%neighbor_grid_vel,                  &
-                       self%grad1,                      &
-                       self%grad2,                      &
-                       self%grad3                       &
+                       self%grad1,                              &
+                       self%grad2,                              &
+                       self%grad3                               &
                        ) 
 
 
@@ -439,20 +433,17 @@ contains
                  self%jacobian_grid(nnodes,3,3),                    &
                  self%inv_jacobian_grid(nnodes,3,3),                &
                  self%det_jacobian_grid(nnodes),                    &
-                 self%det_jacobian_grid_grad1(nnodes),          &
-                 self%det_jacobian_grid_grad2(nnodes),          &
-                 self%det_jacobian_grid_grad3(nnodes),          &
-                 self%det_jacobian_grid_modes(self%nterms_s),          &
-                 self%grid_vel(nnodes,3),                            &
-                 !self%neighbor_jinv_ale(nnodes),                             &
-                 !self%neighbor_jacobian_grid(nnodes,3,3),                    &
-                 !self%neighbor_det_jacobian_grid_modes(self%nterms_s),          &
-                 self%neighbor_inv_jacobian_grid(nnodes,3,3),                &
-                 self%neighbor_det_jacobian_grid(nnodes),                    &
-                 self%neighbor_det_jacobian_grid_grad1(nnodes),          &
-                 self%neighbor_det_jacobian_grid_grad2(nnodes),          &
-                 self%neighbor_det_jacobian_grid_grad3(nnodes),          &
-                 self%neighbor_grid_vel(nnodes,3),                            &
+                 self%det_jacobian_grid_grad1(nnodes),              &
+                 self%det_jacobian_grid_grad2(nnodes),              &
+                 self%det_jacobian_grid_grad3(nnodes),              &
+                 self%det_jacobian_grid_modes(self%nterms_s),       &
+                 self%grid_vel(nnodes,3),                           &
+                 self%neighbor_inv_jacobian_grid(nnodes,3,3),       &
+                 self%neighbor_det_jacobian_grid(nnodes),           &
+                 self%neighbor_det_jacobian_grid_grad1(nnodes),     &
+                 self%neighbor_det_jacobian_grid_grad2(nnodes),     &
+                 self%neighbor_det_jacobian_grid_grad3(nnodes),     &
+                 self%neighbor_grid_vel(nnodes,3),                  &
                  self%grad1(nnodes,self%nterms_s),                  &
                  self%grad2(nnodes,self%nterms_s),                  &
                  self%grad3(nnodes,self%nterms_s),                  &

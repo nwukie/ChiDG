@@ -219,7 +219,7 @@ contains
         ! Limit wave speeds for entropy fix
         !
         lamda1 = abs(vmagtil - ctil) + sqrt(u_grid**TWO+v_grid**TWO+w_grid**TWO)
-        lamda2 = abs(vmagtil) + sqrt(u_grid**TWO+v_grid**TWO+w_grid**TWO)
+        lamda2 = abs(vmagtil)        + sqrt(u_grid**TWO+v_grid**TWO+w_grid**TWO)
         lamda3 = abs(vmagtil + ctil) + sqrt(u_grid**TWO+v_grid**TWO+w_grid**TWO)
 
         eps = 0.01_rk

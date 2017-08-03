@@ -158,7 +158,6 @@ contains
                        idomain_g_list, idomain_l_list, ielement_g_list, ielement_l_list,        &
                        neqns_list, nterms_s_list, nterms_c_list, iproc_list, eqn_ID_list,       &
                        local_domain_g, parallel_domain_g, donor_domain_g, donor_index, donor_ID, send_ID
-        integer(ik), allocatable    :: domains_g(:)
         integer(ik)                 :: receiver_indices(5), parallel_indices(9)
 
 
@@ -169,9 +168,6 @@ contains
         real(rk)                :: d1dxi, d1deta, d1dzeta, &
                                    d2dxi, d2deta, d2dzeta, &
                                    d3dxi, d3deta, d3dzeta
-
-        type(mvector_t) :: dmetric
-        type(rvector_t) :: djinv
 
         type(face_info_t)           :: receiver
         type(element_info_t)        :: donor
@@ -188,7 +184,6 @@ contains
 
         type(ivector_t)             :: donor_proc_indices, donor_proc_domains
         type(rvector_t)             :: donor_proc_vols
-        type(pvector_t)             :: dcoordinate
 
 
 
@@ -373,9 +368,9 @@ contains
                                 ! 1: Receive donor local coordinate
                                 ! 2: Receive donor metric matrix
                                 ! 3: Receive donor inverse jacobian mapping
-                                call MPI_Recv(donor_coord,3,MPI_REAL8, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                                call MPI_Recv(donor_coord, 3,MPI_REAL8, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
                                 call MPI_Recv(donor_metric,9,MPI_REAL8, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-                                call MPI_Recv(donor_jinv,1,MPI_REAL8, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                                call MPI_Recv(donor_jinv,  1,MPI_REAL8, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
 
 
@@ -766,19 +761,16 @@ contains
     !!                                      multiple are available.
     !!
     !-----------------------------------------------------------------------------------------------------------------------
-    !subroutine find_gq_donor(mesh,gq_node,receiver_face,donor_element,donor_coordinate,donor_volume)
     subroutine find_gq_donor(mesh,gq_node,receiver_face,donor_element,donor_coordinate,donor_found,donor_volume)
         type(mesh_t),               intent(in)              :: mesh
         type(point_t),              intent(in)              :: gq_node
         type(face_info_t),          intent(in)              :: receiver_face
         type(element_info_t),       intent(inout)           :: donor_element
-        !type(point_t),              intent(inout)           :: donor_coordinate
         real(rk),                   intent(inout)           :: donor_coordinate(3)
         logical,                    intent(inout)           :: donor_found
         real(rk),                   intent(inout), optional :: donor_volume
 
 
-        integer(ik), allocatable    :: domains_g(:)
         integer(ik)                 :: idom, ielem, inewton, idomain_g, idomain_l,      &
                                        ielement_g, ielement_l, icandidate, ncandidates, &
                                        idonor, ndonors, donor_index

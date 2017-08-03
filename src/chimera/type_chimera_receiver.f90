@@ -37,7 +37,7 @@ module type_chimera_receiver
         !
         ! Data assembled from all donors to define the complete node set
         !
-        real(rk),   allocatable :: jinv(:)
+!        real(rk),   allocatable :: jinv(:)
         real(rk),   allocatable :: det_jacobian_grid(:)
         real(rk),   allocatable :: det_jacobian_grid_grad1(:)
         real(rk),   allocatable :: det_jacobian_grid_grad2(:)
@@ -97,7 +97,8 @@ contains
         instance%iface      = iface
 
 
-        allocate(instance%jinv(nnodes),                     &
+!        allocate(instance%jinv(nnodes),                     &
+        allocate(   &
                  instance%det_jacobian_grid(nnodes),        &
                  instance%det_jacobian_grid_grad1(nnodes),  &
                  instance%det_jacobian_grid_grad2(nnodes),  &
@@ -228,29 +229,6 @@ contains
 
 
 
-
-
-
-
-!    !>  Return the number of donor elements providing the receiver with data.
-!    !!
-!    !!  @author Nathan A. Wukie (AFRL)
-!    !!  @date   7/13/2016
-!    !!
-!    !!
-!    !!
-!    !-------------------------------------------------------------------------------------------
-!    function ndonors(self) result(res)
-!        class(chimera_receiver_t), intent(in)  :: self
-!
-!        integer(ik) :: res
-!
-!        res = self%donor_neqns%size()
-!
-!    end function ndonors
-!    !*******************************************************************************************
-
-
     !>  Return the number of donor elements providing the receiver with data.
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -293,10 +271,14 @@ contains
         self%ielement_l   = 0
         self%iface        = 0
 
-        if (allocated(self%donor))             deallocate(self%donor)
-        if (allocated(self%jinv))              deallocate(self%jinv)
-        if (allocated(self%det_jacobian_grid)) deallocate(self%det_jacobian_grid)
-        if (allocated(self%inv_jacobian_grid)) deallocate(self%inv_jacobian_grid)
+        if (allocated(self%donor))                   deallocate(self%donor)
+!        if (allocated(self%jinv))                    deallocate(self%jinv)
+        if (allocated(self%det_jacobian_grid))       deallocate(self%det_jacobian_grid)
+        if (allocated(self%det_jacobian_grid_grad1)) deallocate(self%det_jacobian_grid_grad1)
+        if (allocated(self%det_jacobian_grid_grad2)) deallocate(self%det_jacobian_grid_grad2)
+        if (allocated(self%det_jacobian_grid_grad3)) deallocate(self%det_jacobian_grid_grad3)
+        if (allocated(self%inv_jacobian_grid))       deallocate(self%inv_jacobian_grid)
+        if (allocated(self%grid_vel))                deallocate(self%grid_vel)
 
     end subroutine clear
     !******************************************************************************************

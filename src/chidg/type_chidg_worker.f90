@@ -2013,35 +2013,38 @@ contains
         integer(ik)                             :: idomain_l, ielement_l, iface
         logical                                 :: parallel_neighbor
 
-        if ((interp_source == 'face interior') .or. (interp_source == 'boundary')) then
-            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel
-        else if (interp_source == 'face exterior') then
+        ! Presumably, the node velocity
+        grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel
+        !if ((interp_source == 'face interior') .or. (interp_source == 'boundary')) then
+        !    grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel
+        !else if (interp_source == 'face exterior') then
 
-            if (self%face_type() == INTERIOR) then
-                parallel_neighbor = (self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_proc /= IRANK) 
-                if (parallel_neighbor) then
-                    grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%neighbor_grid_vel
-                else
-                    idomain_l   = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_domain_l
-                    ielement_l  = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_element_l
-                    iface       = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%iface
-                    grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel
-                end if
+        !    if (self%face_type() == INTERIOR) then
+        !        parallel_neighbor = (self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_proc /= IRANK) 
+        !        if (parallel_neighbor) then
+        !            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%neighbor_grid_vel
+        !        else
+        !            idomain_l   = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_domain_l
+        !            ielement_l  = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_element_l
+        !            iface       = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_face
+        !            grid_vel_gq = self%mesh%domain(idomain_l)%faces(ielement_l, iface)%grid_vel
+        !            !grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel
+        !        end if
 
 
-            else if (self%face_type() == CHIMERA) then
-                !ChiID = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ChiID
-                !grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%chimera%recv(ChiID)%grid_vel
+        !    else if (self%face_type() == CHIMERA) then
+        !        !ChiID = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ChiID
+        !        !grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%chimera%recv(ChiID)%grid_vel
 
-                ! For Chimera faces, we actually just want to use the interior face velocity
-                grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel
+        !        ! For Chimera faces, we actually just want to use the interior face velocity
+        !        grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel
 
-            else if (self%face_type() == BOUNDARY) then
-                grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel
-            end if
-        else
-                call chidg_signal(FATAL,"chidg_worker%get_grid_velocity_face: Invalid value for 'interp_source'.")
-        end if
+        !    else if (self%face_type() == BOUNDARY) then
+        !        grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel
+        !    end if
+        !else
+        !        call chidg_signal(FATAL,"chidg_worker%get_grid_velocity_face: Invalid value for 'interp_source'.")
+        !end if
 
         if (field == 'u_grid') then
             grid_vel_comp_gq = grid_vel_gq(:,1)
@@ -2126,7 +2129,7 @@ contains
                 else
                     idomain_l  = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_domain_l
                     ielement_l = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_element_l
-                    iface      = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%iface
+                    iface      = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_face
                     jacobian_grid_gq = self%mesh%domain(idomain_l)%faces(ielement_l, iface)%inv_jacobian_grid
                 end if
 
@@ -2164,16 +2167,12 @@ contains
         ! Interpolate modes to nodes
         if (interp_type == 'value') then
             det_jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%det_jacobian_grid
-            !val = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%basis_s%interpolator('Value')
         else if (interp_type == 'grad1') then
             det_jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%det_jacobian_grid_grad1
-            !val = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grad1
         else if (interp_type == 'grad2') then
             det_jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%det_jacobian_grid_grad2
-            !val = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grad2
         else if (interp_type == 'grad3') then
             det_jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%det_jacobian_grid_grad3
-            !val = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%grad3
         end if
 
 
@@ -2200,7 +2199,6 @@ contains
         logical                             :: parallel_neighbor
         integer(ik) :: ChiID, idomain_l, ielement_l, iface
 
-        !det_jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%det_jacobian_grid(:)
 
         if ( (trim(interp_type) /= 'value') .and. &
              (trim(interp_type) /= 'grad1') .and. &

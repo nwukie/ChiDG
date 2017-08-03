@@ -1003,7 +1003,6 @@ contains
             !
             if ( chimera_interpolation ) then
                 ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
-                !gq_node_indices = mesh%domain(idom)%chimera%recv(ChiID)%donor_gq_indices(idonor)%data()
                 gq_node_indices = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%node_index(:)
 
                 ! Create mask over full GQ vector of only those nodes that are filled by the current element

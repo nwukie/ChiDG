@@ -2008,25 +2008,36 @@ contains
         character(*),           intent(in)  :: interp_source
 
 
-        real(rk), dimension(:), allocatable :: grid_vel_comp_gq
-        real(rk), dimension(:,:), allocatable :: grid_vel_gq
-        integer(ik)                         :: ChiID
+        real(rk),   dimension(:),   allocatable :: grid_vel_comp_gq
+        real(rk),   dimension(:,:), allocatable :: grid_vel_gq
+        integer(ik)                             :: idomain_l, ielement_l, iface
+        logical                                 :: parallel_neighbor
 
         if ((interp_source == 'face interior') .or. (interp_source == 'boundary')) then
-            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%&
-                faces(self%element_info%ielement_l, self%iface)%grid_vel
+            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel
         else if (interp_source == 'face exterior') then
+
             if (self%face_type() == INTERIOR) then
-                grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%&
-                    faces(self%element_info%ielement_l, self%iface)%neighbor_grid_vel
+                parallel_neighbor = (self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_proc /= IRANK) 
+                if (parallel_neighbor) then
+                    grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%neighbor_grid_vel
+                else
+                    idomain_l   = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_domain_l
+                    ielement_l  = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_element_l
+                    iface       = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%iface
+                    grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel
+                end if
+
+
             else if (self%face_type() == CHIMERA) then
-                ChiID = self%mesh%domain(self%element_info%idomain_l)% &
-                    faces(self%element_info%ielement_l, self%iface)%ChiID
-                grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%&
-                    chimera%recv(ChiID)%grid_vel
+                !ChiID = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ChiID
+                !grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%chimera%recv(ChiID)%grid_vel
+
+                ! For Chimera faces, we actually just want to use the interior face velocity
+                grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel
+
             else if (self%face_type() == BOUNDARY) then
-                grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%&
-                    faces(self%element_info%ielement_l, self%iface)%grid_vel
+                grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel
             end if
         else
                 call chidg_signal(FATAL,"chidg_worker%get_grid_velocity_face: Invalid value for 'interp_source'.")
@@ -2107,6 +2118,7 @@ contains
         if ((interp_source == 'face interior') .or. (interp_source == 'boundary')) then
             jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%inv_jacobian_grid
         else if (interp_source == 'face exterior') then
+
             if (self%face_type() == INTERIOR) then
                 parallel_neighbor = (self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_proc /= IRANK) 
                 if (parallel_neighbor) then
@@ -2117,12 +2129,15 @@ contains
                     iface      = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%iface
                     jacobian_grid_gq = self%mesh%domain(idomain_l)%faces(ielement_l, iface)%inv_jacobian_grid
                 end if
+
             else if (self%face_type() == CHIMERA) then
                 ChiID = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ChiID
                 jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%chimera%recv(ChiID)%inv_jacobian_grid
+
             else if (self%face_type() == BOUNDARY) then
                  jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%inv_jacobian_grid
             end if
+
         else
             call chidg_signal(FATAL,"chidg_worker%get_grid_velocity_face: Invalid value for 'interp_source'.")
         end if

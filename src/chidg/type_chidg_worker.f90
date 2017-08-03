@@ -2134,9 +2134,9 @@ contains
                 end if
 
             else if (self%face_type() == CHIMERA) then
-                !ChiID = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ChiID
-                !jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%chimera%recv(ChiID)%inv_jacobian_grid
-                jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%inv_jacobian_grid
+                ChiID = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ChiID
+                jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%chimera%recv(ChiID)%inv_jacobian_grid
+                !jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%inv_jacobian_grid
 
             else if (self%face_type() == BOUNDARY) then
                  jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%inv_jacobian_grid
@@ -2248,25 +2248,25 @@ contains
 
 
             else if (self%face_type() == CHIMERA) then
-                !ChiID = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ChiID
-                !if (interp_type == 'value') then
-                !    val = self%mesh%domain(self%element_info%idomain_l)%chimera%recv(ChiID)%det_jacobian_grid
-                !else if (interp_type == 'grad1') then
-                !    val = self%mesh%domain(self%element_info%idomain_l)%chimera%recv(ChiID)%det_jacobian_grid_grad1
-                !else if (interp_type == 'grad2') then
-                !    val = self%mesh%domain(self%element_info%idomain_l)%chimera%recv(ChiID)%det_jacobian_grid_grad2
-                !else if (interp_type == 'grad3') then
-                !    val = self%mesh%domain(self%element_info%idomain_l)%chimera%recv(ChiID)%det_jacobian_grid_grad3
-                !end if
+                ChiID = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ChiID
                 if (interp_type == 'value') then
-                    val = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%det_jacobian_grid
+                    val = self%mesh%domain(self%element_info%idomain_l)%chimera%recv(ChiID)%det_jacobian_grid
                 else if (interp_type == 'grad1') then
-                    val = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%det_jacobian_grid_grad1
+                    val = self%mesh%domain(self%element_info%idomain_l)%chimera%recv(ChiID)%det_jacobian_grid_grad1
                 else if (interp_type == 'grad2') then
-                    val = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%det_jacobian_grid_grad2
+                    val = self%mesh%domain(self%element_info%idomain_l)%chimera%recv(ChiID)%det_jacobian_grid_grad2
                 else if (interp_type == 'grad3') then
-                    val = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%det_jacobian_grid_grad3
+                    val = self%mesh%domain(self%element_info%idomain_l)%chimera%recv(ChiID)%det_jacobian_grid_grad3
                 end if
+                !if (interp_type == 'value') then
+                !    val = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%det_jacobian_grid
+                !else if (interp_type == 'grad1') then
+                !    val = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%det_jacobian_grid_grad1
+                !else if (interp_type == 'grad2') then
+                !    val = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%det_jacobian_grid_grad2
+                !else if (interp_type == 'grad3') then
+                !    val = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%det_jacobian_grid_grad3
+                !end if
 
 
             else if (self%face_type() == BOUNDARY) then

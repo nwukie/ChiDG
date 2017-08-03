@@ -2334,7 +2334,9 @@ contains
 
         det_jacobian_grid = jinv_ale/jinv
 
-        inv_jacobian_grid = matmul(inv(metric_ale),metric)
+        !inv_jacobian_grid = matmul(inv(metric_ale),metric)
+        inv_jacobian_grid = matmul(inv(metric),metric_ale)
+
 
         ! evaluate polynomial modes at node location
         do iterm = 1,self%nterms_s
@@ -2353,18 +2355,19 @@ contains
             ddzeta(iterm) = dpolynomial_val(spacedim,self%nterms_s,iterm,[xi,eta,zeta],ZETA_DIR)
         end do
 
+        metric = inv(metric)
         do iterm = 1,self%nterms_s
-                grad1(iterm) = metric(1,1) * ddxi(iterm) + &
-                                    metric(2,1) * ddeta(iterm) + &
-                                    metric(3,1) * ddzeta(iterm)
+            grad1(iterm) = metric(1,1) * ddxi(iterm)  + &
+                           metric(2,1) * ddeta(iterm) + &
+                           metric(3,1) * ddzeta(iterm)
 
-                grad2(iterm) = metric(1,2) * ddxi(iterm) + &
-                                    metric(2,2) * ddeta(iterm) + &
-                                    metric(3,2) * ddzeta(iterm)
+            grad2(iterm) = metric(1,2) * ddxi(iterm)  + &
+                           metric(2,2) * ddeta(iterm) + &
+                           metric(3,2) * ddzeta(iterm)
 
-                grad3(iterm) = metric(1,3) * ddxi(iterm) + &
-                                          metric(2,3) * ddeta(iterm) + &
-                                          metric(3,3) * ddzeta(iterm)
+            grad3(iterm) = metric(1,3) * ddxi(iterm)  + &
+                           metric(2,3) * ddeta(iterm) + &
+                           metric(3,3) * ddzeta(iterm)
         end do
 
         det_jacobian_grid_grad(1) = dot_product(grad1, self%det_jacobian_grid_modes)

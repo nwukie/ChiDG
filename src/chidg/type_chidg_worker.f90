@@ -136,7 +136,7 @@ module type_chidg_worker
         procedure   :: get_grid_velocity_face
         procedure   :: get_jacobian_grid_element
         procedure   :: get_inv_jacobian_grid_element
-        procedure   :: get_jacobian_grid_face
+!        procedure   :: get_jacobian_grid_face
         procedure   :: get_inv_jacobian_grid_face
         procedure   :: get_det_jacobian_grid_element
         procedure   :: get_det_jacobian_grid_face
@@ -2089,20 +2089,20 @@ contains
     end function get_inv_jacobian_grid_element
 
 
-    !>
-    !!
-    !!  @author Eric M. Wolf
-    !!  @date 1/9/2017
-    !!
-    !----------------------------------------------------------------------------------------------------
-    function get_jacobian_grid_face(self) result(jacobian_grid_gq)
-        class(chidg_worker_t),  intent(in)  :: self
-
-        real(rk), dimension(:,:,:), allocatable :: jacobian_grid_gq
-
-        jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%jacobian_grid(:,:,:)
-
-    end function get_jacobian_grid_face
+!    !>
+!    !!
+!    !!  @author Eric M. Wolf
+!    !!  @date 1/9/2017
+!    !!
+!    !----------------------------------------------------------------------------------------------------
+!    function get_jacobian_grid_face(self) result(jacobian_grid_gq)
+!        class(chidg_worker_t),  intent(in)  :: self
+!
+!        real(rk), dimension(:,:,:), allocatable :: jacobian_grid_gq
+!
+!        jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%jacobian_grid(:,:,:)
+!
+!    end function get_jacobian_grid_face
 
     !>
     !!
@@ -2708,13 +2708,24 @@ contains
         type(AD_D), allocatable                 :: flux_ref(:,:)
         real(rk),   allocatable                 :: det_jacobian_grid(:), u_grid(:), v_grid(:), w_grid(:), jacobian_grid(:,:,:)
 
-        u_grid = self%get_grid_velocity_face('u_grid', interp_source)
-        v_grid = self%get_grid_velocity_face('v_grid', interp_source)
-        w_grid = self%get_grid_velocity_face('w_grid', interp_source)
+        !u_grid = self%get_grid_velocity_face('u_grid', interp_source)
+        !v_grid = self%get_grid_velocity_face('v_grid', interp_source)
+        !w_grid = self%get_grid_velocity_face('w_grid', interp_source)
 
 
-        det_jacobian_grid = self%get_det_jacobian_grid_face('value', interp_source)
-        jacobian_grid     = self%get_inv_jacobian_grid_face(interp_source)
+        !det_jacobian_grid = self%get_det_jacobian_grid_face('value', interp_source)
+        !jacobian_grid     = self%get_inv_jacobian_grid_face(interp_source)
+
+        u_grid = self%get_grid_velocity_face('u_grid', 'face interior')
+        v_grid = self%get_grid_velocity_face('v_grid', 'face interior')
+        w_grid = self%get_grid_velocity_face('w_grid', 'face interior')
+
+
+        det_jacobian_grid = self%get_det_jacobian_grid_face('value', 'face interior')
+        jacobian_grid     = self%get_inv_jacobian_grid_face('face interior')
+
+
+
 
 
         flux_1_tmp = flux_1-u_grid*advected_quantity
@@ -2787,8 +2798,10 @@ contains
         real(rk),   allocatable :: det_jacobian_grid(:), jacobian_grid(:,:,:)
 
 
-        det_jacobian_grid = self%get_det_jacobian_grid_face('value', interp_source)
-        jacobian_grid     = self%get_inv_jacobian_grid_face(interp_source)
+        !det_jacobian_grid = self%get_det_jacobian_grid_face('value', interp_source)
+        !jacobian_grid     = self%get_inv_jacobian_grid_face(interp_source)
+        det_jacobian_grid = self%get_det_jacobian_grid_face('value', 'face interior')
+        jacobian_grid     = self%get_inv_jacobian_grid_face('face interior')
 
        
         allocate(flux_ref(size(flux_1,1),3))

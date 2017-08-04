@@ -2707,6 +2707,8 @@ contains
         type(AD_D), allocatable, dimension(:)   :: flux_1_tmp, flux_2_tmp, flux_3_tmp
         type(AD_D), allocatable                 :: flux_ref(:,:)
         real(rk),   allocatable                 :: det_jacobian_grid(:), u_grid(:), v_grid(:), w_grid(:), jacobian_grid(:,:,:)
+        logical                                 :: chimera_face
+        character(:),   allocatable             :: source
 
         !u_grid = self%get_grid_velocity_face('u_grid', interp_source)
         !v_grid = self%get_grid_velocity_face('v_grid', interp_source)
@@ -2716,13 +2718,25 @@ contains
         !det_jacobian_grid = self%get_det_jacobian_grid_face('value', interp_source)
         !jacobian_grid     = self%get_inv_jacobian_grid_face(interp_source)
 
-        u_grid = self%get_grid_velocity_face('u_grid', 'face interior')
-        v_grid = self%get_grid_velocity_face('v_grid', 'face interior')
-        w_grid = self%get_grid_velocity_face('w_grid', 'face interior')
 
 
-        det_jacobian_grid = self%get_det_jacobian_grid_face('value', 'face interior')
-        jacobian_grid     = self%get_inv_jacobian_grid_face('face interior')
+        chimera_face = (self%face_type() == CHIMERA)
+        if (chimera_face) then
+            source = 'face interior'
+        else
+            source = interp_source
+        end if
+
+
+
+
+        u_grid = self%get_grid_velocity_face('u_grid', source)
+        v_grid = self%get_grid_velocity_face('v_grid', source)
+        w_grid = self%get_grid_velocity_face('w_grid', source)
+
+
+        det_jacobian_grid = self%get_det_jacobian_grid_face('value', source)
+        jacobian_grid     = self%get_inv_jacobian_grid_face(source)
 
 
 
@@ -2794,14 +2808,24 @@ contains
         type(AD_D),             intent(in)  :: flux_3(:)
         character(*),           intent(in)  :: interp_source
 
-        type(AD_D), allocatable :: flux_ref(:,:)
-        real(rk),   allocatable :: det_jacobian_grid(:), jacobian_grid(:,:,:)
+        type(AD_D),     allocatable :: flux_ref(:,:)
+        real(rk),       allocatable :: det_jacobian_grid(:), jacobian_grid(:,:,:)
+        character(:),   allocatable :: source
+        logical                     :: chimera_face
 
 
         !det_jacobian_grid = self%get_det_jacobian_grid_face('value', interp_source)
         !jacobian_grid     = self%get_inv_jacobian_grid_face(interp_source)
-        det_jacobian_grid = self%get_det_jacobian_grid_face('value', 'face interior')
-        jacobian_grid     = self%get_inv_jacobian_grid_face('face interior')
+
+        chimera_face = (self%face_type() == CHIMERA)
+        if (chimera_face) then
+            source = 'face interior'
+        else
+            source = interp_source
+        end if
+
+        det_jacobian_grid = self%get_det_jacobian_grid_face('value', source)
+        jacobian_grid     = self%get_inv_jacobian_grid_face(source)
 
        
         allocate(flux_ref(size(flux_1,1),3))

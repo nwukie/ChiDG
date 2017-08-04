@@ -2181,6 +2181,8 @@ contains
         self%det_jacobian_grid_grad1 = matmul(self%grad1,self%det_jacobian_grid_modes)
         self%det_jacobian_grid_grad2 = matmul(self%grad2,self%det_jacobian_grid_modes)
         self%det_jacobian_grid_grad3 = matmul(self%grad3,self%det_jacobian_grid_modes)
+
+
     end subroutine compute_quadrature_metrics_ale
     !********************************************************************************************************
 
@@ -2319,7 +2321,6 @@ contains
         metric_ale(2,3) = self%metric_point_ale(DIR_2,ZETA_DIR,xi,eta,zeta)
         metric_ale(3,3) = self%metric_point_ale(DIR_3,ZETA_DIR,xi,eta,zeta)
 
-
         !
         ! Compute inverse cell mapping jacobian
         !
@@ -2332,10 +2333,9 @@ contains
                    metric_ale(1,1)*metric_ale(2,3)*metric_ale(3,2) + metric_ale(1,3)*metric_ale(2,1)*metric_ale(3,2) + &
                    metric_ale(1,2)*metric_ale(2,3)*metric_ale(3,1) - metric_ale(1,3)*metric_ale(2,2)*metric_ale(3,1)
 
-        det_jacobian_grid = jinv_ale/jinv
 
-        !inv_jacobian_grid = matmul(inv(metric_ale),metric)
-        inv_jacobian_grid = matmul(inv(metric),metric_ale)
+        det_jacobian_grid = jinv_ale/jinv
+        inv_jacobian_grid = matmul(inv(metric_ale),metric)
 
 
         ! evaluate polynomial modes at node location

@@ -4,7 +4,7 @@ module type_reference_element
     use mod_constants,      only: NFACES, ZERO, ONE, XI_DIR, ETA_DIR, ZETA_DIR
     use mod_gauss_legendre, only: quadrature_nodes, quadrature_weights
     use mod_nodes_uniform,  only: uniform_nodes, uniform_weights
-    use mod_polynomial,     only: polynomial_val, dpolynomial_val
+    use mod_polynomial,     only: polynomial_val, dpolynomial_val, ddpolynomial_val
     use mod_inv,            only: inv
     implicit none
 
@@ -98,11 +98,25 @@ module type_reference_element
         real(rk),       allocatable :: ddxi_e(:,:)          ! element interpolator, expansion ddxi   to elem nodes
         real(rk),       allocatable :: ddeta_e(:,:)         ! element interpolator, expansion ddeta  to elem nodes
         real(rk),       allocatable :: ddzeta_e(:,:)        ! element interpolator, expansion ddzeta to elem nodes
-        real(rk),       allocatable :: val_f(:,:,:)         ! face    interpolator, expansion value  to face nodes
-        real(rk),       allocatable :: ddxi_f(:,:,:)        ! face    interpolator, expansion ddxi   to face nodes
-        real(rk),       allocatable :: ddeta_f(:,:,:)       ! face    interpolator, expansion ddeta  to face nodes
-        real(rk),       allocatable :: ddzeta_f(:,:,:)      ! face    interpolator, expansion ddzeta to face nodes
 
+        real(rk),       allocatable :: dd_dxidxi_e(:,:)     ! element interpolator
+        real(rk),       allocatable :: dd_dxideta_e(:,:)    ! element interpolator
+        real(rk),       allocatable :: dd_dxidzeta_e(:,:)   ! element interpolator
+        real(rk),       allocatable :: dd_detadeta_e(:,:)   ! element interpolator
+        real(rk),       allocatable :: dd_detadzeta_e(:,:)  ! element interpolator
+        real(rk),       allocatable :: dd_dzetadzeta_e(:,:) ! element interpolator
+
+        real(rk),       allocatable :: val_f(:,:,:)             ! face    interpolator, expansion value  to face nodes
+        real(rk),       allocatable :: ddxi_f(:,:,:)            ! face    interpolator, expansion ddxi   to face nodes
+        real(rk),       allocatable :: ddeta_f(:,:,:)           ! face    interpolator, expansion ddeta  to face nodes
+        real(rk),       allocatable :: ddzeta_f(:,:,:)          ! face    interpolator, expansion ddzeta to face nodes
+
+        real(rk),       allocatable :: dd_dxidxi_f(:,:,:)       ! face interpolator, dxidxi
+        real(rk),       allocatable :: dd_dxideta_f(:,:,:)      ! face interpolator, dxideta
+        real(rk),       allocatable :: dd_dxidzeta_f(:,:,:)     ! face interpolator, dxidzeta
+        real(rk),       allocatable :: dd_detadeta_f(:,:,:)     ! face interpolator, detadeta
+        real(rk),       allocatable :: dd_detadzeta_f(:,:,:)    ! face interpolator, detadzeta
+        real(rk),       allocatable :: dd_dzetadzeta_f(:,:,:)   ! face interpolator, dzetadzeta
 
         logical :: element_initialized       = .false.
         logical :: nodes_initialized         = .false.
@@ -407,14 +421,26 @@ contains
         !
         ! Compute element interpolators
         !
-        if (allocated(self%val_e))    deallocate(self%val_e)
-        if (allocated(self%ddxi_e))   deallocate(self%ddxi_e)
-        if (allocated(self%ddeta_e))  deallocate(self%ddeta_e)
-        if (allocated(self%ddzeta_e)) deallocate(self%ddzeta_e)
-        allocate(self%val_e(   self%nnodes_ie(), nterms), &
-                 self%ddxi_e(  self%nnodes_ie(), nterms), &
-                 self%ddeta_e( self%nnodes_ie(), nterms), &
-                 self%ddzeta_e(self%nnodes_ie(), nterms), stat=ierr)
+        if (allocated(self%val_e)) deallocate(self%val_e,           &
+                                              self%ddxi_e,          &
+                                              self%ddeta_e,         &
+                                              self%ddzeta_e,        &
+                                              self%dd_dxidxi_e,     &
+                                              self%dd_dxideta_e,    &
+                                              self%dd_dxidzeta_e,   &
+                                              self%dd_detadeta_e,   &
+                                              self%dd_detadzeta_e,  &
+                                              self%dd_dzetadzeta_e)
+        allocate(self%val_e(          self%nnodes_ie(), nterms),    &
+                 self%ddxi_e(         self%nnodes_ie(), nterms),    &
+                 self%ddeta_e(        self%nnodes_ie(), nterms),    &
+                 self%ddzeta_e(       self%nnodes_ie(), nterms),    &
+                 self%dd_dxidxi_e(    self%nnodes_ie(), nterms),    &
+                 self%dd_dxideta_e(   self%nnodes_ie(), nterms),    &
+                 self%dd_dxidzeta_e(  self%nnodes_ie(), nterms),    &
+                 self%dd_detadeta_e(  self%nnodes_ie(), nterms),    &
+                 self%dd_detadzeta_e( self%nnodes_ie(), nterms),    &
+                 self%dd_dzetadzeta_e(self%nnodes_ie(), nterms), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         do iterm = 1,nterms
@@ -422,10 +448,24 @@ contains
                 xi   = self%nodes_ie(inode,1)
                 eta  = self%nodes_ie(inode,2)
                 zeta = self%nodes_ie(inode,3)
-                self%val_e(   inode,iterm) =  polynomial_val(3,nterms,iterm,[xi,eta,zeta])
-                self%ddxi_e(  inode,iterm) = dpolynomial_val(3,nterms,iterm,[xi,eta,zeta],XI_DIR)
-                self%ddeta_e( inode,iterm) = dpolynomial_val(3,nterms,iterm,[xi,eta,zeta],ETA_DIR)
-                self%ddzeta_e(inode,iterm) = dpolynomial_val(3,nterms,iterm,[xi,eta,zeta],ZETA_DIR)
+
+                ! Value
+                self%val_e(   inode,iterm) =  polynomial_val(spacedim,nterms,iterm,[xi,eta,zeta])
+
+                ! First derivatives
+                self%ddxi_e(  inode,iterm) = dpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],XI_DIR)
+                self%ddeta_e( inode,iterm) = dpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],ETA_DIR)
+                self%ddzeta_e(inode,iterm) = dpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],ZETA_DIR)
+
+                ! Second/mixed derivatives
+                self%dd_dxidxi_e(    inode,iterm) = ddpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],XI_DIR,XI_DIR  )
+                self%dd_dxideta_e(   inode,iterm) = ddpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],XI_DIR,ETA_DIR )
+                self%dd_dxidzeta_e(  inode,iterm) = ddpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],XI_DIR,ZETA_DIR)
+
+                self%dd_detadeta_e(  inode,iterm) = ddpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],ETA_DIR,ETA_DIR )
+                self%dd_detadzeta_e( inode,iterm) = ddpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],ETA_DIR,ZETA_DIR)
+
+                self%dd_dzetadzeta_e(inode,iterm) = ddpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],ZETA_DIR,ZETA_DIR)
             end do
         end do
 
@@ -434,14 +474,27 @@ contains
         !
         ! Compute face interpolators
         !
-        if (allocated(self%val_f))    deallocate(self%val_f)
-        if (allocated(self%ddxi_f))   deallocate(self%ddxi_f)
-        if (allocated(self%ddeta_f))  deallocate(self%ddeta_f)
-        if (allocated(self%ddzeta_f)) deallocate(self%ddzeta_f)
-        allocate(self%val_f(   self%nnodes_if(), nterms, NFACES), &
-                 self%ddxi_f(  self%nnodes_if(), nterms, NFACES), &
-                 self%ddeta_f( self%nnodes_if(), nterms, NFACES), &
-                 self%ddzeta_f(self%nnodes_if(), nterms, NFACES), stat=ierr)
+        if (allocated(self%val_f))    deallocate(self%val_f,            &
+                                                 self%ddxi_f,           &
+                                                 self%ddeta_f,          &
+                                                 self%ddzeta_f,         &
+                                                 self%dd_dxidxi_f,      &
+                                                 self%dd_dxideta_f,     &
+                                                 self%dd_dxidzeta_f,    &
+                                                 self%dd_detadeta_f,    &
+                                                 self%dd_detadzeta_f,   &
+                                                 self%dd_dzetadzeta_f)
+
+        allocate(self%val_f(          self%nnodes_if(), nterms, NFACES), &
+                 self%ddxi_f(         self%nnodes_if(), nterms, NFACES), &
+                 self%ddeta_f(        self%nnodes_if(), nterms, NFACES), &
+                 self%ddzeta_f(       self%nnodes_if(), nterms, NFACES), &
+                 self%dd_dxidxi_f(    self%nnodes_if(), nterms, NFACES), &
+                 self%dd_dxideta_f(   self%nnodes_if(), nterms, NFACES), &
+                 self%dd_dxidzeta_f(  self%nnodes_if(), nterms, NFACES), &
+                 self%dd_detadeta_f(  self%nnodes_if(), nterms, NFACES), &
+                 self%dd_detadzeta_f( self%nnodes_if(), nterms, NFACES), &
+                 self%dd_dzetadzeta_f(self%nnodes_if(), nterms, NFACES), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         do iface = 1,NFACES
@@ -450,10 +503,25 @@ contains
                     xi   = self%nodes_if(inode,1,iface)
                     eta  = self%nodes_if(inode,2,iface)
                     zeta = self%nodes_if(inode,3,iface)
+
+                    ! Value
                     self%val_f(   inode,iterm,iface) =  polynomial_val(spacedim,nterms,iterm,[xi,eta,zeta])
+
+                    ! First-derivatives
                     self%ddxi_f(  inode,iterm,iface) = dpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],XI_DIR)
                     self%ddeta_f( inode,iterm,iface) = dpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],ETA_DIR)
                     self%ddzeta_f(inode,iterm,iface) = dpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],ZETA_DIR)
+
+                    ! Second/midxed-derivatives
+                    self%dd_dxidxi_f(     inode,iterm,iface) = ddpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],XI_DIR,XI_DIR)
+                    self%dd_dxideta_f(    inode,iterm,iface) = ddpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],XI_DIR,ETA_DIR)
+                    self%dd_dxidzeta_f(   inode,iterm,iface) = ddpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],XI_DIR,ZETA_DIR)
+
+                    self%dd_detadeta_f(   inode,iterm,iface) = ddpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],ETA_DIR,ETA_DIR)
+                    self%dd_detadzeta_f(  inode,iterm,iface) = ddpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],ETA_DIR,ZETA_DIR)
+
+                    self%dd_dzetadzeta_f( inode,iterm,iface) = ddpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],ZETA_DIR,ZETA_DIR)
+
                 end do
             end do
         end do
@@ -600,6 +668,18 @@ contains
                 interpolator_ = self%ddeta_e
             case('ddzeta')
                 interpolator_ = self%ddzeta_e
+            case('dxidxi')
+                interpolator_ = self%dd_dxidxi_e
+            case('dxideta')
+                interpolator_ = self%dd_dxideta_e
+            case('dxidzeta')
+                interpolator_ = self%dd_dxidzeta_e
+            case('detadeta')
+                interpolator_ = self%dd_detadeta_e
+            case('detadzeta')
+                interpolator_ = self%dd_detadzeta_e
+            case('dzetadzeta')
+                interpolator_ = self%dd_dzetadzeta_e
             case default
                 call chidg_signal_one(FATAL,"reference_element%interpolate: Invalid selector for element interpolator.", trim(selector))
         end select
@@ -632,6 +712,18 @@ contains
                 interpolator_ = self%ddeta_f(:,:,iface)
             case('ddzeta')
                 interpolator_ = self%ddzeta_f(:,:,iface)
+            case('dxidxi')
+                interpolator_ = self%dd_dxidxi_f(:,:,iface)
+            case('dxideta')
+                interpolator_ = self%dd_dxideta_f(:,:,iface)
+            case('dxidzeta')
+                interpolator_ = self%dd_dxidzeta_f(:,:,iface)
+            case('detadeta')
+                interpolator_ = self%dd_detadeta_f(:,:,iface)
+            case('detadzeta')
+                interpolator_ = self%dd_detadzeta_f(:,:,iface)
+            case('dzetadzeta')
+                interpolator_ = self%dd_dzetadzeta_f(:,:,iface)
             case default
                 call chidg_signal_one(FATAL,"reference_element%interpolate: Invalid selector for face interpolator.", trim(selector))
         end select

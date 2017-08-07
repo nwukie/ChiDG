@@ -2041,16 +2041,25 @@ contains
 
         integer(ik)                             :: ierr
         real(rk),   dimension(:),   allocatable ::  &
-            d1dxi, d1deta, d1dzeta,                 &
-            d2dxi, d2deta, d2dzeta,                 &
-            d3dxi, d3deta, d3dzeta,                 &
+!            d1dxi, d1deta, d1dzeta,                 &
+!            d2dxi, d2deta, d2dzeta,                 &
+!            d3dxi, d3deta, d3dzeta,                 &
             d1dxi_ale, d1deta_ale, d1dzeta_ale,                 &
             d2dxi_ale, d2deta_ale, d2dzeta_ale,                 &
             d3dxi_ale, d3deta_ale, d3dzeta_ale,                 &
+            d1_dxidxi,   d1_detadeta,   d1_dzetadzeta,          &
+            d2_dxidxi,   d2_detadeta,   d2_dzetadzeta,          &
+            d3_dxidxi,   d3_detadeta,   d3_dzetadzeta,          &
+            d1_dxideta,  d1_dxidzeta,   d1_detadzeta,           &
+            d2_dxideta,  d2_dxidzeta,   d2_detadzeta,           &
+            d3_dxideta,  d3_dxidzeta,   d3_detadzeta,           &
             scaling_12, scaling_13, scaling_23, scaling_123,    &
             fvals, temp, weights
 
-        real(rk),   dimension(:,:), allocatable :: val, ddxi, ddeta, ddzeta, tempmat
+        real(rk),   dimension(:,:), allocatable ::  &
+            val, ddxi, ddeta, ddzeta,               &
+            dxidxi, detadeta, dzetadzeta,           &
+            dxideta, dxidzeta, detadzeta
         real(rk), dimension(:,:,:), allocatable :: jacobian_matrix, jacobian_matrix_ale
 
         !
@@ -2062,17 +2071,21 @@ contains
         ddeta   = self%basis_c%interpolator('ddeta')
         ddzeta  = self%basis_c%interpolator('ddzeta')
 
-        d1dxi   = matmul(ddxi,  self%coords%getvar(1,itime = 1))
-        d1deta  = matmul(ddeta, self%coords%getvar(1,itime = 1))
-        d1dzeta = matmul(ddzeta,self%coords%getvar(1,itime = 1))
+        dxidxi  = self%basis_c%interpolator('dxidxi')
 
-        d2dxi   = matmul(ddxi,  self%coords%getvar(2,itime = 1))
-        d2deta  = matmul(ddeta, self%coords%getvar(2,itime = 1))
-        d2dzeta = matmul(ddzeta,self%coords%getvar(2,itime = 1))
 
-        d3dxi   = matmul(ddxi,  self%coords%getvar(3,itime = 1))
-        d3deta  = matmul(ddeta, self%coords%getvar(3,itime = 1))
-        d3dzeta = matmul(ddzeta,self%coords%getvar(3,itime = 1))
+
+!        d1dxi   = matmul(ddxi,  self%coords%getvar(1,itime = 1))
+!        d1deta  = matmul(ddeta, self%coords%getvar(1,itime = 1))
+!        d1dzeta = matmul(ddzeta,self%coords%getvar(1,itime = 1))
+!
+!        d2dxi   = matmul(ddxi,  self%coords%getvar(2,itime = 1))
+!        d2deta  = matmul(ddeta, self%coords%getvar(2,itime = 1))
+!        d2dzeta = matmul(ddzeta,self%coords%getvar(2,itime = 1))
+!
+!        d3dxi   = matmul(ddxi,  self%coords%getvar(3,itime = 1))
+!        d3deta  = matmul(ddeta, self%coords%getvar(3,itime = 1))
+!        d3dzeta = matmul(ddzeta,self%coords%getvar(3,itime = 1))
 
 
         d1dxi_ale   = matmul(ddxi,  self%ale_coords%getvar(1,itime = 1))
@@ -2133,23 +2146,26 @@ contains
         self%vol_ale = abs(sum(self%jinv_ale * weights))
 
 
-        allocate(jacobian_matrix(nnodes,3,3), jacobian_matrix_ale(nnodes,3,3), tempmat(3,3))
+        !allocate(jacobian_matrix(nnodes,3,3), jacobian_matrix_ale(nnodes,3,3), tempmat(3,3))
+        allocate(jacobian_matrix(nnodes,3,3), jacobian_matrix_ale(nnodes,3,3))
         do inode = 1,nnodes
-            jacobian_matrix(inode,1,1) = d1dxi(inode)
-            jacobian_matrix(inode,1,2) = d1deta(inode)
-            jacobian_matrix(inode,1,3) = d1dzeta(inode)
-                                     
-            jacobian_matrix(inode,2,1) = d2dxi(inode)
-            jacobian_matrix(inode,2,2) = d2deta(inode)
-            jacobian_matrix(inode,2,3) = d2dzeta(inode)
-                                     
-            jacobian_matrix(inode,3,1) = d3dxi(inode)
-            jacobian_matrix(inode,3,2) = d3deta(inode)
-            jacobian_matrix(inode,3,3) = d3dzeta(inode)
+            !jacobian_matrix(inode,1,1) = d1dxi(inode)
+            !jacobian_matrix(inode,1,2) = d1deta(inode)
+            !jacobian_matrix(inode,1,3) = d1dzeta(inode)
+            !                         
+            !jacobian_matrix(inode,2,1) = d2dxi(inode)
+            !jacobian_matrix(inode,2,2) = d2deta(inode)
+            !jacobian_matrix(inode,2,3) = d2dzeta(inode)
+            !                         
+            !jacobian_matrix(inode,3,1) = d3dxi(inode)
+            !jacobian_matrix(inode,3,2) = d3deta(inode)
+            !jacobian_matrix(inode,3,3) = d3dzeta(inode)
+            !
+            !tempmat = inv(jacobian_matrix(inode,:,:))
+            !jacobian_matrix(inode,:,:) = tempmat 
 
+            jacobian_matrix(inode,:,:) = self%metric(:,:,inode)
 
-            tempmat = inv(jacobian_matrix(inode,:,:))
-            jacobian_matrix(inode,:,:) = tempmat 
 
             jacobian_matrix_ale(inode,1,1) = d1dxi_ale(inode)
             jacobian_matrix_ale(inode,1,2) = d1deta_ale(inode)
@@ -2184,6 +2200,19 @@ contains
 
         ! Use consistent representation of det_jacobian_grid and grad(det_jacobian_grid)
         !self%det_jacobian_grid       = matmul(val,       self%det_jacobian_grid_modes)
+
+        jinv_grad1 = dd1_dxidxi*self%metric(1,1,:)     +  dd1_dxideta*self%metric(2,1,:)    +  dd1_dxidzeta*self%metric(3,1,:)   +  &
+                     dd2_dxidxi*self%metric(1,2,:)     +  dd2_dxideta*self%metric(2,2,:)    +  dd2_dxidzeta*self%metric(3,2,:)   +  &
+                     dd3_dxidxi*self%metric(1,3,:)     +  dd3_dxideta*self%metric(2,3,:)    +  dd2_dxidzeta*self%metric(3,3,:)
+
+        jinv_grad2 = dd1_dxideta*self%metric(1,1,:)    +  dd1_detadeta*self%metric(2,1,:)   +  dd1_detadzeta*self%metric(3,1,:)  +  &
+                     dd2_dxideta*self%metric(1,2,:)    +  dd2_detadeta*self%metric(2,2,:)   +  dd2_detadzeta*self%metric(3,2,:)  +  &
+                     dd3_dxideta*self%metric(1,3,:)    +  dd3_detadeta*self%metric(2,3,:)   +  dd3_detadzeta*self%metric(3,3,:)
+
+        jinv_grad3 = dd1_dxidzeta*self%metric(1,1,:)   +  dd1_detadzeta*self%metric(2,1,:)  +  dd1_dzetadzeta*self%metric(3,1,:) +  &
+                     dd2_dxidzeta*self%metric(1,2,:)   +  dd2_detadzeta*self%metric(2,2,:)  +  dd2_dzetadzeta*self%metric(3,2,:) +  &
+                     dd3_dxidzeta*self%metric(1,3,:)   +  dd3_detadzeta*self%metric(2,3,:)  +  dd3_dzetadzeta*self%metric(3,3,:)
+
 
 
         self%det_jacobian_grid_grad1 = matmul(self%grad1,self%det_jacobian_grid_modes)

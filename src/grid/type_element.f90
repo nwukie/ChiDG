@@ -1510,9 +1510,10 @@ contains
         integer(ik),            intent(in)      :: itime
         real(rk),               intent(in)      :: xi,eta,zeta
 
-        real(rk)                   :: temp,val
-        real(rk)                   :: polyvals(q%nterms())
-        integer(ik)                :: iterm, spacedim
+        real(rk)    :: temp,val
+        real(rk)    :: det_jacobian_grid,det_jacobian_grid_grad(3),inv_jacobian_grid(3,3),grid_vel(3)
+        real(rk)    :: polyvals(q%nterms())
+        integer(ik) :: iterm, spacedim
 
 
         ! evaluate polynomial modes at node location
@@ -1524,6 +1525,9 @@ contains
 
         ! evaluate x from dot product of modes and polynomial values
         temp = dot_product(q%getvar(ivar,itime),polyvals)
+
+        !call self%ale_point(xi,eta,zeta,det_jacobian_grid,det_jacobian_grid_grad,inv_jacobian_grid,grid_vel)
+        !val = temp/det_jacobian_grid
         val = temp/dot_product(self%det_jacobian_grid_modes,polyvals)
 
 
@@ -2178,6 +2182,10 @@ contains
         self%det_jacobian_grid_modes = matmul(self%invmass,temp)
 
 
+        ! Use consistent representation of det_jacobian_grid and grad(det_jacobian_grid)
+        self%det_jacobian_grid       = matmul(val,       self%det_jacobian_grid_modes)
+
+
         self%det_jacobian_grid_grad1 = matmul(self%grad1,self%det_jacobian_grid_modes)
         self%det_jacobian_grid_grad2 = matmul(self%grad2,self%det_jacobian_grid_modes)
         self%det_jacobian_grid_grad3 = matmul(self%grad3,self%det_jacobian_grid_modes)
@@ -2370,9 +2378,10 @@ contains
                            metric(3,3) * ddzeta(iterm)
         end do
 
-        det_jacobian_grid_grad(1) = dot_product(grad1, self%det_jacobian_grid_modes)
-        det_jacobian_grid_grad(2) = dot_product(grad2, self%det_jacobian_grid_modes)
-        det_jacobian_grid_grad(3) = dot_product(grad3, self%det_jacobian_grid_modes)
+        det_jacobian_grid         = dot_product(polyval, self%det_jacobian_grid_modes)
+        det_jacobian_grid_grad(1) = dot_product(grad1,   self%det_jacobian_grid_modes)
+        det_jacobian_grid_grad(2) = dot_product(grad2,   self%det_jacobian_grid_modes)
+        det_jacobian_grid_grad(3) = dot_product(grad3,   self%det_jacobian_grid_modes)
 
 
     end subroutine ale_point

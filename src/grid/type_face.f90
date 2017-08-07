@@ -1197,7 +1197,9 @@ contains
             self%inv_jacobian_grid(inode,:,:) = inv(self%jacobian_grid(inode,:,:))
         end do
 
-        self%det_jacobian_grid       = matmul(self%basis_s%interpolator('Value',iface),self%det_jacobian_grid_modes)
+        !self%det_jacobian_grid       = matmul(self%basis_s%interpolator('Value',iface),self%det_jacobian_grid_modes)
+        self%det_jacobian_grid       = self%jinv_ale/self%jinv
+
         self%det_jacobian_grid_grad1 = matmul(self%grad1,self%det_jacobian_grid_modes)
         self%det_jacobian_grid_grad2 = matmul(self%grad2,self%det_jacobian_grid_modes)
         self%det_jacobian_grid_grad3 = matmul(self%grad3,self%det_jacobian_grid_modes)

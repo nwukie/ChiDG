@@ -74,4 +74,40 @@ contains
 
 
 
+    !>  Return second/mixed derivative of a term in a polynomial expansion at a specified 
+    !!  (xi, eta, zeta) location.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/7/2017
+    !!
+    !!  @param[in]  spacedim   Integer specifying whether to compute the 1D, 2D, 
+    !!                          or 3D expansion function.
+    !!  @param[in]  nterms      Number of terms in the polynomial expansion.
+    !!  @param[in]  mode        Integer of the mode in the expansion to be computed.
+    !!  @param[in]  node        point_t containing (xi,eta,zeta) location on reference element.
+    !!  @param[in]  dir         Integer indicating direction of the derivative (xi, eta, zeta).
+    !!
+    !----------------------------------------------------------------------------------------
+    function ddpolynomial_val(spacedim,nterms,mode,node,partial1,partial2) result(res)
+        integer(ik),    intent(in)  :: spacedim
+        integer(ik),    intent(in)  :: nterms
+        integer(ik),    intent(in)  :: mode
+        real(rk),       intent(in)  :: node(3)
+        integer(ik),    intent(in)  :: partial1
+        integer(ik),    intent(in)  :: partial2
+
+        real(rk)    :: res
+
+        res = ddlegendre_val(spacedim,mode,node(1),node(2),node(3),partial1,partial2)
+
+    end function ddpolynomial_val
+    !****************************************************************************************
+
+
+
+
+
+
+
+
 end module mod_polynomial

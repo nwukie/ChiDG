@@ -2183,7 +2183,7 @@ contains
 
 
         ! Use consistent representation of det_jacobian_grid and grad(det_jacobian_grid)
-        self%det_jacobian_grid       = matmul(val,       self%det_jacobian_grid_modes)
+        !self%det_jacobian_grid       = matmul(val,       self%det_jacobian_grid_modes)
 
 
         self%det_jacobian_grid_grad1 = matmul(self%grad1,self%det_jacobian_grid_modes)

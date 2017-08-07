@@ -205,14 +205,12 @@ contains
             case (3)    ! 3D
                 dpolyval = dlegendre_val3D(currentmode,xi,eta,zeta,dir)
             case default
-                print*, "Error - DLegendreVal: Valid space dimensions are (1,2,3)"
+                print*, "Error - dlegendre_val: Valid space dimensions are (1,2,3)"
                 stop
         end select
 
     end function dlegendre_val
     !*****************************************************************************************
-
-
 
 
 
@@ -362,6 +360,277 @@ contains
 
     end function dlegendre_val3D
     !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+    !>  Second/mixed derivatives of modes in legendre tensor product basis.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   8/7/2017
+    !!
+    !-----------------------------------------------------------------------------------------
+    function ddlegendre_val(space_dim,currentmode,xi,eta,zeta,partial1,partial2) result(res)
+        integer(ik),    intent(in)  :: space_dim
+        integer(ik),    intent(in)  :: currentmode
+        real(rk),       intent(in)  :: xi
+        real(rk),       intent(in)  :: eta
+        real(rk),       intent(in)  :: zeta
+        integer(ik),    intent(in)  :: partial1
+        integer(ik),    intent(in)  :: partial2
+
+        real(rk)    :: res
+
+        select case (space_dim)
+            case (1)    ! 1D
+                res = ddlegendre_val1D(currentmode,xi)
+            case (2)    ! 2D
+                res = ddlegendre_val2D(currentmode,xi,eta,partial1,partial2)
+            case (3)    ! 3D
+                res = ddlegendre_val3D(currentmode,xi,eta,zeta,partial1,partial2)
+            case default
+                print*, "Error - ddlegendre_val: Valid space dimensions are (1,2,3)"
+                stop
+        end select
+
+    end function ddlegendre_val
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Compute the second derivative of the nterm Legendre polynomial at the location 
+    !!  'pos' between -1 and 1.
+    !!
+    !!  The Legendre polynomials satisfy the Legendre equation:
+    !!      ddx( (1-x^2)*ddx(Pn) )  +  n*(n+1)*Pn = 0
+    !!
+    !!  Applying the chain rule:
+    !!      ddx(1 - x^2) * ddx(Pn)  -  2*x* ddx(ddx(Pn))  +  n*(n+1)*Pn = 0
+    !!
+    !!  Rearranging to solve for the second derivative: ddx(ddx(Pn))
+    !!      ddx(ddx(Pn)) = [2*x*ddx(Pn)  -  n*(n+1)*Pn]/(1-x^2)
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   8/07/2017
+    !!
+    !-----------------------------------------------------------------------------------------
+    recursive function ddlegendre_val1d(nterm,pos) result(res)
+        integer(ik), intent(in)    :: nterm
+        real(rk),    intent(in)    :: pos
+
+        real(rk)    :: res
+
+        res = (TWO*pos*dlegendre_val1D(nterm,pos) + real(nterm,rk)*(real(nterm,rk) + ONE)*legendre_val1D(nterm,pos))/(ONE-pos*pos)
+
+    end function ddlegendre_val1d
+    !*****************************************************************************************
+
+
+
+
+    !>  A set of 1D-Lagrange polynomials is associated with the coordinates
+    !!  in 'nodes'. This function compute the derivative of the 2D Legendre modal tensor 
+    !!  product associated with the 'currentnode' at the location 'pos'.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   8/7/2017
+    !!
+    !-----------------------------------------------------------------------------------------
+    function ddlegendre_val2d(currentmode,xi,eta,partial1,partial2) result(res)
+        integer(ik),    intent(in)  :: currentmode
+        real(rk),       intent(in)  :: xi
+        real(rk),       intent(in)  :: eta
+        integer(ik),    intent(in)  :: partial1
+        integer(ik),    intent(in)  :: partial2
+
+        integer(ik) :: xi_mode, eta_mode
+        real(rk)    :: term1, term2, res
+
+        !
+        ! Check valid input for derivatives
+        !
+        if ((partial1 /= XI_DIR) .and. (partial1 /= ETA_DIR) .and. (partial1 /= ZETA_DIR) .or. &
+            (partial2 /= XI_DIR) .and. (partial2 /= ETA_DIR) .and. (partial2 /= ZETA_DIR) ) then
+            print*, "valid derivative directions are - 'XI_DIR', 'ETA_DIR', 'ZETA_DIR'"
+            stop
+        end if
+
+
+        !
+        ! Get indices of terms that construct tensor product mode
+        !
+        xi_mode  = xi_order_2d(currentmode)
+        eta_mode = eta_order_2d(currentmode)
+
+
+        !
+        ! Pure second derivative
+        !
+        if (partial1 == partial2) then
+
+            select case (partial1)
+                case (XI_DIR)
+                    term1 = ddlegendre_val1D(xi_mode,xi)
+                    term2 =   legendre_val1D(eta_mode,eta)
+
+                case (ETA_DIR)
+                    term1 =   legendre_val1D(xi_mode,xi)
+                    term2 = ddlegendre_val1D(eta_mode,eta)
+            end select
+
+        !
+        ! Mixed derivative:  dd(phi)/dxideta = [d(phi)/dxi][d(phi)/deta]
+        !
+        else
+            term1  = dlegendre_val1D(xi_mode,xi)
+            term2 = dlegendre_val1D(eta_mode,eta)
+
+        end if
+
+
+        res = term1 * term2
+
+
+        ! By definition of 2D polynomial, no derivative in ZETA dimension
+        if ((partial1 == ZETA_DIR) .or. (partial2 == ZETA_DIR)) res = ZERO
+
+
+    end function ddlegendre_val2d
+    !*****************************************************************************************
+
+
+
+
+
+
+    !>  A set of 1D-Legendre polynomials is associated with the coordinates
+    !!  in 'nodes'. This function compute the derivative of the 3D Legendre modal tensor 
+    !!  product associated with the 'currentnode' at the location 'pos'.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   8/7/2016
+    !!
+    !-----------------------------------------------------------------------------------------
+    function ddlegendre_val3d(currentmode,xi,eta,zeta,partial1,partial2) result(res)
+        integer(ik),    intent(in)  :: currentmode
+        real(rk),       intent(in)  :: xi
+        real(rk),       intent(in)  :: eta
+        real(rk),       intent(in)  :: zeta
+        integer(ik),    intent(in)  :: partial1
+        integer(ik),    intent(in)  :: partial2
+
+        integer(ik) :: xi_mode, eta_mode, zeta_mode
+        real(rk)    :: term1, term2, term3, res
+
+        xi_mode   = xi_order_3d(currentmode)
+        eta_mode  = eta_order_3d(currentmode)
+        zeta_mode = zeta_order_3d(currentmode)
+
+
+        !
+        ! Check valid input for derivatives
+        !
+        if ((partial1 /= XI_DIR) .and. (partial1 /= ETA_DIR) .and. (partial1 /= ZETA_DIR) .or. &
+            (partial2 /= XI_DIR) .and. (partial2 /= ETA_DIR) .and. (partial2 /= ZETA_DIR) ) then
+            print*, "valid derivative directions are - 'XI_DIR', 'ETA_DIR', 'ZETA_DIR'"
+            stop
+        end if
+
+
+
+
+        !
+        ! Pure second derivative
+        !
+        if (partial1 == partial2) then
+
+            select case (partial1)
+                case (XI_DIR)
+                    term1 = ddlegendre_val1D(xi_mode,xi)
+                    term2 =   legendre_val1D(eta_mode,eta)
+                    term3 =   legendre_val1D(zeta_mode,zeta)
+
+                case (ETA_DIR)
+                    term1 =   legendre_val1D(xi_mode,xi)
+                    term2 = ddlegendre_val1D(eta_mode,eta)
+                    term3 =   legendre_val1D(zeta_mode,zeta)
+
+                case (ZETA_DIR)
+                    term1 =   legendre_val1D(xi_mode,xi)
+                    term2 =   legendre_val1D(eta_mode,eta)
+                    term3 = ddlegendre_val1D(zeta_mode,zeta)
+
+            end select
+
+
+        !
+        ! Mixed derivative:  
+        !   ex:  dd(phi)/dxideta   = [d(phi)/dxi] * [d(phi)/deta] * [phi(zeta)]
+        !   ex:  dd(phi)/detadzeta = [phi(xi)]  *  [d(phi)/deta] * [d(phi)/dzeta]
+        !
+        else
+
+
+            select case(partial1)
+                case (XI_DIR)
+                    term1 = dlegendre_val1D(xi_mode,xi)
+                case (ETA_DIR)
+                    term1 = dlegendre_val1D(eta_mode,eta)
+                case (ZETA_DIR)
+                    term1 = dlegendre_val1D(zeta_mode,zeta)
+            end select
+
+
+            select case(partial2)
+                case (XI_DIR)
+                    term2 = dlegendre_val1D(xi_mode,xi)
+                case (ETA_DIR)
+                    term2 = dlegendre_val1D(eta_mode,eta)
+                case (ZETA_DIR)
+                    term2 = dlegendre_val1D(zeta_mode,zeta)
+            end select
+
+            
+            ! Determine third term by knowledge of first two terms in derivative
+            select case(partial1 + partial2)
+                case (XI_DIR + ETA_DIR)
+                    term3 = legendre_val1D(zeta_mode,zeta)
+                case (XI_DIR + ZETA_DIR)
+                    term3 = legendre_val1D(eta_mode,eta)
+                case (ETA_DIR + ZETA_DIR)
+                    term3 = legendre_val1D(xi_mode,xi)
+            end select
+
+
+
+        end if
+
+
+        ! Compute output
+        res = term1 * term2 * term3
+
+
+    end function ddlegendre_val3d
+    !*****************************************************************************************
+
 
 
 

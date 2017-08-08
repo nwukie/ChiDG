@@ -1081,7 +1081,6 @@ contains
             dd2_dxideta,  dd2_dxidzeta,   dd2_detadzeta,        &
             dd3_dxideta,  dd3_dxidzeta,   dd3_detadzeta,        &
             scaling_12, scaling_13, scaling_23, scaling_123,    &
-            fvals, temp, weights,                               &
             jinv_grad1,     jinv_grad2,     jinv_grad3,         &
             jinv_ale_grad1, jinv_ale_grad2, jinv_ale_grad3
 
@@ -1119,7 +1118,7 @@ contains
         !
         iface   = self%iface
         nnodes  = self%basis_c%nnodes_if()
-        weights = self%basis_c%weights()
+        !weights = self%basis_c%weights()
         ddxi    = self%basis_c%interpolator('ddxi',iface)
         ddeta   = self%basis_c%interpolator('ddeta',iface)
         ddzeta  = self%basis_c%interpolator('ddzeta',iface)
@@ -1314,6 +1313,10 @@ contains
 
 
 
+        print*, 'face'
+        print*, 'grad1:', self%det_jacobian_grid_grad1
+        print*, 'grad2:', self%det_jacobian_grid_grad2
+        print*, 'grad3:', self%det_jacobian_grid_grad3
 
 
 

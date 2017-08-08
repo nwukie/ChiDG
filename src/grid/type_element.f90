@@ -2282,6 +2282,10 @@ contains
         self%det_jacobian_grid_grad3 = (jinv_ale_grad3*self%jinv  -  self%jinv_ale*jinv_grad3)/(self%jinv**TWO)
 
 
+        print*, 'element'
+        print*, 'grad1: ', self%det_jacobian_grid_grad1
+        print*, 'grad2: ', self%det_jacobian_grid_grad2
+        print*, 'grad3: ', self%det_jacobian_grid_grad3
 
 
 

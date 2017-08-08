@@ -1314,14 +1314,14 @@ contains
 
 
 
-        print*, if (any(ieee_is_nan(self%jinv_ale))) print*, 'face jinv_ale isnan'
-        print*, if (any(ieee_is_nan(self%jinv))) print*, 'face jinv isnan'
-        print*, if (any(ieee_is_nan(jinv_ale_grad1))) print*, 'face jinv_ale_grad1 isnan'
-        print*, if (any(ieee_is_nan(jinv_ale_grad2))) print*, 'face jinv_ale_grad2 isnan'
-        print*, if (any(ieee_is_nan(jinv_ale_grad3))) print*, 'face jinv_ale_grad3 isnan'
-        print*, if (any(ieee_is_nan(jinv_grad1))) print*, 'face jinv_grad1 isnan'
-        print*, if (any(ieee_is_nan(jinv_grad2))) print*, 'face jinv_grad2 isnan'
-        print*, if (any(ieee_is_nan(jinv_grad3))) print*, 'face jinv_grad3 isnan'
+        if (any(ieee_is_nan(self%jinv_ale))) print*, 'face jinv_ale isnan'
+        if (any(ieee_is_nan(self%jinv))) print*, 'face jinv isnan'
+        if (any(ieee_is_nan(jinv_ale_grad1))) print*, 'face jinv_ale_grad1 isnan'
+        if (any(ieee_is_nan(jinv_ale_grad2))) print*, 'face jinv_ale_grad2 isnan'
+        if (any(ieee_is_nan(jinv_ale_grad3))) print*, 'face jinv_ale_grad3 isnan'
+        if (any(ieee_is_nan(jinv_grad1))) print*, 'face jinv_grad1 isnan'
+        if (any(ieee_is_nan(jinv_grad2))) print*, 'face jinv_grad2 isnan'
+        if (any(ieee_is_nan(jinv_grad3))) print*, 'face jinv_grad3 isnan'
 
 
 

@@ -438,7 +438,7 @@ contains
 
         real(rk)    :: res
 
-        res = (TWO*pos*dlegendre_val1D(nterm,pos) + real(nterm,rk)*(real(nterm,rk) + ONE)*legendre_val1D(nterm,pos))/(ONE-pos*pos)
+        res = (TWO*pos*dlegendre_val1D(nterm,pos) - real(nterm-1,rk)*(real(nterm-1,rk) + ONE)*legendre_val1D(nterm,pos))/(ONE-pos*pos)
 
     end function ddlegendre_val1d
     !*****************************************************************************************

@@ -2224,7 +2224,7 @@ contains
 
         jinv_grad1 = dd1_dxidxi*self%metric(1,1,:)     +  dd1_dxideta*self%metric(2,1,:)    +  dd1_dxidzeta*self%metric(3,1,:)   +  &
                      dd2_dxidxi*self%metric(1,2,:)     +  dd2_dxideta*self%metric(2,2,:)    +  dd2_dxidzeta*self%metric(3,2,:)   +  &
-                     dd3_dxidxi*self%metric(1,3,:)     +  dd3_dxideta*self%metric(2,3,:)    +  dd2_dxidzeta*self%metric(3,3,:)
+                     dd3_dxidxi*self%metric(1,3,:)     +  dd3_dxideta*self%metric(2,3,:)    +  dd3_dxidzeta*self%metric(3,3,:)
 
         jinv_grad2 = dd1_dxideta*self%metric(1,1,:)    +  dd1_detadeta*self%metric(2,1,:)   +  dd1_detadzeta*self%metric(3,1,:)  +  &
                      dd2_dxideta*self%metric(1,2,:)    +  dd2_detadeta*self%metric(2,2,:)   +  dd2_detadzeta*self%metric(3,2,:)  +  &
@@ -2259,7 +2259,7 @@ contains
 
         jinv_ale_grad1 = dd1_dxidxi*jacobian_matrix_ale(:,1,1)    +  dd1_dxideta*jacobian_matrix_ale(:,2,1)    +  dd1_dxidzeta*jacobian_matrix_ale(:,3,1)   +  &
                          dd2_dxidxi*jacobian_matrix_ale(:,1,2)    +  dd2_dxideta*jacobian_matrix_ale(:,2,2)    +  dd2_dxidzeta*jacobian_matrix_ale(:,3,2)   +  &
-                         dd3_dxidxi*jacobian_matrix_ale(:,1,3)    +  dd3_dxideta*jacobian_matrix_ale(:,2,3)    +  dd2_dxidzeta*jacobian_matrix_ale(:,3,3)
+                         dd3_dxidxi*jacobian_matrix_ale(:,1,3)    +  dd3_dxideta*jacobian_matrix_ale(:,2,3)    +  dd3_dxidzeta*jacobian_matrix_ale(:,3,3)
 
         jinv_ale_grad2 = dd1_dxideta*jacobian_matrix_ale(:,1,1)   +  dd1_detadeta*jacobian_matrix_ale(:,2,1)   +  dd1_detadzeta*jacobian_matrix_ale(:,3,1)  +  &
                          dd2_dxideta*jacobian_matrix_ale(:,1,2)   +  dd2_detadeta*jacobian_matrix_ale(:,2,2)   +  dd2_detadzeta*jacobian_matrix_ale(:,3,2)  +  &
@@ -2280,12 +2280,6 @@ contains
         self%det_jacobian_grid_grad1 = (jinv_ale_grad1*self%jinv  -  self%jinv_ale*jinv_grad1)/(self%jinv**TWO)
         self%det_jacobian_grid_grad2 = (jinv_ale_grad2*self%jinv  -  self%jinv_ale*jinv_grad2)/(self%jinv**TWO)
         self%det_jacobian_grid_grad3 = (jinv_ale_grad3*self%jinv  -  self%jinv_ale*jinv_grad3)/(self%jinv**TWO)
-
-
-!        print*, 'element'
-!        print*, 'grad1: ', self%det_jacobian_grid_grad1
-!        print*, 'grad2: ', self%det_jacobian_grid_grad2
-!        print*, 'grad3: ', self%det_jacobian_grid_grad3
 
 
 

@@ -2014,7 +2014,6 @@ contains
         logical                                 :: parallel_neighbor
 
         ! Presumably, the node velocity
-        !grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel
         if ((interp_source == 'face interior') .or. (interp_source == 'boundary')) then
             grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%grid_vel
 

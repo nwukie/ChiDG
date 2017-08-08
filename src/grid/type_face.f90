@@ -1071,7 +1071,7 @@ contains
 
         character(:),   allocatable :: coordinate_system
 
-        real(rk),   dimension(:),   allocatable ::  &
+        real(rk),   dimension(:),   allocatable ::              &
             d1dxi_ale, d1deta_ale, d1dzeta_ale,                 &
             d2dxi_ale, d2deta_ale, d2dzeta_ale,                 &
             d3dxi_ale, d3deta_ale, d3dzeta_ale,                 &
@@ -1083,7 +1083,8 @@ contains
             dd3_dxideta,  dd3_dxidzeta,   dd3_detadzeta,        &
             scaling_12, scaling_13, scaling_23, scaling_123,    &
             jinv_grad1,     jinv_grad2,     jinv_grad3,         &
-            jinv_ale_grad1, jinv_ale_grad2, jinv_ale_grad3
+            jinv_ale_grad1, jinv_ale_grad2, jinv_ale_grad3,     &
+            det_jacobian_grid_ddxi, det_jacobian_grid_ddeta, det_jacobian_grid_ddzeta
 
         real(rk),   dimension(:,:), allocatable ::  &
             val,                                    &
@@ -1309,12 +1310,26 @@ contains
         !   grad(det_jacobian_grid) = [grad(jinv_ale)*jinv - jinv_ale*grad(jinv)] / [jinv*jinv]
         !
         !self%det_jacobian_grid       = matmul(self%basis_s%interpolator('Value',iface),self%det_jacobian_grid_modes)
-        self%det_jacobian_grid       = self%jinv_ale/self%jinv
-        self%det_jacobian_grid_grad1 = (jinv_ale_grad1*self%jinv  -  self%jinv_ale*jinv_grad1)/(self%jinv**TWO)
-        self%det_jacobian_grid_grad2 = (jinv_ale_grad2*self%jinv  -  self%jinv_ale*jinv_grad2)/(self%jinv**TWO)
-        self%det_jacobian_grid_grad3 = (jinv_ale_grad3*self%jinv  -  self%jinv_ale*jinv_grad3)/(self%jinv**TWO)
+        self%det_jacobian_grid   = self%jinv_ale/self%jinv
+        det_jacobian_grid_ddxi   = (jinv_ale_grad1*self%jinv  -  self%jinv_ale*jinv_grad1)/(self%jinv**TWO)
+        det_jacobian_grid_ddeta  = (jinv_ale_grad2*self%jinv  -  self%jinv_ale*jinv_grad2)/(self%jinv**TWO)
+        det_jacobian_grid_ddzeta = (jinv_ale_grad3*self%jinv  -  self%jinv_ale*jinv_grad3)/(self%jinv**TWO)
 
 
+        ! Transform into gradient in physical space(undeformed geometry)
+        do inode = 1,size(det_jacobian_grid_ddxi)
+            self%det_jacobian_grid_grad1(inode) = self%metric(1,1,inode) * det_jacobian_grid_ddxi(inode)  + &
+                                                  self%metric(2,1,inode) * det_jacobian_grid_ddeta(inode) + &
+                                                  self%metric(3,1,inode) * det_jacobian_grid_ddzeta(inode)
+
+            self%det_jacobian_grid_grad2(inode) = self%metric(1,2,inode) * det_jacobian_grid_ddxi(inode)  + &
+                                                  self%metric(2,2,inode) * det_jacobian_grid_ddeta(inode) + &
+                                                  self%metric(3,2,inode) * det_jacobian_grid_ddzeta(inode)
+
+            self%det_jacobian_grid_grad3(inode) = self%metric(1,3,inode) * det_jacobian_grid_ddxi(inode)  + &
+                                                  self%metric(2,3,inode) * det_jacobian_grid_ddeta(inode) + &
+                                                  self%metric(3,3,inode) * det_jacobian_grid_ddzeta(inode)
+        end do
 
 
 

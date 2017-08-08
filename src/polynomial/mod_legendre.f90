@@ -4,6 +4,7 @@ module mod_legendre
                               ZERO, ONE, TWO, THREE, FOUR, FIVE, EIGHTH, HALF
     use mod_ordering,   only: xi_order_2d, eta_order_2d, &
                               xi_order_3d, eta_order_3d, zeta_order_3d
+    use ieee_arithmetic,    only: ieee_is_nan
 
     implicit none
 
@@ -433,12 +434,34 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     recursive function ddlegendre_val1d(nterm,pos) result(res)
+        use mod_constants,  only: ZERO, ONE, TWO, THREE, SEVEN, EIGHT
         integer(ik), intent(in)    :: nterm
         real(rk),    intent(in)    :: pos
 
         real(rk)    :: res
 
-        res = (TWO*pos*dlegendre_val1D(nterm,pos) - real(nterm-1,rk)*(real(nterm-1,rk) + ONE)*legendre_val1D(nterm,pos))/(ONE-pos*pos)
+        ! DANGEROUS AT (pos=1)
+        !res = (TWO*pos*dlegendre_val1D(nterm,pos) - real(nterm-1,rk)*(real(nterm-1,rk) + ONE)*legendre_val1D(nterm,pos))/(ONE-pos*pos)
+
+        select case(nterm)
+            case(1)
+                res = ZERO
+            case(2)
+                res = ZERO
+            case(3)
+                res = THREE
+            case(4) 
+                res = 15._rk*pos
+            case(5)
+                res = (15._rk/TWO)*(SEVEN*pos*pos - ONE)
+            case(6)
+                res = (105_rk/TWO)*pos*(THREE*pos*pos - ONE)
+            case(7)
+                res = (105_rk/EIGHT)*(33._rk*pos*pos*pos*pos - 18._rk*pos*pos + ONE)
+            case default
+                print*, "Error: ddlegendre_val1d is only defined through order 6"
+                stop
+        end select
 
     end function ddlegendre_val1d
     !*****************************************************************************************
@@ -500,7 +523,7 @@ contains
         ! Mixed derivative:  dd(phi)/dxideta = [d(phi)/dxi][d(phi)/deta]
         !
         else
-            term1  = dlegendre_val1D(xi_mode,xi)
+            term1 = dlegendre_val1D(xi_mode,xi)
             term2 = dlegendre_val1D(eta_mode,eta)
 
         end if
@@ -626,6 +649,8 @@ contains
 
         ! Compute output
         res = term1 * term2 * term3
+
+        if (ieee_is_nan(res)) print*, 'term ', currentmode, ' is nan'
 
 
     end function ddlegendre_val3d

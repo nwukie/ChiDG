@@ -306,24 +306,28 @@ subroutine test_ddlegendre_val_1d_P1()
     use mod_legendre,   only: ddlegendre_val
     
     implicit none
-    real(rk), dimension(3)  :: ddpolyval_known,ddpolyval_test,x
+    real(rk), dimension(5)  :: ddpolyval_known,ddpolyval_test,x
     integer(ik)             :: spacedim, mode, partial1, partial2
     real(rk)                :: tol
     
     tol = 1.e-17_rk
     
     ! Locations for testing
-    x = [-0.5_rk, 0._rk, 0.5_rk]
+    ! Important to test at endpoints because some formulas
+    ! become undefined at that location
+    x = [-1._rk, -0.5_rk, 0._rk, 0.5_rk, 1._rk]
     
     spacedim        = 1
     mode            = 2
     partial1        = 1
     partial2        = 1
-    ddpolyval_known = [0._rk, 0._rk, 0._rk]
+    ddpolyval_known = [0._rk, 0._rk, 0._rk, 0._rk, 0._rk]
     
     ddpolyval_test(1) = ddlegendre_val(spacedim,mode,x(1),ZERO,ZERO,partial1,partial2)
     ddpolyval_test(2) = ddlegendre_val(spacedim,mode,x(2),ZERO,ZERO,partial1,partial2)
     ddpolyval_test(3) = ddlegendre_val(spacedim,mode,x(3),ZERO,ZERO,partial1,partial2)
+    ddpolyval_test(4) = ddlegendre_val(spacedim,mode,x(4),ZERO,ZERO,partial1,partial2)
+    ddpolyval_test(5) = ddlegendre_val(spacedim,mode,x(5),ZERO,ZERO,partial1,partial2)
     
     @assertEqual(ddpolyval_known,ddpolyval_test,tol)
 
@@ -932,11 +936,56 @@ end subroutine
 
 
 
+!-------------------------------------------------
+!   Test ddlegendre_val - 3D - against analytical solutions
+!-------------------------------------------------
 
 
+!>
+!!
+!!  phi_300 = phi(xi)_3 * phi(eta)_0 * phi(zeta)_0
+!!
+!!
+!----------------------------------------------------------
+@Test
+subroutine test_ddlegendre_val_3D_mode300()
+    use pfunit_mod
+    use mod_kinds,      only: rk,ik
+    use mod_constants,  only: ZERO
+    use mod_ordering,   only: xi_order_3d, eta_order_3d, zeta_order_3d
+    use mod_legendre,   only: ddlegendre_val
+    
+    implicit none
+    real(rk), dimension(5)  :: polyval_known,polyval_test,x,y
+    integer(ik)             :: spacedim, partial1, partial2, mode, i
+    
+    ! Locations for testing
+    x = [-0.5_rk,  0.5_rk, -0.5_rk,  0.5_rk,  0.0_rk]
+    y = [-0.5_rk, -0.5_rk,  0.5_rk,  0.5_rk,  0.0_rk]
+    
+    spacedim = 3
+    partial1 = 1
+    partial2 = 1
+    
+    ! Find mode that has xi_order = 4  ;; eta_order = 4
+    do i = 1,size(xi_order_3d)
+        if ( xi_order_3d(i) == 4  .and. eta_order_3d(i) == 1 .and. zeta_order_3d(i) == 1) then
+            mode = i
+            exit
+        end if
+    end do
+    
 
-
-
+    polyval_known = 15._rk*x
+    polyval_test(1) = ddlegendre_val(spacedim,mode,x(1),y(1),ZERO,partial1,partial2)
+    polyval_test(2) = ddlegendre_val(spacedim,mode,x(2),y(2),ZERO,partial1,partial2)
+    polyval_test(3) = ddlegendre_val(spacedim,mode,x(3),y(3),ZERO,partial1,partial2)
+    polyval_test(4) = ddlegendre_val(spacedim,mode,x(4),y(4),ZERO,partial1,partial2)
+    polyval_test(5) = ddlegendre_val(spacedim,mode,x(5),y(5),ZERO,partial1,partial2)
+    
+    @assertEqual(polyval_known,polyval_test)
+    
+end subroutine test_ddlegendre_val_3D_mode300
 
 
 

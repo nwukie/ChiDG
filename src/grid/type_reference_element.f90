@@ -6,6 +6,7 @@ module type_reference_element
     use mod_nodes_uniform,  only: uniform_nodes, uniform_weights
     use mod_polynomial,     only: polynomial_val, dpolynomial_val, ddpolynomial_val
     use mod_inv,            only: inv
+    use ieee_arithmetic,    only: ieee_is_nan
     implicit none
 
 
@@ -516,10 +517,8 @@ contains
                     self%dd_dxidxi_f(     inode,iterm,iface) = ddpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],XI_DIR,XI_DIR)
                     self%dd_dxideta_f(    inode,iterm,iface) = ddpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],XI_DIR,ETA_DIR)
                     self%dd_dxidzeta_f(   inode,iterm,iface) = ddpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],XI_DIR,ZETA_DIR)
-
                     self%dd_detadeta_f(   inode,iterm,iface) = ddpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],ETA_DIR,ETA_DIR)
                     self%dd_detadzeta_f(  inode,iterm,iface) = ddpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],ETA_DIR,ZETA_DIR)
-
                     self%dd_dzetadzeta_f( inode,iterm,iface) = ddpolynomial_val(spacedim,nterms,iterm,[xi,eta,zeta],ZETA_DIR,ZETA_DIR)
 
                 end do

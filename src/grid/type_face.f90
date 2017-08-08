@@ -1251,7 +1251,6 @@ contains
         dd3_dxidzeta   = matmul(dxidzeta,   self%coords%getvar(3,itime = 1))
         dd3_detadzeta  = matmul(detadzeta,  self%coords%getvar(3,itime = 1))
 
-        if (any(ieee_is_nan(self%metric))) print*, 'metric is nan'
         jinv_grad1 = dd1_dxidxi*self%metric(1,1,:)     +  dd1_dxideta*self%metric(2,1,:)    +  dd1_dxidzeta*self%metric(3,1,:)   +  &
                      dd2_dxidxi*self%metric(1,2,:)     +  dd2_dxideta*self%metric(2,2,:)    +  dd2_dxidzeta*self%metric(3,2,:)   +  &
                      dd3_dxidxi*self%metric(1,3,:)     +  dd3_dxideta*self%metric(2,3,:)    +  dd2_dxidzeta*self%metric(3,3,:)
@@ -1288,13 +1287,13 @@ contains
         dd3_detadzeta  = matmul(detadzeta,  self%ale_coords%getvar(3,itime = 1))
 
 
-        if (any(ieee_is_nan(dxidxi))) print*, 'dxidxi is nan'
-        if (any(ieee_is_nan(detadeta))) print*, 'detadeta is nan'
-        if (any(ieee_is_nan(dzetadzeta))) print*, 'dzetadzeta is nan'
-        if (any(ieee_is_nan(dxideta))) print*, 'dxideta is nan'
-        if (any(ieee_is_nan(dxidzeta))) print*, 'dxidzeta is nan'
-        if (any(ieee_is_nan(detadzeta))) print*, 'detadzeta is nan'
-        if (any(ieee_is_nan(jacobian_matrix_ale))) print*, 'jacobian_matrix_ale is nan'
+!        if (any(ieee_is_nan(dxidxi))) print*, 'dxidxi is nan'
+!        if (any(ieee_is_nan(detadeta))) print*, 'detadeta is nan'
+!        if (any(ieee_is_nan(dzetadzeta))) print*, 'dzetadzeta is nan'
+!        if (any(ieee_is_nan(dxideta))) print*, 'dxideta is nan'
+!        if (any(ieee_is_nan(dxidzeta))) print*, 'dxidzeta is nan'
+!        if (any(ieee_is_nan(detadzeta))) print*, 'detadzeta is nan'
+!        if (any(ieee_is_nan(jacobian_matrix_ale))) print*, 'jacobian_matrix_ale is nan'
 
         jinv_ale_grad1 = dd1_dxidxi*jacobian_matrix_ale(:,1,1)    +  dd1_dxideta*jacobian_matrix_ale(:,2,1)    +  dd1_dxidzeta*jacobian_matrix_ale(:,3,1)   +  &
                          dd2_dxidxi*jacobian_matrix_ale(:,1,2)    +  dd2_dxideta*jacobian_matrix_ale(:,2,2)    +  dd2_dxidzeta*jacobian_matrix_ale(:,3,2)   +  &
@@ -1324,14 +1323,14 @@ contains
 
 
 
-        if (any(ieee_is_nan(self%jinv_ale))) print*, 'face jinv_ale isnan'
-        if (any(ieee_is_nan(self%jinv))) print*, 'face jinv isnan'
-        if (any(ieee_is_nan(jinv_ale_grad1))) print*, 'face jinv_ale_grad1 isnan'
-        if (any(ieee_is_nan(jinv_ale_grad2))) print*, 'face jinv_ale_grad2 isnan'
-        if (any(ieee_is_nan(jinv_ale_grad3))) print*, 'face jinv_ale_grad3 isnan'
-        if (any(ieee_is_nan(jinv_grad1))) print*, 'face jinv_grad1 isnan'
-        if (any(ieee_is_nan(jinv_grad2))) print*, 'face jinv_grad2 isnan'
-        if (any(ieee_is_nan(jinv_grad3))) print*, 'face jinv_grad3 isnan'
+!        if (any(ieee_is_nan(self%jinv_ale))) print*, 'face jinv_ale isnan'
+!        if (any(ieee_is_nan(self%jinv))) print*, 'face jinv isnan'
+!        if (any(ieee_is_nan(jinv_ale_grad1))) print*, 'face jinv_ale_grad1 isnan'
+!        if (any(ieee_is_nan(jinv_ale_grad2))) print*, 'face jinv_ale_grad2 isnan'
+!        if (any(ieee_is_nan(jinv_ale_grad3))) print*, 'face jinv_ale_grad3 isnan'
+!        if (any(ieee_is_nan(jinv_grad1))) print*, 'face jinv_grad1 isnan'
+!        if (any(ieee_is_nan(jinv_grad2))) print*, 'face jinv_grad2 isnan'
+!        if (any(ieee_is_nan(jinv_grad3))) print*, 'face jinv_grad3 isnan'
 
 
 

@@ -128,7 +128,7 @@ module integration_force_mod
     use pfunit_mod
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: ZERO, HALF, ONE, THREE, IO_DESTINATION
-    use mod_force,                  only: compute_force
+    use mod_force,                  only: report_aerodynamics
     use type_chidg,                 only: chidg_t
     use type_chidg_worker,          only: chidg_worker_t
     use type_model,                 only: model_t
@@ -848,7 +848,7 @@ contains
         !
         ! Compute force: THIS IS BEING TESTED
         !
-        force_computed = compute_force(self%chidg%data, 'Walls')
+        call report_aerodynamics(self%chidg%data, 'Walls', force=force_computed)
 
 
 

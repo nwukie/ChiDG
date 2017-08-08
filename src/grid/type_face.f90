@@ -12,6 +12,7 @@ module type_face
     use type_quadrature,        only: quadrature_t
     use type_densevector,       only: densevector_t
     use mod_inv,                only: inv
+    use ieee_arithmetic,        only: ieee_is_nan
     implicit none
 
 
@@ -1313,10 +1314,14 @@ contains
 
 
 
-        print*, 'face'
-        print*, 'grad1:', self%det_jacobian_grid_grad1
-        print*, 'grad2:', self%det_jacobian_grid_grad2
-        print*, 'grad3:', self%det_jacobian_grid_grad3
+        print*, if (any(ieee_is_nan(self%jinv_ale))) print*, 'face jinv_ale isnan'
+        print*, if (any(ieee_is_nan(self%jinv))) print*, 'face jinv isnan'
+        print*, if (any(ieee_is_nan(jinv_ale_grad1))) print*, 'face jinv_ale_grad1 isnan'
+        print*, if (any(ieee_is_nan(jinv_ale_grad2))) print*, 'face jinv_ale_grad2 isnan'
+        print*, if (any(ieee_is_nan(jinv_ale_grad3))) print*, 'face jinv_ale_grad3 isnan'
+        print*, if (any(ieee_is_nan(jinv_grad1))) print*, 'face jinv_grad1 isnan'
+        print*, if (any(ieee_is_nan(jinv_grad2))) print*, 'face jinv_grad2 isnan'
+        print*, if (any(ieee_is_nan(jinv_grad3))) print*, 'face jinv_grad3 isnan'
 
 
 

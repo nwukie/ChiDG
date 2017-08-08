@@ -1066,12 +1066,10 @@ contains
     subroutine compute_quadrature_metrics_ale(self)
         class(face_t),  intent(inout)   :: self
 
-        integer(ik)                 :: inode, iface, ierr
-        integer(ik)                 :: nnodes
+        integer(ik)                 :: inode, iface, ierr, nnodes
 
         character(:),   allocatable :: coordinate_system
 
-        integer(ik)                             :: ierr
         real(rk),   dimension(:),   allocatable ::  &
             d1dxi_ale, d1deta_ale, d1dzeta_ale,                 &
             d2dxi_ale, d2deta_ale, d2dzeta_ale,                 &

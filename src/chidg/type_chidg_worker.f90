@@ -134,7 +134,7 @@ module type_chidg_worker
         !ALE procedures
         procedure   :: get_grid_velocity_element
         procedure   :: get_grid_velocity_face
-        procedure   :: get_jacobian_grid_element
+!        procedure   :: get_jacobian_grid_element
         procedure   :: get_inv_jacobian_grid_element
 !        procedure   :: get_jacobian_grid_face
         procedure   :: get_inv_jacobian_grid_face
@@ -2058,20 +2058,21 @@ contains
 
     end function get_grid_velocity_face
 
-    !>
-    !!
-    !!  @author Eric M. Wolf
-    !!  @date 1/9/2017
-    !!
-    !----------------------------------------------------------------------------------------------------
-    function get_jacobian_grid_element(self) result(jacobian_grid_gq)
-        class(chidg_worker_t),  intent(in)  :: self
+!    !>
+!    !!
+!    !!  @author Eric M. Wolf
+!    !!  @date 1/9/2017
+!    !!
+!    !----------------------------------------------------------------------------------------------------
+!    function get_jacobian_grid_element(self) result(jacobian_grid_gq)
+!        class(chidg_worker_t),  intent(in)  :: self
+!
+!        real(rk), dimension(:,:,:), allocatable :: jacobian_grid_gq
+!
+!        jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%jacobian_grid(:,:,:)
+!
+!    end function get_jacobian_grid_element
 
-        real(rk), dimension(:,:,:), allocatable :: jacobian_grid_gq
-
-        jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%jacobian_grid(:,:,:)
-
-    end function get_jacobian_grid_element
     !>
     !!
     !!  @author Eric M. Wolf

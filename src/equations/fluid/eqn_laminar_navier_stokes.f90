@@ -98,7 +98,7 @@ contains
 
                 call laminar_navier_stokes_eqns%add_operator('Geometric Conservation Volume Operator')
                 call laminar_navier_stokes_eqns%add_operator('Geometric Conservation Boundary Average Operator')
-                call laminar_navier_stokes_eqns%add_operator('Geometric Conservation LaxFriedrichs Operator')
+!                call laminar_navier_stokes_eqns%add_operator('Geometric Conservation LaxFriedrichs Operator')
                 call laminar_navier_stokes_eqns%add_operator('Geometric Conservation BC Operator')
 
 

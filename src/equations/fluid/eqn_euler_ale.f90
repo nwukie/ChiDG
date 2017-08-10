@@ -86,7 +86,7 @@ contains
 
                 call euler_ale_eqns%add_operator('Geometric Conservation Volume Operator')
                 call euler_ale_eqns%add_operator('Geometric Conservation Boundary Average Operator')
-                call euler_ale_eqns%add_operator('Geometric Conservation LaxFriedrichs Operator')
+!                call euler_ale_eqns%add_operator('Geometric Conservation LaxFriedrichs Operator')
                 call euler_ale_eqns%add_operator('Geometric Conservation BC Operator')
 
             case default

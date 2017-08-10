@@ -139,9 +139,12 @@ contains
         flux_3_p = (inv_jacobian_grid_p(:,3,1)*grid_velocity_1 + inv_jacobian_grid_p(:,3,2)*grid_velocity_2 + inv_jacobian_grid_p(:,3,3)*grid_velocity_3)*det_jacobian_grid_p
 
 
-        flux_1 = HALF*(flux_1_m + flux_1_p)
-        flux_2 = HALF*(flux_2_m + flux_2_p)
-        flux_3 = HALF*(flux_3_m + flux_3_p)
+        !flux_1 = HALF*(flux_1_m + flux_1_p)
+        !flux_2 = HALF*(flux_2_m + flux_2_p)
+        !flux_3 = HALF*(flux_3_m + flux_3_p)
+        flux_1 = flux_1_m
+        flux_2 = flux_2_m
+        flux_3 = flux_3_m
 
 
         !

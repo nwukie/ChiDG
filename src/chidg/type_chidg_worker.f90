@@ -2498,6 +2498,7 @@ contains
 
         val_gq = g_bar*(val_ref/det_jacobian_grid)
 
+
     end function get_primary_field_value_ale_element
     !************************************************************************************
 

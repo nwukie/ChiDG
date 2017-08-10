@@ -81,7 +81,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(GCL_bc_operator_t),    intent(inout)   :: self
+        class(GCL_bc_operator_t),   intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         class(properties_t),        intent(inout)   :: prop
 

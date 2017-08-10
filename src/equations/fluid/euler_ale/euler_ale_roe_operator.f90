@@ -104,21 +104,17 @@ contains
             sqrt_rhom, sqrt_rhop, sqrt_rhom_plus_rhop, ctil2, invrho_m, invrho_p
 
         real(rk), allocatable, dimension(:) :: &
-            normx, normy, normz, unormx, unormy, unormz
+            normx, normy, normz, unormx, unormy, unormz, unormx_ale, unormy_ale, unormz_ale
 
         real(rk), allocatable, dimension(:) ::      &
-           u_grid, v_grid, w_grid
-
-
-!        real(rk), allocatable, dimension(:,:,:) ::      &
-!            jacobian_grid
-
+           u_grid, v_grid, w_grid, ale_area_ratio
 
         real(rk) :: eps
 
         u_grid = worker%get_grid_velocity_face("u_grid",'face interior')
         v_grid = worker%get_grid_velocity_face("v_grid",'face interior')
         w_grid = worker%get_grid_velocity_face("w_grid",'face interior')
+        ale_area_ratio = worker%get_area_ratio()
 
 
         !
@@ -148,6 +144,9 @@ contains
         unormy = worker%unit_normal(2)
         unormz = worker%unit_normal(3)
 
+        unormx_ale = worker%unit_normal_ale(1)
+        unormy_ale = worker%unit_normal_ale(2)
+        unormz_ale = worker%unit_normal_ale(3)
 
 
 
@@ -174,12 +173,12 @@ contains
         u_m = rhou_m*invrho_m 
         v_m = rhov_m*invrho_m 
         w_m = rhow_m*invrho_m 
-        vmag_m = u_m*unormx + v_m*unormy + w_m*unormz
+        vmag_m = u_m*unormx_ale + v_m*unormy_ale + w_m*unormz_ale
 
         u_p = rhou_p*invrho_p 
         v_p = rhov_p*invrho_p 
         w_p = rhow_p*invrho_p 
-        vmag_p = u_p*unormx + v_p*unormy + w_p*unormz
+        vmag_p = u_p*unormx_ale + v_p*unormy_ale + w_p*unormz_ale
 
 
         !
@@ -194,7 +193,7 @@ contains
         wtil = (sqrt_rhom*w_m + sqrt_rhop*w_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged w-velocity
         Htil = (sqrt_rhom*H_m + sqrt_rhop*H_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged Enthalpy
 
-        vmagtil = util*unormx + vtil*unormy + wtil*unormz  ! Magnitude of Roe-averaged velocity in the face normal direction
+        vmagtil = util*unormx_ale + vtil*unormy_ale + wtil*unormz_ale   ! Magnitude of Roe-averaged velocity in the face normal direction
         qtil2   = util**TWO + vtil**TWO + wtil**TWO
 
 
@@ -259,7 +258,7 @@ contains
         !================================
         upwind = C1 + C2_a + C3
 
-        integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)
+        integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)/ale_area_ratio
 
 
         call worker%integrate_boundary('Density',integrand)
@@ -268,9 +267,9 @@ contains
         !================================
         !       X-MOMENTUM FLUX
         !================================
-        upwind = C1*(util - ctil*unormx)  +  C2_a*util  +  C2_b*(delu - delvmag*unormx)  +  C3*(util + ctil*unormx)
+        upwind = C1*(util - ctil*unormx_ale)  +  C2_a*util  +  C2_b*(delu - delvmag*unormx_ale)  +  C3*(util + ctil*unormx_ale)
 
-        integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)
+        integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)/ale_area_ratio
 
 
         call worker%integrate_boundary('Momentum-1',integrand)
@@ -279,9 +278,9 @@ contains
         !================================
         !       Y-MOMENTUM FLUX
         !================================
-        upwind = C1*(vtil - ctil*unormy)  +  C2_a*vtil  +  C2_b*(delv - delvmag*unormy)  +  C3*(vtil + ctil*unormy)
+        upwind = C1*(vtil - ctil*unormy_ale)  +  C2_a*vtil  +  C2_b*(delv - delvmag*unormy_ale)  +  C3*(vtil + ctil*unormy_ale)
 
-        integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)
+        integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)/ale_area_ratio
 
 
         call worker%integrate_boundary('Momentum-2',integrand)
@@ -289,9 +288,9 @@ contains
         !================================
         !       Z-MOMENTUM FLUX
         !================================
-        upwind = C1*(wtil - ctil*unormz)  +  C2_a*wtil  +  C2_b*(delw - delvmag*unormz)  +  C3*(wtil + ctil*unormz)
+        upwind = C1*(wtil - ctil*unormz_ale)  +  C2_a*wtil  +  C2_b*(delw - delvmag*unormz_ale)  +  C3*(wtil + ctil*unormz_ale)
 
-        integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)
+        integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)/ale_area_ratio
 
 
         call worker%integrate_boundary('Momentum-3',integrand)
@@ -301,7 +300,7 @@ contains
         !================================
         upwind = C1*(Htil - ctil*vmagtil)  +  C2_a*(qtil2/TWO)  +  C2_b*(util*delu + vtil*delv + wtil*delw - vmagtil*delvmag)  +  C3*(Htil + ctil*vmagtil)
 
-        integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)
+        integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)/ale_area_ratio
 
 
         call worker%integrate_boundary('Energy',integrand)

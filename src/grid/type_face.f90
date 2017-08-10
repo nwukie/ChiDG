@@ -112,6 +112,7 @@ module type_face
         real(rk),           allocatable :: metric(:,:,:)        ! Face metric terms
         real(rk),           allocatable :: norm(:,:)            ! Face normal vector - scaled by differential area
         real(rk),           allocatable :: unorm(:,:)           ! Face normal vector - unit length
+        real(rk),           allocatable :: unorm_ale(:,:)       ! Face normal vector - unit length: ale
 
 
         ! Matrices of cartesian gradients of basis/test functions
@@ -132,6 +133,7 @@ module type_face
         ! Face area
         real(rk)                        :: total_area
         real(rk),           allocatable :: differential_areas(:)
+        real(rk),           allocatable :: ale_area_ratio(:)
 
         ! ALE
         real(rk),   allocatable         :: ale_quad_pts(:,:)
@@ -176,6 +178,7 @@ module type_face
         procedure, public   :: update_face_ale
         procedure           :: update_face_ale_coords
         procedure           :: update_face_ale_quadrature
+        procedure           :: compute_quadrature_normals_ale   ! Compute normals at quadrature nodes
         procedure           :: compute_quadrature_coords_ale
         procedure           :: compute_quadrature_metrics_ale
 
@@ -779,6 +782,190 @@ contains
 
 
 
+    !> Compute normal vector components at face quadrature nodes: ALE
+    !!
+    !!  NOTE: be sure to differentiate between normals self%norm and unit-normals self%unorm
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!
+    !!  @author Mayank Sharma + Matteo Ugolotti  
+    !!  @date   11/5/2016
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine compute_quadrature_normals_ale(self)
+        class(face_t),  intent(inout)   :: self
+
+        integer(ik)                 :: inode, iface, nnodes, ierr
+        character(:),   allocatable :: coordinate_system
+
+        real(rk),   dimension(:),   allocatable ::              &
+            d1dxi, d1deta, d1dzeta,                             &
+            d2dxi, d2deta, d2dzeta,                             &
+            d3dxi, d3deta, d3dzeta,                             &
+            scaling_12, scaling_13, scaling_23, scaling_123,    &
+            norm_mag, weights
+
+        real(rk),   dimension(:,:),   allocatable ::  &
+            ddxi, ddeta, ddzeta, norm
+
+
+        iface   = self%iface
+        nnodes  = self%basis_c%nnodes_if()
+        weights = self%basis_c%weights(iface)
+        ddxi    = self%basis_c%interpolator('ddxi',  iface)
+        ddeta   = self%basis_c%interpolator('ddeta', iface)
+        ddzeta  = self%basis_c%interpolator('ddzeta',iface)
+
+
+        
+        !
+        ! Evaluate directional derivatives of coordinates at quadrature nodes.
+        !
+        d1dxi   = matmul(ddxi,   self%ale_coords%getvar(1,itime=1))
+        d1deta  = matmul(ddeta,  self%ale_coords%getvar(1,itime=1))
+        d1dzeta = matmul(ddzeta, self%ale_coords%getvar(1,itime=1))
+
+        d2dxi   = matmul(ddxi,   self%ale_coords%getvar(2,itime=1))
+        d2deta  = matmul(ddeta,  self%ale_coords%getvar(2,itime=1))
+        d2dzeta = matmul(ddzeta, self%ale_coords%getvar(2,itime=1))
+
+        d3dxi   = matmul(ddxi,   self%ale_coords%getvar(3,itime=1))
+        d3deta  = matmul(ddeta,  self%ale_coords%getvar(3,itime=1))
+        d3dzeta = matmul(ddzeta, self%ale_coords%getvar(3,itime=1))
+
+
+
+        !
+        ! Define area/volume scaling for coordinate system
+        !   Cartesian:
+        !       12 = x-y  ;  13 = x-z  ;  23 = y-z
+        !
+        !   Cylindrical
+        !       12 = r-theta  ;  13 = r-z      ;  23 = theta-z
+        !
+        allocate(scaling_12(nnodes), scaling_13(nnodes), scaling_23(nnodes), scaling_123(nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        select case (self%coordinate_system)
+            case (CARTESIAN)
+                scaling_12  = ONE
+                scaling_13  = ONE
+                scaling_23  = ONE
+                scaling_123 = ONE
+            case (CYLINDRICAL)
+                scaling_12  = self%quad_pts(:,1)
+                scaling_13  = ONE
+                scaling_23  = self%quad_pts(:,1)
+                scaling_123 = self%quad_pts(:,1)
+            case default
+                call chidg_signal(FATAL,"face%compute_quadrature_normals_ale: Invalid coordinate system. Choose 'Cartesian' or 'Cylindrical'.")
+        end select
+
+
+
+        !
+        ! Compute normal vectors for each face
+        !
+        allocate(norm(nnodes,3), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        select case (self%iface)
+            case (XI_MIN, XI_MAX)
+
+                do inode = 1,nnodes
+                    norm(inode,XI_DIR)   = scaling_23(inode)*d2deta(inode)*d3dzeta(inode) - scaling_23(inode)*d2dzeta(inode)*d3deta(inode)
+                    norm(inode,ETA_DIR)  = scaling_13(inode)*d1dzeta(inode)*d3deta(inode) - scaling_13(inode)*d1deta(inode)*d3dzeta(inode)
+                    norm(inode,ZETA_DIR) = scaling_12(inode)*d1deta(inode)*d2dzeta(inode) - scaling_12(inode)*d1dzeta(inode)*d2deta(inode)
+                end do
+
+            case (ETA_MIN, ETA_MAX)
+
+                do inode = 1,nnodes
+                    norm(inode,XI_DIR)   = scaling_23(inode)*d2dzeta(inode)*d3dxi(inode)  - scaling_23(inode)*d2dxi(inode)*d3dzeta(inode)
+                    norm(inode,ETA_DIR)  = scaling_13(inode)*d1dxi(inode)*d3dzeta(inode)  - scaling_13(inode)*d1dzeta(inode)*d3dxi(inode)
+                    norm(inode,ZETA_DIR) = scaling_12(inode)*d1dzeta(inode)*d2dxi(inode)  - scaling_12(inode)*d1dxi(inode)*d2dzeta(inode)
+                end do
+
+            case (ZETA_MIN, ZETA_MAX)
+
+                do inode = 1,nnodes
+                    norm(inode,XI_DIR)   = scaling_23(inode)*d2dxi(inode)*d3deta(inode)   - scaling_23(inode)*d3dxi(inode)*d2deta(inode)
+                    norm(inode,ETA_DIR)  = scaling_13(inode)*d3dxi(inode)*d1deta(inode)   - scaling_13(inode)*d1dxi(inode)*d3deta(inode)
+                    norm(inode,ZETA_DIR) = scaling_12(inode)*d1dxi(inode)*d2deta(inode)   - scaling_12(inode)*d2dxi(inode)*d1deta(inode)
+                end do
+
+            case default
+                call chidg_signal(FATAL,"face%compute_quadrature_normals_ale: Invalid face index in face initialization.")
+        end select
+
+
+        
+        !
+        ! Reverse normal vectors for faces XI_MIN,ETA_MIN,ZETA_MIN
+        !
+        if (self%iface == XI_MIN .or. self%iface == ETA_MIN .or. self%iface == ZETA_MIN) then
+            norm(:,XI_DIR)   = -norm(:,XI_DIR)
+            norm(:,ETA_DIR)  = -norm(:,ETA_DIR)
+            norm(:,ZETA_DIR) = -norm(:,ZETA_DIR)
+        end if
+
+
+
+        !
+        ! Compute vector magnitude, which is the differential area
+        !
+        norm_mag = sqrt(norm(:,XI_DIR)**TWO + norm(:,ETA_DIR)**TWO + norm(:,ZETA_DIR)**TWO)
+        self%unorm_ale(:,XI_DIR)   = norm(:,XI_DIR)/norm_mag
+        self%unorm_ale(:,ETA_DIR)  = norm(:,ETA_DIR)/norm_mag
+        self%unorm_ale(:,ZETA_DIR) = norm(:,ZETA_DIR)/norm_mag
+
+
+
+        !
+        ! Compute da/dA
+        !
+        self%ale_area_ratio = norm_mag/self%differential_areas
+
+
+    end subroutine compute_quadrature_normals_ale
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     !>  Compute matrices containing cartesian gradients of basis/test function
     !!  at each quadrature node.
@@ -994,6 +1181,7 @@ contains
 
         call self%compute_quadrature_coords_ale()
         call self%compute_quadrature_metrics_ale()
+        call self%compute_quadrature_normals_ale()
 
     end subroutine update_face_ale_quadrature
     !******************************************************************************************

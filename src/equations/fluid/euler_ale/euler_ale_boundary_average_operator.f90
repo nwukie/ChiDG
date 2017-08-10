@@ -113,23 +113,6 @@ contains
         real(rk), allocatable, dimension(:) ::      &
             normx, normy, normz
         
-!        real(rk), allocatable, dimension(:) ::      &
-!           u_grid, v_grid, w_grid, det_jacobian_grid, testx
-!
-!
-!        real(rk), allocatable, dimension(:,:,:) ::      &
-!            jacobian_grid
-!
-!        u_grid = worker%get_grid_velocity_face("u_grid",'face interior')
-!        v_grid = worker%get_grid_velocity_face("v_grid",'face interior')
-!        w_grid = worker%get_grid_velocity_face("w_grid",'face interior')
-!
-!        jacobian_grid = worker%get_inv_jacobian_grid_face('face interior')
-!        det_jacobian_grid = worker%get_det_jacobian_grid_face('value','face interior')
-!        print *, 'jacobian_grid'
-!        print *, jacobian_grid(2,:,:)
-!        print *, 'det_jacobian_grid'
-!        print *, det_jacobian_grid
 
 
         !
@@ -164,13 +147,9 @@ contains
         !
         ! Compute pressure and total enthalpy
         !
-        !p_m = prop%fluid%compute_pressure(rho_m,rhou_m,rhov_m,rhow_m,rhoE_m)
-        !p_p = prop%fluid%compute_pressure(rho_p,rhou_p,rhov_p,rhow_p,rhoE_p)
         p_m = worker%get_model_field_face('Pressure', 'value', 'face interior')
         p_p = worker%get_model_field_face('Pressure', 'value', 'face exterior')
 
-        !p_m = (1.4_rk-ONE)*(rhoE_m - HALF*(rhou_m**TWO+rhov_m**TWO+rhow_m**TWO)/rho_m)
-        !p_p = (1.4_rk-ONE)*(rhoE_p - HALF*(rhou_p**TWO+rhov_p**TWO+rhow_p**TWO)/rho_p)
 
         H_m = (rhoE_m + p_m)*invrho_m
         H_p = (rhoE_p + p_p)*invrho_p
@@ -194,22 +173,9 @@ contains
         flux_y = (flux_ref_m(:,2) + flux_ref_p(:,2))
         flux_z = (flux_ref_m(:,3) + flux_ref_p(:,3))
 
-!        flux_x = (flux_x_m + flux_x_p)
-!        flux_y = (flux_y_m + flux_y_p)
-!        flux_z = (flux_z_m + flux_z_p)
-!        
-!        flux_x = flux_x - (rho_m+rho_p)*u_grid
-!        flux_y = flux_y - (rho_m+rho_p)*v_grid
-!        flux_z = flux_z - (rho_m+rho_p)*w_grid
-!
-!        flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
-!        flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
-!        flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
-
 
 
         ! dot with normal vector
-        !integrand = HALF*(flux_x_ref*normx + flux_y_ref*normy + flux_z_ref*normz)
         integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
 
         call worker%integrate_boundary('Density',integrand)
@@ -231,19 +197,6 @@ contains
         flux_x = (flux_ref_m(:,1) + flux_ref_p(:,1))
         flux_y = (flux_ref_m(:,2) + flux_ref_p(:,2))
         flux_z = (flux_ref_m(:,3) + flux_ref_p(:,3))
-
-!        flux_x = (flux_x_m + flux_x_p)
-!        flux_y = (flux_y_m + flux_y_p)
-!        flux_z = (flux_z_m + flux_z_p)
-!        
-!        flux_x = flux_x - (rhou_m+rhou_p)*u_grid
-!        flux_y = flux_y - (rhou_m+rhou_p)*v_grid
-!        flux_z = flux_z - (rhou_m+rhou_p)*w_grid
-!
-!        flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
-!        flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
-!        flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
-
 
 
         ! dot with normal vector
@@ -269,17 +222,6 @@ contains
         flux_y = (flux_ref_m(:,2) + flux_ref_p(:,2))
         flux_z = (flux_ref_m(:,3) + flux_ref_p(:,3))
 
-!        flux_x = (flux_x_m + flux_x_p)
-!        flux_y = (flux_y_m + flux_y_p)
-!        flux_z = (flux_z_m + flux_z_p)
-!
-!        flux_x = flux_x - (rhov_m+rhov_p)*u_grid
-!        flux_y = flux_y - (rhov_m+rhov_p)*v_grid
-!        flux_z = flux_z - (rhov_m+rhov_p)*w_grid
-!
-!        flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
-!        flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
-!        flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
 
 
         ! dot with normal vector
@@ -305,18 +247,6 @@ contains
         flux_y = (flux_ref_m(:,2) + flux_ref_p(:,2))
         flux_z = (flux_ref_m(:,3) + flux_ref_p(:,3))
 
-!        flux_x = (flux_x_m + flux_x_p)
-!        flux_y = (flux_y_m + flux_y_p)
-!        flux_z = (flux_z_m + flux_z_p)
-!
-!        flux_x = flux_x - (rhow_m+rhow_p)*u_grid
-!        flux_y = flux_y - (rhow_m+rhow_p)*v_grid
-!        flux_z = flux_z - (rhow_m+rhow_p)*w_grid
-!
-!        flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
-!        flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
-!        flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
-!
 
         ! dot with normal vector
         integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
@@ -340,18 +270,6 @@ contains
         flux_x = (flux_ref_m(:,1) + flux_ref_p(:,1))
         flux_y = (flux_ref_m(:,2) + flux_ref_p(:,2))
         flux_z = (flux_ref_m(:,3) + flux_ref_p(:,3))
-
-!        flux_x = (flux_x_m + flux_x_p)
-!        flux_y = (flux_y_m + flux_y_p)
-!        flux_z = (flux_z_m + flux_z_p)
-!
-!        flux_x = flux_x - (rhoE_m+rhoE_p)*u_grid
-!        flux_y = flux_y - (rhoE_m+rhoE_p)*v_grid
-!        flux_z = flux_z - (rhoE_m+rhoE_p)*w_grid
-!
-!        flux_x_ref = det_jacobian_grid*(jacobian_grid(:,1,1)*flux_x + jacobian_grid(:,1,2)*flux_y + jacobian_grid(:,1,3)*flux_z)
-!        flux_y_ref = det_jacobian_grid*(jacobian_grid(:,2,1)*flux_x + jacobian_grid(:,2,2)*flux_y + jacobian_grid(:,2,3)*flux_z)
-!        flux_z_ref = det_jacobian_grid*(jacobian_grid(:,3,1)*flux_x + jacobian_grid(:,3,2)*flux_y + jacobian_grid(:,3,3)*flux_z)
 
 
 

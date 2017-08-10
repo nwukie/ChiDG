@@ -105,6 +105,7 @@ module type_chidg_worker
 
         procedure   :: normal
         procedure   :: unit_normal
+        procedure   :: unit_normal_ale
 
         procedure   :: coords
         procedure   :: x
@@ -132,6 +133,7 @@ module type_chidg_worker
         procedure   :: integrate_volume_source
         
         !ALE procedures
+        procedure   :: get_area_ratio
         procedure   :: get_grid_velocity_element
         procedure   :: get_grid_velocity_face
 !        procedure   :: get_jacobian_grid_element
@@ -1382,13 +1384,29 @@ contains
 
         real(rk), dimension(:), allocatable :: unorm_gq
 
-
         unorm_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%unorm(:,direction)
-
 
     end function unit_normal
     !***************************************************************************************
 
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/22/2016
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    function unit_normal_ale(self,direction) result(unorm_gq)
+        class(chidg_worker_t),  intent(in)  :: self
+        integer(ik),            intent(in)  :: direction
+
+        real(rk), dimension(:), allocatable :: unorm_gq
+
+        unorm_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%unorm_ale(:,direction)
+
+    end function unit_normal_ale
+    !***************************************************************************************
 
 
 
@@ -1967,6 +1985,33 @@ contains
     !
     ! ALE Procedures
     !
+
+
+    !>
+    !!
+    !!  @author Eric M. Wolf
+    !!  @date 1/9/2017
+    !!
+    !----------------------------------------------------------------------------------------------------
+    function get_area_ratio(self) result(res)
+        class(chidg_worker_t),  intent(in)  :: self
+
+        integer(ik)                             :: idomain_l, ielement_l, iface
+        real(rk),   dimension(:),   allocatable :: res
+
+        res = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ale_area_ratio
+
+    end function get_area_ratio
+    !****************************************************************************************************
+
+
+
+
+
+
+
+
+
 
     ! Get ALE quantities
     !>

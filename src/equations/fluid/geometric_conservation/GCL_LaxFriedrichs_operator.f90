@@ -114,7 +114,7 @@ contains
         !
         ! Integrate flux
         !
-        integrand = -integrand
+        !integrand = -integrand
         call worker%integrate_boundary('g_bar',integrand)
 
 

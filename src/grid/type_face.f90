@@ -951,27 +951,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     !>  Compute matrices containing cartesian gradients of basis/test function
     !!  at each quadrature node.
     !!

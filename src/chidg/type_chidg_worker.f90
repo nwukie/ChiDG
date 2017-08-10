@@ -1570,16 +1570,10 @@ contains
         ! Get coordinates
         !
         if ( (source == 'boundary') .or. (source == 'face interior') .or. (source == 'face exterior') ) then
-            !gq_1 = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:)%c1_
-            !gq_2 = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:)%c2_
-            !gq_3 = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:)%c3_
             gq_1 = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:,1)
             gq_2 = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:,2)
             gq_3 = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:,3)
         else if ( (source == 'volume') .or. (source == 'element') ) then
-            !gq_1 = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:)%c1_
-            !gq_2 = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:)%c2_
-            !gq_3 = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:)%c3_
             gq_1 = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:,1)
             gq_2 = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:,2)
             gq_3 = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:,3)
@@ -1831,16 +1825,10 @@ contains
 
         real(rk),   allocatable,    dimension(:)    :: jinv
 
-
-
         if (source == 'face') then
-
             jinv = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%jinv
-
         else if (source == 'element') then
-
             jinv = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%jinv
-
         else
             call chidg_signal(FATAL,"chidg_worker%inverse_jacobian(source): Invalid value for 'source'. Options are 'face', 'element'")
         end if
@@ -2220,6 +2208,8 @@ contains
             det_jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%det_jacobian_grid_grad2
         else if (interp_type == 'grad3') then
             det_jacobian_grid_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%det_jacobian_grid_grad3
+        else
+            call chidg_signal(FATAL,"worker%get_det_jacobian_grid_element: invalid selection for returning det_jacobian_grid.")
         end if
 
     end function get_det_jacobian_grid_element
@@ -2499,13 +2489,14 @@ contains
         class(chidg_worker_t), intent(in)           :: self
         character(*), intent(in)                    :: field
 
-        type(AD_D), allocatable                     :: val_ref(:), val_gq(:)
+        type(AD_D), allocatable                     :: val_ref(:), val_gq(:), g_bar(:)
         real(rk), allocatable                       :: det_jacobian_grid(:)
 
-        val_ref           = self%get_primary_field_element(field,'value')
+        val_ref           = self%get_primary_field_element(field,   'value')
+        g_bar             = self%get_primary_field_element('g_bar', 'value')
         det_jacobian_grid = self%get_det_jacobian_grid_element('value')
 
-        val_gq = val_ref/det_jacobian_grid
+        val_gq = g_bar*(val_ref/det_jacobian_grid)
 
     end function get_primary_field_value_ale_element
     !************************************************************************************
@@ -2592,18 +2583,19 @@ contains
         character(*),           intent(in)  :: field
         character(*),           intent(in)  :: interp_source
 
-        type(AD_D), allocatable :: val_ref(:), val_gq(:)
+        type(AD_D), allocatable :: val_ref(:), val_gq(:), g_bar(:)
         real(rk),   allocatable :: det_jacobian_grid(:)
 
-        val_ref = self%get_primary_field_face(field,'value', interp_source)
+        val_ref = self%get_primary_field_face(field, 'value', interp_source)
         if (interp_source == 'boundary') then
             ! In this case, the value supplied by the BC is already the physical value!
             val_gq = val_ref
 
         else
             ! Otherwise, we need to convert the reference configuration value to the physical value.
+            g_bar             = self%get_primary_field_face('g_bar', 'value', interp_source)
             det_jacobian_grid = self%get_det_jacobian_grid_face('value', interp_source)
-            val_gq = val_ref/det_jacobian_grid
+            val_gq = g_bar*(val_ref/det_jacobian_grid)
 
         end if
 

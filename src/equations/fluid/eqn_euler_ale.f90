@@ -84,6 +84,11 @@ contains
                 call euler_ale_eqns%add_pseudo_timestep(fluid_pseudo_time)
 
 
+                call euler_ale_eqns%add_operator('Geometric Conservation Volume Operator')
+                call euler_ale_eqns%add_operator('Geometric Conservation Boundary Average Operator')
+                call euler_ale_eqns%add_operator('Geometric Conservation LaxFriedrichs Operator')
+                call euler_ale_eqns%add_operator('Geometric Conservation BC Operator')
+
             case default
                 call chidg_signal_one(FATAL, "build_euler_ale: I didn't recognize the construction parameter &
                                               that was passed to build the equation set.", blueprint)

@@ -5,6 +5,7 @@ add_subdirectory(viscous_ale)
 add_subdirectory(rans_lowcache)
 add_subdirectory(bc)
 add_subdirectory(spalart_allmaras)
+add_subdirectory(geometric_conservation)
 
 add_lib_sources(
                 eqn_euler.f90

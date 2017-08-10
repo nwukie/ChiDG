@@ -26,6 +26,7 @@ module mod_bc
     use bc_state_scalar_value,                  only: scalar_value_t
     use bc_state_scalar_derivative,             only: scalar_derivative_t
     use bc_state_scalar_extrapolate,            only: scalar_extrapolate_t
+    use bc_state_gcl_extrapolate,               only: gcl_extrapolate_t
     
     ! Scalar boundary conditions
     use bc_state_scalar_ale_value,                  only: scalar_ale_value_t
@@ -104,14 +105,15 @@ contains
         type(scalar_value_t)                    :: SCALAR_VALUE
         type(scalar_derivative_t)               :: SCALAR_DERIVATIVE
         type(scalar_extrapolate_t)              :: SCALAR_EXTRAPOLATE
-        type(scalar_ale_value_t)                    :: SCALAR_ALE_VALUE
-        type(scalar_ale_derivative_t)               :: SCALAR_ALE_DERIVATIVE
-        type(scalar_ale_extrapolate_t)              :: SCALAR_ALE_EXTRAPOLATE
+        type(scalar_ale_value_t)                :: SCALAR_ALE_VALUE
+        type(scalar_ale_derivative_t)           :: SCALAR_ALE_DERIVATIVE
+        type(scalar_ale_extrapolate_t)          :: SCALAR_ALE_EXTRAPOLATE
+        type(gcl_extrapolate_t)                 :: GCL_EXTRAPOLATE
         
 
-        type(mesh_motion_value_t)                    :: MESH_MOTION_VALUE
-        type(mesh_motion_derivative_t)               :: MESH_MOTION_DERIVATIVE
-        type(mesh_motion_extrapolate_t)              :: MESH_MOTION_EXTRAPOLATE
+        type(mesh_motion_value_t)               :: MESH_MOTION_VALUE
+        type(mesh_motion_derivative_t)          :: MESH_MOTION_DERIVATIVE
+        type(mesh_motion_extrapolate_t)         :: MESH_MOTION_EXTRAPOLATE
 
 
         type(wall_t)                            :: WALL
@@ -154,6 +156,7 @@ contains
             call registered_bcs%push_back(SCALAR_ALE_VALUE)
             call registered_bcs%push_back(SCALAR_ALE_DERIVATIVE)
             call registered_bcs%push_back(SCALAR_ALE_EXTRAPOLATE)
+            call registered_bcs%push_back(GCL_EXTRAPOLATE)
             
 
             call registered_bcs%push_back(MESH_MOTION_VALUE)

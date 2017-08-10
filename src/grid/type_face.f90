@@ -403,6 +403,7 @@ contains
                        self%metric,                             &
                        self%norm,                               &
                        self%unorm,                              &
+                       self%unorm_ale,                          &
                        self%ale_quad_pts,                       &
                        self%jinv_ale,                           &
                        self%jacobian_grid,                      &
@@ -432,6 +433,7 @@ contains
                  self%metric(3,3,nnodes),                           &
                  self%norm(nnodes,3),                               &
                  self%unorm(nnodes,3),                              &
+                 self%unorm_ale(nnodes,3),                          &
                  self%ale_quad_pts(nnodes,3),                       &
                  self%jinv_ale(nnodes),                             &
                  self%jacobian_grid(nnodes,3,3),                    &
@@ -805,7 +807,7 @@ contains
             d2dxi, d2deta, d2dzeta,                             &
             d3dxi, d3deta, d3dzeta,                             &
             scaling_12, scaling_13, scaling_23, scaling_123,    &
-            norm_mag, weights
+            norm_mag 
 
         real(rk),   dimension(:,:),   allocatable ::  &
             ddxi, ddeta, ddzeta, norm
@@ -813,7 +815,6 @@ contains
 
         iface   = self%iface
         nnodes  = self%basis_c%nnodes_if()
-        weights = self%basis_c%weights(iface)
         ddxi    = self%basis_c%interpolator('ddxi',  iface)
         ddeta   = self%basis_c%interpolator('ddeta', iface)
         ddzeta  = self%basis_c%interpolator('ddzeta',iface)
@@ -848,6 +849,9 @@ contains
         allocate(scaling_12(nnodes), scaling_13(nnodes), scaling_23(nnodes), scaling_123(nnodes), stat=ierr)
         if (ierr /= 0) call AllocationError
 
+        !
+        ! TODO: CHECK ALE SCALING
+        !
         select case (self%coordinate_system)
             case (CARTESIAN)
                 scaling_12  = ONE
@@ -870,6 +874,7 @@ contains
         !
         allocate(norm(nnodes,3), stat=ierr)
         if (ierr /= 0) call AllocationError
+
 
         select case (self%iface)
             case (XI_MIN, XI_MAX)
@@ -1284,31 +1289,11 @@ contains
             jacobian_matrix_ale
 
 
-
-
-
-
-
-        !real(rk),   dimension(:),   allocatable ::  &
-        !    d1dxi, d1deta, d1dzeta,                 &
-        !    d2dxi, d2deta, d2dzeta,                 &
-        !    d3dxi, d3deta, d3dzeta,                 &
-        !    d1dxi_ale, d1deta_ale, d1dzeta_ale,                 &
-        !    d2dxi_ale, d2deta_ale, d2dzeta_ale,                 &
-        !    d3dxi_ale, d3deta_ale, d3dzeta_ale,                 &
-        !    invjac_ale,                                         &
-        !    scaling_12, scaling_13, scaling_23, scaling_123,    &
-        !    fvals, temp, weights
-
-        !real(rk),   dimension(:,:), allocatable :: val, ddxi, ddeta, ddzeta, tempmat
-        !real(rk), dimension(:,:,:), allocatable :: jacobian_matrix, jacobian_matrix_ale
-
         !
         ! Retrieve interpolators
         !
         iface   = self%iface
         nnodes  = self%basis_c%nnodes_if()
-        !weights = self%basis_c%weights()
         ddxi    = self%basis_c%interpolator('ddxi',iface)
         ddeta   = self%basis_c%interpolator('ddeta',iface)
         ddzeta  = self%basis_c%interpolator('ddzeta',iface)
@@ -1347,6 +1332,9 @@ contains
         allocate(scaling_12(nnodes), scaling_13(nnodes), scaling_23(nnodes), scaling_123(nnodes), stat=ierr)
         if (ierr /= 0) call AllocationError
 
+        !
+        ! TODO: CHECK ALE SCALING
+        !
         select case (self%coordinate_system)
             case (CARTESIAN)
                 scaling_12  = ONE
@@ -1378,20 +1366,6 @@ contains
 
         allocate(jacobian_matrix_ale(nnodes,3,3))
         do inode = 1,nnodes
-            !jacobian_matrix(inode,1,1) = d1dxi(inode)
-            !jacobian_matrix(inode,1,2) = d1deta(inode)
-            !jacobian_matrix(inode,1,3) = d1dzeta(inode)
-            !                         
-            !jacobian_matrix(inode,2,1) = d2dxi(inode)
-            !jacobian_matrix(inode,2,2) = d2deta(inode)
-            !jacobian_matrix(inode,2,3) = d2dzeta(inode)
-            !                         
-            !jacobian_matrix(inode,3,1) = d3dxi(inode)
-            !jacobian_matrix(inode,3,2) = d3deta(inode)
-            !jacobian_matrix(inode,3,3) = d3dzeta(inode)
-
-            !tempmat = inv(jacobian_matrix(inode,:,:))
-            !jacobian_matrix(inode,:,:) = tempmat 
 
             jacobian_matrix_ale(inode,1,1) = d1dxi_ale(inode)
             jacobian_matrix_ale(inode,1,2) = d1deta_ale(inode)
@@ -1406,12 +1380,11 @@ contains
             jacobian_matrix_ale(inode,3,3) = d3dzeta_ale(inode)
 
 
-            !self%jacobian_grid(inode,:,:) = matmul(jacobian_matrix_ale(inode,:,:),jacobian_matrix(inode,:,:))
             self%jacobian_grid(inode,:,:) = matmul(jacobian_matrix_ale(inode,:,:),self%metric(:,:,inode))
             self%inv_jacobian_grid(inode,:,:) = inv(self%jacobian_grid(inode,:,:))
 
 
-            ! Invert jacobian_matrix_ale
+            ! Invert jacobian_matrix_ale for use in computing grad(jinv_ale)
             jacobian_matrix_ale(inode,:,:) = inv(jacobian_matrix_ale(inode,:,:))
 
         end do
@@ -1497,7 +1470,6 @@ contains
         !
         !   grad(det_jacobian_grid) = [grad(jinv_ale)*jinv - jinv_ale*grad(jinv)] / [jinv*jinv]
         !
-        !self%det_jacobian_grid       = matmul(self%basis_s%interpolator('Value',iface),self%det_jacobian_grid_modes)
         self%det_jacobian_grid   = self%jinv_ale/self%jinv
         det_jacobian_grid_ddxi   = (jinv_ale_grad1*self%jinv  -  self%jinv_ale*jinv_grad1)/(self%jinv**TWO)
         det_jacobian_grid_ddeta  = (jinv_ale_grad2*self%jinv  -  self%jinv_ale*jinv_grad2)/(self%jinv**TWO)
@@ -1524,6 +1496,7 @@ contains
 
 
 
+        !self%det_jacobian_grid       = matmul(self%basis_s%interpolator('Value',iface),self%det_jacobian_grid_modes)
         !self%det_jacobian_grid_grad1 = matmul(self%grad1,self%det_jacobian_grid_modes)
         !self%det_jacobian_grid_grad2 = matmul(self%grad2,self%det_jacobian_grid_modes)
         !self%det_jacobian_grid_grad3 = matmul(self%grad3,self%det_jacobian_grid_modes)

@@ -129,9 +129,9 @@ contains
         flux_2 = g_bar  !just to initialize AD allocation
         flux_3 = g_bar  !just to initialize AD allocation
 
-        flux_1 = (inv_jacobian_grid(:,1,1)*grid_velocity_1 + inv_jacobian_grid(:,1,2)*grid_velocity_2 + inv_jacobian_grid(:,1,3)*grid_velocity_3)/det_jacobian_grid
-        flux_2 = (inv_jacobian_grid(:,2,1)*grid_velocity_1 + inv_jacobian_grid(:,2,2)*grid_velocity_2 + inv_jacobian_grid(:,2,3)*grid_velocity_3)/det_jacobian_grid
-        flux_3 = (inv_jacobian_grid(:,3,1)*grid_velocity_1 + inv_jacobian_grid(:,3,2)*grid_velocity_2 + inv_jacobian_grid(:,3,3)*grid_velocity_3)/det_jacobian_grid
+        flux_1 = (inv_jacobian_grid(:,1,1)*grid_velocity_1 + inv_jacobian_grid(:,1,2)*grid_velocity_2 + inv_jacobian_grid(:,1,3)*grid_velocity_3)*det_jacobian_grid
+        flux_2 = (inv_jacobian_grid(:,2,1)*grid_velocity_1 + inv_jacobian_grid(:,2,2)*grid_velocity_2 + inv_jacobian_grid(:,2,3)*grid_velocity_3)*det_jacobian_grid
+        flux_3 = (inv_jacobian_grid(:,3,1)*grid_velocity_1 + inv_jacobian_grid(:,3,2)*grid_velocity_2 + inv_jacobian_grid(:,3,3)*grid_velocity_3)*det_jacobian_grid
 
         integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
 

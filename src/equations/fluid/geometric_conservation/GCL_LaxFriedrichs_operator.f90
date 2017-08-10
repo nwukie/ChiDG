@@ -73,14 +73,10 @@ contains
             g_bar_m,  g_bar_p,                      &
             flux_1, flux_2, flux_3, integrand
 
-        real(rk),   allocatable, dimension(:)   ::                      &
-            grid_velocity_1, grid_velocity_2, grid_velocity_3,          &
-            wave_speed, area, det_jacobian_grid_m, det_jacobian_grid_p, &
+        real(rk),   allocatable, dimension(:)   ::              &
+            grid_velocity_1, grid_velocity_2, grid_velocity_3,  &
+            wave_speed, area,                                   &
             norm_1, norm_2, norm_3, max_grid_vel
-
-        real(rk),   allocatable, dimension(:,:,:)   ::  &
-            inv_jacobian_grid_m, inv_jacobian_grid_p
-
 
         !
         ! Interpolate solution to quadrature nodes
@@ -95,10 +91,6 @@ contains
         grid_velocity_1     = worker%get_grid_velocity_face('u_grid','face interior')
         grid_velocity_2     = worker%get_grid_velocity_face('v_grid','face interior')
         grid_velocity_3     = worker%get_grid_velocity_face('w_grid','face interior')
-        det_jacobian_grid_m = worker%get_det_jacobian_grid_face('value','face interior')
-        det_jacobian_grid_p = worker%get_det_jacobian_grid_face('value','face exterior')
-        inv_jacobian_grid_m = worker%get_inv_jacobian_grid_face('face interior')
-        inv_jacobian_grid_p = worker%get_inv_jacobian_grid_face('face exterior')
 
 
         !

@@ -127,16 +127,16 @@ contains
         flux_1_m = g_bar  !just to initialize AD allocation
         flux_2_m = g_bar  !just to initialize AD allocation
         flux_3_m = g_bar  !just to initialize AD allocation
-        flux_1_m = (inv_jacobian_grid_m(:,1,1)*grid_velocity_1 + inv_jacobian_grid_m(:,1,2)*grid_velocity_2 + inv_jacobian_grid_m(:,1,3)*grid_velocity_3)/det_jacobian_grid_m
-        flux_2_m = (inv_jacobian_grid_m(:,2,1)*grid_velocity_1 + inv_jacobian_grid_m(:,2,2)*grid_velocity_2 + inv_jacobian_grid_m(:,2,3)*grid_velocity_3)/det_jacobian_grid_m
-        flux_3_m = (inv_jacobian_grid_m(:,3,1)*grid_velocity_1 + inv_jacobian_grid_m(:,3,2)*grid_velocity_2 + inv_jacobian_grid_m(:,3,3)*grid_velocity_3)/det_jacobian_grid_m
+        flux_1_m = (inv_jacobian_grid_m(:,1,1)*grid_velocity_1 + inv_jacobian_grid_m(:,1,2)*grid_velocity_2 + inv_jacobian_grid_m(:,1,3)*grid_velocity_3)*det_jacobian_grid_m
+        flux_2_m = (inv_jacobian_grid_m(:,2,1)*grid_velocity_1 + inv_jacobian_grid_m(:,2,2)*grid_velocity_2 + inv_jacobian_grid_m(:,2,3)*grid_velocity_3)*det_jacobian_grid_m
+        flux_3_m = (inv_jacobian_grid_m(:,3,1)*grid_velocity_1 + inv_jacobian_grid_m(:,3,2)*grid_velocity_2 + inv_jacobian_grid_m(:,3,3)*grid_velocity_3)*det_jacobian_grid_m
 
         flux_1_p = g_bar  !just to initialize AD allocation
         flux_2_p = g_bar  !just to initialize AD allocation
         flux_3_p = g_bar  !just to initialize AD allocation
-        flux_1_p = (inv_jacobian_grid_p(:,1,1)*grid_velocity_1 + inv_jacobian_grid_p(:,1,2)*grid_velocity_2 + inv_jacobian_grid_p(:,1,3)*grid_velocity_3)/det_jacobian_grid_p
-        flux_2_p = (inv_jacobian_grid_p(:,2,1)*grid_velocity_1 + inv_jacobian_grid_p(:,2,2)*grid_velocity_2 + inv_jacobian_grid_p(:,2,3)*grid_velocity_3)/det_jacobian_grid_p
-        flux_3_p = (inv_jacobian_grid_p(:,3,1)*grid_velocity_1 + inv_jacobian_grid_p(:,3,2)*grid_velocity_2 + inv_jacobian_grid_p(:,3,3)*grid_velocity_3)/det_jacobian_grid_p
+        flux_1_p = (inv_jacobian_grid_p(:,1,1)*grid_velocity_1 + inv_jacobian_grid_p(:,1,2)*grid_velocity_2 + inv_jacobian_grid_p(:,1,3)*grid_velocity_3)*det_jacobian_grid_p
+        flux_2_p = (inv_jacobian_grid_p(:,2,1)*grid_velocity_1 + inv_jacobian_grid_p(:,2,2)*grid_velocity_2 + inv_jacobian_grid_p(:,2,3)*grid_velocity_3)*det_jacobian_grid_p
+        flux_3_p = (inv_jacobian_grid_p(:,3,1)*grid_velocity_1 + inv_jacobian_grid_p(:,3,2)*grid_velocity_2 + inv_jacobian_grid_p(:,3,3)*grid_velocity_3)*det_jacobian_grid_p
 
 
         flux_1 = HALF*(flux_1_m + flux_1_p)

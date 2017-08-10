@@ -96,6 +96,14 @@ contains
                 call laminar_navier_stokes_eqns%add_pseudo_timestep(fluid_pseudo_time)
 
 
+                call laminar_navier_stokes_eqns%add_operator('Geometric Conservation Volume Operator')
+                call laminar_navier_stokes_eqns%add_operator('Geometric Conservation Boundary Average Operator')
+                call laminar_navier_stokes_eqns%add_operator('Geometric Conservation LaxFriedrichs Operator')
+                call laminar_navier_stokes_eqns%add_operator('Geometric Conservation BC Operator')
+
+
+
+
             case default
                 call chidg_signal_one(FATAL, "build_laminar_navier_stokes: I didn't recognize the &
                                               construction parameter that was passed to build &

@@ -488,14 +488,14 @@ contains
         if (NRANK == 2) then
 
             if (IRANK == 0) then
-                communicated_data = self%chidg%data%mesh%domain(1)%faces(2,2)%neighbor_grid_vel
+                communicated_data = self%chidg%data%mesh%domain(1)%faces(2,2)%neighbor_ale_grid_vel
                 expected_data = communicated_data
                 expected_data(:,1) = 12.5_rk
                 expected_data(:,2) = ZERO
                 expected_data(:,3) = ZERO
                 @assertEqual(expected_data, communicated_data, 1.e-6_rk)
             else if (IRANK == 1) then
-                communicated_data = self%chidg%data%mesh%domain(1)%faces(1,1)%neighbor_grid_vel
+                communicated_data = self%chidg%data%mesh%domain(1)%faces(1,1)%neighbor_ale_grid_vel
                 expected_data = communicated_data
                 expected_data(:,1) = 12.5_rk
                 expected_data(:,2) = ZERO
@@ -510,14 +510,14 @@ contains
         else if (NRANK == 3) then
 
             if (IRANK == 1) then
-                communicated_data = self%chidg%data%mesh%domain(1)%faces(1,2)%neighbor_grid_vel
+                communicated_data = self%chidg%data%mesh%domain(1)%faces(1,2)%neighbor_ale_grid_vel
                 expected_data = communicated_data
                 expected_data(:,1) = 12.5_rk
                 expected_data(:,2) = ZERO
                 expected_data(:,3) = ZERO
                 @assertEqual(expected_data, communicated_data, 1.e-6_rk)
             else if (IRANK == 2) then
-                communicated_data = self%chidg%data%mesh%domain(1)%faces(1,1)%neighbor_grid_vel
+                communicated_data = self%chidg%data%mesh%domain(1)%faces(1,1)%neighbor_ale_grid_vel
                 expected_data = communicated_data
                 expected_data(:,1) = 12.5_rk
                 expected_data(:,2) = ZERO
@@ -531,14 +531,14 @@ contains
         else if (NRANK == 4) then
 
             if (IRANK == 1) then
-                communicated_data = self%chidg%data%mesh%domain(1)%faces(1,2)%neighbor_grid_vel
+                communicated_data = self%chidg%data%mesh%domain(1)%faces(1,2)%neighbor_ale_grid_vel
                 expected_data = communicated_data
                 expected_data(:,1) = 12.5_rk
                 expected_data(:,2) = ZERO
                 expected_data(:,3) = ZERO
                 @assertEqual(expected_data, communicated_data, 1.e-6_rk)
             else if (IRANK == 2) then
-                communicated_data = self%chidg%data%mesh%domain(1)%faces(1,1)%neighbor_grid_vel
+                communicated_data = self%chidg%data%mesh%domain(1)%faces(1,1)%neighbor_ale_grid_vel
                 expected_data = communicated_data
                 expected_data(:,1) = 12.5_rk
                 expected_data(:,2) = ZERO

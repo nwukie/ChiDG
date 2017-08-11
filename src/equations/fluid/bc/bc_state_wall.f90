@@ -103,18 +103,20 @@ contains
 
         real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3, r
     
+        real(rk),   allocatable, dimension(:,:) :: grid_velocity
 
         real(rk), allocatable, dimension(:) ::      &
-           u_grid, v_grid, w_grid, det_jacobian_grid
+           det_jacobian_grid
 
         type(AD_D), allocatable, dimension(:,:) :: grad_density, grad_mom1, grad_mom2, grad_mom3, grad_energy
 
         det_jacobian_grid = worker%get_det_jacobian_grid_face('value','face interior')
 
 
-        u_grid = worker%get_grid_velocity_face('u_grid','face interior')
-        v_grid = worker%get_grid_velocity_face('v_grid','face interior')
-        w_grid = worker%get_grid_velocity_face('w_grid','face interior')
+!        u_grid = worker%get_grid_velocity_face('u_grid','face interior')
+!        v_grid = worker%get_grid_velocity_face('v_grid','face interior')
+!        w_grid = worker%get_grid_velocity_face('w_grid','face interior')
+        grid_velocity = worker%get_grid_velocity_face('face interior')
 
         !
         ! Interpolate interior solution to quadrature nodes
@@ -225,15 +227,15 @@ contains
 
         ! Set relative velocity to zero, ie
         ! set fluid velocity equal to grid/wall velocity.
-        mom1_bc = density_m*u_grid
-        mom2_bc = density_m*v_grid
-        mom3_bc = density_m*w_grid
+        mom1_bc = density_m*grid_velocity(:,1)
+        mom2_bc = density_m*grid_velocity(:,2)
+        mom3_bc = density_m*grid_velocity(:,3)
         !
         ! We want:  W dot n = 0
         !
-        u_m = mom1_m/density_m-u_grid
-        v_m = mom2_m/density_m-v_grid
-        w_m = mom3_m/density_m-w_grid
+        u_m = mom1_m/density_m-grid_velocity(:,1)
+        v_m = mom2_m/density_m-grid_velocity(:,2)
+        w_m = mom3_m/density_m-grid_velocity(:,3)
 
 
         !

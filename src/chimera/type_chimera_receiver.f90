@@ -37,12 +37,12 @@ module type_chimera_receiver
         !
         ! Data assembled from all donors to define the complete node set
         !
-        real(rk),   allocatable :: det_jacobian_grid(:)
-        real(rk),   allocatable :: det_jacobian_grid_grad1(:)
-        real(rk),   allocatable :: det_jacobian_grid_grad2(:)
-        real(rk),   allocatable :: det_jacobian_grid_grad3(:)
-        real(rk),   allocatable :: inv_jacobian_grid(:,:,:)
-        real(rk),   allocatable :: grid_vel(:,:)
+        real(rk),   allocatable :: ale_g(:)
+        real(rk),   allocatable :: ale_g_grad1(:)
+        real(rk),   allocatable :: ale_g_grad2(:)
+        real(rk),   allocatable :: ale_g_grad3(:)
+        real(rk),   allocatable :: ale_Dinv(:,:,:)
+        real(rk),   allocatable :: ale_grid_vel(:,:)
 
     contains
 
@@ -96,12 +96,12 @@ contains
         instance%iface      = iface
 
 
-        allocate(instance%det_jacobian_grid(nnodes),        &
-                 instance%det_jacobian_grid_grad1(nnodes),  &
-                 instance%det_jacobian_grid_grad2(nnodes),  &
-                 instance%det_jacobian_grid_grad3(nnodes),  &
-                 instance%inv_jacobian_grid(nnodes,3,3),    &
-                 instance%grid_vel(nnodes,3), stat=ierr)
+        allocate(instance%ale_g(nnodes),        &
+                 instance%ale_g_grad1(nnodes),  &
+                 instance%ale_g_grad2(nnodes),  &
+                 instance%ale_g_grad3(nnodes),  &
+                 instance%ale_Dinv(nnodes,3,3),    &
+                 instance%ale_grid_vel(nnodes,3), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
@@ -268,13 +268,13 @@ contains
         self%ielement_l   = 0
         self%iface        = 0
 
-        if (allocated(self%donor))                   deallocate(self%donor)
-        if (allocated(self%det_jacobian_grid))       deallocate(self%det_jacobian_grid)
-        if (allocated(self%det_jacobian_grid_grad1)) deallocate(self%det_jacobian_grid_grad1)
-        if (allocated(self%det_jacobian_grid_grad2)) deallocate(self%det_jacobian_grid_grad2)
-        if (allocated(self%det_jacobian_grid_grad3)) deallocate(self%det_jacobian_grid_grad3)
-        if (allocated(self%inv_jacobian_grid))       deallocate(self%inv_jacobian_grid)
-        if (allocated(self%grid_vel))                deallocate(self%grid_vel)
+        if (allocated(self%donor))        deallocate(self%donor)
+        if (allocated(self%ale_g))        deallocate(self%ale_g)
+        if (allocated(self%ale_g_grad1))  deallocate(self%ale_g_grad1)
+        if (allocated(self%ale_g_grad2))  deallocate(self%ale_g_grad2)
+        if (allocated(self%ale_g_grad3))  deallocate(self%ale_g_grad3)
+        if (allocated(self%ale_Dinv))     deallocate(self%ale_Dinv)
+        if (allocated(self%ale_grid_vel)) deallocate(self%ale_grid_vel)
 
     end subroutine clear
     !******************************************************************************************

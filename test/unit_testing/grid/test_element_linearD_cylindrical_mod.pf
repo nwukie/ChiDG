@@ -227,19 +227,19 @@ contains
         class(test_element_linearD),    intent(inout)   :: self
 
         real(rk)    :: test_metric(3,3,self%elem%basis_s%nnodes_ie())
-        real(rk)    :: jinv(self%elem%basis_s%nnodes_ie())
+        real(rk)    :: jinv_undef(self%elem%basis_s%nnodes_ie())
 
-        jinv = (PI/16._rk) * self%elem%quad_pts(:,1)
+        jinv_undef = (PI/16._rk) * self%elem%quad_pts(:,1)
         
-        test_metric(1,1,:) = (PI/8._rk) * self%elem%quad_pts(:,1)     / jinv
-        test_metric(2,1,:) = ZERO       * self%elem%quad_pts(:,1)     / jinv
-        test_metric(3,1,:) = ZERO       * self%elem%quad_pts(:,1)     / jinv
-        test_metric(1,2,:) = ZERO                                   / jinv
-        test_metric(2,2,:) = (ONE/FOUR)                             / jinv
-        test_metric(3,2,:) = ZERO                                   / jinv
-        test_metric(1,3,:) = ZERO       * self%elem%quad_pts(:,1)     / jinv
-        test_metric(2,3,:) = ZERO       * self%elem%quad_pts(:,1)     / jinv
-        test_metric(3,3,:) = (PI/8._rk) * self%elem%quad_pts(:,1)     / jinv
+        test_metric(1,1,:) = (PI/8._rk) * self%elem%quad_pts(:,1)   / jinv_undef
+        test_metric(2,1,:) = ZERO       * self%elem%quad_pts(:,1)   / jinv_undef
+        test_metric(3,1,:) = ZERO       * self%elem%quad_pts(:,1)   / jinv_undef
+        test_metric(1,2,:) = ZERO                                   / jinv_undef
+        test_metric(2,2,:) = (ONE/FOUR)                             / jinv_undef
+        test_metric(3,2,:) = ZERO                                   / jinv_undef
+        test_metric(1,3,:) = ZERO       * self%elem%quad_pts(:,1)   / jinv_undef
+        test_metric(2,3,:) = ZERO       * self%elem%quad_pts(:,1)   / jinv_undef
+        test_metric(3,3,:) = (PI/8._rk) * self%elem%quad_pts(:,1)   / jinv_undef
 
         @assertEqual(test_metric,self%elem%metric, 1.e-14_rk)
         
@@ -259,15 +259,15 @@ contains
     !!
     !---------------------------------------------------------------------------------------
     @Test
-    subroutine testElement_jinv(self)
+    subroutine testElement_jinv_undef(self)
         class(test_element_linearD),    intent(inout)   :: self
 
-        real(rk)    :: test_jinv(self%elem%basis_s%nnodes_ie())
+        real(rk)    :: test_jinv_undef(self%elem%basis_s%nnodes_ie())
         
-        test_jinv = (PI/16._rk) * self%elem%quad_pts(:,1)
-        @assertEqual(test_jinv,self%elem%jinv)
+        test_jinv_undef = (PI/16._rk) * self%elem%quad_pts(:,1)
+        @assertEqual(test_jinv_undef,self%elem%jinv_undef)
 
-    end subroutine testElement_jinv
+    end subroutine testElement_jinv_undef
     !****************************************************************************************
 
 

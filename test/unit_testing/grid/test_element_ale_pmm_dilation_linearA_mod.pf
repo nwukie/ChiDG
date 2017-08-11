@@ -10,6 +10,7 @@ module test_element_ale_pmm_dilation_linearA_mod
     use type_point,                 only: point_t
     use type_prescribed_mesh_motion
     use mod_io,                     only: gq_rule
+    use mod_inv,                    only: inv
     implicit none
 
     public  :: test_element_ale_pmm_dilation_linearA
@@ -237,9 +238,9 @@ contains
         vg2 = TWO*self%elem%quad_pts(:,2)
         vg3 = TWO*self%elem%quad_pts(:,3)
 
-        @assertEqual(vg1,self%elem%grid_vel(:,1), 1.e-14_rk)
-        @assertEqual(vg2,self%elem%grid_vel(:,2), 1.e-14_rk)
-        @assertEqual(vg3,self%elem%grid_vel(:,3), 1.e-14_rk)
+        @assertEqual(vg1,self%elem%ale_grid_vel(:,1), 1.e-14_rk)
+        @assertEqual(vg2,self%elem%ale_grid_vel(:,2), 1.e-14_rk)
+        @assertEqual(vg3,self%elem%ale_grid_vel(:,3), 1.e-14_rk)
         
     end subroutine testElement_grid_velocities
     !***************************************************************************************
@@ -274,21 +275,21 @@ contains
     !!
     !---------------------------------------------------------------------------------------
     @Test
-    subroutine testElement_jinv_ale(self)
+    subroutine testElement_jinv_def(self)
         class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: self
-        real(rk)    :: test_det_jac_grid(self%elem%basis_s%nnodes_ie()), &
+        real(rk)    :: test_ale_g(self%elem%basis_s%nnodes_ie()), &
                        zeros(self%elem%basis_s%nnodes_ie())
         
-        test_det_jac_grid = 27.0_rk 
+        test_ale_g = 27.0_rk 
         zeros = ZERO
 
-        @assertEqual(27.0_rk*self%elem%jinv, self%elem%jinv_ale,                1.e-14_rk)
-        @assertEqual(test_det_jac_grid,      self%elem%det_jacobian_grid,       1.e-14_rk)
-        @assertEqual(zeros,                  self%elem%det_jacobian_grid_grad1, 1.e-14_rk)
-        @assertEqual(zeros,                  self%elem%det_jacobian_grid_grad2, 1.e-14_rk)
-        @assertEqual(zeros,                  self%elem%det_jacobian_grid_grad3, 1.e-14_rk)
+        @assertEqual(27.0_rk*self%elem%jinv_undef, self%elem%jinv_def,    1.e-14_rk)
+        @assertEqual(test_ale_g,                   self%elem%ale_g,       1.e-14_rk)
+        @assertEqual(zeros,                        self%elem%ale_g_grad1, 1.e-14_rk)
+        @assertEqual(zeros,                        self%elem%ale_g_grad2, 1.e-14_rk)
+        @assertEqual(zeros,                        self%elem%ale_g_grad3, 1.e-14_rk)
 
-    end subroutine testElement_jinv_ale
+    end subroutine testElement_jinv_def
     !****************************************************************************************
 
     
@@ -297,10 +298,10 @@ contains
     !!
     !!-------------------------------------------------------------------------------------
     @Test
-    subroutine testElement_jacobian_grid(self)
+    subroutine testElement_ale_Dinv(self)
         class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: self
 
-        !real(rk)    :: test_metric(self%elem%gq%vol%nnodes,3,3)
+        integer(ik) :: inode
         real(rk)    :: test_metric(self%elem%basis_s%nnodes_ie(),3,3)
         
         test_metric(:,1,1) = 3.0_rk 
@@ -313,9 +314,13 @@ contains
         test_metric(:,2,3) = 0._rk  
         test_metric(:,3,3) = 3.0_rk 
 
-        @assertEqual(test_metric,self%elem%jacobian_grid, 1.e-14_rk)
+        do inode = 1,size(test_metric,1)
+            test_metric(inode,:,:) = inv(test_metric(inode,:,:))
+        end do
+
+        @assertEqual(test_metric,self%elem%ale_Dinv, 1.e-14_rk)
         
-    end subroutine testElement_jacobian_grid
+    end subroutine testElement_ale_Dinv
     !***************************************************************************************
 
 
@@ -349,49 +354,50 @@ contains
 
 
 
-        @assertEqual(vg1,self%faces(XI_MIN)%grid_vel(:,1), 1.e-14_rk)
-        @assertEqual(vg2,self%faces(XI_MIN)%grid_vel(:,2), 1.e-14_rk)
-        @assertEqual(vg3,self%faces(XI_MIN)%grid_vel(:,3), 1.e-14_rk)
+        @assertEqual(vg1,self%faces(XI_MIN)%ale_grid_vel(:,1), 1.e-14_rk)
+        @assertEqual(vg2,self%faces(XI_MIN)%ale_grid_vel(:,2), 1.e-14_rk)
+        @assertEqual(vg3,self%faces(XI_MIN)%ale_grid_vel(:,3), 1.e-14_rk)
         
         vg1 = TWO*self%faces(XI_MAX)%quad_pts(:,1)
         vg2 = TWO*self%faces(XI_MAX)%quad_pts(:,2)
         vg3 = TWO*self%faces(XI_MAX)%quad_pts(:,3)
 
-        @assertEqual(vg1,self%faces(XI_MAX)%grid_vel(:,1), 1.e-14_rk)
-        @assertEqual(vg2,self%faces(XI_MAX)%grid_vel(:,2), 1.e-14_rk)
-        @assertEqual(vg3,self%faces(XI_MAX)%grid_vel(:,3), 1.e-14_rk)
+        @assertEqual(vg1,self%faces(XI_MAX)%ale_grid_vel(:,1), 1.e-14_rk)
+        @assertEqual(vg2,self%faces(XI_MAX)%ale_grid_vel(:,2), 1.e-14_rk)
+        @assertEqual(vg3,self%faces(XI_MAX)%ale_grid_vel(:,3), 1.e-14_rk)
 
         vg1 = TWO*self%faces(ETA_MIN)%quad_pts(:,1)
         vg2 = TWO*self%faces(ETA_MIN)%quad_pts(:,2)
         vg3 = TWO*self%faces(ETA_MIN)%quad_pts(:,3)
         
-        @assertEqual(vg1,self%faces(ETA_MIN)%grid_vel(:,1), 1.e-14_rk)
-        @assertEqual(vg2,self%faces(ETA_MIN)%grid_vel(:,2), 1.e-14_rk)
-        @assertEqual(vg3,self%faces(ETA_MIN)%grid_vel(:,3), 1.e-14_rk)
+        @assertEqual(vg1,self%faces(ETA_MIN)%ale_grid_vel(:,1), 1.e-14_rk)
+        @assertEqual(vg2,self%faces(ETA_MIN)%ale_grid_vel(:,2), 1.e-14_rk)
+        @assertEqual(vg3,self%faces(ETA_MIN)%ale_grid_vel(:,3), 1.e-14_rk)
 
         vg1 = TWO*self%faces(ETA_MAX)%quad_pts(:,1)
         vg2 = TWO*self%faces(ETA_MAX)%quad_pts(:,2)
         vg3 = TWO*self%faces(ETA_MAX)%quad_pts(:,3)
         
-        @assertEqual(vg1,self%faces(ETA_MAX)%grid_vel(:,1), 1.e-14_rk)
-        @assertEqual(vg2,self%faces(ETA_MAX)%grid_vel(:,2), 1.e-14_rk)
-        @assertEqual(vg3,self%faces(ETA_MAX)%grid_vel(:,3), 1.e-14_rk)
+        @assertEqual(vg1,self%faces(ETA_MAX)%ale_grid_vel(:,1), 1.e-14_rk)
+        @assertEqual(vg2,self%faces(ETA_MAX)%ale_grid_vel(:,2), 1.e-14_rk)
+        @assertEqual(vg3,self%faces(ETA_MAX)%ale_grid_vel(:,3), 1.e-14_rk)
 
         vg1 = TWO*self%faces(ZETA_MIN)%quad_pts(:,1)
         vg2 = TWO*self%faces(ZETA_MIN)%quad_pts(:,2)
         vg3 = TWO*self%faces(ZETA_MIN)%quad_pts(:,3)
         
-        @assertEqual(vg1,self%faces(ZETA_MIN)%grid_vel(:,1), 1.e-14_rk)
-        @assertEqual(vg2,self%faces(ZETA_MIN)%grid_vel(:,2), 1.e-14_rk)
-        @assertEqual(vg3,self%faces(ZETA_MIN)%grid_vel(:,3), 1.e-14_rk)
+        @assertEqual(vg1,self%faces(ZETA_MIN)%ale_grid_vel(:,1), 1.e-14_rk)
+        @assertEqual(vg2,self%faces(ZETA_MIN)%ale_grid_vel(:,2), 1.e-14_rk)
+        @assertEqual(vg3,self%faces(ZETA_MIN)%ale_grid_vel(:,3), 1.e-14_rk)
 
         vg1 = TWO*self%faces(ZETA_MAX)%quad_pts(:,1)
         vg2 = TWO*self%faces(ZETA_MAX)%quad_pts(:,2)
         vg3 = TWO*self%faces(ZETA_MAX)%quad_pts(:,3)
         
-        @assertEqual(vg1,self%faces(ZETA_MAX)%grid_vel(:,1), 1.e-14_rk)
-        @assertEqual(vg2,self%faces(ZETA_MAX)%grid_vel(:,2), 1.e-14_rk)
-        @assertEqual(vg3,self%faces(ZETA_MAX)%grid_vel(:,3), 1.e-14_rk)
+        @assertEqual(vg1,self%faces(ZETA_MAX)%ale_grid_vel(:,1), 1.e-14_rk)
+        @assertEqual(vg2,self%faces(ZETA_MAX)%ale_grid_vel(:,2), 1.e-14_rk)
+        @assertEqual(vg3,self%faces(ZETA_MAX)%ale_grid_vel(:,3), 1.e-14_rk)
+
     end subroutine testElement_face_grid_velocities
     !***************************************************************************************
 
@@ -451,31 +457,32 @@ contains
     !!
     !---------------------------------------------------------------------------------------
     @Test
-    subroutine testElement_face_jinv_ale(self)
+    subroutine testElement_face_jinv_def(self)
         class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: self
-        real(rk)    :: test_det_jac_grid(self%faces(XI_MAX)%basis_s%nnodes_if())
+
+        real(rk) :: test_ale_g(self%faces(XI_MAX)%basis_s%nnodes_if())
         
-        test_det_jac_grid = 27.0_rk 
+        test_ale_g = 27.0_rk 
 
-        @assertEqual(self%faces(XI_MIN)%jinv_ale,27.0_rk*self%faces(XI_MIN)%jinv)
-        @assertEqual(self%faces(XI_MIN)%det_jacobian_grid,test_det_jac_grid)
+        @assertEqual(self%faces(XI_MIN)%jinv_def,27.0_rk*self%faces(XI_MIN)%jinv_undef)
+        @assertEqual(self%faces(XI_MIN)%ale_g,test_ale_g)
 
-        @assertEqual(self%faces(XI_MAX)%jinv_ale,27.0_rk*self%faces(XI_MAX)%jinv)
-        @assertEqual(self%faces(XI_MAX)%det_jacobian_grid,test_det_jac_grid)
+        @assertEqual(self%faces(XI_MAX)%jinv_def,27.0_rk*self%faces(XI_MAX)%jinv_undef)
+        @assertEqual(self%faces(XI_MAX)%ale_g,test_ale_g)
 
-        @assertEqual(self%faces(ETA_MIN)%jinv_ale,27.0_rk*self%faces(ETA_MIN)%jinv)
-        @assertEqual(self%faces(ETA_MIN)%det_jacobian_grid,test_det_jac_grid)
+        @assertEqual(self%faces(ETA_MIN)%jinv_def,27.0_rk*self%faces(ETA_MIN)%jinv_undef)
+        @assertEqual(self%faces(ETA_MIN)%ale_g,test_ale_g)
 
-        @assertEqual(self%faces(ETA_MAX)%jinv_ale,27.0_rk*self%faces(ETA_MAX)%jinv)
-        @assertEqual(self%faces(ETA_MAX)%det_jacobian_grid,test_det_jac_grid)
+        @assertEqual(self%faces(ETA_MAX)%jinv_def,27.0_rk*self%faces(ETA_MAX)%jinv_undef)
+        @assertEqual(self%faces(ETA_MAX)%ale_g,test_ale_g)
 
-        @assertEqual(self%faces(ZETA_MIN)%jinv_ale,27.0_rk*self%faces(ZETA_MIN)%jinv)
-        @assertEqual(self%faces(ZETA_MIN)%det_jacobian_grid,test_det_jac_grid)
+        @assertEqual(self%faces(ZETA_MIN)%jinv_def,27.0_rk*self%faces(ZETA_MIN)%jinv_undef)
+        @assertEqual(self%faces(ZETA_MIN)%ale_g,test_ale_g)
 
-        @assertEqual(self%faces(ZETA_MAX)%jinv_ale,27.0_rk*self%faces(ZETA_MAX)%jinv)
-        @assertEqual(self%faces(ZETA_MAX)%det_jacobian_grid,test_det_jac_grid)
+        @assertEqual(self%faces(ZETA_MAX)%jinv_def,27.0_rk*self%faces(ZETA_MAX)%jinv_undef)
+        @assertEqual(self%faces(ZETA_MAX)%ale_g,test_ale_g)
 
-    end subroutine testElement_face_jinv_ale
+    end subroutine testElement_face_jinv_def
     !****************************************************************************************
 
 
@@ -486,6 +493,8 @@ contains
     @Test
     subroutine testElement_face_metrics(self)
         class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: self
+
+        integer(ik) :: inode
         real(rk)    :: test_metric(self%faces(XI_MAX)%basis_s%nnodes_if(),3,3)
         real(rk)    :: tol
         
@@ -500,13 +509,17 @@ contains
         test_metric(:,1,3) = 0._rk   
         test_metric(:,2,3) = 0._rk   
         test_metric(:,3,3) = 3.0_rk 
+
+        do inode = 1,size(test_metric,1)
+            test_metric(inode,:,:) = inv(test_metric(inode,:,:))
+        end do
         
-        @assertEqual(test_metric,self%faces(XI_MIN)%jacobian_grid,tol)
-        @assertEqual(test_metric,self%faces(XI_MAX)%jacobian_grid,tol)
-        @assertEqual(test_metric,self%faces(ETA_MIN)%jacobian_grid,tol)
-        @assertEqual(test_metric,self%faces(ETA_MAX)%jacobian_grid,tol)
-        @assertEqual(test_metric,self%faces(ZETA_MIN)%jacobian_grid,tol)
-        @assertEqual(test_metric,self%faces(ZETA_MAX)%jacobian_grid,tol)
+        @assertEqual(test_metric,self%faces(XI_MIN)%ale_Dinv,tol)
+        @assertEqual(test_metric,self%faces(XI_MAX)%ale_Dinv,tol)
+        @assertEqual(test_metric,self%faces(ETA_MIN)%ale_Dinv,tol)
+        @assertEqual(test_metric,self%faces(ETA_MAX)%ale_Dinv,tol)
+        @assertEqual(test_metric,self%faces(ZETA_MIN)%ale_Dinv,tol)
+        @assertEqual(test_metric,self%faces(ZETA_MAX)%ale_Dinv,tol)
 
     end subroutine testElement_face_metrics
     !*******************************************************************************************

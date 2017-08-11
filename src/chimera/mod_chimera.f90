@@ -100,7 +100,7 @@ contains
 
                         ! Set face-type to CHIMERA
                         mesh%domain(idom)%faces(ielem,iface)%ftype = CHIMERA
-                        nnodes = size(mesh%domain(idom)%faces(ielem,iface)%jinv)
+                        nnodes = size(mesh%domain(idom)%faces(ielem,iface)%jinv_undef)
 
                         ! Set domain-local Chimera identifier. Really, just the index order which they were detected in, starting from 1.
                         ! The n-th chimera face
@@ -164,7 +164,7 @@ contains
         real(rk)                :: donor_metric(3,3), parallel_metric(3,3)
         real(rk), allocatable   :: donor_vols(:)
         real(rk)                :: gq_coords(3), offset(3), gq_node(3), &
-                                   donor_jinv, donor_vol, local_vol, parallel_vol, parallel_jinv
+                                   donor_jinv_undef, donor_vol, local_vol, parallel_vol, parallel_jinv_undef
         real(rk)                :: d1dxi, d1deta, d1dzeta, &
                                    d2dxi, d2deta, d2dzeta, &
                                    d3dxi, d3deta, d3dzeta
@@ -368,9 +368,9 @@ contains
                                 ! 1: Receive donor local coordinate
                                 ! 2: Receive donor metric matrix
                                 ! 3: Receive donor inverse jacobian mapping
-                                call MPI_Recv(donor_coord, 3,MPI_REAL8, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-                                call MPI_Recv(donor_metric,9,MPI_REAL8, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-                                call MPI_Recv(donor_jinv,  1,MPI_REAL8, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                                call MPI_Recv(donor_coord,      3,MPI_REAL8, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                                call MPI_Recv(donor_metric,     9,MPI_REAL8, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                                call MPI_Recv(donor_jinv_undef, 1,MPI_REAL8, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
 
 
@@ -396,9 +396,9 @@ contains
                                 d2dzeta = mesh%domain(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,3,donor_coord(1),donor_coord(2),donor_coord(3),scale=.true.)
                                 d3dzeta = mesh%domain(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,3,donor_coord(1),donor_coord(2),donor_coord(3),scale=.true.)
 
-                                donor_jinv = (d1dxi*d2deta*d3dzeta - d1deta*d2dxi*d3dzeta - &
-                                              d1dxi*d2dzeta*d3deta + d1dzeta*d2dxi*d3deta + &
-                                              d1deta*d2dzeta*d3dxi - d1dzeta*d2deta*d3dxi)
+                                donor_jinv_undef = (d1dxi*d2deta*d3dzeta - d1deta*d2dxi*d3dzeta - &
+                                                    d1dxi*d2dzeta*d3deta + d1dzeta*d2dxi*d3deta + &
+                                                    d1deta*d2dzeta*d3dxi - d1dzeta*d2deta*d3dxi)
 
 
                                 donor_metric(1,1) = (d2deta*d3dzeta - d2dzeta*d3deta)
@@ -412,7 +412,7 @@ contains
                                 donor_metric(3,3) = (d1dxi*d2deta   - d1deta*d2dxi)
 
                                 ! Complete definition of metric term by scaling by J
-                                donor_metric = donor_metric/donor_jinv
+                                donor_metric = donor_metric/donor_jinv_undef
 
 
                             else 
@@ -425,7 +425,7 @@ contains
                             !
                             donor_ID = mesh%domain(idom)%chimera%recv(ichimera_face)%add_donor(donor%idomain_g, donor%idomain_l, donor%ielement_g, donor%ielement_l, donor%iproc)
                             call mesh%domain(idom)%chimera%recv(ichimera_face)%donor(donor_ID)%set_properties(donor%nterms_c,donor%nterms_s,donor%neqns,donor%eqn_ID)
-                            call mesh%domain(idom)%chimera%recv(ichimera_face)%donor(donor_ID)%add_node(igq,donor_coord,donor_metric,donor_jinv)
+                            call mesh%domain(idom)%chimera%recv(ichimera_face)%donor(donor_ID)%add_node(igq,donor_coord,donor_metric,donor_jinv_undef)
 
 
                             !
@@ -543,9 +543,9 @@ contains
 
 
                             ! Compute inverse element jacobian
-                            parallel_jinv = (d1dxi*d2deta*d3dzeta - d1deta*d2dxi*d3dzeta - &
-                                             d1dxi*d2dzeta*d3deta + d1dzeta*d2dxi*d3deta + &
-                                             d1deta*d2dzeta*d3dxi - d1dzeta*d2deta*d3dxi)
+                            parallel_jinv_undef = (d1dxi*d2deta*d3dzeta - d1deta*d2dxi*d3dzeta - &
+                                                   d1dxi*d2dzeta*d3deta + d1dzeta*d2dxi*d3deta + &
+                                                   d1deta*d2dzeta*d3dxi - d1dzeta*d2deta*d3dxi)
 
 
                             parallel_metric(1,1) = (d2deta*d3dzeta - d2dzeta*d3deta)
@@ -559,11 +559,11 @@ contains
                             parallel_metric(3,3) = (d1dxi*d2deta   - d1deta*d2dxi)
 
                             ! Complete definition of metric by scaling by J
-                            parallel_metric = parallel_metric/parallel_jinv
+                            parallel_metric = parallel_metric/parallel_jinv_undef
 
                             ! Communicate metric and jacobian 
-                            call MPI_Send(parallel_metric,9,MPI_REAL8,iproc,0,ChiDG_COMM,ierr)
-                            call MPI_Send(parallel_jinv,1,MPI_REAL8,iproc,0,ChiDG_COMM,ierr)
+                            call MPI_Send(parallel_metric,    9,MPI_REAL8,iproc,0,ChiDG_COMM,ierr)
+                            call MPI_Send(parallel_jinv_undef,1,MPI_REAL8,iproc,0,ChiDG_COMM,ierr)
 
                         end if
 
@@ -619,7 +619,7 @@ contains
                            npts, donor_nterms_s, spacedim
         real(rk)        :: node(3)
 
-        real(rk)        :: jinv, ddxi, ddeta, ddzeta
+        real(rk)        :: jinv_undef, ddxi, ddeta, ddzeta
         real(rk), allocatable, dimension(:,:)   ::  &
             interpolator, interpolator_grad1, interpolator_grad2, interpolator_grad3, metric
 
@@ -688,8 +688,8 @@ contains
                             ddzeta = dpolynomial_val(spacedim,donor_nterms_s,iterm,node,ZETA_DIR)
 
                             ! Get metrics for element mapping
-                            metric = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%metric(:,:,ipt)
-                            jinv   = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%jinv(ipt)
+                            metric     = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%metric(:,:,ipt)
+                            jinv_undef = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%jinv_undef(ipt)
 
                             ! Compute cartesian derivative interpolator for gq node
                             interpolator_grad1(ipt,iterm) = metric(1,1) * ddxi   + &

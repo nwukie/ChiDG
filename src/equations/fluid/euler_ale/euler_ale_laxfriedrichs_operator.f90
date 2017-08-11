@@ -104,12 +104,12 @@ contains
             integrand
 
         real(rk), allocatable, dimension(:)    :: &
-            norm_mag, normx, normy, normz, unormx, unormy, unormz
+            norm_mag, normx, normy, normz, unormx, unormy, unormz, det_jacobian_grid
 
         real(rk) :: gam_m, gam_p
 
-        real(rk), allocatable, dimension(:) ::      &
-           u_grid, v_grid, w_grid, det_jacobian_grid
+        real(rk), allocatable, dimension(:,:) ::      &
+           grid_vel(:,:)
 
 
         real(rk), allocatable, dimension(:,:,:) ::      &
@@ -117,9 +117,7 @@ contains
 
 
 !        print *, 'LaxFriedrichs Flux'
-        u_grid = worker%get_grid_velocity_face("u_grid",'face interior')
-        v_grid = worker%get_grid_velocity_face("v_grid",'face interior')
-        w_grid = worker%get_grid_velocity_face("w_grid",'face interior')
+        grid_vel = worker%get_grid_velocity_face('face interior')
 
         jacobian_grid = worker%get_inv_jacobian_grid_face('face interior')
         det_jacobian_grid = worker%get_det_jacobian_grid_face('value','face interior')
@@ -187,8 +185,8 @@ contains
         !
         ! Compute normal velocities: dot-product vector projection along unit-normal direction
         !
-        un_m = unormx*(rhou_m/rho_m-u_grid) + unormy*(rhov_m/rho_m-v_grid) + unormz*(rhow_m/rho_m-w_grid)
-        un_p = unormx*(rhou_p/rho_p-u_grid) + unormy*(rhov_p/rho_p-v_grid) + unormz*(rhow_p/rho_p-w_grid)
+        un_m = unormx*(rhou_m/rho_m-grid_vel(:,1)) + unormy*(rhov_m/rho_m-grid_vel(:,2)) + unormz*(rhow_m/rho_m-grid_vel(:,3))
+        un_p = unormx*(rhou_p/rho_p-grid_vel(:,1)) + unormy*(rhov_p/rho_p-grid_vel(:,2)) + unormz*(rhow_p/rho_p-grid_vel(:,3))
 
         
         !

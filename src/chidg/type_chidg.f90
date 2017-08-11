@@ -1532,8 +1532,7 @@ contains
                     temp = &
                         matmul(self%data%mesh%domain(idom)%elems(ielem)%basis_s%interpolator('Value'),&
                     q_diff%dom(idom)%vecs(ielem)%vec((ieqn-1)*nterms+1:ieqn*nterms))
-                    temp = temp**TWO*self%data%mesh%domain(idom)%elems(ielem)%basis_s%weights()*&
-                        self%data%mesh%domain(idom)%elems(ielem)%jinv
+                    temp = temp**TWO*self%data%mesh%domain(idom)%elems(ielem)%basis_s%weights()*self%data%mesh%domain(idom)%elems(ielem)%jinv_undef
                     local_error_val = local_error_val + sum(temp)
                 end do
                 error_val = error_val + local_error_val

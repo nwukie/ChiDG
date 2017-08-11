@@ -90,8 +90,10 @@ contains
             g_bar, flux_1, flux_2, flux_3, integrand
 
         real(rk),   allocatable, dimension(:)   ::  &
-            grid_velocity_1, grid_velocity_2, grid_velocity_3, det_jacobian_grid,   &
+            det_jacobian_grid,   &
             norm_1, norm_2, norm_3
+
+        real(rk),   allocatable, dimension(:,:) :: grid_velocity
 
         real(rk),   allocatable, dimension(:,:,:) :: &
             inv_jacobian_grid
@@ -105,9 +107,10 @@ contains
         !
         ! Get model coefficients
         !
-        grid_velocity_1   = worker%get_grid_velocity_face('u_grid','face interior')
-        grid_velocity_2   = worker%get_grid_velocity_face('v_grid','face interior')
-        grid_velocity_3   = worker%get_grid_velocity_face('w_grid','face interior')
+!        grid_velocity_1   = worker%get_grid_velocity_face('u_grid','face interior')
+!        grid_velocity_2   = worker%get_grid_velocity_face('v_grid','face interior')
+!        grid_velocity_3   = worker%get_grid_velocity_face('w_grid','face interior')
+        grid_velocity     = worker%get_grid_velocity_face('face interior')
         det_jacobian_grid = worker%get_det_jacobian_grid_face('value','face interior')
         inv_jacobian_grid = worker%get_inv_jacobian_grid_face('face interior')
 
@@ -129,9 +132,9 @@ contains
         flux_2 = g_bar  !just to initialize AD allocation
         flux_3 = g_bar  !just to initialize AD allocation
 
-        flux_1 = (inv_jacobian_grid(:,1,1)*grid_velocity_1 + inv_jacobian_grid(:,1,2)*grid_velocity_2 + inv_jacobian_grid(:,1,3)*grid_velocity_3)*det_jacobian_grid
-        flux_2 = (inv_jacobian_grid(:,2,1)*grid_velocity_1 + inv_jacobian_grid(:,2,2)*grid_velocity_2 + inv_jacobian_grid(:,2,3)*grid_velocity_3)*det_jacobian_grid
-        flux_3 = (inv_jacobian_grid(:,3,1)*grid_velocity_1 + inv_jacobian_grid(:,3,2)*grid_velocity_2 + inv_jacobian_grid(:,3,3)*grid_velocity_3)*det_jacobian_grid
+        flux_1 = (inv_jacobian_grid(:,1,1)*grid_velocity(:,1) + inv_jacobian_grid(:,1,2)*grid_velocity(:,2) + inv_jacobian_grid(:,1,3)*grid_velocity(:,3))*det_jacobian_grid
+        flux_2 = (inv_jacobian_grid(:,2,1)*grid_velocity(:,1) + inv_jacobian_grid(:,2,2)*grid_velocity(:,2) + inv_jacobian_grid(:,2,3)*grid_velocity(:,3))*det_jacobian_grid
+        flux_3 = (inv_jacobian_grid(:,3,1)*grid_velocity(:,1) + inv_jacobian_grid(:,3,2)*grid_velocity(:,2) + inv_jacobian_grid(:,3,3)*grid_velocity(:,3))*det_jacobian_grid
 
         integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
 

@@ -541,7 +541,7 @@ contains
         type(mpi_comm),     intent(in)      :: ChiDG_COMM
 
         real(rk), allocatable, dimension(:) :: &
-            u_dg, u_analytical, x_gq, gq_error_squared, det_jacobian_grid_gq
+            u_dg, u_analytical, x_gq, gq_error_squared, ale_g_gq
 
 
         integer(ik) :: idens, imom1, imom2, imom3, ienergy
@@ -584,7 +584,7 @@ contains
                     ! Compute the analytical solution at the quadrature nodes
                     !
                     x_gq = mesh%domain(idom)%elems(ielem)%quad_pts(:,1)
-                    det_jacobian_grid_gq = mesh%domain(idom)%elems(ielem)%det_jacobian_grid
+                    ale_g_gq = mesh%domain(idom)%elems(ielem)%ale_g
                     u_analytical = ZERO*x_gq
                     u_analytical = 1.0_rk
 
@@ -594,7 +594,7 @@ contains
                     u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,idens,itime,'value')
 
 
-                    u_dg = u_dg/det_jacobian_grid_gq
+                    u_dg = u_dg/ale_g_gq
                     !
                     ! Compute error
                     !                    
@@ -605,7 +605,7 @@ contains
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%basis_s%weights())
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_def * mesh%domain(idom)%elems(ielem)%basis_s%weights())
 
 
                     print *, 'density error squared'
@@ -629,7 +629,7 @@ contains
                     u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,imom1,itime,'value')
 
 
-                    u_dg = u_dg/det_jacobian_grid_gq
+                    u_dg = u_dg/ale_g_gq
                     !
                     ! Compute error
                     !                    
@@ -639,7 +639,7 @@ contains
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%basis_s%weights())
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_def * mesh%domain(idom)%elems(ielem)%basis_s%weights())
 
                     print *, 'mom1 error squared'
                     print *, element_error_squared
@@ -662,7 +662,7 @@ contains
                     u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,imom2,itime,'value')
 
 
-                    u_dg = u_dg/det_jacobian_grid_gq
+                    u_dg = u_dg/ale_g_gq
                     !
                     ! Compute error
                     !                    
@@ -672,7 +672,7 @@ contains
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%basis_s%weights())
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_def * mesh%domain(idom)%elems(ielem)%basis_s%weights())
 
                     print *, 'mom2 error squared'
                     print *, element_error_squared
@@ -694,7 +694,7 @@ contains
                     u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,imom3,itime,'value')
 
 
-                    u_dg = u_dg/det_jacobian_grid_gq
+                    u_dg = u_dg/ale_g_gq
                     !
                     ! Compute error
                     !                    
@@ -704,7 +704,7 @@ contains
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%basis_s%weights())
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_def * mesh%domain(idom)%elems(ielem)%basis_s%weights())
 
 
                     print *, 'mom3 error squared'
@@ -727,7 +727,7 @@ contains
                     u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,ienergy,itime,'value')
 
 
-                    u_dg = u_dg/det_jacobian_grid_gq
+                    u_dg = u_dg/ale_g_gq
                     !
                     ! Compute error
                     !                    
@@ -737,7 +737,7 @@ contains
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_ale * mesh%domain(idom)%elems(ielem)%basis_s%weights())
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_def * mesh%domain(idom)%elems(ielem)%basis_s%weights())
 
                     print *, 'energy error squared'
                     print *, element_error_squared

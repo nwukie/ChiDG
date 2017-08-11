@@ -219,14 +219,14 @@ contains
     !!
     !---------------------------------------------------------------------------------------
     @Test
-    subroutine testElement_jinv(self)
+    subroutine testElement_jinv_undef(self)
         class(test_element_linearA),    intent(inout)   :: self
-        real(rk)    :: test_jinv(self%elem%basis_s%nnodes_ie())
+        real(rk)    :: test_jinv_undef(self%elem%basis_s%nnodes_ie())
         
-        test_jinv = 0.625_rk
-        @assertEqual(test_jinv,self%elem%jinv)
+        test_jinv_undef = 0.625_rk
+        @assertEqual(test_jinv_undef,self%elem%jinv_undef)
 
-    end subroutine testElement_jinv
+    end subroutine testElement_jinv_undef
     !****************************************************************************************
 
     

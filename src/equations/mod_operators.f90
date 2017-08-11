@@ -100,7 +100,6 @@ module mod_operators
     ! Geometric Conservation Operators
     use GCL_volume_advective_operator,               only: GCL_volume_advective_operator_t
     use GCL_boundary_average_advective_operator,     only: GCL_boundary_average_advective_operator_t
-    use GCL_LaxFriedrichs_operator,                  only: GCL_LaxFriedrichs_operator_t
     use GCL_bc_operator,                             only: GCL_bc_operator_t
 
 
@@ -318,7 +317,6 @@ contains
         ! Geometric Conservation Operators
         type(GCL_volume_advective_operator_t)            :: GCL_volume_operator
         type(GCL_boundary_average_advective_operator_t)  :: GCL_average_operator
-        type(GCL_LaxFriedrichs_operator_t)               :: GCL_laxfriedrichs_operator
         type(GCL_bc_operator_t)                          :: GCL_bc_operator
 
         if (.not. operators_initialized) then
@@ -422,7 +420,6 @@ contains
             ! Register Geometric Conservation
             call operator_factory%register(GCL_volume_operator)
             call operator_factory%register(GCL_average_operator)
-            call operator_factory%register(GCL_laxfriedrichs_operator)
             call operator_factory%register(GCL_bc_operator)
 
             operators_initialized = .true.

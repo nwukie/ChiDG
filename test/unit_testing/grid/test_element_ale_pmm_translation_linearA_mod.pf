@@ -276,15 +276,16 @@ contains
     !!
     !---------------------------------------------------------------------------------------
     @Test
-    subroutine testElement_jinv_ale(self)
+    subroutine testElement_jinv_def(self)
         class(test_element_ale_pmm_translation_linearA),    intent(inout)   :: self
-        real(rk)    :: test_det_jac_grid(self%elem%basis_s%nnodes_ie())
+
+        real(rk)    :: test_ale_g(self%elem%basis_s%nnodes_ie())
         
-        test_det_jac_grid = ONE
-        @assertEqual(self%elem%jinv_ale,self%elem%jinv)
+        test_ale_g = ONE
+        @assertEqual(self%elem%jinv_def,self%elem%jinv_undef)
         @assertEqual(self%elem%det_jacobian_grid,test_det_jac_grid)
 
-    end subroutine testElement_jinv_ale
+    end subroutine testElement_jinv_def
     !****************************************************************************************
 
     

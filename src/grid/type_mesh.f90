@@ -492,8 +492,8 @@ contains
                                    idomain_g, ielement_g, idomain_l, ielement_l,    &
                                    pelem_ID, igq
         real(rk),   allocatable :: ref_coords(:,:)
-        real(rk)                :: det_jacobian_grid_pt, det_jacobian_grid_grad_pt(3), &
-                                   inv_jacobian_grid_pt(3,3), grid_vel_pt(3), xi, eta, zeta
+        real(rk)                :: ale_g_pt, ale_g_grad_pt(3), &
+                                   ale_Dinv_pt(3,3), ale_grid_vel_pt(3), xi, eta, zeta
         logical                 :: parallel_donor
 
  
@@ -524,13 +524,13 @@ contains
                           xi   = ref_coords(ipt,1)
                           eta  = ref_coords(ipt,2)
                           zeta = ref_coords(ipt,3)
-                          call self%parallel_element(pelem_ID)%ale_point(xi, eta, zeta,det_jacobian_grid_pt,det_jacobian_grid_grad_pt,inv_jacobian_grid_pt,grid_vel_pt)
-                          self%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid(igq)       = det_jacobian_grid_pt
-                          self%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid_grad1(igq) = det_jacobian_grid_grad_pt(1)
-                          self%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid_grad2(igq) = det_jacobian_grid_grad_pt(2)
-                          self%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid_grad3(igq) = det_jacobian_grid_grad_pt(3)
-                          self%domain(idom)%chimera%recv(ChiID)%inv_jacobian_grid(igq,:,:)   = inv_jacobian_grid_pt
-                          self%domain(idom)%chimera%recv(ChiID)%grid_vel(igq,:)              = grid_vel_pt
+                          call self%parallel_element(pelem_ID)%ale_point(xi, eta, zeta,ale_g_pt,ale_g_grad_pt,ale_Dinv_pt,ale_grid_vel_pt)
+                          self%domain(idom)%chimera%recv(ChiID)%ale_g(igq)          = ale_g_pt
+                          self%domain(idom)%chimera%recv(ChiID)%ale_g_grad1(igq)    = ale_g_grad_pt(1)
+                          self%domain(idom)%chimera%recv(ChiID)%ale_g_grad2(igq)    = ale_g_grad_pt(2)
+                          self%domain(idom)%chimera%recv(ChiID)%ale_g_grad3(igq)    = ale_g_grad_pt(3)
+                          self%domain(idom)%chimera%recv(ChiID)%ale_Dinv(igq,:,:)   = ale_Dinv_pt
+                          self%domain(idom)%chimera%recv(ChiID)%ale_grid_vel(igq,:) = ale_grid_vel_pt
                       end do
         
                    else
@@ -543,13 +543,13 @@ contains
                           xi   = ref_coords(ipt,1)
                           eta  = ref_coords(ipt,2)
                           zeta = ref_coords(ipt,3)
-                          call self%domain(idomain_l)%elems(ielement_l)%ale_point(xi, eta, zeta,det_jacobian_grid_pt,det_jacobian_grid_grad_pt,inv_jacobian_grid_pt,grid_vel_pt)
-                          self%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid(igq)       = det_jacobian_grid_pt
-                          self%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid_grad1(igq) = det_jacobian_grid_grad_pt(1)
-                          self%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid_grad2(igq) = det_jacobian_grid_grad_pt(2)
-                          self%domain(idom)%chimera%recv(ChiID)%det_jacobian_grid_grad3(igq) = det_jacobian_grid_grad_pt(3)
-                          self%domain(idom)%chimera%recv(ChiID)%inv_jacobian_grid(igq,:,:)   = inv_jacobian_grid_pt
-                          self%domain(idom)%chimera%recv(ChiID)%grid_vel(igq,:)              = grid_vel_pt
+                          call self%domain(idomain_l)%elems(ielement_l)%ale_point(xi, eta, zeta,ale_g_pt,ale_g_grad_pt,ale_Dinv_pt,ale_grid_vel_pt)
+                          self%domain(idom)%chimera%recv(ChiID)%ale_g(igq)          = ale_g_pt
+                          self%domain(idom)%chimera%recv(ChiID)%ale_g_grad1(igq)    = ale_g_grad_pt(1)
+                          self%domain(idom)%chimera%recv(ChiID)%ale_g_grad2(igq)    = ale_g_grad_pt(2)
+                          self%domain(idom)%chimera%recv(ChiID)%ale_g_grad3(igq)    = ale_g_grad_pt(3)
+                          self%domain(idom)%chimera%recv(ChiID)%ale_Dinv(igq,:,:)   = ale_Dinv_pt
+                          self%domain(idom)%chimera%recv(ChiID)%ale_grid_vel(igq,:) = ale_grid_vel_pt
                       end do
                    end if
 
@@ -1003,19 +1003,19 @@ contains
                         associate ( face => self%domain(idom)%faces(ielem,iface) ) 
 
                         send_size_a = size(face%neighbor_location)
-                        send_size_b = size(face%grid_vel)
-                        send_size_c = size(face%det_jacobian_grid)
-                        send_size_d = size(face%inv_jacobian_grid)
+                        send_size_b = size(face%ale_grid_vel)
+                        send_size_c = size(face%ale_g)
+                        send_size_d = size(face%ale_Dinv)
 
                         ! First, send neighbor location. This way, the receiving processor knows where to put the data.
                         ! Next, send all ALE information
-                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%neighbor_location,       send_size_a, mpi_integer4, face%ineighbor_proc, 0, ChiDG_COMM, request(1), ierr)
-                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%grid_vel,                send_size_b, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(2), ierr)
-                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%det_jacobian_grid,       send_size_c, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(3), ierr)
-                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%det_jacobian_grid_grad1, send_size_c, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(4), ierr)
-                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%det_jacobian_grid_grad2, send_size_c, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(5), ierr)
-                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%det_jacobian_grid_grad3, send_size_c, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(6), ierr)
-                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%inv_jacobian_grid,       send_size_d, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(7), ierr)
+                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%neighbor_location, send_size_a, mpi_integer4, face%ineighbor_proc, 0, ChiDG_COMM, request(1), ierr)
+                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%ale_grid_vel,      send_size_b, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(2), ierr)
+                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%ale_g,             send_size_c, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(3), ierr)
+                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%ale_g_grad1,       send_size_c, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(4), ierr)
+                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%ale_g_grad2,       send_size_c, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(5), ierr)
+                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%ale_g_grad3,       send_size_c, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(6), ierr)
+                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%ale_Dinv,          send_size_d, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(7), ierr)
 
                         call self%comm_requests%push_back(request(1))
                         call self%comm_requests%push_back(request(2))
@@ -1139,16 +1139,16 @@ contains
                 ielem = face_location(4)
                 iface = face_location(5)
 
-                recv_size_a = size(self%domain(idom)%faces(ielem,iface)%neighbor_grid_vel)
-                recv_size_b = size(self%domain(idom)%faces(ielem,iface)%neighbor_det_jacobian_grid)
-                recv_size_c = size(self%domain(idom)%faces(ielem,iface)%neighbor_inv_jacobian_grid)
+                recv_size_a = size(self%domain(idom)%faces(ielem,iface)%neighbor_ale_grid_vel)
+                recv_size_b = size(self%domain(idom)%faces(ielem,iface)%neighbor_ale_g)
+                recv_size_c = size(self%domain(idom)%faces(ielem,iface)%neighbor_ale_Dinv)
 
-                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_grid_vel,                recv_size_a, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_det_jacobian_grid,       recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_det_jacobian_grid_grad1, recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_det_jacobian_grid_grad2, recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_det_jacobian_grid_grad3, recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_inv_jacobian_grid,       recv_size_c, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_grid_vel, recv_size_a, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_g,        recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_g_grad1,  recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_g_grad2,  recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_g_grad3,  recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_Dinv,     recv_size_c, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
 
             end do !irecv
         end do !iproc
@@ -1192,9 +1192,9 @@ contains
                          connectivity(nnodes  ), stat=ierr)
                 if (ierr /= 0) call AllocationError
 
-                call mpi_recv(nodes,        nnodes*3, mpi_real8,    recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-                call mpi_recv(dnodes,       nnodes*3, mpi_real8,    recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-                call mpi_recv(vnodes,       nnodes*3, mpi_real8,    recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(nodes,  nnodes*3, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(dnodes, nnodes*3, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(vnodes, nnodes*3, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
 
 
                 !

@@ -77,15 +77,16 @@ contains
 
         type(AD_D), allocatable, dimension(:,:)   :: flux_ref
 
-        real(rk), allocatable                       :: u_grid(:), v_grid(:), w_grid(:),wave_speed(:), area(:)
+        real(rk), allocatable                       :: wave_speed(:), area(:), grid_velocity(:,:)
         
         real(rk),   allocatable, dimension(:)   ::  &
             norm_1, norm_2, norm_3
 
 
-        u_grid = worker%get_grid_velocity_face('u_grid','face interior')
-        v_grid = worker%get_grid_velocity_face('v_grid','face interior')
-        w_grid = worker%get_grid_velocity_face('w_grid','face interior')
+!        u_grid = worker%get_grid_velocity_face('u_grid','face interior')
+!        v_grid = worker%get_grid_velocity_face('v_grid','face interior')
+!        w_grid = worker%get_grid_velocity_face('w_grid','face interior')
+        grid_velocity = worker%get_grid_velocity_face('face interior')
 
         !
         ! Interpolate solution to quadrature nodes
@@ -127,7 +128,7 @@ contains
 
         !integrand = flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3
         !max_grid_vel = max(abs(u_grid),abs(v_grid),abs(w_grid))
-        wave_speed = ONE + abs(u_grid)
+        wave_speed = ONE + abs(grid_velocity(:,1))
         area = sqrt(norm_1**TWO+norm_2**TWO+norm_3**TWO)
         integrand = area*wave_speed*HALF*(u_m-u_p)
 

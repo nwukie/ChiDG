@@ -104,17 +104,19 @@ contains
             sqrt_rhom, sqrt_rhop, sqrt_rhom_plus_rhop, ctil2, invrho_m, invrho_p
 
         real(rk), allocatable, dimension(:) :: &
-            normx, normy, normz, unormx, unormy, unormz, unormx_ale, unormy_ale, unormz_ale
+            normx, normy, normz, unormx, unormy, unormz, unormx_ale, unormy_ale, unormz_ale, ale_area_ratio
 
-        real(rk), allocatable, dimension(:) ::      &
-           u_grid, v_grid, w_grid, ale_area_ratio
+        real(rk), allocatable, dimension(:,:) ::      &
+           grid_vel
 
         real(rk) :: eps
 
-        u_grid = worker%get_grid_velocity_face("u_grid",'face interior')
-        v_grid = worker%get_grid_velocity_face("v_grid",'face interior')
-        w_grid = worker%get_grid_velocity_face("w_grid",'face interior')
+!        u_grid = worker%get_grid_velocity_face("u_grid",'face interior')
+!        v_grid = worker%get_grid_velocity_face("v_grid",'face interior')
+!        w_grid = worker%get_grid_velocity_face("w_grid",'face interior')
+        grid_vel = worker%get_grid_velocity_face('face interior')
         ale_area_ratio = worker%get_area_ratio()
+
 
 
         !
@@ -217,9 +219,9 @@ contains
         !
         ! Limit wave speeds for entropy fix
         !
-        lamda1 = abs(vmagtil - ctil) + sqrt(u_grid**TWO+v_grid**TWO+w_grid**TWO)
-        lamda2 = abs(vmagtil)        + sqrt(u_grid**TWO+v_grid**TWO+w_grid**TWO)
-        lamda3 = abs(vmagtil + ctil) + sqrt(u_grid**TWO+v_grid**TWO+w_grid**TWO)
+        lamda1 = abs(vmagtil - ctil) + sqrt(grid_vel(:,1)**TWO+grid_vel(:,2)**TWO+grid_vel(:,3)**TWO)
+        lamda2 = abs(vmagtil)        + sqrt(grid_vel(:,1)**TWO+grid_vel(:,2)**TWO+grid_vel(:,3)**TWO)
+        lamda3 = abs(vmagtil + ctil) + sqrt(grid_vel(:,1)**TWO+grid_vel(:,2)**TWO+grid_vel(:,3)**TWO)
 
         eps = 0.01_rk
         where ( (-eps*ctil < lamda1) .and. (lamda1 < eps*ctil) )

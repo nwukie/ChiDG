@@ -100,7 +100,7 @@ contains
                  instance%ale_g_grad1(nnodes),  &
                  instance%ale_g_grad2(nnodes),  &
                  instance%ale_g_grad3(nnodes),  &
-                 instance%ale_Dinv(nnodes,3,3),    &
+                 instance%ale_Dinv(3,3,nnodes), &
                  instance%ale_grid_vel(nnodes,3), stat=ierr)
         if (ierr /= 0) call AllocationError
 

@@ -104,7 +104,6 @@ contains
     !!  @date   4/4/2017
     !!
     !!
-    !!
     !----------------------------------------------------------------------------------
     subroutine add_domain(self, name, nodes, dnodes, vnodes, connectivity, nelements_g, coord_system, eqn_ID)
         class(mesh_t),                  intent(inout)   :: self
@@ -135,13 +134,11 @@ contains
                                               nodes,        &
                                               connectivity, &
                                               coord_system )
-
         
         !
         ! Initialize ALE 
         !
-        call self%domain(idomain_l)%init_ale(dnodes,vnodes)
-
+        call self%domain(idomain_l)%set_displacements_velocities(dnodes,vnodes)
 
         
         !
@@ -151,8 +148,6 @@ contains
 
     end subroutine add_domain
     !***********************************************************************************
-
-
 
 
 
@@ -176,12 +171,10 @@ contains
         type(domain_t), allocatable :: temp_domains(:)
 
 
-
         !
         ! Resize array storage
         !
         allocate(temp_domains(self%ndomains() + 1), stat=ierr)
-
 
 
         ! Copy previously initialized instances to new array. Be careful about pointers 
@@ -192,14 +185,12 @@ contains
         end if
 
 
-
         !
         ! Move resized temp allocation back to mesh container. 
         ! Be careful about pointer components here! Their location in memory has changed.
         !
         call move_alloc(temp_domains,self%domain)
         
-
 
         !
         ! Set domain identifier of newly allocated domain that will be returned
@@ -235,8 +226,6 @@ contains
 
     end function ndomains
     !********************************************************************************
-
-
 
 
 
@@ -314,46 +303,30 @@ contains
         integer(ik) :: group_ID, idomain
 
         !
-        ! Find patch group identifier. If none, call new_bc_patch_group.
-        !   - don't create patches for 'Empty' groups. These should be left ORPHAN
-        !     so that they get picked up by Chimera.
+        ! Add new group, if not already in existence
         !
-        !if ( (trim(group_name) /= 'Empty') .and. &
-        !     (trim(group_name) /= 'empty') ) then
+        group_ID = self%get_bc_patch_group_id(group_name)
+        if (group_ID == NO_ID) then
+            group_ID = self%new_bc_patch_group()
+            self%bc_patch_group(group_ID)%name     = trim(group_name)
+            self%bc_patch_group(group_ID)%group_ID = group_ID
+        end if
 
 
-            !
-            ! Add new group, if not already in existence
-            !
-            group_ID = self%get_bc_patch_group_id(group_name)
-            if (group_ID == NO_ID) then
-                group_ID = self%new_bc_patch_group()
-                self%bc_patch_group(group_ID)%name     = trim(group_name)
-                self%bc_patch_group(group_ID)%group_ID = group_ID
-            end if
+        !
+        ! Find domain identifier
+        !
+        idomain = self%get_domain_id(domain_name)
 
 
-            !
-            ! Find domain identifier
-            !
-            idomain = self%get_domain_id(domain_name)
-
-
-            !
-            ! Add bc_patch
-            !
-            call self%bc_patch_group(group_ID)%add_bc_patch(self%domain(idomain), patch_name, bc_connectivity, bc_ID)
-
-
-        !end if
-
+        !
+        ! Add bc_patch
+        !
+        call self%bc_patch_group(group_ID)%add_bc_patch(self%domain(idomain), patch_name, bc_connectivity, bc_ID)
 
 
     end subroutine add_bc_patch
     !*********************************************************************************
-
-
-
 
 
 
@@ -375,12 +348,10 @@ contains
         type(bc_patch_group_t), allocatable :: temp_groups(:)
 
 
-
         !
         ! Resize array storage
         !
         allocate(temp_groups(self%nbc_patch_groups() + 1), stat=ierr)
-
 
 
         ! Copy previously initialized instances to new array. Be careful about pointers 
@@ -391,13 +362,11 @@ contains
         end if
 
 
-
         !
         ! Move resized temp allocation back to mesh container. 
         ! Be careful about pointer components here! Their location in memory has changed.
         !
         call move_alloc(temp_groups,self%bc_patch_group)
-        
 
 
         !
@@ -529,7 +498,7 @@ contains
                           self%domain(idom)%chimera%recv(ChiID)%ale_g_grad1(igq)    = ale_g_grad_pt(1)
                           self%domain(idom)%chimera%recv(ChiID)%ale_g_grad2(igq)    = ale_g_grad_pt(2)
                           self%domain(idom)%chimera%recv(ChiID)%ale_g_grad3(igq)    = ale_g_grad_pt(3)
-                          self%domain(idom)%chimera%recv(ChiID)%ale_Dinv(igq,:,:)   = ale_Dinv_pt
+                          self%domain(idom)%chimera%recv(ChiID)%ale_Dinv(:,:,igq)   = ale_Dinv_pt
                           self%domain(idom)%chimera%recv(ChiID)%ale_grid_vel(igq,:) = ale_grid_vel_pt
                       end do
         
@@ -548,7 +517,7 @@ contains
                           self%domain(idom)%chimera%recv(ChiID)%ale_g_grad1(igq)    = ale_g_grad_pt(1)
                           self%domain(idom)%chimera%recv(ChiID)%ale_g_grad2(igq)    = ale_g_grad_pt(2)
                           self%domain(idom)%chimera%recv(ChiID)%ale_g_grad3(igq)    = ale_g_grad_pt(3)
-                          self%domain(idom)%chimera%recv(ChiID)%ale_Dinv(igq,:,:)   = ale_Dinv_pt
+                          self%domain(idom)%chimera%recv(ChiID)%ale_Dinv(:,:,igq)   = ale_Dinv_pt
                           self%domain(idom)%chimera%recv(ChiID)%ale_grid_vel(igq,:) = ale_grid_vel_pt
                       end do
                    end if
@@ -1243,16 +1212,11 @@ contains
                 end if
 
                 call self%parallel_element(pelem_ID)%init_sol('Quadrature',interpolation_level,nterms_s,nfields,ntime)
-                call self%parallel_element(pelem_ID)%init_ale(dnodes,vnodes)
-                call self%parallel_element(pelem_ID)%update_element_ale()
+                call self%parallel_element(pelem_ID)%set_displacements_velocities(dnodes,vnodes)
+                call self%parallel_element(pelem_ID)%update_interpolations_ale()
 
             end do !irecv
         end do !iproc
-
-
-
-
-
 
 
 
@@ -1260,9 +1224,6 @@ contains
         ! Assemble overset interpolations on receiver exterior state
         !
         call self%assemble_chimera_data()
-
-
-
 
 
     end subroutine comm_recv

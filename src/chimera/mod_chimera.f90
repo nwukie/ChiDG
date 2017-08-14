@@ -20,7 +20,7 @@ module mod_chimera
     use mod_constants,          only: NFACES, ORPHAN, CHIMERA, &
                                       XI_DIR, ETA_DIR, ZETA_DIR, &
                                       ONE, ZERO, TWO, TWO_DIM, THREE_DIM, &
-                                      INVALID_POINT, VALID_POINT, NO_PROC, NO_ID
+                                      NO_PROC, NO_ID
     use mod_reference_elements, only: ref_elems
 
     use type_point
@@ -33,6 +33,7 @@ module mod_chimera
     use type_pvector,           only: pvector_t
     use type_mvector,           only: mvector_t
 
+    use mod_determinant,        only: det_3x3
     use mod_polynomial,         only: polynomial_val, dpolynomial_val
     use mod_periodic,           only: get_periodic_offset
     use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM
@@ -165,9 +166,6 @@ contains
         real(rk), allocatable   :: donor_vols(:)
         real(rk)                :: gq_coords(3), offset(3), gq_node(3), &
                                    donor_jinv_undef, donor_vol, local_vol, parallel_vol, parallel_jinv_undef
-        real(rk)                :: d1dxi, d1deta, d1dzeta, &
-                                   d2dxi, d2deta, d2dzeta, &
-                                   d3dxi, d3deta, d3dzeta
 
         type(face_info_t)           :: receiver
         type(element_info_t)        :: donor
@@ -383,36 +381,8 @@ contains
                                     call MPI_Send(get_donor,1,MPI_LOGICAL, idonor_proc, 0, ChiDG_COMM, ierr)
                                 end do
 
-
-
-                                ! Compute local metric
-                                d1dxi   = mesh%domain(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,1,donor_coord(1),donor_coord(2),donor_coord(3),scale=.true.)
-                                d2dxi   = mesh%domain(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,1,donor_coord(1),donor_coord(2),donor_coord(3),scale=.true.)
-                                d3dxi   = mesh%domain(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,1,donor_coord(1),donor_coord(2),donor_coord(3),scale=.true.)
-                                d1deta  = mesh%domain(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,2,donor_coord(1),donor_coord(2),donor_coord(3),scale=.true.)
-                                d2deta  = mesh%domain(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,2,donor_coord(1),donor_coord(2),donor_coord(3),scale=.true.)
-                                d3deta  = mesh%domain(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,2,donor_coord(1),donor_coord(2),donor_coord(3),scale=.true.)
-                                d1dzeta = mesh%domain(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,3,donor_coord(1),donor_coord(2),donor_coord(3),scale=.true.)
-                                d2dzeta = mesh%domain(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,3,donor_coord(1),donor_coord(2),donor_coord(3),scale=.true.)
-                                d3dzeta = mesh%domain(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,3,donor_coord(1),donor_coord(2),donor_coord(3),scale=.true.)
-
-                                donor_jinv_undef = (d1dxi*d2deta*d3dzeta - d1deta*d2dxi*d3dzeta - &
-                                                    d1dxi*d2dzeta*d3deta + d1dzeta*d2dxi*d3deta + &
-                                                    d1deta*d2dzeta*d3dxi - d1dzeta*d2deta*d3dxi)
-
-
-                                donor_metric(1,1) = (d2deta*d3dzeta - d2dzeta*d3deta)
-                                donor_metric(2,1) = (d2dzeta*d3dxi  - d2dxi*d3dzeta)
-                                donor_metric(3,1) = (d2dxi*d3deta   - d2deta*d3dxi)
-                                donor_metric(1,2) = (d1dzeta*d3deta - d1deta*d3dzeta)
-                                donor_metric(2,2) = (d1dxi*d3dzeta  - d1dzeta*d3dxi)
-                                donor_metric(3,2) = (d1deta*d3dxi   - d1dxi*d3deta)
-                                donor_metric(1,3) = (d1deta*d2dzeta - d1dzeta*d2deta)
-                                donor_metric(2,3) = (d1dzeta*d2dxi  - d1dxi*d2dzeta)
-                                donor_metric(3,3) = (d1dxi*d2deta   - d1deta*d2dxi)
-
-                                ! Complete definition of metric term by scaling by J
-                                donor_metric = donor_metric/donor_jinv_undef
+                                donor_metric = mesh%domain(donor%idomain_l)%elems(donor%ielement_l)%metric_point(donor_coord,coordinate_frame='Undeformed',coordinate_scaling=.true.)
+                                donor_jinv_undef = ONE/det_3x3(donor_metric)
 
 
                             else 
@@ -531,35 +501,8 @@ contains
 
 
                             ! Compute metric terms for the point in the donor element
-                            d1dxi   = mesh%domain(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,1,donor_coord(1),donor_coord(2),donor_coord(3),scale=.true.)
-                            d2dxi   = mesh%domain(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,1,donor_coord(1),donor_coord(2),donor_coord(3),scale=.true.)
-                            d3dxi   = mesh%domain(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,1,donor_coord(1),donor_coord(2),donor_coord(3),scale=.true.)
-                            d1deta  = mesh%domain(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,2,donor_coord(1),donor_coord(2),donor_coord(3),scale=.true.)
-                            d2deta  = mesh%domain(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,2,donor_coord(1),donor_coord(2),donor_coord(3),scale=.true.)
-                            d3deta  = mesh%domain(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,2,donor_coord(1),donor_coord(2),donor_coord(3),scale=.true.)
-                            d1dzeta = mesh%domain(donor%idomain_l)%elems(donor%ielement_l)%metric_point(1,3,donor_coord(1),donor_coord(2),donor_coord(3),scale=.true.)
-                            d2dzeta = mesh%domain(donor%idomain_l)%elems(donor%ielement_l)%metric_point(2,3,donor_coord(1),donor_coord(2),donor_coord(3),scale=.true.)
-                            d3dzeta = mesh%domain(donor%idomain_l)%elems(donor%ielement_l)%metric_point(3,3,donor_coord(1),donor_coord(2),donor_coord(3),scale=.true.)
-
-
-                            ! Compute inverse element jacobian
-                            parallel_jinv_undef = (d1dxi*d2deta*d3dzeta - d1deta*d2dxi*d3dzeta - &
-                                                   d1dxi*d2dzeta*d3deta + d1dzeta*d2dxi*d3deta + &
-                                                   d1deta*d2dzeta*d3dxi - d1dzeta*d2deta*d3dxi)
-
-
-                            parallel_metric(1,1) = (d2deta*d3dzeta - d2dzeta*d3deta)
-                            parallel_metric(2,1) = (d2dzeta*d3dxi  - d2dxi*d3dzeta)
-                            parallel_metric(3,1) = (d2dxi*d3deta   - d2deta*d3dxi)
-                            parallel_metric(1,2) = (d1dzeta*d3deta - d1deta*d3dzeta)
-                            parallel_metric(2,2) = (d1dxi*d3dzeta  - d1dzeta*d3dxi)
-                            parallel_metric(3,2) = (d1deta*d3dxi   - d1dxi*d3deta)
-                            parallel_metric(1,3) = (d1deta*d2dzeta - d1dzeta*d2deta)
-                            parallel_metric(2,3) = (d1dzeta*d2dxi  - d1dxi*d2dzeta)
-                            parallel_metric(3,3) = (d1dxi*d2deta   - d1deta*d2dxi)
-
-                            ! Complete definition of metric by scaling by J
-                            parallel_metric = parallel_metric/parallel_jinv_undef
+                            parallel_metric = mesh%domain(donor%idomain_l)%elems(donor%ielement_l)%metric_point(donor_coord, coordinate_frame='Undeformed', coordinate_scaling=.true.)
+                            parallel_jinv_undef = ONE/det_3x3(parallel_metric)
 
                             ! Communicate metric and jacobian 
                             call MPI_Send(parallel_metric,    9,MPI_REAL8,iproc,0,ChiDG_COMM,ierr)
@@ -884,16 +827,10 @@ contains
             !
             ! Try to find donor (xi,eta,zeta) coordinates for receiver (xgq,ygq,zgq)
             !
-            gq_comp = mesh%domain(idomain_l)%elems(ielement_l)%computational_point(xgq,ygq,zgq)    ! Newton's method routine
+            gq_comp = mesh%domain(idomain_l)%elems(ielement_l)%computational_point([xgq,ygq,zgq])    ! Newton's method routine
             node_found = (any(ieee_is_nan(gq_comp)) .eqv. .false.)
 
-            ! Add donor if gq_comp point is valid
-            !
-            ! NOTE: the exit call here enforces that only one candidate is considered and others are thrown away. Maybe not the best choice.
-            !
-            !donor_found = (gq_comp%status == VALID_POINT)
-            !donor_found = (donor_status == VALID_POINT)
-
+            ! Add donor if gq_comp is valid
             if ( node_found ) then
                 ndonors = ndonors + 1
                 call donors%push_back(icandidate)
@@ -921,7 +858,6 @@ contains
             donor_element%ielement_l = 0
             donor_element%iproc      = NO_PROC
 
-            !donor_coordinate%status = INVALID_POINT
             donor_found = .false.
 
 
@@ -941,8 +877,6 @@ contains
             xi   = donors_xi%at(1)
             eta  = donors_eta%at(1)
             zeta = donors_zeta%at(1)
-            !call donor_coordinate%set(xi,eta,zeta)
-            !donor_coordinate%status = VALID_POINT
             donor_coordinate = [xi,eta,zeta]
             donor_found = .true.
             if (present(donor_volume)) donor_volume = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%vol
@@ -983,8 +917,6 @@ contains
             xi   = donors_xi%at(donor_index)
             eta  = donors_eta%at(donor_index)
             zeta = donors_zeta%at(donor_index)
-            !call donor_coordinate%set(xi,eta,zeta)
-            !donor_coordinate%status = VALID_POINT
             donor_coordinate = [xi,eta,zeta]
             donor_found = .true.
             if (present(donor_volume)) donor_volume = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%vol

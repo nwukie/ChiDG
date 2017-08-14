@@ -1,0 +1,35 @@
+!>  Test explicit 3x3 matrix inversion routine.
+!!
+!!  @author Nathan A. Wukie (AFRL)
+!!  @date   8/14/2017
+!!
+!!------------------------------------------------------------------
+@Test
+subroutine test_det_3x3()
+    use pfunit_mod
+    use mod_kinds,          only: rk
+    use mod_determinant,    only: det_3x3
+    
+    real(rk)    :: A(3,3), det_computed, det_expected, tol
+
+    tol = 1.e-4_rk
+
+    A = reshape([0.154796_rk, 0.833115_rk, 0.668913_rk, &
+                 0.963953_rk, 0.395079_rk, 0.737986_rk, &
+                 0.992443_rk, 0.204542_rk, 0.333033_rk], [3,3])
+
+    det_expected = .209341_rk
+
+    !
+    ! Call 'bisect' to find root between 1.1, and 2.1.
+    !
+    ! THIS IS BEING TESTED.
+    !
+    det_computed = det_3x3(A)
+
+    @assertEqual(det_expected, det_computed, tol)
+
+end subroutine test_det_3x3
+!*******************************************************************
+
+

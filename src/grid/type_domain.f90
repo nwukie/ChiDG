@@ -92,8 +92,6 @@ module type_domain
     contains
 
         procedure           :: init_geom                ! geometry init for elements and faces 
-        procedure           :: init_ale
-        procedure           :: update_ale
         procedure           :: init_sol                 ! init data depending on solution order for elements and faces
         procedure           :: init_eqn                 ! initialize the equation set identifier on the mesh
 
@@ -104,6 +102,10 @@ module type_domain
 
         procedure           :: init_comm_local          ! For faces, find proc-local neighbors, initialize face neighbor indices 
         procedure           :: init_comm_global         ! For faces, find neighbors across procs, initialize face neighbor indices
+
+        ! ALE
+        procedure, public   :: set_displacements_velocities
+        procedure           :: update_interpolations_ale
 
         ! Utilities
         procedure, private  :: find_neighbor_local      ! Try to find a neighbor for a particular face on the local processor
@@ -220,7 +222,7 @@ contains
     !!  TODO: Test
     !!
     !----------------------------------------------------------------------------------------
-    subroutine init_ale(self,dnodes,vnodes)
+    subroutine set_displacements_velocities(self,dnodes,vnodes)
         class(domain_t),        intent(inout)   :: self
         real(rk),               intent(in)      :: dnodes(:,:)
         real(rk),               intent(in)      :: vnodes(:,:)
@@ -228,11 +230,11 @@ contains
         integer(ik) :: ielem, iface
 
         do ielem = 1,self%nelem
-            call self%elems(ielem)%init_ale(dnodes,vnodes)
+            call self%elems(ielem)%set_displacements_velocities(dnodes,vnodes)
         end do !ielem
 
 
-    end subroutine init_ale
+    end subroutine set_displacements_velocities
     !*****************************************************************************************
 
 
@@ -245,14 +247,14 @@ contains
     !!  TODO: Test
     !!
     !----------------------------------------------------------------------------------------
-    subroutine update_ale(self)
+    subroutine update_interpolations_ale(self)
         class(domain_t),        intent(inout)   :: self
 
         integer(ik) :: ielem, iface
 
         do ielem = 1,self%nelem
 
-            call self%elems(ielem)%update_element_ale()
+            call self%elems(ielem)%update_interpolations_ale()
             do iface = 1,NFACES
                 call self%faces(ielem,iface)%update_face_ale(self%elems(ielem))
             end do !iface
@@ -260,7 +262,7 @@ contains
         end do !ielem
 
 
-    end subroutine update_ale
+    end subroutine update_interpolations_ale
     !*****************************************************************************************
 
 
@@ -307,7 +309,7 @@ contains
         call self%init_elems_sol(interpolation,level,nterms_s,neqns,ntime)
         call self%init_faces_sol()               
 
-        call self%update_ale()
+        call self%update_interpolations_ale()
         !
         ! Confirm initialization
         !

@@ -6,12 +6,10 @@ module type_face
                                       NO_INTERIOR_NEIGHBOR, NO_PROC,                    &
                                       ZERO, ONE, TWO, ORPHAN, NO_PMM_ASSIGNED, CARTESIAN, CYLINDRICAL
     use type_reference_element, only: reference_element_t
-
-    use type_point,             only: point_t
     use type_element,           only: element_t
-    use type_quadrature,        only: quadrature_t
     use type_densevector,       only: densevector_t
-    use mod_inv,                only: inv
+    use mod_inv,                only: inv, inv_3x3
+    use mod_determinant,        only: det_3x3
     use ieee_arithmetic,        only: ieee_is_nan
     implicit none
 
@@ -62,12 +60,12 @@ module type_face
 
 
         ! Neighbor information
-        integer(ik)             :: neighbor_location(5) = 0
-        integer(ik)             :: ineighbor_proc       = NO_PROC    ! MPI processor rank of the neighboring element
-        integer(ik)             :: ineighbor_domain_g   = 0          ! Global index of the neighboring element's domain
-        integer(ik)             :: ineighbor_domain_l   = 0          ! Processor-local index of the neighboring element's domain
-        integer(ik)             :: ineighbor_element_g  = 0          ! Domain-global index of the neighboring element
-        integer(ik)             :: ineighbor_element_l  = 0          ! Processor-local index of the neighboring element
+        integer(ik)             :: neighbor_location(5) = 0         ! [idomain_g, idomain_l, ielement_g, ielement_l, iface]
+        integer(ik)             :: ineighbor_proc       = NO_PROC   ! MPI processor rank of the neighboring element
+        integer(ik)             :: ineighbor_domain_g   = 0         ! Global index of the neighboring element's domain
+        integer(ik)             :: ineighbor_domain_l   = 0         ! Processor-local index of the neighboring element's domain
+        integer(ik)             :: ineighbor_element_g  = 0         ! Domain-global index of the neighboring element
+        integer(ik)             :: ineighbor_element_l  = 0         ! Processor-local index of the neighboring element
         integer(ik)             :: ineighbor_face       = 0
         integer(ik)             :: ineighbor_neqns      = 0
         integer(ik)             :: ineighbor_nterms_s   = 0
@@ -103,8 +101,8 @@ module type_face
         ! Geometry
         type(densevector_t)     :: coords               ! Modal expansion of coordinates 
         real(rk),   allocatable :: quad_pts(:,:)        ! Discrete coordinates at quadrature nodes
-        real(rk),   allocatable :: jinv_undef(:)
-        real(rk),   allocatable :: jinv_def(:)
+        real(rk),   allocatable :: jinv_undef(:)        ! Volume scaling: Undeformed/Reference
+        real(rk),   allocatable :: jinv_def(:)          ! Volume scaling: Deformed/Reference
         real(rk),   allocatable :: metric(:,:,:)        ! Face metric terms  : undeformed face
         real(rk),   allocatable :: norm(:,:)            ! Face normal vector : scaled by differential area : undeformed face
         real(rk),   allocatable :: unorm(:,:)           ! Face normal vector : unit length : undeformed face
@@ -213,8 +211,6 @@ contains
         integer(ik),        intent(in)              :: iface
         type(element_t),    intent(in)              :: elem
 
-
-
         !
         ! Set indices
         !
@@ -240,7 +236,11 @@ contains
         self%ineighbor_domain_l  = NO_INTERIOR_NEIGHBOR
         self%ineighbor_element_g = NO_INTERIOR_NEIGHBOR
         self%ineighbor_element_l = NO_INTERIOR_NEIGHBOR
+        self%ineighbor_face      = NO_INTERIOR_NEIGHBOR
         self%ineighbor_proc      = NO_PROC
+        self%neighbor_location = [self%ineighbor_domain_g, self%ineighbor_domain_l, &
+                                  self%ineighbor_element_g, self%ineighbor_element_l, &
+                                  self%ineighbor_face]
         
 
         !
@@ -265,10 +265,6 @@ contains
 
 
 
-
-
-
-
     !>  Initialize ALE data from nodal displacements.
     !!
     !!  @author Eric Wolf (AFRL)
@@ -285,6 +281,8 @@ contains
 
     end subroutine init_face_ale_coords 
     !**************************************************************************************
+
+
 
 
 
@@ -310,12 +308,10 @@ contains
 
 
 
-    !>
+    !>  Initialize neighbor location.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   6/10/2016
-    !!
-    !!
     !!
     !------------------------------------------------------------------------------------------
     subroutine init_neighbor(self,ftype,ineighbor_domain_g,ineighbor_domain_l,              &
@@ -344,18 +340,14 @@ contains
         self%ineighbor_nterms_s  = ineighbor_nterms_s
         self%ineighbor_proc      = ineighbor_proc
 
-        self%neighbor_location = [ineighbor_domain_g, ineighbor_domain_l, ineighbor_element_g, ineighbor_element_l, ineighbor_face]
+        self%neighbor_location = [ineighbor_domain_g,  ineighbor_domain_l,  &
+                                  ineighbor_element_g, ineighbor_element_l, &
+                                  ineighbor_face]
 
         self%neighborInitialized = .true.
 
     end subroutine init_neighbor
     !*******************************************************************************************
-
-
-
-
-
-
 
 
 
@@ -424,30 +416,30 @@ contains
 
 
         nnodes = self%basis_s%nnodes_if()
-        allocate(self%jinv_undef(nnodes),                           &
-                 self%jinv_def(nnodes),                             &
-                 self%quad_pts(nnodes,3),                           &
-                 self%metric(3,3,nnodes),                           &
-                 self%norm(nnodes,3),                               &
-                 self%unorm(nnodes,3),                              &
-                 self%unorm_def(nnodes,3),                          &
-                 self%ale_quad_pts(nnodes,3),                       &
-                 self%ale_Dinv(nnodes,3,3),                         &
-                 self%ale_g(nnodes),                                &
-                 self%ale_g_grad1(nnodes),                          &
-                 self%ale_g_grad2(nnodes),                          &
-                 self%ale_g_grad3(nnodes),                          &
-                 self%ale_g_modes(self%nterms_s),                   &
-                 self%ale_grid_vel(nnodes,3),                       &
-                 self%neighbor_ale_Dinv(nnodes,3,3),       &
+        allocate(self%jinv_undef(nnodes),               &
+                 self%jinv_def(nnodes),                 &
+                 self%quad_pts(nnodes,3),               &
+                 self%metric(3,3,nnodes),               &
+                 self%norm(nnodes,3),                   &
+                 self%unorm(nnodes,3),                  &
+                 self%unorm_def(nnodes,3),              &
+                 self%ale_quad_pts(nnodes,3),           &
+                 self%ale_Dinv(3,3,nnodes),             &
+                 self%ale_g(nnodes),                    &
+                 self%ale_g_grad1(nnodes),              &
+                 self%ale_g_grad2(nnodes),              &
+                 self%ale_g_grad3(nnodes),              &
+                 self%ale_g_modes(self%nterms_s),       &
+                 self%ale_grid_vel(nnodes,3),           &
+                 self%neighbor_ale_Dinv(3,3,nnodes),    &
                  self%neighbor_ale_g(nnodes),           &
                  self%neighbor_ale_g_grad1(nnodes),     &
                  self%neighbor_ale_g_grad2(nnodes),     &
                  self%neighbor_ale_g_grad3(nnodes),     &
-                 self%neighbor_ale_grid_vel(nnodes,3),                  &
-                 self%grad1(nnodes,self%nterms_s),                  &
-                 self%grad2(nnodes,self%nterms_s),                  &
-                 self%grad3(nnodes,self%nterms_s),                  &
+                 self%neighbor_ale_grid_vel(nnodes,3),  &
+                 self%grad1(nnodes,self%nterms_s),      &
+                 self%grad2(nnodes,self%nterms_s),      &
+                 self%grad3(nnodes,self%nterms_s),      &
                  stat=ierr)
         if (ierr /= 0) call AllocationError
 
@@ -500,101 +492,89 @@ contains
     subroutine compute_quadrature_metrics(self)
         class(face_t),  intent(inout)   :: self
 
-        integer(ik)                 :: inode, iface, nnodes, ierr
-        character(:),   allocatable :: coordinate_system
+        integer(ik)                 :: inode, nnodes, ierr
+        character(:),   allocatable :: coordinate_system, user_msg
 
-        real(rk),   dimension(:),   allocatable ::  &
-            d1dxi, d1deta, d1dzeta,                 &
-            d2dxi, d2deta, d2dzeta,                 &
-            d3dxi, d3deta, d3dzeta,                 &
-            scaling_12, scaling_13, scaling_23, scaling_123, &
-            weights
+        real(rk),   dimension(:),       allocatable :: scaling_row2, weights
+        real(rk),   dimension(:,:),     allocatable :: val, ddxi, ddeta, ddzeta
+        real(rk),   dimension(:,:,:),   allocatable :: jacobian
 
-        real(rk),   dimension(:,:), allocatable :: val, ddxi, ddeta, ddzeta
 
-        iface  = self%iface
         nnodes  = self%basis_c%nnodes_if()
         weights = self%basis_c%weights()
+
         val     = self%basis_c%interpolator('Value', self%iface)
         ddxi    = self%basis_c%interpolator('ddxi',  self%iface)
         ddeta   = self%basis_c%interpolator('ddeta', self%iface)
         ddzeta  = self%basis_c%interpolator('ddzeta',self%iface)
 
         !
-        ! Evaluate directional derivatives of coordinates at quadrature nodes.
+        ! Compute element jacobian matrix at interpolation nodes
         !
-        d1dxi   = matmul(ddxi,   self%coords%getvar(1,itime = 1))
-        d1deta  = matmul(ddeta,  self%coords%getvar(1,itime = 1))
-        d1dzeta = matmul(ddzeta, self%coords%getvar(1,itime = 1))
+        allocate(jacobian(3,3,nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        jacobian(1,1,:) = matmul(ddxi,   self%coords%getvar(1,itime = 1))
+        jacobian(1,2,:) = matmul(ddeta,  self%coords%getvar(1,itime = 1))
+        jacobian(1,3,:) = matmul(ddzeta, self%coords%getvar(1,itime = 1))
 
-        d2dxi   = matmul(ddxi,   self%coords%getvar(2,itime = 1))
-        d2deta  = matmul(ddeta,  self%coords%getvar(2,itime = 1))
-        d2dzeta = matmul(ddzeta, self%coords%getvar(2,itime = 1))
+        jacobian(2,1,:) = matmul(ddxi,   self%coords%getvar(2,itime = 1))
+        jacobian(2,2,:) = matmul(ddeta,  self%coords%getvar(2,itime = 1))
+        jacobian(2,3,:) = matmul(ddzeta, self%coords%getvar(2,itime = 1))
 
-        d3dxi   = matmul(ddxi,   self%coords%getvar(3,itime = 1))
-        d3deta  = matmul(ddeta,  self%coords%getvar(3,itime = 1))
-        d3dzeta = matmul(ddzeta, self%coords%getvar(3,itime = 1))
-
+        jacobian(3,1,:) = matmul(ddxi,   self%coords%getvar(3,itime = 1))
+        jacobian(3,2,:) = matmul(ddeta,  self%coords%getvar(3,itime = 1))
+        jacobian(3,3,:) = matmul(ddzeta, self%coords%getvar(3,itime = 1))
 
 
         !
-        ! Define area/volume scaling for coordinate system
-        !   Cartesian:
-        !       12 = x-y  ;  13 = x-z  ;  23 = y-z
+        ! Add coordinate system scaling to jacobian matrix
         !
-        !   Cylindrical
-        !       12 = r-theta  ;  13 = r-z      ;  23 = theta-z
-        !
-        allocate(scaling_12(nnodes), scaling_13(nnodes), scaling_23(nnodes), scaling_123(nnodes), stat=ierr)
+        allocate(scaling_row2(nnodes), stat=ierr)
         if (ierr /= 0) call AllocationError
 
         select case (self%coordinate_system)
             case (CARTESIAN)
-                scaling_12  = ONE
-                scaling_13  = ONE
-                scaling_23  = ONE
-                scaling_123 = ONE
+                scaling_row2 = ONE
             case (CYLINDRICAL)
-                scaling_12  = self%quad_pts(:,1)
-                scaling_13  = ONE
-                scaling_23  = self%quad_pts(:,1)
-                scaling_123 = self%quad_pts(:,1)
+                scaling_row2 = self%quad_pts(:,1)
             case default
-                call chidg_signal_one(FATAL,"face%compute_quadrature_metrics: Invalid coordinate system. Choose 'Cartesian' or 'Cylindrical'.",self%coordinate_system)
+                user_msg = "face%compute_quadrature_metrics: Invalid coordinate system."
+                call chidg_signal(FATAL,user_msg)
         end select
 
+
         !
-        ! compute inverse cell mapping jacobian terms
+        ! Apply coorindate system scaling
         !
-        self%jinv_undef= scaling_123 * (d1dxi*d2deta*d3dzeta - d1deta*d2dxi*d3dzeta - &
-                                        d1dxi*d2dzeta*d3deta + d1dzeta*d2dxi*d3deta + &
-                                        d1deta*d2dzeta*d3dxi - d1dzeta*d2deta*d3dxi)
+        jacobian(2,1,:) = jacobian(2,1,:)*scaling_row2
+        jacobian(2,2,:) = jacobian(2,2,:)*scaling_row2
+        jacobian(2,3,:) = jacobian(2,3,:)*scaling_row2
 
 
 
         !
-        ! At each quadrature node, compute metric terms.
+        ! Compute inverse cell mapping jacobian
         !
         do inode = 1,nnodes
-            self%metric(1,1,inode) = ONE/self%jinv_undef(inode) * scaling_23(inode) * (d2deta(inode)*d3dzeta(inode) - d2dzeta(inode)*d3deta(inode))
-            self%metric(2,1,inode) = ONE/self%jinv_undef(inode) * scaling_23(inode) * (d2dzeta(inode)*d3dxi(inode)  - d2dxi(inode)*d3dzeta(inode) )
-            self%metric(3,1,inode) = ONE/self%jinv_undef(inode) * scaling_23(inode) * (d2dxi(inode)*d3deta(inode)   - d2deta(inode)*d3dxi(inode)  )
-
-            self%metric(1,2,inode) = ONE/self%jinv_undef(inode) * scaling_13(inode) * (d1dzeta(inode)*d3deta(inode) - d1deta(inode)*d3dzeta(inode))
-            self%metric(2,2,inode) = ONE/self%jinv_undef(inode) * scaling_13(inode) * (d1dxi(inode)*d3dzeta(inode)  - d1dzeta(inode)*d3dxi(inode) )
-            self%metric(3,2,inode) = ONE/self%jinv_undef(inode) * scaling_13(inode) * (d1deta(inode)*d3dxi(inode)   - d1dxi(inode)*d3deta(inode)  )
-
-            self%metric(1,3,inode) = ONE/self%jinv_undef(inode) * scaling_12(inode) * (d1deta(inode)*d2dzeta(inode) - d1dzeta(inode)*d2deta(inode))
-            self%metric(2,3,inode) = ONE/self%jinv_undef(inode) * scaling_12(inode) * (d1dzeta(inode)*d2dxi(inode)  - d1dxi(inode)*d2dzeta(inode) )
-            self%metric(3,3,inode) = ONE/self%jinv_undef(inode) * scaling_12(inode) * (d1dxi(inode)*d2deta(inode)   - d1deta(inode)*d2dxi(inode)  )
+            self%jinv_undef(inode) = det_3x3(jacobian(:,:,inode))
         end do
-
 
 
         !
         ! Check for negative jacobians
         !
-        if (any(self%jinv_undef < ZERO)) call chidg_signal(FATAL,"face%compute_quadrature_metrics: Negative element volumes detected. Check element quality and orientation.")
+        user_msg = "face%compute_quadrature_metrics: Negative element &
+                    volume detected. Check element quality and orientation."
+        if (any(self%jinv_undef < ZERO)) call chidg_signal(FATAL,user_msg)
+
+
+
+        !
+        ! Invert jacobian matrix at each interpolation node
+        !
+        do inode = 1,nnodes
+            self%metric(:,:,inode) = inv_3x3(jacobian(:,:,inode))
+        end do
 
 
 
@@ -627,73 +607,13 @@ contains
     subroutine compute_quadrature_normals(self)
         class(face_t),  intent(inout)   :: self
 
-        integer(ik)                 :: inode, iface, nnodes, ierr
-        character(:),   allocatable :: coordinate_system
-
-        real(rk),   dimension(:),   allocatable ::              &
-            d1dxi, d1deta, d1dzeta,                             &
-            d2dxi, d2deta, d2dzeta,                             &
-            d3dxi, d3deta, d3dzeta,                             &
-            scaling_12, scaling_13, scaling_23, scaling_123,    &
-            norm_mag, weights
-
-        real(rk),   dimension(:,:),   allocatable ::  &
-            val, ddxi, ddeta, ddzeta
+        integer(ik)                                 :: inode, nnodes, ierr
+        character(:),   allocatable                 :: coordinate_system, user_msg
+        real(rk),       allocatable, dimension(:)   :: norm_mag, weights
 
 
-        iface   = self%iface
         nnodes  = self%basis_c%nnodes_if()
-        weights = self%basis_c%weights(iface)
-        val     = self%basis_c%interpolator('Value', iface)
-        ddxi    = self%basis_c%interpolator('ddxi',  iface)
-        ddeta   = self%basis_c%interpolator('ddeta', iface)
-        ddzeta  = self%basis_c%interpolator('ddzeta',iface)
-
-
-        
-        !
-        ! Evaluate directional derivatives of coordinates at quadrature nodes.
-        !
-        d1dxi   = matmul(ddxi,   self%coords%getvar(1,itime=1))
-        d1deta  = matmul(ddeta,  self%coords%getvar(1,itime=1))
-        d1dzeta = matmul(ddzeta, self%coords%getvar(1,itime=1))
-
-        d2dxi   = matmul(ddxi,   self%coords%getvar(2,itime=1))
-        d2deta  = matmul(ddeta,  self%coords%getvar(2,itime=1))
-        d2dzeta = matmul(ddzeta, self%coords%getvar(2,itime=1))
-
-        d3dxi   = matmul(ddxi,   self%coords%getvar(3,itime=1))
-        d3deta  = matmul(ddeta,  self%coords%getvar(3,itime=1))
-        d3dzeta = matmul(ddzeta, self%coords%getvar(3,itime=1))
-
-
-
-        !
-        ! Define area/volume scaling for coordinate system
-        !   Cartesian:
-        !       12 = x-y  ;  13 = x-z  ;  23 = y-z
-        !
-        !   Cylindrical
-        !       12 = r-theta  ;  13 = r-z      ;  23 = theta-z
-        !
-        allocate(scaling_12(nnodes), scaling_13(nnodes), scaling_23(nnodes), scaling_123(nnodes), stat=ierr)
-        if (ierr /= 0) call AllocationError
-
-        select case (self%coordinate_system)
-            case (CARTESIAN)
-                scaling_12  = ONE
-                scaling_13  = ONE
-                scaling_23  = ONE
-                scaling_123 = ONE
-            case (CYLINDRICAL)
-                scaling_12  = self%quad_pts(:,1)
-                scaling_13  = ONE
-                scaling_23  = self%quad_pts(:,1)
-                scaling_123 = self%quad_pts(:,1)
-            case default
-                call chidg_signal(FATAL,"face%compute_quadrature_normals: Invalid coordinate system. Choose 'Cartesian' or 'Cylindrical'.")
-        end select
-
+        weights = self%basis_c%weights(self%iface)
 
 
         !
@@ -701,33 +621,24 @@ contains
         !
         select case (self%iface)
             case (XI_MIN, XI_MAX)
-
-                do inode = 1,nnodes
-                    self%norm(inode,XI_DIR)   = scaling_23(inode)*d2deta(inode)*d3dzeta(inode) - scaling_23(inode)*d2dzeta(inode)*d3deta(inode)
-                    self%norm(inode,ETA_DIR)  = scaling_13(inode)*d1dzeta(inode)*d3deta(inode) - scaling_13(inode)*d1deta(inode)*d3dzeta(inode)
-                    self%norm(inode,ZETA_DIR) = scaling_12(inode)*d1deta(inode)*d2dzeta(inode) - scaling_12(inode)*d1dzeta(inode)*d2deta(inode)
-                end do
+                self%norm(:,XI_DIR)   = self%jinv_undef(:)*self%metric(1,1,:)
+                self%norm(:,ETA_DIR)  = self%jinv_undef(:)*self%metric(1,2,:)
+                self%norm(:,ZETA_DIR) = self%jinv_undef(:)*self%metric(1,3,:)
 
             case (ETA_MIN, ETA_MAX)
-
-                do inode = 1,nnodes
-                    self%norm(inode,XI_DIR)   = scaling_23(inode)*d2dzeta(inode)*d3dxi(inode)  - scaling_23(inode)*d2dxi(inode)*d3dzeta(inode)
-                    self%norm(inode,ETA_DIR)  = scaling_13(inode)*d1dxi(inode)*d3dzeta(inode)  - scaling_13(inode)*d1dzeta(inode)*d3dxi(inode)
-                    self%norm(inode,ZETA_DIR) = scaling_12(inode)*d1dzeta(inode)*d2dxi(inode)  - scaling_12(inode)*d1dxi(inode)*d2dzeta(inode)
-                end do
+                self%norm(:,XI_DIR)   = self%jinv_undef(:)*self%metric(2,1,:)
+                self%norm(:,ETA_DIR)  = self%jinv_undef(:)*self%metric(2,2,:)
+                self%norm(:,ZETA_DIR) = self%jinv_undef(:)*self%metric(2,3,:)
 
             case (ZETA_MIN, ZETA_MAX)
-
-                do inode = 1,nnodes
-                    self%norm(inode,XI_DIR)   = scaling_23(inode)*d2dxi(inode)*d3deta(inode)   - scaling_23(inode)*d3dxi(inode)*d2deta(inode)
-                    self%norm(inode,ETA_DIR)  = scaling_13(inode)*d3dxi(inode)*d1deta(inode)   - scaling_13(inode)*d1dxi(inode)*d3deta(inode)
-                    self%norm(inode,ZETA_DIR) = scaling_12(inode)*d1dxi(inode)*d2deta(inode)   - scaling_12(inode)*d2dxi(inode)*d1deta(inode)
-                end do
+                self%norm(:,XI_DIR)   = self%jinv_undef(:)*self%metric(3,1,:)
+                self%norm(:,ETA_DIR)  = self%jinv_undef(:)*self%metric(3,2,:)
+                self%norm(:,ZETA_DIR) = self%jinv_undef(:)*self%metric(3,3,:)
 
             case default
-                call chidg_signal(FATAL,"face%compute_quadrature_normals: Invalid face index in face initialization.")
+                user_msg = "face%compute_quadrature_normals: Invalid face index in face initialization."
+                call chidg_signal(FATAL,user_msg)
         end select
-
 
         
         !
@@ -745,8 +656,8 @@ contains
         ! Compute unit normals
         !
         norm_mag = sqrt(self%norm(:,XI_DIR)**TWO + self%norm(:,ETA_DIR)**TWO + self%norm(:,ZETA_DIR)**TWO)
-        self%unorm(:,XI_DIR)   = self%norm(:,XI_DIR)/norm_mag
-        self%unorm(:,ETA_DIR)  = self%norm(:,ETA_DIR)/norm_mag
+        self%unorm(:,XI_DIR)   = self%norm(:,XI_DIR  )/norm_mag
+        self%unorm(:,ETA_DIR)  = self%norm(:,ETA_DIR )/norm_mag
         self%unorm(:,ZETA_DIR) = self%norm(:,ZETA_DIR)/norm_mag
 
 
@@ -791,75 +702,15 @@ contains
     subroutine compute_quadrature_normals_ale(self)
         class(face_t),  intent(inout)   :: self
 
-        integer(ik)                 :: inode, iface, nnodes, ierr
-        character(:),   allocatable :: coordinate_system
+        integer(ik)                 :: inode, nnodes, ierr
+        character(:),   allocatable :: coordinate_system, user_msg
 
-        real(rk),   dimension(:),   allocatable ::              &
-            d1dxi, d1deta, d1dzeta,                             &
-            d2dxi, d2deta, d2dzeta,                             &
-            d3dxi, d3deta, d3dzeta,                             &
-            scaling_12, scaling_13, scaling_23, scaling_123,    &
-            norm_mag 
-
-        real(rk),   dimension(:,:),   allocatable ::  &
-            ddxi, ddeta, ddzeta, norm
+        real(rk)                                :: metric_ale(3,3)
+        real(rk),   dimension(:),   allocatable ::  norm_mag 
+        real(rk),   dimension(:,:), allocatable ::  norm
 
 
-        iface   = self%iface
         nnodes  = self%basis_c%nnodes_if()
-        ddxi    = self%basis_c%interpolator('ddxi',  iface)
-        ddeta   = self%basis_c%interpolator('ddeta', iface)
-        ddzeta  = self%basis_c%interpolator('ddzeta',iface)
-
-
-        
-        !
-        ! Evaluate directional derivatives of coordinates at quadrature nodes.
-        !
-        d1dxi   = matmul(ddxi,   self%ale_coords%getvar(1,itime=1))
-        d1deta  = matmul(ddeta,  self%ale_coords%getvar(1,itime=1))
-        d1dzeta = matmul(ddzeta, self%ale_coords%getvar(1,itime=1))
-
-        d2dxi   = matmul(ddxi,   self%ale_coords%getvar(2,itime=1))
-        d2deta  = matmul(ddeta,  self%ale_coords%getvar(2,itime=1))
-        d2dzeta = matmul(ddzeta, self%ale_coords%getvar(2,itime=1))
-
-        d3dxi   = matmul(ddxi,   self%ale_coords%getvar(3,itime=1))
-        d3deta  = matmul(ddeta,  self%ale_coords%getvar(3,itime=1))
-        d3dzeta = matmul(ddzeta, self%ale_coords%getvar(3,itime=1))
-
-
-
-        !
-        ! Define area/volume scaling for coordinate system
-        !   Cartesian:
-        !       12 = x-y  ;  13 = x-z  ;  23 = y-z
-        !
-        !   Cylindrical
-        !       12 = r-theta  ;  13 = r-z      ;  23 = theta-z
-        !
-        allocate(scaling_12(nnodes), scaling_13(nnodes), scaling_23(nnodes), scaling_123(nnodes), stat=ierr)
-        if (ierr /= 0) call AllocationError
-
-        !
-        ! TODO: CHECK ALE SCALING
-        !
-        select case (self%coordinate_system)
-            case (CARTESIAN)
-                scaling_12  = ONE
-                scaling_13  = ONE
-                scaling_23  = ONE
-                scaling_123 = ONE
-            case (CYLINDRICAL)
-                scaling_12  = self%quad_pts(:,1)
-                scaling_13  = ONE
-                scaling_23  = self%quad_pts(:,1)
-                scaling_123 = self%quad_pts(:,1)
-            case default
-                call chidg_signal(FATAL,"face%compute_quadrature_normals_ale: Invalid coordinate system. Choose 'Cartesian' or 'Cylindrical'.")
-        end select
-
-
 
         !
         ! Compute normal vectors for each face
@@ -867,42 +718,43 @@ contains
         allocate(norm(nnodes,3), stat=ierr)
         if (ierr /= 0) call AllocationError
 
+        do inode = 1,nnodes
 
-        select case (self%iface)
-            case (XI_MIN, XI_MAX)
+            ! Compute metric_ale: 
+            !   dxi/dx = [Dinv]*[dxi/dX]
+            !   dxi/dx = [dX/dx]*[dxi/dX]
+            metric_ale = matmul(self%ale_Dinv(:,:,inode),self%metric(:,:,inode))
 
-                do inode = 1,nnodes
-                    norm(inode,XI_DIR)   = scaling_23(inode)*d2deta(inode)*d3dzeta(inode) - scaling_23(inode)*d2dzeta(inode)*d3deta(inode)
-                    norm(inode,ETA_DIR)  = scaling_13(inode)*d1dzeta(inode)*d3deta(inode) - scaling_13(inode)*d1deta(inode)*d3dzeta(inode)
-                    norm(inode,ZETA_DIR) = scaling_12(inode)*d1deta(inode)*d2dzeta(inode) - scaling_12(inode)*d1dzeta(inode)*d2deta(inode)
-                end do
+            select case (self%iface)
+                case (XI_MIN, XI_MAX)
+                    norm(inode,XI_DIR)   = self%jinv_def(inode)*metric_ale(1,1)
+                    norm(inode,ETA_DIR)  = self%jinv_def(inode)*metric_ale(1,2)
+                    norm(inode,ZETA_DIR) = self%jinv_def(inode)*metric_ale(1,3)
 
-            case (ETA_MIN, ETA_MAX)
+                case (ETA_MIN, ETA_MAX)
+                    norm(inode,XI_DIR)   = self%jinv_def(inode)*metric_ale(2,1)
+                    norm(inode,ETA_DIR)  = self%jinv_def(inode)*metric_ale(2,2)
+                    norm(inode,ZETA_DIR) = self%jinv_def(inode)*metric_ale(2,3)
 
-                do inode = 1,nnodes
-                    norm(inode,XI_DIR)   = scaling_23(inode)*d2dzeta(inode)*d3dxi(inode)  - scaling_23(inode)*d2dxi(inode)*d3dzeta(inode)
-                    norm(inode,ETA_DIR)  = scaling_13(inode)*d1dxi(inode)*d3dzeta(inode)  - scaling_13(inode)*d1dzeta(inode)*d3dxi(inode)
-                    norm(inode,ZETA_DIR) = scaling_12(inode)*d1dzeta(inode)*d2dxi(inode)  - scaling_12(inode)*d1dxi(inode)*d2dzeta(inode)
-                end do
+                case (ZETA_MIN, ZETA_MAX)
+                    norm(inode,XI_DIR)   = self%jinv_def(inode)*metric_ale(3,1)
+                    norm(inode,ETA_DIR)  = self%jinv_def(inode)*metric_ale(3,2)
+                    norm(inode,ZETA_DIR) = self%jinv_def(inode)*metric_ale(3,3)
 
-            case (ZETA_MIN, ZETA_MAX)
+                case default
+                    user_msg = "face%compute_quadrature_normals_ale: Invalid face index in face initialization."
+                    call chidg_signal(FATAL,user_msg)
+            end select
 
-                do inode = 1,nnodes
-                    norm(inode,XI_DIR)   = scaling_23(inode)*d2dxi(inode)*d3deta(inode)   - scaling_23(inode)*d3dxi(inode)*d2deta(inode)
-                    norm(inode,ETA_DIR)  = scaling_13(inode)*d3dxi(inode)*d1deta(inode)   - scaling_13(inode)*d1dxi(inode)*d3deta(inode)
-                    norm(inode,ZETA_DIR) = scaling_12(inode)*d1dxi(inode)*d2deta(inode)   - scaling_12(inode)*d2dxi(inode)*d1deta(inode)
-                end do
-
-            case default
-                call chidg_signal(FATAL,"face%compute_quadrature_normals_ale: Invalid face index in face initialization.")
-        end select
-
+        end do
 
         
         !
         ! Reverse normal vectors for faces XI_MIN,ETA_MIN,ZETA_MIN
         !
-        if (self%iface == XI_MIN .or. self%iface == ETA_MIN .or. self%iface == ZETA_MIN) then
+        if (self%iface == XI_MIN   .or. &
+            self%iface == ETA_MIN  .or. &
+            self%iface == ZETA_MIN) then
             norm(:,XI_DIR)   = -norm(:,XI_DIR)
             norm(:,ETA_DIR)  = -norm(:,ETA_DIR)
             norm(:,ZETA_DIR) = -norm(:,ZETA_DIR)
@@ -914,8 +766,8 @@ contains
         ! Compute vector magnitude, which is the differential area
         !
         norm_mag = sqrt(norm(:,XI_DIR)**TWO + norm(:,ETA_DIR)**TWO + norm(:,ZETA_DIR)**TWO)
-        self%unorm_def(:,XI_DIR)   = norm(:,XI_DIR)/norm_mag
-        self%unorm_def(:,ETA_DIR)  = norm(:,ETA_DIR)/norm_mag
+        self%unorm_def(:,XI_DIR)   = norm(:,XI_DIR  )/norm_mag
+        self%unorm_def(:,ETA_DIR)  = norm(:,ETA_DIR )/norm_mag
         self%unorm_def(:,ZETA_DIR) = norm(:,ZETA_DIR)/norm_mag
 
 
@@ -1231,134 +1083,118 @@ contains
     subroutine compute_quadrature_metrics_ale(self)
         class(face_t),  intent(inout)   :: self
 
-        integer(ik)                 :: inode, iface, ierr, nnodes
-
-        character(:),   allocatable :: coordinate_system
+        integer(ik)                 :: inode, nnodes, ierr
+        character(:),   allocatable :: coordinate_system, user_msg
 
         real(rk),   dimension(:),   allocatable ::                  &
-            d1dxi_ale, d1deta_ale, d1dzeta_ale,                     &
-            d2dxi_ale, d2deta_ale, d2dzeta_ale,                     &
-            d3dxi_ale, d3deta_ale, d3dzeta_ale,                     &
             dd1_dxidxi,   dd1_detadeta,   dd1_dzetadzeta,           &
             dd2_dxidxi,   dd2_detadeta,   dd2_dzetadzeta,           &
             dd3_dxidxi,   dd3_detadeta,   dd3_dzetadzeta,           &
             dd1_dxideta,  dd1_dxidzeta,   dd1_detadzeta,            &
             dd2_dxideta,  dd2_dxidzeta,   dd2_detadzeta,            &
             dd3_dxideta,  dd3_dxidzeta,   dd3_detadzeta,            &
-            scaling_12, scaling_13, scaling_23, scaling_123,        &
             jinv_undef_grad1, jinv_undef_grad2, jinv_undef_grad3,   &
             jinv_def_grad1,   jinv_def_grad2,   jinv_def_grad3,     &
-            ale_g_ddxi, ale_g_ddeta, ale_g_ddzeta
+            ale_g_ddxi, ale_g_ddeta, ale_g_ddzeta, scaling_row2
 
         real(rk),   dimension(:,:), allocatable ::  &
-            val,                                    &
-            ddxi,    ddeta,    ddzeta,              &
+            val, ddxi,    ddeta,    ddzeta,         &
             dxidxi,  detadeta, dzetadzeta,          &
             dxideta, dxidzeta, detadzeta, D_matrix
 
-        real(rk), dimension(:,:,:), allocatable ::  &
-            jacobian_ale
+        real(rk), dimension(:,:,:), allocatable :: jacobian_ale
 
 
         !
         ! Retrieve interpolators
         !
-        iface   = self%iface
-        nnodes  = self%basis_c%nnodes_if()
-        ddxi    = self%basis_c%interpolator('ddxi',iface)
-        ddeta   = self%basis_c%interpolator('ddeta',iface)
-        ddzeta  = self%basis_c%interpolator('ddzeta',iface)
+        nnodes     = self%basis_c%nnodes_if()
 
-        dxidxi     = self%basis_c%interpolator('dxidxi',iface)
-        detadeta   = self%basis_c%interpolator('detadeta',iface)
-        dzetadzeta = self%basis_c%interpolator('dzetadzeta',iface)
+        ddxi       = self%basis_c%interpolator('ddxi',      self%iface)
+        ddeta      = self%basis_c%interpolator('ddeta',     self%iface)
+        ddzeta     = self%basis_c%interpolator('ddzeta',    self%iface)
 
-        dxideta    = self%basis_c%interpolator('dxideta',iface)
-        dxidzeta   = self%basis_c%interpolator('dxidzeta',iface)
-        detadzeta  = self%basis_c%interpolator('detadzeta',iface)
+        dxidxi     = self%basis_c%interpolator('dxidxi',    self%iface)
+        detadeta   = self%basis_c%interpolator('detadeta',  self%iface)
+        dzetadzeta = self%basis_c%interpolator('dzetadzeta',self%iface)
 
+        dxideta    = self%basis_c%interpolator('dxideta',   self%iface)
+        dxidzeta   = self%basis_c%interpolator('dxidzeta',  self%iface)
+        detadzeta  = self%basis_c%interpolator('detadzeta', self%iface)
 
-
-        ! First derivatives
-        d1dxi_ale   = matmul(ddxi,  self%ale_coords%getvar(1,itime = 1))
-        d1deta_ale  = matmul(ddeta, self%ale_coords%getvar(1,itime = 1))
-        d1dzeta_ale = matmul(ddzeta,self%ale_coords%getvar(1,itime = 1))
-
-        d2dxi_ale   = matmul(ddxi,  self%ale_coords%getvar(2,itime = 1))
-        d2deta_ale  = matmul(ddeta, self%ale_coords%getvar(2,itime = 1))
-        d2dzeta_ale = matmul(ddzeta,self%ale_coords%getvar(2,itime = 1))
-
-        d3dxi_ale   = matmul(ddxi,  self%ale_coords%getvar(3,itime = 1))
-        d3deta_ale  = matmul(ddeta, self%ale_coords%getvar(3,itime = 1))
-        d3dzeta_ale = matmul(ddzeta,self%ale_coords%getvar(3,itime = 1))
 
         !
-        ! Define area/volume scaling for coordinate system
-        !   Cartesian:
-        !       12 = x-y  ;  13 = x-z  ;  23 = y-z
+        ! Compute coordinate jacobian matrix at interpolation nodes
         !
-        !   Cylindrical
-        !       12 = r-theta  ;  13 = r-z      ;  23 = theta-z
+        allocate(jacobian_ale(3,3,nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        jacobian_ale(1,1,:) = matmul(ddxi,   self%ale_coords%getvar(1,itime = 1))
+        jacobian_ale(1,2,:) = matmul(ddeta,  self%ale_coords%getvar(1,itime = 1))
+        jacobian_ale(1,3,:) = matmul(ddzeta, self%ale_coords%getvar(1,itime = 1))
+
+        jacobian_ale(2,1,:) = matmul(ddxi,   self%ale_coords%getvar(2,itime = 1))
+        jacobian_ale(2,2,:) = matmul(ddeta,  self%ale_coords%getvar(2,itime = 1))
+        jacobian_ale(2,3,:) = matmul(ddzeta, self%ale_coords%getvar(2,itime = 1))
+
+        jacobian_ale(3,1,:) = matmul(ddxi,   self%ale_coords%getvar(3,itime = 1))
+        jacobian_ale(3,2,:) = matmul(ddeta,  self%ale_coords%getvar(3,itime = 1))
+        jacobian_ale(3,3,:) = matmul(ddzeta, self%ale_coords%getvar(3,itime = 1))
+
+
+
         !
-        allocate(scaling_12(nnodes), scaling_13(nnodes), scaling_23(nnodes), scaling_123(nnodes), stat=ierr)
+        ! Add coordinate system scaling to jacobian matrix
+        !
+        allocate(scaling_row2(nnodes), stat=ierr)
         if (ierr /= 0) call AllocationError
 
-        !
-        ! TODO: CHECK ALE SCALING
-        !
         select case (self%coordinate_system)
             case (CARTESIAN)
-                scaling_12  = ONE
-                scaling_13  = ONE
-                scaling_23  = ONE
-                scaling_123 = ONE
+                scaling_row2 = ONE
             case (CYLINDRICAL)
-                scaling_12  = self%quad_pts(:,1)
-                scaling_13  = ONE
-                scaling_23  = self%quad_pts(:,1)
-                scaling_123 = self%quad_pts(:,1)
+                scaling_row2 = self%ale_quad_pts(:,1)
             case default
-                call chidg_signal(FATAL,"element%compute_quadrature_metrics_ale: Invalid coordinate system. Choose 'Cartesian' or 'Cylindrical'.")
+                user_msg = "element%compute_quadrature_metrics_ale: Invalid coordinate system."
+                call chidg_signal(FATAL,user_msg)
         end select
+
+
+        !
+        ! Apply coorindate system scaling
+        !
+        jacobian_ale(2,1,:) = jacobian_ale(2,1,:)*scaling_row2
+        jacobian_ale(2,2,:) = jacobian_ale(2,2,:)*scaling_row2
+        jacobian_ale(2,3,:) = jacobian_ale(2,3,:)*scaling_row2
+
 
 
         !
         ! Compute inverse cell mapping jacobian
         !
-        self%jinv_def = scaling_123*(d1dxi_ale*d2deta_ale*d3dzeta_ale  -  d1deta_ale*d2dxi_ale*d3dzeta_ale - &
-                                     d1dxi_ale*d2dzeta_ale*d3deta_ale  +  d1dzeta_ale*d2dxi_ale*d3deta_ale + &
-                                     d1deta_ale*d2dzeta_ale*d3dxi_ale  -  d1dzeta_ale*d2deta_ale*d3dxi_ale)
+        do inode = 1,nnodes
+            self%jinv_def(inode) = det_3x3(jacobian_ale(:,:,inode))
+        end do
+
 
         !
         ! Check for negative jacobians
         !
-        if (any(self%jinv_def < ZERO)) call chidg_signal(FATAL,"element%compute_quadrature_metrics_ale: Negative element jacobians. Check element quality and orientation.")
+        user_msg = "face%compute_quadrature_metrics_ale: Negative element jacobians. &
+                    Check element quality and origntation."
+        if (any(self%jinv_def < ZERO)) call chidg_signal(FATAL,user_msg)
 
 
-        allocate(jacobian_ale(nnodes,3,3))
+        !
+        ! Compute element deformation gradient: dX/dx
+        !   dX/dx = [dxi/dx][dX/dxi]
+        !
         do inode = 1,nnodes
-
-            jacobian_ale(inode,1,1) = d1dxi_ale(inode)
-            jacobian_ale(inode,1,2) = d1deta_ale(inode)
-            jacobian_ale(inode,1,3) = d1dzeta_ale(inode)
-                                  
-            jacobian_ale(inode,2,1) = d2dxi_ale(inode)
-            jacobian_ale(inode,2,2) = d2deta_ale(inode)
-            jacobian_ale(inode,2,3) = d2dzeta_ale(inode)
-                                  
-            jacobian_ale(inode,3,1) = d3dxi_ale(inode)
-            jacobian_ale(inode,3,2) = d3deta_ale(inode)
-            jacobian_ale(inode,3,3) = d3dzeta_ale(inode)
-
-
-            D_matrix = matmul(jacobian_ale(inode,:,:),self%metric(:,:,inode))
-            self%ale_Dinv(inode,:,:) = inv(D_matrix)
-
+            D_matrix = matmul(jacobian_ale(:,:,inode),self%metric(:,:,inode))
+            self%ale_Dinv(:,:,inode) = inv(D_matrix)
 
             ! Invert jacobian_matrix_ale for use in computing grad(jinv_ale)
-            jacobian_ale(inode,:,:) = inv(jacobian_ale(inode,:,:))
-
-        end do
+            jacobian_ale(:,:,inode) = inv(jacobian_ale(:,:,inode))
+        end do !inode
 
 
 
@@ -1421,17 +1257,17 @@ contains
 
 
 
-        jinv_def_grad1 = dd1_dxidxi*jacobian_ale(:,1,1)    +  dd1_dxideta*jacobian_ale(:,2,1)    +  dd1_dxidzeta*jacobian_ale(:,3,1)   +  &
-                         dd2_dxidxi*jacobian_ale(:,1,2)    +  dd2_dxideta*jacobian_ale(:,2,2)    +  dd2_dxidzeta*jacobian_ale(:,3,2)   +  &
-                         dd3_dxidxi*jacobian_ale(:,1,3)    +  dd3_dxideta*jacobian_ale(:,2,3)    +  dd3_dxidzeta*jacobian_ale(:,3,3)
+        jinv_def_grad1 = dd1_dxidxi*jacobian_ale(1,1,:)    +  dd1_dxideta*jacobian_ale(2,1,:)    +  dd1_dxidzeta*jacobian_ale(3,1,:)   +  &
+                         dd2_dxidxi*jacobian_ale(1,2,:)    +  dd2_dxideta*jacobian_ale(2,2,:)    +  dd2_dxidzeta*jacobian_ale(3,2,:)   +  &
+                         dd3_dxidxi*jacobian_ale(1,3,:)    +  dd3_dxideta*jacobian_ale(2,3,:)    +  dd3_dxidzeta*jacobian_ale(3,3,:)
 
-        jinv_def_grad2 = dd1_dxideta*jacobian_ale(:,1,1)   +  dd1_detadeta*jacobian_ale(:,2,1)   +  dd1_detadzeta*jacobian_ale(:,3,1)  +  &
-                         dd2_dxideta*jacobian_ale(:,1,2)   +  dd2_detadeta*jacobian_ale(:,2,2)   +  dd2_detadzeta*jacobian_ale(:,3,2)  +  &
-                         dd3_dxideta*jacobian_ale(:,1,3)   +  dd3_detadeta*jacobian_ale(:,2,3)   +  dd3_detadzeta*jacobian_ale(:,3,3)
+        jinv_def_grad2 = dd1_dxideta*jacobian_ale(1,1,:)   +  dd1_detadeta*jacobian_ale(2,1,:)   +  dd1_detadzeta*jacobian_ale(3,1,:)  +  &
+                         dd2_dxideta*jacobian_ale(1,2,:)   +  dd2_detadeta*jacobian_ale(2,2,:)   +  dd2_detadzeta*jacobian_ale(3,2,:)  +  &
+                         dd3_dxideta*jacobian_ale(1,3,:)   +  dd3_detadeta*jacobian_ale(2,3,:)   +  dd3_detadzeta*jacobian_ale(3,3,:)
 
-        jinv_def_grad3 = dd1_dxidzeta*jacobian_ale(:,1,1)  +  dd1_detadzeta*jacobian_ale(:,2,1)  +  dd1_dzetadzeta*jacobian_ale(:,3,1) +  &
-                         dd2_dxidzeta*jacobian_ale(:,1,2)  +  dd2_detadzeta*jacobian_ale(:,2,2)  +  dd2_dzetadzeta*jacobian_ale(:,3,2) +  &
-                         dd3_dxidzeta*jacobian_ale(:,1,3)  +  dd3_detadzeta*jacobian_ale(:,2,3)  +  dd3_dzetadzeta*jacobian_ale(:,3,3)
+        jinv_def_grad3 = dd1_dxidzeta*jacobian_ale(1,1,:)  +  dd1_detadzeta*jacobian_ale(2,1,:)  +  dd1_dzetadzeta*jacobian_ale(3,1,:) +  &
+                         dd2_dxidzeta*jacobian_ale(1,2,:)  +  dd2_detadzeta*jacobian_ale(2,2,:)  +  dd2_dzetadzeta*jacobian_ale(3,2,:) +  &
+                         dd3_dxidzeta*jacobian_ale(1,3,:)  +  dd3_detadzeta*jacobian_ale(2,3,:)  +  dd3_dzetadzeta*jacobian_ale(3,3,:)
 
 
         !

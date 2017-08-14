@@ -3,4 +3,5 @@ add_lib_sources(
                 mod_gridspace.f90
                 mod_interpolation.f90
                 mod_inv.f90
+                mod_determinant.f90
                 )

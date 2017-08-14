@@ -2536,9 +2536,9 @@ contains
         grad3_u = grad3_u-(u/ale_g)*ale_g_grad3
 
         allocate(grad_u_gq(size(grad1_u,1),3))
-        grad_u_gq(:,1) = (ale_Dinv(:,1,1)*grad1_u + ale_Dinv(:,2,1)*grad2_u + ale_Dinv(:,3,1)*grad3_u)/ale_g
-        grad_u_gq(:,2) = (ale_Dinv(:,1,2)*grad1_u + ale_Dinv(:,2,2)*grad2_u + ale_Dinv(:,3,2)*grad3_u)/ale_g
-        grad_u_gq(:,3) = (ale_Dinv(:,1,3)*grad1_u + ale_Dinv(:,2,3)*grad2_u + ale_Dinv(:,3,3)*grad3_u)/ale_g
+        grad_u_gq(:,1) = (ale_Dinv(1,1,:)*grad1_u + ale_Dinv(2,1,:)*grad2_u + ale_Dinv(3,1,:)*grad3_u)/ale_g
+        grad_u_gq(:,2) = (ale_Dinv(1,2,:)*grad1_u + ale_Dinv(2,2,:)*grad2_u + ale_Dinv(3,2,:)*grad3_u)/ale_g
+        grad_u_gq(:,3) = (ale_Dinv(1,3,:)*grad1_u + ale_Dinv(2,3,:)*grad2_u + ale_Dinv(3,3,:)*grad3_u)/ale_g
 
 
     end function get_primary_field_grad_ale_element
@@ -2648,9 +2648,9 @@ contains
             grad2_u = grad2_u-(u/ale_g)*ale_g_grad2
             grad3_u = grad3_u-(u/ale_g)*ale_g_grad3
 
-            grad_u_gq(:,1) = (ale_Dinv(:,1,1)*grad1_u + ale_Dinv(:,2,1)*grad2_u + ale_Dinv(:,3,1)*grad3_u)/ale_g
-            grad_u_gq(:,2) = (ale_Dinv(:,1,2)*grad1_u + ale_Dinv(:,2,2)*grad2_u + ale_Dinv(:,3,2)*grad3_u)/ale_g
-            grad_u_gq(:,3) = (ale_Dinv(:,1,3)*grad1_u + ale_Dinv(:,2,3)*grad2_u + ale_Dinv(:,3,3)*grad3_u)/ale_g
+            grad_u_gq(:,1) = (ale_Dinv(1,1,:)*grad1_u + ale_Dinv(2,1,:)*grad2_u + ale_Dinv(3,1,:)*grad3_u)/ale_g
+            grad_u_gq(:,2) = (ale_Dinv(1,2,:)*grad1_u + ale_Dinv(2,2,:)*grad2_u + ale_Dinv(3,2,:)*grad3_u)/ale_g
+            grad_u_gq(:,3) = (ale_Dinv(1,3,:)*grad1_u + ale_Dinv(2,3,:)*grad2_u + ale_Dinv(3,3,:)*grad3_u)/ale_g
 
         end if
 
@@ -2677,15 +2677,11 @@ contains
         type(AD_D),             intent(in)  :: advected_quantity(:)
 
         type(AD_D), allocatable, dimension(:)   :: flux_1_tmp, flux_2_tmp, flux_3_tmp
-        type(AD_D), allocatable                 :: flux_ref(:,:)
+        type(AD_D), allocatable, dimension(:,:) :: flux_ref
         real(rk),   allocatable                 :: ale_g(:), ale_Dinv(:,:,:), grid_vel(:,:)
 
 
-!        u_grid = self%get_grid_velocity_element('u_grid')
-!        v_grid = self%get_grid_velocity_element('v_grid')
-!        w_grid = self%get_grid_velocity_element('w_grid')
         grid_vel = self%get_grid_velocity_element()
-
         ale_g    = self%get_det_jacobian_grid_element('value')
         ale_Dinv = self%get_inv_jacobian_grid_element()
 
@@ -2694,9 +2690,9 @@ contains
         flux_3_tmp = flux_3-grid_vel(:,3)*advected_quantity
        
         allocate(flux_ref(size(flux_1,1),3))
-        flux_ref(:,1) = ale_g*(ale_Dinv(:,1,1)*flux_1_tmp + ale_Dinv(:,1,2)*flux_2_tmp + ale_Dinv(:,1,3)*flux_3_tmp)
-        flux_ref(:,2) = ale_g*(ale_Dinv(:,2,1)*flux_1_tmp + ale_Dinv(:,2,2)*flux_2_tmp + ale_Dinv(:,2,3)*flux_3_tmp)
-        flux_ref(:,3) = ale_g*(ale_Dinv(:,3,1)*flux_1_tmp + ale_Dinv(:,3,2)*flux_2_tmp + ale_Dinv(:,3,3)*flux_3_tmp)
+        flux_ref(:,1) = ale_g*(ale_Dinv(1,1,:)*flux_1_tmp + ale_Dinv(1,2,:)*flux_2_tmp + ale_Dinv(1,3,:)*flux_3_tmp)
+        flux_ref(:,2) = ale_g*(ale_Dinv(2,1,:)*flux_1_tmp + ale_Dinv(2,2,:)*flux_2_tmp + ale_Dinv(2,3,:)*flux_3_tmp)
+        flux_ref(:,3) = ale_g*(ale_Dinv(3,1,:)*flux_1_tmp + ale_Dinv(3,2,:)*flux_2_tmp + ale_Dinv(3,3,:)*flux_3_tmp)
 
 
     end function post_process_volume_advective_flux_ale
@@ -2721,11 +2717,11 @@ contains
         type(AD_D),             intent(in)  :: advected_quantity(:)
         character(*),           intent(in)  :: interp_source
 
-        type(AD_D), allocatable, dimension(:)   :: flux_1_tmp, flux_2_tmp, flux_3_tmp
-        type(AD_D), allocatable                 :: flux_ref(:,:)
-        real(rk),   allocatable                 :: ale_g(:), ale_Dinv(:,:,:), grid_vel(:,:)
-        logical                                 :: chimera_face
-        character(:),   allocatable             :: source
+        type(AD_D),     allocatable, dimension(:)   :: flux_1_tmp, flux_2_tmp, flux_3_tmp
+        type(AD_D),     allocatable                 :: flux_ref(:,:)
+        real(rk),       allocatable                 :: ale_g(:), ale_Dinv(:,:,:), grid_vel(:,:)
+        character(:),   allocatable                 :: source
+        logical                                     :: chimera_face
 
 
         chimera_face = (self%face_type() == CHIMERA)
@@ -2746,9 +2742,9 @@ contains
         flux_3_tmp = flux_3-grid_vel(:,3)*advected_quantity
        
         allocate(flux_ref(size(flux_1,1),3))
-        flux_ref(:,1) = ale_g*(ale_Dinv(:,1,1)*flux_1_tmp + ale_Dinv(:,1,2)*flux_2_tmp + ale_Dinv(:,1,3)*flux_3_tmp)
-        flux_ref(:,2) = ale_g*(ale_Dinv(:,2,1)*flux_1_tmp + ale_Dinv(:,2,2)*flux_2_tmp + ale_Dinv(:,2,3)*flux_3_tmp)
-        flux_ref(:,3) = ale_g*(ale_Dinv(:,3,1)*flux_1_tmp + ale_Dinv(:,3,2)*flux_2_tmp + ale_Dinv(:,3,3)*flux_3_tmp)
+        flux_ref(:,1) = ale_g*(ale_Dinv(1,1,:)*flux_1_tmp + ale_Dinv(1,2,:)*flux_2_tmp + ale_Dinv(1,3,:)*flux_3_tmp)
+        flux_ref(:,2) = ale_g*(ale_Dinv(2,1,:)*flux_1_tmp + ale_Dinv(2,2,:)*flux_2_tmp + ale_Dinv(2,3,:)*flux_3_tmp)
+        flux_ref(:,3) = ale_g*(ale_Dinv(3,1,:)*flux_1_tmp + ale_Dinv(3,2,:)*flux_2_tmp + ale_Dinv(3,3,:)*flux_3_tmp)
 
 
     end function post_process_boundary_advective_flux_ale
@@ -2782,9 +2778,9 @@ contains
 
        
         allocate(flux_ref(size(flux_1,1),3))
-        flux_ref(:,1) = ale_g*(ale_Dinv(:,1,1)*flux_1 + ale_Dinv(:,1,2)*flux_2 + ale_Dinv(:,1,3)*flux_3)
-        flux_ref(:,2) = ale_g*(ale_Dinv(:,2,1)*flux_1 + ale_Dinv(:,2,2)*flux_2 + ale_Dinv(:,2,3)*flux_3)
-        flux_ref(:,3) = ale_g*(ale_Dinv(:,3,1)*flux_1 + ale_Dinv(:,3,2)*flux_2 + ale_Dinv(:,3,3)*flux_3)
+        flux_ref(:,1) = ale_g*(ale_Dinv(1,1,:)*flux_1 + ale_Dinv(1,2,:)*flux_2 + ale_Dinv(1,3,:)*flux_3)
+        flux_ref(:,2) = ale_g*(ale_Dinv(2,1,:)*flux_1 + ale_Dinv(2,2,:)*flux_2 + ale_Dinv(2,3,:)*flux_3)
+        flux_ref(:,3) = ale_g*(ale_Dinv(3,1,:)*flux_1 + ale_Dinv(3,2,:)*flux_2 + ale_Dinv(3,3,:)*flux_3)
 
 
     end function post_process_volume_diffusive_flux_ale
@@ -2824,9 +2820,9 @@ contains
 
        
         allocate(flux_ref(size(flux_1,1),3))
-        flux_ref(:,1) = ale_g*(ale_Dinv(:,1,1)*flux_1 + ale_Dinv(:,1,2)*flux_2 + ale_Dinv(:,1,3)*flux_3)
-        flux_ref(:,2) = ale_g*(ale_Dinv(:,2,1)*flux_1 + ale_Dinv(:,2,2)*flux_2 + ale_Dinv(:,2,3)*flux_3)
-        flux_ref(:,3) = ale_g*(ale_Dinv(:,3,1)*flux_1 + ale_Dinv(:,3,2)*flux_2 + ale_Dinv(:,3,3)*flux_3)
+        flux_ref(:,1) = ale_g*(ale_Dinv(1,1,:)*flux_1 + ale_Dinv(1,2,:)*flux_2 + ale_Dinv(1,3,:)*flux_3)
+        flux_ref(:,2) = ale_g*(ale_Dinv(2,1,:)*flux_1 + ale_Dinv(2,2,:)*flux_2 + ale_Dinv(2,3,:)*flux_3)
+        flux_ref(:,3) = ale_g*(ale_Dinv(3,1,:)*flux_1 + ale_Dinv(3,2,:)*flux_2 + ale_Dinv(3,3,:)*flux_3)
 
 
     end function post_process_boundary_diffusive_flux_ale

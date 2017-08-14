@@ -1,0 +1,75 @@
+!>  Test explicit 3x3 matrix inversion routine.
+!!
+!!  @author Nathan A. Wukie (AFRL)
+!!  @date   8/14/2017
+!!
+!!------------------------------------------------------------------
+@Test
+subroutine test_inv_3x3()
+    use pfunit_mod
+    use mod_kinds,          only: rk
+    use mod_inv,            only: inv_3x3
+    
+    real(rk)    :: A(3,3), Ainv_computed(3,3), Ainv_expected(3,3), tol
+
+    tol = 1.e-4_rk
+
+    A = reshape([0.154796_rk, 0.963953_rk, 0.992443_rk, &
+                 0.833115_rk, 0.395079_rk, 0.204542_rk, &
+                 0.668913_rk, 0.737986_rk, 0.333033_rk], [3,3])
+
+    Ainv_expected = reshape([-0.0925513_rk, 1.96512_rk, -0.931134_rk, &
+                             -0.671794_rk, -2.92492_rk,  3.79838_rk,  &
+                              1.67456_rk,   2.53445_rk, -3.54411_rk], [3,3])
+
+
+    !
+    ! Call 'bisect' to find root between 1.1, and 2.1.
+    !
+    ! THIS IS BEING TESTED.
+    !
+    Ainv_computed = inv_3x3(A)
+
+    @assertEqual(Ainv_expected, Ainv_computed, tol)
+
+end subroutine test_inv_3x3
+!*******************************************************************
+
+
+
+!>  Test general matrix inversion routine.
+!!
+!!  @author Nathan A. Wukie (AFRL)
+!!  @date   8/14/2017
+!!
+!!------------------------------------------------------------------
+@Test
+subroutine test_inv()
+    use pfunit_mod
+    use mod_kinds,          only: rk
+    use mod_inv,            only: inv
+    
+    real(rk)    :: A(3,3), Ainv_computed(3,3), Ainv_expected(3,3), tol
+
+    tol = 1.e-4_rk
+
+    A = reshape([0.154796_rk, 0.963953_rk, 0.992443_rk, &
+                 0.833115_rk, 0.395079_rk, 0.204542_rk, &
+                 0.668913_rk, 0.737986_rk, 0.333033_rk], [3,3])
+
+    Ainv_expected = reshape([-0.0925513_rk, 1.96512_rk, -0.931134_rk, &
+                             -0.671794_rk, -2.92492_rk,  3.79838_rk,  &
+                              1.67456_rk,   2.53445_rk, -3.54411_rk], [3,3])
+
+
+    !
+    ! Call 'bisect' to find root between 1.1, and 2.1.
+    !
+    ! THIS IS BEING TESTED.
+    !
+    Ainv_computed = inv(A)
+
+    @assertEqual(Ainv_expected, Ainv_computed, tol)
+
+end subroutine test_inv
+!*******************************************************************

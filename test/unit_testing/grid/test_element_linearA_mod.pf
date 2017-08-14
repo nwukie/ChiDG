@@ -737,7 +737,7 @@ contains
 
         icoord = 1 ! Check x-coordinates
         do ipt = 1,5
-            check_coords(ipt) = self%elem%grid_point('Reference',icoord, xi(ipt), eta(ipt), zeta(ipt))
+            check_coords(ipt) = self%elem%grid_point(icoord, [xi(ipt),eta(ipt),zeta(ipt)], 'Undeformed')
         end do
 
         @assertEqual(ref_coords,check_coords)
@@ -770,7 +770,7 @@ contains
 
         icoord = 2 ! Check y-coordinates
         do ipt = 1,5
-            check_coords(ipt) = self%elem%grid_point('Reference',icoord, xi(ipt), eta(ipt), zeta(ipt))
+            check_coords(ipt) = self%elem%grid_point(icoord, [xi(ipt),eta(ipt),zeta(ipt)], 'Undeformed')
         end do
 
         @assertEqual(ref_coords,check_coords)
@@ -803,7 +803,7 @@ contains
 
         icoord = 3 ! Check z-coordinates
         do ipt = 1,5
-            check_coords(ipt) = self%elem%grid_point('Reference',icoord, xi(ipt), eta(ipt), zeta(ipt))
+            check_coords(ipt) = self%elem%grid_point(icoord, [xi(ipt), eta(ipt), zeta(ipt)],'Undeformed')
         end do
 
         @assertEqual(ref_coords,check_coords)
@@ -846,7 +846,7 @@ contains
             y = self%nodes(ipt,2)
             z = self%nodes(ipt,3)
 
-            check_coords = self%elem%computational_point(x, y, z)
+            check_coords = self%elem%computational_point([x, y, z])
 
             check_xi(ipt)   = check_coords(1)
             check_eta(ipt)  = check_coords(2)

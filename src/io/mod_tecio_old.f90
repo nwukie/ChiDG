@@ -222,9 +222,9 @@ contains
                                     ! Get coordinate value at point
                                     if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == CYLINDRICAL ) then
 
-                                        r     = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',1,xi,eta,zeta),rdouble)
-                                        theta = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',2,xi,eta,zeta),rdouble)
-                                        z     = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',3,xi,eta,zeta),rdouble)
+                                        r     = real(data%mesh%domain(idom)%elems(ielem)%grid_point(1,[xi,eta,zeta],'Deformed'),rdouble)
+                                        theta = real(data%mesh%domain(idom)%elems(ielem)%grid_point(2,[xi,eta,zeta],'Deformed'),rdouble)
+                                        z     = real(data%mesh%domain(idom)%elems(ielem)%grid_point(3,[xi,eta,zeta],'Deformed'),rdouble)
 
                                         if (icoord == 1) then
                                             val = r*cos(theta)
@@ -236,7 +236,7 @@ contains
 
                                     else
 
-                                        val = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',icoord,xi,eta,zeta),rdouble)
+                                        val = real(data%mesh%domain(idom)%elems(ielem)%grid_point(icoord,[xi,eta,zeta],'Deformed'),rdouble)
 
                                     end if
 
@@ -537,9 +537,9 @@ contains
                                         ! Get coordinate value at point
                                         if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == CYLINDRICAL ) then
 
-                                            r     = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',1,xi,eta,zeta),rdouble)
-                                            theta = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',2,xi,eta,zeta),rdouble)
-                                            z     = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',3,xi,eta,zeta),rdouble)
+                                            r     = real(data%mesh%domain(idom)%elems(ielem)%grid_point(1,[xi,eta,zeta],'Deformed'),rdouble)
+                                            theta = real(data%mesh%domain(idom)%elems(ielem)%grid_point(2,[xi,eta,zeta],'Deformed'),rdouble)
+                                            z     = real(data%mesh%domain(idom)%elems(ielem)%grid_point(3,[xi,eta,zeta],'Deformed'),rdouble)
 
                                             if (icoord == 1) then
                                                 val = r*cos(theta)
@@ -551,7 +551,7 @@ contains
 
                                         else
 
-                                            val = real(data%mesh%domain(idom)%elems(ielem)%grid_point('ALE',icoord,xi,eta,zeta),rdouble)
+                                            val = real(data%mesh%domain(idom)%elems(ielem)%grid_point(icoord,[xi,eta,zeta],'Deformed'),rdouble)
 
                                         end if
 

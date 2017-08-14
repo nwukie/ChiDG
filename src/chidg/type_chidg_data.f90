@@ -748,7 +748,7 @@ contains
 
             self%mesh%ntime_ = self%time_manager%ntime
             call self%mesh%domain(idomain)%init_sol(interpolation,level,nterms_s,nfields,self%time_manager%ntime)
-            call self%mesh%domain(idomain)%update_ale()
+            call self%mesh%domain(idomain)%update_interpolations_ale()
         end do
 
 

@@ -302,20 +302,20 @@ contains
         class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: self
 
         integer(ik) :: inode
-        real(rk)    :: test_metric(self%elem%basis_s%nnodes_ie(),3,3)
+        real(rk)    :: test_metric(3,3,self%elem%basis_s%nnodes_ie())
         
-        test_metric(:,1,1) = 3.0_rk 
-        test_metric(:,2,1) = 0._rk  
-        test_metric(:,3,1) = 0._rk  
-        test_metric(:,1,2) = 0._rk  
-        test_metric(:,2,2) = 3.0_rk 
-        test_metric(:,3,2) = 0._rk  
-        test_metric(:,1,3) = 0._rk  
-        test_metric(:,2,3) = 0._rk  
-        test_metric(:,3,3) = 3.0_rk 
+        test_metric(1,1,:) = 3.0_rk 
+        test_metric(2,1,:) = 0._rk  
+        test_metric(3,1,:) = 0._rk  
+        test_metric(1,2,:) = 0._rk  
+        test_metric(2,2,:) = 3.0_rk 
+        test_metric(3,2,:) = 0._rk  
+        test_metric(1,3,:) = 0._rk  
+        test_metric(2,3,:) = 0._rk  
+        test_metric(3,3,:) = 3.0_rk 
 
-        do inode = 1,size(test_metric,1)
-            test_metric(inode,:,:) = inv(test_metric(inode,:,:))
+        do inode = 1,size(test_metric,3)
+            test_metric(:,:,inode) = inv(test_metric(:,:,inode))
         end do
 
         @assertEqual(test_metric,self%elem%ale_Dinv, 1.e-14_rk)
@@ -495,23 +495,23 @@ contains
         class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: self
 
         integer(ik) :: inode
-        real(rk)    :: test_metric(self%faces(XI_MAX)%basis_s%nnodes_if(),3,3)
+        real(rk)    :: test_metric(3,3,self%faces(XI_MAX)%basis_s%nnodes_if())
         real(rk)    :: tol
         
         tol = 1.e-14_rk
         
-        test_metric(:,1,1) = 3.0_rk 
-        test_metric(:,2,1) = 0._rk   
-        test_metric(:,3,1) = 0._rk   
-        test_metric(:,1,2) = 0._rk   
-        test_metric(:,2,2) = 3.0_rk 
-        test_metric(:,3,2) = 0._rk   
-        test_metric(:,1,3) = 0._rk   
-        test_metric(:,2,3) = 0._rk   
-        test_metric(:,3,3) = 3.0_rk 
+        test_metric(1,1,:) = 3.0_rk 
+        test_metric(2,1,:) = 0._rk   
+        test_metric(3,1,:) = 0._rk   
+        test_metric(1,2,:) = 0._rk   
+        test_metric(2,2,:) = 3.0_rk 
+        test_metric(3,2,:) = 0._rk   
+        test_metric(1,3,:) = 0._rk   
+        test_metric(2,3,:) = 0._rk   
+        test_metric(3,3,:) = 3.0_rk 
 
-        do inode = 1,size(test_metric,1)
-            test_metric(inode,:,:) = inv(test_metric(inode,:,:))
+        do inode = 1,size(test_metric,3)
+            test_metric(:,:,inode) = inv(test_metric(:,:,inode))
         end do
         
         @assertEqual(test_metric,self%faces(XI_MIN)%ale_Dinv,tol)

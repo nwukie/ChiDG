@@ -46,7 +46,6 @@ contains
     !!  @result[out]    force           Integrated force vector: force = [f1, f2, f3]
     !!
     !-----------------------------------------------------------------------------------
-    !function compute_force(data,patch_group) result(force_reduced)
     subroutine report_aerodynamics(data,patch_group,force,work)
         type(chidg_data_t), intent(inout)               :: data
         character(*),       intent(in)                  :: patch_group
@@ -55,7 +54,7 @@ contains
     
         integer(ik)                 :: group_ID, patch_ID, face_ID, &
                                        idomain_g,  idomain_l,        &
-                                       ielement_g, ielement_l, iface
+                                       ielement_g, ielement_l, iface, ierr
 
         type(chidg_worker_t)        :: worker
         type(chidg_cache_t)         :: cache
@@ -70,10 +69,10 @@ contains
         real(rk),   allocatable, dimension(:)   ::  &
             norm_1,      norm_2,      norm_3,       &
             norm_1_phys, norm_2_phys, norm_3_phys,  &
-            weights, det_jacobian_grid, u_grid, v_grid, w_grid
+            weights, det_jacobian_grid
 
         real(rk),   allocatable                 ::  &
-            jacobian_grid(:,:,:)
+            jacobian_grid(:,:,:), grid_velocity(:,:)
 
 
         type(AD_D), allocatable, dimension(:)   ::  &
@@ -81,13 +80,10 @@ contains
             tau_21,     tau_22,     tau_23,         &
             tau_31,     tau_32,     tau_33,         &
             stress_x,   stress_y,   stress_z,       &
-            pressure,   normal_stress
-
-        integer(ik) :: ierr
+            pressure
 
 
-
-        call write_line('Computing Force...')
+        call write_line('Computing Force...', io_proc=GLOBAL_MASTER)
 
         !
         ! Initialize Chidg Worker references
@@ -102,12 +98,6 @@ contains
 
 
         !
-        ! Check if a group matching "patch_group" was found
-        !
-        !if (group_ID == NO_ID) call chidg_signal_one(FATAL,"compute_force: No patch group was found matching the incoming string.",trim(patch_group))
-
-
-        !
         ! Loop over domains/elements/faces for "patch_group" 
         !
         force_local = ZERO
@@ -115,10 +105,6 @@ contains
 
         if (group_ID /= NO_ID) then
             do patch_ID = 1,data%mesh%bc_patch_group(group_ID)%npatches()
-
-                !
-                ! Loop over faces in the patch
-                !
                 do face_ID = 1,data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
 
                     idomain_g  = data%mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g()
@@ -146,7 +132,6 @@ contains
                                                                                       face          = NO_ID,   &
                                                                                       differentiate = .false., &
                                                                                       lift          = .true.)
-
 
 
                     call worker%set_face(iface)
@@ -194,20 +179,14 @@ contains
 
 
                     !
-                    ! Hit normal vector with g*G^{-T} so our normal and Area correspond to physical ALE quantities
+                    ! Transform normal vector with g*G^{-T} so our normal and Area correspond to quantities on the deformed grid
                     !
                     det_jacobian_grid = worker%get_det_jacobian_grid_face('value', 'face interior')
                     jacobian_grid     = worker%get_inv_jacobian_grid_face('face interior')
-                    !norm_1_phys = det_jacobian_grid*(jacobian_grid(:,1,1)*norm_1 + jacobian_grid(:,1,2)*norm_2 + jacobian_grid(:,1,3)*norm_3)
-                    !norm_2_phys = det_jacobian_grid*(jacobian_grid(:,2,1)*norm_1 + jacobian_grid(:,2,2)*norm_2 + jacobian_grid(:,2,3)*norm_3)
-                    !norm_3_phys = det_jacobian_grid*(jacobian_grid(:,3,1)*norm_1 + jacobian_grid(:,3,2)*norm_2 + jacobian_grid(:,3,3)*norm_3)
+                    grid_velocity     = worker%get_grid_velocity_face('face interior')
                     norm_1_phys = det_jacobian_grid*(jacobian_grid(:,1,1)*norm_1 + jacobian_grid(:,2,1)*norm_2 + jacobian_grid(:,3,1)*norm_3)
                     norm_2_phys = det_jacobian_grid*(jacobian_grid(:,1,2)*norm_1 + jacobian_grid(:,2,2)*norm_2 + jacobian_grid(:,3,2)*norm_3)
                     norm_3_phys = det_jacobian_grid*(jacobian_grid(:,1,3)*norm_1 + jacobian_grid(:,2,3)*norm_2 + jacobian_grid(:,3,3)*norm_3)
-
-                    u_grid = worker%get_grid_velocity_face('u_grid', 'face interior')
-                    v_grid = worker%get_grid_velocity_face('v_grid', 'face interior')
-                    w_grid = worker%get_grid_velocity_face('w_grid', 'face interior')
                     
 
                     !
@@ -219,7 +198,6 @@ contains
                     !stress_y = norm_1_phys*tau_12 + norm_2_phys*tau_22 + norm_3_phys*tau_32
                     !stress_z = norm_1_phys*tau_13 + norm_2_phys*tau_23 + norm_3_phys*tau_33
 
-                    ! Testing: ALE
                     stress_x = tau_11*norm_1_phys + tau_12*norm_2_phys + tau_13*norm_3_phys
                     stress_y = tau_21*norm_1_phys + tau_22*norm_2_phys + tau_23*norm_3_phys
                     stress_z = tau_31*norm_1_phys + tau_32*norm_2_phys + tau_33*norm_3_phys
@@ -237,15 +215,14 @@ contains
                     end if
 
                     if (present(work)) then
-                        work_local = work_local + sum( (stress_x(:)%x_ad_ * weights * u_grid) + &
-                                                       (stress_y(:)%x_ad_ * weights * v_grid) + &
-                                                       (stress_z(:)%x_ad_ * weights * w_grid) )
+                        work_local = work_local + sum( (stress_x(:)%x_ad_ * grid_velocity(:,1) * weights) + &
+                                                       (stress_y(:)%x_ad_ * grid_velocity(:,2) * weights) + &
+                                                       (stress_z(:)%x_ad_ * grid_velocity(:,3) * weights) )
                     end if
 
                 end do !iface
-
             end do !ipatch
-        end if
+        end if ! group_ID /= NO_ID
 
 
         !

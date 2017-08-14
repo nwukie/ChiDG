@@ -367,9 +367,9 @@ contains
         class(*), pointer   :: auxdata => null()
 
         integer :: iaux
-        logical :: print_info_one, print_info_two, print_info_three, print_info_four, print_info_five
-        logical :: print_info_six, print_info_seven, print_info_eight
-        logical :: proc_write
+        logical :: print_info_one,   print_info_two,   print_info_three, &
+                   print_info_four,  print_info_five,  print_info_six,   &
+                   print_info_seven, print_info_eight, proc_write
 
 
         
@@ -397,8 +397,6 @@ contains
         if ( present(silence) ) then
             if (proc_write .and. silence) proc_write = .false.
         end if
-
-
 
 
         !
@@ -436,38 +434,24 @@ contains
 
 
 
+                ! Add data to line
                 if ( associated(auxdata) ) then
-
-                        !
-                        ! Add data to line
-                        !
-                        call add_to_line(auxdata,delimiter,columns,column_width,color,ltrim,bold)
-
+                    call add_to_line(auxdata,delimiter,columns,column_width,color,ltrim,bold)
                 end if
 
-
-
-                !
                 ! Unassociate pointer
-                !
                 auxdata => null()
-
 
             end do
 
 
-
-
-            !
             ! Send line to output
-            !
             call send_line()
 
         end if ! proc_write
 
-        !
+
         ! ReSet width
-        !
         if (present(width)) msg_length = max_msg_length
 
     end subroutine write_line

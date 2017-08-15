@@ -2024,18 +2024,12 @@ contains
 
 
 
-
-
-
-
-
-
-
-
     subroutine destructor(self)
         type(element_t), intent(inout) :: self
 
 
     end subroutine
+
+
 
 end module type_element

@@ -396,7 +396,7 @@ contains
 
 
 
-        if (.not. allocated(cache_data(1)%xp_ad_) ) call chidg_signal(FATAL,"get_data: gradients not allocated")
+        if (.not. allocated(cache_data(1)%xp_ad_) ) call chidg_signal_two(FATAL,"get_data: derivatives not allocated",trim(field),trim(cache_type))
 
 
     end function get_data

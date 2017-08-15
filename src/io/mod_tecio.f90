@@ -245,10 +245,10 @@ contains
                     call worker%set_element(elem_info)
 
                     ! Update the element cache
-                    call cache_handler%update(worker,data%eqnset, data%bc_state_group, components    = 'all',   &
-                                                                                       face          = NO_ID,   &
-                                                                                       differentiate = .false., &
-                                                                                       lift          = .true.)
+                    call cache_handler%update(worker,data%eqnset, data%bc_state_group, components    = 'element',   &
+                                                                                       face          = NO_ID,       &
+                                                                                       differentiate = .false.,     &
+                                                                                       lift          = .false.)
 
                     ! Retrieve name of current field, retrieve interpolation, write interpolation to file
                     do ifield = 1,data%eqnset(eqn_ID)%prop%nio_fields()
@@ -484,11 +484,20 @@ contains
                         call worker%set_face(iface)
 
                         ! Update the element cache
-                        call cache_handler%update(worker,data%eqnset, data%bc_state_group, components    = 'all',   &
-                                                                                           face          = NO_ID,   &
-                                                                                           differentiate = .false., &
-                                                                                           lift          = .true.)
+                        call cache_handler%update(worker,data%eqnset, data%bc_state_group, components    = 'interior faces',   &
+                                                                                           face          = iface,   &
+                                                                                           differentiate = .false.,  &
+                                                                                           lift          = .false.)
+                        !! Update the element cache
+                        !call cache_handler%update(worker,data%eqnset, data%bc_state_group, components    = 'all',   &
+                        !                                                                   face          = NO_ID,   &
+                        !                                                                   differentiate = .true.,  &
+                        !                                                                   lift          = .true.)
 
+                        !call cache_handler%update(worker,data%eqnset, data%bc_state_group, components    = 'interior faces',    &
+                        !                                                                   face          = iface,               &
+                        !                                                                   differentiate = .false.,             &
+                        !                                                                   lift          = .false.)
 
                         ! Retrieve name of current field, retrieve interpolation, write interpolation to file
                         do ifield = 1,data%eqnset(eqn_ID)%prop%nio_fields()

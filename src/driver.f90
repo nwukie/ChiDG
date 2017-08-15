@@ -28,6 +28,7 @@ program driver
     use mod_chidg_post,         only: chidg_post, chidg_post_vtk, chidg_post_matplotlib
     use mod_chidg_airfoil,      only: chidg_airfoil
     use mod_chidg_clone,        only: chidg_clone
+    use mod_chidg_post_hdf2tec, only: chidg_post_hdf2tec_new
 
     use mod_oscillating_cylinder_1, only: oscillating_cylinder
     
@@ -356,7 +357,7 @@ program driver
                 do
                     read(7,fmt='(a)', iostat=ierr) solution_file
                     if (ierr /= 0) exit
-                    call chidg_post(trim(solution_file), trim(solution_file))
+                    call chidg_post_hdf2tec_new(trim(solution_file),trim(solution_file))
                 end do
                 close(7)
 

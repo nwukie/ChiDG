@@ -36,6 +36,7 @@ module mod_tecio_old
     use type_chidg_data,        only: chidg_data_t
     use type_domain,            only: domain_t
     use type_bc_patch_group,    only: bc_patch_group_t
+    use type_timer,             only: timer_t
     implicit none
 
 #include "tecio.f90"
@@ -74,6 +75,9 @@ contains
 
         integer(ik)     :: ierr, ieq, eqn_ID
         character(100)  :: varstring
+        type(timer_t)   :: timer
+
+        call timer%start()
 
 
         !
@@ -117,6 +121,9 @@ contains
         ! Close the current TecIO file context
         !
         call close_tecio_file()
+
+        call timer%stop()
+        call timer%report('Time:')
 
 
     end subroutine write_tecio_old

@@ -74,7 +74,8 @@ module type_chidg_worker
         type(function_info_t)       :: function_info
     
         character(:),   allocatable :: interpolation_source
-        real(rk)                    :: t    ! Physical time
+        real(rk)                    :: t                    ! Physical time
+        logical                     :: contains_lift
 
     contains 
     
@@ -136,9 +137,7 @@ module type_chidg_worker
         procedure   :: get_area_ratio
         procedure   :: get_grid_velocity_element
         procedure   :: get_grid_velocity_face
-!        procedure   :: get_jacobian_grid_element
         procedure   :: get_inv_jacobian_grid_element
-!        procedure   :: get_jacobian_grid_face
         procedure   :: get_inv_jacobian_grid_face
         procedure   :: get_det_jacobian_grid_element
         procedure   :: get_det_jacobian_grid_face
@@ -476,7 +475,9 @@ contains
             var_gq = self%cache%get_data(field,cache_component,'gradient',idirection,self%function_info%seed,self%iface)
 
             ! Modify derivative by face lift stabilized by a factor of NFACES
-            var_gq = var_gq + real(NFACES,rk)*self%cache%get_data(field,cache_component,'lift face',idirection,self%function_info%seed,self%iface)
+            if (self%contains_lift) then
+                var_gq = var_gq + real(NFACES,rk)*self%cache%get_data(field,cache_component,'lift face',idirection,self%function_info%seed,self%iface)
+            end if
 
         end if
 
@@ -590,10 +591,12 @@ contains
                 var_gq = self%cache%get_data(field,'element','gradient',idirection,self%function_info%seed)
 
                 ! Add lift contributions from each face
-                do iface = 1,NFACES
-                    tmp_gq = self%cache%get_data(field,'face interior', 'lift element', idirection, self%function_info%seed,iface)
-                    var_gq = var_gq + tmp_gq
-                end do
+                if (self%contains_lift) then
+                    do iface = 1,NFACES
+                        tmp_gq = self%cache%get_data(field,'face interior', 'lift element', idirection, self%function_info%seed,iface)
+                        var_gq = var_gq + tmp_gq
+                    end do
+                end if
 
             end if
 
@@ -709,7 +712,7 @@ contains
         ! we don't want to lift because there is no lift for the boundary function to use
         ! If we aren't on a face, face_type returns NOT_A_FACE, so this is still valid for 
         ! returning element data.
-        no_lift = (self%face_type() == BOUNDARY) .and. (cache_component == 'face interior')
+        no_lift = ((self%face_type() == BOUNDARY) .and. (cache_component == 'face interior')) .or. (.not. self%contains_lift)
 
 
         !

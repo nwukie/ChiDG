@@ -122,24 +122,24 @@ contains
         ineighbor_proc      = 0
         ineighbor_neqns     = 2
         ineighbor_nterms_s  = 8
-        call this%faces(XI_MIN)%init_neighbor(  ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,    &
-                                                      ineighbor_element_l,ineighbor_face,ineighbor_neqns,           &
-                                                      ineighbor_nterms_s,ineighbor_proc)
-        call this%faces(XI_MAX)%init_neighbor(  ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,    &
-                                                      ineighbor_element_l,ineighbor_face,ineighbor_neqns,           &
-                                                      ineighbor_nterms_s,ineighbor_proc)
-        call this%faces(ETA_MIN)%init_neighbor( ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,    &
-                                                      ineighbor_element_l,ineighbor_face,ineighbor_neqns,           &
-                                                      ineighbor_nterms_s,ineighbor_proc)
-        call this%faces(ETA_MAX)%init_neighbor( ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,    &
-                                                      ineighbor_element_l,ineighbor_face,ineighbor_neqns,           &
-                                                      ineighbor_nterms_s,ineighbor_proc)
-        call this%faces(ZETA_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,    &
-                                                      ineighbor_element_l,ineighbor_face,ineighbor_neqns,           &
-                                                      ineighbor_nterms_s,ineighbor_proc)
-        call this%faces(ZETA_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,    &
-                                                      ineighbor_element_l,ineighbor_face,ineighbor_neqns,           &
-                                                      ineighbor_nterms_s,ineighbor_proc)
+        call this%faces(XI_MIN)%set_neighbor(  ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,    &
+                                                     ineighbor_element_l,ineighbor_face,ineighbor_neqns,           &
+                                                     ineighbor_nterms_s,ineighbor_proc)
+        call this%faces(XI_MAX)%set_neighbor(  ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,    &
+                                                     ineighbor_element_l,ineighbor_face,ineighbor_neqns,           &
+                                                     ineighbor_nterms_s,ineighbor_proc)
+        call this%faces(ETA_MIN)%set_neighbor( ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,    &
+                                                     ineighbor_element_l,ineighbor_face,ineighbor_neqns,           &
+                                                     ineighbor_nterms_s,ineighbor_proc)
+        call this%faces(ETA_MAX)%set_neighbor( ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,    &
+                                                     ineighbor_element_l,ineighbor_face,ineighbor_neqns,           &
+                                                     ineighbor_nterms_s,ineighbor_proc)
+        call this%faces(ZETA_MIN)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,    &
+                                                     ineighbor_element_l,ineighbor_face,ineighbor_neqns,           &
+                                                     ineighbor_nterms_s,ineighbor_proc)
+        call this%faces(ZETA_MAX)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,ineighbor_element_g,    &
+                                                     ineighbor_element_l,ineighbor_face,ineighbor_neqns,           &
+                                                     ineighbor_nterms_s,ineighbor_proc)
         
         call this%faces(XI_MIN)%init_sol(this%elem)
         call this%faces(XI_MAX)%init_sol(this%elem)
@@ -214,15 +214,15 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     @Test
-    subroutine testElement_jinv_undef(self)
+    subroutine testElement_jinv(self)
         class(test_element_linearC),    intent(inout)   :: self
-        real(rk)    :: test_jinv_undef(self%elem%basis_s%nnodes_ie()), tol
+        real(rk)    :: test_jinv(self%elem%basis_s%nnodes_ie()), tol
         tol = 1.e-13_rk
         
-        test_jinv_undef = 1._rk/8._rk
-        @assertEqual(test_jinv_undef,self%elem%jinv_undef,tol)
+        test_jinv = 1._rk/8._rk
+        @assertEqual(test_jinv,self%elem%jinv,tol)
 
-    end subroutine testElement_jinv_undef
+    end subroutine testElement_jinv
     !*******************************************************************************************
     
 

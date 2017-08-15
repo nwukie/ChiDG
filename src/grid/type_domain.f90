@@ -231,6 +231,9 @@ contains
 
         do ielem = 1,self%nelem
             call self%elems(ielem)%set_displacements_velocities(dnodes,vnodes)
+            do iface = 1,NFACES
+                call self%faces(ielem,iface)%set_displacements_velocities(self%elems(ielem))
+            end do !iface
         end do !ielem
 
 
@@ -253,12 +256,10 @@ contains
         integer(ik) :: ielem, iface
 
         do ielem = 1,self%nelem
-
             call self%elems(ielem)%update_interpolations_ale()
             do iface = 1,NFACES
-                call self%faces(ielem,iface)%update_face_ale(self%elems(ielem))
+                call self%faces(ielem,iface)%update_interpolations_ale(self%elems(ielem))
             end do !iface
-
         end do !ielem
 
 
@@ -661,10 +662,10 @@ contains
                     !
                     ! Call face neighbor initialization routine
                     !
-                    call self%faces(ielem,iface)%init_neighbor(ftype,ineighbor_domain_g, ineighbor_domain_l,    &
-                                                                     ineighbor_element_g,ineighbor_element_l,   &
-                                                                     ineighbor_face,     ineighbor_neqns,       &
-                                                                     ineighbor_nterms_s, ineighbor_proc)
+                    call self%faces(ielem,iface)%set_neighbor(ftype,ineighbor_domain_g, ineighbor_domain_l,    &
+                                                                    ineighbor_element_g,ineighbor_element_l,   &
+                                                                    ineighbor_face,     ineighbor_neqns,       &
+                                                                    ineighbor_nterms_s, ineighbor_proc)
 
                     !
                     ! Also, initialize neighbor face at the same time so we don't
@@ -679,10 +680,10 @@ contains
                         ielement_l = self%elems(ielem)%ielement_l
                         neqns      = self%elems(ielem)%neqns
                         nterms_s   = self%elems(ielem)%nterms_s
-                        call self%faces(ineighbor_element_l,ineighbor_face)%init_neighbor(ftype,idomain_g,  idomain_l,  &
-                                                                                                ielement_g, ielement_l, &
-                                                                                                iface,      neqns,      &
-                                                                                                nterms_s,   IRANK)
+                        call self%faces(ineighbor_element_l,ineighbor_face)%set_neighbor(ftype,idomain_g,  idomain_l,  &
+                                                                                               ielement_g, ielement_l, &
+                                                                                               iface,      neqns,      &
+                                                                                               nterms_s,   IRANK)
                     end if
 
                 end if
@@ -824,10 +825,10 @@ contains
                     !
                     ! Call face neighbor initialization routine
                     !
-                    call self%faces(ielem,iface)%init_neighbor(ftype,ineighbor_domain_g,  ineighbor_domain_l,   &
-                                                                     ineighbor_element_g, ineighbor_element_l,  &
-                                                                     ineighbor_face,      ineighbor_neqns,      &
-                                                                     ineighbor_nterms_s,  ineighbor_proc)
+                    call self%faces(ielem,iface)%set_neighbor(ftype,ineighbor_domain_g,  ineighbor_domain_l,   &
+                                                                    ineighbor_element_g, ineighbor_element_l,  &
+                                                                    ineighbor_face,      ineighbor_neqns,      &
+                                                                    ineighbor_nterms_s,  ineighbor_proc)
 
 
                 end if

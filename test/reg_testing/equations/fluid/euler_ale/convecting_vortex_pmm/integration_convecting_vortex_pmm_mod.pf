@@ -617,8 +617,8 @@ contains
                     !
                     ! Compute the analytical solution at the quadrature nodes
                     !
-                    x_gq = mesh%domain(idom)%elems(ielem)%quad_pts(:,1)
-                    y_gq = mesh%domain(idom)%elems(ielem)%quad_pts(:,2)
+                    x_gq = mesh%domain(idom)%elems(ielem)%interp_coords(:,1)
+                    y_gq = mesh%domain(idom)%elems(ielem)%interp_coords(:,2)
                     do igq = 1, size(x_gq)
                         test_points(igq)%c1_ = x_gq(igq)
                         test_points(igq)%c2_ = y_gq(igq)

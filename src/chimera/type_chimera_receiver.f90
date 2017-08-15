@@ -42,7 +42,7 @@ module type_chimera_receiver
         real(rk),   allocatable :: ale_g_grad2(:)
         real(rk),   allocatable :: ale_g_grad3(:)
         real(rk),   allocatable :: ale_Dinv(:,:,:)
-        real(rk),   allocatable :: ale_grid_vel(:,:)
+        real(rk),   allocatable :: interp_coords_vel(:,:)
 
     contains
 
@@ -101,7 +101,7 @@ contains
                  instance%ale_g_grad2(nnodes),  &
                  instance%ale_g_grad3(nnodes),  &
                  instance%ale_Dinv(3,3,nnodes), &
-                 instance%ale_grid_vel(nnodes,3), stat=ierr)
+                 instance%interp_coords_vel(nnodes,3), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
@@ -268,13 +268,13 @@ contains
         self%ielement_l   = 0
         self%iface        = 0
 
-        if (allocated(self%donor))        deallocate(self%donor)
-        if (allocated(self%ale_g))        deallocate(self%ale_g)
-        if (allocated(self%ale_g_grad1))  deallocate(self%ale_g_grad1)
-        if (allocated(self%ale_g_grad2))  deallocate(self%ale_g_grad2)
-        if (allocated(self%ale_g_grad3))  deallocate(self%ale_g_grad3)
-        if (allocated(self%ale_Dinv))     deallocate(self%ale_Dinv)
-        if (allocated(self%ale_grid_vel)) deallocate(self%ale_grid_vel)
+        if (allocated(self%donor))             deallocate(self%donor)
+        if (allocated(self%ale_g))             deallocate(self%ale_g)
+        if (allocated(self%ale_g_grad1))       deallocate(self%ale_g_grad1)
+        if (allocated(self%ale_g_grad2))       deallocate(self%ale_g_grad2)
+        if (allocated(self%ale_g_grad3))       deallocate(self%ale_g_grad3)
+        if (allocated(self%ale_Dinv))          deallocate(self%ale_Dinv)
+        if (allocated(self%interp_coords_vel)) deallocate(self%interp_coords_vel)
 
     end subroutine clear
     !******************************************************************************************

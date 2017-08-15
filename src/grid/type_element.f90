@@ -52,75 +52,80 @@ module type_element
     type, public :: element_t
 
         ! Element location
-        integer(ik)     :: element_location(4)              ! [idomain_g, idomain_l, ielement_g, ielement_l], useful for nonblocking send
-        integer(ik)     :: idomain_g                        ! Global index of parent domain
-        integer(ik)     :: idomain_l                        ! Proc-local index of parent domain
-        integer(ik)     :: ielement_g                       ! Domain-global index of element
-        integer(ik)     :: ielement_l                       ! Proc-local index of the element
+        integer(ik)                 :: element_location(4)  ! [idomain_g, idomain_l, ielement_g, ielement_l], useful for nonblocking send
+        integer(ik)                 :: idomain_g            ! Global index of parent domain
+        integer(ik)                 :: idomain_l            ! Proc-local index of parent domain
+        integer(ik)                 :: ielement_g           ! Domain-global index of element
+        integer(ik)                 :: ielement_l           ! Proc-local index of the element
 
         ! Element data
-        integer(ik)     :: element_data(8)                  ! [element_type, spacedim, coordinate_system, neqns, nterms_s, nterms_c, ntime, interpolation_level]
-        integer(ik)     :: element_type                     ! 1=linear, 2=quadratic, 3=cubic, 4=quartic, etc.
-        integer(ik)     :: spacedim                         ! Number of spatial dimensions for the element
-        integer(ik)     :: coordinate_system                ! CARTESIAN, CYLINDRICAL. parameters from mod_constants
-        integer(ik)     :: neqns                            ! Number of equations being solved
-        integer(ik)     :: nterms_s                         ! Number of terms in solution expansion.  
-        integer(ik)     :: nterms_c                         ! Number of terms in coordinate expansion. 
-        integer(ik)     :: ntime                            ! Number of time levels in solution
-        integer(ik)     :: interpolation_level              ! 1=lowest, 2-> are higher
+        integer(ik)                 :: element_data(8)      ! [element_type, spacedim, coordinate_system, neqns, nterms_s, nterms_c, ntime, interpolation_level]
+        integer(ik)                 :: element_type         ! 1=linear, 2=quadratic, 3=cubic, 4=quartic, etc.
+        integer(ik)                 :: spacedim             ! Number of spatial dimensions for the element
+        integer(ik)                 :: coordinate_system    ! CARTESIAN, CYLINDRICAL. parameters from mod_constants
+        integer(ik)                 :: neqns                ! Number of equations being solved
+        integer(ik)                 :: nterms_s             ! Number of terms in solution expansion.  
+        integer(ik)                 :: nterms_c             ! Number of terms in coordinate expansion. 
+        integer(ik)                 :: ntime                ! Number of time levels in solution
+        integer(ik)                 :: interpolation_level  ! 1=lowest, 2-> are higher
 
-        ! Element quadrature points, mesh points and modes
-        type(densevector_t)             :: coords               ! Modal expansion of coordinates (nterms_var,(x,y,z))
-        integer(ik),    allocatable     :: connectivity(:)      ! Integer indices of the associated nodes in block node list
-        real(rk),       allocatable     :: nodes_to_modes(:,:)  ! Transformation matrix for converting nodal values to modal coefficients
 
-        ! Element geometry at element nodes
-        real(rk),       allocatable     :: elem_pts(:,:)        ! Coordinates of discrete points defining element
-        real(rk),       allocatable     :: dnodes_l(:,:)        ! Node displacements, local element ordering
-        real(rk),       allocatable     :: vnodes_l(:,:)        ! Node velocities,    local element ordering
+        ! Connectivty and linear transformation martrix for 
+        ! converting between nodal and modal representations
+        integer(ik),    allocatable :: connectivity(:)      ! Integer indices of the associated nodes in block node list
+        real(rk),       allocatable :: nodes_to_modes(:,:)  ! Transformation matrix for converting nodal values to modal coefficients
+
+
+        ! Modal representations of element coordinates/velocity
+        type(densevector_t)         :: coords               ! Modal representation of undeformed element coordinates (nterms_var,(x,y,z))
+        type(densevector_t)         :: coords_def           ! Modal representation of deformed element coordinates (nterms, (x,y,z))
+        type(densevector_t)         :: coords_vel           ! Modal representation of coordinate velocities (nterms,(v_x,v_y,v_z))
+
+
+        ! Element geometry at support nodes
+        real(rk),       allocatable :: node_coords(:,:)     ! Node coordinates, undeformed element, local element ordering
+        real(rk),       allocatable :: node_coords_def(:,:) ! Node coordinates, deformed element,   local element ordering
+        real(rk),       allocatable :: node_coords_vel(:,:) ! Node velocities,  deformed element,   local element ordering
 
         ! Element geometry at interpolation nodes
-        real(rk),       allocatable     :: quad_pts(:,:)        ! Coordinates of discrete quadrature points
-        real(rk),       allocatable     :: metric(:,:,:)        ! inverted jacobian matrix for each quadrature node (mat_i,mat_j,quad_pt)
-        real(rk),       allocatable     :: jinv_undef(:)        ! Differential volume ratio: Undeformed Volume/Reference Volume
-        real(rk),       allocatable     :: jinv_def(:)          ! Differential volume ratio: Deformed Volume/Reference Volume
+        real(rk),       allocatable :: interp_coords(:,:)       ! Undeformed coordinates at element interpolation nodes
+        real(rk),       allocatable :: interp_coords_def(:,:)   ! Deformed coordinates at element interpolation nodes
+        real(rk),       allocatable :: interp_coords_vel(:,:)   ! Coordinate velocities at element interpolation nodes
+        real(rk),       allocatable :: metric(:,:,:)            ! inverted jacobian matrix for each quadrature node (mat_i,mat_j,quad_pt)
+        real(rk),       allocatable :: jinv(:)                  ! Differential volume ratio: Undeformed Volume/Reference Volume
+        real(rk),       allocatable :: jinv_def(:)              ! Differential volume ratio: Deformed Volume/Reference Volume
 
 
         ! Arbitrary Lagrangian Eulerian data
         !   : This defines a mapping from some deformed element back to the original
         !   : undeformed element with the idea that the governing equations are transformed
         !   : and solved on the undeformed element.
-        integer(ik)                     :: pmm_ID = NO_PMM_ASSIGNED
-        type(densevector_t)             :: ale_coords               ! Modal representation of deformed coordinates (nterms_var,(x,y,z))
-        type(densevector_t)             :: ale_vel_coords           ! Modal representation of grid velocity        (nterms_var,(x,y,z))
-        real(rk),       allocatable     :: ale_quad_pts(:,:)        ! Deformed coordinates at interpolation nodes
-        real(rk),       allocatable     :: ale_elem_pts(:,:)        ! Deformed coordinates at at element nodes
-        real(rk),       allocatable     :: ale_grid_vel(:,:)        ! Grid velocity at interpolation nodes
-        real(rk),       allocatable     :: ale_Dinv(:,:,:)          ! Deformation gradient: deformed element/undeformed element
-        real(rk),       allocatable     :: ale_g(:)                 ! Differential volume ratio: Deformed Volume/Undeformed Volume
-        real(rk),       allocatable     :: ale_g_grad1(:)
-        real(rk),       allocatable     :: ale_g_grad2(:)
-        real(rk),       allocatable     :: ale_g_grad3(:)
-        real(rk),       allocatable     :: ale_g_modes(:)           ! A modal expansion of the ale differential volume ratio in the solution basis
+        integer(ik)                 :: pmm_ID = NO_PMM_ASSIGNED
+        real(rk),       allocatable :: ale_Dinv(:,:,:)          ! Deformation gradient: deformed element/undeformed element
+        real(rk),       allocatable :: ale_g(:)                 ! Differential volume ratio: Deformed Volume/Undeformed Volume
+        real(rk),       allocatable :: ale_g_grad1(:)
+        real(rk),       allocatable :: ale_g_grad2(:)
+        real(rk),       allocatable :: ale_g_grad3(:)
+        real(rk),       allocatable :: ale_g_modes(:)           ! A modal expansion of the ale differential volume ratio in the solution basis
 
 
         ! Matrices of physical gradients of basis/test functions
-        real(rk),       allocatable     :: grad1(:,:)           ! Grad of basis functions in at quadrature nodes
-        real(rk),       allocatable     :: grad2(:,:)           ! Grad of basis functions in at quadrature nodes
-        real(rk),       allocatable     :: grad3(:,:)           ! Grad of basis functions in at quadrature nodes
-        real(rk),       allocatable     :: grad1_trans(:,:)     ! transpose grad1
-        real(rk),       allocatable     :: grad2_trans(:,:)     ! transpose grad2
-        real(rk),       allocatable     :: grad3_trans(:,:)     ! transpose grad3
+        real(rk),       allocatable :: grad1(:,:)           ! Grad of basis functions in at quadrature nodes
+        real(rk),       allocatable :: grad2(:,:)           ! Grad of basis functions in at quadrature nodes
+        real(rk),       allocatable :: grad3(:,:)           ! Grad of basis functions in at quadrature nodes
+        real(rk),       allocatable :: grad1_trans(:,:)     ! transpose grad1
+        real(rk),       allocatable :: grad2_trans(:,:)     ! transpose grad2
+        real(rk),       allocatable :: grad3_trans(:,:)     ! transpose grad3
 
         ! Element-local mass, inverse mass matrices
-        real(rk),       allocatable     :: mass(:,:)        
-        real(rk),       allocatable     :: invmass(:,:)
+        real(rk),       allocatable :: mass(:,:)        
+        real(rk),       allocatable :: invmass(:,:)
 
         ! Element volume, approx. size of bounding box
-        real(rk)                        :: vol
-        real(rk)                        :: vol_ale
-        real(rk)                        :: h(3)     
-        real(rk),       allocatable     :: dtau(:)              ! a pseudo-timestep for each equation. Used in the nonlinear solver.
+        real(rk)                    :: vol
+        real(rk)                    :: vol_ale
+        real(rk)                    :: h(3)     
+        real(rk),       allocatable :: dtau(:)              ! a pseudo-timestep for each equation. Used in the nonlinear solver.
 
         ! Reference element and interpolators
         type(reference_element_t),  pointer :: basis_s => null()  ! Pointer to solution basis and interpolator
@@ -138,7 +143,21 @@ module type_element
         procedure, public   :: init_sol
 
 
-        ! Compute discrete value for at a given xi,eta,zeta.
+        ! Undeformed element procedures
+        procedure, public   :: update_interpolations
+        procedure, private  :: interpolate_coords
+        procedure, private  :: interpolate_metrics
+        procedure, private  :: interpolate_gradients
+        procedure, private  :: compute_mass_matrix
+
+        ! Deformed element/ALE procedures
+        procedure, public   :: set_displacements_velocities
+        procedure, public   :: update_interpolations_ale
+        procedure, private  :: interpolate_coords_ale
+        procedure, private  :: interpolate_metrics_ale
+
+
+        ! Compute discrete value for a given xi,eta,zeta.
         procedure, public   :: x                      
         procedure, public   :: y                      
         procedure, public   :: z                      
@@ -157,19 +176,8 @@ module type_element
         ! Get connected face
         procedure, public   :: get_face_from_corners
 
-        ! Private utility procedure
-        procedure           :: update_interpolations
-        procedure           :: interpolate_coords
-        procedure           :: interpolate_metrics
-        procedure           :: interpolate_gradients
-        procedure           :: compute_mass_matrix
 
 
-        ! ALE procedures
-        procedure, public   :: set_displacements_velocities
-        procedure, public   :: update_interpolations_ale
-        procedure           :: interpolate_coords_ale
-        procedure           :: interpolate_metrics_ale
 
         final               :: destructor
 
@@ -272,10 +280,12 @@ contains
 
 
 
+
         !
         ! Get element mapping
         !
-        self%spacedim =3
+        self%spacedim = 3
+        self%ntime    = 1
         self%nodes_to_modes = self%basis_c%nodes_to_modes
         self%nterms_c = size(self%nodes_to_modes,1)
         user_msg = "element%init_geom: mapping and points do not match."
@@ -286,17 +296,17 @@ contains
         !
         ! Allocate storage
         !
-        allocate(self%elem_pts(self%nterms_c,3),stat=ierr)
-        call self%coords%init(self%nterms_c,3,ntime,self%idomain_g,self%idomain_l,self%ielement_g,self%ielement_l)
-        self%elem_pts = nodes_l
+        allocate(self%node_coords(self%nterms_c,3),stat=ierr)
+        call self%coords%init(self%nterms_c,self%spacedim,self%ntime,self%idomain_g,self%idomain_l,self%ielement_g,self%ielement_l)
+        self%node_coords = nodes_l
 
         
         !
         ! Compute modal expansion of element coordinates
         !
-        modes1 = matmul(self%nodes_to_modes,self%elem_pts(:,1))
-        modes2 = matmul(self%nodes_to_modes,self%elem_pts(:,2))
-        modes3 = matmul(self%nodes_to_modes,self%elem_pts(:,3))
+        modes1 = matmul(self%nodes_to_modes,self%node_coords(:,1))
+        modes2 = matmul(self%nodes_to_modes,self%node_coords(:,2))
+        modes3 = matmul(self%nodes_to_modes,self%node_coords(:,3))
 
         call self%coords%setvar(1,itime = 1,vals = modes1)
         call self%coords%setvar(2,itime = 1,vals = modes2)
@@ -339,6 +349,12 @@ contains
         self%geom_initialized = .true.   
 
 
+        !
+        ! Store element_data(1-2)
+        !
+        self%element_data(1) = self%element_type
+        self%element_data(2) = self%spacedim
+        self%element_data(3) = self%coordinate_system
 
 
         !
@@ -352,109 +368,11 @@ contains
         call self%set_displacements_velocities(dnodes,vnodes)
 
 
-        !
-        ! Store element_data(1-2)
-        !
-        self%element_data(1) = self%element_type
-        self%element_data(2) = self%spacedim
-        self%element_data(3) = self%coordinate_system
-
-
-
     end subroutine init_geom
     !******************************************************************************************
 
 
 
-
-
-
-
-    !>  Initialize ALE data from nodal displacements.
-    !!
-    !!  With domain-global representations of node displacements and velocities passed
-    !!  in, update the ALE data by:
-    !!      1: locate displacements and velocities in the global array that correspond to the local element.
-    !!      2: (re)allocate ale storage and initialize data containers
-    !!      3: compute ALE element nodes as: (ref_nodes + displacements). Compute modal representation.
-    !!      4: set ALE element node velocities. Comput modal representation.
-    !!
-    !!  @author Eric Wolf (AFRL)
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   6/16/2017
-    !!
-    !-------------------------------------------------------------------------------------
-    subroutine set_displacements_velocities(self,dnodes,vnodes)
-        class(element_t),   intent(inout)   :: self
-        real(rk),           intent(in)      :: dnodes(:,:)
-        real(rk),           intent(in)      :: vnodes(:,:)
-
-        integer(ik)             :: ipt, npts, inode, ierr
-        real(rk),   allocatable :: modes1(:), modes2(:), modes3(:)
-
-
-        ! Check if reference geometry has been initialized
-        if (.not. self%geom_initialized) call chidg_signal(FATAL,"element%set_displacements_velocities: reference geometry has not been initialized. Make sure to call element%init_geom.")
-
-
-        !
-        ! Accumulate local node displacements and velocities
-        !
-        npts = size(self%elem_pts,1)
-        if (allocated(self%dnodes_l)) deallocate(self%dnodes_l, self%vnodes_l)
-        allocate(self%dnodes_l(npts,3), self%vnodes_l(npts,3), stat=ierr)
-        if (ierr /= 0) call AllocationError
-
-        do ipt = 1,npts
-            ! Get node index
-            inode = self%connectivity(ipt)
-
-            ! Assemble local node disp/vel from global
-            self%dnodes_l(ipt,:)  = dnodes(inode,:)
-            self%vnodes_l(ipt,:)  = vnodes(inode,:)
-        end do !ipt
-
-
-        !
-        ! Compute deformed coordinates at element nodes: (undeformed + perturbation)
-        !
-        self%ale_elem_pts = (self%elem_pts + self%dnodes_l)
-
-
-        !
-        ! ALE (re)initialization
-        !
-        call self%ale_coords%init(    self%nterms_c,self%spacedim,self%ntime,self%idomain_g,self%idomain_l,self%ielement_g,self%ielement_l)
-        call self%ale_vel_coords%init(self%nterms_c,self%spacedim,self%ntime,self%idomain_g,self%idomain_l,self%ielement_g,self%ielement_l)
-
-
-        !
-        ! Compute modal representation of coordinates
-        !
-        modes1 = matmul(self%nodes_to_modes,self%ale_elem_pts(:,1))
-        modes2 = matmul(self%nodes_to_modes,self%ale_elem_pts(:,2))
-        modes3 = matmul(self%nodes_to_modes,self%ale_elem_pts(:,3))
-
-        call self%ale_coords%setvar(1,itime = 1,vals = modes1)
-        call self%ale_coords%setvar(2,itime = 1,vals = modes2)
-        call self%ale_coords%setvar(3,itime = 1,vals = modes3)
-
-
-
-        !
-        ! Compute modal representation of grid velocity
-        !
-        modes1 = matmul(self%nodes_to_modes,self%vnodes_l(:,1))
-        modes2 = matmul(self%nodes_to_modes,self%vnodes_l(:,2))
-        modes3 = matmul(self%nodes_to_modes,self%vnodes_l(:,3))
-
-        call self%ale_vel_coords%setvar(1,itime = 1,vals = modes1)
-        call self%ale_vel_coords%setvar(2,itime = 1,vals = modes2)
-        call self%ale_vel_coords%setvar(3,itime = 1,vals = modes3)
-
-
-    end subroutine set_displacements_velocities
-    !**************************************************************************************
 
 
 
@@ -524,12 +442,12 @@ contains
         !
         ! (Re)Allocate storage for element data structures
         !
-        if (allocated(self%jinv_undef)) &
-            deallocate( self%jinv_undef,                &
+        if (allocated(self%jinv)) &
+            deallocate( self%jinv,                &
                         self%jinv_def,                  &
                         self%metric,                    &
-                        self%quad_pts,                  &
-                        self%ale_quad_pts,              &
+                        self%interp_coords,                  &
+                        self%interp_coords_def,              &
                         self%grad1,                     &
                         self%grad2,                     &
                         self%grad3,                     &
@@ -538,7 +456,7 @@ contains
                         self%grad3_trans,               &
                         self%mass,                      &
                         self%invmass,                   &
-                        self%ale_grid_vel,              &
+                        self%interp_coords_vel,              &
                         self%ale_Dinv,                  &
                         self%ale_g,                     &
                         self%ale_g_grad1,               &
@@ -550,7 +468,7 @@ contains
             
 
         nnodes = ref_elems(ref_ID_s)%nnodes_ie()
-        allocate(self%jinv_undef(nnodes),               &
+        allocate(self%jinv(nnodes),               &
                  self%jinv_def(nnodes),                 &
                  self%grad1(nnodes,nterms_s),           &
                  self%grad2(nnodes,nterms_s),           &
@@ -560,18 +478,19 @@ contains
                  self%grad3_trans(nterms_s,nnodes),     &
                  self%mass(nterms_s,nterms_s),          &
                  self%invmass(nterms_s,nterms_s),       &
-                 self%quad_pts(nnodes,3),               &
-                 self%ale_quad_pts(nnodes,3),           &
-                 self%ale_grid_vel(nnodes,3),           &
+                 self%interp_coords(nnodes,3),               &
+                 self%interp_coords_def(nnodes,3),           &
+                 self%interp_coords_vel(nnodes,3),           &
                  self%metric(3,3,nnodes),               &
                  self%ale_Dinv(3,3,nnodes),             &
                  self%ale_g(nnodes),                    &
                  self%ale_g_grad1(nnodes),              &
                  self%ale_g_grad2(nnodes),              &
                  self%ale_g_grad3(nnodes),              &
-                 self%ale_g_modes(self%nterms_s),       &
+                 self%ale_g_modes(nterms_s),            &
                  self%dtau(nfields), stat=ierr)
         if (ierr /= 0) call AllocationError
+
 
 
         !
@@ -609,9 +528,10 @@ contains
 
 
     !>  Subroutine computes element-specific matrices
+    !!      - Coordinates of interpolation node set
+    !!      - Metric terms at interpolation node set
     !!      - Mass matrix   (mass, invmass)
     !!      - Matrices of gradients of basis/test functions (grad1, grad2, grad3)
-    !!      - Coordinates of quadrature points (quad_pts)
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -621,12 +541,12 @@ contains
         class(element_t),   intent(inout)   :: self
 
         !
-        ! Call to compute coordinates at each quadrature node
+        ! Call to compute coordinates at each interpolation node
         !
         call self%interpolate_coords()
 
         !
-        ! Compute quadrature metrics
+        ! Compute interpolation metrics
         !
         call self%interpolate_metrics()
 
@@ -636,7 +556,7 @@ contains
         call self%compute_mass_matrix()
 
         !
-        ! Call to compute matrices of gradients at each quadrature node
+        ! Call to compute matrices of gradients at each interpolation node
         !
         call self%interpolate_gradients()
 
@@ -708,7 +628,7 @@ contains
             case (CARTESIAN)
                 scaling_row2 = ONE
             case (CYLINDRICAL)
-                scaling_row2 = self%quad_pts(:,1)
+                scaling_row2 = self%interp_coords(:,1)
             case default
                 user_msg = "element%interpolate_metrics: Invalid coordinate system."
                 call chidg_signal(FATAL,user_msg)
@@ -730,7 +650,7 @@ contains
         ! Compute inverse cell mapping jacobian
         !
         do inode = 1,nnodes
-            self%jinv_undef(inode) = det_3x3(jacobian(:,:,inode))
+            self%jinv(inode) = det_3x3(jacobian(:,:,inode))
         end do
 
 
@@ -739,13 +659,13 @@ contains
         !
         user_msg = "element%interpolate_metrics: Negative element &
                     volume detected. Check element quality and orientation."
-        if (any(self%jinv_undef < ZERO)) call chidg_signal(FATAL,user_msg)
+        if (any(self%jinv < ZERO)) call chidg_signal(FATAL,user_msg)
 
 
         !
         ! Compute total volume by integrating differential volumes
         !
-        self%vol = abs(sum(self%jinv_undef * weights))
+        self%vol = abs(sum(self%jinv * weights))
 
 
         !
@@ -847,7 +767,7 @@ contains
         ! Initialize each point with coordinates
         !
         do inode = 1,nnodes
-            self%quad_pts(inode,1:3) = [coord1(inode), coord2(inode), coord3(inode)]
+            self%interp_coords(inode,1:3) = [coord1(inode), coord2(inode), coord3(inode)]
         end do
 
     end subroutine interpolate_coords
@@ -881,7 +801,7 @@ contains
         ! Multiply rows by quadrature weights and cell jacobians
         !
         do iterm = 1,self%nterms_s
-            temp(iterm,:) = temp(iterm,:)*(self%basis_s%weights())*(self%jinv_undef)
+            temp(iterm,:) = temp(iterm,:)*(self%basis_s%weights())*(self%jinv)
         end do
 
 
@@ -901,6 +821,423 @@ contains
 
     end subroutine compute_mass_matrix
     !******************************************************************************************
+
+
+
+
+
+
+    !>  Initialize ALE data from nodal displacements.
+    !!
+    !!  With domain-global representations of node displacements and velocities passed
+    !!  in, update the ALE data by:
+    !!      1: locate displacements and velocities in the global array that correspond to the local element.
+    !!      2: (re)allocate ale storage and initialize data containers
+    !!      3: compute ALE element nodes as: (ref_nodes + displacements). Compute modal representation.
+    !!      4: set ALE element node velocities. Comput modal representation.
+    !!
+    !!  @author Eric Wolf (AFRL)
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/16/2017
+    !!
+    !-------------------------------------------------------------------------------------
+    subroutine set_displacements_velocities(self,dnodes,vnodes)
+        class(element_t),   intent(inout)   :: self
+        real(rk),           intent(in)      :: dnodes(:,:)
+        real(rk),           intent(in)      :: vnodes(:,:)
+
+        integer(ik)             :: ipt, npts, inode, ierr
+        real(rk),   allocatable :: modes1(:), modes2(:), modes3(:), dnodes_l(:,:)
+
+
+        ! Check if reference geometry has been initialized
+        if (.not. self%geom_initialized) call chidg_signal(FATAL,"element%set_displacements_velocities: reference geometry has not been initialized. Make sure to call element%init_geom.")
+
+
+        !
+        ! Accumulate local node displacements and velocities
+        !
+        npts = size(self%node_coords,1)
+        if (allocated(self%node_coords_vel)) deallocate(self%node_coords_vel)
+        allocate(dnodes_l(npts,3), self%node_coords_vel(npts,3), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        do ipt = 1,npts
+            ! Get node index
+            inode = self%connectivity(ipt)
+
+            ! Assemble local node disp/vel from global
+            dnodes_l(ipt,:)  = dnodes(inode,:)
+            self%node_coords_vel(ipt,:)  = vnodes(inode,:)
+        end do !ipt
+
+
+        !
+        ! Compute deformed coordinates at element nodes: (undeformed + perturbation)
+        !
+        self%node_coords_def = (self%node_coords + dnodes_l)
+
+
+        !
+        ! ALE (re)initialization
+        !
+        call self%coords_def%init(self%nterms_c,self%spacedim,self%ntime,self%idomain_g,self%idomain_l,self%ielement_g,self%ielement_l)
+        call self%coords_vel%init(self%nterms_c,self%spacedim,self%ntime,self%idomain_g,self%idomain_l,self%ielement_g,self%ielement_l)
+
+
+        !
+        ! Compute modal representation of coordinates
+        !
+        modes1 = matmul(self%nodes_to_modes,self%node_coords_def(:,1))
+        modes2 = matmul(self%nodes_to_modes,self%node_coords_def(:,2))
+        modes3 = matmul(self%nodes_to_modes,self%node_coords_def(:,3))
+
+        call self%coords_def%setvar(1,itime = 1,vals = modes1)
+        call self%coords_def%setvar(2,itime = 1,vals = modes2)
+        call self%coords_def%setvar(3,itime = 1,vals = modes3)
+
+
+
+        !
+        ! Compute modal representation of grid velocity
+        !
+        modes1 = matmul(self%nodes_to_modes,self%node_coords_vel(:,1))
+        modes2 = matmul(self%nodes_to_modes,self%node_coords_vel(:,2))
+        modes3 = matmul(self%nodes_to_modes,self%node_coords_vel(:,3))
+
+        call self%coords_vel%setvar(1,itime = 1,vals = modes1)
+        call self%coords_vel%setvar(2,itime = 1,vals = modes2)
+        call self%coords_vel%setvar(3,itime = 1,vals = modes3)
+
+
+    end subroutine set_displacements_velocities
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !!
+    !-------------------------------------------------------------------------------------------
+    subroutine update_interpolations_ale(self)
+        class(element_t),       intent(inout)      :: self
+
+        call self%interpolate_coords_ale()
+        call self%interpolate_metrics_ale()
+
+    end subroutine update_interpolations_ale
+    !*******************************************************************************************
+
+
+
+
+
+
+    !>  Compute ALE quantities at interpolation nodes from modes.
+    !!      coords_def     -> interp_coords_def
+    !!      coords_vel -> interp_coords_vel
+    !!
+    !!  @author Eric Wolf (AFRL)
+    !!  @date   7/14/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine interpolate_coords_ale(self)
+        class(element_t),   intent(inout)   :: self
+
+        real(rk),   allocatable :: val(:,:)
+
+
+        !
+        ! Retrieve interpolator
+        !
+        val = self%basis_c%interpolator('Value')
+
+        !
+        ! compute cartesian coordinates associated with quadrature points
+        !
+        self%interp_coords_def(:,1) = matmul(val,self%coords_def%getvar(1,itime = 1))
+        self%interp_coords_def(:,2) = matmul(val,self%coords_def%getvar(2,itime = 1))
+        self%interp_coords_def(:,3) = matmul(val,self%coords_def%getvar(3,itime = 1))
+
+
+        !
+        ! Grid velocity
+        ! compute cartesian coordinates associated with quadrature points
+        !
+        self%interp_coords_vel(:,1) = matmul(val,self%coords_vel%getvar(1,itime = 1))
+        self%interp_coords_vel(:,2) = matmul(val,self%coords_vel%getvar(2,itime = 1))
+        self%interp_coords_vel(:,3) = matmul(val,self%coords_vel%getvar(3,itime = 1))
+
+    end subroutine interpolate_coords_ale
+    !****************************************************************************************
+
+
+
+
+
+
+    !>  Compute ALE metrics at interpolation nodes.
+    !!
+    !!  @author Eric Wolf (AFRL)
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine interpolate_metrics_ale(self)
+        class(element_t),    intent(inout)   :: self
+
+        integer(ik)                             :: inode, nnodes, ierr
+        character(:),               allocatable :: coordinate_system, user_msg
+
+        real(rk),   dimension(:),   allocatable ::                  &
+            dd1_dxidxi,   dd1_detadeta,   dd1_dzetadzeta,           &
+            dd2_dxidxi,   dd2_detadeta,   dd2_dzetadzeta,           &
+            dd3_dxidxi,   dd3_detadeta,   dd3_dzetadzeta,           &
+            dd1_dxideta,  dd1_dxidzeta,   dd1_detadzeta,            &
+            dd2_dxideta,  dd2_dxidzeta,   dd2_detadzeta,            &
+            dd3_dxideta,  dd3_dxidzeta,   dd3_detadzeta,            &
+            ale_g_ddxi,   ale_g_ddeta,    ale_g_ddzeta,             &
+            jinv_grad1, jinv_grad2, jinv_grad3,   &
+            jinv_def_grad1,   jinv_def_grad2,   jinv_def_grad3,     &
+            fvals, temp, scaling_row2, weights
+
+        real(rk),   dimension(:,:), allocatable ::  &
+            val,                                    &
+            ddxi,    ddeta,    ddzeta,              &
+            dxidxi,  detadeta, dzetadzeta,          &
+            dxideta, dxidzeta, detadzeta,           &
+            D_matrix
+
+        real(rk), dimension(:,:,:), allocatable ::  &
+            jacobian_ale, jacobian(:,:,:)
+
+
+
+        !
+        ! Retrieve interpolators
+        !
+        nnodes  = self%basis_c%nnodes_ie()
+        weights = self%basis_c%weights()
+        ddxi    = self%basis_c%interpolator('ddxi')
+        ddeta   = self%basis_c%interpolator('ddeta')
+        ddzeta  = self%basis_c%interpolator('ddzeta')
+
+        dxidxi     = self%basis_c%interpolator('dxidxi')
+        detadeta   = self%basis_c%interpolator('detadeta')
+        dzetadzeta = self%basis_c%interpolator('dzetadzeta')
+
+        dxideta    = self%basis_c%interpolator('dxideta')
+        dxidzeta   = self%basis_c%interpolator('dxidzeta')
+        detadzeta  = self%basis_c%interpolator('detadzeta')
+
+
+
+        ! First derivatives
+        allocate(jacobian_ale(3,3,nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        jacobian_ale(1,1,:) = matmul(ddxi,   self%coords_def%getvar(1,itime = 1))
+        jacobian_ale(1,2,:) = matmul(ddeta,  self%coords_def%getvar(1,itime = 1))
+        jacobian_ale(1,3,:) = matmul(ddzeta, self%coords_def%getvar(1,itime = 1))
+
+        jacobian_ale(2,1,:) = matmul(ddxi,   self%coords_def%getvar(2,itime = 1))
+        jacobian_ale(2,2,:) = matmul(ddeta,  self%coords_def%getvar(2,itime = 1))
+        jacobian_ale(2,3,:) = matmul(ddzeta, self%coords_def%getvar(2,itime = 1))
+
+        jacobian_ale(3,1,:) = matmul(ddxi,   self%coords_def%getvar(3,itime = 1))
+        jacobian_ale(3,2,:) = matmul(ddeta,  self%coords_def%getvar(3,itime = 1))
+        jacobian_ale(3,3,:) = matmul(ddzeta, self%coords_def%getvar(3,itime = 1))
+
+
+        !
+        ! Add coordinate system scaling to jacobian matrix
+        !
+        allocate(scaling_row2(nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        select case (self%coordinate_system)
+            case (CARTESIAN)
+                scaling_row2 = ONE
+            case (CYLINDRICAL)
+                scaling_row2 = self%interp_coords_def(:,1)
+            case default
+                user_msg = "element%interpolate_metrics_ale: Invalid coordinate system."
+                call chidg_signal(FATAL,user_msg)
+        end select
+
+
+
+        !
+        ! Apply coorindate system scaling
+        !
+        jacobian_ale(2,1,:) = jacobian_ale(2,1,:)*scaling_row2
+        jacobian_ale(2,2,:) = jacobian_ale(2,2,:)*scaling_row2
+        jacobian_ale(2,3,:) = jacobian_ale(2,3,:)*scaling_row2
+
+
+
+
+        !
+        ! Compute inverse cell mapping jacobian
+        !
+        do inode = 1,nnodes
+            self%jinv_def(inode) = det_3x3(jacobian_ale(:,:,inode))
+        end do
+
+
+
+        !
+        ! Check for negative jacobians
+        !
+        user_msg = "element%interpolate_metrics_ale: Negative element jacobians. &
+                    Check element quality and origntation."
+        if (any(self%jinv_def < ZERO)) call chidg_signal(FATAL,user_msg)
+
+
+        !
+        ! Compute element volume
+        !
+        self%vol_ale = abs(sum(self%jinv_def * weights))
+
+
+        !
+        ! Compute element deformation gradient: dX/dx
+        !   dX/dx = [dxi/dx][dX/dxi]
+        !
+        do inode = 1,nnodes
+            D_matrix = matmul(jacobian_ale(:,:,inode),self%metric(:,:,inode))
+            self%ale_Dinv(:,:,inode) = inv_3x3(D_matrix)
+
+            ! Invert jacobian_ale for use later in routine
+            jacobian_ale(:,:,inode) = inv_3x3(jacobian_ale(:,:,inode))
+        end do
+
+
+        !
+        ! Compute volume scaling: deformed/undeformed
+        !
+        self%ale_g = self%jinv_def/self%jinv
+
+
+        !
+        ! Project ale_g to solution basis
+        !
+        val  = self%basis_s%interpolator('Value')
+        fvals = self%ale_g * weights * self%jinv
+        temp = matmul(transpose(val),fvals)
+        self%ale_g_modes = matmul(self%invmass,temp)
+
+
+
+        ! Second/mixed derivatives
+        dd1_dxidxi     = matmul(dxidxi,     self%coords%getvar(1,itime = 1))
+        dd1_detadeta   = matmul(detadeta,   self%coords%getvar(1,itime = 1))
+        dd1_dzetadzeta = matmul(dzetadzeta, self%coords%getvar(1,itime = 1))
+        dd1_dxideta    = matmul(dxideta,    self%coords%getvar(1,itime = 1))
+        dd1_dxidzeta   = matmul(dxidzeta,   self%coords%getvar(1,itime = 1))
+        dd1_detadzeta  = matmul(detadzeta,  self%coords%getvar(1,itime = 1))
+
+        dd2_dxidxi     = matmul(dxidxi,     self%coords%getvar(2,itime = 1))
+        dd2_detadeta   = matmul(detadeta,   self%coords%getvar(2,itime = 1))
+        dd2_dzetadzeta = matmul(dzetadzeta, self%coords%getvar(2,itime = 1))
+        dd2_dxideta    = matmul(dxideta,    self%coords%getvar(2,itime = 1))
+        dd2_dxidzeta   = matmul(dxidzeta,   self%coords%getvar(2,itime = 1))
+        dd2_detadzeta  = matmul(detadzeta,  self%coords%getvar(2,itime = 1))
+
+        dd3_dxidxi     = matmul(dxidxi,     self%coords%getvar(3,itime = 1))
+        dd3_detadeta   = matmul(detadeta,   self%coords%getvar(3,itime = 1))
+        dd3_dzetadzeta = matmul(dzetadzeta, self%coords%getvar(3,itime = 1))
+        dd3_dxideta    = matmul(dxideta,    self%coords%getvar(3,itime = 1))
+        dd3_dxidzeta   = matmul(dxidzeta,   self%coords%getvar(3,itime = 1))
+        dd3_detadzeta  = matmul(detadzeta,  self%coords%getvar(3,itime = 1))
+
+        jinv_grad1 = dd1_dxidxi*self%metric(1,1,:)    +  dd1_dxideta*self%metric(2,1,:)    +  dd1_dxidzeta*self%metric(3,1,:)   +  &
+                     dd2_dxidxi*self%metric(1,2,:)    +  dd2_dxideta*self%metric(2,2,:)    +  dd2_dxidzeta*self%metric(3,2,:)   +  &
+                     dd3_dxidxi*self%metric(1,3,:)    +  dd3_dxideta*self%metric(2,3,:)    +  dd3_dxidzeta*self%metric(3,3,:)
+
+        jinv_grad2 = dd1_dxideta*self%metric(1,1,:)   +  dd1_detadeta*self%metric(2,1,:)   +  dd1_detadzeta*self%metric(3,1,:)  +  &
+                     dd2_dxideta*self%metric(1,2,:)   +  dd2_detadeta*self%metric(2,2,:)   +  dd2_detadzeta*self%metric(3,2,:)  +  &
+                     dd3_dxideta*self%metric(1,3,:)   +  dd3_detadeta*self%metric(2,3,:)   +  dd3_detadzeta*self%metric(3,3,:)
+
+        jinv_grad3 = dd1_dxidzeta*self%metric(1,1,:)  +  dd1_detadzeta*self%metric(2,1,:)  +  dd1_dzetadzeta*self%metric(3,1,:) +  &
+                     dd2_dxidzeta*self%metric(1,2,:)  +  dd2_detadzeta*self%metric(2,2,:)  +  dd2_dzetadzeta*self%metric(3,2,:) +  &
+                     dd3_dxidzeta*self%metric(1,3,:)  +  dd3_detadzeta*self%metric(2,3,:)  +  dd3_dzetadzeta*self%metric(3,3,:)
+
+
+        ! Second/mixed derivatives
+        dd1_dxidxi     = matmul(dxidxi,     self%coords_def%getvar(1,itime = 1))
+        dd1_detadeta   = matmul(detadeta,   self%coords_def%getvar(1,itime = 1))
+        dd1_dzetadzeta = matmul(dzetadzeta, self%coords_def%getvar(1,itime = 1))
+        dd1_dxideta    = matmul(dxideta,    self%coords_def%getvar(1,itime = 1))
+        dd1_dxidzeta   = matmul(dxidzeta,   self%coords_def%getvar(1,itime = 1))
+        dd1_detadzeta  = matmul(detadzeta,  self%coords_def%getvar(1,itime = 1))
+
+        dd2_dxidxi     = matmul(dxidxi,     self%coords_def%getvar(2,itime = 1))
+        dd2_detadeta   = matmul(detadeta,   self%coords_def%getvar(2,itime = 1))
+        dd2_dzetadzeta = matmul(dzetadzeta, self%coords_def%getvar(2,itime = 1))
+        dd2_dxideta    = matmul(dxideta,    self%coords_def%getvar(2,itime = 1))
+        dd2_dxidzeta   = matmul(dxidzeta,   self%coords_def%getvar(2,itime = 1))
+        dd2_detadzeta  = matmul(detadzeta,  self%coords_def%getvar(2,itime = 1))
+
+        dd3_dxidxi     = matmul(dxidxi,     self%coords_def%getvar(3,itime = 1))
+        dd3_detadeta   = matmul(detadeta,   self%coords_def%getvar(3,itime = 1))
+        dd3_dzetadzeta = matmul(dzetadzeta, self%coords_def%getvar(3,itime = 1))
+        dd3_dxideta    = matmul(dxideta,    self%coords_def%getvar(3,itime = 1))
+        dd3_dxidzeta   = matmul(dxidzeta,   self%coords_def%getvar(3,itime = 1))
+        dd3_detadzeta  = matmul(detadzeta,  self%coords_def%getvar(3,itime = 1))
+
+        jinv_def_grad1 = dd1_dxidxi*jacobian_ale(1,1,:)    +  dd1_dxideta*jacobian_ale(2,1,:)    +  dd1_dxidzeta*jacobian_ale(3,1,:)   +  &
+                         dd2_dxidxi*jacobian_ale(1,2,:)    +  dd2_dxideta*jacobian_ale(2,2,:)    +  dd2_dxidzeta*jacobian_ale(3,2,:)   +  &
+                         dd3_dxidxi*jacobian_ale(1,3,:)    +  dd3_dxideta*jacobian_ale(2,3,:)    +  dd3_dxidzeta*jacobian_ale(3,3,:)
+
+        jinv_def_grad2 = dd1_dxideta*jacobian_ale(1,1,:)   +  dd1_detadeta*jacobian_ale(2,1,:)   +  dd1_detadzeta*jacobian_ale(3,1,:)  +  &
+                         dd2_dxideta*jacobian_ale(1,2,:)   +  dd2_detadeta*jacobian_ale(2,2,:)   +  dd2_detadzeta*jacobian_ale(3,2,:)  +  &
+                         dd3_dxideta*jacobian_ale(1,3,:)   +  dd3_detadeta*jacobian_ale(2,3,:)   +  dd3_detadzeta*jacobian_ale(3,3,:)
+
+        jinv_def_grad3 = dd1_dxidzeta*jacobian_ale(1,1,:)  +  dd1_detadzeta*jacobian_ale(2,1,:)  +  dd1_dzetadzeta*jacobian_ale(3,1,:) +  &
+                         dd2_dxidzeta*jacobian_ale(1,2,:)  +  dd2_detadzeta*jacobian_ale(2,2,:)  +  dd2_dzetadzeta*jacobian_ale(3,2,:) +  &
+                         dd3_dxidzeta*jacobian_ale(1,3,:)  +  dd3_detadzeta*jacobian_ale(2,3,:)  +  dd3_dzetadzeta*jacobian_ale(3,3,:)
+
+
+        !
+        ! Apply Quotiend Rule for computing gradient of det_jacobian_grid
+        !
+        !   det_jacobian_grid = jinv_def/jinv
+        !
+        !   grad(det_jacobian_grid) = [grad(jinv_def)*jinv - jinv_def*grad(jinv)] / [jinv*jinv]
+        !
+        ale_g_ddxi   = (jinv_def_grad1*self%jinv  -  self%jinv_def*jinv_grad1)/(self%jinv**TWO)
+        ale_g_ddeta  = (jinv_def_grad2*self%jinv  -  self%jinv_def*jinv_grad2)/(self%jinv**TWO)
+        ale_g_ddzeta = (jinv_def_grad3*self%jinv  -  self%jinv_def*jinv_grad3)/(self%jinv**TWO)
+
+
+        ! Transform into gradient in physical space(undeformed geometry)
+        do inode = 1,size(ale_g_ddxi)
+            self%ale_g_grad1(inode) = self%metric(1,1,inode) * ale_g_ddxi(inode)  + &
+                                      self%metric(2,1,inode) * ale_g_ddeta(inode) + &
+                                      self%metric(3,1,inode) * ale_g_ddzeta(inode)
+
+            self%ale_g_grad2(inode) = self%metric(1,2,inode) * ale_g_ddxi(inode)  + &
+                                      self%metric(2,2,inode) * ale_g_ddeta(inode) + &
+                                      self%metric(3,2,inode) * ale_g_ddzeta(inode)
+
+            self%ale_g_grad3(inode) = self%metric(1,3,inode) * ale_g_ddxi(inode)  + &
+                                      self%metric(2,3,inode) * ale_g_ddeta(inode) + &
+                                      self%metric(3,3,inode) * ale_g_ddzeta(inode)
+        end do
+
+
+
+    end subroutine interpolate_metrics_ale
+    !********************************************************************************************************
+
+
+
 
 
 
@@ -1107,7 +1444,7 @@ contains
             case('Undeformed')
                 val = dot_product(self%coords%getvar(coord_index,itime = 1), polyvals)
             case('Deformed')
-                val = dot_product(self%ale_coords%getvar(coord_index,itime = 1), polyvals)
+                val = dot_product(self%coords_def%getvar(coord_index,itime = 1), polyvals)
             case default
                 call chidg_signal(FATAL,"element%grid_point: Invalid input for coordinate_frame.")
         end select
@@ -1174,7 +1511,7 @@ contains
             case('Undeformed')
                 modal_coords = self%coords
             case('Deformed')
-                modal_coords = self%ale_coords
+                modal_coords = self%coords_def
         end select
 
 
@@ -1259,7 +1596,7 @@ contains
         real(rk),               intent(in)      :: xi,eta,zeta
 
         real(rk)    :: temp,val
-        real(rk)    :: ale_g,ale_g_grad(3),ale_dinv(3,3),ale_grid_vel(3)
+        real(rk)    :: ale_g,ale_g_grad(3),ale_dinv(3,3),interp_coords_vel(3)
         real(rk)    :: polyvals(q%nterms())
         integer(ik) :: iterm, spacedim
 
@@ -1312,7 +1649,7 @@ contains
 !        real(rk)        :: val
 !        real(rk)        :: ddxi(q%nterms()), ddeta(q%nterms()), ddzeta(q%nterms()), &
 !                           deriv(q%nterms())
-!        real(rk)        :: metric(3,3), jinv_undef, dxi_dx, dxi_dy, dxi_dz, &
+!        real(rk)        :: metric(3,3), jinv, dxi_dx, dxi_dy, dxi_dz, &
 !                           deta_dx, deta_dy, deta_dz, dzeta_dx, dzeta_dy, dzeta_dz
 !        integer(ik)     :: iterm, spacedim
 !
@@ -1345,7 +1682,7 @@ contains
 !        !
 !        ! Compute inverse cell mapping jacobian
 !        !
-!        jinv_undef = metric(1,1)*metric(2,2)*metric(3,3) - metric(1,2)*metric(2,1)*metric(3,3) - &
+!        jinv = metric(1,1)*metric(2,2)*metric(3,3) - metric(1,2)*metric(2,1)*metric(3,3) - &
 !                     metric(1,1)*metric(2,3)*metric(3,2) + metric(1,3)*metric(2,1)*metric(3,2) + &
 !                     metric(1,2)*metric(2,3)*metric(3,1) - metric(1,3)*metric(2,2)*metric(3,1)
 !
@@ -1358,25 +1695,25 @@ contains
 !                dxi_dx   = metric(2,2)*metric(3,3) - metric(2,3)*metric(3,2)
 !                deta_dx  = metric(2,3)*metric(3,1) - metric(2,1)*metric(3,3)
 !                dzeta_dx = metric(2,1)*metric(3,2) - metric(2,2)*metric(3,1)
-!                deriv(iterm) = dxi_dx   * ddxi(iterm)   * (ONE/jinv_undef) + &
-!                               deta_dx  * ddeta(iterm)  * (ONE/jinv_undef) + &
-!                               dzeta_dx * ddzeta(iterm) * (ONE/jinv_undef)
+!                deriv(iterm) = dxi_dx   * ddxi(iterm)   * (ONE/jinv) + &
+!                               deta_dx  * ddeta(iterm)  * (ONE/jinv) + &
+!                               dzeta_dx * ddzeta(iterm) * (ONE/jinv)
 !
 !            else if (dir == DIR_2) then
 !                dxi_dy   = metric(1,3)*metric(3,2) - metric(1,2)*metric(3,3)
 !                deta_dy  = metric(1,1)*metric(3,3) - metric(1,3)*metric(3,1)
 !                dzeta_dy = metric(1,2)*metric(3,1) - metric(1,1)*metric(3,2)
-!                deriv(iterm) = dxi_dy   * ddxi(iterm)   * (ONE/jinv_undef) + &
-!                               deta_dy  * ddeta(iterm)  * (ONE/jinv_undef) + &
-!                               dzeta_dy * ddzeta(iterm) * (ONE/jinv_undef)
+!                deriv(iterm) = dxi_dy   * ddxi(iterm)   * (ONE/jinv) + &
+!                               deta_dy  * ddeta(iterm)  * (ONE/jinv) + &
+!                               dzeta_dy * ddzeta(iterm) * (ONE/jinv)
 !
 !            else if (dir == DIR_3) then
 !                dxi_dz   = metric(1,2)*metric(2,3) - metric(1,3)*metric(2,2)
 !                deta_dz  = metric(1,3)*metric(2,1) - metric(1,1)*metric(2,3)
 !                dzeta_dz = metric(1,1)*metric(2,2) - metric(1,2)*metric(2,1)
-!                deriv(iterm) = dxi_dz   * ddxi(iterm)   * (ONE/jinv_undef) + &
-!                               deta_dz  * ddeta(iterm)  * (ONE/jinv_undef) + &
-!                               dzeta_dz * ddzeta(iterm) * (ONE/jinv_undef)
+!                deriv(iterm) = dxi_dz   * ddxi(iterm)   * (ONE/jinv) + &
+!                               deta_dz  * ddeta(iterm)  * (ONE/jinv) + &
+!                               dzeta_dz * ddzeta(iterm) * (ONE/jinv)
 !
 !            else
 !                call chidg_signal(FATAL,"element%derivative_point: Invalid value for 'dir' parameter. (1,2,3).")
@@ -1479,12 +1816,101 @@ contains
 
 
 
+    !>  Compute ALE grid quantities, based on the location in reference space (xi, eta, zeta)
+    !!
+    !!  @author Eric Wolf
+    !!  @date   7/21/2017
+    !!
+    !!  @param[in]  elem            Element that the solution expansion is associated with.
+    !!  @param[in]  xi              Real value for xi-coordinate.
+    !!  @param[in]  eta             Real value for eta-coordinate.
+    !!  @param[in]  zeta            Real value for zeta-coordinate.
+    !!  @param[inout]  ale_g        Determinant of grid Jacobian
+    !!  @param[inout]  ale_Dinv     Inverse of grid Jacobian
+    !!  @param[inout]  interp_coords_vel Grid velocities
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine ale_point(self,xi,eta,zeta,ale_g,ale_g_grad,ale_Dinv,interp_coords_vel) 
+        class(element_t),       intent(in)      :: self
+        real(rk),               intent(in)      :: xi,eta,zeta
+        real(rk),               intent(inout)   :: ale_g
+        real(rk),               intent(inout)   :: ale_g_grad(3)
+        real(rk),               intent(inout)   :: ale_Dinv(3,3)
+        real(rk),               intent(inout)   :: interp_coords_vel(3)
+
+        integer(ik)                             :: iterm, itime
+        real(rk)                                :: metric(3,3), jinv, metric_ale(3,3), jinv_def
+        real(rk),   dimension(self%nterms_s)    :: val, ddxi, ddeta, ddzeta, grad1, grad2, grad3
+
+        
+        !
+        ! Compute metrics at node
+        !
+        metric     = self%metric_point([xi,eta,zeta], coordinate_frame='Undeformed', coordinate_scaling=.true.)
+        metric_ale = self%metric_point([xi,eta,zeta], coordinate_frame='Deformed',   coordinate_scaling=.true.)
+
+        !
+        ! Compute inverse cell mapping jacobian
+        !
+        jinv = ONE/det_3x3(metric)
+        jinv_def   = ONE/det_3x3(metric_ale)
+
+
+        !
+        ! Compute volume scaling and deformation gradient
+        !
+        ale_g = jinv_def/jinv
+        ale_Dinv = matmul(metric_ale,inv_3x3(metric))
+
+
+        ! evaluate polynomial modes at node location
+        do iterm = 1,self%nterms_s
+            val(iterm)    = polynomial_val( self%spacedim,self%nterms_s,iterm,[xi,eta,zeta])
+            ddxi(iterm)   = dpolynomial_val(self%spacedim,self%nterms_s,iterm,[xi,eta,zeta],XI_DIR)
+            ddeta(iterm)  = dpolynomial_val(self%spacedim,self%nterms_s,iterm,[xi,eta,zeta],ETA_DIR)
+            ddzeta(iterm) = dpolynomial_val(self%spacedim,self%nterms_s,iterm,[xi,eta,zeta],ZETA_DIR)
+        end do
+
+
+        do iterm = 1,self%nterms_s
+            grad1(iterm) = metric(1,1) * ddxi(iterm)  + &
+                           metric(2,1) * ddeta(iterm) + &
+                           metric(3,1) * ddzeta(iterm)
+
+            grad2(iterm) = metric(1,2) * ddxi(iterm)  + &
+                           metric(2,2) * ddeta(iterm) + &
+                           metric(3,2) * ddzeta(iterm)
+
+            grad3(iterm) = metric(1,3) * ddxi(iterm)  + &
+                           metric(2,3) * ddeta(iterm) + &
+                           metric(3,3) * ddzeta(iterm)
+        end do
+
+        ! Evaluate volume scaling and gradient
+        ale_g         = dot_product(val,   self%ale_g_modes)
+        ale_g_grad(1) = dot_product(grad1, self%ale_g_modes)
+        ale_g_grad(2) = dot_product(grad2, self%ale_g_modes)
+        ale_g_grad(3) = dot_product(grad3, self%ale_g_modes)
+
+        ! Evaluate grid velocities
+        interp_coords_vel(1) = dot_product(val,self%coords_vel%getvar(1,itime = 1))
+        interp_coords_vel(2) = dot_product(val,self%coords_vel%getvar(2,itime = 1))
+        interp_coords_vel(3) = dot_product(val,self%coords_vel%getvar(3,itime = 1))
+
+    end subroutine ale_point
+    !*****************************************************************************************
+
+
+
+
+
+
 
     !>  Project a function to the solution basis. Return modal coefficients.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   10/25/2016
-    !!
     !!
     !-----------------------------------------------------------------------------------------
     function project(self,fcn) result(fmodes)
@@ -1500,7 +1926,7 @@ contains
 
         ! Call function for evaluation at quadrature nodes and multiply by quadrature weights
         time  = 0._rk
-        fvals = fcn%compute(time,point_t(self%quad_pts)) * self%basis_s%weights() * self%jinv_undef
+        fvals = fcn%compute(time,point_t(self%interp_coords)) * self%basis_s%weights() * self%jinv
 
 
         ! Project
@@ -1510,7 +1936,6 @@ contains
 
     end function project
     !*****************************************************************************************
-
 
 
 
@@ -1600,462 +2025,6 @@ contains
 
 
 
-
-    !>
-    !!
-    !!
-    !!
-    !!
-    !-------------------------------------------------------------------------------------------
-    subroutine update_interpolations_ale(self)
-        class(element_t),       intent(inout)      :: self
-
-        call self%interpolate_coords_ale()
-        call self%interpolate_metrics_ale()
-
-    end subroutine update_interpolations_ale
-    !*******************************************************************************************
-
-
-
-!    !>  Update ALE modal quantities from element support nodes:
-!    !!      : ale_coords
-!    !!      : ale_vel_coords
-!    !!
-!    !!  We are assuming that the ale_elem_pts have already been updated according to mesh motion
-!    !!  A worker has a pointer to the mesh, which it has used to update this field
-!    !!
-!    !!  @author Eric Wolf (AFRL)
-!    !!  @date   7/14/2017
-!    !!
-!    !------------------------------------------------------------------------------------------
-!    subroutine update_ale_modes(self)
-!        class(element_t),               intent(inout)   :: self
-!
-!        real(rk),   allocatable :: xmodes(:), ymodes(:), zmodes(:)
-!
-!        !
-!        ! ALE (re)initialization
-!        !
-!        call self%ale_coords%init(    self%nterms_c,self%spacedim,self%ntime,self%idomain_g,self%idomain_l,self%ielement_g,self%ielement_l)
-!        call self%ale_vel_coords%init(self%nterms_c,self%spacedim,self%ntime,self%idomain_g,self%idomain_l,self%ielement_g,self%ielement_l)
-!
-!
-!        !
-!        ! Compute mesh x,y,z modes
-!        !
-!        xmodes = matmul(self%nodes_to_modes,self%ale_elem_pts(:,1))
-!        ymodes = matmul(self%nodes_to_modes,self%ale_elem_pts(:,2))
-!        zmodes = matmul(self%nodes_to_modes,self%ale_elem_pts(:,3))
-!
-!        call self%ale_coords%setvar(1,itime = 1,vals = xmodes)
-!        call self%ale_coords%setvar(2,itime = 1,vals = ymodes)
-!        call self%ale_coords%setvar(3,itime = 1,vals = zmodes)
-!
-!
-!
-!        !
-!        ! Compute grid velocity modes
-!        !
-!        xmodes = matmul(self%nodes_to_modes,self%vnodes_l(:,1))
-!        ymodes = matmul(self%nodes_to_modes,self%vnodes_l(:,2))
-!        zmodes = matmul(self%nodes_to_modes,self%vnodes_l(:,3))
-!
-!        call self%ale_vel_coords%setvar(1,itime = 1,vals = xmodes)
-!        call self%ale_vel_coords%setvar(2,itime = 1,vals = ymodes)
-!        call self%ale_vel_coords%setvar(3,itime = 1,vals = zmodes)
-!
-!
-!    end subroutine update_ale_modes
-!    !***************************************************************************************
-    
-
-
-
-
-    !>  Compute ALE quantities at interpolation nodes from modes.
-    !!      ale_coords     -> ale_quad_pts
-    !!      ale_vel_coords -> ale_grid_vel
-    !!
-    !!  @author Eric Wolf (AFRL)
-    !!  @date   7/14/2017
-    !!
-    !---------------------------------------------------------------------------------------
-    subroutine interpolate_coords_ale(self)
-        class(element_t),   intent(inout)   :: self
-
-        real(rk),   allocatable :: val(:,:)
-
-
-        !
-        ! Retrieve interpolator
-        !
-        val = self%basis_c%interpolator('Value')
-
-        !
-        ! compute cartesian coordinates associated with quadrature points
-        !
-        self%ale_quad_pts(:,1) = matmul(val,self%ale_coords%getvar(1,itime = 1))
-        self%ale_quad_pts(:,2) = matmul(val,self%ale_coords%getvar(2,itime = 1))
-        self%ale_quad_pts(:,3) = matmul(val,self%ale_coords%getvar(3,itime = 1))
-
-
-        !
-        ! Grid velocity
-        ! compute cartesian coordinates associated with quadrature points
-        !
-        self%ale_grid_vel(:,1) = matmul(val,self%ale_vel_coords%getvar(1,itime = 1))
-        self%ale_grid_vel(:,2) = matmul(val,self%ale_vel_coords%getvar(2,itime = 1))
-        self%ale_grid_vel(:,3) = matmul(val,self%ale_vel_coords%getvar(3,itime = 1))
-
-    end subroutine interpolate_coords_ale
-    !****************************************************************************************
-
-
-
-    !>  Compute ALE metrics at interpolation nodes.
-    !!
-    !!  @author Eric Wolf (AFRL)
-    !!
-    !----------------------------------------------------------------------------------------
-    subroutine interpolate_metrics_ale(self)
-        class(element_t),    intent(inout)   :: self
-
-        integer(ik)                             :: inode, nnodes, ierr
-        character(:),               allocatable :: coordinate_system, user_msg
-
-        real(rk),   dimension(:),   allocatable ::                  &
-            dd1_dxidxi,   dd1_detadeta,   dd1_dzetadzeta,           &
-            dd2_dxidxi,   dd2_detadeta,   dd2_dzetadzeta,           &
-            dd3_dxidxi,   dd3_detadeta,   dd3_dzetadzeta,           &
-            dd1_dxideta,  dd1_dxidzeta,   dd1_detadzeta,            &
-            dd2_dxideta,  dd2_dxidzeta,   dd2_detadzeta,            &
-            dd3_dxideta,  dd3_dxidzeta,   dd3_detadzeta,            &
-            ale_g_ddxi,   ale_g_ddeta,    ale_g_ddzeta,             &
-            jinv_undef_grad1, jinv_undef_grad2, jinv_undef_grad3,   &
-            jinv_def_grad1,   jinv_def_grad2,   jinv_def_grad3,     &
-            fvals, temp, scaling_row2, weights
-
-        real(rk),   dimension(:,:), allocatable ::  &
-            val,                                    &
-            ddxi,    ddeta,    ddzeta,              &
-            dxidxi,  detadeta, dzetadzeta,          &
-            dxideta, dxidzeta, detadzeta,           &
-            D_matrix
-
-        real(rk), dimension(:,:,:), allocatable ::  &
-            jacobian_ale, jacobian(:,:,:)
-
-
-
-        !
-        ! Retrieve interpolators
-        !
-        nnodes  = self%basis_c%nnodes_ie()
-        weights = self%basis_c%weights()
-        ddxi    = self%basis_c%interpolator('ddxi')
-        ddeta   = self%basis_c%interpolator('ddeta')
-        ddzeta  = self%basis_c%interpolator('ddzeta')
-
-        dxidxi     = self%basis_c%interpolator('dxidxi')
-        detadeta   = self%basis_c%interpolator('detadeta')
-        dzetadzeta = self%basis_c%interpolator('dzetadzeta')
-
-        dxideta    = self%basis_c%interpolator('dxideta')
-        dxidzeta   = self%basis_c%interpolator('dxidzeta')
-        detadzeta  = self%basis_c%interpolator('detadzeta')
-
-
-
-        ! First derivatives
-        allocate(jacobian_ale(3,3,nnodes), stat=ierr)
-        if (ierr /= 0) call AllocationError
-        jacobian_ale(1,1,:) = matmul(ddxi,   self%ale_coords%getvar(1,itime = 1))
-        jacobian_ale(1,2,:) = matmul(ddeta,  self%ale_coords%getvar(1,itime = 1))
-        jacobian_ale(1,3,:) = matmul(ddzeta, self%ale_coords%getvar(1,itime = 1))
-
-        jacobian_ale(2,1,:) = matmul(ddxi,   self%ale_coords%getvar(2,itime = 1))
-        jacobian_ale(2,2,:) = matmul(ddeta,  self%ale_coords%getvar(2,itime = 1))
-        jacobian_ale(2,3,:) = matmul(ddzeta, self%ale_coords%getvar(2,itime = 1))
-
-        jacobian_ale(3,1,:) = matmul(ddxi,   self%ale_coords%getvar(3,itime = 1))
-        jacobian_ale(3,2,:) = matmul(ddeta,  self%ale_coords%getvar(3,itime = 1))
-        jacobian_ale(3,3,:) = matmul(ddzeta, self%ale_coords%getvar(3,itime = 1))
-
-
-        !
-        ! Add coordinate system scaling to jacobian matrix
-        !
-        allocate(scaling_row2(nnodes), stat=ierr)
-        if (ierr /= 0) call AllocationError
-
-        select case (self%coordinate_system)
-            case (CARTESIAN)
-                scaling_row2 = ONE
-            case (CYLINDRICAL)
-                scaling_row2 = self%ale_quad_pts(:,1)
-            case default
-                user_msg = "element%interpolate_metrics_ale: Invalid coordinate system."
-                call chidg_signal(FATAL,user_msg)
-        end select
-
-
-
-        !
-        ! Apply coorindate system scaling
-        !
-        jacobian_ale(2,1,:) = jacobian_ale(2,1,:)*scaling_row2
-        jacobian_ale(2,2,:) = jacobian_ale(2,2,:)*scaling_row2
-        jacobian_ale(2,3,:) = jacobian_ale(2,3,:)*scaling_row2
-
-
-
-
-        !
-        ! Compute inverse cell mapping jacobian
-        !
-        do inode = 1,nnodes
-            self%jinv_def(inode) = det_3x3(jacobian_ale(:,:,inode))
-        end do
-
-
-
-        !
-        ! Check for negative jacobians
-        !
-        user_msg = "element%interpolate_metrics_ale: Negative element jacobians. &
-                    Check element quality and origntation."
-        if (any(self%jinv_def < ZERO)) call chidg_signal(FATAL,user_msg)
-
-
-        !
-        ! Compute element volume
-        !
-        self%vol_ale = abs(sum(self%jinv_def * weights))
-
-
-        !
-        ! Compute element deformation gradient: dX/dx
-        !   dX/dx = [dxi/dx][dX/dxi]
-        !
-        do inode = 1,nnodes
-            D_matrix = matmul(jacobian_ale(:,:,inode),self%metric(:,:,inode))
-            self%ale_Dinv(:,:,inode) = inv_3x3(D_matrix)
-
-            ! Invert jacobian_ale for use later in routine
-            jacobian_ale(:,:,inode) = inv_3x3(jacobian_ale(:,:,inode))
-        end do
-
-
-        !
-        ! Compute volume scaling: deformed/undeformed
-        !
-        self%ale_g = self%jinv_def/self%jinv_undef
-
-
-        !
-        ! Project ale_g to solution basis
-        !
-        val  = self%basis_s%interpolator('Value')
-        fvals = self%ale_g * weights * self%jinv_undef
-        temp = matmul(transpose(val),fvals)
-        self%ale_g_modes = matmul(self%invmass,temp)
-
-
-
-        ! Second/mixed derivatives
-        dd1_dxidxi     = matmul(dxidxi,     self%coords%getvar(1,itime = 1))
-        dd1_detadeta   = matmul(detadeta,   self%coords%getvar(1,itime = 1))
-        dd1_dzetadzeta = matmul(dzetadzeta, self%coords%getvar(1,itime = 1))
-        dd1_dxideta    = matmul(dxideta,    self%coords%getvar(1,itime = 1))
-        dd1_dxidzeta   = matmul(dxidzeta,   self%coords%getvar(1,itime = 1))
-        dd1_detadzeta  = matmul(detadzeta,  self%coords%getvar(1,itime = 1))
-
-        dd2_dxidxi     = matmul(dxidxi,     self%coords%getvar(2,itime = 1))
-        dd2_detadeta   = matmul(detadeta,   self%coords%getvar(2,itime = 1))
-        dd2_dzetadzeta = matmul(dzetadzeta, self%coords%getvar(2,itime = 1))
-        dd2_dxideta    = matmul(dxideta,    self%coords%getvar(2,itime = 1))
-        dd2_dxidzeta   = matmul(dxidzeta,   self%coords%getvar(2,itime = 1))
-        dd2_detadzeta  = matmul(detadzeta,  self%coords%getvar(2,itime = 1))
-
-        dd3_dxidxi     = matmul(dxidxi,     self%coords%getvar(3,itime = 1))
-        dd3_detadeta   = matmul(detadeta,   self%coords%getvar(3,itime = 1))
-        dd3_dzetadzeta = matmul(dzetadzeta, self%coords%getvar(3,itime = 1))
-        dd3_dxideta    = matmul(dxideta,    self%coords%getvar(3,itime = 1))
-        dd3_dxidzeta   = matmul(dxidzeta,   self%coords%getvar(3,itime = 1))
-        dd3_detadzeta  = matmul(detadzeta,  self%coords%getvar(3,itime = 1))
-
-        jinv_undef_grad1 = dd1_dxidxi*self%metric(1,1,:)    +  dd1_dxideta*self%metric(2,1,:)    +  dd1_dxidzeta*self%metric(3,1,:)   +  &
-                           dd2_dxidxi*self%metric(1,2,:)    +  dd2_dxideta*self%metric(2,2,:)    +  dd2_dxidzeta*self%metric(3,2,:)   +  &
-                           dd3_dxidxi*self%metric(1,3,:)    +  dd3_dxideta*self%metric(2,3,:)    +  dd3_dxidzeta*self%metric(3,3,:)
-
-        jinv_undef_grad2 = dd1_dxideta*self%metric(1,1,:)   +  dd1_detadeta*self%metric(2,1,:)   +  dd1_detadzeta*self%metric(3,1,:)  +  &
-                           dd2_dxideta*self%metric(1,2,:)   +  dd2_detadeta*self%metric(2,2,:)   +  dd2_detadzeta*self%metric(3,2,:)  +  &
-                           dd3_dxideta*self%metric(1,3,:)   +  dd3_detadeta*self%metric(2,3,:)   +  dd3_detadzeta*self%metric(3,3,:)
-
-        jinv_undef_grad3 = dd1_dxidzeta*self%metric(1,1,:)  +  dd1_detadzeta*self%metric(2,1,:)  +  dd1_dzetadzeta*self%metric(3,1,:) +  &
-                           dd2_dxidzeta*self%metric(1,2,:)  +  dd2_detadzeta*self%metric(2,2,:)  +  dd2_dzetadzeta*self%metric(3,2,:) +  &
-                           dd3_dxidzeta*self%metric(1,3,:)  +  dd3_detadzeta*self%metric(2,3,:)  +  dd3_dzetadzeta*self%metric(3,3,:)
-
-
-        ! Second/mixed derivatives
-        dd1_dxidxi     = matmul(dxidxi,     self%ale_coords%getvar(1,itime = 1))
-        dd1_detadeta   = matmul(detadeta,   self%ale_coords%getvar(1,itime = 1))
-        dd1_dzetadzeta = matmul(dzetadzeta, self%ale_coords%getvar(1,itime = 1))
-        dd1_dxideta    = matmul(dxideta,    self%ale_coords%getvar(1,itime = 1))
-        dd1_dxidzeta   = matmul(dxidzeta,   self%ale_coords%getvar(1,itime = 1))
-        dd1_detadzeta  = matmul(detadzeta,  self%ale_coords%getvar(1,itime = 1))
-
-        dd2_dxidxi     = matmul(dxidxi,     self%ale_coords%getvar(2,itime = 1))
-        dd2_detadeta   = matmul(detadeta,   self%ale_coords%getvar(2,itime = 1))
-        dd2_dzetadzeta = matmul(dzetadzeta, self%ale_coords%getvar(2,itime = 1))
-        dd2_dxideta    = matmul(dxideta,    self%ale_coords%getvar(2,itime = 1))
-        dd2_dxidzeta   = matmul(dxidzeta,   self%ale_coords%getvar(2,itime = 1))
-        dd2_detadzeta  = matmul(detadzeta,  self%ale_coords%getvar(2,itime = 1))
-
-        dd3_dxidxi     = matmul(dxidxi,     self%ale_coords%getvar(3,itime = 1))
-        dd3_detadeta   = matmul(detadeta,   self%ale_coords%getvar(3,itime = 1))
-        dd3_dzetadzeta = matmul(dzetadzeta, self%ale_coords%getvar(3,itime = 1))
-        dd3_dxideta    = matmul(dxideta,    self%ale_coords%getvar(3,itime = 1))
-        dd3_dxidzeta   = matmul(dxidzeta,   self%ale_coords%getvar(3,itime = 1))
-        dd3_detadzeta  = matmul(detadzeta,  self%ale_coords%getvar(3,itime = 1))
-
-        jinv_def_grad1 = dd1_dxidxi*jacobian_ale(1,1,:)    +  dd1_dxideta*jacobian_ale(2,1,:)    +  dd1_dxidzeta*jacobian_ale(3,1,:)   +  &
-                         dd2_dxidxi*jacobian_ale(1,2,:)    +  dd2_dxideta*jacobian_ale(2,2,:)    +  dd2_dxidzeta*jacobian_ale(3,2,:)   +  &
-                         dd3_dxidxi*jacobian_ale(1,3,:)    +  dd3_dxideta*jacobian_ale(2,3,:)    +  dd3_dxidzeta*jacobian_ale(3,3,:)
-
-        jinv_def_grad2 = dd1_dxideta*jacobian_ale(1,1,:)   +  dd1_detadeta*jacobian_ale(2,1,:)   +  dd1_detadzeta*jacobian_ale(3,1,:)  +  &
-                         dd2_dxideta*jacobian_ale(1,2,:)   +  dd2_detadeta*jacobian_ale(2,2,:)   +  dd2_detadzeta*jacobian_ale(3,2,:)  +  &
-                         dd3_dxideta*jacobian_ale(1,3,:)   +  dd3_detadeta*jacobian_ale(2,3,:)   +  dd3_detadzeta*jacobian_ale(3,3,:)
-
-        jinv_def_grad3 = dd1_dxidzeta*jacobian_ale(1,1,:)  +  dd1_detadzeta*jacobian_ale(2,1,:)  +  dd1_dzetadzeta*jacobian_ale(3,1,:) +  &
-                         dd2_dxidzeta*jacobian_ale(1,2,:)  +  dd2_detadzeta*jacobian_ale(2,2,:)  +  dd2_dzetadzeta*jacobian_ale(3,2,:) +  &
-                         dd3_dxidzeta*jacobian_ale(1,3,:)  +  dd3_detadzeta*jacobian_ale(2,3,:)  +  dd3_dzetadzeta*jacobian_ale(3,3,:)
-
-
-        !
-        ! Apply Quotiend Rule for computing gradient of det_jacobian_grid
-        !
-        !   det_jacobian_grid = jinv_def/jinv_undef
-        !
-        !   grad(det_jacobian_grid) = [grad(jinv_def)*jinv_undef - jinv_def*grad(jinv_undef)] / [jinv_undef*jinv_undef]
-        !
-        ale_g_ddxi   = (jinv_def_grad1*self%jinv_undef  -  self%jinv_def*jinv_undef_grad1)/(self%jinv_undef**TWO)
-        ale_g_ddeta  = (jinv_def_grad2*self%jinv_undef  -  self%jinv_def*jinv_undef_grad2)/(self%jinv_undef**TWO)
-        ale_g_ddzeta = (jinv_def_grad3*self%jinv_undef  -  self%jinv_def*jinv_undef_grad3)/(self%jinv_undef**TWO)
-
-
-        ! Transform into gradient in physical space(undeformed geometry)
-        do inode = 1,size(ale_g_ddxi)
-            self%ale_g_grad1(inode) = self%metric(1,1,inode) * ale_g_ddxi(inode)  + &
-                                      self%metric(2,1,inode) * ale_g_ddeta(inode) + &
-                                      self%metric(3,1,inode) * ale_g_ddzeta(inode)
-
-            self%ale_g_grad2(inode) = self%metric(1,2,inode) * ale_g_ddxi(inode)  + &
-                                      self%metric(2,2,inode) * ale_g_ddeta(inode) + &
-                                      self%metric(3,2,inode) * ale_g_ddzeta(inode)
-
-            self%ale_g_grad3(inode) = self%metric(1,3,inode) * ale_g_ddxi(inode)  + &
-                                      self%metric(2,3,inode) * ale_g_ddeta(inode) + &
-                                      self%metric(3,3,inode) * ale_g_ddzeta(inode)
-        end do
-
-
-
-    end subroutine interpolate_metrics_ale
-    !********************************************************************************************************
-
-
-
-
-
-
-
-
-    !>  Compute ALE grid quantities, based on the location in reference space (xi, eta, zeta)
-    !!
-    !!  @author Eric Wolf
-    !!  @date   7/21/2017
-    !!
-    !!  @param[in]  elem            Element that the solution expansion is associated with.
-    !!  @param[in]  xi              Real value for xi-coordinate.
-    !!  @param[in]  eta             Real value for eta-coordinate.
-    !!  @param[in]  zeta            Real value for zeta-coordinate.
-    !!  @param[inout]  ale_g        Determinant of grid Jacobian
-    !!  @param[inout]  ale_Dinv     Inverse of grid Jacobian
-    !!  @param[inout]  ale_grid_vel Grid velocities
-    !!
-    !!
-    !----------------------------------------------------------------------------------------
-    subroutine ale_point(self,xi,eta,zeta,ale_g,ale_g_grad,ale_Dinv,ale_grid_vel) 
-        class(element_t),       intent(in)      :: self
-        real(rk),               intent(in)      :: xi,eta,zeta
-        real(rk),               intent(inout)   :: ale_g
-        real(rk),               intent(inout)   :: ale_g_grad(3)
-        real(rk),               intent(inout)   :: ale_Dinv(3,3)
-        real(rk),               intent(inout)   :: ale_grid_vel(3)
-
-        integer(ik)                             :: iterm, itime
-        real(rk)                                :: metric(3,3), jinv_undef, metric_ale(3,3), jinv_def
-        real(rk),   dimension(self%nterms_s)    :: val, ddxi, ddeta, ddzeta, grad1, grad2, grad3
-
-        
-        !
-        ! Compute metrics at node
-        !
-        metric     = self%metric_point([xi,eta,zeta], coordinate_frame='Undeformed', coordinate_scaling=.true.)
-        metric_ale = self%metric_point([xi,eta,zeta], coordinate_frame='Deformed',   coordinate_scaling=.true.)
-
-        !
-        ! Compute inverse cell mapping jacobian
-        !
-        jinv_undef = ONE/det_3x3(metric)
-        jinv_def   = ONE/det_3x3(metric_ale)
-
-
-        !
-        ! Compute volume scaling and deformation gradient
-        !
-        ale_g = jinv_def/jinv_undef
-        ale_Dinv = matmul(metric_ale,inv_3x3(metric))
-
-
-        ! evaluate polynomial modes at node location
-        do iterm = 1,self%nterms_s
-            val(iterm)    = polynomial_val( self%spacedim,self%nterms_s,iterm,[xi,eta,zeta])
-            ddxi(iterm)   = dpolynomial_val(self%spacedim,self%nterms_s,iterm,[xi,eta,zeta],XI_DIR)
-            ddeta(iterm)  = dpolynomial_val(self%spacedim,self%nterms_s,iterm,[xi,eta,zeta],ETA_DIR)
-            ddzeta(iterm) = dpolynomial_val(self%spacedim,self%nterms_s,iterm,[xi,eta,zeta],ZETA_DIR)
-        end do
-
-
-        do iterm = 1,self%nterms_s
-            grad1(iterm) = metric(1,1) * ddxi(iterm)  + &
-                           metric(2,1) * ddeta(iterm) + &
-                           metric(3,1) * ddzeta(iterm)
-
-            grad2(iterm) = metric(1,2) * ddxi(iterm)  + &
-                           metric(2,2) * ddeta(iterm) + &
-                           metric(3,2) * ddzeta(iterm)
-
-            grad3(iterm) = metric(1,3) * ddxi(iterm)  + &
-                           metric(2,3) * ddeta(iterm) + &
-                           metric(3,3) * ddzeta(iterm)
-        end do
-
-        ! Evaluate volume scaling and gradient
-        ale_g         = dot_product(val,   self%ale_g_modes)
-        ale_g_grad(1) = dot_product(grad1, self%ale_g_modes)
-        ale_g_grad(2) = dot_product(grad2, self%ale_g_modes)
-        ale_g_grad(3) = dot_product(grad3, self%ale_g_modes)
-
-        ! Evaluate grid velocities
-        ale_grid_vel(1) = dot_product(val,self%ale_vel_coords%getvar(1,itime = 1))
-        ale_grid_vel(2) = dot_product(val,self%ale_vel_coords%getvar(2,itime = 1))
-        ale_grid_vel(3) = dot_product(val,self%ale_vel_coords%getvar(3,itime = 1))
-
-    end subroutine ale_point
-    !*****************************************************************************************
 
 
 

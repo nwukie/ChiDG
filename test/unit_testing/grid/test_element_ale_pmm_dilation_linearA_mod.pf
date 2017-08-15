@@ -135,30 +135,30 @@ contains
         ineighbor_neqns     = 2
         ineighbor_nterms_s  = 8
         ineighbor_proc      = 0
-        call this%faces(XI_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,      &
-                                                    ineighbor_element_g,ineighbor_element_l,    &
-                                                    ineighbor_face,ineighbor_neqns,             &
+        call this%faces(XI_MIN)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,      &
+                                                   ineighbor_element_g,ineighbor_element_l,    &
+                                                   ineighbor_face,ineighbor_neqns,             &
+                                                   ineighbor_nterms_s,ineighbor_proc)
+        call this%faces(XI_MAX)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,      &
+                                                   ineighbor_element_g,ineighbor_element_l,    &
+                                                   ineighbor_face,ineighbor_neqns,             &
+                                                   ineighbor_nterms_s,ineighbor_proc)
+        call this%faces(ETA_MIN)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,     &
+                                                    ineighbor_element_g,ineighbor_element_l,   &
+                                                    ineighbor_face,ineighbor_neqns,            &
                                                     ineighbor_nterms_s,ineighbor_proc)
-        call this%faces(XI_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,      &
-                                                    ineighbor_element_g,ineighbor_element_l,    &
-                                                    ineighbor_face,ineighbor_neqns,             &
+        call this%faces(ETA_MAX)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,     &
+                                                    ineighbor_element_g,ineighbor_element_l,   &
+                                                    ineighbor_face,ineighbor_neqns,            &
                                                     ineighbor_nterms_s,ineighbor_proc)
-        call this%faces(ETA_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,     &
-                                                     ineighbor_element_g,ineighbor_element_l,   &
-                                                     ineighbor_face,ineighbor_neqns,            &
+        call this%faces(ZETA_MIN)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,    &
+                                                     ineighbor_element_g,ineighbor_element_l,  &
+                                                     ineighbor_face,ineighbor_neqns,           &
                                                      ineighbor_nterms_s,ineighbor_proc)
-        call this%faces(ETA_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,     &
-                                                     ineighbor_element_g,ineighbor_element_l,   &
-                                                     ineighbor_face,ineighbor_neqns,            &
+        call this%faces(ZETA_MAX)%set_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,    &
+                                                     ineighbor_element_g,ineighbor_element_l,  &
+                                                     ineighbor_face,ineighbor_neqns,           &
                                                      ineighbor_nterms_s,ineighbor_proc)
-        call this%faces(ZETA_MIN)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,    &
-                                                      ineighbor_element_g,ineighbor_element_l,  &
-                                                      ineighbor_face,ineighbor_neqns,           &
-                                                      ineighbor_nterms_s,ineighbor_proc)
-        call this%faces(ZETA_MAX)%init_neighbor(ftype,ineighbor_domain_g,ineighbor_domain_l,    &
-                                                      ineighbor_element_g,ineighbor_element_l,  &
-                                                      ineighbor_face,ineighbor_neqns,           &
-                                                      ineighbor_nterms_s,ineighbor_proc)
 
         
         call this%faces(XI_MIN)%init_sol(this%elem)
@@ -182,22 +182,22 @@ contains
             vnodes(ipt, :) = pmm%pmmf%compute_vel(ONE, this%nodes(ipt, :))
         end do
 
-        call this%elem%init_ale(dnodes,vnodes)
-        call this%elem%update_element_ale()
+        call this%elem%set_displacements_velocities(dnodes,vnodes)
+        call this%elem%update_interpolations_ale()
 
-        call this%faces(XI_MIN)%init_face_ale_coords(this%elem)
-        call this%faces(XI_MAX)%init_face_ale_coords(this%elem)
-        call this%faces(ETA_MIN)%init_face_ale_coords(this%elem)
-        call this%faces(ETA_MAX)%init_face_ale_coords(this%elem)
-        call this%faces(ZETA_MIN)%init_face_ale_coords(this%elem)
-        call this%faces(ZETA_MAX)%init_face_ale_coords(this%elem)
+        call this%faces(XI_MIN)%set_displacements_velocities(this%elem)
+        call this%faces(XI_MAX)%set_displacements_velocities(this%elem)
+        call this%faces(ETA_MIN)%set_displacements_velocities(this%elem)
+        call this%faces(ETA_MAX)%set_displacements_velocities(this%elem)
+        call this%faces(ZETA_MIN)%set_displacements_velocities(this%elem)
+        call this%faces(ZETA_MAX)%set_displacements_velocities(this%elem)
 
-        call this%faces(XI_MIN)%update_face_ale(this%elem)
-        call this%faces(XI_MAX)%update_face_ale(this%elem)
-        call this%faces(ETA_MIN)%update_face_ale(this%elem)
-        call this%faces(ETA_MAX)%update_face_ale(this%elem)
-        call this%faces(ZETA_MIN)%update_face_ale(this%elem)
-        call this%faces(ZETA_MAX)%update_face_ale(this%elem)
+        call this%faces(XI_MIN)%update_interpolations_ale(this%elem)
+        call this%faces(XI_MAX)%update_interpolations_ale(this%elem)
+        call this%faces(ETA_MIN)%update_interpolations_ale(this%elem)
+        call this%faces(ETA_MAX)%update_interpolations_ale(this%elem)
+        call this%faces(ZETA_MIN)%update_interpolations_ale(this%elem)
+        call this%faces(ZETA_MAX)%update_interpolations_ale(this%elem)
 
 
     end subroutine setUp
@@ -234,13 +234,13 @@ contains
 
         real(rk), allocatable, dimension(:) :: vg1, vg2, vg3
 
-        vg1 = TWO*self%elem%quad_pts(:,1)
-        vg2 = TWO*self%elem%quad_pts(:,2)
-        vg3 = TWO*self%elem%quad_pts(:,3)
+        vg1 = TWO*self%elem%interp_coords(:,1)
+        vg2 = TWO*self%elem%interp_coords(:,2)
+        vg3 = TWO*self%elem%interp_coords(:,3)
 
-        @assertEqual(vg1,self%elem%ale_grid_vel(:,1), 1.e-14_rk)
-        @assertEqual(vg2,self%elem%ale_grid_vel(:,2), 1.e-14_rk)
-        @assertEqual(vg3,self%elem%ale_grid_vel(:,3), 1.e-14_rk)
+        @assertEqual(vg1,self%elem%interp_coords_vel(:,1), 1.e-14_rk)
+        @assertEqual(vg2,self%elem%interp_coords_vel(:,2), 1.e-14_rk)
+        @assertEqual(vg3,self%elem%interp_coords_vel(:,3), 1.e-14_rk)
         
     end subroutine testElement_grid_velocities
     !***************************************************************************************
@@ -253,16 +253,11 @@ contains
     subroutine testElement_grid_positions(self)
         class(test_element_ale_pmm_dilation_linearA),    intent(inout)   :: self
 
-        !real(rk),   allocatable, dimension(:,:) :: pg(:,:)
         real(rk),   allocatable, dimension(:,:) :: pg
 
+        pg = THREE*self%elem%interp_coords
 
-        !pg(:,1) =  THREE*self%elem%quad_pts(:,1)
-        !pg(:,2) =  THREE*self%elem%quad_pts(:,2)
-        !pg(:,3) =  THREE*self%elem%quad_pts(:,3)
-        pg = THREE*self%elem%quad_pts
-
-        @assertEqual(pg,self%elem%ale_quad_pts, 1.e-14_rk)
+        @assertEqual(pg,self%elem%interp_coords_def, 1.e-14_rk)
         
     end subroutine testElement_grid_positions
     !***************************************************************************************
@@ -283,7 +278,7 @@ contains
         test_ale_g = 27.0_rk 
         zeros = ZERO
 
-        @assertEqual(27.0_rk*self%elem%jinv_undef, self%elem%jinv_def,    1.e-14_rk)
+        @assertEqual(27.0_rk*self%elem%jinv, self%elem%jinv_def,    1.e-14_rk)
         @assertEqual(test_ale_g,                   self%elem%ale_g,       1.e-14_rk)
         @assertEqual(zeros,                        self%elem%ale_g_grad1, 1.e-14_rk)
         @assertEqual(zeros,                        self%elem%ale_g_grad2, 1.e-14_rk)
@@ -347,56 +342,56 @@ contains
 
         real(rk),   allocatable, dimension(:)   :: vg1, vg2, vg3 
 
-        vg1 = TWO*self%faces(XI_MIN)%quad_pts(:,1)
-        vg2 = TWO*self%faces(XI_MIN)%quad_pts(:,2)
-        vg3 = TWO*self%faces(XI_MIN)%quad_pts(:,3)
+        vg1 = TWO*self%faces(XI_MIN)%interp_coords(:,1)
+        vg2 = TWO*self%faces(XI_MIN)%interp_coords(:,2)
+        vg3 = TWO*self%faces(XI_MIN)%interp_coords(:,3)
 
 
 
 
-        @assertEqual(vg1,self%faces(XI_MIN)%ale_grid_vel(:,1), 1.e-14_rk)
-        @assertEqual(vg2,self%faces(XI_MIN)%ale_grid_vel(:,2), 1.e-14_rk)
-        @assertEqual(vg3,self%faces(XI_MIN)%ale_grid_vel(:,3), 1.e-14_rk)
+        @assertEqual(vg1,self%faces(XI_MIN)%interp_coords_vel(:,1), 1.e-14_rk)
+        @assertEqual(vg2,self%faces(XI_MIN)%interp_coords_vel(:,2), 1.e-14_rk)
+        @assertEqual(vg3,self%faces(XI_MIN)%interp_coords_vel(:,3), 1.e-14_rk)
         
-        vg1 = TWO*self%faces(XI_MAX)%quad_pts(:,1)
-        vg2 = TWO*self%faces(XI_MAX)%quad_pts(:,2)
-        vg3 = TWO*self%faces(XI_MAX)%quad_pts(:,3)
+        vg1 = TWO*self%faces(XI_MAX)%interp_coords(:,1)
+        vg2 = TWO*self%faces(XI_MAX)%interp_coords(:,2)
+        vg3 = TWO*self%faces(XI_MAX)%interp_coords(:,3)
 
-        @assertEqual(vg1,self%faces(XI_MAX)%ale_grid_vel(:,1), 1.e-14_rk)
-        @assertEqual(vg2,self%faces(XI_MAX)%ale_grid_vel(:,2), 1.e-14_rk)
-        @assertEqual(vg3,self%faces(XI_MAX)%ale_grid_vel(:,3), 1.e-14_rk)
+        @assertEqual(vg1,self%faces(XI_MAX)%interp_coords_vel(:,1), 1.e-14_rk)
+        @assertEqual(vg2,self%faces(XI_MAX)%interp_coords_vel(:,2), 1.e-14_rk)
+        @assertEqual(vg3,self%faces(XI_MAX)%interp_coords_vel(:,3), 1.e-14_rk)
 
-        vg1 = TWO*self%faces(ETA_MIN)%quad_pts(:,1)
-        vg2 = TWO*self%faces(ETA_MIN)%quad_pts(:,2)
-        vg3 = TWO*self%faces(ETA_MIN)%quad_pts(:,3)
+        vg1 = TWO*self%faces(ETA_MIN)%interp_coords(:,1)
+        vg2 = TWO*self%faces(ETA_MIN)%interp_coords(:,2)
+        vg3 = TWO*self%faces(ETA_MIN)%interp_coords(:,3)
         
-        @assertEqual(vg1,self%faces(ETA_MIN)%ale_grid_vel(:,1), 1.e-14_rk)
-        @assertEqual(vg2,self%faces(ETA_MIN)%ale_grid_vel(:,2), 1.e-14_rk)
-        @assertEqual(vg3,self%faces(ETA_MIN)%ale_grid_vel(:,3), 1.e-14_rk)
+        @assertEqual(vg1,self%faces(ETA_MIN)%interp_coords_vel(:,1), 1.e-14_rk)
+        @assertEqual(vg2,self%faces(ETA_MIN)%interp_coords_vel(:,2), 1.e-14_rk)
+        @assertEqual(vg3,self%faces(ETA_MIN)%interp_coords_vel(:,3), 1.e-14_rk)
 
-        vg1 = TWO*self%faces(ETA_MAX)%quad_pts(:,1)
-        vg2 = TWO*self%faces(ETA_MAX)%quad_pts(:,2)
-        vg3 = TWO*self%faces(ETA_MAX)%quad_pts(:,3)
+        vg1 = TWO*self%faces(ETA_MAX)%interp_coords(:,1)
+        vg2 = TWO*self%faces(ETA_MAX)%interp_coords(:,2)
+        vg3 = TWO*self%faces(ETA_MAX)%interp_coords(:,3)
         
-        @assertEqual(vg1,self%faces(ETA_MAX)%ale_grid_vel(:,1), 1.e-14_rk)
-        @assertEqual(vg2,self%faces(ETA_MAX)%ale_grid_vel(:,2), 1.e-14_rk)
-        @assertEqual(vg3,self%faces(ETA_MAX)%ale_grid_vel(:,3), 1.e-14_rk)
+        @assertEqual(vg1,self%faces(ETA_MAX)%interp_coords_vel(:,1), 1.e-14_rk)
+        @assertEqual(vg2,self%faces(ETA_MAX)%interp_coords_vel(:,2), 1.e-14_rk)
+        @assertEqual(vg3,self%faces(ETA_MAX)%interp_coords_vel(:,3), 1.e-14_rk)
 
-        vg1 = TWO*self%faces(ZETA_MIN)%quad_pts(:,1)
-        vg2 = TWO*self%faces(ZETA_MIN)%quad_pts(:,2)
-        vg3 = TWO*self%faces(ZETA_MIN)%quad_pts(:,3)
+        vg1 = TWO*self%faces(ZETA_MIN)%interp_coords(:,1)
+        vg2 = TWO*self%faces(ZETA_MIN)%interp_coords(:,2)
+        vg3 = TWO*self%faces(ZETA_MIN)%interp_coords(:,3)
         
-        @assertEqual(vg1,self%faces(ZETA_MIN)%ale_grid_vel(:,1), 1.e-14_rk)
-        @assertEqual(vg2,self%faces(ZETA_MIN)%ale_grid_vel(:,2), 1.e-14_rk)
-        @assertEqual(vg3,self%faces(ZETA_MIN)%ale_grid_vel(:,3), 1.e-14_rk)
+        @assertEqual(vg1,self%faces(ZETA_MIN)%interp_coords_vel(:,1), 1.e-14_rk)
+        @assertEqual(vg2,self%faces(ZETA_MIN)%interp_coords_vel(:,2), 1.e-14_rk)
+        @assertEqual(vg3,self%faces(ZETA_MIN)%interp_coords_vel(:,3), 1.e-14_rk)
 
-        vg1 = TWO*self%faces(ZETA_MAX)%quad_pts(:,1)
-        vg2 = TWO*self%faces(ZETA_MAX)%quad_pts(:,2)
-        vg3 = TWO*self%faces(ZETA_MAX)%quad_pts(:,3)
+        vg1 = TWO*self%faces(ZETA_MAX)%interp_coords(:,1)
+        vg2 = TWO*self%faces(ZETA_MAX)%interp_coords(:,2)
+        vg3 = TWO*self%faces(ZETA_MAX)%interp_coords(:,3)
         
-        @assertEqual(vg1,self%faces(ZETA_MAX)%ale_grid_vel(:,1), 1.e-14_rk)
-        @assertEqual(vg2,self%faces(ZETA_MAX)%ale_grid_vel(:,2), 1.e-14_rk)
-        @assertEqual(vg3,self%faces(ZETA_MAX)%ale_grid_vel(:,3), 1.e-14_rk)
+        @assertEqual(vg1,self%faces(ZETA_MAX)%interp_coords_vel(:,1), 1.e-14_rk)
+        @assertEqual(vg2,self%faces(ZETA_MAX)%interp_coords_vel(:,2), 1.e-14_rk)
+        @assertEqual(vg3,self%faces(ZETA_MAX)%interp_coords_vel(:,3), 1.e-14_rk)
 
     end subroutine testElement_face_grid_velocities
     !***************************************************************************************
@@ -412,39 +407,39 @@ contains
         real(rk)    :: pg(self%faces(XI_MAX)%basis_s%nnodes_if(),3,6)
 
 
-        pg(:,1,XI_MIN) = THREE*self%faces(XI_MIN)%quad_pts(:,1)
-        pg(:,2,XI_MIN) = THREE*self%faces(XI_MIN)%quad_pts(:,2)
-        pg(:,3,XI_MIN) = THREE*self%faces(XI_MIN)%quad_pts(:,3)
+        pg(:,1,XI_MIN) = THREE*self%faces(XI_MIN)%interp_coords(:,1)
+        pg(:,2,XI_MIN) = THREE*self%faces(XI_MIN)%interp_coords(:,2)
+        pg(:,3,XI_MIN) = THREE*self%faces(XI_MIN)%interp_coords(:,3)
 
-        pg(:,1,XI_MAX) = THREE*self%faces(XI_MAX)%quad_pts(:,1)
-        pg(:,2,XI_MAX) = THREE*self%faces(XI_MAX)%quad_pts(:,2)
-        pg(:,3,XI_MAX) = THREE*self%faces(XI_MAX)%quad_pts(:,3)
+        pg(:,1,XI_MAX) = THREE*self%faces(XI_MAX)%interp_coords(:,1)
+        pg(:,2,XI_MAX) = THREE*self%faces(XI_MAX)%interp_coords(:,2)
+        pg(:,3,XI_MAX) = THREE*self%faces(XI_MAX)%interp_coords(:,3)
 
-        pg(:,1,ETA_MIN) = THREE*self%faces(ETA_MIN)%quad_pts(:,1)
-        pg(:,2,ETA_MIN) = THREE*self%faces(ETA_MIN)%quad_pts(:,2)
-        pg(:,3,ETA_MIN) = THREE*self%faces(ETA_MIN)%quad_pts(:,3)
+        pg(:,1,ETA_MIN) = THREE*self%faces(ETA_MIN)%interp_coords(:,1)
+        pg(:,2,ETA_MIN) = THREE*self%faces(ETA_MIN)%interp_coords(:,2)
+        pg(:,3,ETA_MIN) = THREE*self%faces(ETA_MIN)%interp_coords(:,3)
 
-        pg(:,1,ETA_MAX) = THREE*self%faces(ETA_MAX)%quad_pts(:,1)
-        pg(:,2,ETA_MAX) = THREE*self%faces(ETA_MAX)%quad_pts(:,2)
-        pg(:,3,ETA_MAX) = THREE*self%faces(ETA_MAX)%quad_pts(:,3)
+        pg(:,1,ETA_MAX) = THREE*self%faces(ETA_MAX)%interp_coords(:,1)
+        pg(:,2,ETA_MAX) = THREE*self%faces(ETA_MAX)%interp_coords(:,2)
+        pg(:,3,ETA_MAX) = THREE*self%faces(ETA_MAX)%interp_coords(:,3)
 
-        pg(:,1,ZETA_MIN) = THREE*self%faces(ZETA_MIN)%quad_pts(:,1)
-        pg(:,2,ZETA_MIN) = THREE*self%faces(ZETA_MIN)%quad_pts(:,2)
-        pg(:,3,ZETA_MIN) = THREE*self%faces(ZETA_MIN)%quad_pts(:,3)
+        pg(:,1,ZETA_MIN) = THREE*self%faces(ZETA_MIN)%interp_coords(:,1)
+        pg(:,2,ZETA_MIN) = THREE*self%faces(ZETA_MIN)%interp_coords(:,2)
+        pg(:,3,ZETA_MIN) = THREE*self%faces(ZETA_MIN)%interp_coords(:,3)
 
-        pg(:,1,ZETA_MAX) = THREE*self%faces(ZETA_MAX)%quad_pts(:,1)
-        pg(:,2,ZETA_MAX) = THREE*self%faces(ZETA_MAX)%quad_pts(:,2)
-        pg(:,3,ZETA_MAX) = THREE*self%faces(ZETA_MAX)%quad_pts(:,3)
+        pg(:,1,ZETA_MAX) = THREE*self%faces(ZETA_MAX)%interp_coords(:,1)
+        pg(:,2,ZETA_MAX) = THREE*self%faces(ZETA_MAX)%interp_coords(:,2)
+        pg(:,3,ZETA_MAX) = THREE*self%faces(ZETA_MAX)%interp_coords(:,3)
 
 
-        @assertEqual(pg(:,:,XI_MIN),self%faces(XI_MIN)%ale_quad_pts, 1.e-14_rk)
-        @assertEqual(pg(:,:,XI_MAX),self%faces(XI_MAX)%ale_quad_pts, 1.e-14_rk)
+        @assertEqual(pg(:,:,XI_MIN),self%faces(XI_MIN)%interp_coords_def, 1.e-14_rk)
+        @assertEqual(pg(:,:,XI_MAX),self%faces(XI_MAX)%interp_coords_def, 1.e-14_rk)
         
-        @assertEqual(pg(:,:,ETA_MIN),self%faces(ETA_MIN)%ale_quad_pts, 1.e-14_rk)
-        @assertEqual(pg(:,:,ETA_MAX),self%faces(ETA_MAX)%ale_quad_pts, 1.e-14_rk)
+        @assertEqual(pg(:,:,ETA_MIN),self%faces(ETA_MIN)%interp_coords_def, 1.e-14_rk)
+        @assertEqual(pg(:,:,ETA_MAX),self%faces(ETA_MAX)%interp_coords_def, 1.e-14_rk)
         
-        @assertEqual(pg(:,:,ZETA_MIN),self%faces(ZETA_MIN)%ale_quad_pts, 1.e-14_rk)
-        @assertEqual(pg(:,:,ZETA_MAX),self%faces(ZETA_MAX)%ale_quad_pts, 1.e-14_rk)
+        @assertEqual(pg(:,:,ZETA_MIN),self%faces(ZETA_MIN)%interp_coords_def, 1.e-14_rk)
+        @assertEqual(pg(:,:,ZETA_MAX),self%faces(ZETA_MAX)%interp_coords_def, 1.e-14_rk)
         
     end subroutine testElement_face_grid_positions
     !***************************************************************************************
@@ -464,22 +459,22 @@ contains
         
         test_ale_g = 27.0_rk 
 
-        @assertEqual(self%faces(XI_MIN)%jinv_def,27.0_rk*self%faces(XI_MIN)%jinv_undef)
+        @assertEqual(self%faces(XI_MIN)%jinv_def,27.0_rk*self%faces(XI_MIN)%jinv)
         @assertEqual(self%faces(XI_MIN)%ale_g,test_ale_g)
 
-        @assertEqual(self%faces(XI_MAX)%jinv_def,27.0_rk*self%faces(XI_MAX)%jinv_undef)
+        @assertEqual(self%faces(XI_MAX)%jinv_def,27.0_rk*self%faces(XI_MAX)%jinv)
         @assertEqual(self%faces(XI_MAX)%ale_g,test_ale_g)
 
-        @assertEqual(self%faces(ETA_MIN)%jinv_def,27.0_rk*self%faces(ETA_MIN)%jinv_undef)
+        @assertEqual(self%faces(ETA_MIN)%jinv_def,27.0_rk*self%faces(ETA_MIN)%jinv)
         @assertEqual(self%faces(ETA_MIN)%ale_g,test_ale_g)
 
-        @assertEqual(self%faces(ETA_MAX)%jinv_def,27.0_rk*self%faces(ETA_MAX)%jinv_undef)
+        @assertEqual(self%faces(ETA_MAX)%jinv_def,27.0_rk*self%faces(ETA_MAX)%jinv)
         @assertEqual(self%faces(ETA_MAX)%ale_g,test_ale_g)
 
-        @assertEqual(self%faces(ZETA_MIN)%jinv_def,27.0_rk*self%faces(ZETA_MIN)%jinv_undef)
+        @assertEqual(self%faces(ZETA_MIN)%jinv_def,27.0_rk*self%faces(ZETA_MIN)%jinv)
         @assertEqual(self%faces(ZETA_MIN)%ale_g,test_ale_g)
 
-        @assertEqual(self%faces(ZETA_MAX)%jinv_def,27.0_rk*self%faces(ZETA_MAX)%jinv_undef)
+        @assertEqual(self%faces(ZETA_MAX)%jinv_def,27.0_rk*self%faces(ZETA_MAX)%jinv)
         @assertEqual(self%faces(ZETA_MAX)%ale_g,test_ale_g)
 
     end subroutine testElement_face_jinv_def

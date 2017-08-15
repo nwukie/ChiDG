@@ -35,15 +35,15 @@ module type_face
     !------------------------------------------------------------------------------------------
     type, public :: face_t
 
-        integer(ik)        :: spacedim        ! Number of spatial dimensions
 
         ! Self information
-        integer(ik)             :: ftype         ! INTERIOR, BOUNDARY, CHIMERA, ORPHAN 
-        integer(ik)             :: ChiID    = 0  ! Identifier for domain-local Chimera interfaces
-        integer(ik)             :: bc_ID    = 0  ! Index for bc state group data%bc_state_group(bc_ID)
-        integer(ik)             :: group_ID = 0  ! Index for bc patch group mesh%bc_patch_group(group_ID)
-        integer(ik)             :: patch_ID = 0  ! Index for bc patch 
-        integer(ik)             :: face_ID  = 0  ! Index for bc patch face
+        integer(ik)             :: spacedim         ! Number of spatial dimensions
+        integer(ik)             :: ftype            ! INTERIOR, BOUNDARY, CHIMERA, ORPHAN 
+        integer(ik)             :: ChiID    = 0     ! Identifier for domain-local Chimera interfaces
+        integer(ik)             :: bc_ID    = 0     ! Index for bc state group data%bc_state_group(bc_ID)
+        integer(ik)             :: group_ID = 0     ! Index for bc patch group mesh%bc_patch_group(group_ID)
+        integer(ik)             :: patch_ID = 0     ! Index for bc patch 
+        integer(ik)             :: face_ID  = 0     ! Index for bc patch face
         integer(ik)             :: pmm_ID   = NO_PMM_ASSIGNED
 
         ! Owner-element information
@@ -83,7 +83,7 @@ module type_face
         real(rk),   allocatable :: neighbor_invmass(:,:)    
 
         ! Neighbor ALE: if neighbor is off-processor
-        real(rk),   allocatable :: neighbor_ale_grid_vel(:,:)   
+        real(rk),   allocatable :: neighbor_interp_coords_vel(:,:)   
         real(rk),   allocatable :: neighbor_ale_Dinv(:,:,:)
         real(rk),   allocatable :: neighbor_ale_g(:)
         real(rk),   allocatable :: neighbor_ale_g_grad1(:)
@@ -98,42 +98,45 @@ module type_face
         real(rk)                :: chimera_offset_3 = 0._rk
 
 
-        ! Geometry
-        type(densevector_t)     :: coords               ! Modal expansion of coordinates 
-        real(rk),   allocatable :: quad_pts(:,:)        ! Discrete coordinates at quadrature nodes
-        real(rk),   allocatable :: jinv_undef(:)        ! Volume scaling: Undeformed/Reference
-        real(rk),   allocatable :: jinv_def(:)          ! Volume scaling: Deformed/Reference
-        real(rk),   allocatable :: metric(:,:,:)        ! Face metric terms  : undeformed face
-        real(rk),   allocatable :: norm(:,:)            ! Face normal vector : scaled by differential area : undeformed face
-        real(rk),   allocatable :: unorm(:,:)           ! Face normal vector : unit length : undeformed face
-        real(rk),   allocatable :: unorm_def(:,:)       ! Face normal vector : unit length : deformed face
+        ! Modal representations of element coordinates/velocity
+        type(densevector_t)     :: coords                   ! Modal expansion of coordinates 
+        type(densevector_t)     :: ale_coords               ! Modal representation of cartesian coordinates (nterms_var,(x,y,z))
+        type(densevector_t)     :: ale_vel_coords           ! Modal representation of cartesian coordinates (nterms_var,(x,y,z))
+
+
+        ! Element data at interpolation nodes
+        real(rk),   allocatable :: interp_coords(:,:)       ! Undeformed coordinates at face interpolation nodes
+        real(rk),   allocatable :: interp_coords_def(:,:)   ! Deformed coordinates at face interpolation nodes
+        real(rk),   allocatable :: interp_coords_vel(:,:)   ! Coordinate velocities at face interpolation nodes
+        real(rk),   allocatable :: jinv(:)                  ! Volume scaling: Undeformed/Reference
+        real(rk),   allocatable :: jinv_def(:)              ! Volume scaling: Deformed/Reference
+        real(rk),   allocatable :: metric(:,:,:)            ! Face metric terms  : undeformed face
+        real(rk),   allocatable :: norm(:,:)                ! Face normal vector : scaled by differential area : undeformed face
+        real(rk),   allocatable :: unorm(:,:)               ! Face normal vector : unit length : undeformed face
+        real(rk),   allocatable :: unorm_def(:,:)           ! Face normal vector : unit length : deformed face
 
 
         ! Matrices of cartesian gradients of basis/test functions
-        real(rk),   allocatable :: grad1(:,:)           ! Deriv of basis functions in at quadrature nodes
-        real(rk),   allocatable :: grad2(:,:)           ! Deriv of basis functions in at quadrature nodes
-        real(rk),   allocatable :: grad3(:,:)           ! Deriv of basis functions in at quadrature nodes
-
+        real(rk),   allocatable :: grad1(:,:)           ! Deriv of basis functions in at interpolation nodes
+        real(rk),   allocatable :: grad2(:,:)           ! Deriv of basis functions in at interpolation nodes
+        real(rk),   allocatable :: grad3(:,:)           ! Deriv of basis functions in at interpolation nodes
 
 
         ! BR2 matrix
         real(rk),   allocatable :: br2_face(:,:)
         real(rk),   allocatable :: br2_vol(:,:)
 
+
         ! Face area
         real(rk)                :: total_area
         real(rk),   allocatable :: differential_areas(:)
         real(rk),   allocatable :: ale_area_ratio(:)
 
+
         ! Arbitrary Lagrangian Eulerian data
         !   : This defines a mapping from some deformed element back to the original
         !   : undeformed element with the idea that the governing equations are transformed
         !   : and solved on the undeformed element.
-        type(densevector_t)     :: ale_coords           ! Modal representation of cartesian coordinates (nterms_var,(x,y,z))
-        type(densevector_t)     :: ale_vel_coords       ! Modal representation of cartesian coordinates (nterms_var,(x,y,z))
-        real(rk),   allocatable :: ale_quad_pts(:,:)
-        real(rk),   allocatable :: ale_elem_pts(:,:)
-        real(rk),   allocatable :: ale_grid_vel(:,:)
         real(rk),   allocatable :: ale_Dinv(:,:,:)
         real(rk),   allocatable :: ale_g(:)
         real(rk),   allocatable :: ale_g_grad1(:)
@@ -142,10 +145,9 @@ module type_face
         real(rk),   allocatable :: ale_g_modes(:)
 
 
-        ! Quadrature matrices
+        ! Solution/Coordinate basis objects
         type(reference_element_t), pointer  :: basis_s => null()
         type(reference_element_t), pointer  :: basis_c => null()
-
 
 
         ! Logical tests
@@ -154,32 +156,32 @@ module type_face
         logical :: numInitialized      = .false.
 
 
-
     contains
 
-        procedure           :: init_geom
-        procedure           :: init_face_ale_coords
-        procedure           :: init_sol
+        ! Initialization procedures
+        procedure, public   :: init_geom
+        procedure, public   :: init_sol
 
-        procedure           :: init_neighbor
-
-        procedure           :: compute_quadrature_metrics       ! Compute metric terms at quadrature nodes
-        procedure           :: compute_quadrature_normals       ! Compute normals at quadrature nodes
-        procedure           :: compute_quadrature_coords        ! Compute cartesian coordinates at quadrature nodes
-        procedure           :: compute_quadrature_gradients     ! Compute gradients in cartesian coordinates
+        ! Undeformed element procedures
+        procedure, public   :: update_interpolations
+        procedure, private  :: interpolate_coords        
+        procedure, private  :: interpolate_metrics       
+        procedure, private  :: interpolate_normals       
+        procedure, private  :: interpolate_gradients     
 
         
-        ! ALE procedures
-        procedure, public   :: update_face_ale
-        procedure           :: update_face_ale_coords
-        procedure           :: update_face_ale_quadrature
-        procedure           :: compute_quadrature_normals_ale   ! Compute normals at quadrature nodes
-        procedure           :: compute_quadrature_coords_ale
-        procedure           :: compute_quadrature_metrics_ale
+        ! Deformed element/ALE procedures
+        procedure, public   :: set_displacements_velocities
+        procedure, public   :: update_interpolations_ale
+        procedure, private  :: interpolate_normals_ale  
+        procedure, private  :: interpolate_coords_ale
+        procedure, private  :: interpolate_metrics_ale
 
-        procedure           :: get_neighbor_element_g           ! Return neighbor element index
-        procedure           :: get_neighbor_element_l           ! Return neighbor element index
-        procedure           :: get_neighbor_face                ! Return neighbor face index
+        ! Neighbor data procedures
+        procedure           :: set_neighbor             ! Set neighbor location data
+        procedure           :: get_neighbor_element_g   ! Return neighbor element index
+        procedure           :: get_neighbor_element_l   ! Return neighbor element index
+        procedure           :: get_neighbor_face        ! Return neighbor face index
 
         final               :: destructor
 
@@ -249,7 +251,7 @@ contains
         !   2: set default ALE (displacements, velocities)
         !
         self%coords = elem%coords
-        call self%init_face_ale_coords(elem)
+        call self%set_displacements_velocities(elem)
 
 
         !
@@ -261,93 +263,6 @@ contains
     end subroutine init_geom
     !******************************************************************************************
 
-
-
-
-
-    !>  Initialize ALE data from nodal displacements.
-    !!
-    !!  @author Eric Wolf (AFRL)
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   6/16/2017
-    !!
-    !--------------------------------------------------------------------------------------
-    subroutine init_face_ale_coords(self,elem)
-        class(face_t),      intent(inout)   :: self
-        type(element_t),    intent(in)  :: elem
-
-        self%ale_coords     = elem%ale_coords
-        self%ale_vel_coords = elem%ale_vel_coords
-
-    end subroutine init_face_ale_coords 
-    !**************************************************************************************
-
-
-
-
-
-    !>  Initialize ALE data from nodal displacements.
-    !!
-    !!  @author Eric Wolf (AFRL)
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   6/16/2017
-    !!
-    !--------------------------------------------------------------------------------------
-    subroutine update_face_ale_coords(self,elem)
-        class(face_t),      intent(inout)   :: self
-        type(element_t),    intent(in)  :: elem
-
-        call self%init_face_ale_coords(elem)
-        self%ale_g_modes = elem%ale_g_modes
-
-    end subroutine update_face_ale_coords
-    !**************************************************************************************
-
-
-
-
-
-
-    !>  Initialize neighbor location.
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   6/10/2016
-    !!
-    !------------------------------------------------------------------------------------------
-    subroutine init_neighbor(self,ftype,ineighbor_domain_g,ineighbor_domain_l,              &
-                                        ineighbor_element_g,ineighbor_element_l,            &
-                                        ineighbor_face,ineighbor_neqns, ineighbor_nterms_s, &
-                                        ineighbor_proc)
-        class(face_t),  intent(inout)   :: self
-        integer(ik),    intent(in)      :: ftype
-        integer(ik),    intent(in)      :: ineighbor_domain_g
-        integer(ik),    intent(in)      :: ineighbor_domain_l
-        integer(ik),    intent(in)      :: ineighbor_element_g
-        integer(ik),    intent(in)      :: ineighbor_element_l
-        integer(ik),    intent(in)      :: ineighbor_face
-        integer(ik),    intent(in)      :: ineighbor_proc
-        integer(ik),    intent(in)      :: ineighbor_neqns
-        integer(ik),    intent(in)      :: ineighbor_nterms_s
-
-
-        self%ftype               = ftype
-        self%ineighbor_domain_g  = ineighbor_domain_g
-        self%ineighbor_domain_l  = ineighbor_domain_l
-        self%ineighbor_element_g = ineighbor_element_g
-        self%ineighbor_element_l = ineighbor_element_l
-        self%ineighbor_face      = ineighbor_face
-        self%ineighbor_neqns     = ineighbor_neqns
-        self%ineighbor_nterms_s  = ineighbor_nterms_s
-        self%ineighbor_proc      = ineighbor_proc
-
-        self%neighbor_location = [ineighbor_domain_g,  ineighbor_domain_l,  &
-                                  ineighbor_element_g, ineighbor_element_l, &
-                                  ineighbor_face]
-
-        self%neighborInitialized = .true.
-
-    end subroutine init_neighbor
-    !*******************************************************************************************
 
 
 
@@ -386,28 +301,28 @@ contains
         !
         ! (Re)Allocate storage for face data structures.
         !
-        if (allocated(self%jinv_undef))             &
-            deallocate(self%jinv_undef,             &
+        if (allocated(self%jinv))             &
+            deallocate(self%jinv,             &
                        self%jinv_def,               &
-                       self%quad_pts,               &
+                       self%interp_coords,               &
                        self%metric,                 &
                        self%norm,                   &
                        self%unorm,                  &
                        self%unorm_def,              &
-                       self%ale_quad_pts,           &
+                       self%interp_coords_def,           &
                        self%ale_Dinv,               &
                        self%ale_g,                  &
                        self%ale_g_grad1,            &
                        self%ale_g_grad2,            &
                        self%ale_g_grad3,            &
                        self%ale_g_modes,            &
-                       self%ale_grid_vel,           &
+                       self%interp_coords_vel,           &
                        self%neighbor_ale_Dinv,      &
                        self%neighbor_ale_g,         &
                        self%neighbor_ale_g_grad1,   &
                        self%neighbor_ale_g_grad2,   &
                        self%neighbor_ale_g_grad3,   &
-                       self%neighbor_ale_grid_vel,  &
+                       self%neighbor_interp_coords_vel,  &
                        self%grad1,                  &
                        self%grad2,                  &
                        self%grad3                   &
@@ -416,27 +331,27 @@ contains
 
 
         nnodes = self%basis_s%nnodes_if()
-        allocate(self%jinv_undef(nnodes),               &
+        allocate(self%jinv(nnodes),               &
                  self%jinv_def(nnodes),                 &
-                 self%quad_pts(nnodes,3),               &
+                 self%interp_coords(nnodes,3),               &
                  self%metric(3,3,nnodes),               &
                  self%norm(nnodes,3),                   &
                  self%unorm(nnodes,3),                  &
                  self%unorm_def(nnodes,3),              &
-                 self%ale_quad_pts(nnodes,3),           &
+                 self%interp_coords_def(nnodes,3),           &
                  self%ale_Dinv(3,3,nnodes),             &
                  self%ale_g(nnodes),                    &
                  self%ale_g_grad1(nnodes),              &
                  self%ale_g_grad2(nnodes),              &
                  self%ale_g_grad3(nnodes),              &
                  self%ale_g_modes(self%nterms_s),       &
-                 self%ale_grid_vel(nnodes,3),           &
+                 self%interp_coords_vel(nnodes,3),           &
                  self%neighbor_ale_Dinv(3,3,nnodes),    &
                  self%neighbor_ale_g(nnodes),           &
                  self%neighbor_ale_g_grad1(nnodes),     &
                  self%neighbor_ale_g_grad2(nnodes),     &
                  self%neighbor_ale_g_grad3(nnodes),     &
-                 self%neighbor_ale_grid_vel(nnodes,3),  &
+                 self%neighbor_interp_coords_vel(nnodes,3),  &
                  self%grad1(nnodes,self%nterms_s),      &
                  self%grad2(nnodes,self%nterms_s),      &
                  self%grad3(nnodes,self%nterms_s),      &
@@ -448,12 +363,8 @@ contains
         !
         ! Compute metrics, normals, node coordinates
         !
-        call self%compute_quadrature_coords()
-        call self%compute_quadrature_metrics()
-        call self%compute_quadrature_normals()
-        call self%compute_quadrature_gradients()
-
-        call self%update_face_ale(elem)
+        call self%update_interpolations()
+        call self%update_interpolations_ale(elem)
 
         !
         ! Compute BR2 matrix
@@ -480,6 +391,28 @@ contains
 
 
 
+    !>  Update interpolations of data related to the undeformed element/face to the 
+    !!  interpolation node set.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/15/2017
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine update_interpolations(self)
+        class(face_t),  intent(inout)   :: self
+
+        call self%interpolate_coords()
+        call self%interpolate_metrics()
+        call self%interpolate_normals()
+        call self%interpolate_gradients()
+
+    end subroutine update_interpolations
+    !*****************************************************************************************
+
+
+
+
+
 
     !> Compute metric terms and cell jacobians at face quadrature nodes
     !!
@@ -488,8 +421,8 @@ contains
     !!
     !!  TODO: Generalize 2D physical coordinates. Currently assumes x-y.
     !!
-    !------------------------------------------------------------------------------------------
-    subroutine compute_quadrature_metrics(self)
+    !-----------------------------------------------------------------------------------------
+    subroutine interpolate_metrics(self)
         class(face_t),  intent(inout)   :: self
 
         integer(ik)                 :: inode, nnodes, ierr
@@ -536,9 +469,9 @@ contains
             case (CARTESIAN)
                 scaling_row2 = ONE
             case (CYLINDRICAL)
-                scaling_row2 = self%quad_pts(:,1)
+                scaling_row2 = self%interp_coords(:,1)
             case default
-                user_msg = "face%compute_quadrature_metrics: Invalid coordinate system."
+                user_msg = "face%interpolate_metrics: Invalid coordinate system."
                 call chidg_signal(FATAL,user_msg)
         end select
 
@@ -556,16 +489,16 @@ contains
         ! Compute inverse cell mapping jacobian
         !
         do inode = 1,nnodes
-            self%jinv_undef(inode) = det_3x3(jacobian(:,:,inode))
+            self%jinv(inode) = det_3x3(jacobian(:,:,inode))
         end do
 
 
         !
         ! Check for negative jacobians
         !
-        user_msg = "face%compute_quadrature_metrics: Negative element &
+        user_msg = "face%interpolate_metrics: Negative element &
                     volume detected. Check element quality and orientation."
-        if (any(self%jinv_undef < ZERO)) call chidg_signal(FATAL,user_msg)
+        if (any(self%jinv < ZERO)) call chidg_signal(FATAL,user_msg)
 
 
 
@@ -578,12 +511,8 @@ contains
 
 
 
-    end subroutine compute_quadrature_metrics
+    end subroutine interpolate_metrics
     !******************************************************************************************
-
-
-
-
 
 
 
@@ -604,7 +533,7 @@ contains
     !!  @date   11/5/2016
     !!
     !------------------------------------------------------------------------------------------
-    subroutine compute_quadrature_normals(self)
+    subroutine interpolate_normals(self)
         class(face_t),  intent(inout)   :: self
 
         integer(ik)                                 :: inode, nnodes, ierr
@@ -621,22 +550,22 @@ contains
         !
         select case (self%iface)
             case (XI_MIN, XI_MAX)
-                self%norm(:,XI_DIR)   = self%jinv_undef(:)*self%metric(1,1,:)
-                self%norm(:,ETA_DIR)  = self%jinv_undef(:)*self%metric(1,2,:)
-                self%norm(:,ZETA_DIR) = self%jinv_undef(:)*self%metric(1,3,:)
+                self%norm(:,XI_DIR)   = self%jinv(:)*self%metric(1,1,:)
+                self%norm(:,ETA_DIR)  = self%jinv(:)*self%metric(1,2,:)
+                self%norm(:,ZETA_DIR) = self%jinv(:)*self%metric(1,3,:)
 
             case (ETA_MIN, ETA_MAX)
-                self%norm(:,XI_DIR)   = self%jinv_undef(:)*self%metric(2,1,:)
-                self%norm(:,ETA_DIR)  = self%jinv_undef(:)*self%metric(2,2,:)
-                self%norm(:,ZETA_DIR) = self%jinv_undef(:)*self%metric(2,3,:)
+                self%norm(:,XI_DIR)   = self%jinv(:)*self%metric(2,1,:)
+                self%norm(:,ETA_DIR)  = self%jinv(:)*self%metric(2,2,:)
+                self%norm(:,ZETA_DIR) = self%jinv(:)*self%metric(2,3,:)
 
             case (ZETA_MIN, ZETA_MAX)
-                self%norm(:,XI_DIR)   = self%jinv_undef(:)*self%metric(3,1,:)
-                self%norm(:,ETA_DIR)  = self%jinv_undef(:)*self%metric(3,2,:)
-                self%norm(:,ZETA_DIR) = self%jinv_undef(:)*self%metric(3,3,:)
+                self%norm(:,XI_DIR)   = self%jinv(:)*self%metric(3,1,:)
+                self%norm(:,ETA_DIR)  = self%jinv(:)*self%metric(3,2,:)
+                self%norm(:,ZETA_DIR) = self%jinv(:)*self%metric(3,3,:)
 
             case default
-                user_msg = "face%compute_quadrature_normals: Invalid face index in face initialization."
+                user_msg = "face%interpolate_normals: Invalid face index in face initialization."
                 call chidg_signal(FATAL,user_msg)
         end select
 
@@ -675,12 +604,30 @@ contains
         self%total_area = sum(abs(self%differential_areas * weights))
 
 
-    end subroutine compute_quadrature_normals
+    end subroutine interpolate_normals
     !******************************************************************************************
 
 
 
 
+
+
+    !>  Initialize ALE data from nodal displacements.
+    !!
+    !!  @author Eric Wolf (AFRL)
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/16/2017
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine set_displacements_velocities(self,elem)
+        class(face_t),      intent(inout)   :: self
+        type(element_t),    intent(in)  :: elem
+
+        self%ale_coords     = elem%coords_def
+        self%ale_vel_coords = elem%coords_vel
+
+    end subroutine set_displacements_velocities
+    !**************************************************************************************
 
 
 
@@ -699,7 +646,7 @@ contains
     !!  @date   11/5/2016
     !!
     !------------------------------------------------------------------------------------------
-    subroutine compute_quadrature_normals_ale(self)
+    subroutine interpolate_normals_ale(self)
         class(face_t),  intent(inout)   :: self
 
         integer(ik)                 :: inode, nnodes, ierr
@@ -742,7 +689,7 @@ contains
                     norm(inode,ZETA_DIR) = self%jinv_def(inode)*metric_ale(3,3)
 
                 case default
-                    user_msg = "face%compute_quadrature_normals_ale: Invalid face index in face initialization."
+                    user_msg = "face%interpolate_normals_ale: Invalid face index in face initialization."
                     call chidg_signal(FATAL,user_msg)
             end select
 
@@ -778,15 +725,8 @@ contains
         self%ale_area_ratio = norm_mag/self%differential_areas
 
 
-    end subroutine compute_quadrature_normals_ale
+    end subroutine interpolate_normals_ale
     !******************************************************************************************
-
-
-
-
-
-
-
 
 
 
@@ -803,7 +743,7 @@ contains
     !!
     !!
     !------------------------------------------------------------------------------------------
-    subroutine compute_quadrature_gradients(self)
+    subroutine interpolate_gradients(self)
         class(face_t),      intent(inout)   :: self
 
         integer(ik)                                 :: iterm,inode,iface,nnodes
@@ -835,7 +775,7 @@ contains
             end do
         end do
 
-    end subroutine compute_quadrature_gradients
+    end subroutine interpolate_gradients
     !*******************************************************************************************
 
 
@@ -853,7 +793,7 @@ contains
     !!  @date   11/5/2016
     !!
     !------------------------------------------------------------------------------------------
-    subroutine compute_quadrature_coords(self)
+    subroutine interpolate_coords(self)
         class(face_t),  intent(inout)   :: self
 
         integer(ik) :: iface, inode
@@ -875,55 +815,10 @@ contains
         ! For each quadrature node, store real coordinates
         !
         do inode = 1,self%basis_s%nnodes_if()
-            self%quad_pts(inode,1:3) = [c1(inode), c2(inode), c3(inode)]
+            self%interp_coords(inode,1:3) = [c1(inode), c2(inode), c3(inode)]
         end do !inode
 
-    end subroutine compute_quadrature_coords
-    !******************************************************************************************
-
-
-
-
-
-
-
-    !>  Return neighbor element index
-    !!
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/1/2016
-    !!
-    !------------------------------------------------------------------------------------------
-    function get_neighbor_element_l(self) result(neighbor_e)
-        class(face_t),  intent(in)   ::  self
-
-        integer(ik) :: neighbor_e
-
-        neighbor_e = self%ineighbor_element_l
-
-    end function get_neighbor_element_l
-    !******************************************************************************************
-
-
-
-
-
-
-    !> Return neighbor element index
-    !!
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/1/2016
-    !!
-    !------------------------------------------------------------------------------------------
-    function get_neighbor_element_g(self) result(neighbor_e)
-        class(face_t),  intent(in)   ::  self
-
-        integer(ik) :: neighbor_e
-
-        neighbor_e = self%ineighbor_element_g
-
-    end function get_neighbor_element_g
+    end subroutine interpolate_coords
     !******************************************************************************************
 
 
@@ -933,52 +828,6 @@ contains
 
 
 
-
-
-
-    !> Return neighbor face index
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/1/2016
-    !!
-    !!
-    !------------------------------------------------------------------------------------------
-    function get_neighbor_face(self) result(neighbor_f)
-        class(face_t),  intent(in)   ::  self
-
-        integer(ik) :: neighbor_e
-        integer(ik) :: neighbor_f
-
-
-        neighbor_e = self%get_neighbor_element_l()
-
-
-        if ( neighbor_e == NO_INTERIOR_NEIGHBOR ) then
-            
-            neighbor_f = NO_INTERIOR_NEIGHBOR
-
-        else
-
-            !& ASSUMPTION: All elements have same orientation.
-            if ( self%iface == XI_MIN ) then
-                neighbor_f = XI_MAX
-            else if ( self%iface == XI_MAX ) then
-                neighbor_f = XI_MIN
-            else if ( self%iface == ETA_MIN ) then
-                neighbor_f = ETA_MAX
-            else if ( self%iface == ETA_MAX ) then
-                neighbor_f = ETA_MIN
-            else if ( self%iface == ZETA_MIN ) then
-                neighbor_f = ZETA_MAX
-            else if ( self%iface == ZETA_MAX ) then
-                neighbor_f = ZETA_MIN
-            end if
-
-        end if
-
-
-    end function get_neighbor_face
-    !******************************************************************************************
 
     !>  Initialize ALE data from nodal displacements.
     !!
@@ -987,34 +836,20 @@ contains
     !!  @date   6/16/2017
     !!
     !--------------------------------------------------------------------------------------
-    subroutine update_face_ale(self,elem)
+    subroutine update_interpolations_ale(self,elem)
         class(face_t),      intent(inout)   :: self
-        type(element_t),    intent(in)  :: elem
+        type(element_t),    intent(in)      :: elem
 
-        call self%update_face_ale_coords(elem)
-        call self%update_face_ale_quadrature()
+        self%ale_g_modes = elem%ale_g_modes
+        call self%interpolate_coords_ale()
+        call self%interpolate_metrics_ale()
+        call self%interpolate_normals_ale()
 
-    end subroutine update_face_ale
+
+    end subroutine update_interpolations_ale
     !**************************************************************************************
 
 
-    !>
-    !!
-    !!  @author Eric Wolf (AFRL)
-    !!  @date   7/5/2017
-    !!
-    !------------------------------------------------------------------------------------------
-    subroutine update_face_ale_quadrature(self)
-        class(face_t),       intent(inout)      :: self
-
-        call self%compute_quadrature_coords_ale()
-        call self%compute_quadrature_metrics_ale()
-        call self%compute_quadrature_normals_ale()
-
-    end subroutine update_face_ale_quadrature
-    !******************************************************************************************
-
-
 
     !>
     !!
@@ -1023,7 +858,7 @@ contains
     !!  @date   7/5/2017
     !!
     !------------------------------------------------------------------------------------------
-    subroutine compute_quadrature_coords_ale(self)
+    subroutine interpolate_coords_ale(self)
         class(face_t),   intent(inout)   :: self
 
 
@@ -1045,7 +880,7 @@ contains
         ! Initialize each point with cartesian coordinates
         !
         do inode = 1,nnodes
-            self%ale_quad_pts(inode,1:3) = [x(inode), y(inode), z(inode)]
+            self%interp_coords_def(inode,1:3) = [x(inode), y(inode), z(inode)]
         end do
 
 
@@ -1062,13 +897,13 @@ contains
         ! Initialize each point with cartesian coordinates
         !
         do inode = 1,nnodes
-            self%ale_grid_vel(inode,1) = vg1(inode)
-            self%ale_grid_vel(inode,2) = vg2(inode)
-            self%ale_grid_vel(inode,3) = vg3(inode)
+            self%interp_coords_vel(inode,1) = vg1(inode)
+            self%interp_coords_vel(inode,2) = vg2(inode)
+            self%interp_coords_vel(inode,3) = vg3(inode)
         end do 
 
 
-    end subroutine compute_quadrature_coords_ale
+    end subroutine interpolate_coords_ale
     !****************************************************************************************
 
 
@@ -1080,7 +915,7 @@ contains
     !!  TODO: Generalize 2D physical coordinates. Currently assumes x-y.
     !!
     !----------------------------------------------------------------------------------------
-    subroutine compute_quadrature_metrics_ale(self)
+    subroutine interpolate_metrics_ale(self)
         class(face_t),  intent(inout)   :: self
 
         integer(ik)                 :: inode, nnodes, ierr
@@ -1093,7 +928,7 @@ contains
             dd1_dxideta,  dd1_dxidzeta,   dd1_detadzeta,            &
             dd2_dxideta,  dd2_dxidzeta,   dd2_detadzeta,            &
             dd3_dxideta,  dd3_dxidzeta,   dd3_detadzeta,            &
-            jinv_undef_grad1, jinv_undef_grad2, jinv_undef_grad3,   &
+            jinv_grad1, jinv_grad2, jinv_grad3,   &
             jinv_def_grad1,   jinv_def_grad2,   jinv_def_grad3,     &
             ale_g_ddxi, ale_g_ddeta, ale_g_ddzeta, scaling_row2
 
@@ -1152,9 +987,9 @@ contains
             case (CARTESIAN)
                 scaling_row2 = ONE
             case (CYLINDRICAL)
-                scaling_row2 = self%ale_quad_pts(:,1)
+                scaling_row2 = self%interp_coords_def(:,1)
             case default
-                user_msg = "element%compute_quadrature_metrics_ale: Invalid coordinate system."
+                user_msg = "element%interpolate_metrics_ale: Invalid coordinate system."
                 call chidg_signal(FATAL,user_msg)
         end select
 
@@ -1179,7 +1014,7 @@ contains
         !
         ! Check for negative jacobians
         !
-        user_msg = "face%compute_quadrature_metrics_ale: Negative element jacobians. &
+        user_msg = "face%interpolate_metrics_ale: Negative element jacobians. &
                     Check element quality and origntation."
         if (any(self%jinv_def < ZERO)) call chidg_signal(FATAL,user_msg)
 
@@ -1220,17 +1055,17 @@ contains
         dd3_dxidzeta   = matmul(dxidzeta,   self%coords%getvar(3,itime = 1))
         dd3_detadzeta  = matmul(detadzeta,  self%coords%getvar(3,itime = 1))
 
-        jinv_undef_grad1 = dd1_dxidxi*self%metric(1,1,:)     +  dd1_dxideta*self%metric(2,1,:)    +  dd1_dxidzeta*self%metric(3,1,:)   +  &
-                           dd2_dxidxi*self%metric(1,2,:)     +  dd2_dxideta*self%metric(2,2,:)    +  dd2_dxidzeta*self%metric(3,2,:)   +  &
-                           dd3_dxidxi*self%metric(1,3,:)     +  dd3_dxideta*self%metric(2,3,:)    +  dd3_dxidzeta*self%metric(3,3,:)
+        jinv_grad1 = dd1_dxidxi*self%metric(1,1,:)     +  dd1_dxideta*self%metric(2,1,:)    +  dd1_dxidzeta*self%metric(3,1,:)   +  &
+                     dd2_dxidxi*self%metric(1,2,:)     +  dd2_dxideta*self%metric(2,2,:)    +  dd2_dxidzeta*self%metric(3,2,:)   +  &
+                     dd3_dxidxi*self%metric(1,3,:)     +  dd3_dxideta*self%metric(2,3,:)    +  dd3_dxidzeta*self%metric(3,3,:)
 
-        jinv_undef_grad2 = dd1_dxideta*self%metric(1,1,:)    +  dd1_detadeta*self%metric(2,1,:)   +  dd1_detadzeta*self%metric(3,1,:)  +  &
-                           dd2_dxideta*self%metric(1,2,:)    +  dd2_detadeta*self%metric(2,2,:)   +  dd2_detadzeta*self%metric(3,2,:)  +  &
-                           dd3_dxideta*self%metric(1,3,:)    +  dd3_detadeta*self%metric(2,3,:)   +  dd3_detadzeta*self%metric(3,3,:)
+        jinv_grad2 = dd1_dxideta*self%metric(1,1,:)    +  dd1_detadeta*self%metric(2,1,:)   +  dd1_detadzeta*self%metric(3,1,:)  +  &
+                     dd2_dxideta*self%metric(1,2,:)    +  dd2_detadeta*self%metric(2,2,:)   +  dd2_detadzeta*self%metric(3,2,:)  +  &
+                     dd3_dxideta*self%metric(1,3,:)    +  dd3_detadeta*self%metric(2,3,:)   +  dd3_detadzeta*self%metric(3,3,:)
 
-        jinv_undef_grad3 = dd1_dxidzeta*self%metric(1,1,:)   +  dd1_detadzeta*self%metric(2,1,:)  +  dd1_dzetadzeta*self%metric(3,1,:) +  &
-                           dd2_dxidzeta*self%metric(1,2,:)   +  dd2_detadzeta*self%metric(2,2,:)  +  dd2_dzetadzeta*self%metric(3,2,:) +  &
-                           dd3_dxidzeta*self%metric(1,3,:)   +  dd3_detadzeta*self%metric(2,3,:)  +  dd3_dzetadzeta*self%metric(3,3,:)
+        jinv_grad3 = dd1_dxidzeta*self%metric(1,1,:)   +  dd1_detadzeta*self%metric(2,1,:)  +  dd1_dzetadzeta*self%metric(3,1,:) +  &
+                     dd2_dxidzeta*self%metric(1,2,:)   +  dd2_detadzeta*self%metric(2,2,:)  +  dd2_dzetadzeta*self%metric(3,2,:) +  &
+                     dd3_dxidzeta*self%metric(1,3,:)   +  dd3_detadzeta*self%metric(2,3,:)  +  dd3_dzetadzeta*self%metric(3,3,:)
 
 
         ! Second/mixed derivatives
@@ -1277,10 +1112,10 @@ contains
         !
         !   grad(det_jacobian_grid) = [grad(jinv_ale)*jinv - jinv_ale*grad(jinv)] / [jinv*jinv]
         !
-        self%ale_g   = self%jinv_def/self%jinv_undef
-        ale_g_ddxi   = (jinv_def_grad1*self%jinv_undef  -  self%jinv_def*jinv_undef_grad1)/(self%jinv_undef**TWO)
-        ale_g_ddeta  = (jinv_def_grad2*self%jinv_undef  -  self%jinv_def*jinv_undef_grad2)/(self%jinv_undef**TWO)
-        ale_g_ddzeta = (jinv_def_grad3*self%jinv_undef  -  self%jinv_def*jinv_undef_grad3)/(self%jinv_undef**TWO)
+        self%ale_g   = self%jinv_def/self%jinv
+        ale_g_ddxi   = (jinv_def_grad1*self%jinv  -  self%jinv_def*jinv_grad1)/(self%jinv**TWO)
+        ale_g_ddeta  = (jinv_def_grad2*self%jinv  -  self%jinv_def*jinv_grad2)/(self%jinv**TWO)
+        ale_g_ddzeta = (jinv_def_grad3*self%jinv  -  self%jinv_def*jinv_grad3)/(self%jinv**TWO)
 
 
         ! Transform into gradient in physical space(undeformed geometry)
@@ -1299,8 +1134,146 @@ contains
         end do
 
 
-    end subroutine compute_quadrature_metrics_ale
+    end subroutine interpolate_metrics_ale
     !*****************************************************************************************************
+
+
+
+
+
+
+
+    !>  Initialize neighbor location.
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   6/10/2016
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine set_neighbor(self,ftype,ineighbor_domain_g,ineighbor_domain_l,              &
+                                       ineighbor_element_g,ineighbor_element_l,            &
+                                       ineighbor_face,ineighbor_neqns, ineighbor_nterms_s, &
+                                       ineighbor_proc)
+        class(face_t),  intent(inout)   :: self
+        integer(ik),    intent(in)      :: ftype
+        integer(ik),    intent(in)      :: ineighbor_domain_g
+        integer(ik),    intent(in)      :: ineighbor_domain_l
+        integer(ik),    intent(in)      :: ineighbor_element_g
+        integer(ik),    intent(in)      :: ineighbor_element_l
+        integer(ik),    intent(in)      :: ineighbor_face
+        integer(ik),    intent(in)      :: ineighbor_proc
+        integer(ik),    intent(in)      :: ineighbor_neqns
+        integer(ik),    intent(in)      :: ineighbor_nterms_s
+
+
+        self%ftype               = ftype
+        self%ineighbor_domain_g  = ineighbor_domain_g
+        self%ineighbor_domain_l  = ineighbor_domain_l
+        self%ineighbor_element_g = ineighbor_element_g
+        self%ineighbor_element_l = ineighbor_element_l
+        self%ineighbor_face      = ineighbor_face
+        self%ineighbor_neqns     = ineighbor_neqns
+        self%ineighbor_nterms_s  = ineighbor_nterms_s
+        self%ineighbor_proc      = ineighbor_proc
+
+        self%neighbor_location = [ineighbor_domain_g,  ineighbor_domain_l,  &
+                                  ineighbor_element_g, ineighbor_element_l, &
+                                  ineighbor_face]
+
+        self%neighborInitialized = .true.
+
+    end subroutine set_neighbor
+    !*******************************************************************************************
+
+
+
+
+
+
+    !>  Return neighbor element index
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !------------------------------------------------------------------------------------------
+    function get_neighbor_element_l(self) result(neighbor_e)
+        class(face_t),  intent(in)   ::  self
+
+        integer(ik) :: neighbor_e
+
+        neighbor_e = self%ineighbor_element_l
+
+    end function get_neighbor_element_l
+    !******************************************************************************************
+
+
+
+
+
+
+    !> Return neighbor element index
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !------------------------------------------------------------------------------------------
+    function get_neighbor_element_g(self) result(neighbor_e)
+        class(face_t),  intent(in)   ::  self
+
+        integer(ik) :: neighbor_e
+
+        neighbor_e = self%ineighbor_element_g
+
+    end function get_neighbor_element_g
+    !******************************************************************************************
+
+
+
+
+
+
+
+    !> Return neighbor face index
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !------------------------------------------------------------------------------------------
+    function get_neighbor_face(self) result(neighbor_f)
+        class(face_t),  intent(in)   ::  self
+
+        integer(ik) :: neighbor_e
+        integer(ik) :: neighbor_f
+
+
+        neighbor_e = self%get_neighbor_element_l()
+
+
+        if ( neighbor_e == NO_INTERIOR_NEIGHBOR ) then
+            
+            neighbor_f = NO_INTERIOR_NEIGHBOR
+
+        else
+
+            !& ASSUMPTION: All elements have same orientation.
+            if ( self%iface == XI_MIN ) then
+                neighbor_f = XI_MAX
+            else if ( self%iface == XI_MAX ) then
+                neighbor_f = XI_MIN
+            else if ( self%iface == ETA_MIN ) then
+                neighbor_f = ETA_MAX
+            else if ( self%iface == ETA_MAX ) then
+                neighbor_f = ETA_MIN
+            else if ( self%iface == ZETA_MIN ) then
+                neighbor_f = ZETA_MAX
+            else if ( self%iface == ZETA_MAX ) then
+                neighbor_f = ZETA_MIN
+            end if
+
+        end if
+
+
+    end function get_neighbor_face
+    !******************************************************************************************
 
 
 

@@ -583,7 +583,7 @@ contains
                     !
                     ! Compute the analytical solution at the quadrature nodes
                     !
-                    x_gq = mesh%domain(idom)%elems(ielem)%quad_pts(:,1)
+                    x_gq = mesh%domain(idom)%elems(ielem)%interp_coords(:,1)
                     ale_g_gq = mesh%domain(idom)%elems(ielem)%ale_g
                     u_analytical = ZERO*x_gq
                     u_analytical = 1.0_rk

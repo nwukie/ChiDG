@@ -55,7 +55,7 @@ contains
 
         associate( idom => elem_info%idomain_l, ielem => elem_info%ielement_l, idiff => fcn_info%idiff,             &
                    weights     => mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%basis_s%weights(),   &
-                   jinv_undef  => mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%jinv_undef,          &
+                   jinv  => mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%jinv,          &
                    grad1_trans => mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%grad1_trans,         &
                    grad2_trans => mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%grad2_trans,         &
                    grad3_trans => mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%grad3_trans )
@@ -64,9 +64,9 @@ contains
         !
         ! Multiply each component by quadrature weights and element jacobians
         !
-        flux1 = flux1 * weights * jinv_undef
-        flux2 = flux2 * weights * jinv_undef
-        flux3 = flux3 * weights * jinv_undef
+        flux1 = flux1 * weights * jinv
+        flux2 = flux2 * weights * jinv
+        flux3 = flux3 * weights * jinv
 
 
         !
@@ -144,12 +144,12 @@ contains
         associate( idom       => elem_info%idomain_l, ielem => elem_info%ielement_l, idiff => fcn_info%idiff,                     &
                    weights    => mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%basis_s%weights(),               &
                    val        => mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%basis_s%interpolator('Value'),   &
-                   jinv_undef => mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%jinv_undef )
+                   jinv => mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%jinv )
 
         !
         ! Multiply each component by quadrature weights and element jacobians
         !
-        source = source * weights * jinv_undef
+        source = source * weights * jinv
 
 
         !
@@ -241,7 +241,7 @@ contains
         ! Integrate and apply once
         !
         associate ( weights    => mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%weights(iface),                          &
-                    jinv_undef => mesh%domain(idomain_l)%faces(ielement_l,iface)%jinv_undef,                                      &
+                    jinv => mesh%domain(idomain_l)%faces(ielement_l,iface)%jinv,                                      &
                     val        => mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%interpolator('Value',iface),             &
                     valtrans   => transpose(mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%interpolator('Value',iface)) )
 
@@ -301,9 +301,9 @@ contains
                 function_n%idiff   = idiff_n
 
 
-                associate ( weights_n    => mesh%domain(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%basis_s%weights(ineighbor_face),   &
-                            jinv_undef_n => mesh%domain(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%jinv_undef,                        & 
-                            val_n        => mesh%domain(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%basis_s%interpolator('Value',ineighbor_face),     &
+                associate ( weights_n    => mesh%domain(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%basis_s%weights(ineighbor_face),               &
+                            jinv_n       => mesh%domain(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%jinv,                                          &  
+                            val_n        => mesh%domain(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%basis_s%interpolator('Value',ineighbor_face),  &
                             valtrans_n   => transpose(mesh%domain(idomain_l)%faces(ineighbor_element_l,ineighbor_face)%basis_s%interpolator('Value',ineighbor_face)) )
 
                     integrand_n = integrand_n * weights_n

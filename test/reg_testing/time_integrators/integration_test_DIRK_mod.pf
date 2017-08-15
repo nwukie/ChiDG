@@ -925,7 +925,7 @@ contains
                     !
                     ! Compute the analytical solution at the quadrature nodes
                     !
-                    u_analytical = gaussian%compute(time,point_t(mesh%domain(idom)%elems(ielem)%quad_pts))
+                    u_analytical = gaussian%compute(time,point_t(mesh%domain(idom)%elems(ielem)%interp_coords))
 
                     !
                     ! Interpolate DG numerical solution
@@ -942,7 +942,7 @@ contains
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_undef * mesh%domain(idom)%elems(ielem)%basis_s%weights())
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%basis_s%weights())
 
 
                     !

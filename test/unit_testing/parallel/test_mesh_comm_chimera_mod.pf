@@ -528,8 +528,8 @@ contains
                                ZERO, ZERO, 12.5_rk,     &
                                ZERO, ZERO, 12.5_rk,     &
                                ZERO, ZERO, 12.5_rk]
-                call self%chidg%data%mesh%domain(1)%init_ale(dnodes,vnodes)
-                call self%chidg%data%mesh%domain(1)%update_ale()
+                call self%chidg%data%mesh%domain(1)%set_displacements_velocities(dnodes,vnodes)
+                call self%chidg%data%mesh%domain(1)%update_interpolations_ale()
             else if (IRANK == 1) then
                 dnodes(:,1) = [0.125_rk, ZERO, ZERO,    &
                                0.125_rk, ZERO, ZERO,    &
@@ -539,8 +539,8 @@ contains
                                12.5_rk, ZERO, ZERO,     &
                                12.5_rk, ZERO, ZERO,     &
                                12.5_rk, ZERO, ZERO]
-                call self%chidg%data%mesh%domain(1)%init_ale(dnodes,vnodes)
-                call self%chidg%data%mesh%domain(1)%update_ale()
+                call self%chidg%data%mesh%domain(1)%set_displacements_velocities(dnodes,vnodes)
+                call self%chidg%data%mesh%domain(1)%update_interpolations_ale()
             end if
 
 
@@ -555,8 +555,8 @@ contains
                                ZERO, ZERO, 12.5_rk,     &
                                ZERO, ZERO, 12.5_rk,     &
                                ZERO, ZERO, 12.5_rk]
-                call self%chidg%data%mesh%domain(1)%init_ale(dnodes,vnodes)
-                call self%chidg%data%mesh%domain(1)%update_ale()
+                call self%chidg%data%mesh%domain(1)%set_displacements_velocities(dnodes,vnodes)
+                call self%chidg%data%mesh%domain(1)%update_interpolations_ale()
             else if (IRANK == 2) then
                 dnodes(:,1) = [0.125_rk, ZERO, ZERO,    &
                                0.125_rk, ZERO, ZERO,    &
@@ -566,8 +566,8 @@ contains
                                12.5_rk, ZERO, ZERO,     &
                                12.5_rk, ZERO, ZERO,     &
                                12.5_rk, ZERO, ZERO]
-                call self%chidg%data%mesh%domain(1)%init_ale(dnodes,vnodes)
-                call self%chidg%data%mesh%domain(1)%update_ale()
+                call self%chidg%data%mesh%domain(1)%set_displacements_velocities(dnodes,vnodes)
+                call self%chidg%data%mesh%domain(1)%update_interpolations_ale()
             end if
 
 
@@ -582,8 +582,8 @@ contains
                                ZERO, ZERO, 12.5_rk,     &
                                ZERO, ZERO, 12.5_rk,     &
                                ZERO, ZERO, 12.5_rk]
-                call self%chidg%data%mesh%domain(1)%init_ale(dnodes,vnodes)
-                call self%chidg%data%mesh%domain(1)%update_ale()
+                call self%chidg%data%mesh%domain(1)%set_displacements_velocities(dnodes,vnodes)
+                call self%chidg%data%mesh%domain(1)%update_interpolations_ale()
             else if ( (IRANK == 2) .or. (IRANK == 3) ) then
                 dnodes(:,1) = [0.125_rk, ZERO, ZERO,    &
                                0.125_rk, ZERO, ZERO,    &
@@ -593,8 +593,8 @@ contains
                                12.5_rk, ZERO, ZERO,     &
                                12.5_rk, ZERO, ZERO,     &
                                12.5_rk, ZERO, ZERO]
-                call self%chidg%data%mesh%domain(1)%init_ale(dnodes,vnodes)
-                call self%chidg%data%mesh%domain(1)%update_ale()
+                call self%chidg%data%mesh%domain(1)%set_displacements_velocities(dnodes,vnodes)
+                call self%chidg%data%mesh%domain(1)%update_interpolations_ale()
             end if
 
 

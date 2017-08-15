@@ -135,8 +135,8 @@ contains
         integer(ik) :: idomain_g_coupled, idomain_l_coupled, ielement_g_coupled, ielement_l_coupled, &
                        iface_coupled, proc_coupled
 
-!        type(point_t),  allocatable :: quad_pts(:)
-        real(rk),       allocatable :: quad_pts(:,:)
+!        type(point_t),  allocatable :: interp_coords_def(:)
+        real(rk),       allocatable :: interp_coords_def(:,:)
         real(rk),       allocatable :: areas(:)
         real(rk)                    :: total_area
 
@@ -170,7 +170,7 @@ contains
                         nterms_s   = mesh%domain(idomain_l)%faces(ielement_l,iface)%nterms_s
                         total_area = mesh%domain(idomain_l)%faces(ielement_l,iface)%total_area
                         areas      = mesh%domain(idomain_l)%faces(ielement_l,iface)%differential_areas
-                        quad_pts   = mesh%domain(idomain_l)%faces(ielement_l,iface)%quad_pts
+                        interp_coords_def   = mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def
 
 
 
@@ -190,7 +190,7 @@ contains
                                                                                                              nterms_s,      &
                                                                                                              total_area,    &
                                                                                                              areas,         &
-                                                                                                             quad_pts)
+                                                                                                             interp_coords_def)
 
 
                     end do ! face_ID_couple
@@ -253,15 +253,15 @@ contains
                         call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%nterms_s,   1, MPI_INTEGER, iproc, bc_COMM, ierr)
                         call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%total_area, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
 
-                        ngq = size(mesh%domain(idomain_l)%faces(ielement_l,iface)%quad_pts,1)
+                        ngq = size(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def,1)
                         call MPI_Bcast(ngq,                                                                 1, MPI_INTEGER, iproc, bc_COMM, ierr)
                         call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%differential_areas, ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%quad_pts(:,1),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%quad_pts(:,2),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%quad_pts(:,3),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        !call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%quad_pts(:)%c1_,    ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        !call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%quad_pts(:)%c2_,    ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        !call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%quad_pts(:)%c3_,    ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
+                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,1),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
+                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,2),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
+                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,3),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
+                        !call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:)%c1_,    ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
+                        !call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:)%c2_,    ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
+                        !call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:)%c3_,    ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
 
                     end do ! face_ID
                 end do ! patch_ID
@@ -305,18 +305,18 @@ contains
 
 
                     call MPI_BCast(ngq, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                    if (allocated(areas) ) deallocate(areas, quad_pts)
-                    allocate(areas(ngq), quad_pts(ngq,3), stat=ierr)
+                    if (allocated(areas) ) deallocate(areas, interp_coords_def)
+                    allocate(areas(ngq), interp_coords_def(ngq,3), stat=ierr)
                     if (ierr /= 0) call AllocationError
 
 
                     call MPI_BCast(areas,           ngq, MPI_REAL8, iproc, bc_COMM, ierr)
-                    call MPI_BCast(quad_pts(:,1), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
-                    call MPI_BCast(quad_pts(:,2), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
-                    call MPI_BCast(quad_pts(:,3), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
-                    !call MPI_BCast(quad_pts(:)%c1_, ngq, MPI_REAL8, iproc, bc_COMM, ierr)
-                    !call MPI_BCast(quad_pts(:)%c2_, ngq, MPI_REAL8, iproc, bc_COMM, ierr)
-                    !call MPI_BCast(quad_pts(:)%c3_, ngq, MPI_REAL8, iproc, bc_COMM, ierr)
+                    call MPI_BCast(interp_coords_def(:,1), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
+                    call MPI_BCast(interp_coords_def(:,2), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
+                    call MPI_BCast(interp_coords_def(:,3), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
+                    !call MPI_BCast(interp_coords_def(:)%c1_, ngq, MPI_REAL8, iproc, bc_COMM, ierr)
+                    !call MPI_BCast(interp_coords_def(:)%c2_, ngq, MPI_REAL8, iproc, bc_COMM, ierr)
+                    !call MPI_BCast(interp_coords_def(:)%c3_, ngq, MPI_REAL8, iproc, bc_COMM, ierr)
 
 
                     !
@@ -339,7 +339,7 @@ contains
                                                                                                                  nterms_s,              &
                                                                                                                  total_area,            &
                                                                                                                  areas,                 &
-                                                                                                                 quad_pts)
+                                                                                                                 interp_coords_def)
 
 
 
@@ -471,7 +471,7 @@ contains
             energy  = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, ienergy,  itime, 'value', ME)
 
             if (worker%mesh%domain(idomain_l_coupled)%elems(ielement_l_coupled)%coordinate_system == CYLINDRICAL) then
-                mom_2 = mom_2 / worker%mesh%domain(idomain_l_coupled)%elems(ielement_l_coupled)%quad_pts(:,1)
+                mom_2 = mom_2 / worker%mesh%domain(idomain_l_coupled)%elems(ielement_l_coupled)%interp_coords_def(:,1)
             end if
 
 

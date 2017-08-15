@@ -92,7 +92,7 @@ contains
             ! Account for Cylindrical coordinates. Get tangential momentum from angular momentum
             !
             if ( mesh%domain(idomain)%elems(ielem)%coordinate_system == CYLINDRICAL ) then
-                rhov = rhov / mesh%domain(idomain)%elems(ielem)%quad_pts(:,1)
+                rhov = rhov / mesh%domain(idomain)%elems(ielem)%interp_coords(:,1)
             end if
 
             !
@@ -125,8 +125,8 @@ contains
             !
             ! Compute velocity magnitude
             !
-            !r = mesh%domain(idomain)%elems(ielem)%quad_pts(:)%c1_
-            r = mesh%domain(idomain)%elems(ielem)%quad_pts(:,1)
+            !r = mesh%domain(idomain)%elems(ielem)%interp_coords(:)%c1_
+            r = mesh%domain(idomain)%elems(ielem)%interp_coords(:,1)
             vmag = sqrt((rhou*rhou + rhov*rhov + rhow*rhow)/(rho*rho))
             !vmag = sqrt((rhou*rhou + (rhov-rho*omega*r)*(rhov-rho*omega*r) + rhow*rhow)/(rho*rho))
 

@@ -211,15 +211,15 @@ contains
 
                         ! Get coordinate value at point
                         if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == CYLINDRICAL ) then
-                            r     = real(data%mesh%domain(idom)%elems(ielem)%ale_quad_pts(:,1),rdouble)
-                            theta = real(data%mesh%domain(idom)%elems(ielem)%ale_quad_pts(:,2),rdouble)
-                            z     = real(data%mesh%domain(idom)%elems(ielem)%ale_quad_pts(:,3),rdouble)
+                            r     = real(data%mesh%domain(idom)%elems(ielem)%interp_coords_def(:,1),rdouble)
+                            theta = real(data%mesh%domain(idom)%elems(ielem)%interp_coords_def(:,2),rdouble)
+                            z     = real(data%mesh%domain(idom)%elems(ielem)%interp_coords_def(:,3),rdouble)
                             if (icoord == 1) val = r*cos(theta)
                             if (icoord == 2) val = r*sin(theta)
                             if (icoord == 3) val = z
 
                         else
-                            val = real(data%mesh%domain(idom)%elems(ielem)%ale_quad_pts(:,icoord),rdouble)
+                            val = real(data%mesh%domain(idom)%elems(ielem)%interp_coords_def(:,icoord),rdouble)
                         end if
 
                         tecstat = tecZoneVarWriteDoubleValues(handle, zone_index, icoord, 0, int(size(val),c_int64_t), val)
@@ -438,15 +438,15 @@ contains
 
                             ! Get coordinate value at point
                             if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == CYLINDRICAL ) then
-                                r     = real(data%mesh%domain(idom)%faces(ielem,iface)%ale_quad_pts(:,1),rdouble)
-                                theta = real(data%mesh%domain(idom)%faces(ielem,iface)%ale_quad_pts(:,2),rdouble)
-                                z     = real(data%mesh%domain(idom)%faces(ielem,iface)%ale_quad_pts(:,3),rdouble)
+                                r     = real(data%mesh%domain(idom)%faces(ielem,iface)%interp_coords_def(:,1),rdouble)
+                                theta = real(data%mesh%domain(idom)%faces(ielem,iface)%interp_coords_def(:,2),rdouble)
+                                z     = real(data%mesh%domain(idom)%faces(ielem,iface)%interp_coords_def(:,3),rdouble)
                                 if (icoord == 1) val = r*cos(theta)
                                 if (icoord == 2) val = r*sin(theta)
                                 if (icoord == 3) val = z
 
                             else
-                                val = real(data%mesh%domain(idom)%faces(ielem,iface)%ale_quad_pts(:,icoord),rdouble)
+                                val = real(data%mesh%domain(idom)%faces(ielem,iface)%interp_coords_def(:,icoord),rdouble)
                             end if
 
                             tecstat = tecZoneVarWriteDoubleValues(handle, zone_index, icoord, 0, int(size(val),c_int64_t), val)

@@ -901,7 +901,7 @@ contains
                     ! Compute the analytical solution at the quadrature nodes
                     !      U(x) = (1/lambda)ln((A+Bx)/D)  for x in [0,1]
                     !
-                    x_gq = mesh(idom)%elems(ielem)%quad_pts(:)%c1_
+                    x_gq = mesh(idom)%elems(ielem)%interp_coords(:)%c1_
                     u_analytical = log(ONE + 50._rk*x_gq)
 
                     !

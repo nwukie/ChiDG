@@ -462,7 +462,7 @@ contains
                                    pelem_ID, igq
         real(rk),   allocatable :: ref_coords(:,:)
         real(rk)                :: ale_g_pt, ale_g_grad_pt(3), &
-                                   ale_Dinv_pt(3,3), ale_grid_vel_pt(3), xi, eta, zeta
+                                   ale_Dinv_pt(3,3), interp_coords_vel_pt(3), xi, eta, zeta
         logical                 :: parallel_donor
 
  
@@ -493,13 +493,13 @@ contains
                           xi   = ref_coords(ipt,1)
                           eta  = ref_coords(ipt,2)
                           zeta = ref_coords(ipt,3)
-                          call self%parallel_element(pelem_ID)%ale_point(xi, eta, zeta,ale_g_pt,ale_g_grad_pt,ale_Dinv_pt,ale_grid_vel_pt)
-                          self%domain(idom)%chimera%recv(ChiID)%ale_g(igq)          = ale_g_pt
-                          self%domain(idom)%chimera%recv(ChiID)%ale_g_grad1(igq)    = ale_g_grad_pt(1)
-                          self%domain(idom)%chimera%recv(ChiID)%ale_g_grad2(igq)    = ale_g_grad_pt(2)
-                          self%domain(idom)%chimera%recv(ChiID)%ale_g_grad3(igq)    = ale_g_grad_pt(3)
-                          self%domain(idom)%chimera%recv(ChiID)%ale_Dinv(:,:,igq)   = ale_Dinv_pt
-                          self%domain(idom)%chimera%recv(ChiID)%ale_grid_vel(igq,:) = ale_grid_vel_pt
+                          call self%parallel_element(pelem_ID)%ale_point(xi, eta, zeta,ale_g_pt,ale_g_grad_pt,ale_Dinv_pt,interp_coords_vel_pt)
+                          self%domain(idom)%chimera%recv(ChiID)%ale_g(igq)               = ale_g_pt
+                          self%domain(idom)%chimera%recv(ChiID)%ale_g_grad1(igq)         = ale_g_grad_pt(1)
+                          self%domain(idom)%chimera%recv(ChiID)%ale_g_grad2(igq)         = ale_g_grad_pt(2)
+                          self%domain(idom)%chimera%recv(ChiID)%ale_g_grad3(igq)         = ale_g_grad_pt(3)
+                          self%domain(idom)%chimera%recv(ChiID)%ale_Dinv(:,:,igq)        = ale_Dinv_pt
+                          self%domain(idom)%chimera%recv(ChiID)%interp_coords_vel(igq,:) = interp_coords_vel_pt
                       end do
         
                    else
@@ -512,13 +512,13 @@ contains
                           xi   = ref_coords(ipt,1)
                           eta  = ref_coords(ipt,2)
                           zeta = ref_coords(ipt,3)
-                          call self%domain(idomain_l)%elems(ielement_l)%ale_point(xi, eta, zeta,ale_g_pt,ale_g_grad_pt,ale_Dinv_pt,ale_grid_vel_pt)
-                          self%domain(idom)%chimera%recv(ChiID)%ale_g(igq)          = ale_g_pt
-                          self%domain(idom)%chimera%recv(ChiID)%ale_g_grad1(igq)    = ale_g_grad_pt(1)
-                          self%domain(idom)%chimera%recv(ChiID)%ale_g_grad2(igq)    = ale_g_grad_pt(2)
-                          self%domain(idom)%chimera%recv(ChiID)%ale_g_grad3(igq)    = ale_g_grad_pt(3)
-                          self%domain(idom)%chimera%recv(ChiID)%ale_Dinv(:,:,igq)   = ale_Dinv_pt
-                          self%domain(idom)%chimera%recv(ChiID)%ale_grid_vel(igq,:) = ale_grid_vel_pt
+                          call self%domain(idomain_l)%elems(ielement_l)%ale_point(xi, eta, zeta,ale_g_pt,ale_g_grad_pt,ale_Dinv_pt,interp_coords_vel_pt)
+                          self%domain(idom)%chimera%recv(ChiID)%ale_g(igq)               = ale_g_pt
+                          self%domain(idom)%chimera%recv(ChiID)%ale_g_grad1(igq)         = ale_g_grad_pt(1)
+                          self%domain(idom)%chimera%recv(ChiID)%ale_g_grad2(igq)         = ale_g_grad_pt(2)
+                          self%domain(idom)%chimera%recv(ChiID)%ale_g_grad3(igq)         = ale_g_grad_pt(3)
+                          self%domain(idom)%chimera%recv(ChiID)%ale_Dinv(:,:,igq)        = ale_Dinv_pt
+                          self%domain(idom)%chimera%recv(ChiID)%interp_coords_vel(igq,:) = interp_coords_vel_pt
                       end do
                    end if
 
@@ -722,22 +722,49 @@ contains
         class(mesh_t),  intent(in)  :: self
         integer(ik),    intent(in)  :: iproc
 
-        integer(ik) :: idom, ChiID, idonor, n
+        integer(ik)     :: idom, ChiID, idonor, n, donor_domain_g, donor_element_g, i
+        type(ivector_t) :: donor_domains_g, donor_elements_g
+        logical         :: already_counted, proc_has_donor
 
 
         !
         ! Accumulate number of CHIMERA donors that live on iproc
         !
-        n = 0
         do idom = 1,self%ndomains()
             do ChiID = 1,self%domain(idom)%chimera%nreceivers()
                 do idonor = 1,self%domain(idom)%chimera%recv(ChiID)%ndonors()
-                    if (self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%iproc == iproc) n = n + 1
+
+                    proc_has_donor = (self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%iproc == iproc)
+                    if (proc_has_donor) then
+
+                        donor_domain_g  = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g
+                        donor_element_g = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_g
+
+                        ! Check if donor was already counted
+                        already_counted = .false.
+                        do i = 1,donor_elements_g%size()
+                            already_counted = (donor_domains_g%at(i) == donor_domain_g .and. donor_elements_g%at(i) == donor_element_g)
+                            if (already_counted) exit
+                        end do
+
+                        
+                        if (.not. already_counted) then
+                            call donor_domains_g%push_back(donor_domain_g)
+                            call donor_elements_g%push_back(donor_element_g)
+                        end if
+
+                    end if
+                    
+
                 end do !idonor
             end do !ChiID
         end do !idom
         
 
+        !
+        ! Get number of counted donors coming from iproc
+        !
+        n = donor_elements_g%size()
 
     end function get_proc_nchimera_donors
     !**********************************************************************************
@@ -972,14 +999,14 @@ contains
                         associate ( face => self%domain(idom)%faces(ielem,iface) ) 
 
                         send_size_a = size(face%neighbor_location)
-                        send_size_b = size(face%ale_grid_vel)
+                        send_size_b = size(face%interp_coords_vel)
                         send_size_c = size(face%ale_g)
                         send_size_d = size(face%ale_Dinv)
 
                         ! First, send neighbor location. This way, the receiving processor knows where to put the data.
                         ! Next, send all ALE information
                         call mpi_isend(self%domain(idom)%faces(ielem,iface)%neighbor_location, send_size_a, mpi_integer4, face%ineighbor_proc, 0, ChiDG_COMM, request(1), ierr)
-                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%ale_grid_vel,      send_size_b, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(2), ierr)
+                        call mpi_isend(self%domain(idom)%faces(ielem,iface)%interp_coords_vel, send_size_b, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(2), ierr)
                         call mpi_isend(self%domain(idom)%faces(ielem,iface)%ale_g,             send_size_c, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(3), ierr)
                         call mpi_isend(self%domain(idom)%faces(ielem,iface)%ale_g_grad1,       send_size_c, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(4), ierr)
                         call mpi_isend(self%domain(idom)%faces(ielem,iface)%ale_g_grad2,       send_size_c, mpi_real8,    face%ineighbor_proc, 0, ChiDG_COMM, request(5), ierr)
@@ -1024,16 +1051,16 @@ contains
                         ielement_l = self%domain(idom)%chimera%send(isend)%ielement_l
 
                         send_size_a = size(self%domain(idomain_l)%elems(ielement_l)%connectivity)
-                        send_size_b = size(self%domain(idomain_l)%elems(ielement_l)%elem_pts)
-                        send_size_c = size(self%domain(idomain_l)%elems(ielement_l)%dnodes_l)
-                        send_size_d = size(self%domain(idomain_l)%elems(ielement_l)%vnodes_l)
+                        send_size_b = size(self%domain(idomain_l)%elems(ielement_l)%node_coords)
+                        send_size_c = size(self%domain(idomain_l)%elems(ielement_l)%node_coords_def)
+                        send_size_d = size(self%domain(idomain_l)%elems(ielement_l)%node_coords_vel)
                 
                         ! First send location of donor
-                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%element_location,            4, mpi_integer4, iproc, 0, ChiDG_COMM, request(1), ierr)
-                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%element_data,                8, mpi_integer4, iproc, 0, ChiDG_COMM, request(2), ierr)
-                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%elem_pts,          send_size_b, mpi_real8,    iproc, 0, ChiDG_COMM, request(3), ierr)
-                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%dnodes_l,          send_size_c, mpi_real8,    iproc, 0, ChiDG_COMM, request(4), ierr)
-                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%vnodes_l,          send_size_d, mpi_real8,    iproc, 0, ChiDG_COMM, request(5), ierr)
+                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%element_location,             4, mpi_integer4, iproc, 0, ChiDG_COMM, request(1), ierr)
+                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%element_data,                 8, mpi_integer4, iproc, 0, ChiDG_COMM, request(2), ierr)
+                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%node_coords,        send_size_b, mpi_real8,    iproc, 0, ChiDG_COMM, request(3), ierr)
+                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%node_coords_def,    send_size_c, mpi_real8,    iproc, 0, ChiDG_COMM, request(4), ierr)
+                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%node_coords_vel,    send_size_d, mpi_real8,    iproc, 0, ChiDG_COMM, request(5), ierr)
 
 
                         call self%comm_requests%push_back(request(1))
@@ -1073,7 +1100,7 @@ contains
         class(mesh_t),  intent(inout)   :: self
 
         character(:),   allocatable :: coord_system
-        real(rk),       allocatable :: nodes(:,:), dnodes(:,:), vnodes(:,:)
+        real(rk),       allocatable :: nodes(:,:), nodes_def(:,:), nodes_vel(:,:), nodes_disp(:,:)
         integer(ik),    allocatable :: recv_procs(:), connectivity(:)
         integer(ik)                 :: idom, ielem, iface, iproc, irecv, ierr,      &
                                        etype, nnodes, nterms_s, nterms_c, nfields,  &
@@ -1091,8 +1118,6 @@ contains
         integer(ik) :: npts, ipt, donor_proc, idonor, idomain_l, ielement_l,  igq, ChiID
 
 
-
-
         !
         ! Receive interior face data
         !
@@ -1108,16 +1133,16 @@ contains
                 ielem = face_location(4)
                 iface = face_location(5)
 
-                recv_size_a = size(self%domain(idom)%faces(ielem,iface)%neighbor_ale_grid_vel)
+                recv_size_a = size(self%domain(idom)%faces(ielem,iface)%neighbor_interp_coords_vel)
                 recv_size_b = size(self%domain(idom)%faces(ielem,iface)%neighbor_ale_g)
                 recv_size_c = size(self%domain(idom)%faces(ielem,iface)%neighbor_ale_Dinv)
 
-                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_grid_vel, recv_size_a, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_g,        recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_g_grad1,  recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_g_grad2,  recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_g_grad3,  recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_Dinv,     recv_size_c, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_interp_coords_vel, recv_size_a, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_g,             recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_g_grad1,       recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_g_grad2,       recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_g_grad3,       recv_size_b, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(self%domain(idom)%faces(ielem,iface)%neighbor_ale_Dinv,          recv_size_c, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
 
             end do !irecv
         end do !iproc
@@ -1132,10 +1157,13 @@ contains
         do iproc = 1,size(recv_procs)
             do irecv = 1,self%get_proc_nchimera_donors(recv_procs(iproc))
 
+
+
                 ! element_location = [idomain_g, idomain_l, ielement_g, ielement_l]
                 call mpi_recv(element_location, 4, mpi_integer4,  recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
                 idomain_g           = element_location(1)
                 ielement_g          = element_location(3)
+
 
                 ! element_data = [element_type, spacedim, coordinate_system, nfields, nterms_s, nterms_c, ntime, interpolation_level]
                 call mpi_recv(element_data,     8, mpi_integer4,  recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
@@ -1154,17 +1182,23 @@ contains
                 ! Allocate buffers and receive: nodes, displacements, and velocities. 
                 ! These quantities are located at the element support nodes, not interpolation
                 ! nodes.
-                if (allocated(nodes)) deallocate(nodes, dnodes, vnodes, connectivity)
+                if (allocated(nodes)) deallocate(nodes, nodes_def, nodes_vel, connectivity)
                 allocate(nodes(       nnodes,3), &
-                         dnodes(      nnodes,3), &
-                         vnodes(      nnodes,3), &
+                         nodes_def(   nnodes,3), &
+                         nodes_vel(   nnodes,3), &
                          connectivity(nnodes  ), stat=ierr)
                 if (ierr /= 0) call AllocationError
 
-                call mpi_recv(nodes,  nnodes*3, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-                call mpi_recv(dnodes, nnodes*3, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-                call mpi_recv(vnodes, nnodes*3, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
 
+                call mpi_recv(nodes,     nnodes*3, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(nodes_def, nnodes*3, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                call mpi_recv(nodes_vel, nnodes*3, mpi_real8, recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+
+                
+                !
+                ! Compute node displacements
+                !
+                nodes_disp = nodes_def - nodes
 
                 !
                 ! Build local connectivity
@@ -1211,9 +1245,11 @@ contains
                     call self%parallel_element(pelem_ID)%init_geom(nodes,connectivity,etype,element_location,trim(coord_system))
                 end if
 
+
                 call self%parallel_element(pelem_ID)%init_sol('Quadrature',interpolation_level,nterms_s,nfields,ntime)
-                call self%parallel_element(pelem_ID)%set_displacements_velocities(dnodes,vnodes)
+                call self%parallel_element(pelem_ID)%set_displacements_velocities(nodes_disp,nodes_vel)
                 call self%parallel_element(pelem_ID)%update_interpolations_ale()
+
 
             end do !irecv
         end do !iproc

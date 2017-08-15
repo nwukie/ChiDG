@@ -235,10 +235,10 @@ contains
         idom = worker%element_info%idomain_l
         ielem = worker%element_info%ielement_l
         if (worker%interpolation_source== 'element') then
-            x_gq = worker%mesh%domain(idom)%elems(ielem)%quad_pts(:,1)
+            x_gq = worker%mesh%domain(idom)%elems(ielem)%interp_coords(:,1)
         else
             iface = worker%iface
-            x_gq = worker%mesh%domain(idom)%faces(ielem, iface)%quad_pts(:,1)
+            x_gq = worker%mesh%domain(idom)%faces(ielem, iface)%interp_coords(:,1)
         end if
 
 
@@ -1012,7 +1012,7 @@ contains
                     !
                     ! Compute the analytical solution at the quadrature nodes
                     !
-                    x_gq = mesh%domain(idom)%elems(ielem)%quad_pts(:,1)
+                    x_gq = mesh%domain(idom)%elems(ielem)%interp_coords(:,1)
                     u_analytical = x_gq
 
                     !
@@ -1057,7 +1057,7 @@ contains
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_undef * mesh%domain(idom)%elems(ielem)%basis_s%weights())
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%basis_s%weights())
 
 
                     !
@@ -1067,7 +1067,7 @@ contains
                     !
                     ! Compute the analytical solution at the quadrature nodes
                     !
-                    x_gq = mesh%domain(idom)%elems(ielem)%quad_pts(:,1)
+                    x_gq = mesh%domain(idom)%elems(ielem)%interp_coords(:,1)
                     u_analytical = ZERO 
 
                     !
@@ -1085,7 +1085,7 @@ contains
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_undef * mesh%domain(idom)%elems(ielem)%basis_s%weights())
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%basis_s%weights())
 
 
                     !
@@ -1096,7 +1096,7 @@ contains
 !
                     ! Compute the analytical solution at the quadrature nodes
                     !
-                    x_gq = mesh%domain(idom)%elems(ielem)%quad_pts(:,1)
+                    x_gq = mesh%domain(idom)%elems(ielem)%interp_coords(:,1)
                     u_analytical = ZERO 
 
                     !
@@ -1114,7 +1114,7 @@ contains
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_undef * mesh%domain(idom)%elems(ielem)%basis_s%weights())
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%basis_s%weights())
 
 
                     !

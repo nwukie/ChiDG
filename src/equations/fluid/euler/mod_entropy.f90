@@ -97,7 +97,7 @@ contains
                     rhoE = interpolate_element_standard(mesh,sdata%q,idom,ielem,irhoE,1, 'value')
 
                     if (mesh%domain(idom)%elems(ielem)%coordinate_system == CYLINDRICAL) then
-                        rhov = rhov / mesh%domain(idom)%elems(ielem)%quad_pts(:,1)
+                        rhov = rhov / mesh%domain(idom)%elems(ielem)%interp_coords_def(:,1)
                     end if
 
 

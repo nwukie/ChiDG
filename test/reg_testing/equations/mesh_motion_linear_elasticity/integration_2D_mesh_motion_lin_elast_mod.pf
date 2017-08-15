@@ -225,10 +225,10 @@ contains
         idom = worker%element_info%idomain_l
         ielem = worker%element_info%ielement_l
         if (worker%interpolation_source== 'element') then
-            x_gq = worker%mesh(idom)%elems(ielem)%quad_pts(:)%c1_
+            x_gq = worker%mesh(idom)%elems(ielem)%interp_coords(:)%c1_
         else
             iface = worker%iface
-            x_gq = worker%mesh(idom)%faces(ielem, iface)%quad_pts(:)%c1_
+            x_gq = worker%mesh(idom)%faces(ielem, iface)%interp_coords(:)%c1_
         end if
 
 
@@ -860,12 +860,12 @@ contains
                     !
                     ! Compute the analytical solution at the quadrature nodes
                     !
-                    x_gq = mesh(idom)%elems(ielem)%quad_pts(:)%c1_
-                    y_gq = mesh(idom)%elems(ielem)%quad_pts(:)%c2_
-                    z_gq = mesh(idom)%elems(ielem)%quad_pts(:)%c3_
+                    x_gq = mesh(idom)%elems(ielem)%interp_coords(:)%c1_
+                    y_gq = mesh(idom)%elems(ielem)%interp_coords(:)%c2_
+                    z_gq = mesh(idom)%elems(ielem)%interp_coords(:)%c3_
                     call analytical_solution%set_option('ivar',ONE)
                     u_analytical = x_gq
-                    u_analytical = analytical_solution%compute(ZERO,mesh(idom)%elems(ielem)%quad_pts(:))
+                    u_analytical = analytical_solution%compute(ZERO,mesh(idom)%elems(ielem)%interp_coords(:))
 
 !                    u_analytical = ZERO
                     !
@@ -897,7 +897,7 @@ contains
                     ! Compute the analytical solution at the quadrature nodes
                     !
                     call analytical_solution%set_option('ivar',TWO)
-                    u_analytical = analytical_solution%compute(ZERO,mesh(idom)%elems(ielem)%quad_pts(:))
+                    u_analytical = analytical_solution%compute(ZERO,mesh(idom)%elems(ielem)%interp_coords(:))
 
                     !
                     ! Interpolate DG numerical solution
@@ -928,7 +928,7 @@ contains
                     ! Compute the analytical solution at the quadrature nodes
                     !
                     call analytical_solution%set_option('ivar',THREE)
-                    u_analytical = analytical_solution%compute(ZERO,mesh(idom)%elems(ielem)%quad_pts(:))
+                    u_analytical = analytical_solution%compute(ZERO,mesh(idom)%elems(ielem)%interp_coords(:))
 
                     !
                     ! Interpolate DG numerical solution

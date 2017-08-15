@@ -1428,7 +1428,7 @@ contains
 
         !coords_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:)
         ! Use constructor to return an array of point_t's from an array of reals
-        coords_ = point_t(self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts)
+        coords_ = point_t(self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%interp_coords_def)
 
     end function coords
     !***************************************************************************************
@@ -1455,9 +1455,9 @@ contains
         real(rk), dimension(:), allocatable :: x_gq
 
         if (source == 'boundary') then
-            x_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:,1)
+            x_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%interp_coords_def(:,1)
         else if (source == 'volume') then
-            x_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:,1)
+            x_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%interp_coords_def(:,1)
         else
             call chidg_signal(FATAL,"chidg_worker%x(source): Invalid value for 'source'. Options are 'boundary', 'volume'")
         end if
@@ -1485,9 +1485,9 @@ contains
 
 
         if (source == 'boundary') then
-            y_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:,2)
+            y_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%interp_coords_def(:,2)
         else if (source == 'volume') then
-            y_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:,2)
+            y_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%interp_coords_def(:,2)
         else
             call chidg_signal(FATAL,"chidg_worker%y(source): Invalid value for 'source'. Options are 'boundary', 'volume'")
         end if
@@ -1515,9 +1515,9 @@ contains
 
 
         if (source == 'boundary') then
-            z_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:,3)
+            z_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%interp_coords_def(:,3)
         else if (source == 'volume') then
-            z_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:,3)
+            z_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%interp_coords_def(:,3)
         else
             call chidg_signal(FATAL,"chidg_worker%z(source): Invalid value for 'source'. Options are 'boundary', 'volume'")
         end if
@@ -1564,13 +1564,13 @@ contains
         ! Get coordinates
         !
         if ( (source == 'boundary') .or. (source == 'face interior') .or. (source == 'face exterior') ) then
-            gq_1 = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:,1)
-            gq_2 = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:,2)
-            gq_3 = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:,3)
+            gq_1 = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%interp_coords_def(:,1)
+            gq_2 = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%interp_coords_def(:,2)
+            gq_3 = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%interp_coords_def(:,3)
         else if ( (source == 'volume') .or. (source == 'element') ) then
-            gq_1 = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:,1)
-            gq_2 = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:,2)
-            gq_3 = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%quad_pts(:,3)
+            gq_1 = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%interp_coords_def(:,1)
+            gq_2 = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%interp_coords_def(:,2)
+            gq_3 = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%interp_coords_def(:,3)
         else
             user_msg = "chidg_worker%coordinate: Invalid source for returning coordinate. Options are 'boundary' and 'volume'."
             call chidg_signal_one(FATAL,user_msg,source)
@@ -1813,16 +1813,16 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------
-    function inverse_jacobian(self,source) result(jinv_undef)
+    function inverse_jacobian(self,source) result(jinv)
         class(chidg_worker_t),  intent(in)  :: self
         character(*),           intent(in)  :: source
 
-        real(rk),   allocatable,    dimension(:)    :: jinv_undef
+        real(rk),   allocatable,    dimension(:)    :: jinv
 
         if (source == 'face') then
-            jinv_undef = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%jinv_undef
+            jinv = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%jinv
         else if (source == 'element') then
-            jinv_undef = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%jinv_undef
+            jinv = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%jinv
         else
             call chidg_signal(FATAL,"chidg_worker%inverse_jacobian(source): Invalid value for 'source'. Options are 'face', 'element'")
         end if
@@ -1990,37 +1990,6 @@ contains
 
 
 
-!    ! Get ALE quantities
-!    !>
-!    !!
-!    !!  @author Eric M. Wolf
-!    !!  @date 1/9/2017
-!    !!
-!    !----------------------------------------------------------------------------------------------------
-!    function get_grid_velocity_element(self,field) result(grid_vel_gq)
-!        class(chidg_worker_t),  intent(in)  :: self
-!        character(len=*),       intent(in)  :: field
-!
-!        real(rk), dimension(:), allocatable :: grid_vel_gq
-!
-!        if (field == 'u_grid') then
-!            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%ale_grid_vel(:,1)
-!
-!        else if (field == 'v_grid') then
-!            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%ale_grid_vel(:,2)
-!
-!        else if (field == 'w_grid') then
-!            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%ale_grid_vel(:,3)
-!
-!        else
-!            call chidg_signal(FATAL,"chidg_worker%get_grid_velocity_element(field): Invalid value for 'field'.")
-!        end if
-!    end function get_grid_velocity_element
-!    !****************************************************************************************************
-
-
-
-
     ! Get ALE quantities
     !>
     !!
@@ -2033,24 +2002,10 @@ contains
 
         real(rk), dimension(:,:), allocatable :: grid_vel_gq
 
-        grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%ale_grid_vel
+        grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%interp_coords_vel
 
-!        if (field == 'u_grid') then
-!            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%ale_grid_vel(:,1)
-!
-!        else if (field == 'v_grid') then
-!            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%ale_grid_vel(:,2)
-!
-!        else if (field == 'w_grid') then
-!            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%ale_grid_vel(:,3)
-!
-!        else
-!            call chidg_signal(FATAL,"chidg_worker%get_grid_velocity_element(field): Invalid value for 'field'.")
-!        end if
     end function get_grid_velocity_element
     !****************************************************************************************************
-
-
 
 
 
@@ -2079,28 +2034,28 @@ contains
 !
 !        ! Presumably, the node velocity
 !        if ((interp_source == 'face interior') .or. (interp_source == 'boundary')) then
-!            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ale_grid_vel
+!            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%interp_coords_vel
 !
 !        else if (interp_source == 'face exterior') then
 !
 !            if (self%face_type() == INTERIOR) then
 !                parallel_neighbor = (self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_proc /= IRANK) 
 !                if (parallel_neighbor) then
-!                    grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%neighbor_ale_grid_vel
+!                    grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%neighbor_interp_coords_vel
 !                else
 !                    idomain_l   = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_domain_l
 !                    ielement_l  = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_element_l
 !                    iface       = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_face
-!                    grid_vel_gq = self%mesh%domain(idomain_l)%faces(ielement_l, iface)%ale_grid_vel
+!                    grid_vel_gq = self%mesh%domain(idomain_l)%faces(ielement_l, iface)%interp_coords_vel
 !                end if
 !
 !
 !            else if (self%face_type() == CHIMERA) then
 !                ! For Chimera faces, we actually just want to use the interior face velocity
-!                grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ale_grid_vel
+!                grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%interp_coords_vel
 !
 !            else if (self%face_type() == BOUNDARY) then
-!                grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ale_grid_vel
+!                grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%interp_coords_vel
 !            end if
 !        else
 !                call chidg_signal(FATAL,"chidg_worker%get_grid_velocity_face: Invalid value for 'interp_source'.")
@@ -2144,17 +2099,17 @@ contains
         if (self%face_type() == INTERIOR .and. interp_source == 'face exterior') then
             parallel_neighbor = (self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_proc /= IRANK) 
             if (parallel_neighbor) then
-                grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%neighbor_ale_grid_vel
+                grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%neighbor_interp_coords_vel
             else
                 idomain_l   = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_domain_l
                 ielement_l  = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_element_l
                 iface       = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%ineighbor_face
-                grid_vel_gq = self%mesh%domain(idomain_l)%faces(ielement_l, iface)%ale_grid_vel
+                grid_vel_gq = self%mesh%domain(idomain_l)%faces(ielement_l, iface)%interp_coords_vel
             end if
 
         else
             ! For all other cases, use the 'face interior' grid velocity
-            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%ale_grid_vel
+            grid_vel_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%interp_coords_vel
         end if
 
     end function get_grid_velocity_face

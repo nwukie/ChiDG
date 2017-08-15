@@ -101,7 +101,7 @@ contains
 
                         ! Set face-type to CHIMERA
                         mesh%domain(idom)%faces(ielem,iface)%ftype = CHIMERA
-                        nnodes = size(mesh%domain(idom)%faces(ielem,iface)%jinv_undef)
+                        nnodes = size(mesh%domain(idom)%faces(ielem,iface)%jinv)
 
                         ! Set domain-local Chimera identifier. Really, just the index order which they were detected in, starting from 1.
                         ! The n-th chimera face
@@ -159,13 +159,13 @@ contains
                        idomain_g_list, idomain_l_list, ielement_g_list, ielement_l_list,        &
                        neqns_list, nterms_s_list, nterms_c_list, iproc_list, eqn_ID_list,       &
                        local_domain_g, parallel_domain_g, donor_domain_g, donor_index, donor_ID, send_ID
-        integer(ik)                 :: receiver_indices(5), parallel_indices(9)
+        integer(ik)             :: receiver_indices(5), parallel_indices(9)
 
 
         real(rk)                :: donor_metric(3,3), parallel_metric(3,3)
         real(rk), allocatable   :: donor_vols(:)
         real(rk)                :: gq_coords(3), offset(3), gq_node(3), &
-                                   donor_jinv_undef, donor_vol, local_vol, parallel_vol, parallel_jinv_undef
+                                   donor_jinv, donor_vol, local_vol, parallel_vol, parallel_jinv
 
         type(face_info_t)           :: receiver
         type(element_info_t)        :: donor
@@ -231,7 +231,7 @@ contains
                             !
                             ! Get node coordinates
                             !
-                            gq_node = mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface)%quad_pts(igq,1:3)
+                            gq_node = mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface)%interp_coords_def(igq,1:3)
 
 
                             !
@@ -366,9 +366,9 @@ contains
                                 ! 1: Receive donor local coordinate
                                 ! 2: Receive donor metric matrix
                                 ! 3: Receive donor inverse jacobian mapping
-                                call MPI_Recv(donor_coord,      3,MPI_REAL8, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-                                call MPI_Recv(donor_metric,     9,MPI_REAL8, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
-                                call MPI_Recv(donor_jinv_undef, 1,MPI_REAL8, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                                call MPI_Recv(donor_coord,  3,MPI_REAL8, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                                call MPI_Recv(donor_metric, 9,MPI_REAL8, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
+                                call MPI_Recv(donor_jinv,   1,MPI_REAL8, idonor_proc, MPI_ANY_TAG, ChiDG_COMM, MPI_STATUS_IGNORE, ierr)
 
 
 
@@ -382,7 +382,7 @@ contains
                                 end do
 
                                 donor_metric = mesh%domain(donor%idomain_l)%elems(donor%ielement_l)%metric_point(donor_coord,coordinate_frame='Undeformed',coordinate_scaling=.true.)
-                                donor_jinv_undef = ONE/det_3x3(donor_metric)
+                                donor_jinv   = ONE/det_3x3(donor_metric)
 
 
                             else 
@@ -395,7 +395,7 @@ contains
                             !
                             donor_ID = mesh%domain(idom)%chimera%recv(ichimera_face)%add_donor(donor%idomain_g, donor%idomain_l, donor%ielement_g, donor%ielement_l, donor%iproc)
                             call mesh%domain(idom)%chimera%recv(ichimera_face)%donor(donor_ID)%set_properties(donor%nterms_c,donor%nterms_s,donor%neqns,donor%eqn_ID)
-                            call mesh%domain(idom)%chimera%recv(ichimera_face)%donor(donor_ID)%add_node(igq,donor_coord,donor_metric,donor_jinv_undef)
+                            call mesh%domain(idom)%chimera%recv(ichimera_face)%donor(donor_ID)%add_node(igq,donor_coord,donor_metric,donor_jinv)
 
 
                             !
@@ -502,11 +502,11 @@ contains
 
                             ! Compute metric terms for the point in the donor element
                             parallel_metric = mesh%domain(donor%idomain_l)%elems(donor%ielement_l)%metric_point(donor_coord, coordinate_frame='Undeformed', coordinate_scaling=.true.)
-                            parallel_jinv_undef = ONE/det_3x3(parallel_metric)
+                            parallel_jinv   = ONE/det_3x3(parallel_metric)
 
                             ! Communicate metric and jacobian 
-                            call MPI_Send(parallel_metric,    9,MPI_REAL8,iproc,0,ChiDG_COMM,ierr)
-                            call MPI_Send(parallel_jinv_undef,1,MPI_REAL8,iproc,0,ChiDG_COMM,ierr)
+                            call MPI_Send(parallel_metric, 9, MPI_REAL8, iproc, 0, ChiDG_COMM, ierr)
+                            call MPI_Send(parallel_jinv,   1, MPI_REAL8, iproc, 0, ChiDG_COMM, ierr)
 
                         end if
 
@@ -562,7 +562,7 @@ contains
                            npts, donor_nterms_s, spacedim
         real(rk)        :: node(3)
 
-        real(rk)        :: jinv_undef, ddxi, ddeta, ddzeta
+        real(rk)        :: jinv, ddxi, ddeta, ddzeta
         real(rk), allocatable, dimension(:,:)   ::  &
             interpolator, interpolator_grad1, interpolator_grad2, interpolator_grad3, metric
 
@@ -631,8 +631,8 @@ contains
                             ddzeta = dpolynomial_val(spacedim,donor_nterms_s,iterm,node,ZETA_DIR)
 
                             ! Get metrics for element mapping
-                            metric     = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%metric(:,:,ipt)
-                            jinv_undef = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%jinv_undef(ipt)
+                            metric = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%metric(:,:,ipt)
+                            jinv   = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%jinv(ipt)
 
                             ! Compute cartesian derivative interpolator for gq node
                             interpolator_grad1(ipt,iterm) = metric(1,1) * ddxi   + &
@@ -759,12 +759,12 @@ contains
                 !
                 ! Get bounding coordinates for the current element
                 !
-                xmin = minval(mesh%domain(idom)%elems(ielem)%elem_pts(:,1))
-                xmax = maxval(mesh%domain(idom)%elems(ielem)%elem_pts(:,1))
-                ymin = minval(mesh%domain(idom)%elems(ielem)%elem_pts(:,2))
-                ymax = maxval(mesh%domain(idom)%elems(ielem)%elem_pts(:,2))
-                zmin = minval(mesh%domain(idom)%elems(ielem)%elem_pts(:,3))
-                zmax = maxval(mesh%domain(idom)%elems(ielem)%elem_pts(:,3))
+                xmin = minval(mesh%domain(idom)%elems(ielem)%node_coords(:,1))
+                xmax = maxval(mesh%domain(idom)%elems(ielem)%node_coords(:,1))
+                ymin = minval(mesh%domain(idom)%elems(ielem)%node_coords(:,2))
+                ymax = maxval(mesh%domain(idom)%elems(ielem)%node_coords(:,2))
+                zmin = minval(mesh%domain(idom)%elems(ielem)%node_coords(:,3))
+                zmax = maxval(mesh%domain(idom)%elems(ielem)%node_coords(:,3))
 
                 !
                 ! Grow bounding box by 10%. Use delta x,y,z instead of scaling xmin etc. in case xmin is 0

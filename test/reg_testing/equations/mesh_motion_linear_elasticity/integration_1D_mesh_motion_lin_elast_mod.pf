@@ -237,10 +237,10 @@ contains
         idom = worker%element_info%idomain_l
         ielem = worker%element_info%ielement_l
         if (worker%interpolation_source== 'element') then
-            x_gq = worker%mesh(idom)%elems(ielem)%quad_pts(:)%c1_
+            x_gq = worker%mesh(idom)%elems(ielem)%interp_coords(:)%c1_
         else
             iface = worker%iface
-            x_gq = worker%mesh(idom)%faces(ielem, iface)%quad_pts(:)%c1_
+            x_gq = worker%mesh(idom)%faces(ielem, iface)%interp_coords(:)%c1_
         end if
 
 
@@ -1018,7 +1018,7 @@ contains
                     !
                     ! Compute the analytical solution at the quadrature nodes
                     !
-                    x_gq = mesh(idom)%elems(ielem)%quad_pts(:)%c1_
+                    x_gq = mesh(idom)%elems(ielem)%interp_coords(:)%c1_
                     u_analytical = x_gq
 
                     !
@@ -1073,7 +1073,7 @@ contains
                     !
                     ! Compute the analytical solution at the quadrature nodes
                     !
-                    x_gq = mesh(idom)%elems(ielem)%quad_pts(:)%c1_
+                    x_gq = mesh(idom)%elems(ielem)%interp_coords(:)%c1_
                     u_analytical = ZERO 
 
                     !
@@ -1102,7 +1102,7 @@ contains
 !
                     ! Compute the analytical solution at the quadrature nodes
                     !
-                    x_gq = mesh(idom)%elems(ielem)%quad_pts(:)%c1_
+                    x_gq = mesh(idom)%elems(ielem)%interp_coords(:)%c1_
                     u_analytical = ZERO 
 
                     !

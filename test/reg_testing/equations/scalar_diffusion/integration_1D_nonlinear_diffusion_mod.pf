@@ -895,7 +895,7 @@ contains
                     ! Compute the analytical solution at the quadrature nodes
                     !      U(x) = (1/lambda)ln((A+Bx)/D)  for x in [0,1]
                     !
-                    x_gq = mesh%domain(idom)%elems(ielem)%quad_pts(:,1)
+                    x_gq = mesh%domain(idom)%elems(ielem)%interp_coords(:,1)
                     u_analytical = log(ONE + 50._rk*x_gq)
 
                     !
@@ -912,7 +912,7 @@ contains
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv_undef * mesh%domain(idom)%elems(ielem)%basis_s%weights())
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%basis_s%weights())
 
 
                     !

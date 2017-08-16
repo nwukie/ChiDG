@@ -231,7 +231,8 @@ contains
                             !
                             ! Get node coordinates
                             !
-                            gq_node = mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface)%interp_coords_def(igq,1:3)
+                            !gq_node = mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface)%interp_coords_def(igq,1:3)
+                            gq_node = mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface)%interp_coords(igq,1:3)
 
 
                             !

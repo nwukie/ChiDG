@@ -87,9 +87,6 @@ contains
         class(properties_t),        intent(inout)   :: prop
         type(mpi_comm),             intent(in)      :: bc_COMM
 
-        ! Equation indices
-        integer(ik)     :: iu
-
         integer(ik)     :: igq
         real(rk)        :: time
 
@@ -97,9 +94,8 @@ contains
         type(point_t),  allocatable, dimension(:)   :: coords
 
 
-
         real(rk), allocatable, dimension(:) ::      &
-           u_grid, v_grid, w_grid, det_jacobian_grid
+           u_grid, v_grid, w_grid
 
         logical, allocatable, dimension(:)  :: inflow, outflow
 
@@ -107,18 +103,11 @@ contains
         type(AD_D), allocatable, dimension(:,:)   ::  &
             gradu
 
- 
-        !
-        ! Get equation index
-        !
-        iu = prop%get_primary_field_index("u")
-
-
 
         !
         ! Get u_m from face interior to initialize derivatives
         !
-        u_bc    = worker%get_primary_field_value_ale_face('u', 'face interior')
+        u_bc  = worker%get_primary_field_value_ale_face('u', 'face interior')
         gradu = worker%get_primary_field_grad_ale_face('u', 'gradient', 'face interior')
         
         dudx_bc = gradu(:,1) 

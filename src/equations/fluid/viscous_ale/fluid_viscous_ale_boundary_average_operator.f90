@@ -106,8 +106,7 @@ contains
 
         type(AD_D), allocatable, dimension(:,:)          :: flux_ref
 
-        real(rk), allocatable, dimension(:) ::      &
-            norm_1, norm_2, norm_3, r
+        real(rk), allocatable, dimension(:) :: r
 
 
         !
@@ -140,17 +139,6 @@ contains
         else
             call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
-
-
-
-
-        !
-        ! Get normal vector
-        !
-        norm_1 = worker%normal(1)
-        norm_2 = worker%normal(2)
-        norm_3 = worker%normal(3)
-
 
 
 
@@ -232,6 +220,25 @@ contains
         !----------------------------------
         !         momentum-1 flux
         !----------------------------------
+!        flux_1_m = -tau_11_m
+!        flux_2_m = -tau_12_m
+!        flux_3_m = -tau_13_m
+!
+!        flux_1_p = -tau_11_p
+!        flux_2_p = -tau_12_p
+!        flux_3_p = -tau_13_p
+!
+!        flux_1 = (flux_1_m + flux_1_p)
+!        flux_2 = (flux_2_m + flux_2_p)
+!        flux_3 = (flux_3_m + flux_3_p)
+!
+!
+!        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3, 'face interior')
+!        ! dot with normal vector
+!        integrand = HALF*(flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3)
+!
+!        call worker%integrate_boundary('Momentum-1',integrand)
+
         flux_1_m = -tau_11_m
         flux_2_m = -tau_12_m
         flux_3_m = -tau_13_m
@@ -240,21 +247,45 @@ contains
         flux_2_p = -tau_12_p
         flux_3_p = -tau_13_p
 
-        flux_1 = (flux_1_m + flux_1_p)
-        flux_2 = (flux_2_m + flux_2_p)
-        flux_3 = (flux_3_m + flux_3_p)
-
-
-        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3, 'face interior')
-        ! dot with normal vector
-        integrand = HALF*(flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3)
-
-        call worker%integrate_boundary('Momentum-1',integrand)
+        call worker%integrate_boundary_average('Momentum-1','Diffusive',    &
+                                                flux_1_m,flux_2_m,flux_3_m, &   
+                                                flux_1_p,flux_2_p,flux_3_p)
 
 
         !----------------------------------
         !         momentum-2 flux
         !----------------------------------
+!        flux_1_m = -tau_12_m
+!        flux_2_m = -tau_22_m
+!        flux_3_m = -tau_23_m
+!
+!        flux_1_p = -tau_12_p
+!        flux_2_p = -tau_22_p
+!        flux_3_p = -tau_23_p
+!
+!        flux_1 = (flux_1_m + flux_1_p)
+!        flux_2 = (flux_2_m + flux_2_p)
+!        flux_3 = (flux_3_m + flux_3_p)
+!
+!        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3, 'face interior')
+!        ! dot with normal vector
+!        integrand = HALF*(flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3)
+!
+!
+!        !
+!        ! Convert to tangential to angular momentum flux
+!        !
+!        if (worker%coordinate_system() == 'Cylindrical') then
+!            integrand = integrand * r
+!        else if (worker%coordinate_system() == 'Cartesian') then
+!
+!        else
+!            call chidg_signal(FATAL,"inlet, bad coordinate system")
+!        end if
+!
+!
+!        call worker%integrate_boundary('Momentum-2',integrand)
+
         flux_1_m = -tau_12_m
         flux_2_m = -tau_22_m
         flux_3_m = -tau_23_m
@@ -263,33 +294,35 @@ contains
         flux_2_p = -tau_22_p
         flux_3_p = -tau_23_p
 
-        flux_1 = (flux_1_m + flux_1_p)
-        flux_2 = (flux_2_m + flux_2_p)
-        flux_3 = (flux_3_m + flux_3_p)
+        call worker%integrate_boundary_average('Momentum-2','Diffusive',    &
+                                                flux_1_m,flux_2_m,flux_3_m, &   
+                                                flux_1_p,flux_2_p,flux_3_p)
 
-        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3, 'face interior')
-        ! dot with normal vector
-        integrand = HALF*(flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3)
-
-
-        !
-        ! Convert to tangential to angular momentum flux
-        !
-        if (worker%coordinate_system() == 'Cylindrical') then
-            integrand = integrand * r
-        else if (worker%coordinate_system() == 'Cartesian') then
-
-        else
-            call chidg_signal(FATAL,"inlet, bad coordinate system")
-        end if
-
-
-        call worker%integrate_boundary('Momentum-2',integrand)
 
 
         !----------------------------------
         !         momentum-3 flux
         !----------------------------------
+!        flux_1_m = -tau_13_m
+!        flux_2_m = -tau_23_m
+!        flux_3_m = -tau_33_m
+!
+!        flux_1_p = -tau_13_p
+!        flux_2_p = -tau_23_p
+!        flux_3_p = -tau_33_p
+!
+!
+!        flux_1 = (flux_1_m + flux_1_p)
+!        flux_2 = (flux_2_m + flux_2_p)
+!        flux_3 = (flux_3_m + flux_3_p)
+!
+!
+!        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3, 'face interior')
+!        ! dot with normal vector
+!        integrand = HALF*(flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3)
+!
+!        call worker%integrate_boundary('Momentum-3',integrand)
+
         flux_1_m = -tau_13_m
         flux_2_m = -tau_23_m
         flux_3_m = -tau_33_m
@@ -298,22 +331,33 @@ contains
         flux_2_p = -tau_23_p
         flux_3_p = -tau_33_p
 
-
-        flux_1 = (flux_1_m + flux_1_p)
-        flux_2 = (flux_2_m + flux_2_p)
-        flux_3 = (flux_3_m + flux_3_p)
-
-
-        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3, 'face interior')
-        ! dot with normal vector
-        integrand = HALF*(flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3)
-
-        call worker%integrate_boundary('Momentum-3',integrand)
-
+        call worker%integrate_boundary_average('Momentum-3','Diffusive',    &
+                                                flux_1_m,flux_2_m,flux_3_m, &   
+                                                flux_1_p,flux_2_p,flux_3_p)
 
         !----------------------------------
         !           energy flux
         !----------------------------------
+!        flux_1_m = -k_m*grad1_T_m  -  (u_m*tau_11_m + v_m*tau_12_m + w_m*tau_13_m)
+!        flux_2_m = -k_m*grad2_T_m  -  (u_m*tau_12_m + v_m*tau_22_m + w_m*tau_23_m)
+!        flux_3_m = -k_m*grad3_T_m  -  (u_m*tau_13_m + v_m*tau_23_m + w_m*tau_33_m)
+!
+!        flux_1_p = -k_p*grad1_T_p  -  (u_p*tau_11_p + v_p*tau_12_p + w_p*tau_13_p)
+!        flux_2_p = -k_p*grad2_T_p  -  (u_p*tau_12_p + v_p*tau_22_p + w_p*tau_23_p)
+!        flux_3_p = -k_p*grad3_T_p  -  (u_p*tau_13_p + v_p*tau_23_p + w_p*tau_33_p)
+!
+!
+!        flux_1 = (flux_1_m + flux_1_p)
+!        flux_2 = (flux_2_m + flux_2_p)
+!        flux_3 = (flux_3_m + flux_3_p)
+!
+!
+!        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3, 'face interior')
+!        ! dot with normal vector
+!        integrand = HALF*(flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3)
+!
+!        call worker%integrate_boundary('Energy',integrand)
+
         flux_1_m = -k_m*grad1_T_m  -  (u_m*tau_11_m + v_m*tau_12_m + w_m*tau_13_m)
         flux_2_m = -k_m*grad2_T_m  -  (u_m*tau_12_m + v_m*tau_22_m + w_m*tau_23_m)
         flux_3_m = -k_m*grad3_T_m  -  (u_m*tau_13_m + v_m*tau_23_m + w_m*tau_33_m)
@@ -322,18 +366,9 @@ contains
         flux_2_p = -k_p*grad2_T_p  -  (u_p*tau_12_p + v_p*tau_22_p + w_p*tau_23_p)
         flux_3_p = -k_p*grad3_T_p  -  (u_p*tau_13_p + v_p*tau_23_p + w_p*tau_33_p)
 
-
-        flux_1 = (flux_1_m + flux_1_p)
-        flux_2 = (flux_2_m + flux_2_p)
-        flux_3 = (flux_3_m + flux_3_p)
-
-
-        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3, 'face interior')
-        ! dot with normal vector
-        integrand = HALF*(flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3)
-
-        call worker%integrate_boundary('Energy',integrand)
-
+        call worker%integrate_boundary_average('Energy','Diffusive',        &
+                                                flux_1_m,flux_2_m,flux_3_m, &   
+                                                flux_1_p,flux_2_p,flux_3_p)
 
     end subroutine compute
     !*********************************************************************************************************

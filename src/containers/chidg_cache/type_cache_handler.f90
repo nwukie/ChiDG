@@ -425,7 +425,9 @@ contains
         integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, &
                                                        iface, idiff, eqn_ID
         character(:),   allocatable                 :: field
-        type(AD_D),     allocatable, dimension(:)   :: value_gq, grad1_gq, grad2_gq, grad3_gq
+        real(rk),       allocatable                 :: ale_Dinv(:,:,:)
+        real(rk),       allocatable, dimension(:)   :: ale_g, ale_g_grad1, ale_g_grad2, ale_g_grad3
+        type(AD_D),     allocatable, dimension(:)   :: value_u, grad1_u, grad2_u, grad3_u, grad1_tmp, grad2_tmp, grad3_tmp
 
 
         idomain_l  = worker%element_info%idomain_l 
@@ -448,23 +450,71 @@ contains
         !
         idepend = 1
         eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+        worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
+        worker%function_info%idepend = idepend
         do ieqn = 1,worker%mesh%domain(idomain_l)%neqns
-            worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
-            worker%function_info%idepend = idepend
-
             field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
 
-            value_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'value')
-            call worker%cache%set_data(field,'element',value_gq,'value',0,worker%function_info%seed)
+            !
+            ! Interpolate U
+            !
 
+            ! Interpolate modes to nodes on undeformed element
+            value_u = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'value')
+
+            ! Get ALE transformation data
+            ale_g = worker%get_det_jacobian_grid_element('value')
+
+            ! Compute transformation to deformed element
+            value_u = (value_u/ale_g)
+
+            ! Store quantities valid on the deformed element
+            call worker%cache%set_data(field,'element',value_u,'value',0,worker%function_info%seed)
+
+
+
+
+
+
+
+            !
+            ! Interpolate Grad(U)
+            !
             if (compute_gradients) then
-                grad1_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad1')
-                grad2_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad2')
-                grad3_gq = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad3')
+                !
+                ! Interpolate modes to nodes on undeformed element
+                !
+                grad1_u = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad1')
+                grad2_u = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad2')
+                grad3_u = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad3')
 
-                call worker%cache%set_data(field,'element',grad1_gq,'gradient',1,worker%function_info%seed)
-                call worker%cache%set_data(field,'element',grad2_gq,'gradient',2,worker%function_info%seed)
-                call worker%cache%set_data(field,'element',grad3_gq,'gradient',3,worker%function_info%seed)
+                !
+                ! Get ALE transformation data
+                !
+                ale_g_grad1 = worker%get_det_jacobian_grid_element('grad1')
+                ale_g_grad2 = worker%get_det_jacobian_grid_element('grad2')
+                ale_g_grad3 = worker%get_det_jacobian_grid_element('grad3')
+                ale_Dinv    = worker%get_inv_jacobian_grid_element()
+
+                
+                !
+                ! Compute transformation to deformed element
+                !
+                grad1_tmp = grad1_u-(value_u)*ale_g_grad1
+                grad2_tmp = grad2_u-(value_u)*ale_g_grad2
+                grad3_tmp = grad3_u-(value_u)*ale_g_grad3
+
+                grad1_u = (ale_Dinv(1,1,:)*grad1_tmp + ale_Dinv(2,1,:)*grad2_tmp + ale_Dinv(3,1,:)*grad3_tmp)/ale_g
+                grad2_u = (ale_Dinv(1,2,:)*grad1_tmp + ale_Dinv(2,2,:)*grad2_tmp + ale_Dinv(3,2,:)*grad3_tmp)/ale_g
+                grad3_u = (ale_Dinv(1,3,:)*grad1_tmp + ale_Dinv(2,3,:)*grad2_tmp + ale_Dinv(3,3,:)*grad3_tmp)/ale_g
+
+
+                !
+                ! Store quantities valid on the deformed element
+                !
+                call worker%cache%set_data(field,'element',grad1_u,'gradient',1,worker%function_info%seed)
+                call worker%cache%set_data(field,'element',grad2_u,'gradient',2,worker%function_info%seed)
+                call worker%cache%set_data(field,'element',grad3_u,'gradient',3,worker%function_info%seed)
             end if
 
         end do !ieqn
@@ -500,10 +550,11 @@ contains
         logical,                    intent(in)      :: differentiate
         logical,                    intent(in)      :: compute_gradients
 
-        integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, &
-                                                       iface, idiff, eqn_ID
+        integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, iface, idiff, eqn_ID
         character(:),   allocatable                 :: field
-        type(AD_D),     allocatable, dimension(:)   :: value_gq, grad1_gq, grad2_gq, grad3_gq
+        real(rk),       allocatable                 :: ale_Dinv(:,:,:)
+        real(rk),       allocatable, dimension(:)   :: ale_g, ale_g_grad1, ale_g_grad2, ale_g_grad3
+        type(AD_D),     allocatable, dimension(:)   :: value_u, grad1_u, grad2_u, grad3_u, grad1_tmp, grad2_tmp, grad3_tmp
 
 
         idomain_l  = worker%element_info%idomain_l 
@@ -529,26 +580,55 @@ contains
         !
         ! Compute Values
         !
+        worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
+        worker%function_info%idepend = idepend
+        worker%function_info%idiff   = idiff
         eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
         do ieqn = 1,worker%mesh%domain(idomain_l)%neqns
 
             field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
-            worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
-            worker%function_info%idepend = idepend
-            worker%function_info%idiff   = idiff
 
-
-            ! Interpolate modes to nodes. 
+            
+            !
+            ! Interpolate modes to nodes on undeformed element
             ! NOTE: we always need to compute the graduent for interior faces for boundary conditions.
-            value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'value',ME)
-            grad1_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad1',ME)
-            grad2_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad2',ME)
-            grad3_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad3',ME)
+            !
+            value_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'value',ME)
+            grad1_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad1',ME)
+            grad2_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad2',ME)
+            grad3_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad3',ME)
 
-            call worker%cache%set_data(field,'face interior',value_gq,'value',   0,worker%function_info%seed,iface)
-            call worker%cache%set_data(field,'face interior',grad1_gq,'gradient',1,worker%function_info%seed,iface)
-            call worker%cache%set_data(field,'face interior',grad2_gq,'gradient',2,worker%function_info%seed,iface)
-            call worker%cache%set_data(field,'face interior',grad3_gq,'gradient',3,worker%function_info%seed,iface)
+
+            !
+            ! Get ALE transformation data
+            !
+            ale_g       = worker%get_det_jacobian_grid_face('value','face interior')
+            ale_g_grad1 = worker%get_det_jacobian_grid_face('grad1','face interior')
+            ale_g_grad2 = worker%get_det_jacobian_grid_face('grad2','face interior')
+            ale_g_grad3 = worker%get_det_jacobian_grid_face('grad3','face interior')
+            ale_Dinv    = worker%get_inv_jacobian_grid_face('face interior')
+
+
+            !
+            ! Compute transformation to deformed element
+            !
+            value_u   = value_u/ale_g
+            grad1_tmp = grad1_u-(value_u)*ale_g_grad1
+            grad2_tmp = grad2_u-(value_u)*ale_g_grad2
+            grad3_tmp = grad3_u-(value_u)*ale_g_grad3
+
+            grad1_u = (ale_Dinv(1,1,:)*grad1_tmp + ale_Dinv(2,1,:)*grad2_tmp + ale_Dinv(3,1,:)*grad3_tmp)/ale_g
+            grad2_u = (ale_Dinv(1,2,:)*grad1_tmp + ale_Dinv(2,2,:)*grad2_tmp + ale_Dinv(3,2,:)*grad3_tmp)/ale_g
+            grad3_u = (ale_Dinv(1,3,:)*grad1_tmp + ale_Dinv(2,3,:)*grad2_tmp + ale_Dinv(3,3,:)*grad3_tmp)/ale_g
+
+
+            !
+            ! Store quantities valid on the deformed element
+            !
+            call worker%cache%set_data(field,'face interior',value_u,'value',   0,worker%function_info%seed,iface)
+            call worker%cache%set_data(field,'face interior',grad1_u,'gradient',1,worker%function_info%seed,iface)
+            call worker%cache%set_data(field,'face interior',grad2_u,'gradient',2,worker%function_info%seed,iface)
+            call worker%cache%set_data(field,'face interior',grad3_u,'gradient',3,worker%function_info%seed,iface)
 
         end do !ieqn
 
@@ -587,7 +667,9 @@ contains
         integer(ik)                                 :: idepend, ieqn, idomain_l, ielement_l, &
                                                        iface, BC_ID, BC_face, ndepend, idiff, eqn_ID
         character(:),   allocatable                 :: field
-        type(AD_D),     allocatable, dimension(:)   :: value_gq, grad1_gq, grad2_gq, grad3_gq
+        real(rk),       allocatable                 :: ale_Dinv(:,:,:)
+        real(rk),       allocatable, dimension(:)   :: ale_g, ale_g_grad1, ale_g_grad2, ale_g_grad3
+        type(AD_D),     allocatable, dimension(:)   :: value_u, grad1_u, grad2_u, grad3_u, grad1_tmp, grad2_tmp, grad3_tmp
 
 
         idomain_l  = worker%element_info%idomain_l 
@@ -627,18 +709,63 @@ contains
                     worker%function_info%idepend = idepend
 
 
+                    !
+                    ! Interpolate U
+                    !
 
-                    value_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'value',NEIGHBOR)
-                    call worker%cache%set_data(field,'face exterior',value_gq,'value',   0,worker%function_info%seed,iface)
+                    ! Interpolate modes to nodes on undeformed element
+                    value_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'value',NEIGHBOR)
+
+                    ! Get ALE transformation data
+                    ale_g = worker%get_det_jacobian_grid_face('value','face exterior')
+
+                    ! Compute transformation to deformed element
+                    value_u = (value_u/ale_g)
+
+                    ! Store quantities valid on the deformed element
+                    call worker%cache%set_data(field,'face exterior',value_u,'value',0,worker%function_info%seed,iface)
 
 
+
+                    !
+                    ! Interpolate Grad(U)
+                    !
                     if (compute_gradients) then
-                        grad1_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad1',NEIGHBOR)
-                        grad2_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad2',NEIGHBOR)
-                        grad3_gq = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad3',NEIGHBOR)
-                        call worker%cache%set_data(field,'face exterior',grad1_gq,'gradient',1,worker%function_info%seed,iface)
-                        call worker%cache%set_data(field,'face exterior',grad2_gq,'gradient',2,worker%function_info%seed,iface)
-                        call worker%cache%set_data(field,'face exterior',grad3_gq,'gradient',3,worker%function_info%seed,iface)
+                        !
+                        ! Interpolate modes to nodes on undeformed element
+                        !
+                        grad1_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad1',NEIGHBOR)
+                        grad2_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad2',NEIGHBOR)
+                        grad3_u = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info,ieqn,worker%itime,'grad3',NEIGHBOR)
+
+
+                        !
+                        ! Get ALE transformation data
+                        !
+                        ale_g_grad1 = worker%get_det_jacobian_grid_face('grad1','face exterior')
+                        ale_g_grad2 = worker%get_det_jacobian_grid_face('grad2','face exterior')
+                        ale_g_grad3 = worker%get_det_jacobian_grid_face('grad3','face exterior')
+                        ale_Dinv    = worker%get_inv_jacobian_grid_face('face exterior')
+
+                        
+                        !
+                        ! Compute transformation to deformed element
+                        !
+                        grad1_tmp = grad1_u-(value_u)*ale_g_grad1
+                        grad2_tmp = grad2_u-(value_u)*ale_g_grad2
+                        grad3_tmp = grad3_u-(value_u)*ale_g_grad3
+
+                        grad1_u = (ale_Dinv(1,1,:)*grad1_tmp + ale_Dinv(2,1,:)*grad2_tmp + ale_Dinv(3,1,:)*grad3_tmp)/ale_g
+                        grad2_u = (ale_Dinv(1,2,:)*grad1_tmp + ale_Dinv(2,2,:)*grad2_tmp + ale_Dinv(3,2,:)*grad3_tmp)/ale_g
+                        grad3_u = (ale_Dinv(1,3,:)*grad1_tmp + ale_Dinv(2,3,:)*grad2_tmp + ale_Dinv(3,3,:)*grad3_tmp)/ale_g
+
+
+                        ! 
+                        ! Store quantities valid on the deformed element
+                        !
+                        call worker%cache%set_data(field,'face exterior',grad1_u,'gradient',1,worker%function_info%seed,iface)
+                        call worker%cache%set_data(field,'face exterior',grad2_u,'gradient',2,worker%function_info%seed,iface)
+                        call worker%cache%set_data(field,'face exterior',grad3_u,'gradient',3,worker%function_info%seed,iface)
                     end if
 
 
@@ -1640,6 +1767,7 @@ contains
         logical,                    intent(in)      :: differentiate
 
         character(:),   allocatable :: field
+        real(rk),       allocatable :: ale_g_m(:), ale_g_p(:)
         integer(ik)                 :: idomain_l, ielement_l, iface, idepend, &
                                        ndepend, BC_ID, BC_face, ieqn, idiff, eqn_ID
 
@@ -1715,9 +1843,18 @@ contains
                     worker%function_info%idepend = idepend
 
 
-                    ! Get interior/exterior state
+                    ! Get interior/exterior state on deformed element
                     var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
                     var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
+
+                    ! Get ALE transformation
+                    ale_g_m = worker%get_det_jacobian_grid_face('value', 'face interior')
+                    ale_g_p = worker%get_det_jacobian_grid_face('value', 'face exterior')
+
+                    ! Transform values to undeformed element
+                    var_m = var_m*ale_g_m
+                    var_p = var_p*ale_g_p
+
 
                     ! Difference
                     var_diff = HALF*(var_p - var_m) 
@@ -1816,6 +1953,16 @@ contains
                     ! Get interior/exterior state
                     var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
                     var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
+
+                    ! Get ALE transformation
+                    ale_g_m = worker%get_det_jacobian_grid_face('value', 'face interior')
+                    ale_g_p = worker%get_det_jacobian_grid_face('value', 'face exterior')
+
+                    ! Transform values to undeformed element
+                    var_m = var_m*ale_g_m
+                    var_p = var_p*ale_g_p
+
+
 
                     ! Difference
                     var_diff = HALF*(var_p - var_m) 
@@ -2061,7 +2208,7 @@ contains
             lift_gq_vol_x,  lift_gq_vol_y,  lift_gq_vol_z
 
         character(:),   allocatable                 :: field
-        real(rk),       allocatable, dimension(:)   :: normx, normy, normz, weights
+        real(rk),       allocatable, dimension(:)   :: normx, normy, normz, weights, ale_g_m, ale_g_p
         real(rk),       allocatable, dimension(:,:) :: val_face_trans, val_face, val_vol, &
                                                        invmass, br2_face
 
@@ -2124,6 +2271,16 @@ contains
             ! Get interior/exterior state
             var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
             var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
+
+            ! Get ALE transformation
+            ale_g_m = worker%get_det_jacobian_grid_face('value', 'face interior')
+            ale_g_p = worker%get_det_jacobian_grid_face('value', 'face exterior')
+
+            ! Transform values to undeformed element
+            var_m = var_m*ale_g_m
+            var_p = var_p*ale_g_p
+
+
 
             ! Difference. Relative to exterior element, so reversed
             var_diff = HALF*(var_m - var_p) 
@@ -2212,7 +2369,7 @@ contains
             lift_gq_x,      lift_gq_y,      lift_gq_z
 
         character(:),   allocatable                 :: field
-        real(rk),       allocatable, dimension(:)   :: normx, normy, normz
+        real(rk),       allocatable, dimension(:)   :: normx, normy, normz, ale_g_m, ale_g_p
 
 
         !
@@ -2268,6 +2425,13 @@ contains
             var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
             var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
 
+            ! Get ALE transformation
+            ale_g_m = worker%get_det_jacobian_grid_face('value', 'face interior')
+            ale_g_p = worker%get_det_jacobian_grid_face('value', 'face exterior')
+
+            ! Transform values to undeformed element
+            var_m = var_m*ale_g_m
+            var_p = var_p*ale_g_p
 
             ! Difference. Relative to exterior element, so reversed
             var_diff = HALF*(var_m - var_p) 
@@ -2366,7 +2530,7 @@ contains
             lift_gq_vol_x,  lift_gq_vol_y,  lift_gq_vol_z
 
         character(:),   allocatable                 :: field
-        real(rk),       allocatable, dimension(:)   :: normx, normy, normz
+        real(rk),       allocatable, dimension(:)   :: normx, normy, normz, ale_g_m, ale_g_p
 
 
         !
@@ -2406,6 +2570,16 @@ contains
             ! Get interior/exterior state
             var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
             var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
+
+            ! Get ALE transformation
+            ale_g_m = worker%get_det_jacobian_grid_face('value', 'face interior')
+            ale_g_p = worker%get_det_jacobian_grid_face('value', 'face exterior')
+
+            ! Transform values to undeformed element
+            var_m = var_m*ale_g_m
+            var_p = var_p*ale_g_p
+
+
 
             ! Difference. Relative to exterior element, so reversed
             var_diff = HALF*(var_m - var_p) 

@@ -82,38 +82,37 @@ contains
 
 
         ! Storage at quadrature nodes
-        type(AD_D), allocatable, dimension(:)   ::                      &
-            rho_m,      rho_p,                                          &
-            rhou_m,     rhou_p,                                         &
-            rhov_m,     rhov_p,                                         &
-            rhow_m,     rhow_p,                                         &
-            rhoe_m,     rhoe_p,                                         &
-            rhor_p,     rhot_p,                                         &
-            p_m,        p_p,                                            &
-            un_m,       un_p,                                           &
-            a_m,        a_p,                                            &
-            H_m,        H_p,                                            &
-            rtil, util, vtil, wtil, vmagtil, Htil, ctil, qtil2,         &
-            integrand,  upwind,     wave,                               &
-            C1,  C2_a, C2_b,  C3,                                       &
-            u_m, v_m, w_m,                                              &
-            u_p, v_p, w_p,                                              &
-            vmag_p, vmag_m,                                             &
-            delr,   delp,   delvmag, delu, delv, delw,                  &
-            lamda1, lamda2, lamda3,                                     &
-            sqrt_rhom, sqrt_rhop, sqrt_rhom_plus_rhop, ctil2, invrho_m, invrho_p
+        type(AD_D), allocatable, dimension(:)   ::                  &
+            density_m,      density_p,                              &
+            mom1_m,         mom1_p,                                 &
+            mom2_m,         mom2_p,                                 &
+            mom3_m,         mom3_p,                                 &
+            energy_m,       energy_p,                               &
+            enthalpy_m,     enthalpy_p,                             &
+            invdensity_m,   invdensity_p,                           &
+            p_m,            p_p,                                    &
+            un_m,           un_p,                                   &
+            a_m,            a_p,                                    &
+            rtil, util, vtil, wtil, vmagtil, Htil, ctil, qtil2,     &
+            integrand,  upwind,     wave,                           &
+            C1,  C2_a, C2_b,  C3,                                   &
+            u_m, v_m, w_m,                                          &
+            u_p, v_p, w_p,                                          &
+            vmag_p, vmag_m,                                         &
+            delr,   delp,   delvmag, delu, delv, delw,              &
+            lamda1, lamda2, lamda3,                                 &
+            sqrt_rhom, sqrt_rhop, sqrt_rhom_plus_rhop, ctil2
 
-        real(rk), allocatable, dimension(:) :: &
-            normx, normy, normz, unormx, unormy, unormz, unormx_ale, unormy_ale, unormz_ale, ale_area_ratio
+        real(rk), allocatable, dimension(:) ::              &
+            norm_1,         norm_2,         norm_3,         &
+            unorm_1,        unorm_2,        unorm_3,        &
+            unorm_1_ale,    unorm_2_ale,    unorm_3_ale,    &
+            ale_area_ratio
 
-        real(rk), allocatable, dimension(:,:) ::      &
-           grid_vel
+        real(rk), allocatable, dimension(:,:) :: grid_vel
 
         real(rk) :: eps
 
-!        u_grid = worker%get_grid_velocity_face("u_grid",'face interior')
-!        v_grid = worker%get_grid_velocity_face("v_grid",'face interior')
-!        w_grid = worker%get_grid_velocity_face("w_grid",'face interior')
         grid_vel = worker%get_grid_velocity_face('face interior')
         ale_area_ratio = worker%get_area_ratio()
 
@@ -122,33 +121,33 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho_m  = worker%get_primary_field_value_ale_face('Density'   , 'face interior')
-        rho_p  = worker%get_primary_field_value_ale_face('Density'   , 'face exterior')
+        density_m = worker%get_primary_field_value_ale_face('Density'   , 'face interior')
+        density_p = worker%get_primary_field_value_ale_face('Density'   , 'face exterior')
 
-        rhou_m = worker%get_primary_field_value_ale_face('Momentum-1', 'face interior')
-        rhou_p = worker%get_primary_field_value_ale_face('Momentum-1', 'face exterior')
+        mom1_m    = worker%get_primary_field_value_ale_face('Momentum-1', 'face interior')
+        mom1_p    = worker%get_primary_field_value_ale_face('Momentum-1', 'face exterior')
 
-        rhov_m = worker%get_primary_field_value_ale_face('Momentum-2', 'face interior')
-        rhov_p = worker%get_primary_field_value_ale_face('Momentum-2', 'face exterior')
+        mom2_m    = worker%get_primary_field_value_ale_face('Momentum-2', 'face interior')
+        mom2_p    = worker%get_primary_field_value_ale_face('Momentum-2', 'face exterior')
 
-        rhow_m = worker%get_primary_field_value_ale_face('Momentum-3', 'face interior')
-        rhow_p = worker%get_primary_field_value_ale_face('Momentum-3', 'face exterior')
+        mom3_m    = worker%get_primary_field_value_ale_face('Momentum-3', 'face interior')
+        mom3_p    = worker%get_primary_field_value_ale_face('Momentum-3', 'face exterior')
 
-        rhoE_m = worker%get_primary_field_value_ale_face('Energy'    , 'face interior')
-        rhoE_p = worker%get_primary_field_value_ale_face('Energy'    , 'face exterior')
+        energy_m  = worker%get_primary_field_value_ale_face('Energy'    , 'face interior')
+        energy_p  = worker%get_primary_field_value_ale_face('Energy'    , 'face exterior')
 
 
-        normx  = worker%normal(1)
-        normy  = worker%normal(2)
-        normz  = worker%normal(3)
+        norm_1  = worker%normal(1)
+        norm_2  = worker%normal(2)
+        norm_3  = worker%normal(3)
 
-        unormx = worker%unit_normal(1)
-        unormy = worker%unit_normal(2)
-        unormz = worker%unit_normal(3)
+        unorm_1 = worker%unit_normal(1)
+        unorm_2 = worker%unit_normal(2)
+        unorm_3 = worker%unit_normal(3)
 
-        unormx_ale = worker%unit_normal_ale(1)
-        unormy_ale = worker%unit_normal_ale(2)
-        unormz_ale = worker%unit_normal_ale(3)
+        unorm_1_ale = worker%unit_normal_ale(1)
+        unorm_2_ale = worker%unit_normal_ale(2)
+        unorm_3_ale = worker%unit_normal_ale(3)
 
 
 
@@ -159,43 +158,43 @@ contains
         p_m = worker%get_model_field_face('Pressure', 'value', 'face interior')
         p_p = worker%get_model_field_face('Pressure', 'value', 'face exterior')
 
-        invrho_m = ONE/rho_m
-        invrho_p = ONE/rho_p
+        invdensity_m = ONE/density_m
+        invdensity_p = ONE/density_p
 
         !
         ! Compute enthalpy
         !
-        H_m = (rhoE_m + p_m)*invrho_m
-        H_p = (rhoE_p + p_p)*invrho_p
+        enthalpy_m = (energy_m + p_m)*invdensity_m
+        enthalpy_p = (energy_p + p_p)*invdensity_p
 
 
         !
         ! Compute velocity components
         !
-        u_m = rhou_m*invrho_m 
-        v_m = rhov_m*invrho_m 
-        w_m = rhow_m*invrho_m 
-        vmag_m = u_m*unormx_ale + v_m*unormy_ale + w_m*unormz_ale
+        u_m = mom1_m*invdensity_m 
+        v_m = mom2_m*invdensity_m 
+        w_m = mom3_m*invdensity_m 
+        vmag_m = u_m*unorm_1_ale + v_m*unorm_2_ale + w_m*unorm_3_ale
 
-        u_p = rhou_p*invrho_p 
-        v_p = rhov_p*invrho_p 
-        w_p = rhow_p*invrho_p 
-        vmag_p = u_p*unormx_ale + v_p*unormy_ale + w_p*unormz_ale
+        u_p = mom1_p*invdensity_p 
+        v_p = mom2_p*invdensity_p 
+        w_p = mom3_p*invdensity_p 
+        vmag_p = u_p*unorm_1_ale + v_p*unorm_2_ale + w_p*unorm_3_ale
 
 
         !
         ! Compute Roe-averaged variables
         !
-        sqrt_rhom = sqrt(rho_m)
-        sqrt_rhop = sqrt(rho_p)
+        sqrt_rhom = sqrt(density_m)
+        sqrt_rhop = sqrt(density_p)
         sqrt_rhom_plus_rhop = sqrt_rhom + sqrt_rhop
-        rtil =  sqrt(rho_p * rho_m)                                       ! Roe-averaged density
+        rtil =  sqrt(density_p * density_m)                               ! Roe-averaged density
         util = (sqrt_rhom*u_m + sqrt_rhop*u_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged u-velocity
         vtil = (sqrt_rhom*v_m + sqrt_rhop*v_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged v-velocity
         wtil = (sqrt_rhom*w_m + sqrt_rhop*w_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged w-velocity
-        Htil = (sqrt_rhom*H_m + sqrt_rhop*H_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged Enthalpy
+        Htil = (sqrt_rhom*enthalpy_m + sqrt_rhop*enthalpy_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged Enthalpy
 
-        vmagtil = util*unormx_ale + vtil*unormy_ale + wtil*unormz_ale   ! Magnitude of Roe-averaged velocity in the face normal direction
+        vmagtil = util*unorm_1_ale + vtil*unorm_2_ale + wtil*unorm_3_ale   ! Magnitude of Roe-averaged velocity in the face normal direction
         qtil2   = util**TWO + vtil**TWO + wtil**TWO
 
 
@@ -208,7 +207,7 @@ contains
         !
         ! Compute jump terms
         !
-        delr    = (rho_m - rho_p)
+        delr    = (density_m - density_p)
         delu    = (u_m - u_p)
         delv    = (v_m - v_p)
         delw    = (w_m - w_p)
@@ -260,7 +259,7 @@ contains
         !================================
         upwind = C1 + C2_a + C3
 
-        integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)/ale_area_ratio
+        integrand = HALF*(upwind*norm_1*unorm_1 + upwind*norm_2*unorm_2 + upwind*norm_3*unorm_3)/ale_area_ratio
 
 
         call worker%integrate_boundary('Density',integrand)
@@ -269,9 +268,9 @@ contains
         !================================
         !       X-MOMENTUM FLUX
         !================================
-        upwind = C1*(util - ctil*unormx_ale)  +  C2_a*util  +  C2_b*(delu - delvmag*unormx_ale)  +  C3*(util + ctil*unormx_ale)
+        upwind = C1*(util - ctil*unorm_1_ale)  +  C2_a*util  +  C2_b*(delu - delvmag*unorm_1_ale)  +  C3*(util + ctil*unorm_1_ale)
 
-        integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)/ale_area_ratio
+        integrand = HALF*(upwind*norm_1*unorm_1 + upwind*norm_2*unorm_2 + upwind*norm_3*unorm_3)/ale_area_ratio
 
 
         call worker%integrate_boundary('Momentum-1',integrand)
@@ -280,9 +279,9 @@ contains
         !================================
         !       Y-MOMENTUM FLUX
         !================================
-        upwind = C1*(vtil - ctil*unormy_ale)  +  C2_a*vtil  +  C2_b*(delv - delvmag*unormy_ale)  +  C3*(vtil + ctil*unormy_ale)
+        upwind = C1*(vtil - ctil*unorm_2_ale)  +  C2_a*vtil  +  C2_b*(delv - delvmag*unorm_2_ale)  +  C3*(vtil + ctil*unorm_2_ale)
 
-        integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)/ale_area_ratio
+        integrand = HALF*(upwind*norm_1*unorm_1 + upwind*norm_2*unorm_2 + upwind*norm_3*unorm_3)/ale_area_ratio
 
 
         call worker%integrate_boundary('Momentum-2',integrand)
@@ -290,9 +289,9 @@ contains
         !================================
         !       Z-MOMENTUM FLUX
         !================================
-        upwind = C1*(wtil - ctil*unormz_ale)  +  C2_a*wtil  +  C2_b*(delw - delvmag*unormz_ale)  +  C3*(wtil + ctil*unormz_ale)
+        upwind = C1*(wtil - ctil*unorm_3_ale)  +  C2_a*wtil  +  C2_b*(delw - delvmag*unorm_3_ale)  +  C3*(wtil + ctil*unorm_3_ale)
 
-        integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)/ale_area_ratio
+        integrand = HALF*(upwind*norm_1*unorm_1 + upwind*norm_2*unorm_2 + upwind*norm_3*unorm_3)/ale_area_ratio
 
 
         call worker%integrate_boundary('Momentum-3',integrand)
@@ -302,7 +301,7 @@ contains
         !================================
         upwind = C1*(Htil - ctil*vmagtil)  +  C2_a*(qtil2/TWO)  +  C2_b*(util*delu + vtil*delv + wtil*delw - vmagtil*delvmag)  +  C3*(Htil + ctil*vmagtil)
 
-        integrand = HALF*(upwind*normx*unormx + upwind*normy*unormy + upwind*normz*unormz)/ale_area_ratio
+        integrand = HALF*(upwind*norm_1*unorm_1 + upwind*norm_2*unorm_2 + upwind*norm_3*unorm_3)/ale_area_ratio
 
 
         call worker%integrate_boundary('Energy',integrand)

@@ -76,27 +76,20 @@ contains
     !---------------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_COMM)
         class(scalar_ale_extrapolate_t),    intent(inout)   :: self
-        type(chidg_worker_t),           intent(inout)   :: worker
-        class(properties_t),            intent(inout)   :: prop
-        type(mpi_comm),                 intent(in)      :: bc_COMM
-
-        ! Equation indices
-        integer(ik)     :: iu
+        type(chidg_worker_t),               intent(inout)   :: worker
+        class(properties_t),                intent(inout)   :: prop
+        type(mpi_comm),                     intent(in)      :: bc_COMM
 
 
         type(AD_D), allocatable, dimension(:)   ::  &
                 u_bc, dudx_bc, dudy_bc, dudz_bc
 
         real(rk), allocatable, dimension(:) ::      &
-           u_grid, v_grid, w_grid, det_jacobian_grid
+           u_grid, v_grid, w_grid
 
         type(AD_D), allocatable, dimension(:,:)   ::  &
             gradu
 
-        !
-        ! Get equation index
-        !
-        iu = prop%get_primary_field_index("u")
 
 
         !

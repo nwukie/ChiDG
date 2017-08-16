@@ -31,7 +31,7 @@ module type_chidg_worker
     use mod_kinds,              only: ik, rk
     use mod_constants,          only: NFACES, ME, NEIGHBOR, BC, ZERO, CHIMERA,  &
                                       ONE, THIRD, TWO, NOT_A_FACE, BOUNDARY,    &
-                                      CARTESIAN, CYLINDRICAL, INTERIOR
+                                      CARTESIAN, CYLINDRICAL, INTERIOR, HALF
 
     use mod_interpolate,        only: interpolate_element_autodiff
     use mod_integrate,          only: integrate_boundary_scalar_flux, &
@@ -128,6 +128,7 @@ module type_chidg_worker
 
         ! Worker process data
         procedure   :: integrate_boundary
+        procedure   :: integrate_boundary_average
         generic     :: integrate_volume => integrate_volume_flux, &
                                            integrate_volume_source
         procedure   :: integrate_volume_flux
@@ -1275,6 +1276,93 @@ contains
 
     end subroutine integrate_boundary
     !****************************************************************************************
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/22/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine integrate_boundary_average(self,primary_field,flux_type,flux_1_m,flux_2_m,flux_3_m,flux_1_p,flux_2_p,flux_3_p)
+        class(chidg_worker_t),  intent(in)      :: self
+        character(*),           intent(in)      :: primary_field
+        character(*),           intent(in)      :: flux_type
+        type(AD_D),             intent(inout)   :: flux_1_m(:)
+        type(AD_D),             intent(inout)   :: flux_2_m(:)
+        type(AD_D),             intent(inout)   :: flux_3_m(:)
+        type(AD_D),             intent(inout)   :: flux_1_p(:)
+        type(AD_D),             intent(inout)   :: flux_2_p(:)
+        type(AD_D),             intent(inout)   :: flux_3_p(:)
+
+        integer(ik)                             :: ifield, idomain_l, eqn_ID
+        type(AD_D), allocatable, dimension(:)   :: q_m, q_p, flux_1, flux_2, flux_3, integrand
+        type(AD_D), allocatable, dimension(:,:) :: flux_ref_m, flux_ref_p
+        real(rk),   allocatable, dimension(:)   :: norm_1, norm_2, norm_3
+
+        idomain_l = self%element_info%idomain_l
+        eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
+        ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
+
+
+        !
+        ! Get field
+        !
+        q_m = self%get_primary_field_face(primary_field,'value','face interior')
+        q_p = self%get_primary_field_face(primary_field,'value','face exterior')
+
+
+        !
+        ! Compute ALE transformation
+        !
+        select case(trim(flux_type))
+            case('Advective')
+                flux_ref_m = self%post_process_boundary_advective_flux_ale(flux_1_m,flux_2_m,flux_3_m, advected_quantity=q_m, interp_source='face interior')
+                flux_ref_p = self%post_process_boundary_advective_flux_ale(flux_1_p,flux_2_p,flux_3_p, advected_quantity=q_p, interp_source='face exterior')
+            case('Diffusive')
+                flux_ref_m = self%post_process_boundary_diffusive_flux_ale(flux_1_m,flux_2_m,flux_3_m, interp_source='face interior')
+                flux_ref_p = self%post_process_boundary_diffusive_flux_ale(flux_1_p,flux_2_p,flux_3_p, interp_source='face exterior')
+            case default
+                call chidg_signal_one(FATAL,"worker%integrate_boundary_average: Invalid value for incoming flux_type.",trim(flux_type))
+        end select
+
+
+
+        !
+        ! Compute Average, delay multiplying by HALF until later
+        !
+        flux_1 = (flux_ref_m(:,1) + flux_ref_p(:,1))
+        flux_2 = (flux_ref_m(:,2) + flux_ref_p(:,2))
+        flux_3 = (flux_ref_m(:,3) + flux_ref_p(:,3))
+
+
+        !
+        ! Dot with normal vector, complete averaging with HALF
+        !
+        norm_1 = self%normal(1)
+        norm_2 = self%normal(2)
+        norm_3 = self%normal(3)
+        integrand = HALF*(flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3)
+
+
+        !
+        ! Integrate
+        !
+        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ifield,self%itime,integrand)
+
+
+    end subroutine integrate_boundary_average
+    !****************************************************************************************
+
+
+
+
+
+
+
 
 
 
@@ -2431,10 +2519,12 @@ contains
         type(AD_D), allocatable                     :: val_ref(:), val_gq(:)
         real(rk), allocatable                       :: ale_g(:)
 
-        val_ref = self%get_primary_field_element(field, 'value')
-        ale_g   = self%get_det_jacobian_grid_element('value')
+!        val_ref = self%get_primary_field_element(field, 'value')
+!        ale_g   = self%get_det_jacobian_grid_element('value')
+!
+!        val_gq = (val_ref/ale_g)
 
-        val_gq = (val_ref/ale_g)
+        val_gq = self%get_primary_field_element(field, 'value')
 
     end function get_primary_field_value_ale_element
     !****************************************************************************************************
@@ -2466,12 +2556,37 @@ contains
 
         character(:),   allocatable :: user_msg
 
-        ale_g       = self%get_det_jacobian_grid_element('value')
-        ale_g_grad1 = self%get_det_jacobian_grid_element('grad1')
-        ale_g_grad2 = self%get_det_jacobian_grid_element('grad2')
-        ale_g_grad3 = self%get_det_jacobian_grid_element('grad3')
-        ale_Dinv    = self%get_inv_jacobian_grid_element()
-
+!        ale_g       = self%get_det_jacobian_grid_element('value')
+!        ale_g_grad1 = self%get_det_jacobian_grid_element('grad1')
+!        ale_g_grad2 = self%get_det_jacobian_grid_element('grad2')
+!        ale_g_grad3 = self%get_det_jacobian_grid_element('grad3')
+!        ale_Dinv    = self%get_inv_jacobian_grid_element()
+!
+!
+!        if (gradient_type == 'gradient + lift') then
+!            grad1_u = self%get_primary_field_element(field,'grad1 + lift')
+!            grad2_u = self%get_primary_field_element(field,'grad2 + lift')
+!            grad3_u = self%get_primary_field_element(field,'grad3 + lift')
+!        elseif (gradient_type == 'gradient') then
+!            grad1_u = self%get_primary_field_element(field,'grad1')
+!            grad2_u = self%get_primary_field_element(field,'grad2')
+!            grad3_u = self%get_primary_field_element(field,'grad3')
+!        else
+!            user_msg = "chidg_worker%get_primary_field_grad_ale_element: Invalid interpolation &
+!                        type. 'gradient' or 'gradient + lift'"
+!            call chidg_signal(FATAL,user_msg)
+!        end if
+!
+!
+!        u       = self%get_primary_field_element(field,'value')
+!        grad1_u = grad1_u-(u/ale_g)*ale_g_grad1
+!        grad2_u = grad2_u-(u/ale_g)*ale_g_grad2
+!        grad3_u = grad3_u-(u/ale_g)*ale_g_grad3
+!
+!        allocate(grad_u_gq(size(grad1_u,1),3))
+!        grad_u_gq(:,1) = (ale_Dinv(1,1,:)*grad1_u + ale_Dinv(2,1,:)*grad2_u + ale_Dinv(3,1,:)*grad3_u)/ale_g
+!        grad_u_gq(:,2) = (ale_Dinv(1,2,:)*grad1_u + ale_Dinv(2,2,:)*grad2_u + ale_Dinv(3,2,:)*grad3_u)/ale_g
+!        grad_u_gq(:,3) = (ale_Dinv(1,3,:)*grad1_u + ale_Dinv(2,3,:)*grad2_u + ale_Dinv(3,3,:)*grad3_u)/ale_g
 
         if (gradient_type == 'gradient + lift') then
             grad1_u = self%get_primary_field_element(field,'grad1 + lift')
@@ -2488,15 +2603,10 @@ contains
         end if
 
 
-        u       = self%get_primary_field_element(field,'value')
-        grad1_u = grad1_u-(u/ale_g)*ale_g_grad1
-        grad2_u = grad2_u-(u/ale_g)*ale_g_grad2
-        grad3_u = grad3_u-(u/ale_g)*ale_g_grad3
-
         allocate(grad_u_gq(size(grad1_u,1),3))
-        grad_u_gq(:,1) = (ale_Dinv(1,1,:)*grad1_u + ale_Dinv(2,1,:)*grad2_u + ale_Dinv(3,1,:)*grad3_u)/ale_g
-        grad_u_gq(:,2) = (ale_Dinv(1,2,:)*grad1_u + ale_Dinv(2,2,:)*grad2_u + ale_Dinv(3,2,:)*grad3_u)/ale_g
-        grad_u_gq(:,3) = (ale_Dinv(1,3,:)*grad1_u + ale_Dinv(2,3,:)*grad2_u + ale_Dinv(3,3,:)*grad3_u)/ale_g
+        grad_u_gq(:,1) = grad1_u
+        grad_u_gq(:,2) = grad2_u
+        grad_u_gq(:,3) = grad3_u
 
 
     end function get_primary_field_grad_ale_element
@@ -2524,17 +2634,19 @@ contains
         type(AD_D), allocatable :: val_ref(:), val_gq(:), g_bar(:)
         real(rk),   allocatable :: ale_g(:)
 
-        val_ref = self%get_primary_field_face(field, 'value', interp_source)
-        if (interp_source == 'boundary') then
-            ! In this case, the value supplied by the BC is already the physical value!
-            val_gq = val_ref
+!        val_ref = self%get_primary_field_face(field, 'value', interp_source)
+!        if (interp_source == 'boundary') then
+!            ! In this case, the value supplied by the BC is already the physical value!
+!            val_gq = val_ref
+!
+!        else
+!            ! Otherwise, we need to convert the reference configuration value to the physical value.
+!            ale_g  = self%get_det_jacobian_grid_face('value', interp_source)
+!            val_gq = (val_ref/ale_g)
+!
+!        end if
 
-        else
-            ! Otherwise, we need to convert the reference configuration value to the physical value.
-            ale_g  = self%get_det_jacobian_grid_face('value', interp_source)
-            val_gq = (val_ref/ale_g)
-
-        end if
+        val_gq = self%get_primary_field_face(field, 'value', interp_source)
 
 
     end function get_primary_field_value_ale_face
@@ -2569,6 +2681,53 @@ contains
                                        ale_Dinv(:,:,:)
         character(:),   allocatable :: user_msg
 
+!        if (gradient_type == 'gradient + lift') then
+!            grad1_u = self%get_primary_field_face(field,'grad1 + lift', interp_source)
+!            grad2_u = self%get_primary_field_face(field,'grad2 + lift', interp_source)
+!            grad3_u = self%get_primary_field_face(field,'grad3 + lift', interp_source)
+!        elseif (gradient_type == 'gradient') then
+!            grad1_u = self%get_primary_field_face(field,'grad1', interp_source)
+!            grad2_u = self%get_primary_field_face(field,'grad2', interp_source)
+!            grad3_u = self%get_primary_field_face(field,'grad3', interp_source)
+!        else
+!            user_msg = "chidg_worker%get_primary_field_grad_ale_face: Invalid interpolation &
+!                        type. 'gradient' or 'gradient + lift'"
+!            call chidg_signal(FATAL,user_msg)
+!        end if
+!
+!
+!
+!        allocate(grad_u_gq(size(grad1_u,1),3))
+!        if (interp_source == 'boundary') then
+!            ! In this case, the value supplied by the BC is already the physical value!
+!            grad_u_gq(:,1) = grad1_u
+!            grad_u_gq(:,2) = grad2_u
+!            grad_u_gq(:,3) = grad3_u
+!
+!        else
+!            ! Otherwise, we need to convert the reference configuration value to the physical value.
+!            ale_g       = self%get_det_jacobian_grid_face('value', interp_source)
+!            ale_g_grad1 = self%get_det_jacobian_grid_face('grad1', interp_source)
+!            ale_g_grad2 = self%get_det_jacobian_grid_face('grad2', interp_source)
+!            ale_g_grad3 = self%get_det_jacobian_grid_face('grad3', interp_source)
+!            ale_Dinv    = self%get_inv_jacobian_grid_face(interp_source)
+!
+!            u = self%get_primary_field_face(field,'value', interp_source)
+!
+!            grad1_u = grad1_u-(u/ale_g)*ale_g_grad1
+!            grad2_u = grad2_u-(u/ale_g)*ale_g_grad2
+!            grad3_u = grad3_u-(u/ale_g)*ale_g_grad3
+!
+!            grad_u_gq(:,1) = (ale_Dinv(1,1,:)*grad1_u + ale_Dinv(2,1,:)*grad2_u + ale_Dinv(3,1,:)*grad3_u)/ale_g
+!            grad_u_gq(:,2) = (ale_Dinv(1,2,:)*grad1_u + ale_Dinv(2,2,:)*grad2_u + ale_Dinv(3,2,:)*grad3_u)/ale_g
+!            grad_u_gq(:,3) = (ale_Dinv(1,3,:)*grad1_u + ale_Dinv(2,3,:)*grad2_u + ale_Dinv(3,3,:)*grad3_u)/ale_g
+!
+!        end if
+
+
+
+
+
         if (gradient_type == 'gradient + lift') then
             grad1_u = self%get_primary_field_face(field,'grad1 + lift', interp_source)
             grad2_u = self%get_primary_field_face(field,'grad2 + lift', interp_source)
@@ -2584,33 +2743,11 @@ contains
         end if
 
 
-
         allocate(grad_u_gq(size(grad1_u,1),3))
-        if (interp_source == 'boundary') then
-            ! In this case, the value supplied by the BC is already the physical value!
-            grad_u_gq(:,1) = grad1_u
-            grad_u_gq(:,2) = grad2_u
-            grad_u_gq(:,3) = grad3_u
+        grad_u_gq(:,1) = grad1_u
+        grad_u_gq(:,2) = grad2_u
+        grad_u_gq(:,3) = grad3_u
 
-        else
-            ! Otherwise, we need to convert the reference configuration value to the physical value.
-            ale_g       = self%get_det_jacobian_grid_face('value', interp_source)
-            ale_g_grad1 = self%get_det_jacobian_grid_face('grad1', interp_source)
-            ale_g_grad2 = self%get_det_jacobian_grid_face('grad2', interp_source)
-            ale_g_grad3 = self%get_det_jacobian_grid_face('grad3', interp_source)
-            ale_Dinv    = self%get_inv_jacobian_grid_face(interp_source)
-
-            u = self%get_primary_field_face(field,'value', interp_source)
-
-            grad1_u = grad1_u-(u/ale_g)*ale_g_grad1
-            grad2_u = grad2_u-(u/ale_g)*ale_g_grad2
-            grad3_u = grad3_u-(u/ale_g)*ale_g_grad3
-
-            grad_u_gq(:,1) = (ale_Dinv(1,1,:)*grad1_u + ale_Dinv(2,1,:)*grad2_u + ale_Dinv(3,1,:)*grad3_u)/ale_g
-            grad_u_gq(:,2) = (ale_Dinv(1,2,:)*grad1_u + ale_Dinv(2,2,:)*grad2_u + ale_Dinv(3,2,:)*grad3_u)/ale_g
-            grad_u_gq(:,3) = (ale_Dinv(1,3,:)*grad1_u + ale_Dinv(2,3,:)*grad2_u + ale_Dinv(3,3,:)*grad3_u)/ale_g
-
-        end if
 
    end function get_primary_field_grad_ale_face
     !************************************************************************************

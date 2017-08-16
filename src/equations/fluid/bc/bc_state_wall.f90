@@ -102,38 +102,21 @@ contains
             u_m, v_m, w_m, p_m, normal_velocity, normal_velocity_1, normal_velocity_2, normal_velocity_3
 
         real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3, r
-    
         real(rk),   allocatable, dimension(:,:) :: grid_velocity
-
-        real(rk), allocatable, dimension(:) ::      &
-           det_jacobian_grid
-
         type(AD_D), allocatable, dimension(:,:) :: grad_density, grad_mom1, grad_mom2, grad_mom3, grad_energy
 
 
 
-!        u_grid = worker%get_grid_velocity_face('u_grid','face interior')
-!        v_grid = worker%get_grid_velocity_face('v_grid','face interior')
-!        w_grid = worker%get_grid_velocity_face('w_grid','face interior')
-        det_jacobian_grid = worker%get_det_jacobian_grid_face('value','face interior')
         grid_velocity = worker%get_grid_velocity_face('face interior')
 
         !
         ! Interpolate interior solution to quadrature nodes
         !
-        density_m = worker%get_primary_field_face('Density'   , 'value', 'face interior')
-        mom1_m    = worker%get_primary_field_face('Momentum-1', 'value', 'face interior')
-        mom2_m    = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
-        mom3_m    = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
-        energy_m  = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
-
-
-        density_m = density_m/det_jacobian_grid
-        mom1_m = mom1_m/det_jacobian_grid
-        mom2_m = mom2_m/det_jacobian_grid
-        mom3_m = mom3_m/det_jacobian_grid
-        energy_m = energy_m/det_jacobian_grid
-
+        density_m = worker%get_primary_field_value_ale_face('Density'   , 'face interior')
+        mom1_m    = worker%get_primary_field_value_ale_face('Momentum-1', 'face interior')
+        mom2_m    = worker%get_primary_field_value_ale_face('Momentum-2', 'face interior')
+        mom3_m    = worker%get_primary_field_value_ale_face('Momentum-3', 'face interior')
+        energy_m  = worker%get_primary_field_value_ale_face('Energy'    , 'face interior')
 
 
         !

@@ -87,60 +87,45 @@ contains
         type(chidg_worker_t),                       intent(inout)   :: worker
         class(properties_t),                        intent(inout)   :: prop
 
-        ! Equation indices
-        integer(ik)     :: irho, irhou, irhov, irhow, irhoE
-
-
         ! Storage at quadrature nodes
         type(AD_D), allocatable,    dimension(:) :: &
-            rho_m,      rho_p,                      &
-            rhou_m,     rhou_p,                     &
-            rhov_m,     rhov_p,                     &
-            rhow_m,     rhow_p,                     &
-            rhoe_m,     rhoe_p,                     &
-            rhor_p,     rhot_p,                     &
+            density_m,  density_p,                  &
+            mom1_m,     mom1_p,                     &
+            mom2_m,     mom2_p,                     &
+            mom3_m,     mom3_p,                     &
+            energy_m,   energy_p,                   &
             p_m,        p_p,                        &
-            H_m,        H_p,                        &
-            flux_x_m,   flux_y_m,   flux_z_m,       &
-            flux_x_p,   flux_y_p,   flux_z_p,       &
-            flux_x,     flux_y,     flux_z,         &
-            invrho_m,   invrho_p,                   &
+            enthalpy_m, enthalpy_p,                 &
+            flux_1_m,   flux_2_m,   flux_3_m,       &
+            flux_1_p,   flux_2_p,   flux_3_p,       &
+            flux_1,     flux_2,     flux_3,         &
+            invdensity_m,   invdensity_p,           &
             integrand
 
-        type(AD_D), allocatable,    dimension(:,:)  ::  &
-            flux_ref_m, flux_ref_p
-
-        real(rk), allocatable, dimension(:) ::      &
-            normx, normy, normz
-        
+        type(AD_D), allocatable,    dimension(:,:)  :: flux_ref_m, flux_ref_p
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho_m  = worker%get_primary_field_value_ale_face('Density'   , 'face interior')
-        rho_p  = worker%get_primary_field_value_ale_face('Density'   , 'face exterior')
+        density_m = worker%get_primary_field_value_ale_face('Density'   , 'face interior')
+        density_p = worker%get_primary_field_value_ale_face('Density'   , 'face exterior')
 
-        rhou_m = worker%get_primary_field_value_ale_face('Momentum-1', 'face interior')
-        rhou_p = worker%get_primary_field_value_ale_face('Momentum-1', 'face exterior')
+        mom1_m    = worker%get_primary_field_value_ale_face('Momentum-1', 'face interior')
+        mom1_p    = worker%get_primary_field_value_ale_face('Momentum-1', 'face exterior')
 
-        rhov_m = worker%get_primary_field_value_ale_face('Momentum-2', 'face interior')
-        rhov_p = worker%get_primary_field_value_ale_face('Momentum-2', 'face exterior')
+        mom2_m    = worker%get_primary_field_value_ale_face('Momentum-2', 'face interior')
+        mom2_p    = worker%get_primary_field_value_ale_face('Momentum-2', 'face exterior')
 
-        rhow_m = worker%get_primary_field_value_ale_face('Momentum-3', 'face interior')
-        rhow_p = worker%get_primary_field_value_ale_face('Momentum-3', 'face exterior')
+        mom3_m    = worker%get_primary_field_value_ale_face('Momentum-3', 'face interior')
+        mom3_p    = worker%get_primary_field_value_ale_face('Momentum-3', 'face exterior')
 
-        rhoE_m = worker%get_primary_field_value_ale_face('Energy'    , 'face interior')
-        rhoE_p = worker%get_primary_field_value_ale_face('Energy'    , 'face exterior')
+        energy_m  = worker%get_primary_field_value_ale_face('Energy'    , 'face interior')
+        energy_p  = worker%get_primary_field_value_ale_face('Energy'    , 'face exterior')
 
-        invrho_m = ONE/rho_m
-        invrho_p = ONE/rho_p
+        invdensity_m = ONE/density_m
+        invdensity_p = ONE/density_p
 
-
-
-        normx = worker%normal(1)
-        normy = worker%normal(2)
-        normz = worker%normal(3)
 
 
 
@@ -151,133 +136,187 @@ contains
         p_p = worker%get_model_field_face('Pressure', 'value', 'face exterior')
 
 
-        H_m = (rhoE_m + p_m)*invrho_m
-        H_p = (rhoE_p + p_p)*invrho_p
+        enthalpy_m = (energy_m + p_m)*invdensity_m
+        enthalpy_p = (energy_p + p_p)*invdensity_p
 
 
 
         !================================
         !       MASS FLUX
         !================================
-        flux_x_m = rhou_m
-        flux_y_m = rhov_m
-        flux_z_m = rhow_m
-        flux_ref_m = worker%post_process_boundary_advective_flux_ale(flux_x_m,flux_y_m,flux_z_m, advected_quantity=rho_m, interp_source='face interior')
+!        flux_1_m = mom1_m
+!        flux_2_m = mom2_m
+!        flux_3_m = mom3_m
+!        flux_ref_m = worker%post_process_boundary_advective_flux_ale(flux_1_m,flux_2_m,flux_3_m, advected_quantity=density_m, interp_source='face interior')
+!
+!        flux_1_p = mom1_p
+!        flux_2_p = mom2_p
+!        flux_3_p = mom3_p
+!        flux_ref_p = worker%post_process_boundary_advective_flux_ale(flux_1_p,flux_2_p,flux_3_p, advected_quantity=density_p, interp_source='face exterior')
+!
+!        flux_1 = (flux_ref_m(:,1) + flux_ref_p(:,1))
+!        flux_2 = (flux_ref_m(:,2) + flux_ref_p(:,2))
+!        flux_3 = (flux_ref_m(:,3) + flux_ref_p(:,3))
+!
+!
+!
+!        ! dot with normal vector
+!        integrand = HALF*(flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3)
+!
+!        call worker%integrate_boundary('Density',integrand)
 
-        flux_x_p = rhou_p
-        flux_y_p = rhov_p
-        flux_z_p = rhow_p
-        flux_ref_p = worker%post_process_boundary_advective_flux_ale(flux_x_p,flux_y_p,flux_z_p, advected_quantity=rho_p, interp_source='face exterior')
 
-        flux_x = (flux_ref_m(:,1) + flux_ref_p(:,1))
-        flux_y = (flux_ref_m(:,2) + flux_ref_p(:,2))
-        flux_z = (flux_ref_m(:,3) + flux_ref_p(:,3))
+        flux_1_m = mom1_m
+        flux_2_m = mom2_m
+        flux_3_m = mom3_m
 
+        flux_1_p = mom1_p
+        flux_2_p = mom2_p
+        flux_3_p = mom3_p
 
-
-        ! dot with normal vector
-        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
-
-        call worker%integrate_boundary('Density',integrand)
+        call worker%integrate_boundary_average('Density','Advective',       &
+                                                flux_1_m,flux_2_m,flux_3_m, &   
+                                                flux_1_p,flux_2_p,flux_3_p)
 
 
         !================================
         !       X-MOMENTUM FLUX
         !================================
-        flux_x_m = (rhou_m*rhou_m)*invrho_m + p_m
-        flux_y_m = (rhou_m*rhov_m)*invrho_m
-        flux_z_m = (rhou_m*rhow_m)*invrho_m
-        flux_ref_m = worker%post_process_boundary_advective_flux_ale(flux_x_m,flux_y_m,flux_z_m, advected_quantity=rhou_m, interp_source='face interior')
+!        flux_1_m = (mom1_m*mom1_m)*invdensity_m + p_m
+!        flux_2_m = (mom1_m*mom2_m)*invdensity_m
+!        flux_3_m = (mom1_m*mom3_m)*invdensity_m
+!        flux_ref_m = worker%post_process_boundary_advective_flux_ale(flux_1_m,flux_2_m,flux_3_m, advected_quantity=mom1_m, interp_source='face interior')
+!
+!        flux_1_p = (mom1_p*mom1_p)*invdensity_p + p_p
+!        flux_2_p = (mom1_p*mom2_p)*invdensity_p
+!        flux_3_p = (mom1_p*mom3_p)*invdensity_p
+!        flux_ref_p = worker%post_process_boundary_advective_flux_ale(flux_1_p,flux_2_p,flux_3_p, advected_quantity=mom1_p, interp_source='face exterior')
+!
+!        flux_1 = (flux_ref_m(:,1) + flux_ref_p(:,1))
+!        flux_2 = (flux_ref_m(:,2) + flux_ref_p(:,2))
+!        flux_3 = (flux_ref_m(:,3) + flux_ref_p(:,3))
+!
+!
+!        ! dot with normal vector
+!        integrand = HALF*(flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3)
+!
+!        call worker%integrate_boundary('Momentum-1',integrand)
 
-        flux_x_p = (rhou_p*rhou_p)*invrho_p + p_p
-        flux_y_p = (rhou_p*rhov_p)*invrho_p
-        flux_z_p = (rhou_p*rhow_p)*invrho_p
-        flux_ref_p = worker%post_process_boundary_advective_flux_ale(flux_x_p,flux_y_p,flux_z_p, advected_quantity=rhou_p, interp_source='face exterior')
+        flux_1_m = (mom1_m*mom1_m)*invdensity_m + p_m
+        flux_2_m = (mom1_m*mom2_m)*invdensity_m
+        flux_3_m = (mom1_m*mom3_m)*invdensity_m
 
-        flux_x = (flux_ref_m(:,1) + flux_ref_p(:,1))
-        flux_y = (flux_ref_m(:,2) + flux_ref_p(:,2))
-        flux_z = (flux_ref_m(:,3) + flux_ref_p(:,3))
+        flux_1_p = (mom1_p*mom1_p)*invdensity_p + p_p
+        flux_2_p = (mom1_p*mom2_p)*invdensity_p
+        flux_3_p = (mom1_p*mom3_p)*invdensity_p
 
-
-        ! dot with normal vector
-        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
-
-        call worker%integrate_boundary('Momentum-1',integrand)
-
+        call worker%integrate_boundary_average('Momentum-1','Advective',    &
+                                                flux_1_m,flux_2_m,flux_3_m, &   
+                                                flux_1_p,flux_2_p,flux_3_p)
 
         !================================
         !       Y-MOMENTUM FLUX
         !================================
-        flux_x_m = (rhov_m*rhou_m)*invrho_m
-        flux_y_m = (rhov_m*rhov_m)*invrho_m + p_m
-        flux_z_m = (rhov_m*rhow_m)*invrho_m
-        flux_ref_m = worker%post_process_boundary_advective_flux_ale(flux_x_m,flux_y_m,flux_z_m, advected_quantity=rhov_m, interp_source='face interior')
+!        flux_1_m = (mom2_m*mom1_m)*invdensity_m
+!        flux_2_m = (mom2_m*mom2_m)*invdensity_m + p_m
+!        flux_3_m = (mom2_m*mom3_m)*invdensity_m
+!        flux_ref_m = worker%post_process_boundary_advective_flux_ale(flux_1_m,flux_2_m,flux_3_m, advected_quantity=mom2_m, interp_source='face interior')
+!
+!        flux_1_p = (mom2_p*mom1_p)*invdensity_p
+!        flux_2_p = (mom2_p*mom2_p)*invdensity_p + p_p
+!        flux_3_p = (mom2_p*mom3_p)*invdensity_p
+!        flux_ref_p = worker%post_process_boundary_advective_flux_ale(flux_1_p,flux_2_p,flux_3_p, advected_quantity=mom2_p, interp_source='face exterior')
+!
+!        flux_1 = (flux_ref_m(:,1) + flux_ref_p(:,1))
+!        flux_2 = (flux_ref_m(:,2) + flux_ref_p(:,2))
+!        flux_3 = (flux_ref_m(:,3) + flux_ref_p(:,3))
+!
+!        ! dot with normal vector
+!        integrand = HALF*(flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3)
+!
+!        call worker%integrate_boundary('Momentum-2',integrand)
 
-        flux_x_p = (rhov_p*rhou_p)*invrho_p
-        flux_y_p = (rhov_p*rhov_p)*invrho_p + p_p
-        flux_z_p = (rhov_p*rhow_p)*invrho_p
-        flux_ref_p = worker%post_process_boundary_advective_flux_ale(flux_x_p,flux_y_p,flux_z_p, advected_quantity=rhov_p, interp_source='face exterior')
+        flux_1_m = (mom2_m*mom1_m)*invdensity_m
+        flux_2_m = (mom2_m*mom2_m)*invdensity_m + p_m
+        flux_3_m = (mom2_m*mom3_m)*invdensity_m
 
-        flux_x = (flux_ref_m(:,1) + flux_ref_p(:,1))
-        flux_y = (flux_ref_m(:,2) + flux_ref_p(:,2))
-        flux_z = (flux_ref_m(:,3) + flux_ref_p(:,3))
+        flux_1_p = (mom2_p*mom1_p)*invdensity_p
+        flux_2_p = (mom2_p*mom2_p)*invdensity_p + p_p
+        flux_3_p = (mom2_p*mom3_p)*invdensity_p
 
-
-
-        ! dot with normal vector
-        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
-
-        call worker%integrate_boundary('Momentum-2',integrand)
+        call worker%integrate_boundary_average('Momentum-2','Advective',    &
+                                                flux_1_m,flux_2_m,flux_3_m, &   
+                                                flux_1_p,flux_2_p,flux_3_p)
 
 
         !================================
         !       Z-MOMENTUM FLUX
         !================================
-        flux_x_m = (rhow_m*rhou_m)*invrho_m
-        flux_y_m = (rhow_m*rhov_m)*invrho_m
-        flux_z_m = (rhow_m*rhow_m)*invrho_m + p_m
-        flux_ref_m = worker%post_process_boundary_advective_flux_ale(flux_x_m,flux_y_m,flux_z_m, advected_quantity=rhow_m, interp_source='face interior')
+!        flux_1_m = (mom3_m*mom1_m)*invdensity_m
+!        flux_2_m = (mom3_m*mom2_m)*invdensity_m
+!        flux_3_m = (mom3_m*mom3_m)*invdensity_m + p_m
+!        flux_ref_m = worker%post_process_boundary_advective_flux_ale(flux_1_m,flux_2_m,flux_3_m, advected_quantity=mom3_m, interp_source='face interior')
+!
+!        flux_1_p = (mom3_p*mom1_p)*invdensity_p
+!        flux_2_p = (mom3_p*mom2_p)*invdensity_p
+!        flux_3_p = (mom3_p*mom3_p)*invdensity_p + p_p
+!        flux_ref_p = worker%post_process_boundary_advective_flux_ale(flux_1_p,flux_2_p,flux_3_p, advected_quantity=mom3_p, interp_source='face exterior')
+!
+!        flux_1 = (flux_ref_m(:,1) + flux_ref_p(:,1))
+!        flux_2 = (flux_ref_m(:,2) + flux_ref_p(:,2))
+!        flux_3 = (flux_ref_m(:,3) + flux_ref_p(:,3))
+!
+!        ! dot with normal vector
+!        integrand = HALF*(flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3)
+!
+!        call worker%integrate_boundary('Momentum-3',integrand)
 
-        flux_x_p = (rhow_p*rhou_p)*invrho_p
-        flux_y_p = (rhow_p*rhov_p)*invrho_p
-        flux_z_p = (rhow_p*rhow_p)*invrho_p + p_p
-        flux_ref_p = worker%post_process_boundary_advective_flux_ale(flux_x_p,flux_y_p,flux_z_p, advected_quantity=rhow_p, interp_source='face exterior')
+        flux_1_m = (mom3_m*mom1_m)*invdensity_m
+        flux_2_m = (mom3_m*mom2_m)*invdensity_m
+        flux_3_m = (mom3_m*mom3_m)*invdensity_m + p_m
 
-        flux_x = (flux_ref_m(:,1) + flux_ref_p(:,1))
-        flux_y = (flux_ref_m(:,2) + flux_ref_p(:,2))
-        flux_z = (flux_ref_m(:,3) + flux_ref_p(:,3))
+        flux_1_p = (mom3_p*mom1_p)*invdensity_p
+        flux_2_p = (mom3_p*mom2_p)*invdensity_p
+        flux_3_p = (mom3_p*mom3_p)*invdensity_p + p_p
 
-
-        ! dot with normal vector
-        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
-
-        call worker%integrate_boundary('Momentum-3',integrand)
+        call worker%integrate_boundary_average('Momentum-3','Advective',    &
+                                                flux_1_m,flux_2_m,flux_3_m, &   
+                                                flux_1_p,flux_2_p,flux_3_p)
 
 
         !================================
         !          ENERGY FLUX
         !================================
-        flux_x_m = rhou_m*H_m
-        flux_y_m = rhov_m*H_m
-        flux_z_m = rhow_m*H_m
-        flux_ref_m = worker%post_process_boundary_advective_flux_ale(flux_x_m,flux_y_m,flux_z_m, advected_quantity=rhoE_m, interp_source='face interior')
+!        flux_1_m = mom1_m*enthalpy_m
+!        flux_2_m = mom2_m*enthalpy_m
+!        flux_3_m = mom3_m*enthalpy_m
+!        flux_ref_m = worker%post_process_boundary_advective_flux_ale(flux_1_m,flux_2_m,flux_3_m, advected_quantity=energy_m, interp_source='face interior')
+!
+!        flux_1_p = mom1_p*enthalpy_p
+!        flux_2_p = mom2_p*enthalpy_p
+!        flux_3_p = mom3_p*enthalpy_p
+!        flux_ref_p = worker%post_process_boundary_advective_flux_ale(flux_1_p,flux_2_p,flux_3_p, advected_quantity=energy_p, interp_source='face exterior')
+!
+!        flux_1 = (flux_ref_m(:,1) + flux_ref_p(:,1))
+!        flux_2 = (flux_ref_m(:,2) + flux_ref_p(:,2))
+!        flux_3 = (flux_ref_m(:,3) + flux_ref_p(:,3))
+!
+!        ! dot with normal vector
+!        integrand = HALF*(flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3)
+!
+!        call worker%integrate_boundary('Energy',integrand)
 
-        flux_x_p = rhou_p*H_p
-        flux_y_p = rhov_p*H_p
-        flux_z_p = rhow_p*H_p
-        flux_ref_p = worker%post_process_boundary_advective_flux_ale(flux_x_p,flux_y_p,flux_z_p, advected_quantity=rhoE_p, interp_source='face exterior')
+        flux_1_m = mom1_m*enthalpy_m
+        flux_2_m = mom2_m*enthalpy_m
+        flux_3_m = mom3_m*enthalpy_m
 
-        flux_x = (flux_ref_m(:,1) + flux_ref_p(:,1))
-        flux_y = (flux_ref_m(:,2) + flux_ref_p(:,2))
-        flux_z = (flux_ref_m(:,3) + flux_ref_p(:,3))
+        flux_1_p = mom1_p*enthalpy_p
+        flux_2_p = mom2_p*enthalpy_p
+        flux_3_p = mom3_p*enthalpy_p
 
-
-
-        ! dot with normal vector
-        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
-
-        call worker%integrate_boundary('Energy',integrand)
-
+        call worker%integrate_boundary_average('Energy','Advective',        &
+                                                flux_1_m,flux_2_m,flux_3_m, &   
+                                                flux_1_p,flux_2_p,flux_3_p)
 
     end subroutine compute
     !*********************************************************************************************************

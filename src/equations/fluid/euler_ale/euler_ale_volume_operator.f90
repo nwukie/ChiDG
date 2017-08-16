@@ -81,13 +81,9 @@ contains
         type(chidg_worker_t),           intent(inout)   :: worker
         class(properties_t),            intent(inout)   :: prop
 
-        ! Equation indices
-        integer(ik)    :: irho, irhou, irhov, irhow, irhoE
-
-
-        type(AD_D), allocatable, dimension(:) ::    &
-            rho, rhou, rhov, rhow, rhoE, p, H,      &
-            flux_x, flux_y, flux_z, invrho
+        type(AD_D), allocatable, dimension(:) ::            &
+            density, mom1, mom2, mom3, energy, p, enthalpy, &
+            flux_1, flux_2, flux_3, invdensity
 
 
         type(AD_D), allocatable, dimension(:,:)  :: flux
@@ -96,14 +92,14 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho  = worker%get_primary_field_value_ale_element('Density'   )
-        rhou = worker%get_primary_field_value_ale_element('Momentum-1')
-        rhov = worker%get_primary_field_value_ale_element('Momentum-2')
-        rhow = worker%get_primary_field_value_ale_element('Momentum-3')
-        rhoE = worker%get_primary_field_value_ale_element('Energy'    )
+        density = worker%get_primary_field_value_ale_element('Density'   )
+        mom1    = worker%get_primary_field_value_ale_element('Momentum-1')
+        mom2    = worker%get_primary_field_value_ale_element('Momentum-2')
+        mom3    = worker%get_primary_field_value_ale_element('Momentum-3')
+        energy  = worker%get_primary_field_value_ale_element('Energy'    )
 
 
-        invrho = ONE/rho
+        invdensity = ONE/density
     
 
 
@@ -112,15 +108,15 @@ contains
         !
         p = worker%get_model_field_element('Pressure','value')
 
-        H = (rhoE + p)*invrho
+        enthalpy = (energy + p)*invdensity
 
         !===========================
         !        MASS FLUX
         !===========================
-        flux_x = rhou
-        flux_y = rhov
-        flux_z = rhow
-        flux = worker%post_process_volume_advective_flux_ale(flux_x,flux_y,flux_z, advected_quantity=rho)
+        flux_1 = mom1
+        flux_2 = mom2
+        flux_3 = mom3
+        flux = worker%post_process_volume_advective_flux_ale(flux_1,flux_2,flux_3, advected_quantity=density)
 
         call worker%integrate_volume('Density',flux(:,1),flux(:,2),flux(:,3))
 
@@ -128,10 +124,10 @@ contains
         !===========================
         !     X-MOMENTUM FLUX
         !===========================
-        flux_x = (rhou*rhou)*invrho  +  p
-        flux_y = (rhou*rhov)*invrho
-        flux_z = (rhou*rhow)*invrho
-        flux = worker%post_process_volume_advective_flux_ale(flux_x,flux_y,flux_z, advected_quantity=rhou)
+        flux_1 = (mom1*mom1)*invdensity  +  p
+        flux_2 = (mom1*mom2)*invdensity
+        flux_3 = (mom1*mom3)*invdensity
+        flux = worker%post_process_volume_advective_flux_ale(flux_1,flux_2,flux_3, advected_quantity=mom1)
         
         call worker%integrate_volume('Momentum-1',flux(:,1),flux(:,2),flux(:,3))
 
@@ -139,30 +135,30 @@ contains
         !============================
         !     Y-MOMENTUM FLUX
         !============================
-        flux_x = (rhov*rhou)*invrho
-        flux_y = (rhov*rhov)*invrho  +  p
-        flux_z = (rhov*rhow)*invrho
-        flux = worker%post_process_volume_advective_flux_ale(flux_x,flux_y,flux_z, advected_quantity=rhov)
+        flux_1 = (mom2*mom1)*invdensity
+        flux_2 = (mom2*mom2)*invdensity  +  p
+        flux_3 = (mom2*mom3)*invdensity
+        flux = worker%post_process_volume_advective_flux_ale(flux_1,flux_2,flux_3, advected_quantity=mom2)
         
         call worker%integrate_volume('Momentum-2',flux(:,1),flux(:,2),flux(:,3))
 
         !============================
         !     Z-MOMENTUM FLUX
         !============================
-        flux_x = (rhow*rhou)*invrho
-        flux_y = (rhow*rhov)*invrho
-        flux_z = (rhow*rhow)*invrho  +  p
-        flux = worker%post_process_volume_advective_flux_ale(flux_x,flux_y,flux_z, advected_quantity=rhow)
+        flux_1 = (mom3*mom1)*invdensity
+        flux_2 = (mom3*mom2)*invdensity
+        flux_3 = (mom3*mom3)*invdensity  +  p
+        flux = worker%post_process_volume_advective_flux_ale(flux_1,flux_2,flux_3, advected_quantity=mom3)
 
         call worker%integrate_volume('Momentum-3',flux(:,1),flux(:,2),flux(:,3))
 
         !============================
         !       ENERGY FLUX
         !============================
-        flux_x = rhou*H
-        flux_y = rhov*H
-        flux_z = rhow*H
-        flux = worker%post_process_volume_advective_flux_ale(flux_x,flux_y,flux_z, advected_quantity=rhoE)
+        flux_1 = mom1*enthalpy
+        flux_2 = mom2*enthalpy
+        flux_3 = mom3*enthalpy
+        flux = worker%post_process_volume_advective_flux_ale(flux_1,flux_2,flux_3, advected_quantity=energy)
 
         call worker%integrate_volume('Energy',flux(:,1),flux(:,2),flux(:,3))
 

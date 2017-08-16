@@ -45,6 +45,8 @@ module type_properties
         procedure   :: nmodel_fields
         procedure   :: nio_fields
 
+        procedure   :: clear_io_fields
+
     end type properties_t
     !*********************************************************************************************
 
@@ -775,6 +777,19 @@ contains
 
 
 
+    !>  Clear any IO fields that have been added.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   8/16/2017
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine clear_io_fields(self)
+        class(properties_t),    intent(inout)   :: self
+
+        deallocate(self%io_fields)
+
+    end subroutine clear_io_fields
+    !******************************************************************************************
 
 
 

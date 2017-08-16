@@ -19,6 +19,7 @@ add_lib_sources(
                 eqn_flat_plate_zonal_rans.f90
                 eqn_navier_stokes_av.f90
                 eqn_laminar_navier_stokes.f90
+                eqn_laminar_navier_stokes_io.f90
                 eqn_laminar_navier_stokes_ale.f90
                 eqn_rans_lowcache.f90
                 mod_fluid.f90

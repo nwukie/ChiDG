@@ -32,6 +32,7 @@ module mod_equations
     use eqn_flat_plate_zonal_rans,          only: flat_plate_zonal_rans
     use eqn_navier_stokes_av,               only: navier_stokes_av
     use eqn_laminar_navier_stokes,          only: laminar_navier_stokes
+    use eqn_laminar_navier_stokes_io,       only: laminar_navier_stokes_io
     use eqn_laminar_navier_stokes_ale,      only: laminar_navier_stokes_ale
     use eqn_rans_lowcache,                  only: rans_lowcache
     use eqn_wall_distance,                  only: wall_distance
@@ -135,6 +136,7 @@ contains
         type(flat_plate_zonal_rans)      :: flat_plate_zonal_rans_builder
         type(navier_stokes_av)           :: navier_stokes_av_builder
         type(laminar_navier_stokes)      :: laminar_navier_stokes_builder
+        type(laminar_navier_stokes_io)   :: laminar_navier_stokes_io_builder
         type(laminar_navier_stokes_ale)  :: laminar_navier_stokes_ale_builder
         type(rans_lowcache)              :: rans_lowcache_builder
         type(wall_distance)              :: wall_distance_builder
@@ -165,6 +167,7 @@ contains
             call equation_builder_factory%register(flat_plate_zonal_rans_builder)
             call equation_builder_factory%register(navier_stokes_av_builder)
             call equation_builder_factory%register(laminar_navier_stokes_builder)
+            call equation_builder_factory%register(laminar_navier_stokes_io_builder)
             call equation_builder_factory%register(laminar_navier_stokes_ale_builder)
             call equation_builder_factory%register(rans_lowcache_builder)
             call equation_builder_factory%register(wall_distance_builder)

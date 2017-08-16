@@ -110,12 +110,12 @@ contains
 
         type(AD_D), allocatable, dimension(:,:) :: grad_density, grad_mom1, grad_mom2, grad_mom3, grad_energy
 
-        det_jacobian_grid = worker%get_det_jacobian_grid_face('value','face interior')
 
 
 !        u_grid = worker%get_grid_velocity_face('u_grid','face interior')
 !        v_grid = worker%get_grid_velocity_face('v_grid','face interior')
 !        w_grid = worker%get_grid_velocity_face('w_grid','face interior')
+        det_jacobian_grid = worker%get_det_jacobian_grid_face('value','face interior')
         grid_velocity = worker%get_grid_velocity_face('face interior')
 
         !

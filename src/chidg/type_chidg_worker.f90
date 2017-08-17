@@ -132,9 +132,10 @@ module type_chidg_worker
         generic     :: integrate_volume => integrate_volume_flux, &
                                            integrate_volume_source
         procedure   :: integrate_volume_flux
+        procedure   :: integrate_volume_flux_ale
         procedure   :: integrate_volume_source
         
-        !ALE procedures
+        ! ALE procedures
         procedure   :: get_area_ratio
         procedure   :: get_grid_velocity_element
         procedure   :: get_grid_velocity_face
@@ -1309,17 +1310,12 @@ contains
 
 
         !
-        ! Get field
-        !
-        q_m = self%get_primary_field_face(primary_field,'value','face interior')
-        q_p = self%get_primary_field_face(primary_field,'value','face exterior')
-
-
-        !
         ! Compute ALE transformation
         !
         select case(trim(flux_type))
             case('Advective')
+                q_m = self%get_primary_field_face(primary_field,'value','face interior')
+                q_p = self%get_primary_field_face(primary_field,'value','face exterior')
                 flux_ref_m = self%post_process_boundary_advective_flux_ale(flux_1_m,flux_2_m,flux_3_m, advected_quantity=q_m, interp_source='face interior')
                 flux_ref_p = self%post_process_boundary_advective_flux_ale(flux_1_p,flux_2_p,flux_3_p, advected_quantity=q_p, interp_source='face exterior')
             case('Diffusive')
@@ -1370,6 +1366,15 @@ contains
 
 
 
+
+
+
+
+
+
+
+
+
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
@@ -1398,6 +1403,56 @@ contains
     !***************************************************************************************
 
 
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/22/2016
+    !!
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine integrate_volume_flux_ale(self,primary_field,flux_type,flux_1,flux_2,flux_3)
+        class(chidg_worker_t),  intent(in)      :: self
+        character(*),           intent(in)      :: primary_field
+        character(*),           intent(in)      :: flux_type
+        type(AD_D),             intent(inout)   :: flux_1(:)
+        type(AD_D),             intent(inout)   :: flux_2(:)
+        type(AD_D),             intent(inout)   :: flux_3(:)
+
+        integer(ik)             :: ifield, idomain_l, eqn_ID
+        type(AD_D), allocatable :: flux(:,:), q(:)
+
+
+        idomain_l = self%element_info%idomain_l
+        eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
+        ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
+
+
+        !
+        ! Compute ALE transformation
+        !
+        select case(trim(flux_type))
+            case('Advective')
+                q = self%get_primary_field_element(primary_field,'value')
+                flux = self%post_process_volume_advective_flux_ale(flux_1,flux_2,flux_3, advected_quantity=q)
+            case('Diffusive')
+                flux = self%post_process_volume_diffusive_flux_ale(flux_1,flux_2,flux_3)
+            case default
+                call chidg_signal_one(FATAL,"worker%integrate_boundary_average: Invalid value for incoming flux_type.",trim(flux_type))
+        end select
+
+        
+        !
+        ! Integrate
+        !
+        call integrate_volume_vector_flux(self%mesh,self%solverdata,self%element_info,self%function_info,ifield,self%itime,flux(:,1),flux(:,2),flux(:,3))
+
+
+    end subroutine integrate_volume_flux_ale
+    !***************************************************************************************
 
 
 
@@ -2749,14 +2804,14 @@ contains
         grad_u_gq(:,3) = grad3_u
 
 
-   end function get_primary_field_grad_ale_face
+    end function get_primary_field_grad_ale_face
     !************************************************************************************
 
 
 
-   !
-   ! ALE flux post-processing
-   !
+    !
+    ! ALE flux post-processing
+    !
 
     !>
     !!

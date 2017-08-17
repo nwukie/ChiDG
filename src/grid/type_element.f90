@@ -1779,7 +1779,7 @@ contains
             R = -(coord_phys - coord)
 
             ! Solve linear system for Newton update
-            dcoord     = matmul(minv,R)
+            dcoord = matmul(minv,R)
 
             ! Apply Newton update
             coord_comp = coord_comp + dcoord

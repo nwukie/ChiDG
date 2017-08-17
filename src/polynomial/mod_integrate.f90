@@ -240,10 +240,10 @@ contains
         !
         ! Integrate and apply once
         !
-        associate ( weights    => mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%weights(iface),                          &
-                    jinv => mesh%domain(idomain_l)%faces(ielement_l,iface)%jinv,                                      &
-                    val        => mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%interpolator('Value',iface),             &
-                    valtrans   => transpose(mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%interpolator('Value',iface)) )
+        associate ( weights  => mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%weights(iface),                          &
+                    jinv     => mesh%domain(idomain_l)%faces(ielement_l,iface)%jinv,                                            &
+                    val      => mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%interpolator('Value',iface),             &
+                    valtrans => transpose(mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%interpolator('Value',iface)) )
 
 
             !

@@ -1095,6 +1095,7 @@ contains
         integer(ik)                 :: istep, nsteps, wcount
         logical                     :: option_write_initial, option_write_final
 
+        class(chidg_t), pointer :: chidg
     
 
         call write_line("---------------------------------------------------", io_proc=GLOBAL_MASTER)

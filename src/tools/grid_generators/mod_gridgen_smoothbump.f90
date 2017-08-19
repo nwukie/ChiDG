@@ -54,7 +54,7 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------
-    subroutine create_mesh_file__smoothbump(filename,nelem_xi,nelem_eta,nelem_zeta,equation_sets,group_names,bc_state_groups)
+    subroutine create_mesh_file__smoothbump(filename,nelem_xi,nelem_eta,nelem_zeta,equation_sets,group_names,bc_state_groups,save_intermediate_files)
         character(*),           intent(in)              :: filename
         integer(ik),            intent(in)              :: nelem_xi
         integer(ik),            intent(in)              :: nelem_eta
@@ -62,10 +62,11 @@ contains
         type(string_t),         intent(in), optional    :: equation_sets(:)
         type(string_t),         intent(in), optional    :: group_names(:,:)
         type(bc_state_group_t), intent(in), optional    :: bc_state_groups(:)
+        logical,                intent(in), optional    :: save_intermediate_files
 
         class(bc_state_t),  allocatable             :: bc_state
-        integer(HID_T)                              :: file_id, dom_id, bcface_id, bcgroup_id, patch_id
-        integer(ik)                                 :: ierr, spacedim, mapping, bcface, igroup, istate
+        integer(HID_T)                              :: file_id, dom_id, bcgroup_id, patch_id
+        integer(ik)                                 :: ierr, spacedim, bcface, igroup, istate
         character(8)                                :: patch_names(6)
         type(point_t),      allocatable             :: nodes(:)
         integer(ik),        allocatable             :: elements(:,:), faces(:,:)
@@ -77,7 +78,7 @@ contains
         !
         ! Generate coordinates
         !
-        call meshgen_smoothbump_quartic(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords)
+        call meshgen_smoothbump_quartic(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords,save_intermediate_files)
 
     
 
@@ -136,9 +137,7 @@ contains
 
                 bcgroup_id = open_bc_group_hdf(file_id,bc_state_groups(igroup)%name)
 
-                !do istate = 1,bc_state_groups(igroup)%bc_states%size()
                 do istate = 1,bc_state_groups(igroup)%nbc_states()
-                    !call add_bc_state_hdf(bcgroup_id, bc_state_groups(igroup)%bc_states%at(istate))
                     call add_bc_state_hdf(bcgroup_id, bc_state_groups(igroup)%bc_state(istate)%state)
                 end do
                 call close_bc_group_hdf(bcgroup_id)
@@ -266,16 +265,17 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------
-    subroutine meshgen_smoothbump_quartic(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords)
-        integer(ik)             :: nelem_xi
-        integer(ik)             :: nelem_eta
-        integer(ik)             :: nelem_zeta
-        real(rk),   allocatable :: xcoords(:,:,:)
-        real(rk),   allocatable :: ycoords(:,:,:)
-        real(rk),   allocatable :: zcoords(:,:,:)
+    subroutine meshgen_smoothbump_quartic(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords,save_intermediate_files)
+        integer(ik),                intent(in)      :: nelem_xi
+        integer(ik),                intent(in)      :: nelem_eta
+        integer(ik),                intent(in)      :: nelem_zeta
+        real(rk),   allocatable,    intent(inout)   :: xcoords(:,:,:)
+        real(rk),   allocatable,    intent(inout)   :: ycoords(:,:,:)
+        real(rk),   allocatable,    intent(inout)   :: zcoords(:,:,:)
+        logical,    optional,       intent(in)      :: save_intermediate_files
 
         integer(ik)             :: npt_x, npt_y, npt_z, &
-                                   ierr, i, j, k, n, &
+                                   ierr, i, j, k, n,    &
                                    ipt_x, ipt_y, ipt_z
         real(rk)                :: x,y,z,alpha
 
@@ -283,9 +283,9 @@ contains
         !
         ! Compute number of points in each direction, quartic elements
         !
-        npt_x = nelem_xi*4   + 1
-        npt_y = nelem_eta*4  + 1
-        npt_z = nelem_zeta*4 + 1 
+        npt_x = 4*nelem_xi   + 1
+        npt_y = 4*nelem_eta  + 1
+        npt_z = 4*nelem_zeta + 1 
 
 
         !
@@ -320,6 +320,14 @@ contains
 
 
 
+        !
+        ! Save file if asked
+        !
+        if (present(save_intermediate_files)) then
+            if (save_intermediate_files) then
+                call write_to_plot3d(xcoords,ycoords,zcoords)
+            end if
+        end if
 
 
     end subroutine meshgen_smoothbump_quartic
@@ -328,6 +336,52 @@ contains
 
 
 
+
+
+    !>  Write smooth bump grid to Plot3D file.
+    !!
+    !!  Plot3D format:
+    !!      multi-block, double precision, unformatted
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   5/16/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------
+    subroutine write_to_plot3d(xcoords,ycoords,zcoords)
+        real(rk),   allocatable, intent(in) :: xcoords(:,:,:)
+        real(rk),   allocatable, intent(in) :: ycoords(:,:,:)
+        real(rk),   allocatable, intent(in) :: zcoords(:,:,:)
+
+        integer(ik) :: npt_i, npt_j, npt_k, i, j, k
+
+        !
+        ! Get block size
+        !
+        npt_i   = size(xcoords,1)
+        npt_j   = size(xcoords,2)
+        npt_k   = size(xcoords,3)
+        
+
+        !
+        ! Write coordinates to file
+        !
+        open(unit=7, file='smooth_bump.x', form='unformatted')
+
+        write(7) 1
+        write(7) npt_i, npt_j, npt_k
+        !write(7) (((( coord(i,j,k,n), i=1,npt_i), j=1,npt_j), k=1,npt_k), n=1,ncoords)
+        write(7) ((( xcoords(i,j,k), i=1,npt_i), j=1,npt_j), k=1,npt_k)
+        write(7) ((( ycoords(i,j,k), i=1,npt_i), j=1,npt_j), k=1,npt_k)
+        write(7) ((( zcoords(i,j,k), i=1,npt_i), j=1,npt_j), k=1,npt_k)
+
+        close(7)
+
+
+
+
+    end subroutine write_to_plot3d
+    !**********************************************************************************
 
 
 end module mod_gridgen_smoothbump

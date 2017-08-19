@@ -85,9 +85,6 @@ contains
         call chidg%set('Solution Order', integer_input=solution_order)
         call chidg%set('Time Integrator', algorithm=trim(time_string))
         call chidg%time_integrator%initialize_state(chidg%data)
-        !call chidg%init('domains')
-        !call chidg%init('communication')
-        !call chidg%init('solvers')
 
 
         !

@@ -91,27 +91,6 @@ contains
 
 
         fid = open_file_hdf(filename)
-!        !
-!        ! Check that file can be found
-!        !
-!        inquire(file=filename, exist=fileexists)
-!        if ( .not. fileexists ) then
-!            call chidg_signal_one(FATAL,"chidg_edit: file not found for editing.",filename)
-!        end if
-!
-!
-!        !
-!        ! Initialize Fortran interface
-!        !
-!        call h5open_f(ierr)
-!        if (ierr /= 0) call chidg_signal(FATAL,"chidg_edit: HDF5 Fortran interface had an error during initialization.")
-!
-!
-!        !
-!        ! Get HDF file identifier
-!        !
-!        call h5fopen_f(filename, H5F_ACC_RDWR_F, fid, ierr)
-!        if (ierr /= 0) call chidg_signal_one(FATAL,"chidg_edit: Error opening HDF5 file for editing.",filename)
 
 
 
@@ -172,9 +151,6 @@ contains
         !
         ! Close HDF5 file and Fortran interface
         !
-        !call h5fclose_f(fid, ierr)  ! Close HDF5 File
-        !if (ierr /= 0) call chidg_signal(FATAL,"chidg_edit: error closing file.")
-        !call h5close_f(ierr)        ! Close HDF5 Fortran interface
         call close_file_hdf(fid)
 
 

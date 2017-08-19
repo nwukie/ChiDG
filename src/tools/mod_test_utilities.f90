@@ -57,7 +57,8 @@ contains
                                                     group_names,                        &
                                                     bc_state_groups,                    &
                                                     nelem_xi,  nelem_eta,  nelem_zeta,  &
-                                                    clusterx)
+                                                    clusterx,                           &
+                                                    save_intermediate_files)
         character(*),                           intent(in)  :: selector
         character(*),                           intent(in)  :: filename
         type(string_t),             optional,   intent(in)  :: equation_sets(:)
@@ -67,6 +68,7 @@ contains
         integer(ik),                optional,   intent(in)  :: nelem_eta
         integer(ik),                optional,   intent(in)  :: nelem_zeta
         integer(ik),                optional,   intent(in)  :: clusterx
+        logical,                    optional,   intent(in)  :: save_intermediate_files
 
         character(:),   allocatable :: user_msg
         integer(ik)                 :: ierr
@@ -139,7 +141,8 @@ contains
                                                            nelem_zeta      = nelem_zeta,      &
                                                            equation_sets   = equation_sets,   &
                                                            group_names     = group_names,     &
-                                                           bc_state_groups = bc_state_groups)
+                                                           bc_state_groups = bc_state_groups, &
+                                                           save_intermediate_files = save_intermediate_files)
 
             case default
                 user_msg = "create_mesh_file: There was no valid case that matched the incoming string"

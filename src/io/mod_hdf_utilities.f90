@@ -392,8 +392,9 @@ contains
     !!
     !!
     !----------------------------------------------------------------------------------------
-    function open_file_hdf(filename) result(fid)
-        character(*),   intent(in)      :: filename
+    function open_file_hdf(filename,silent) result(fid)
+        character(*),   intent(in)              :: filename
+        logical,        intent(in), optional    :: silent
 
         character(:),   allocatable :: filename_open, user_msg
         integer(HID_T)  :: fid
@@ -403,12 +404,6 @@ contains
         !
         ! Append extension if we need to
         !
-        !loc = index(filename,".h5")
-        !if (loc == 0) then
-        !    filename_open = trim(filename)//".h5"
-        !else
-        !    filename_open = trim(filename)
-        !end if
         filename_open = trim(filename)
 
         ! Check file exists
@@ -426,7 +421,7 @@ contains
         !  Open input file using default properties.
         !
         call open_hdf()
-        call write_line('   Opening file: ', filename_open, io_proc=GLOBAL_MASTER, ltrim=.false.)
+        call write_line('   Opening file: ', filename_open, io_proc=GLOBAL_MASTER, ltrim=.false., silent=silent)
         call h5fopen_f(filename_open, H5F_ACC_RDWR_F, fid, ierr)
         user_msg = "open_file_hdf: There was an error opening the file."
         if (ierr /= 0) call chidg_signal_one(FATAL,user_msg,trim(filename_open))
@@ -459,10 +454,20 @@ contains
     !!  @date   10/15/2016
     !!
     !----------------------------------------------------------------------------------------
-    subroutine close_file_hdf(fid)
-        integer(HID_T), intent(in)  :: fid
+    subroutine close_file_hdf(fid,silent)
+        integer(HID_T), intent(in)              :: fid
+        logical,        intent(in), optional    :: silent
 
-        integer :: ierr
+        character(1024) :: buf
+        integer(SIZE_T) :: name_size
+        integer         :: ierr
+
+
+        ! Get file name
+        call h5fget_name_f(fid, buf, name_size, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"close_file_hdf: error getting file name from identifier.")
+        call write_line('   Closing file: ', trim(buf), io_proc=GLOBAL_MASTER, ltrim=.false., silent=silent)
+
 
         !  Close file and Fortran interface
         call h5fclose_f(fid, ierr)

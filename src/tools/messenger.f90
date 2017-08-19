@@ -475,7 +475,7 @@ contains
     !!  @param[in]  column_width    Optional integer indicating the column width if columns was indicated.
     !!
     !------------------------------------------------------------------------------------------
-    subroutine add_to_line(linedata,delimiter,columns,column_width,color,ltrim,bold)
+    subroutine add_to_line(linedata,delimiter,columns,column_width,color,ltrim,bold,silent)
         class(*),       intent(in)              :: linedata
         character(*),   intent(in), optional    :: delimiter
         logical,        intent(in), optional    :: columns
@@ -483,11 +483,12 @@ contains
         character(*),   intent(in), optional    :: color
         logical,        intent(in), optional    :: ltrim
         logical,        intent(in), optional    :: bold
+        logical,        intent(in), optional    :: silent
 
         character(100)                  :: write_internal
         character(len=:),   allocatable :: temp, temp_a, temp_b
         integer(ik)                     :: current_width, extra_space, test_blank, width
-        logical                         :: blank_line
+        logical                         :: blank_line, silent_status
 
 
         !
@@ -662,11 +663,21 @@ contains
 
 
 
-        ! Append new text to line
-        line = line//color_begin//temp_b//color_end
+        ! Detect silence
+        if (present(silent)) then
+            silent_status = silent
+        else
+            silent_status = .false.
+        end if
 
-        ! Append delimiter
-        line = line//current_delimiter
+        ! Handle silence
+        if (.not. silent_status) then
+            ! Append new text to line
+            line = line//color_begin//temp_b//color_end
+
+            ! Append delimiter
+            line = line//current_delimiter
+        end if
 
 
     end subroutine add_to_line
@@ -689,7 +700,9 @@ contains
     !!  @date   2/3/2016
     !!
     !------------------------------------------------------------------------------------------
-    subroutine send_line()
+    subroutine send_line(silent)
+        logical,    intent(in), optional  :: silent
+
         integer :: delimiter_size
         integer :: line_size
         integer :: line_trim
@@ -697,148 +710,161 @@ contains
 
         character(:),   allocatable :: writeline, file_line
         integer                     :: section_length
-
+        logical                     :: send
 
         !
-        ! Get line section length
+        ! Detect silent or not
         !
-        if ( len(line) > msg_length ) then
-            section_length = msg_length
-        else
-            section_length = len(line)
+        send = .true.
+        if (present(silent)) then
+            if (silent) send = .false.
         end if
 
 
         !
-        ! Get line/delimiter sizes
+        ! Enable silent
         !
-        delimiter_size = len(current_delimiter)
-        line_size      = len(line)
-        line_trim      = line_size - delimiter_size
-
-
-
-        !
-        ! Remove trailing delimiter
-        !
-        line = line(1:line_trim)
-
-
-
-        !
-        ! Handle line IO. Writes the line in chunks for line-wrapping until the entire 
-        ! line has been processed.
-        !
-        writeline = line
-        section = 1
-        lend    = 0
-        !do while ( lend /= len(line) ) 
-        do while ( lend < len(line) ) 
+        if (send) then
 
             !
-            ! Set position to start writing
+            ! Get line section length
             !
-            lstart = lend + 1
-
-            !
-            ! Set position to stop writing
-            !
-            lend = lend + section_length
-
-            ! Don't go out-of-bounds
-            if (lend >= len(line)) then
-                lend = len(line)
+            if ( len(line) > msg_length ) then
+                section_length = msg_length
             else
-                ! Move backwards until a word break so we don't split words when we wrap
-                do while ( (line(lend:lend) /= " ") .and. (lend > 1))
-                    lend = lend-1
-                end do
-            end if
-
-
-            ! Make sure lend is valid and that we didn't back up too far.
-            ! This might happen for a long file path that doens't have a blank.
-            ! then the line wrapper backs up to space 0. In that case, we just write 
-            ! the whole thing.
-            if (lend == 1) lend = len(line)
-
-
-            !
-            ! Make sure to at least print something in case where was a really long solid string 
-            ! and we stepped backwards too far.
-            !
-            if (lend < lstart) then
-                lend = lstart + section_length
-            end if
-
-            !
-            ! Dont go out-of-bounds
-            !
-            if (lstart > len(line) ) then
-                exit
-            end if
-            if (lend >= len(line)) then
-                lend = len(line)
+                section_length = len(line)
             end if
 
 
             !
-            ! Get line for writing
+            ! Get line/delimiter sizes
             !
-            writeline = line(lstart:lend)
+            delimiter_size = len(current_delimiter)
+            line_size      = len(line)
+            line_trim      = line_size - delimiter_size
+
 
 
             !
-            ! Write to destination
+            ! Remove trailing delimiter
             !
-            if ( trim(IO_DESTINATION) == 'screen' ) then
-                print*, writeline
+            line = line(1:line_trim)
 
 
-            else if ( trim(IO_DESTINATION) == 'file' ) then
-                if (log_initialized) then
-                    !file_line = writeline
-                    file_line = remove_formatting(writeline)
-                    write(unit,*) file_line
+
+            !
+            ! Handle line IO. Writes the line in chunks for line-wrapping until the entire 
+            ! line has been processed.
+            !
+            writeline = line
+            section = 1
+            lend    = 0
+            !do while ( lend /= len(line) ) 
+            do while ( lend < len(line) ) 
+
+                !
+                ! Set position to start writing
+                !
+                lstart = lend + 1
+
+                !
+                ! Set position to stop writing
+                !
+                lend = lend + section_length
+
+                ! Don't go out-of-bounds
+                if (lend >= len(line)) then
+                    lend = len(line)
                 else
-                    stop "Trying to write a line, but log file not inititlized. Call chidg%init('env')"
+                    ! Move backwards until a word break so we don't split words when we wrap
+                    do while ( (line(lend:lend) /= " ") .and. (lend > 1))
+                        lend = lend-1
+                    end do
                 end if
 
 
+                ! Make sure lend is valid and that we didn't back up too far.
+                ! This might happen for a long file path that doens't have a blank.
+                ! then the line wrapper backs up to space 0. In that case, we just write 
+                ! the whole thing.
+                if (lend == 1) lend = len(line)
 
-            else if ( trim(IO_DESTINATION) == 'both' ) then
-                if (log_initialized) then
+
+                !
+                ! Make sure to at least print something in case where was a really long solid string 
+                ! and we stepped backwards too far.
+                !
+                if (lend < lstart) then
+                    lend = lstart + section_length
+                end if
+
+                !
+                ! Dont go out-of-bounds
+                !
+                if (lstart > len(line) ) then
+                    exit
+                end if
+                if (lend >= len(line)) then
+                    lend = len(line)
+                end if
+
+
+                !
+                ! Get line for writing
+                !
+                writeline = line(lstart:lend)
+
+
+                !
+                ! Write to destination
+                !
+                if ( trim(IO_DESTINATION) == 'screen' ) then
                     print*, writeline
 
-                    !file_line = writeline
-                    file_line = remove_formatting(writeline)
-                    write(unit,*) file_line
+
+                else if ( trim(IO_DESTINATION) == 'file' ) then
+                    if (log_initialized) then
+                        file_line = remove_formatting(writeline)
+                        write(unit,*) file_line
+                    else
+                        stop "Trying to write a line, but log file not inititlized. Call chidg%init('env')"
+                    end if
+
+
+
+                else if ( trim(IO_DESTINATION) == 'both' ) then
+                    if (log_initialized) then
+                        print*, writeline
+
+                        file_line = remove_formatting(writeline)
+                        write(unit,*) file_line
+
+                    else
+                        stop "Trying to write a line, but log file not inititlized. Call chidg%init('env')"
+                    end if
+
+
 
                 else
-                    stop "Trying to write a line, but log file not inititlized. Call chidg%init('env')"
+                    print*, "Error: value for IO_DESTINATION is invalid. Valid selections are 'screen', 'file', 'both'."
+
                 end if
 
 
+                !
+                ! Next line chunk to write
+                !
+                section = section + 1
 
-            else
-                print*, "Error: value for IO_DESTINATION is invalid. Valid selections are 'screen', 'file', 'both'."
-
-            end if
+            end do ! len(line) > msg_length
 
 
             !
-            ! Next line chunk to write
+            ! Clear line
             !
-            section = section + 1
+            line = ''
 
-        end do ! len(line) > msg_length
-
-
-        !
-        ! Clear line
-        !
-        line = ''
-
+        end if !silent
 
 
     end subroutine send_line

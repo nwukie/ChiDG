@@ -20,7 +20,7 @@ module type_element
     use type_element_connectivity,  only: element_connectivity_t
     use type_reference_element,     only: reference_element_t
     use DNAD_D
-    use ieee_arithmetic,            only: ieee_value, ieee_quiet_nan
+    use ieee_arithmetic,            only: ieee_value, ieee_quiet_nan, ieee_is_nan
     implicit none
 
 
@@ -697,7 +697,9 @@ contains
     !------------------------------------------------------------------------------------------
     subroutine interpolate_gradients(self)
         class(element_t),   intent(inout)   :: self
-        integer(ik)                         :: iterm,inode
+
+        character(:),   allocatable :: user_msg
+        integer(ik)                 :: iterm,inode
 
         integer(ik)                                 :: nnodes
         real(rk),   allocatable,    dimension(:,:)  :: ddxi, ddeta, ddzeta
@@ -723,6 +725,16 @@ contains
             end do
         end do
 
+        !
+        ! Check for acceptable element
+        !
+        if (any(ieee_is_nan(self%grad1)) .or. &
+            any(ieee_is_nan(self%grad2)) .or. &
+            any(ieee_is_nan(self%grad3)) ) then
+            user_msg = "element%compute_quadrature_gradients: Element failed to produce valid gradient information. &
+                        Element quality is likely not reasonable."
+            call chidg_signal(FATAL,"element%compute_quadrature_gradients: Element failed to produce valid gradient information. Element quality is likely not reasonable.")
+        end if
 
         self%grad1_trans = transpose(self%grad1)
         self%grad2_trans = transpose(self%grad2)

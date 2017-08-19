@@ -60,7 +60,8 @@ contains
                                                     group_names,                        &
                                                     bc_state_groups,                    &
                                                     nelem_xi,  nelem_eta,  nelem_zeta,  &
-                                                    clusterx, x_max_in, x_min_in)
+                                                    clusterx, save_intermediate_files,  &
+                                                    x_max_in, x_min_in)
         character(*),                           intent(in)  :: selector
         character(*),                           intent(in)  :: filename
         type(string_t),             optional,   intent(in)  :: equation_sets(:)
@@ -72,6 +73,7 @@ contains
         integer(ik),                optional,   intent(in)  :: clusterx
         real(rk),                   optional,   intent(in)  :: x_max_in
         real(rk),                   optional,   intent(in)  :: x_min_in
+        logical,                    optional,   intent(in)  :: save_intermediate_files
 
         character(:),   allocatable :: user_msg
         integer(ik)                 :: ierr
@@ -144,7 +146,8 @@ contains
                                                            nelem_zeta      = nelem_zeta,      &
                                                            equation_sets   = equation_sets,   &
                                                            group_names     = group_names,     &
-                                                           bc_state_groups = bc_state_groups)
+                                                           bc_state_groups = bc_state_groups, &
+                                                           save_intermediate_files = save_intermediate_files)
 
             !
             ! PMM

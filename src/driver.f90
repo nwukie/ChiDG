@@ -29,6 +29,7 @@ program driver
     use mod_chidg_airfoil,      only: chidg_airfoil
     use mod_chidg_clone,        only: chidg_clone
     use mod_chidg_post_hdf2tec, only: chidg_post_hdf2tec_new
+    use mod_tutorials,          only: tutorial_driver
 
     use mod_oscillating_cylinder_1, only: oscillating_cylinder
     
@@ -40,8 +41,8 @@ program driver
 
 
     integer                                     :: iarg, narg, iorder, ierr, loc, ifield
-    character(len=1024)                         :: chidg_action, filename, grid_file, solution_file, file_a, file_b, file_in, pattern
-    character(len=10)                           :: time
+    character(len=1024)                         :: chidg_action, filename, grid_file, solution_file, file_a, file_b, file_in, pattern, tutorial
+    character(len=10)                           :: time_string
     character(:),                   allocatable :: command, tmp_file
     class(function_t),              allocatable :: constant, monopole, fcn, polynomial
 
@@ -268,7 +269,7 @@ program driver
             !!
             !----------------------------------------------------------------------------
             case ('edit')
-                if (narg /= 2) call chidg_signal(FATAL,"The 'edit' action expects: chidg edit filename.h5")
+                if (narg /= 2) call chidg_signal(FATAL,"The 'edit' action expects to be called as: chidg edit filename.h5")
                 call get_command_argument(2,filename)
                 call chidg_edit(trim(filename))
 
@@ -302,8 +303,8 @@ program driver
             !!---------------------------------------------------------------------------
                 if (narg /= 2) call chidg_signal(FATAL,"The 'post' action expects: chidg post file.h5")
 
-                call date_and_time(time=time)
-                tmp_file = 'chidg_post_files'//time//'.txt'
+                call date_and_time(time=time_string)
+                tmp_file = 'chidg_post_files'//time_string//'.txt'
                 call get_command_argument(2,pattern)
                 command = 'ls '//trim(pattern)//' > '//tmp_file
                 call system(command)
@@ -443,10 +444,14 @@ program driver
                 call chidg_post_matplotlib(trim(grid_file),trim(solution_file))
 
             case ('airfoil')
-                if (narg /= 2) call chidg_signal(FATAL,"The 'airfoil' action expects: chidg airfoil solutionfile.h5")
+                if (narg /= 2) call chidg_signal(FATAL,"The 'airfoil' action expects to be called as: chidg airfoil solutionfile.h5")
                 call get_command_argument(2,solution_file)
                 call chidg_airfoil(trim(solution_file))
 
+            case ('tutorial')
+                if (narg /= 2) call chidg_signal(FATAL,"The 'tutorial' action expects to be called as: chidg tutorial selected_tutorial.")
+                call get_command_argument(2,tutorial)
+                call tutorial_driver(trim(tutorial))
 
             case default
                 call chidg_signal(FATAL,"We didn't understand the way chidg was called. Available chidg 'actions' are: 'edit' 'convert' 'post' 'matplotlib' and 'airfoil'.")

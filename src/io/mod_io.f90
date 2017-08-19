@@ -4,7 +4,7 @@
 !!  @date   2/3/2016
 !!
 !!
-!----------------------------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------------------
 module mod_io
 #include <messenger.h>
     use mod_kinds,      only: rk,ik
@@ -13,9 +13,9 @@ module mod_io
     implicit none
 
 
+
     ! Files
-    character(len=100),     save    :: gridfile
-    character(len=100),     save    :: gridtype
+    character(len=100),     save    :: gridfile         = 'none'
     character(len=100),     save    :: solutionfile_in  = 'none'
     character(len=100),     save    :: solutionfile_out = 'none'
 
@@ -61,6 +61,42 @@ module mod_io
     ! initial field values: function = constant
     real(rk),               save    :: initial_fields(100) = ZERO
 
+    !
+    ! Namelist Groups
+    !
+    namelist /files/                    gridfile,              &
+                                        solutionfile_in,       &
+                                        solutionfile_out
+
+    namelist /space/                    basis,                 &
+                                        solution_order,        &
+                                        spacedim
+
+    namelist /quadrature/               gq_rule
+
+
+    namelist /time/                     time_integrator,       &
+                                        dt,                    &
+                                        time_steps,            &
+                                        ttol,                  &
+                                        ntime_instances,       &
+                                        frequencies
+
+
+    namelist /nonlinear_solve/          nonlinear_solver,      &
+                                        nonlinear_steps,       &
+                                        norders_reduction,     &
+                                        cfl0,                  &
+                                        ntol
+
+    namelist /linear_solve/             linear_solver,         &
+                                        ltol,                  &
+                                        preconditioner
+
+
+    namelist /io/                       nwrite,                &
+                                        initial_write,         &
+                                        final_write
 
 contains
 
@@ -76,7 +112,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/3/2016
     !!
-    !----------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     subroutine read_input()
         use mod_ordering,   only: MAX_POLY_ORDER
 
@@ -84,7 +120,6 @@ contains
         integer :: file_unit, msg
 
         namelist /files/                    gridfile,              &
-                                            gridtype,              &
                                             solutionfile_in,       &
                                             solutionfile_out
 
@@ -159,12 +194,6 @@ contains
         ! Initialize options dictionaries
         !
 
-
-        ! Set time-integrator options
-!        call toptions%set('dt',dt)                 !
-!        call toptions%set('nsteps',time_steps)     ! TO BE REMOVED
-!        call toptions%set('nwrite',nwrite)         !
-
         ! Set nonlinear solver options
         call noptions%set('tol',ntol)
         call noptions%set('norders_reduction',norders_reduction)
@@ -177,7 +206,41 @@ contains
 
 
     end subroutine read_input
-    !*******************************************************************************************************
+    !****************************************************************************************
+
+
+
+
+
+
+    !>  Write a file containing the default namelist entries.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   5/17/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine write_namelist()
+
+        !
+        ! Write default namelist input for parameter initialization
+        !
+        open(unit=7,form='formatted',file="chidg.nml")
+        write(unit=7, nml=files)
+        write(unit=7, nml=space)
+        write(unit=7, nml=quadrature)
+        write(unit=7, nml=time)
+        write(unit=7, nml=nonlinear_solve)
+        write(unit=7, nml=linear_solve)
+        write(unit=7, nml=io)
+        close(unit=7)
+
+
+    end subroutine write_namelist
+    !****************************************************************************************
+
+
+
 
 
 

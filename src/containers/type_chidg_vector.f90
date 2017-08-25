@@ -231,6 +231,7 @@ contains
                     !
                     fmodes = mesh%domain(idom)%elems(ielem)%project(fcn)
 
+                    !
 
                     !
                     ! Store the projected modes to the solution expansion

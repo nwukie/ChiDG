@@ -12,7 +12,7 @@ module mod_chidg_convert_p3d_hdf5
 #include <messenger.h>
     use mod_kinds,              only: rk,ik, rdouble
     use mod_constants,          only: IO_DESTINATION, TWO
-    use mod_equations,          only: equation_builder_factory
+    use mod_equations,          only: equation_set_factory
     use mod_hdf_utilities,      only: initialize_file_hdf, open_file_hdf,                   &
                                       set_domain_equation_set_hdf, set_contains_grid_hdf,   &
                                       set_domain_coordinates_hdf, set_patch_hdf,            &
@@ -221,9 +221,9 @@ contains
                 if ( (ierr/=0)  ) print*, "Invalid input. Try again :)"
 
                 if (trim(eqnset_string) == '?') then
-                    call equation_builder_factory%list()
+                    call equation_set_factory%list()
                 else
-                    if ( equation_builder_factory%has(trim(eqnset_string)) ) exit
+                    if ( equation_set_factory%has(trim(eqnset_string)) ) exit
                     print*, "We didn't find '"//trim(eqnset_string)//"' registered in ChiDG :/. Try another equation and remember you can enter '?' to list the registered equation sets."
                 end if
 

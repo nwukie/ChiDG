@@ -1,6 +1,6 @@
 module type_chidg
 #include <messenger.h>
-    use mod_constants,              only: NFACES, ZERO, ONE, TWO, NO_ID
+    use mod_constants,              only: NFACES, ZERO, ONE, TWO, NO_ID, OUTPUT_RES
     use mod_equations,              only: register_equation_builders
     use mod_operators,              only: register_operators
     use mod_models,                 only: register_models
@@ -38,6 +38,7 @@ module type_chidg
 
     use mod_hdfio
     use mod_hdf_utilities
+    use mod_tecio,                  only: write_tecio
     use mod_partitioners,           only: partition_connectivity, send_partitions, &
                                           recv_partition
     use mpi_f08
@@ -121,6 +122,7 @@ module type_chidg
         procedure       :: write_mesh
         procedure       :: read_fields
         procedure       :: write_fields
+        procedure       :: produce_visualization
 
 
 
@@ -191,10 +193,10 @@ contains
                     ! equations and bcs.
                     call register_functions()
                     call register_prescribed_mesh_motion_functions()
-                    call register_models()
-                    call register_equation_builders()
                     call register_operators()
+                    call register_models()
                     call register_bcs()
+                    call register_equation_builders()
                     call initialize_grid()
                     self%envInitialized = .true.
 
@@ -459,13 +461,19 @@ contains
     !!  @param[inout] options     Dictionary for initialization options
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine set(self,selector,algorithm,integer_input,real_input,options)
-        class(chidg_t),         intent(inout)   :: self
-        character(*),           intent(in)      :: selector
-        character(*), optional, intent(in)      :: algorithm
-        integer(ik),  optional, intent(in)      :: integer_input
-        real(rk),     optional, intent(in)      :: real_input
-        type(dict_t), optional, intent(inout)   :: options 
+    subroutine set(self,selector,algorithm,integer_input,real_input,options,cfl0,tol,nsteps,nwrite,norders_reduction,search)
+        class(chidg_t),             intent(inout)   :: self
+        character(*),               intent(in)      :: selector
+        character(*),   optional,   intent(in)      :: algorithm
+        integer(ik),    optional,   intent(in)      :: integer_input
+        real(rk),       optional,   intent(in)      :: real_input
+        type(dict_t),   optional,   intent(inout)   :: options 
+        real(rk),       optional,   intent(in)      :: cfl0
+        real(rk),       optional,   intent(in)      :: tol
+        integer(ik),    optional,   intent(in)      :: nsteps
+        integer(ik),    optional,   intent(in)      :: nwrite
+        integer(rk),    optional,   intent(in)      :: norders_reduction
+        logical,        optional,   intent(in)      :: search
 
         character(:),   allocatable :: user_msg
         integer(ik)                 :: ierr
@@ -523,6 +531,12 @@ contains
                 if (allocated(self%nonlinear_solver)) deallocate(self%nonlinear_solver)
                 call create_nonlinear_solver(algorithm,self%nonlinear_solver,options)
 
+                if (present(cfl0))   self%nonlinear_solver%cfl0   = cfl0
+                if (present(tol))    self%nonlinear_solver%tol    = tol
+                if (present(nsteps)) self%nonlinear_solver%nsteps = nsteps
+                if (present(nwrite)) self%nonlinear_solver%nwrite = nwrite
+                if (present(search)) self%nonlinear_solver%search = search
+                if (present(norders_reduction)) self%nonlinear_solver%norders_reduction = norders_reduction
 
 
             !
@@ -532,6 +546,7 @@ contains
                 if (allocated(self%linear_solver)) deallocate(self%linear_solver)
                 call create_linear_solver(algorithm,self%linear_solver,options)
 
+                if (present(tol)) self%linear_solver%tol = tol
 
             !
             ! Allocation for preconditioner
@@ -594,9 +609,9 @@ contains
     !!  boundar functions are overridden with neumann boundary conditions.
     !!
     !------------------------------------------------------------------------------------------
-    subroutine read_mesh(self,gridfile,equation_set, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield, bc_periodic, partitions_in, interpolation, level)
+    subroutine read_mesh(self,grid_file,equation_set, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield, bc_periodic, partitions_in, interpolation, level)
         class(chidg_t),     intent(inout)               :: self
-        character(*),       intent(in)                  :: gridfile
+        character(*),       intent(in)                  :: grid_file
         character(*),       intent(in),     optional    :: equation_set
         class(bc_state_t),  intent(in),     optional    :: bc_wall
         class(bc_state_t),  intent(in),     optional    :: bc_inlet
@@ -616,7 +631,7 @@ contains
         !
         ! Read domain geometry. Also performs partitioning.
         !
-        call self%read_mesh_grids(gridfile,equation_set,partitions_in)
+        call self%read_mesh_grids(grid_file,equation_set,partitions_in)
 
 
 
@@ -626,16 +641,16 @@ contains
         !
         ! Read boundary conditions.
         !
-        call self%read_mesh_boundary_conditions(gridfile, bc_wall,        &
-                                                          bc_inlet,       &
-                                                          bc_outlet,      &
-                                                          bc_symmetry,    &
-                                                          bc_farfield,    &
-                                                          bc_periodic )
+        call self%read_mesh_boundary_conditions(grid_file, bc_wall,        &
+                                                           bc_inlet,       &
+                                                           bc_outlet,      &
+                                                           bc_symmetry,    &
+                                                           bc_farfield,    &
+                                                           bc_periodic )
 
 
                                                       
-        call self%read_prescribedmeshmotions(gridfile)
+        call self%read_prescribedmeshmotions(grid_file)
 
         !
         ! Initialize data
@@ -671,9 +686,9 @@ contains
     !!  TODO: Generalize spacedim
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine read_mesh_grids(self,gridfile,equation_set, partitions_in)
+    subroutine read_mesh_grids(self,grid_file,equation_set, partitions_in)
         class(chidg_t),     intent(inout)               :: self
-        character(*),       intent(in)                  :: gridfile
+        character(*),       intent(in)                  :: grid_file
         character(*),       intent(in),     optional    :: equation_set
         type(partition_t),  intent(in),     optional    :: partitions_in(:)
 
@@ -711,12 +726,11 @@ contains
             call write_line("   partitioning...", ltrim=.false., io_proc=GLOBAL_MASTER)
             if ( IRANK == GLOBAL_MASTER ) then
 
-                call read_global_connectivity_hdf(gridfile,connectivities)
-                call read_weights_hdf(gridfile,weights)
+                call read_global_connectivity_hdf(grid_file,connectivities)
+                call read_weights_hdf(grid_file,weights)
 
                 call partition_connectivity(connectivities, weights, partitions)
 
-                !call send_partitions(partitions,MPI_COMM_WORLD)
                 call send_partitions(partitions,ChiDG_COMM)
             end if
 
@@ -725,7 +739,6 @@ contains
             ! All ranks: Receive partition from GLOBAL_MASTER
             !
             call write_line("   distributing partitions...", ltrim=.false., io_proc=GLOBAL_MASTER)
-            !call recv_partition(self%partition,MPI_COMM_WORLD)
             call recv_partition(self%partition,ChiDG_COMM)
 
 
@@ -739,8 +752,8 @@ contains
         do iread = 0,NRANK-1
             if ( iread == IRANK ) then
 
-                call read_equations_hdf(self%data, gridfile)
-                call read_grids_hdf(gridfile,self%partition,meshdata)
+                call read_equations_hdf(self%data, grid_file)
+                call read_grids_hdf(grid_file,self%partition,meshdata)
 
             end if
             call MPI_Barrier(ChiDG_COMM,ierr)
@@ -804,12 +817,12 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/5/2016
     !!
-    !!  @param[in]  gridfile    String specifying a gridfile, including extension.
+    !!  @param[in]  grid_file    String specifying a gridfile, including extension.
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine read_mesh_boundary_conditions(self, gridfile, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield, bc_periodic)
+    subroutine read_mesh_boundary_conditions(self, grid_file, bc_wall, bc_inlet, bc_outlet, bc_symmetry, bc_farfield, bc_periodic)
         class(chidg_t),     intent(inout)               :: self
-        character(*),       intent(in)                  :: gridfile
+        character(*),       intent(in)                  :: grid_file
         class(bc_state_t),  intent(in),     optional    :: bc_wall
         class(bc_state_t),  intent(in),     optional    :: bc_inlet
         class(bc_state_t),  intent(in),     optional    :: bc_outlet
@@ -833,7 +846,7 @@ contains
         do iread = 0,NRANK-1
             if ( iread == IRANK ) then
 
-                call read_boundaryconditions_hdf(gridfile,domain_patch_data,bc_state_groups,self%partition)
+                call read_boundaryconditions_hdf(grid_file,domain_patch_data,bc_state_groups,self%partition)
 
             end if
             call MPI_Barrier(ChiDG_COMM,ierr)
@@ -872,7 +885,6 @@ contains
                 patch_name = domain_patch_data(idom)%patch_name%at(ipatch)
 
                 bc_ID = self%data%get_bc_state_group_id(group_name%get())
-                !if (bc_ID == NO_ID) call chidg_signal_one(FATAL,"chidg%read_boundary_conditions: bc state group was not found.", group_name%get())
 
                 call self%data%mesh%add_bc_patch(domain_patch_data(idom)%domain_name,               &
                                                  group_name%get(),                                  &
@@ -901,12 +913,12 @@ contains
     !!  @author Eric Wolf
     !!  @date  3/30/2017 
     !!
-    !!  @param[in]  gridfile    String specifying a gridfile, including extension.
+    !!  @param[in]  grid_file    String specifying a grid_file, including extension.
     !!
     !-----------------------------------------------------------------------------------------
-    subroutine read_prescribedmeshmotions(self, gridfile)
+    subroutine read_prescribedmeshmotions(self, grid_file)
         class(chidg_t),     intent(inout)               :: self
-        character(*),       intent(in)                  :: gridfile
+        character(*),       intent(in)                  :: grid_file
 
         character(5),           dimension(1)    :: extensions
         character(:),           allocatable     :: extension
@@ -921,7 +933,7 @@ contains
         ! Get filename extension
         !
         extensions = ['.h5']
-        extension = get_file_extension(gridfile, extensions)
+        extension = get_file_extension(grid_file, extensions)
 
 
         !
@@ -933,7 +945,7 @@ contains
 
 
                 if ( extension == '.h5' ) then
-                    call read_prescribedmeshmotion_hdf(gridfile,pmm_domain_data,pmm_group_wrapper,self%partition)
+                    call read_prescribedmeshmotion_hdf(grid_file,pmm_domain_data,pmm_group_wrapper,self%partition)
                 else
                     call chidg_signal(FATAL,"chidg%read_boundaryconditions: grid file extension not recognized")
                 end if
@@ -1224,6 +1236,98 @@ contains
 
     end subroutine write_fields
     !*****************************************************************************************
+
+
+
+
+
+    !>  Write visualization to file.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   8/24/2017
+    !!
+    !!  @param[in]  solutionfile    String containing a solution file name, including extension.
+    !!
+    !!
+    !------------------------------------------------------------------------------------------
+    subroutine produce_visualization(self,grid_file,solution_file,equation_set)
+        class(chidg_t),     intent(inout)           :: self
+        character(*),       intent(in)              :: grid_file
+        character(*),       intent(in)              :: solution_file
+        character(*),       intent(in), optional    :: equation_set
+
+        character(:),   allocatable :: user_msg, time_integrator, solution_file_prefix
+        integer(ik),    allocatable :: solution_orders(:)
+        integer(HID_T)              :: fid
+        
+
+        call write_line(' ', ltrim=.false.,          io_proc=GLOBAL_MASTER)
+        call write_line('Writing visualization... ', io_proc=GLOBAL_MASTER)
+
+
+        !
+        ! Check we are running serial
+        !
+        user_msg = "chidg%produce_visualization: We currently can only write &
+                    visualization files in serial. Please run using a single process."
+        if (NRANK > 1) call chidg_signal(FATAL,user_msg)
+
+
+
+        !
+        ! Get properties from solution_file and set
+        !
+        fid = open_file_hdf(solution_file)
+        solution_orders = get_domain_field_orders_hdf(fid)
+        time_integrator = get_time_integrator_hdf(fid)
+        call close_file_hdf(fid)
+
+
+        !
+        ! Initialize solution data storage
+        !
+        call self%set('Solution Order', integer_input=solution_orders(1))
+        call self%set('Time Integrator', algorithm=trim(time_integrator))
+        self%solution_file_in = solution_file
+
+
+        !
+        ! Read grid/solution modes and time integrator options from HDF5
+        !
+        print*, 'Present status: ', present(equation_set)
+        if (present(equation_set)) print*, 'equation_set:' , equation_set
+        self%grid_file = grid_file
+        call self%read_mesh(grid_file, interpolation='Uniform', level=OUTPUT_RES, equation_set=equation_set)
+        call self%read_fields(solution_file)
+
+
+        !
+        ! Process for getting wall distance
+        !
+        call self%process()
+
+
+        call self%time_integrator%initialize_state(self%data)
+        call self%time_integrator%read_time_options(self%data,solution_file)
+        call self%time_integrator%process_data_for_output(self%data)
+
+
+        !
+        ! Write solution
+        !
+        solution_file_prefix = get_file_prefix(solution_file,'.h5')
+        call write_tecio(self%data,solution_file_prefix, write_domains=.true., write_surfaces=.true.)
+
+
+        call write_line("Done writing visualization.", io_proc=GLOBAL_MASTER)
+        call write_line(' ', ltrim=.false.,            io_proc=GLOBAL_MASTER)
+
+    end subroutine produce_visualization
+    !*****************************************************************************************
+
+
+
+
 
 
 

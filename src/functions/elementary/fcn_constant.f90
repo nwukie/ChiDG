@@ -69,15 +69,14 @@ contains
     !!
     !--------------------------------------------------------------------
     impure elemental function compute(self,time,coord) result(val)
-        class(constant_f),  intent(inout)  :: self
-        real(rk),           intent(in)  :: time
-        type(point_t),      intent(in)  :: coord
+        class(constant_f),  intent(inout)   :: self
+        real(rk),           intent(in)      :: time
+        type(point_t),      intent(in)      :: coord
 
-        real(rk)                        :: val
+        real(rk)    :: val
 
         ! f(x,y,z) = const
         val = self%get_option_value('val')
-
 
     end function compute
     !********************************************************************

@@ -2,8 +2,10 @@ module type_evector
 #include <messenger.h>
     use mod_kinds,                      only: rk, ik
     use mod_string,                     only: string_to_upper
-    use type_equation_builder,          only: equation_builder_t
-    use type_equation_builder_wrapper,  only: equation_builder_wrapper_t
+    !use type_equation_builder,          only: equation_builder_t
+    !use type_equation_builder_wrapper,  only: equation_builder_wrapper_t
+    use type_equation_set,              only: equation_set_t
+    use type_equation_set_wrapper,      only: equation_set_wrapper_t
     implicit none
 
 
@@ -20,7 +22,9 @@ module type_evector
         integer(ik)             :: capacity_    = 0
         integer(ik)             :: buffer_      = 20
 
-        type(equation_builder_wrapper_t), allocatable :: data(:)
+        !type(equation_builder_wrapper_t), allocatable :: data(:)
+        !type(equation_set_wrapper_t), allocatable :: data(:)
+        type(equation_set_t), allocatable :: data(:)
 
     contains
 
@@ -33,8 +37,8 @@ module type_evector
         procedure, private  :: increase_capacity
 
         ! Data accessors
-        procedure, public   :: index_by_name        !< Return an index location of a specified name identifier.
-        procedure, public   :: at                   !< Return an instance from the specified index.
+        procedure, public   :: index_by_name        ! Return an index location of a specified name identifier.
+        procedure, public   :: at                   ! Return an instance from the specified index.
 
     end type evector_t
     !***************************************************************************************
@@ -98,8 +102,8 @@ contains
     !!
     !--------------------------------------------------------------------------------------
     subroutine push_back(self,element)
-        class(evector_t),           intent(inout)   :: self
-        class(equation_builder_t),  intent(in)      :: element
+        class(evector_t),       intent(inout)   :: self
+        type(equation_set_t),   intent(in)      :: element
 
         logical     :: capacity_reached
         integer(ik) :: size, ierr
@@ -118,9 +122,9 @@ contains
         ! Add element to end of vector
         !
         size = self%size()
-!        self%data(size + 1) = element
-        allocate(self%data(size + 1)%bld, source=element, stat=ierr)
-        if (ierr /= 0) call AllocationError
+        self%data(size + 1) = element
+        !allocate(self%data(size + 1)%bld, source=element, stat=ierr)
+        !if (ierr /= 0) call AllocationError
 
 
         !
@@ -176,9 +180,9 @@ contains
         class(evector_t),   intent(in)  :: self
         integer(ik),        intent(in)  :: index
 
-        integer                                     :: ierr
-        class(equation_builder_t),   allocatable    :: res
-        logical                                     :: out_of_bounds
+        integer                 :: ierr
+        logical                 :: out_of_bounds
+        type(equation_set_t)    :: res
 
         !
         ! Check vector bounds
@@ -192,9 +196,9 @@ contains
         !
         ! Allocate result
         !
-        allocate(res, source=self%data(index)%bld, stat=ierr)
-        if (ierr /= 0) call chidg_signal(FATAL,"evector%at: error returning equation set")
-!        res = self%data(index)
+        !allocate(res, source=self%data(index)%bld, stat=ierr)
+        !if (ierr /= 0) call chidg_signal(FATAL,"evector%at: error returning equation set")
+        res = self%data(index)
 
     end function at
     !*****************************************************************************************
@@ -222,9 +226,9 @@ contains
         class(evector_t),   intent(inout)   :: self
         character(*),       intent(in)      :: key
 
-        integer                         :: neqns, ieqn, ind
-        character(len=:),   allocatable :: ename
-        logical                         :: found
+        integer                     :: neqns, ieqn, ind
+        character(:),   allocatable :: ename
+        logical                     :: found
 
         neqns = self%size()
         
@@ -238,7 +242,8 @@ contains
         do ieqn = 1,neqns
 
             ! Get current equation set name
-            ename = self%data(ieqn)%bld%get_name()
+            !ename = self%data(ieqn)%bld%get_name()
+            ename = self%data(ieqn)%get_name()
 
             ! Test name against key
             found = ( string_to_upper(trim(key)) == string_to_upper(trim(ename)) )
@@ -278,8 +283,8 @@ contains
     subroutine increase_capacity(self)
         class(evector_t),   intent(inout)   :: self
 
-        integer(ik) :: newsize, ierr
-        type(equation_builder_wrapper_t), allocatable   :: temp(:)
+        integer(ik)                         :: newsize, ierr
+        type(equation_set_t),   allocatable :: temp(:)
 
 
         !

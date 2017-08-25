@@ -25,26 +25,26 @@ module type_function
     contains
 
         ! Function initialization
-        procedure(init_interface),      deferred    :: init             !< Initialize function and register options
-        procedure                                   :: add_option       !< Add option to the function definition. Only use for initialization
+        procedure(init_interface),      deferred    :: init             ! Initialize function and register options
+        procedure                                   :: add_option       ! Add option to the function definition. Only use for initialization
 
-        procedure                                   :: set_name         !< Add function name. Only use for initialization
-        procedure                                   :: get_name         !< Return the function name
+        procedure                                   :: set_name         ! Add function name. Only use for initialization
+        procedure                                   :: get_name         ! Return the function name
 
         ! Function set
-        procedure                                   :: set_option       !< Set option value
+        procedure                                   :: set_option       ! Set option value
 
         ! Function get
-        procedure                                   :: get_noptions     !< Return number of options in the function
-        procedure                                   :: get_option_key   !< Return the name of an option,  given an index
-        procedure                                   :: get_option_value !< Return the value of an option, given a key
+        procedure                                   :: get_noptions     ! Return number of options in the function
+        procedure                                   :: get_option_key   ! Return the name of an option,  given an index
+        procedure                                   :: get_option_value ! Return the value of an option, given a key
 
         ! Function check
-        procedure                                   :: check_key_exists !< Return logical indicating if a key exists in the list.
-        procedure                                   :: get_key_index    !< Return the index of a key in the current list.
+        procedure                                   :: check_key_exists ! Return logical indicating if a key exists in the list.
+        procedure                                   :: get_key_index    ! Return the index of a key in the current list.
 
         ! Function copute
-        procedure(compute_interface),   deferred    :: compute          !< Elemental function definition
+        procedure(compute_interface),   deferred    :: compute          ! Elemental function definition
 
     end type function_t
     !********************************************************************************************

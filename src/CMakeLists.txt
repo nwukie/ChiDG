@@ -25,6 +25,7 @@ add_subdirectory(interfaces)
 
 # Propagate lib_srcs list to parent directory
 add_lib_sources() 
+add_python_sources()
 
 
 # Add main executable and propagate to parent

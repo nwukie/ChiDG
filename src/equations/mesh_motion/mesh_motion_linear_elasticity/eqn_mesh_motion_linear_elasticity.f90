@@ -240,7 +240,7 @@ contains
 
 
                 ! Add a definition for mu
-                call mesh_motion_linear_elasticity_eqn%add_model('constant')
+                !call mesh_motion_linear_elasticity_eqn%add_model('constant')
 
             case default
                 user_msg = "build_mesh_motion_linear_elasticity: I didn't recognize the construction &

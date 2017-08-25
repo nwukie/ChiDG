@@ -71,9 +71,7 @@ contains
         !
         ! Call options initialization if present
         !
-        if (present(options)) then
-            call instance%set(options)
-        end if
+        if (present(options)) call instance%set(options)
 
 
 

@@ -1,0 +1,101 @@
+! Module type_equation_set defined in file type_equation_set.f90
+
+subroutine f90wrap_set_name(self, ename)
+    use type_equation_set, only: equation_set_t, set_name
+    implicit none
+    
+    type equation_set_t_ptr_type
+        type(equation_set_t), pointer :: p => NULL()
+    end type equation_set_t_ptr_type
+    type(equation_set_t_ptr_type) :: self_ptr
+    integer, intent(in), dimension(@type_size@) :: self
+    character(*), intent(in) :: ename
+    self_ptr = transfer(self, self_ptr)
+    call set_name(self=self_ptr%p, ename=ename)
+end subroutine f90wrap_set_name
+
+subroutine f90wrap_add_operator(self, string_bn)
+    use type_equation_set, only: add_operator, equation_set_t
+    implicit none
+    
+    type equation_set_t_ptr_type
+        type(equation_set_t), pointer :: p => NULL()
+    end type equation_set_t_ptr_type
+    type(equation_set_t_ptr_type) :: self_ptr
+    integer, intent(in), dimension(@type_size@) :: self
+    character(*), intent(in) :: string_bn
+    self_ptr = transfer(self, self_ptr)
+    call add_operator(self=self_ptr%p, string=string_bn)
+end subroutine f90wrap_add_operator
+
+subroutine f90wrap_add_model(self, string_bn)
+    use type_equation_set, only: equation_set_t, add_model
+    implicit none
+    
+    type equation_set_t_ptr_type
+        type(equation_set_t), pointer :: p => NULL()
+    end type equation_set_t_ptr_type
+    type(equation_set_t_ptr_type) :: self_ptr
+    integer, intent(in), dimension(@type_size@) :: self
+    character(*), intent(in) :: string_bn
+    self_ptr = transfer(self, self_ptr)
+    call add_model(self=self_ptr%p, string=string_bn)
+end subroutine f90wrap_add_model
+
+
+subroutine f90wrap_add_io_field(self, field)
+    use type_equation_set, only: equation_set_t, add_io_field
+    implicit none
+    
+    type equation_set_t_ptr_type
+        type(equation_set_t), pointer :: p => NULL()
+    end type equation_set_t_ptr_type
+    type(equation_set_t_ptr_type) :: self_ptr
+    integer, intent(in), dimension(@type_size@) :: self
+    character(*), intent(in) :: field
+    self_ptr = transfer(self, self_ptr)
+    call add_io_field(self=self_ptr%p, field=field)
+end subroutine f90wrap_add_io_field
+
+subroutine f90wrap_clear_io_fields(self)
+    use type_equation_set, only: equation_set_t, clear_io_fields
+    implicit none
+    
+    type equation_set_t_ptr_type
+        type(equation_set_t), pointer :: p => NULL()
+    end type equation_set_t_ptr_type
+    type(equation_set_t_ptr_type) :: self_ptr
+    integer, intent(in), dimension(@type_size@) :: self
+    self_ptr = transfer(self, self_ptr)
+    call clear_io_fields(self=self_ptr%p)
+end subroutine f90wrap_clear_io_fields
+
+
+subroutine f90wrap_equation_set_t_initialise(this)
+    use type_equation_set, only: equation_set_t
+    implicit none
+    
+    type equation_set_t_ptr_type
+        type(equation_set_t), pointer :: p => NULL()
+    end type equation_set_t_ptr_type
+    type(equation_set_t_ptr_type) :: this_ptr
+    integer, intent(out), dimension(@type_size@) :: this
+    allocate(this_ptr%p)
+    this = transfer(this_ptr, this)
+end subroutine f90wrap_equation_set_t_initialise
+
+subroutine f90wrap_equation_set_t_finalise(this)
+    use type_equation_set, only: equation_set_t
+    implicit none
+    
+    type equation_set_t_ptr_type
+        type(equation_set_t), pointer :: p => NULL()
+    end type equation_set_t_ptr_type
+    type(equation_set_t_ptr_type) :: this_ptr
+    integer, intent(in), dimension(@type_size@) :: this
+    this_ptr = transfer(this, this_ptr)
+    deallocate(this_ptr%p)
+end subroutine f90wrap_equation_set_t_finalise
+
+! End of module type_equation_set defined in file type_equation_set.f90
+

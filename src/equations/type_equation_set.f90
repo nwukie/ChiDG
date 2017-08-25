@@ -26,7 +26,6 @@ module type_equation_set
     use type_function_info,             only: function_info_t
     use type_pseudo_timestep,           only: pseudo_timestep_t, default_pseudo_timestep_t
     implicit none
-    private
 
 
 
@@ -68,8 +67,8 @@ module type_equation_set
         ! Models
         type(model_wrapper_t),      allocatable :: models(:)
 
-        ! IO fields
-        type(model_wrapper_t),      allocatable :: io_models(:)
+!        ! IO fields
+!        type(model_wrapper_t),      allocatable :: io_models(:)
 
         ! Pseudo time-step calculator
         class(pseudo_timestep_t),   allocatable :: pseudo_timestep
@@ -87,6 +86,8 @@ module type_equation_set
         procedure   :: add_model
         procedure   :: add_pseudo_timestep                  
 
+        procedure   :: clear_io_fields
+        procedure   :: add_io_field
 
         procedure   :: compute_boundary_advective_operators 
         procedure   :: compute_boundary_diffusive_operators 
@@ -106,21 +107,7 @@ module type_equation_set
 
 
 
-
-
-
-
-    !> Interface definitions
-    abstract interface
-        subroutine self_interface(self)
-            import equation_set_t
-            class(equation_set_t), intent(inout) :: self
-        end subroutine
-    end interface
-
-
 contains
-
 
 
 
@@ -137,7 +124,7 @@ contains
         class(equation_set_t),  intent(inout)   :: self
         character(*),           intent(in)      :: ename
 
-        self%name = ename
+        self%name = trim(ename)
 
     end subroutine set_name
     !**************************************************************************************
@@ -157,7 +144,7 @@ contains
 
         character(:),   allocatable :: ename
 
-        ename = self%name
+        ename = trim(self%name)
 
     end function get_name
     !**************************************************************************************
@@ -503,6 +490,40 @@ contains
 
 
 
+
+
+    !>  Clear/remove all IO fields.
+    !!
+    !!  @author Nathan A. Wukie 
+    !!  @date   8/24/2017
+    !!
+    !-------------------------------------------------------------------------------
+    subroutine clear_io_fields(self)
+        class(equation_set_t),  intent(inout)   :: self
+
+        call self%prop%clear_io_fields()
+
+    end subroutine clear_io_fields
+    !*******************************************************************************
+
+
+
+
+
+    !>  Add an IO field.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   8/24/2017
+    !!
+    !-------------------------------------------------------------------------------
+    subroutine add_io_field(self, field)
+        class(equation_set_t),  intent(inout)   :: self
+        character(*),           intent(in)      :: field
+        
+        call self%prop%add_io_field(field)
+        
+    end subroutine add_io_field
+    !******************************************************************************* 
 
 
 

@@ -33,4 +33,8 @@ module mod_kinds
     ! TECPLOT
     integer, parameter, public :: TEC = 4
 
+    ! Fortran type/class pointer sizes
+    integer, parameter, public  :: type_int_size  = @type_size@
+    integer, parameter, public  :: class_int_size = @class_size@
+
 end module mod_kinds

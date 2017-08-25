@@ -104,9 +104,7 @@ contains
         !
         ! Call options initialization if present
         !
-        if (present(options)) then
-            call lsolver%set(options)
-        end if
+        if (present(options)) call lsolver%set(options)
 
         
 

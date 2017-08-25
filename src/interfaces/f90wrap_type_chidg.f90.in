@@ -1,0 +1,275 @@
+!>  Opaque interface for chidg_t
+!!
+!!  @author Nathan A. Wukie
+!!  @date   8/23/2017
+!!
+!!  Generating command:
+!!      f90wrap -k kind_map -m chidg --move-methods type_chidg.f90
+!!
+!!  with some manual changes
+!!
+!!  Interfaces:
+!!      f90wrap_start_up
+!!      f90wrap_shut_down
+!!      f90wrap_project
+!!      f90wrap_set
+!!      f90wrap_read_mesh
+!!      f90wrap_read_fields
+!!      f90wrap_write_mesh
+!!      f90wrap_write_fields
+!!      f90wrap_run
+!!      f90wrap_report
+!!      f90wrap_chidg_t_initialize  (constructor)
+!!      f90wrap_chidg_t_finalise    (destructor)
+!!
+!---------------------------------------------------------------------
+subroutine f90wrap_start_up(self, activity)
+    use type_chidg, only: start_up, chidg_t
+    implicit none
+    
+    type chidg_t_ptr_type
+        type(chidg_t), pointer :: p => NULL()
+    end type chidg_t_ptr_type
+
+    integer,      intent(in), dimension(@type_size@) :: self
+    character(*), intent(in)                         :: activity
+    type(chidg_t_ptr_type)                           :: self_ptr
+
+    self_ptr = transfer(self, self_ptr)
+    call start_up(self=self_ptr%p, activity=activity)
+
+end subroutine f90wrap_start_up
+
+
+subroutine f90wrap_shut_down(self, selection)
+    use type_chidg, only: shut_down, chidg_t
+    implicit none
+    
+    type chidg_t_ptr_type
+        type(chidg_t), pointer :: p => NULL()
+    end type chidg_t_ptr_type
+    integer,      intent(in), dimension(@type_size@) :: self
+    character(*), intent(in), optional               :: selection
+    type(chidg_t_ptr_type) :: self_ptr
+
+    self_ptr = transfer(self, self_ptr)
+    call shut_down(self=self_ptr%p, selection=selection)
+
+end subroutine f90wrap_shut_down
+
+
+subroutine f90wrap_project(chidg, func, ifield)
+    use mod_kinds,      only: ik, rk
+    use type_chidg,     only: chidg_t
+    use type_function,  only: function_t
+!    use type_point,     only: point_t
+    implicit none
+    
+    type chidg_t_ptr_type
+        type(chidg_t), pointer :: p => NULL()
+    end type chidg_t_ptr_type
+    type function_t_ptr_type
+        class(function_t), pointer :: p => NULL()
+    end type function_t_ptr_type
+
+    type(chidg_t_ptr_type)    :: chidg_ptr
+    type(function_t_ptr_type) :: func_ptr
+
+    integer, intent(in), dimension(@type_size@)  :: chidg
+    integer, intent(in), dimension(@class_size@) :: func
+    integer, intent(in)                          :: ifield
+    
+    chidg_ptr = transfer(chidg, chidg_ptr)
+    func_ptr  = transfer(func,  func_ptr )
+
+    call chidg_ptr%p%data%sdata%q_in%project(chidg_ptr%p%data%mesh,func_ptr%p,int(ifield,ik))
+
+end subroutine f90wrap_project
+
+
+
+subroutine f90wrap_set(self, selector, algorithm, integer_input, real_input)
+    use type_chidg, only: set, chidg_t
+    implicit none
+    
+    type chidg_t_ptr_type
+        type(chidg_t), pointer :: p => NULL()
+    end type chidg_t_ptr_type
+    type(chidg_t_ptr_type) :: self_ptr
+    integer,      intent(in), dimension(@type_size@) :: self
+    character(*), intent(in)           :: selector
+    character(*), intent(in), optional :: algorithm
+    integer(4),   intent(in), optional :: integer_input
+    real(8),      intent(in), optional :: real_input
+
+    self_ptr = transfer(self, self_ptr)
+    call set(self=self_ptr%p, selector=selector, algorithm=algorithm, &
+             integer_input=integer_input, real_input=real_input)
+
+end subroutine f90wrap_set
+
+subroutine f90wrap_read_mesh(self, grid_file, interpolation, level, equation_set)
+    use type_chidg, only: read_mesh, chidg_t
+    implicit none
+    
+    type chidg_t_ptr_type
+        type(chidg_t), pointer :: p => NULL()
+    end type chidg_t_ptr_type
+
+    integer,      intent(in), dimension(@type_size@) :: self
+    character(*), intent(in)           :: grid_file
+    character(*), intent(in), optional :: interpolation
+    integer(4),   intent(in), optional :: level
+    character(*), intent(in), optional :: equation_set
+
+    type(chidg_t_ptr_type) :: self_ptr
+
+    self_ptr = transfer(self, self_ptr)
+    call read_mesh(self=self_ptr%p, grid_file=grid_file, interpolation=interpolation, level=level, equation_set=equation_set)
+
+end subroutine f90wrap_read_mesh
+
+
+subroutine f90wrap_read_fields(self, file_name)
+    use type_chidg, only: read_fields, chidg_t
+    implicit none
+    
+    type chidg_t_ptr_type
+        type(chidg_t), pointer :: p => NULL()
+    end type chidg_t_ptr_type
+
+    integer,      intent(in), dimension(@type_size@) :: self
+    character(*), intent(in) :: file_name
+
+    type(chidg_t_ptr_type) :: self_ptr
+
+    self_ptr = transfer(self, self_ptr)
+    call read_fields(self=self_ptr%p, file_name=file_name)
+
+end subroutine f90wrap_read_fields
+
+subroutine f90wrap_write_mesh(self, file_name)
+    use type_chidg, only: write_mesh, chidg_t
+    implicit none
+    
+    type chidg_t_ptr_type
+        type(chidg_t), pointer :: p => NULL()
+    end type chidg_t_ptr_type
+
+    integer,      intent(in), dimension(@type_size@) :: self
+    character(*), intent(in) :: file_name
+
+    type(chidg_t_ptr_type) :: self_ptr
+
+    self_ptr = transfer(self, self_ptr)
+    call write_mesh(self=self_ptr%p, file_name=file_name)
+
+end subroutine f90wrap_write_mesh
+
+subroutine f90wrap_write_fields(self, file_name)
+    use type_chidg, only: write_fields, chidg_t
+    implicit none
+    
+    type chidg_t_ptr_type
+        type(chidg_t), pointer :: p => NULL()
+    end type chidg_t_ptr_type
+
+    integer,      intent(in), dimension(@type_size@) :: self
+    character(*), intent(in) :: file_name
+
+    type(chidg_t_ptr_type) :: self_ptr
+
+    self_ptr = transfer(self, self_ptr)
+    call write_fields(self=self_ptr%p, file_name=file_name)
+
+end subroutine f90wrap_write_fields
+
+
+
+subroutine f90wrap_produce_visualization(self, grid_file, solution_file, equation_set)
+    use type_chidg, only: produce_visualization, chidg_t
+    implicit none
+    
+    type chidg_t_ptr_type
+        type(chidg_t), pointer :: p => NULL()
+    end type chidg_t_ptr_type
+
+    integer,      intent(in), dimension(@type_size@) :: self
+    character(*), intent(in)            :: grid_file
+    character(*), intent(in)            :: solution_file
+    character(*), intent(in), optional  :: equation_set
+
+    type(chidg_t_ptr_type) :: self_ptr
+
+    self_ptr = transfer(self, self_ptr)
+    call produce_visualization(self=self_ptr%p, grid_file=grid_file, solution_file=solution_file, equation_set=equation_set)
+
+end subroutine f90wrap_produce_visualization
+
+
+
+subroutine f90wrap_run(self, write_initial, write_final)
+    use type_chidg, only: run, chidg_t
+    implicit none
+    
+    type chidg_t_ptr_type
+        type(chidg_t), pointer :: p => NULL()
+    end type chidg_t_ptr_type
+
+    integer, intent(in), dimension(@type_size@) :: self
+    logical, intent(in), optional :: write_initial
+    logical, intent(in), optional :: write_final
+
+    type(chidg_t_ptr_type) :: self_ptr
+
+    self_ptr = transfer(self, self_ptr)
+    call run(self=self_ptr%p, write_initial=write_initial, write_final=write_final)
+end subroutine f90wrap_run
+
+subroutine f90wrap_report(self, selection)
+    use type_chidg, only: report, chidg_t
+    implicit none
+    
+    type chidg_t_ptr_type
+        type(chidg_t), pointer :: p => NULL()
+    end type chidg_t_ptr_type
+
+    integer, intent(in), dimension(@type_size@) :: self
+    character(*), intent(in) :: selection
+
+    type(chidg_t_ptr_type) :: self_ptr
+
+    self_ptr = transfer(self, self_ptr)
+    call report(self=self_ptr%p, selection=selection)
+
+end subroutine f90wrap_report
+
+subroutine f90wrap_chidg_t_initialise(this)
+    use type_chidg, only: chidg_t
+    implicit none
+    
+    type chidg_t_ptr_type
+        type(chidg_t), pointer :: p => NULL()
+    end type chidg_t_ptr_type
+    type(chidg_t_ptr_type) :: this_ptr
+    integer, intent(out), dimension(@type_size@) :: this
+    allocate(this_ptr%p)
+    this = transfer(this_ptr, this)
+end subroutine f90wrap_chidg_t_initialise
+
+subroutine f90wrap_chidg_t_finalise(this)
+    use type_chidg, only: chidg_t
+    implicit none
+    
+    type chidg_t_ptr_type
+        type(chidg_t), pointer :: p => NULL()
+    end type chidg_t_ptr_type
+    type(chidg_t_ptr_type) :: this_ptr
+    integer, intent(in), dimension(@type_size@) :: this
+    this_ptr = transfer(this, this_ptr)
+    deallocate(this_ptr%p)
+end subroutine f90wrap_chidg_t_finalise
+
+
+! End of module type_chidg defined in file type_chidg.f90
+

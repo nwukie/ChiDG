@@ -1,0 +1,9 @@
+from distutils.core import setup
+
+setup(name='pychidg',
+      version='${ChiDG_VERSION_MAJOR}.${ChiDG_VERSION_MINOR}',
+      package_dir={ '' : '${CMAKE_CURRENT_BINARY_DIR}' },
+      package_data={ 'pychidg' : ['_chidg.so']},
+      packages=['pychidg'],
+      )
+

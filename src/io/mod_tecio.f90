@@ -250,6 +250,7 @@ contains
                                                                                        differentiate = .false.,     &
                                                                                        lift          = .false.)
 
+
                     ! Retrieve name of current field, retrieve interpolation, write interpolation to file
                     do ifield = 1,data%eqnset(eqn_ID)%prop%nio_fields()
                         var_string = data%eqnset(eqn_ID)%prop%get_io_field_name(ifield)

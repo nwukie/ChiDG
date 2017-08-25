@@ -14,6 +14,7 @@ add_subdirectory(HB_test_cases)
 
 add_lib_sources(type_field.f90 
                 type_equation_set.f90 
+                type_equation_set_wrapper.f90
                 type_equation_builder.f90
                 type_equation_builder_wrapper.f90
                 mod_equations.f90 

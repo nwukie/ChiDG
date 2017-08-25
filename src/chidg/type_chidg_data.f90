@@ -20,7 +20,7 @@ module type_chidg_data
     use mod_string,                     only: string_t
 
     ! Factory methods
-    use mod_equations,                      only: equation_builder_factory
+    use mod_equations,                      only: equation_set_factory
 
     !Mesh motion
     use type_prescribed_mesh_motion,        only: prescribed_mesh_motion_t
@@ -259,7 +259,7 @@ contains
         !
         ! Allocate equation set - causing segfault?
         !
-!        temp_eqnset(idomain_l) = equation_builder_factory%produce(eqnset,'default')
+!        temp_eqnset(idomain_l) = equation_set_factory%produce(eqnset,'default')
 
 
 
@@ -424,7 +424,7 @@ contains
         !
         if (.not. already_added) then
             eqn_ID = self%new_equation_set()
-            self%eqnset(eqn_ID) = equation_builder_factory%produce(eqn_name, 'default')
+            self%eqnset(eqn_ID) = equation_set_factory%produce(eqn_name, 'default')
             self%eqnset(eqn_ID)%eqn_ID = eqn_ID
         end if
 

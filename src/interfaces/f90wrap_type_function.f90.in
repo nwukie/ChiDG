@@ -1,0 +1,84 @@
+!>  Opaque interface for function_t
+!!
+!!  @author Nathan A. Wukie
+!!  @date   8/23/2017
+!!
+!!  Interfaces:
+!!      f90wrap_create_function
+!!      f90wrap_set_option
+!!      f90wrap_function_t_initialize  (constructor)
+!!      f90wrap_function_t_finalise    (destructor)
+!!
+!---------------------------------------------------------------------
+subroutine f90wrap_function_t_initialise(this)
+    use type_function,  only: function_t
+    implicit none
+    
+    type function_t_ptr_type
+        class(function_t), pointer :: p => NULL()
+    end type function_t_ptr_type
+    type(function_t_ptr_type) :: this_ptr
+    integer, intent(out), dimension(@class_size@) :: this
+    this = transfer(this_ptr, this)
+end subroutine f90wrap_function_t_initialise
+
+subroutine f90wrap_function_t_finalise(this)
+    use type_function, only: function_t
+    implicit none
+    
+    type function_t_ptr_type
+        class(function_t), pointer :: p => NULL()
+    end type function_t_ptr_type
+    type(function_t_ptr_type) :: this_ptr
+    integer, intent(in), dimension(@class_size@) :: this
+    this_ptr = transfer(this, this_ptr)
+    if (associated(this_ptr%p)) deallocate(this_ptr%p)
+end subroutine f90wrap_function_t_finalise
+
+subroutine f90wrap_create_function(fcn, fcn_name)
+    use mod_kinds,      only: rk
+    use type_function,  only: function_t
+    use mod_function,   only: create_function
+    implicit none
+    
+    type function_t_ptr_type
+        class(function_t), pointer :: p => NULL()
+    end type function_t_ptr_type
+    integer,      intent(inout), dimension(@class_size@)    :: fcn
+    character(*), intent(in)                                :: fcn_name
+    type(function_t_ptr_type) :: fcn_ptr
+
+    class(function_t), allocatable      :: pa
+
+    call create_function(fcn=pa, string=fcn_name)
+
+    allocate(fcn_ptr%p, source=pa)
+    if (allocated(pa)) deallocate(pa)
+
+    fcn = transfer(fcn_ptr,fcn)
+
+
+end subroutine f90wrap_create_function
+
+
+
+subroutine f90wrap_set_option(self, key, val)
+    use mod_kinds,      only: rk
+    use type_function,  only: function_t
+    use mod_function,   only: create_function
+    implicit none
+    
+    type function_t_ptr_type
+        class(function_t), pointer :: p => NULL()
+    end type function_t_ptr_type
+    integer,        intent(in), dimension(@class_size@) :: self
+    character(*),   intent(in)                          :: key
+    real(8),        intent(in)                          :: val
+
+    type(function_t_ptr_type) :: self_ptr
+    self_ptr = transfer(self,self_ptr)
+
+    call self_ptr%p%set_option(key,val)
+
+end subroutine f90wrap_set_option
+

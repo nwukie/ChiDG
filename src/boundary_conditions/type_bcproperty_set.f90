@@ -27,19 +27,19 @@ module type_bcproperty_set
     contains
 
         ! bcfcn procedures
-        procedure   :: add              !< Procedure for adding bcfunction_t's to the list
+        procedure   :: add                  ! Procedure for adding bcfunction_t's to the list
 
 
-        procedure   :: get_nproperties          !< Return the number of properties in the set.
-        procedure   :: get_property_index       !< Return the index of a property in the set, given an identifying string.
-        procedure   :: get_property_name        !< Return a string of the property, given an index in the set.
+        procedure   :: get_nproperties      ! Return the number of properties in the set.
+        procedure   :: get_property_index   ! Return the index of a property in the set, given an identifying string.
+        procedure   :: get_property_name    ! Return a string of the property, given an index in the set.
 
         ! bcfunction%fcn procedures
-        procedure   :: set_fcn          !< Procedure for setting the particular function associated with bcfunction_t
-        procedure   :: set_fcn_option   !< Procedure for setting options of an allocated function; bcfunction_t%fcn
+        procedure   :: set_fcn              ! Procedure for setting the particular function associated with bcfunction_t
+        procedure   :: set_fcn_option       ! Procedure for setting options of an allocated function; bcfunction_t%fcn
 
         ! compute bcfunction%fcn
-        procedure   :: compute          !< Compute values from a bcfunction_t definition.
+        procedure   :: compute              ! Compute values from a bcfunction_t definition.
 
     end type bcproperty_set_t
     !********************************************************************************

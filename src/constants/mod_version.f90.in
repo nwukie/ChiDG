@@ -8,9 +8,11 @@ module mod_version
     implicit none
 
     ! ChiDG version
-    integer, parameter          :: ChiDG_VERSION_MAJOR = 0
-    integer, parameter          :: ChiDG_VERSION_MINOR = 2
+    !integer, parameter          :: ChiDG_VERSION_MAJOR = 0
+    !integer, parameter          :: ChiDG_VERSION_MINOR = 2
 
+    integer, parameter          :: ChiDG_VERSION_MAJOR = @ChiDG_VERSION_MAJOR@
+    integer, parameter          :: ChiDG_VERSION_MINOR = @ChiDG_VERSION_MINOR@
 
 
 

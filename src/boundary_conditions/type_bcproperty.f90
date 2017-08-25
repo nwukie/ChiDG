@@ -31,21 +31,21 @@ module type_bcproperty
     !----------------------------------------------------------------------------------------
     type, public :: bcproperty_t
 
-        character(len=:),   allocatable :: name_    !< Name of the property the function is applied to. Ex. Static Pressure.
-        character(len=:),   allocatable :: type_    !< Property type.  'Function' or 'Parameter'
-        class(function_t),  allocatable :: fcn      !< allocatable function class
+        character(len=:),   allocatable :: name_    ! Name of the property the function is applied to. Ex. Static Pressure.
+        character(len=:),   allocatable :: type_    ! Property type.  'Function' or 'Parameter'
+        class(function_t),  allocatable :: fcn      ! allocatable function class
 
     contains
 
-        procedure   :: status           !< Indicates if self%fcn component has been allocated
+        procedure   :: status           ! Indicates if self%fcn component has been allocated
 
-        procedure   :: set              !<  Set the name_, type_, or fcn components
-        procedure   :: get              !<  Get the name_, type_, or fcn compoenents
+        procedure   :: set              !  Set the name_, type_, or fcn components
+        procedure   :: get              !  Get the name_, type_, or fcn compoenents
 
-        procedure   :: get_name         !< Return the name of the bcproperty. Ex. StaticPressure.
-        procedure   :: get_noptions     !< Return the number of available options for the property. Depends on fcn.
-        procedure   :: get_option_key   !< Return the key of an option, given option index.
-        procedure   :: get_option_value !< Return the value of an option, given a key.
+        procedure   :: get_name         ! Return the name of the bcproperty. Ex. StaticPressure.
+        procedure   :: get_noptions     ! Return the number of available options for the property. Depends on fcn.
+        procedure   :: get_option_key   ! Return the key of an option, given option index.
+        procedure   :: get_option_value ! Return the value of an option, given a key.
 
     end type bcproperty_t
     !***************************************************************************************

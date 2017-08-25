@@ -1,6 +1,8 @@
 project(chidg Fortran)
 cmake_minimum_required(VERSION 3.7.1)
 
+set(ChiDG_VERSION_MAJOR 0)
+set(ChiDG_VERSION_MINOR 2)
 
 #-----------------------------------------------------------------------------------
 #                           Check for bad CMake version
@@ -22,6 +24,7 @@ include(cmake/macros/add_exe_sources.txt)
 include(cmake/macros/add_lib_sources.txt)
 include(cmake/macros/add_test_target.txt)
 include(cmake/macros/add_test_sources.txt)
+include(cmake/macros/add_python_sources.txt)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
@@ -130,8 +133,30 @@ if (HDF5_FOUND)
 endif()
 
 
+# Assemble libraries in form for linking with f2py Python interface
+# Accumulate low-level hdf5 libraries
+foreach(LIBFULL ${HDF5_LIBRARIES})
+    get_filename_component(LIB ${LIBFULL} NAME_WE)
+    set(TRIMMED_LIBRARIES ${TRIMMED_LIBRARIES} ${LIB})
+endforeach()
 
+# Accumulate high-level hdf5 libraries
+foreach(LIBFULL ${HDF5_HL_LIBRARIES})
+    get_filename_component(LIB ${LIBFULL} NAME_WE)
+    set(TRIMMED_LIBRARIES ${TRIMMED_LIBRARIES} ${LIB})
+endforeach()
 
+# Replace leading 'lib' with '-l' for each library 
+# so we can use it as the link statement for f2py
+foreach(LIB ${TRIMMED_LIBRARIES})
+    string(REPLACE "lib" " -l" PROCESSED_NAME ${LIB})
+    set(PYTHON_LINK_HDF5_LIBRARIES ${PYTHON_LINK_HDF5_LIBRARIES} ${PROCESSED_NAME})
+endforeach()
+
+# Get library path
+foreach(LIB ${HDF5_LIBRARIES})
+    get_filename_component(HDF5_LIBRARY_PATH ${LIB} DIRECTORY)
+endforeach()
 
 
 #----------------------------------------------------------------------------------------------
@@ -169,6 +194,26 @@ if (MPI_Fortran_FOUND)
 endif()
 
 
+
+# Assemble libraries in form for linking with f2py Python interface
+unset(TRIMMED_LIBRARIES)
+# Trim path and extension
+foreach(LIBFULL ${MPI_Fortran_LIBRARIES})
+    get_filename_component(LIB ${LIBFULL} NAME_WE)
+    set(TRIMMED_LIBRARIES ${TRIMMED_LIBRARIES} ${LIB})
+endforeach()
+
+# Replace leading 'lib' with '-l' for each library 
+# so we can use it as the link statement for f2py
+foreach(LIB ${TRIMMED_LIBRARIES})
+    string(REPLACE "lib" " -l" PROCESSED_NAME ${LIB})
+    set(PYTHON_LINK_MPI_LIBRARIES ${PYTHON_LINK_MPI_LIBRARIES} ${PROCESSED_NAME})
+endforeach()
+
+# Get library path for -L
+foreach(LIB ${MPI_Fortran_LIBRARIES})
+    get_filename_component(MPI_LIBRARY_PATH ${LIB} DIRECTORY)
+endforeach()
 
 
 
@@ -326,6 +371,12 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/constants/mod_version.f90.in" "$
 list(APPEND LIB_SRCS "${CMAKE_CURRENT_BINARY_DIR}/mod_version.f90")
 
 
+include(cmake/macros/cmake_fortran_macros.txt)
+get_fortran_type_size(type_size)
+get_fortran_class_size(class_size)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/constants/mod_kinds.f90.in" "${CMAKE_CURRENT_BINARY_DIR}/mod_kinds.f90" @ONLY)
+list(APPEND LIB_SRCS "${CMAKE_CURRENT_BINARY_DIR}/mod_kinds.f90")
+
 
 #----------------------------------------------------------------------------------------------
 #                                         Build library
@@ -361,35 +412,76 @@ set_target_properties(chidg PROPERTIES
                             
 
 
-##
-## Build python module
-##
-#if (CMAKE_BUILD_TYPE STREQUAL "Release")
-#    set(QUIET_STATUS --quiet)
-#endif()
 #
-#add_custom_command(OUTPUT "_chidg.so"
-#                   COMMAND f2py-f90wrap
-#                           -c ${PYTHON_SRCS}
-#                           -m _chidg
-#                           --build-dir "${CMAKE_BINARY_DIR}/lib"
-#                           ${CMAKE_BINARY_DIR}/lib/libcoredg.a
-#                           ${TECPLOT_LIBRARIES}
-#                           ${HDF5_INTRINSIC_LIBRARIES}
-#                           --link-lapack_opt
-#                           -I${CMAKE_BINARY_DIR}/lib
-#                           ${QUIET_STATUS}
-#                   DEPENDS ${PYTHON_SRCS} coredg
-#                   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-#                   COMMENT "f2py: Building Python module _chidg")
+# Build python module
 #
-#
-## Add a custom target <name> to trigger the generation of the python module.
-#add_custom_target(python DEPENDS "_chidg.so")
-#
-## Install the python module
-#install(FILES "${CMAKE_BINARY_DIR}/lib/_chidg.so" "${CMAKE_SOURCE_DIR}/src/interfaces/chidg.py"
-#        DESTINATION /usr/local/chidg/lib)
+if (CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(QUIET_STATUS --quiet)
+endif()
+
+
+# Copy 'pychidg' package to build directory so we can build the _chidg.so extension
+# module inside of it and install it with a parameter in distutils package_data.
+# This install behavior is set in the install script 'src/interfaces/setup.py.in'
+# which is configured by cmake with some text substitutions for version numbers
+# and directory locations.
+file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/src/interfaces/pychidg" 
+     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
+
+# PYTHON 1:
+# Build python extension module using f2py to process opaque interfaces
+set(PYTHON_INTERFACE_MODULE _chidg.so)
+add_custom_command(OUTPUT ${PYTHON_INTERFACE_MODULE}
+                   COMMAND f2py-f90wrap
+                           -c ${PYTHON_SRCS}
+                           -m _chidg
+                           --f90exec=${CMAKE_Fortran_COMPILER}
+                           --build-dir "${CMAKE_BINARY_DIR}/pychidg"
+                           ${CMAKE_BINARY_DIR}/lib/libcoredg.a
+                           ${METIS_LIBRARIES}
+                           -L${TEC_ROOT}/lib
+                           -ltecio
+                           -L${HDF5_LIBRARY_PATH}
+                           ${PYTHON_LINK_HDF5_LIBRARIES}
+                           -L${MPI_LIBRARY_PATH}
+                           ${PYTHON_LINK_MPI_LIBRARIES}
+                           --link-lapack_opt
+                           -I${CMAKE_BINARY_DIR}/lib
+                           ${QUIET_STATUS}
+                   DEPENDS ${PYTHON_SRCS} coredg
+                   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/pychidg
+                   COMMENT "f2py: Building Python module _chidg")
+
+
+# Define/configure setup.py 
+set(SETUP_PY_IN  "${CMAKE_CURRENT_SOURCE_DIR}/src/interfaces/setup.py.in")
+set(SETUP_PY     "${CMAKE_CURRENT_BINARY_DIR}/setup.py")
+set(DEPS         "${CMAKE_CURRENT_BINARY_DIR}/pychidg/__init__.py")
+set(PYTHON_BUILD "${CMAKE_CURRENT_BINARY_DIR}/python-build-stamp")
+configure_file(${SETUP_PY_IN} ${SETUP_PY})
+
+
+# PYTHON 2:
+# Build python module
+find_program(PYTHON "python")
+add_custom_command(OUTPUT ${PYTHON_BUILD}
+                   COMMAND ${PYTHON} ${SETUP_PY} build
+                   COMMAND ${CMAKE_COMMAND} -E touch ${PYTHON_BUILD}
+                   DEPENDS ${DEPS})
+
+
+# Add target 'make python'. Triggers sections PYTHON 1, PYTHON 2
+add_custom_target(python DEPENDS ${PYTHON_INTERFACE_MODULE} ${PYTHON_BUILD})
+
+
+# Define python install, if extension modules were built('make python')
+# then execute package install script 'python setup.py install'
+install(CODE 
+        "if (EXISTS ${PYTHON_BUILD}) 
+        execute_process(COMMAND ${PYTHON} ${SETUP_PY} install) 
+        endif()"
+        )
 
 
 #----------------------------------------------------------------------------------------------

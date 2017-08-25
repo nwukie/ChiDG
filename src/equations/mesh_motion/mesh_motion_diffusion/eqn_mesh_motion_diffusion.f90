@@ -247,7 +247,7 @@ contains
 
 
                 ! Add a definition for mu
-                call mesh_motion_diffusion_eqn%add_model('constant')
+                !call mesh_motion_diffusion_eqn%add_model('constant')
 
             case default
                 user_msg = "build_mesh_motion_diffusion: I didn't recognize the construction &

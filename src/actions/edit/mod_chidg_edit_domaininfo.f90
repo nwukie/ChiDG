@@ -2,7 +2,7 @@ module mod_chidg_edit_domaininfo
 #include <messenger.h>
     use mod_kinds,      only: rk, ik
     use mod_constants,  only: NFACES, XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
-    use mod_equations,  only: equation_builder_factory
+    use mod_equations,  only: equation_set_factory
     use hdf5
     use h5lt
 
@@ -320,7 +320,7 @@ contains
             call write_line("Enter equation set(? to list): ",color='blue')
 
 
-            if (list_equations) call equation_builder_factory%list()
+            if (list_equations) call equation_set_factory%list()
 
             not_found_string = "We didn't find '"//trim(equation_set)//"' registered &
                                 in ChiDG :/. Try another equation and remember you can &
@@ -346,7 +346,7 @@ contains
 
             ! Check registered, exit if valid
             else
-                if ( equation_builder_factory%has(trim(equation_set)) ) exit
+                if ( equation_set_factory%has(trim(equation_set)) ) exit
                 list_equations     = .false.
                 equation_not_found = .true.
             end if

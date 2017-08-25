@@ -30,6 +30,7 @@ module type_properties
         procedure   :: add_auxiliary_field
         procedure   :: add_model_field
         procedure   :: add_io_field
+        procedure   :: clear_io_fields
 
         procedure   :: get_primary_field_name
         procedure   :: get_primary_field_index
@@ -45,7 +46,6 @@ module type_properties
         procedure   :: nmodel_fields
         procedure   :: nio_fields
 
-        procedure   :: clear_io_fields
 
     end type properties_t
     !*********************************************************************************************

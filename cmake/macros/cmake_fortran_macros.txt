@@ -1,0 +1,67 @@
+#   Return the integer size of a Fortran 'type' pointer
+#
+#   We do this by wrapping a type() pointer in a derived type, creating
+#   an instance of this, and then interpreting it as an array of integers
+#   using the transfer procedure.
+#
+#   The returned value is the size of the integer array used to represent 
+#   the type() pointer.
+#
+macro (get_fortran_type_size type_size_out)
+
+    # Write test program to file.
+    set(test_fortran_file ${CMAKE_BINARY_DIR}/test_fortran.f90)
+    file(WRITE ${test_fortran_file}
+        "program main\n"
+        "    implicit none\n"
+        "    type :: fortran_type\n"
+        "        type(fortran_type), pointer :: p => null()\n"
+        "    end type fortran_type\n"
+        "    type(fortran_type)      :: ftype\n"
+        "    integer, allocatable    :: int_array(:)\n"
+        "    integer                 :: type_int_size\n"
+        "    type_int_size  = size(transfer(ftype,  int_array))\n"
+        "    write(*,'(I0)', advance='no'), type_int_size\n"
+        "end program main\n")
+
+    # Try compiling and running test program that computes the type/class pointer sizes.
+    try_run(RUN_RESULTS COMPILE_RESULTS
+            ${CMAKE_BINARY_DIR} ${test_fortran_file}
+            RUN_OUTPUT_VARIABLE type_size)
+
+endmacro()
+
+
+
+#   Return the integer size of a Fortran 'class' pointer
+#
+#   We do this by wrapping a class() pointer in a derived type, creating
+#   an instance of this, and then interpreting it as an array of integers
+#   using the transfer procedure.
+#
+#   The returned value is the size of the integer array used to represent 
+#   the class() pointer.
+#
+macro (get_fortran_class_size class_size_out)
+
+    # Write test program to file.
+    set(test_fortran_file ${CMAKE_BINARY_DIR}/test_fortran.f90)
+    file(WRITE ${test_fortran_file}
+        "program main\n"
+        "    implicit none\n"
+        "    type :: fortran_class\n"
+        "        class(fortran_class), pointer :: p => null()\n"
+        "    end type fortran_class\n"
+        "    type(fortran_class)     :: fclass\n"
+        "    integer, allocatable    :: int_array(:)\n"
+        "    integer                 :: class_int_size\n"
+        "    class_int_size = size(transfer(fclass, int_array))\n"
+        "    write(*,'(I0)', advance='no') class_int_size\n"
+        "end program main\n")
+
+    # Try compiling and running test program that computes the type/class pointer sizes.
+    try_run(RUN_RESULTS COMPILE_RESULTS
+            ${CMAKE_BINARY_DIR} ${test_fortran_file}
+            RUN_OUTPUT_VARIABLE class_size)
+
+endmacro()

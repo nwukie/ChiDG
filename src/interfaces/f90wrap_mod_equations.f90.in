@@ -1,0 +1,83 @@
+! Module mod_equations defined in file mod_equations.f90
+subroutine f90wrap_register_equation_set(factory_handle, eqnset_handle)
+    use mod_equations,      only: equation_set_factory_t, register
+    use type_equation_set,  only: equation_set_t
+    implicit none
+    
+    type equation_set_factory_t_ptr_type
+        type(equation_set_factory_t), pointer :: p => NULL()
+    end type equation_set_factory_t_ptr_type
+    type equation_set_t_ptr_type
+        type(equation_set_t), pointer :: p => NULL()
+    end type equation_set_t_ptr_type
+
+    type(equation_set_factory_t_ptr_type) :: factory_ptr
+    type(equation_set_t_ptr_type)         :: eqnset_ptr
+
+    integer,      intent(in), dimension(@type_size@) :: factory_handle
+    integer,      intent(in), dimension(@type_size@) :: eqnset_handle
+
+    factory_ptr = transfer(factory_handle, factory_ptr)
+    eqnset_ptr  = transfer(eqnset_handle,  eqnset_ptr)
+
+    call register(self=factory_ptr%p, eqn_set=eqnset_ptr%p)
+
+end subroutine f90wrap_register_equation_set
+
+
+
+subroutine f90wrap_equation_set_factory_t_initialise(this)
+    use mod_equations, only: equation_set_factory_t
+    implicit none
+    
+    type equation_set_factory_t_ptr_type
+        type(equation_set_factory_t), pointer :: p => NULL()
+    end type equation_set_factory_t_ptr_type
+    type(equation_set_factory_t_ptr_type) :: this_ptr
+    integer, intent(out), dimension(@type_size@) :: this
+    allocate(this_ptr%p)
+    this = transfer(this_ptr, this)
+end subroutine f90wrap_equation_set_factory_t_initialise
+
+subroutine f90wrap_equation_set_factory_t_finalise(this)
+    use mod_equations, only: equation_set_factory_t
+    implicit none
+    
+    type equation_set_factory_t_ptr_type
+        type(equation_set_factory_t), pointer :: p => NULL()
+    end type equation_set_factory_t_ptr_type
+    type(equation_set_factory_t_ptr_type) :: this_ptr
+    integer, intent(in), dimension(@type_size@) :: this
+    this_ptr = transfer(this, this_ptr)
+    deallocate(this_ptr%p)
+end subroutine f90wrap_equation_set_factory_t_finalise
+
+subroutine f90wrap_mod_equations__get__equation_set_factory(f90wrap_equation_set_factory)
+    use mod_equations, only: equation_set_factory_t, equation_set_factory
+    implicit none
+    type equation_set_factory_t_ptr_type
+        type(equation_set_factory_t), pointer :: p => NULL()
+    end type equation_set_factory_t_ptr_type
+    integer, intent(out) :: f90wrap_equation_set_factory(@type_size@)
+    type(equation_set_factory_t_ptr_type) :: equation_set_factory_ptr
+    
+    equation_set_factory_ptr%p => equation_set_factory
+    f90wrap_equation_set_factory = transfer(equation_set_factory_ptr,f90wrap_equation_set_factory)
+
+end subroutine f90wrap_mod_equations__get__equation_set_factory
+
+subroutine f90wrap_mod_equations__set__equation_set_factory(f90wrap_equation_set_factory)
+    use mod_equations, only: equation_set_factory_t, equation_set_factory
+    implicit none
+    type equation_set_factory_t_ptr_type
+        type(equation_set_factory_t), pointer :: p => NULL()
+    end type equation_set_factory_t_ptr_type
+    integer, intent(in) :: f90wrap_equation_set_factory(@type_size@)
+    type(equation_set_factory_t_ptr_type) :: equation_set_factory_ptr
+    
+    equation_set_factory_ptr = transfer(f90wrap_equation_set_factory,equation_set_factory_ptr)
+    equation_set_factory = equation_set_factory_ptr%p
+end subroutine f90wrap_mod_equations__set__equation_set_factory
+
+! End of module mod_equations defined in file mod_equations.f90
+

@@ -6,3 +6,17 @@ the git hash of the current checked-out commit. This allows us to report the
 git hash in the ChiDG log header for records and code tracking purposes.
 The generated mod_version.f90 is added to the library_sources CMake variable
 in the main configuration file, not here.
+
+
+
+
+mod_kinds.f90.in is used during the CMake configuration procedure.
+CMake generates a file mod_kinds.f90 from mod_kinds.f90.in, substituting
+the size of type/class pointers used by the Fortran compiler. Because Fortran
+pointers are more than just a memory address, the size of a pointer may not be
+the same from compiler-to-compiler, as their implementations my differ.
+Specifying these during configuration allows us to pass this type/class 
+pointers as integers between Python and Fortran in a portable way, 
+facilitating the implementation of an opaque interface.
+
+

@@ -22,7 +22,7 @@ module mod_equations
     use eqn_scalar_diffusion,               only: scalar_diffusion
     use eqn_dual_linear_advection,          only: dual_linear_advection
     use eqn_euler,                          only: euler 
-    use eqn_euler_ale,                          only: euler_ale
+    use eqn_euler_ale,                      only: euler_ale
     use eqn_navier_stokes,                  only: navier_stokes
     use eqn_navier_stokes_multi,            only: navier_stokes_multi
     use eqn_multi_navier_stokes_laminar,    only: multi_navier_stokes_laminar
@@ -36,8 +36,8 @@ module mod_equations
     use eqn_laminar_navier_stokes_ale,      only: laminar_navier_stokes_ale
     use eqn_rans_lowcache,                  only: rans_lowcache
     use eqn_wall_distance,                  only: wall_distance
-    use eqn_mesh_motion_diffusion,                  only: mesh_motion_diffusion 
-    use eqn_mesh_motion_linear_elasticity,                  only: mesh_motion_linear_elasticity
+    use eqn_mesh_motion_diffusion,          only: mesh_motion_diffusion 
+    use eqn_mesh_motion_linear_elasticity,  only: mesh_motion_linear_elasticity
     use eqn_test_case_linear_advection,     only: test_case_linear_advection
     use eqn_test_case_poisson_equation,     only: test_case_poisson_equation
     implicit none
@@ -52,25 +52,25 @@ module mod_equations
     !!
     !!
     !--------------------------------------------------------------------------------------
-    type, public :: equation_builder_factory_t
+    type, public :: equation_set_factory_t
 
-        type(evector_t) :: builders
+        type(evector_t) :: equation_sets
 
     contains
         
         procedure   :: register
-        procedure   :: produce  => build_equation_set
-        procedure   :: list     => list_equations
-        procedure   :: has      => has_equation
+        procedure   :: produce  => produce_equation_set
+        procedure   :: list     => list_equation_sets
+        procedure   :: has      => has_equation_set
 
-    end type equation_builder_factory_t
+    end type equation_set_factory_t
     !**************************************************************************************
 
 
 
 
-    type(equation_builder_factory_t)    :: equation_builder_factory
-    logical                             :: initialized = .false.
+    type(equation_set_factory_t),   target  :: equation_set_factory
+    logical                                 :: initialized = .false.
 
 
 
@@ -84,11 +84,11 @@ contains
     !!
     !!
     !--------------------------------------------------------------------------------------
-    subroutine register(self,builder)
-        class(equation_builder_factory_t),  intent(inout)   :: self
-        class(equation_builder_t),          intent(in)      :: builder
+    subroutine register(self,eqn_set)
+        class(equation_set_factory_t),  intent(inout)   :: self
+        type(equation_set_t),           intent(in)      :: eqn_set
 
-        call self%builders%push_back(builder)
+        call self%equation_sets%push_back(eqn_set)
 
     end subroutine register
     !***************************************************************************************
@@ -121,29 +121,29 @@ contains
         !
         ! Instantiate Equations
         !
-        type(scalar_advection)           :: scalar_advection_builder
-        type(scalar_advection_ale)           :: scalar_advection_ale_builder
-        type(scalar_diffusion)           :: scalar_diffusion_builder
-        type(dual_linear_advection)      :: dual_linear_advection_builder
-        type(euler)                      :: euler_builder
-        type(euler_ale)                      :: euler_ale_builder
-        type(navier_stokes)              :: navier_stokes_builder
-        type(navier_stokes_multi)        :: navier_stokes_multi_builder
-        type(multi_navier_stokes_laminar):: multi_navier_stokes_laminar_builder
-        type(joukowski_rans)             :: joukowski_rans_builder
-        type(joukowski_zonal_rans)       :: joukowski_zonal_rans_builder
-        type(flat_plate_rans)            :: flat_plate_rans_builder
-        type(flat_plate_zonal_rans)      :: flat_plate_zonal_rans_builder
-        type(navier_stokes_av)           :: navier_stokes_av_builder
-        type(laminar_navier_stokes)      :: laminar_navier_stokes_builder
-        type(laminar_navier_stokes_io)   :: laminar_navier_stokes_io_builder
-        type(laminar_navier_stokes_ale)  :: laminar_navier_stokes_ale_builder
-        type(rans_lowcache)              :: rans_lowcache_builder
-        type(wall_distance)              :: wall_distance_builder
-        type(mesh_motion_diffusion)              :: mesh_motion_diffusion_builder
-        type(mesh_motion_linear_elasticity)              :: mesh_motion_linear_elasticity_builder
-        type(test_case_linear_advection) :: test_case_linear_advection_builder
-        type(test_case_poisson_equation) :: test_case_poisson_equation_builder
+        type(scalar_advection)              :: scalar_advection_builder
+        type(scalar_advection_ale)          :: scalar_advection_ale_builder
+        type(scalar_diffusion)              :: scalar_diffusion_builder
+        type(dual_linear_advection)         :: dual_linear_advection_builder
+        type(euler)                         :: euler_builder
+        type(euler_ale)                     :: euler_ale_builder
+        type(navier_stokes)                 :: navier_stokes_builder
+        type(navier_stokes_multi)           :: navier_stokes_multi_builder
+        type(multi_navier_stokes_laminar)   :: multi_navier_stokes_laminar_builder
+        type(joukowski_rans)                :: joukowski_rans_builder
+        type(joukowski_zonal_rans)          :: joukowski_zonal_rans_builder
+        type(flat_plate_rans)               :: flat_plate_rans_builder
+        type(flat_plate_zonal_rans)         :: flat_plate_zonal_rans_builder
+        type(navier_stokes_av)              :: navier_stokes_av_builder
+        type(laminar_navier_stokes)         :: laminar_navier_stokes_builder
+        type(laminar_navier_stokes_io)      :: laminar_navier_stokes_io_builder
+        type(laminar_navier_stokes_ale)     :: laminar_navier_stokes_ale_builder
+        type(rans_lowcache)                 :: rans_lowcache_builder
+        type(wall_distance)                 :: wall_distance_builder
+        type(mesh_motion_diffusion)         :: mesh_motion_diffusion_builder
+        type(mesh_motion_linear_elasticity) :: mesh_motion_linear_elasticity_builder
+        type(test_case_linear_advection)    :: test_case_linear_advection_builder
+        type(test_case_poisson_equation)    :: test_case_poisson_equation_builder
 
 
         !
@@ -152,37 +152,31 @@ contains
         if ( .not. initialized ) then
 
             ! Register in global vector
-            call equation_builder_factory%register(scalar_advection_builder)
-            call equation_builder_factory%register(scalar_advection_ale_builder)
-            call equation_builder_factory%register(scalar_diffusion_builder)
-            call equation_builder_factory%register(dual_linear_advection_builder)
-            call equation_builder_factory%register(euler_builder)
-            call equation_builder_factory%register(euler_ale_builder)
-            call equation_builder_factory%register(navier_stokes_builder)
-            call equation_builder_factory%register(navier_stokes_multi_builder)
-            call equation_builder_factory%register(multi_navier_stokes_laminar_builder)
-            call equation_builder_factory%register(joukowski_rans_builder)
-            call equation_builder_factory%register(joukowski_zonal_rans_builder)
-            call equation_builder_factory%register(flat_plate_rans_builder)
-            call equation_builder_factory%register(flat_plate_zonal_rans_builder)
-            call equation_builder_factory%register(navier_stokes_av_builder)
-            call equation_builder_factory%register(laminar_navier_stokes_builder)
-            call equation_builder_factory%register(laminar_navier_stokes_io_builder)
-            call equation_builder_factory%register(laminar_navier_stokes_ale_builder)
-            call equation_builder_factory%register(rans_lowcache_builder)
-            call equation_builder_factory%register(wall_distance_builder)
-            call equation_builder_factory%register(mesh_motion_diffusion_builder)
-            call equation_builder_factory%register(mesh_motion_linear_elasticity_builder)
-            call equation_builder_factory%register(test_case_linear_advection_builder)
-            call equation_builder_factory%register(test_case_poisson_equation_builder)
+            call equation_set_factory%register(scalar_advection_builder%build('default'))
+            call equation_set_factory%register(scalar_advection_ale_builder%build('default'))
+            call equation_set_factory%register(scalar_diffusion_builder%build('default'))
+            call equation_set_factory%register(dual_linear_advection_builder%build('default'))
+            call equation_set_factory%register(euler_builder%build('default'))
+            call equation_set_factory%register(euler_ale_builder%build('default'))
+            call equation_set_factory%register(navier_stokes_builder%build('default'))
+            call equation_set_factory%register(navier_stokes_multi_builder%build('default'))
+            call equation_set_factory%register(multi_navier_stokes_laminar_builder%build('default'))
+            call equation_set_factory%register(joukowski_rans_builder%build('default'))
+            call equation_set_factory%register(joukowski_zonal_rans_builder%build('default'))
+            call equation_set_factory%register(flat_plate_rans_builder%build('default'))
+            call equation_set_factory%register(flat_plate_zonal_rans_builder%build('default'))
+            call equation_set_factory%register(navier_stokes_av_builder%build('default'))
+            call equation_set_factory%register(laminar_navier_stokes_builder%build('default'))
+            call equation_set_factory%register(laminar_navier_stokes_io_builder%build('default'))
+            call equation_set_factory%register(laminar_navier_stokes_ale_builder%build('default'))
+            call equation_set_factory%register(rans_lowcache_builder%build('default'))
+            call equation_set_factory%register(wall_distance_builder%build('default'))
+            call equation_set_factory%register(mesh_motion_diffusion_builder%build('default'))
+            call equation_set_factory%register(mesh_motion_linear_elasticity_builder%build('default'))
+            call equation_set_factory%register(test_case_linear_advection_builder%build('default'))
+            call equation_set_factory%register(test_case_poisson_equation_builder%build('default'))
 
 
-
-
-            ! Initialize each builder
-            do ibuild = 1,equation_builder_factory%builders%size()
-                call equation_builder_factory%builders%data(ibuild)%bld%init()
-            end do
 
             ! Confirm initialization
             initialized = .true.
@@ -208,20 +202,19 @@ contains
     !!  @param[in] eqnset       Allocatable equationset_t class to be instantiated
     !!
     !-------------------------------------------------------------------------------------
-    function build_equation_set(self,eqnstring,blueprint) result(eqnset)
-        class(equation_builder_factory_t),  intent(inout)   :: self
-        character(*),                       intent(in)      :: eqnstring
-        character(*),                       intent(in)      :: blueprint
+    function produce_equation_set(self,eqnstring,blueprint) result(eqnset)
+        class(equation_set_factory_t),  intent(inout)   :: self
+        character(*),                   intent(in)      :: eqnstring
+        character(*),                   intent(in)      :: blueprint
 
         character(:),               allocatable :: user_msg, dev_msg
         integer                                 :: ierr, bindex
         type(equation_set_t)                    :: eqnset
-        class(equation_builder_t), allocatable  :: builder
 
         !
         ! Find equation set in 'available_equations' vector
         !
-        bindex = self%builders%index_by_name(eqnstring)
+        bindex = self%equation_sets%index_by_name(eqnstring)
 
 
         !
@@ -234,7 +227,7 @@ contains
         dev_msg = "Check that the equation set builder is registered properly in &
                    the equation set builder factory: src/equations/mod_equations.f90. When an equation &
                    set builder is defined, is needs to be registered in the factory by calling &
-                   'call equation_builder_factory%register(builder)', where 'builder' is the &
+                   'call equation_set_factory%register(builder)', where 'builder' is the &
                    object that knows how to build the equation set. This could be done in  &
                    'mod_equations.register_equation_builders'. The 'register_equation_builders' routine &
                    gets called on startup and loads all the default equation builders into the factory &
@@ -245,18 +238,11 @@ contains
         !
         ! Get equation set builder
         !
-        allocate(builder, source=self%builders%at(bindex), stat=ierr)
-        if (ierr /= 0) call AllocationError
+        eqnset = self%equation_sets%at(bindex)
 
 
-        !
-        ! Build equation set
-        !
 
-        eqnset = builder%build(blueprint)
-
-
-    end function build_equation_set
+    end function produce_equation_set
     !*************************************************************************************
 
 
@@ -273,22 +259,22 @@ contains
     !!  @date   2/8/2016
     !!
     !--------------------------------------------------------------------------------------
-    subroutine list_equations(self)
-        class(equation_builder_factory_t),  intent(in)   :: self
+    subroutine list_equation_sets(self)
+        class(equation_set_factory_t),  intent(in)   :: self
 
         integer :: neqns, ieqn
         character(:),   allocatable :: ename
         
-        neqns = self%builders%size()
+        neqns = self%equation_sets%size()
 
         do ieqn = 1,neqns
 
-            ename = self%builders%data(ieqn)%bld%get_name()
+            ename = self%equation_sets%data(ieqn)%get_name()
             call write_line(trim(ename))
 
         end do ! ieqn
 
-    end subroutine list_equations
+    end subroutine list_equation_sets
     !**************************************************************************************
 
 
@@ -301,9 +287,9 @@ contains
     !!  @date   2/24/2017
     !!
     !--------------------------------------------------------------------------------------
-    function has_equation(self,equation_string) result(equation_status)
-        class(equation_builder_factory_t),  intent(in)  :: self
-        character(*),                       intent(in)  :: equation_string
+    function has_equation_set(self,equation_string) result(equation_status)
+        class(equation_set_factory_t),  intent(in)  :: self
+        character(*),                   intent(in)  :: equation_string
 
 
 
@@ -312,10 +298,10 @@ contains
         logical                     :: equation_status
         
         equation_status = .false.
-        neqns = self%builders%size()
+        neqns = self%equation_sets%size()
         do ieqn = 1,neqns
 
-            ename = self%builders%data(ieqn)%bld%get_name()
+            ename = self%equation_sets%data(ieqn)%get_name()
 
             equation_status = (trim(equation_string) == trim(ename))
             if (equation_status) exit
@@ -323,7 +309,7 @@ contains
         end do ! ieqn
 
 
-    end function has_equation
+    end function has_equation_set
     !**************************************************************************************
 
 

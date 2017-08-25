@@ -3,6 +3,7 @@ module mod_function
     use mod_kinds,      only: rk, ik
     use type_function,  only: function_t
     use type_fcnvector, only: fcnvector_t
+    use type_point,     only: point_t
 
     !
     ! Import functions
@@ -134,10 +135,7 @@ contains
         integer(ik) :: ierr, fcnindex
 
 
-        if ( allocated(fcn) ) then
-            deallocate(fcn)
-        end if
-
+        if ( allocated(fcn) ) deallocate(fcn)
 
 
         !
@@ -171,7 +169,6 @@ contains
 
     end subroutine create_function
     !*****************************************************************************************
-
 
 
 

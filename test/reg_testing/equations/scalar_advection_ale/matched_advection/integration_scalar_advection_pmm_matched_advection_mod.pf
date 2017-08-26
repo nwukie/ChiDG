@@ -66,11 +66,6 @@ module integration_scalar_advection_pmm_matched_advection_mod
     use mod_models,             only: model_factory
     use type_model,             only: model_t
 
-    ! Imports for defining a new equation builder
-    use mod_equations,                  only: equation_builder_factory
-    use type_equation_builder,          only: equation_builder_t
-    use type_equation_set,              only: equation_set_t
-
     implicit none
 
 

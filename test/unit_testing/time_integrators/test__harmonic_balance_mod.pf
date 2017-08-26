@@ -28,7 +28,7 @@ module test__harmonic_balance_mod
     use mod_operators,          only: operator_factory
     use type_operator,          only: operator_t
 
-    use mod_equations,          only: equation_builder_factory
+    use mod_equations,          only: equation_set_factory
     use type_equation_builder,  only: equation_builder_t
     use type_equation_set,      only: equation_set_t
     
@@ -208,7 +208,7 @@ contains
         ! Initialize and register equation set builder
         !
         call builder_test_blank_equation_set%init()
-        call equation_builder_factory%register(builder_test_blank_equation_set)
+        call equation_set_factory%register(builder_test_blank_equation_set%build('default'))
 
 
         !

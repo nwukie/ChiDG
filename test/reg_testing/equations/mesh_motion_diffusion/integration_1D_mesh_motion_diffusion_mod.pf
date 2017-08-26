@@ -64,7 +64,7 @@ module integration_1D_mesh_motion_diffusion_mod
     use type_model,             only: model_t
 
     ! Imports for defining a new equation builder
-    use mod_equations,                  only: equation_builder_factory
+    use mod_equations,                  only: equation_set_factory
     use type_equation_builder,          only: equation_builder_t
     use type_equation_set,              only: equation_set_t
     implicit none
@@ -491,7 +491,7 @@ contains
         !
         !-------------------------------------------------------------------------------
         call builder_test_mesh_motion_diffusion%init()
-        call equation_builder_factory%register(builder_test_mesh_motion_diffusion)
+        call equation_set_factory%register(builder_test_mesh_motion_diffusion%build('default'))
 
 
 

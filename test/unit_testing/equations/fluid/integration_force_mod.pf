@@ -135,7 +135,7 @@ module integration_force_mod
     use mod_models,                 only: model_factory
     use type_equation_set,          only: equation_set_t
     use type_equation_builder,      only: equation_builder_t
-    use mod_equations,              only: equation_builder_factory
+    use mod_equations,              only: equation_set_factory
     use type_bc_state,              only: bc_state_t
     use type_bc_state_group,        only: bc_state_group_t
     use mod_bc,                     only: create_bc
@@ -638,6 +638,23 @@ contains
         class(function_t),  allocatable :: fcn
         real(rk)                        :: tol, entropy_error
 
+        !
+        ! Get MPI communicator information from pFUnit
+        !
+        IRANK                   = this%getProcessRank()
+        NRANK                   = this%getNumProcessesRequested()
+        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call this%chidg%start_up('mpi',this%ChiDG_COMM)
+        call this%chidg%start_up('core')
+
+
+
+
 
         !-------------------------------------------!
         !     Register initial solution function    !
@@ -658,7 +675,7 @@ contains
         !     Register equation builder             !
         !-------------------------------------------!
         call test_force_equation_builder%init()
-        call equation_builder_factory%register(test_force_equation_builder)
+        call equation_set_factory%register(test_force_equation_builder%build('default'))
 
 
         
@@ -681,12 +698,6 @@ contains
         !------------------------------------------------------------------------------
 
 
-        !
-        ! Get MPI communicator information from pFUnit
-        !
-        IRANK                   = this%getProcessRank()
-        NRANK                   = this%getNumProcessesRequested()
-        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
 
 
 
@@ -705,13 +716,6 @@ contains
         call noptions%set('cfl0',1.0_rk)
         call noptions%set('nsteps',100)
 
-
-
-        !
-        ! Initialize ChiDG environment
-        !
-        call this%chidg%start_up('mpi',this%ChiDG_COMM)
-        call this%chidg%start_up('core')
 
 
 

@@ -333,10 +333,10 @@ message(STATUS "Tecplot Summary: ")
 # Select TecIO library based on detected OS
 if ( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" ) 
     set(TEC_ROOT ${CMAKE_SOURCE_DIR}/tecio/mac)
-    install(FILES ${TEC_ROOT}/lib/libtecio.dylib DESTINATION /usr/local/chidg/lib)
+    install(FILES ${TEC_ROOT}/lib/libtecio.dylib DESTINATION lib)
 elseif( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )
     set(TEC_ROOT ${CMAKE_SOURCE_DIR}/tecio/linux)
-    install(FILES ${TEC_ROOT}/lib/libtecio.so DESTINATION /usr/local/chidg/lib)
+    install(FILES ${TEC_ROOT}/lib/libtecio.so DESTINATION lib)
 else()
     message(SEND_ERROR "Invalid operating system detected for TecIO")
 endif()
@@ -347,8 +347,9 @@ include_directories(${TECPLOT_INCLUDE_DIR})
 
 
 message(STATUS "    Tecplot Libraries: ")
-message(STATUS "        " ${TECPLOT_LIBRARIES})
-
+foreach (L ${TECPLOT_LIBRARIES})
+    message(STATUS "        " ${L})
+endforeach()
 
 #----------------------------------------------------------------------------------------------
 #                                   Add source tree and includes
@@ -382,9 +383,9 @@ list(APPEND LIB_SRCS "${CMAKE_CURRENT_BINARY_DIR}/mod_kinds.f90")
 #                                         Build library
 #----------------------------------------------------------------------------------------------
 message(STATUS " ")
-#add_library(coredg SHARED ${LIB_SRCS})
-add_library(coredg STATIC ${LIB_SRCS})
-target_link_libraries(coredg 
+#add_library(chidg-core SHARED ${LIB_SRCS})
+add_library(chidg-core STATIC ${LIB_SRCS})
+target_link_libraries(chidg-core
                       ${HDF5_LIBRARIES} ${HDF5_HL_LIBRARIES} 
                       ${LAPACK_LIBRARIES}
                       ${BLAS_LIBRARIES} 
@@ -392,7 +393,7 @@ target_link_libraries(coredg
                       ${MPI_Fortran_LIBRARIES}
                       ${METIS_LIBRARIES}
                       )
-set_target_properties(coredg PROPERTIES 
+set_target_properties(chidg-core PROPERTIES 
                              COMPILE_FLAGS "${CMAKE_Fortran_FLAGS}"
                              LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS}")
 
@@ -403,9 +404,9 @@ set_target_properties(coredg PROPERTIES
 #----------------------------------------------------------------------------------------------
 #                                       Build Interfaces
 #----------------------------------------------------------------------------------------------
-# Add driver executable linked to coredg library
+# Add driver executable linked to chidg-core library
 add_executable(chidg ${EXE_SRCS})
-target_link_libraries(chidg coredg)
+target_link_libraries(chidg chidg-core)
 set_target_properties(chidg PROPERTIES 
                             COMPILE_FLAGS "${CMAKE_Fortran_FLAGS}"
                             LINK_FLAGS    "${CMAKE_Fortran_LINK_FLAGS}")
@@ -431,14 +432,14 @@ file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/src/interfaces/pychidg"
 
 # PYTHON 1:
 # Build python extension module using f2py to process opaque interfaces
-set(PYTHON_INTERFACE_MODULE _chidg.so)
+set(PYTHON_INTERFACE_MODULE _chidg_core.so)
 add_custom_command(OUTPUT ${PYTHON_INTERFACE_MODULE}
                    COMMAND f2py-f90wrap
                            -c ${PYTHON_SRCS}
-                           -m _chidg
+                           -m _chidg_core
                            --f90exec=${CMAKE_Fortran_COMPILER}
                            --build-dir "${CMAKE_BINARY_DIR}/pychidg"
-                           ${CMAKE_BINARY_DIR}/lib/libcoredg.a
+                           ${CMAKE_BINARY_DIR}/lib/libchidg-core.a
                            ${METIS_LIBRARIES}
                            -L${TEC_ROOT}/lib
                            -ltecio
@@ -449,9 +450,9 @@ add_custom_command(OUTPUT ${PYTHON_INTERFACE_MODULE}
                            --link-lapack_opt
                            -I${CMAKE_BINARY_DIR}/lib
                            ${QUIET_STATUS}
-                   DEPENDS ${PYTHON_SRCS} coredg
+                   DEPENDS ${PYTHON_SRCS} chidg-core
                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/pychidg
-                   COMMENT "f2py: Building Python module _chidg")
+                   COMMENT "f2py: Building Python module _chidg_core")
 
 
 # Define/configure setup.py 
@@ -487,13 +488,13 @@ install(CODE
 #----------------------------------------------------------------------------------------------
 #                                       Install targets
 #----------------------------------------------------------------------------------------------
-install(TARGETS chidg coredg
-        RUNTIME DESTINATION /usr/local/chidg/bin
-        LIBRARY DESTINATION /usr/local/chidg/lib
-        ARCHIVE DESTINATION /usr/local/chidg/lib)
+install(TARGETS chidg chidg-core
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib)
 
 
-install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/ DESTINATION /usr/local/chidg/include)
+install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/ DESTINATION include/chidg)
 
 
 #----------------------------------------------------------------------------------------------

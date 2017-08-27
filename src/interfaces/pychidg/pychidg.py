@@ -1,5 +1,5 @@
 from __future__ import print_function, absolute_import, division
-import _chidg
+import _chidg_core
 import f90wrap.runtime
 import logging
 

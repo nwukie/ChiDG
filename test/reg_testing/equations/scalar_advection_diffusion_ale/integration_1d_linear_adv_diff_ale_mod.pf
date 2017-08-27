@@ -482,6 +482,21 @@ contains
 
         real(rk)                        :: sim_time
 
+        !
+        ! Get MPI communicator information from pFUnit
+        !
+        IRANK                   = this%getProcessRank()
+        NRANK                   = this%getNumProcessesRequested()
+        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call this%chidg%start_up('mpi',this%ChiDG_COMM)
+        call this%chidg%start_up('core')
+
+
         sim_time = 0.5
 
         !-------------------------------------------------------------------------------
@@ -521,14 +536,6 @@ contains
         solutionfile_out = trim(this%gridfile) 
         !------------------------------------------------------------------------------
 
-        !
-        ! Get MPI communicator information from pFUnit
-        !
-        IRANK                   = this%getProcessRank()
-        NRANK                   = this%getNumProcessesRequested()
-        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
-
-
 
         ! Set timescheme options to pass during initialization
         !call toptions%set('dt', 0.1_rk) ! means nothing here
@@ -545,12 +552,6 @@ contains
         call noptions%set('nsteps',100)
 
 
-
-        !
-        ! Initialize ChiDG environment
-        !
-        call this%chidg%start_up('mpi',this%ChiDG_COMM)
-        call this%chidg%start_up('core')
 
 
 

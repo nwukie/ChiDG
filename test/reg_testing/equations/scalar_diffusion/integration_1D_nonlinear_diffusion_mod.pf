@@ -461,6 +461,19 @@ contains
         type(test_nonlinear_diffusion_builder_t)        :: builder_test_nonlinear_diffusion
         type(testing_1D_nonlinear_diffusion_model_t)    :: diffusion_coefficient_model
 
+        !
+        ! Get MPI communicator information from pFUnit
+        !
+        IRANK                   = this%getProcessRank()
+        NRANK                   = this%getNumProcessesRequested()
+        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call this%chidg%start_up('mpi',this%ChiDG_COMM)
+        call this%chidg%start_up('core')
 
 
         !-------------------------------------------------------------------------------
@@ -495,13 +508,6 @@ contains
         IO_DESTINATION   = 'file'
         !------------------------------------------------------------------------------
 
-        !
-        ! Get MPI communicator information from pFUnit
-        !
-        IRANK                   = this%getProcessRank()
-        NRANK                   = this%getNumProcessesRequested()
-        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
-
 
 
         ! Set timescheme options to pass during initialization
@@ -519,12 +525,6 @@ contains
         call noptions%set('nsteps',1000)
 
 
-
-        !
-        ! Initialize ChiDG environment
-        !
-        call this%chidg%start_up('mpi',this%ChiDG_COMM)
-        call this%chidg%start_up('core')
 
 
 

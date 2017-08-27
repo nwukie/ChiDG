@@ -479,7 +479,19 @@ contains
         type(test_1D_linear_advection_diffusion_builder_t)  :: builder_test_linear_advection_diffusion
         type(testing_1D_linear_adv_diff_model_t)            :: diffusion_coefficient_model
 
+        !
+        ! Get MPI communicator information from pFUnit
+        !
+        IRANK                   = this%getProcessRank()
+        NRANK                   = this%getNumProcessesRequested()
+        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
 
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call this%chidg%start_up('mpi',this%ChiDG_COMM)
+        call this%chidg%start_up('core')
 
 
         !-------------------------------------------------------------------------------
@@ -514,12 +526,6 @@ contains
         IO_DESTINATION   = 'file'
         !------------------------------------------------------------------------------
 
-        !
-        ! Get MPI communicator information from pFUnit
-        !
-        IRANK                   = this%getProcessRank()
-        NRANK                   = this%getNumProcessesRequested()
-        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
 
 
 
@@ -537,13 +543,6 @@ contains
         call noptions%set('cfl0',1.0_rk)
         call noptions%set('nsteps',100)
 
-
-
-        !
-        ! Initialize ChiDG environment
-        !
-        call this%chidg%start_up('mpi',this%ChiDG_COMM)
-        call this%chidg%start_up('core')
 
 
 

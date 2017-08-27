@@ -539,6 +539,24 @@ contains
         type(test_linear_diffusion_builder_t)       :: builder_test_linear_diffusion
 
 
+        !
+        ! Get MPI communicator information from pFUnit
+        !
+        IRANK                   = this%getProcessRank()
+        NRANK                   = this%getNumProcessesRequested()
+        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call this%chidg%start_up('mpi',this%ChiDG_COMM)
+        call this%chidg%start_up('core')
+
+
+
+
+
 
         !-------------------------------------------------------------------------------
         !               Initialize and register the diffusion coefficient model
@@ -587,13 +605,6 @@ contains
         IO_DESTINATION   = "file"
         !------------------------------------------------------------------------------
 
-        !
-        ! Get MPI communicator information from pFUnit
-        !
-        IRANK                   = this%getProcessRank()
-        NRANK                   = this%getNumProcessesRequested()
-        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
-
 
 
         ! Set timescheme options to pass during initialization
@@ -611,12 +622,6 @@ contains
         call noptions%set("nsteps",100)
 
 
-
-        !
-        ! Initialize ChiDG environment
-        !
-        call this%chidg%start_up('mpi',this%ChiDG_COMM)
-        call this%chidg%start_up('core')
 
 
         !

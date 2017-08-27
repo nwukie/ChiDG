@@ -474,6 +474,19 @@ contains
         type(testing_1D_mesh_motion_diffusion_model_t)   :: diffusion_coefficient_model
         type(test_mesh_motion_diffusion_builder_t)       :: builder_test_mesh_motion_diffusion
 
+        !
+        ! Get MPI communicator information from pFUnit
+        !
+        IRANK                   = this%getProcessRank()
+        NRANK                   = this%getNumProcessesRequested()
+        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call this%chidg%start_up('mpi',this%ChiDG_COMM)
+        call this%chidg%start_up('core')
+
 
 
         !-------------------------------------------------------------------------------
@@ -511,13 +524,6 @@ contains
         IO_DESTINATION   = "file"
         !------------------------------------------------------------------------------
 
-        !
-        ! Get MPI communicator information from pFUnit
-        !
-
-        IRANK                   = this%getProcessRank()
-        NRANK                   = this%getNumProcessesRequested()
-        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
 
         ! Set timescheme options to pass during initialization
         !call toptions%set("dt", 0.1_rk) ! means nothing here
@@ -536,11 +542,6 @@ contains
 
 
 
-        !
-        ! Initialize ChiDG environment
-        !
-        call this%chidg%start_up('mpi',this%ChiDG_COMM)
-        call this%chidg%start_up('core')
 
 
         !

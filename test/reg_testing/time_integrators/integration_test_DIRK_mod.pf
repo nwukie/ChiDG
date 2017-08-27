@@ -585,6 +585,19 @@ contains
         type(gaussian_test_t)                       :: gaussian
 
 
+        !
+        ! Get MPI communicator information from pFUnit
+        !
+        IRANK                   = this%getProcessRank()
+        NRANK                   = this%getNumProcessesRequested()
+        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
+
+
+        !
+        ! Initialize ChiDG environment
+        !
+        call this%chidg%start_up('mpi',this%ChiDG_COMM)
+        call this%chidg%start_up('core')
 
 
         !-------------------------------------------------------------------------------
@@ -628,12 +641,6 @@ contains
         IO_DESTINATION   = 'file'
         !------------------------------------------------------------------------------
 
-        !
-        ! Get MPI communicator information from pFUnit
-        !
-        IRANK                   = this%getProcessRank()
-        NRANK                   = this%getNumProcessesRequested()
-        this%ChiDG_COMM%mpi_val = this%getMpiCommunicator()
 
 
 
@@ -650,14 +657,6 @@ contains
         call noptions%set('tol',5.e-10_rk)
         call noptions%set('cfl0',1.0_rk)
         call noptions%set('nsteps',100)
-
-
-
-        !
-        ! Initialize ChiDG environment
-        !
-        call this%chidg%start_up('mpi',this%ChiDG_COMM)
-        call this%chidg%start_up('core')
 
 
 

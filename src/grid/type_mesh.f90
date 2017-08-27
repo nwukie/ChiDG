@@ -486,7 +486,7 @@ contains
                       idomain_g   = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g
                       ielement_g  = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_g
                       pelem_ID    = self%find_parallel_element(idomain_g,ielement_g)
-                      if (pelem_ID == NO_ID) call chidg_signal(FATAL,"mesh%assemble_chimera_data: did not find parallel chimera element.")
+                      if (pelem_ID == NO_ID) call chidg_signal_three(FATAL,"mesh%assemble_chimera_data: did not find parallel chimera element.", IRANK, idomain_g, ielement_g)
         
                       do ipt = 1, npts
                           igq  = self%domain(idom)%chimera%recv(ChiID)%donor(idonor)%node_index(ipt)

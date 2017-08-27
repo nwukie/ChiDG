@@ -269,6 +269,7 @@ contains
 
         ! Resize array storage
         allocate(temp(self%nsend() + 1), stat=ierr)
+        if (ierr /= 0) call AllocationError
 
 
         ! Copy previously initialized instances to new array.

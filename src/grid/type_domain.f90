@@ -1631,6 +1631,7 @@ contains
         !
         comm_procs = comm_procs_vector%data()
 
+
     end function get_send_procs_chimera
     !*****************************************************************************************
 

@@ -479,10 +479,11 @@ contains
 
                             ! Add donor to the chimera send collection
                             send_ID = mesh%domain(donor%idomain_l)%chimera%find_send(donor%idomain_g, donor%ielement_g)
-                            if (send_ID == NO_ID) send_ID = mesh%domain(donor%idomain_l)%chimera%new_send()
-                            mesh%domain(donor%idomain_l)%chimera%send(send_ID) = chimera_send(donor%idomain_g, donor%idomain_l, donor%ielement_g, donor%ielement_l)
-                            call mesh%domain(donor%idomain_l)%chimera%send(send_ID)%send_procs%push_back(iproc)
-
+                            if (send_ID == NO_ID) then
+                                send_ID = mesh%domain(donor%idomain_l)%chimera%new_send()
+                                mesh%domain(donor%idomain_l)%chimera%send(send_ID) = chimera_send(donor%idomain_g, donor%idomain_l, donor%ielement_g, donor%ielement_l)
+                            end if
+                            call mesh%domain(donor%idomain_l)%chimera%send(send_ID)%send_procs%push_back_unique(iproc)
 
 
                             ! 1: Send donor indices

@@ -271,8 +271,15 @@ contains
 
         ! These send's are recv'd by blockvector%init_recv
         do idom_send = 1,self%dom_send%size()
+            idom = self%dom_send%at(idom_send)
+        end do
+
+
+
+        do idom_send = 1,self%dom_send%size()
 
             idom = self%dom_send%at(idom_send)
+
 
             ! Communicate domain indices
             call MPI_ISend(mesh%domain(idom)%idomain_g, 1, MPI_INTEGER4, self%proc, 0, ChiDG_COMM, request1, ierr)

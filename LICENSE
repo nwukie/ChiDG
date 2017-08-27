@@ -45,22 +45,13 @@ those of the author(s) and do not necessarily reflect the view of the National
 Science Foundation.
 
 
-
-
-
-
-
-
-
-
 Licenses from included projects and code: 
 The applicable code subject to the following copyrights are noted in-source.
 
 
 
-BAST
-url:  https://github.com/bast/pfunit-demo
-file: LICENSE
+label: BAST
+url:   https://github.com/bast/pfunit-demo
 ------------------------------------------------------------------------------
 Copyright (c) 2015-2016, Radovan Bast
 All rights reserved.
@@ -89,5 +80,30 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+
+
+
+label:   KERMODE
+url:     https://github.com/jameskermode/f90wrap 
+copying: Copyright James Kermode. Used with permission under the BSD 3-clause license.
+purpose: Approach for determining fortran pointer storage size.
+------------------------------------------------------------------------------
+program main
+    implicit none
+    type :: fortran_type
+        type(fortran_type), pointer :: p => null()
+    end type fortran_type
+    type(fortran_type)      :: ftype
+    integer, allocatable    :: int_array(:)
+    integer                 :: type_int_size
+    type_int_size  = size(transfer(ftype,  int_array))
+    write(*,'(I0)', advance='no'), type_int_size
+end program main
+
+
+
+
 
 

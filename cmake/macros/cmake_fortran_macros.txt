@@ -7,6 +7,10 @@
 #   The returned value is the size of the integer array used to represent 
 #   the type() pointer.
 #
+#   The following code is based on code from the 'f90wrap' project by 
+#   James Kermode, and used here in modified form with permission. 
+#   See file LICENSE, label KERMODE for license.
+#
 macro (get_fortran_type_size type_size_out)
 
     # Write test program to file.

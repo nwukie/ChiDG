@@ -16,6 +16,7 @@ module mod_function
     use fcn_gaussian,                       only: gaussian_f
     use fcn_constant,                       only: constant_f
     use fcn_sine,                           only: sine_f
+    use fcn_turbine_bc_sine,                only: turbine_bc_sine_f
     use fcn_polynomial,                     only: polynomial_f
     use fcn_convecting_vortex,              only: convecting_vortex_f
     use fcn_scalar_adv_diff_bl_solution,    only: scalar_adv_diff_bl_solution_f
@@ -59,6 +60,7 @@ contains
         type(convecting_vortex_f)               :: convecting_vortex
         type(constant_f)                        :: constant
         type(sine_f)                            :: sin_function
+        type(turbine_bc_sine_f)                 :: turbine_bc_sin_function
         type(polynomial_f)                      :: polynomial
         type(scalar_adv_diff_bl_solution_f)     :: scalar_adv_diff_bl_solution
 
@@ -82,6 +84,7 @@ contains
             call registered_fcns%push_back(gaussian)
             call registered_fcns%push_back(constant)
             call registered_fcns%push_back(sin_function)
+            call registered_fcns%push_back(turbine_bc_sin_function)
             call registered_fcns%push_back(polynomial)
 !            call registered_fcns%push_back(cylindricalduct_eigenfunction)
             call registered_fcns%push_back(monopole)

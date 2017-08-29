@@ -59,7 +59,7 @@ contains
         !
         ! Set equation set name
         !
-        call eqn%set_name(self%get_name())
+        call eqn%set_name('Laminar Navier Stokes IO')
         
 
 

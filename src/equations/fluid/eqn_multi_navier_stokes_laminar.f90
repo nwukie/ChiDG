@@ -60,7 +60,7 @@ contains
         !
         ! Set equation set name
         !
-        call equation_set%set_name(self%get_name())
+        call equation_set%set_name('Multi Navier Stokes Laminar')
         
 
         !

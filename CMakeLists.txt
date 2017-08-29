@@ -1,4 +1,4 @@
-project(chidg Fortran)
+project(chidg Fortran C)
 cmake_minimum_required(VERSION 3.7.1)
 
 set(ChiDG_VERSION_MAJOR 0)

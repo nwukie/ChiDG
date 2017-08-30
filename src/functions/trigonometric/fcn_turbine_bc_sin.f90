@@ -136,6 +136,8 @@ contains
             compute_coord_2 = ZERO
         end if
         
+        val = mean + amp*sin(freq_1*compute_coord_1 + freq_2*compute_coord_2 + phase) 
+        
          
     end function compute
     !*****************************************************************************************************************

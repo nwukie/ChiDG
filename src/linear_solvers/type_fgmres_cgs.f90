@@ -86,23 +86,6 @@ contains
 
 
 
-
-
-!        xstart = x%dom(3)%vecs(553)%get_time_start(1)
-!        xend   = x%dom(3)%vecs(553)%get_time_end(1)
-!        print*, 'a: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
-!        xstart = x%dom(3)%vecs(553)%get_time_start(2)
-!        xend   = x%dom(3)%vecs(553)%get_time_end(2)
-!        print*, 'a: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
-!        xstart = x%dom(3)%vecs(553)%get_time_start(3)
-!        xend   = x%dom(3)%vecs(553)%get_time_end(3)
-!        print*, 'a: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
-
-
-
-
-
-
         !
         ! Reset/Start timers
         !
@@ -125,15 +108,6 @@ contains
         end if
 
 
-!        xstart = x%dom(3)%vecs(553)%get_time_start(1)
-!        xend   = x%dom(3)%vecs(553)%get_time_end(1)
-!        print*, 'b: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
-!        xstart = x%dom(3)%vecs(553)%get_time_start(2)
-!        xend   = x%dom(3)%vecs(553)%get_time_end(2)
-!        print*, 'b: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
-!        xstart = x%dom(3)%vecs(553)%get_time_start(3)
-!        xend   = x%dom(3)%vecs(553)%get_time_end(3)
-!        print*, 'b: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
 
 
         !
@@ -211,15 +185,6 @@ contains
             htmp = ZERO
 
 
-!        xstart = x%dom(3)%vecs(553)%get_time_start(1)
-!        xend   = x%dom(3)%vecs(553)%get_time_end(1)
-!        print*, 'c: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
-!        xstart = x%dom(3)%vecs(553)%get_time_start(2)
-!        xend   = x%dom(3)%vecs(553)%get_time_end(2)
-!        print*, 'c: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
-!        xstart = x%dom(3)%vecs(553)%get_time_start(3)
-!        xend   = x%dom(3)%vecs(553)%get_time_end(3)
-!        print*, 'c: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
 
             !
             ! Compute initial residual r0, residual norm, and normalized r0
@@ -229,15 +194,6 @@ contains
             v(1)   = r0/r0norm
             p(1)   = r0norm
 
-!        xstart = x%dom(3)%vecs(553)%get_time_start(1)
-!        xend   = x%dom(3)%vecs(553)%get_time_end(1)
-!        print*, 'd: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
-!        xstart = x%dom(3)%vecs(553)%get_time_start(2)
-!        xend   = x%dom(3)%vecs(553)%get_time_end(2)
-!        print*, 'd: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
-!        xstart = x%dom(3)%vecs(553)%get_time_start(3)
-!        xend   = x%dom(3)%vecs(553)%get_time_end(3)
-!        print*, 'd: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
 
 
             !
@@ -250,17 +206,6 @@ contains
                 nvecs = nvecs + 1
 
 
-!        xstart = x%dom(3)%vecs(553)%get_time_start(1)
-!        xend   = x%dom(3)%vecs(553)%get_time_end(1)
-!        print*, 'e: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
-!        xstart = x%dom(3)%vecs(553)%get_time_start(2)
-!        xend   = x%dom(3)%vecs(553)%get_time_end(2)
-!        print*, 'e: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
-!        xstart = x%dom(3)%vecs(553)%get_time_start(3)
-!        xend   = x%dom(3)%vecs(553)%get_time_end(3)
-!        print*, 'e: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
-
-
            
                 !
                 ! Apply preconditioner:  z(j) = Minv * v(j)
@@ -268,16 +213,6 @@ contains
                 call timer_precon%start()
                 z(j) = M%apply(A,v(j))
                 call timer_precon%stop()
-
-!        xstart = x%dom(3)%vecs(553)%get_time_start(1)
-!        xend   = x%dom(3)%vecs(553)%get_time_end(1)
-!        print*, 'f: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
-!        xstart = x%dom(3)%vecs(553)%get_time_start(2)
-!        xend   = x%dom(3)%vecs(553)%get_time_end(2)
-!        print*, 'f: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
-!        xstart = x%dom(3)%vecs(553)%get_time_start(3)
-!        xend   = x%dom(3)%vecs(553)%get_time_end(3)
-!        print*, 'f: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
 
 
                 !
@@ -287,15 +222,6 @@ contains
                 w = chidg_mv(A,z(j))
                 call timer_mv%stop()
 
-!        xstart = x%dom(3)%vecs(553)%get_time_start(1)
-!        xend   = x%dom(3)%vecs(553)%get_time_end(1)
-!        print*, 'g: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
-!        xstart = x%dom(3)%vecs(553)%get_time_start(2)
-!        xend   = x%dom(3)%vecs(553)%get_time_end(2)
-!        print*, 'g: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
-!        xstart = x%dom(3)%vecs(553)%get_time_start(3)
-!        xend   = x%dom(3)%vecs(553)%get_time_end(3)
-!        print*, 'g: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
 
 
 

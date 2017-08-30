@@ -211,7 +211,6 @@ contains
 
         integer(ik) :: istart
 
-        !print*, 'get_time_start: ', self%nvars_, self%nterms_, itime
         istart = (self%nvars_ * self%nterms_)*(itime - 1) + 1
 
     end function get_time_start
@@ -233,7 +232,6 @@ contains
 
         integer(ik) :: iend
 
-        !print*, 'get_time_end: ', self%nvars_, self%nterms_, itime
         iend = self%nvars_ * self%nterms_ * itime
 
     end function get_time_end

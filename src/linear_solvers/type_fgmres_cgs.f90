@@ -76,13 +76,30 @@ contains
         real(rk),               allocatable :: p(:), y(:), c(:), s(:), p_dim(:), y_dim(:)
         real(rk)                            :: pj, pjp, h_ij, h_ipj, norm_before, norm_after, L_crit, crit
 
-        integer(ik) :: iparent, ierr, ivec, isol, nvecs, ielem
+        integer(ik) :: iparent, ierr, ivec, isol, nvecs, ielem, xstart, xend
         integer(ik) :: i, j, k, l, ii, ih                 ! Loop counters
         real(rk)    :: res, err, r0norm, gam, delta 
 
         logical :: converged = .false.
         logical :: max_iter  = .false.
         logical :: reorthogonalize = .false.
+
+
+
+
+
+!        xstart = x%dom(3)%vecs(553)%get_time_start(1)
+!        xend   = x%dom(3)%vecs(553)%get_time_end(1)
+!        print*, 'a: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
+!        xstart = x%dom(3)%vecs(553)%get_time_start(2)
+!        xend   = x%dom(3)%vecs(553)%get_time_end(2)
+!        print*, 'a: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
+!        xstart = x%dom(3)%vecs(553)%get_time_start(3)
+!        xend   = x%dom(3)%vecs(553)%get_time_end(3)
+!        print*, 'a: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
+
+
+
 
 
 
@@ -108,6 +125,15 @@ contains
         end if
 
 
+!        xstart = x%dom(3)%vecs(553)%get_time_start(1)
+!        xend   = x%dom(3)%vecs(553)%get_time_end(1)
+!        print*, 'b: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
+!        xstart = x%dom(3)%vecs(553)%get_time_start(2)
+!        xend   = x%dom(3)%vecs(553)%get_time_end(2)
+!        print*, 'b: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
+!        xstart = x%dom(3)%vecs(553)%get_time_start(3)
+!        xend   = x%dom(3)%vecs(553)%get_time_end(3)
+!        print*, 'b: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
 
 
         !
@@ -185,6 +211,15 @@ contains
             htmp = ZERO
 
 
+!        xstart = x%dom(3)%vecs(553)%get_time_start(1)
+!        xend   = x%dom(3)%vecs(553)%get_time_end(1)
+!        print*, 'c: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
+!        xstart = x%dom(3)%vecs(553)%get_time_start(2)
+!        xend   = x%dom(3)%vecs(553)%get_time_end(2)
+!        print*, 'c: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
+!        xstart = x%dom(3)%vecs(553)%get_time_start(3)
+!        xend   = x%dom(3)%vecs(553)%get_time_end(3)
+!        print*, 'c: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
 
             !
             ! Compute initial residual r0, residual norm, and normalized r0
@@ -194,6 +229,15 @@ contains
             v(1)   = r0/r0norm
             p(1)   = r0norm
 
+!        xstart = x%dom(3)%vecs(553)%get_time_start(1)
+!        xend   = x%dom(3)%vecs(553)%get_time_end(1)
+!        print*, 'd: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
+!        xstart = x%dom(3)%vecs(553)%get_time_start(2)
+!        xend   = x%dom(3)%vecs(553)%get_time_end(2)
+!        print*, 'd: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
+!        xstart = x%dom(3)%vecs(553)%get_time_start(3)
+!        xend   = x%dom(3)%vecs(553)%get_time_end(3)
+!        print*, 'd: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
 
 
             !
@@ -204,6 +248,19 @@ contains
 
 
                 nvecs = nvecs + 1
+
+
+!        xstart = x%dom(3)%vecs(553)%get_time_start(1)
+!        xend   = x%dom(3)%vecs(553)%get_time_end(1)
+!        print*, 'e: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
+!        xstart = x%dom(3)%vecs(553)%get_time_start(2)
+!        xend   = x%dom(3)%vecs(553)%get_time_end(2)
+!        print*, 'e: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
+!        xstart = x%dom(3)%vecs(553)%get_time_start(3)
+!        xend   = x%dom(3)%vecs(553)%get_time_end(3)
+!        print*, 'e: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
+
+
            
                 !
                 ! Apply preconditioner:  z(j) = Minv * v(j)
@@ -212,6 +269,16 @@ contains
                 z(j) = M%apply(A,v(j))
                 call timer_precon%stop()
 
+!        xstart = x%dom(3)%vecs(553)%get_time_start(1)
+!        xend   = x%dom(3)%vecs(553)%get_time_end(1)
+!        print*, 'f: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
+!        xstart = x%dom(3)%vecs(553)%get_time_start(2)
+!        xend   = x%dom(3)%vecs(553)%get_time_end(2)
+!        print*, 'f: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
+!        xstart = x%dom(3)%vecs(553)%get_time_start(3)
+!        xend   = x%dom(3)%vecs(553)%get_time_end(3)
+!        print*, 'f: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
+
 
                 !
                 ! Compute w = Av for the current iteration
@@ -219,6 +286,19 @@ contains
                 call timer_mv%start()
                 w = chidg_mv(A,z(j))
                 call timer_mv%stop()
+
+!        xstart = x%dom(3)%vecs(553)%get_time_start(1)
+!        xend   = x%dom(3)%vecs(553)%get_time_end(1)
+!        print*, 'g: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
+!        xstart = x%dom(3)%vecs(553)%get_time_start(2)
+!        xend   = x%dom(3)%vecs(553)%get_time_end(2)
+!        print*, 'g: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
+!        xstart = x%dom(3)%vecs(553)%get_time_start(3)
+!        xend   = x%dom(3)%vecs(553)%get_time_end(3)
+!        print*, 'g: ', size(x%dom(3)%vecs(553)%vec(xstart:xend))
+
+
+
 
 
                 norm_before = w%norm(ChiDG_COMM)

@@ -136,6 +136,9 @@ contains
             compute_coord_2 = ZERO
         end if
         
+    !!  \f$ f(t, \vec{x}) = mean + amp*sin(freq_1*coord_1 + freq_2*coord_2 + phase) \f$
+        val = mean + amp*sin(freq_1*compute_coord_1 + freq_2*compute_coord_2 + phase)
+
          
     end function compute
     !*****************************************************************************************************************

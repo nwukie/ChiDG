@@ -81,7 +81,7 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        viscosity = worker%get_model_field_general('Laminar Viscosity','value')
+        viscosity = worker%get_field('Laminar Viscosity','value')
 
 
         !

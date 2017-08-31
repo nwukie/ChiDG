@@ -95,37 +95,26 @@ contains
             flux_1, flux_2, flux_3, diffusion, integrand
 
 
-        real(rk), allocatable, dimension(:) ::      &
-            norm_1, norm_2, norm_3
-
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho         = worker%get_primary_field_face('Density',          'value','boundary')
-        rho_nutilde = worker%get_primary_field_face('Density * NuTilde','value','boundary')
+        rho         = worker%get_field('Density',          'value','boundary')
+        rho_nutilde = worker%get_field('Density * NuTilde','value','boundary')
 
 
         !
         ! Interpolate gradient to quadrature nodes
         !
-        grad1_rho         = worker%get_primary_field_face('Density',          'grad1+lift','boundary')
-        grad2_rho         = worker%get_primary_field_face('Density',          'grad2+lift','boundary')
-        grad3_rho         = worker%get_primary_field_face('Density',          'grad3+lift','boundary')
+        grad1_rho         = worker%get_field('Density',           'grad1', 'boundary')
+        grad2_rho         = worker%get_field('Density',           'grad2', 'boundary')
+        grad3_rho         = worker%get_field('Density',           'grad3', 'boundary')
 
-        grad1_rho_nutilde = worker%get_primary_field_face('Density * NuTilde','grad1+lift','boundary')
-        grad2_rho_nutilde = worker%get_primary_field_face('Density * NuTilde','grad2+lift','boundary')
-        grad3_rho_nutilde = worker%get_primary_field_face('Density * NuTilde','grad3+lift','boundary')
+        grad1_rho_nutilde = worker%get_field('Density * NuTilde', 'grad1', 'boundary')
+        grad2_rho_nutilde = worker%get_field('Density * NuTilde', 'grad2', 'boundary')
+        grad3_rho_nutilde = worker%get_field('Density * NuTilde', 'grad3', 'boundary')
 
-
-
-        !
-        ! Get normal vector
-        !
-        norm_1 = worker%normal(1)
-        norm_2 = worker%normal(2)
-        norm_3 = worker%normal(3)
 
 
         !
@@ -133,7 +122,7 @@ contains
         !   Viscosity
         !
         invrho = ONE/rho
-        mu_l = worker%get_model_field_face('Laminar Viscosity','value','boundary')
+        mu_l = worker%get_field('Laminar Viscosity', 'value', 'boundary')
         nu_l = mu_l*invrho
 
 
@@ -177,9 +166,7 @@ contains
         flux_2 = diffusion*grad2_nutilde
         flux_3 = diffusion*grad3_nutilde
 
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-
-        call worker%integrate_boundary('Density * NuTilde',integrand)
+        call worker%integrate_boundary_condition('Density * NuTilde','Diffusion',flux_1,flux_2,flux_3)
 
 
     end subroutine compute

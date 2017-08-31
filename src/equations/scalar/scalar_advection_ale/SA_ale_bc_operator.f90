@@ -125,12 +125,11 @@ contains
         flux_2 = c2*u
         flux_3 = c3*u
 
-        flux_ref = worker%post_process_boundary_advective_flux_ale(flux_1, flux_2, flux_3, u, 'face interior')
+        !flux_ref = worker%post_process_boundary_advective_flux_ale(flux_1, flux_2, flux_3, u, 'face interior')
+        !integrand = flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3
 
-        integrand = flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3
 
-
-        call worker%integrate_boundary('u',integrand)
+        call worker%integrate_boundary_condition('u','Advection',flux_1,flux_2,flux_3)
 
 
     end subroutine compute

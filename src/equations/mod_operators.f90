@@ -10,11 +10,11 @@ module mod_operators
     use SA_LaxFriedrichs_operator,                  only: SA_LaxFriedrichs_operator_t
     use SA_bc_operator,                             only: SA_bc_operator_t
 
-    ! Linear Advection Operators
-    use SA_ale_volume_advective_operator,               only: SA_ale_volume_advective_operator_t
-    use SA_ale_boundary_average_advective_operator,     only: SA_ale_boundary_average_advective_operator_t
-    use SA_ale_LaxFriedrichs_operator,                  only: SA_ale_LaxFriedrichs_operator_t
-    use SA_ale_bc_operator,                             only: SA_ale_bc_operator_t
+    !! Linear Advection Operators
+    !use SA_ale_volume_advective_operator,               only: SA_ale_volume_advective_operator_t
+    !use SA_ale_boundary_average_advective_operator,     only: SA_ale_boundary_average_advective_operator_t
+    !use SA_ale_LaxFriedrichs_operator,                  only: SA_ale_LaxFriedrichs_operator_t
+    !use SA_ale_bc_operator,                             only: SA_ale_bc_operator_t
 
 
     ! Dual Linear Advection Operators
@@ -27,10 +27,10 @@ module mod_operators
     use SD_boundary_operator,                       only: SD_boundary_operator_t
     use SD_bc_operator,                             only: SD_bc_operator_t
 
-    ! Scalar Diffusion Operators
-    use SD_ale_volume_operator,                         only: SD_ale_volume_operator_t
-    use SD_ale_boundary_operator,                       only: SD_ale_boundary_operator_t
-    use SD_ale_bc_operator,                             only: SD_ale_bc_operator_t
+    !! Scalar Diffusion Operators
+    !use SD_ale_volume_operator,                         only: SD_ale_volume_operator_t
+    !use SD_ale_boundary_operator,                       only: SD_ale_boundary_operator_t
+    !use SD_ale_bc_operator,                             only: SD_ale_bc_operator_t
 
 
     ! Mesh Motion Diffusion Operators
@@ -46,40 +46,42 @@ module mod_operators
 
     ! Fluid Inviscid Operators
     use euler_volume_operator,                      only: euler_volume_operator_t
-    use euler_volume_cylindrical_source,            only: euler_volume_cylindrical_source_t
     use euler_boundary_average_operator,            only: euler_boundary_average_operator_t
     use euler_roe_operator,                         only: euler_roe_operator_t
-    use euler_laxfriedrichs_operator,               only: euler_laxfriedrichs_operator_t
     use euler_bc_operator,                          only: euler_bc_operator_t
+    !use euler_volume_cylindrical_source,            only: euler_volume_cylindrical_source_t
+    !use euler_laxfriedrichs_operator,               only: euler_laxfriedrichs_operator_t
 
-    ! Fluid Inviscid ALE Operators
-    use euler_ale_volume_operator,                      only: euler_ale_volume_operator_t
-    use euler_ale_boundary_average_operator,            only: euler_ale_boundary_average_operator_t
-    use euler_ale_roe_operator,                         only: euler_ale_roe_operator_t
-    use euler_ale_laxfriedrichs_operator,               only: euler_ale_laxfriedrichs_operator_t
-    use euler_ale_bc_operator,                          only: euler_ale_bc_operator_t
 
 
     ! Fluid Viscous Operators
     use fluid_viscous_volume_operator,              only: fluid_viscous_volume_operator_t
     use fluid_viscous_boundary_average_operator,    only: fluid_viscous_boundary_average_operator_t
     use fluid_viscous_bc_operator,                  only: fluid_viscous_bc_operator_t
-    use fluid_viscous_volume_cylindrical_source,    only: fluid_viscous_volume_cylindrical_source_t
+    !use fluid_viscous_volume_cylindrical_source,    only: fluid_viscous_volume_cylindrical_source_t
 
-    ! Fluid Viscous Operators ALE
-    use fluid_viscous_ale_volume_operator,              only: fluid_viscous_ale_volume_operator_t
-    use fluid_viscous_ale_boundary_average_operator,    only: fluid_viscous_ale_boundary_average_operator_t
-    use fluid_viscous_ale_bc_operator,                  only: fluid_viscous_ale_bc_operator_t
+    !! Fluid Inviscid ALE Operators
+    !use euler_ale_volume_operator,                      only: euler_ale_volume_operator_t
+    !use euler_ale_boundary_average_operator,            only: euler_ale_boundary_average_operator_t
+    !use euler_ale_roe_operator,                         only: euler_ale_roe_operator_t
+    !use euler_ale_laxfriedrichs_operator,               only: euler_ale_laxfriedrichs_operator_t
+    !use euler_ale_bc_operator,                          only: euler_ale_bc_operator_t
+
+    !! Fluid Viscous Operators ALE
+    !use fluid_viscous_ale_volume_operator,              only: fluid_viscous_ale_volume_operator_t
+    !use fluid_viscous_ale_boundary_average_operator,    only: fluid_viscous_ale_boundary_average_operator_t
+    !use fluid_viscous_ale_bc_operator,                  only: fluid_viscous_ale_bc_operator_t
 
 
     ! Fluid Turbulence Operators
-    use spalart_allmaras_source,                    only: spalart_allmaras_source_operator_t
-    use spalart_allmaras_laxfriedrichs,             only: spalart_allmaras_laxfriedrichs_operator_t
-    use spalart_allmaras_volume_advection,          only: spalart_allmaras_volume_advection_operator_t
-    use spalart_allmaras_bc_advection,              only: spalart_allmaras_bc_advection_operator_t
-    use spalart_allmaras_boundary_diffusion,        only: spalart_allmaras_boundary_diffusion_operator_t
-    use spalart_allmaras_volume_diffusion,          only: spalart_allmaras_volume_diffusion_operator_t
-    use spalart_allmaras_bc_diffusion,              only: spalart_allmaras_bc_diffusion_operator_t
+    use spalart_allmaras_source,                        only: spalart_allmaras_source_operator_t
+    use spalart_allmaras_advection_boundary_average,    only: spalart_allmaras_advection_boundary_average_operator_t
+    use spalart_allmaras_laxfriedrichs,                 only: spalart_allmaras_laxfriedrichs_operator_t
+    use spalart_allmaras_volume_advection,              only: spalart_allmaras_volume_advection_operator_t
+    use spalart_allmaras_bc_advection,                  only: spalart_allmaras_bc_advection_operator_t
+    use spalart_allmaras_boundary_diffusion,            only: spalart_allmaras_boundary_diffusion_operator_t
+    use spalart_allmaras_volume_diffusion,              only: spalart_allmaras_volume_diffusion_operator_t
+    use spalart_allmaras_bc_diffusion,                  only: spalart_allmaras_bc_diffusion_operator_t
 
 
     ! RANS Low-Cache operators
@@ -224,80 +226,84 @@ contains
         integer(ik) :: iop
 
         ! Linear Advection Operators
-        type(SA_volume_advective_operator_t)            :: SA_volume_operator
-        type(SA_boundary_average_advective_operator_t)  :: SA_average_operator
-        type(SA_LaxFriedrichs_operator_t)               :: SA_laxfriedrichs_operator
-        type(SA_bc_operator_t)                          :: SA_bc_operator
+        type(SA_volume_advective_operator_t)                :: SA_volume_operator
+        type(SA_boundary_average_advective_operator_t)      :: SA_average_operator
+        type(SA_LaxFriedrichs_operator_t)                   :: SA_laxfriedrichs_operator
+        type(SA_bc_operator_t)                              :: SA_bc_operator
         
-         ! Linear Advection Operators
-        type(SA_ale_volume_advective_operator_t)            :: SA_ale_volume_operator
-        type(SA_ale_boundary_average_advective_operator_t)  :: SA_ale_average_operator
-        type(SA_ale_LaxFriedrichs_operator_t)               :: SA_ale_laxfriedrichs_operator
-        type(SA_ale_bc_operator_t)                          :: SA_ale_bc_operator
-        ! Linear Diffusion Operators
-        type(SD_volume_operator_t)                      :: SD_volume_operator
-        type(SD_boundary_operator_t)                    :: SD_boundary_operator
-        type(SD_bc_operator_t)                          :: SD_bc_operator
+        !! Linear Advection Operators
+        !type(SA_ale_volume_advective_operator_t)            :: SA_ale_volume_operator
+        !type(SA_ale_boundary_average_advective_operator_t)  :: SA_ale_average_operator
+        !type(SA_ale_LaxFriedrichs_operator_t)               :: SA_ale_laxfriedrichs_operator
+        !type(SA_ale_bc_operator_t)                          :: SA_ale_bc_operator
 
         ! Linear Diffusion Operators
-        type(SD_ale_volume_operator_t)                      :: SD_ale_volume_operator
-        type(SD_ale_boundary_operator_t)                    :: SD_ale_boundary_operator
-        type(SD_ale_bc_operator_t)                          :: SD_ale_bc_operator
+        type(SD_volume_operator_t)                          :: SD_volume_operator
+        type(SD_boundary_operator_t)                        :: SD_boundary_operator
+        type(SD_bc_operator_t)                              :: SD_bc_operator
+
+        !! Linear Diffusion Operators
+        !type(SD_ale_volume_operator_t)                      :: SD_ale_volume_operator
+        !type(SD_ale_boundary_operator_t)                    :: SD_ale_boundary_operator
+        !type(SD_ale_bc_operator_t)                          :: SD_ale_bc_operator
         
 
         ! Mesh Motion Diffusion Operators
-        type(MMD_volume_operator_t)                      :: MMD_volume_operator
-        type(MMD_boundary_operator_t)                    :: MMD_boundary_operator
-        type(MMD_bc_operator_t)                          :: MMD_bc_operator
+        type(MMD_volume_operator_t)                         :: MMD_volume_operator
+        type(MMD_boundary_operator_t)                       :: MMD_boundary_operator
+        type(MMD_bc_operator_t)                             :: MMD_bc_operator
 
         ! Mesh Motion Linear Elasticity Operators
-        type(MMLE_volume_operator_t)                      :: MMLE_volume_operator
-        type(MMLE_boundary_operator_t)                    :: MMLE_boundary_operator
-        type(MMLE_bc_operator_t)                          :: MMLE_bc_operator
+        type(MMLE_volume_operator_t)                        :: MMLE_volume_operator
+        type(MMLE_boundary_operator_t)                      :: MMLE_boundary_operator
+        type(MMLE_bc_operator_t)                            :: MMLE_bc_operator
 
 
 
         ! Dual Linear Advection Operators
-        type(DLA_volume_advective_flux_t)               :: DLA_volume_operator
-        type(DLA_boundary_average_advective_flux_t)     :: DLA_average_operator
-        type(DLA_LaxFriedrichs_flux_t)                  :: DLA_laxfriedrichs_operator
+        type(DLA_volume_advective_flux_t)                   :: DLA_volume_operator
+        type(DLA_boundary_average_advective_flux_t)         :: DLA_average_operator
+        type(DLA_LaxFriedrichs_flux_t)                      :: DLA_laxfriedrichs_operator
 
         ! Fluid Inviscid Operators
-        type(euler_volume_operator_t)                   :: euler_volume_operator
-        type(euler_volume_cylindrical_source_t)         :: euler_volume_cylindrical_source
-        type(euler_boundary_average_operator_t)         :: euler_average_operator
-        type(euler_roe_operator_t)                      :: euler_roe_operator
-        type(euler_laxfriedrichs_operator_t)            :: euler_laxfriedrichs_operator
-        type(euler_bc_operator_t)                       :: euler_bc_operator
+        type(euler_volume_operator_t)                       :: euler_volume_operator
+        type(euler_boundary_average_operator_t)             :: euler_average_operator
+        type(euler_roe_operator_t)                          :: euler_roe_operator
+        type(euler_bc_operator_t)                           :: euler_bc_operator
+        !type(euler_volume_cylindrical_source_t)             :: euler_volume_cylindrical_source
+        !type(euler_laxfriedrichs_operator_t)                :: euler_laxfriedrichs_operator
 
-        ! Fluid Inviscid Operators
-        type(euler_ale_volume_operator_t)                   :: euler_ale_volume_operator
-        type(euler_ale_boundary_average_operator_t)         :: euler_ale_average_operator
-        type(euler_ale_roe_operator_t)                      :: euler_ale_roe_operator
-        type(euler_ale_laxfriedrichs_operator_t)            :: euler_ale_laxfriedrichs_operator
-        type(euler_ale_bc_operator_t)                       :: euler_ale_bc_operator
 
 
         ! Fluid Viscous Operators
-        type(fluid_viscous_volume_operator_t)           :: fluid_viscous_volume_operator
-        type(fluid_viscous_boundary_average_operator_t) :: fluid_viscous_boundary_average_operator
-        type(fluid_viscous_bc_operator_t)               :: fluid_viscous_bc_operator
-        type(fluid_viscous_volume_cylindrical_source_t) :: fluid_viscous_volume_cylindrical_source
+        type(fluid_viscous_volume_operator_t)               :: fluid_viscous_volume_operator
+        type(fluid_viscous_boundary_average_operator_t)     :: fluid_viscous_boundary_average_operator
+        type(fluid_viscous_bc_operator_t)                   :: fluid_viscous_bc_operator
+        !type(fluid_viscous_volume_cylindrical_source_t)     :: fluid_viscous_volume_cylindrical_source
 
-        ! Fluid Viscous Operators ALE
-        type(fluid_viscous_ale_volume_operator_t)           :: fluid_viscous_ale_volume_operator
-        type(fluid_viscous_ale_boundary_average_operator_t) :: fluid_viscous_ale_boundary_average_operator
-        type(fluid_viscous_ale_bc_operator_t)               :: fluid_viscous_ale_bc_operator
+
+        !! Fluid Inviscid Operators
+        !type(euler_ale_volume_operator_t)                   :: euler_ale_volume_operator
+        !type(euler_ale_boundary_average_operator_t)         :: euler_ale_average_operator
+        !type(euler_ale_roe_operator_t)                      :: euler_ale_roe_operator
+        !type(euler_ale_laxfriedrichs_operator_t)            :: euler_ale_laxfriedrichs_operator
+        !type(euler_ale_bc_operator_t)                       :: euler_ale_bc_operator
+
+        !! Fluid Viscous Operators ALE
+        !type(fluid_viscous_ale_volume_operator_t)           :: fluid_viscous_ale_volume_operator
+        !type(fluid_viscous_ale_boundary_average_operator_t) :: fluid_viscous_ale_boundary_average_operator
+        !type(fluid_viscous_ale_bc_operator_t)               :: fluid_viscous_ale_bc_operator
 
 
         ! Fluid Turbulence Operators
-        type(spalart_allmaras_source_operator_t)                :: spalart_allmaras_source_operator
-        type(spalart_allmaras_laxfriedrichs_operator_t)         :: spalart_allmaras_laxfriedrichs_operator
-        type(spalart_allmaras_volume_advection_operator_t)      :: spalart_allmaras_volume_advection_operator
-        type(spalart_allmaras_bc_advection_operator_t)          :: spalart_allmaras_bc_advection_operator
-        type(spalart_allmaras_boundary_diffusion_operator_t)    :: spalart_allmaras_boundary_diffusion_operator
-        type(spalart_allmaras_volume_diffusion_operator_t)      :: spalart_allmaras_volume_diffusion_operator
-        type(spalart_allmaras_bc_diffusion_operator_t)          :: spalart_allmaras_bc_diffusion_operator
+        type(spalart_allmaras_source_operator_t)                        :: spalart_allmaras_source_operator
+        type(spalart_allmaras_advection_boundary_average_operator_t)    :: spalart_allmaras_advection_boundary_average_operator
+        type(spalart_allmaras_laxfriedrichs_operator_t)                 :: spalart_allmaras_laxfriedrichs_operator
+        type(spalart_allmaras_volume_advection_operator_t)              :: spalart_allmaras_volume_advection_operator
+        type(spalart_allmaras_bc_advection_operator_t)                  :: spalart_allmaras_bc_advection_operator
+        type(spalart_allmaras_boundary_diffusion_operator_t)            :: spalart_allmaras_boundary_diffusion_operator
+        type(spalart_allmaras_volume_diffusion_operator_t)              :: spalart_allmaras_volume_diffusion_operator
+        type(spalart_allmaras_bc_diffusion_operator_t)                  :: spalart_allmaras_bc_diffusion_operator
 
         type(RANS_volume_advection_t)                           :: rans_volume_advection
         type(RANS_boundary_advection_t)                         :: rans_boundary_advection
@@ -315,9 +321,9 @@ contains
         type(artificial_viscosity_source_t)                     :: artificial_viscosity_source
 
         ! Geometric Conservation Operators
-        type(GCL_volume_advective_operator_t)            :: GCL_volume_operator
-        type(GCL_boundary_average_advective_operator_t)  :: GCL_average_operator
-        type(GCL_bc_operator_t)                          :: GCL_bc_operator
+        type(GCL_volume_advective_operator_t)                   :: GCL_volume_operator
+        type(GCL_boundary_average_advective_operator_t)         :: GCL_average_operator
+        type(GCL_bc_operator_t)                                 :: GCL_bc_operator
 
         if (.not. operators_initialized) then
 
@@ -327,11 +333,11 @@ contains
             call operator_factory%register(SA_laxfriedrichs_operator)
             call operator_factory%register(SA_bc_operator)
 
-            ! Register Linear Advection
-            call operator_factory%register(SA_ale_volume_operator)
-            call operator_factory%register(SA_ale_average_operator)
-            call operator_factory%register(SA_ale_laxfriedrichs_operator)
-            call operator_factory%register(SA_ale_bc_operator)
+!            ! Register Linear Advection
+!            call operator_factory%register(SA_ale_volume_operator)
+!            call operator_factory%register(SA_ale_average_operator)
+!            call operator_factory%register(SA_ale_laxfriedrichs_operator)
+!            call operator_factory%register(SA_ale_bc_operator)
 
  
             ! Register Linear Diffusion
@@ -339,10 +345,10 @@ contains
             call operator_factory%register(SD_boundary_operator)
             call operator_factory%register(SD_bc_operator)
 
-            ! Register Linear Diffusion
-            call operator_factory%register(SD_ale_volume_operator)
-            call operator_factory%register(SD_ale_boundary_operator)
-            call operator_factory%register(SD_ale_bc_operator)
+!            ! Register Linear Diffusion
+!            call operator_factory%register(SD_ale_volume_operator)
+!            call operator_factory%register(SD_ale_boundary_operator)
+!            call operator_factory%register(SD_ale_bc_operator)
 
 
             ! Register Mesh Motion Diffusion
@@ -364,34 +370,35 @@ contains
 
             ! Register Fluid Inviscid
             call operator_factory%register(euler_volume_operator)
-            call operator_factory%register(euler_volume_cylindrical_source)
             call operator_factory%register(euler_average_operator)
             call operator_factory%register(euler_roe_operator)
-            call operator_factory%register(euler_laxfriedrichs_operator)
             call operator_factory%register(euler_bc_operator)
+            !call operator_factory%register(euler_laxfriedrichs_operator)
+            !call operator_factory%register(euler_volume_cylindrical_source)
             
-            ! Register Fluid Inviscid
-            call operator_factory%register(euler_ale_volume_operator)
-            call operator_factory%register(euler_ale_average_operator)
-            call operator_factory%register(euler_ale_roe_operator)
-            call operator_factory%register(euler_ale_laxfriedrichs_operator)
-            call operator_factory%register(euler_ale_bc_operator)
+            !! Register Fluid Inviscid
+            !call operator_factory%register(euler_ale_volume_operator)
+            !call operator_factory%register(euler_ale_average_operator)
+            !call operator_factory%register(euler_ale_roe_operator)
+            !call operator_factory%register(euler_ale_laxfriedrichs_operator)
+            !call operator_factory%register(euler_ale_bc_operator)
 
 
             ! Register Fluid Viscous
             call operator_factory%register(fluid_viscous_boundary_average_operator)
             call operator_factory%register(fluid_viscous_bc_operator)
             call operator_factory%register(fluid_viscous_volume_operator)
-            call operator_factory%register(fluid_viscous_volume_cylindrical_source)
+            !call operator_factory%register(fluid_viscous_volume_cylindrical_source)
 
-            ! Register Fluid Viscous ALE
-            call operator_factory%register(fluid_viscous_ale_boundary_average_operator)
-            call operator_factory%register(fluid_viscous_ale_bc_operator)
-            call operator_factory%register(fluid_viscous_ale_volume_operator)
+            !! Register Fluid Viscous ALE
+            !call operator_factory%register(fluid_viscous_ale_boundary_average_operator)
+            !call operator_factory%register(fluid_viscous_ale_bc_operator)
+            !call operator_factory%register(fluid_viscous_ale_volume_operator)
 
 
             ! Register Fluid Turbulence
             call operator_factory%register(spalart_allmaras_source_operator)
+            call operator_factory%register(spalart_allmaras_advection_boundary_average_operator)
             call operator_factory%register(spalart_allmaras_laxfriedrichs_operator)
             call operator_factory%register(spalart_allmaras_volume_advection_operator)
             call operator_factory%register(spalart_allmaras_bc_advection_operator)

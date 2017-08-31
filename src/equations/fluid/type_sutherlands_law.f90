@@ -81,7 +81,7 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        T = worker%get_model_field_general('Temperature','value')
+        T = worker%get_field('Temperature','value')
 
 
         !

@@ -73,27 +73,24 @@ contains
 
 
         type(AD_D), allocatable, dimension(:)   ::  &
-            flux_1, flux_2, flux_3, grad1_u, grad2_u, grad3_u, mu
+            grad1_u, grad2_u, grad3_u, mu,          &
+            flux_1, flux_2, flux_3
 
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        !grad1_u = worker%get_primary_field_element('u','grad1 + lift')
-        !grad2_u = worker%get_primary_field_element('u','grad2 + lift')
-        !grad3_u = worker%get_primary_field_element('u','grad3 + lift')
-        grad1_u = worker%get_field('u','grad1','element')
-        grad2_u = worker%get_field('u','grad2','element')
-        grad3_u = worker%get_field('u','grad3','element')
+        grad1_u = worker%get_primary_field_element('u','grad1 + lift')
+        grad2_u = worker%get_primary_field_element('u','grad2 + lift')
+        grad3_u = worker%get_primary_field_element('u','grad3 + lift')
 
 
 
         !
         ! Compute scalar coefficient
         ! 
-        !mu = worker%get_model_field_element('Scalar Diffusion Coefficient', 'value')
-        mu = worker%get_field('Scalar Diffusion Coefficient','value','element')
+        mu = worker%get_model_field_element('Scalar Diffusion Coefficient', 'value')
 
 
         !
@@ -107,7 +104,7 @@ contains
         !
         ! Integrate volume flux
         !
-        call worker%integrate_volume('u',flux_1,flux_2,flux_3)
+        call worker%integrate_volume_flux('u','Diffusion',flux_1,flux_2,flux_3)
 
 
 

@@ -103,20 +103,20 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        density         = worker%get_primary_field_element('Density',          'value')
-        density_nutilde = worker%get_primary_field_element('Density * NuTilde','value')
+        density         = worker%get_field('Density',           'value', 'element')
+        density_nutilde = worker%get_field('Density * NuTilde', 'value', 'element')
 
 
         !
         ! Interpolate gradient to quadrature nodes
         !
-        grad1_density         = worker%get_primary_field_element('Density',          'grad1+lift')
-        grad2_density         = worker%get_primary_field_element('Density',          'grad2+lift')
-        grad3_density         = worker%get_primary_field_element('Density',          'grad3+lift')
+        grad1_density         = worker%get_field('Density',           'grad1')
+        grad2_density         = worker%get_field('Density',           'grad2')
+        grad3_density         = worker%get_field('Density',           'grad3')
 
-        grad1_density_nutilde = worker%get_primary_field_element('Density * NuTilde','grad1+lift')
-        grad2_density_nutilde = worker%get_primary_field_element('Density * NuTilde','grad2+lift')
-        grad3_density_nutilde = worker%get_primary_field_element('Density * NuTilde','grad3+lift')
+        grad1_density_nutilde = worker%get_field('Density * NuTilde', 'grad1')
+        grad2_density_nutilde = worker%get_field('Density * NuTilde', 'grad2')
+        grad3_density_nutilde = worker%get_field('Density * NuTilde', 'grad3')
 
 
 
@@ -139,7 +139,7 @@ contains
         ! Get model fields:
         !   Viscosity
         !
-        mu_l = worker%get_model_field_element('Laminar Viscosity','value')
+        mu_l = worker%get_field('Laminar Viscosity', 'value', 'element')
         nu_l = mu_l*invdensity
 
 
@@ -185,7 +185,7 @@ contains
         flux_3 = diffusion*grad3_nutilde
 
 
-        call worker%integrate_volume('Density * NuTilde',flux_1,flux_2,flux_3)
+        call worker%integrate_volume_flux('Density * NuTilde','Diffusion',flux_1,flux_2,flux_3)
 
 
     end subroutine compute

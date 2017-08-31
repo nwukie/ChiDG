@@ -18,22 +18,12 @@ module mod_equations
     ! Import Equations
     !
     use eqn_scalar_advection,               only: scalar_advection
-    use eqn_scalar_advection_ale,           only: scalar_advection_ale
     use eqn_scalar_diffusion,               only: scalar_diffusion
     use eqn_dual_linear_advection,          only: dual_linear_advection
     use eqn_euler,                          only: euler 
-    use eqn_euler_ale,                      only: euler_ale
     use eqn_navier_stokes,                  only: navier_stokes
-    use eqn_navier_stokes_multi,            only: navier_stokes_multi
-    use eqn_multi_navier_stokes_laminar,    only: multi_navier_stokes_laminar
-    use eqn_joukowski_rans,                 only: joukowski_rans
-    use eqn_joukowski_zonal_rans,           only: joukowski_zonal_rans
-    use eqn_flat_plate_rans,                only: flat_plate_rans
-    use eqn_flat_plate_zonal_rans,          only: flat_plate_zonal_rans
-    use eqn_navier_stokes_av,               only: navier_stokes_av
     use eqn_laminar_navier_stokes,          only: laminar_navier_stokes
     use eqn_laminar_navier_stokes_io,       only: laminar_navier_stokes_io
-    use eqn_laminar_navier_stokes_ale,      only: laminar_navier_stokes_ale
     use eqn_rans_lowcache,                  only: rans_lowcache
     use eqn_wall_distance,                  only: wall_distance
     use eqn_mesh_motion_diffusion,          only: mesh_motion_diffusion 
@@ -122,22 +112,12 @@ contains
         ! Instantiate Equations
         !
         type(scalar_advection)              :: scalar_advection_builder
-        type(scalar_advection_ale)          :: scalar_advection_ale_builder
         type(scalar_diffusion)              :: scalar_diffusion_builder
         type(dual_linear_advection)         :: dual_linear_advection_builder
         type(euler)                         :: euler_builder
-        type(euler_ale)                     :: euler_ale_builder
         type(navier_stokes)                 :: navier_stokes_builder
-        type(navier_stokes_multi)           :: navier_stokes_multi_builder
-        type(multi_navier_stokes_laminar)   :: multi_navier_stokes_laminar_builder
-        type(joukowski_rans)                :: joukowski_rans_builder
-        type(joukowski_zonal_rans)          :: joukowski_zonal_rans_builder
-        type(flat_plate_rans)               :: flat_plate_rans_builder
-        type(flat_plate_zonal_rans)         :: flat_plate_zonal_rans_builder
-        type(navier_stokes_av)              :: navier_stokes_av_builder
         type(laminar_navier_stokes)         :: laminar_navier_stokes_builder
         type(laminar_navier_stokes_io)      :: laminar_navier_stokes_io_builder
-        type(laminar_navier_stokes_ale)     :: laminar_navier_stokes_ale_builder
         type(rans_lowcache)                 :: rans_lowcache_builder
         type(wall_distance)                 :: wall_distance_builder
         type(mesh_motion_diffusion)         :: mesh_motion_diffusion_builder
@@ -153,22 +133,12 @@ contains
 
             ! Register in global vector
             call equation_set_factory%register(scalar_advection_builder%build('default'))
-            call equation_set_factory%register(scalar_advection_ale_builder%build('default'))
             call equation_set_factory%register(scalar_diffusion_builder%build('default'))
             call equation_set_factory%register(dual_linear_advection_builder%build('default'))
             call equation_set_factory%register(euler_builder%build('default'))
-            call equation_set_factory%register(euler_ale_builder%build('default'))
             call equation_set_factory%register(navier_stokes_builder%build('default'))
-            call equation_set_factory%register(navier_stokes_multi_builder%build('default'))
-            call equation_set_factory%register(multi_navier_stokes_laminar_builder%build('default'))
-            call equation_set_factory%register(joukowski_rans_builder%build('default'))
-            call equation_set_factory%register(joukowski_zonal_rans_builder%build('default'))
-            call equation_set_factory%register(flat_plate_rans_builder%build('default'))
-            call equation_set_factory%register(flat_plate_zonal_rans_builder%build('default'))
-            call equation_set_factory%register(navier_stokes_av_builder%build('default'))
             call equation_set_factory%register(laminar_navier_stokes_builder%build('default'))
             call equation_set_factory%register(laminar_navier_stokes_io_builder%build('default'))
-            call equation_set_factory%register(laminar_navier_stokes_ale_builder%build('default'))
             call equation_set_factory%register(rans_lowcache_builder%build('default'))
             call equation_set_factory%register(wall_distance_builder%build('default'))
             call equation_set_factory%register(mesh_motion_diffusion_builder%build('default'))

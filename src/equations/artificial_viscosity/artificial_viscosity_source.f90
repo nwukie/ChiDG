@@ -140,7 +140,7 @@ contains
 !        source = -(sensor - eps)
         source = sensor - 100000._rk*eps
 
-        call worker%integrate_volume('Artificial Viscosity',source)
+        call worker%integrate_volume_source('Artificial Viscosity',source)
 
 
     end subroutine compute

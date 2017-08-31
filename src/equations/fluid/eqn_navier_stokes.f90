@@ -74,19 +74,19 @@ contains
                 call navier_stokes_eqns%add_operator('Euler Boundary Average Flux')
                 call navier_stokes_eqns%add_operator('Euler Roe Flux')
                 call navier_stokes_eqns%add_operator('Euler BC Flux')
-                call navier_stokes_eqns%add_operator('Euler Volume Cylindrical Source')
+                !call navier_stokes_eqns%add_operator('Euler Volume Cylindrical Source')
 
                 call navier_stokes_eqns%add_operator('Fluid Viscous Volume Operator')
                 call navier_stokes_eqns%add_operator('Fluid Viscous Boundary Average Operator')
                 call navier_stokes_eqns%add_operator('Fluid Viscous BC Operator')
-                call navier_stokes_eqns%add_operator('Fluid Viscous Volume Cylindrical Source')
+                !call navier_stokes_eqns%add_operator('Fluid Viscous Volume Cylindrical Source')
 
                 call navier_stokes_eqns%add_model('Ideal Gas')
-                call navier_stokes_eqns%add_model('Fluid Advection Velocity')
                 call navier_stokes_eqns%add_model('Sutherlands Law')
-                !call navier_stokes_eqns%add_model('Constant Viscosity')
                 call navier_stokes_eqns%add_model('Stokes Hypothesis')
                 call navier_stokes_eqns%add_model('Reynolds Analogy')
+                !call navier_stokes_eqns%add_model('Fluid Advection Velocity')
+                !call navier_stokes_eqns%add_model('Constant Viscosity')
 !                call navier_stokes_eqns%add_model('Zero Turbulent Model Fields')
 
 
@@ -94,6 +94,7 @@ contains
 
 
                 call navier_stokes_eqns%add_operator('Spalart-Allmaras Source Operator')
+                call navier_stokes_eqns%add_operator('Spalart-Allmaras Advection Boundary Average Operator')
                 call navier_stokes_eqns%add_operator('Spalart-Allmaras LaxFriedrichs Operator')
                 call navier_stokes_eqns%add_operator('Spalart-Allmaras Volume Advection Operator')
                 call navier_stokes_eqns%add_operator('Spalart-Allmaras BC Advection Operator')

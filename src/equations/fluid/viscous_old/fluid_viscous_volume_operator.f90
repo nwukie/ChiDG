@@ -1,4 +1,4 @@
-module fluid_viscous_ale_volume_operator
+module fluid_viscous_volume_operator
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ONE,TWO,HALF
@@ -19,7 +19,7 @@ module fluid_viscous_ale_volume_operator
     !!
     !!
     !------------------------------------------------------------------------------
-    type, extends(operator_t), public :: fluid_viscous_ale_volume_operator_t
+    type, extends(operator_t), public :: fluid_viscous_volume_operator_t
 
 
     contains
@@ -27,7 +27,7 @@ module fluid_viscous_ale_volume_operator
         procedure   :: init
         procedure   :: compute
 
-    end type fluid_viscous_ale_volume_operator_t
+    end type fluid_viscous_volume_operator_t
     !******************************************************************************
 
 
@@ -49,10 +49,10 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(fluid_viscous_ale_volume_operator_t),   intent(inout)      :: self
+        class(fluid_viscous_volume_operator_t),   intent(inout)      :: self
 
         ! Set operator name
-        call self%set_name('Fluid Viscous ALE Volume Operator')
+        call self%set_name('Fluid Viscous Volume Operator')
 
         ! Set operator type
         call self%set_operator_type('Volume Diffusive Operator')
@@ -77,7 +77,7 @@ contains
     !!
     !!------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(fluid_viscous_ale_volume_operator_t), intent(inout)   :: self
+        class(fluid_viscous_volume_operator_t), intent(inout)   :: self
         type(chidg_worker_t),                   intent(inout)   :: worker
         class(properties_t),                    intent(inout)   :: prop
 
@@ -92,16 +92,15 @@ contains
 
         real(rk),   allocatable, dimension(:)   :: r
 
-        type(AD_D), allocatable                 :: flux_ref(:,:)
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        density = worker%get_primary_field_value_ale_element('Density'   )
-        mom1    = worker%get_primary_field_value_ale_element('Momentum-1')
-        mom2    = worker%get_primary_field_value_ale_element('Momentum-2')
-        mom3    = worker%get_primary_field_value_ale_element('Momentum-3')
-        energy  = worker%get_primary_field_value_ale_element('Energy'    )
+        density = worker%get_primary_field_element('Density'   ,'value')
+        mom1    = worker%get_primary_field_element('Momentum-1','value')
+        mom2    = worker%get_primary_field_element('Momentum-2','value')
+        mom3    = worker%get_primary_field_element('Momentum-3','value')
+        energy  = worker%get_primary_field_element('Energy'    ,'value')
 
 
         !
@@ -176,9 +175,7 @@ contains
         flux_2 = -tau_12
         flux_3 = -tau_13
 
-        flux_ref = worker%post_process_volume_diffusive_flux_ale(flux_1, flux_2, flux_3)
-        
-        call worker%integrate_volume('Momentum-1',flux_ref(:,1),flux_ref(:,2),flux_ref(:,3))
+        call worker%integrate_volume('Momentum-1',flux_1,flux_2,flux_3)
 
         !----------------------------------
         !         momentum-2 flux
@@ -187,7 +184,6 @@ contains
         flux_2 = -tau_22
         flux_3 = -tau_23
 
-        flux_ref = worker%post_process_volume_diffusive_flux_ale(flux_1, flux_2, flux_3)
         !
         ! Convert to tangential to angular momentum flux
         !
@@ -201,7 +197,7 @@ contains
             call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
-        call worker%integrate_volume('Momentum-2',flux_ref(:,1),flux_ref(:,2),flux_ref(:,3))
+        call worker%integrate_volume('Momentum-2',flux_1,flux_2,flux_3)
 
         !----------------------------------
         !         momentum-3 flux
@@ -210,8 +206,7 @@ contains
         flux_2 = -tau_23
         flux_3 = -tau_33
 
-        flux_ref = worker%post_process_volume_diffusive_flux_ale(flux_1, flux_2, flux_3)
-        call worker%integrate_volume('Momentum-3',flux_ref(:,1),flux_ref(:,2),flux_ref(:,3))
+        call worker%integrate_volume('Momentum-3',flux_1,flux_2,flux_3)
 
         !----------------------------------
         !           energy flux
@@ -220,8 +215,7 @@ contains
         flux_2 = -k*grad2_T  -  (u*tau_12 + v*tau_22 + w*tau_23)
         flux_3 = -k*grad3_T  -  (u*tau_13 + v*tau_23 + w*tau_33)
 
-        flux_ref = worker%post_process_volume_diffusive_flux_ale(flux_1, flux_2, flux_3)
-        call worker%integrate_volume('Energy',flux_ref(:,1),flux_ref(:,2),flux_ref(:,3))
+        call worker%integrate_volume('Energy',flux_1,flux_2,flux_3)
 
     end subroutine compute
     !*********************************************************************************************************
@@ -231,4 +225,4 @@ contains
 
 
 
-end module fluid_viscous_ale_volume_operator
+end module fluid_viscous_volume_operator

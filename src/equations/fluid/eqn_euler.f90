@@ -75,14 +75,13 @@ contains
                 call euler_eqns%add_operator('Euler Volume Flux')
                 call euler_eqns%add_operator('Euler Boundary Average Flux')
                 call euler_eqns%add_operator('Euler Roe Flux')
-                !call euler_eqns%add_operator('Euler LaxFriedrichs Flux')
                 call euler_eqns%add_operator('Euler BC Flux')
-                call euler_eqns%add_operator('Euler Volume Cylindrical Source')
-
-                call euler_eqns%add_pseudo_timestep(fluid_pseudo_time)
+                !call euler_eqns%add_operator('Euler Volume Cylindrical Source')
+                !call euler_eqns%add_operator('Euler LaxFriedrichs Flux')
 
                 call euler_eqns%add_model('Ideal Gas')
-                call euler_eqns%add_model('Fluid Advection Velocity')
+                call euler_eqns%add_pseudo_timestep(fluid_pseudo_time)
+
 
 
 

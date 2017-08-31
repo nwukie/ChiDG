@@ -93,14 +93,14 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        density         = worker%get_primary_field_general('Density',           'value')
-        density_nutilde = worker%get_primary_field_general('Density * NuTilde', 'value')
+        density         = worker%get_field('Density',           'value')
+        density_nutilde = worker%get_field('Density * NuTilde', 'value')
 
 
         !
         ! Get viscosity: compute nu, nutilde
         !
-        mu      = worker%get_model_field_general('Laminar Viscosity', 'value')
+        mu      = worker%gefield('Laminar Viscosity', 'value')
         nu      = mu/density
         nutilde = density_nutilde/density
 

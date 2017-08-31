@@ -113,7 +113,7 @@ contains
         flux_y = cy  *  ua
         flux_z = cz  *  ua
 
-        call worker%integrate_volume('u_a',flux_x,flux_y,flux_z)
+        call worker%integrate_volume_flux('u_a','Advection',flux_x,flux_y,flux_z)
 
 
 
@@ -122,7 +122,7 @@ contains
         flux_y = cy  *  ub
         flux_z = cz  *  ub
 
-        call worker%integrate_volume('u_b',flux_x,flux_y,flux_z)
+        call worker%integrate_volume_flux('u_b','Advection',flux_x,flux_y,flux_z)
 
 
 

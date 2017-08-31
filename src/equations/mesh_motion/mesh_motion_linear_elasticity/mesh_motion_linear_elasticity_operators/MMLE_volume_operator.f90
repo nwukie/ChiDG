@@ -157,7 +157,7 @@ contains
         !
         ! Integrate volume flux
         !
-        call worker%integrate_volume('grid_displacement1',flux_1,flux_2,flux_3)
+        call worker%integrate_volume_flux('grid_displacement1','Diffusion',flux_1,flux_2,flux_3)
 
         !GD2
         flux_1 = -stress_12
@@ -169,7 +169,7 @@ contains
         !
         ! Integrate volume flux
         !
-        call worker%integrate_volume('grid_displacement2',flux_1,flux_2,flux_3)
+        call worker%integrate_volume_flux('grid_displacement2','Diffusion',flux_1,flux_2,flux_3)
 
         !GD3
         flux_1 = -stress_31
@@ -181,7 +181,7 @@ contains
         !
         ! Integrate volume flux
         !
-        call worker%integrate_volume('grid_displacement3',flux_1,flux_2,flux_3)
+        call worker%integrate_volume_flux('grid_displacement3','Diffusion',flux_1,flux_2,flux_3)
 
 
 

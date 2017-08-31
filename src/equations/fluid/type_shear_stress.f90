@@ -102,47 +102,39 @@ contains
         real(rk),   allocatable,    dimension(:) :: r
 
 
-        type(AD_D), allocatable, dimension(:,:) :: grad_density, grad_mom1, grad_mom2, grad_mom3, grad_energy
-
         !
         ! Interpolate solution to quadrature nodes
         !
-        density = worker%get_primary_field_value_ale_general('Density')
-        mom1    = worker%get_primary_field_value_ale_general('Momentum-1')
-        mom2    = worker%get_primary_field_value_ale_general('Momentum-2')
-        mom3    = worker%get_primary_field_value_ale_general('Momentum-3')
-        energy  = worker%get_primary_field_value_ale_general('Energy')
+        density = worker%get_field('Density',    'value')
+        mom1    = worker%get_field('Momentum-1', 'value')
+        mom2    = worker%get_field('Momentum-2', 'value')
+        mom3    = worker%get_field('Momentum-3', 'value')
+        energy  = worker%get_field('Energy',     'value')
 
 
         !
         ! Interpolate gradient to quadrature nodes
         !
-        grad_density    = worker%get_primary_field_grad_ale_general('Density'   , 'gradient + lift')
-        grad_mom1       = worker%get_primary_field_grad_ale_general('Momentum-1', 'gradient + lift')
-        grad_mom2       = worker%get_primary_field_grad_ale_general('Momentum-2', 'gradient + lift')
-        grad_mom3       = worker%get_primary_field_grad_ale_general('Momentum-3', 'gradient + lift')
-        grad_energy     = worker%get_primary_field_grad_ale_general('Energy    ', 'gradient + lift')
+        grad1_density    = worker%get_field('Density'   , 'grad1')
+        grad2_density    = worker%get_field('Density'   , 'grad2')
+        grad3_density    = worker%get_field('Density'   , 'grad3')
 
-        grad1_density = grad_density(:,1)
-        grad2_density = grad_density(:,2)
-        grad3_density = grad_density(:,3)
+        grad1_mom1       = worker%get_field('Momentum-1', 'grad1')
+        grad2_mom1       = worker%get_field('Momentum-1', 'grad2')
+        grad3_mom1       = worker%get_field('Momentum-1', 'grad3')
 
-        grad1_mom1    = grad_mom1(:,1)
-        grad2_mom1    = grad_mom1(:,2)
-        grad3_mom1    = grad_mom1(:,3)
+        grad1_mom2       = worker%get_field('Momentum-2', 'grad1')
+        grad2_mom2       = worker%get_field('Momentum-2', 'grad2')
+        grad3_mom2       = worker%get_field('Momentum-2', 'grad3')
 
-        grad1_mom2    = grad_mom2(:,1)
-        grad2_mom2    = grad_mom2(:,2)
-        grad3_mom2    = grad_mom2(:,3)
+        grad1_mom3       = worker%get_field('Momentum-3', 'grad1')
+        grad2_mom3       = worker%get_field('Momentum-3', 'grad2')
+        grad3_mom3       = worker%get_field('Momentum-3', 'grad3')
 
-        grad1_mom3    = grad_mom3(:,1)
-        grad2_mom3    = grad_mom3(:,2)
-        grad3_mom3    = grad_mom3(:,3)
-
-        grad1_energy  = grad_energy(:,1)
-        grad2_energy  = grad_energy(:,2)
-        grad3_energy  = grad_energy(:,3)
-
+        grad1_energy     = worker%get_field('Energy    ', 'grad1')
+        grad2_energy     = worker%get_field('Energy    ', 'grad2')
+        grad3_energy     = worker%get_field('Energy    ', 'grad3')
+        
 
 
         !
@@ -174,11 +166,11 @@ contains
         !
         ! Get previously computed viscosities
         !
-        mu_l    = worker%get_model_field_general('Laminar Viscosity',   'value')
-        mu_t    = worker%get_model_field_general('Turbulent Viscosity', 'value')
+        mu_l    = worker%get_field('Laminar Viscosity',   'value')
+        mu_t    = worker%get_field('Turbulent Viscosity', 'value')
 
-        lamda_l = worker%get_model_field_general('Second Coefficient of Laminar Viscosity',   'value')
-        lamda_t = worker%get_model_field_general('Second Coefficient of Turbulent Viscosity', 'value')
+        lamda_l = worker%get_field('Second Coefficient of Laminar Viscosity',   'value')
+        lamda_t = worker%get_field('Second Coefficient of Turbulent Viscosity', 'value')
 
 
         invdensity = ONE/density

@@ -100,18 +100,17 @@ contains
             tau_12, tau_13, tau_23,                 &
             flux_1, flux_2, flux_3, integrand
 
-        real(rk),   allocatable, dimension(:)   ::  &
-            norm_1, norm_2, norm_3, r
+        real(rk),   allocatable, dimension(:)   ::  r
 
 
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
-        density = worker%get_primary_field_face('Density'   ,'value', 'boundary')
-        mom1    = worker%get_primary_field_face('Momentum-1','value', 'boundary')
-        mom2    = worker%get_primary_field_face('Momentum-2','value', 'boundary')
-        mom3    = worker%get_primary_field_face('Momentum-3','value', 'boundary')
-        energy  = worker%get_primary_field_face('Energy'    ,'value', 'boundary')
+        density = worker%get_field('Density'   , 'value', 'boundary')
+        mom1    = worker%get_field('Momentum-1', 'value', 'boundary')
+        mom2    = worker%get_field('Momentum-2', 'value', 'boundary')
+        mom3    = worker%get_field('Momentum-3', 'value', 'boundary')
+        energy  = worker%get_field('Energy'    , 'value', 'boundary')
 
 
         !
@@ -127,24 +126,13 @@ contains
         end if
 
 
-
-
-
-        !
-        ! Get normal vector
-        !
-        norm_1 = worker%normal(1)
-        norm_2 = worker%normal(2)
-        norm_3 = worker%normal(3)
-
-
         !
         ! Get Model fields:
         !   Pressure
         !   Thermal Conductivity
         !
-        k_l = worker%get_model_field_face('Laminar Thermal Conductivity',   'value', 'boundary')
-        k_t = worker%get_model_field_face('Turbulent Thermal Conductivity', 'value', 'boundary')
+        k_l = worker%get_field('Laminar Thermal Conductivity',   'value', 'boundary')
+        k_t = worker%get_field('Turbulent Thermal Conductivity', 'value', 'boundary')
 
 
 
@@ -167,21 +155,21 @@ contains
         !
         ! get temperature gradient
         !
-        grad1_T = worker%get_model_field_face('Temperature Gradient - 1', 'value', 'boundary')
-        grad2_T = worker%get_model_field_face('Temperature Gradient - 2', 'value', 'boundary')
-        grad3_T = worker%get_model_field_face('Temperature Gradient - 3', 'value', 'boundary')
+        grad1_T = worker%get_field('Temperature Gradient - 1', 'value', 'boundary')
+        grad2_T = worker%get_field('Temperature Gradient - 2', 'value', 'boundary')
+        grad3_T = worker%get_field('Temperature Gradient - 3', 'value', 'boundary')
 
 
         !
         ! get shear stress components
         !
-        tau_11 = worker%get_model_field_face('Shear-11', 'value', 'boundary')
-        tau_22 = worker%get_model_field_face('Shear-22', 'value', 'boundary')
-        tau_33 = worker%get_model_field_face('Shear-33', 'value', 'boundary')
+        tau_11 = worker%get_field('Shear-11', 'value', 'boundary')
+        tau_22 = worker%get_field('Shear-22', 'value', 'boundary')
+        tau_33 = worker%get_field('Shear-33', 'value', 'boundary')
 
-        tau_12 = worker%get_model_field_face('Shear-12', 'value', 'boundary')
-        tau_13 = worker%get_model_field_face('Shear-13', 'value', 'boundary')
-        tau_23 = worker%get_model_field_face('Shear-23', 'value', 'boundary')
+        tau_12 = worker%get_field('Shear-12', 'value', 'boundary')
+        tau_13 = worker%get_field('Shear-13', 'value', 'boundary')
+        tau_23 = worker%get_field('Shear-23', 'value', 'boundary')
 
         !=================================================
         ! Mass flux
@@ -195,9 +183,7 @@ contains
         flux_2 = -tau_12
         flux_3 = -tau_13
 
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-
-        call worker%integrate_boundary('Momentum-1',integrand)
+        call worker%integrate_boundary_condition('Momentum-1','Diffusion',flux_1,flux_2,flux_3)
 
         !=================================================
         ! momentum-2 flux
@@ -206,21 +192,7 @@ contains
         flux_2 = -tau_22
         flux_3 = -tau_23
 
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-
-        !
-        ! Convert to tangential to angular momentum flux
-        !
-        if (worker%coordinate_system() == 'Cylindrical') then
-            integrand = integrand * r
-        else if (worker%coordinate_system() == 'Cartesian') then
-
-        else
-            call chidg_signal(FATAL,"inlet, bad coordinate system")
-        end if
-
-
-        call worker%integrate_boundary('Momentum-2',integrand)
+        call worker%integrate_boundary_condition('Momentum-2','Diffusion',flux_1,flux_2,flux_3)
 
         !=================================================
         ! momentum-3 flux
@@ -229,9 +201,7 @@ contains
         flux_2 = -tau_23
         flux_3 = -tau_33
 
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-
-        call worker%integrate_boundary('Momentum-3',integrand)
+        call worker%integrate_boundary_condition('Momentum-3','Diffusion',flux_1,flux_2,flux_3)
 
         !=================================================
         ! Energy flux
@@ -240,26 +210,10 @@ contains
         flux_2 = -k*grad2_T  -  (u*tau_12 + v*tau_22 + w*tau_23)
         flux_3 = -k*grad3_T  -  (u*tau_13 + v*tau_23 + w*tau_33)
 
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-
-        call worker%integrate_boundary('Energy',integrand)
+        call worker%integrate_boundary_condition('Energy','Diffusion',flux_1,flux_2,flux_3)
 
     end subroutine compute
     !**********************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

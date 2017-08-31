@@ -89,48 +89,30 @@ contains
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   ::  &
             u, c1, c2, c3,                          &
-            flux_1, flux_2, flux_3, integrand
-
-        real(rk),   allocatable, dimension(:)   ::  &
-            norm_1, norm_2, norm_3
-
+            flux_1, flux_2, flux_3
 
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
-        !u  = worker%get_primary_field_face('u', 'value', 'boundary')
-        u  = worker%get_field('u', 'value', 'boundary')
+        u  = worker%get_primary_field_face('u', 'value', 'boundary')
 
 
         !
         ! Get model coefficients
         !
-        !c1 = worker%get_model_field_face('Scalar Advection Velocity-1', 'value', 'boundary')
-        !c2 = worker%get_model_field_face('Scalar Advection Velocity-2', 'value', 'boundary')
-        !c3 = worker%get_model_field_face('Scalar Advection Velocity-3', 'value', 'boundary')
-        c1 = worker%get_field('Scalar Advection Velocity-1', 'value', 'boundary')
-        c2 = worker%get_field('Scalar Advection Velocity-2', 'value', 'boundary')
-        c3 = worker%get_field('Scalar Advection Velocity-3', 'value', 'boundary')
+        c1 = worker%get_model_field_face('Scalar Advection Velocity-1', 'value', 'boundary')
+        c2 = worker%get_model_field_face('Scalar Advection Velocity-2', 'value', 'boundary')
+        c3 = worker%get_model_field_face('Scalar Advection Velocity-3', 'value', 'boundary')
 
         
         !
-        ! Get normal vectors
+        ! Compute flux and integrate
         !
-        norm_1 = worker%normal(1)
-        norm_2 = worker%normal(2)
-        norm_3 = worker%normal(3)
-
-
-        !=================================================
-        ! Mass flux
-        !=================================================
         flux_1 = c1*u
         flux_2 = c2*u
         flux_3 = c3*u
 
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-
-        call worker%integrate_boundary('u',integrand)
+        call worker%integrate_boundary_condition('u','Advection',flux_1,flux_2,flux_3)
 
 
     end subroutine compute

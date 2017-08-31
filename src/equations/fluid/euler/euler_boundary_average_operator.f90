@@ -1,8 +1,6 @@
 module euler_boundary_average_operator
-#include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ONE, TWO, HALF
-    use mod_fluid,              only: omega
     use type_operator,          only: operator_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
@@ -89,45 +87,27 @@ contains
         type(chidg_worker_t),                       intent(inout)   :: worker
         class(properties_t),                        intent(inout)   :: prop
 
-
         ! Storage at quadrature nodes
         type(AD_D), allocatable,    dimension(:) :: &
             density_m,  density_p,                  &
             mom1_m,     mom1_p,                     &
             mom2_m,     mom2_p,                     &
             mom3_m,     mom3_p,                     &
-            u_a_m, v_a_m, w_a_m,                    &
-            u_a_p, v_a_p, w_a_p,                    &
             energy_m,   energy_p,                   &
-            enthalpy_m, enthalpy_p,                 &
             p_m,        p_p,                        &
+            enthalpy_m, enthalpy_p,                 &
             flux_1_m,   flux_2_m,   flux_3_m,       &
             flux_1_p,   flux_2_p,   flux_3_p,       &
             flux_1,     flux_2,     flux_3,         &
+            invdensity_m,   invdensity_p,           &
             integrand
 
-        real(rk), allocatable, dimension(:) ::      &
-            norm_1, norm_2, norm_3, r
+        type(AD_D), allocatable,    dimension(:,:)  :: flux_ref_m, flux_ref_p
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        !density_m = worker%get_primary_field_face('Density'   , 'value', 'face interior')
-        !density_p = worker%get_primary_field_face('Density'   , 'value', 'face exterior')
-
-        !mom1_m    = worker%get_primary_field_face('Momentum-1', 'value', 'face interior')
-        !mom1_p    = worker%get_primary_field_face('Momentum-1', 'value', 'face exterior')
-
-        !mom2_m    = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
-        !mom2_p    = worker%get_primary_field_face('Momentum-2', 'value', 'face exterior')
-
-        !mom3_m    = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
-        !mom3_p    = worker%get_primary_field_face('Momentum-3', 'value', 'face exterior')
-
-        !energy_m  = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
-        !energy_p  = worker%get_primary_field_face('Energy'    , 'value', 'face exterior')
-
         density_m = worker%get_field('Density'   , 'value', 'face interior')
         density_p = worker%get_field('Density'   , 'value', 'face exterior')
 
@@ -143,182 +123,101 @@ contains
         energy_m  = worker%get_field('Energy'    , 'value', 'face interior')
         energy_p  = worker%get_field('Energy'    , 'value', 'face exterior')
 
+        invdensity_m = ONE/density_m
+        invdensity_p = ONE/density_p
 
 
-        !
-        ! Account for cylindrical. Get tangential momentum from angular momentum.
-        !
-        r = worker%coordinate('1','boundary') 
-        if (worker%coordinate_system() == 'Cylindrical') then
-            mom2_m = mom2_m / r
-            mom2_p = mom2_p / r
-        else if (worker%coordinate_system() == 'Cartesian') then
 
-        else
-            call chidg_signal(FATAL,"inlet, bad coordinate system")
-        end if
-
-
-        !
-        ! Get normal vectors
-        !
-        norm_1 = worker%normal(1)
-        norm_2 = worker%normal(2)
-        norm_3 = worker%normal(3)
-
-
-        
-        !
-        ! Get fluid advection velocity
-        !
-        !u_a_m = worker%get_model_field_face('Advection Velocity-1', 'value', 'face interior')
-        !v_a_m = worker%get_model_field_face('Advection Velocity-2', 'value', 'face interior')
-        !w_a_m = worker%get_model_field_face('Advection Velocity-3', 'value', 'face interior')
-
-        !u_a_p = worker%get_model_field_face('Advection Velocity-1', 'value', 'face exterior')
-        !v_a_p = worker%get_model_field_face('Advection Velocity-2', 'value', 'face exterior')
-        !w_a_p = worker%get_model_field_face('Advection Velocity-3', 'value', 'face exterior')
-
-        u_a_m = worker%get_field('Advection Velocity-1', 'value', 'face interior')
-        v_a_m = worker%get_field('Advection Velocity-2', 'value', 'face interior')
-        w_a_m = worker%get_field('Advection Velocity-3', 'value', 'face interior')
-
-        u_a_p = worker%get_field('Advection Velocity-1', 'value', 'face exterior')
-        v_a_p = worker%get_field('Advection Velocity-2', 'value', 'face exterior')
-        w_a_p = worker%get_field('Advection Velocity-3', 'value', 'face exterior')
 
         !
         ! Compute pressure and total enthalpy
         !
-        !p_m = worker%get_model_field_face('Pressure', 'value', 'face interior')
-        !p_p = worker%get_model_field_face('Pressure', 'value', 'face exterior')
         p_m = worker%get_field('Pressure', 'value', 'face interior')
         p_p = worker%get_field('Pressure', 'value', 'face exterior')
 
-        enthalpy_m = (energy_m + p_m)/density_m
-        enthalpy_p = (energy_p + p_p)/density_p
+
+        enthalpy_m = (energy_m + p_m)*invdensity_m
+        enthalpy_p = (energy_p + p_p)*invdensity_p
 
 
-        !=================================================
-        ! mass flux
-        !=================================================
-        flux_1_m = (density_m * u_a_m)
-        flux_2_m = (density_m * v_a_m)
-        flux_3_m = (density_m * w_a_m)
 
-        flux_1_p = (density_p * u_a_p)
-        flux_2_p = (density_p * v_a_p)
-        flux_3_p = (density_p * w_a_p)
+        !================================
+        !       MASS FLUX
+        !================================
+        flux_1_m = mom1_m
+        flux_2_m = mom2_m
+        flux_3_m = mom3_m
 
-        flux_1 = (flux_1_m + flux_1_p)
-        flux_2 = (flux_2_m + flux_2_p)
-        flux_3 = (flux_3_m + flux_3_p)
+        flux_1_p = mom1_p
+        flux_2_p = mom2_p
+        flux_3_p = mom3_p
 
-        ! dot with normal vector
-        integrand = HALF*(flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3)
-
-        call worker%integrate_boundary('Density',integrand)
+        call worker%integrate_boundary_average('Density','Advection',       &
+                                                flux_1_m,flux_2_m,flux_3_m, &   
+                                                flux_1_p,flux_2_p,flux_3_p)
 
 
-        !=================================================
-        ! momentum-1 flux
-        !=================================================
-        flux_1_m = (mom1_m * u_a_m) + p_m
-        flux_2_m = (mom1_m * v_a_m)
-        flux_3_m = (mom1_m * w_a_m)
+        !================================
+        !       X-MOMENTUM FLUX
+        !================================
+        flux_1_m = (mom1_m*mom1_m)*invdensity_m + p_m
+        flux_2_m = (mom1_m*mom2_m)*invdensity_m
+        flux_3_m = (mom1_m*mom3_m)*invdensity_m
 
-        flux_1_p = (mom1_p * u_a_p) + p_p
-        flux_2_p = (mom1_p * v_a_p)
-        flux_3_p = (mom1_p * w_a_p)
+        flux_1_p = (mom1_p*mom1_p)*invdensity_p + p_p
+        flux_2_p = (mom1_p*mom2_p)*invdensity_p
+        flux_3_p = (mom1_p*mom3_p)*invdensity_p
 
-        flux_1 = (flux_1_m + flux_1_p)
-        flux_2 = (flux_2_m + flux_2_p)
-        flux_3 = (flux_3_m + flux_3_p)
+        call worker%integrate_boundary_average('Momentum-1','Advection',    &
+                                                flux_1_m,flux_2_m,flux_3_m, &   
+                                                flux_1_p,flux_2_p,flux_3_p)
 
+        !================================
+        !       Y-MOMENTUM FLUX
+        !================================
+        flux_1_m = (mom2_m*mom1_m)*invdensity_m
+        flux_2_m = (mom2_m*mom2_m)*invdensity_m + p_m
+        flux_3_m = (mom2_m*mom3_m)*invdensity_m
 
-        ! dot with normal vector
-        integrand = HALF*(flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3)
+        flux_1_p = (mom2_p*mom1_p)*invdensity_p
+        flux_2_p = (mom2_p*mom2_p)*invdensity_p + p_p
+        flux_3_p = (mom2_p*mom3_p)*invdensity_p
 
-        call worker%integrate_boundary('Momentum-1',integrand)
-
-
-        !=================================================
-        ! momentum-2 flux
-        !=================================================
-        flux_1_m = (mom2_m * u_a_m)
-        flux_2_m = (mom2_m * v_a_m) + p_m
-        flux_3_m = (mom2_m * w_a_m)
-
-        flux_1_p = (mom2_p * u_a_p)
-        flux_2_p = (mom2_p * v_a_p) + p_p
-        flux_3_p = (mom2_p * w_a_p)
-
-        flux_1 = (flux_1_m + flux_1_p)
-        flux_2 = (flux_2_m + flux_2_p)
-        flux_3 = (flux_3_m + flux_3_p)
+        call worker%integrate_boundary_average('Momentum-2','Advection',    &
+                                                flux_1_m,flux_2_m,flux_3_m, &   
+                                                flux_1_p,flux_2_p,flux_3_p)
 
 
-        ! dot with normal vector
-        integrand = HALF*(flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3)
+        !================================
+        !       Z-MOMENTUM FLUX
+        !================================
+        flux_1_m = (mom3_m*mom1_m)*invdensity_m
+        flux_2_m = (mom3_m*mom2_m)*invdensity_m
+        flux_3_m = (mom3_m*mom3_m)*invdensity_m + p_m
 
-        !
-        ! Convert to tangential to angular momentum flux
-        !
-        if (worker%coordinate_system() == 'Cylindrical') then
-            integrand = integrand * r
-        else if (worker%coordinate_system() == 'Cartesian') then
+        flux_1_p = (mom3_p*mom1_p)*invdensity_p
+        flux_2_p = (mom3_p*mom2_p)*invdensity_p
+        flux_3_p = (mom3_p*mom3_p)*invdensity_p + p_p
 
-        else
-            call chidg_signal(FATAL,"inlet, bad coordinate system")
-        end if
-
-        call worker%integrate_boundary('Momentum-2',integrand)
-
-
-        !=================================================
-        ! momentum-3 flux
-        !=================================================
-        flux_1_m = (mom3_m * u_a_m)
-        flux_2_m = (mom3_m * v_a_m)
-        flux_3_m = (mom3_m * w_a_m) + p_m
-
-        flux_1_p = (mom3_p * u_a_p)
-        flux_2_p = (mom3_p * v_a_p)
-        flux_3_p = (mom3_p * w_a_p) + p_p
+        call worker%integrate_boundary_average('Momentum-3','Advection',    &
+                                                flux_1_m,flux_2_m,flux_3_m, &   
+                                                flux_1_p,flux_2_p,flux_3_p)
 
 
-        flux_1 = (flux_1_m + flux_1_p)
-        flux_2 = (flux_2_m + flux_2_p)
-        flux_3 = (flux_3_m + flux_3_p)
+        !================================
+        !          ENERGY FLUX
+        !================================
+        flux_1_m = mom1_m*enthalpy_m
+        flux_2_m = mom2_m*enthalpy_m
+        flux_3_m = mom3_m*enthalpy_m
 
+        flux_1_p = mom1_p*enthalpy_p
+        flux_2_p = mom2_p*enthalpy_p
+        flux_3_p = mom3_p*enthalpy_p
 
-        ! dot with normal vector
-        integrand = HALF*(flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3)
-
-        call worker%integrate_boundary('Momentum-3',integrand)
-
-
-        !=================================================
-        ! energy flux
-        !=================================================
-        flux_1_m = (density_m * enthalpy_m * u_a_m)
-        flux_2_m = (density_m * enthalpy_m * v_a_m)  +  omega*r*p_m
-        flux_3_m = (density_m * enthalpy_m * w_a_m)
-
-        flux_1_p = (density_p * enthalpy_p * u_a_p)
-        flux_2_p = (density_p * enthalpy_p * v_a_p)  +  omega*r*p_p
-        flux_3_p = (density_p * enthalpy_p * w_a_p)
-        
-        flux_1 = (flux_1_m + flux_1_p)
-        flux_2 = (flux_2_m + flux_2_p)
-        flux_3 = (flux_3_m + flux_3_p)
-
-
-        ! dot with normal vector
-        integrand = HALF*(flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3)
-
-        call worker%integrate_boundary('Energy',integrand)
-
+        call worker%integrate_boundary_average('Energy','Advection',        &
+                                                flux_1_m,flux_2_m,flux_3_m, &   
+                                                flux_1_p,flux_2_p,flux_3_p)
 
     end subroutine compute
     !*********************************************************************************************************

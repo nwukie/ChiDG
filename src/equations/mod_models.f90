@@ -6,15 +6,11 @@ module mod_models
     use type_model,             only: model_t
 
     use type_ideal_gas,                                 only: ideal_gas_t
-    use type_fluid_advection_velocity,                  only: fluid_advection_velocity_t
     use type_shear_stress,                              only: shear_stress_t
     use type_model_vorticity,                           only: model_vorticity_t
     use type_temperature_gradient,                      only: temperature_gradient_t
     use type_sutherlands_law,                           only: sutherlands_law_t
     use type_constant_viscosity,                        only: constant_viscosity_t
-    use type_constant_viscosity_laminar,                only: constant_viscosity_laminar_t
-    use type_constant_viscosity_rans,                   only: constant_viscosity_rans_t
-    use type_constant_viscosity_flat_plate,             only: constant_viscosity_flat_plate_t
     use type_stokes_hypothesis,                         only: stokes_hypothesis_t
     use type_reynolds_analogy,                          only: reynolds_analogy_t
     use type_zero_turbulent_model_fields,               only: zero_turbulent_model_fields_t
@@ -256,15 +252,11 @@ contains
         ! Fluid models
         !
         type(ideal_gas_t)                               :: IDEAL_GAS
-        type(fluid_advection_velocity_t)                :: FLUID_ADVECTION_VELOCITY
         type(shear_stress_t)                            :: SHEAR_STRESS
         type(model_vorticity_t)                         :: VORTICITY
         type(temperature_gradient_t)                    :: TEMPERATURE_GRADIENT
         type(sutherlands_law_t)                         :: SUTHERLANDS_LAW
         type(constant_viscosity_t)                      :: CONSTANT_VISCOSITY
-        type(constant_viscosity_laminar_t)              :: CONSTANT_VISCOSITY_LAMINAR
-        type(constant_viscosity_rans_t)                 :: CONSTANT_VISCOSITY_RANS
-        type(constant_viscosity_flat_plate_t)           :: CONSTANT_VISCOSITY_FLAT_PLATE
         type(stokes_hypothesis_t)                       :: STOKES_HYPOTHESIS
         type(reynolds_analogy_t)                        :: REYNOLDS_ANALOGY
         type(zero_turbulent_model_fields_t)             :: ZERO_TURBULENT_MODEL_FIELDS
@@ -289,15 +281,11 @@ contains
         if (.not. models_initialized) then
 
             call model_factory%register(IDEAL_GAS)
-            call model_factory%register(FLUID_ADVECTION_VELOCITY)
             call model_factory%register(SHEAR_STRESS)
             call model_factory%register(VORTICITY)
             call model_factory%register(TEMPERATURE_GRADIENT)
             call model_factory%register(SUTHERLANDS_LAW)
             call model_factory%register(CONSTANT_VISCOSITY)
-            call model_factory%register(CONSTANT_VISCOSITY_LAMINAR)
-            call model_factory%register(CONSTANT_VISCOSITY_RANS)
-            call model_factory%register(CONSTANT_VISCOSITY_FLAT_PLATE)
             call model_factory%register(STOKES_HYPOTHESIS)
             call model_factory%register(REYNOLDS_ANALOGY)
             call model_factory%register(ZERO_TURBULENT_MODEL_FIELDS)

@@ -104,28 +104,28 @@ contains
             flux_1_p, flux_2_p, flux_3_p,                               &
             flux_1, flux_2, flux_3, integrand
 
+        type(AD_D), allocatable, dimension(:,:)          :: flux_ref
 
-        real(rk), allocatable, dimension(:) ::      &
-            norm_1, norm_2, norm_3, r
+        real(rk), allocatable, dimension(:) :: r
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        density_m = worker%get_primary_field_face('Density'   , 'value', 'face interior')
-        density_p = worker%get_primary_field_face('Density'   , 'value', 'face exterior')
+        density_m = worker%get_field('Density'   , 'value', 'face interior')
+        density_p = worker%get_field('Density'   , 'value', 'face exterior')
 
-        mom1_m    = worker%get_primary_field_face('Momentum-1', 'value', 'face interior')
-        mom1_p    = worker%get_primary_field_face('Momentum-1', 'value', 'face exterior')
+        mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
+        mom1_p    = worker%get_field('Momentum-1', 'value', 'face exterior')
 
-        mom2_m    = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
-        mom2_p    = worker%get_primary_field_face('Momentum-2', 'value', 'face exterior')
+        mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
+        mom2_p    = worker%get_field('Momentum-2', 'value', 'face exterior')
 
-        mom3_m    = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
-        mom3_p    = worker%get_primary_field_face('Momentum-3', 'value', 'face exterior')
+        mom3_m    = worker%get_field('Momentum-3', 'value', 'face interior')
+        mom3_p    = worker%get_field('Momentum-3', 'value', 'face exterior')
 
-        energy_m  = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
-        energy_p  = worker%get_primary_field_face('Energy'    , 'value', 'face exterior')
+        energy_m  = worker%get_field('Energy'    , 'value', 'face interior')
+        energy_p  = worker%get_field('Energy'    , 'value', 'face exterior')
 
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
@@ -142,25 +142,14 @@ contains
 
 
 
-
-        !
-        ! Get normal vector
-        !
-        norm_1 = worker%normal(1)
-        norm_2 = worker%normal(2)
-        norm_3 = worker%normal(3)
-
-
-
-
         !
         ! Get Thermal Conductivity
         !
-        k_l_m = worker%get_model_field_face('Laminar Thermal Conductivity',   'value', 'face interior')
-        k_l_p = worker%get_model_field_face('Laminar Thermal Conductivity',   'value', 'face exterior')
+        k_l_m = worker%get_field('Laminar Thermal Conductivity',   'value', 'face interior')
+        k_l_p = worker%get_field('Laminar Thermal Conductivity',   'value', 'face exterior')
 
-        k_t_m = worker%get_model_field_face('Turbulent Thermal Conductivity', 'value', 'face interior')
-        k_t_p = worker%get_model_field_face('Turbulent Thermal Conductivity', 'value', 'face exterior')
+        k_t_m = worker%get_field('Turbulent Thermal Conductivity', 'value', 'face interior')
+        k_t_p = worker%get_field('Turbulent Thermal Conductivity', 'value', 'face exterior')
 
 
 
@@ -190,13 +179,13 @@ contains
         !
         ! get temperature gradient
         !
-        grad1_T_m = worker%get_model_field_face('Temperature Gradient - 1', 'value', 'face interior')
-        grad2_T_m = worker%get_model_field_face('Temperature Gradient - 2', 'value', 'face interior')
-        grad3_T_m = worker%get_model_field_face('Temperature Gradient - 3', 'value', 'face interior')
+        grad1_T_m = worker%get_field('Temperature Gradient - 1', 'value', 'face interior')
+        grad2_T_m = worker%get_field('Temperature Gradient - 2', 'value', 'face interior')
+        grad3_T_m = worker%get_field('Temperature Gradient - 3', 'value', 'face interior')
 
-        grad1_T_p = worker%get_model_field_face('Temperature Gradient - 1', 'value', 'face exterior')
-        grad2_T_p = worker%get_model_field_face('Temperature Gradient - 2', 'value', 'face exterior')
-        grad3_T_p = worker%get_model_field_face('Temperature Gradient - 3', 'value', 'face exterior')
+        grad1_T_p = worker%get_field('Temperature Gradient - 1', 'value', 'face exterior')
+        grad2_T_p = worker%get_field('Temperature Gradient - 2', 'value', 'face exterior')
+        grad3_T_p = worker%get_field('Temperature Gradient - 3', 'value', 'face exterior')
 
 
 
@@ -204,22 +193,22 @@ contains
         !
         ! get shear stress components
         !
-        tau_11_m = worker%get_model_field_face('Shear-11', 'value', 'face interior')
-        tau_22_m = worker%get_model_field_face('Shear-22', 'value', 'face interior')
-        tau_33_m = worker%get_model_field_face('Shear-33', 'value', 'face interior')
+        tau_11_m = worker%get_field('Shear-11', 'value', 'face interior')
+        tau_22_m = worker%get_field('Shear-22', 'value', 'face interior')
+        tau_33_m = worker%get_field('Shear-33', 'value', 'face interior')
 
-        tau_12_m = worker%get_model_field_face('Shear-12', 'value', 'face interior')
-        tau_13_m = worker%get_model_field_face('Shear-13', 'value', 'face interior')
-        tau_23_m = worker%get_model_field_face('Shear-23', 'value', 'face interior')
+        tau_12_m = worker%get_field('Shear-12', 'value', 'face interior')
+        tau_13_m = worker%get_field('Shear-13', 'value', 'face interior')
+        tau_23_m = worker%get_field('Shear-23', 'value', 'face interior')
 
 
-        tau_11_p = worker%get_model_field_face('Shear-11', 'value', 'face exterior')
-        tau_22_p = worker%get_model_field_face('Shear-22', 'value', 'face exterior')
-        tau_33_p = worker%get_model_field_face('Shear-33', 'value', 'face exterior')
+        tau_11_p = worker%get_field('Shear-11', 'value', 'face exterior')
+        tau_22_p = worker%get_field('Shear-22', 'value', 'face exterior')
+        tau_33_p = worker%get_field('Shear-33', 'value', 'face exterior')
 
-        tau_12_p = worker%get_model_field_face('Shear-12', 'value', 'face exterior')
-        tau_13_p = worker%get_model_field_face('Shear-13', 'value', 'face exterior')
-        tau_23_p = worker%get_model_field_face('Shear-23', 'value', 'face exterior')
+        tau_12_p = worker%get_field('Shear-12', 'value', 'face exterior')
+        tau_13_p = worker%get_field('Shear-13', 'value', 'face exterior')
+        tau_23_p = worker%get_field('Shear-23', 'value', 'face exterior')
 
 
 
@@ -239,16 +228,9 @@ contains
         flux_2_p = -tau_12_p
         flux_3_p = -tau_13_p
 
-        flux_1 = (flux_1_m + flux_1_p)
-        flux_2 = (flux_2_m + flux_2_p)
-        flux_3 = (flux_3_m + flux_3_p)
-
-
-        ! dot with normal vector
-        integrand = HALF*(flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3)
-
-        call worker%integrate_boundary('Momentum-1',integrand)
-
+        call worker%integrate_boundary_average('Momentum-1','Diffusive',    &
+                                                flux_1_m,flux_2_m,flux_3_m, &   
+                                                flux_1_p,flux_2_p,flux_3_p)
 
         !----------------------------------
         !         momentum-2 flux
@@ -261,28 +243,9 @@ contains
         flux_2_p = -tau_22_p
         flux_3_p = -tau_23_p
 
-        flux_1 = (flux_1_m + flux_1_p)
-        flux_2 = (flux_2_m + flux_2_p)
-        flux_3 = (flux_3_m + flux_3_p)
-
-
-        ! dot with normal vector
-        integrand = HALF*(flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3)
-
-        !
-        ! Convert to tangential to angular momentum flux
-        !
-        if (worker%coordinate_system() == 'Cylindrical') then
-            integrand = integrand * r
-        else if (worker%coordinate_system() == 'Cartesian') then
-
-        else
-            call chidg_signal(FATAL,"inlet, bad coordinate system")
-        end if
-
-
-        call worker%integrate_boundary('Momentum-2',integrand)
-
+        call worker%integrate_boundary_average('Momentum-2','Diffusive',    &
+                                                flux_1_m,flux_2_m,flux_3_m, &   
+                                                flux_1_p,flux_2_p,flux_3_p)
 
         !----------------------------------
         !         momentum-3 flux
@@ -295,17 +258,9 @@ contains
         flux_2_p = -tau_23_p
         flux_3_p = -tau_33_p
 
-
-        flux_1 = (flux_1_m + flux_1_p)
-        flux_2 = (flux_2_m + flux_2_p)
-        flux_3 = (flux_3_m + flux_3_p)
-
-
-        ! dot with normal vector
-        integrand = HALF*(flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3)
-
-        call worker%integrate_boundary('Momentum-3',integrand)
-
+        call worker%integrate_boundary_average('Momentum-3','Diffusive',    &
+                                                flux_1_m,flux_2_m,flux_3_m, &   
+                                                flux_1_p,flux_2_p,flux_3_p)
 
         !----------------------------------
         !           energy flux
@@ -318,17 +273,9 @@ contains
         flux_2_p = -k_p*grad2_T_p  -  (u_p*tau_12_p + v_p*tau_22_p + w_p*tau_23_p)
         flux_3_p = -k_p*grad3_T_p  -  (u_p*tau_13_p + v_p*tau_23_p + w_p*tau_33_p)
 
-
-        flux_1 = (flux_1_m + flux_1_p)
-        flux_2 = (flux_2_m + flux_2_p)
-        flux_3 = (flux_3_m + flux_3_p)
-
-
-        ! dot with normal vector
-        integrand = HALF*(flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3)
-
-        call worker%integrate_boundary('Energy',integrand)
-
+        call worker%integrate_boundary_average('Energy','Diffusive',        &
+                                                flux_1_m,flux_2_m,flux_3_m, &   
+                                                flux_1_p,flux_2_p,flux_3_p)
 
     end subroutine compute
     !*********************************************************************************************************

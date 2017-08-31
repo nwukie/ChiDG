@@ -57,14 +57,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
     !>
     !!
     !!  @author Nathan A. Wukie
@@ -75,20 +67,20 @@ contains
     !------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
         class(SA_ale_volume_advective_operator_t),  intent(inout)   :: self
-        type(chidg_worker_t),                   intent(inout)   :: worker
-        class(properties_t),                    intent(inout)   :: prop
+        type(chidg_worker_t),                       intent(inout)   :: worker
+        class(properties_t),                        intent(inout)   :: prop
 
 
         type(AD_D), allocatable, dimension(:)   ::  &
-            u, flux_1, flux_2, flux_3, c1, c2, c3
+            u, c1, c2, c3,                          &
+            flux_1, flux_2, flux_3
 
-        type(AD_D), allocatable, dimension(:,:)   :: flux_ref
-
-        real(rk),   allocatable, dimension(:)   ::  &
-            norm_1, norm_2, norm_3
-
-
+        !
+        ! Get primary field
+        !
         u = worker%get_primary_field_value_ale_element('u')
+
+
         !
         ! Get model coefficients
         !
@@ -104,15 +96,11 @@ contains
         flux_2 = c2 * u
         flux_3 = c3 * u
 
-        flux_ref = worker%post_process_volume_advective_flux_ale(flux_1, flux_2, flux_3, u)
-
 
         !
         ! Integrate volume flux
         !
-
-
-        call worker%integrate_volume('u',flux_ref(:,1),flux_ref(:,3),flux_ref(:,3))
+        call worker%integrate_volume_flux('u','Advection',flux_1,flux_2,flux_3)
 
     end subroutine compute
     !****************************************************************************************************

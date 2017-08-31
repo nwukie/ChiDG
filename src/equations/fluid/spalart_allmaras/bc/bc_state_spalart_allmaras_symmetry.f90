@@ -80,10 +80,10 @@ contains
         !
         ! Interpolate interior solution to quadrature nodes
         !
-        density_nutilde_m       = worker%get_primary_field_face('Density * NuTilde', 'value', 'face interior')
-        grad1_density_nutilde_m = worker%get_primary_field_face('Density * NuTilde', 'grad1', 'face interior')
-        grad2_density_nutilde_m = worker%get_primary_field_face('Density * NuTilde', 'grad2', 'face interior')
-        grad3_density_nutilde_m = worker%get_primary_field_face('Density * NuTilde', 'grad3', 'face interior')
+        density_nutilde_m       = worker%get_field('Density * NuTilde', 'value', 'face interior')
+        grad1_density_nutilde_m = worker%get_field('Density * NuTilde', 'grad1', 'face interior')
+        grad2_density_nutilde_m = worker%get_field('Density * NuTilde', 'grad2', 'face interior')
+        grad3_density_nutilde_m = worker%get_field('Density * NuTilde', 'grad3', 'face interior')
 
 
 

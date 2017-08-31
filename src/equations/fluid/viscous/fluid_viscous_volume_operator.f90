@@ -92,15 +92,16 @@ contains
 
         real(rk),   allocatable, dimension(:)   :: r
 
+        type(AD_D), allocatable                 :: flux_ref(:,:)
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        density = worker%get_primary_field_element('Density'   ,'value')
-        mom1    = worker%get_primary_field_element('Momentum-1','value')
-        mom2    = worker%get_primary_field_element('Momentum-2','value')
-        mom3    = worker%get_primary_field_element('Momentum-3','value')
-        energy  = worker%get_primary_field_element('Energy'    ,'value')
+        density = worker%get_field('Density'   , 'value', 'element')
+        mom1    = worker%get_field('Momentum-1', 'value', 'element')
+        mom2    = worker%get_field('Momentum-2', 'value', 'element')
+        mom3    = worker%get_field('Momentum-3', 'value', 'element')
+        energy  = worker%get_field('Energy'    , 'value', 'element')
 
 
         !
@@ -121,8 +122,8 @@ contains
         !   Second Coefficient of Viscosity
         !   Thermal Conductivity
         !
-        k_l = worker%get_model_field_element('Laminar Thermal Conductivity',   'value')
-        k_t = worker%get_model_field_element('Turbulent Thermal Conductivity', 'value')
+        k_l = worker%get_field('Laminar Thermal Conductivity',   'value', 'element')
+        k_t = worker%get_field('Turbulent Thermal Conductivity', 'value', 'element')
 
 
         !
@@ -143,21 +144,21 @@ contains
         !
         ! get temperature gradient
         !
-        grad1_T = worker%get_model_field_element('Temperature Gradient - 1', 'value')
-        grad2_T = worker%get_model_field_element('Temperature Gradient - 2', 'value')
-        grad3_T = worker%get_model_field_element('Temperature Gradient - 3', 'value')
+        grad1_T = worker%get_field('Temperature Gradient - 1', 'value', 'element')
+        grad2_T = worker%get_field('Temperature Gradient - 2', 'value', 'element')
+        grad3_T = worker%get_field('Temperature Gradient - 3', 'value', 'element')
 
 
         !
         ! get shear stress components
         !
-        tau_11 = worker%get_model_field_element('Shear-11', 'value')
-        tau_22 = worker%get_model_field_element('Shear-22', 'value')
-        tau_33 = worker%get_model_field_element('Shear-33', 'value')
+        tau_11 = worker%get_field('Shear-11', 'value', 'element')
+        tau_22 = worker%get_field('Shear-22', 'value', 'element')
+        tau_33 = worker%get_field('Shear-33', 'value', 'element')
 
-        tau_12 = worker%get_model_field_element('Shear-12', 'value')
-        tau_13 = worker%get_model_field_element('Shear-13', 'value')
-        tau_23 = worker%get_model_field_element('Shear-23', 'value')
+        tau_12 = worker%get_field('Shear-12', 'value', 'element')
+        tau_13 = worker%get_field('Shear-13', 'value', 'element')
+        tau_23 = worker%get_field('Shear-23', 'value', 'element')
 
 
 
@@ -174,8 +175,8 @@ contains
         flux_1 = -tau_11
         flux_2 = -tau_12
         flux_3 = -tau_13
-
-        call worker%integrate_volume('Momentum-1',flux_1,flux_2,flux_3)
+        
+        call worker%integrate_volume_flux('Momentum-1','Diffusion',flux_1,flux_2,flux_3)
 
         !----------------------------------
         !         momentum-2 flux
@@ -184,20 +185,7 @@ contains
         flux_2 = -tau_22
         flux_3 = -tau_23
 
-        !
-        ! Convert to tangential to angular momentum flux
-        !
-        if (worker%coordinate_system() == 'Cylindrical') then
-            flux_1 = flux_1 * r
-            flux_2 = flux_2 * r
-            flux_3 = flux_3 * r
-        else if (worker%coordinate_system() == 'Cartesian') then
-
-        else
-            call chidg_signal(FATAL,"inlet, bad coordinate system")
-        end if
-
-        call worker%integrate_volume('Momentum-2',flux_1,flux_2,flux_3)
+        call worker%integrate_volume_flux('Momentum-2','Diffusion',flux_1,flux_2,flux_3)
 
         !----------------------------------
         !         momentum-3 flux
@@ -206,7 +194,7 @@ contains
         flux_2 = -tau_23
         flux_3 = -tau_33
 
-        call worker%integrate_volume('Momentum-3',flux_1,flux_2,flux_3)
+        call worker%integrate_volume_flux('Momentum-3','Diffusion',flux_1,flux_2,flux_3)
 
         !----------------------------------
         !           energy flux
@@ -215,7 +203,7 @@ contains
         flux_2 = -k*grad2_T  -  (u*tau_12 + v*tau_22 + w*tau_23)
         flux_3 = -k*grad3_T  -  (u*tau_13 + v*tau_23 + w*tau_33)
 
-        call worker%integrate_volume('Energy',flux_1,flux_2,flux_3)
+        call worker%integrate_volume_flux('Energy','Diffusion',flux_1,flux_2,flux_3)
 
     end subroutine compute
     !*********************************************************************************************************

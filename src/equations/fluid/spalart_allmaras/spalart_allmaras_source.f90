@@ -107,21 +107,21 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho         = worker%get_primary_field_element('Density'          ,'value')
-        rho_nutilde = worker%get_primary_field_element('Density * NuTilde','value')
+        rho         = worker%get_field('Density'          , 'value', 'element')
+        rho_nutilde = worker%get_field('Density * NuTilde', 'value', 'element')
 
 
 
         !
         ! Interpolate solution gradients to quadrature nodes
         !
-        grad1_rho         = worker%get_primary_field_element('Density',          'grad1+lift')
-        grad2_rho         = worker%get_primary_field_element('Density',          'grad2+lift')
-        grad3_rho         = worker%get_primary_field_element('Density',          'grad3+lift')
+        grad1_rho         = worker%get_field('Density',           'grad1', 'element')
+        grad2_rho         = worker%get_field('Density',           'grad2', 'element')
+        grad3_rho         = worker%get_field('Density',           'grad3', 'element')
 
-        grad1_rho_nutilde = worker%get_primary_field_element('Density * NuTilde','grad1+lift')
-        grad2_rho_nutilde = worker%get_primary_field_element('Density * NuTilde','grad2+lift')
-        grad3_rho_nutilde = worker%get_primary_field_element('Density * NuTilde','grad3+lift')
+        grad1_rho_nutilde = worker%get_field('Density * NuTilde', 'grad1', 'element')
+        grad2_rho_nutilde = worker%get_field('Density * NuTilde', 'grad2', 'element')
+        grad3_rho_nutilde = worker%get_field('Density * NuTilde', 'grad3', 'element')
 
 
 
@@ -129,7 +129,7 @@ contains
         ! Interpolate auxiliary field, Wall Distance
         !
         eps = 1.e-6_rk
-        dwall = worker%get_model_field_element('Wall Distance', 'value')
+        dwall = worker%get_field('Wall Distance', 'value', 'element')
 
 
 
@@ -144,7 +144,7 @@ contains
         !
         ! Compute model values
         !
-        mu  = worker%get_model_field_element('Laminar Viscosity',   'value')
+        mu  = worker%get_field('Laminar Viscosity', 'value', 'element')
         nu  = mu*invrho
 
 
@@ -178,9 +178,9 @@ contains
         !
         ! Compute vorticity and modified vorticity
         !
-        vorticity_1 = worker%get_model_field_element('Vorticity-1', 'value')
-        vorticity_2 = worker%get_model_field_element('Vorticity-2', 'value')
-        vorticity_3 = worker%get_model_field_element('Vorticity-3', 'value')
+        vorticity_1 = worker%get_field('Vorticity-1', 'value', 'element')
+        vorticity_2 = worker%get_field('Vorticity-2', 'value', 'element')
+        vorticity_3 = worker%get_field('Vorticity-3', 'value', 'element')
 
         !vorticity2 =  (dw_dy - dv_dz)**TWO  +  (du_dz - dw_dx)**TWO  +  (dv_dx - du_dy)**TWO 
         vorticity2 =  vorticity_1**TWO  +  vorticity_2**TWO  +  vorticity_3**TWO 
@@ -270,7 +270,7 @@ contains
                     +(ONE/SA_sigma)*(nu + f_n1*nutilde)*(grad1_rho*grad1_nutilde + grad2_rho*grad2_nutilde + grad3_rho*grad3_nutilde)   &
                   )
 
-        call worker%integrate_volume('Density * NuTilde',source)
+        call worker%integrate_volume_source('Density * NuTilde',source)
 
 
     end subroutine compute

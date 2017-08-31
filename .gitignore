@@ -9,3 +9,4 @@ testrun
 *.out
 *.bak
 tags
+.DS_Store

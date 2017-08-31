@@ -158,7 +158,7 @@ contains
         flux_y = -0.20_rk*deps_dy
         flux_z = -0.20_rk*deps_dz
 
-        call worker%integrate_volume('Artificial Viscosity',flux_x,flux_y,flux_z)
+        call worker%integrate_volume_flux('Artificial Viscosity','Diffusion',flux_x,flux_y,flux_z)
 
 
     end subroutine compute

@@ -86,52 +86,40 @@ contains
             dnutilde_drho_p, dnutilde_drhonutilde_p,        &
             diffusion_m, diffusion_p,                       &
             flux_1_m, flux_2_m, flux_3_m,                   &
-            flux_1_p, flux_2_p, flux_3_p,                   &
-            flux_1, flux_2, flux_3, integrand
+            flux_1_p, flux_2_p, flux_3_p
 
-
-        real(rk), allocatable, dimension(:) ::      &
-            norm_1, norm_2, norm_3
 
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho_m         = worker%get_primary_field_face('Density',          'value', 'face interior')
-        rho_p         = worker%get_primary_field_face('Density',          'value', 'face exterior')
+        rho_m         = worker%get_field('Density',           'value', 'face interior')
+        rho_p         = worker%get_field('Density',           'value', 'face exterior')
 
-        rho_nutilde_m = worker%get_primary_field_face('Density * NuTilde','value', 'face interior')
-        rho_nutilde_p = worker%get_primary_field_face('Density * NuTilde','value', 'face exterior')
+        rho_nutilde_m = worker%get_field('Density * NuTilde', 'value', 'face interior')
+        rho_nutilde_p = worker%get_field('Density * NuTilde', 'value', 'face exterior')
 
 
         !
         ! Interpolate gradient to quadrature nodes
         !
-        grad1_rho_m         = worker%get_primary_field_face('Density',          'grad1+lift', 'face interior')
-        grad2_rho_m         = worker%get_primary_field_face('Density',          'grad2+lift', 'face interior')
-        grad3_rho_m         = worker%get_primary_field_face('Density',          'grad3+lift', 'face interior')
-        grad1_rho_p         = worker%get_primary_field_face('Density',          'grad1+lift', 'face exterior')
-        grad2_rho_p         = worker%get_primary_field_face('Density',          'grad2+lift', 'face exterior')
-        grad3_rho_p         = worker%get_primary_field_face('Density',          'grad3+lift', 'face exterior')
+        grad1_rho_m         = worker%get_field('Density',           'grad1', 'face interior')
+        grad2_rho_m         = worker%get_field('Density',           'grad2', 'face interior')
+        grad3_rho_m         = worker%get_field('Density',           'grad3', 'face interior')
+
+        grad1_rho_p         = worker%get_field('Density',           'grad1', 'face exterior')
+        grad2_rho_p         = worker%get_field('Density',           'grad2', 'face exterior')
+        grad3_rho_p         = worker%get_field('Density',           'grad3', 'face exterior')
 
 
-        grad1_rho_nutilde_m = worker%get_primary_field_face('Density * NuTilde','grad1+lift', 'face interior')
-        grad2_rho_nutilde_m = worker%get_primary_field_face('Density * NuTilde','grad2+lift', 'face interior')
-        grad3_rho_nutilde_m = worker%get_primary_field_face('Density * NuTilde','grad3+lift', 'face interior')
-        grad1_rho_nutilde_p = worker%get_primary_field_face('Density * NuTilde','grad1+lift', 'face exterior')
-        grad2_rho_nutilde_p = worker%get_primary_field_face('Density * NuTilde','grad2+lift', 'face exterior')
-        grad3_rho_nutilde_p = worker%get_primary_field_face('Density * NuTilde','grad3+lift', 'face exterior')
+        grad1_rho_nutilde_m = worker%get_field('Density * NuTilde', 'grad1', 'face interior')
+        grad2_rho_nutilde_m = worker%get_field('Density * NuTilde', 'grad2', 'face interior')
+        grad3_rho_nutilde_m = worker%get_field('Density * NuTilde', 'grad3', 'face interior')
 
-
-
-        !
-        ! Get normal vector
-        !
-        norm_1 = worker%normal(1)
-        norm_2 = worker%normal(2)
-        norm_3 = worker%normal(3)
-
+        grad1_rho_nutilde_p = worker%get_field('Density * NuTilde', 'grad1', 'face exterior')
+        grad2_rho_nutilde_p = worker%get_field('Density * NuTilde', 'grad2', 'face exterior')
+        grad3_rho_nutilde_p = worker%get_field('Density * NuTilde', 'grad3', 'face exterior')
 
 
         !
@@ -141,8 +129,8 @@ contains
         invrho_m = ONE/rho_m
         invrho_p = ONE/rho_p
 
-        mu_l_m = worker%get_model_field_face('Laminar Viscosity','value', 'face interior')
-        mu_l_p = worker%get_model_field_face('Laminar Viscosity','value', 'face exterior')
+        mu_l_m = worker%get_field('Laminar Viscosity','value', 'face interior')
+        mu_l_p = worker%get_field('Laminar Viscosity','value', 'face exterior')
 
         nu_l_m = mu_l_m*invrho_m
         nu_l_p = mu_l_p*invrho_p
@@ -213,15 +201,10 @@ contains
         flux_3_p = diffusion_p*grad3_nutilde_p
 
 
-        flux_1 = (flux_1_m + flux_1_p)
-        flux_2 = (flux_2_m + flux_2_p)
-        flux_3 = (flux_3_m + flux_3_p)
+        call worker%integrate_boundary_average('Density * NuTilde','Diffusion', &
+                                                flux_1_m, flux_2_m, flux_3_m,   &
+                                                flux_1_p, flux_2_p, flux_3_p)
 
-
-        ! dot with normal vector
-        integrand = HALF*(flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3)
-
-        call worker%integrate_boundary('Density * NuTilde',integrand)
 
 
     end subroutine compute

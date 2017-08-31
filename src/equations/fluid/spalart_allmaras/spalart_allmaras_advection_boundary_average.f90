@@ -1,4 +1,4 @@
-module spalart_allmaras_laxfriedrichs
+module spalart_allmaras_advection_boundary_average
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO,ONE,TWO,HALF
@@ -18,7 +18,7 @@ module spalart_allmaras_laxfriedrichs
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    type, extends(operator_t), public :: spalart_allmaras_laxfriedrichs_operator_t
+    type, extends(operator_t), public :: spalart_allmaras_advection_boundary_average_operator_t
 
 
     contains
@@ -26,7 +26,7 @@ module spalart_allmaras_laxfriedrichs
         procedure   :: init
         procedure   :: compute
 
-    end type spalart_allmaras_laxfriedrichs_operator_t
+    end type spalart_allmaras_advection_boundary_average_operator_t
     !*****************************************************************************************
 
 contains
@@ -40,10 +40,10 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine init(self)
-        class(spalart_allmaras_laxfriedrichs_operator_t),   intent(inout)  :: self
+        class(spalart_allmaras_advection_boundary_average_operator_t),   intent(inout)  :: self
 
         ! Set operator name
-        call self%set_name('Spalart-Allmaras LaxFriedrichs Operator')
+        call self%set_name('Spalart-Allmaras Advection Boundary Average Operator')
 
         ! Set operator type
         call self%set_operator_type('Boundary Advective Operator')
@@ -65,25 +65,21 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(spalart_allmaras_laxfriedrichs_operator_t), intent(inout)   :: self
-        type(chidg_worker_t),                             intent(inout)   :: worker
-        class(properties_t),                              intent(inout)   :: prop
+        class(spalart_allmaras_advection_boundary_average_operator_t),  intent(inout)   :: self
+        type(chidg_worker_t),                                           intent(inout)   :: worker
+        class(properties_t),                                            intent(inout)   :: prop
 
 
-        type(AD_D), dimension(:), allocatable   ::      &
-            density_m, density_p,                       &
-            mom1_m, mom2_m, mom3_m,                     &
-            mom1_p, mom2_p, mom3_p,                     &
-            density_nutilde_m, density_nutilde_p,       &
-            invdensity_m, invdensity_p,                 &
-            u_m, v_m, w_m, T_m, un_m, c_m, wavespeed_m, &
-            u_p, v_p, w_p, T_p, un_p, c_p, wavespeed_p, &
-            dissipation
-
-        real(rk),   dimension(:), allocatable   ::  &
-            unorm_1, unorm_2, unorm_3, grid_vel_n
-
-        real(rk),   dimension(:,:), allocatable :: grid_vel
+        type(AD_D), dimension(:), allocatable   ::  &
+            density_m, density_p,                   &
+            mom1_m, mom2_m, mom3_m,                 &
+            mom1_p, mom2_p, mom3_p,                 &
+            density_nutilde_m, density_nutilde_p,   &
+            invdensity_m, invdensity_p,             &
+            u_m, v_m, w_m,                          &
+            u_p, v_p, w_p,                          &
+            flux_1_m, flux_2_m, flux_3_m,           &
+            flux_1_p, flux_2_p, flux_3_p
 
 
 
@@ -105,7 +101,6 @@ contains
         density_nutilde_m = worker%get_field('Density * NuTilde', 'value', 'face interior')
         density_nutilde_p = worker%get_field('Density * NuTilde', 'value', 'face exterior')
 
-
         
         !
         ! Get fluid advection velocity
@@ -119,46 +114,26 @@ contains
         u_p = mom1_p*invdensity_p
         v_p = mom2_p*invdensity_p
         w_p = mom3_p*invdensity_p
-        
 
 
         !
-        ! Get normal vector
-        !
-        unorm_1 = worker%unit_normal_ale(1)
-        unorm_2 = worker%unit_normal_ale(2)
-        unorm_3 = worker%unit_normal_ale(3)
+        ! Compute average flux
+        ! 
+        flux_1_m = density_nutilde_m * u_m
+        flux_2_m = density_nutilde_m * v_m
+        flux_3_m = density_nutilde_m * w_m
 
-
-
-        !
-        ! Compute maximum wave speed
-        !
-        grid_vel = worker%get_grid_velocity_face('face interior')
-        un_m = u_m*unorm_1 + v_m*unorm_2 + w_m*unorm_3
-        un_p = u_p*unorm_1 + v_p*unorm_2 + w_p*unorm_3
-        grid_vel_n = grid_vel(:,1)*unorm_1  +  grid_vel(:,2)*unorm_2  +  grid_vel(:,3)*unorm_3
-
-
-        T_m = worker%get_field('Temperature','value','face interior')
-        T_p = worker%get_field('Temperature','value','face exterior')
-        c_m = sqrt(gam * Rgas * T_m)
-        c_p = sqrt(gam * Rgas * T_p)
-
-        wavespeed_m = abs(un_m) + c_m  + abs(grid_vel_n)
-        wavespeed_p = abs(un_p) + c_p  + abs(grid_vel_n)
-
-
-        !
-        ! Compute Lax-Friedrichs upwind flux
-        !
-        dissipation = HALF*max(abs(wavespeed_m),abs(wavespeed_p))*(density_nutilde_m - density_nutilde_p)
+        flux_1_p = density_nutilde_p * u_p
+        flux_2_p = density_nutilde_p * v_p
+        flux_3_p = density_nutilde_p * w_p
 
 
         !
         ! Integrate flux
         !
-        call worker%integrate_boundary_upwind('Density * NuTilde',dissipation)
+        call worker%integrate_boundary_average('Density * NuTilde','Advection', &
+                                                flux_1_m, flux_2_m, flux_3_m,   &
+                                                flux_1_p, flux_2_p, flux_3_p)
 
 
     end subroutine compute
@@ -172,4 +147,4 @@ contains
 
 
 
-end module spalart_allmaras_laxfriedrichs
+end module spalart_allmaras_advection_boundary_average

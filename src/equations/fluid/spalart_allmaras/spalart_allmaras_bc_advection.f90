@@ -70,51 +70,40 @@ contains
         class(properties_t),                             intent(inout)   :: prop
 
 
-        type(AD_D), dimension(:), allocatable   ::  &
-            density_nutilde, u_a, v_a, w_a,         &
-            flux_1, flux_2, flux_3, integrand
-
-        real(rk),   dimension(:), allocatable   ::  &
-            norm_1, norm_2, norm_3
-
+        type(AD_D), dimension(:), allocatable   ::          &
+            density, mom1, mom2, mom3, density_nutilde,     &
+            u, v, w, invdensity, flux_1, flux_2, flux_3
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        density_nutilde = worker%get_primary_field_face('Density * NuTilde', 'value', 'boundary')
+        density         = worker%get_field('Density',           'value', 'boundary')
+        mom1            = worker%get_field('Momentum-1',        'value', 'boundary')
+        mom2            = worker%get_field('Momentum-2',        'value', 'boundary')
+        mom3            = worker%get_field('Momentum-3',        'value', 'boundary')
+        density_nutilde = worker%get_field('Density * NuTilde', 'value', 'boundary')
 
 
         !
         ! Get fluid advection velocity
         !
-        u_a = worker%get_model_field_face('Advection Velocity-1', 'value', 'boundary')
-        v_a = worker%get_model_field_face('Advection Velocity-2', 'value', 'boundary')
-        w_a = worker%get_model_field_face('Advection Velocity-3', 'value', 'boundary')
-
-
-        !
-        ! Get normal vector
-        !
-        norm_1  = worker%normal(1)
-        norm_2  = worker%normal(2)
-        norm_3  = worker%normal(3)
+        invdensity = ONE/density
+        u = mom1*invdensity
+        v = mom2*invdensity
+        w = mom3*invdensity
+    
 
 
         !
         ! Compute advection of spalart-allmaras working variable 
         ! 
-        flux_1 = density_nutilde * u_a
-        flux_2 = density_nutilde * v_a
-        flux_3 = density_nutilde * w_a
+        flux_1 = density_nutilde * u
+        flux_2 = density_nutilde * v
+        flux_3 = density_nutilde * w
 
 
-        !
-        ! Integrate flux
-        !
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-
-        call worker%integrate_boundary('Density * NuTilde',integrand)
+        call worker%integrate_boundary_condition('Density * NuTilde','Advection',flux_1,flux_2,flux_3)
 
 
     end subroutine compute

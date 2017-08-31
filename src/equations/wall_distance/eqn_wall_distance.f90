@@ -342,7 +342,7 @@ contains
         !
         ! Integrate volume flux
         !
-        call worker%integrate_volume('u',source)
+        call worker%integrate_volume_source('u',source)
 
 
     end subroutine compute_source

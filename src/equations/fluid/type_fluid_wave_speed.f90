@@ -80,15 +80,15 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho  = worker%get_primary_field_general('Density', 'value')
-        rhoE = worker%get_primary_field_general('Energy',  'value')
+        rho  = worker%get_field('Density', 'value')
+        rhoE = worker%get_field('Energy',  'value')
 
 
         !
         ! Get Temperature defined by some model for equation of state
         !
-        T    = worker%get_model_field_general('Temperature', 'value')
-        P    = worker%get_model_field_general('Pressure', 'value')
+        T    = worker%gefield('Temperature', 'value')
+        P    = worker%gefield('Pressure', 'value')
 
 
 

@@ -87,6 +87,10 @@ module type_chidg_worker
         procedure   :: face_info            ! Return a face_info type
 
 
+
+
+
+
         ! Worker get data
         procedure   :: get_primary_field_general
         procedure   :: get_primary_field_face
@@ -101,9 +105,24 @@ module type_chidg_worker
         procedure   :: get_field
         !procedure   :: get_field_gradient
 
+        ! Previously ALE routines
+        procedure   :: get_primary_field_value_ale_element
+        procedure   :: get_primary_field_grad_ale_element
+        procedure   :: get_primary_field_value_ale_face
+        procedure   :: get_primary_field_grad_ale_face
+        procedure   :: get_primary_field_value_ale_general
+        procedure   :: get_primary_field_grad_ale_general
+
+
+
         procedure   :: store_bc_state
         procedure   :: store_model_field
 
+
+
+
+
+        ! Element/Face data access procedures
         procedure   :: normal
         procedure   :: unit_normal
         procedure   :: unit_normal_ale
@@ -122,20 +141,8 @@ module type_chidg_worker
         procedure   :: coordinate_system
 
         procedure   :: face_type
-
         procedure   :: time
 
-
-        ! Worker process data
-        procedure   :: integrate_boundary
-        procedure   :: integrate_boundary_average
-        generic     :: integrate_volume => integrate_volume_flux, &
-                                           integrate_volume_source
-        procedure   :: integrate_volume_flux
-        procedure   :: integrate_volume_flux_ale
-        procedure   :: integrate_volume_source
-        
-        ! ALE procedures
         procedure   :: get_area_ratio
         procedure   :: get_grid_velocity_element
         procedure   :: get_grid_velocity_face
@@ -145,17 +152,28 @@ module type_chidg_worker
         procedure   :: get_det_jacobian_grid_face
 
 
-        procedure   :: get_primary_field_value_ale_element
-        procedure   :: get_primary_field_grad_ale_element
-        procedure   :: get_primary_field_value_ale_face
-        procedure   :: get_primary_field_grad_ale_face
-        procedure   :: get_primary_field_value_ale_general
-        procedure   :: get_primary_field_grad_ale_general
 
-        procedure   :: post_process_volume_advective_flux_ale
-        procedure   :: post_process_boundary_advective_flux_ale
-        procedure   :: post_process_volume_diffusive_flux_ale
-        procedure   :: post_process_boundary_diffusive_flux_ale
+
+
+
+        ! Integration procedures
+        procedure   :: integrate_boundary
+        procedure   :: integrate_boundary_average
+        procedure   :: integrate_boundary_upwind
+        procedure   :: integrate_boundary_condition
+
+!        generic     :: integrate_volume => integrate_volume_flux, &
+!                                           integrate_volume_source
+        procedure   :: integrate_volume_flux
+        procedure   :: integrate_volume_source
+        
+
+        ! Worker auxiliary flux processing procedures. Used internally
+        procedure, private:: post_process_volume_advective_flux_ale
+        procedure, private:: post_process_boundary_advective_flux_ale
+        procedure, private:: post_process_volume_diffusive_flux_ale
+        procedure, private:: post_process_boundary_diffusive_flux_ale
+
         final       :: destructor
     
     end type chidg_worker_t
@@ -625,11 +643,11 @@ contains
     !!  @date   7/10/2017
     !!
     !---------------------------------------------------------------------------------------
-    function get_field(self,field,interp_type,interp_source) result(var_gq)
+    function get_field(self,field,interp_type,interp_source_user) result(var_gq)
         class(chidg_worker_t),  intent(in)              :: self
         character(*),           intent(in)              :: field
         character(*),           intent(in)              :: interp_type
-        character(*),           intent(in), optional    :: interp_source
+        character(*),           intent(in), optional    :: interp_source_user
 
         type(AD_D),     allocatable :: var_gq(:), tmp_gq(:)
         character(:),   allocatable :: cache_component, cache_type, lift_source, lift_nodes, user_msg
@@ -637,71 +655,72 @@ contains
         real(rk)                    :: stabilization
         logical                     :: no_lift
 
+        !
+        ! Get user-specified interpolation source, or get from cache pointer entry
+        !
+        if (present(interp_source_user)) then
+            interp_source = interp_source_user
+        else
+            interp_source = self%interpolation_source
+        end if
+
+
+
 
         !
         ! Set cache_component
         !
-        if (present(interp_source)) then
-            select case(trim(interp_source))
-                case('face interior') 
-                    cache_component = 'face interior'
-                    lift_source     = 'face interior'
-                    lift_nodes      = 'lift face'
-                    lift_face_min   = self%iface
-                    lift_face_max   = self%iface
-                    stabilization   = real(NFACES,rk)
-                case('face exterior','boundary')
-                    cache_component = 'face exterior'
-                    lift_source     = 'face exterior'
-                    lift_nodes      = 'lift face'
-                    lift_face_min   = self%iface
-                    lift_face_max   = self%iface
-                    stabilization   = real(NFACES,rk)
-                case('element')
-                    cache_component = 'element'
-                    lift_source     = 'face interior'
-                    lift_nodes      = 'lift element'
-                    lift_face_min   = 1
-                    lift_face_max   = NFACES
-                    stabilization   = ONE
-                case default
-                    user_msg = "chidg_worker%get_field: Invalid value for interpolation source. &
-                                Try 'face interior', 'face exterior', 'boundary', or 'element'"
-                    call chidg_signal_one(FATAL,user_msg,trim(interp_source))
-            end select
-        else
-            cache_component = self%interpolation_source
-            if ( (trim(cache_component) /= "face interior") .and. &
-                 (trim(cache_component) /= "face exterior") .and. &
-                 (trim(cache_component) /= "element") ) then
-            user_msg = "chidg_worker%get_field: chidg_worker implicit interpolation source is not valid."
-            call chidg_signal(FATAL,user_msg)
-            end if
-        end if
-
+        select case(trim(interp_source))
+            case('face interior') 
+                cache_component = 'face interior'
+                lift_source     = 'face interior'
+                lift_nodes      = 'lift face'
+                lift_face_min   = self%iface
+                lift_face_max   = self%iface
+                stabilization   = real(NFACES,rk)
+            case('face exterior','boundary')
+                cache_component = 'face exterior'
+                lift_source     = 'face exterior'
+                lift_nodes      = 'lift face'
+                lift_face_min   = self%iface
+                lift_face_max   = self%iface
+                stabilization   = real(NFACES,rk)
+            case('element')
+                cache_component = 'element'
+                lift_source     = 'face interior'
+                lift_nodes      = 'lift element'
+                lift_face_min   = 1
+                lift_face_max   = NFACES
+                stabilization   = ONE
+            case default
+                user_msg = "chidg_worker%get_field: Invalid value for interpolation source. &
+                            Try 'face interior', 'face exterior', 'boundary', or 'element'"
+                call chidg_signal_one(FATAL,user_msg,trim(interp_source))
+        end select
 
 
 
         !
         ! Set cache_type
         !
-        if (interp_type == 'value') then
-            cache_type = 'value'
-            idirection = 0
-        else if (interp_type == 'grad1') then
-            cache_type = 'gradient'
-            idirection = 1
-        else if (interp_type == 'grad2') then
-            cache_type = 'gradient'
-            idirection = 2
-        else if (interp_type == 'grad3') then
-            cache_type = 'gradient'
-            idirection = 3
-        else
-            user_msg = "chidg_worker%get_field: Invalid interpolation &
-                        type. 'value', 'grad1', 'grad2', 'grad3'"
-            call chidg_signal(FATAL,user_msg)
-        end if
+        select case(trim(interp_type))
+            case('value')
+                cache_type = 'value'
+                idirection = 0
+            case('grad1','gradient1','gradient-1')
+                cache_type = 'gradient'
+                idirection = 1
+            case('grad2','gradient2','gradient-2')
+                cache_type = 'gradient'
+                idirection = 2
+            case('grad3','gradient3','gradient-3')
+                cache_type = 'gradient'
+                idirection = 3
+            case default
+                user_msg = "chidg_worker%get_field: Invalid interpolation &
+                            type. 'value', 'grad1', 'grad2', 'grad3'"
+                call chidg_signal(FATAL,user_msg)
+        end select
 
 
 
@@ -1304,21 +1323,18 @@ contains
         type(AD_D), allocatable, dimension(:,:) :: flux_ref_m, flux_ref_p
         real(rk),   allocatable, dimension(:)   :: norm_1, norm_2, norm_3
 
-        idomain_l = self%element_info%idomain_l
-        eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
-        ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
 
 
         !
         ! Compute ALE transformation
         !
         select case(trim(flux_type))
-            case('Advective')
+            case('Advection')
                 q_m = self%get_primary_field_face(primary_field,'value','face interior')
                 q_p = self%get_primary_field_face(primary_field,'value','face exterior')
                 flux_ref_m = self%post_process_boundary_advective_flux_ale(flux_1_m,flux_2_m,flux_3_m, advected_quantity=q_m, interp_source='face interior')
                 flux_ref_p = self%post_process_boundary_advective_flux_ale(flux_1_p,flux_2_p,flux_3_p, advected_quantity=q_p, interp_source='face exterior')
-            case('Diffusive')
+            case('Diffusion')
                 flux_ref_m = self%post_process_boundary_diffusive_flux_ale(flux_1_m,flux_2_m,flux_3_m, interp_source='face interior')
                 flux_ref_p = self%post_process_boundary_diffusive_flux_ale(flux_1_p,flux_2_p,flux_3_p, interp_source='face exterior')
             case default
@@ -1347,10 +1363,128 @@ contains
         !
         ! Integrate
         !
+        idomain_l = self%element_info%idomain_l
+        eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
+        ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
         call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ifield,self%itime,integrand)
 
 
     end subroutine integrate_boundary_average
+    !****************************************************************************************
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/22/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine integrate_boundary_upwind(self,primary_field,integrand)
+        class(chidg_worker_t),  intent(in)      :: self
+        character(*),           intent(in)      :: primary_field
+        type(AD_D),             intent(inout)   :: integrand(:)
+
+        integer(ik)                                 :: ifield, idomain_l, eqn_ID
+        real(rk),   allocatable,    dimension(:)    :: norm_1, norm_2, norm_3, darea
+
+        !
+        ! Get normal vector
+        !
+        norm_1  = self%normal(1)
+        norm_2  = self%normal(2)
+        norm_3  = self%normal(3)
+        darea = sqrt(norm_1**TWO+norm_2**TWO+norm_3**TWO)
+
+
+        !
+        ! Multiply by differential area
+        !
+        integrand = darea*integrand
+
+
+        !
+        ! Integrate
+        !
+        idomain_l = self%element_info%idomain_l
+        eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
+        ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
+        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ifield,self%itime,integrand)
+
+
+    end subroutine integrate_boundary_upwind
+    !****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie (AFRL)
+    !!  @date   8/22/2016
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    subroutine integrate_boundary_condition(self,primary_field,flux_type,flux_1,flux_2,flux_3)
+        class(chidg_worker_t),  intent(in)      :: self
+        character(*),           intent(in)      :: primary_field
+        character(*),           intent(in)      :: flux_type
+        type(AD_D),             intent(inout)   :: flux_1(:)
+        type(AD_D),             intent(inout)   :: flux_2(:)
+        type(AD_D),             intent(inout)   :: flux_3(:)
+
+        integer(ik)                             :: ifield, idomain_l, eqn_ID
+        real(rk),   allocatable, dimension(:)   :: norm_1, norm_2, norm_3
+        type(AD_D), allocatable, dimension(:)   :: integrand, q_bc
+        type(AD_D), allocatable, dimension(:,:) :: flux
+
+
+        !
+        ! Compute ALE transformation
+        !
+        select case(trim(flux_type))
+            case('Advection')
+                q_bc = self%get_primary_field_face(primary_field,'value','face interior')
+                flux = self%post_process_boundary_advective_flux_ale(flux_1,flux_2,flux_3, advected_quantity=q_bc, interp_source='face interior')
+            case('Diffusion')
+                flux = self%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3,'face interior')
+            case default
+                call chidg_signal_one(FATAL,"worker%integrate_boundary_condition: Invalid value for incoming flux_type.",trim(flux_type))
+
+        end select
+
+
+        !
+        ! Dot flux with normal vector
+        !
+        norm_1 = self%normal(1)
+        norm_2 = self%normal(2)
+        norm_3 = self%normal(3)
+        integrand = flux(:,1)*norm_1 + flux(:,2)*norm_2 + flux(:,3)*norm_3
+
+
+        !
+        ! Integrate
+        !
+        idomain_l = self%element_info%idomain_l
+        eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
+        ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
+        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ifield,self%itime,integrand)
+
+
+    end subroutine integrate_boundary_condition
     !****************************************************************************************
 
 
@@ -1370,37 +1504,32 @@ contains
 
 
 
-
-
-
-
-
-    !>
-    !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   8/22/2016
-    !!
-    !!
-    !---------------------------------------------------------------------------------------
-    subroutine integrate_volume_flux(self,primary_field,integrand_x,integrand_y,integrand_z)
-        class(chidg_worker_t),  intent(in)      :: self
-        character(*),           intent(in)      :: primary_field
-        type(AD_D),             intent(inout)   :: integrand_x(:)
-        type(AD_D),             intent(inout)   :: integrand_y(:)
-        type(AD_D),             intent(inout)   :: integrand_z(:)
-
-        integer(ik) :: ifield, idomain_l, eqn_ID
-
-
-        idomain_l = self%element_info%idomain_l
-        eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
-        ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
-
-        call integrate_volume_vector_flux(self%mesh,self%solverdata,self%element_info,self%function_info,ifield,self%itime,integrand_x,integrand_y,integrand_z)
-
-
-    end subroutine integrate_volume_flux
-    !***************************************************************************************
+!    !>
+!    !!
+!    !!  @author Nathan A. Wukie (AFRL)
+!    !!  @date   8/22/2016
+!    !!
+!    !!
+!    !---------------------------------------------------------------------------------------
+!    subroutine integrate_volume_flux(self,primary_field,integrand_x,integrand_y,integrand_z)
+!        class(chidg_worker_t),  intent(in)      :: self
+!        character(*),           intent(in)      :: primary_field
+!        type(AD_D),             intent(inout)   :: integrand_x(:)
+!        type(AD_D),             intent(inout)   :: integrand_y(:)
+!        type(AD_D),             intent(inout)   :: integrand_z(:)
+!
+!        integer(ik) :: ifield, idomain_l, eqn_ID
+!
+!
+!        idomain_l = self%element_info%idomain_l
+!        eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
+!        ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
+!
+!        call integrate_volume_vector_flux(self%mesh,self%solverdata,self%element_info,self%function_info,ifield,self%itime,integrand_x,integrand_y,integrand_z)
+!
+!
+!    end subroutine integrate_volume_flux
+!    !***************************************************************************************
 
 
 
@@ -1414,7 +1543,7 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine integrate_volume_flux_ale(self,primary_field,flux_type,flux_1,flux_2,flux_3)
+    subroutine integrate_volume_flux(self,primary_field,flux_type,flux_1,flux_2,flux_3)
         class(chidg_worker_t),  intent(in)      :: self
         character(*),           intent(in)      :: primary_field
         character(*),           intent(in)      :: flux_type
@@ -1435,13 +1564,13 @@ contains
         ! Compute ALE transformation
         !
         select case(trim(flux_type))
-            case('Advective')
+            case('Advection')
                 q = self%get_primary_field_element(primary_field,'value')
                 flux = self%post_process_volume_advective_flux_ale(flux_1,flux_2,flux_3, advected_quantity=q)
-            case('Diffusive')
+            case('Diffusion')
                 flux = self%post_process_volume_diffusive_flux_ale(flux_1,flux_2,flux_3)
             case default
-                call chidg_signal_one(FATAL,"worker%integrate_boundary_average: Invalid value for incoming flux_type.",trim(flux_type))
+                call chidg_signal_one(FATAL,"worker%integrate_volume_flux: Invalid value for incoming flux_type.",trim(flux_type))
         end select
 
         
@@ -1451,7 +1580,7 @@ contains
         call integrate_volume_vector_flux(self%mesh,self%solverdata,self%element_info,self%function_info,ifield,self%itime,flux(:,1),flux(:,2),flux(:,3))
 
 
-    end subroutine integrate_volume_flux_ale
+    end subroutine integrate_volume_flux
     !***************************************************************************************
 
 
@@ -2611,37 +2740,6 @@ contains
 
         character(:),   allocatable :: user_msg
 
-!        ale_g       = self%get_det_jacobian_grid_element('value')
-!        ale_g_grad1 = self%get_det_jacobian_grid_element('grad1')
-!        ale_g_grad2 = self%get_det_jacobian_grid_element('grad2')
-!        ale_g_grad3 = self%get_det_jacobian_grid_element('grad3')
-!        ale_Dinv    = self%get_inv_jacobian_grid_element()
-!
-!
-!        if (gradient_type == 'gradient + lift') then
-!            grad1_u = self%get_primary_field_element(field,'grad1 + lift')
-!            grad2_u = self%get_primary_field_element(field,'grad2 + lift')
-!            grad3_u = self%get_primary_field_element(field,'grad3 + lift')
-!        elseif (gradient_type == 'gradient') then
-!            grad1_u = self%get_primary_field_element(field,'grad1')
-!            grad2_u = self%get_primary_field_element(field,'grad2')
-!            grad3_u = self%get_primary_field_element(field,'grad3')
-!        else
-!            user_msg = "chidg_worker%get_primary_field_grad_ale_element: Invalid interpolation &
-!                        type. 'gradient' or 'gradient + lift'"
-!            call chidg_signal(FATAL,user_msg)
-!        end if
-!
-!
-!        u       = self%get_primary_field_element(field,'value')
-!        grad1_u = grad1_u-(u/ale_g)*ale_g_grad1
-!        grad2_u = grad2_u-(u/ale_g)*ale_g_grad2
-!        grad3_u = grad3_u-(u/ale_g)*ale_g_grad3
-!
-!        allocate(grad_u_gq(size(grad1_u,1),3))
-!        grad_u_gq(:,1) = (ale_Dinv(1,1,:)*grad1_u + ale_Dinv(2,1,:)*grad2_u + ale_Dinv(3,1,:)*grad3_u)/ale_g
-!        grad_u_gq(:,2) = (ale_Dinv(1,2,:)*grad1_u + ale_Dinv(2,2,:)*grad2_u + ale_Dinv(3,2,:)*grad3_u)/ale_g
-!        grad_u_gq(:,3) = (ale_Dinv(1,3,:)*grad1_u + ale_Dinv(2,3,:)*grad2_u + ale_Dinv(3,3,:)*grad3_u)/ale_g
 
         if (gradient_type == 'gradient + lift') then
             grad1_u = self%get_primary_field_element(field,'grad1 + lift')

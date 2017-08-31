@@ -430,15 +430,15 @@ contains
         call eqn%add_operator('Euler Boundary Average Flux')
         call eqn%add_operator('Euler Roe Flux')
         call eqn%add_operator('Euler BC Flux')
-        call eqn%add_operator('Euler Volume Cylindrical Source')
+        !call eqn%add_operator('Euler Volume Cylindrical Source')
 
         call eqn%add_operator('Fluid Viscous Volume Operator')
         call eqn%add_operator('Fluid Viscous Boundary Average Operator')
         call eqn%add_operator('Fluid Viscous BC Operator')
-        call eqn%add_operator('Fluid Viscous Volume Cylindrical Source')
+        !call eqn%add_operator('Fluid Viscous Volume Cylindrical Source')
 
         call eqn%add_model('Ideal Gas')
-        call eqn%add_model('Fluid Advection Velocity')
+        !call eqn%add_model('Fluid Advection Velocity')
         call eqn%add_model('Test Force Constant Viscosity')
         call eqn%add_model('Stokes Hypothesis')
         call eqn%add_model('Reynolds Analogy')

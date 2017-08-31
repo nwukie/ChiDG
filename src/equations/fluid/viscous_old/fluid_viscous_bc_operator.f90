@@ -1,4 +1,4 @@
-module fluid_viscous_ale_bc_operator
+module fluid_viscous_bc_operator
 #include <messenger.h>
     use mod_kinds,          only: ik, rk
     use mod_constants,      only: HALF, ONE, TWO
@@ -18,7 +18,7 @@ module fluid_viscous_ale_bc_operator
     !!
     !!
     !------------------------------------------------------------------------------------
-    type, public, extends(operator_t)   :: fluid_viscous_ale_bc_operator_t
+    type, public, extends(operator_t)   :: fluid_viscous_bc_operator_t
 
 
     contains
@@ -26,7 +26,7 @@ module fluid_viscous_ale_bc_operator
         procedure   :: init
         procedure   :: compute
 
-    end type fluid_viscous_ale_bc_operator_t
+    end type fluid_viscous_bc_operator_t
     !*************************************************************************************
 
 
@@ -44,12 +44,12 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(fluid_viscous_ale_bc_operator_t),   intent(inout) :: self
+        class(fluid_viscous_bc_operator_t),   intent(inout) :: self
         
         !
         ! Set operator name
         !
-        call self%set_name('Fluid Viscous ALE BC Operator')
+        call self%set_name('Fluid Viscous BC Operator')
 
         !
         ! Set operator type
@@ -85,7 +85,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(fluid_viscous_ale_bc_operator_t), intent(inout)   :: self
+        class(fluid_viscous_bc_operator_t), intent(inout)   :: self
         type(chidg_worker_t),               intent(inout)   :: worker
         class(properties_t),                intent(inout)   :: prop
 
@@ -104,15 +104,14 @@ contains
             norm_1, norm_2, norm_3, r
 
 
-        type(AD_D), allocatable, dimension(:,:)          :: flux_ref
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
-        density = worker%get_primary_field_value_ale_face('Density'   , 'boundary')
-        mom1    = worker%get_primary_field_value_ale_face('Momentum-1', 'boundary')
-        mom2    = worker%get_primary_field_value_ale_face('Momentum-2', 'boundary')
-        mom3    = worker%get_primary_field_value_ale_face('Momentum-3', 'boundary')
-        energy  = worker%get_primary_field_value_ale_face('Energy'    , 'boundary')
+        density = worker%get_primary_field_face('Density'   ,'value', 'boundary')
+        mom1    = worker%get_primary_field_face('Momentum-1','value', 'boundary')
+        mom2    = worker%get_primary_field_face('Momentum-2','value', 'boundary')
+        mom3    = worker%get_primary_field_face('Momentum-3','value', 'boundary')
+        energy  = worker%get_primary_field_face('Energy'    ,'value', 'boundary')
 
 
         !
@@ -196,10 +195,7 @@ contains
         flux_2 = -tau_12
         flux_3 = -tau_13
 
-        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3,'face interior')
-        ! dot with normal vector
-        integrand = (flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3)
-
+        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
 
         call worker%integrate_boundary('Momentum-1',integrand)
 
@@ -210,11 +206,7 @@ contains
         flux_2 = -tau_22
         flux_3 = -tau_23
 
-        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3,'face interior')
-        ! dot with normal vector
-        integrand = (flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3)
-
-
+        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
 
         !
         ! Convert to tangential to angular momentum flux
@@ -236,12 +228,8 @@ contains
         flux_1 = -tau_13
         flux_2 = -tau_23
         flux_3 = -tau_33
-        
-        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3,'face interior')
-        ! dot with normal vector
-        integrand = (flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3)
 
-
+        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
 
         call worker%integrate_boundary('Momentum-3',integrand)
 
@@ -252,11 +240,7 @@ contains
         flux_2 = -k*grad2_T  -  (u*tau_12 + v*tau_22 + w*tau_23)
         flux_3 = -k*grad3_T  -  (u*tau_13 + v*tau_23 + w*tau_33)
 
-        flux_ref = worker%post_process_boundary_diffusive_flux_ale(flux_1, flux_2, flux_3,'face interior')
-        ! dot with normal vector
-        integrand = (flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3)
-
-
+        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
 
         call worker%integrate_boundary('Energy',integrand)
 
@@ -285,4 +269,4 @@ contains
 
 
 
-end module fluid_viscous_ale_bc_operator
+end module fluid_viscous_bc_operator

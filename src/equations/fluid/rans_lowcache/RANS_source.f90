@@ -409,7 +409,7 @@ contains
                     +(ONE/SA_sigma)*(nu + f_n1*nutilde)*(grad1_rho*grad1_nutilde + grad2_rho*grad2_nutilde + grad3_rho*grad3_nutilde)   &
                   )
 
-        call worker%integrate_volume('Density * NuTilde',source)
+        call worker%integrate_volume_source('Density * NuTilde',source)
 
 
     end subroutine compute

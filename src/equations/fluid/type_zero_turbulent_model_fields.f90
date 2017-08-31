@@ -82,7 +82,7 @@ contains
         !
         ! Get field to set derivative arrays. Set mut to zero.
         !
-        vals = worker%get_primary_field_general('Density','value')
+        vals = worker%get_field('Density','value')
         vals = ZERO
 
         !

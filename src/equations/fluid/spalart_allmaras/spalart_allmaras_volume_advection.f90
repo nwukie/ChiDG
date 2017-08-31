@@ -70,37 +70,42 @@ contains
         class(properties_t),                                 intent(inout)   :: prop
 
 
-        type(AD_D), dimension(:), allocatable   ::  &
-            density_nutilde, u_a, v_a, w_a,         &
-            flux_1, flux_2, flux_3
+        type(AD_D), dimension(:), allocatable   ::          &
+            density, mom1, mom2, mom3,  density_nutilde,    &
+            invdensity, u, v, w, flux_1, flux_2, flux_3
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        density_nutilde = worker%get_primary_field_element('Density * NuTilde', 'value')
+        density         = worker%get_field('Density',           'value', 'element')
+        mom1            = worker%get_field('Momentum-1',        'value', 'element')
+        mom2            = worker%get_field('Momentum-2',        'value', 'element')
+        mom3            = worker%get_field('Momentum-3',        'value', 'element')
+        density_nutilde = worker%get_field('Density * NuTilde', 'value', 'element')
 
         
         !
         ! Get fluid advection velocity
         ! 
-        u_a = worker%get_model_field_element('Advection Velocity-1', 'value')
-        v_a = worker%get_model_field_element('Advection Velocity-2', 'value')
-        w_a = worker%get_model_field_element('Advection Velocity-3', 'value')
+        invdensity = ONE/density
+        u = mom1*invdensity
+        v = mom2*invdensity
+        w = mom3*invdensity
 
 
         !
         ! Compute average flux and field difference.
         ! 
-        flux_1 = density_nutilde*u_a
-        flux_2 = density_nutilde*v_a
-        flux_3 = density_nutilde*w_a
+        flux_1 = density_nutilde * u
+        flux_2 = density_nutilde * v
+        flux_3 = density_nutilde * w
 
 
         !
         ! Integrate flux
         !
-        call worker%integrate_volume('Density * NuTilde',flux_1,flux_2,flux_3)
+        call worker%integrate_volume_flux('Density * NuTilde','Advection',flux_1,flux_2,flux_3)
 
 
     end subroutine compute

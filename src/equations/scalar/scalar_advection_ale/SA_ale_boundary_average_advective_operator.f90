@@ -76,22 +76,17 @@ contains
     !-----------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
         class(SA_ale_boundary_average_advective_operator_t),    intent(inout)   :: self
-        type(chidg_worker_t),                               intent(inout)   :: worker
-        class(properties_t),                                intent(inout)   :: prop
+        type(chidg_worker_t),                                   intent(inout)   :: worker
+        class(properties_t),                                    intent(inout)   :: prop
 
 
         type(AD_D), allocatable, dimension(:)   ::  &
             u_m, u_p,                               &
             c1_m, c2_m, c3_m,                       &
             c1_p, c2_p, c3_p,                       &
-            flux_1, flux_2, flux_3, integrand, advected_quantity
+            flux_1_m, flux_2_m, flux_3_m,           &
+            flux_1_p, flux_2_p, flux_3_p
 
-
-        real(rk),   allocatable, dimension(:)   ::  &
-            norm_1, norm_2, norm_3
-
-        type(AD_D), allocatable, dimension(:,:)   :: flux_ref
-       
         !
         ! Interpolate solution to quadrature nodes
         !
@@ -111,35 +106,24 @@ contains
 
 
         !
-        ! Get normal vector
-        !
-        norm_1 = worker%normal(1)
-        norm_2 = worker%normal(2)
-        norm_3 = worker%normal(3)
-
-
-        !
         ! Compute boundary average flux
         !
-        flux_1 = HALF*(c1_m*u_m + c1_p*u_p)  
-        flux_2 = HALF*(c2_m*u_m + c2_p*u_p) 
-        flux_3 = HALF*(c3_m*u_m + c3_p*u_p) 
+        flux_1_m = c1_m*u_m
+        flux_2_m = c2_m*u_m
+        flux_3_m = c3_m*u_m
 
-        advected_quantity = HALF*(u_m+u_p)
-        flux_ref = worker%post_process_boundary_advective_flux_ale(flux_1, flux_2, flux_3, advected_quantity, 'face interior')
-
-
-
-        !
-        ! Dot with normal vector
-        ! 
-        integrand = flux_ref(:,1)*norm_1 + flux_ref(:,2)*norm_2 + flux_ref(:,3)*norm_3
+        flux_1_p = c1_p*u_p
+        flux_2_p = c2_p*u_p
+        flux_3_p = c3_p*u_p
 
 
         !
         ! Integrate flux
         !
-        call worker%integrate_boundary('u',integrand)
+        call worker%integrate_boundary_average('u','Advection',             &
+                                                flux_1_m,flux_2_m,flux_3_m, &
+                                                flux_1_p,flux_2_p,flux_3_p)
+
 
 
     end subroutine compute

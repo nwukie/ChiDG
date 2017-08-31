@@ -91,72 +91,45 @@ contains
         type(AD_D), allocatable, dimension(:)   ::  &
             grad1_u_m, grad2_u_m, grad3_u_m,        &
             grad1_u_p, grad2_u_p, grad3_u_p,        &
-            flux_1, flux_2, flux_3,                 &
-            flux_m, flux_p, flux, integrand,        &
+            flux_1_m, flux_2_m, flux_3_m,           &
+            flux_1_p, flux_2_p, flux_3_p,           &
             mu_m, mu_p
-
-        real(rk),   allocatable, dimension(:)   :: &
-            norm_1, norm_2, norm_3
-
-
-        norm_1 = worker%normal(1)
-        norm_2 = worker%normal(2)
-        norm_3 = worker%normal(3)
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        !grad1_u_m = worker%get_primary_field_face('u', 'grad1 + lift', 'face interior')
-        !grad2_u_m = worker%get_primary_field_face('u', 'grad2 + lift', 'face interior')
-        !grad3_u_m = worker%get_primary_field_face('u', 'grad3 + lift', 'face interior')
+        grad1_u_m = worker%get_primary_field_face('u', 'grad1 + lift', 'face interior')
+        grad2_u_m = worker%get_primary_field_face('u', 'grad2 + lift', 'face interior')
+        grad3_u_m = worker%get_primary_field_face('u', 'grad3 + lift', 'face interior')
 
-        !grad1_u_p = worker%get_primary_field_face('u', 'grad1 + lift', 'face exterior')
-        !grad2_u_p = worker%get_primary_field_face('u', 'grad2 + lift', 'face exterior')
-        !grad3_u_p = worker%get_primary_field_face('u', 'grad3 + lift', 'face exterior')
-        grad1_u_m = worker%get_field('u', 'grad1', 'face interior')
-        grad2_u_m = worker%get_field('u', 'grad2', 'face interior')
-        grad3_u_m = worker%get_field('u', 'grad3', 'face interior')
-
-        grad1_u_p = worker%get_field('u', 'grad1', 'face exterior')
-        grad2_u_p = worker%get_field('u', 'grad2', 'face exterior')
-        grad3_u_p = worker%get_field('u', 'grad3', 'face exterior')
-
-
+        grad1_u_p = worker%get_primary_field_face('u', 'grad1 + lift', 'face exterior')
+        grad2_u_p = worker%get_primary_field_face('u', 'grad2 + lift', 'face exterior')
+        grad3_u_p = worker%get_primary_field_face('u', 'grad3 + lift', 'face exterior')
 
 
         !
         ! Compute scalar coefficient
         !
-        !mu_m = worker%get_model_field_face('Scalar Diffusion Coefficient', 'value', 'face interior')
-        !mu_p = worker%get_model_field_face('Scalar Diffusion Coefficient', 'value', 'face exterior')
-        mu_m = worker%get_field('Scalar Diffusion Coefficient', 'value', 'face interior')
-        mu_p = worker%get_field('Scalar Diffusion Coefficient', 'value', 'face exterior')
+        mu_m = worker%get_model_field_face('Scalar Diffusion Coefficient', 'value', 'face interior')
+        mu_p = worker%get_model_field_face('Scalar Diffusion Coefficient', 'value', 'face exterior')
 
 
-        flux_m = -mu_m*grad1_u_m
-        flux_p = -mu_p*grad1_u_p
-        flux_1 = HALF*(flux_m + flux_p)
+        flux_1_m = -mu_m*grad1_u_m
+        flux_2_m = -mu_m*grad2_u_m
+        flux_3_m = -mu_m*grad3_u_m
 
-        flux_m = -mu_m*grad2_u_m
-        flux_p = -mu_p*grad2_u_p
-        flux_2 = HALF*(flux_m + flux_p)
-
-        flux_m = -mu_m*grad3_u_m
-        flux_p = -mu_p*grad3_u_p
-        flux_3 = HALF*(flux_m + flux_p)
-
-
-        !
-        ! Compute boundary average flux
-        !
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
+        flux_1_p = -mu_p*grad1_u_p
+        flux_2_p = -mu_p*grad2_u_p
+        flux_3_p = -mu_p*grad3_u_p
 
 
         !
         ! Integrate flux
         !
-        call worker%integrate_boundary('u',integrand)
+        call worker%integrate_boundary_average('u','Diffusion',                 &
+                                                flux_1_m, flux_2_m, flux_3_m,   &
+                                                flux_1_p, flux_2_p, flux_3_p)
 
 
     end subroutine compute

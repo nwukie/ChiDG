@@ -530,7 +530,7 @@ contains
         flux_2 = -shear_12
         flux_3 = -shear_13
 
-        call worker%integrate_volume('Momentum-1',flux_1,flux_2,flux_3)
+        call worker%integrate_volume_flux('Momentum-1','Diffusion',flux_1,flux_2,flux_3)
 
 
         !=================================================
@@ -553,7 +553,7 @@ contains
             call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
-        call worker%integrate_volume('Momentum-2',flux_1,flux_2,flux_3)
+        call worker%integrate_volume_flux('Momentum-2','Diffusion',flux_1,flux_2,flux_3)
 
 
         !=================================================
@@ -563,7 +563,7 @@ contains
         flux_2 = -shear_23
         flux_3 = -shear_33
 
-        call worker%integrate_volume('Momentum-3',flux_1,flux_2,flux_3)
+        call worker%integrate_volume_flux('Momentum-3','Diffusion',flux_1,flux_2,flux_3)
                              
         !=================================================
         ! energy flux
@@ -572,7 +572,7 @@ contains
         flux_2 = -k*grad2_T  -  (u*shear_12 + v*shear_22 + w*shear_23)
         flux_3 = -k*grad3_T  -  (u*shear_13 + v*shear_23 + w*shear_33)
 
-        call worker%integrate_volume('Energy',flux_1,flux_2,flux_3)
+        call worker%integrate_volume_flux('Energy','Diffusion',flux_1,flux_2,flux_3)
 
 
         !================================
@@ -585,7 +585,7 @@ contains
         flux_3 = (diffusion*grad3_nutilde)
 
 
-        call worker%integrate_volume('Density * NuTilde',flux_1,flux_2,flux_3)
+        call worker%integrate_volume_flux('Density * NuTilde','Diffusion',flux_1,flux_2,flux_3)
 
     
 

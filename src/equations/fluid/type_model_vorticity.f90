@@ -97,30 +97,30 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        density = worker%get_primary_field_general('Density',    'value')
-        mom1    = worker%get_primary_field_general('Momentum-1', 'value')
-        mom2    = worker%get_primary_field_general('Momentum-2', 'value')
-        mom3    = worker%get_primary_field_general('Momentum-3', 'value')
+        density = worker%get_field('Density',    'value')
+        mom1    = worker%get_field('Momentum-1', 'value')
+        mom2    = worker%get_field('Momentum-2', 'value')
+        mom3    = worker%get_field('Momentum-3', 'value')
 
 
         !
         ! Interpolate gradient to quadrature nodes
         !
-        grad1_density = worker%get_primary_field_general('Density'   , 'grad1+lift')
-        grad2_density = worker%get_primary_field_general('Density'   , 'grad2+lift')
-        grad3_density = worker%get_primary_field_general('Density'   , 'grad3+lift')
+        grad1_density = worker%get_field('Density'   , 'grad1')
+        grad2_density = worker%get_field('Density'   , 'grad2')
+        grad3_density = worker%get_field('Density'   , 'grad3')
 
-        grad1_mom1    = worker%get_primary_field_general('Momentum-1', 'grad1+lift')
-        grad2_mom1    = worker%get_primary_field_general('Momentum-1', 'grad2+lift')
-        grad3_mom1    = worker%get_primary_field_general('Momentum-1', 'grad3+lift')
+        grad1_mom1    = worker%get_field('Momentum-1', 'grad1')
+        grad2_mom1    = worker%get_field('Momentum-1', 'grad2')
+        grad3_mom1    = worker%get_field('Momentum-1', 'grad3')
 
-        grad1_mom2    = worker%get_primary_field_general('Momentum-2', 'grad1+lift')
-        grad2_mom2    = worker%get_primary_field_general('Momentum-2', 'grad2+lift')
-        grad3_mom2    = worker%get_primary_field_general('Momentum-2', 'grad3+lift')
+        grad1_mom2    = worker%get_field('Momentum-2', 'grad1')
+        grad2_mom2    = worker%get_field('Momentum-2', 'grad2')
+        grad3_mom2    = worker%get_field('Momentum-2', 'grad3')
 
-        grad1_mom3    = worker%get_primary_field_general('Momentum-3', 'grad1+lift')
-        grad2_mom3    = worker%get_primary_field_general('Momentum-3', 'grad2+lift')
-        grad3_mom3    = worker%get_primary_field_general('Momentum-3', 'grad3+lift')
+        grad1_mom3    = worker%get_field('Momentum-3', 'grad1')
+        grad2_mom3    = worker%get_field('Momentum-3', 'grad2')
+        grad3_mom3    = worker%get_field('Momentum-3', 'grad3')
 
 
         !

@@ -90,74 +90,46 @@ contains
         type(AD_D), allocatable, dimension(:)   ::                      &
             density_m,  mom1_m,  mom2_m,  mom3_m,  energy_m,            &
             density_bc, mom1_bc, mom2_bc, mom3_bc, energy_bc,           &
-            drho_dx_m, drhou_dx_m, drhov_dx_m, drhow_dx_m, drhoE_dx_m,  &
-            drho_dy_m, drhou_dy_m, drhov_dy_m, drhow_dy_m, drhoE_dy_m,  &
-            drho_dz_m, drhou_dz_m, drhov_dz_m, drhow_dz_m, drhoE_dz_m,  &
+            grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,  &
+            grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,  &
+            grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
             normal_momentum
 
         real(rk), allocatable, dimension(:) :: &
             unorm_1, unorm_2, unorm_3, r
 
-        integer(ik) :: igq
 
-        type(AD_D), allocatable, dimension(:,:) :: grad_density, grad_mom1, grad_mom2, grad_mom3, grad_energy
+
+
         !
         ! Interpolate interior solution to quadrature nodes
         !
-        density_m = worker%get_primary_field_value_ale_face("Density"   , 'face interior')
-        mom1_m    = worker%get_primary_field_value_ale_face("Momentum-1", 'face interior')
-        mom2_m    = worker%get_primary_field_value_ale_face("Momentum-2", 'face interior')
-        mom3_m    = worker%get_primary_field_value_ale_face("Momentum-3", 'face interior')
-        energy_m  = worker%get_primary_field_value_ale_face("Energy"    , 'face interior')
-
-        grad_density    = worker%get_primary_field_grad_ale_face('Density'   , 'gradient', 'face interior')
-        grad_mom1       = worker%get_primary_field_grad_ale_face('Momentum-1', 'gradient', 'face interior')
-        grad_mom2       = worker%get_primary_field_grad_ale_face('Momentum-2', 'gradient', 'face interior')
-        grad_mom3       = worker%get_primary_field_grad_ale_face('Momentum-3', 'gradient', 'face interior')
-        grad_energy     = worker%get_primary_field_grad_ale_face('Energy'    , 'gradient', 'face interior')
+        density_m = worker%get_field('Density'   , 'face interior')
+        mom1_m    = worker%get_field('Momentum-1', 'face interior')
+        mom2_m    = worker%get_field('Momentum-2', 'face interior')
+        mom3_m    = worker%get_field('Momentum-3', 'face interior')
+        energy_m  = worker%get_field('Energy'    , 'face interior')
 
 
+        grad1_density_m = worker%get_field('Density'   , 'grad1', 'face interior')
+        grad2_density_m = worker%get_field('Density'   , 'grad2', 'face interior')
+        grad3_density_m = worker%get_field('Density'   , 'grad3', 'face interior')
 
-        drho_dx_m  = grad_density(:,1) !worker%get_primary_field_face('Density'   , 'grad1', 'face interior')
-        drho_dy_m  = grad_density(:,2) !worker%get_primary_field_face('Density'   , 'grad2', 'face interior')
-        drho_dz_m  = grad_density(:,3) !worker%get_primary_field_face('Density'   , 'grad3', 'face interior')
+        grad1_mom1_m    = worker%get_field('Momentum-1', 'grad1', 'face interior')
+        grad2_mom1_m    = worker%get_field('Momentum-1', 'grad2', 'face interior')
+        grad3_mom1_m    = worker%get_field('Momentum-1', 'grad3', 'face interior')
 
-        drhou_dx_m = grad_mom1(:,1)!worker%get_primary_field_face('Momentum-1', 'grad1', 'face interior')
-        drhou_dy_m = grad_mom1(:,2)!worker%get_primary_field_face('Momentum-1', 'grad2', 'face interior')
-        drhou_dz_m = grad_mom1(:,3)!worker%get_primary_field_face('Momentum-1', 'grad3', 'face interior')
+        grad1_mom2_m    = worker%get_field('Momentum-2', 'grad1', 'face interior')
+        grad2_mom2_m    = worker%get_field('Momentum-2', 'grad2', 'face interior')
+        grad3_mom2_m    = worker%get_field('Momentum-2', 'grad3', 'face interior')
 
-        drhov_dx_m = grad_mom2(:,1)!worker%get_primary_field_face('Momentum-2', 'grad1', 'face interior')
-        drhov_dy_m = grad_mom2(:,2)!worker%get_primary_field_face('Momentum-2', 'grad2', 'face interior')
-        drhov_dz_m = grad_mom2(:,3)!worker%get_primary_field_face('Momentum-2', 'grad3', 'face interior')
+        grad1_mom3_m    = worker%get_field('Momentum-3', 'grad1', 'face interior')
+        grad2_mom3_m    = worker%get_field('Momentum-3', 'grad2', 'face interior')
+        grad3_mom3_m    = worker%get_field('Momentum-3', 'grad3', 'face interior')
 
-        drhow_dx_m = grad_mom3(:,1)!worker%get_primary_field_face('Momentum-3', 'grad1', 'face interior')
-        drhow_dy_m = grad_mom3(:,2)!worker%get_primary_field_face('Momentum-3', 'grad2', 'face interior')
-        drhow_dz_m = grad_mom3(:,3)!worker%get_primary_field_face('Momentum-3', 'grad3', 'face interior')
-        
-        drhoE_dx_m = grad_energy(:,1)!worker%get_primary_field_face('Energy'    , 'grad1', 'face interior')
-        drhoE_dy_m = grad_energy(:,2)!worker%get_primary_field_face('Energy'    , 'grad2', 'face interior')
-        drhoE_dz_m = grad_energy(:,3)!worker%get_primary_field_face('Energy'    , 'grad3', 'face interior')
-
-
-       ! drho_dx_m  = worker%get_primary_field_face("Density"   , 'grad1', 'face interior')
-       ! drho_dy_m  = worker%get_primary_field_face("Density"   , 'grad2', 'face interior')
-       ! drho_dz_m  = worker%get_primary_field_face("Density"   , 'grad3', 'face interior')
-
-       ! drhou_dx_m = worker%get_primary_field_face("Momentum-1", 'grad1', 'face interior')
-       ! drhou_dy_m = worker%get_primary_field_face("Momentum-1", 'grad2', 'face interior')
-       ! drhou_dz_m = worker%get_primary_field_face("Momentum-1", 'grad3', 'face interior')
-
-       ! drhov_dx_m = worker%get_primary_field_face("Momentum-2", 'grad1', 'face interior')
-       ! drhov_dy_m = worker%get_primary_field_face("Momentum-2", 'grad2', 'face interior')
-       ! drhov_dz_m = worker%get_primary_field_face("Momentum-2", 'grad3', 'face interior')
-
-       ! drhow_dx_m = worker%get_primary_field_face("Momentum-3", 'grad1', 'face interior')
-       ! drhow_dy_m = worker%get_primary_field_face("Momentum-3", 'grad2', 'face interior')
-       ! drhow_dz_m = worker%get_primary_field_face("Momentum-3", 'grad3', 'face interior')
-       ! 
-       ! drhoE_dx_m = worker%get_primary_field_face("Energy"    , 'grad1', 'face interior')
-       ! drhoE_dy_m = worker%get_primary_field_face("Energy"    , 'grad2', 'face interior')
-       ! drhoE_dz_m = worker%get_primary_field_face("Energy"    , 'grad3', 'face interior')
+        grad1_energy_m  = worker%get_field('Energy'    , 'grad1', 'face interior')
+        grad2_energy_m  = worker%get_field('Energy'    , 'grad2', 'face interior')
+        grad3_energy_m  = worker%get_field('Energy'    , 'grad3', 'face interior')
 
 
         !
@@ -249,25 +221,25 @@ contains
         
         
         
-        call worker%store_bc_state('Density'   , drho_dx_m,  'grad1')
-        call worker%store_bc_state('Density'   , drho_dy_m,  'grad2')
-        call worker%store_bc_state('Density'   , drho_dz_m,  'grad3')
+        call worker%store_bc_state('Density'   , grad1_density_m, 'grad1')
+        call worker%store_bc_state('Density'   , grad2_density_m, 'grad2')
+        call worker%store_bc_state('Density'   , grad3_density_m, 'grad3')
                                                 
-        call worker%store_bc_state('Momentum-1', drhou_dx_m, 'grad1')
-        call worker%store_bc_state('Momentum-1', drhou_dy_m, 'grad2')
-        call worker%store_bc_state('Momentum-1', drhou_dz_m, 'grad3')
+        call worker%store_bc_state('Momentum-1', grad1_mom1_m,    'grad1')
+        call worker%store_bc_state('Momentum-1', grad2_mom1_m,    'grad2')
+        call worker%store_bc_state('Momentum-1', grad3_mom1_m,    'grad3')
                                                 
-        call worker%store_bc_state('Momentum-2', drhov_dx_m, 'grad1')
-        call worker%store_bc_state('Momentum-2', drhov_dy_m, 'grad2')
-        call worker%store_bc_state('Momentum-2', drhov_dz_m, 'grad3')
+        call worker%store_bc_state('Momentum-2', grad1_mom2_m,    'grad1')
+        call worker%store_bc_state('Momentum-2', grad2_mom2_m,    'grad2')
+        call worker%store_bc_state('Momentum-2', grad3_mom2_m,    'grad3')
                                                 
-        call worker%store_bc_state('Momentum-3', drhow_dx_m, 'grad1')
-        call worker%store_bc_state('Momentum-3', drhow_dy_m, 'grad2')
-        call worker%store_bc_state('Momentum-3', drhow_dz_m, 'grad3')
+        call worker%store_bc_state('Momentum-3', grad1_mom3_m,    'grad1')
+        call worker%store_bc_state('Momentum-3', grad2_mom3_m,    'grad2')
+        call worker%store_bc_state('Momentum-3', grad3_mom3_m,    'grad3')
                                                 
-        call worker%store_bc_state('Energy'    , drhoE_dx_m, 'grad1')
-        call worker%store_bc_state('Energy'    , drhoE_dy_m, 'grad2')
-        call worker%store_bc_state('Energy'    , drhoE_dz_m, 'grad3')
+        call worker%store_bc_state('Energy'    , grad1_energy_m,  'grad1')
+        call worker%store_bc_state('Energy'    , grad2_energy_m,  'grad2')
+        call worker%store_bc_state('Energy'    , grad3_energy_m,  'grad3')
 
 
 

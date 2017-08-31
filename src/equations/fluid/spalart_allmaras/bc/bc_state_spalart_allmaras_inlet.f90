@@ -96,12 +96,12 @@ contains
         !
         ! Interpolate interior solution to quadrature nodes
         !
-        density_m               = worker%get_primary_field_face('Density',           'value', 'face interior')
-        density_nutilde_m       = worker%get_primary_field_face('Density * NuTilde', 'value', 'face interior')
+        density_m               = worker%get_field('Density',           'value', 'face interior')
+        density_nutilde_m       = worker%get_field('Density * NuTilde', 'value', 'face interior')
 
-        grad1_density_nutilde_m = worker%get_primary_field_face('Density * NuTilde', 'grad1', 'face interior')
-        grad2_density_nutilde_m = worker%get_primary_field_face('Density * NuTilde', 'grad2', 'face interior')
-        grad3_density_nutilde_m = worker%get_primary_field_face('Density * NuTilde', 'grad3', 'face interior')
+        grad1_density_nutilde_m = worker%get_field('Density * NuTilde', 'grad1', 'face interior')
+        grad2_density_nutilde_m = worker%get_field('Density * NuTilde', 'grad2', 'face interior')
+        grad3_density_nutilde_m = worker%get_field('Density * NuTilde', 'grad3', 'face interior')
 
 
         
@@ -114,7 +114,7 @@ contains
         !
         ! Get viscosity from interior
         !
-        mu_m = worker%get_model_field_face('Laminar Viscosity', 'value', 'face interior')
+        mu_m = worker%get_field('Laminar Viscosity', 'value', 'face interior')
         nu_m = mu_m/density_m
 
 

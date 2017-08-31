@@ -82,11 +82,11 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        density = worker%get_primary_field_value_ale_general('Density')
-        mom1    = worker%get_primary_field_value_ale_general('Momentum-1')
-        mom2    = worker%get_primary_field_value_ale_general('Momentum-2')
-        mom3    = worker%get_primary_field_value_ale_general('Momentum-3')
-        energy  = worker%get_primary_field_value_ale_general('Energy')
+        density = worker%get_field('Density',    'value')
+        mom1    = worker%get_field('Momentum-1', 'value')
+        mom2    = worker%get_field('Momentum-2', 'value')
+        mom3    = worker%get_field('Momentum-3', 'value')
+        energy  = worker%get_field('Energy',     'value')
 
 
         !

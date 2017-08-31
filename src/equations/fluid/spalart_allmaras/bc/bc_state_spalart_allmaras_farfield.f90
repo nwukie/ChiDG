@@ -94,15 +94,15 @@ contains
         !
         ! Interpolate interior solution to quadrature nodes
         !
-        density_m = worker%get_primary_field_face('Density',    'value', 'face interior')
-        mom1_m    = worker%get_primary_field_face('Momentum-1', 'value', 'face interior')
-        mom2_m    = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
-        mom3_m    = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
+        density_m = worker%get_field('Density',    'value', 'face interior')
+        mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
+        mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
+        mom3_m    = worker%get_field('Momentum-3', 'value', 'face interior')
 
-        density_nutilde_m       = worker%get_primary_field_face('Density * NuTilde', 'value', 'face interior')
-        grad1_density_nutilde_m = worker%get_primary_field_face('Density * NuTilde', 'grad1', 'face interior')
-        grad2_density_nutilde_m = worker%get_primary_field_face('Density * NuTilde', 'grad2', 'face interior')
-        grad3_density_nutilde_m = worker%get_primary_field_face('Density * NuTilde', 'grad3', 'face interior')
+        density_nutilde_m       = worker%get_field('Density * NuTilde', 'value', 'face interior')
+        grad1_density_nutilde_m = worker%get_field('Density * NuTilde', 'grad1', 'face interior')
+        grad2_density_nutilde_m = worker%get_field('Density * NuTilde', 'grad2', 'face interior')
+        grad3_density_nutilde_m = worker%get_field('Density * NuTilde', 'grad3', 'face interior')
 
 
         !
@@ -147,7 +147,6 @@ contains
         nu_m = mu_m/density_m
         density_nutilde_bc = density_nutilde_m
         where(inflow)
-            !density_nutilde_bc = density_m * (nutilde_over_nu * 0.00018_rk)
             density_nutilde_bc = density_m * (nutilde_over_nu * nu_m)
         end where
 

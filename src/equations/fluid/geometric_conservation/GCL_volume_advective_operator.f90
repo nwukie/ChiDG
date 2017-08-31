@@ -126,7 +126,7 @@ contains
         flux_1 = -flux_1
         flux_2 = -flux_2
         flux_3 = -flux_3
-        call worker%integrate_volume('g_bar',flux_1,flux_2,flux_3)
+        call worker%integrate_volume_flux('g_bar','Advection',flux_1,flux_2,flux_3)
 
     end subroutine compute
     !****************************************************************************************************

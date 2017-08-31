@@ -310,7 +310,7 @@ contains
 
                                 end if 
                             end do  ! itime_i
-                        end if  ! locla_multiply
+                        end if  ! local_multiply
 
                     end do  ! ielem
 

@@ -99,13 +99,13 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        grad1_u_m = worker%get_field('u', 'grad1 + lift', 'face interior')
-        grad2_u_m = worker%get_field('u', 'grad2 + lift', 'face interior')
-        grad3_u_m = worker%get_field('u', 'grad3 + lift', 'face interior')
+        grad1_u_m = worker%get_field('u', 'grad1', 'face interior')
+        grad2_u_m = worker%get_field('u', 'grad2', 'face interior')
+        grad3_u_m = worker%get_field('u', 'grad3', 'face interior')
 
-        grad1_u_p = worker%get_field('u', 'grad1 + lift', 'face exterior')
-        grad2_u_p = worker%get_field('u', 'grad2 + lift', 'face exterior')
-        grad3_u_p = worker%get_field('u', 'grad3 + lift', 'face exterior')
+        grad1_u_p = worker%get_field('u', 'grad1', 'face exterior')
+        grad2_u_p = worker%get_field('u', 'grad2', 'face exterior')
+        grad3_u_p = worker%get_field('u', 'grad3', 'face exterior')
 
 
         !

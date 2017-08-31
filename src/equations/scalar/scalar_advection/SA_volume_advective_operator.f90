@@ -78,15 +78,15 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        u  = worker%get_primary_field_element('u','value')
+        u  = worker%get_field('u','value')
 
 
         !
         ! Get model coefficients
         !
-        c1 = worker%get_model_field_element('Scalar Advection Velocity-1', 'value')
-        c2 = worker%get_model_field_element('Scalar Advection Velocity-2', 'value')
-        c3 = worker%get_model_field_element('Scalar Advection Velocity-3', 'value')
+        c1 = worker%get_field('Scalar Advection Velocity-1', 'value', 'element')
+        c2 = worker%get_field('Scalar Advection Velocity-2', 'value', 'element')
+        c3 = worker%get_field('Scalar Advection Velocity-3', 'value', 'element')
 
 
         !

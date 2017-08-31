@@ -84,64 +84,53 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        grad1_u1 = worker%get_primary_field_element('grid_displacement1','grad1 + lift')
-        grad2_u1 = worker%get_primary_field_element('grid_displacement1','grad2 + lift')
-        grad3_u1 = worker%get_primary_field_element('grid_displacement1','grad3 + lift')
+        grad1_u1 = worker%get_field('grid_displacement1','grad1', 'element')
+        grad2_u1 = worker%get_field('grid_displacement1','grad2', 'element')
+        grad3_u1 = worker%get_field('grid_displacement1','grad3', 'element')
 
-        grad1_u2 = worker%get_primary_field_element('grid_displacement2','grad1 + lift')
-        grad2_u2 = worker%get_primary_field_element('grid_displacement2','grad2 + lift')
-        grad3_u2 = worker%get_primary_field_element('grid_displacement2','grad3 + lift')
+        grad1_u2 = worker%get_field('grid_displacement2','grad1', 'element')
+        grad2_u2 = worker%get_field('grid_displacement2','grad2', 'element')
+        grad3_u2 = worker%get_field('grid_displacement2','grad3', 'element')
 
-        grad1_u3 = worker%get_primary_field_element('grid_displacement3','grad1 + lift')
-        grad2_u3 = worker%get_primary_field_element('grid_displacement3','grad2 + lift')
-        grad3_u3 = worker%get_primary_field_element('grid_displacement3','grad3 + lift')
+        grad1_u3 = worker%get_field('grid_displacement3','grad1', 'element')
+        grad2_u3 = worker%get_field('grid_displacement3','grad2', 'element')
+        grad3_u3 = worker%get_field('grid_displacement3','grad3', 'element')
 
 
         !
         ! Compute scalar coefficient
         ! 
-        mu = worker%get_model_field_element('Mesh Motion Diffusion Coefficient', 'value')
+        mu = worker%get_field('Mesh Motion Diffusion Coefficient', 'value', 'element')
 
 
-        !
-        ! Compute volume flux at quadrature nodes
-        !
 
-        !GD1
+
+        !=================================
+        !               GD1
+        !=================================
         flux_1 = -mu*grad1_u1
         flux_2 = -mu*grad2_u1
         flux_3 = -mu*grad3_u1
 
-
-        !
-        ! Integrate volume flux
-        !
         call worker%integrate_volume_flux('grid_displacement1','Diffusion',flux_1,flux_2,flux_3)
 
-        !GD2
+        !=================================
+        !               GD2
+        !=================================
         flux_1 = -mu*grad1_u2
         flux_2 = -mu*grad2_u2
         flux_3 = -mu*grad3_u2
 
-
-        !
-        ! Integrate volume flux
-        !
         call worker%integrate_volume_flux('grid_displacement2','Diffusion',flux_1,flux_2,flux_3)
 
-        !GD3
+        !=================================
+        !               GD3
+        !=================================
         flux_1 = -mu*grad1_u3
         flux_2 = -mu*grad2_u3
         flux_3 = -mu*grad3_u3
 
-
-        !
-        ! Integrate volume flux
-        !
         call worker%integrate_volume_flux('grid_displacement3','Diffusion',flux_1,flux_2,flux_3)
-
-
-
 
 
     end subroutine compute

@@ -103,13 +103,12 @@ contains
         class(default_advection_model),     intent(in)      :: self
         type(chidg_worker_t),               intent(inout)   :: worker
 
-        type(AD_D), dimension(:),   allocatable :: &
-            u, c1, c2, c3
+        type(AD_D), dimension(:),   allocatable :: u, c1, c2, c3
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        u = worker%get_primary_field_general('u', 'value')
+        u = worker%get_field('u', 'value')
 
 
         ! Initialize derivatives

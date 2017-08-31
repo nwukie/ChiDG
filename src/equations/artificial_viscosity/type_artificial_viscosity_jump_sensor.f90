@@ -96,7 +96,7 @@ contains
         ! Interpolate solution to quadrature nodes
         !
         !turb_m = worker%get_primary_field_face('Density * NuTilde', 'value', 'face interior')
-        turb_m = worker%get_primary_field_face('Energy', 'value', 'face interior')
+        turb_m = worker%get_field('Energy', 'value', 'face interior')
 
 
         !
@@ -146,7 +146,7 @@ contains
             ! Get exterior field
             !
             !turb_p = worker%get_primary_field_face('Density * NuTilde', 'value', 'face exterior')
-            turb_p = worker%get_primary_field_face('Energy', 'value', 'face exterior')
+            turb_p = worker%get_field('Energy', 'value', 'face exterior')
 
 
             jump_x   = turb_p*unormx_p + turb_m*unormx_m
@@ -203,7 +203,7 @@ contains
 
 
         !turb_element = worker%get_primary_field_general('Density * NuTilde', 'value')
-        turb_element = worker%get_primary_field_general('Energy', 'value')
+        turb_element = worker%get_field('Energy', 'value')
         sensor = turb_element
         sensor = ZERO
 

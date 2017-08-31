@@ -96,7 +96,7 @@ contains
         ! Interpolate solution to quadrature nodes
         !
         !turb_total = worker%get_primary_field_element('Density * NuTilde', 'value')
-        turb_total = worker%get_primary_field_element('Density', 'value')
+        turb_total = worker%get_field('Density', 'value', 'element')
 
 
 
@@ -104,7 +104,10 @@ contains
         if (order > 0) then
 
             !turb_low   = worker%get_primary_field_element('Density * NuTilde', 'value', Pmin=0,Pmax=(order-1))
-            turb_low   = worker%get_primary_field_element('Density', 'value', Pmin=0,Pmax=(order-1))
+
+            
+            call chidg_signal(FATAL,"artificial_viscosity_resolution_sensor: Fix partial expansion access.")
+            !turb_low   = worker%get_primary_field_element('Density', 'value', Pmin=0,Pmax=(order-1), 'element
 
 
 
@@ -147,7 +150,7 @@ contains
 
 
 
-            turb_gen = worker%get_primary_field_general('Density * NuTilde', 'value')
+            turb_gen = worker%get_field('Density * NuTilde', 'value')
             sensor = turb_gen
             sensor = ZERO
             if ( Fk <= (psi - dpsi) ) then
@@ -163,7 +166,7 @@ contains
         else
 
             !turb_gen = worker%get_primary_field_general('Density * NuTilde', 'value')
-            turb_gen = worker%get_primary_field_general('Density', 'value')
+            turb_gen = worker%get_field('Density', 'value')
             sensor = turb_gen
             sensor = ZERO
 

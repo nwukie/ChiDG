@@ -74,21 +74,21 @@ contains
         type(chidg_worker_t),   intent(inout)   :: worker
 
         type(AD_D), dimension(:),   allocatable :: &
-            rho, rhoE, T, P, vmag, sound_speed, wave_speed
+            density, energy, T, P, vmag, sound_speed, wave_speed
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        rho  = worker%get_field('Density', 'value')
-        rhoE = worker%get_field('Energy',  'value')
+        density = worker%get_field('Density', 'value')
+        energy  = worker%get_field('Energy',  'value')
 
 
         !
         ! Get Temperature defined by some model for equation of state
         !
-        T    = worker%gefield('Temperature', 'value')
-        P    = worker%gefield('Pressure', 'value')
+        T = worker%get_field('Temperature', 'value')
+        P = worker%get_field('Pressure', 'value')
 
 
 
@@ -97,8 +97,8 @@ contains
         !   Danger computing vmag with sqrt because derivative
         !   is undefined at zero.
         !
-        !vmag = sqrt((rhou**TWO + rhov**TWO + rhow**TWO)/(rho*rho))
-        vmag = rhoE - (P/(gam - ONE))
+        !vmag = sqrt((densityu**TWO + densityv**TWO + densityw**TWO)/(density*density))
+        vmag = energy - (P/(gam - ONE))
         sound_speed = sqrt(gam * Rgas * T)
 
         

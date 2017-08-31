@@ -117,20 +117,20 @@ contains
         !
         ! Get u_m from face interior to initialize derivatives
         !
-        u1_bc    = worker%get_primary_field_face('grid_displacement1','value', 'face interior')
-        du1dx_bc = worker%get_primary_field_face('grid_displacement1','grad1', 'face interior')
-        du1dy_bc = worker%get_primary_field_face('grid_displacement1','grad2', 'face interior')
-        du1dz_bc = worker%get_primary_field_face('grid_displacement1','grad3', 'face interior')
+        u1_bc    = worker%get_field('grid_displacement1','value', 'face interior')
+        du1dx_bc = worker%get_field('grid_displacement1','grad1', 'face interior')
+        du1dy_bc = worker%get_field('grid_displacement1','grad2', 'face interior')
+        du1dz_bc = worker%get_field('grid_displacement1','grad3', 'face interior')
 
-        u2_bc    = worker%get_primary_field_face('grid_displacement2','value', 'face interior')
-        du2dx_bc = worker%get_primary_field_face('grid_displacement2','grad1', 'face interior')
-        du2dy_bc = worker%get_primary_field_face('grid_displacement2','grad2', 'face interior')
-        du2dz_bc = worker%get_primary_field_face('grid_displacement2','grad3', 'face interior')
+        u2_bc    = worker%get_field('grid_displacement2','value', 'face interior')
+        du2dx_bc = worker%get_field('grid_displacement2','grad1', 'face interior')
+        du2dy_bc = worker%get_field('grid_displacement2','grad2', 'face interior')
+        du2dz_bc = worker%get_field('grid_displacement2','grad3', 'face interior')
 
-        u3_bc    = worker%get_primary_field_face('grid_displacement3','value', 'face interior')
-        du3dx_bc = worker%get_primary_field_face('grid_displacement3','grad1', 'face interior')
-        du3dy_bc = worker%get_primary_field_face('grid_displacement3','grad2', 'face interior')
-        du3dz_bc = worker%get_primary_field_face('grid_displacement3','grad3', 'face interior')
+        u3_bc    = worker%get_field('grid_displacement3','value', 'face interior')
+        du3dx_bc = worker%get_field('grid_displacement3','grad1', 'face interior')
+        du3dy_bc = worker%get_field('grid_displacement3','grad2', 'face interior')
+        du3dz_bc = worker%get_field('grid_displacement3','grad3', 'face interior')
 
 
         !

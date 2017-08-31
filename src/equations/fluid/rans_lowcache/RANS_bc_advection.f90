@@ -2,7 +2,7 @@ module RANS_bc_advection
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ONE,TWO,THREE,HALF
-    use mod_fluid,              only: omega
+    use mod_fluid,              only: omega, gam
 
     use type_operator,          only: operator_t
     use type_properties,        only: properties_t
@@ -21,11 +21,6 @@ module RANS_bc_advection
     !!
     !------------------------------------------------------------------------------
     type, extends(operator_t), public :: RANS_bc_advection_t
-
-        real(rk)    :: gam = 1.4_rk
-        real(rk)    :: R   = 287.15_rk
-        real(rk)    :: Cp  = 1003.0_rk
-        real(rk)    :: Pr  = 0.72_rk
 
     contains
 
@@ -78,30 +73,30 @@ contains
     !!
     !!------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(RANS_bc_advection_t),     intent(inout)   :: self
-        type(chidg_worker_t),               intent(inout)   :: worker
-        class(properties_t),                intent(inout)   :: prop
+        class(RANS_bc_advection_t), intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        class(properties_t),        intent(inout)   :: prop
 
 
         type(AD_D), allocatable, dimension(:) ::    &
             density, mom1, mom2, mom3, energy,      &
-            u_a, v_a, w_a,                          &
+            u, v, w,                                &
             enthalpy, pressure,                     &
             density_nutilde,                        &
-            flux_1, flux_2, flux_3, integrand
+            flux_1, flux_2, flux_3
 
-        real(rk),   allocatable, dimension(:)   :: r, norm_1, norm_2, norm_3
+        real(rk),   allocatable, dimension(:)   :: r
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        density         = worker%get_primary_field_face('Density'   ,        'value','boundary')
-        mom1            = worker%get_primary_field_face('Momentum-1',        'value','boundary')
-        mom2            = worker%get_primary_field_face('Momentum-2',        'value','boundary')
-        mom3            = worker%get_primary_field_face('Momentum-3',        'value','boundary')
-        energy          = worker%get_primary_field_face('Energy'    ,        'value','boundary')
-        density_nutilde = worker%get_primary_field_face('Density * NuTilde', 'value','boundary')
+        density         = worker%get_field('Density'   ,        'value', 'boundary')
+        mom1            = worker%get_field('Momentum-1',        'value', 'boundary')
+        mom2            = worker%get_field('Momentum-2',        'value', 'boundary')
+        mom3            = worker%get_field('Momentum-3',        'value', 'boundary')
+        energy          = worker%get_field('Energy'    ,        'value', 'boundary')
+        density_nutilde = worker%get_field('Density * NuTilde', 'value', 'boundary')
 
 
         !
@@ -125,28 +120,20 @@ contains
             call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
-        !
-        ! Get normal vector
-        !
-        norm_1 = worker%normal(1)
-        norm_2 = worker%normal(2)
-        norm_3 = worker%normal(3)
-
-
-
 
         !
         ! Get fluid advection velocity
         !
-        u_a = worker%get_model_field_face('Advection Velocity-1', 'value','boundary')
-        v_a = worker%get_model_field_face('Advection Velocity-2', 'value','boundary')
-        w_a = worker%get_model_field_face('Advection Velocity-3', 'value','boundary')
+        invdensity = ONE/density
+        u = mom1*invdensity
+        v = mom2*invdensity
+        w = mom3*invdensity
 
 
         !
         ! Compute Pressure, Enthalpy
         !
-        pressure = (self%gam-ONE)*(energy - HALF*( (mom1*mom1) + (mom2*mom2) + (mom3*mom3) )/density )
+        pressure = get_field('Pressure', 'value', 'boundary')
         enthalpy = (energy + pressure)/density
 
 
@@ -154,32 +141,29 @@ contains
         !=================================================
         ! mass flux
         !=================================================
-        flux_1 = (density * u_a)
-        flux_2 = (density * v_a)
-        flux_3 = (density * w_a)
+        flux_1 = (density * u)
+        flux_2 = (density * v)
+        flux_3 = (density * w)
 
-
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-        call worker%integrate_boundary('Density',integrand)
+        call worker%integrate_boundary_condition('Density','Advection', flux_1, flux_2, flux_3)
 
 
         !=================================================
         ! momentum-1 flux
         !=================================================
-        flux_1 = (mom1 * u_a)  +  pressure
-        flux_2 = (mom1 * v_a)
-        flux_3 = (mom1 * w_a)
+        flux_1 = (mom1 * u)  +  pressure
+        flux_2 = (mom1 * v)
+        flux_3 = (mom1 * w)
 
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-        call worker%integrate_boundary('Momentum-1',integrand)
+        call worker%integrate_boundary_condition('Momentum-1','Advection', flux_1, flux_2, flux_3)
 
 
         !=================================================
         ! momentum-2 flux
         !=================================================
-        flux_1 = (mom2 * u_a)
-        flux_2 = (mom2 * v_a)  +  pressure
-        flux_3 = (mom2 * w_a)
+        flux_1 = (mom2 * u)
+        flux_2 = (mom2 * v)  +  pressure
+        flux_3 = (mom2 * w)
 
         !
         ! Convert to tangential to angular momentum flux
@@ -194,41 +178,38 @@ contains
             call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-        call worker%integrate_boundary('Momentum-2',integrand)
+        call worker%integrate_boundary_condition('Momentum-2','Advection', flux_1, flux_2, flux_3)
 
 
         !=================================================
         ! momentum-3 flux
         !=================================================
-        flux_1 = (mom3 * u_a)
-        flux_2 = (mom3 * v_a)
-        flux_3 = (mom3 * w_a)  +  pressure
+        flux_1 = (mom3 * u)
+        flux_2 = (mom3 * v)
+        flux_3 = (mom3 * w)  +  pressure
 
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-        call worker%integrate_boundary('Momentum-3',integrand)
+        call worker%integrate_boundary_condition('Momentum-3','Advection', flux_1, flux_2, flux_3)
 
 
         !=================================================
         ! energy flux
         !=================================================
-        flux_1 = (density * enthalpy * u_a)
-        flux_2 = (density * enthalpy * v_a)  +  omega*r*pressure
-        flux_3 = (density * enthalpy * w_a)
+        flux_1 = (density * enthalpy * u)
+        flux_2 = (density * enthalpy * v)
+        flux_3 = (density * enthalpy * w)
+        !flux_2 = (density * enthalpy * v)  +  omega*r*pressure
 
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-        call worker%integrate_boundary('Energy',integrand)
+        call worker%integrate_boundary_condition('Energy','Advection', flux_1, flux_2, flux_3)
 
 
         !=================================================
         ! turbulence flux
         !=================================================
-        flux_1 = (density_nutilde * u_a)
-        flux_2 = (density_nutilde * v_a)
-        flux_3 = (density_nutilde * w_a)
+        flux_1 = (density_nutilde * u)
+        flux_2 = (density_nutilde * v)
+        flux_3 = (density_nutilde * w)
 
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-        call worker%integrate_boundary('Density * NuTilde',integrand)
+        call worker%integrate_boundary_condition('Density * NuTilde','Advection', flux_1, flux_2, flux_3)
 
     
 

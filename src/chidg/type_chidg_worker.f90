@@ -91,27 +91,28 @@ module type_chidg_worker
 
 
 
-        ! Worker get data
-        procedure   :: get_primary_field_general
-        procedure   :: get_primary_field_face
-        procedure   :: get_primary_field_element
-        procedure   :: get_model_field_general
-        procedure   :: get_model_field_face
-        procedure   :: get_model_field_element
-        procedure   :: get_auxiliary_field_general
-        procedure   :: get_auxiliary_field_face
-        procedure   :: get_auxiliary_field_element
 
         procedure   :: get_field
-        !procedure   :: get_field_gradient
 
-        ! Previously ALE routines
-        procedure   :: get_primary_field_value_ale_element
-        procedure   :: get_primary_field_grad_ale_element
-        procedure   :: get_primary_field_value_ale_face
-        procedure   :: get_primary_field_grad_ale_face
-        procedure   :: get_primary_field_value_ale_general
-        procedure   :: get_primary_field_grad_ale_general
+        ! Worker get data
+        ! BEGIN DEPRECATED
+        procedure, private   :: get_primary_field_general
+        procedure, private   :: get_primary_field_face
+        procedure, private   :: get_primary_field_element
+        procedure, private   :: get_model_field_general
+        procedure, private   :: get_model_field_face
+        procedure, private   :: get_model_field_element
+        procedure            :: get_auxiliary_field_general
+        procedure            :: get_auxiliary_field_face
+        procedure            :: get_auxiliary_field_element
+        ! ALE
+        procedure, private   :: get_primary_field_value_ale_element
+        procedure, private   :: get_primary_field_grad_ale_element
+        procedure, private   :: get_primary_field_value_ale_face
+        procedure, private   :: get_primary_field_grad_ale_face
+        procedure, private   :: get_primary_field_value_ale_general
+        procedure, private   :: get_primary_field_grad_ale_general
+        ! END DEPRECATED
 
 
 
@@ -157,15 +158,16 @@ module type_chidg_worker
 
 
         ! Integration procedures
-        procedure   :: integrate_boundary
         procedure   :: integrate_boundary_average
         procedure   :: integrate_boundary_upwind
         procedure   :: integrate_boundary_condition
 
-!        generic     :: integrate_volume => integrate_volume_flux, &
-!                                           integrate_volume_source
         procedure   :: integrate_volume_flux
         procedure   :: integrate_volume_source
+
+!        procedure   :: integrate_boundary
+!        generic     :: integrate_volume => integrate_volume_flux, &
+!                                           integrate_volume_source
         
 
         ! Worker auxiliary flux processing procedures. Used internally
@@ -650,7 +652,7 @@ contains
         character(*),           intent(in), optional    :: interp_source_user
 
         type(AD_D),     allocatable :: var_gq(:), tmp_gq(:)
-        character(:),   allocatable :: cache_component, cache_type, lift_source, lift_nodes, user_msg
+        character(:),   allocatable :: cache_component, cache_type, lift_source, lift_nodes, user_msg, interp_source
         integer(ik)                 :: lift_face_min, lift_face_max, idirection, iface
         real(rk)                    :: stabilization
         logical                     :: no_lift
@@ -695,7 +697,7 @@ contains
             case default
                 user_msg = "chidg_worker%get_field: Invalid value for interpolation source. &
                             Try 'face interior', 'face exterior', 'boundary', or 'element'"
-                call chidg_signal_one(FATAL,user_msg,trim(interp_source))
+                call chidg_signal_three(FATAL,user_msg,trim(field),trim(interp_type),trim(interp_source))
         end select
 
 
@@ -719,7 +721,7 @@ contains
             case default
                 user_msg = "chidg_worker%get_field: Invalid interpolation &
                             type. 'value', 'grad1', 'grad2', 'grad3'"
-                call chidg_signal(FATAL,user_msg)
+                call chidg_signal_three(FATAL,user_msg,trim(field),trim(interp_type),present(interp_source_user))
         end select
 
 

@@ -31,11 +31,6 @@ module mod_bc
     use bc_state_gcl_farfield,                  only: gcl_farfield_t
     use bc_state_gcl_symmetry,                  only: gcl_symmetry_t
     
-    ! Scalar boundary conditions
-    use bc_state_scalar_ale_value,                  only: scalar_ale_value_t
-    use bc_state_scalar_ale_derivative,             only: scalar_ale_derivative_t
-    use bc_state_scalar_ale_extrapolate,            only: scalar_ale_extrapolate_t
-
 
     use bc_state_mesh_motion_value,                  only: mesh_motion_value_t
     use bc_state_mesh_motion_derivative,             only: mesh_motion_derivative_t
@@ -108,9 +103,6 @@ contains
         type(scalar_value_t)                    :: SCALAR_VALUE
         type(scalar_derivative_t)               :: SCALAR_DERIVATIVE
         type(scalar_extrapolate_t)              :: SCALAR_EXTRAPOLATE
-        type(scalar_ale_value_t)                :: SCALAR_ALE_VALUE
-        type(scalar_ale_derivative_t)           :: SCALAR_ALE_DERIVATIVE
-        type(scalar_ale_extrapolate_t)          :: SCALAR_ALE_EXTRAPOLATE
         type(gcl_extrapolate_t)                 :: GCL_EXTRAPOLATE
         type(gcl_wall_t)                        :: GCL_WALL
         type(gcl_farfield_t)                    :: GCL_FARFIELD
@@ -159,9 +151,6 @@ contains
             call registered_bcs%push_back(SCALAR_VALUE)
             call registered_bcs%push_back(SCALAR_DERIVATIVE)
             call registered_bcs%push_back(SCALAR_EXTRAPOLATE)
-            call registered_bcs%push_back(SCALAR_ALE_VALUE)
-            call registered_bcs%push_back(SCALAR_ALE_DERIVATIVE)
-            call registered_bcs%push_back(SCALAR_ALE_EXTRAPOLATE)
             call registered_bcs%push_back(GCL_EXTRAPOLATE)
             call registered_bcs%push_back(GCL_WALL)
             call registered_bcs%push_back(GCL_FARFIELD)

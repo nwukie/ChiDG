@@ -254,7 +254,6 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        !source = worker%get_primary_field_element('u','grad1 + lift')
         source = worker%get_field('u','grad1','element')
 
         x = worker%x('volume')
@@ -314,7 +313,7 @@ contains
         type(AD_D), allocatable, dimension(:)   :: u, mu
 
 
-        u = worker%get_primary_field_general('u', 'value')
+        u = worker%get_field('u', 'value')
 
         ! mu(u) = 1.0
         mu = u

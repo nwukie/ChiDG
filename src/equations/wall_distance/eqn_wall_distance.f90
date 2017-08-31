@@ -238,14 +238,10 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        u       = worker%get_primary_field_general('u', 'value')
-        !grad1_u = worker%get_primary_field_general('u', 'grad1+lift')
-        !grad2_u = worker%get_primary_field_general('u', 'grad2+lift')
-        !grad3_u = worker%get_primary_field_general('u', 'grad3+lift')
-
-        grad1_u = worker%get_primary_field_general('u', 'grad1')
-        grad2_u = worker%get_primary_field_general('u', 'grad2')
-        grad3_u = worker%get_primary_field_general('u', 'grad3')
+        u       = worker%get_field('u', 'value')
+        grad1_u = worker%get_field('u', 'grad1')
+        grad2_u = worker%get_field('u', 'grad2')
+        grad3_u = worker%get_field('u', 'grad3')
 
 
         !
@@ -335,7 +331,7 @@ contains
         !
         ! Interpolate solution to quadrature nodes to initialize derivatives
         !
-        source = worker%get_primary_field_element('u','value')
+        source = worker%get_field('u','value','element')
         source = ONE
 
 

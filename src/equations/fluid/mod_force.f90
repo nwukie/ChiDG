@@ -140,19 +140,19 @@ contains
                     !
                     ! Get pressure
                     !
-                    pressure = worker%get_model_field_face('Pressure', 'value', 'face interior')
+                    pressure = worker%get_field('Pressure', 'value', 'face interior')
 
 
                     
                     !
                     ! Get shear stress tensor
                     !
-                    tau_11 = worker%get_model_field_face('Shear-11', 'value', 'face interior')
-                    tau_22 = worker%get_model_field_face('Shear-22', 'value', 'face interior')
-                    tau_33 = worker%get_model_field_face('Shear-33', 'value', 'face interior')
-                    tau_12 = worker%get_model_field_face('Shear-12', 'value', 'face interior')
-                    tau_13 = worker%get_model_field_face('Shear-13', 'value', 'face interior')
-                    tau_23 = worker%get_model_field_face('Shear-23', 'value', 'face interior')
+                    tau_11 = worker%get_field('Shear-11', 'value', 'face interior')
+                    tau_22 = worker%get_field('Shear-22', 'value', 'face interior')
+                    tau_33 = worker%get_field('Shear-33', 'value', 'face interior')
+                    tau_12 = worker%get_field('Shear-12', 'value', 'face interior')
+                    tau_13 = worker%get_field('Shear-13', 'value', 'face interior')
+                    tau_23 = worker%get_field('Shear-23', 'value', 'face interior')
 
 
                     ! From symmetry

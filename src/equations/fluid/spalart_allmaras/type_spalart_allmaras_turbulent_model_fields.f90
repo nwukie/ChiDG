@@ -100,7 +100,7 @@ contains
         !
         ! Get viscosity: compute nu, nutilde
         !
-        mu      = worker%gefield('Laminar Viscosity', 'value')
+        mu      = worker%get_field('Laminar Viscosity', 'value')
         nu      = mu/density
         nutilde = density_nutilde/density
 

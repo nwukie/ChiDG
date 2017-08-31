@@ -87,23 +87,13 @@ contains
         class(properties_t),        intent(inout)   :: prop
         type(mpi_comm),             intent(in)      :: bc_COMM
 
-        ! Equation indices
-        integer(ik)     :: iu
-
-        integer(ik)     :: igq
-        real(rk)        :: time
 
         type(AD_D),     allocatable, dimension(:)   :: u_bc, dudx_bc, dudy_bc, dudz_bc
-        type(point_t),  allocatable, dimension(:)   :: coords
 
 
         !
         ! Get u_m from face interior to initialize derivatives
         !
-        !u_bc    = worker%get_primary_field_face('u','value', 'face interior')
-        !dudx_bc = worker%get_primary_field_face('u','grad1', 'face interior')
-        !dudy_bc = worker%get_primary_field_face('u','grad2', 'face interior')
-        !dudz_bc = worker%get_primary_field_face('u','grad3', 'face interior')
         u_bc    = worker%get_field('u','value', 'face interior')
         dudx_bc = worker%get_field('u','grad1', 'face interior')
         dudy_bc = worker%get_field('u','grad2', 'face interior')
@@ -113,18 +103,13 @@ contains
         !
         ! Get derivative value from boundary condition parameter
         !
-        coords = worker%coords()
-        time   = worker%time()
-        u_bc   = self%bcproperties%compute("Value",time,coords)
-
-
+        u_bc   = self%bcproperties%compute("Value",worker%time(),worker%coords())
 
 
         !
         ! Store boundary condition state, Value
         !
         call worker%store_bc_state('u', u_bc, 'value')
-
 
 
         !

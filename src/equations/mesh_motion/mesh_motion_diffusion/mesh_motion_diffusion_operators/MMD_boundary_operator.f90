@@ -91,54 +91,47 @@ contains
 
 
         type(AD_D), allocatable, dimension(:)   ::  &
-            grad1_u1_m, grad2_u1_m, grad3_u1_m,        &
-            grad1_u1_p, grad2_u1_p, grad3_u1_p,        &
-            grad1_u2_m, grad2_u2_m, grad3_u2_m,        &
-            grad1_u2_p, grad2_u2_p, grad3_u2_p,        &
-            grad1_u3_m, grad2_u3_m, grad3_u3_m,        &
-            grad1_u3_p, grad2_u3_p, grad3_u3_p,        &
-            flux_1, flux_2, flux_3,                 &
-            flux_m, flux_p, flux, integrand,        &
+            grad1_u1_m, grad2_u1_m, grad3_u1_m,     &
+            grad1_u1_p, grad2_u1_p, grad3_u1_p,     &
+            grad1_u2_m, grad2_u2_m, grad3_u2_m,     &
+            grad1_u2_p, grad2_u2_p, grad3_u2_p,     &
+            grad1_u3_m, grad2_u3_m, grad3_u3_m,     &
+            grad1_u3_p, grad2_u3_p, grad3_u3_p,     &
+            flux_1_m, flux_2_m, flux_3_m,           &
+            flux_1_p, flux_2_p, flux_3_p,           &
             mu_m, mu_p
 
-        real(rk),   allocatable, dimension(:)   :: &
-            norm_1, norm_2, norm_3
-
-
-        norm_1 = worker%normal(1)
-        norm_2 = worker%normal(2)
-        norm_3 = worker%normal(3)
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        grad1_u1_m = worker%get_primary_field_face('grid_displacement1', 'grad1 + lift', 'face interior')
-        grad2_u1_m = worker%get_primary_field_face('grid_displacement1', 'grad2 + lift', 'face interior')
-        grad3_u1_m = worker%get_primary_field_face('grid_displacement1', 'grad3 + lift', 'face interior')
+        grad1_u1_m = worker%get_field('grid_displacement1', 'grad1', 'face interior')
+        grad2_u1_m = worker%get_field('grid_displacement1', 'grad2', 'face interior')
+        grad3_u1_m = worker%get_field('grid_displacement1', 'grad3', 'face interior')
 
 
-        grad1_u1_p = worker%get_primary_field_face('grid_displacement1', 'grad1 + lift', 'face exterior')
-        grad2_u1_p = worker%get_primary_field_face('grid_displacement1', 'grad2 + lift', 'face exterior')
-        grad3_u1_p = worker%get_primary_field_face('grid_displacement1', 'grad3 + lift', 'face exterior')
+        grad1_u1_p = worker%get_field('grid_displacement1', 'grad1', 'face exterior')
+        grad2_u1_p = worker%get_field('grid_displacement1', 'grad2', 'face exterior')
+        grad3_u1_p = worker%get_field('grid_displacement1', 'grad3', 'face exterior')
 
-        grad1_u2_m = worker%get_primary_field_face('grid_displacement2', 'grad1 + lift', 'face interior')
-        grad2_u2_m = worker%get_primary_field_face('grid_displacement2', 'grad2 + lift', 'face interior')
-        grad3_u2_m = worker%get_primary_field_face('grid_displacement2', 'grad3 + lift', 'face interior')
-
-
-        grad1_u2_p = worker%get_primary_field_face('grid_displacement2', 'grad1 + lift', 'face exterior')
-        grad2_u2_p = worker%get_primary_field_face('grid_displacement2', 'grad2 + lift', 'face exterior')
-        grad3_u2_p = worker%get_primary_field_face('grid_displacement2', 'grad3 + lift', 'face exterior')
-
-        grad1_u3_m = worker%get_primary_field_face('grid_displacement3', 'grad1 + lift', 'face interior')
-        grad2_u3_m = worker%get_primary_field_face('grid_displacement3', 'grad2 + lift', 'face interior')
-        grad3_u3_m = worker%get_primary_field_face('grid_displacement3', 'grad3 + lift', 'face interior')
+        grad1_u2_m = worker%get_field('grid_displacement2', 'grad1', 'face interior')
+        grad2_u2_m = worker%get_field('grid_displacement2', 'grad2', 'face interior')
+        grad3_u2_m = worker%get_field('grid_displacement2', 'grad3', 'face interior')
 
 
-        grad1_u3_p = worker%get_primary_field_face('grid_displacement3', 'grad1 + lift', 'face exterior')
-        grad2_u3_p = worker%get_primary_field_face('grid_displacement3', 'grad2 + lift', 'face exterior')
-        grad3_u3_p = worker%get_primary_field_face('grid_displacement3', 'grad3 + lift', 'face exterior')
+        grad1_u2_p = worker%get_field('grid_displacement2', 'grad1', 'face exterior')
+        grad2_u2_p = worker%get_field('grid_displacement2', 'grad2', 'face exterior')
+        grad3_u2_p = worker%get_field('grid_displacement2', 'grad3', 'face exterior')
+
+        grad1_u3_m = worker%get_field('grid_displacement3', 'grad1', 'face interior')
+        grad2_u3_m = worker%get_field('grid_displacement3', 'grad2', 'face interior')
+        grad3_u3_m = worker%get_field('grid_displacement3', 'grad3', 'face interior')
+
+
+        grad1_u3_p = worker%get_field('grid_displacement3', 'grad1', 'face exterior')
+        grad2_u3_p = worker%get_field('grid_displacement3', 'grad2', 'face exterior')
+        grad3_u3_p = worker%get_field('grid_displacement3', 'grad3', 'face exterior')
 
 
 
@@ -148,86 +141,69 @@ contains
         !
         ! Compute scalar coefficient
         !
-        mu_m = worker%get_model_field_face('Mesh Motion Diffusion Coefficient', 'value', 'face interior')
-        mu_p = worker%get_model_field_face('Mesh Motion Diffusion Coefficient', 'value', 'face exterior')
-
-        !GD1
-
-        flux_m = -mu_m*grad1_u1_m
-        flux_p = -mu_p*grad1_u1_p
-        flux_1 = HALF*(flux_m + flux_p)
-
-        flux_m = -mu_m*grad2_u1_m
-        flux_p = -mu_p*grad2_u1_p
-        flux_2 = HALF*(flux_m + flux_p)
-
-        flux_m = -mu_m*grad3_u1_m
-        flux_p = -mu_p*grad3_u1_p
-        flux_3 = HALF*(flux_m + flux_p)
+        mu_m = worker%get_field('Mesh Motion Diffusion Coefficient', 'value', 'face interior')
+        mu_p = worker%get_field('Mesh Motion Diffusion Coefficient', 'value', 'face exterior')
 
 
-        !
-        ! Compute boundary average flux
-        !
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
+
+
+        !======================================
+        !               GD1
+        !======================================
+        flux_1_m = -mu_m*grad1_u1_m
+        flux_2_m = -mu_m*grad2_u1_m
+        flux_3_m = -mu_m*grad3_u1_m
+
+        flux_1_p = -mu_p*grad1_u1_p
+        flux_2_p = -mu_p*grad2_u1_p
+        flux_3_p = -mu_p*grad3_u1_p
 
 
         !
         ! Integrate flux
         !
-        call worker%integrate_boundary('grid_displacement1',integrand)
+        call worker%integrate_boundary_average('grid_displacement1','Diffusion',    &
+                                                flux_1_m, flux_2_m, flux_3_m,       &
+                                                flux_1_p, flux_2_p, flux_3_p)
 
-        !GD2
 
-        flux_m = -mu_m*grad1_u2_m
-        flux_p = -mu_p*grad1_u2_p
-        flux_1 = HALF*(flux_m + flux_p)
+        !======================================
+        !               GD2
+        !======================================
+        flux_1_m = -mu_m*grad1_u2_m
+        flux_2_m = -mu_m*grad2_u2_m
+        flux_3_m = -mu_m*grad3_u2_m
 
-        flux_m = -mu_m*grad2_u2_m
-        flux_p = -mu_p*grad2_u2_p
-        flux_2 = HALF*(flux_m + flux_p)
-
-        flux_m = -mu_m*grad3_u2_m
-        flux_p = -mu_p*grad3_u2_p
-        flux_3 = HALF*(flux_m + flux_p)
-
+        flux_1_p = -mu_p*grad1_u2_p
+        flux_2_p = -mu_p*grad2_u2_p
+        flux_3_p = -mu_p*grad3_u2_p
 
         !
-        ! Compute boundary average flux
+        ! Integrate flux
         !
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
+        call worker%integrate_boundary_average('grid_displacement2','Diffusion',    &
+                                                flux_1_m, flux_2_m, flux_3_m,       &
+                                                flux_1_p, flux_2_p, flux_3_p)
+
+
+        !======================================
+        !               GD3
+        !======================================
+        flux_1_m = -mu_m*grad1_u3_m
+        flux_2_m = -mu_m*grad2_u3_m
+        flux_3_m = -mu_m*grad3_u3_m
+
+        flux_1_p = -mu_p*grad1_u3_p
+        flux_2_p = -mu_p*grad2_u3_p
+        flux_3_p = -mu_p*grad3_u3_p
 
 
         !
         ! Integrate flux
         !
-        call worker%integrate_boundary('grid_displacement2',integrand)
-
-        !GD3
-
-        flux_m = -mu_m*grad1_u3_m
-        flux_p = -mu_p*grad1_u3_p
-        flux_1 = HALF*(flux_m + flux_p)
-
-        flux_m = -mu_m*grad2_u3_m
-        flux_p = -mu_p*grad2_u3_p
-        flux_2 = HALF*(flux_m + flux_p)
-
-        flux_m = -mu_m*grad3_u3_m
-        flux_p = -mu_p*grad3_u3_p
-        flux_3 = HALF*(flux_m + flux_p)
-
-
-        !
-        ! Compute boundary average flux
-        !
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-
-
-        !
-        ! Integrate flux
-        !
-        call worker%integrate_boundary('grid_displacement3',integrand)
+        call worker%integrate_boundary_average('grid_displacement3','Diffusion',    &
+                                                flux_1_m, flux_2_m, flux_3_m,       &
+                                                flux_1_p, flux_2_p, flux_3_p)
 
 
     end subroutine compute

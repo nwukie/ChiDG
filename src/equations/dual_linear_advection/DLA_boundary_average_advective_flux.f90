@@ -71,70 +71,63 @@ contains
         type(chidg_worker_t),                           intent(inout)   :: worker
         class(properties_t),                            intent(inout)   :: prop
 
-        real(rk)                 :: cx, cy, cz
-        integer(ik)              :: iu_a, iu_b
-
         type(AD_D), dimension(:), allocatable   ::  &
             ua_l, ua_r, ub_l, ub_r,                 &
-            flux_x, flux_y, flux_z, integrand
+            flux_1_m, flux_2_m, flux_3_m,           &
+            flux_1_p, flux_2_p, flux_3_p
 
-        real(rk),   dimension(:), allocatable   ::  &
-            normx, normy, normz
-
-
-        !
-        ! Get integer data
-        !
-        iu_a = prop%get_primary_field_index("u_a")
-        iu_b = prop%get_primary_field_index("u_b")
-
+        real(rk) :: c1, c2, c3
 
 
         !
         ! Get equation set properties
         !
-        cx = 1._rk
-        cy = 0._rk
-        cz = 0._rk
+        c1 = ONE
+        c2 = ZERO
+        c3 = ZERO
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        ua_r = worker%get_primary_field_face('u_a', 'value', 'face interior')
-        ua_l = worker%get_primary_field_face('u_a', 'value', 'face exterior')
+        ua_r = worker%get_field('u_a', 'value', 'face interior')
+        ub_r = worker%get_field('u_b', 'value', 'face interior')
 
-        ub_r = worker%get_primary_field_face('u_b', 'value', 'face interior')
-        ub_l = worker%get_primary_field_face('u_b', 'value', 'face exterior')
+        ua_l = worker%get_field('u_a', 'value', 'face exterior')
+        ub_l = worker%get_field('u_b', 'value', 'face exterior')
 
-
-        normx = worker%normal(1)
-        normy = worker%normal(2)
-        normz = worker%normal(3)
 
         !
         ! Compute boundary average flux for u_a
         !
-        flux_x = ((cx*ua_l + cx*ua_r)/TWO )  *  normx
-        flux_y = ((cy*ua_l + cy*ua_r)/TWO )  *  normy
-        flux_z = ((cz*ua_l + cz*ua_r)/TWO )  *  normz
+        flux_1_m = c1*ua_r
+        flux_2_m = c2*ua_r
+        flux_3_m = c3*ua_r
 
-        integrand = flux_x + flux_y + flux_z
+        flux_1_p = c1*ua_l
+        flux_2_p = c2*ua_l
+        flux_3_p = c3*ua_l
 
-        call worker%integrate_boundary('u_a',integrand)
+        call worker%integrate_boundary_average('u_a','Advection',               &
+                                                flux_1_m, flux_2_m, flux_3_m,   &
+                                                flux_1_p, flux_2_p, flux_3_p)
 
 
 
         !
         ! Compute boundary average flux for u_b
         !
-        flux_x = ((cx*ub_l + cx*ub_r)/TWO )  *  normx
-        flux_y = ((cy*ub_l + cy*ub_r)/TWO )  *  normy
-        flux_z = ((cz*ub_l + cz*ub_r)/TWO )  *  normz
+        flux_1_m = c1*ub_r
+        flux_2_m = c2*ub_r
+        flux_3_m = c3*ub_r
 
-        integrand = flux_x + flux_y + flux_z
+        flux_1_p = c1*ub_l
+        flux_2_p = c2*ub_l
+        flux_3_p = c3*ub_l
 
-        call worker%integrate_boundary('u_b',integrand)
+        call worker%integrate_boundary_average('u_b','Advection',               &
+                                                flux_1_m, flux_2_m, flux_3_m,   &
+                                                flux_1_p, flux_2_p, flux_3_p)
 
 
     end subroutine compute

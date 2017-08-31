@@ -72,57 +72,44 @@ contains
         type(chidg_worker_t),                   intent(inout)   :: worker
         class(properties_t),                    intent(inout)   :: prop
 
-
-        real(rk)                :: cx, cy, cz
-        integer(ik)             :: iu_a, iu_b
-
         type(AD_D), allocatable, dimension(:)   ::  &
-            ua, ub, flux_x, flux_y, flux_z
+            ua, ub, flux_1, flux_2, flux_3
 
-
-
-        !
-        ! Get variable index from equation set
-        !
-        iu_a = prop%get_primary_field_index('u_a')
-        iu_b = prop%get_primary_field_index('u_b')
+        real(rk) :: c1, c2, c3
 
 
         !
         ! Get equation set properties
         !
-        cx = 1._rk
-        cy = 0._rk
-        cz = 0._rk
-
-
+        c1 = 1._rk
+        c2 = 0._rk
+        c3 = 0._rk
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        ua = worker%get_primary_field_element('u_a', 'value')
-        ub = worker%get_primary_field_element('u_b', 'value')
-
+        ua = worker%get_field('u_a', 'value', 'element')
+        ub = worker%get_field('u_b', 'value', 'element')
 
 
         !
         ! Compute volume flux at quadrature nodes
         !
-        flux_x = cx  *  ua
-        flux_y = cy  *  ua
-        flux_z = cz  *  ua
+        flux_1 = (c1 * ua)
+        flux_2 = (c2 * ua)
+        flux_3 = (c3 * ua)
 
-        call worker%integrate_volume_flux('u_a','Advection',flux_x,flux_y,flux_z)
+        call worker%integrate_volume_flux('u_a','Advection',flux_1,flux_2,flux_3)
 
 
 
         ! Compute volume flux at quadrature nodes
-        flux_x = cx  *  ub
-        flux_y = cy  *  ub
-        flux_z = cz  *  ub
+        flux_1 = (c1 * ub)
+        flux_2 = (c2 * ub)
+        flux_3 = (c3 * ub)
 
-        call worker%integrate_volume_flux('u_b','Advection',flux_x,flux_y,flux_z)
+        call worker%integrate_volume_flux('u_b','Advection',flux_1,flux_2,flux_3)
 
 
 

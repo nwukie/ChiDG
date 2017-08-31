@@ -104,11 +104,11 @@ contains
         !
         ! Interpolate interior solution to quadrature nodes
         !
-        density_m = worker%get_field('Density'   , 'face interior')
-        mom1_m    = worker%get_field('Momentum-1', 'face interior')
-        mom2_m    = worker%get_field('Momentum-2', 'face interior')
-        mom3_m    = worker%get_field('Momentum-3', 'face interior')
-        energy_m  = worker%get_field('Energy'    , 'face interior')
+        density_m = worker%get_field('Density'   , 'value', 'face interior')
+        mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
+        mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
+        mom3_m    = worker%get_field('Momentum-3', 'value', 'face interior')
+        energy_m  = worker%get_field('Energy'    , 'value', 'face interior')
 
 
         grad1_density_m = worker%get_field('Density'   , 'grad1', 'face interior')

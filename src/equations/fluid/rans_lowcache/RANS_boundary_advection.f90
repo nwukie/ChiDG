@@ -2,7 +2,7 @@ module RANS_boundary_advection
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO,ONE,TWO,HALF
-    use mod_fluid,              only: omega
+    use mod_fluid,              only: omega, gam
     use type_operator,          only: operator_t
     use type_properties,        only: properties_t
     use type_chidg_worker,      only: chidg_worker_t
@@ -22,10 +22,10 @@ module RANS_boundary_advection
     !------------------------------------------------------------------------------
     type, extends(operator_t), public :: RANS_boundary_advection_t
 
-        real(rk)    :: gam = 1.4_rk
-        real(rk)    :: R   = 287.15_rk
-        real(rk)    :: Cp  = 1003.0_rk
-        real(rk)    :: Pr  = 0.72_rk
+!        real(rk)    :: gam = 1.4_rk
+!        real(rk)    :: R   = 287.15_rk
+!        real(rk)    :: Cp  = 1003.0_rk
+!        real(rk)    :: Pr  = 0.72_rk
 
     contains
 
@@ -102,8 +102,8 @@ contains
             p_m,            p_p,                                    &
             un_m,           un_p,                                   &
             a_m,            a_p,                                    &
-            u_a_m, v_a_m, w_a_m,                                    &
-            u_a_p, v_a_p, w_a_p,                                    &
+            u_m, v_m, w_m,                                    &
+            u_p, v_p, w_p,                                    &
             rtil, util, vtil, wtil, vmagtil, Htil, ctil, qtil2,     &
             vtil_t, v_m_t, v_p_t, vmagtil_t,                        &
             integrand,  upwind,     wave,                           &
@@ -291,13 +291,13 @@ contains
         !
         ! Get fluid advection velocity
         !
-        u_a_m = worker%get_model_field_face('Advection Velocity-1', 'value', 'face interior')
-        v_a_m = worker%get_model_field_face('Advection Velocity-2', 'value', 'face interior')
-        w_a_m = worker%get_model_field_face('Advection Velocity-3', 'value', 'face interior')
+        u_m = worker%get_model_field_face('Advection Velocity-1', 'value', 'face interior')
+        v_m = worker%get_model_field_face('Advection Velocity-2', 'value', 'face interior')
+        w_m = worker%get_model_field_face('Advection Velocity-3', 'value', 'face interior')
 
-        u_a_p = worker%get_model_field_face('Advection Velocity-1', 'value', 'face exterior')
-        v_a_p = worker%get_model_field_face('Advection Velocity-2', 'value', 'face exterior')
-        w_a_p = worker%get_model_field_face('Advection Velocity-3', 'value', 'face exterior')
+        u_p = worker%get_model_field_face('Advection Velocity-1', 'value', 'face exterior')
+        v_p = worker%get_model_field_face('Advection Velocity-2', 'value', 'face exterior')
+        w_p = worker%get_model_field_face('Advection Velocity-3', 'value', 'face exterior')
 
 
 
@@ -316,13 +316,13 @@ contains
         !=================================================
         ! mass flux
         !=================================================
-        flux_1_m = (density_m * u_a_m)
-        flux_2_m = (density_m * v_a_m)
-        flux_3_m = (density_m * w_a_m)
+        flux_1_m = (density_m * u_m)
+        flux_2_m = (density_m * v_m)
+        flux_3_m = (density_m * w_m)
 
-        flux_1_p = (density_p * u_a_p)
-        flux_2_p = (density_p * v_a_p)
-        flux_3_p = (density_p * w_a_p)
+        flux_1_p = (density_p * u_p)
+        flux_2_p = (density_p * v_p)
+        flux_3_p = (density_p * w_p)
 
         flux_1 = (flux_1_m + flux_1_p)
         flux_2 = (flux_2_m + flux_2_p)
@@ -341,13 +341,13 @@ contains
         !=================================================
         ! momentum-1 flux
         !=================================================
-        flux_1_m = (mom1_m * u_a_m) + p_m
-        flux_2_m = (mom1_m * v_a_m)
-        flux_3_m = (mom1_m * w_a_m)
+        flux_1_m = (mom1_m * u_m) + p_m
+        flux_2_m = (mom1_m * v_m)
+        flux_3_m = (mom1_m * w_m)
 
-        flux_1_p = (mom1_p * u_a_p) + p_p
-        flux_2_p = (mom1_p * v_a_p)
-        flux_3_p = (mom1_p * w_a_p)
+        flux_1_p = (mom1_p * u_p) + p_p
+        flux_2_p = (mom1_p * v_p)
+        flux_3_p = (mom1_p * w_p)
 
         flux_1 = (flux_1_m + flux_1_p)
         flux_2 = (flux_2_m + flux_2_p)
@@ -364,13 +364,13 @@ contains
         !=================================================
         ! momentum-2 flux
         !=================================================
-        flux_1_m = (mom2_m * u_a_m)
-        flux_2_m = (mom2_m * v_a_m) + p_m
-        flux_3_m = (mom2_m * w_a_m)
+        flux_1_m = (mom2_m * u_m)
+        flux_2_m = (mom2_m * v_m) + p_m
+        flux_3_m = (mom2_m * w_m)
 
-        flux_1_p = (mom2_p * u_a_p)
-        flux_2_p = (mom2_p * v_a_p) + p_p
-        flux_3_p = (mom2_p * w_a_p)
+        flux_1_p = (mom2_p * u_p)
+        flux_2_p = (mom2_p * v_p) + p_p
+        flux_3_p = (mom2_p * w_p)
 
         flux_1 = (flux_1_m + flux_1_p)
         flux_2 = (flux_2_m + flux_2_p)
@@ -397,13 +397,13 @@ contains
         !=================================================
         ! momentum-3 flux
         !=================================================
-        flux_1_m = (mom3_m * u_a_m)
-        flux_2_m = (mom3_m * v_a_m)
-        flux_3_m = (mom3_m * w_a_m) + p_m
+        flux_1_m = (mom3_m * u_m)
+        flux_2_m = (mom3_m * v_m)
+        flux_3_m = (mom3_m * w_m) + p_m
 
-        flux_1_p = (mom3_p * u_a_p)
-        flux_2_p = (mom3_p * v_a_p)
-        flux_3_p = (mom3_p * w_a_p) + p_p
+        flux_1_p = (mom3_p * u_p)
+        flux_2_p = (mom3_p * v_p)
+        flux_3_p = (mom3_p * w_p) + p_p
 
 
         flux_1 = (flux_1_m + flux_1_p)
@@ -421,13 +421,13 @@ contains
         !=================================================
         ! energy flux
         !=================================================
-        flux_1_m = (density_m * enthalpy_m * u_a_m)
-        flux_2_m = (density_m * enthalpy_m * v_a_m)  +  omega*r*p_m
-        flux_3_m = (density_m * enthalpy_m * w_a_m)
+        flux_1_m = (density_m * enthalpy_m * u_m)
+        flux_2_m = (density_m * enthalpy_m * v_m)  +  omega*r*p_m
+        flux_3_m = (density_m * enthalpy_m * w_m)
 
-        flux_1_p = (density_p * enthalpy_p * u_a_p)
-        flux_2_p = (density_p * enthalpy_p * v_a_p)  +  omega*r*p_p
-        flux_3_p = (density_p * enthalpy_p * w_a_p)
+        flux_1_p = (density_p * enthalpy_p * u_p)
+        flux_2_p = (density_p * enthalpy_p * v_p)  +  omega*r*p_p
+        flux_3_p = (density_p * enthalpy_p * w_p)
         
         flux_1 = (flux_1_m + flux_1_p)
         flux_2 = (flux_2_m + flux_2_p)
@@ -452,15 +452,15 @@ contains
         !
         ! Compute average flux
         ! 
-        flux_avg_1 = HALF*(density_nutilde_m*u_a_m  +  density_nutilde_p*u_a_p)
-        flux_avg_2 = HALF*(density_nutilde_m*v_a_m  +  density_nutilde_p*v_a_p)
-        flux_avg_3 = HALF*(density_nutilde_m*w_a_m  +  density_nutilde_p*w_a_p)
+        flux_avg_1 = HALF*(density_nutilde_m*u_m  +  density_nutilde_p*u_p)
+        flux_avg_2 = HALF*(density_nutilde_m*v_m  +  density_nutilde_p*v_p)
+        flux_avg_3 = HALF*(density_nutilde_m*w_m  +  density_nutilde_p*w_p)
 
         !
         ! Compute maximum wave speed
         !
-        un_m = u_a_m*unorm_1 + v_a_m*unorm_2 + w_a_m*unorm_3
-        un_p = u_a_p*unorm_1 + v_a_p*unorm_2 + w_a_p*unorm_3
+        un_m = u_m*unorm_1 + v_m*unorm_2 + w_m*unorm_3
+        un_p = u_p*unorm_1 + v_p*unorm_2 + w_p*unorm_3
 
 
         c_m = sqrt(self%gam * self%R * t_m)

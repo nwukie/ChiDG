@@ -76,51 +76,35 @@ contains
     !-----------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
         class(GCL_boundary_average_advective_operator_t),   intent(inout)   :: self
-        type(chidg_worker_t),                                   intent(inout)   :: worker
-        class(properties_t),                                    intent(inout)   :: prop
+        type(chidg_worker_t),                               intent(inout)   :: worker
+        class(properties_t),                                intent(inout)   :: prop
 
 
-        type(AD_D), allocatable, dimension(:)   ::      &
-            g_bar, flux_1, flux_2, flux_3, integrand,   &
-            flux_1_m, flux_2_m, flux_3_m,               &
+        type(AD_D), allocatable, dimension(:)   ::  &
+            g_bar,                                  &
+            flux_1_m, flux_2_m, flux_3_m,           &
             flux_1_p, flux_2_p, flux_3_p            
 
 
-        real(rk),   allocatable, dimension(:)   ::  &
-            norm_1, norm_2, norm_3, det_jacobian_grid_m, det_jacobian_grid_p
+        real(rk),   allocatable, dimension(:)       :: det_jacobian_grid_m, det_jacobian_grid_p
+        real(rk),   allocatable, dimension(:,:)     :: grid_velocity
+        real(rk),   allocatable, dimension(:,:,:)   :: inv_jacobian_grid_m, inv_jacobian_grid_p
 
-        real(rk),   allocatable, dimension(:,:) :: grid_velocity
-
-        real(rk),   allocatable, dimension(:,:,:)   ::  &
-            inv_jacobian_grid_m, inv_jacobian_grid_p
-
-        type(AD_D), allocatable, dimension(:,:)   :: flux_ref
        
         !
         ! Interpolate solution to quadrature nodes
         !
-        g_bar = worker%get_primary_field_face('g_bar', 'value', 'face interior')
+        g_bar = worker%get_field('g_bar', 'value', 'face interior')
 
         
         !
         ! Get model coefficients
         !
-!        grid_velocity_1     = worker%get_grid_velocity_face('u_grid','face interior')
-!        grid_velocity_2     = worker%get_grid_velocity_face('v_grid','face interior')
-!        grid_velocity_3     = worker%get_grid_velocity_face('w_grid','face interior')
         grid_velocity       = worker%get_grid_velocity_face('face interior')
         det_jacobian_grid_m = worker%get_det_jacobian_grid_face('value','face interior')
         det_jacobian_grid_p = worker%get_det_jacobian_grid_face('value','face exterior')
         inv_jacobian_grid_m = worker%get_inv_jacobian_grid_face('face interior')
         inv_jacobian_grid_p = worker%get_inv_jacobian_grid_face('face exterior')
-
-
-        !
-        ! Get normal vector
-        !
-        norm_1 = worker%normal(1)
-        norm_2 = worker%normal(2)
-        norm_3 = worker%normal(3)
 
 
         !
@@ -141,25 +125,12 @@ contains
         flux_3_p = (inv_jacobian_grid_p(:,3,1)*grid_velocity(:,1) + inv_jacobian_grid_p(:,3,2)*grid_velocity(:,2) + inv_jacobian_grid_p(:,3,3)*grid_velocity(:,3))*det_jacobian_grid_p
 
 
-        !flux_1 = HALF*(flux_1_m + flux_1_p)
-        !flux_2 = HALF*(flux_2_m + flux_2_p)
-        !flux_3 = HALF*(flux_3_m + flux_3_p)
-        flux_1 = flux_1_m
-        flux_2 = flux_2_m
-        flux_3 = flux_3_m
-
-
-        !
-        ! Dot with normal vector
-        ! 
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-
-
         !
         ! Integrate flux
         !
-        integrand = -integrand
-        call worker%integrate_boundary('g_bar',integrand)
+        call worker%integrate_boundary_average('g_bar','Advection',             &
+                                                flux_1_m, flux_2_m, flux_3_m,   &
+                                                flux_1_p, flux_2_p, flux_3_p)
 
 
     end subroutine compute

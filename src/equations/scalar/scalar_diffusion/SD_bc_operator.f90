@@ -96,15 +96,15 @@ contains
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
-        grad1_u = worker%get_primary_field_face('u','grad1 + lift', 'boundary')
-        grad2_u = worker%get_primary_field_face('u','grad2 + lift', 'boundary')
-        grad3_u = worker%get_primary_field_face('u','grad3 + lift', 'boundary')
+        grad1_u = worker%get_field('u','grad1 + lift', 'boundary')
+        grad2_u = worker%get_field('u','grad2 + lift', 'boundary')
+        grad3_u = worker%get_field('u','grad3 + lift', 'boundary')
 
 
         !
         ! Compute scalar coefficient
         !
-        mu = worker%get_model_field_face('Scalar Diffusion Coefficient', 'value', 'boundary')
+        mu = worker%get_field('Scalar Diffusion Coefficient', 'value', 'boundary')
 
 
         !=================================================

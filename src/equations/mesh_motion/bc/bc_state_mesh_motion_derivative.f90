@@ -102,14 +102,14 @@ contains
         !
         ! Get 'u' value from face interior to extrapolate
         !
-        u_bc = worker%get_primary_field_face('grid_displacement1', 'value', 'face interior')
+        u_bc = worker%get_field('grid_displacement1', 'value', 'face interior')
 
 
 
         !
         ! Initialize derivative arrays
         !
-        dudx_bc = ZERO*worker%get_primary_field_face('grid_displacement1', 'grad1','face interior')
+        dudx_bc = ZERO*worker%get_field('grid_displacement1', 'grad1', 'face interior')
         dudy_bc = ZERO*dudx_bc
         dudz_bc = ZERO*dudx_bc
 
@@ -142,14 +142,14 @@ contains
         !
         ! Get 'u' value from face interior to extrapolate
         !
-        u_bc = worker%get_primary_field_face('grid_displacement2', 'value', 'face interior')
+        u_bc = worker%get_field('grid_displacement2', 'value', 'face interior')
 
 
 
         !
         ! Initialize derivative arrays
         !
-        dudx_bc = ZERO*worker%get_primary_field_face('grid_displacement2', 'grad1','face interior')
+        dudx_bc = ZERO*worker%get_field('grid_displacement2', 'grad1','face interior')
         dudy_bc = ZERO*dudx_bc
         dudz_bc = ZERO*dudx_bc
 
@@ -182,14 +182,14 @@ contains
         !
         ! Get 'u' value from face interior to extrapolate
         !
-        u_bc = worker%get_primary_field_face('grid_displacement3', 'value', 'face interior')
+        u_bc = worker%get_field('grid_displacement3', 'value', 'face interior')
 
 
 
         !
         ! Initialize derivative arrays
         !
-        dudx_bc = ZERO*worker%get_primary_field_face('grid_displacement3', 'grad1','face interior')
+        dudx_bc = ZERO*worker%get_field('grid_displacement3', 'grad1','face interior')
         dudy_bc = ZERO*dudx_bc
         dudz_bc = ZERO*dudx_bc
 

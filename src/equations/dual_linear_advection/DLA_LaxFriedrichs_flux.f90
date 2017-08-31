@@ -77,73 +77,45 @@ contains
         type(chidg_worker_t),               intent(inout)   :: worker
         class(properties_t),                intent(inout)   :: prop
 
-        real(rk)                 :: cx, cy, cz
-        integer(ik)              :: iu_a, iu_b
 
         type(AD_D), allocatable, dimension(:)   ::  & 
-            ua_l, ua_r, ub_l, ub_r,                 &
-            flux_x, flux_y, flux_z, integrand
+            ua_p, ua_m, ub_p, ub_m, dissipation
 
-        real(rk),   allocatable, dimension(:)   ::  &
-            normx, normy, normz, unormx, unormy, unormz
-
-
-        !
-        ! Get integer data
-        !
-        iu_a      = prop%get_primary_field_index('u_a')
-        iu_b      = prop%get_primary_field_index('u_b')
-
+        real(rk) :: c1, c2, c3
 
 
         !
         ! Get equation set property data
         !
-        cx = 1._rk
-        cy = 0._rk
-        cz = 0._rk
+        c1 = ONE
+        c2 = ZERO
+        c3 = ZERO
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        ua_r = worker%get_primary_field_face('u_a','value', 'face interior')
-        ua_l = worker%get_primary_field_face('u_a','value', 'face exterior')
+        ua_m = worker%get_field('u_a','value', 'face interior')
+        ua_p = worker%get_field('u_a','value', 'face exterior')
 
-        ub_r = worker%get_primary_field_face('u_b','value', 'face interior')
-        ub_l = worker%get_primary_field_face('u_b','value', 'face exterior')
-
-
-
-        normx = worker%normal(1)
-        normy = worker%normal(2)
-        normz = worker%normal(3)
-
-        unormx = worker%unit_normal(1)
-        unormy = worker%unit_normal(2)
-        unormz = worker%unit_normal(3)
-
-        !
-        ! Compute boundary upwind flux
-        !
-        flux_x = (cx * (ua_l - ua_r)/TWO )  *  normx * unormx
-        flux_y = (cy * (ua_l - ua_r)/TWO )  *  normy * unormy
-        flux_z = (cz * (ua_l - ua_r)/TWO )  *  normz * unormz
-
-        integrand = flux_x + flux_y + flux_z
-        call worker%integrate_boundary('u_a',integrand)
-
+        ub_m = worker%get_field('u_b','value', 'face interior')
+        ub_p = worker%get_field('u_b','value', 'face exterior')
 
 
         !
         ! Compute boundary upwind flux
         !
-        flux_x = (cx * (ub_l - ub_r)/TWO )  *  normx * unormx
-        flux_y = (cy * (ub_l - ub_r)/TWO )  *  normy * unormy
-        flux_z = (cz * (ub_l - ub_r)/TWO )  *  normz * unormz
+        dissipation = -max(abs(c1),abs(c2),abs(c3))*(ua_p - ua_m)
 
-        integrand = flux_x + flux_y + flux_z
-        call worker%integrate_boundary('u_b',integrand)
+        call worker%integrate_boundary_upwind('u_a',dissipation)
+
+
+        !
+        ! Compute boundary upwind flux
+        !
+        dissipation = -max(abs(c1),abs(c2),abs(c3))*(ub_p - ub_m)
+
+        call worker%integrate_boundary_upwind('u_b',dissipation)
 
 
 

@@ -2,7 +2,7 @@ module RANS_bc_diffusion
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO,ONE,TWO,THREE,HALF
-    use mod_fluid,              only: omega
+    use mod_fluid,              only: omega, gam
     use mod_spalart_allmaras
 
     use type_operator,          only: operator_t
@@ -23,10 +23,10 @@ module RANS_bc_diffusion
     !------------------------------------------------------------------------------
     type, extends(operator_t), public :: RANS_bc_diffusion_t
 
-        real(rk)    :: gam = 1.4_rk
-        real(rk)    :: R   = 287.15_rk
-        real(rk)    :: Cp  = 1003.0_rk
-        real(rk)    :: Pr  = 0.72_rk
+!        real(rk)    :: gam = 1.4_rk
+!        real(rk)    :: R   = 287.15_rk
+!        real(rk)    :: Cp  = 1003.0_rk
+!        real(rk)    :: Pr  = 0.72_rk
 
     contains
 
@@ -86,7 +86,7 @@ contains
 
         type(AD_D), allocatable, dimension(:) ::                    &
             density, mom1, mom2, mom3, energy, density_nutilde,     &
-            enthalpy, pressure, nu, nutilde,           &
+            enthalpy, pressure, nu, nutilde,                        &
             grad1_density, grad2_density, grad3_density,            &
             grad1_mom1,    grad2_mom1,    grad3_mom1,               &
             grad1_mom2,    grad2_mom2,    grad3_mom2,               &
@@ -112,9 +112,9 @@ contains
             dnutilde_ddensitynutilde,                                               &
             invdensity, div_velocity, u, v, w, chi, diffusion, f_n1, f_v1,          &
             vorticity_1, vorticity_2, vorticity_3,                                  &
-            flux_1, flux_2, flux_3, integrand
+            flux_1, flux_2, flux_3
 
-        real(rk),   allocatable, dimension(:)   :: r, norm_1, norm_2, norm_3
+        real(rk),   allocatable, dimension(:)   :: r
         real(rk)                                :: const
 
         ! Sutherlands Law constants
@@ -128,52 +128,41 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        density         = worker%get_primary_field_face('Density'   ,        'value','boundary')
-        mom1            = worker%get_primary_field_face('Momentum-1',        'value','boundary')
-        mom2            = worker%get_primary_field_face('Momentum-2',        'value','boundary')
-        mom3            = worker%get_primary_field_face('Momentum-3',        'value','boundary')
-        energy          = worker%get_primary_field_face('Energy'    ,        'value','boundary')
-        density_nutilde = worker%get_primary_field_face('Density * NuTilde', 'value','boundary')
+        density         = worker%get_field('Density'   ,        'value','boundary')
+        mom1            = worker%get_field('Momentum-1',        'value','boundary')
+        mom2            = worker%get_field('Momentum-2',        'value','boundary')
+        mom3            = worker%get_field('Momentum-3',        'value','boundary')
+        energy          = worker%get_field('Energy'    ,        'value','boundary')
+        density_nutilde = worker%get_field('Density * NuTilde', 'value','boundary')
         invdensity = ONE/density
 
 
         !
         ! Interpolate gradient to quadrature nodes
         !
-        grad1_density         = worker%get_primary_field_face('Density'   ,       'grad1+lift','boundary')
-        grad2_density         = worker%get_primary_field_face('Density'   ,       'grad2+lift','boundary')
-        grad3_density         = worker%get_primary_field_face('Density'   ,       'grad3+lift','boundary')
+        grad1_density         = worker%get_field('Density'   ,       'grad1','boundary')
+        grad2_density         = worker%get_field('Density'   ,       'grad2','boundary')
+        grad3_density         = worker%get_field('Density'   ,       'grad3','boundary')
 
-        grad1_mom1            = worker%get_primary_field_face('Momentum-1',       'grad1+lift','boundary')
-        grad2_mom1            = worker%get_primary_field_face('Momentum-1',       'grad2+lift','boundary')
-        grad3_mom1            = worker%get_primary_field_face('Momentum-1',       'grad3+lift','boundary')
+        grad1_mom1            = worker%get_field('Momentum-1',       'grad1','boundary')
+        grad2_mom1            = worker%get_field('Momentum-1',       'grad2','boundary')
+        grad3_mom1            = worker%get_field('Momentum-1',       'grad3','boundary')
 
-        grad1_mom2            = worker%get_primary_field_face('Momentum-2',       'grad1+lift','boundary')
-        grad2_mom2            = worker%get_primary_field_face('Momentum-2',       'grad2+lift','boundary')
-        grad3_mom2            = worker%get_primary_field_face('Momentum-2',       'grad3+lift','boundary')
+        grad1_mom2            = worker%get_field('Momentum-2',       'grad1','boundary')
+        grad2_mom2            = worker%get_field('Momentum-2',       'grad2','boundary')
+        grad3_mom2            = worker%get_field('Momentum-2',       'grad3','boundary')
 
-        grad1_mom3            = worker%get_primary_field_face('Momentum-3',       'grad1+lift','boundary')
-        grad2_mom3            = worker%get_primary_field_face('Momentum-3',       'grad2+lift','boundary')
-        grad3_mom3            = worker%get_primary_field_face('Momentum-3',       'grad3+lift','boundary')
+        grad1_mom3            = worker%get_field('Momentum-3',       'grad1','boundary')
+        grad2_mom3            = worker%get_field('Momentum-3',       'grad2','boundary')
+        grad3_mom3            = worker%get_field('Momentum-3',       'grad3','boundary')
 
-        grad1_energy          = worker%get_primary_field_face('Energy'    ,       'grad1+lift','boundary')
-        grad2_energy          = worker%get_primary_field_face('Energy'    ,       'grad2+lift','boundary')
-        grad3_energy          = worker%get_primary_field_face('Energy'    ,       'grad3+lift','boundary')
+        grad1_energy          = worker%get_field('Energy'    ,       'grad1','boundary')
+        grad2_energy          = worker%get_field('Energy'    ,       'grad2','boundary')
+        grad3_energy          = worker%get_field('Energy'    ,       'grad3','boundary')
 
-        grad1_density_nutilde = worker%get_primary_field_face('Density * NuTilde','grad1+lift','boundary')
-        grad2_density_nutilde = worker%get_primary_field_face('Density * NuTilde','grad2+lift','boundary')
-        grad3_density_nutilde = worker%get_primary_field_face('Density * NuTilde','grad3+lift','boundary')
-
-
-
-        !
-        ! Get normal vector
-        !
-        norm_1 = worker%normal(1)
-        norm_2 = worker%normal(2)
-        norm_3 = worker%normal(3)
-
-
+        grad1_density_nutilde = worker%get_field('Density * NuTilde','grad1','boundary')
+        grad2_density_nutilde = worker%get_field('Density * NuTilde','grad2','boundary')
+        grad3_density_nutilde = worker%get_field('Density * NuTilde','grad3','boundary')
 
 
         !
@@ -210,12 +199,12 @@ contains
         !
         !pressure    = (self%gam-ONE)*(energy - HALF*( (mom1*mom1) + (mom2*mom2) + (mom3*mom3) )*invdensity )
         !temperature = pressure/(density*self%R)
-        pressure = worker%get_model_field_face('Pressure', 'value', 'boundary')
+        pressure = worker%get_field('Pressure', 'value', 'boundary')
 
 
         ! Compute viscosity using Sutherland's Law
         !mu_l  = mu0*((temperature/T0)**(THREE/TWO))*(T0+S)/(temperature+S)
-        mu_l  = worker%get_model_field_face('Laminar Viscosity', 'value', 'boundary')
+        mu_l  = worker%get_field('Laminar Viscosity', 'value', 'boundary')
         mu2_l = -(TWO/THREE)*mu_l
         k_l   = self%Cp * mu_l / self%Pr
 
@@ -507,22 +496,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         !=================================================
         ! mass flux
         !=================================================
@@ -535,8 +508,7 @@ contains
         flux_2 = -shear_12
         flux_3 = -shear_13
 
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-        call worker%integrate_boundary('Momentum-1',integrand)
+        call worker%integrate_boundary_condition('Momentum-1','Diffusion',flux_1,flux_2,flux_3)
 
 
         !=================================================
@@ -559,8 +531,7 @@ contains
             call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-        call worker%integrate_boundary('Momentum-2',integrand)
+        call worker%integrate_boundary_condition('Momentum-2','Diffusion',flux_1,flux_2,flux_3)
 
 
         !=================================================
@@ -570,8 +541,7 @@ contains
         flux_2 = -shear_23
         flux_3 = -shear_33
 
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-        call worker%integrate_boundary('Momentum-3',integrand)
+        call worker%integrate_boundary_condition('Momentum-3','Diffusion',flux_1,flux_2,flux_3)
                              
         !=================================================
         ! energy flux
@@ -580,8 +550,7 @@ contains
         flux_2 = -k*grad2_T  -  (u*shear_12 + v*shear_22 + w*shear_23)
         flux_3 = -k*grad3_T  -  (u*shear_13 + v*shear_23 + w*shear_33)
 
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-        call worker%integrate_boundary('Energy',integrand)
+        call worker%integrate_boundary_condition('Energy','Diffusion',flux_1,flux_2,flux_3)
 
 
         !================================
@@ -593,9 +562,7 @@ contains
         flux_2 = (diffusion*grad2_nutilde)
         flux_3 = (diffusion*grad3_nutilde)
 
-
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-        call worker%integrate_boundary('Density * NuTilde',integrand)
+        call worker%integrate_boundary_condition('Density * NuTilde','Diffusion',flux_1,flux_2,flux_3)
 
     
 

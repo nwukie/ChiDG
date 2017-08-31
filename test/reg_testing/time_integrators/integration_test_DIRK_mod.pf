@@ -314,7 +314,7 @@ contains
         type(AD_D), allocatable, dimension(:)   :: u, cx_model,cy_model,cz_model
 
 
-        u = worker%get_primary_field_general('u', 'value')
+        u = worker%get_field('u', 'value')
 
         ! Initialize derivative arrays
         cx_model = u

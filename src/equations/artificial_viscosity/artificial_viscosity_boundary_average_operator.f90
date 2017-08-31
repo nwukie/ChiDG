@@ -89,12 +89,12 @@ contains
         type(AD_D), allocatable,    dimension(:) ::         &
             lamda_m,        lamda_p,                        &
             tau_m,          tau_p,                          &
-            diffusion_x_m,  diffusion_y_m,  diffusion_z_m,  &
-            diffusion_x_p,  diffusion_y_p,  diffusion_z_p,  &
-            deps_dx_m,      deps_dy_m,      deps_dz_m,      &
-            deps_dx_p,      deps_dy_p,      deps_dz_p,      &
-            flux_x_m,       flux_y_m,       flux_z_m,       &
-            flux_x_p,       flux_y_p,       flux_z_p,       &
+            diffusion_1_m,  diffusion_2_m,  diffusion_3_m,  &
+            diffusion_1_p,  diffusion_2_p,  diffusion_3_p,  &
+            grad1_eps_m,      grad2_eps_m,      grad3_eps_m,      &
+            grad1_eps_p,      grad2_eps_p,      grad3_eps_p,      &
+            flux_1_m,       flux_2_m,       flux_3_m,       &
+            flux_1_p,       flux_2_p,       flux_3_p,       &
             flux_x,         flux_y,         flux_z,         &
             integrand
 
@@ -103,29 +103,29 @@ contains
 
         integer(ik) :: order_m, order_p
         real(rk)    :: C1, C2, h_m(3), h_p(3),      &
-                       eta_x_m, eta_y_m, eta_z_m,   &
-                       eta_x_p, eta_y_p, eta_z_p
+                       eta_1_m, eta_2_m, eta_3_m,   &
+                       eta_1_p, eta_2_p, eta_3_p
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        deps_dx_m  = worker%get_primary_field_face('Artificial Viscosity', 'grad1+lift', 'face interior')
-        deps_dx_p  = worker%get_primary_field_face('Artificial Viscosity', 'grad1+lift', 'face exterior')
+        grad1_eps_m  = worker%get_field('Artificial Viscosity', 'grad1', 'face interior')
+        grad1_eps_p  = worker%get_field('Artificial Viscosity', 'grad1', 'face exterior')
 
-        deps_dy_m  = worker%get_primary_field_face('Artificial Viscosity', 'grad2+lift', 'face interior')
-        deps_dy_p  = worker%get_primary_field_face('Artificial Viscosity', 'grad2+lift', 'face exterior')
+        grad2_eps_m  = worker%get_field('Artificial Viscosity', 'grad2', 'face interior')
+        grad2_eps_p  = worker%get_field('Artificial Viscosity', 'grad2', 'face exterior')
 
-        deps_dz_m  = worker%get_primary_field_face('Artificial Viscosity', 'grad3+lift', 'face interior')
-        deps_dz_p  = worker%get_primary_field_face('Artificial Viscosity', 'grad3+lift', 'face exterior')
+        grad3_eps_m  = worker%get_field('Artificial Viscosity', 'grad3', 'face interior')
+        grad3_eps_p  = worker%get_field('Artificial Viscosity', 'grad3', 'face exterior')
 
 
 
         !
         ! Get model field for Maximum Wave Speed
         !
-        lamda_m = worker%get_model_field_face('Maximum Wave Speed', 'value', 'face interior')
-        lamda_p = worker%get_model_field_face('Maximum Wave Speed', 'value', 'face exterior')
+        lamda_m = worker%get_field('Maximum Wave Speed', 'value', 'face interior')
+        lamda_p = worker%get_field('Maximum Wave Speed', 'value', 'face exterior')
 
 
 
@@ -157,26 +157,26 @@ contains
         tau_m = minval(h_m)/(C1 * real(order_m+1,rk) * lamda_m)
         tau_p = minval(h_p)/(C1 * real(order_p+1,rk) * lamda_p)
 
-        eta_x_m = C2*(h_m(1)**TWO)
-        eta_y_m = C2*(h_m(2)**TWO)
-        eta_z_m = C2*(h_m(3)**TWO)
+        eta_1_m = C2*(h_m(1)**TWO)
+        eta_2_m = C2*(h_m(2)**TWO)
+        eta_3_m = C2*(h_m(3)**TWO)
 
-        eta_x_p = C2*(h_p(1)**TWO)
-        eta_y_p = C2*(h_p(2)**TWO)
-        eta_z_p = C2*(h_p(3)**TWO)
+        eta_1_p = C2*(h_p(1)**TWO)
+        eta_2_p = C2*(h_p(2)**TWO)
+        eta_3_p = C2*(h_p(3)**TWO)
 
 
 
         !
         ! Compute diffusion tensor diagonal
         !
-        diffusion_x_m = eta_x_m/tau_m
-        diffusion_y_m = eta_y_m/tau_m
-        diffusion_z_m = eta_z_m/tau_m
+        diffusion_1_m = eta_1_m/tau_m
+        diffusion_2_m = eta_2_m/tau_m
+        diffusion_3_m = eta_3_m/tau_m
 
-        diffusion_x_p = eta_x_p/tau_p
-        diffusion_y_p = eta_y_p/tau_p
-        diffusion_z_p = eta_z_p/tau_p
+        diffusion_1_p = eta_1_p/tau_p
+        diffusion_2_p = eta_2_p/tau_p
+        diffusion_3_p = eta_3_p/tau_p
 
 
 
@@ -185,31 +185,18 @@ contains
         !================================
         !             FLUX
         !================================
-!        flux_x_m = -diffusion_x_m * deps_dx_m
-!        flux_y_m = -diffusion_y_m * deps_dy_m
-!        flux_z_m = -diffusion_z_m * deps_dz_m
-!
-!        flux_x_p = -diffusion_x_p * deps_dx_p
-!        flux_y_p = -diffusion_y_p * deps_dy_p
-!        flux_z_p = -diffusion_z_p * deps_dz_p
-        flux_x_m = -0.20_rk*deps_dx_m
-        flux_y_m = -0.20_rk*deps_dy_m
-        flux_z_m = -0.20_rk*deps_dz_m
+        flux_1_m = -diffusion_1_m * grad1_eps_m
+        flux_2_m = -diffusion_2_m * grad2_eps_m
+        flux_3_m = -diffusion_3_m * grad3_eps_m
 
-        flux_x_p = -0.20_rk*deps_dx_p
-        flux_y_p = -0.20_rk*deps_dy_p
-        flux_z_p = -0.20_rk*deps_dz_p
+        flux_1_p = -diffusion_1_p * grad1_eps_p
+        flux_2_p = -diffusion_2_p * grad2_eps_p
+        flux_3_p = -diffusion_3_p * grad3_eps_p
 
+        call worker%integrate_boundary_average('Artificial Viscosity','Diffusion',  &
+                                                flux_1_m, flux_2_m, flux_3_m,       &
+                                                flux_1_p, flux_2_p, flux_3_p)
 
-        flux_x = (flux_x_m + flux_x_p)
-        flux_y = (flux_y_m + flux_y_p)
-        flux_z = (flux_z_m + flux_z_p)
-
-
-        ! dot with normal vector
-        integrand = HALF*(flux_x*normx + flux_y*normy + flux_z*normz)
-
-        call worker%integrate_boundary('Artificial Viscosity',integrand)
 
 
     end subroutine compute

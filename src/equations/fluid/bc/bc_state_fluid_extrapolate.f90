@@ -111,25 +111,25 @@ contains
         mom3_m    = worker%get_field('Momentum-3', 'value', 'face interior')
         energy_m  = worker%get_field('Energy'    , 'value', 'face interior')
 
-        grad1_density = worker%get_field('Density'   , 'grad1', 'face interior')
-        grad2_density = worker%get_field('Density'   , 'grad2', 'face interior')
-        grad3_density = worker%get_field('Density'   , 'grad3', 'face interior')
+        grad1_density_m = worker%get_field('Density'   , 'grad1', 'face interior')
+        grad2_density_m = worker%get_field('Density'   , 'grad2', 'face interior')
+        grad3_density_m = worker%get_field('Density'   , 'grad3', 'face interior')
 
-        grad1_mom1    = worker%get_field('Momentum-1', 'grad1', 'face interior')
-        grad2_mom1    = worker%get_field('Momentum-1', 'grad2', 'face interior')
-        grad3_mom1    = worker%get_field('Momentum-1', 'grad3', 'face interior')
+        grad1_mom1_m    = worker%get_field('Momentum-1', 'grad1', 'face interior')
+        grad2_mom1_m    = worker%get_field('Momentum-1', 'grad2', 'face interior')
+        grad3_mom1_m    = worker%get_field('Momentum-1', 'grad3', 'face interior')
 
-        grad1_mom2    = worker%get_field('Momentum-2', 'grad1', 'face interior')
-        grad2_mom2    = worker%get_field('Momentum-2', 'grad2', 'face interior')
-        grad3_mom2    = worker%get_field('Momentum-2', 'grad3', 'face interior')
+        grad1_mom2_m    = worker%get_field('Momentum-2', 'grad1', 'face interior')
+        grad2_mom2_m    = worker%get_field('Momentum-2', 'grad2', 'face interior')
+        grad3_mom2_m    = worker%get_field('Momentum-2', 'grad3', 'face interior')
 
-        grad1_mom3    = worker%get_field('Momentum-3', 'grad1', 'face interior')
-        grad2_mom3    = worker%get_field('Momentum-3', 'grad2', 'face interior')
-        grad3_mom3    = worker%get_field('Momentum-3', 'grad3', 'face interior')
+        grad1_mom3_m    = worker%get_field('Momentum-3', 'grad1', 'face interior')
+        grad2_mom3_m    = worker%get_field('Momentum-3', 'grad2', 'face interior')
+        grad3_mom3_m    = worker%get_field('Momentum-3', 'grad3', 'face interior')
 
-        grad1_energy  = worker%get_field('Energy'    , 'grad1', 'face interior')
-        grad2_energy  = worker%get_field('Energy'    , 'grad2', 'face interior')
-        grad3_energy  = worker%get_field('Energy'    , 'grad3', 'face interior')
+        grad1_energy_m  = worker%get_field('Energy'    , 'grad1', 'face interior')
+        grad2_energy_m  = worker%get_field('Energy'    , 'grad2', 'face interior')
+        grad3_energy_m  = worker%get_field('Energy'    , 'grad3', 'face interior')
 
 
 

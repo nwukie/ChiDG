@@ -106,7 +106,7 @@ contains
             density_bc, mom1_bc, mom2_bc, mom3_bc, energy_bc, p_bc,                     &
             grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,  &
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,  &
-            grad3_density_m, grad3_mom1_m, grad3_mom3_m, grad3_mom3_m, grad3_energy_m,  &
+            grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
             u_m,    v_m,    w_m,                                                        &
             u_bc,   v_bc,   w_bc,                                                       &
             T_bc,   vmag2_m, vmag
@@ -274,7 +274,7 @@ contains
                                                 
         call worker%store_bc_state('Momentum-2', grad1_mom2_m,    'grad1')
         call worker%store_bc_state('Momentum-2', grad2_mom2_m,    'grad2')
-        call worker%store_bc_state('Momentum-2', grad3_mom3_m,    'grad3')
+        call worker%store_bc_state('Momentum-2', grad3_mom2_m,    'grad3')
                                                 
         call worker%store_bc_state('Momentum-3', grad1_mom3_m,    'grad1')
         call worker%store_bc_state('Momentum-3', grad2_mom3_m,    'grad2')

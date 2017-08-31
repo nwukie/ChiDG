@@ -93,44 +93,40 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(MMLE_bc_operator_t),    intent(inout)   :: self
+        class(MMLE_bc_operator_t),  intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         class(properties_t),        intent(inout)   :: prop
 
 
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   ::  &
-            grad1_u1, grad2_u1, grad3_u1,              &
-            grad1_u2, grad2_u2, grad3_u2,              &
-            grad1_u3, grad2_u3, grad3_u3,              &
+            grad1_u1, grad2_u1, grad3_u1,           &
+            grad1_u2, grad2_u2, grad3_u2,           &
+            grad1_u3, grad2_u3, grad3_u3,           &
             flux_1,  flux_2,  flux_3,               &
-            integrand, mu, &
-            strain_11, strain_22, strain_33, &
-            strain_12, strain_31, strain_23,&
-            stress_11, stress_22, stress_33, &
-            stress_12, stress_31, stress_23, &
+            integrand, mu,                          &
+            strain_11, strain_22, strain_33,        &
+            strain_12, strain_31, strain_23,        &
+            stress_11, stress_22, stress_33,        &
+            stress_12, stress_31, stress_23,        &
             elasticity_modulus, alpha_param, poisson_ratio
 
         
 
-        real(rk),   allocatable, dimension(:)   ::  &
-            norm_1, norm_2, norm_3
-
-
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
-        grad1_u1 = worker%get_primary_field_face('grid_displacement1','grad1 + lift', 'boundary')
-        grad2_u1 = worker%get_primary_field_face('grid_displacement1','grad2 + lift', 'boundary')
-        grad3_u1 = worker%get_primary_field_face('grid_displacement1','grad3 + lift', 'boundary')
+        grad1_u1 = worker%get_field('grid_displacement1','grad1', 'boundary')
+        grad2_u1 = worker%get_field('grid_displacement1','grad2', 'boundary')
+        grad3_u1 = worker%get_field('grid_displacement1','grad3', 'boundary')
 
-        grad1_u2 = worker%get_primary_field_face('grid_displacement2','grad1 + lift', 'boundary')
-        grad2_u2 = worker%get_primary_field_face('grid_displacement2','grad2 + lift', 'boundary')
-        grad3_u2 = worker%get_primary_field_face('grid_displacement2','grad3 + lift', 'boundary')
+        grad1_u2 = worker%get_field('grid_displacement2','grad1', 'boundary')
+        grad2_u2 = worker%get_field('grid_displacement2','grad2', 'boundary')
+        grad3_u2 = worker%get_field('grid_displacement2','grad3', 'boundary')
 
-        grad1_u3 = worker%get_primary_field_face('grid_displacement3','grad1 + lift', 'boundary')
-        grad2_u3 = worker%get_primary_field_face('grid_displacement3','grad2 + lift', 'boundary')
-        grad3_u3 = worker%get_primary_field_face('grid_displacement3','grad3 + lift', 'boundary')
+        grad1_u3 = worker%get_field('grid_displacement3','grad1', 'boundary')
+        grad2_u3 = worker%get_field('grid_displacement3','grad2', 'boundary')
+        grad3_u3 = worker%get_field('grid_displacement3','grad3', 'boundary')
 
 
 
@@ -143,11 +139,12 @@ contains
         strain_23 = (grad3_u2 + grad2_u3)
         strain_31 = (grad3_u1 + grad1_u3)
 
-        !!
-        !! Compute scalar coefficient
-        !! 
-        poisson_ratio = worker%get_model_field_face('Mesh Motion Linear Elasticity Poisson Ratio', 'value', 'boundary')
-        elasticity_modulus = worker%get_model_field_face('Mesh Motion Linear Elasticity Modulus', 'value', 'boundary')
+
+        !
+        ! Compute scalar coefficient
+        ! 
+        poisson_ratio      = worker%get_field('Mesh Motion Linear Elasticity Poisson Ratio', 'value', 'boundary')
+        elasticity_modulus = worker%get_field('Mesh Motion Linear Elasticity Modulus',       'value', 'boundary')
 
 
         !Use negative Poisson ratio to maintain element aspect ratio
@@ -165,14 +162,6 @@ contains
         stress_23 = alpha_param*(HALF-poisson_ratio)*strain_23
         stress_31 = alpha_param*(HALF-poisson_ratio)*strain_31
  
-
-
-
-        norm_1 = worker%normal(1)
-        norm_2 = worker%normal(2)
-        norm_3 = worker%normal(3)
-
-
         
 
         !=================================================
@@ -182,52 +171,27 @@ contains
         flux_2 = -stress_12
         flux_3 = -stress_31
 
-
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-
-
-        if (any(ieee_is_nan(integrand(:)%x_ad_))) then
-            print*, 'BC OP: ', integrand(:)%x_ad_
-        end if
-
-
-        call worker%integrate_boundary('grid_displacement1',integrand)
+        call worker%integrate_boundary_condition('grid_displacement1','Diffusion',flux_1,flux_2,flux_3)
 
 
         !=================================================
         ! GD2 flux
         !=================================================
-
         flux_1 = -stress_12
         flux_2 = -stress_22
         flux_3 = -stress_23
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
 
-
-        if (any(ieee_is_nan(integrand(:)%x_ad_))) then
-            print*, 'BC OP: ', integrand(:)%x_ad_
-        end if
-
-
-        call worker%integrate_boundary('grid_displacement2',integrand)
+        call worker%integrate_boundary_condition('grid_displacement2','Diffusion',flux_1,flux_2,flux_3)
 
 
         !=================================================
         ! GD3 flux
         !=================================================
-
         flux_1 = -stress_31
         flux_2 = -stress_23
         flux_3 = -stress_33
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
 
-
-        if (any(ieee_is_nan(integrand(:)%x_ad_))) then
-            print*, 'BC OP: ', integrand(:)%x_ad_
-        end if
-
-
-        call worker%integrate_boundary('grid_displacement3',integrand)
+        call worker%integrate_boundary_condition('grid_displacement3','Diffusion',flux_1,flux_2,flux_3)
 
 
     end subroutine compute

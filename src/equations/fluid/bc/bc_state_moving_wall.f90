@@ -1,6 +1,7 @@
 module bc_state_moving_wall
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: TWO, HALF, ZERO, ONE
+    use mod_fluid,              only: gam
 
     use type_point,             only: point_t
     use type_bc_state,          only: bc_state_t
@@ -109,7 +110,6 @@ contains
             p_m, u_bc, v_bc, w_bc, u_m, v_m, w_m
 
         real(rk),   allocatable, dimension(:)   :: r
-        real(rk)                                :: gam_m
 
 
 
@@ -160,8 +160,7 @@ contains
         !
         ! Get pressure / velocity
         !
-        gam_m = 1.4_rk
-        p_m = worker%get_model_field_face('Pressure', 'value', 'face interior')
+        p_m = worker%get_field('Pressure', 'value', 'face interior')
         u_m = mom1_m/density_m
         v_m = mom2_m/density_m
         w_m = mom3_m/density_m
@@ -196,7 +195,7 @@ contains
         !
         ! Energy subtract momentum
         !
-        energy_bc = p_m/(gam_m-ONE)  +  (HALF*density_bc)*(u_bc*u_bc + v_bc*v_bc + w_bc*w_bc)
+        energy_bc = p_m/(gam-ONE)  +  (HALF*density_bc)*(u_bc*u_bc + v_bc*v_bc + w_bc*w_bc)
 
 
 

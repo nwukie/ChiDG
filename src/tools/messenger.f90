@@ -253,17 +253,19 @@ contains
                 select type(auxdata)
                     type is(integer)
                         call write_line(auxdata, width=chidg_signal_length)
-
                     type is(integer(8))
                         call write_line(auxdata, width=chidg_signal_length)
-
                     type is(real)
                         call write_line(auxdata, width=chidg_signal_length)
-
                     type is(real(8))
                         call write_line(auxdata, width=chidg_signal_length)
-
                     type is(character(*))
+                        call write_line(auxdata, width=chidg_signal_length)
+                    type is(logical(2))
+                        call write_line(auxdata, width=chidg_signal_length)
+                    type is(logical(4)) 
+                        call write_line(auxdata, width=chidg_signal_length)
+                    type is(logical(8))
                         call write_line(auxdata, width=chidg_signal_length)
 
                     class default

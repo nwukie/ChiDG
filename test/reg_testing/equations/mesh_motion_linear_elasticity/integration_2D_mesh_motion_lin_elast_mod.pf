@@ -220,7 +220,7 @@ contains
         integer(ik)                             :: idom, ielem, iface
 
 
-        u = worker%get_primary_field_general('grid_displacement2', 'value')
+        u = worker%get_field('grid_displacement2', 'value')
 
         idom = worker%element_info%idomain_l
         ielem = worker%element_info%ielement_l

@@ -89,10 +89,10 @@ contains
         !
         ! Interpolate interior solution to quadrature nodes
         !
-        eps_m      = worker%get_primary_field_face('Artificial Viscosity' , 'value', 'face interior')
-        deps_dx_m  = worker%get_primary_field_face('Artificial Viscosity' , 'grad1', 'face interior')
-        deps_dy_m  = worker%get_primary_field_face('Artificial Viscosity' , 'grad2', 'face interior')
-        deps_dz_m  = worker%get_primary_field_face('Artificial Viscosity' , 'grad3', 'face interior')
+        eps_m      = worker%get_field('Artificial Viscosity' , 'value', 'face interior')
+        deps_dx_m  = worker%get_field('Artificial Viscosity' , 'grad1', 'face interior')
+        deps_dy_m  = worker%get_field('Artificial Viscosity' , 'grad2', 'face interior')
+        deps_dz_m  = worker%get_field('Artificial Viscosity' , 'grad3', 'face interior')
 
 
         !

@@ -498,16 +498,15 @@ contains
     !!
     !--------------------------------------------------------------------------------------
     subroutine compute_constant_viscosity(self,worker)
-        class(test_force_constant_viscosity_t),    intent(in)      :: self
-        type(chidg_worker_t),           intent(inout)   :: worker
+        class(test_force_constant_viscosity_t), intent(in)      :: self
+        type(chidg_worker_t),                   intent(inout)   :: worker
 
-        type(AD_D), dimension(:),   allocatable :: &
-            viscosity, T
+        type(AD_D), dimension(:),   allocatable :: viscosity, T
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        T = worker%get_model_field_general('Temperature','value')
+        T = worker%get_field('Temperature','value')
     
 
         !

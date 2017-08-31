@@ -105,33 +105,33 @@ contains
         !
         ! Interpolate interior solution to face quadrature nodes
         !
-        density_m = worker%get_primary_field_face('Density'   , 'value', 'face interior')
-        mom1_m    = worker%get_primary_field_face('Momentum-1', 'value', 'face interior')
-        mom2_m    = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
-        mom3_m    = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
-        energy_m  = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
+        density_m = worker%get_field('Density'   , 'value', 'face interior')
+        mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
+        mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
+        mom3_m    = worker%get_field('Momentum-3', 'value', 'face interior')
+        energy_m  = worker%get_field('Energy'    , 'value', 'face interior')
 
 
 
-        grad1_density_m = worker%get_primary_field_face('Density'   , 'grad1', 'face interior')
-        grad2_density_m = worker%get_primary_field_face('Density'   , 'grad2', 'face interior')
-        grad3_density_m = worker%get_primary_field_face('Density'   , 'grad3', 'face interior')
+        grad1_density_m = worker%get_field('Density'   , 'grad1', 'face interior')
+        grad2_density_m = worker%get_field('Density'   , 'grad2', 'face interior')
+        grad3_density_m = worker%get_field('Density'   , 'grad3', 'face interior')
 
-        grad1_mom1_m    = worker%get_primary_field_face('Momentum-1', 'grad1', 'face interior')
-        grad2_mom1_m    = worker%get_primary_field_face('Momentum-1', 'grad2', 'face interior')
-        grad3_mom1_m    = worker%get_primary_field_face('Momentum-1', 'grad3', 'face interior')
+        grad1_mom1_m    = worker%get_field('Momentum-1', 'grad1', 'face interior')
+        grad2_mom1_m    = worker%get_field('Momentum-1', 'grad2', 'face interior')
+        grad3_mom1_m    = worker%get_field('Momentum-1', 'grad3', 'face interior')
 
-        grad1_mom2_m    = worker%get_primary_field_face('Momentum-2', 'grad1', 'face interior')
-        grad2_mom2_m    = worker%get_primary_field_face('Momentum-2', 'grad2', 'face interior')
-        grad3_mom2_m    = worker%get_primary_field_face('Momentum-2', 'grad3', 'face interior')
+        grad1_mom2_m    = worker%get_field('Momentum-2', 'grad1', 'face interior')
+        grad2_mom2_m    = worker%get_field('Momentum-2', 'grad2', 'face interior')
+        grad3_mom2_m    = worker%get_field('Momentum-2', 'grad3', 'face interior')
 
-        grad1_mom3_m    = worker%get_primary_field_face('Momentum-3', 'grad1', 'face interior')
-        grad2_mom3_m    = worker%get_primary_field_face('Momentum-3', 'grad2', 'face interior')
-        grad3_mom3_m    = worker%get_primary_field_face('Momentum-3', 'grad3', 'face interior')
+        grad1_mom3_m    = worker%get_field('Momentum-3', 'grad1', 'face interior')
+        grad2_mom3_m    = worker%get_field('Momentum-3', 'grad2', 'face interior')
+        grad3_mom3_m    = worker%get_field('Momentum-3', 'grad3', 'face interior')
         
-        grad1_energy_m  = worker%get_primary_field_face('Energy'    , 'grad1', 'face interior')
-        grad2_energy_m  = worker%get_primary_field_face('Energy'    , 'grad2', 'face interior')
-        grad3_energy_m  = worker%get_primary_field_face('Energy'    , 'grad3', 'face interior')
+        grad1_energy_m  = worker%get_field('Energy'    , 'grad1', 'face interior')
+        grad2_energy_m  = worker%get_field('Energy'    , 'grad2', 'face interior')
+        grad3_energy_m  = worker%get_field('Energy'    , 'grad3', 'face interior')
 
 
 

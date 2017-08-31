@@ -102,16 +102,16 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        deps_dx = worker%get_primary_field_element('Artificial Viscosity', 'grad1+lift')
-        deps_dy = worker%get_primary_field_element('Artificial Viscosity', 'grad2+lift')
-        deps_dz = worker%get_primary_field_element('Artificial Viscosity', 'grad3+lift')
+        deps_dx = worker%get_field('Artificial Viscosity', 'grad1', 'element')
+        deps_dy = worker%get_field('Artificial Viscosity', 'grad2', 'element')
+        deps_dz = worker%get_field('Artificial Viscosity', 'grad3', 'element')
 
 
 
         !
         ! Get model field for Maximum Wave Speed
         !
-        lamda = worker%get_model_field_element('Maximum Wave Speed', 'value')
+        lamda = worker%get_field('Maximum Wave Speed', 'value', 'element')
 
 
         !

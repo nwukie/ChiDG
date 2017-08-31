@@ -237,7 +237,7 @@ contains
         type(AD_D), allocatable, dimension(:)   :: u, mu
 
 
-        u = worker%get_primary_field_general('u', 'value')
+        u = worker%get_field('u', 'value')
 
         ! mu(u) = exp(u)
         mu = exp(u)

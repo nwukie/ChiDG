@@ -91,19 +91,19 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        u_m = worker%get_primary_field_face('u','value' , 'face interior')
-        u_p = worker%get_primary_field_face('u','value' , 'face exterior')
+        u_m = worker%get_field('u','value' , 'face interior')
+        u_p = worker%get_field('u','value' , 'face exterior')
 
 
         !
         ! Get model coefficients
         !
-        c1_m = worker%get_model_field_face('Scalar Advection Velocity-1', 'value', 'face interior')
-        c2_m = worker%get_model_field_face('Scalar Advection Velocity-2', 'value', 'face interior')
-        c3_m = worker%get_model_field_face('Scalar Advection Velocity-3', 'value', 'face interior')
-        c1_p = worker%get_model_field_face('Scalar Advection Velocity-1', 'value', 'face exterior')
-        c2_p = worker%get_model_field_face('Scalar Advection Velocity-2', 'value', 'face exterior')
-        c3_p = worker%get_model_field_face('Scalar Advection Velocity-3', 'value', 'face exterior')
+        c1_m = worker%get_field('Scalar Advection Velocity-1', 'value', 'face interior')
+        c2_m = worker%get_field('Scalar Advection Velocity-2', 'value', 'face interior')
+        c3_m = worker%get_field('Scalar Advection Velocity-3', 'value', 'face interior')
+        c1_p = worker%get_field('Scalar Advection Velocity-1', 'value', 'face exterior')
+        c2_p = worker%get_field('Scalar Advection Velocity-2', 'value', 'face exterior')
+        c3_p = worker%get_field('Scalar Advection Velocity-3', 'value', 'face exterior')
 
 
         !

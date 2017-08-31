@@ -14,7 +14,6 @@ module MMLE_volume_operator
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
     use DNAD_D
-    use ieee_arithmetic
     implicit none
     private
 
@@ -97,17 +96,17 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        grad1_u1 = worker%get_primary_field_element('grid_displacement1','grad1 + lift')
-        grad2_u1 = worker%get_primary_field_element('grid_displacement1','grad2 + lift')
-        grad3_u1 = worker%get_primary_field_element('grid_displacement1','grad3 + lift')
+        grad1_u1 = worker%get_field('grid_displacement1','grad1', 'element')
+        grad2_u1 = worker%get_field('grid_displacement1','grad2', 'element')
+        grad3_u1 = worker%get_field('grid_displacement1','grad3', 'element')
 
-        grad1_u2 = worker%get_primary_field_element('grid_displacement2','grad1 + lift')
-        grad2_u2 = worker%get_primary_field_element('grid_displacement2','grad2 + lift')
-        grad3_u2 = worker%get_primary_field_element('grid_displacement2','grad3 + lift')
+        grad1_u2 = worker%get_field('grid_displacement2','grad1', 'element')
+        grad2_u2 = worker%get_field('grid_displacement2','grad2', 'element')
+        grad3_u2 = worker%get_field('grid_displacement2','grad3', 'element')
 
-        grad1_u3 = worker%get_primary_field_element('grid_displacement3','grad1 + lift')
-        grad2_u3 = worker%get_primary_field_element('grid_displacement3','grad2 + lift')
-        grad3_u3 = worker%get_primary_field_element('grid_displacement3','grad3 + lift')
+        grad1_u3 = worker%get_field('grid_displacement3','grad1', 'element')
+        grad2_u3 = worker%get_field('grid_displacement3','grad2', 'element')
+        grad3_u3 = worker%get_field('grid_displacement3','grad3', 'element')
 
 
 
@@ -119,23 +118,20 @@ contains
         strain_23 = (grad3_u2 + grad2_u3)
         strain_31 = (grad3_u1 + grad1_u3)
 
-        !!
-        !! Compute scalar coefficient
-        !! 
-        poisson_ratio = worker%get_model_field_element('Mesh Motion Linear Elasticity Poisson Ratio', 'value')
-        elasticity_modulus = worker%get_model_field_element('Mesh Motion Linear Elasticity Modulus', 'value')
+        !
+        ! Compute scalar coefficient
+        ! 
+        poisson_ratio      = worker%get_field('Mesh Motion Linear Elasticity Poisson Ratio', 'value', 'element')
+        elasticity_modulus = worker%get_field('Mesh Motion Linear Elasticity Modulus',       'value', 'element')
 
 
         !Use negative Poisson ratio to maintain element aspect ratio
         alpha_param = elasticity_modulus/((ONE+poisson_ratio)*(ONE-TWO*poisson_ratio))
 
 
-        stress_11 = alpha_param*(&
-            (ONE-poisson_ratio)*strain_11 + poisson_ratio*strain_22 + poisson_ratio*strain_33)
-        stress_22 = alpha_param*(&
-            poisson_ratio*strain_11 + (ONE-poisson_ratio)*strain_22 + poisson_ratio*strain_33)
-        stress_33 = alpha_param*(&
-            poisson_ratio*strain_11 + poisson_ratio*strain_22 + (ONE-poisson_ratio)*strain_33)
+        stress_11 = alpha_param*((ONE-poisson_ratio)*strain_11 + poisson_ratio*strain_22 + poisson_ratio*strain_33)
+        stress_22 = alpha_param*(poisson_ratio*strain_11 + (ONE-poisson_ratio)*strain_22 + poisson_ratio*strain_33)
+        stress_33 = alpha_param*(poisson_ratio*strain_11 + poisson_ratio*strain_22 + (ONE-poisson_ratio)*strain_33)
 
         stress_12 = alpha_param*(HALF-poisson_ratio)*strain_12
         stress_23 = alpha_param*(HALF-poisson_ratio)*strain_23
@@ -143,48 +139,33 @@ contains
         
 
 
-        
-        !
-        ! Compute volume flux at quadrature nodes
-        !
 
-        !GD1
+        !===================================
+        !               GD1
+        !===================================
         flux_1 = -stress_11
         flux_2 = -stress_12
         flux_3 = -stress_31
 
-
-        !
-        ! Integrate volume flux
-        !
         call worker%integrate_volume_flux('grid_displacement1','Diffusion',flux_1,flux_2,flux_3)
 
-        !GD2
+        !===================================
+        !               GD2
+        !===================================
         flux_1 = -stress_12
         flux_2 = -stress_22
         flux_3 = -stress_23
 
-
-
-        !
-        ! Integrate volume flux
-        !
         call worker%integrate_volume_flux('grid_displacement2','Diffusion',flux_1,flux_2,flux_3)
 
-        !GD3
+        !===================================
+        !               GD3
+        !===================================
         flux_1 = -stress_31
         flux_2 = -stress_23
         flux_3 = -stress_33
 
-
-
-        !
-        ! Integrate volume flux
-        !
         call worker%integrate_volume_flux('grid_displacement3','Diffusion',flux_1,flux_2,flux_3)
-
-
-
 
 
     end subroutine compute

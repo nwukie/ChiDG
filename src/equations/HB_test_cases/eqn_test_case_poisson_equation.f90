@@ -92,7 +92,7 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        u = worker%get_primary_field_general('u', 'value')
+        u = worker%get_field('u', 'value')
 
         !
         ! Initialize derivatives

@@ -82,26 +82,19 @@ contains
         type(AD_D), allocatable, dimension(:)   ::  &
             g_bar, flux_1, flux_2, flux_3
 
-        real(rk),   allocatable, dimension(:)   ::  &
-            det_jacobian_grid
-
-        real(rk),   allocatable, dimension(:,:) :: grid_velocity
-
-        real(rk),   allocatable, dimension(:,:,:) :: &
-            inv_jacobian_grid
+        real(rk),   allocatable, dimension(:)     :: det_jacobian_grid
+        real(rk),   allocatable, dimension(:,:)   :: grid_velocity
+        real(rk),   allocatable, dimension(:,:,:) :: inv_jacobian_grid
 
 
 
         ! Just to set up AD variables
-        g_bar = worker%get_primary_field_element('g_bar','value')
+        g_bar = worker%get_field('g_bar','value','element')
 
 
         !
         ! Get model coefficients
         !
-!        grid_velocity_1   = worker%get_grid_velocity_element('u_grid')
-!        grid_velocity_2   = worker%get_grid_velocity_element('v_grid')
-!        grid_velocity_3   = worker%get_grid_velocity_element('w_grid')
         grid_velocity     = worker%get_grid_velocity_element()
         det_jacobian_grid = worker%get_det_jacobian_grid_element('value')
         inv_jacobian_grid = worker%get_inv_jacobian_grid_element()

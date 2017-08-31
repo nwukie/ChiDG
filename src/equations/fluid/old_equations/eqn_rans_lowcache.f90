@@ -79,7 +79,7 @@ contains
                 call equation_set%add_operator('RANS Source')
 
                 call equation_set%add_model('Ideal Gas')
-                call equation_set%add_model('Fluid Advection Velocity')
+                !call equation_set%add_model('Fluid Advection Velocity')
                 call equation_set%add_model('Constant Viscosity')
 
                 call equation_set%add_pseudo_timestep(fluid_pseudo_time)

@@ -1,16 +1,15 @@
 add_subdirectory(euler)
 add_subdirectory(viscous)
-add_subdirectory(rans_lowcache)
 add_subdirectory(bc)
 add_subdirectory(spalart_allmaras)
 add_subdirectory(geometric_conservation)
+#add_subdirectory(rans_lowcache)
 
 add_lib_sources(
                 eqn_euler.f90
                 eqn_laminar_navier_stokes.f90
                 eqn_laminar_navier_stokes_io.f90
                 eqn_navier_stokes.f90
-                eqn_rans_lowcache.f90
                 mod_fluid.f90
                 mod_force.f90
                 mod_entropy.f90

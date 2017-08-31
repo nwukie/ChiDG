@@ -90,42 +90,28 @@ contains
         class(properties_t),        intent(inout)   :: prop
         type(mpi_comm),             intent(in)      :: bc_COMM
 
-        ! Equation indices
-        integer(ik)     :: iu
 
         type(AD_D), allocatable, dimension(:)   :: u_bc, dudx_bc, dudy_bc, dudz_bc
-
-
 
 
         !
         ! Get 'u' value from face interior to extrapolate
         !
-        !u_bc = worker%get_primary_field_face('u', 'value', 'face interior')
         u_bc = worker%get_field('u', 'value', 'face interior')
-
 
 
         !
         ! Initialize derivative arrays
         !
-        !dudx_bc = ZERO*worker%get_primary_field_face('u', 'grad1','face interior')
         dudx_bc = ZERO*worker%get_field('u', 'grad1','face interior')
         dudy_bc = ZERO*dudx_bc
         dudz_bc = ZERO*dudx_bc
-
-
-
-
-
 
 
         !
         ! Get derivative value
         !
         dudx_bc = self%bcproperties%compute("Derivative",worker%time(),worker%coords())
-
-
 
         call worker%store_bc_state('u', u_bc,    'value')
         call worker%store_bc_state('u', dudx_bc, 'grad1')

@@ -87,76 +87,64 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(MMLE_boundary_operator_t),  intent(inout)   :: self
-        type(chidg_worker_t),           intent(inout)   :: worker
-        class(properties_t),            intent(inout)   :: prop
+        class(MMLE_boundary_operator_t),    intent(inout)   :: self
+        type(chidg_worker_t),               intent(inout)   :: worker
+        class(properties_t),                intent(inout)   :: prop
 
 
 
         type(AD_D), allocatable, dimension(:)   ::  &
-            grad1_u1_m, grad2_u1_m, grad3_u1_m,        &
-            grad1_u1_p, grad2_u1_p, grad3_u1_p,        &
-            grad1_u2_m, grad2_u2_m, grad3_u2_m,        &
-            grad1_u2_p, grad2_u2_p, grad3_u2_p,        &
-            grad1_u3_m, grad2_u3_m, grad3_u3_m,        &
-            grad1_u3_p, grad2_u3_p, grad3_u3_p,        &
-            flux_1, flux_2, flux_3,                 &
-            flux_m, flux_p, flux, integrand,        &
-            mu_m, mu_p, &
-            strain_11_m, strain_22_m, strain_33_m, &
-            strain_12_m, strain_31_m, strain_23_m,&
-            stress_11_m, stress_22_m, stress_33_m, &
-            stress_12_m, stress_31_m, stress_23_m, &
-            strain_11_p, strain_22_p, strain_33_p, &
-            strain_12_p, strain_31_p, strain_23_p,&
-            stress_11_p, stress_22_p, stress_33_p, &
-            stress_12_p, stress_31_p, stress_23_p, &
-            elasticity_modulus_m, alpha_param_m, &
-            elasticity_modulus_p, alpha_param_p, &
-            poisson_ratio_m, poisson_ratio_p
+            grad1_u1_m, grad2_u1_m, grad3_u1_m,     &
+            grad1_u1_p, grad2_u1_p, grad3_u1_p,     &
+            grad1_u2_m, grad2_u2_m, grad3_u2_m,     &
+            grad1_u2_p, grad2_u2_p, grad3_u2_p,     &
+            grad1_u3_m, grad2_u3_m, grad3_u3_m,     &
+            grad1_u3_p, grad2_u3_p, grad3_u3_p,     &
+            strain_11_m, strain_22_m, strain_33_m,  &
+            strain_12_m, strain_31_m, strain_23_m,  &
+            stress_11_m, stress_22_m, stress_33_m,  &
+            stress_12_m, stress_31_m, stress_23_m,  &
+            strain_11_p, strain_22_p, strain_33_p,  &
+            strain_12_p, strain_31_p, strain_23_p,  &
+            stress_11_p, stress_22_p, stress_33_p,  &
+            stress_12_p, stress_31_p, stress_23_p,  &
+            elasticity_modulus_m, alpha_param_m,    &
+            elasticity_modulus_p, alpha_param_p,    &
+            poisson_ratio_m, poisson_ratio_p,       &
+            mu_m, mu_p,                             &
+            flux_1_m, flux_2_m, flux_3_m,           &
+            flux_1_p, flux_2_p, flux_3_p
              
-
-                                             
-
-
-        real(rk),   allocatable, dimension(:)   :: &
-            norm_1, norm_2, norm_3
-
-
-        norm_1 = worker%normal(1)
-        norm_2 = worker%normal(2)
-        norm_3 = worker%normal(3)
-
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        grad1_u1_m = worker%get_primary_field_face('grid_displacement1', 'grad1 + lift', 'face interior')
-        grad2_u1_m = worker%get_primary_field_face('grid_displacement1', 'grad2 + lift', 'face interior')
-        grad3_u1_m = worker%get_primary_field_face('grid_displacement1', 'grad3 + lift', 'face interior')
+        grad1_u1_m = worker%get_field('grid_displacement1', 'grad1', 'face interior')
+        grad2_u1_m = worker%get_field('grid_displacement1', 'grad2', 'face interior')
+        grad3_u1_m = worker%get_field('grid_displacement1', 'grad3', 'face interior')
 
 
-        grad1_u1_p = worker%get_primary_field_face('grid_displacement1', 'grad1 + lift', 'face exterior')
-        grad2_u1_p = worker%get_primary_field_face('grid_displacement1', 'grad2 + lift', 'face exterior')
-        grad3_u1_p = worker%get_primary_field_face('grid_displacement1', 'grad3 + lift', 'face exterior')
+        grad1_u1_p = worker%get_field('grid_displacement1', 'grad1', 'face exterior')
+        grad2_u1_p = worker%get_field('grid_displacement1', 'grad2', 'face exterior')
+        grad3_u1_p = worker%get_field('grid_displacement1', 'grad3', 'face exterior')
 
-        grad1_u2_m = worker%get_primary_field_face('grid_displacement2', 'grad1 + lift', 'face interior')
-        grad2_u2_m = worker%get_primary_field_face('grid_displacement2', 'grad2 + lift', 'face interior')
-        grad3_u2_m = worker%get_primary_field_face('grid_displacement2', 'grad3 + lift', 'face interior')
-
-
-        grad1_u2_p = worker%get_primary_field_face('grid_displacement2', 'grad1 + lift', 'face exterior')
-        grad2_u2_p = worker%get_primary_field_face('grid_displacement2', 'grad2 + lift', 'face exterior')
-        grad3_u2_p = worker%get_primary_field_face('grid_displacement2', 'grad3 + lift', 'face exterior')
-
-        grad1_u3_m = worker%get_primary_field_face('grid_displacement3', 'grad1 + lift', 'face interior')
-        grad2_u3_m = worker%get_primary_field_face('grid_displacement3', 'grad2 + lift', 'face interior')
-        grad3_u3_m = worker%get_primary_field_face('grid_displacement3', 'grad3 + lift', 'face interior')
+        grad1_u2_m = worker%get_field('grid_displacement2', 'grad1', 'face interior')
+        grad2_u2_m = worker%get_field('grid_displacement2', 'grad2', 'face interior')
+        grad3_u2_m = worker%get_field('grid_displacement2', 'grad3', 'face interior')
 
 
-        grad1_u3_p = worker%get_primary_field_face('grid_displacement3', 'grad1 + lift', 'face exterior')
-        grad2_u3_p = worker%get_primary_field_face('grid_displacement3', 'grad2 + lift', 'face exterior')
-        grad3_u3_p = worker%get_primary_field_face('grid_displacement3', 'grad3 + lift', 'face exterior')
+        grad1_u2_p = worker%get_field('grid_displacement2', 'grad1', 'face exterior')
+        grad2_u2_p = worker%get_field('grid_displacement2', 'grad2', 'face exterior')
+        grad3_u2_p = worker%get_field('grid_displacement2', 'grad3', 'face exterior')
+
+        grad1_u3_m = worker%get_field('grid_displacement3', 'grad1', 'face interior')
+        grad2_u3_m = worker%get_field('grid_displacement3', 'grad2', 'face interior')
+        grad3_u3_m = worker%get_field('grid_displacement3', 'grad3', 'face interior')
+
+
+        grad1_u3_p = worker%get_field('grid_displacement3', 'grad1', 'face exterior')
+        grad2_u3_p = worker%get_field('grid_displacement3', 'grad2', 'face exterior')
+        grad3_u3_p = worker%get_field('grid_displacement3', 'grad3', 'face exterior')
 
 
         strain_11_m = grad1_u1_m
@@ -167,11 +155,12 @@ contains
         strain_23_m = (grad3_u2_m + grad2_u3_m)
         strain_31_m = (grad3_u1_m + grad1_u3_m)
 
-        !!
-        !! Compute scalar coefficient
-        !! 
-        poisson_ratio_m  = worker%get_model_field_face('Mesh Motion Linear Elasticity Poisson Ratio', 'value','face interior')
-        elasticity_modulus_m  = worker%get_model_field_face('Mesh Motion Linear Elasticity Modulus', 'value','face interior')
+
+        !
+        ! Compute scalar coefficient
+        ! 
+        poisson_ratio_m      = worker%get_field('Mesh Motion Linear Elasticity Poisson Ratio', 'value', 'face interior')
+        elasticity_modulus_m = worker%get_field('Mesh Motion Linear Elasticity Modulus',       'value', 'face interior')
 
 
         !Use negative Poisson ratio to maintain element aspect ratio
@@ -204,8 +193,8 @@ contains
         !! Compute scalar coefficient
         !! 
 
-        poisson_ratio_p = worker%get_model_field_face('Mesh Motion Linear Elasticity Poisson Ratio', 'value','face exterior')
-        elasticity_modulus_p  = worker%get_model_field_face('Mesh Motion Linear Elasticity Modulus', 'value','face exterior')
+        poisson_ratio_p = worker%get_field('Mesh Motion Linear Elasticity Poisson Ratio', 'value','face exterior')
+        elasticity_modulus_p  = worker%get_field('Mesh Motion Linear Elasticity Modulus', 'value','face exterior')
 
         !elasticity_modulus_p = ONE
         alpha_param_p = elasticity_modulus_p/((ONE+poisson_ratio_p)*(ONE-TWO*poisson_ratio_p))
@@ -227,83 +216,53 @@ contains
 
 
 
-        !GD1
 
-        flux_m = -stress_11_m
-        flux_p = -stress_11_p
-        flux_1 = HALF*(flux_m + flux_p)
+        !====================================
+        !               GD1
+        !====================================
+        flux_1_m = -stress_11_m
+        flux_2_m = -stress_12_m
+        flux_3_m = -stress_31_m
 
-        flux_m = -stress_12_m
-        flux_p = -stress_12_p
-        flux_2 = HALF*(flux_m + flux_p)
+        flux_1_p = -stress_11_p
+        flux_2_p = -stress_12_p
+        flux_3_p = -stress_31_p
 
-        flux_m = -stress_31_m
-        flux_p = -stress_31_p
-        flux_3 = HALF*(flux_m + flux_p)
-
-
-        !
-        ! Compute boundary average flux
-        !
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
+        call worker%integrate_boundary_average('grid_displacement1','Diffusion',    &
+                                                flux_1_m, flux_2_m, flux_3_m,       &
+                                                flux_1_p, flux_2_p, flux_3_p)
 
 
-        !
-        ! Integrate flux
-        !
-        call worker%integrate_boundary('grid_displacement1',integrand)
+        !====================================
+        !               GD1
+        !====================================
+        flux_1_m = -stress_12_m
+        flux_2_m = -stress_22_m
+        flux_3_m = -stress_23_m
 
-        !GD2
+        flux_1_p = -stress_12_p
+        flux_2_p = -stress_22_p
+        flux_3_p = -stress_23_p
 
-        flux_m = -stress_12_m
-        flux_p = -stress_12_p
-        flux_1 = HALF*(flux_m + flux_p)
-
-        flux_m = -stress_22_m
-        flux_p = -stress_22_p
-        flux_2 = HALF*(flux_m + flux_p)
-
-        flux_m = -stress_23_m
-        flux_p = -stress_23_p
-        flux_3 = HALF*(flux_m + flux_p)
+        call worker%integrate_boundary_average('grid_displacement2','Diffusion',    &
+                                                flux_1_m, flux_2_m, flux_3_m,       &
+                                                flux_1_p, flux_2_p, flux_3_p)
 
 
-        !
-        ! Compute boundary average flux
-        !
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
+        !====================================
+        !               GD1
+        !====================================
+        flux_1_m = -stress_31_m
+        flux_2_m = -stress_23_m
+        flux_3_m = -stress_33_m
 
+        flux_1_p = -stress_31_p
+        flux_2_p = -stress_23_p
+        flux_3_p = -stress_33_p
 
-        !
-        ! Integrate flux
-        !
-        call worker%integrate_boundary('grid_displacement2',integrand)
-
-        !GD3
-
-        flux_m = -stress_31_m
-        flux_p = -stress_31_p
-        flux_1 = HALF*(flux_m + flux_p)
-
-        flux_m = -stress_23_m
-        flux_p = -stress_23_p
-        flux_2 = HALF*(flux_m + flux_p)
-
-        flux_m = -stress_33_m
-        flux_p = -stress_33_p
-        flux_3 = HALF*(flux_m + flux_p)
-
-
-        !
-        ! Compute boundary average flux
-        !
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-
-
-        !
-        ! Integrate flux
-        !
-        call worker%integrate_boundary('grid_displacement3',integrand)
+        call worker%integrate_boundary_average('grid_displacement3','Diffusion',    &
+                                                flux_1_m, flux_2_m, flux_3_m,       &
+                                                flux_1_p, flux_2_p, flux_3_p)
 
 
     end subroutine compute

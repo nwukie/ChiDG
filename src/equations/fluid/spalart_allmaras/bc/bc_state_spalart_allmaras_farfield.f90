@@ -143,7 +143,7 @@ contains
         !   1: Extrapolate all values (assuming outflow)
         !   2: Where inflow is detected, set from user specified parameter
         !
-        mu_m = worker%get_model_field_face('Laminar Viscosity', 'value', 'face interior')
+        mu_m = worker%get_field('Laminar Viscosity', 'value', 'face interior')
         nu_m = mu_m/density_m
         density_nutilde_bc = density_nutilde_m
         where(inflow)

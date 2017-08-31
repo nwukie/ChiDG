@@ -80,7 +80,7 @@ contains
 
 
         ! Get primary field to initialize derivatives
-        rho     = worker%get_primary_field_general('Density', 'value')
+        rho     = worker%get_field('Density', 'value')
         d       = rho
         grad1_d = rho
         grad2_d = rho

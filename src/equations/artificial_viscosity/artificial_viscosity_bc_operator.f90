@@ -88,42 +88,30 @@ contains
         ! Storage at quadrature nodes
         type(AD_D), allocatable,    dimension(:) ::         &
             lamda,  tau,                                    &
-            diffusion_x,    diffusion_y,    diffusion_z,    &
+            diffusion_1,    diffusion_2,    diffusion_3,    &
             deps_dx,        deps_dy,        deps_dz,        &
-            flux_x,         flux_y,         flux_z,         &
+            flux_1,         flux_2,         flux_3,         &
             integrand
 
 
         integer(ik) :: order
         real(rk)    :: C1, C2, h(3),  &
-                       eta_x, eta_y, eta_z
-
-        real(rk),   allocatable, dimension(:)   :: &
-            normx, normy, normz
+                       eta_1, eta_2, eta_3
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        deps_dx = worker%get_primary_field_face('Artificial Viscosity', 'grad1+lift', 'boundary')
-        deps_dy = worker%get_primary_field_face('Artificial Viscosity', 'grad2+lift', 'boundary')
-        deps_dz = worker%get_primary_field_face('Artificial Viscosity', 'grad3+lift', 'boundary')
+        deps_dx = worker%get_field('Artificial Viscosity', 'grad1', 'boundary')
+        deps_dy = worker%get_field('Artificial Viscosity', 'grad2', 'boundary')
+        deps_dz = worker%get_field('Artificial Viscosity', 'grad3', 'boundary')
 
         
 
         !
         ! Get model field for Maximum Wave Speed
         !
-        lamda = worker%get_model_field_face('Maximum Wave Speed', 'value', 'boundary')
-
-
-
-        !
-        ! Get normal vector
-        !
-        normx = worker%normal(1)
-        normy = worker%normal(2)
-        normz = worker%normal(3)
+        lamda = worker%get_field('Maximum Wave Speed', 'value', 'boundary')
 
 
         !
@@ -133,28 +121,26 @@ contains
         order = worker%solution_order('interior')
 
 
-
-
         !
         ! Compute time constant and conductivity
         !
         C1 = THREE
         C2 = FIVE
 
-        tau = minval(h)/(C1 * real(order+1,rk) * lamda)
 
-        eta_x = C2*(h(1)**TWO)
-        eta_y = C2*(h(2)**TWO)
-        eta_z = C2*(h(3)**TWO)
+        tau = minval(h)/(C1 * real(order+1,rk) * lamda)
+        eta_1 = C2*(h(1)**TWO)
+        eta_2 = C2*(h(2)**TWO)
+        eta_3 = C2*(h(3)**TWO)
 
 
 
         !
         ! Compute diffusion coefficient tensor diagonal
         !
-        diffusion_x = eta_x/tau
-        diffusion_y = eta_y/tau
-        diffusion_z = eta_z/tau
+        diffusion_1 = eta_1/tau
+        diffusion_2 = eta_2/tau
+        diffusion_3 = eta_3/tau
 
 
 
@@ -163,16 +149,11 @@ contains
         !================================
         !             FLUX
         !================================
-        !flux_x = -(diffusion_x * deps_dx)
-        !flux_y = -(diffusion_y * deps_dy)
-        !flux_z = -(diffusion_z * deps_dz)
-        flux_x = -0.20_rk*deps_dx
-        flux_y = -0.20_rk*deps_dy
-        flux_z = -0.20_rk*deps_dz
+        flux_1 = -(diffusion_1 * deps_dx)
+        flux_2 = -(diffusion_2 * deps_dy)
+        flux_3 = -(diffusion_3 * deps_dz)
 
-        integrand = flux_x*normx + flux_y*normy + flux_z*normz
-
-        call worker%integrate_boundary('Artificial Viscosity',integrand)
+        call worker%integrate_boundary_condition('Artificial Viscosity','Diffusion',flux_1,flux_2,flux_3)
 
 
     end subroutine compute

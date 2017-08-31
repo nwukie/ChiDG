@@ -91,45 +91,32 @@ contains
 
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   ::  &
-            grad1_u1, grad2_u1, grad3_u1,              &
-            grad1_u2, grad2_u2, grad3_u2,              &
-            grad1_u3, grad2_u3, grad3_u3,              &
-            flux_1,  flux_2,  flux_3,               &
-            integrand, mu
-
-        real(rk),   allocatable, dimension(:)   ::  &
-            norm_1, norm_2, norm_3
+            grad1_u1, grad2_u1, grad3_u1,           &
+            grad1_u2, grad2_u2, grad3_u2,           &
+            grad1_u3, grad2_u3, grad3_u3,           &
+            flux_1,  flux_2,  flux_3, mu
 
 
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
-        grad1_u1 = worker%get_primary_field_face('grid_displacement1','grad1 + lift', 'boundary')
-        grad2_u1 = worker%get_primary_field_face('grid_displacement1','grad2 + lift', 'boundary')
-        grad3_u1 = worker%get_primary_field_face('grid_displacement1','grad3 + lift', 'boundary')
+        grad1_u1 = worker%get_field('grid_displacement1','grad1', 'boundary')
+        grad2_u1 = worker%get_field('grid_displacement1','grad2', 'boundary')
+        grad3_u1 = worker%get_field('grid_displacement1','grad3', 'boundary')
 
-        grad1_u2 = worker%get_primary_field_face('grid_displacement2','grad1 + lift', 'boundary')
-        grad2_u2 = worker%get_primary_field_face('grid_displacement2','grad2 + lift', 'boundary')
-        grad3_u2 = worker%get_primary_field_face('grid_displacement2','grad3 + lift', 'boundary')
+        grad1_u2 = worker%get_field('grid_displacement2','grad1', 'boundary')
+        grad2_u2 = worker%get_field('grid_displacement2','grad2', 'boundary')
+        grad3_u2 = worker%get_field('grid_displacement2','grad3', 'boundary')
 
-        grad1_u3 = worker%get_primary_field_face('grid_displacement3','grad1 + lift', 'boundary')
-        grad2_u3 = worker%get_primary_field_face('grid_displacement3','grad2 + lift', 'boundary')
-        grad3_u3 = worker%get_primary_field_face('grid_displacement3','grad3 + lift', 'boundary')
-
-
-
-
-
-
-        norm_1 = worker%normal(1)
-        norm_2 = worker%normal(2)
-        norm_3 = worker%normal(3)
+        grad1_u3 = worker%get_field('grid_displacement3','grad1', 'boundary')
+        grad2_u3 = worker%get_field('grid_displacement3','grad2', 'boundary')
+        grad3_u3 = worker%get_field('grid_displacement3','grad3', 'boundary')
 
 
         !
         ! Compute scalar coefficient
         !
-        mu = worker%get_model_field_face('Mesh Motion Diffusion Coefficient', 'value', 'boundary')
+        mu = worker%get_field('Mesh Motion Diffusion Coefficient', 'value', 'boundary')
 
 
 
@@ -140,15 +127,7 @@ contains
         flux_2 = -mu*grad2_u1
         flux_3 = -mu*grad3_u1
 
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-
-
-        if (any(ieee_is_nan(integrand(:)%x_ad_))) then
-            print*, 'BC OP: ', integrand(:)%x_ad_
-        end if
-
-
-        call worker%integrate_boundary('grid_displacement1',integrand)
+        call worker%integrate_boundary_condition('grid_displacement1','Diffusion',flux_1,flux_2,flux_3)
 
 
         !=================================================
@@ -158,15 +137,7 @@ contains
         flux_2 = -mu*grad2_u2
         flux_3 = -mu*grad3_u2
 
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-
-
-        if (any(ieee_is_nan(integrand(:)%x_ad_))) then
-            print*, 'BC OP: ', integrand(:)%x_ad_
-        end if
-
-
-        call worker%integrate_boundary('grid_displacement2',integrand)
+        call worker%integrate_boundary_condition('grid_displacement2','Diffusion',flux_1,flux_2,flux_3)
 
 
         !=================================================
@@ -176,15 +147,7 @@ contains
         flux_2 = -mu*grad2_u3
         flux_3 = -mu*grad3_u3
 
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
-
-
-        if (any(ieee_is_nan(integrand(:)%x_ad_))) then
-            print*, 'BC OP: ', integrand(:)%x_ad_
-        end if
-
-
-        call worker%integrate_boundary('grid_displacement3',integrand)
+        call worker%integrate_boundary_condition('grid_displacement3','Diffusion',flux_1,flux_2,flux_3)
 
 
     end subroutine compute

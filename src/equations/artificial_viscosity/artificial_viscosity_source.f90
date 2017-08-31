@@ -101,14 +101,14 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        eps = worker%get_primary_field_element('Artificial Viscosity', 'value')
+        eps = worker%get_field('Artificial Viscosity', 'value', 'element')
 
 
         !
         ! Get model field for Maximum Wave Speed
         !
-        lamda  = worker%get_model_field_element('Maximum Wave Speed', 'value')
-        sensor = worker%get_model_field_element('Artificial Viscosity Sensor', 'value')
+        lamda  = worker%get_field('Maximum Wave Speed', 'value', 'element')
+        sensor = worker%get_field('Artificial Viscosity Sensor', 'value', 'element')
 
 
 

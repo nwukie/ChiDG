@@ -101,15 +101,12 @@ contains
 
 
         ! Just to set up AD variables
-        g_bar = worker%get_primary_field_face('g_bar', 'value', 'boundary')
+        g_bar = worker%get_field('g_bar', 'value', 'boundary')
 
 
         !
         ! Get model coefficients
         !
-!        grid_velocity_1   = worker%get_grid_velocity_face('u_grid','face interior')
-!        grid_velocity_2   = worker%get_grid_velocity_face('v_grid','face interior')
-!        grid_velocity_3   = worker%get_grid_velocity_face('w_grid','face interior')
         grid_velocity     = worker%get_grid_velocity_face('face interior')
         det_jacobian_grid = worker%get_det_jacobian_grid_face('value','face interior')
         inv_jacobian_grid = worker%get_inv_jacobian_grid_face('face interior')
@@ -136,13 +133,11 @@ contains
         flux_2 = (inv_jacobian_grid(:,2,1)*grid_velocity(:,1) + inv_jacobian_grid(:,2,2)*grid_velocity(:,2) + inv_jacobian_grid(:,2,3)*grid_velocity(:,3))*det_jacobian_grid
         flux_3 = (inv_jacobian_grid(:,3,1)*grid_velocity(:,1) + inv_jacobian_grid(:,3,2)*grid_velocity(:,2) + inv_jacobian_grid(:,3,3)*grid_velocity(:,3))*det_jacobian_grid
 
-        integrand = flux_1*norm_1 + flux_2*norm_2 + flux_3*norm_3
 
         !
         ! Integrate volume flux
         !
-        integrand = -integrand
-        call worker%integrate_boundary('g_bar',integrand)
+        call worker%integrate_boundary_condition('g_bar','Advection',flux_1,flux_2,flux_3)
 
 
     end subroutine compute

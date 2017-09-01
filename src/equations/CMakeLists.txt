@@ -4,10 +4,10 @@ add_subdirectory(dual_linear_advection)
 add_subdirectory(wall_distance)
 add_subdirectory(mesh_motion)
 add_subdirectory(artificial_viscosity)
-#add_subdirectory(PrimitiveLinearizedEuler)
 add_subdirectory(HB_test_cases)
 
 
+#add_subdirectory(PrimitiveLinearizedEuler)
 #add_subdirectory(Acoustics)
 
 

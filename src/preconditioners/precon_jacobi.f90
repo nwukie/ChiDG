@@ -22,7 +22,7 @@ module precon_jacobi
     !-----------------------------------------------------------------------------
     type, extends(preconditioner_t) :: precon_jacobi_t
 
-        type(chidg_matrix_t) :: D     !< inverse of block diagonal, (ndom,maxelems,ntime)
+        type(chidg_matrix_t) :: D     ! inverse of block diagonal, (ndom,maxelems,ntime)
 
     contains
         procedure   :: init
@@ -133,8 +133,9 @@ contains
         type(chidg_matrix_t),    intent(in)      :: A
         type(chidg_vector_t),    intent(in)      :: v
 
-        type(chidg_vector_t) :: z
-        integer(ik)         :: idom, ielem, itime, ndom
+        type(chidg_vector_t)    :: z
+        integer(ik)             :: idom, ielem, itime, ndom
+        real(rk),   allocatable :: mv(:)
 
         call self%timer%start()
 
@@ -152,8 +153,10 @@ contains
         do idom = 1,size(A%dom)
             do ielem = 1,size(A%dom(idom)%lblks,1)
                 do itime = 1,size(A%dom(idom)%lblks,2)
-                    z%dom(idom)%vecs(ielem)%vec = &
-                        matmul(self%D%dom(idom)%lblks(ielem,itime)%data_(1)%mat,v%dom(idom)%vecs(ielem)%vec)
+                    !z%dom(idom)%vecs(ielem)%vec = &
+                    !    matmul(self%D%dom(idom)%lblks(ielem,itime)%data_(1)%mat,v%dom(idom)%vecs(ielem)%vec)
+                    mv = matmul(self%D%dom(idom)%lblks(ielem,itime)%data_(1)%mat,v%dom(idom)%vecs(ielem)%gettime(itime))
+                    call z%dom(idom)%vecs(ielem)%settime(itime, mv)
                 end do
             end do
         end do

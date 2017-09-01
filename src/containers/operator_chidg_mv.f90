@@ -89,24 +89,6 @@ contains
 
 
 
-        print*, 'a: ', x%dom(4)%vecs(1)%nvars(), x%dom(4)%vecs(1)%nterms()
-        print*, 'a: ', res%dom(3)%vecs(553)%nvars(), res%dom(3)%vecs(553)%nterms()
-
-                        !xstart = x%dom(4)%vecs(1)%get_time_start(1)
-                        !xend   = x%dom(4)%vecs(1)%get_time_end(1)
-                        !print*, 'b: ', size(x%dom(4)%vecs(1)%vec(xstart:xend))
-                        !xstart = x%dom(4)%vecs(1)%get_time_start(2)
-                        !xend   = x%dom(4)%vecs(1)%get_time_end(2)
-                        !print*, 'b: ', size(x%dom(4)%vecs(1)%vec(xstart:xend))
-                        !xstart = x%dom(4)%vecs(1)%get_time_start(3)
-                        !xend   = x%dom(4)%vecs(1)%get_time_end(3)
-                        !print*, 'b: ', size(x%dom(4)%vecs(1)%vec(xstart:xend))
-
-
-
-
-
-
         !
         ! Allocate result and clear
         !
@@ -133,12 +115,12 @@ contains
 
         do itime = 1,time_manager_global%ntime
 
+
             !
             ! Compute A*x for local matrix-vector product
             !
             do idom = 1,size(A%dom)
 
-!                print*, 'Hi :D - 1'
 
                 !
                 ! Routine for proc-local INTERIOR coupling (lblks)
@@ -152,56 +134,27 @@ contains
                         local_multiply    = ( matrix_proc == vector_proc )
                         parallel_multiply = ( matrix_proc /= vector_proc )
 
-                !print*, 'Hi :D - 2'
         
                         if ( local_multiply ) then
                             dparent_l = A%dom(idom)%lblks(ielem,itime)%dparent_l(imat)
                             eparent_l = A%dom(idom)%lblks(ielem,itime)%eparent_l(imat)
 
-
-        print*, 'b: ', x%dom(4)%vecs(1)%nvars(), x%dom(4)%vecs(1)%nterms()
-        print*, 'b: ', res%dom(3)%vecs(553)%nvars(), res%dom(3)%vecs(553)%nterms()
-
-
-
-                !print*, 'Hi :D - 2.1'
-
                             res_istart = res%dom(idom)%vecs(ielem)%get_time_start(itime)
                             res_iend   = res%dom(idom)%vecs(ielem)%get_time_end(itime)
-                !print*, 'Hi :D - 2.2'
                             x_istart = x%dom(dparent_l)%vecs(eparent_l)%get_time_start(itime)
                             x_iend   = x%dom(dparent_l)%vecs(eparent_l)%get_time_end(itime)
                             associate ( resvec => res%dom(idom)%vecs(ielem)%vec(res_istart:res_iend),   &
-                                        !xvec   => x%dom(idom)%vecs(eparent_l)%vec(x_istart:x_iend),     &
                                         xvec   => x%dom(dparent_l)%vecs(eparent_l)%vec(x_istart:x_iend),     &
                                         Amat   => A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat )
 
                                
-                !print*, 'Hi :D - 2.3'
 
                                 nonconforming = ( size(Amat,2) /= size(xvec) )
                                 if (nonconforming) call chidg_signal(FATAL,"operator_chidg_mv: nonconforming Local m-v operation")
 
-        print*, 'c: ', x%dom(4)%vecs(1)%nvars(), x%dom(4)%vecs(1)%nterms()
-        print*, 'c: ', res%dom(3)%vecs(553)%nvars(), res%dom(3)%vecs(553)%nterms()
-        print*, 'c info: ', idom, ielem, dparent_l, eparent_l, itime, imat
-        print*, 'c info: ', size(A%dom(idom)%lblks,1), size(A%dom(idom)%lblks,2)
-        print*, 'c info: ', size(A%dom(idom)%lblks(ielem,itime)%data_)
-        print*, 'c info: ', allocated(A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat)
-        print*, 'c info: ', size(A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat,1), size(A%dom(idom)%lblks(ielem,itime)%data_(imat)%mat,2)
-        print*, 'c info: ', x_istart, x_iend
-        print*, 'c info: ', res_istart, res_iend
-
                                 call timer_blas%start()
                                 resvec = resvec + matmul(Amat,xvec)
                                 call timer_blas%stop()
-        print*, 'd: ', x%dom(4)%vecs(1)%nvars(), x%dom(4)%vecs(1)%nterms()
-        print*, 'd: ', res%dom(3)%vecs(553)%nvars(), res%dom(3)%vecs(553)%nterms()
-
-
-
-
-                !print*, 'Hi :D - 3'
 
                             end associate
 
@@ -212,12 +165,9 @@ contains
 
 
 
-        print*, 'e: ', x%dom(4)%vecs(1)%nvars(), x%dom(4)%vecs(1)%nterms()
-        print*, 'e: ', res%dom(3)%vecs(553)%nvars(), res%dom(3)%vecs(553)%nterms()
 
 
 
-                !print*, 'Hi :D - 4'
 
                 !
                 ! Routine for proc-local CHIMERA coupling (chi_blks)
@@ -226,57 +176,34 @@ contains
                     do ielem = 1,size(A%dom(idom)%chi_blks,1)
                         do imat = 1,A%dom(idom)%chi_blks(ielem,itime)%size()
 
-                !print*, 'Hi :D - 5'
                             matrix_proc = IRANK
                             vector_proc = A%dom(idom)%chi_blks(ielem,itime)%parent_proc(imat)
 
                             local_multiply    = ( matrix_proc == vector_proc )
                             parallel_multiply = ( matrix_proc /= vector_proc )
 
-                !print*, 'Hi :D - 6'
 
                             if ( local_multiply ) then
                                 dparent_l = A%dom(idom)%chi_blks(ielem,itime)%dparent_l(imat)
                                 eparent_l = A%dom(idom)%chi_blks(ielem,itime)%eparent_l(imat)
 
-
-        print*, 'f: ', x%dom(4)%vecs(1)%nvars(), x%dom(4)%vecs(1)%nterms()
-
-
-
-                !print*, 'Hi :D - 7'
-                !print*, 'Hi :D:', dparent_l, eparent_l
-
                                 res_istart = res%dom(idom)%vecs(ielem)%get_time_start(itime)
                                 res_iend   = res%dom(idom)%vecs(ielem)%get_time_end(itime)
                                 x_istart   = x%dom(dparent_l)%vecs(eparent_l)%get_time_start(itime)
                                 x_iend     = x%dom(dparent_l)%vecs(eparent_l)%get_time_end(itime)
-        print*, 'f1: ', x%dom(4)%vecs(1)%nvars(), x%dom(4)%vecs(1)%nterms()
-        print*, 'f1: ', res%dom(3)%vecs(553)%nvars(), res%dom(3)%vecs(553)%nterms()
                                 associate ( resvec => res%dom(idom)%vecs(ielem)%vec(res_istart:res_iend),    &
                                             xvec   => x%dom(dparent_l)%vecs(eparent_l)%vec(x_istart:x_iend), &
                                             Amat   => A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat  ) 
 
-                !print*, 'Hi :D - 8'
                                     !
                                     ! Test matrix vector sizes
                                     !
-                                    print*, 'Allocated: ', allocated(A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat), allocated(x%dom(dparent_l)%vecs(eparent_l)%vec)
-                                    print*, 'Sizes: ', size(Amat, 2), size(xvec), dparent_l, eparent_l, itime, imat
-        print*, 'f2: ', x%dom(4)%vecs(1)%nvars(), x%dom(4)%vecs(1)%nterms()
-        print*, 'f2: ', res%dom(3)%vecs(553)%nvars(), res%dom(3)%vecs(553)%nterms()
                                     nonconforming = ( size(Amat,2) /= size(xvec) )
                                     if (nonconforming) call chidg_signal(FATAL,"operator_chidg_mv: nonconforming Chimera m-v operation")
-        print*, 'f3: ', x%dom(4)%vecs(1)%nvars(), x%dom(4)%vecs(1)%nterms()
-        print*, 'f3: ', res%dom(3)%vecs(553)%nvars(), res%dom(3)%vecs(553)%nterms()
 
-        print*, 'g: ', x%dom(4)%vecs(1)%nvars(), x%dom(4)%vecs(1)%nterms()
-        print*, 'g: ', res%dom(3)%vecs(553)%nvars(), res%dom(3)%vecs(553)%nterms()
                                     call timer_blas%start()
                                     resvec = resvec + matmul(Amat,xvec)
                                     call timer_blas%stop()
-        print*, 'h: ', x%dom(4)%vecs(1)%nvars(), x%dom(4)%vecs(1)%nterms()
-        print*, 'h: ', res%dom(3)%vecs(553)%nvars(), res%dom(3)%vecs(553)%nterms()
 
                                 end associate
                             end if
@@ -285,65 +212,62 @@ contains
 
 
 
-                !print*, 'Hi :D - 9'
 
                         end do !imat
                     end do ! ielem
                 end if  ! allocated
 
-        print*, 'i: ', x%dom(4)%vecs(1)%nvars(), x%dom(4)%vecs(1)%nterms()
 
 
-!                !
-!                ! Routine for proc-local BOUNDARY coupling (bc_blks)
-!                !
-!                if (allocated(A%dom(idom)%bc_blks)) then
-!                    do ielem = 1,size(A%dom(idom)%bc_blks,1)
-!                        do imat = 1,A%dom(idom)%bc_blks(ielem,itime)%size()
-!
-!                            matrix_proc = IRANK
-!                            vector_proc = A%dom(idom)%bc_blks(ielem,itime)%parent_proc(imat)
-!
-!                            local_multiply    = ( matrix_proc == vector_proc )
-!                            parallel_multiply = ( matrix_proc /= vector_proc )
-!
-!
-!                            if ( local_multiply ) then
-!                                dparent_l = A%dom(idom)%bc_blks(ielem,itime)%dparent_l(imat)
-!                                eparent_l = A%dom(idom)%bc_blks(ielem,itime)%eparent_l(imat)
-!
-!
-!                                res_istart = res%dom(idom)%vecs(ielem)%get_time_start(itime)
-!                                res_iend   = res%dom(idom)%vecs(ielem)%get_time_end(itime)
-!                                x_istart   = x%dom(dparent_l)%vecs(eparent_l)%get_time_start(itime)
-!                                x_iend     = x%dom(dparent_l)%vecs(eparent_l)%get_time_end(itime)
-!                                associate ( resvec => res%dom(idom)%vecs(ielem)%vec(res_istart:res_iend),    &
-!                                            xvec   => x%dom(dparent_l)%vecs(eparent_l)%vec(x_istart:x_iend), &
-!                                            Amat   => A%dom(idom)%bc_blks(ielem,itime)%data_(imat)%mat ) 
-!
-!                                    !
-!                                    ! Test matrix vector sizes
-!                                    !
-!                                    nonconforming = ( size(Amat,2) /= size(xvec) )
-!                                    if (nonconforming) call chidg_signal(FATAL,"operator_chidg_mv: nonconforming Chimera m-v operation")
-!
-!                                    call timer_blas%start()
-!                                    resvec = resvec + matmul(Amat,xvec)
-!                                    call timer_blas%stop()
-!
-!                                end associate
-!                            end if
-!
-!
-!                        end do !imat
-!                    end do ! ielem
-!                end if  ! allocated
+                !
+                ! Routine for proc-local BOUNDARY coupling (bc_blks)
+                !
+                if (allocated(A%dom(idom)%bc_blks)) then
+                    do ielem = 1,size(A%dom(idom)%bc_blks,1)
+                        do imat = 1,A%dom(idom)%bc_blks(ielem,itime)%size()
+
+                            matrix_proc = IRANK
+                            vector_proc = A%dom(idom)%bc_blks(ielem,itime)%parent_proc(imat)
+
+                            local_multiply    = ( matrix_proc == vector_proc )
+                            parallel_multiply = ( matrix_proc /= vector_proc )
 
 
+                            if ( local_multiply ) then
+                                dparent_l = A%dom(idom)%bc_blks(ielem,itime)%dparent_l(imat)
+                                eparent_l = A%dom(idom)%bc_blks(ielem,itime)%eparent_l(imat)
+
+
+                                res_istart = res%dom(idom)%vecs(ielem)%get_time_start(itime)
+                                res_iend   = res%dom(idom)%vecs(ielem)%get_time_end(itime)
+                                x_istart   = x%dom(dparent_l)%vecs(eparent_l)%get_time_start(itime)
+                                x_iend     = x%dom(dparent_l)%vecs(eparent_l)%get_time_end(itime)
+                                associate ( resvec => res%dom(idom)%vecs(ielem)%vec(res_istart:res_iend),    &
+                                            xvec   => x%dom(dparent_l)%vecs(eparent_l)%vec(x_istart:x_iend), &
+                                            Amat   => A%dom(idom)%bc_blks(ielem,itime)%data_(imat)%mat ) 
+
+                                    !
+                                    ! Test matrix vector sizes
+                                    !
+                                    nonconforming = ( size(Amat,2) /= size(xvec) )
+                                    if (nonconforming) call chidg_signal(FATAL,"operator_chidg_mv: nonconforming Chimera m-v operation")
+
+                                    call timer_blas%start()
+                                    resvec = resvec + matmul(Amat,xvec)
+                                    call timer_blas%stop()
+
+                                end associate
+                            end if
+
+
+                        end do !imat
+                    end do ! ielem
+                end if  ! allocated
 
 
 
-                !print*, 'Hi :D - 10'
+
+
 
 
 
@@ -357,7 +281,6 @@ contains
                 if (HB_flag == 'Harmonic Balance' .or. HB_flag == 'Harmonic_Balance' .or. HB_flag == 'harmonic balance' &
                     .or. HB_flag == 'harmonic_balance' .or. HB_flag == 'HB') then
 
-        print*, 'j: ', x%dom(4)%vecs(1)%nvars(), x%dom(4)%vecs(1)%nterms()
                     D = time_manager_global%D
 
                     do ielem = 1,size(A%dom(idom)%lblks,1) 
@@ -374,12 +297,10 @@ contains
                             do itime_i = 1,size(A%dom(idom)%lblks,2)
                                 if (itime_i /= itime) then
 
-        print*, 'k: ', x%dom(4)%vecs(1)%nvars(), x%dom(4)%vecs(1)%nterms()
                                     associate ( nvars  => x%dom(idom)%vecs(ielem)%nvars(), &
                                                 nterms => x%dom(idom)%vecs(ielem)%nterms(), &
                                                 mass   => A%dom(idom)%lblks(ielem,itime_i)%mass )
 
-                                    !print*, 'MV: ', idom, ielem, nterms, itime, itime_i
                                     if (allocated(temp_1)) deallocate(temp_1)
                                     if (allocated(temp_2)) deallocate(temp_2)
                                     allocate(temp_1(nterms),temp_2(nterms), stat=ierr)
@@ -388,12 +309,10 @@ contains
                                     call timer_blas%start()
                                     do ivar = 1,nvars
 
-        print*, 'l: ', x%dom(4)%vecs(1)%nvars(), x%dom(4)%vecs(1)%nterms()
                                         temp_1 = D(itime,itime_i)*matmul(mass,x%dom(idom)%vecs(ielem)%getvar(ivar,itime_i))
                                         temp_2 = res%dom(idom)%vecs(ielem)%getvar(ivar,itime) + temp_1
                                         call res%dom(idom)%vecs(ielem)%setvar(ivar,itime,temp_2)
 
-        print*, 'm: ', x%dom(4)%vecs(1)%nvars(), x%dom(4)%vecs(1)%nterms()
                                     end do  ! ivar
                                     call timer_blas%stop()
 
@@ -407,9 +326,7 @@ contains
 
                 end if  ! HB_flag
 
-                !print*, 'Hi :D - 11'
 
-        print*, 'n: ', x%dom(4)%vecs(1)%nvars(), x%dom(4)%vecs(1)%nterms()
 
             end do ! idom
 
@@ -506,7 +423,7 @@ contains
                                 x_istart   = x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%get_time_start(itime)
                                 x_iend     = x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%get_time_end(itime)
                                 associate ( resvec => res%dom(idom)%vecs(ielem)%vec,                                    &
-                                            xvec   => x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec,   &
+                                            xvec   => x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec(x_istart:x_iend),   &
                                             Amat   => A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat )
 
 
@@ -514,6 +431,7 @@ contains
                                     ! Test matrix vector sizes
                                     !
                                     nonconforming = ( size(Amat,2) /= size(xvec) )
+                                    !print *, 'MV-parallel :', size(Amat,2), size(xvec)
                                     if (nonconforming) call chidg_signal(FATAL,"operator_chidg_mv: nonconforming Chimera m-v operation")
 
                                     call timer_blas%start()

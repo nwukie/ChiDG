@@ -228,7 +228,7 @@ contains
         flux_2_p = -tau_12_p
         flux_3_p = -tau_13_p
 
-        call worker%integrate_boundary_average('Momentum-1','Diffusive',    &
+        call worker%integrate_boundary_average('Momentum-1','Diffusion',    &
                                                 flux_1_m,flux_2_m,flux_3_m, &   
                                                 flux_1_p,flux_2_p,flux_3_p)
 
@@ -243,7 +243,7 @@ contains
         flux_2_p = -tau_22_p
         flux_3_p = -tau_23_p
 
-        call worker%integrate_boundary_average('Momentum-2','Diffusive',    &
+        call worker%integrate_boundary_average('Momentum-2','Diffusion',    &
                                                 flux_1_m,flux_2_m,flux_3_m, &   
                                                 flux_1_p,flux_2_p,flux_3_p)
 
@@ -258,7 +258,7 @@ contains
         flux_2_p = -tau_23_p
         flux_3_p = -tau_33_p
 
-        call worker%integrate_boundary_average('Momentum-3','Diffusive',    &
+        call worker%integrate_boundary_average('Momentum-3','Diffusion',    &
                                                 flux_1_m,flux_2_m,flux_3_m, &   
                                                 flux_1_p,flux_2_p,flux_3_p)
 
@@ -273,7 +273,7 @@ contains
         flux_2_p = -k_p*grad2_T_p  -  (u_p*tau_12_p + v_p*tau_22_p + w_p*tau_23_p)
         flux_3_p = -k_p*grad3_T_p  -  (u_p*tau_13_p + v_p*tau_23_p + w_p*tau_33_p)
 
-        call worker%integrate_boundary_average('Energy','Diffusive',        &
+        call worker%integrate_boundary_average('Energy','Diffusion',        &
                                                 flux_1_m,flux_2_m,flux_3_m, &   
                                                 flux_1_p,flux_2_p,flux_3_p)
 

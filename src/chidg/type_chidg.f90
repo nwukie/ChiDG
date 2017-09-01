@@ -1013,18 +1013,15 @@ contains
         class(chidg_t),     intent(inout)           :: self
         character(*),       intent(in)              :: file_name
 
-        integer(ik) :: iread, ierr
 
-        call write_line(' ', ltrim=.false.,      io_proc=GLOBAL_MASTER)
-        call write_line(' Reading solution... ', io_proc=GLOBAL_MASTER)
-
+        call write_line(' ',                            ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line(' Reading solution... ',        ltrim=.false., io_proc=GLOBAL_MASTER)
+        call write_line('   reading from: ', file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
 
 
         !
         ! Read solution from hdf file
         !
-        call write_line("   reading from: ", file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
-
         call read_fields_hdf(file_name,self%data)
 
 
@@ -1219,13 +1216,12 @@ contains
 
         call write_line(' ', ltrim=.false.,     io_proc=GLOBAL_MASTER)
         call write_line('Writing solution... ', io_proc=GLOBAL_MASTER)
+        call write_line("   writing to:", file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
 
 
         !
         ! Call grid reader based on file extension
         !
-        call write_line("   writing to:", file_name, ltrim=.false., io_proc=GLOBAL_MASTER)
-
         call write_fields_hdf(self%data,file_name)
         call self%time_integrator%write_time_options(self%data,file_name)
 
@@ -1294,8 +1290,6 @@ contains
         !
         ! Read grid/solution modes and time integrator options from HDF5
         !
-        print*, 'Present status: ', present(equation_set)
-        if (present(equation_set)) print*, 'equation_set:' , equation_set
         self%grid_file = grid_file
         call self%read_mesh(grid_file, interpolation='Uniform', level=OUTPUT_RES, equation_set=equation_set)
         call self%read_fields(solution_file)
@@ -1308,7 +1302,7 @@ contains
 
 
         call self%time_integrator%initialize_state(self%data)
-        call self%time_integrator%read_time_options(self%data,solution_file)
+        call self%time_integrator%read_time_options(self%data,solution_file,'process')
         call self%time_integrator%process_data_for_output(self%data)
 
 
@@ -1449,17 +1443,10 @@ contains
         !
         ! Check optional incoming parameters
         !
-        if (present(write_initial)) then
-            option_write_initial = write_initial
-        else
-            option_write_initial = .false.
-        end if
-
-        if (present(write_final)) then
-            option_write_final = write_final
-        else
-            option_write_final = .true.
-        end if
+        option_write_initial = .false.
+        option_write_final   = .true.
+        if (present(write_initial)) option_write_initial = write_initial
+        if (present(write_final))   option_write_final   = write_final
 
 
 
@@ -1480,7 +1467,7 @@ contains
         ! Initialize time integrator state
         !
         call self%time_integrator%initialize_state(self%data)
-
+        if (solutionfile_in /= 'none') call self%time_integrator%read_time_options(self%data,solutionfile_in,'run')
         
         !
         ! Get the prefix in the file name in case of multiple output files
@@ -1500,13 +1487,12 @@ contains
             
 
             !
-            ! 1: Update time t. Compute as t = t + dt. This way we can restart time-marching and start from t /= 0.
-            ! 2: Call time integrator to take a step
+            ! Call time integrator to take a step. 
             !
-            !self%data%time_manager%t = self%data%time_manager%t + self%data%time_manager%dt
-            call self%time_integrator%step(self%data,self%nonlinear_solver, &
-                                                     self%linear_solver,    &
-                                                     self%preconditioner)
+            call self%time_integrator%step(self%data,               &
+                                           self%nonlinear_solver,   &
+                                           self%linear_solver,      &
+                                           self%preconditioner)
            
            
 

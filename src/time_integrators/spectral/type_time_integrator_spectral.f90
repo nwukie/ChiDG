@@ -4,10 +4,10 @@ module type_time_integrator_spectral
     use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM
     use type_chidg_data,        only: chidg_data_t
     use type_time_integrator,   only: time_integrator_t
+    use mod_HB_post,            only: get_post_processing_data
     use mod_hdf_utilities
     use hdf5
     use h5lt
-    use mod_HB_post,            only: get_post_processing_data
     use mpi_f08
     implicit none
 
@@ -113,12 +113,13 @@ contains
     !!  @date   3/22/2017
     !!
     !-------------------------------------------------------------------------------
-    subroutine read_time_options(self,data,filename)
+    subroutine read_time_options(self,data,filename,read_type)
         class(time_integrator_spectral_t),  intent(inout)   :: self
         type(chidg_data_t),                 intent(inout)   :: data
         character(*),                       intent(in)      :: filename
+        character(*),                       intent(in)      :: read_type
 
-        integer(HID_T)                  :: fid
+        integer(HID_T)  :: fid
         
         !
         ! Open hdf file
@@ -129,13 +130,20 @@ contains
         !
         ! Set no. of time levels and frequencies
         !
-        data%time_manager%time_scheme = trim(get_time_integrator_hdf(fid))
-        data%time_manager%times       = get_times_hdf(fid)
-        data%time_manager%freqs       = get_frequencies_hdf(fid)
-        data%time_manager%nsteps      = get_nsteps_hdf(fid)
-        data%time_manager%nwrite      = get_nwrite_hdf(fid)
-        data%time_manager%ntime       = size(data%time_manager%times)
+        select case(trim(read_type))
+            case('run')
 
+            case('process')
+                data%time_manager%time_scheme = trim(get_time_integrator_hdf(fid))
+                data%time_manager%times       = get_times_hdf(fid)
+                data%time_manager%freqs       = get_frequencies_hdf(fid)
+                data%time_manager%nsteps      = get_nsteps_hdf(fid)
+                data%time_manager%nwrite      = get_nwrite_hdf(fid)
+                data%time_manager%ntime       = size(data%time_manager%times)
+
+            case default
+                call chidg_signal(FATAL,"time_integrator_spectral%read_time_options: Invalid read_type. 'run' or 'process'.")
+        end select
 
         call close_file_hdf(fid)
 

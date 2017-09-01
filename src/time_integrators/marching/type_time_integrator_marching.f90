@@ -76,7 +76,6 @@ contains
         type(chidg_data_t),                 intent(inout)   :: data
         character(*),                       intent(in)      :: filename
 
-        !integer(kind = 8),   parameter  :: SIZE_ONE = 1
         integer(HID_T)                  :: fid
         integer(ik)                     :: ierr, iwrite
         
@@ -85,22 +84,14 @@ contains
             if (iwrite == IRANK) then
 
                 !
-                ! Assuming file exists, open hdf file
-                !
-                fid = open_file_hdf(filename)
-
-
-
-                !
                 ! Write dt, no. of time steps and nwrite to hdf file
                 !
+                fid = open_file_hdf(filename)
                 call set_time_integrator_hdf(fid, trim(data%time_manager%get_name()))
                 call set_time_step_hdf(      fid, data%time_manager%dt              )
                 call set_times_hdf(          fid, [data%time_manager%t]             )
                 call set_nsteps_hdf(         fid, data%time_manager%nsteps          )
                 call set_nwrite_hdf(         fid, data%time_manager%nwrite          )
-
-                
                 call close_file_hdf(fid)
 
             end if
@@ -119,12 +110,13 @@ contains
     !!  @date   3/22/2017
     !!
     !-------------------------------------------------------------------------------
-    subroutine read_time_options(self,data,filename)
+    subroutine read_time_options(self,data,filename,read_type)
         class(time_integrator_marching_t),  intent(inout)   :: self
         type(chidg_data_t),                 intent(inout)   :: data
         character(*),                       intent(in)      :: filename
+        character(*),                       intent(in)      :: read_type
 
-        integer(HID_T)                  :: fid
+        integer(HID_T)  :: fid
 
 
         !
@@ -136,14 +128,25 @@ contains
         !
         ! Read dt, no. of time steps and nwrite
         !
-        data%time_manager%time_scheme = trim(get_time_integrator_hdf(fid))
-        data%time_manager%times       = get_times_hdf(fid)
-        data%time_manager%dt          = get_time_step_hdf(fid)
-        data%time_manager%nsteps      = get_nsteps_hdf(fid)
-        data%time_manager%nwrite      = get_nwrite_hdf(fid)
-        data%time_manager%t           = data%time_manager%times(1)
-        data%time_manager%ntime       = size(data%time_manager%times)
-        
+        select case(trim(read_type))
+            case('run')
+                ! For running a time-marching case, 
+                data%time_manager%times       = get_times_hdf(fid)
+                data%time_manager%t           = data%time_manager%times(1)
+                data%time_manager%ntime       = size(data%time_manager%times)
+
+            case('process')
+                data%time_manager%time_scheme = trim(get_time_integrator_hdf(fid))
+                data%time_manager%dt          = get_time_step_hdf(fid)
+                data%time_manager%nsteps      = get_nsteps_hdf(fid)
+                data%time_manager%nwrite      = get_nwrite_hdf(fid)
+                data%time_manager%times       = get_times_hdf(fid)
+                data%time_manager%t           = data%time_manager%times(1)
+                data%time_manager%ntime       = size(data%time_manager%times)
+            case default
+                call chidg_signal(FATAL,"time_integrator_marching%read_time_options: Invalid read_type. 'run' or 'process'.")
+        end select
+
 
         !
         ! Close file

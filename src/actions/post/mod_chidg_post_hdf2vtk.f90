@@ -91,7 +91,7 @@ contains
         !
         call chidg%read_mesh(grid_file)
         call chidg%read_fields(solution_file)
-        call chidg%time_integrator%read_time_options(chidg%data,solution_file)
+        call chidg%time_integrator%read_time_options(chidg%data,solution_file,'process')
 
         
         !

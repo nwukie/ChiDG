@@ -115,10 +115,11 @@ contains
     !!  @date   3/22/2017
     !!
     !-------------------------------------------------------------------------------
-    subroutine read_time_options(self,data,filename)
+    subroutine read_time_options(self,data,filename,read_type)
         class(time_integrator_steady_t),    intent(inout)   :: self
         type(chidg_data_t),                 intent(inout)   :: data
         character(*),                       intent(in)      :: filename
+        character(*),                       intent(in)      :: read_type
 
         integer(HID_T)  :: fid
 
@@ -132,22 +133,23 @@ contains
         !
         ! Get ntime
         !
-        data%time_manager%time_scheme = trim(get_time_integrator_hdf(fid))
-        data%time_manager%times       = get_times_hdf(fid)
-        data%time_manager%nsteps      = get_nsteps_hdf(fid)
-        data%time_manager%nwrite      = get_nwrite_hdf(fid)
-        data%time_manager%ntime       = size(data%time_manager%times)
-        data%time_manager%t           = data%time_manager%times(1)
+        select case(trim(read_type))
+            case('run')
+
+            case('process')
+                data%time_manager%time_scheme = trim(get_time_integrator_hdf(fid))
+                data%time_manager%times       = get_times_hdf(fid)
+                data%time_manager%nsteps      = get_nsteps_hdf(fid)
+                data%time_manager%nwrite      = get_nwrite_hdf(fid)
+                data%time_manager%ntime       = size(data%time_manager%times)
+                data%time_manager%t           = data%time_manager%times(1)
+
+            case default
+                call chidg_signal(FATAL,"time_integrator_steady%read_time_options: Invalid read_type. 'run' or 'process'.")
+        end select
 
         call close_file_hdf(fid)
         
-
-        !
-        ! Set time_options in time_manager
-        !
-        !data%time_manager%nsteps      = nsteps(1)
-        !data%time_manager%nwrite      = nwrite(1)
-
 
     end subroutine read_time_options
     !*******************************************************************************

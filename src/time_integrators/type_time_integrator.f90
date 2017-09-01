@@ -9,7 +9,6 @@ module type_time_integrator
     use type_ivector,           only: ivector_t
     use type_chidg_data,        only: chidg_data_t
     use type_system_assembler,  only: system_assembler_t
-    !use type_time_manager,      only: time_manager_t
     implicit none
 
 
@@ -32,10 +31,6 @@ module type_time_integrator
 !        integer(ik)     :: nwrite   = 10            !< Write data every 'nwrite' steps     !
 
         class(system_assembler_t),  allocatable :: system
-
-!        type(time_manager_t)                    :: time_manager    ! now part of chidg%data
-
-
 
 
         ! Data logs
@@ -103,8 +98,8 @@ module type_time_integrator
         subroutine state_interface(self,data)
             use type_chidg_data,        only: chidg_data_t
             import time_integrator_t
-            class(time_integrator_t),               intent(inout)   :: self
-            type(chidg_data_t),                     intent(inout)   :: data
+            class(time_integrator_t),   intent(inout)   :: self
+            type(chidg_data_t),         intent(inout)   :: data
         end subroutine
     end interface
 
@@ -114,21 +109,22 @@ module type_time_integrator
         subroutine write_interface(self,data,filename)
             use type_chidg_data,        only: chidg_data_t
             import time_integrator_t
-            class(time_integrator_t),               intent(inout)   :: self
-            type(chidg_data_t),                     intent(inout)   :: data
-            character(*),                           intent(in)      :: filename
+            class(time_integrator_t),   intent(inout)   :: self
+            type(chidg_data_t),         intent(inout)   :: data
+            character(*),               intent(in)      :: filename
         end subroutine
     end interface
 
 
     ! Interface for reading time_integrator options from .h5 file
     abstract interface
-        subroutine read_interface(self,data,filename)
+        subroutine read_interface(self,data,filename,read_type)
             use type_chidg_data,        only: chidg_data_t
             import time_integrator_t
-            class(time_integrator_t),               intent(inout)   :: self
-            type(chidg_data_t),                     intent(inout)   :: data
-            character(*),                           intent(in)      :: filename
+            class(time_integrator_t),   intent(inout)   :: self
+            type(chidg_data_t),         intent(inout)   :: data
+            character(*),               intent(in)      :: filename
+            character(*),               intent(in)      :: read_type
         end subroutine
     end interface
 
@@ -138,8 +134,8 @@ module type_time_integrator
         subroutine post_interface(self,data)
             use type_chidg_data,        only: chidg_data_t
             import time_integrator_t
-            class(time_integrator_t),           intent(inout)   :: self
-            type(chidg_data_t),                 intent(inout)   :: data
+            class(time_integrator_t),   intent(inout)   :: self
+            type(chidg_data_t),         intent(inout)   :: data
         end subroutine
     end interface
 

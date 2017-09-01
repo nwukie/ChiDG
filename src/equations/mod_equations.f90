@@ -22,8 +22,7 @@ module mod_equations
     use eqn_dual_linear_advection,          only: dual_linear_advection
     use eqn_euler,                          only: euler 
     use eqn_navier_stokes,                  only: navier_stokes
-    use eqn_laminar_navier_stokes,          only: laminar_navier_stokes
-    use eqn_laminar_navier_stokes_io,       only: laminar_navier_stokes_io
+    use eqn_rans,                           only: rans
     use eqn_wall_distance,                  only: wall_distance
     use eqn_mesh_motion_diffusion,          only: mesh_motion_diffusion 
     use eqn_mesh_motion_linear_elasticity,  only: mesh_motion_linear_elasticity
@@ -115,8 +114,7 @@ contains
         type(dual_linear_advection)         :: dual_linear_advection_builder
         type(euler)                         :: euler_builder
         type(navier_stokes)                 :: navier_stokes_builder
-        type(laminar_navier_stokes)         :: laminar_navier_stokes_builder
-        type(laminar_navier_stokes_io)      :: laminar_navier_stokes_io_builder
+        type(rans)                          :: rans_builder
         type(wall_distance)                 :: wall_distance_builder
         type(mesh_motion_diffusion)         :: mesh_motion_diffusion_builder
         type(mesh_motion_linear_elasticity) :: mesh_motion_linear_elasticity_builder
@@ -135,8 +133,7 @@ contains
             call equation_set_factory%register(dual_linear_advection_builder%build('default'))
             call equation_set_factory%register(euler_builder%build('default'))
             call equation_set_factory%register(navier_stokes_builder%build('default'))
-            call equation_set_factory%register(laminar_navier_stokes_builder%build('default'))
-            call equation_set_factory%register(laminar_navier_stokes_io_builder%build('default'))
+            call equation_set_factory%register(rans_builder%build('default'))
             call equation_set_factory%register(wall_distance_builder%build('default'))
             call equation_set_factory%register(mesh_motion_diffusion_builder%build('default'))
             call equation_set_factory%register(mesh_motion_linear_elasticity_builder%build('default'))

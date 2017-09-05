@@ -98,7 +98,7 @@ contains
         type(AD_D), allocatable, dimension(:,:) ::  &
             grad_density, grad_mom1, grad_mom2, grad_mom3, grad_energy
 
-        real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3, r
+        real(rk),   allocatable, dimension(:)   :: r
         real(rk),   allocatable, dimension(:,:) :: grid_velocity
 
 
@@ -121,10 +121,6 @@ contains
         r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_m = mom2_m / r
-        else if (worker%coordinate_system() == 'Cartesian') then
-
-        else
-            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
     
@@ -148,14 +144,6 @@ contains
         grad2_energy_m  = worker%get_field('Energy'    , 'grad2', 'face interior')
         grad3_energy_m  = worker%get_field('Energy'    , 'grad3', 'face interior')
 
-
-
-        !
-        ! Get normal vectors
-        !
-        unorm_1 = worker%unit_normal(1)
-        unorm_2 = worker%unit_normal(2)
-        unorm_3 = worker%unit_normal(3)
 
 
 
@@ -195,10 +183,6 @@ contains
 
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_bc = mom2_bc * r
-        else if (worker%coordinate_system() == 'Cartesian') then
-
-        else
-            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 

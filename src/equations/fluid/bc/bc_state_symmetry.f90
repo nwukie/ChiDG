@@ -138,10 +138,6 @@ contains
         r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_m = mom2_m / r
-        else if (worker%coordinate_system() == 'Cartesian') then
-
-        else
-            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 
@@ -163,18 +159,9 @@ contains
 
 
         !
-        ! Convert to relative momentum
-        !
-        mom1_m = mom1_m
-        mom2_m = mom2_m  -  density_m*r*omega
-        mom3_m = mom3_m
-
-
-        !
         ! Dot momentum with normal vector
         !
         normal_momentum = mom1_m*unorm_1 + mom2_m*unorm_2 + mom3_m*unorm_3
-
 
 
         !
@@ -187,23 +174,10 @@ contains
 
 
         !
-        ! Convert to absolute momentum
-        !
-        mom1_bc = mom1_bc
-        mom2_bc = mom2_bc  +  density_bc*r*omega
-        mom3_bc = mom3_bc
-
-
-
-        !
         ! Account for cylindrical. Convert tangential momentum back to angular momentum.
         !
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_bc = mom2_bc * r
-        else if (worker%coordinate_system() == 'Cartesian') then
-
-        else
-            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 

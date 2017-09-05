@@ -81,6 +81,7 @@ contains
             flux_1_m, flux_2_m, flux_3_m,           &
             flux_1_p, flux_2_p, flux_3_p
 
+        real(rk),   allocatable,    dimension(:)    :: r
 
 
         !
@@ -101,7 +102,18 @@ contains
         density_nutilde_m = worker%get_field('Density * NuTilde', 'value', 'face interior')
         density_nutilde_p = worker%get_field('Density * NuTilde', 'value', 'face exterior')
 
-        
+
+        !
+        ! Account for cylindrical. Get tangential momentum from angular momentum.
+        !
+        if (worker%coordinate_system() == 'Cylindrical') then
+            r = worker%coordinate('1','face interior') 
+            mom2_m = mom2_m / r
+            mom2_p = mom2_p / r
+        end if
+
+
+
         !
         ! Get fluid advection velocity
         !

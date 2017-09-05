@@ -1,4 +1,4 @@
-module type_model_vorticity
+module model_vorticity
 #include <messenger.h>
     use mod_kinds,          only: rk
     use mod_constants,      only: HALF, ONE, TWO
@@ -23,7 +23,7 @@ module type_model_vorticity
     !!  @date   02/23/2017
     !!
     !---------------------------------------------------------------------------------------
-    type, extends(model_t)  :: model_vorticity_t
+    type, extends(model_t)  :: vorticity_t
 
 
     contains
@@ -31,7 +31,7 @@ module type_model_vorticity
         procedure   :: init
         procedure   :: compute
 
-    end type model_vorticity_t
+    end type vorticity_t
     !***************************************************************************************
 
 
@@ -50,7 +50,7 @@ contains
     !!
     !---------------------------------------------------------------------------------------
     subroutine init(self)   
-        class(model_vorticity_t), intent(inout)   :: self
+        class(vorticity_t), intent(inout)   :: self
 
         call self%set_name('Vorticity')
         call self%set_dependency('f(Grad(Q))')
@@ -74,7 +74,7 @@ contains
     !!
     !--------------------------------------------------------------------------------------
     subroutine compute(self,worker)
-        class(model_vorticity_t),  intent(in)      :: self
+        class(vorticity_t),  intent(in)      :: self
         type(chidg_worker_t),   intent(inout)   :: worker
 
         type(AD_D), allocatable,    dimension(:) ::         &
@@ -141,10 +141,6 @@ contains
             grad1_mom2 = (grad1_mom2/r) - mom2/r
             grad2_mom2 = (grad2_mom2/r)
             grad3_mom2 = (grad3_mom2/r)
-        else if (worker%coordinate_system() == 'Cartesian') then
-
-        else
-            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 
@@ -195,9 +191,6 @@ contains
         !
         !----------------------------------------------------------
         if (worker%coordinate_system() == 'Cartesian') then
-
-
-
             !
             ! Compute vorticity:
             !
@@ -214,7 +207,6 @@ contains
 
 
         else if (worker%coordinate_system() == 'Cylindrical') then
-
             !
             ! Compute divergence of velocity vector
             !
@@ -236,11 +228,6 @@ contains
             vorticity_3 =  (grad1_v - grad2_u + (v/r)) 
 
 
-            !
-            ! Account for rotation, convert to relative vorticity
-            !
-            vorticity_3 = vorticity_3 - TWO*omega
-
         end if
 
 
@@ -257,4 +244,4 @@ contains
 
 
 
-end module type_model_vorticity
+end module model_vorticity

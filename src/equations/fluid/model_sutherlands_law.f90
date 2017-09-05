@@ -1,4 +1,4 @@
-module type_sutherlands_law
+module model_sutherlands_law
 #include <messenger.h>
     use mod_kinds,          only: rk
     use mod_constants,      only: THREE, TWO
@@ -102,4 +102,4 @@ contains
 
 
 
-end module type_sutherlands_law
+end module model_sutherlands_law

@@ -86,12 +86,12 @@
 !
 !
 !         Constant Pressure:  pressure = 100,000
-!                          --------->.
-!                          --------->.
-!                          --------->.
-!                          --------->.
-!                          --------->.
-!                          --------->.
+!                                        
+!       |    |    |    |    |    |    |    |    |               
+!       |    |    |    |    |    |    |    |    |               
+!       |    |    |    |    |    |    |    |    |               
+!       |    |    |    |    |    |    |    |    |               
+!       v    v    v    v    v    v    v    v    v               
 !      |------------------------------------------|
 !
 !
@@ -124,7 +124,7 @@
 !   @date   7/13/2017
 !
 !--------------------------------------------------------------------------------
-module integration_force_mod
+module integration_force_cartesian_mod
     use pfunit_mod
     use mod_kinds,                  only: rk, ik
     use mod_constants,              only: ZERO, HALF, ONE, THREE, IO_DESTINATION
@@ -430,15 +430,14 @@ contains
         call eqn%add_operator('Euler Boundary Average Flux')
         call eqn%add_operator('Euler Roe Flux')
         call eqn%add_operator('Euler BC Flux')
-        !call eqn%add_operator('Euler Volume Cylindrical Source')
+        call eqn%add_operator('Euler Volume Cylindrical Source')
 
         call eqn%add_operator('Fluid Viscous Volume Operator')
         call eqn%add_operator('Fluid Viscous Boundary Average Operator')
         call eqn%add_operator('Fluid Viscous BC Operator')
-        !call eqn%add_operator('Fluid Viscous Volume Cylindrical Source')
+        call eqn%add_operator('Fluid Viscous Volume Cylindrical Source')
 
         call eqn%add_model('Ideal Gas')
-        !call eqn%add_model('Fluid Advection Velocity')
         call eqn%add_model('Test Force Constant Viscosity')
         call eqn%add_model('Stokes Hypothesis')
         call eqn%add_model('Reynolds Analogy')
@@ -875,4 +874,4 @@ contains
 
 
 
-end module integration_force_mod
+end module integration_force_cartesian_mod

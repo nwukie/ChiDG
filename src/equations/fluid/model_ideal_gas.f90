@@ -1,4 +1,4 @@
-module type_ideal_gas
+module model_ideal_gas
 #include <messenger.h>
     use mod_kinds,          only: rk
     use mod_constants,      only: HALF, ONE
@@ -94,10 +94,6 @@ contains
         !
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2 = mom2 / worker%coordinate('1')
-        else if (worker%coordinate_system() == 'Cartesian') then
-
-        else
-            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 
@@ -121,4 +117,4 @@ contains
 
 
 
-end module type_ideal_gas
+end module model_ideal_gas

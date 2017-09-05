@@ -95,8 +95,6 @@ contains
             flux_1, flux_2, flux_3, diffusion, integrand
 
 
-
-
         !
         ! Interpolate solution to quadrature nodes
         !

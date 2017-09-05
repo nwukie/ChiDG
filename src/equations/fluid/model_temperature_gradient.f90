@@ -1,4 +1,4 @@
-module type_temperature_gradient
+module model_temperature_gradient
 #include <messenger.h>
     use mod_kinds,          only: rk
     use mod_constants,      only: HALF, ONE, TWO
@@ -151,10 +151,6 @@ contains
             grad1_mom2 = (grad1_mom2/r) - mom2/r
             grad2_mom2 = (grad2_mom2/r)
             grad3_mom2 = (grad3_mom2/r)
-        else if (worker%coordinate_system() == 'Cartesian') then
-
-        else
-            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 
@@ -227,4 +223,4 @@ contains
 
 
 
-end module type_temperature_gradient
+end module model_temperature_gradient

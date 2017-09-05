@@ -1,4 +1,4 @@
-module type_constant_viscosity
+module model_constant_viscosity
 #include <messenger.h>
     use mod_kinds,          only: rk
     use mod_constants,      only: THREE, TWO
@@ -144,4 +144,4 @@ contains
 
 
 
-end module type_constant_viscosity
+end module model_constant_viscosity

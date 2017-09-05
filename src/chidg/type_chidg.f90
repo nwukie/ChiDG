@@ -1413,7 +1413,7 @@ contains
 
         character(100)              :: filename
         character(:),   allocatable :: prefix
-        integer(ik)                 :: istep, nsteps, wcount
+        integer(ik)                 :: istep, nsteps, wcount, iread, ierr
         logical                     :: option_write_initial, option_write_final
 
         class(chidg_t), pointer :: chidg
@@ -1467,7 +1467,16 @@ contains
         ! Initialize time integrator state
         !
         call self%time_integrator%initialize_state(self%data)
-        if (solutionfile_in /= 'none') call self%time_integrator%read_time_options(self%data,solutionfile_in,'run')
+
+        do iread = 0,NRANK-1
+            if ( iread == IRANK ) then
+                if (solutionfile_in /= 'none') call self%time_integrator%read_time_options(self%data,solutionfile_in,'run')
+            end if
+            call MPI_Barrier(ChiDG_COMM,ierr)
+        end do
+
+
+
         
         !
         ! Get the prefix in the file name in case of multiple output files

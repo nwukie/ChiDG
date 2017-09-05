@@ -1,4 +1,4 @@
-module type_fluid_wave_speed
+module model_fluid_wave_speed
 #include <messenger.h>
     use mod_kinds,          only: rk
     use mod_constants,      only: HALF, ONE, TWO
@@ -116,4 +116,4 @@ contains
 
 
 
-end module type_fluid_wave_speed
+end module model_fluid_wave_speed

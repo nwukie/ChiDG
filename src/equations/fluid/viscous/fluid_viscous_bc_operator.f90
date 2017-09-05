@@ -116,13 +116,9 @@ contains
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
-        r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
+            r = worker%coordinate('1','boundary')
             mom2 = mom2 / r
-        else if (worker%coordinate_system() == 'Cartesian') then
-
-        else
-            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 
@@ -191,6 +187,11 @@ contains
         flux_1 = -tau_12
         flux_2 = -tau_22
         flux_3 = -tau_23
+
+        ! Convert to tangential to angular momentum flux
+        if (worker%coordinate_system() == 'Cylindrical') then
+            integrand = integrand * r
+        end if
 
         call worker%integrate_boundary_condition('Momentum-2','Diffusion',flux_1,flux_2,flux_3)
 

@@ -92,22 +92,20 @@ contains
             invdensity_m,   invdensity_p,                           &
             p_m,            p_p,                                    &
             un_m,           un_p,                                   &
-            a_m,            a_p,                                    &
             rtil, util, vtil, wtil, vmagtil, Htil, ctil, qtil2,     &
-            integrand,  upwind,     wave,                           &
             C1,  C2_a, C2_b,  C3,                                   &
             u_m, v_m, w_m,                                          &
             u_p, v_p, w_p,                                          &
             vmag_p, vmag_m,                                         &
             delr,   delp,   delvmag, delu, delv, delw,              &
             lamda1, lamda2, lamda3,                                 &
-            sqrt_rhom, sqrt_rhop, sqrt_rhom_plus_rhop, ctil2
+            sqrt_rhom, sqrt_rhop, sqrt_rhom_plus_rhop, ctil2, upwind
 
         real(rk), allocatable, dimension(:) ::              &
             norm_1,         norm_2,         norm_3,         &
             unorm_1,        unorm_2,        unorm_3,        &
             unorm_1_ale,    unorm_2_ale,    unorm_3_ale,    &
-            ale_area_ratio
+            ale_area_ratio, r, grid_vel_n
 
         real(rk), allocatable, dimension(:,:) :: grid_vel
 
@@ -135,6 +133,17 @@ contains
 
         energy_m  = worker%get_field('Energy'    , 'value', 'face interior')
         energy_p  = worker%get_field('Energy'    , 'value', 'face exterior')
+
+
+        !
+        ! Account for cylindrical. Get tangential momentum from angular momentum.
+        !
+        if (worker%coordinate_system() == 'Cylindrical') then
+            r = worker%coordinate('1','face interior') 
+            mom2_m = mom2_m / r
+            mom2_p = mom2_p / r
+        end if
+
 
 
         norm_1  = worker%normal(1)
@@ -188,10 +197,10 @@ contains
         sqrt_rhom = sqrt(density_m)
         sqrt_rhop = sqrt(density_p)
         sqrt_rhom_plus_rhop = sqrt_rhom + sqrt_rhop
-        rtil =  sqrt(density_p * density_m)                               ! Roe-averaged density
-        util = (sqrt_rhom*u_m + sqrt_rhop*u_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged u-velocity
-        vtil = (sqrt_rhom*v_m + sqrt_rhop*v_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged v-velocity
-        wtil = (sqrt_rhom*w_m + sqrt_rhop*w_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged w-velocity
+        rtil =  sqrt(density_p * density_m)                                             ! Roe-averaged density
+        util = (sqrt_rhom*u_m        + sqrt_rhop*u_p       ) / (sqrt_rhom_plus_rhop)    ! Roe-averaged u-velocity
+        vtil = (sqrt_rhom*v_m        + sqrt_rhop*v_p       ) / (sqrt_rhom_plus_rhop)    ! Roe-averaged v-velocity
+        wtil = (sqrt_rhom*w_m        + sqrt_rhop*w_p       ) / (sqrt_rhom_plus_rhop)    ! Roe-averaged w-velocity
         Htil = (sqrt_rhom*enthalpy_m + sqrt_rhop*enthalpy_p) / (sqrt_rhom_plus_rhop)    ! Roe-averaged Enthalpy
 
         vmagtil = util*unorm_1_ale + vtil*unorm_2_ale + wtil*unorm_3_ale   ! Magnitude of Roe-averaged velocity in the face normal direction
@@ -218,9 +227,14 @@ contains
         !
         ! Limit wave speeds for entropy fix
         !
-        lamda1 = abs(vmagtil - ctil) + sqrt(grid_vel(:,1)**TWO+grid_vel(:,2)**TWO+grid_vel(:,3)**TWO)
-        lamda2 = abs(vmagtil)        + sqrt(grid_vel(:,1)**TWO+grid_vel(:,2)**TWO+grid_vel(:,3)**TWO)
-        lamda3 = abs(vmagtil + ctil) + sqrt(grid_vel(:,1)**TWO+grid_vel(:,2)**TWO+grid_vel(:,3)**TWO)
+        !lamda1 = abs(vmagtil - ctil) + sqrt(grid_vel(:,1)**TWO+grid_vel(:,2)**TWO+grid_vel(:,3)**TWO)
+        !lamda2 = abs(vmagtil)        + sqrt(grid_vel(:,1)**TWO+grid_vel(:,2)**TWO+grid_vel(:,3)**TWO)
+        !lamda3 = abs(vmagtil + ctil) + sqrt(grid_vel(:,1)**TWO+grid_vel(:,2)**TWO+grid_vel(:,3)**TWO)
+
+        grid_vel_n = grid_vel(:,1)*unorm_1_ale  +  grid_vel(:,2)*unorm_2_ale  +  grid_vel(:,3)*unorm_3_ale
+        lamda1 = abs(vmagtil + grid_vel_n - ctil)
+        lamda2 = abs(vmagtil + grid_vel_n)
+        lamda3 = abs(vmagtil + grid_vel_n + ctil)
 
         eps = 0.01_rk
         where ( (-eps*ctil < lamda1) .and. (lamda1 < eps*ctil) )
@@ -250,12 +264,10 @@ contains
         C2_b = abs(lamda2)*rtil
         C3   = abs(lamda3)*( delp + rtil*ctil*delvmag)/(TWO*(ctil2))
 
-        integrand = delr
-        integrand = ZERO
 
 
         !================================
-        !       MASS FLUX
+        !       Mass flux
         !================================
         upwind = HALF*(C1 + C2_a + C3)
 
@@ -263,7 +275,7 @@ contains
 
 
         !================================
-        !       X-MOMENTUM FLUX
+        !       Momentum-1 flux
         !================================
         upwind = HALF*(C1*(util - ctil*unorm_1_ale)  +  C2_a*util  +  C2_b*(delu - delvmag*unorm_1_ale)  +  C3*(util + ctil*unorm_1_ale))
 
@@ -271,21 +283,26 @@ contains
 
 
         !================================
-        !       Y-MOMENTUM FLUX
+        !       Momentum-2 flux
         !================================
         upwind = HALF*(C1*(vtil - ctil*unorm_2_ale)  +  C2_a*vtil  +  C2_b*(delv - delvmag*unorm_2_ale)  +  C3*(vtil + ctil*unorm_2_ale))
+
+        ! Convert to tangential to angular momentum flux
+        if (worker%coordinate_system() == 'Cylindrical') then
+            upwind = upwind * r
+        end if
 
         call worker%integrate_boundary_upwind('Momentum-2',upwind)
 
         !================================
-        !       Z-MOMENTUM FLUX
+        !       Momentum-3 flux
         !================================
         upwind = HALF*(C1*(wtil - ctil*unorm_3_ale)  +  C2_a*wtil  +  C2_b*(delw - delvmag*unorm_3_ale)  +  C3*(wtil + ctil*unorm_3_ale))
 
         call worker%integrate_boundary_upwind('Momentum-3',upwind)
 
         !================================
-        !          ENERGY FLUX
+        !       Energy flux
         !================================
         upwind = HALF*(C1*(Htil - ctil*vmagtil)  +  C2_a*(qtil2/TWO)  +  C2_b*(util*delu + vtil*delv + wtil*delw - vmagtil*delvmag)  +  C3*(Htil + ctil*vmagtil))
 

@@ -95,10 +95,6 @@ contains
             flux_1, flux_2, flux_3, diffusion
 
 
-        real(rk), allocatable, dimension(:) ::      &
-            norm_1, norm_2, norm_3
-
-
 
         !
         ! Interpolate solution to quadrature nodes
@@ -119,26 +115,11 @@ contains
         grad3_density_nutilde = worker%get_field('Density * NuTilde', 'grad3')
 
 
-
-
-
-        invdensity = ONE/density
-
-
-        !
-        ! Get normal vector
-        !
-        norm_1 = worker%normal(1)
-        norm_2 = worker%normal(2)
-        norm_3 = worker%normal(3)
-
-
-
-
         !
         ! Get model fields:
         !   Viscosity
         !
+        invdensity = ONE/density
         mu_l = worker%get_field('Laminar Viscosity', 'value', 'element')
         nu_l = mu_l*invdensity
 

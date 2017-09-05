@@ -74,12 +74,12 @@ contains
                 call rans_eqns%add_operator('Euler Boundary Average Flux')
                 call rans_eqns%add_operator('Euler Roe Flux')
                 call rans_eqns%add_operator('Euler BC Flux')
-                !call rans_eqns%add_operator('Euler Volume Cylindrical Source')
+                call rans_eqns%add_operator('Euler Volume Cylindrical Source')
 
                 call rans_eqns%add_operator('Fluid Viscous Volume Operator')
                 call rans_eqns%add_operator('Fluid Viscous Boundary Average Operator')
                 call rans_eqns%add_operator('Fluid Viscous BC Operator')
-                !call rans_eqns%add_operator('Fluid Viscous Volume Cylindrical Source')
+                call rans_eqns%add_operator('Fluid Viscous Volume Cylindrical Source')
 
                 call rans_eqns%add_model('Ideal Gas')
                 call rans_eqns%add_model('Sutherlands Law')

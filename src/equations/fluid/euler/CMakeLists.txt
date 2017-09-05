@@ -3,4 +3,5 @@ add_lib_sources(
                 euler_boundary_average_operator.f90
                 euler_roe_operator.f90
                 euler_bc_operator.f90
+                euler_volume_cylindrical_source.f90
                 )

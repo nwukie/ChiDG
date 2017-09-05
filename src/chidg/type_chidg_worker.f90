@@ -87,14 +87,11 @@ module type_chidg_worker
         procedure   :: face_info            ! Return a face_info type
 
 
-
-
-
-
-
+        ! Worker get/set data
         procedure   :: get_field
+        procedure   :: store_bc_state
+        procedure   :: store_model_field
 
-        ! Worker get data
         ! BEGIN DEPRECATED
         procedure, private   :: get_primary_field_general
         procedure, private   :: get_primary_field_face
@@ -116,8 +113,6 @@ module type_chidg_worker
 
 
 
-        procedure   :: store_bc_state
-        procedure   :: store_model_field
 
 
 
@@ -140,7 +135,6 @@ module type_chidg_worker
         procedure   :: inverse_jacobian
         procedure   :: face_area
         procedure   :: coordinate_system
-
         procedure   :: face_type
         procedure   :: time
 
@@ -165,10 +159,7 @@ module type_chidg_worker
         procedure   :: integrate_volume_flux
         procedure   :: integrate_volume_source
 
-!        procedure   :: integrate_boundary
-!        generic     :: integrate_volume => integrate_volume_flux, &
-!                                           integrate_volume_source
-        
+
 
         ! Worker auxiliary flux processing procedures. Used internally
         procedure, private:: post_process_volume_advective_flux_ale
@@ -1271,38 +1262,14 @@ contains
 
 
 
-
-
-
-
-    !>
+    !>  Accept fluxes from both sides of a face, apply appropriate transformation
+    !!  for potential grid motion, average, dot with face normal vector, and integrate.
     !!
-    !!  @author Nathan A. Wukie (AFRL)
-    !!  @date   8/22/2016
-    !!
-    !!
-    !----------------------------------------------------------------------------------------
-    subroutine integrate_boundary(self,primary_field,integrand)
-        class(chidg_worker_t),  intent(in)      :: self
-        character(*),           intent(in)      :: primary_field
-        type(AD_D),             intent(inout)   :: integrand(:)
-
-        integer(ik) :: ifield, idomain_l, eqn_ID
-
-        idomain_l = self%element_info%idomain_l
-        eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
-        ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
-
-        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ifield,self%itime,integrand)
-
-
-    end subroutine integrate_boundary
-    !****************************************************************************************
-
-
-
-
-    !>
+    !!  1: (in)             flux-, flux+
+    !!  2: (transform)      flux_ale-, flux_ale+
+    !!  3: (average)        flux_avg
+    !!  4: (normal flux)    flux_normal
+    !!  5: (integrate)      int(flux_normal)
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/22/2016
@@ -1377,25 +1344,23 @@ contains
 
 
 
-
-
-    !>
+    !>  Accept some measure of advection upwind dissipation and integrate.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/22/2016
     !!
     !!
     !----------------------------------------------------------------------------------------
-    subroutine integrate_boundary_upwind(self,primary_field,integrand)
+    subroutine integrate_boundary_upwind(self,primary_field,upwind)
         class(chidg_worker_t),  intent(in)      :: self
         character(*),           intent(in)      :: primary_field
-        type(AD_D),             intent(inout)   :: integrand(:)
+        type(AD_D),             intent(inout)   :: upwind(:)
 
         integer(ik)                                 :: ifield, idomain_l, eqn_ID
         real(rk),   allocatable,    dimension(:)    :: norm_1, norm_2, norm_3, darea
 
         !
-        ! Get normal vector
+        ! Compute differential areas by computing magnitude of scaled normal vector
         !
         norm_1  = self%normal(1)
         norm_2  = self%normal(2)
@@ -1406,7 +1371,7 @@ contains
         !
         ! Multiply by differential area
         !
-        integrand = darea*integrand
+        upwind = darea*upwind
 
 
         !
@@ -1415,7 +1380,7 @@ contains
         idomain_l = self%element_info%idomain_l
         eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
         ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
-        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ifield,self%itime,integrand)
+        call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ifield,self%itime,upwind)
 
 
     end subroutine integrate_boundary_upwind
@@ -1424,19 +1389,10 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-    !>
+    !>  Accept domain boundary flux, transform to ale flux, dot with normal vector, and integrate. 
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/22/2016
-    !!
     !!
     !----------------------------------------------------------------------------------------
     subroutine integrate_boundary_condition(self,primary_field,flux_type,flux_1,flux_2,flux_3)
@@ -1496,49 +1452,11 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-!    !>
-!    !!
-!    !!  @author Nathan A. Wukie (AFRL)
-!    !!  @date   8/22/2016
-!    !!
-!    !!
-!    !---------------------------------------------------------------------------------------
-!    subroutine integrate_volume_flux(self,primary_field,integrand_x,integrand_y,integrand_z)
-!        class(chidg_worker_t),  intent(in)      :: self
-!        character(*),           intent(in)      :: primary_field
-!        type(AD_D),             intent(inout)   :: integrand_x(:)
-!        type(AD_D),             intent(inout)   :: integrand_y(:)
-!        type(AD_D),             intent(inout)   :: integrand_z(:)
-!
-!        integer(ik) :: ifield, idomain_l, eqn_ID
-!
-!
-!        idomain_l = self%element_info%idomain_l
-!        eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
-!        ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
-!
-!        call integrate_volume_vector_flux(self%mesh,self%solverdata,self%element_info,self%function_info,ifield,self%itime,integrand_x,integrand_y,integrand_z)
-!
-!
-!    end subroutine integrate_volume_flux
-!    !***************************************************************************************
-
-
-
-
-
-
-    !>
+    !>  Accept a flux at volume quadrature nodes, apply ale transformation, integrate.
+    !!
+    !!  1: (in)         vec{F}
+    !!  2: (transform)  vec{F_ale}
+    !!  3: (integrate)  int[ grad(psi) (dot) vec{F_ale} ]dV
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/22/2016
@@ -1577,7 +1495,7 @@ contains
 
         
         !
-        ! Integrate
+        ! Integrate: int[ grad(psi) (dot) F_ale ]
         !
         call integrate_volume_vector_flux(self%mesh,self%solverdata,self%element_info,self%function_info,ifield,self%itime,flux(:,1),flux(:,2),flux(:,3))
 
@@ -1589,7 +1507,9 @@ contains
 
 
 
-    !>
+    !>  Accept a source term at element volume quadrature nodes, integrate.
+    !!
+    !!  Computes integral: int[ psi * S ]dV
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/22/2016
@@ -1603,13 +1523,11 @@ contains
 
         integer(ik) :: ifield, idomain_l, eqn_ID
 
-
         idomain_l = self%element_info%idomain_l
         eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
         ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
 
         call integrate_volume_scalar_source(self%mesh,self%solverdata,self%element_info,self%function_info,ifield,self%itime,integrand)
-
 
     end subroutine integrate_volume_source
     !***************************************************************************************
@@ -1620,12 +1538,13 @@ contains
 
 
 
-    !>
+    !>  Return outward-facing, 'scaled' normal vector.
+    !!
+    !!  Normal vector scaled by face differential area. One can compute face differential 
+    !!  areas by computing the magnitude of this normal vector.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/22/2016
-    !!
-    !!
     !!
     !---------------------------------------------------------------------------------------
     function normal(self,direction) result(norm_gq)
@@ -1647,12 +1566,12 @@ contains
 
 
 
-    !>
+    !>  Return outward-facing unit normal vector on the undeformed face.
+    !!
+    !!  Magnitude of this vector is 1.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/22/2016
-    !!
-    !!
     !!
     !---------------------------------------------------------------------------------------
     function unit_normal(self,direction) result(unorm_gq)
@@ -1666,12 +1585,12 @@ contains
     end function unit_normal
     !***************************************************************************************
 
-    !>
+
+
+    !>  Return outward-facing unit normal vector on the ALE deformed face.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   8/22/2016
-    !!
-    !!
     !!
     !---------------------------------------------------------------------------------------
     function unit_normal_ale(self,direction) result(unorm_gq)
@@ -1701,10 +1620,7 @@ contains
         class(chidg_worker_t),  intent(in)  :: self
 
         type(point_t), allocatable, dimension(:) :: coords_(:)
-        !real(rk), allocatable :: coords_support(:,:)
 
-        !coords_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%quad_pts(:)
-        ! Use constructor to return an array of point_t's from an array of reals
         coords_ = point_t(self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%interp_coords_def)
 
     end function coords
@@ -1727,7 +1643,7 @@ contains
     !--------------------------------------------------------------------------------------
     function x(self,source) result(x_gq)
         class(chidg_worker_t),  intent(in)  :: self
-        character(len=*),       intent(in)  :: source
+        character(*),           intent(in)  :: source
 
         real(rk), dimension(:), allocatable :: x_gq
 
@@ -1756,7 +1672,7 @@ contains
     !--------------------------------------------------------------------------------------
     function y(self,source) result(y_gq)
         class(chidg_worker_t),  intent(in)  :: self
-        character(len=*),       intent(in)  :: source
+        character(*),           intent(in)  :: source
 
         real(rk), dimension(:), allocatable :: y_gq
 
@@ -1786,10 +1702,9 @@ contains
     !--------------------------------------------------------------------------------------
     function z(self,source) result(z_gq)
         class(chidg_worker_t),  intent(in)  :: self
-        character(len=*),       intent(in)  :: source
+        character(*),           intent(in)  :: source
 
         real(rk), dimension(:), allocatable :: z_gq
-
 
         if (source == 'boundary') then
             z_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%interp_coords_def(:,3)

@@ -69,10 +69,11 @@ contains
         type(chidg_worker_t),                                intent(inout)   :: worker
         class(properties_t),                                 intent(inout)   :: prop
 
-
         type(AD_D), dimension(:), allocatable   ::          &
             density, mom1, mom2, mom3,  density_nutilde,    &
             invdensity, u, v, w, flux_1, flux_2, flux_3
+
+        real(rk),   allocatable,    dimension(:)    :: r
 
 
         !
@@ -83,6 +84,15 @@ contains
         mom2            = worker%get_field('Momentum-2',        'value', 'element')
         mom3            = worker%get_field('Momentum-3',        'value', 'element')
         density_nutilde = worker%get_field('Density * NuTilde', 'value', 'element')
+
+
+        !
+        ! Account for cylindrical. Get tangential momentum from angular momentum.
+        !
+        if (worker%coordinate_system() == 'Cylindrical') then
+            r = worker%coordinate('1','element') 
+            mom2 = mom2 / r
+        end if
 
         
         !

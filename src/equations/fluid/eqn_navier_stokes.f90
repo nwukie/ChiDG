@@ -74,12 +74,12 @@ contains
                 call navier_stokes_eqns%add_operator('Euler Boundary Average Flux')
                 call navier_stokes_eqns%add_operator('Euler Roe Flux')
                 call navier_stokes_eqns%add_operator('Euler BC Flux')
-                !call navier_stokes_eqns%add_operator('Euler Volume Cylindrical Source')
+                call navier_stokes_eqns%add_operator('Euler Volume Cylindrical Source')
 
                 call navier_stokes_eqns%add_operator('Fluid Viscous Volume Operator')
                 call navier_stokes_eqns%add_operator('Fluid Viscous Boundary Average Operator')
                 call navier_stokes_eqns%add_operator('Fluid Viscous BC Operator')
-                !call navier_stokes_eqns%add_operator('Fluid Viscous Volume Cylindrical Source')
+                call navier_stokes_eqns%add_operator('Fluid Viscous Volume Cylindrical Source')
 
                 call navier_stokes_eqns%add_model('Ideal Gas')
                 call navier_stokes_eqns%add_model('Constant Viscosity')

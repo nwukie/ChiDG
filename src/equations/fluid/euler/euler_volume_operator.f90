@@ -85,8 +85,7 @@ contains
             p, u, v, w, enthalpy, invdensity,       &
             flux_1, flux_2, flux_3
 
-
-        type(AD_D), allocatable, dimension(:,:)  :: flux
+        real(rk),   allocatable, dimension(:) :: r
 
 
         !
@@ -98,6 +97,14 @@ contains
         mom3    = worker%get_field('Momentum-3', 'value', 'element')
         energy  = worker%get_field('Energy'    , 'value', 'element')
 
+
+        !
+        ! Account for cylindrical. Get tangential momentum from angular momentum.
+        !
+        if (worker%coordinate_system() == 'Cylindrical') then
+            r = worker%coordinate('1','element') 
+            mom2 = mom2 / r
+        end if
 
     
         !
@@ -113,11 +120,11 @@ contains
         ! Compute pressure and total enthalpy
         !
         p = worker%get_field('Pressure', 'value', 'element')
-
         enthalpy = (energy + p)*invdensity
 
+
         !===========================
-        !        MASS FLUX
+        !        Mass flux
         !===========================
         flux_1 = (density * u)
         flux_2 = (density * v)
@@ -126,7 +133,7 @@ contains
         call worker%integrate_volume_flux('Density','Advection',flux_1,flux_2,flux_3)
 
         !===========================
-        !     X-MOMENTUM FLUX
+        !       Momentum-1 flux
         !===========================
         flux_1 = (mom1 * u)  +  p
         flux_2 = (mom1 * v)
@@ -135,16 +142,23 @@ contains
         call worker%integrate_volume_flux('Momentum-1','Advection',flux_1,flux_2,flux_3)
 
         !============================
-        !     Y-MOMENTUM FLUX
+        !       Momentum-2 flux
         !============================
         flux_1 = (mom2 * u)
         flux_2 = (mom2 * v)  +  p
         flux_3 = (mom2 * w)
         
+        ! Convert to tangential to angular momentum flux
+        if (worker%coordinate_system() == 'Cylindrical') then
+            flux_1 = flux_1 * r
+            flux_2 = flux_2 * r
+            flux_3 = flux_3 * r
+        end if
+
         call worker%integrate_volume_flux('Momentum-2','Advection',flux_1,flux_2,flux_3)
 
         !============================
-        !     Z-MOMENTUM FLUX
+        !       Momentum-3 flux
         !============================
         flux_1 = (mom3 * u)
         flux_2 = (mom3 * v)
@@ -153,7 +167,7 @@ contains
         call worker%integrate_volume_flux('Momentum-3','Advection',flux_1,flux_2,flux_3)
 
         !============================
-        !       ENERGY FLUX
+        !       Energy flux
         !============================
         flux_1 = (density * enthalpy * u)
         flux_2 = (density * enthalpy * v)

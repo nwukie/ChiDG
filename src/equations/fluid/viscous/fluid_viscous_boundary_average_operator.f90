@@ -101,10 +101,8 @@ contains
             tau_11_m, tau_22_m, tau_33_m, tau_12_m, tau_13_m, tau_23_m, &
             tau_11_p, tau_22_p, tau_33_p, tau_12_p, tau_13_p, tau_23_p, &
             flux_1_m, flux_2_m, flux_3_m,                               &
-            flux_1_p, flux_2_p, flux_3_p,                               &
-            flux_1, flux_2, flux_3, integrand
+            flux_1_p, flux_2_p, flux_3_p
 
-        type(AD_D), allocatable, dimension(:,:)          :: flux_ref
 
         real(rk), allocatable, dimension(:) :: r
 
@@ -130,14 +128,10 @@ contains
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
-        r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
+            r = worker%coordinate('1','boundary')
             mom2_m = mom2_m / r
             mom2_p = mom2_p / r
-        else if (worker%coordinate_system() == 'Cartesian') then
-
-        else
-            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 
@@ -242,6 +236,17 @@ contains
         flux_1_p = -tau_12_p
         flux_2_p = -tau_22_p
         flux_3_p = -tau_23_p
+
+        ! Convert to tangential to angular momentum flux
+        if (worker%coordinate_system() == 'Cylindrical') then
+            flux_1_m = flux_1_m * r
+            flux_2_m = flux_2_m * r
+            flux_3_m = flux_3_m * r
+
+            flux_1_p = flux_1_p * r
+            flux_2_p = flux_2_p * r
+            flux_3_p = flux_3_p * r
+        end if
 
         call worker%integrate_boundary_average('Momentum-2','Diffusion',    &
                                                 flux_1_m,flux_2_m,flux_3_m, &   

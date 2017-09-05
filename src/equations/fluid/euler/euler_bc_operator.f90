@@ -95,12 +95,11 @@ contains
             density_bc,  mom1_bc, mom2_bc, mom3_bc, energy_bc,  &
             u_bc,    v_bc,    w_bc,                             &
             H_bc,    p_bc,                                      &
-            flux_1,  flux_2,  flux_3,  integrand
+            flux_1,  flux_2,  flux_3
 
-        type(AD_D), allocatable, dimension(:,:) :: flux
+        real(rk),   allocatable, dimension(:) :: r
 
-        real(rk),   allocatable, dimension(:)   :: norm_1, norm_2, norm_3
-            
+
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
@@ -111,9 +110,16 @@ contains
         energy_bc  = worker%get_field("Energy"    , 'value', 'boundary')
 
 
-        norm_1 = worker%normal(1)
-        norm_2 = worker%normal(2)
-        norm_3 = worker%normal(3)
+        !
+        ! Account for cylindrical. Get tangential momentum from angular momentum.
+        !
+        if (worker%coordinate_system() == 'Cylindrical') then
+            r = worker%coordinate('1','boundary') 
+            mom2_bc = mom2_bc / r
+        end if
+
+
+
 
 
         !
@@ -149,7 +155,7 @@ contains
         call worker%integrate_boundary_condition('Density','Advection',flux_1,flux_2,flux_3)
 
         !=================================================
-        ! x-momentum flux
+        ! Momenum-1 flux
         !=================================================
         flux_1 = (mom1_bc * u_bc) + p_bc
         flux_2 = (mom1_bc * v_bc) 
@@ -158,16 +164,23 @@ contains
         call worker%integrate_boundary_condition('Momentum-1','Advection',flux_1,flux_2,flux_3)
 
         !=================================================
-        ! y-momentum flux
+        ! Momentum-2 flux
         !=================================================
         flux_1 = (mom2_bc * u_bc) 
         flux_2 = (mom2_bc * v_bc) + p_bc
         flux_3 = (mom2_bc * w_bc) 
 
+        ! Convert to tangential to angular momentum flux
+        if (worker%coordinate_system() == 'Cylindrical') then
+            flux_1 = flux_1 * r
+            flux_2 = flux_2 * r
+            flux_3 = flux_3 * r
+        end if
+
         call worker%integrate_boundary_condition('Momentum-2','Advection',flux_1,flux_2,flux_3)
 
         !=================================================
-        ! z-momentum flux
+        ! Momentum-3 flux
         !=================================================
         flux_1 = (mom3_bc * u_bc) 
         flux_2 = (mom3_bc * v_bc) 

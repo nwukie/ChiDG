@@ -81,7 +81,7 @@ contains
             dissipation
 
         real(rk),   dimension(:), allocatable   ::  &
-            unorm_1, unorm_2, unorm_3, grid_vel_n
+            unorm_1, unorm_2, unorm_3, grid_vel_n, r
 
         real(rk),   dimension(:,:), allocatable :: grid_vel
 
@@ -105,6 +105,15 @@ contains
         density_nutilde_m = worker%get_field('Density * NuTilde', 'value', 'face interior')
         density_nutilde_p = worker%get_field('Density * NuTilde', 'value', 'face exterior')
 
+
+        !
+        ! Account for cylindrical. Get tangential momentum from angular momentum.
+        !
+        if (worker%coordinate_system() == 'Cylindrical') then
+            r = worker%coordinate('1','face interior') 
+            mom2_m = mom2_m / r
+            mom2_p = mom2_p / r
+        end if
 
         
         !

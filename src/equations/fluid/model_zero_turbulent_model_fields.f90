@@ -1,8 +1,7 @@
-module type_reynolds_analogy
+module model_zero_turbulent_model_fields
 #include <messenger.h>
     use mod_kinds,          only: rk
-    use mod_constants,      only: THREE, TWO
-    use mod_fluid,          only: cp
+    use mod_constants,      only: ZERO
     use type_model,         only: model_t
     use type_chidg_worker,  only: chidg_worker_t
     use DNAD_D
@@ -12,25 +11,25 @@ module type_reynolds_analogy
     
 
 
-    !>  Reynolds' Analogy used to compute thermal conductivity.
+    !>  Provide zero-values for turbulent model fields, implying laminar flow.
     !!
     !!  Model Fields:
-    !!      - Thermal Conductivity
+    !!      - Turbulent Viscosity
+    !!      - Second Coefficient of Turbulent Viscosity
+    !!      - Turbulent Thermal Conductivity
     !!
     !!  @author Nathan A. Wukie
     !!  @date   12/9/2016
     !!
     !---------------------------------------------------------------------------------------
-    type, extends(model_t)  :: reynolds_analogy_t
-
-        real(rk)    :: Pr = 0.72_rk
+    type, extends(model_t)  :: zero_turbulent_model_fields_t
 
     contains
 
         procedure   :: init
         procedure   :: compute
 
-    end type reynolds_analogy_t
+    end type zero_turbulent_model_fields_t
     !***************************************************************************************
 
 
@@ -49,12 +48,14 @@ contains
     !!
     !---------------------------------------------------------------------------------------
     subroutine init(self)   
-        class(reynolds_analogy_t), intent(inout)   :: self
+        class(zero_turbulent_model_fields_t), intent(inout)   :: self
 
-        call self%set_name('Reynolds Analogy')
+        call self%set_name('Zero Turbulent Model Fields')
         call self%set_dependency('f(Q-)')
 
-        call self%add_model_field('Laminar Thermal Conductivity')
+        call self%add_model_field('Turbulent Viscosity')
+        call self%add_model_field('Second Coefficient of Turbulent Viscosity')
+        call self%add_model_field('Turbulent Thermal Conductivity')
 
 
     end subroutine init
@@ -72,28 +73,24 @@ contains
     !!
     !--------------------------------------------------------------------------------------
     subroutine compute(self,worker)
-        class(reynolds_analogy_t),  intent(in)      :: self
-        type(chidg_worker_t),       intent(inout)   :: worker
+        class(zero_turbulent_model_fields_t), intent(in)      :: self
+        type(chidg_worker_t),                   intent(inout)   :: worker
 
-        type(AD_D), dimension(:),   allocatable :: viscosity, thermal_conductivity
-
-
-        !
-        ! Interpolate solution to quadrature nodes
-        !
-        viscosity = worker%get_field('Laminar Viscosity','value')
+        type(AD_D), dimension(:),   allocatable :: vals
 
 
         !
-        ! Stokes' Hypothesis for the second coefficient of viscosity
+        ! Get field to set derivative arrays. Set mut to zero.
         !
-        thermal_conductivity = cp * viscosity / self%Pr
-
+        vals = worker%get_field('Density','value')
+        vals = ZERO
 
         !
         ! Contribute second coefficient of viscosity
         !
-        call worker%store_model_field('Laminar Thermal Conductivity', 'value', thermal_conductivity)
+        call worker%store_model_field('Turbulent Viscosity',                       'value', vals)
+        call worker%store_model_field('Second Coefficient of Turbulent Viscosity', 'value', vals)
+        call worker%store_model_field('Turbulent Thermal Conductivity',            'value', vals)
 
 
     end subroutine compute
@@ -102,4 +99,4 @@ contains
 
 
 
-end module type_reynolds_analogy
+end module model_zero_turbulent_model_fields

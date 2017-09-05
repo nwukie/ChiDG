@@ -92,7 +92,6 @@ contains
 
         real(rk),   allocatable, dimension(:)   :: r
 
-        type(AD_D), allocatable                 :: flux_ref(:,:)
 
         !
         ! Interpolate solution to quadrature nodes
@@ -107,13 +106,9 @@ contains
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
-        r = worker%coordinate('1','volume')
         if (worker%coordinate_system() == 'Cylindrical') then
+            r = worker%coordinate('1','volume')
             mom2 = mom2 / r
-        else if (worker%coordinate_system() == 'Cartesian') then
-
-        else
-            call chidg_signal(FATAL,"inlet, bad coordinate system")
         end if
 
 
@@ -184,6 +179,13 @@ contains
         flux_1 = -tau_12
         flux_2 = -tau_22
         flux_3 = -tau_23
+
+        ! Convert to tangential to angular momentum flux
+        if (worker%coordinate_system() == 'Cylindrical') then
+            flux_1 = flux_1 * r
+            flux_2 = flux_2 * r
+            flux_3 = flux_3 * r
+        end if
 
         call worker%integrate_volume_flux('Momentum-2','Diffusion',flux_1,flux_2,flux_3)
 

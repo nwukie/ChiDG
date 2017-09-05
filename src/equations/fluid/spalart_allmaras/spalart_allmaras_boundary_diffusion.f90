@@ -89,8 +89,6 @@ contains
             flux_1_p, flux_2_p, flux_3_p
 
 
-
-
         !
         ! Interpolate solution to quadrature nodes
         !

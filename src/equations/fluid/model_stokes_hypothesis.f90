@@ -1,4 +1,4 @@
-module type_stokes_hypothesis
+module model_stokes_hypothesis
 #include <messenger.h>
     use mod_kinds,          only: rk
     use mod_constants,      only: THREE, TWO
@@ -100,4 +100,4 @@ contains
 
 
 
-end module type_stokes_hypothesis
+end module model_stokes_hypothesis

@@ -113,21 +113,6 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        !density_m = worker%get_primary_field_face('Density'   , 'value', 'face interior')
-        !density_p = worker%get_primary_field_face('Density'   , 'value', 'face exterior')
-
-        !mom1_m    = worker%get_primary_field_face('Momentum-1', 'value', 'face interior')
-        !mom1_p    = worker%get_primary_field_face('Momentum-1', 'value', 'face exterior')
-
-        !mom2_m    = worker%get_primary_field_face('Momentum-2', 'value', 'face interior')
-        !mom2_p    = worker%get_primary_field_face('Momentum-2', 'value', 'face exterior')
-
-        !mom3_m    = worker%get_primary_field_face('Momentum-3', 'value', 'face interior')
-        !mom3_p    = worker%get_primary_field_face('Momentum-3', 'value', 'face exterior')
-
-        !energy_m  = worker%get_primary_field_face('Energy'    , 'value', 'face interior')
-        !energy_p  = worker%get_primary_field_face('Energy'    , 'value', 'face exterior')
-
         density_m = worker%get_field('Density'   , 'value', 'face interior')
         density_p = worker%get_field('Density'   , 'value', 'face exterior')
 

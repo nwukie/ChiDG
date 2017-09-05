@@ -74,6 +74,7 @@ contains
             density, mom1, mom2, mom3, density_nutilde,     &
             u, v, w, invdensity, flux_1, flux_2, flux_3
 
+        real(rk),   allocatable,    dimension(:)    :: r
 
         !
         ! Interpolate solution to quadrature nodes
@@ -83,6 +84,16 @@ contains
         mom2            = worker%get_field('Momentum-2',        'value', 'boundary')
         mom3            = worker%get_field('Momentum-3',        'value', 'boundary')
         density_nutilde = worker%get_field('Density * NuTilde', 'value', 'boundary')
+
+
+        !
+        ! Account for cylindrical. Get tangential momentum from angular momentum.
+        !
+        if (worker%coordinate_system() == 'Cylindrical') then
+            r = worker%coordinate('1','boundary') 
+            mom2 = mom2 / r
+        end if
+
 
 
         !

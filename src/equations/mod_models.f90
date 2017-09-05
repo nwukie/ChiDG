@@ -5,17 +5,17 @@ module mod_models
     use type_model_wrapper,     only: model_wrapper_t
     use type_model,             only: model_t
 
-    use type_ideal_gas,                                 only: ideal_gas_t
-    use type_shear_stress,                              only: shear_stress_t
-    use type_model_vorticity,                           only: model_vorticity_t
-    use type_temperature_gradient,                      only: temperature_gradient_t
-    use type_sutherlands_law,                           only: sutherlands_law_t
-    use type_constant_viscosity,                        only: constant_viscosity_t
-    use type_stokes_hypothesis,                         only: stokes_hypothesis_t
-    use type_reynolds_analogy,                          only: reynolds_analogy_t
-    use type_zero_turbulent_model_fields,               only: zero_turbulent_model_fields_t
-    use type_spalart_allmaras_turbulent_model_fields,   only: spalart_allmaras_turbulent_model_fields_t
-    use type_fluid_wave_speed,                          only: fluid_wave_speed_t
+    use model_ideal_gas,                                only: ideal_gas_t
+    use model_shear_stress,                             only: shear_stress_t
+    use model_vorticity,                                only: vorticity_t
+    use model_temperature_gradient,                     only: temperature_gradient_t
+    use model_sutherlands_law,                          only: sutherlands_law_t
+    use model_constant_viscosity,                       only: constant_viscosity_t
+    use model_stokes_hypothesis,                        only: stokes_hypothesis_t
+    use model_reynolds_analogy,                         only: reynolds_analogy_t
+    use model_zero_turbulent_model_fields,              only: zero_turbulent_model_fields_t
+    use model_spalart_allmaras_turbulent_model_fields,  only: spalart_allmaras_turbulent_model_fields_t
+    use model_fluid_wave_speed,                         only: fluid_wave_speed_t
 
     use model_wall_distance,                            only: wall_distance_m
 
@@ -253,7 +253,7 @@ contains
         !
         type(ideal_gas_t)                               :: IDEAL_GAS
         type(shear_stress_t)                            :: SHEAR_STRESS
-        type(model_vorticity_t)                         :: VORTICITY
+        type(vorticity_t)                               :: VORTICITY
         type(temperature_gradient_t)                    :: TEMPERATURE_GRADIENT
         type(sutherlands_law_t)                         :: SUTHERLANDS_LAW
         type(constant_viscosity_t)                      :: CONSTANT_VISCOSITY

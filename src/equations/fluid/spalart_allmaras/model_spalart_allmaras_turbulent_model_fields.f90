@@ -1,13 +1,13 @@
-module type_spalart_allmaras_turbulent_model_fields
+module model_spalart_allmaras_turbulent_model_fields
 #include <messenger.h>
     use mod_kinds,              only: rk
     use mod_constants,          only: ZERO, HALF, ONE, TWO, THREE
     use mod_fluid,              only: cp
+    use mod_spalart_allmaras,   only: SA_c_v1, SA_Pr_t
     use type_model,             only: model_t
     use type_chidg_worker,      only: chidg_worker_t
     use DNAD_D
 
-    use mod_spalart_allmaras,   only: SA_c_v1, SA_Pr_t
     implicit none
 
 
@@ -25,8 +25,6 @@ module type_spalart_allmaras_turbulent_model_fields
     !!
     !---------------------------------------------------------------------------------------
     type, extends(model_t)  :: spalart_allmaras_turbulent_model_fields_t
-
-        !real(rk)    :: Cp = 1003._rk
 
     contains
 
@@ -144,4 +142,4 @@ contains
 
 
 
-end module type_spalart_allmaras_turbulent_model_fields
+end module model_spalart_allmaras_turbulent_model_fields

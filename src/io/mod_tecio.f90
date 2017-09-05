@@ -185,8 +185,6 @@ contains
 
         eqn_ID = data%mesh%domain(1)%eqn_ID
         numvars = 3 + data%eqnset(eqn_ID)%prop%nio_fields()
-        !io_ID = data%mesh%domain(1)%io_ID
-        !numvars = data%io(io_ID)%prop%nio_fields()
 
 
         !

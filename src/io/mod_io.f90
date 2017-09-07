@@ -96,7 +96,10 @@ module mod_io
 
     namelist /io/                       nwrite,                &
                                         initial_write,         &
-                                        final_write
+                                        final_write,           &
+                                        verbosity
+
+    namelist /initial/                  initial_fields
 
 contains
 
@@ -119,42 +122,42 @@ contains
         logical :: file_exists
         integer :: file_unit, msg
 
-        namelist /files/                    gridfile,              &
-                                            solutionfile_in,       &
-                                            solutionfile_out
-
-        namelist /space/                    basis,                 &
-                                            solution_order,        &
-                                            spacedim
-
-        namelist /quadrature/               gq_rule
-
-
-        namelist /time/                     time_integrator,       &
-                                            dt,                    &
-                                            time_steps,            &
-                                            ttol,                  &
-                                            ntime_instances,       &
-                                            frequencies
-
-
-        namelist /nonlinear_solve/          nonlinear_solver,      &
-                                            nonlinear_steps,       &
-                                            norders_reduction,     &
-                                            cfl0,                  &
-                                            ntol
-
-        namelist /linear_solve/             linear_solver,         &
-                                            ltol,                  &
-                                            preconditioner
-
-
-        namelist /io/                       nwrite,                &
-                                            initial_write,         &
-                                            final_write,           &
-                                            verbosity
-
-        namelist /initial/                  initial_fields
+!        namelist /files/                    gridfile,              &
+!                                            solutionfile_in,       &
+!                                            solutionfile_out
+!
+!        namelist /space/                    basis,                 &
+!                                            solution_order,        &
+!                                            spacedim
+!
+!        namelist /quadrature/               gq_rule
+!
+!
+!        namelist /time/                     time_integrator,       &
+!                                            dt,                    &
+!                                            time_steps,            &
+!                                            ttol,                  &
+!                                            ntime_instances,       &
+!                                            frequencies
+!
+!
+!        namelist /nonlinear_solve/          nonlinear_solver,      &
+!                                            nonlinear_steps,       &
+!                                            norders_reduction,     &
+!                                            cfl0,                  &
+!                                            ntol
+!
+!        namelist /linear_solve/             linear_solver,         &
+!                                            ltol,                  &
+!                                            preconditioner
+!
+!
+!        namelist /io/                       nwrite,                &
+!                                            initial_write,         &
+!                                            final_write,           &
+!                                            verbosity
+!
+!        namelist /initial/                  initial_fields
 
 
         !
@@ -222,18 +225,21 @@ contains
     !----------------------------------------------------------------------------------------
     subroutine write_namelist()
 
+        integer :: file_unit
+
         !
         ! Write default namelist input for parameter initialization
         !
-        open(unit=7,form='formatted',file="chidg.nml")
-        write(unit=7, nml=files)
-        write(unit=7, nml=space)
-        write(unit=7, nml=quadrature)
-        write(unit=7, nml=time)
-        write(unit=7, nml=nonlinear_solve)
-        write(unit=7, nml=linear_solve)
-        write(unit=7, nml=io)
-        close(unit=7)
+        open(newunit=file_unit,form='formatted',file="chidg.nml")
+        write(unit=file_unit, nml=files)
+        write(unit=file_unit, nml=space)
+        write(unit=file_unit, nml=quadrature)
+        write(unit=file_unit, nml=time)
+        write(unit=file_unit, nml=nonlinear_solve)
+        write(unit=file_unit, nml=linear_solve)
+        write(unit=file_unit, nml=io)
+        write(unit=file_unit, nml=initial)
+        close(unit=file_unit)
 
 
     end subroutine write_namelist

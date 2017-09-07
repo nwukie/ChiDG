@@ -1,7 +1,8 @@
 module type_tutorial
 #include <messenger.h>
-    use mod_kinds,          only: rk, ik
-    use type_tutorial_step, only: tutorial_step_t
+    use mod_kinds,                  only: rk, ik
+    use type_tutorial_step,         only: tutorial_step_t
+    use type_tutorial_step_wrapper, only: tutorial_step_wrapper_t
     implicit none
 
 
@@ -19,12 +20,13 @@ module type_tutorial
         character(:),   allocatable         :: tags
         character(:),   allocatable         :: files
 
-        type(tutorial_step_t),  allocatable ::  step(:)
+        type(tutorial_step_wrapper_t),  allocatable :: step(:)
 
     contains
 
-        procedure(self_interface),  deferred    :: print_configuration
         procedure(self_interface),  deferred    :: initialize
+        procedure(self_interface),  deferred    :: print_configuration
+        !procedure(self_interface),  deferred    :: clean_up
 
         procedure                               :: set_title
         procedure                               :: get_title
@@ -37,6 +39,7 @@ module type_tutorial
         procedure                               :: nsteps
         procedure                               :: run
         procedure                               :: stepper
+        procedure                               :: print_navigation
 
     end type tutorial_t
     !***********************************************************************
@@ -163,11 +166,12 @@ contains
         class(tutorial_t),      intent(inout)   :: self
         class(tutorial_step_t), intent(in)      :: step
 
-        integer(ik) :: step_ID
+        integer(ik) :: step_ID, ierr
 
         step_ID = self%new_step()
-        self%step(step_ID) = step 
-
+        !self%step(step_ID) = step 
+        allocate(self%step(step_ID)%item, source=step, stat=ierr)
+        if (ierr /= 0) call AllocationError
 
     end subroutine add_step
     !****************************************************************************************
@@ -184,8 +188,8 @@ contains
     function new_step(self) result(step_ID)
         class(tutorial_t),  intent(inout)   :: self
 
-        type(tutorial_step_t), allocatable  :: temp_steps(:)
-        integer(ik)                         :: step_ID, ierr
+        type(tutorial_step_wrapper_t),  allocatable :: temp_steps(:)
+        integer(ik)                                 :: step_ID, ierr
 
         !
         ! Allocate number of steps
@@ -265,19 +269,18 @@ contains
             ! Header
             if (.not. done) then
                 call execute_command_line('clear')
-                call write_line('Title:',self%get_title(), bold=.true.)
-                call write_line('Tags:',self%get_tags(), bold=.true.)
-                call write_line('Files:',self%get_files(), bold=.true.)
+                call write_line('Title:', self%get_title(), bold=.true.)
+                call write_line('Tags:',  self%get_tags(),  bold=.true.)
+                call write_line('Files:', self%get_files(), bold=.true.)
                 call self%print_configuration()
-                call write_line('Step ', step,': ',self%step(step)%get_title(), color='blue', bold=.true.)
+                call self%print_navigation()
+                call write_line('---------------------------------------------------------------------------------------', ltrim=.false., bold=.true.)
             end if
 
 
 
             ! Stepper - execute step
             call self%stepper(step,done)
-
-
 
 
 
@@ -341,12 +344,37 @@ contains
 
 
         if (.not. done) then
-            call self%step(step)%execute()
+            call write_line('Step ', step,': ',self%step(step)%item%get_title(), color='blue', bold=.true.)
+            call self%step(step)%item%execute()
         end if
 
 
     end subroutine stepper
     !****************************************************************************************
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !!
+    !---------------------------------------------------------------------------------
+    subroutine print_navigation(self)
+        class(tutorial_t),  intent(inout)   :: self
+
+        call write_line('                                                                           ',ltrim=.false.)
+        call write_line('Keyboard navigation: Forward(f-Enter), Backward(b-Enter), Quit(q-Enter)    ',ltrim=.false., bold=.true.)
+        call write_line('                                                                           ',ltrim=.false.)
+
+    end subroutine print_navigation
+    !*********************************************************************************
+
+
+
+
+
+
 
 
 

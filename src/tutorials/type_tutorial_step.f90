@@ -10,16 +10,18 @@ module type_tutorial_step
     !!
     !!
     !-----------------------------------------------------------------------------------
-    type, public :: tutorial_step_t
+    type, public, abstract :: tutorial_step_t
 
         character(:),               allocatable :: title
-        class(tutorial_action_t),   allocatable :: action
+        !class(tutorial_action_t),   allocatable :: action
 
     contains
 
-        procedure   :: set_title
-        procedure   :: get_title
-        procedure(deferred)   :: execute
+        procedure           :: execute
+        !procedure(deferred) :: execute
+
+        procedure           :: set_title
+        procedure           :: get_title
 
     end type tutorial_step_t
     !***********************************************************************************

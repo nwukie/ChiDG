@@ -516,12 +516,7 @@ install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/ DESTINATION include/chidg)
 # Update Tecplot rpath in installed executable so the user doesn't have to change their environment
 if ( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" ) 
     set(INSTALL_SNIPPET "${CMAKE_INSTALL_NAME_TOOL} -change \"@executable_path/libtecio.dylib\" \"${CMAKE_INSTALL_PREFIX}/lib/libtecio.dylib\" ${CMAKE_INSTALL_PREFIX}/bin/chidg")
-    message(STATUS ${INSTALL_SNIPPET})
     install(CODE "execute_process(COMMAND ${CMAKE_INSTALL_NAME_TOOL} -change \"@executable_path/libtecio.dylib\" \"${CMAKE_INSTALL_PREFIX}/lib/libtecio.dylib\" ${CMAKE_INSTALL_PREFIX}/bin/chidg)")
-    #install(CODE ${CMAKE_INSTALL_NAME_TOOL} -change \"@executable_path\/libtecio.dylib\" \"${CMAKE_INSTALL_PREFIX}\/lib\/libtecio.dylib\" ${CMAKE_INSTALL_PREFIX}\/bin\/chidg)
-    #install(CODE "${INSTALL_SNIPPET}")
-elseif( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )
-    #execute_process(COMMAND "chrpath 
 endif()
 
 

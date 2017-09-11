@@ -342,7 +342,7 @@ elseif( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )
     set(TECIO_LIBRARY_NAME libtecio.so)
     set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
     add_custom_target(update_tecio_install_name 
-                      COMMAND " ")
+                      COMMAND "")
     install(FILES ${TEC_ROOT}/lib/libtecio.so DESTINATION lib)
 else()
     message(SEND_ERROR "Invalid operating system detected for TecIO")
@@ -359,34 +359,6 @@ include_directories(${TECPLOT_INCLUDE_DIR})
 file(COPY        "${TECIO_LIBRARY}" 
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/bin)
 set(TECPLOT_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/bin/${TECIO_LIBRARY_NAME} "stdc++" "pthread")
-
-
-
-#set_source_files_properties(
-#  ${TECIO_LIBRARY}
-#  PROPERTIES
-#  EXTERNAL_OBJECT true
-#)
-
-#add_library(Tecplot ${TECIO_LIBRARY})
-
-#add_library(Tecplot INTERFACE)
-#target_sources(Tecplot INTERFACE ${TECIO_LIBRARY})
-#target_link_libraries(Tecplot INTERFACE "stdc++" "pthread" )
-
-#add_library(Tecplot IMPORTED INTERFACE)
-#set_property(TARGET Tecplot PROPERTY IMPORTED_LOCATION ${TECIO_LIBRARY})
-#add_library(Tecplot SHARED ${TECIO_LIBRARY})
-#target_link_libraries(Tecplot "stdc++" "pthread" )
-#set_target_properties(Tecplot PROPERTIES LINKER_LANGUAGE Fortran)
-
-
-#install(TARGETS Tecplot
-#        RUNTIME DESTINATION bin
-#        LIBRARY DESTINATION lib
-#        ARCHIVE DESTINATION lib)
-
-
 
 
 message(STATUS "    Tecplot Libraries: ")

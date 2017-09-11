@@ -333,9 +333,16 @@ message(STATUS "Tecplot Summary: ")
 # Select TecIO library based on detected OS
 if ( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" ) 
     set(TEC_ROOT ${CMAKE_SOURCE_DIR}/tecio/mac)
+    set(TECIO_LIBRARY_NAME libtecio.dylib)
+    add_custom_target(update_tecio_install_name 
+                      COMMAND ${CMAKE_INSTALL_NAME_TOOL} -id '@executable_path/libtecio.dylib' ${CMAKE_CURRENT_BINARY_DIR}/bin/libtecio.dylib)
     install(FILES ${TEC_ROOT}/lib/libtecio.dylib DESTINATION lib)
 elseif( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )
     set(TEC_ROOT ${CMAKE_SOURCE_DIR}/tecio/linux)
+    set(TECIO_LIBRARY_NAME libtecio.so)
+    set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
+    add_custom_target(update_tecio_install_name 
+                      COMMAND " ")
     install(FILES ${TEC_ROOT}/lib/libtecio.so DESTINATION lib)
 else()
     message(SEND_ERROR "Invalid operating system detected for TecIO")
@@ -344,6 +351,42 @@ endif()
 
 find_package(Tecplot REQUIRED)
 include_directories(${TECPLOT_INCLUDE_DIR})
+
+
+
+
+# Copy tecio library to build directory so it is available
+file(COPY        "${TECIO_LIBRARY}" 
+     DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/bin)
+set(TECPLOT_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/bin/${TECIO_LIBRARY_NAME} "stdc++" "pthread")
+
+
+
+#set_source_files_properties(
+#  ${TECIO_LIBRARY}
+#  PROPERTIES
+#  EXTERNAL_OBJECT true
+#)
+
+#add_library(Tecplot ${TECIO_LIBRARY})
+
+#add_library(Tecplot INTERFACE)
+#target_sources(Tecplot INTERFACE ${TECIO_LIBRARY})
+#target_link_libraries(Tecplot INTERFACE "stdc++" "pthread" )
+
+#add_library(Tecplot IMPORTED INTERFACE)
+#set_property(TARGET Tecplot PROPERTY IMPORTED_LOCATION ${TECIO_LIBRARY})
+#add_library(Tecplot SHARED ${TECIO_LIBRARY})
+#target_link_libraries(Tecplot "stdc++" "pthread" )
+#set_target_properties(Tecplot PROPERTIES LINKER_LANGUAGE Fortran)
+
+
+#install(TARGETS Tecplot
+#        RUNTIME DESTINATION bin
+#        LIBRARY DESTINATION lib
+#        ARCHIVE DESTINATION lib)
+
+
 
 
 message(STATUS "    Tecplot Libraries: ")
@@ -383,8 +426,8 @@ list(APPEND LIB_SRCS "${CMAKE_CURRENT_BINARY_DIR}/mod_kinds.f90")
 #                                         Build library
 #----------------------------------------------------------------------------------------------
 message(STATUS " ")
-#add_library(chidg-core SHARED ${LIB_SRCS})
 add_library(chidg-core STATIC ${LIB_SRCS})
+add_dependencies(chidg-core update_tecio_install_name)
 target_link_libraries(chidg-core
                       ${HDF5_LIBRARIES} ${HDF5_HL_LIBRARIES} 
                       ${LAPACK_LIBRARIES}
@@ -491,10 +534,23 @@ install(CODE
 install(TARGETS chidg chidg-core
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib)
+        ARCHIVE DESTINATION lib
+        )
 
 
 install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/ DESTINATION include/chidg)
+
+
+# Update Tecplot rpath in installed executable so the user doesn't have to change their environment
+if ( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" ) 
+    set(INSTALL_SNIPPET "${CMAKE_INSTALL_NAME_TOOL} -change \"@executable_path/libtecio.dylib\" \"${CMAKE_INSTALL_PREFIX}/lib/libtecio.dylib\" ${CMAKE_INSTALL_PREFIX}/bin/chidg")
+    message(STATUS ${INSTALL_SNIPPET})
+    install(CODE "execute_process(COMMAND ${CMAKE_INSTALL_NAME_TOOL} -change \"@executable_path/libtecio.dylib\" \"${CMAKE_INSTALL_PREFIX}/lib/libtecio.dylib\" ${CMAKE_INSTALL_PREFIX}/bin/chidg)")
+    #install(CODE ${CMAKE_INSTALL_NAME_TOOL} -change \"@executable_path\/libtecio.dylib\" \"${CMAKE_INSTALL_PREFIX}\/lib\/libtecio.dylib\" ${CMAKE_INSTALL_PREFIX}\/bin\/chidg)
+    #install(CODE "${INSTALL_SNIPPET}")
+elseif( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )
+    #execute_process(COMMAND "chrpath 
+endif()
 
 
 #----------------------------------------------------------------------------------------------

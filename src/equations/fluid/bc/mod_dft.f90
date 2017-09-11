@@ -553,7 +553,6 @@ contains
         type(AD_D),       intent(in)      :: inreal
         type(AD_D),       intent(in)      :: inimag
         integer(ik),      intent(in)      :: imode
-        !type(AD_D),       intent(in)     :: angles(:)
         real(rk),         intent(in)      :: angles(:)
         type(AD_D),       intent(inout)   :: output(:)
 
@@ -777,17 +776,14 @@ contains
     !!
     !-----------------------------------------------------------------
     subroutine idft_mode_points(ymin, periodicity, inreal, inimag, imode, points, output)
-        real(rk),         intent(in)  :: ymin
-        real(rk),         intent(in)  :: periodicity
-        type(AD_D),       intent(in)  :: inreal
-        type(AD_D),       intent(in)  :: inimag
-        integer(ik),      intent(in)  :: imode
-        !type(AD_D),       intent(in)  :: points(:)
-        real(rk),         intent(in)  :: points(:)
-        !type(AD_D),       intent(inout), allocatable  :: output(:)
-        type(AD_D),       intent(inout)  :: output(:)
+        real(rk),         intent(in)    :: ymin
+        real(rk),         intent(in)    :: periodicity
+        type(AD_D),       intent(in)    :: inreal
+        type(AD_D),       intent(in)    :: inimag
+        integer(ik),      intent(in)    :: imode
+        real(rk),         intent(in)    :: points(:)
+        type(AD_D),       intent(inout) :: output(:)
 
-        !type(AD_D)   :: angles(size(points))
         real(rk)   :: angles(size(points))
         integer      :: npts, k
 

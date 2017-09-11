@@ -15,7 +15,7 @@ find_path (TECPLOT_INCLUDE_DIR
            HINTS ${TEC_ROOT}
            PATH_SUFFIXES include
            NO_DEFAULT_PATH)
-find_library (TECPLOT_LIBRARIES
+find_library (TECIO_LIBRARY
               NAMES libtecio.a libtecio.so libtecio.dylib libtecio
               HINTS ${TEC_ROOT}
               PATH_SUFFIXES lib
@@ -23,25 +23,8 @@ find_library (TECPLOT_LIBRARIES
 
 
 #
-# Find stdc++ library used by TecIO
-#
-#find_library (CXX_STDLIBS
-#              NAMES libstdc++ libstdc++.so libstdc++.a
-#              )
-
-
-#
-# Find Threads library used by TecIO. 
-#
-#set(THREADS_PREFER_PTHREAD_FLAG ON)
-#find_package(Threads REQUIRED)
-
-
-
-#
 # Append the TECPLOT_LIBRARIES with the Threads and C++ libraries
 #
-#set(TECPLOT_LIBRARIES ${TECPLOT_LIBRARIES} Threads::Threads "stdc++" )
-set(TECPLOT_LIBRARIES ${TECPLOT_LIBRARIES} "stdc++" "pthread")
+set(TECPLOT_LIBRARIES ${TECIO_LIBRARY} "stdc++" "pthread")
 
 

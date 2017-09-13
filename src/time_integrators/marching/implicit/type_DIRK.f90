@@ -333,13 +333,13 @@ contains
                             if (     index(trim(data%eqnset(eqn_ID)%name),'FP0') /= 0) then
                                 elem_field(2:size(elem_field)) = ZERO
                             else if (index(trim(data%eqnset(eqn_ID)%name),'FP1') /= 0) then
-                                elem_field(3:size(elem_field)) = ZERO
+                                elem_field(9:size(elem_field)) = ZERO
                             else if (index(trim(data%eqnset(eqn_ID)%name),'FP2') /= 0) then
-                                elem_field(4:size(elem_field)) = ZERO
+                                elem_field(28:size(elem_field)) = ZERO
                             else if (index(trim(data%eqnset(eqn_ID)%name),'FP3') /= 0) then
-                                elem_field(5:size(elem_field)) = ZERO
+                                elem_field(65:size(elem_field)) = ZERO
                             else if (index(trim(data%eqnset(eqn_ID)%name),'FP4') /= 0) then
-                                elem_field(6:size(elem_field)) = ZERO
+                                elem_field(126:size(elem_field)) = ZERO
                             else
 
                                 ! Default, filter to piecewise constant

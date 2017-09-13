@@ -316,7 +316,8 @@ contains
             !
             do idom = 1,data%mesh%ndomains()
                 eqn_ID = data%mesh%domain(idom)%eqn_ID
-                if (trim(data%eqnset(eqn_ID)%name) == 'Filtered Euler') then
+                !if (trim(data%eqnset(eqn_ID)%name) == 'Filtered Euler') then
+                if (index(trim(data%eqnset(eqn_ID)%name),'Filtered Euler') /= 0) then
                     do ielem = 1,data%mesh%domain(idom)%nelements()
                         do ifield = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
                             
@@ -329,8 +330,22 @@ contains
                             ! Apply spatial filtering
                             !   : ZERO all but the constant mode
                             !
-                            elem_field(2:size(elem_field)) = ZERO
+                            if (     index(trim(data%eqnset(eqn_ID)%name),'FP0') /= 0) then
+                                elem_field(2:size(elem_field)) = ZERO
+                            else if (index(trim(data%eqnset(eqn_ID)%name),'FP1') /= 0) then
+                                elem_field(3:size(elem_field)) = ZERO
+                            else if (index(trim(data%eqnset(eqn_ID)%name),'FP2') /= 0) then
+                                elem_field(4:size(elem_field)) = ZERO
+                            else if (index(trim(data%eqnset(eqn_ID)%name),'FP3') /= 0) then
+                                elem_field(5:size(elem_field)) = ZERO
+                            else if (index(trim(data%eqnset(eqn_ID)%name),'FP4') /= 0) then
+                                elem_field(6:size(elem_field)) = ZERO
+                            else
 
+                                ! Default, filter to piecewise constant
+                                elem_field(2:size(elem_field)) = ZERO
+
+                            end if
 
                             !
                             ! Add the temporal contributions in the rhs

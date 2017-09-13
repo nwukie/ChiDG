@@ -8,6 +8,9 @@ add_subdirectory(geometric_conservation)
 add_lib_sources(
                 eqn_euler.f90
                 eqn_filtered_euler.f90
+                eqn_filtered_euler_FP0.f90
+                eqn_filtered_euler_FP1.f90
+                eqn_filtered_euler_FP2.f90
                 eqn_navier_stokes.f90
                 eqn_rans.f90
                 mod_fluid.f90

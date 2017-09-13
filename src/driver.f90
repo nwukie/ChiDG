@@ -44,7 +44,7 @@ program driver
     character(len=1024)                         :: chidg_action, filename, grid_file, solution_file, file_a, file_b, file_in, pattern, tutorial
     character(len=10)                           :: time_string
     character(:),                   allocatable :: command, tmp_file
-    class(function_t),              allocatable :: constant, monopole, fcn, polynomial
+    class(function_t),              allocatable :: fcn
 
 
     integer(HID_T) :: file_id, dom_id
@@ -191,11 +191,25 @@ program driver
         !   2: read initial solution from ChiDG hdf5 file
         !
         if (solutionfile_in == 'none') then
-            call create_function(constant,'constant')
-            do ifield = 1,chidg%data%mesh%domain(1)%neqns
-                call constant%set_option('val',initial_fields(ifield))
-                call chidg%data%sdata%q_in%project(chidg%data%mesh,constant,ifield)
-            end do
+            !call create_function(fcn,'constant')
+            !do ifield = 1,chidg%data%mesh%domain(1)%neqns
+            !    call fcn%set_option('val',initial_fields(ifield))
+            !    call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,ifield)
+            !end do
+
+            !call create_function(fcn,'pressure_pulse')
+            call create_function(fcn,'isentropic_vortex')
+            call fcn%set_option('ivar',1._rk)
+            call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,1)
+            call fcn%set_option('ivar',2._rk)
+            call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,2)
+            call fcn%set_option('ivar',3._rk)
+            call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,3)
+            call fcn%set_option('ivar',4._rk)
+            call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,4)
+            call fcn%set_option('ivar',5._rk)
+            call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,5)
+
 
         else
             call chidg%read_fields(solutionfile_in)

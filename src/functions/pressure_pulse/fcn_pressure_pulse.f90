@@ -1,4 +1,4 @@
-module fcn_isentropic_vortex
+module fcn_pressure_pulse
 #include <messenger.h>
     use mod_kinds,      only: rk,ik
     use mod_constants,  only: ZERO, HALF, ONE, TWO, THREE, FIVE, EIGHT, PI
@@ -25,7 +25,17 @@ module fcn_isentropic_vortex
     !!
     !!
     !-------------------------------------------------------------------------------
-    type, extends(function_t), public :: isentropic_vortex_f
+    type, extends(function_t), public :: pressure_pulse_f
+
+        real(rk)    :: x0 = 0.0_rk
+        real(rk)    :: y0 = 0.0_rk
+        real(rk)    :: z0 = 0.0_rk
+
+        real(rk)    :: uinf   = ZERO
+        real(rk)    :: vinf   = ZERO
+        real(rk)    :: winf   = ZERO
+        real(rk)    :: rhoinf = ONE
+        real(rk)    :: pinf   = ONE/1.4_rk
 
         integer(ik) :: ivar
 
@@ -34,7 +44,7 @@ module fcn_isentropic_vortex
         procedure   :: init
         procedure   :: compute
 
-    end type isentropic_vortex_f
+    end type pressure_pulse_f
     !********************************************************************************
 
 
@@ -51,12 +61,12 @@ contains
     !!
     !-------------------------------------------------------------------------
     subroutine init(self)
-        class(isentropic_vortex_f),  intent(inout)  :: self
+        class(pressure_pulse_f),  intent(inout)  :: self
 
         !
         ! Set function name
         !
-        call self%set_name("isentropic_vortex")
+        call self%set_name("pressure_pulse")
 
         call self%add_option('ivar', 1._rk)
 
@@ -78,7 +88,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     impure elemental function compute(self,time,coord) result(val)
-        class(isentropic_vortex_f),     intent(inout)  :: self
+        class(pressure_pulse_f),     intent(inout)  :: self
         real(rk),                       intent(in)  :: time
         type(point_t),                  intent(in)  :: coord
 
@@ -87,42 +97,25 @@ contains
 
         real(rk)    :: x, y, z, r, &
                        u, v, w, &
-                       b, rho, p, drho, dp, gam, theta, uinf, vinf, dumax, du, dv
+                       b, rho, p, drho, dp, gam
 
-        x     = coord%c1_
-        y     = coord%c2_
-        z     = coord%c3_
-        r     = sqrt(x*x + y*y)
-        theta = atan2(y,x)
-
-
-
-        !
-        ! Base parameters
-        !
+        x   = coord%c1_
+        y   = coord%c2_
+        z   = coord%c3_
+        b   = 0.01_rk
         gam = 1.4_rk
-        uinf = 0.5_rk
-        vinf = 0._rk
-        dumax = 0.5_rk*uinf
-        b = 0.2_rk
-
-        
-        !
-        ! Perturbations
-        !
-        drho = (ONE - HALF*(gam - ONE)*dumax*dumax*exp(ONE - (r*r/(b*b))))**(ONE/(gam-ONE))
-        dp   = (ONE/gam)*drho**(gam)
-        du   = -(dumax/b)*r*exp(HALF*(ONE - (r*r/(b*b)))) * sin(theta)
-        dv   =  (dumax/b)*r*exp(HALF*(ONE - (r*r/(b*b)))) * cos(theta)
 
 
-        !
-        ! Total quantities
-        !
-        rho = drho
-        p   = dp
-        u   = uinf + du
-        v   = vinf + dv
+        !r = x
+        r = sqrt(x*x + y*y)
+        drho = 0.1_rk * exp(-(log(TWO)/b)*r*r)
+        dp   = drho/gam
+
+
+        rho = self%rhoinf + drho
+        p   = self%pinf   + dp
+        u   = ZERO
+        v   = ZERO
         w   = ZERO
 
 
@@ -136,15 +129,15 @@ contains
 
             ! RHO-U
             case (2)
-                val = rho * u
+                val = ZERO
 
             ! RHO-V
             case (3)
-                val = rho * v
+                val = ZERO
 
             ! RHO-W
             case (4)
-                val = rho * w
+                val = ZERO
 
             ! RHO-E
             case (5)
@@ -156,4 +149,4 @@ contains
     !**********************************************************************************
 
 
-end module fcn_isentropic_vortex
+end module fcn_pressure_pulse

@@ -200,7 +200,8 @@ contains
         integer(ik),    parameter   :: nstage = 3
         type(chidg_vector_t)        :: dq(nstage), q_temp, q_n, residual
         real(rk)                    :: t_n, force(3), work
-        integer(ik)                 :: istage, jstage, myunit
+        real(rk),   allocatable     :: elem_field(:)
+        integer(ik)                 :: istage, jstage, myunit, idom, ielem, ifield, eqn_ID
         logical                     :: exists
 
         type(DIRK_solver_controller_t),    save    :: solver_controller
@@ -237,7 +238,6 @@ contains
         select type(associate_name => self%system)
             type is (assemble_DIRK_t)
                 associate_name%q_n = data%sdata%q
-
         end select
 
 
@@ -307,6 +307,48 @@ contains
                 dq(istage) = (q - q_temp)/alpha
 
             end do
+
+
+
+
+            !
+            ! Filter
+            !
+            do idom = 1,data%mesh%ndomains()
+                eqn_ID = data%mesh%domain(idom)%eqn_ID
+                if (trim(data%eqnset(eqn_ID)%name) == 'Filtered Euler') then
+                    do ielem = 1,data%mesh%domain(idom)%nelements()
+                        do ifield = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
+                            
+                            !
+                            ! Get solution field
+                            !
+                            elem_field = data%sdata%q%dom(idom)%vecs(ielem)%getvar(ifield,1)
+
+                            !
+                            ! Apply spatial filtering
+                            !   : ZERO all but the constant mode
+                            !
+                            elem_field(2:size(elem_field)) = ZERO
+
+
+                            !
+                            ! Add the temporal contributions in the rhs
+                            !
+                            call data%sdata%q%dom(idom)%vecs(ielem)%setvar(ifield,1,elem_field)
+
+
+
+                        end do !ifield
+                    end do !ielem
+                end if
+            end do !idom
+
+
+
+
+
+
 
 
             !

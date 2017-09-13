@@ -21,6 +21,7 @@ module mod_equations
     use eqn_scalar_diffusion,               only: scalar_diffusion
     use eqn_dual_linear_advection,          only: dual_linear_advection
     use eqn_euler,                          only: euler 
+    use eqn_filtered_euler,                 only: filtered_euler 
     use eqn_navier_stokes,                  only: navier_stokes
     use eqn_rans,                           only: rans
     use eqn_wall_distance,                  only: wall_distance
@@ -113,6 +114,7 @@ contains
         type(scalar_diffusion)              :: scalar_diffusion_builder
         type(dual_linear_advection)         :: dual_linear_advection_builder
         type(euler)                         :: euler_builder
+        type(filtered_euler)                :: filtered_euler_builder
         type(navier_stokes)                 :: navier_stokes_builder
         type(rans)                          :: rans_builder
         type(wall_distance)                 :: wall_distance_builder
@@ -132,6 +134,7 @@ contains
             call equation_set_factory%register(scalar_diffusion_builder%build('default'))
             call equation_set_factory%register(dual_linear_advection_builder%build('default'))
             call equation_set_factory%register(euler_builder%build('default'))
+            call equation_set_factory%register(filtered_euler_builder%build('default'))
             call equation_set_factory%register(navier_stokes_builder%build('default'))
             call equation_set_factory%register(rans_builder%build('default'))
             call equation_set_factory%register(wall_distance_builder%build('default'))

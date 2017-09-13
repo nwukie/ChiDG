@@ -122,8 +122,9 @@ module type_domain
         procedure,  public  :: get_send_procs_local     ! Return proc ranks sending neighbor data to
         procedure,  public  :: get_send_procs_chimera   ! Return proc ranks sending chimera data to
 
-        procedure,  public  :: get_nelements_global
-        procedure,  public  :: get_nelements_local
+        procedure,  public  :: get_nelements_global             ! Return number of elements in the global domain
+        procedure,  public  :: get_nelements_local              ! Return number of elements in the processor-local domain
+        procedure,  public  :: nelements => get_nelements_local ! Included for framework consistency
 
         final               :: destructor
 

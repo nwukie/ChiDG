@@ -5,7 +5,6 @@ module euler_roe_operator
     use type_properties,        only: properties_t
     use type_chidg_worker,      only: chidg_worker_t
     use DNAD_D
-    use ieee_arithmetic,        only: ieee_is_nan
     implicit none
 
 

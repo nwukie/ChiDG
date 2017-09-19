@@ -1,7 +1,7 @@
 module bc_state_inlet_total
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ONE, TWO
+    use mod_constants,          only: ONE, TWO, ZERO, HALF
     use mod_fluid,              only: Rgas, cp, gam
     use type_bc_state,          only: bc_state_t
     use type_chidg_worker,      only: chidg_worker_t
@@ -113,6 +113,8 @@ contains
 
         real(rk),       allocatable, dimension(:)   ::  &
             TT, n1, n2, n3, nmag, alpha, r, PT
+
+        real(rk)    :: K0, u_x
             
         integer(ik) :: ierr, igq
 
@@ -144,6 +146,7 @@ contains
 
 
 
+
         !
         ! Interpolate interior solution to quadrature nodes
         !
@@ -165,7 +168,7 @@ contains
 
         grad1_mom2_m    = worker%get_field('Momentum-2','grad1', 'face interior')
         grad2_mom2_m    = worker%get_field('Momentum-2','grad2', 'face interior')
-        grad3_mom3_m    = worker%get_field('Momentum-2','grad3', 'face interior')
+        grad3_mom2_m    = worker%get_field('Momentum-2','grad3', 'face interior')
 
         grad1_mom3_m    = worker%get_field('Momentum-3','grad1', 'face interior')
         grad2_mom3_m    = worker%get_field('Momentum-3','grad2', 'face interior')
@@ -188,11 +191,27 @@ contains
 
 
         !
+        ! Compute normal vector
+        !
+        K0 = 10._rk
+        u_x = 40._rk
+        alpha = atan2(K0/r,u_x)
+        
+        n1 = ZERO
+        n2 = sin(alpha)
+        n3 = cos(alpha)
+
+
+
+
+
+        !
         ! Compute velocity components
         !
         u_m = mom1_m/density_m
         v_m = mom2_m/density_m
         w_m = mom3_m/density_m
+
 
 
         !
@@ -225,6 +244,7 @@ contains
         density_bc = p_bc/(T_bc*Rgas)
 
 
+
         !
         ! Compute bc momentum
         !
@@ -236,7 +256,7 @@ contains
         !
         ! Compute bc energy
         !
-        energy_bc = p_bc/(gam - ONE) + (density_bc/TWO)*( (u_bc*u_bc) + (v_bc*v_bc) + (w_bc*w_bc) )
+        energy_bc = p_bc/(gam - ONE) + HALF*((mom1_bc*mom1_bc) + (mom2_bc*mom2_bc) + (mom3_bc*mom3_bc))/density_bc
 
 
         !
@@ -245,6 +265,7 @@ contains
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_bc = mom2_bc * r
         end if
+
 
 
 
@@ -263,11 +284,11 @@ contains
         call worker%store_bc_state('Density'   , grad1_density_m, 'grad1')
         call worker%store_bc_state('Density'   , grad2_density_m, 'grad2')
         call worker%store_bc_state('Density'   , grad3_density_m, 'grad3')
-                                                
+
         call worker%store_bc_state('Momentum-1', grad1_mom1_m,    'grad1')
         call worker%store_bc_state('Momentum-1', grad2_mom1_m,    'grad2')
         call worker%store_bc_state('Momentum-1', grad3_mom1_m,    'grad3')
-                                                
+
         call worker%store_bc_state('Momentum-2', grad1_mom2_m,    'grad1')
         call worker%store_bc_state('Momentum-2', grad2_mom2_m,    'grad2')
         call worker%store_bc_state('Momentum-2', grad3_mom2_m,    'grad3')

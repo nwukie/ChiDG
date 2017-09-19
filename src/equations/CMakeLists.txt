@@ -5,6 +5,9 @@ add_subdirectory(wall_distance)
 add_subdirectory(mesh_motion)
 add_subdirectory(artificial_viscosity)
 add_subdirectory(HB_test_cases)
+add_subdirectory(radial_angular_equilibrium)
+add_subdirectory(radial_angular_combined)
+add_subdirectory(tangential_momentum)
 
 
 #add_subdirectory(PrimitiveLinearizedEuler)

@@ -221,7 +221,7 @@ contains
                         receiver%ielement_l = mesh%domain(idom)%chimera%recv(ichimera_face)%ielement_l
                         receiver%iface      = mesh%domain(idom)%chimera%recv(ichimera_face)%iface
 
-                        call write_line('   Face ', ichimera_face,' of ',mesh%domain(idom)%chimera%nreceivers(), delimiter='  ')
+                        call write_line('   Face ', ichimera_face,' of ',mesh%domain(idom)%chimera%nreceivers(), '      (domain,element,face) = ', receiver%idomain_g, receiver%ielement_g, receiver%iface, delimiter='  ')
 
                         !
                         ! Loop through quadrature nodes on Chimera face and find donors
@@ -240,7 +240,7 @@ contains
                             !
                             offset = get_periodic_offset(mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface))
 
-                            gq_node = gq_node + offset
+                            !gq_node = gq_node + offset
 
 
                             searching = .true.
@@ -248,6 +248,7 @@ contains
 
                             ! Send gq node physical coordinates
                             call MPI_BCast(gq_node,3,MPI_REAL8, iproc, ChiDG_COMM, ierr)
+                            call MPI_BCast(offset, 3,MPI_REAL8, iproc, ChiDG_COMM, ierr)
 
                             ! Send receiver indices
                             receiver_indices(1) = receiver%idomain_g
@@ -262,7 +263,7 @@ contains
                             !
                             ! Call routine to find LOCAL gq donor for current node
                             !
-                            call find_gq_donor(mesh,point_t(gq_node), receiver, donor, donor_coord, donor_found, donor_volume=local_vol)
+                            call find_gq_donor(mesh,point_t(gq_node), point_t(offset), receiver, donor, donor_coord, donor_found, donor_volume=local_vol)
 
                             local_domain_g = 0
                             local_donor = .false.
@@ -443,6 +444,7 @@ contains
                     ! Receive gq node physical coordinates from iproc
                     !
                     call MPI_BCast(gq_node,3,MPI_REAL8, iproc, ChiDG_COMM, ierr)
+                    call MPI_BCast(offset, 3,MPI_REAL8, iproc, ChiDG_COMM, ierr)
 
                     
                     !
@@ -460,7 +462,7 @@ contains
                     !
                     ! Try to find donor
                     !
-                    call find_gq_donor(mesh,point_t(gq_node),receiver,donor,donor_coord, donor_found, donor_volume=donor_vol)
+                    call find_gq_donor(mesh,point_t(gq_node),point_t(offset),receiver,donor,donor_coord, donor_found, donor_volume=donor_vol)
 
                     
                     !
@@ -706,9 +708,10 @@ contains
     !!                                      multiple are available.
     !!
     !-----------------------------------------------------------------------------------------------------------------------
-    subroutine find_gq_donor(mesh,gq_node,receiver_face,donor_element,donor_coordinate,donor_found,donor_volume)
+    subroutine find_gq_donor(mesh,gq_node,offset,receiver_face,donor_element,donor_coordinate,donor_found,donor_volume)
         type(mesh_t),               intent(in)              :: mesh
         type(point_t),              intent(in)              :: gq_node
+        type(point_t),              intent(in)              :: offset
         type(face_info_t),          intent(in)              :: receiver_face
         type(element_info_t),       intent(inout)           :: donor_element
         real(rk),                   intent(inout)           :: donor_coordinate(3)
@@ -725,7 +728,7 @@ contains
                                    xmin, xmax, ymin, ymax, zmin, zmax,                      &
                                    xcenter_recv, ycenter_recv, zcenter_recv
 
-        real(rk)                :: gq_comp(3)
+        real(rk)                :: donor_comp(3), recv_comp(3), search1, search2, search3, offset1, offset2, offset3
         type(ivector_t)         :: candidate_domains_g, candidate_domains_l, candidate_elements_g, candidate_elements_l
         type(ivector_t)         :: donors
         type(rvector_t)         :: donors_xi, donors_eta, donors_zeta
@@ -733,12 +736,22 @@ contains
         logical                 :: contained = .false.
         logical                 :: receiver  = .false.
         logical                 :: node_found = .false.
+        logical                 :: node_self = .false.
 
 
 
         xgq = gq_node%c1_
         ygq = gq_node%c2_
         zgq = gq_node%c3_
+
+        offset1 = offset%c1_
+        offset2 = offset%c2_
+        offset3 = offset%c3_
+
+        search1 = xgq + offset1
+        search2 = ygq + offset2
+        search3 = zgq + offset3
+
 
 
         !
@@ -785,20 +798,21 @@ contains
                 !
                 ! Test if gq_node is contained within the bounding coordinates
                 !
-                contained = ( (xmin < xgq) .and. (xgq < xmax ) .and. &
-                              (ymin < ygq) .and. (ygq < ymax ) .and. &
-                              (zmin < zgq) .and. (zgq < zmax ) )
+                contained = ( (xmin < search1) .and. (search1 < xmax ) .and. &
+                              (ymin < search2) .and. (search2 < ymax ) .and. &
+                              (zmin < search3) .and. (search3 < zmax ) )
 
-                !
-                ! Make sure that we arent adding the receiver element itself as a potential donor
-                !
-                receiver = ( (idomain_g == receiver_face%idomain_g) .and. (ielement_g == receiver_face%ielement_g) )
+                !!
+                !! Make sure that we arent adding the receiver element itself as a potential donor
+                !!
+                !receiver = ( (idomain_g == receiver_face%idomain_g) .and. (ielement_g == receiver_face%ielement_g) )
 
 
                 !
                 ! If the node was within the bounding coordinates, flag the element as a potential donor
                 !
-                if (contained .and. (.not. receiver)) then
+                !if (contained .and. (.not. receiver)) then
+                if (contained) then
                     call candidate_domains_g%push_back(idomain_g)
                     call candidate_domains_l%push_back(idomain_l)
                     call candidate_elements_g%push_back(ielement_g)
@@ -829,16 +843,34 @@ contains
             !
             ! Try to find donor (xi,eta,zeta) coordinates for receiver (xgq,ygq,zgq)
             !
-            gq_comp = mesh%domain(idomain_l)%elems(ielement_l)%computational_point([xgq,ygq,zgq])    ! Newton's method routine
-            node_found = (any(ieee_is_nan(gq_comp)) .eqv. .false.)
+            donor_comp = mesh%domain(idomain_l)%elems(ielement_l)%computational_point([search1,search2,search3])    ! Newton's method routine
 
-            ! Add donor if gq_comp is valid
-            if ( node_found ) then
+
+            !node_found = (any(ieee_is_nan(gq_comp)) .eqv. .false.)
+
+            ! Node is not nan
+            node_found = (any(ieee_is_nan(donor_comp)) .eqv. .false.) 
+
+            ! Node is not self: could be periodic, so same element is okay, but we don't want the same node
+            if ( (idomain_g == receiver_face%idomain_g) .and. (ielement_g == receiver_face%ielement_g) ) then
+                recv_comp  = mesh%domain(idomain_l)%elems(ielement_l)%computational_point([xgq, ygq, zgq])
+                node_self = (abs(sum(recv_comp - donor_comp)) < 1.e-3_rk)
+            else
+                node_self = .false.
+            end if
+
+            !node_self = ((idomain_g == receiver_face%idomain_g) .and. (ielement_g == receiver_face%ielement_g)) .and. &
+            !            (abs(sum(recv_comp - donor_comp)) < 1.e-3_rk)
+
+
+
+            ! Add donor if donor_comp is valid
+            if ( node_found .and. (.not. node_self)) then
                 ndonors = ndonors + 1
                 call donors%push_back(icandidate)
-                call donors_xi%push_back(  gq_comp(1))
-                call donors_eta%push_back( gq_comp(2))
-                call donors_zeta%push_back(gq_comp(3))
+                call donors_xi%push_back(  donor_comp(1))
+                call donors_eta%push_back( donor_comp(2))
+                call donors_zeta%push_back(donor_comp(3))
                 !exit
             end if
 

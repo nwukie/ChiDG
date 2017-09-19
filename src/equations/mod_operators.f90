@@ -77,6 +77,29 @@ module mod_operators
     use GCL_bc_operator,                             only: GCL_bc_operator_t
 
 
+    ! Radial-angular equilibrium
+    use rae_volume_operator,                      only: rae_volume_operator_t
+    use rae_boundary_average_operator,            only: rae_boundary_average_operator_t
+    use rae_bc_operator,                          only: rae_bc_operator_t
+    use rae_volume_cylindrical_source,            only: rae_volume_cylindrical_source_t
+    use rae_laxfriedrichs_operator,               only: rae_laxfriedrichs_operator_t
+
+
+    ! Radial-angular combined
+    use rac_volume_operator,                      only: rac_volume_operator_t
+    use rac_boundary_average_operator,            only: rac_boundary_average_operator_t
+    use rac_bc_operator,                          only: rac_bc_operator_t
+    use rac_volume_cylindrical_source,            only: rac_volume_cylindrical_source_t
+    use rac_laxfriedrichs_operator,               only: rac_laxfriedrichs_operator_t
+
+    ! Tangential momentum
+    use tm_volume_operator,                      only: tm_volume_operator_t
+    use tm_boundary_average_operator,            only: tm_boundary_average_operator_t
+    use tm_bc_operator,                          only: tm_bc_operator_t
+    use tm_laxfriedrichs_operator,               only: tm_laxfriedrichs_operator_t
+    use tm_volume_cylindrical_source,            only: tm_volume_cylindrical_source_t
+
+
     implicit none
 
 
@@ -267,6 +290,33 @@ contains
         type(GCL_boundary_average_advective_operator_t)         :: GCL_average_operator
         type(GCL_bc_operator_t)                                 :: GCL_bc_operator
 
+
+        ! Radial-angular equilibrium operators
+        type(rae_volume_operator_t)                       :: rae_volume_operator
+        type(rae_boundary_average_operator_t)             :: rae_average_operator
+        type(rae_bc_operator_t)                           :: rae_bc_operator
+        type(rae_volume_cylindrical_source_t)             :: rae_volume_cylindrical_source
+        type(rae_laxfriedrichs_operator_t)                :: rae_laxfriedrichs_operator
+
+
+        ! Radial-angular equilibrium operators
+        type(rac_volume_operator_t)                       :: rac_volume_operator
+        type(rac_boundary_average_operator_t)             :: rac_average_operator
+        type(rac_bc_operator_t)                           :: rac_bc_operator
+        type(rac_volume_cylindrical_source_t)             :: rac_volume_cylindrical_source
+        type(rac_laxfriedrichs_operator_t)                :: rac_laxfriedrichs_operator
+
+        ! Tangential momentum operators
+        type(tm_volume_operator_t)                       :: tm_volume_operator
+        type(tm_boundary_average_operator_t)             :: tm_average_operator
+        type(tm_bc_operator_t)                           :: tm_bc_operator
+        type(tm_laxfriedrichs_operator_t)                :: tm_laxfriedrichs_operator
+        type(tm_volume_cylindrical_source_t)             :: tm_volume_cylindrical_source
+
+
+
+
+
         if (.not. operators_initialized) then
 
             ! Register Linear Advection
@@ -346,6 +396,32 @@ contains
             call operator_factory%register(GCL_volume_operator)
             call operator_factory%register(GCL_average_operator)
             call operator_factory%register(GCL_bc_operator)
+
+
+            ! Register Radial-Angular equilibrium 
+            call operator_factory%register(rae_volume_operator)
+            call operator_factory%register(rae_average_operator)
+            call operator_factory%register(rae_bc_operator)
+            call operator_factory%register(rae_volume_cylindrical_source)
+            call operator_factory%register(rae_laxfriedrichs_operator)
+            
+
+            ! Register Radial-Angular equilibrium 
+            call operator_factory%register(rac_volume_operator)
+            call operator_factory%register(rac_average_operator)
+            call operator_factory%register(rac_bc_operator)
+            call operator_factory%register(rac_volume_cylindrical_source)
+            call operator_factory%register(rac_laxfriedrichs_operator)
+
+            ! Register Tangential momentum
+            call operator_factory%register(tm_volume_operator)
+            call operator_factory%register(tm_average_operator)
+            call operator_factory%register(tm_bc_operator)
+            call operator_factory%register(tm_laxfriedrichs_operator)
+            call operator_factory%register(tm_volume_cylindrical_source)
+
+
+
 
             operators_initialized = .true.
 

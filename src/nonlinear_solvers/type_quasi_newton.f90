@@ -71,11 +71,11 @@ contains
         character(100)          :: filename
         integer(ik)             :: itime, nsteps, ielem, iblk, iindex,  &
                                    niter, ieqn, idom, ierr,                     &
-                                   rstart, rend, cstart, cend, nterms, imat, iwrite, step, eqn_ID, icfl
+                                   rstart, rend, cstart, cend, nterms, imat, iwrite, step, eqn_ID, icfl, ifield
 
         real(rk)                :: dtau, amp, cfl, timing, resid, resid_prev, resid0, resid_new,    &
                                    alpha, f0, fn, forcing_term, residual_ratio
-        real(rk), allocatable   :: vals(:), cfln(:), rnorm0(:), rnorm(:)
+        real(rk), allocatable   :: vals(:), cfln(:), rnorm0(:), rnorm(:), elem_field(:)
         type(chidg_vector_t)    :: b, qn, qold, qnew, dqdtau, q0
         logical                 :: searching, absolute_convergence, relative_convergence
 
@@ -369,11 +369,6 @@ contains
                 !
                 q = qn
                 call dq%clear()
-
-
-
-
-
 
 
                 absolute_convergence = (resid > self%tol)

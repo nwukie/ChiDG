@@ -1777,7 +1777,7 @@ contains
         !
         ! Newton iteration to find the donor local coordinates
         !
-        tol = 1000._rk*RKTOL
+        tol = 100000._rk*RKTOL
         coord_comp = ZERO
         do inewton = 1,20
 

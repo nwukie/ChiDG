@@ -46,6 +46,7 @@ module mod_bc
     !use bc_state_outlet_LODI_pressure,          only: outlet_LODI_pressure_t
     !use bc_state_outlet_LODI_z_pressure,        only: outlet_LODI_z_pressure_t
     !use bc_state_outlet_wukie,                  only: outlet_wukie_t
+    use bc_state_outlet_average_pressure,       only: outlet_average_pressure_t
     use bc_state_fluid_extrapolate,             only: fluid_extrapolate_t
     use bc_state_momentum_inlet,                only: momentum_inlet_t
     use bc_state_symmetry,                      only: symmetry_t
@@ -64,9 +65,17 @@ module mod_bc
     use bc_state_artificial_viscosity_outlet,   only: artificial_viscosity_outlet_t
     use bc_state_artificial_viscosity_symmetry, only: artificial_viscosity_symmetry_t
 
+    ! Radial-Angular equilibrium
+    use bc_state_rae_extrapolate,   only: rae_extrapolate_t
+    use bc_state_rae_dirichlet,     only: rae_dirichlet_t
 
-!    use bc_kirchoff,                        only: kirchoff_t
+    ! Radial-Angular equilibrium
+    use bc_state_rac_extrapolate,   only: rac_extrapolate_t
+    use bc_state_rac_dirichlet,     only: rac_dirichlet_t
 
+    ! Radial-Angular equilibrium
+    use bc_state_tm_extrapolate,   only: tm_extrapolate_t
+    use bc_state_tm_dirichlet,     only: tm_dirichlet_t
     implicit none
 
 
@@ -122,6 +131,7 @@ contains
         !type(outlet_LODI_pressure_t)            :: OUTLET_LODI_PRESSURE
         !type(outlet_LODI_z_pressure_t)          :: OUTLET_LODI_Z_PRESSURE
         !type(outlet_wukie_t)                    :: OUTLET_WUKIE
+        type(outlet_average_pressure_t)         :: OUTLET_AVERAGE_PRESSURE
         type(fluid_extrapolate_t)               :: FLUID_EXTRAPOLATE
         type(momentum_inlet_t)                  :: MOMENTUM_INLET
         type(symmetry_t)                        :: SYMMETRY
@@ -138,7 +148,17 @@ contains
         type(artificial_viscosity_outlet_t)     :: ARTIFICIAL_VISCOSITY_OUTLET
         type(artificial_viscosity_symmetry_t)   :: ARTIFICIAL_VISCOSITY_SYMMETRY
 
+        ! Radial-Angular Equilibirum
+        type(rae_extrapolate_t) :: RAE_EXTRAPOLATE
+        type(rae_dirichlet_t)   :: RAE_DIRICHLET
 
+        ! Radial-Angular Equilibirum
+        type(rac_extrapolate_t) :: RAC_EXTRAPOLATE
+        type(rac_dirichlet_t)   :: RAC_DIRICHLET
+
+        ! Tangential Equilibirum
+        type(tm_extrapolate_t) :: TM_EXTRAPOLATE
+        type(tm_dirichlet_t)   :: TM_DIRICHLET
 
         if ( .not. initialized ) then
             !
@@ -166,6 +186,7 @@ contains
             call registered_bcs%push_back(MOVING_WALL)
             call registered_bcs%push_back(INLET_TOTAL)
             call registered_bcs%push_back(OUTLET_CONSTANT_PRESSURE)
+            call registered_bcs%push_back(OUTLET_AVERAGE_PRESSURE)
             !call registered_bcs%push_back(OUTLET_POINT_PRESSURE)
             !call registered_bcs%push_back(OUTLET_LODI_PRESSURE)
             !call registered_bcs%push_back(OUTLET_LODI_Z_PRESSURE)
@@ -186,7 +207,14 @@ contains
             call registered_bcs%push_back(ARTIFICIAL_VISCOSITY_OUTLET)
             call registered_bcs%push_back(ARTIFICIAL_VISCOSITY_SYMMETRY)
 
+            call registered_bcs%push_back(RAE_EXTRAPOLATE)
+            call registered_bcs%push_back(RAE_DIRICHLET)
 
+            call registered_bcs%push_back(RAC_EXTRAPOLATE)
+            call registered_bcs%push_back(RAC_DIRICHLET)
+
+            call registered_bcs%push_back(TM_EXTRAPOLATE)
+            call registered_bcs%push_back(TM_DIRICHLET)
 
             !
             ! Initialize each boundary condition in set. Doesn't need modified.

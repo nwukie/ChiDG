@@ -2,7 +2,6 @@ module euler_volume_cylindrical_source
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ONE,TWO,HALF
-
     use type_operator,          only: operator_t
     use type_properties,        only: properties_t
     use type_chidg_worker,      only: chidg_worker_t

@@ -16,6 +16,9 @@ module mod_models
     use model_zero_turbulent_model_fields,              only: zero_turbulent_model_fields_t
     use model_spalart_allmaras_turbulent_model_fields,  only: spalart_allmaras_turbulent_model_fields_t
     use model_fluid_wave_speed,                         only: fluid_wave_speed_t
+    use model_rae,                                      only: rae_t
+    use model_rac,                                      only: rac_t
+    use model_tm,                                       only: tm_t
 
     use model_wall_distance,                            only: wall_distance_m
 
@@ -262,6 +265,9 @@ contains
         type(zero_turbulent_model_fields_t)             :: ZERO_TURBULENT_MODEL_FIELDS
         type(spalart_allmaras_turbulent_model_fields_t) :: SPALART_ALLMARAS_TURBULENT_MODEL_FIELDS
         type(fluid_wave_speed_t)                        :: FLUID_WAVE_SPEED
+        type(rae_t)                                     :: RADIAL_ANGULAR_EQUILIBRIUM
+        type(rac_t)                                     :: RADIAL_ANGULAR_COMBINED
+        type(tm_t)                                      :: TANGENTIAL_MOMENTUM
 
 
 
@@ -294,6 +300,9 @@ contains
             call model_factory%register(FLUID_WAVE_SPEED)
             call model_factory%register(ARTIFICIAL_VISCOSITY_JUMP_SENSOR)
             call model_factory%register(ARTIFICIAL_VISCOSITY_RESOLUTION_SENSOR)
+            call model_factory%register(RADIAL_ANGULAR_EQUILIBRIUM)
+            call model_factory%register(RADIAL_ANGULAR_COMBINED)
+            call model_factory%register(TANGENTIAL_MOMENTUM)
 
             models_initialized = .true.
 

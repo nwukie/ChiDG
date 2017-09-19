@@ -191,24 +191,24 @@ program driver
         !   2: read initial solution from ChiDG hdf5 file
         !
         if (solutionfile_in == 'none') then
-            !call create_function(fcn,'constant')
-            !do ifield = 1,chidg%data%mesh%domain(1)%neqns
-            !    call fcn%set_option('val',initial_fields(ifield))
-            !    call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,ifield)
-            !end do
+            call create_function(fcn,'constant')
+            do ifield = 1,chidg%data%mesh%domain(1)%neqns
+                call fcn%set_option('val',initial_fields(ifield))
+                call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,ifield)
+            end do
 
             !call create_function(fcn,'pressure_pulse')
-            call create_function(fcn,'isentropic_vortex')
-            call fcn%set_option('ivar',1._rk)
-            call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,1)
-            call fcn%set_option('ivar',2._rk)
-            call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,2)
-            call fcn%set_option('ivar',3._rk)
-            call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,3)
-            call fcn%set_option('ivar',4._rk)
-            call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,4)
-            call fcn%set_option('ivar',5._rk)
-            call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,5)
+            !call create_function(fcn,'isentropic_vortex')
+            !call fcn%set_option('ivar',1._rk)
+            !call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,1)
+            !call fcn%set_option('ivar',2._rk)
+            !call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,2)
+            !call fcn%set_option('ivar',3._rk)
+            !call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,3)
+            !call fcn%set_option('ivar',4._rk)
+            !call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,4)
+            !call fcn%set_option('ivar',5._rk)
+            !call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,5)
 
 
         else

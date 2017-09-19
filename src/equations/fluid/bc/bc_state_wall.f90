@@ -155,17 +155,14 @@ contains
         energy_bc  = density_m
 
 
-        ! Zero momentum
-        !mom1_bc = ZERO
-        !mom2_bc = ZERO
-        !mom3_bc = ZERO
-
-
-        ! Set relative velocity to zero, ie
-        ! set fluid velocity equal to grid/wall velocity.
+        !
+        ! Set relative velocity to zero: ie set fluid velocity equal to grid/wall velocity.
+        !
         mom1_bc = density_m*grid_velocity(:,1)
         mom2_bc = density_m*grid_velocity(:,2)
         mom3_bc = density_m*grid_velocity(:,3)
+
+
         !
         ! We want:  W dot n = 0
         !

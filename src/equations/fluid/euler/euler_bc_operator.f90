@@ -5,7 +5,6 @@ module euler_bc_operator
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
     use DNAD_D
-    use ieee_arithmetic,        only: ieee_is_nan
     implicit none
 
 
@@ -117,9 +116,6 @@ contains
             r = worker%coordinate('1','boundary') 
             mom2_bc = mom2_bc / r
         end if
-
-
-
 
 
         !

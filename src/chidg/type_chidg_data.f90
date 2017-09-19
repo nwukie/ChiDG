@@ -256,13 +256,6 @@ contains
                                                                             
 
 
-        !
-        ! Allocate equation set - causing segfault?
-        !
-!        temp_eqnset(idomain_l) = equation_set_factory%produce(eqnset,'default')
-
-
-
     end subroutine add_bc_state_group
     !***************************************************************************************
 
@@ -370,7 +363,7 @@ contains
         character(*),           intent(in)  :: group_name_in
 
         integer(ik)                 :: igroup, group_ID
-        character(:),   allocatable :: group_name
+        character(:),   allocatable :: group_name, user_msg
         logical                     :: found_group
 
         group_ID = NO_ID
@@ -383,6 +376,10 @@ contains
 
         end do
 
+        if ((group_ID == NO_ID) .and. (trim(group_name_in) /= 'empty')) then
+            user_msg = "chidg_data%get_bc_state_group_id: Didn't find boundary condition state group. Make sure this group exists and that the patch group assignment is spelled correctly."
+            call chidg_signal_one(FATAL,user_msg,trim(group_name_in))
+        end if
 
     end function get_bc_state_group_id
     !*************************************************************************************

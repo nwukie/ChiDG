@@ -27,6 +27,9 @@ module mod_equations
     use eqn_filtered_euler_FP2,             only: filtered_euler_FP2
     use eqn_navier_stokes,                  only: navier_stokes
     use eqn_rans,                           only: rans
+    use eqn_rae,                            only: rae
+    use eqn_rac,                            only: rac
+    use eqn_tm,                             only: tm
     use eqn_wall_distance,                  only: wall_distance
     use eqn_mesh_motion_diffusion,          only: mesh_motion_diffusion 
     use eqn_mesh_motion_linear_elasticity,  only: mesh_motion_linear_elasticity
@@ -123,6 +126,9 @@ contains
         type(filtered_euler_FP2)            :: filtered_euler_FP2_builder
         type(navier_stokes)                 :: navier_stokes_builder
         type(rans)                          :: rans_builder
+        type(rae)                           :: rae_builder
+        type(rac)                           :: rac_builder
+        type(tm)                            :: tm_builder
         type(wall_distance)                 :: wall_distance_builder
         type(mesh_motion_diffusion)         :: mesh_motion_diffusion_builder
         type(mesh_motion_linear_elasticity) :: mesh_motion_linear_elasticity_builder
@@ -146,6 +152,9 @@ contains
             call equation_set_factory%register(filtered_euler_FP2_builder%build('default'))
             call equation_set_factory%register(navier_stokes_builder%build('default'))
             call equation_set_factory%register(rans_builder%build('default'))
+            call equation_set_factory%register(rae_builder%build('default'))
+            call equation_set_factory%register(rac_builder%build('default'))
+            call equation_set_factory%register(tm_builder%build('default'))
             call equation_set_factory%register(wall_distance_builder%build('default'))
             call equation_set_factory%register(mesh_motion_diffusion_builder%build('default'))
             call equation_set_factory%register(mesh_motion_linear_elasticity_builder%build('default'))

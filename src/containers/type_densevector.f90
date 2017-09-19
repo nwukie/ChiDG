@@ -330,6 +330,7 @@ contains
 
         real(rk)                                :: modes_out(self%nterms_)
         integer(ik)                             :: istart, iend
+       
         
         !
         ! Compute start and end indices for accessing modes of a variable
@@ -377,6 +378,7 @@ contains
         real(rk),               intent(in)      :: vals(:)
 
         integer(ik) :: istart, iend    
+
 
         !
         ! Compute start and end indices for accessing modes of a variable

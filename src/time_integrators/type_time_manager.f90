@@ -138,7 +138,7 @@ contains
                             passed in along with it. Please define at least one frequency &
                             different than 0 in chidg.nml"
                 if ( (maxval(frequencies) == ZERO) .and. (minval(frequencies) == ZERO) ) call chidg_signal_one(FATAL,user_msg,trim(time_integrator))
-                
+
 
                 !
                 ! Determine number of frequencies and time levels
@@ -152,8 +152,8 @@ contains
                     end if
                 end do
                 self%ntime = 2*nfreq + 1
-                
 
+                
                 !
                 ! Allocate times(:),freqs(:) storage
                 !

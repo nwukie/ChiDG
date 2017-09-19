@@ -144,7 +144,7 @@ contains
         integer(ik)             :: itime_outer, itime_inner, idom, ielem, ivar, eqn_ID    ! Loop counters
         real(rk), allocatable   :: temp_1(:), temp_2(:)     ! Temporary variables
         integer(ik)             :: ntime
-        integer(ik)             :: ierr,i,j
+        integer(ik)             :: ierr,i,j, xstart, xend
         real(rk),allocatable    :: D(:,:)
 
         
@@ -153,7 +153,6 @@ contains
         call rhs%clear()
         if (differentiate) call lhs%clear()
 
-        
 
         !
         ! Set local variables equal to the values set in time_manager
@@ -161,7 +160,22 @@ contains
         ntime = size(data%time_manager%times)
         D = data%time_manager%D
 
+
+        
         do itime_outer = 1,ntime
+
+
+!            xstart = data%sdata%dq%dom(3)%vecs(553)%get_time_start(1)
+!            xend   = data%sdata%dq%dom(3)%vecs(553)%get_time_end(1)
+!            print*, 'a: ', itime_outer, size(data%sdata%dq%dom(3)%vecs(553)%vec(xstart:xend))
+!            xstart = data%sdata%dq%dom(3)%vecs(553)%get_time_start(2)
+!            xend   = data%sdata%dq%dom(3)%vecs(553)%get_time_end(2)
+!            print*, 'a: ', itime_outer, size(data%sdata%dq%dom(3)%vecs(553)%vec(xstart:xend))
+!            xstart = data%sdata%dq%dom(3)%vecs(553)%get_time_start(3)
+!            xend   = data%sdata%dq%dom(3)%vecs(553)%get_time_end(3)
+!            print*, 'a: ', itime_outer, size(data%sdata%dq%dom(3)%vecs(553)%vec(xstart:xend))
+
+
 
             !
             ! Spatial update needed
@@ -170,9 +184,23 @@ contains
             data%time_manager%t     = data%time_manager%times(itime_outer)
             call update_space(data,differentiate,timing)
 
+
+!            xstart = data%sdata%dq%dom(3)%vecs(553)%get_time_start(1)
+!            xend   = data%sdata%dq%dom(3)%vecs(553)%get_time_end(1)
+!            print*, 'b: ', itime_outer, size(data%sdata%dq%dom(3)%vecs(553)%vec(xstart:xend))
+!            xstart = data%sdata%dq%dom(3)%vecs(553)%get_time_start(2)
+!            xend   = data%sdata%dq%dom(3)%vecs(553)%get_time_end(2)
+!            print*, 'b: ', itime_outer, size(data%sdata%dq%dom(3)%vecs(553)%vec(xstart:xend))
+!            xstart = data%sdata%dq%dom(3)%vecs(553)%get_time_start(3)
+!            xend   = data%sdata%dq%dom(3)%vecs(553)%get_time_end(3)
+!            print*, 'b: ', itime_outer, size(data%sdata%dq%dom(3)%vecs(553)%vec(xstart:xend))
+
+
+
+
+
             do idom = 1,data%mesh%ndomains()
 
-                !associate ( mesh => data%mesh(idom), eqnset => data%eqnset(idom) )
 
                 if (allocated(temp_1) .and. allocated(temp_2)) deallocate(temp_1,temp_2)
                 allocate(temp_1(data%mesh%domain(idom)%nterms_s),temp_2(data%mesh%domain(idom)%nterms_s), stat=ierr)
@@ -204,9 +232,19 @@ contains
 
                 end do  ! ielem
 
-                !end associate
-
             end do  ! idom
+
+!            xstart = data%sdata%dq%dom(3)%vecs(553)%get_time_start(1)
+!            xend   = data%sdata%dq%dom(3)%vecs(553)%get_time_end(1)
+!            print*, 'c: ', itime_outer, size(data%sdata%dq%dom(3)%vecs(553)%vec(xstart:xend))
+!            xstart = data%sdata%dq%dom(3)%vecs(553)%get_time_start(2)
+!            xend   = data%sdata%dq%dom(3)%vecs(553)%get_time_end(2)
+!            print*, 'c: ', itime_outer, size(data%sdata%dq%dom(3)%vecs(553)%vec(xstart:xend))
+!            xstart = data%sdata%dq%dom(3)%vecs(553)%get_time_start(3)
+!            xend   = data%sdata%dq%dom(3)%vecs(553)%get_time_end(3)
+!            print*, 'c: ', itime_outer, size(data%sdata%dq%dom(3)%vecs(553)%vec(xstart:xend))
+
+
 
         end do  ! itime_outer
 

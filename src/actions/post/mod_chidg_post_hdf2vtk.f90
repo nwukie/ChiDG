@@ -117,7 +117,6 @@ contains
         end if
 
         pvd_filename = 'chidg_results.pvd'
-        
 
         !
         ! Write solution in vtk format

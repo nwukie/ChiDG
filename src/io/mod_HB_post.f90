@@ -170,8 +170,6 @@ contains
         allocate(time_interp(ntime_interp), stat=ierr) 
         if (ierr /= 0) call AllocationError
 
-        time_interp = data%time_manager%times
-        
         !do itime_interp = 1,ntime_interp
 
         !    !
@@ -179,11 +177,13 @@ contains
         !    ! t_max is the maximum time level obtained from the HB frequencies (2*PI/omega_min)
         !    ! TODO: Can also be changed to 0 - t_desired
         !    !
+        !do itime_interp = 1,ntime_interp
         !    time_interp(itime_interp) = real(itime_interp - 1,rk)*(1.0_rk&
         !                                /real(ntime_interp - 1,rk))
 
         !end do
 
+        time_interp = data%time_manager%times
 
     end subroutine get_interp_time_levels
     !*******************************************************************************************

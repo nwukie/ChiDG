@@ -54,11 +54,45 @@ contains
         class(time_integrator_spectral_t),  intent(inout)   :: self
         type(chidg_data_t),                 intent(inout)   :: data
 
+        integer(ik)                 :: ntime_q, ntime_q_in, itime, idom, & 
+                                       ielem, ivar, ierr, eqn_ID
+        real(rk),   allocatable     :: temp(:)
+
+    
         associate( q => data%sdata%q, q_in => data%sdata%q_in)
 
-            q = q_in
+            ntime_q    = data%sdata%q%get_ntime()
+            ntime_q_in = data%sdata%q_in%get_ntime()
+
+            if (ntime_q == ntime_q_in) then
+                q = q_in
+
+            else if (ntime_q /= ntime_q_in .and. ntime_q_in == 1) then
+                do itime = 1,ntime_q
+                    do idom = 1,data%mesh%ndomains()
+
+                        if (allocated(temp)) deallocate(temp)
+                        allocate(temp(data%mesh%domain(idom)%nterms_s), stat = ierr)
+                        if (ierr /= 0) call AllocationError
+
+                        do ielem = 1,data%mesh%domain(idom)%nelem
+                            do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
+
+                                temp = q_in%dom(idom)%vecs(ielem)%getvar(ivar,1)
+                                call q%dom(idom)%vecs(ielem)%setvar(ivar,itime,temp)
+
+                            end do  ! ivar
+                        end do  ! ielem
+                    end do  ! idom
+                end do  ! itime
+
+            else
+                call chidg_signal(FATAL,'Initialization array incompatible with solution array')
+
+            end if
 
         end associate
+
 
     end subroutine initialize_state
     !*******************************************************************************

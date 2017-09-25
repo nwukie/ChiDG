@@ -387,7 +387,6 @@ contains
         call data%sdata%q_in%set_ntime(ntime)
 
 
-
         !
         ! Each process reads solution in serial 
         !

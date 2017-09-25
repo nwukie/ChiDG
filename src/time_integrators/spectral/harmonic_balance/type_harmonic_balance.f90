@@ -164,40 +164,12 @@ contains
         
         do itime_outer = 1,ntime
 
-
-!            xstart = data%sdata%dq%dom(3)%vecs(553)%get_time_start(1)
-!            xend   = data%sdata%dq%dom(3)%vecs(553)%get_time_end(1)
-!            print*, 'a: ', itime_outer, size(data%sdata%dq%dom(3)%vecs(553)%vec(xstart:xend))
-!            xstart = data%sdata%dq%dom(3)%vecs(553)%get_time_start(2)
-!            xend   = data%sdata%dq%dom(3)%vecs(553)%get_time_end(2)
-!            print*, 'a: ', itime_outer, size(data%sdata%dq%dom(3)%vecs(553)%vec(xstart:xend))
-!            xstart = data%sdata%dq%dom(3)%vecs(553)%get_time_start(3)
-!            xend   = data%sdata%dq%dom(3)%vecs(553)%get_time_end(3)
-!            print*, 'a: ', itime_outer, size(data%sdata%dq%dom(3)%vecs(553)%vec(xstart:xend))
-
-
-
             !
             ! Spatial update needed
             ! 
             data%time_manager%itime = itime_outer
             data%time_manager%t     = data%time_manager%times(itime_outer)
             call update_space(data,differentiate,timing)
-
-
-!            xstart = data%sdata%dq%dom(3)%vecs(553)%get_time_start(1)
-!            xend   = data%sdata%dq%dom(3)%vecs(553)%get_time_end(1)
-!            print*, 'b: ', itime_outer, size(data%sdata%dq%dom(3)%vecs(553)%vec(xstart:xend))
-!            xstart = data%sdata%dq%dom(3)%vecs(553)%get_time_start(2)
-!            xend   = data%sdata%dq%dom(3)%vecs(553)%get_time_end(2)
-!            print*, 'b: ', itime_outer, size(data%sdata%dq%dom(3)%vecs(553)%vec(xstart:xend))
-!            xstart = data%sdata%dq%dom(3)%vecs(553)%get_time_start(3)
-!            xend   = data%sdata%dq%dom(3)%vecs(553)%get_time_end(3)
-!            print*, 'b: ', itime_outer, size(data%sdata%dq%dom(3)%vecs(553)%vec(xstart:xend))
-
-
-
-
 
             do idom = 1,data%mesh%ndomains()
 
@@ -233,18 +205,6 @@ contains
                 end do  ! ielem
 
             end do  ! idom
-
-!            xstart = data%sdata%dq%dom(3)%vecs(553)%get_time_start(1)
-!            xend   = data%sdata%dq%dom(3)%vecs(553)%get_time_end(1)
-!            print*, 'c: ', itime_outer, size(data%sdata%dq%dom(3)%vecs(553)%vec(xstart:xend))
-!            xstart = data%sdata%dq%dom(3)%vecs(553)%get_time_start(2)
-!            xend   = data%sdata%dq%dom(3)%vecs(553)%get_time_end(2)
-!            print*, 'c: ', itime_outer, size(data%sdata%dq%dom(3)%vecs(553)%vec(xstart:xend))
-!            xstart = data%sdata%dq%dom(3)%vecs(553)%get_time_start(3)
-!            xend   = data%sdata%dq%dom(3)%vecs(553)%get_time_end(3)
-!            print*, 'c: ', itime_outer, size(data%sdata%dq%dom(3)%vecs(553)%vec(xstart:xend))
-
-
 
         end do  ! itime_outer
 

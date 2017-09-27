@@ -71,6 +71,8 @@ contains
                 do itime = 1,ntime_q
                     do idom = 1,data%mesh%ndomains()
 
+                        eqn_ID = data%mesh%domain(idom)%eqn_ID
+
                         if (allocated(temp)) deallocate(temp)
                         allocate(temp(data%mesh%domain(idom)%nterms_s), stat = ierr)
                         if (ierr /= 0) call AllocationError
@@ -85,6 +87,9 @@ contains
                         end do  ! ielem
                     end do  ! idom
                 end do  ! itime
+            
+            else if (ntime_q /= ntime_q_in .and. ntime_q == 1) then
+                q = q_in
 
             else
                 call chidg_signal(FATAL,'Initialization array incompatible with solution array')
@@ -92,6 +97,13 @@ contains
             end if
 
         end associate
+
+        print *, data%sdata%q%dom(1)%vecs(1)%getvar(2,1)
+        print *, data%sdata%q_in%dom(1)%vecs(1)%getvar(2,1)
+        print *, data%sdata%q%dom(1)%vecs(1)%getvar(2,2)
+        print *, data%sdata%q_in%dom(1)%vecs(1)%getvar(2,1)
+        print *, data%sdata%q%dom(1)%vecs(1)%getvar(2,3)
+        print *, data%sdata%q_in%dom(1)%vecs(1)%getvar(2,1)
 
 
     end subroutine initialize_state

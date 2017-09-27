@@ -83,7 +83,6 @@ contains
         !
         call chidg%set('Solution Order', integer_input=solution_order)
         call chidg%set('Time Integrator', algorithm=trim(time_string))
-        call chidg%time_integrator%initialize_state(chidg%data)
 
 
         !
@@ -91,6 +90,8 @@ contains
         !
         call chidg%read_mesh(grid_file)
         call chidg%read_fields(solution_file)
+
+        call chidg%time_integrator%initialize_state(chidg%data)
         call chidg%time_integrator%read_time_options(chidg%data,solution_file,'process')
 
         

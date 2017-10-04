@@ -98,13 +98,6 @@ contains
 
         end associate
 
-        print *, data%sdata%q%dom(1)%vecs(1)%getvar(2,1)
-        print *, data%sdata%q_in%dom(1)%vecs(1)%getvar(2,1)
-        print *, data%sdata%q%dom(1)%vecs(1)%getvar(2,2)
-        print *, data%sdata%q_in%dom(1)%vecs(1)%getvar(2,1)
-        print *, data%sdata%q%dom(1)%vecs(1)%getvar(2,3)
-        print *, data%sdata%q_in%dom(1)%vecs(1)%getvar(2,1)
-
 
     end subroutine initialize_state
     !*******************************************************************************

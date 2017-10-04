@@ -26,7 +26,7 @@ contains
         type(chidg_vector_t),   intent(inout)   :: q_coeff_vector
 
         real(rk),   allocatable     :: temp_1(:),temp_2(:)
-        integer(ik)                 :: otime, itime, ielem, idom, ierr, ivar
+        integer(ik)                 :: otime, itime, ielem, idom, ierr, ivar, eqn_ID
 
         
         associate ( q_in => data%sdata%q_in)
@@ -48,10 +48,12 @@ contains
             do otime = 1,q_in%get_ntime()
                 do idom = 1,data%mesh%ndomains()
                     
+                    eqn_ID = data%mesh%domain(idom)%eqn_ID
+
                     associate ( domain   => data%mesh%domain(idom),          &
                                 nelem    => data%mesh%domain(idom)%nelem,    &
                                 nterms_s => data%mesh%domain(idom)%nterms_s, &
-                                nvars    => data%eqnset(idom)%prop%nprimary_fields()) 
+                                nvars    => data%eqnset(eqn_ID)%prop%nprimary_fields()) 
                     
                     if (allocated(temp_1) .and. allocated(temp_2)) deallocate(temp_1,temp_2)
                     allocate(temp_1(nterms_s), temp_2(nterms_s), stat=ierr)
@@ -94,7 +96,7 @@ contains
         type(chidg_vector_t),   allocatable,    intent(inout)   :: q_coeffs(:)
 
         real(rk),   allocatable :: temp(:)
-        integer(ik)             :: ntime, itime, idom, ielem, ivar, ierr
+        integer(ik)             :: ntime, itime, idom, ielem, ivar, ierr, eqn_ID
 
 
         !
@@ -117,9 +119,11 @@ contains
 
             do idom = 1,data%mesh%ndomains()
 
+                eqn_ID = data%mesh%domain(idom)%eqn_ID
+
                 associate ( nelem    => data%mesh%domain(idom)%nelem,    &
                             nterms_s => data%mesh%domain(idom)%nterms_s, &
-                            nvars    => data%eqnset(idom)%prop%nprimary_fields() )
+                            nvars    => data%eqnset(eqn_ID)%prop%nprimary_fields() )
 
                 if (allocated(temp)) deallocate(temp)
                 allocate(temp(nterms_s), stat = ierr)
@@ -202,7 +206,7 @@ contains
         type(chidg_vector_t),   intent(inout)   :: q_coeffs(:)
         type(chidg_vector_t),   intent(inout)   :: q_time
 
-        integer(ik)                 :: ntime, nfreq, itime, idom, ielem, ivar, ierr
+        integer(ik)                 :: ntime, nfreq, itime, idom, ielem, ivar, ierr, eqn_ID
         real(rk),   allocatable     :: temp_1(:), temp_2(:), freq_data(:)
         character(:),   allocatable :: user_msg, dev_msg
 
@@ -236,9 +240,11 @@ contains
         do itime = 1,ntime
             do idom = 1,data%mesh%ndomains()
 
+                eqn_ID = data%mesh%domain(idom)%eqn_ID
+
                 associate ( nelem    => data%mesh%domain(idom)%nelem,    &
                             nterms_s => data%mesh%domain(idom)%nterms_s, &
-                            nvars    => data%eqnset(idom)%prop%nprimary_fields() )
+                            nvars    => data%eqnset(eqn_ID)%prop%nprimary_fields() )
                     
                     ! Allocate temporary arrays
                     if (allocated(temp_1) .and. allocated(temp_2)) deallocate(temp_1,temp_2)
@@ -307,7 +313,7 @@ contains
 
         real(rk),   allocatable:: temp(:)
         integer(ik)            :: ntime_interp, itime_interp, idom, ielem, &
-                                  ivar, ierr
+                                  ivar, ierr, eqn_ID
 
         
         !
@@ -330,9 +336,11 @@ contains
         do itime_interp = 1,ntime_interp
             do idom = 1,data%mesh%ndomains()
 
+                eqn_ID = data%mesh%domain(idom)%eqn_ID
+
                 associate ( nelem    => data%mesh%domain(idom)%nelem,    &
                             nterms_s => data%mesh%domain(idom)%nterms_s, &
-                            nvars    => data%eqnset(idom)%prop%nprimary_fields() )
+                            nvars    => data%eqnset(eqn_ID)%prop%nprimary_fields() )
                 
                     if (allocated(temp)) deallocate(temp)
                     allocate(temp(nterms_s), stat=ierr)
@@ -419,7 +427,8 @@ contains
         if (allocated(q_interp)) deallocate(q_interp)
         allocate(q_interp(ntime_interp), stat=ierr)
         if (ierr /= 0) call AllocationError
-
+    
+        
         do itime_interp = 1,ntime_interp
 
             call get_interp_solution(data,time_interp(itime_interp), &

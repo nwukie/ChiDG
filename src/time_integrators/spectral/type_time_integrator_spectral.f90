@@ -205,7 +205,17 @@ contains
         !
         ! Set q_out: all subroutines defined in mod_HB_post
         !
-        call get_post_processing_data(data)
+        !call get_post_processing_data(data)
+
+        !
+        ! Set q_out
+        !
+        call data%sdata%q_out%init(data%mesh,data%time_manager%ntime)
+        call data%sdata%q_out%set_ntime(data%time_manager%ntime)
+        call data%sdata%q_out%clear()
+
+        data%sdata%q_out = data%sdata%q_in
+
 
 
     end subroutine process_data_for_output

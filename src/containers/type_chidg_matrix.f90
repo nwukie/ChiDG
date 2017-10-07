@@ -50,6 +50,7 @@ module type_chidg_matrix
         ! Processors
         procedure   :: restrict
 
+        procedure   :: get_ntime
 
         procedure   :: release
         final       :: destructor
@@ -605,6 +606,35 @@ contains
     end function restrict
     !**********************************************************************************
 
+
+
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Mayank Sharma
+    !!  @date   10/05/2017
+    !!
+    !!  TODO: Put in checks for ntime with relation to different blocks
+    !!
+    !----------------------------------------------------------------------------------
+    function get_ntime(self) result(ntime)
+        class(chidg_matrix_t),  intent(in)  :: self
+
+        integer(ik)         :: ntime
+
+        !
+        ! Get ntime from densematrix vector array of the 1st domain
+        !
+        ntime = size(self%dom(1)%lblks,2)
+
+
+    end function get_ntime
+    !**********************************************************************************
 
 
 

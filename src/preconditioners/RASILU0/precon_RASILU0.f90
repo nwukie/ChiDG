@@ -188,7 +188,7 @@ contains
         integer(ik)                 :: ielem, irow, icol, eparent_l, idom, ndom, ilower, ilowerA, ilowerLD,    &
                                        trans_elem, trans_blk, itranspose, nrowsA, ncolsA, ncolsB,      &
                                        iblk_diag_parent, iblk_diag, iblk, icomm,            &
-                                       parent_proc, ierr, iproc, idiagLD, idiagA, dparent_g_lower, eparent_g_lower
+                                       parent_proc, ierr, iproc, idiagLD, idiagA, dparent_g_lower, eparent_g_lower, itime
 
 
         call write_line('   RAS: Computing ILU0 factorization', ltrim=.false., io_proc=GLOBAL_MASTER, silence=(verbosity<5))
@@ -241,13 +241,14 @@ contains
             !
             ! Loop through all Proc-Local rows
             !
+            itime = 1
             do irow = 2,size(A%dom(idom)%lblks,1)
 
 
                 ! Operate on all the L blocks for the current row
-                do icol = 1,A%dom(idom)%local_lower_blocks(irow)%size()
+                do icol = 1,A%dom(idom)%local_lower_blocks(irow,itime)%size()
 
-                    ilowerA = A%dom(idom)%local_lower_blocks(irow)%at(icol)
+                    ilowerA = A%dom(idom)%local_lower_blocks(irow,itime)%at(icol)
 
                     dparent_g_lower = A%dom(idom)%lblks(irow,1)%dparent_g(ilowerA)
                     eparent_g_lower = A%dom(idom)%lblks(irow,1)%eparent_g(ilowerA)
@@ -418,7 +419,7 @@ contains
                                iblk, iblk_diag, icomm, parent_proc, recv_comm, recv_domain, &
                                recv_element, recv_comm_diag, recv_domain_diag, &
                                recv_element_diag, ncols, nrows, diag_irow, dparent_g_lower, &
-                               eparent_g_lower, ilowerA, ilowerLD
+                               eparent_g_lower, ilowerA, ilowerLD, itime
         logical             :: interior_block
 
 
@@ -447,6 +448,7 @@ contains
         ! For each domain
         !
         ndom = size(A%dom)
+        itime = 1
         do idom = 1,ndom
 
 
@@ -459,9 +461,9 @@ contains
                 !
                 ! Lower-Triangular blocks
                 !
-                do icol = 1,A%dom(idom)%local_lower_blocks(irow)%size()
+                do icol = 1,A%dom(idom)%local_lower_blocks(irow,itime)%size()
 
-                    ilowerA = A%dom(idom)%local_lower_blocks(irow)%at(icol)
+                    ilowerA = A%dom(idom)%local_lower_blocks(irow,itime)%at(icol)
 
                     dparent_g_lower = A%dom(idom)%lblks(irow,1)%dparent_g(ilowerA)
                     eparent_g_lower = A%dom(idom)%lblks(irow,1)%eparent_g(ilowerA)
@@ -590,14 +592,15 @@ contains
             !
             ! Backward Solve - Local
             !
+            itime = 1
             do irow = size(A%dom(idom)%lblks,1),1,-1
 
                 !
                 ! Upper-Triangular blocks
                 !
-                do icol = 1,A%dom(idom)%local_upper_blocks(irow)%size()
+                do icol = 1,A%dom(idom)%local_upper_blocks(irow,itime)%size()
 
-                    iupper = A%dom(idom)%local_upper_blocks(irow)%at(icol)
+                    iupper = A%dom(idom)%local_upper_blocks(irow,itime)%at(icol)
 
 
                     interior_block = (A%dom(idom)%lblks(irow,1)%parent_proc(iupper) == IRANK)

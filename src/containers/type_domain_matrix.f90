@@ -44,8 +44,8 @@ module type_domain_matrix
         integer(ik),            allocatable :: ldata(:,:)               ! Block-local data, (nelem,3) nvars, nterms, ntime.
         !integer(ik),            allocatable :: local_transpose(:,:)    ! Block index of the transposed location (nelem,6)
         !type(ivector_t),        allocatable :: local_transpose(:)
-        type(ivector_t),        allocatable :: local_lower_blocks(:)    ! For each element, which blocks (1-6) are lower blocks
-        type(ivector_t),        allocatable :: local_upper_blocks(:)    ! For each element, which blocks (1-6) are upper blocks
+        type(ivector_t),        allocatable :: local_lower_blocks(:,:)    ! For each element, which blocks (1-6) are lower blocks
+        type(ivector_t),        allocatable :: local_upper_blocks(:,:)    ! For each element, which blocks (1-6) are upper blocks
 
 
     contains
@@ -170,8 +170,8 @@ contains
         if (allocated(self%lblks)) deallocate(self%lblks)
         allocate(self%lblks(nelem,ntime),           &
                  self%ldata(nelem,3),               &
-                 self%local_lower_blocks(nelem),    &
-                 self%local_upper_blocks(nelem), stat=ierr)
+                 self%local_lower_blocks(nelem,ntime),    &
+                 self%local_upper_blocks(nelem,ntime), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
@@ -264,9 +264,9 @@ contains
                         upper_block = ( (parent_proc == IRANK .and. eparent_l > ielem) .or. (parent_proc > IRANK) )
 
                         if ( lower_block ) then
-                            call self%local_lower_blocks(ielem)%push_back(imat)
+                            call self%local_lower_blocks(ielem,itime)%push_back(imat)
                         else if ( upper_block ) then
-                            call self%local_upper_blocks(ielem)%push_back(imat)
+                            call self%local_upper_blocks(ielem,itime)%push_back(imat)
                         end if
 
                         imat = imat + 1

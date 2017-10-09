@@ -78,6 +78,10 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/24/2016
     !!
+    !!  Updated for spectral time integrators
+    !!
+    !!  @author Mayank Sharma + Nathan Wukie
+    !!  @date   10/09/2017
     !!
     !-------------------------------------------------------------------------------------------
     subroutine update(self,A,b)
@@ -88,11 +92,12 @@ contains
 
         integer(ik) :: idom, ielem, itime, idiagA, idiagLD, irow, icol, &
                        eparent_l, ilowerA, ilowerLD, itranspose, dparent_g_lower, &
-                       eparent_g_lower
+                       eparent_g_lower, new_mat
 
 
         call write_line(' Computing ILU0 factorization', io_proc=GLOBAL_MASTER, silence=(verbosity<5))
 
+        new_mat = self%LD%dom(1)%lblks(2,1)%loc(1,2)
 
         !
         ! Test preconditioner initialization
@@ -106,6 +111,7 @@ contains
             ! For each domain
             !
             do idom = 1,size(A%dom)
+
 
 
                 !
@@ -127,8 +133,8 @@ contains
                 ! Invert first diagonal block
                 !
                 !idiagLD = self%LD%dom(idom)%lblks(1,1)%get_diagonal()
-                idiagLD = self%LD%dom(idom)%lblks(1,itime)%get_diagonal()
                 !self%LD%dom(idom)%lblks(1,1)%data_(idiagLD)%mat = inv(self%LD%dom(idom)%lblks(1,1)%data_(idiagLD)%mat)
+                idiagLD = self%LD%dom(idom)%lblks(1,itime)%get_diagonal()
                 self%LD%dom(idom)%lblks(1,itime)%data_(idiagLD)%mat = inv(self%LD%dom(idom)%lblks(1,itime)%data_(idiagLD)%mat)
 
 
@@ -143,9 +149,9 @@ contains
                     !
                     ! Operate on all the L blocks for the current row
                     !
-                    do icol = 1,A%dom(idom)%local_lower_blocks(irow)%size()
+                    do icol = 1,A%dom(idom)%local_lower_blocks(irow,itime)%size()
 
-                        ilowerA = A%dom(idom)%local_lower_blocks(irow)%at(icol)
+                        ilowerA = A%dom(idom)%local_lower_blocks(irow,itime)%at(icol)
 
                         dparent_g_lower = A%dom(idom)%lblks(irow,itime)%dparent_g(ilowerA)
                         eparent_g_lower = A%dom(idom)%lblks(irow,itime)%eparent_g(ilowerA)
@@ -183,6 +189,8 @@ contains
                     self%LD%dom(idom)%lblks(irow,itime)%data_(idiagLD)%mat = inv(self%LD%dom(idom)%lblks(irow,itime)%data_(idiagLD)%mat)
 
 
+
+
                 end do !irow
 
 
@@ -209,7 +217,10 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/24/2016
     !!
+    !!  Updated for spectral time integrators
     !!
+    !!  @author Mayank Sharma + Nathan Wukie
+    !!  @date   10/09/2017
     !!
     !-------------------------------------------------------------------------------------------
     function apply(self,A,v) result(z)
@@ -259,9 +270,9 @@ contains
                     !
                     ! Lower-Triangular blocks
                     !
-                    do icol = 1,A%dom(idom)%local_lower_blocks(irow)%size()
+                    do icol = 1,A%dom(idom)%local_lower_blocks(irow,itime)%size()
 
-                        ilowerA = A%dom(idom)%local_lower_blocks(irow)%at(icol)
+                        ilowerA = A%dom(idom)%local_lower_blocks(irow,itime)%at(icol)
 
                         dparent_g_lower = A%dom(idom)%lblks(irow,itime)%dparent_g(ilowerA)
                         eparent_g_lower = A%dom(idom)%lblks(irow,itime)%eparent_g(ilowerA)
@@ -299,9 +310,9 @@ contains
                     !
                     ! Upper-Triangular blocks
                     !
-                    do icol = 1,A%dom(idom)%local_upper_blocks(irow)%size()
+                    do icol = 1,A%dom(idom)%local_upper_blocks(irow,itime)%size()
 
-                        iupper = A%dom(idom)%local_upper_blocks(irow)%at(icol)
+                        iupper = A%dom(idom)%local_upper_blocks(irow,itime)%at(icol)
 
                         if (A%dom(idom)%lblks(irow,itime)%parent_proc(iupper) == IRANK) then
 

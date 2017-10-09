@@ -112,8 +112,6 @@ contains
         imat = this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%loc(1,3)
         this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = -TEN
 
-!        print *, 'test - dmv - ', this%chidg%data%sdata%lhs%lblks(1,1)%data
-
 
         !
         ! Initialize RHS vector with some reference values

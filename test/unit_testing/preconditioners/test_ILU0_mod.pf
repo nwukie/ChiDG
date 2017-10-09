@@ -9,7 +9,8 @@ module test_ILU0_mod
     use type_domain_connectivity,   only: domain_connectivity_t
     use precon_ILU0,                only: precon_ILU0_t
 
-    use mod_test_utilities,         only: create_mesh
+    use mod_test_utilities,         only: create_mesh_file
+    use mod_file_utilities,         only: delete_file
     implicit none
 
 
@@ -27,8 +28,9 @@ module test_ILU0_mod
     @TestCase
     type, extends(TestCase) :: test_preconditioner_ILU0
 
-        type(chidg_t)       :: chidg
-        type(precon_ILU0_t) :: ILU0
+        type(chidg_t)               :: chidg
+        type(precon_ILU0_t)         :: ILU0
+        character(:),   allocatable :: filename
 
     contains
         procedure   :: setUp
@@ -51,9 +53,7 @@ contains
     subroutine setUp(this)
         class(test_preconditioner_ILU0),    intent(inout)   :: this
 
-        type(point_t),  allocatable :: nodes(:)
-        type(domain_connectivity_t) :: connectivity
-        integer(ik)                 :: nterms_c, spacedim
+        integer(ik) :: ielem, itime, imat
 
         
         !
@@ -66,44 +66,51 @@ contains
         ! Initialize ChiDG
         !
         call this%chidg%start_up('core')
+        call this%chidg%set('Solution Order', integer_input=1)
 
 
         !
         ! Initialize a 3-element geometry
         !
-        call create_mesh('311',nodes,connectivity)
+        this%filename = 'ilu_test.h5'
+        call create_mesh_file('D1 NxNxN', this%filename, nelem_xi=3, nelem_eta=1, nelem_zeta=1)
+        call this%chidg%read_mesh(this%filename)
 
-
-        !
-        ! Add domain
-        !
-        spacedim = 3
-        nterms_c = 8
-        call this%chidg%data%add_domain('D_01',nodes,connectivity,spacedim,nterms_c,'Scalar Advection')
-
-
-        !
-        ! Call sdata initialization
-        !
-        call this%chidg%set('Solution Order', integer_input=1)
-        call this%chidg%init('domains')
-        call this%chidg%init('communication')
-        call this%chidg%init('solvers')
 
 
 
         !
         ! Initialize linearization matrix with some reference values
         !
-        this%chidg%data%sdata%lhs%dom(1)%lblks(1,DIAG)%mat   = ONE
-        this%chidg%data%sdata%lhs%dom(1)%lblks(1,XI_MAX)%mat = -TWO
+        ielem = 1
+        itime = 1
 
-        this%chidg%data%sdata%lhs%dom(1)%lblks(2,XI_MIN)%mat = TWO
-        this%chidg%data%sdata%lhs%dom(1)%lblks(2,DIAG)%mat   = -FIVE
-        this%chidg%data%sdata%lhs%dom(1)%lblks(2,XI_MAX)%mat = 12._rk
+        imat = this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%loc(1,1)
+        this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = ONE
+        imat = this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%loc(1,2)
+        this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = -TWO
 
-        this%chidg%data%sdata%lhs%dom(1)%lblks(3,XI_MIN)%mat = TWO
-        this%chidg%data%sdata%lhs%dom(1)%lblks(3,DIAG)%mat   = -TEN
+
+        ielem = 2
+        itime = 1
+
+        imat = this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%loc(1,1)
+        this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = TWO
+        imat = this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%loc(1,2)
+        this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = -FIVE
+        imat = this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%loc(1,3)
+        this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = 12._rk
+
+
+
+
+        ielem = 3
+        itime = 1
+
+        imat = this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%loc(1,2)
+        this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = TWO
+        imat = this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%loc(1,3)
+        this%chidg%data%sdata%lhs%dom(1)%lblks(ielem,itime)%data_(imat)%mat = -TEN
 
 
         !
@@ -127,6 +134,7 @@ contains
     subroutine tearDown(this)
         class(test_preconditioner_ILU0),    intent(inout)   :: this
 
+        call delete_file(this%filename)
 
         call this%chidg%shut_down('core')
 
@@ -148,6 +156,7 @@ contains
     subroutine test_ILU0_init(self)
         class(test_preconditioner_ILU0),    intent(inout)   :: self
 
+        integer(ik) :: ielem, itime, imat
 
         !
         ! Initialize preconditioner. THIS IS BEING TESTED
@@ -159,13 +168,26 @@ contains
         !
         ! Test that only lower-triangular and diagonal components are allocated
         !
-        @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(1,DIAG)%mat))
+        ielem = 1
+        itime = 1
+        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,1)
+        @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(ielem,itime)%data_(imat)%mat))
 
-        @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(2,XI_MIN)%mat))
-        @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(2,DIAG)%mat))
 
-        @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(3,XI_MIN)%mat))
-        @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(3,DIAG)%mat))
+        ielem = 2
+        itime = 1
+        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,1)
+        @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(ielem,itime)%data_(imat)%mat))
+        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,2)
+        @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(ielem,itime)%data_(imat)%mat))
+
+        
+        ielem = 3
+        itime = 1
+        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,2)
+        @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(ielem,itime)%data_(imat)%mat))
+        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,3)
+        @assertTrue(allocated(self%ILU0%LD%dom(1)%lblks(ielem,itime)%data_(imat)%mat))
 
 
     end subroutine test_ILU0_init
@@ -205,6 +227,8 @@ contains
     subroutine test_ILU0_update(self)
         class(test_preconditioner_ILU0),    intent(inout)   :: self
 
+        integer(ik) :: ielem, itime, imat
+
         !
         ! Initialize preconditioner
         !
@@ -228,15 +252,26 @@ contains
         !
         ! Test ILU0 preconditioner matrix factorization values
         !
-        @assertEqual(ONE,self%ILU0%LD%dom(1)%lblks(1,DIAG)%mat(1,1))
+        ielem = 1
+        itime = 1
+        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,1)
+        @assertEqual(ONE,self%ILU0%LD%dom(1)%lblks(ielem,itime)%data_(imat)%mat(1,1))
 
 
-        @assertEqual(TWO,self%ILU0%LD%dom(1)%lblks(2,XI_MIN)%mat(1,1))
-        @assertEqual(-ONE,self%ILU0%LD%dom(1)%lblks(2,DIAG)%mat(1,1))
+        ielem = 2
+        itime = 1
+        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,1)
+        @assertEqual(TWO,self%ILU0%LD%dom(1)%lblks(ielem,itime)%data_(imat)%mat(1,1))
+        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,2)
+        @assertEqual(-ONE,self%ILU0%LD%dom(1)%lblks(ielem,itime)%data_(imat)%mat(1,1))
 
 
-        @assertEqual(-TWO,self%ILU0%LD%dom(1)%lblks(3,XI_MIN)%mat(1,1))
-        @assertEqual((ONE/14._rk),self%ILU0%LD%dom(1)%lblks(3,DIAG)%mat(1,1))
+        ielem = 3
+        itime = 1
+        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,2)
+        @assertEqual(-TWO,self%ILU0%LD%dom(1)%lblks(ielem,itime)%data_(imat)%mat(1,1))
+        imat = self%ILU0%LD%dom(1)%lblks(ielem,itime)%loc(1,3)
+        @assertEqual((ONE/14._rk),self%ILU0%LD%dom(1)%lblks(ielem,itime)%data_(imat)%mat(1,1))
 
 
     end subroutine test_ILU0_update

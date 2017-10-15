@@ -298,8 +298,7 @@ contains
                                     call timer_blas%start()
                                     do ivar = 1,nvars
 
-                                        temp_1 = D(itime,itime_i)*matmul(mass,x%dom(idom)%vecs(ielem)% &
-                                                                              getvar(ivar,itime_i))
+                                        temp_1 = D(itime,itime_i)*matmul(mass,x%dom(idom)%vecs(ielem)%getvar(ivar,itime_i))
                                         temp_2 = res%dom(idom)%vecs(ielem)%getvar(ivar,itime) + temp_1
                                         call res%dom(idom)%vecs(ielem)%setvar(ivar,itime,temp_2)
 

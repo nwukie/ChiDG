@@ -72,7 +72,7 @@ contains
         class(properties_t),                    intent(inout)   :: prop
 
         type(AD_D), allocatable, dimension(:)   ::  &
-            p, density, u, v, source 
+            p, density, mom1, mom2, u, v, source 
 
         real(rk),   allocatable :: r(:)
 
@@ -99,8 +99,14 @@ contains
             ! Get model fields
             !
             density = worker%get_field('Density',    'value', 'element')
-            u       = worker%get_field('Velocity-1', 'value', 'element')
-            v       = worker%get_field('Velocity-2', 'value', 'element')
+            mom1    = worker%get_field('Momentum-1', 'value', 'element')
+            mom2    = worker%get_field('Momentum-2', 'value', 'element')
+
+            ! Get tangential momentum
+            mom2 = mom2/r
+
+            u = mom1/density
+            v = mom2/density
 
 
 

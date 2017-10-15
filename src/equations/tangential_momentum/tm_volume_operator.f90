@@ -77,9 +77,10 @@ contains
         class(properties_t),            intent(inout)   :: prop
 
         type(AD_D), allocatable, dimension(:) ::    &
-            p, density, u, v,                       &
+            p, density, u, v, mom1, mom2,           &
             flux_1, flux_2, flux_3
 
+        real(rk),   allocatable, dimension(:)   :: r
 
         !
         ! Interpolate solution to quadrature nodes
@@ -91,8 +92,18 @@ contains
         ! Get model fields
         !
         density = worker%get_field('Density',    'value', 'element')
-        u       = worker%get_field('Velocity-1', 'value', 'element')
-        v       = worker%get_field('Velocity-2', 'value', 'element')
+        mom1    = worker%get_field('Momentum-1', 'value', 'element')
+        mom2    = worker%get_field('Momentum-2', 'value', 'element')
+
+        if (worker%coordinate_system() == 'Cylindrical') then
+            r = worker%coordinate('1','element')
+            mom2 = mom2/r
+        end if
+
+
+        u = mom1/density
+        v = mom2/density
+
 
 
         !=================================================

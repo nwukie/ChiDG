@@ -7,6 +7,7 @@ add_subdirectory(geometric_conservation)
 
 add_lib_sources(
                 eqn_euler.f90
+                eqn_euler_outlet.f90
                 eqn_filtered_euler.f90
                 eqn_filtered_euler_FP0.f90
                 eqn_filtered_euler_FP1.f90

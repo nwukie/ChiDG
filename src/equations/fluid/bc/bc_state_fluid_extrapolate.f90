@@ -22,8 +22,8 @@ module bc_state_fluid_extrapolate
 
     contains
 
-        procedure   :: init                 !< Set-up bc state with options/name etc.
-        procedure   :: compute_bc_state     !< boundary condition function implementation
+        procedure   :: init                 ! Set-up bc state with options/name etc.
+        procedure   :: compute_bc_state     ! boundary condition function implementation
 
     end type fluid_extrapolate_t
     !****************************************************************************************
@@ -60,10 +60,6 @@ contains
 !        call self%set_equation("Momentum-3")
 !        call self%set_equation("Energy"    )
 
-
-        !
-        ! Add functions
-        !
 
 
     end subroutine init
@@ -104,12 +100,13 @@ contains
         !
         ! Interpolate interior solution to face quadrature nodes
         !
-      
         density_m = worker%get_field('Density'   , 'value', 'face interior')
         mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
         mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
         mom3_m    = worker%get_field('Momentum-3', 'value', 'face interior')
         energy_m  = worker%get_field('Energy'    , 'value', 'face interior')
+
+
 
         grad1_density_m = worker%get_field('Density'   , 'grad1', 'face interior')
         grad2_density_m = worker%get_field('Density'   , 'grad2', 'face interior')

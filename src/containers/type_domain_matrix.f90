@@ -309,13 +309,6 @@ contains
                             ! Call block initialization for each Chimera donor
                             !
                             do idonor = 1,ndonors
-                                !neqns       = mesh%domain(idom)%chimera%recv(ChiID)%donor_neqns%at(idonor)
-                                !nterms_s    = mesh%domain(idom)%chimera%recv(ChiID)%donor_nterms_s%at(idonor)
-                                !dparent_g   = mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_g%at(idonor)
-                                !dparent_l   = mesh%domain(idom)%chimera%recv(ChiID)%donor_domain_l%at(idonor)
-                                !eparent_g   = mesh%domain(idom)%chimera%recv(ChiID)%donor_element_g%at(idonor)
-                                !eparent_l   = mesh%domain(idom)%chimera%recv(ChiID)%donor_element_l%at(idonor)
-                                !parent_proc = mesh%domain(idom)%chimera%recv(ChiID)%donor_proc%at(idonor)
                                 dparent_g   = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g
                                 dparent_l   = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_l
                                 eparent_g   = mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%ielement_g

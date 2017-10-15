@@ -52,7 +52,7 @@ contains
     !!
     !---------------------------------------------------------------------------------------------
     function build(self,blueprint) result(tm_eqns)
-        class(tm),     intent(in)  :: self
+        class(tm),      intent(in)  :: self
         character(*),   intent(in)  :: blueprint
 
         type(equation_set_t)            :: tm_eqns

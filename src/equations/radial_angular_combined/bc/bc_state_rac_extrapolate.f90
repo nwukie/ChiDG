@@ -16,7 +16,7 @@ module bc_state_rac_extrapolate
     !!  @author Nathan A. Wukie
     !!  @date   1/31/2016
     !!
-    !----------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------
     type, public, extends(bc_state_t) :: rac_extrapolate_t
 
     contains
@@ -25,7 +25,7 @@ module bc_state_rac_extrapolate
         procedure   :: compute_bc_state     !< boundary condition function implementation
 
     end type rac_extrapolate_t
-    !****************************************************************************************
+    !********************************************************************************
 
 
 
@@ -68,7 +68,7 @@ contains
     !!  @param[in]      face    face_info_t containing indices on location and misc information
     !!  @param[in]      flux    function_into_t containing info on the function being computed
     !!
-    !-------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_COMM)
         class(rac_extrapolate_t),   intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
@@ -104,7 +104,7 @@ contains
 
 
     end subroutine compute_bc_state
-    !**********************************************************************************************
+    !****************************************************************************
 
 
 

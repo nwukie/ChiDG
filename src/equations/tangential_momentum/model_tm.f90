@@ -108,12 +108,12 @@ contains
 
 
         slope   = 10._rk    ! (m/s) / m
-        density = 1.19_rk
+        density = 1.0_rk
+
         u       = 0._rk
-        !u       = 10._rk + r*slope
-        !v       = 10._rk*sin(4._rk*theta)
-        v       = 10._rk + r*slope
-        !v = ZERO
+        v       = 10._rk*sin(4._rk*theta)
+
+        !v       = 10._rk + r*slope
 
 
         call worker%store_model_field('Density',    'value', density)

@@ -87,10 +87,14 @@ contains
         type(AD_D), allocatable,    dimension(:) :: &
             p_m,        p_p,                        &
             density_m,  density_p,                  &
+            mom1_m,     mom1_p,                     &
+            mom2_m,     mom2_p,                     &
             u_m,        u_p,                        &
             v_m,        v_p,                        &
             flux_1_m,   flux_2_m,   flux_3_m,       &
             flux_1_p,   flux_2_p,   flux_3_p
+
+        real(rk),   allocatable, dimension(:)   :: r
 
 
         !
@@ -104,13 +108,28 @@ contains
         ! Get model fields
         !
         density_m = worker%get_field('Density',    'value', 'face interior')
-        u_m       = worker%get_field('Velocity-1', 'value', 'face interior')
-        v_m       = worker%get_field('Velocity-2', 'value', 'face interior')
+        mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
+        mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
 
         density_p = worker%get_field('Density',    'value', 'face exterior')
-        u_p       = worker%get_field('Velocity-1', 'value', 'face exterior')
-        v_p       = worker%get_field('Velocity-2', 'value', 'face exterior')
+        mom1_p    = worker%get_field('Momentum-1', 'value', 'face exterior')
+        mom2_p    = worker%get_field('Momentum-2', 'value', 'face exterior')
 
+
+        if (worker%coordinate_system() == 'Cylindrical') then
+            r = worker%coordinate('1','face interior')
+            mom2_m = mom2_m/r
+            mom2_p = mom2_p/r
+        end if
+
+
+
+
+        u_m = mom1_m/density_m
+        v_m = mom2_m/density_m
+
+        u_p = mom1_p/density_p
+        v_p = mom2_p/density_p
 
 
         !================================

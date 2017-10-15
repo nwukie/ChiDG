@@ -80,15 +80,18 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(tm_bc_operator_t), intent(inout)   :: self
-        type(chidg_worker_t),     intent(inout)   :: worker
-        class(properties_t),      intent(inout)   :: prop
+        class(tm_bc_operator_t),    intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        class(properties_t),        intent(inout)   :: prop
 
 
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   ::  &
-            p, density_bc, u_bc, v_bc,   &
+            p, density_bc, u_bc, v_bc,              &
+            mom1_bc, mom2_bc,                       &
             flux_1,  flux_2,  flux_3
+
+        real(rk),   allocatable, dimension(:)   :: r
 
 
         !
@@ -101,8 +104,19 @@ contains
         ! Get model fields
         !
         density_bc = worker%get_field('Density',    'value', 'boundary')
-        u_bc       = worker%get_field('Velocity-1', 'value', 'boundary')
-        v_bc       = worker%get_field('Velocity-2', 'value', 'boundary')
+        mom1_bc    = worker%get_field('Momentum-1', 'value', 'boundary')
+        mom2_bc    = worker%get_field('Momentum-2', 'value', 'boundary')
+
+        if (worker%coordinate_system() == 'Cylindrical') then
+            r = worker%coordinate('1','face interior')
+            mom2_bc = mom2_bc/r
+        end if
+
+
+
+        u_bc = mom1_bc/density_bc
+        v_bc = mom2_bc/density_bc
+
 
 
         !=================================================

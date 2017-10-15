@@ -110,6 +110,7 @@ contains
 
         real(rk) :: eps
 
+        print*, 'euler roe - 1'
 
         grid_vel = worker%get_grid_velocity_face('face interior')
         ale_area_ratio = worker%get_area_ratio()
@@ -133,6 +134,7 @@ contains
         energy_m  = worker%get_field('Energy'    , 'value', 'face interior')
         energy_p  = worker%get_field('Energy'    , 'value', 'face exterior')
 
+        print*, 'euler roe - 2'
 
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
@@ -144,6 +146,7 @@ contains
         end if
 
 
+        print*, 'euler roe - 3'
 
         norm_1  = worker%normal(1)
         norm_2  = worker%normal(2)
@@ -159,6 +162,7 @@ contains
 
 
 
+        print*, 'euler roe - 4'
 
         !
         ! Compute pressure and gamma
@@ -189,6 +193,7 @@ contains
         w_p = mom3_p*invdensity_p 
         vmag_p = u_p*unorm_1_ale + v_p*unorm_2_ale + w_p*unorm_3_ale
 
+        print*, 'euler roe - 5'
 
         !
         ! Compute Roe-averaged variables
@@ -264,6 +269,7 @@ contains
         C3   = abs(lamda3)*( delp + rtil*ctil*delvmag)/(TWO*(ctil2))
 
 
+        print*, 'euler roe - 6'
 
         !================================
         !       Mass flux
@@ -308,6 +314,7 @@ contains
         call worker%integrate_boundary_upwind('Energy',upwind)
 
 
+        print*, 'euler roe - 7'
     end subroutine compute
     !**********************************************************************************************
 

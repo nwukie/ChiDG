@@ -21,6 +21,7 @@ module mod_equations
     use eqn_scalar_diffusion,               only: scalar_diffusion
     use eqn_dual_linear_advection,          only: dual_linear_advection
     use eqn_euler,                          only: euler 
+    use eqn_euler_outlet,                   only: euler_outlet
     use eqn_filtered_euler,                 only: filtered_euler 
     use eqn_filtered_euler_FP0,             only: filtered_euler_FP0
     use eqn_filtered_euler_FP1,             only: filtered_euler_FP1
@@ -120,6 +121,7 @@ contains
         type(scalar_diffusion)              :: scalar_diffusion_builder
         type(dual_linear_advection)         :: dual_linear_advection_builder
         type(euler)                         :: euler_builder
+        type(euler_outlet)                  :: euler_outlet_builder
         type(filtered_euler)                :: filtered_euler_builder
         type(filtered_euler_FP0)            :: filtered_euler_FP0_builder
         type(filtered_euler_FP1)            :: filtered_euler_FP1_builder
@@ -146,6 +148,7 @@ contains
             call equation_set_factory%register(scalar_diffusion_builder%build('default'))
             call equation_set_factory%register(dual_linear_advection_builder%build('default'))
             call equation_set_factory%register(euler_builder%build('default'))
+            call equation_set_factory%register(euler_outlet_builder%build('default'))
             call equation_set_factory%register(filtered_euler_builder%build('default'))
             call equation_set_factory%register(filtered_euler_FP0_builder%build('default'))
             call equation_set_factory%register(filtered_euler_FP1_builder%build('default'))

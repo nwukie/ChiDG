@@ -100,14 +100,12 @@ contains
         ! Compute wave speeds
         !
         wave = max(p_m,p_p)
-        !wave = 10._rk
         wave = 1.0_rk
 
         !===================================================
         !                   Momentum-1
         !===================================================
         upwind = -HALF*wave*(p_p - p_m)
-        !upwind = HALF*wave*(p_p - p_m)
 
         call worker%integrate_boundary_upwind('Pressure',upwind)
 

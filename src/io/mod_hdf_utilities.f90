@@ -4230,33 +4230,47 @@ contains
 
                 if (state_found) then
 
-                    ! Get bcgroup family
-                    current_family = get_bc_state_group_family_hdf(bcgroup_id)
+                    ! Set group 'Family'
+                    call set_bc_state_group_family_hdf(bcgroup_id, bc_state%get_family())
 
-                    !
-                    ! Check if new bc_state is of same family
-                    !
-                    if ( (trim(current_family) == 'none') .or. &
-                         (trim(current_family) == trim(bc_state%get_family())) ) then
+                    ! Create a new group for the bc_state_t
+                    call h5gcreate_f(bcgroup_id, "BCS_"//bc_state%get_name(), state_id, ierr)
+                    if (ierr /= 0) call chidg_signal(FATAL,"add_bc_state_hdf: error creating new group for bc_state")
 
-                        ! Set group 'Family'
-                        call set_bc_state_group_family_hdf(bcgroup_id, bc_state%get_family())
+                    ! Add bc_state properties to the group that was created
+                    call add_bc_properties_hdf(state_id,bc_state)
 
-                        ! Create a new group for the bc_state_t
-                        call h5gcreate_f(bcgroup_id, "BCS_"//bc_state%get_name(), state_id, ierr)
-                        if (ierr /= 0) call chidg_signal(FATAL,"add_bc_state_hdf: error creating new group for bc_state")
+                    ! Close function group
+                    call h5gclose_f(state_id,ierr)
 
-                        ! Add bc_state properties to the group that was created
-                        call add_bc_properties_hdf(state_id,bc_state)
 
-                        ! Close function group
-                        call h5gclose_f(state_id,ierr)
+                    !! Get bcgroup family
+                    !current_family = get_bc_state_group_family_hdf(bcgroup_id)
 
-                    else
-                        user_msg = "add_bc_state_hdf: Boundary condition state functions in a group &
-                                    must be of the same family"
-                        call chidg_signal_one(FATAL,user_msg,bc_state%get_family())
-                    end if
+                    !!
+                    !! Check if new bc_state is of same family
+                    !!
+                    !if ( (trim(current_family) == 'none') .or. &
+                    !     (trim(current_family) == trim(bc_state%get_family())) ) then
+
+                    !    ! Set group 'Family'
+                    !    call set_bc_state_group_family_hdf(bcgroup_id, bc_state%get_family())
+
+                    !    ! Create a new group for the bc_state_t
+                    !    call h5gcreate_f(bcgroup_id, "BCS_"//bc_state%get_name(), state_id, ierr)
+                    !    if (ierr /= 0) call chidg_signal(FATAL,"add_bc_state_hdf: error creating new group for bc_state")
+
+                    !    ! Add bc_state properties to the group that was created
+                    !    call add_bc_properties_hdf(state_id,bc_state)
+
+                    !    ! Close function group
+                    !    call h5gclose_f(state_id,ierr)
+
+                    !else
+                    !    user_msg = "add_bc_state_hdf: Boundary condition state functions in a group &
+                    !                must be of the same family"
+                    !    call chidg_signal_one(FATAL,user_msg,bc_state%get_family())
+                    !end if
                 end if
 
             end if

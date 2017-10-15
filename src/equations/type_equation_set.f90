@@ -619,6 +619,7 @@ contains
                 !
                 idiff = compute_pattern(ipattern)
 
+
                 !
                 ! Determine the number of times to execute the functions.
                 ! Depends on if we are differentiating or not.
@@ -648,6 +649,7 @@ contains
                             do icompute = 1,ncompute
                                 worker%function_info%seed    = face_compute_seed(mesh,idom,ielem,iface,icompute,idiff)
                                 worker%function_info%idepend = icompute
+
 
                                 call self%boundary_advective_operator(ifcn)%op%compute(worker,prop)
 
@@ -727,7 +729,6 @@ contains
 
             ChiID = mesh%domain(idom)%faces(ielem,iface)%ChiID
             eqn_m = self%eqn_ID
-            !eqn_p = mesh%domain(idom)%chimera%recv(ChiID)%donor_eqn_ID%at(1)
             eqn_p = mesh%domain(idom)%chimera%recv(ChiID)%donor(1)%eqn_ID
             skip = (eqn_m /= eqn_p)
 

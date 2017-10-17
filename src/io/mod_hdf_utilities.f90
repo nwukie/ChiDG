@@ -4982,54 +4982,6 @@ contains
 
 
 
-
-!    !>  Given a file identifier, set the number of time levels in an hdf5 file.
-!    !!
-!    !!  @author Matteo Ugolotti
-!    !!  @date   02/20/2017
-!    !!
-!    !!  @param[in]  fid     HDF file identifier
-!    !!
-!    !----------------------------------------------------------------------------------------
-!    subroutine set_ntimes_hdf(fid,ntimes)
-!        integer(HID_T), intent(in)  :: fid
-!        integer(ik),    intent(in)  :: ntimes
-!
-!        integer(ik)         :: ierr
-!
-!        call h5ltset_attribute_int_f(fid, "/", "ntimes", [ntimes], SIZE_ONE, ierr)
-!        if (ierr /= 0) call chidg_signal(FATAL,"set_ntimes_hdf: Error h5ltget_attribute_int_f")
-!
-!    end subroutine set_ntimes_hdf
-!    !****************************************************************************************
-!
-!
-!
-!    !>  Given a file identifier, return the number of time levels in an hdf5 file.
-!    !!
-!    !!  @author Matteo Ugolotti
-!    !!  @date   02/20/2017
-!    !!
-!    !!  @param[in]  fid     HDF file identifier
-!    !!
-!    !----------------------------------------------------------------------------------------
-!    function get_ntimes_hdf(fid) result(time_lev)
-!        integer(HID_T), intent(in)  :: fid
-!        
-!        integer                 :: ierr
-!        integer(ik)             :: time_lev
-!        integer, dimension(1)   :: buf
-!
-!        call h5ltget_attribute_int_f(fid, "/", "ntimes", buf, ierr)
-!        if (ierr /= 0) call chidg_signal(FATAL,"get_ntimess_hdf: h5ltget_attribute_int_f had a problem getting the number of time levels")
-!        time_lev = int(buf(1), kind=ik)
-!
-!    end function get_ntimes_hdf
-!    !***************************************************************************************
-
-
-
-
     !>  Set solution times stored in the time.
     !!
     !!  Sets the array:  /Times
@@ -5048,8 +5000,8 @@ contains
         integer(HID_T), intent(in)  :: fid
         real(rk),       intent(in)  :: times(:)
 
-        integer(HSIZE_T)    :: rank_dims(1)
-        integer(HID_T)      :: space_id, time_id
+        integer(HSIZE_T)    :: rank_dims(1), dimsc(1)
+        integer(HID_T)      :: space_id, time_id, crp_list
         integer(ik)         :: ntime, ierr, nrank
         logical             :: exists
 
@@ -5059,6 +5011,25 @@ contains
         rank_dims = [ntime]
         if (ntime == 0) call chidg_signal(FATAL,"set_times_hdf: ntimes == 0.")
 
+
+        !
+        ! Modify dataset creation properties, i.e. enable chunking in order to append
+        ! dataspace, if needed.
+        !
+        dimsc = [1]  ! Chunk size
+
+        call h5pcreate_f(H5P_DATASET_CREATE_F, crp_list, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL, "write_field_domain_hdf: h5pcreate_f error enabling chunking.")
+
+        call h5pset_chunk_f(crp_list, nrank, dimsc, ierr)
+        if (ierr /= 0) call chidg_signal(FATAL, "write_field_domain_hdf: h5pset_chunk_f error setting chunk properties.")
+
+
+
+
+
+
+
         !
         ! : Open 'Times'
         ! : If 'Times' doesn't exists, create new 'Times' data set
@@ -5067,23 +5038,36 @@ contains
         if (exists) then
             call h5dopen_f(fid,"Times",time_id, ierr, H5P_DEFAULT_F)
             if (ierr /= 0) call chidg_signal(FATAL,"set_times_hdf: h5dopen_f.")
+
+            ! Extend dataset if necessary
+            call h5dset_extent_f(time_id, rank_dims, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL, "set_times_hdf: h5dset_extent_f.")
+
+            ! Update existing dataspace ID since it may have been expanded
+            call h5dget_space_f(time_id, space_id, ierr)
+            if (ierr /= 0) call chidg_signal(FATAL, "set_times_hdf: h5dget_space_f.")
+
+
+
         else
             call h5screate_simple_f(nrank, rank_dims, space_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_times_hdf: h5screate_simple_f.")
 
-            call h5dcreate_f(fid, "Times", H5T_NATIVE_DOUBLE, space_id, time_id, ierr)
+            !call h5dcreate_f(fid, "Times", H5T_NATIVE_DOUBLE, space_id, time_id, ierr)
+            call h5dcreate_f(fid, "Times", H5T_NATIVE_DOUBLE, space_id, time_id, ierr, crp_list)
             if (ierr /= 0) call chidg_signal(FATAL,"set_times_hdf: h5dcreate_f.")
 
-            call h5sclose_f(space_id,ierr)
-            if (ierr /= 0) call chidg_signal(FATAL,"set_times_hdf: h5sclose_f.")
         end if
 
-        ! Write coordinates to datasets
+        ! Write times to dataset
         call h5dwrite_f(time_id, H5T_NATIVE_DOUBLE, times, rank_dims, ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"set_times_hdf: h5dwrite_f")
 
         ! Close datasets
+        call h5pclose_f(crp_list,ierr)
         call h5dclose_f(time_id,ierr)
+        call h5sclose_f(space_id,ierr)
+        if (ierr /= 0) call chidg_signal(FATAL,"set_times_hdf: h5sclose_f.")
         if (ierr /= 0) call chidg_signal(FATAL,"set_times_hdf: h5dclose_f")
 
 

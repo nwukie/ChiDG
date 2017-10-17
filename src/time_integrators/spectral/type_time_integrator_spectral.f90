@@ -131,6 +131,7 @@ contains
                 call set_nsteps_hdf(     fid,data%time_manager%nsteps)
                 call set_nwrite_hdf(     fid,data%time_manager%nwrite)        
                 call set_frequencies_hdf(fid,data%time_manager%freqs )
+                print*, 'setting: ', data%time_manager%times
                 call set_times_hdf(      fid,data%time_manager%times )
 
                 

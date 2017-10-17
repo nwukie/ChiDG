@@ -221,7 +221,7 @@ contains
                         receiver%ielement_l = mesh%domain(idom)%chimera%recv(ichimera_face)%ielement_l
                         receiver%iface      = mesh%domain(idom)%chimera%recv(ichimera_face)%iface
 
-                        call write_line('   Face ', ichimera_face,' of ',mesh%domain(idom)%chimera%nreceivers(), delimiter='  ')
+                        call write_line('   Face ', ichimera_face,' of ',mesh%domain(idom)%chimera%nreceivers(),'   :   ', receiver%idomain_g, receiver%ielement_g, receiver%iface,  delimiter='  ')
 
                         !
                         ! Loop through quadrature nodes on Chimera face and find donors

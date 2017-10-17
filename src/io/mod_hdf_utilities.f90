@@ -5027,12 +5027,9 @@ contains
 
 
 
-
-
-
         !
         ! : Open 'Times'
-        ! : If 'Times' doesn't exists, create new 'Times' data set
+        ! : If 'Times' doesn't exist, create new 'Times' data set
         !
         exists = check_link_exists_hdf(fid,'Times')
         if (exists) then
@@ -5053,7 +5050,6 @@ contains
             call h5screate_simple_f(nrank, rank_dims, space_id, ierr)
             if (ierr /= 0) call chidg_signal(FATAL,"set_times_hdf: h5screate_simple_f.")
 
-            !call h5dcreate_f(fid, "Times", H5T_NATIVE_DOUBLE, space_id, time_id, ierr)
             call h5dcreate_f(fid, "Times", H5T_NATIVE_DOUBLE, space_id, time_id, ierr, crp_list)
             if (ierr /= 0) call chidg_signal(FATAL,"set_times_hdf: h5dcreate_f.")
 

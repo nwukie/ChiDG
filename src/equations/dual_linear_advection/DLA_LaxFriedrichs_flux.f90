@@ -73,23 +73,18 @@ contains
     !!
     !----------------------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(DLA_LaxFriedrichs_flux_t),    intent(inout)      :: self
+        class(DLA_LaxFriedrichs_flux_t),    intent(inout)   :: self
         type(chidg_worker_t),               intent(inout)   :: worker
         class(properties_t),                intent(inout)   :: prop
 
 
         type(AD_D), allocatable, dimension(:)   ::  & 
-            ua_p, ua_m, ub_p, ub_m, dissipation
+            ua_p, ua_m, ub_p, ub_m, dissipation, wave_speed, c1, c2, c3, c_n_m, c_n_p
 
-        real(rk) :: c1, c2, c3
+        real(rk),   allocatable, dimension(:,:) :: grid_vel
+        real(rk),   allocatable, dimension(:)   :: unorm_1, unorm_2, unorm_3, grid_vel_n
 
 
-        !
-        ! Get equation set property data
-        !
-        c1 = ONE
-        c2 = ZERO
-        c3 = ZERO
 
 
         !
@@ -101,22 +96,45 @@ contains
         ub_m = worker%get_field('u_b','value', 'face interior')
         ub_p = worker%get_field('u_b','value', 'face exterior')
 
+        !
+        ! Get equation set property data
+        !
+        c1 = ua_m
+        c2 = ua_m
+        c3 = ua_m
+        c1 = ONE
+        c2 = ZERO
+        c3 = ZERO
+
+
 
         !
-        ! Compute boundary upwind flux
+        ! Get normal vector
         !
-        dissipation = -max(abs(c1),abs(c2),abs(c3))*(ua_p - ua_m)
+        unorm_1  = worker%unit_normal_ale(1)
+        unorm_2  = worker%unit_normal_ale(2)
+        unorm_3  = worker%unit_normal_ale(3)
 
+               
+        !
+        ! Compute boundary upwind dissipation
+        !
+        grid_vel   = worker%get_grid_velocity_face('face interior')
+        c_n_m      = c1*unorm_1 + c2*unorm_2 + c3*unorm_3
+        c_n_p      = c1*unorm_1 + c2*unorm_2 + c3*unorm_3
+        grid_vel_n = grid_vel(:,1)*unorm_1  +  grid_vel(:,2)*unorm_2  +  grid_vel(:,3)*unorm_3
+        wave_speed  = max(abs(c_n_m),abs(c_n_p)) + grid_vel_n
+
+
+
+        !
+        ! Integrate flux
+        !
+        dissipation = HALF*wave_speed*(ua_m-ua_p)
         call worker%integrate_boundary_upwind('u_a',dissipation)
 
-
-        !
-        ! Compute boundary upwind flux
-        !
-        dissipation = -max(abs(c1),abs(c2),abs(c3))*(ub_p - ub_m)
-
+        dissipation = HALF*wave_speed*(ub_m-ub_p)
         call worker%integrate_boundary_upwind('u_b',dissipation)
-
 
 
     end subroutine compute

@@ -176,7 +176,8 @@ contains
                 ! Compute, store time levels
                 !
                 do i = 1,self%ntime
-                    self%times(i) = ((TWO*PI)/minval(self%freqs)) * (real(i)/real(self%ntime))
+                    !self%times(i) = ((TWO*PI)/minval(self%freqs)) * (real(i)/real(self%ntime))
+                    self%times(i) = ((TWO*PI)/minval(abs(self%freqs))) * (real(i)/real(self%ntime))
                 end do
 
 

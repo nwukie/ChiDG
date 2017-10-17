@@ -14,6 +14,7 @@ module mod_operators
     use DLA_volume_advective_flux,                  only: DLA_volume_advective_flux_t
     use DLA_boundary_average_advective_flux,        only: DLA_boundary_average_advective_flux_t
     use DLA_LaxFriedrichs_flux,                     only: DLA_LaxFriedrichs_flux_t
+    use DLA_bc_operator,                            only: DLA_bc_operator_t
 
     ! Scalar Diffusion Operators
     use SD_volume_operator,                         only: SD_volume_operator_t
@@ -222,6 +223,7 @@ contains
         type(DLA_volume_advective_flux_t)                   :: DLA_volume_operator
         type(DLA_boundary_average_advective_flux_t)         :: DLA_average_operator
         type(DLA_LaxFriedrichs_flux_t)                      :: DLA_laxfriedrichs_operator
+        type(DLA_bc_operator_t)                             :: DLA_bc_operator
 
         ! Fluid Inviscid Operators
         type(euler_volume_operator_t)                       :: euler_volume_operator
@@ -295,6 +297,7 @@ contains
             call operator_factory%register(DLA_volume_operator)
             call operator_factory%register(DLA_average_operator)
             call operator_factory%register(DLA_laxfriedrichs_operator)
+            call operator_factory%register(DLA_bc_operator)
 
 
             ! Register Fluid Inviscid

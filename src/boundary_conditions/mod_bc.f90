@@ -31,7 +31,11 @@ module mod_bc
     use bc_state_gcl_farfield,                  only: gcl_farfield_t
     use bc_state_gcl_symmetry,                  only: gcl_symmetry_t
     
+    ! Dual Scalar boundary conditions
+    use bc_state_dual_scalar_value,                  only: dual_scalar_value_t
+    use bc_state_dual_scalar_extrapolate,            only: dual_scalar_extrapolate_t
 
+    ! Mesh motion boundary conditions
     use bc_state_mesh_motion_value,                  only: mesh_motion_value_t
     use bc_state_mesh_motion_derivative,             only: mesh_motion_derivative_t
     use bc_state_mesh_motion_extrapolate,            only: mesh_motion_extrapolate_t
@@ -108,6 +112,8 @@ contains
         type(gcl_farfield_t)                    :: GCL_FARFIELD
         type(gcl_symmetry_t)                    :: GCL_SYMMETRY
         
+        type(dual_scalar_value_t)               :: DUAL_SCALAR_VALUE
+        type(dual_scalar_extrapolate_t)         :: DUAL_SCALAR_EXTRAPOLATE
 
         type(mesh_motion_value_t)               :: MESH_MOTION_VALUE
         type(mesh_motion_derivative_t)          :: MESH_MOTION_DERIVATIVE
@@ -156,6 +162,8 @@ contains
             call registered_bcs%push_back(GCL_FARFIELD)
             call registered_bcs%push_back(GCL_SYMMETRY)
             
+            call registered_bcs%push_back(DUAL_SCALAR_VALUE)
+            call registered_bcs%push_back(DUAL_SCALAR_EXTRAPOLATE)
 
             call registered_bcs%push_back(MESH_MOTION_VALUE)
             call registered_bcs%push_back(MESH_MOTION_DERIVATIVE)

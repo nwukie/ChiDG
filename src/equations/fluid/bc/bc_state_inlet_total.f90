@@ -61,7 +61,7 @@ contains
         !
         call self%bcproperties%add('Total Pressure',       'Required')
         call self%bcproperties%add('Total Temperature',    'Required')
-        call self%bcproperties%add('Density Perturbation', 'Required')
+        !call self%bcproperties%add('Density Perturbation', 'Required')
 
         call self%bcproperties%add('Normal-1',         'Required')
         call self%bcproperties%add('Normal-2',         'Required')
@@ -127,7 +127,7 @@ contains
         !
         PT   = self%bcproperties%compute('Total Pressure',        worker%time(), worker%coords())
         TT   = self%bcproperties%compute('Total Temperature',     worker%time(), worker%coords())
-        DRHO = self%bcproperties%compute('Density Perturbation',  worker%time(), worker%coords())
+        !DRHO = self%bcproperties%compute('Density Perturbation',  worker%time(), worker%coords())
 
 
         !
@@ -273,7 +273,7 @@ contains
         !
         ! Compute perturbation quantities
         !
-        density_bc = density_bc + drho
+        !density_bc = density_bc + drho
 
 
         !

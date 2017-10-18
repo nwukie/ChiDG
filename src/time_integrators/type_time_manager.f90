@@ -173,7 +173,7 @@ contains
                 end do
 
                 !
-                ! Compute, store time levels
+                ! Compute, store time levels. Take abs(freqs) in-case of negative frequencies
                 !
                 do i = 1,self%ntime
                     !self%times(i) = ((TWO*PI)/minval(self%freqs)) * (real(i)/real(self%ntime))

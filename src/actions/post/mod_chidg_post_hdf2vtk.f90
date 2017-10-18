@@ -90,16 +90,17 @@ contains
         !
         call chidg%read_mesh(grid_file)
         call chidg%read_fields(solution_file)
-
+        
         call chidg%time_integrator%initialize_state(chidg%data)
         call chidg%time_integrator%read_time_options(chidg%data,solution_file,'process')
+
 
         
         !
         ! Get post processing data (q_out)
         !        
         call chidg%time_integrator%process_data_for_output(chidg%data)
-       
+         
         
         grid_file_prefix     = get_file_prefix(grid_file,'.h5')
         solution_file_prefix = get_file_prefix(solution_file,'.h5')

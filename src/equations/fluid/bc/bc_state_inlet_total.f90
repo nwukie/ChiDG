@@ -1,7 +1,7 @@
 module bc_state_inlet_total
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ONE, TWO
+    use mod_constants,          only: ONE, TWO, HALF
     use mod_fluid,              only: Rgas, cp, gam
     use type_bc_state,          only: bc_state_t
     use type_chidg_worker,      only: chidg_worker_t
@@ -59,8 +59,9 @@ contains
         !
         ! Add functions
         !
-        call self%bcproperties%add('Total Pressure',   'Required')
-        call self%bcproperties%add('Total Temperature','Required')
+        call self%bcproperties%add('Total Pressure',       'Required')
+        call self%bcproperties%add('Total Temperature',    'Required')
+        !call self%bcproperties%add('Density Perturbation', 'Required')
 
         call self%bcproperties%add('Normal-1',         'Required')
         call self%bcproperties%add('Normal-2',         'Required')
@@ -109,19 +110,24 @@ contains
             grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
             u_m,    v_m,    w_m,                                                        &
             u_bc,   v_bc,   w_bc,                                                       &
-            T_bc,   vmag2_m, vmag
+            T_bc,   vmag2_m, vmag, f, df, dT, T, vel, veln, rminus, asp_ext, asp_int, M
 
         real(rk),       allocatable, dimension(:)   ::  &
-            TT, n1, n2, n3, nmag, alpha, r, PT
+            PT, TT, DRHO, n1, n2, n3, nmag, alpha, r, unorm_1, unorm_2, unorm_3
+
+        real(rk)    :: ntol, rafac
             
-        integer(ik) :: ierr, igq
+        integer(ik) :: ierr, igq, inewton, nmax
+
+        logical :: converged
 
 
         !
         ! Get boundary condition Total Temperature, Total Pressure, and normal vector
         !
-        PT = self%bcproperties%compute('Total Pressure',     worker%time(), worker%coords())
-        TT = self%bcproperties%compute('Total Temperature',  worker%time(), worker%coords())
+        PT   = self%bcproperties%compute('Total Pressure',        worker%time(), worker%coords())
+        TT   = self%bcproperties%compute('Total Temperature',     worker%time(), worker%coords())
+        !DRHO = self%bcproperties%compute('Density Perturbation',  worker%time(), worker%coords())
 
 
         !
@@ -165,7 +171,7 @@ contains
 
         grad1_mom2_m    = worker%get_field('Momentum-2','grad1', 'face interior')
         grad2_mom2_m    = worker%get_field('Momentum-2','grad2', 'face interior')
-        grad3_mom3_m    = worker%get_field('Momentum-2','grad3', 'face interior')
+        grad3_mom2_m    = worker%get_field('Momentum-2','grad3', 'face interior')
 
         grad1_mom3_m    = worker%get_field('Momentum-3','grad1', 'face interior')
         grad2_mom3_m    = worker%get_field('Momentum-3','grad2', 'face interior')
@@ -218,11 +224,56 @@ contains
         T_bc = TT - (vmag2_m)/(TWO*cp)
         p_bc = PT*((T_bc/TT)**(gam/(gam-ONE)))
 
+!        print*, 'initial: ', T_bc(1)%x_ad_
+!
+!        ! Reversed to be inward facing for formulation
+!        unorm_1 = -worker%unit_normal(1)
+!        unorm_2 = -worker%unit_normal(2)
+!        unorm_3 = -worker%unit_normal(3)
+!
+!
+!        veln = u_m*unorm_1 + v_m*unorm_2 + w_m*unorm_3
+!        T = worker%get_field('Temperature', 'value', 'face interior')
+!        asp_int = sqrt(gam*Rgas*T)
+!        rminus = veln - TWO*asp_int/(gam-ONE)
+!        rafac = ONE
+!
+!        converged = .false.
+!        nmax = 20
+!        ntol = 1.e-6_rk
+!        inewton = 1
+!        do while((inewton < nmax) .and. (.not. converged))
+!            asp_ext = sqrt(gam*Rgas*T_bc)
+!            vel = rafac * (rminus + TWO*asp_ext/(gam-ONE))
+!
+!            f  = TT - T_bc - HALF*(gam-ONE)*vel*vel/(gam*Rgas)
+!            df = -(ONE + vel*rafac/asp_ext)
+!            dT = -f/df
+!            T_bc = T_bc + dT
+!            converged = sqrt(sum(dT*dT)) < ntol
+!            inewton = inewton + 1
+!        end do
+!
+!        if (.not. converged) print*, 'Total Inlet boundary condition newton iteration did not converge.'
+!
+!        print*, 'final: ', T_bc(1)%x_ad_, inewton
+!
+!
+!        !p_bc = PT*((T_bc/TT)**(gam/(gam-ONE)))
+!
+!        M = vmag / sqrt(gam*Rgas*T_bc)
+!        p_bc = PT*(ONE + ((gam-ONE)/TWO)*M*M)**(-gam/(gam-ONE))
+
 
         !
         ! Compute boundary condition density from ideal gas law
         !
         density_bc = p_bc/(T_bc*Rgas)
+
+        !
+        ! Compute perturbation quantities
+        !
+        !density_bc = density_bc + drho
 
 
         !
@@ -231,6 +282,7 @@ contains
         mom1_bc = density_bc * u_bc
         mom2_bc = density_bc * v_bc
         mom3_bc = density_bc * w_bc
+
 
 
         !
@@ -245,6 +297,8 @@ contains
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_bc = mom2_bc * r
         end if
+
+
 
 
 

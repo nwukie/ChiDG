@@ -449,56 +449,56 @@ contains
 
 
 
-!                !
-!                ! Routine for global(parallel) BOUNDARY coupling (bc_blks)
-!                !
-!                if (allocated(A%dom(idom)%bc_blks)) then
-!                    do ielem = 1,size(A%dom(idom)%bc_blks,1)
-!                        do imat = 1,A%dom(idom)%bc_blks(ielem,itime)%size()
-!
-!
-!                            matrix_proc = IRANK
-!                            vector_proc = A%dom(idom)%bc_blks(ielem,itime)%parent_proc(imat)
-!
-!                            local_multiply    = ( matrix_proc == vector_proc )
-!                            parallel_multiply = ( matrix_proc /= vector_proc )
-!
-!
-!                            if ( parallel_multiply ) then
-!                                dparent_l = A%dom(idom)%bc_blks(ielem,itime)%dparent_l(imat)
-!                                eparent_l = A%dom(idom)%bc_blks(ielem,itime)%eparent_l(imat)
-!
-!                                recv_comm    = A%dom(idom)%bc_blks(ielem,itime)%get_recv_comm(imat)
-!                                recv_domain  = A%dom(idom)%bc_blks(ielem,itime)%get_recv_domain(imat)
-!                                recv_element = A%dom(idom)%bc_blks(ielem,itime)%get_recv_element(imat)
-!
-!
-!                                res_istart = res%dom(idom)%vecs(ielem)%get_time_start(itime)
-!                                res_iend   = res%dom(idom)%vecs(ielem)%get_time_end(itime)
-!                                x_istart   = x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%get_time_start(itime)
-!                                x_iend     = x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%get_time_end(itime)
-!                                associate ( resvec => res%dom(idom)%vecs(ielem)%vec,                                    &
-!                                            xvec   => x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec,   &
-!                                            Amat   => A%dom(idom)%bc_blks(ielem,itime)%data_(imat)%mat )
-!
-!
-!                                    !
-!                                    ! Test matrix vector sizes
-!                                    !
-!                                    nonconforming = ( size(Amat,2) /= size(xvec) )
-!                                    if (nonconforming) call chidg_signal(FATAL,"operator_chidg_mv: nonconforming Boundary m-v operation")
-!
-!                                    call timer_blas%start()
-!                                    resvec = resvec + matmul(Amat,xvec)
-!                                    call timer_blas%stop()
-!
-!                                end associate
-!                            end if
-!
-!
-!                        end do !imat
-!                    end do ! ielem
-!                end if  ! allocated
+                !
+                ! Routine for global(parallel) BOUNDARY coupling (bc_blks)
+                !
+                if (allocated(A%dom(idom)%bc_blks)) then
+                    do ielem = 1,size(A%dom(idom)%bc_blks,1)
+                        do imat = 1,A%dom(idom)%bc_blks(ielem,itime)%size()
+
+
+                            matrix_proc = IRANK
+                            vector_proc = A%dom(idom)%bc_blks(ielem,itime)%parent_proc(imat)
+
+                            local_multiply    = ( matrix_proc == vector_proc )
+                            parallel_multiply = ( matrix_proc /= vector_proc )
+
+
+                            if ( parallel_multiply ) then
+                                dparent_l = A%dom(idom)%bc_blks(ielem,itime)%dparent_l(imat)
+                                eparent_l = A%dom(idom)%bc_blks(ielem,itime)%eparent_l(imat)
+
+                                recv_comm    = A%dom(idom)%bc_blks(ielem,itime)%get_recv_comm(imat)
+                                recv_domain  = A%dom(idom)%bc_blks(ielem,itime)%get_recv_domain(imat)
+                                recv_element = A%dom(idom)%bc_blks(ielem,itime)%get_recv_element(imat)
+
+
+                                res_istart = res%dom(idom)%vecs(ielem)%get_time_start(itime)
+                                res_iend   = res%dom(idom)%vecs(ielem)%get_time_end(itime)
+                                x_istart   = x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%get_time_start(itime)
+                                x_iend     = x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%get_time_end(itime)
+                                associate ( resvec => res%dom(idom)%vecs(ielem)%vec,                                    &
+                                            xvec   => x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec,   &
+                                            Amat   => A%dom(idom)%bc_blks(ielem,itime)%data_(imat)%mat )
+
+
+                                    !
+                                    ! Test matrix vector sizes
+                                    !
+                                    nonconforming = ( size(Amat,2) /= size(xvec) )
+                                    if (nonconforming) call chidg_signal(FATAL,"operator_chidg_mv: nonconforming Boundary m-v operation")
+
+                                    call timer_blas%start()
+                                    resvec = resvec + matmul(Amat,xvec)
+                                    call timer_blas%stop()
+
+                                end associate
+                            end if
+
+
+                        end do !imat
+                    end do ! ielem
+                end if  ! allocated
 
 
             end do ! idom

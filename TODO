@@ -17,9 +17,7 @@
 
 TESTS
 !--------------------------------------------------------------------------------------
-Test boundary condition coupling
 Test periodic boundary conditions, cartesian and cylindrical
-Test coordinate system transformations, rotations
 
 
 Preconditioners
@@ -64,11 +62,6 @@ Chimera
 
 Time
 !----------------------------------------------------------------------
-@detail Implement harmonic balance
-@author Nathan A. Wukie
-@date   1/28/2016
-
-
 @detail Make better abstractions for consistency of linearized euler and harmonic balance methods
 @author Nathan A. Wukie
 @date   1/28/2016
@@ -86,20 +79,10 @@ Nonlinear Solver
 
 
 
-@detail Check for zero residual on first iteration. Else could get NaN's.
-@author Nathan A. Wukie
-@date   4/14/2016
-
-
 
 
 Equation set - PDE
 !----------------------------------------------------------------------
-@detail Redo nomenclature from 'equation set' to 'PDE'
-@author Nathan A. Wukie
-@date   2/8/2016
-
-
 @detail Add blockage terms to Euler equations
 @author Nathan A. Wukie
 @date   1/28/2016
@@ -121,12 +104,6 @@ Framework
 
 IO
 !-------------------------------------------------------------------------
-@detail When reading solution, check that file contains solution
-@author Nathan A. Wukie
-@date   4/22/2016
-
-
-
 
 
 

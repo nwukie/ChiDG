@@ -422,7 +422,7 @@ contains
                                 res_iend   = res%dom(idom)%vecs(ielem)%get_time_end(itime)
                                 x_istart   = x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%get_time_start(itime)
                                 x_iend     = x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%get_time_end(itime)
-                                associate ( resvec => res%dom(idom)%vecs(ielem)%vec,                                    &
+                                associate ( resvec => res%dom(idom)%vecs(ielem)%vec(res_istart:res_iend),                                &
                                             xvec   => x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec(x_istart:x_iend),   &
                                             Amat   => A%dom(idom)%chi_blks(ielem,itime)%data_(imat)%mat )
 
@@ -477,8 +477,8 @@ contains
                                 res_iend   = res%dom(idom)%vecs(ielem)%get_time_end(itime)
                                 x_istart   = x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%get_time_start(itime)
                                 x_iend     = x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%get_time_end(itime)
-                                associate ( resvec => res%dom(idom)%vecs(ielem)%vec,                                    &
-                                            xvec   => x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec,   &
+                                associate ( resvec => res%dom(idom)%vecs(ielem)%vec(res_istart:res_iend),                               &
+                                            xvec   => x%recv%comm(recv_comm)%dom(recv_domain)%vecs(recv_element)%vec(x_istart:x_iend),  &
                                             Amat   => A%dom(idom)%bc_blks(ielem,itime)%data_(imat)%mat )
 
 

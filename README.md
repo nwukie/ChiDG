@@ -1,7 +1,9 @@
 
-[//]: # <p align="center">
-[//]: #    <img src=/doc/figures/chidg_logo_small.png?raw=true />
-[//]: # </p>
+<!---
+<p align="center">
+   <img src=/doc/figures/chidg_logo_small.png?raw=true />
+</p>
+--->
 
 
 # ChiDG
@@ -53,9 +55,9 @@ Nathan A. Wukie   <nathan.wukie@gmail.com>
 
 
 ## Developers:
-Mayank Sharma
-Matteo Ugolotti
-Dr. Eric Wolf
+ - Mayank Sharma
+ - Matteo Ugolotti
+ - Dr. Eric Wolf
 
 
 ## Sponsorship Acknowledgement:

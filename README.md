@@ -1,7 +1,9 @@
 
-[//]: # <p align="center">
-[//]: #    <img src=/doc/figures/chidg_logo_small.png?raw=true />
-[//]: # </p>
+<!---
+<p align="center">
+   <img src=/doc/figures/chidg_logo_small.png?raw=true />
+</p>
+--->
 
 
 # ChiDG

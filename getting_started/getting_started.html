@@ -236,6 +236,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../examples/example_main.html">Examples</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="../examples/smoothbump/example_smoothbump.html">Smooth bump</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../examples/smoothbump/example_smoothbump.html#tutorial">Tutorial</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../examples/smoothbump/example_smoothbump.html#background">Background</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../examples/smoothbump/example_smoothbump.html#setup">Setup</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="../examples/smoothbump/example_smoothbump.html#setup-from-scratch">Setup from scratch:</a></li>
@@ -328,7 +329,7 @@ requirements and recommendations regarding compilers:</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <ul class="last simple">
-<li>The GNU Fortran compiler, <code class="docutils literal"><span class="pre">gfortran</span></code>, is recommended. <strong>Version &gt;= 5.0 is required</strong></li>
+<li>The GNU Fortran compiler, <code class="docutils literal"><span class="pre">gfortran</span></code>, is recommended. <strong>Version &gt;= 6.0 is required</strong></li>
 <li><strong>Do not</strong> use the Intel Fortran compiler, <code class="docutils literal"><span class="pre">ifort</span></code>. There are currently several bugs in all versions of the compiler that make it unusable. One bug in the compiler creates a bad memory leak in the compiled code. Intel has been notified and was able to reproduce the issue.</li>
 <li>Other Fortran compilers have not been tested and are not supported.</li>
 </ul>
@@ -430,7 +431,7 @@ installations on your machine. Either way, you can direct CMake find your MPI li
 by <strong>setting the environment variable</strong>: <code class="docutils literal"><span class="pre">MPI_Fortran_COMPILER</span></code>.</p>
 <p>So, if your MPI installation is located in the directory <code class="docutils literal"><span class="pre">/home/sparky/mpi</span></code>, you might
 place the line
-<code class="docutils literal"><span class="pre">export</span> <span class="pre">MPI_Fortran_COMPILER=/home/sparky/my_mpi_install/bin/mpif90</span></code>
+<code class="docutils literal"><span class="pre">export</span> <span class="pre">MPI_Fortran_COMPILER=/home/sparky/my_mpi_install/bin/mpifort</span></code>
 in your <code class="docutils literal"><span class="pre">.bashrc</span></code> or <code class="docutils literal"><span class="pre">.bash_profile</span></code> files if you are using the Bash shell.</p>
 </div>
 <div class="section" id="blas-and-lapack">

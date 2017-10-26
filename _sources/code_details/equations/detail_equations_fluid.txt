@@ -48,7 +48,7 @@ The velocity vector in ``Cartesian`` and ``Cylindrical`` coordinates is
 
 .. math::
 
-   \vec{u} = [v_x, v_y, v_z]       \quad\quad  \vec{v} = [v_r, v_\theta, v_z]
+   \vec{v} = [v_x, v_y, v_z]       \quad\quad  \vec{v} = [v_r, v_\theta, v_z]
 
 Some distinctions are made here between absolute, relative, and frame velocities.
 The absolute velocity(:math:`v`) is that which is perceived in the inertial frame of 
@@ -450,11 +450,11 @@ So the gradient of the velocity components can be computed as
 
 .. math::
 
-    \nabla (v_1) &= \frac{\nabla(\rho v_1)}{\rho} - \frac{u \nabla(\rho)}{\rho}
+    \nabla (v_1) &= \frac{\nabla(\rho v_1)}{\rho} - \frac{v_1 \nabla(\rho)}{\rho}
     \\
-    \nabla (v_2) &= \frac{\nabla(\rho v_2)}{\rho} - \frac{v \nabla(\rho)}{\rho}
+    \nabla (v_2) &= \frac{\nabla(\rho v_2)}{\rho} - \frac{v_2 \nabla(\rho)}{\rho}
     \\
-    \nabla (v_3) &= \frac{\nabla(\rho v_3)}{\rho} - \frac{w \nabla(\rho)}{\rho}
+    \nabla (v_3) &= \frac{\nabla(\rho v_3)}{\rho} - \frac{v_3 \nabla(\rho)}{\rho}
 
 
 .. note::

@@ -62,7 +62,7 @@ requirements and recommendations regarding compilers:
 
 .. note:: 
 
-    - The GNU Fortran compiler, ``gfortran``, is recommended. **Version >= 5.0 is required**
+    - The GNU Fortran compiler, ``gfortran``, is recommended. **Version >= 6.0 is required**
     - **Do not** use the Intel Fortran compiler, ``ifort``. There are currently several bugs in all versions of the compiler that make it unusable. One bug in the compiler creates a bad memory leak in the compiled code. Intel has been notified and was able to reproduce the issue. 
     - Other Fortran compilers have not been tested and are not supported.
 
@@ -174,7 +174,7 @@ by **setting the environment variable**: ``MPI_Fortran_COMPILER``.
 
 So, if your MPI installation is located in the directory ``/home/sparky/mpi``, you might
 place the line
-``export MPI_Fortran_COMPILER=/home/sparky/my_mpi_install/bin/mpif90``
+``export MPI_Fortran_COMPILER=/home/sparky/my_mpi_install/bin/mpifort``
 in your ``.bashrc`` or ``.bash_profile`` files if you are using the Bash shell.
 
 

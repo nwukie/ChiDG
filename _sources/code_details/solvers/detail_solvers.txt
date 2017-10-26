@@ -62,7 +62,7 @@ is handled by the ``time_integrator_t`` class.
 
     contains
 
-        procedure(data_interface), deferred :: iterate   ! Must define this procedure in the extended type
+        procedure(data_interface), deferred :: step     ! Must define this procedure in the extended type
 
     end type time_integrator_t
 

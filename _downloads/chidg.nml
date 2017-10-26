@@ -49,7 +49,7 @@
 
 
 &linear_solve
-    linear_solver       = 'fgmres'          ! LINEAR SOLVERS:  'fgmres'
+    linear_solver       = 'fgmres_cgs'      ! LINEAR SOLVERS:  'fgmres'
     ltol                = 1.e-8             ! Convergence tolerance to terminate linear solve
     preconditioner      = 'ILU0'            ! PRECONDITIONERS: 'identity', 'jacobi', 'ILU0', 'RASILU0'
 /
@@ -62,5 +62,12 @@
     nwrite         = 50                     ! Write solution state every 'nwrite' iterations
     initial_write  = .false.                ! Write solution before run
     final_write    = .true.                 ! Write solution after run
+    verbosity      = 4
 /
+
+
+&initial
+    initial_fields = 1.0, 0.0, 0.0, 0.0, 250000.0
+/
+
 

@@ -237,6 +237,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../examples/example_main.html">Examples</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html">Smooth bump</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#tutorial">Tutorial</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#background">Background</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup">Setup</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup-from-scratch">Setup from scratch:</a></li>
@@ -318,15 +319,14 @@ the ChiDG library.</p>
     <span class="k">procedure</span>   <span class="kd">::</span> <span class="n">start_up</span>
     <span class="k">procedure</span>   <span class="kd">::</span> <span class="n">shut_down</span>
 
-    <span class="c">! IO</span>
-    <span class="k">procedure</span>   <span class="kd">::</span> <span class="n">read_grid</span>
-    <span class="k">procedure</span>   <span class="kd">::</span> <span class="n">read_solution</span>
-    <span class="k">procedure</span>   <span class="kd">::</span> <span class="n">write_grid</span>
-    <span class="k">procedure</span>   <span class="kd">::</span> <span class="n">write_solution</span>
-
-    <span class="c">! Initialization</span>
+    <span class="c">! Options</span>
     <span class="k">procedure</span>   <span class="kd">::</span> <span class="n">set</span>
-    <span class="k">procedure</span>   <span class="kd">::</span> <span class="n">init</span>
+
+    <span class="c">! IO</span>
+    <span class="k">procedure</span>   <span class="kd">::</span> <span class="n">read_mesh</span>
+    <span class="k">procedure</span>   <span class="kd">::</span> <span class="n">read_fields</span>
+    <span class="k">procedure</span>   <span class="kd">::</span> <span class="n">write_mesh</span>
+    <span class="k">procedure</span>   <span class="kd">::</span> <span class="n">write_fields</span>
 
     <span class="c">! Run</span>
     <span class="k">procedure</span>   <span class="kd">::</span> <span class="n">run</span>
@@ -357,8 +357,8 @@ the ChiDG library.</p>
 <span class="k">call </span><span class="n">chidg</span><span class="p">%</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;Solution Order&#39;</span>  <span class="p">,</span> <span class="n">integer_input</span><span class="o">=</span><span class="mi">2</span>         <span class="p">)</span>
 
 <span class="c">! Read grid (solution if available)</span>
-<span class="k">call </span><span class="n">chidg</span><span class="p">%</span><span class="n">read_grid</span><span class="p">(</span><span class="s1">&#39;grid.h5&#39;</span><span class="p">)</span>
-<span class="k">call </span><span class="n">chidg</span><span class="p">%</span><span class="n">read_solution</span><span class="p">(</span><span class="s1">&#39;grid.h5&#39;</span><span class="p">)</span>
+<span class="k">call </span><span class="n">chidg</span><span class="p">%</span><span class="n">read_mesh</span><span class="p">(</span><span class="s1">&#39;grid.h5&#39;</span><span class="p">)</span>
+<span class="k">call </span><span class="n">chidg</span><span class="p">%</span><span class="n">read_fields</span><span class="p">(</span><span class="s1">&#39;grid.h5&#39;</span><span class="p">)</span>
 
 <span class="c">! Run ChiDG analysis</span>
 <span class="k">call </span><span class="n">chidg</span><span class="p">%</span><span class="n">run</span><span class="p">()</span>
@@ -467,7 +467,7 @@ the ChiDG library.</p>
 
 <dl class="function">
 <dt>
-<code class="descname">chidg%read_grid('file name')</code></dt>
+<code class="descname">chidg%read_mesh('file name')</code></dt>
 <dd><p>Read domains and boundary conditions from the ChiDG-formatted HDF file indicated by the
 string parameter passed in.</p>
 <div class="admonition note">
@@ -478,13 +478,27 @@ string parameter passed in.</p>
 
 <dl class="function">
 <dt>
-<code class="descname">chidg%read_solution('file name')</code></dt>
+<code class="descname">chidg%read_fields('file name')</code></dt>
 <dd><p>Read solution from the ChiDG-formatted HDF file indicated by the
 string parameter passed in.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">A grid shall already have been read/initialized before a call to <code class="docutils literal"><span class="pre">chidg%read_solution('file')</span></code>.</p>
+<p class="last">A grid shall already have been read/initialized before a call to <code class="docutils literal"><span class="pre">chidg%read_fields('file')</span></code>.</p>
 </div>
+</dd></dl>
+
+<dl class="function">
+<dt>
+<code class="descname">chidg%write_mesh('file name')</code></dt>
+<dd><p>Write domains and boundary conditions to the ChiDG-formatted HDF file indicated by the
+string parameter passed in. It &#8216;file name&#8217; does not exist, a new file will be created.</p>
+</dd></dl>
+
+<dl class="function">
+<dt>
+<code class="descname">chidg%write_fields('file name')</code></dt>
+<dd><p>Write primary fields to the ChiDG-formatted HDF file indicated by the
+string parameter passed in.</p>
 </dd></dl>
 
 <dl class="function">

@@ -24,15 +24,14 @@ the ChiDG library.
         procedure   :: start_up
         procedure   :: shut_down
 
-        ! IO
-        procedure   :: read_grid
-        procedure   :: read_solution
-        procedure   :: write_grid
-        procedure   :: write_solution
-
-        ! Initialization
+        ! Options
         procedure   :: set
-        procedure   :: init
+
+        ! IO
+        procedure   :: read_mesh
+        procedure   :: read_fields
+        procedure   :: write_mesh
+        procedure   :: write_fields
 
         ! Run
         procedure   :: run
@@ -70,8 +69,8 @@ the ChiDG library.
     call chidg%set('Solution Order'  , integer_input=2         )
 
     ! Read grid (solution if available)
-    call chidg%read_grid('grid.h5')
-    call chidg%read_solution('grid.h5')
+    call chidg%read_mesh('grid.h5')
+    call chidg%read_fields('grid.h5')
 
     ! Run ChiDG analysis
     call chidg%run()
@@ -127,7 +126,7 @@ the ChiDG library.
     |  ``Solution Order``   |  integer_input=value                                                  |
     +-----------------------+-----------------------------------------------------------------------+
 
-.. function:: chidg%read_grid('file name')
+.. function:: chidg%read_mesh('file name')
 
     Read domains and boundary conditions from the ChiDG-formatted HDF file indicated by the 
     string parameter passed in. 
@@ -135,14 +134,25 @@ the ChiDG library.
     .. note:: All calls to ``chidg%set()`` shall occur before this.
 
 
-.. function:: chidg%read_solution('file name')
+.. function:: chidg%read_fields('file name')
 
     Read solution from the ChiDG-formatted HDF file indicated by the 
     string parameter passed in. 
     
-    .. note:: A grid shall already have been read/initialized before a call to ``chidg%read_solution('file')``.
+    .. note:: A grid shall already have been read/initialized before a call to ``chidg%read_fields('file')``.
 
 
+.. function:: chidg%write_mesh('file name')
+
+    Write domains and boundary conditions to the ChiDG-formatted HDF file indicated by the 
+    string parameter passed in. It 'file name' does not exist, a new file will be created.
+
+
+.. function:: chidg%write_fields('file name')
+
+    Write primary fields to the ChiDG-formatted HDF file indicated by the 
+    string parameter passed in. 
+    
 
 .. function:: chidg%run()
 
@@ -150,31 +160,6 @@ the ChiDG library.
 
     .. note:: All reading/initializing/setting shall occur before this.
 
-
-.. .. function:: chidg%init('option')
-.. 
-.. 
-..     Performs initialization activities on data. This should be executed after add data has been
-..     read in. In an operational setting, using the option ``all`` is recommended. The more granular
-..     initialization options are sometimes useful for testing purposes, where not all initialization
-..     is necessary. Options are:
-.. 
-..     +-------------------+-----------------------------------------------------------------------------------------------+
-..     |  ``all``          | | Calls all initialization routines.                                                          |
-..     +-------------------+-----------------------------------------------------------------------------------------------+
-..     | ``domains``       | | Initialize domain data that depend on solution expansion.                                   |
-..     +-------------------+-----------------------------------------------------------------------------------------------+
-..     | ``bc``            | | Initialize boundary condition coupling, bc parallel comm.                                   |
-..     +-------------------+-----------------------------------------------------------------------------------------------+
-..     | ``communication`` | | Initialize interior communication. Local/Global interior faces.                             |
-..     +-------------------+-----------------------------------------------------------------------------------------------+
-..     | ``chimera``       | | Initialize chimera communication.                                                           |
-..     +-------------------+-----------------------------------------------------------------------------------------------+
-..     | ``solvers``       | | Allocate matrix/vector storage used by solvers.                                             |
-..     +-------------------+-----------------------------------------------------------------------------------------------+
-..     | ``finalize``      | | Check necessary algorithms have been set. Initialize time integrator and preconditioner.    |
-..     +-------------------+-----------------------------------------------------------------------------------------------+
-.. 
 
 
 

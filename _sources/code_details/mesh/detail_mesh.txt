@@ -115,11 +115,16 @@ general information that could be useful to users. This includes:
 
 ::
 
-    elem_pts(:)     An array of points defining the element in real space(cartesian, cylindrical, etc.)
-    quad_pts(:)     An array of points defining the location of each volume quadrature node in real space.
-    metric(3,3,:)   An array, defining for each quadrature point, a matrix of element metric values.
-    jinv(:)         An array of inverse element jacobian values at each volume quadrature node.
-    grad1(:,:)      An array of gradients of the basis functions with respect to physical coordinates at volume quadrature nodes.
+    node_coords(:,:)      An array of points defining the undeformed element in real space(cartesian, cylindrical, etc.). [nnodes, ncoords]
+    node_coords_def(:,:)  An array of points defining the deformed element in real space(cartesian, cylindrical, etc.). [nnodes, ncoords]
+    node_coords_vel(:,:)  An array of points defining the element in real space(cartesian, cylindrical, etc.). [nnodes, ncoords]
+    interp_coords(:)      An array of points defining the undeformed coordinates of each volume interpolation node in real space.
+    interp_coords_def(:)  An array of points defining the deformed coordinates of each volume interpolation node in real space.
+    interp_coords_vel(:)  An array of points defining the coordinate velocities of each volume interpolation node in real space.
+    metric(3,3,:)         An array, defining for each interpolation node, a matrix of element metric values.
+    jinv(:)               An array of inverse element jacobian values at each volume interpolation node. 
+    jinv_def(:)           An array of inverse element jacobian values at each volume quadrature node.
+    grad1(:,:)            An array of gradients of the basis functions with respect to physical coordinates at volume quadrature nodes.
 
 
 .. image:: d__element.png
@@ -130,8 +135,8 @@ general information that could be useful to users. This includes:
 Metric terms
 ~~~~~~~~~~~~
 
-Metric terms are computed by considering the transformation of a differential
-volume in physical space to reference space as
+The transformation of a differential volume in physical space(:math:`[x,y,z]` or :math:`[r,\theta,z]`) 
+to reference space(:math:`[\xi,\eta,\zeta] = [-1,1]` is computed as
 
 .. math::
 

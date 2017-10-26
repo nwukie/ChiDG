@@ -4,6 +4,10 @@
 Smooth bump
 =================
 
+--------
+Tutorial
+--------
+``chidg tutorial smooth_bump``
 
 ----------
 Background

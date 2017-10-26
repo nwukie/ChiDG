@@ -237,6 +237,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../examples/example_main.html">Examples</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html">Smooth bump</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#tutorial">Tutorial</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#background">Background</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup">Setup</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="../../examples/smoothbump/example_smoothbump.html#setup-from-scratch">Setup from scratch:</a></li>
@@ -338,7 +339,7 @@ is being conserved. Not tangential momentum, <span class="math">\(\rho v_\theta\
 \end{bmatrix}\end{split}\]</div>
 <p>The velocity vector in <code class="docutils literal"><span class="pre">Cartesian</span></code> and <code class="docutils literal"><span class="pre">Cylindrical</span></code> coordinates is</p>
 <div class="math">
-\[\vec{u} = [v_x, v_y, v_z]       \quad\quad  \vec{v} = [v_r, v_\theta, v_z]\]</div>
+\[\vec{v} = [v_x, v_y, v_z]       \quad\quad  \vec{v} = [v_r, v_\theta, v_z]\]</div>
 <p>Some distinctions are made here between absolute, relative, and frame velocities.
 The absolute velocity(<span class="math">\(v\)</span>) is that which is perceived in the inertial frame of
 reference. The relative(or advection)(<span class="math">\(w\)</span>) velocity is the velocity, which is perceived
@@ -662,11 +663,11 @@ of velocity, <span class="math">\((\nabla v_1, \nabla v_2, \nabla v_3)\)</span> 
 \[\nabla (\phi f) = \nabla(\phi) f  +  \phi \nabla (f)\]</div>
 <p>So the gradient of the velocity components can be computed as</p>
 <div class="math">
-\[\begin{split}\nabla (v_1) &amp;= \frac{\nabla(\rho v_1)}{\rho} - \frac{u \nabla(\rho)}{\rho}
+\[\begin{split}\nabla (v_1) &amp;= \frac{\nabla(\rho v_1)}{\rho} - \frac{v_1 \nabla(\rho)}{\rho}
 \\
-\nabla (v_2) &amp;= \frac{\nabla(\rho v_2)}{\rho} - \frac{v \nabla(\rho)}{\rho}
+\nabla (v_2) &amp;= \frac{\nabla(\rho v_2)}{\rho} - \frac{v_2 \nabla(\rho)}{\rho}
 \\
-\nabla (v_3) &amp;= \frac{\nabla(\rho v_3)}{\rho} - \frac{w \nabla(\rho)}{\rho}\end{split}\]</div>
+\nabla (v_3) &amp;= \frac{\nabla(\rho v_3)}{\rho} - \frac{v_3 \nabla(\rho)}{\rho}\end{split}\]</div>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p>In <code class="docutils literal"><span class="pre">Cylindrical</span></code> coordinates, we have <span class="math">\(\nabla(r \rho v_\theta)\)</span> instead

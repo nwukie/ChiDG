@@ -2,7 +2,45 @@
 Theory + Abstractions
 =====================
 
-Boundary conditions in ChiDG are abstracted and represented as a boundary condition 
+
+The requirement of a boundary condition is to define an exterior state 
+:math:`u_{bc}` over a region of boundary geometry. ``bc_state_t`` objects
+are implemented with the purpose of providing/defining the exterior state
+:math:`u_{bc}`. ``bc_patch_t`` objects exist with the purpose of defining 
+the geometry over which the external state is defined. In this way, boundary
+conditions provide only an external solution state(:math:`u_{bc}`), but do 
+not actually compute a residual contribution(:math:`f(u_{bc})`). Residual
+contributions are handled exclusively by ``operator_t`` objects that are 
+defined and added to ``equation_set_t`` objects that compute :math:`f(u_{bc})`
+assuming :math:`f(u_{bc})` has already been defined and provided by some
+boundary condition state function.
+
+
+
+
+Boundary conditions in ChiDG are abstracted and represented as two separate ideas:
+**geometry** and **state**. Boundary conditions are composed of boundary condition 
+state objects. Regions over which a boundary condition is to be applied are composed 
+of boundary patch objects. Separately, these compositions exist as boundary condition
+state groups and boundary condition patch groups. Boundary condition state groups
+are used to compose boundary condition state objects that are to be used on the
+same surface. For example, when composing an equation set of the Navier-Stokes 
+equations, one requires a boundary condition for the five equations that exist
+in those operators. A single boundary condition state function might be used to 
+impose the boundary conditions for all of those equations. Consider if one wished
+now to add a turbulence model to the equation set. An extra boundary condition 
+is needed for each extra governing equation. If boundary condition state functions
+are defined that provide a boundary condition for these extra functions, they can
+be added to the same boundary condition state group. 
+
+
+State for boundary conditions is handled through boundary state functions(``bc_state_t``),
+which are grouped together using ``bc_state_group_t``.
+
+Geometry for boundary conditions is handled through boundary patches(``bc_patch_t``),
+which are grouped together using ``bc_patch_group_t``.
+
+
 data type, ``bc_t``. The boundary condition data type itself is separated into two
 distinct concepts. These are **geometry** and **state**. The concepts of geometry and 
 boundary condition state functions exist separetely from each other. Together, they 

@@ -167,8 +167,8 @@ contains
         integer(ik)     :: itime_interp, ierr
         
 
-        ntime_interp = data%time_manager%ntime
-        !ntime_interp = 21
+        !ntime_interp = data%time_manager%ntime
+        ntime_interp = 21
 
         if (allocated(time_interp)) deallocate(time_interp)
         allocate(time_interp(ntime_interp), stat=ierr) 
@@ -176,18 +176,18 @@ contains
 
         !do itime_interp = 1,ntime_interp
 
-        !    !
-        !    ! TODO: Change post processing from 0 - 1 to 0 - t_max
-        !    ! t_max is the maximum time level obtained from the HB frequencies (2*PI/omega_min)
-        !    ! TODO: Can also be changed to 0 - t_desired
-        !    !
-        !do itime_interp = 1,ntime_interp
-        !    time_interp(itime_interp) = real(itime_interp - 1,rk)*(1.0_rk&
-        !                                /real(ntime_interp - 1,rk))
+        !
+        ! TODO: Change post processing from 0 - 1 to 0 - t_max
+        ! t_max is the maximum time level obtained from the HB frequencies (2*PI/omega_min)
+        ! TODO: Can also be changed to 0 - t_desired
+        !
+        do itime_interp = 1,ntime_interp
+            time_interp(itime_interp) = real(itime_interp - 1,rk)*(1.0_rk&
+                                        /real(ntime_interp - 1,rk))
 
-        !end do
+        end do
 
-        time_interp = data%time_manager%times
+        !time_interp = data%time_manager%times
 
     end subroutine get_interp_time_levels
     !*******************************************************************************************

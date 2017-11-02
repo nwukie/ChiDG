@@ -54,9 +54,39 @@ contains
         class(time_integrator_marching_t),  intent(inout)   :: self
         type(chidg_data_t),                 intent(inout)   :: data
 
-        associate( q => data%sdata%q, q_in => data%sdata%q_in)
+        integer(ik)                 :: idom,ielem,ivar,ierr,eqn_ID
+        real(rk),   allocatable     :: temp(:)
 
-            q = q_in
+        associate( q          => data%sdata%q,             &
+                   q_in       => data%sdata%q_in,          &
+                   ntime_q    => data%sdata%q%get_ntime(), &
+                   ntime_q_in => data%sdata%q_in%get_ntime())
+
+            if (ntime_q == ntime_q_in) then
+                q = q_in
+            else if (ntime_q .ne. ntime_q_in .and. ntime_q == 1) then
+
+                    do idom = 1,data%mesh%ndomains()
+
+                        eqn_ID = data%mesh%domain(idom)%eqn_ID
+
+                        if (allocated(temp)) deallocate(temp)
+                        allocate(temp(data%mesh%domain(idom)%nterms_s), stat=ierr)
+                        if (ierr /= 0) call AllocationError
+
+                        do ielem = 1,data%mesh%domain(idom)%nelem
+                            do ivar = 1,data%eqnset(idom)%prop%nprimary_fields()
+
+                                temp = q_in%dom(idom)%vecs(ielem)%getvar(ivar,ntime_q_in)
+                                call q%dom(idom)%vecs(ielem)%setvar(ivar,1,temp)
+
+                            end do
+                        end do
+
+                    end do
+            else
+                call chidg_signal(FATAL, 'Initialization array incompatible with solution array')
+            end if
 
         end associate
 

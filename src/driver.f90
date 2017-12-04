@@ -363,12 +363,14 @@ program driver
             !!---------------------------------------------------------------------------
                 if (narg /= 2) call chidg_signal(FATAL,"The '2tec' action expects: chidg 2tec file.h5")
 
+                call date_and_time(time=time_string)
+                tmp_file = 'chidg_2tec_files'//time_string//'.txt'
                 call get_command_argument(2,pattern)
-                command = 'ls '//trim(pattern)//' > chidg_post_files.txt'
+                command = 'ls '//trim(pattern)//' > '//tmp_file
                 call system(command)
             
 
-                open(7,file='chidg_post_files.txt',action='read')
+                open(7,file=tmp_file,action='read')
                 do
                     read(7,fmt='(a)', iostat=ierr) solution_file
                     if (ierr /= 0) exit
@@ -376,7 +378,7 @@ program driver
                 end do
                 close(7)
 
-                call delete_file('chidg_post_files.txt')
+                call delete_file(tmp_file)
             !*****************************************************************************
 
 
@@ -407,12 +409,14 @@ program driver
             !!---------------------------------------------------------------------------
                 if (narg /= 2) call chidg_signal(FATAL,"The '2vtk' action expects: chidg 2vtk file.h5")
 
+                call date_and_time(time=time_string)
+                tmp_file = 'chidg_2vtk_files'//time_string//'.txt'
                 call get_command_argument(2,pattern)
-                command = 'ls '//trim(pattern)//' > chidg_post_files.txt'
+                command = 'ls '//trim(pattern)//' > '//tmp_file
                 call system(command)
             
 
-                open(7,file='chidg_post_files.txt',action='read')
+                open(7,file=tmp_file,action='read')
                 do
                     read(7,fmt='(a)', iostat=ierr) solution_file
                     if (ierr /= 0) exit
@@ -420,7 +424,7 @@ program driver
                 end do
                 close(7)
 
-                call delete_file('chidg_post_files.txt')
+                call delete_file(tmp_file)
             !*****************************************************************************
 
 

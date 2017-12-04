@@ -142,10 +142,10 @@ contains
         logical,                              intent(in)                  :: differentiate
         real(rk),                             intent(inout), optional     :: timing
 
-        integer(ik)             :: itime_outer, itime_inner, idom, ielem, ivar    ! Loop counters
+        integer(ik)             :: itime_outer, itime_inner, idom, ielem, ivar, eqn_ID    ! Loop counters
         real(rk), allocatable   :: temp_1(:), temp_2(:)     ! Temporary variables
         integer(ik)             :: ntime
-        integer(ik)             :: ierr,i,j
+        integer(ik)             :: ierr,i,j, xstart, xend
         real(rk),allocatable    :: D(:,:)
 
         
@@ -154,7 +154,6 @@ contains
         call rhs%clear()
         if (differentiate) call lhs%clear()
 
-        
 
         !
         ! Set local variables equal to the values set in time_manager
@@ -162,6 +161,8 @@ contains
         ntime = size(data%time_manager%times)
         D = data%time_manager%D
 
+
+        
         do itime_outer = 1,ntime
 
             !
@@ -173,17 +174,17 @@ contains
 
             do idom = 1,data%mesh%ndomains()
 
-                !associate ( mesh => data%mesh(idom), eqnset => data%eqnset(idom) )
 
                 if (allocated(temp_1) .and. allocated(temp_2)) deallocate(temp_1,temp_2)
                 allocate(temp_1(data%mesh%domain(idom)%nterms_s),temp_2(data%mesh%domain(idom)%nterms_s), stat=ierr)
                 if (ierr /= 0) call AllocationError
+                eqn_ID = data%mesh%domain(idom)%eqn_ID
 
                 do ielem = 1,data%mesh%domain(idom)%nelem
 
                     do itime_inner = 1,ntime
 
-                        do ivar = 1,data%eqnset(idom)%prop%nprimary_fields()
+                        do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
                             !
                             ! Temporary variables for computing the temporal rhs contributions
@@ -204,14 +205,13 @@ contains
 
                 end do  ! ielem
 
-                !end associate
-
             end do  ! idom
 
         end do  ! itime_outer
 
         end associate
 
+        
 
     end subroutine assemble
     !*********************************************************************************

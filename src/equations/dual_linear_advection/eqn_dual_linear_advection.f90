@@ -89,6 +89,7 @@ contains
                 call dual_linear_advection_eqn%add_operator('DLA Volume Flux')
                 call dual_linear_advection_eqn%add_operator('DLA Boundary Average Flux')
                 call dual_linear_advection_eqn%add_operator('DLA LaxFriedrichs Flux')
+                call dual_linear_advection_eqn%add_operator('DLA Advection BC Operator')
 
             case default
                 call chidg_signal_one(FATAL, "build_dual_linear_advection: I didn't recognize the construction &

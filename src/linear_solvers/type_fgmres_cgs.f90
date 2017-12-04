@@ -76,7 +76,7 @@ contains
         real(rk),               allocatable :: p(:), y(:), c(:), s(:), p_dim(:), y_dim(:)
         real(rk)                            :: pj, pjp, h_ij, h_ipj, norm_before, norm_after, L_crit, crit
 
-        integer(ik) :: iparent, ierr, ivec, isol, nvecs, ielem
+        integer(ik) :: iparent, ierr, ivec, isol, nvecs, ielem, xstart, xend
         integer(ik) :: i, j, k, l, ii, ih                 ! Loop counters
         real(rk)    :: res, err, r0norm, gam, delta 
 
@@ -108,7 +108,7 @@ contains
         end if
 
 
-
+        
 
         !
         ! Allocate and initialize Krylov vectors V
@@ -204,6 +204,8 @@ contains
 
 
                 nvecs = nvecs + 1
+
+
            
                 !
                 ! Apply preconditioner:  z(j) = Minv * v(j)
@@ -219,6 +221,10 @@ contains
                 call timer_mv%start()
                 w = chidg_mv(A,z(j))
                 call timer_mv%stop()
+
+
+
+
 
 
                 norm_before = w%norm(ChiDG_COMM)

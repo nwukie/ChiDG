@@ -117,8 +117,8 @@ contains
         c3 = u
 
         ! Set default values (1,0,0)
-        c1 = ZERO
-        c2 = ONE
+        c1 = ONE
+        c2 = ZERO
         c3 = ZERO
 
 

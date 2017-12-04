@@ -898,6 +898,7 @@ contains
 
         res%send = right%send
         res%recv = right%recv
+        res%ntime_ = right%ntime_
 
     end function mult_real_chidg_vector
     !*****************************************************************************************
@@ -928,6 +929,7 @@ contains
 
         res%send = left%send
         res%recv = left%recv
+        res%ntime_ = left%ntime_
 
     end function mult_chidg_vector_real
     !****************************************************************************************
@@ -960,6 +962,7 @@ contains
 
         res%send = right%send
         res%recv = right%recv
+        res%ntime_ = right%ntime_
 
     end function div_real_chidg_vector
     !****************************************************************************************
@@ -990,6 +993,7 @@ contains
 
         res%send = left%send
         res%recv = left%recv
+        res%ntime_ = left%ntime_
 
     end function div_chidg_vector_real
     !****************************************************************************************
@@ -1022,6 +1026,7 @@ contains
 
         res%send = right%send
         res%recv = right%recv
+        res%ntime_ = right%ntime_
 
     end function add_chidg_vector_chidg_vector
     !****************************************************************************************
@@ -1054,6 +1059,7 @@ contains
 
         res%send = right%send
         res%recv = right%recv
+        res%ntime_ = right%ntime_
 
     end function sub_chidg_vector_chidg_vector
     !****************************************************************************************

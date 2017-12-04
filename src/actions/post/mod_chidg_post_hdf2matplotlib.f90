@@ -54,6 +54,7 @@ contains
         ! Get nterms_s and eqnset
         !
         file_props = get_properties_hdf(solution_file)
+        
 
         nterms_s    = file_props%nterms_s(1)
         eqnset      = file_props%eqnset(1)
@@ -63,8 +64,6 @@ contains
         !
         ! Read grid data from file
         !
-        call chidg%read_mesh(grid_file)
-
         solution_order = 0
         do while (solution_order*solution_order*solution_order < nterms_s)
             solution_order = solution_order + 1
@@ -82,6 +81,7 @@ contains
         !
         ! Read grid/solution modes and time integrator options from HDF5
         !
+        call chidg%read_mesh(grid_file)
         call chidg%read_fields(solution_file)
         call chidg%time_integrator%read_time_options(chidg%data,solution_file,'process')
 

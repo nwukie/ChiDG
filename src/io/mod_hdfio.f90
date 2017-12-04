@@ -387,7 +387,6 @@ contains
         call data%sdata%q_in%set_ntime(ntime)
 
 
-
         !
         ! Each process reads solution in serial 
         !
@@ -1277,6 +1276,7 @@ contains
         type(bc_state_group_t),     intent(inout), allocatable  :: bc_state_groups(:)
         type(partition_t),          intent(in)                  :: partition
 
+        character(:),       allocatable     :: user_msg
         type(svector_t)                     :: bc_group_names, bc_state_names
         type(string_t)                      :: group_name, state_name
         class(bc_state_t),  allocatable     :: bc
@@ -1324,6 +1324,11 @@ contains
                 call bc_state_groups(igroup)%add_bc_state(bc)
 
             end do !istate
+
+            ! Test for correct number of bc_states added to bc_state_group
+            user_msg = "read_bc_state_groups_hdf: It appears the bc_state objects were not &
+                        added correctly to their associated bc_state_group."
+            if (bc_state_names%size() /= bc_state_groups(igroup)%nbc_states()) call chidg_signal(FATAL,user_msg)
 
 
             ! Close face boundary condition group

@@ -119,22 +119,22 @@ contains
         mom2_bc    = worker%get_field('Momentum-2', 'value', 'boundary')
 
 
-        grad1_density = worker%get_field('Density',    'grad1', 'boundary')
-        grad2_density = worker%get_field('Density',    'grad2', 'boundary')
+        grad1_density = worker%get_field('Density : Grad1',    'value', 'boundary')
+        grad2_density = worker%get_field('Density : Grad2',    'value', 'boundary')
 
-        grad1_mom1    = worker%get_field('Momentum-1', 'grad1', 'boundary')
-        grad2_mom1    = worker%get_field('Momentum-1', 'grad2', 'boundary')
+        grad1_mom1    = worker%get_field('Momentum-1 : Grad1', 'value', 'boundary')
+        grad2_mom1    = worker%get_field('Momentum-1 : Grad2', 'value', 'boundary')
 
-        grad1_mom2    = worker%get_field('Momentum-2', 'grad1', 'boundary')
-        grad2_mom2    = worker%get_field('Momentum-2', 'grad2', 'boundary')
+        grad1_mom2    = worker%get_field('Momentum-2 : Grad1', 'value', 'boundary')
+        grad2_mom2    = worker%get_field('Momentum-2 : Grad2', 'value', 'boundary')
 
 
-        if (worker%coordinate_system() == 'Cylindrical') then
-            r = worker%coordinate('1')
-            mom2_bc    = mom2_bc / r
-            grad1_mom2 = (grad1_mom2/r) - mom2_bc/r
-            grad2_mom2 = (grad2_mom2/r)
-        end if
+!        if (worker%coordinate_system() == 'Cylindrical') then
+!            r = worker%coordinate('1')
+!            mom2_bc    = mom2_bc / r
+!            grad1_mom2 = (grad1_mom2/r) - mom2_bc/r
+!            grad2_mom2 = (grad2_mom2/r)
+!        end if
 
 
         !

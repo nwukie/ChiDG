@@ -86,53 +86,177 @@ contains
 
 
         ! Storage at quadrature nodes
-        type(AD_D), allocatable, dimension(:)   ::  &
-            p, density_bc, u_bc, v_bc,              &
-            mom1_bc, mom2_bc,                       &
+        type(AD_D), allocatable, dimension(:)   ::      &
+            p, density_bc, invdensity, u_bc, v_bc, t,   &
+            mom1_bc, mom2_bc,                           &
+            grad1_density,  grad2_density,              &
+            grad1_mom1,     grad2_mom1,                 &
+            grad1_mom2,     grad2_mom2,                 &
+            grad1_u,        grad2_u,                    &
+            grad1_v,        grad2_v,                    &
+            du_ddensity,    dv_ddensity,                &
+            du_dmom1,       dv_dmom2,                   &
+            source_1, source_2, source,                 &
             flux_1,  flux_2,  flux_3
 
         real(rk),   allocatable, dimension(:)   :: r
 
 
         !
-        ! Interpolate boundary condition state to face quadrature nodes
+        ! interpolate boundary condition state to face quadrature nodes
         !
         p = worker%get_field("Pressure", 'value', 'boundary')
 
 
+
+
+
         !
-        ! Get model fields
+        ! get model fields
         !
         density_bc = worker%get_field('Density',    'value', 'boundary')
         mom1_bc    = worker%get_field('Momentum-1', 'value', 'boundary')
         mom2_bc    = worker%get_field('Momentum-2', 'value', 'boundary')
 
+
+        grad1_density = worker%get_field('Density : Grad1',    'value', 'boundary')
+        grad2_density = worker%get_field('Density : Grad2',    'value', 'boundary')
+
+        grad1_mom1    = worker%get_field('Momentum-1 : Grad1', 'value', 'boundary')
+        grad2_mom1    = worker%get_field('Momentum-1 : Grad2', 'value', 'boundary')
+
+        grad1_mom2    = worker%get_field('Momentum-2 : Grad1', 'value', 'boundary')
+        grad2_mom2    = worker%get_field('Momentum-2 : Grad2', 'value', 'boundary')
+
+
+!        if (worker%coordinate_system() == 'Cylindrical') then
+!            r = worker%coordinate('1')
+!            mom2_bc    = mom2_bc / r
+!            grad1_mom2 = (grad1_mom2/r) - mom2_bc/r
+!            grad2_mom2 = (grad2_mom2/r)
+!        end if
+
+
+        !
+        ! compute velocities
+        !
+        u_bc = mom1_bc / density_bc
+        v_bc = mom2_bc / density_bc
+
+
+
+        !
+        ! compute velocity jacobians
+        !
+        invdensity  = ONE/density_bc
+        du_ddensity = -invdensity*invdensity*mom1_bc
+        dv_ddensity = -invdensity*invdensity*mom2_bc
+
+        du_dmom1 = invdensity
+        dv_dmom2 = invdensity
+
+
+
+        !
+        ! compute velocity gradients via chain rule:
+        !
+        !   u = f(rho,rhou)
+        !
+        !   grad(u) = dudrho * grad(rho)  +  dudrhou * grad(rhou)
+        !
+        grad1_u = du_ddensity*grad1_density  +  du_dmom1*grad1_mom1
+        grad2_u = du_ddensity*grad2_density  +  du_dmom1*grad2_mom1
+
+        grad1_v = dv_ddensity*grad1_density  +  dv_dmom2*grad1_mom2
+        grad2_v = dv_ddensity*grad2_density  +  dv_dmom2*grad2_mom2
+
+
+        
+        !
+        ! compute weighting coefficients
+        !
+        source_1 = - ( (u_bc*grad1_mom1 + density_bc*u_bc*grad1_u) + &
+                       (v_bc*grad2_mom1 + density_bc*u_bc*grad2_v) )
+        source_2 = - ( (v_bc*grad1_mom1 + density_bc*u_bc*grad1_v) + &
+                       (v_bc*grad2_mom2 + density_bc*v_bc*grad2_v) )
         if (worker%coordinate_system() == 'Cylindrical') then
             r = worker%coordinate('1','face interior')
-            mom2_bc = mom2_bc/r
+            source_1 = source_1  +  (density_bc*v_bc*v_bc + p)/r  -  (density_bc*u_bc*u_bc/r)
+            source_2 = source_2  -  (density_bc*u_bc*v_bc)/r      -  (density_bc*u_bc*v_bc/r)
         end if
 
+        t = source_1/(source_1 + source_2)
 
 
-        u_bc = mom1_bc/density_bc
-        v_bc = mom2_bc/density_bc
 
+        t = ZERO ! All tangential
 
 
         !=================================================
         !                   Momentum-1
         !=================================================
-        flux_1 = density_bc
-        flux_2 = density_bc*v_bc*v_bc  +  p
+        flux_1 = t*p
+        flux_2 = (ONE-t)*p
         flux_3 = density_bc
-        flux_1 = ZERO
         flux_3 = ZERO
 
         call worker%integrate_boundary_condition('Pressure','Advection',flux_1,flux_2,flux_3)
 
 
+
+
+
+
+
+
+!        ! Storage at quadrature nodes
+!        type(AD_D), allocatable, dimension(:)   ::  &
+!            p, density_bc, u_bc, v_bc,              &
+!            mom1_bc, mom2_bc,                       &
+!            flux_1,  flux_2,  flux_3
+!
+!        real(rk),   allocatable, dimension(:)   :: r
+!
+!
+!        !
+!        ! Interpolate boundary condition state to face quadrature nodes
+!        !
+!        p = worker%get_field("Pressure", 'value', 'boundary')
+!
+!
+!        !
+!        ! Get model fields
+!        !
+!        density_bc = worker%get_field('Density',    'value', 'boundary')
+!        mom1_bc    = worker%get_field('Momentum-1', 'value', 'boundary')
+!        mom2_bc    = worker%get_field('Momentum-2', 'value', 'boundary')
+!
+!        if (worker%coordinate_system() == 'Cylindrical') then
+!            r = worker%coordinate('1','face interior')
+!            mom2_bc = mom2_bc/r
+!        end if
+!
+!
+!
+!        u_bc = mom1_bc/density_bc
+!        v_bc = mom2_bc/density_bc
+!
+!
+!
+!        !=================================================
+!        !                   Momentum-1
+!        !=================================================
+!        flux_1 = density_bc
+!        flux_2 = density_bc*v_bc*v_bc  +  p
+!        flux_3 = density_bc
+!        flux_1 = ZERO
+!        flux_3 = ZERO
+!
+!        call worker%integrate_boundary_condition('Pressure','Advection',flux_1,flux_2,flux_3)
+
+
     end subroutine compute
-    !**********************************************************************************************
+    !*****************************************************************************************
 
 
 

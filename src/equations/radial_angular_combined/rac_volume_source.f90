@@ -113,22 +113,22 @@ contains
             mom2    = worker%get_field('Momentum-2', 'value', 'element')
 
 
-            grad1_density = worker%get_field('Density',    'grad1', 'element')
-            grad2_density = worker%get_field('Density',    'grad2', 'element')
+            grad1_density = worker%get_field('Density : Grad1',    'value', 'element')
+            grad2_density = worker%get_field('Density : Grad2',    'value', 'element')
 
-            grad1_mom1    = worker%get_field('Momentum-1', 'grad1', 'element')
-            grad2_mom1    = worker%get_field('Momentum-1', 'grad2', 'element')
+            grad1_mom1    = worker%get_field('Momentum-1 : Grad1', 'value', 'element')
+            grad2_mom1    = worker%get_field('Momentum-1 : Grad2', 'value', 'element')
 
-            grad1_mom2    = worker%get_field('Momentum-2', 'grad1', 'element')
-            grad2_mom2    = worker%get_field('Momentum-2', 'grad2', 'element')
+            grad1_mom2    = worker%get_field('Momentum-2 : Grad1', 'value', 'element')
+            grad2_mom2    = worker%get_field('Momentum-2 : Grad2', 'value', 'element')
 
 
-            if (worker%coordinate_system() == 'Cylindrical') then
-                r = worker%coordinate('1')
-                mom2       = mom2 / r
-                grad1_mom2 = (grad1_mom2/r) - mom2/r
-                grad2_mom2 = (grad2_mom2/r)
-            end if
+!            if (worker%coordinate_system() == 'Cylindrical') then
+!                r = worker%coordinate('1')
+!                mom2       = mom2 / r
+!                grad1_mom2 = (grad1_mom2/r) - mom2/r
+!                grad2_mom2 = (grad2_mom2/r)
+!            end if
 
 
             !

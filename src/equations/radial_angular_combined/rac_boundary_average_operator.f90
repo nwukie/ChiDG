@@ -114,7 +114,6 @@ contains
 
         real(rk),   allocatable,    dimension(:)    :: r
 
-        print*, 'rac - 1'
 
         !
         ! Interpolate solution to quadrature nodes
@@ -123,7 +122,6 @@ contains
         p_p = worker%get_field('Pressure', 'value', 'face exterior')
 
 
-        print*, 'rac - 2'
 
 
         !
@@ -133,18 +131,16 @@ contains
         mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
         mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
 
-        print*, 'rac - 3'
 
-        grad1_density_m = worker%get_field('Density',    'grad1', 'face interior')
-        grad2_density_m = worker%get_field('Density',    'grad2', 'face interior')
+        grad1_density_m = worker%get_field('Density : Grad1',    'value', 'face interior')
+        grad2_density_m = worker%get_field('Density : Grad2',    'value', 'face interior')
 
-        grad1_mom1_m    = worker%get_field('Momentum-1', 'grad1', 'face interior')
-        grad2_mom1_m    = worker%get_field('Momentum-1', 'grad2', 'face interior')
+        grad1_mom1_m    = worker%get_field('Momentum-1 : Grad1', 'value', 'face interior')
+        grad2_mom1_m    = worker%get_field('Momentum-1 : Grad2', 'value', 'face interior')
 
-        grad1_mom2_m    = worker%get_field('Momentum-2', 'grad1', 'face interior')
-        grad2_mom2_m    = worker%get_field('Momentum-2', 'grad2', 'face interior')
+        grad1_mom2_m    = worker%get_field('Momentum-2 : Grad1', 'value', 'face interior')
+        grad2_mom2_m    = worker%get_field('Momentum-2 : Grad2', 'value', 'face interior')
 
-        print*, 'rac - 4'
 
         !
         ! Get model fields
@@ -154,31 +150,29 @@ contains
         mom2_p    = worker%get_field('Momentum-2', 'value', 'face exterior')
 
 
-        grad1_density_p = worker%get_field('Density',    'grad1', 'face exterior')
-        grad2_density_p = worker%get_field('Density',    'grad2', 'face exterior')
+        grad1_density_p = worker%get_field('Density : Grad1',    'value', 'face exterior')
+        grad2_density_p = worker%get_field('Density : Grad2',    'value', 'face exterior')
 
-        grad1_mom1_p    = worker%get_field('Momentum-1', 'grad1', 'face exterior')
-        grad2_mom1_p    = worker%get_field('Momentum-1', 'grad2', 'face exterior')
+        grad1_mom1_p    = worker%get_field('Momentum-1 : Grad1', 'value', 'face exterior')
+        grad2_mom1_p    = worker%get_field('Momentum-1 : Grad2', 'value', 'face exterior')
 
-        grad1_mom2_p    = worker%get_field('Momentum-2', 'grad1', 'face exterior')
-        grad2_mom2_p    = worker%get_field('Momentum-2', 'grad2', 'face exterior')
-
-
-        print*, 'rac - 5'
-
-        if (worker%coordinate_system() == 'Cylindrical') then
-            r = worker%coordinate('1')
-            mom2_m       = mom2_m / r
-            grad1_mom2_m = (grad1_mom2_m/r) - mom2_m/r
-            grad2_mom2_m = (grad2_mom2_m/r)
-
-            mom2_p       = mom2_p / r
-            grad1_mom2_p = (grad1_mom2_p/r) - mom2_p/r
-            grad2_mom2_p = (grad2_mom2_p/r)
-        end if
+        grad1_mom2_p    = worker%get_field('Momentum-2 : Grad1', 'value', 'face exterior')
+        grad2_mom2_p    = worker%get_field('Momentum-2 : Grad2', 'value', 'face exterior')
 
 
-        print*, 'rac - 6'
+
+!        if (worker%coordinate_system() == 'Cylindrical') then
+!            r = worker%coordinate('1')
+!            mom2_m       = mom2_m / r
+!            grad1_mom2_m = (grad1_mom2_m/r) - mom2_m/r
+!            grad2_mom2_m = (grad2_mom2_m/r)
+!
+!            mom2_p       = mom2_p / r
+!            grad1_mom2_p = (grad1_mom2_p/r) - mom2_p/r
+!            grad2_mom2_p = (grad2_mom2_p/r)
+!        end if
+
+
 
         !
         ! Compute velocities
@@ -189,7 +183,6 @@ contains
         u_p = mom1_p / density_p
         v_p = mom2_p / density_p
 
-        print*, 'rac - 7'
 
 
         !
@@ -211,7 +204,6 @@ contains
         dv_dmom2_p = invdensity_p
 
 
-        print*, 'rac - 8'
 
 
         !
@@ -237,7 +229,6 @@ contains
 
 
 
-        print*, 'rac - 9'
         
         !
         ! Compute weighting parameter
@@ -256,7 +247,6 @@ contains
 
         t_m = source_1_m/(source_1_m + source_2_m)
 
-        print*, 'rac - 10'
 
 
         source_1_p = - ( (u_p*grad1_mom1_p + density_p*u_p*grad1_u_p) + &
@@ -272,7 +262,6 @@ contains
         t_p = source_1_p/(source_1_p + source_2_p)
 
 
-        print*, 'rac - 11'
 
 
         !================================
@@ -293,7 +282,6 @@ contains
                                                 flux_1_p,flux_2_p,flux_3_p)
 
 
-        print*, 'rac - 12'
 
     end subroutine compute
     !*******************************************************************************

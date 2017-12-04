@@ -111,13 +111,12 @@ contains
 
         if (.not. valid_indices) call chidg_signal(FATAL,"cache_handler%update: Bad domain/element/time indices were detected during update.")
 
-        print*, 'update - 1'
 
 
-        !!
-        !! Store lift indicator in worker
-        !!
-        !worker%contains_lift = lift
+        !
+        ! Store lift indicator in worker
+        !
+        worker%contains_lift = lift
 
 
         !
@@ -161,7 +160,6 @@ contains
             face_max = face
         end if
 
-        print*, 'update - 2'
 
 
         !
@@ -172,27 +170,23 @@ contains
         call worker%cache%resize(worker%mesh,worker%prop,idomain_l,ielement_l,differentiate,lift)
 
 
-        print*, 'update - 3'
 
         !
         ! Determine if we want to update gradient terms in the cache
         !
         eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
-!        compute_gradients = (allocated(equation_set(eqn_ID)%volume_diffusive_operator)   .or. &
-!                             allocated(equation_set(eqn_ID)%boundary_diffusive_operator) )
-        compute_gradients = .true.
+        compute_gradients = (allocated(equation_set(eqn_ID)%volume_diffusive_operator)   .or. &
+                             allocated(equation_set(eqn_ID)%boundary_diffusive_operator) )
+!        compute_gradients = .true.
 
 
 
-        print*, 'update - 4'
 
         !
         ! Update fields
         !
         call self%update_auxiliary_fields(worker,equation_set,bc_state_group,differentiate)
-        print*, 'update - 5'
         call self%update_primary_fields(  worker,equation_set,bc_state_group,differentiate,compute_gradients,update_element, update_interior_faces, update_exterior_faces, face_min, face_max)
-        print*, 'update - 6'
 
 
 
@@ -204,30 +198,24 @@ contains
             ! Update worker face index
             call worker%set_face(iface)
 
-        print*, 'update - 7'
             ! Update face interior/exterior/bc states.
             if (update_interior_faces) call self%update_model_interior(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-)')
             if (update_exterior_faces) call self%update_model_exterior(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-)')
 
 
-        print*, 'update - 8'
             if (update_exterior_faces) call self%update_primary_bc(worker,equation_set,bc_state_group,differentiate)
             if (update_exterior_faces) call self%update_model_bc(  worker,equation_set,bc_state_group,differentiate,model_type='f(Q-)')
 
-        print*, 'update - 9'
 
             if (update_interior_faces) call self%update_model_interior(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-,Q+)')
             if (update_exterior_faces) call self%update_model_exterior(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-,Q+)')
             if (update_exterior_faces) call self%update_model_bc(      worker,equation_set,bc_state_group,differentiate,model_type='f(Q-,Q+)')
 
-        print*, 'update - 10'
         end do !iface
 
-        print*, 'update - 11'
         if (update_element) call self%update_model_element(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-)')
         if (update_element) call self%update_model_element(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-,Q+)')
 
-        print*, 'update - 12'
 
 
 
@@ -235,13 +223,13 @@ contains
         !
         ! Compute f(Q-,Q+), f(Grad(Q) models. Interior, Exterior, BC, Element
         !
-        compute_gradients = .false.
+        !compute_gradients = .false.
         if (compute_gradients) then
 
-            !
-            ! Store lift indicator in worker
-            !
-            worker%contains_lift = lift
+!            !
+!            ! Store lift indicator in worker
+!            !
+!            worker%contains_lift = lift
 
 
             !
@@ -271,16 +259,15 @@ contains
             !
             if (update_element) call self%update_model_element(worker,equation_set,bc_state_group,differentiate,model_type='f(Grad(Q))')
 
-        else
-            !
-            ! Store lift indicator in worker
-            !
-            worker%contains_lift = .false.
+!        else
+!            !
+!            ! Store lift indicator in worker
+!            !
+!            worker%contains_lift = .false.
 
         end if ! compute_gradients
 
 
-        print*, 'update - 13'
 
 
     end subroutine update
@@ -924,11 +911,11 @@ contains
         integer(ik) :: idomain_l, eqn_ID
 
 
-        idomain_l  = worker%element_info%idomain_l 
 
         !
         ! Update lifting terms for gradients if diffusive operators are present
         !
+        idomain_l  = worker%element_info%idomain_l 
         eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
         if (allocated(equation_set(eqn_ID)%volume_diffusive_operator) .or. &
             allocated(equation_set(eqn_ID)%boundary_diffusive_operator)) then
@@ -1861,7 +1848,6 @@ contains
 
 
 
-            !do ieqn = 1,worker%mesh%domain(idomain_l)%neqns
             eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
             do ifield = 1,worker%prop(eqn_ID)%nprimary_fields()
 

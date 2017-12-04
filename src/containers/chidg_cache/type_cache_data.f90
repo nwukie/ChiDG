@@ -284,6 +284,7 @@ contains
         if (field_index == 0) call chidg_signal_one(FATAL,user_msg,field)
 
 
+
         !
         ! Try to find data for field_index that was linearized wrt seed
         !

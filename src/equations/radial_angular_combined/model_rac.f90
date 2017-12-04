@@ -52,17 +52,19 @@ contains
         call self%set_name('RAC')
         call self%set_dependency('f(Q-)')
 
-!        call self%add_model_field('Density')
-!        call self%add_model_field('Velocity-1')
-!        call self%add_model_field('Velocity-2')
+        call self%add_model_field('Density')
+        call self%add_model_field('Momentum-1')
+        call self%add_model_field('Momentum-2')
+        call self%add_model_field('Density : Grad1')
+        call self%add_model_field('Density : Grad2')
+        call self%add_model_field('Momentum-1 : Grad1')
+        call self%add_model_field('Momentum-1 : Grad2')
+        call self%add_model_field('Momentum-2 : Grad1')
+        call self%add_model_field('Momentum-2 : Grad2')
 !        call self%add_model_field('Velocity-1 : Grad1')
 !        call self%add_model_field('Velocity-1 : Grad2')
 !        call self%add_model_field('Velocity-2 : Grad1')
 !        call self%add_model_field('Velocity-2 : Grad2')
-!        call self%add_model_field('Momentum-1 : Grad1')
-!        call self%add_model_field('Momentum-1 : Grad2')
-!        call self%add_model_field('Momentum-2 : Grad1')
-!        call self%add_model_field('Momentum-2 : Grad2')
 
 
 
@@ -84,12 +86,13 @@ contains
         class(rac_t),           intent(in)      :: self
         type(chidg_worker_t),   intent(inout)   :: worker
 
-        type(AD_D), dimension(:),   allocatable :: &
-            p, density, u, v,   &
-            vel1_grad1, vel1_grad2, &
-            vel2_grad1, vel2_grad2, &
-            mom1_grad1, mom1_grad2, &
-            mom2_grad1, mom2_grad2
+        type(AD_D), dimension(:),   allocatable ::  &
+            p, density, u, v, mom1, mom2,           &
+            vel1_grad1,     vel1_grad2,             &
+            vel2_grad1,     vel2_grad2,             &
+            density_grad1,  density_grad2,          &
+            mom1_grad1,     mom1_grad2,             &
+            mom2_grad1,     mom2_grad2
 
         real(rk),   dimension(:),   allocatable :: &
             r, theta
@@ -108,6 +111,10 @@ contains
         density = p
         u       = p
         v       = p
+        mom1    = p
+        mom2    = p
+        density_grad1 = p
+        density_grad2 = p
         vel1_grad1 = p
         vel1_grad2 = p
         vel2_grad1 = p
@@ -120,6 +127,10 @@ contains
         density = ZERO
         u       = ZERO
         v       = ZERO
+        mom1    = ZERO
+        mom2    = ZERO
+        density_grad1 = ZERO
+        density_grad2 = ZERO
         vel1_grad1 = ZERO
         vel1_grad2 = ZERO
         vel2_grad1 = ZERO
@@ -150,6 +161,9 @@ contains
         vel2_grad2 = (ONE/r)*(4._rk*10._rk)*cos(4._rk*theta)
         mom2_grad2 = (ONE/r)*(4._rk*10._rk)*cos(4._rk*theta)
 
+        mom1 = u*density
+        mom2 = v*density
+
         !v          = (ONE/r)*10._rk*sin(4._rk*theta)
         !vel2_grad1 = log(r)*10._rk*sin(4._rk*theta)
         !mom2_grad1 = log(r)*10._rk*sin(4._rk*theta)
@@ -157,13 +171,11 @@ contains
         !mom2_grad2 = (ONE/(r*r))*(4._rk*10._rk)*cos(4._rk*theta)
 
         call worker%store_model_field('Density',    'value', density)
-        call worker%store_model_field('Velocity-1', 'value', u      )
-        call worker%store_model_field('Velocity-2', 'value', v      )
+        call worker%store_model_field('Momentum-1', 'value', mom1   )
+        call worker%store_model_field('Momentum-2', 'value', mom2   )
 
-        call worker%store_model_field('Velocity-1 : Grad1', 'value', vel1_grad1)
-        call worker%store_model_field('Velocity-1 : Grad2', 'value', vel1_grad2)
-        call worker%store_model_field('Velocity-2 : Grad1', 'value', vel2_grad1)
-        call worker%store_model_field('Velocity-2 : Grad2', 'value', vel2_grad2)
+        call worker%store_model_field('Density : Grad1',    'value', density_grad1)
+        call worker%store_model_field('Density : Grad2',    'value', density_grad2)
         call worker%store_model_field('Momentum-1 : Grad1', 'value', mom1_grad1)
         call worker%store_model_field('Momentum-1 : Grad2', 'value', mom1_grad2)
         call worker%store_model_field('Momentum-2 : Grad1', 'value', mom2_grad1)

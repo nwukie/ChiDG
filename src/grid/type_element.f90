@@ -3,8 +3,9 @@ module type_element
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: NFACES,XI_MIN,XI_MAX,ETA_MIN, &
                                       ETA_MAX,ZETA_MIN,ZETA_MAX,ONE,ZERO,THIRD, &
-                                      DIR_1, DIR_2, DIR_3, DIR_THETA, XI_DIR, ETA_DIR, ZETA_DIR, &
-                                      TWO_DIM, THREE_DIM, RKTOL, VALID_POINT, INVALID_POINT, NO_PMM_ASSIGNED, &
+                                      DIR_1, DIR_2, DIR_3, DIR_THETA, XI_DIR,   &
+                                      ETA_DIR, ZETA_DIR, TWO_DIM, THREE_DIM,    &
+                                      RKTOL, VALID_POINT, INVALID_POINT, NO_PMM_ASSIGNED, &
                                       ZERO, TWO, CARTESIAN, CYLINDRICAL, DIR_R
     use mod_grid,               only: get_element_mapping, face_corners
     use mod_reference_elements, only: get_reference_element, ref_elems

@@ -104,16 +104,16 @@ contains
         grad3_p_m = worker%get_field('Pressure', 'grad3', 'face interior')
 
 
-        if ((worker%element_info%ielement_g == 1) .and. (worker%iface == 1)) then
-            do inode = 1,size(p_m)
-                if (inode == 1) then
-                    p_m(inode) = p_bc(inode)
-                else
-                    p_m(inode) = p_m(inode)
-                end if
-            end do
-        end if
-        !p_m = p_bc
+!        if ((worker%element_info%ielement_g == 1) .and. (worker%iface == 1)) then
+!            do inode = 1,size(p_m)
+!                if (inode == 1) then
+!                    p_m(inode) = p_bc(inode)
+!                else
+!                    p_m(inode) = p_m(inode)
+!                end if
+!            end do
+!        end if
+        p_m = p_bc
 
 
         !

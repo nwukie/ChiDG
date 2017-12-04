@@ -104,7 +104,6 @@ contains
 
         real(rk),   allocatable, dimension(:) :: r
 
-        print*, 'euler - 1'
 
         !
         ! Interpolate solution to quadrature nodes
@@ -125,7 +124,6 @@ contains
         energy_p  = worker%get_field('Energy'    , 'value', 'face exterior')
 
 
-        print*, 'euler - 2'
 
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
@@ -136,7 +134,6 @@ contains
             mom2_p = mom2_p / r
         end if
 
-        print*, 'euler - 3'
 
         !
         ! Compute velocity
@@ -152,22 +149,18 @@ contains
         v_p = mom2_p*invdensity_p
         w_p = mom3_p*invdensity_p
 
-        print*, 'euler - 4'
 
         !
         ! Compute pressure and total enthalpy
         !
         p_m = worker%get_field('Pressure', 'value', 'face interior')
-        print*, 'euler - 4.1'
         p_p = worker%get_field('Pressure', 'value', 'face exterior')
 
-        print*, 'euler - 5'
 
         enthalpy_m = (energy_m + p_m)*invdensity_m
         enthalpy_p = (energy_p + p_p)*invdensity_p
 
 
-        print*, 'euler - 6'
 
         !================================
         !           Mass flux
@@ -258,9 +251,9 @@ contains
                                                 flux_1_m,flux_2_m,flux_3_m, &   
                                                 flux_1_p,flux_2_p,flux_3_p)
 
-        print*, 'euler - 7'
+
     end subroutine compute
-    !*********************************************************************************************************
+    !**********************************************************************************
 
 
 

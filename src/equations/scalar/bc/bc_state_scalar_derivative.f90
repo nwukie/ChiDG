@@ -56,7 +56,9 @@ contains
         !
         ! Add functions
         !
-        call self%bcproperties%add('Derivative','Required')         ! add StaticPressure
+        call self%bcproperties%add('Grad1','Required')         ! add StaticPressure
+        call self%bcproperties%add('Grad2','Required')         ! add StaticPressure
+        call self%bcproperties%add('Grad3','Required')         ! add StaticPressure
 
 
         !
@@ -108,10 +110,20 @@ contains
         dudz_bc = ZERO*dudx_bc
 
 
+        if ((worker%element_info%ielement_g == 1) .and. (worker%iface == 1)) then
+        !if (worker%iface == 1) then
+           u_bc(1) = 100000._rk
+        end if 
+
+
+
         !
         ! Get derivative value
         !
-        dudx_bc = self%bcproperties%compute("Derivative",worker%time(),worker%coords())
+        dudx_bc = self%bcproperties%compute("Grad1",worker%time(),worker%coords())
+        dudy_bc = self%bcproperties%compute("Grad2",worker%time(),worker%coords())
+        dudz_bc = self%bcproperties%compute("Grad3",worker%time(),worker%coords())
+
 
         call worker%store_bc_state('u', u_bc,    'value')
         call worker%store_bc_state('u', dudx_bc, 'grad1')

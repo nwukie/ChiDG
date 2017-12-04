@@ -19,7 +19,7 @@ add_lib_sources(
                 type_fcnvector.f90
                 type_mpi_request_vector.f90
                 type_svector.f90
-                #type_vector.f90
+                type_tivector.f90
                 type_chidg_matrix.f90
                 type_chidg_vector.f90
                 type_chidg_vector_send.f90

@@ -129,7 +129,6 @@ contains
                 elem_info%ielement_l = domain%elems(ielem)%ielement_l
                 call worker%set_element(elem_info)
 
-                print*, 'spatial - 1'
 
                 ! Update the element cache
                 call cache_handler%update(worker,data%eqnset, data%bc_state_group, components    = 'all',           &
@@ -137,7 +136,6 @@ contains
                                                                                    differentiate = differentiate,   &
                                                                                    lift          = .true.)
 
-                print*, 'spatial - 2'
 
                 ! Faces loop. For the current element, compute the 
                 ! contributions from boundary integrals.
@@ -145,13 +143,9 @@ contains
 
                     call worker%set_face(iface)
 
-                print*, 'spatial - 3'
                     call eqnset%compute_boundary_advective_operators(worker, differentiate)
-                print*, 'spatial - 4'
                     call eqnset%compute_boundary_diffusive_operators(worker, differentiate)
-                print*, 'spatial - 5'
                     call eqnset%compute_bc_operators(worker,data%bc_state_group, differentiate)
-                print*, 'spatial - 5.1'
 
                 end do  ! faces loop
                 
@@ -160,11 +154,8 @@ contains
                 !
                 ! Compute contributions from volume integrals
                 !
-                print*, 'spatial - 6'
                 call eqnset%compute_volume_advective_operators(worker, differentiate)
-                print*, 'spatial - 7'
                 call eqnset%compute_volume_diffusive_operators(worker, differentiate)
-                print*, 'spatial - 8'
 
 
             end do  ! ielem

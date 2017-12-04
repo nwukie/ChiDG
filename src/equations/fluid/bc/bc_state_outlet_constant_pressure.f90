@@ -75,7 +75,7 @@ contains
     !!  @param[in]      worker  Interface for geometry, cache, integration, etc.
     !!  @param[inout]   prop    properties_t object containing equations and material_t objects
     !!
-    !-------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_COMM)
         class(outlet_constant_pressure_t),  intent(inout)   :: self
         type(chidg_worker_t),               intent(inout)   :: worker
@@ -218,7 +218,7 @@ contains
 
 
     end subroutine compute_bc_state
-    !**********************************************************************************************
+    !**************************************************************************************
 
 
 

@@ -75,7 +75,10 @@ contains
         type(AD_D), allocatable, dimension(:)   ::  &
             grad1_u, grad2_u, grad3_u, mu,          &
             flux_1, flux_2, flux_3
+            
+        real(rk),   allocatable, dimension(:)   :: r
 
+        r = worker%coordinate('1','element')
 
 
         !
@@ -96,6 +99,7 @@ contains
         !
         ! Compute volume flux at quadrature nodes
         !
+        !flux_1 = -mu*grad1_u  -  (100._rk*r + 200._rk + 100._rk/r)
         flux_1 = -mu*grad1_u
         flux_2 = -mu*grad2_u
         flux_3 = -mu*grad3_u

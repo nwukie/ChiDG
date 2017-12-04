@@ -95,6 +95,10 @@ contains
             flux_1_p, flux_2_p, flux_3_p,           &
             mu_m, mu_p
 
+        real(rk),   allocatable, dimension(:)   :: r
+
+        r = worker%coordinate('1','face interior')
+    
 
         !
         ! Interpolate solution to quadrature nodes
@@ -115,10 +119,12 @@ contains
         mu_p = worker%get_field('Scalar Diffusion Coefficient', 'value', 'face exterior')
 
 
+        !flux_1_m = -mu_m*grad1_u_m  -  (100._rk*r + 200._rk + 100._rk/r)
         flux_1_m = -mu_m*grad1_u_m
         flux_2_m = -mu_m*grad2_u_m
         flux_3_m = -mu_m*grad3_u_m
 
+        !flux_1_p = -mu_p*grad1_u_p  -  (100._rk*r + 200._rk + 100._rk/r)
         flux_1_p = -mu_p*grad1_u_p
         flux_2_p = -mu_p*grad2_u_p
         flux_3_p = -mu_p*grad3_u_p

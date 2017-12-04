@@ -229,18 +229,23 @@ contains
         !
         ! Add to vector of bc_states on the group.
         !
-        if (add_state) then
-            call self%set_family(trim(state_family))
-            state_ID = self%new_bc_state()
-            allocate(self%bc_state(state_ID)%state, source=bc_state, stat=ierr)
-            if (ierr /= 0) call AllocationError
+        call self%set_family(trim(state_family))
+        state_ID = self%new_bc_state()
+        allocate(self%bc_state(state_ID)%state, source=bc_state, stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+!        if (add_state) then
+!            call self%set_family(trim(state_family))
+!            state_ID = self%new_bc_state()
+!            allocate(self%bc_state(state_ID)%state, source=bc_state, stat=ierr)
+!            if (ierr /= 0) call AllocationError
 !        else
 !            user_msg = "bc_state_group%add_bc_state: An attempt was made to add a bc_state &
 !                        object to a bc_state_group with dissimilar family. As a rule, &
 !                        bc_state_group objects may only contain bc_state objects of a &
 !                        single family."
 !            call chidg_signal_one(FATAL,user_msg, bc_state%get_name())
-        end if
+!        end if
 
     end subroutine add_bc_state
     !******************************************************************************************

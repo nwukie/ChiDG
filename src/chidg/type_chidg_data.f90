@@ -376,7 +376,10 @@ contains
 
         end do
 
-        if ((group_ID == NO_ID) .and. (trim(group_name_in) /= 'empty')) then
+        if ((group_ID == NO_ID) .and. &
+            (trim(group_name_in) /= 'empty') .and. &
+            (trim(group_name_in) /= 'Empty') .and. &
+            (trim(group_name_in) /= 'EMPTY')) then
             user_msg = "chidg_data%get_bc_state_group_id: Didn't find boundary condition state group. Make sure this group exists and that the patch group assignment is spelled correctly."
             call chidg_signal_one(FATAL,user_msg,trim(group_name_in))
         end if

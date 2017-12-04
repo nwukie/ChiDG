@@ -142,13 +142,13 @@ contains
     !!  @date   5/20/2017
     !!
     !-----------------------------------------------------------------------------------
-    subroutine init(self,data)
+    subroutine init(self)
         class(DIRK_t),          intent(inout)   :: self
-        type(chidg_data_t),     intent(in)      :: data
 
         integer(ik)             :: ierr
         type(assemble_DIRK_t)   :: assemble_DIRK
 
+        call self%set_name('DIRK')
 
         if (allocated(self%system)) deallocate(self%system)
         allocate(self%system, source=assemble_DIRK, stat=ierr)

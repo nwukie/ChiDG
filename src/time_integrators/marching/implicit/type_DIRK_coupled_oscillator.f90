@@ -143,13 +143,13 @@ contains
     !!  @date   5/20/2017
     !!
     !-----------------------------------------------------------------------------------
-    subroutine init(self,data)
+    subroutine init(self)
         class(DIRK_coupled_oscillator_t),          intent(inout)   :: self
-        type(chidg_data_t),     intent(in)      :: data
 
         integer(ik)             :: ierr
         type(assemble_DIRK_coupled_oscillator_t)   :: assemble_DIRK_coupled_oscillator
 
+        call self%set_name('DIRK_coupled_oscillator')
 
         if (allocated(self%system)) deallocate(self%system)
         allocate(self%system, source=assemble_DIRK_coupled_oscillator, stat=ierr)

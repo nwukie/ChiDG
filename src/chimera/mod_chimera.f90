@@ -13,7 +13,7 @@
 !!  @date   2/1/2016
 !!
 !!
-!-----------------------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------
 module mod_chimera
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
@@ -55,15 +55,16 @@ contains
 
     !>  Routine for detecting Chimera faces. 
     !!
-    !!  Routine flags face as a Chimera face if it has an ftype==ORPHAN, indicating it is not an interior
-    !!  face and it has not been assigned a boundary condition.
+    !!  Routine flags face as a Chimera face if it has an ftype==ORPHAN, 
+    !!  indicating it is not an interior face and it has not been assigned a 
+    !!  boundary condition.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
     !!  @param[inout]   mesh    Array of mesh types. One for each domain.
     !!
-    !-----------------------------------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------------
     subroutine detect_chimera_faces(mesh)
         type(mesh_t),   intent(inout)   :: mesh
 
@@ -120,7 +121,7 @@ contains
 
 
     end subroutine detect_chimera_faces
-    !*********************************************************************************************************************
+    !****************************************************************************************
 
 
 
@@ -136,19 +137,18 @@ contains
 
 
 
-    !>  Routine for generating the data in a chimera_receiver_data instance. This includes donor_domain
-    !!  and donor_element indices.
+    !>  Routine for generating the data in a chimera_receiver_data instance. 
+    !!  This includes donor_domain and donor_element indices.
     !!
-    !!  For each Chimera face, find a donor for each quadrature node on the face, for a given node, initialize information
-    !!  about its donor.
-    !!
+    !!  For each Chimera face, find a donor for each quadrature node on the face, 
+    !!  for a given node, initialize information about its donor.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
     !!  @parma[in]  mesh    Array of mesh_t instances
     !!
-    !---------------------------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------
     subroutine detect_chimera_donors(mesh)
         type(mesh_t),   intent(inout)   :: mesh
 
@@ -186,12 +186,14 @@ contains
 
 
         !
-        ! Loop through processes. One will process its chimera faces and try to find processor-local donors. If it can't
-        ! find on-processor donors, then it will broadcast a search request to all other processors. All other processors
+        ! Loop through processes. One will process its chimera faces and try to 
+        ! find processor-local donors. If it can't find on-processor donors, then 
+        ! it will broadcast a search request to all other processors. All other processors
         ! receive the request and return if they have a donor element or not.
         !
-        ! The processes loop through in this serial fashion until all processors have processed their Chimera faces and
-        ! have found donor elements for the quadrature nodes.
+        ! The processes loop through in this serial fashion until all processors have 
+        ! processed their Chimera faces and have found donor elements for the quadrature 
+        ! nodes.
         !
         do iproc = 0,NRANK-1
 
@@ -533,7 +535,7 @@ contains
 
 
     end subroutine detect_chimera_donors
-    !***********************************************************************************************************************
+    !*************************************************************************************
 
 
 
@@ -557,7 +559,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !-----------------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------
     subroutine compute_chimera_interpolators(mesh)
         type(mesh_t),   intent(inout)   :: mesh
 
@@ -681,7 +683,7 @@ contains
 
 
     end subroutine compute_chimera_interpolators
-    !******************************************************************************************************************
+    !********************************************************************************
 
 
 
@@ -707,7 +709,7 @@ contains
     !!  @param[inout]   donor_volume        Volume of the donor element that can be used to select between donors if 
     !!                                      multiple are available.
     !!
-    !-----------------------------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------
     subroutine find_gq_donor(mesh,gq_node,offset,receiver_face,donor_element,donor_coordinate,donor_found,donor_volume)
         type(mesh_t),               intent(in)              :: mesh
         type(point_t),              intent(in)              :: gq_node
@@ -964,7 +966,7 @@ contains
 
 
     end subroutine find_gq_donor
-    !****************************************************************************************************************
+    !******************************************************************************
 
 
 

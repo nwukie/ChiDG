@@ -24,7 +24,7 @@ module type_harmonic_balance
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   2/13/2017
     !!
-    !-------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------
     type, extends(time_integrator_spectral_t), public    :: harmonic_balance_t
         
    
@@ -36,7 +36,7 @@ module type_harmonic_balance
         
 
     end type harmonic_balance_t
-    !*************************************************************************************************
+    !*********************************************************************************
 
 
 
@@ -46,7 +46,7 @@ module type_harmonic_balance
     !!  @date 2/13/2017
     !!
     !!
-    !-------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------
     type , extends(system_assembler_t), public :: assemble_harmonic_balance_t
 
 
@@ -57,7 +57,7 @@ module type_harmonic_balance
 
 
     end type assemble_harmonic_balance_t
-    !*************************************************************************************************
+    !*********************************************************************************
 
 
 
@@ -77,20 +77,21 @@ contains
     !!  @author Mayank Sharma
     !!  @date   2/26/2017
     !!
-    !-------------------------------------------------------------------------------------------------
-    subroutine init(self,data)
+    !---------------------------------------------------------------------------------
+    subroutine init(self)
         class(harmonic_balance_t),  intent(inout)   :: self
-        type(chidg_data_t),         intent(in)      :: data
 
         integer(ik)                         :: ierr
         type(assemble_harmonic_balance_t)   :: assemble_harmonic_balance
+
+        call self%set_name('Harmonic Balance')
 
         allocate(self%system, source=assemble_harmonic_balance, stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
     end subroutine init
-    !*************************************************************************************************
+    !*********************************************************************************
 
 
 
@@ -104,7 +105,7 @@ contains
     !!  @date 2/13/2017
     !!
     !!
-    !-------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------
     subroutine step(self,data,nonlinear_solver,linear_solver,preconditioner)
         class(harmonic_balance_t),                      intent(inout)   :: self
         type(chidg_data_t),                             intent(inout)   :: data
@@ -125,7 +126,7 @@ contains
     
 
     end subroutine step
-    !*************************************************************************************************
+    !*********************************************************************************
 
 
 
@@ -134,7 +135,7 @@ contains
     !!  @author Mayank Sharma + Matteo Ugolotti
     !!  @date   2/13/2017
     !!
-    !-------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------
     subroutine assemble(self,data,differentiate,timing)
         class(assemble_harmonic_balance_t),   intent(inout)               :: self
         type(chidg_data_t),                   intent(inout)               :: data
@@ -213,7 +214,7 @@ contains
 
 
     end subroutine assemble
-    !*************************************************************************************************
+    !*********************************************************************************
 
 
 

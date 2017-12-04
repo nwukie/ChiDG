@@ -276,7 +276,7 @@ contains
         !
         ! Initialize the time integrator
         !
-        call chidg%time_integrator%init(chidg%data)
+        call chidg%time_integrator%init()
         
 
         associate ( q   => chidg%data%sdata%q, &

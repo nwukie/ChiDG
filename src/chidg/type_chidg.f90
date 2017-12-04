@@ -26,7 +26,8 @@ module type_chidg
     use type_domain_connectivity,   only: domain_connectivity_t
     use type_partition,             only: partition_t
 
-    use mod_time_integrators,       only: create_time_integrator
+    !use mod_time_integrators,       only: create_time_integrator
+    use mod_time_integrators,       only: time_integrator_factory, register_time_integrators
     use mod_linear_solver,          only: create_linear_solver
     use mod_nonlinear_solver,       only: create_nonlinear_solver
     use mod_preconditioner,         only: create_preconditioner
@@ -188,7 +189,7 @@ contains
                 if (.not. self%envInitialized ) then
                     call log_init()
 
-                ! Call environment initialization routines by default on first init call
+                    ! Call environment initialization routines by default on first init call
                     ! Order matters here. Functions need to come first. Used by 
                     ! equations and bcs.
                     call register_functions()
@@ -197,6 +198,7 @@ contains
                     call register_models()
                     call register_bcs()
                     call register_equation_builders()
+                    call register_time_integrators()
                     call initialize_grid()
                     self%envInitialized = .true.
 
@@ -424,8 +426,8 @@ contains
                 !
                 ! Initialize time_integrator
                 !
-                call write_line("Initialize: time integrator...", io_proc=GLOBAL_MASTER)
-                call self%time_integrator%init(self%data)
+                !call write_line("Initialize: time integrator...", io_proc=GLOBAL_MASTER)
+                !call self%time_integrator%init(self%data)
 
 
             case default
@@ -520,7 +522,9 @@ contains
             !
             case ('Time Integrator')
                 if (allocated(self%time_integrator)) deallocate(self%time_integrator)
-                call create_time_integrator(algorithm,self%time_integrator)
+                !call create_time_integrator(algorithm,self%time_integrator)
+                allocate(self%time_integrator, source=time_integrator_factory%produce(algorithm), stat=ierr)
+                if (ierr /= 0) call AllocationError
 
 
 

@@ -186,7 +186,7 @@ contains
         !
         ! Allocate result
         !
-        allocate(res, source=self%data(index)%op, stat=ierr)
+        allocate(res, source=self%data(index)%item, stat=ierr)
         if (ierr /= 0) call chidg_signal(FATAL,"tivector%at: error returning time integrator.")
 
     end function at
@@ -234,7 +234,7 @@ contains
             !
             ! Get current equation set name
             !
-            ename = self%data(ieqn)%op%get_name()
+            ename = self%data(ieqn)%item%get_name()
 
             !
             ! Test name against key

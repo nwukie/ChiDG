@@ -19,14 +19,14 @@ module mod_time_integrators
 
 
 
-    ! Instantiate solver types for sourcing
-    type(steady_t)                      :: STEADY
-    type(forward_euler_t)               :: FORWARD_EULER
-    type(backward_euler_t)              :: BACKWARD_EULER
-    type(harmonic_balance_t)            :: HB 
-    type(explicit_runge_kutta_t)        :: EXPLICIT_RK
-    type(DIRK_t)                        :: DIRK
-    type(DIRK_coupled_oscillator_t)     :: DIRK_coupled_oscillator
+!    ! Instantiate solver types for sourcing
+!    type(steady_t)                      :: STEADY
+!    type(forward_euler_t)               :: FORWARD_EULER
+!    type(backward_euler_t)              :: BACKWARD_EULER
+!    type(harmonic_balance_t)            :: HB 
+!    type(explicit_runge_kutta_t)        :: EXPLICIT_RK
+!    type(DIRK_t)                        :: DIRK
+!    type(DIRK_coupled_oscillator_t)     :: DIRK_coupled_oscillator
 
 
 
@@ -120,7 +120,9 @@ contains
     !--------------------------------------------------------------------------------------
     subroutine register_time_integrator(self,time_integrator)
         class(time_integrator_factory_t),   intent(inout)   :: self
-        class(time_integrator_t),           intent(in)      :: time_integrator
+        class(time_integrator_t),           intent(inout)   :: time_integrator
+
+        call time_integrator%init()
 
         call self%time_integrators%push_back(time_integrator)
 
@@ -150,7 +152,7 @@ contains
         !
         ! Find equation set in 'available_equations' vector
         !
-        bindex = self%time_integrator%index_by_name(string)
+        bindex = self%time_integrators%index_by_name(string)
 
 
         !
@@ -175,7 +177,9 @@ contains
         !
         ! Get equation set builder
         !
-        time_integrator = self%time_integrators%at(bindex)
+        allocate(time_integrator, source=self%time_integrators%at(bindex), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        !time_integrator = self%time_integrators%at(bindex)
 
 
     end function produce_time_integrator
@@ -231,7 +235,7 @@ contains
             if (integrator_status) exit
         end do ! item
 
-    end function has_equation_set
+    end function has_time_integrator
     !**************************************************************************************
 
 
@@ -243,68 +247,68 @@ contains
 
 
 
-    !>  Create a concrete time integrator
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   3/15/2016
-    !!
-    !!
-    !!
-    !------------------------------------------------------------------------------------------
-    subroutine create_time_integrator(time_string,instance)
-        character(*),                               intent(in)      :: time_string
-        class(time_integrator_t),   allocatable,    intent(inout)   :: instance
-
-        character(:),   allocatable :: user_msg, dev_msg
-
-
-
-        select case (trim(time_string))
-
-            case ('steady','Steady','STEADY')
-                allocate(instance, source=STEADY)
-
-            case ('forward_euler','Forward_Euler','FORWARD_EULER','forward euler', 'Forward Euler')
-                allocate(instance, source=FORWARD_EULER)
-
-            case ('backward_euler', 'Backward_Euler', 'BACKWARD_EULER', 'backward euler', 'Backward Euler', 'BACKWARD EULER')
-                allocate(instance, source=BACKWARD_EULER)
-            
-            case ('Harmonic Balance', 'Harmonic_Balance', 'harmonic balance', 'harmonic_balance', 'HB')
-                allocate(instance, source=HB)
-            
-            case ('Second Order Runge_Kutta', 'Explict Midpoint', 'Second Order RK', 'Modified Euler', 'Second Order Ralston Method', 'Third Order Runge-Kutta', 'Third Order Kutta', 'Third Order RK', &
-                   'Runge-Kutta Method', 'Fourth Runge-Kutta Method', 'Fourth Order RK Method', 'RK4', 'Three-Eighth Rule', 'Fourth Order Kutta') ! this probably needs to be split up in several RK schemes
-                allocate(instance, source=EXPLICIT_RK)
-
-            case ('DIRK')
-                allocate(instance, source=DIRK)
-
-            case ('DIRK_coupled_oscillator')
-                allocate(instance, source=DIRK_coupled_oscillator)
-
-            case default
-                user_msg = "We can't seem to find a time integrator that matches the input &
-                            string. Maybe check that the time integrator string in the input &
-                            file or driver script is valid."
-                dev_msg = "Check that the time integrator is registered properly in &
-                           create_time_integrator."
-                call chidg_signal_two(OOPS, user_msg, trim(time_string), dev_msg=dev_msg)
-        end select
-
-
-
-
-        !
-        ! Make sure the solver was allocated
-        !
-        user_msg = "create_time_integrator: solver was not allocated. Check that the desired &
-                                            solver was registered and instantiated in the mod_time_integrator module"
-        if (.not. allocated(instance)) call chidg_signal(FATAL,user_msg)
-
-
-    end subroutine create_time_integrator
-    !****************************************************************************************
+!    !>  Create a concrete time integrator
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   3/15/2016
+!    !!
+!    !!
+!    !!
+!    !------------------------------------------------------------------------------------------
+!    subroutine create_time_integrator(time_string,instance)
+!        character(*),                               intent(in)      :: time_string
+!        class(time_integrator_t),   allocatable,    intent(inout)   :: instance
+!
+!        character(:),   allocatable :: user_msg, dev_msg
+!
+!
+!
+!        select case (trim(time_string))
+!
+!            case ('steady','Steady','STEADY')
+!                allocate(instance, source=STEADY)
+!
+!            case ('forward_euler','Forward_Euler','FORWARD_EULER','forward euler', 'Forward Euler')
+!                allocate(instance, source=FORWARD_EULER)
+!
+!            case ('backward_euler', 'Backward_Euler', 'BACKWARD_EULER', 'backward euler', 'Backward Euler', 'BACKWARD EULER')
+!                allocate(instance, source=BACKWARD_EULER)
+!            
+!            case ('Harmonic Balance', 'Harmonic_Balance', 'harmonic balance', 'harmonic_balance', 'HB')
+!                allocate(instance, source=HB)
+!            
+!            case ('Second Order Runge_Kutta', 'Explict Midpoint', 'Second Order RK', 'Modified Euler', 'Second Order Ralston Method', 'Third Order Runge-Kutta', 'Third Order Kutta', 'Third Order RK', &
+!                   'Runge-Kutta Method', 'Fourth Runge-Kutta Method', 'Fourth Order RK Method', 'RK4', 'Three-Eighth Rule', 'Fourth Order Kutta') ! this probably needs to be split up in several RK schemes
+!                allocate(instance, source=EXPLICIT_RK)
+!
+!            case ('DIRK')
+!                allocate(instance, source=DIRK)
+!
+!            case ('DIRK_coupled_oscillator')
+!                allocate(instance, source=DIRK_coupled_oscillator)
+!
+!            case default
+!                user_msg = "We can't seem to find a time integrator that matches the input &
+!                            string. Maybe check that the time integrator string in the input &
+!                            file or driver script is valid."
+!                dev_msg = "Check that the time integrator is registered properly in &
+!                           create_time_integrator."
+!                call chidg_signal_two(OOPS, user_msg, trim(time_string), dev_msg=dev_msg)
+!        end select
+!
+!
+!
+!
+!        !
+!        ! Make sure the solver was allocated
+!        !
+!        user_msg = "create_time_integrator: solver was not allocated. Check that the desired &
+!                                            solver was registered and instantiated in the mod_time_integrator module"
+!        if (.not. allocated(instance)) call chidg_signal(FATAL,user_msg)
+!
+!
+!    end subroutine create_time_integrator
+!    !****************************************************************************************
 
 
 

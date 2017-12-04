@@ -79,17 +79,19 @@ contains
     !!  @date   2/8/2017
     !!
     !----------------------------------------------------------------------------------------
-    subroutine init(self,data)
+    subroutine init(self)
         class(steady_t),    intent(inout)   :: self
-        type(chidg_data_t), intent(in)      :: data
 
         integer(ik)             :: ierr
         type(assemble_steady_t) :: assemble_steady
 
+        ! Set name
+        call self%set_name('Steady')
+
+        ! Allocate assembler
         if (allocated(self%system)) deallocate(self%system)
         allocate(self%system, source=assemble_steady, stat=ierr)
         if (ierr /= 0) call AllocationError
-
 
     end subroutine init
     !*****************************************************************************************

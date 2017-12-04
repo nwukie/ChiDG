@@ -18,7 +18,7 @@
 !   @author Mayank Sharma
 !   @date   2/26/2017
 !
-!-----------------------------------------------------------------------------------------------------------------
+!---------------------------------------------------------------------------------------
 @Test
 subroutine test_chidg_matrix_operator_HB_mv()
 #include<messenger.h>
@@ -57,7 +57,7 @@ subroutine test_chidg_matrix_operator_HB_mv()
     tol             = 1.e-13_rk
     nterms_s        = 8
     IO_DESTINATION  = 'file'
-    time_integrator = 'harmonic_balance'
+    time_integrator = 'Harmonic Balance'
     frequencies(1)  = 2.0_rk*PI
 
     
@@ -181,4 +181,4 @@ subroutine test_chidg_matrix_operator_HB_mv()
 
 
 end subroutine test_chidg_matrix_operator_HB_mv
-!*****************************************************************************************************************
+!*****************************************************************************************

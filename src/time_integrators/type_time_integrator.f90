@@ -21,6 +21,7 @@ module type_time_integrator
     !---------------------------------------------------------------------------------------
     type, abstract, public  :: time_integrator_t
 
+        character(:),   allocatable :: name_
 
 
         ! OPTIONS
@@ -50,6 +51,9 @@ module type_time_integrator
                                         ! called automatically.
         procedure   :: set
         procedure   :: report
+
+        procedure   :: set_name
+        procedure   :: get_name
 
 
         ! Must define this procedure in any extended type
@@ -152,22 +156,48 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/8/2016
     !!
-    !-----------------------------------------------------------------------------------------
-    subroutine init(self,data)
+    !---------------------------------------------------------------------------------
+    subroutine init(self)
         class(time_integrator_t),   intent(inout)   :: self
-        type(chidg_data_t),         intent(in)      :: data
 
         self%solverInitialized = .true.
 
     end subroutine init
-    !*****************************************************************************************
+    !*********************************************************************************
+
+
+    !>  Set name
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/4/2017
+    !!
+    !---------------------------------------------------------------------------------
+    subroutine set_name(self,name_)
+        class(time_integrator_t),   intent(inout)   :: self
+        character(*),               intent(in)      :: name_
+
+        self%name_ = trim(name_)
+
+    end subroutine set_name
+    !*********************************************************************************
 
 
 
+    !>  Return self%name_
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/4/2017
+    !!
+    !---------------------------------------------------------------------------------
+    function get_name(self) result(name_)
+        class(time_integrator_t),   intent(in)  :: self
 
+        character(:),   allocatable :: name_
 
+        name_ = trim(self%name_)
 
-
+    end function get_name
+    !*********************************************************************************
 
 
 
@@ -181,7 +211,7 @@ contains
     !! NOTE: time options (toptions) are not used anymore and time info are stored 
     !!       by time_manager
     !!
-    !------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------
     subroutine set(self,options)
         class(time_integrator_t),   intent(inout)   :: self
         type(dict_t),               intent(inout)   :: options

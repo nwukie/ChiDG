@@ -27,7 +27,7 @@ module type_backward_euler
     !!  @author Mayank Sharma
     !!  @date   3/31/2017
     !!
-    !------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------
     type, extends(time_integrator_marching_t),  public  :: backward_euler_t
 
 
@@ -38,7 +38,7 @@ module type_backward_euler
 
 
     end type backward_euler_t
-    !************************************************************************************************
+    !*******************************************************************************
 
 
 
@@ -47,7 +47,7 @@ module type_backward_euler
     !!  @author Mayank Sharma
     !!  @date   3/31/2017
     !!
-    !------------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------
     type, extends(system_assembler_t),  public  :: assemble_backward_euler_t
 
         type(chidg_vector_t)    :: q_n
@@ -58,7 +58,7 @@ module type_backward_euler
 
 
     end type assemble_backward_euler_t
-    !************************************************************************************************
+    !*******************************************************************************
 
 
 
@@ -109,14 +109,14 @@ contains
     !!  @author Mayank Sharma
     !!  @date   3/31/2017
     !!
-    !------------------------------------------------------------------------------------------------
-    subroutine init(self,data)
+    !-------------------------------------------------------------------------------
+    subroutine init(self)
         class(backward_euler_t),    intent(inout)   :: self
-        type(chidg_data_t),         intent(in)      :: data
 
         integer(ik)                     :: ierr
         type(assemble_backward_euler_t) :: assemble_backward_euler
 
+        call self%set_name('Backward Euler')
 
         if (allocated(self%system)) deallocate(self%system)
         allocate(self%system, source=assemble_backward_euler, stat=ierr)
@@ -124,7 +124,7 @@ contains
 
 
     end subroutine init
-    !************************************************************************************************
+    !*******************************************************************************
 
 
 
@@ -154,7 +154,7 @@ contains
     !!  @author Mayank Sharma
     !!  @date   3/31/2017
     !!
-    !------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     subroutine step(self,data,nonlinear_solver,linear_solver,preconditioner)
         class(backward_euler_t),                intent(inout)   :: self
         type(chidg_data_t),                     intent(inout)   :: data
@@ -195,7 +195,7 @@ contains
 
 
     end subroutine step
-    !************************************************************************************************
+    !**************************************************************************************
 
 
 
@@ -213,7 +213,7 @@ contains
     !!  \f$ lhs = \frac{M}{dt} + lhs \f$
     !!  \f$ rhs = \frac{M}{dt}*dq + rhs \f$
     !!
-    !------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------
     subroutine assemble(self,data,differentiate,timing)
         class(assemble_backward_euler_t),   intent(inout)               :: self
         type(chidg_data_t),                 intent(inout)               :: data
@@ -304,7 +304,7 @@ contains
 
 
     end subroutine assemble
-    !************************************************************************************************
+    !**************************************************************************************
 
 
 

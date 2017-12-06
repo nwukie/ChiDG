@@ -45,11 +45,6 @@ module mod_chimera
 
 
 
-
-
-
-
-
 contains
 
 
@@ -68,53 +63,53 @@ contains
     subroutine detect_chimera_faces(mesh)
         type(mesh_t),   intent(inout)   :: mesh
 
-        integer(ik) :: idom, ndom, ielem, iface, nnodes, ierr, ChiID
+        integer(ik) :: idom, ielem, iface, nnodes, ierr, ChiID
         logical     :: orphan_face = .false.
         logical     :: chimera_face = .false.
-
-        !
-        ! Get number of domains
-        !
-        ndom = mesh%ndomains()
 
         
         !
         ! Loop through each element of each domain and look for ORPHAN face-types.
         ! If orphan is found, designate as CHIMERA 
         !
-        do idom = 1,ndom
+        do idom = 1,mesh%ndomains()
             do ielem = 1,mesh%domain(idom)%nelem
                 do iface = 1,NFACES
+                    associate( domain         => mesh%domain(idom),            &
+                               domain_chimera => mesh%domain(idom)%chimera,    &
+                               face           => mesh%domain(idom)%faces(ielem,iface) )
 
                     !
                     ! Test if the current face is unattached. 
                     ! Test also if the current face is CHIMERA in case this is being 
                     ! called as a reinitialization procedure.
                     !
-                    orphan_face = ( mesh%domain(idom)%faces(ielem,iface)%ftype == ORPHAN .or. &
-                                    mesh%domain(idom)%faces(ielem,iface)%ftype == CHIMERA )
+                    orphan_face = ( face%ftype == ORPHAN .or. face%ftype == CHIMERA )
 
 
                     !
-                    ! If orphan_face, set as Chimera face so it can search for donors in other domains
+                    ! If orphan_face, set as Chimera face so it can search for donors in 
+                    ! other domains
                     !
                     if (orphan_face) then
 
                         ! Set face-type to CHIMERA
-                        mesh%domain(idom)%faces(ielem,iface)%ftype = CHIMERA
-                        nnodes = size(mesh%domain(idom)%faces(ielem,iface)%jinv)
+                        face%ftype = CHIMERA
+                        nnodes = size(face%jinv)
 
-                        ! Set domain-local Chimera identifier. Really, just the index order which they were detected in, starting from 1.
-                        ! The n-th chimera face
-                        mesh%domain(idom)%faces(ielem,iface)%ChiID = mesh%domain(idom)%chimera%add_receiver(mesh%domain(idom)%idomain_g,                &
-                                                                                                            mesh%domain(idom)%idomain_l,                &
-                                                                                                            mesh%domain(idom)%elems(ielem)%ielement_g,  &
-                                                                                                            mesh%domain(idom)%elems(ielem)%ielement_l,  &
-                                                                                                            iface,                                      &
-                                                                                                            nnodes)
+                        ! Set domain-local Chimera identifier. Really, just the index 
+                        ! order which they were detected in, starting from 1.The n-th 
+                        ! chimera face
+                        face%ChiID = domain_chimera%add_receiver(domain%idomain_g,                &
+                                                                 domain%idomain_l,                &
+                                                                 domain%elems(ielem)%ielement_g,  &
+                                                                 domain%elems(ielem)%ielement_l,  &
+                                                                 iface,                           &
+                                                                 nnodes)
                     end if
 
 
+                    end associate
                 end do ! iface
             end do ! ielem
         end do ! idom
@@ -122,15 +117,6 @@ contains
 
     end subroutine detect_chimera_faces
     !****************************************************************************************
-
-
-
-
-
-
-
-
-
 
 
 
@@ -158,8 +144,9 @@ contains
                        idonor_domain_g, idonor_element_g, idonor_domain_l, idonor_element_l,    &
                        idomain_g_list, idomain_l_list, ielement_g_list, ielement_l_list,        &
                        neqns_list, nterms_s_list, nterms_c_list, iproc_list, eqn_ID_list,       &
-                       local_domain_g, parallel_domain_g, donor_domain_g, donor_index, donor_ID, send_ID
-        integer(ik)             :: receiver_indices(5), parallel_indices(9)
+                       local_domain_g, parallel_domain_g, donor_domain_g, donor_index,          &
+                       donor_ID, send_ID
+        integer(ik) :: receiver_indices(5), parallel_indices(9)
 
 
         real(rk)                :: donor_metric(3,3), parallel_metric(3,3)
@@ -167,21 +154,21 @@ contains
         real(rk)                :: gq_coords(3), offset(3), gq_node(3), &
                                    donor_jinv, donor_vol, local_vol, parallel_vol, parallel_jinv
 
-        type(face_info_t)           :: receiver
-        type(element_info_t)        :: donor
-        real(rk)                    :: donor_coord(3)
-        logical                     :: new_donor     = .false.
-        logical                     :: already_added = .false.
-        logical                     :: donor_match   = .false.
-        logical                     :: searching
-        logical                     :: donor_found
-        logical                     :: proc_has_donor
-        logical                     :: still_need_donor
-        logical                     :: local_donor, parallel_donor
-        logical                     :: use_local, use_parallel, get_donor
+        type(face_info_t)       :: receiver
+        type(element_info_t)    :: donor
+        real(rk)                :: donor_coord(3)
+        logical                 :: new_donor     = .false.
+        logical                 :: already_added = .false.
+        logical                 :: donor_match   = .false.
+        logical                 :: searching
+        logical                 :: donor_found
+        logical                 :: proc_has_donor
+        logical                 :: still_need_donor
+        logical                 :: local_donor, parallel_donor
+        logical                 :: use_local, use_parallel, get_donor
 
-        type(ivector_t)             :: donor_proc_indices, donor_proc_domains
-        type(rvector_t)             :: donor_proc_vols
+        type(ivector_t)         :: donor_proc_indices, donor_proc_domains
+        type(rvector_t)         :: donor_proc_vols
 
 
 
@@ -202,10 +189,7 @@ contains
             ! iproc searches for donors for it's Chimera faces
             !
             if ( iproc == IRANK ) then
-    
-
                 do idom = 1,mesh%ndomains()
-
                     call write_line('   Detecting chimera donors for domain: ', idom, delimiter='  ', ltrim=.false.)
 
 
@@ -228,7 +212,7 @@ contains
                         !
                         ! Loop through quadrature nodes on Chimera face and find donors
                         !
-                        do igq = 1,mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface)%basis_s%nnodes_if()
+                        do igq = 1,mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface)%basis_s%nnodes_face()
 
                             !
                             ! Get node coordinates
@@ -265,7 +249,14 @@ contains
                             !
                             ! Call routine to find LOCAL gq donor for current node
                             !
-                            call find_gq_donor(mesh,point_t(gq_node), point_t(offset), receiver, donor, donor_coord, donor_found, donor_volume=local_vol)
+                            call find_gq_donor(mesh,                &
+                                               point_t(gq_node),    &
+                                               point_t(offset),     &
+                                               receiver,            &
+                                               donor,               &
+                                               donor_coord,         &
+                                               donor_found,         &
+                                               donor_volume=local_vol)
 
                             local_domain_g = 0
                             local_donor = .false.
@@ -564,11 +555,11 @@ contains
         type(mesh_t),   intent(inout)   :: mesh
 
         integer(ik)     :: idom, ChiID, idonor, ierr, ipt, iterm,   &
-                           donor_idomain_g, donor_idomain_l, donor_ielement_g, donor_ielement_l, &
+                           donor_idomain_g, donor_idomain_l,        &
+                           donor_ielement_g, donor_ielement_l,      &
                            npts, donor_nterms_s, spacedim
-        real(rk)        :: node(3)
+        real(rk)        :: node(3), jinv, ddxi, ddeta, ddzeta
 
-        real(rk)        :: jinv, ddxi, ddeta, ddzeta
         real(rk), allocatable, dimension(:,:)   ::  &
             interpolator, interpolator_grad1, interpolator_grad2, interpolator_grad3, metric
 
@@ -669,7 +660,6 @@ contains
 
             end do  ! ChiID
         end do  ! idom
-
 
 
         

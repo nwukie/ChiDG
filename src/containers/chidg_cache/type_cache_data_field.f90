@@ -101,9 +101,9 @@ contains
 
 
             case('element')
-                nnodes      = mesh%domain(idomain_l)%elems(ielement_l)%basis_s%nnodes_ie()
-                nnodes_vol  = mesh%domain(idomain_l)%elems(ielement_l)%basis_s%nnodes_ie()
-                nnodes_face = mesh%domain(idomain_l)%elems(ielement_l)%basis_s%nnodes_if()
+                nnodes      = mesh%domain(idomain_l)%elems(ielement_l)%basis_s%nnodes_elem()
+                nnodes_vol  = mesh%domain(idomain_l)%elems(ielement_l)%basis_s%nnodes_elem()
+                nnodes_face = mesh%domain(idomain_l)%elems(ielement_l)%basis_s%nnodes_face()
 
                 ! Interior element
                 !ndepend_value = 1
@@ -123,9 +123,9 @@ contains
 
             case('face interior')
 
-                nnodes      = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_if()
-                nnodes_vol  = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_ie()
-                nnodes_face = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_if()
+                nnodes      = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_face()
+                nnodes_vol  = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_elem()
+                nnodes_face = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_face()
 
                 ! Interior element + Face Exterior Elements
                 !ndepend_value = 1
@@ -138,9 +138,9 @@ contains
 
             case('face exterior')
 
-                nnodes      = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_if()
-                nnodes_vol  = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_ie()
-                nnodes_face = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_if()
+                nnodes      = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_face()
+                nnodes_vol  = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_elem()
+                nnodes_face = mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%nnodes_face()
 
                 ! Exterior Elements
                 ndepend_value = 1 + self%get_ndepend_face_exterior(mesh,idomain_l,ielement_l,iface)

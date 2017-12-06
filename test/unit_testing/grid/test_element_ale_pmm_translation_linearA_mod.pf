@@ -232,9 +232,9 @@ contains
     subroutine testElement_grid_velocities(self)
         class(test_element_ale_pmm_translation_linearA),    intent(inout)   :: self
 
-        real(rk)    :: vg1(self%elem%basis_s%nnodes_ie()), &
-                       vg2(self%elem%basis_s%nnodes_ie()), &
-                       vg3(self%elem%basis_s%nnodes_ie())
+        real(rk)    :: vg1(self%elem%basis_s%nnodes_elem()), &
+                       vg2(self%elem%basis_s%nnodes_elem()), &
+                       vg3(self%elem%basis_s%nnodes_elem())
 
 
         vg1 = ONE
@@ -256,7 +256,7 @@ contains
     subroutine testElement_grid_positions(self)
         class(test_element_ale_pmm_translation_linearA),    intent(inout)   :: self
 
-        real(rk)    :: pg(self%elem%basis_s%nnodes_ie(),3)
+        real(rk)    :: pg(self%elem%basis_s%nnodes_elem(),3)
 
 
         pg(:,1) = ONE + self%elem%quad_pts(:,1)
@@ -279,7 +279,7 @@ contains
     subroutine testElement_jinv_def(self)
         class(test_element_ale_pmm_translation_linearA),    intent(inout)   :: self
 
-        real(rk)    :: test_ale_g(self%elem%basis_s%nnodes_ie())
+        real(rk)    :: test_ale_g(self%elem%basis_s%nnodes_elem())
         
         test_ale_g = ONE
         @assertEqual(self%elem%jinv_def,self%elem%jinv_undef)
@@ -297,7 +297,7 @@ contains
     subroutine testElement_jacobian_grid(self)
         class(test_element_ale_pmm_translation_linearA),    intent(inout)   :: self
 
-        real(rk)    :: test_metric(self%elem%basis_s%nnodes_ie(),3,3)
+        real(rk)    :: test_metric(self%elem%basis_s%nnodes_elem(),3,3)
         
         test_metric(:,1,1) = 1.0_rk 
         test_metric(:,2,1) = 0._rk  
@@ -336,9 +336,9 @@ contains
     subroutine testElement_face_grid_velocities(self)
         class(test_element_ale_pmm_translation_linearA),    intent(inout)   :: self
 
-        real(rk)    :: vg1(self%faces(XI_MAX)%basis_s%nnodes_if()), &
-                       vg2(self%faces(XI_MAX)%basis_s%nnodes_if()), &
-                       vg3(self%faces(XI_MAX)%basis_s%nnodes_if())
+        real(rk)    :: vg1(self%faces(XI_MAX)%basis_s%nnodes_face()), &
+                       vg2(self%faces(XI_MAX)%basis_s%nnodes_face()), &
+                       vg3(self%faces(XI_MAX)%basis_s%nnodes_face())
 
 
         vg1 = ONE
@@ -379,7 +379,7 @@ contains
     subroutine testElement_face_grid_positions(self)
         class(test_element_ale_pmm_translation_linearA),    intent(inout)   :: self
 
-        real(rk)    :: pg(self%faces(XI_MAX)%basis_s%nnodes_if(),3,6)
+        real(rk)    :: pg(self%faces(XI_MAX)%basis_s%nnodes_face(),3,6)
 
 
         pg(:,1,XI_MIN) = ONE +  self%faces(XI_MIN)%quad_pts(:,1)
@@ -429,7 +429,7 @@ contains
     @Test
     subroutine testElement_face_jinv_ale(self)
         class(test_element_ale_pmm_translation_linearA),    intent(inout)   :: self
-        real(rk)    :: test_det_jac_grid(self%faces(XI_MAX)%basis_s%nnodes_if())
+        real(rk)    :: test_det_jac_grid(self%faces(XI_MAX)%basis_s%nnodes_face())
         
         test_det_jac_grid = ONE
 
@@ -462,7 +462,7 @@ contains
     @Test
     subroutine testElement_face_metrics(self)
         class(test_element_ale_pmm_translation_linearA),    intent(inout)   :: self
-        real(rk)    :: test_metric(self%faces(XI_MAX)%basis_s%nnodes_if(),3,3)
+        real(rk)    :: test_metric(self%faces(XI_MAX)%basis_s%nnodes_face(),3,3)
         real(rk)    :: tol
         
         tol = 1.e-14_rk

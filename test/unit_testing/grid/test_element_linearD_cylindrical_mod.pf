@@ -226,8 +226,8 @@ contains
     subroutine testElement_metric(self)
         class(test_element_linearD),    intent(inout)   :: self
 
-        real(rk)    :: test_metric(3,3,self%elem%basis_s%nnodes_ie())
-        real(rk)    :: jinv(self%elem%basis_s%nnodes_ie())
+        real(rk)    :: test_metric(3,3,self%elem%basis_s%nnodes_elem())
+        real(rk)    :: jinv(self%elem%basis_s%nnodes_elem())
 
         jinv = (PI/16._rk) * self%elem%interp_coords(:,1)
         
@@ -262,7 +262,7 @@ contains
     subroutine testElement_jinv(self)
         class(test_element_linearD),    intent(inout)   :: self
 
-        real(rk)    :: test_jinv(self%elem%basis_s%nnodes_ie())
+        real(rk)    :: test_jinv(self%elem%basis_s%nnodes_elem())
         
         test_jinv = (PI/16._rk) * self%elem%interp_coords(:,1)
         @assertEqual(test_jinv,self%elem%jinv)
@@ -350,7 +350,7 @@ contains
     subroutine testElement_quadpts(self)
         class(test_element_linearD),    intent(inout)   :: self
 
-        real(rk), dimension(self%elem%basis_s%nnodes_ie()) :: test_r, test_theta, test_z
+        real(rk), dimension(self%elem%basis_s%nnodes_elem()) :: test_r, test_theta, test_z
         real(rk)                                        :: r1,r2,theta1,theta2,z1,z2
 
         r1     = 1.5_rk    - 0.5_rk*sqrt(ONE/THREE)
@@ -395,15 +395,15 @@ contains
     subroutine testElement_grad1(self)
         class(test_element_linearD),    intent(inout)       :: self
 
-        real(rk), dimension(self%elem%basis_s%nnodes_ie(), 8)  :: test
-        real(rk), dimension(self%elem%basis_s%nnodes_ie())     :: xi, eta, zeta
+        real(rk), dimension(self%elem%basis_s%nnodes_elem(), 8)  :: test
+        real(rk), dimension(self%elem%basis_s%nnodes_elem())     :: xi, eta, zeta
         real(rk), allocatable                               :: nodes(:,:)
         
         real(rk) :: tol
         
         tol = 1.e-14_rk
         
-        nodes = self%elem%basis_s%nodes() 
+        nodes = self%elem%basis_s%nodes_element() 
         xi   = nodes(:,1)
         eta  = nodes(:,2)
         zeta = nodes(:,3)
@@ -446,15 +446,15 @@ contains
     subroutine testElement_grad2(self)
         class(test_element_linearD),    intent(inout)   :: self
 
-        real(rk), dimension(self%elem%basis_s%nnodes_ie(), 8)  :: test
-        real(rk), dimension(self%elem%basis_s%nnodes_ie())     :: xi, eta, zeta, r
+        real(rk), dimension(self%elem%basis_s%nnodes_elem(), 8)  :: test
+        real(rk), dimension(self%elem%basis_s%nnodes_elem())     :: xi, eta, zeta, r
         real(rk),   allocatable                             :: nodes(:,:)
         
         real(rk) :: tol
         
         tol = 1.e-14_rk
         
-        nodes = self%elem%basis_s%nodes()
+        nodes = self%elem%basis_s%nodes_element()
         xi   = nodes(:,1)
         eta  = nodes(:,2)
         zeta = nodes(:,3)
@@ -499,15 +499,15 @@ contains
     subroutine testElement_grad3(self)
         class(test_element_linearD),    intent(inout)   :: self
 
-        real(rk), dimension(self%elem%basis_s%nnodes_ie(), 8)  :: test
-        real(rk), dimension(self%elem%basis_s%nnodes_ie())     :: xi, eta, zeta
+        real(rk), dimension(self%elem%basis_s%nnodes_elem(), 8)  :: test
+        real(rk), dimension(self%elem%basis_s%nnodes_elem())     :: xi, eta, zeta
         real(rk),   allocatable                             :: nodes(:,:)
         
         real(rk) :: tol
         
         tol = 1.e-14_rk
         
-        nodes = self%elem%basis_s%nodes()
+        nodes = self%elem%basis_s%nodes_element()
         xi   = nodes(:,1)
         eta  = nodes(:,2)
         zeta = nodes(:,3)
@@ -553,7 +553,7 @@ contains
         class(test_element_linearD),    intent(inout)   :: self
 
         real(rk)    :: tol
-        real(rk), dimension(self%faces(XI_MAX)%basis_s%nnodes_if()) :: &
+        real(rk), dimension(self%faces(XI_MAX)%basis_s%nnodes_face()) :: &
             test_norm_r, test_norm_t, test_norm_z
         
         tol = 1.e-15_rk

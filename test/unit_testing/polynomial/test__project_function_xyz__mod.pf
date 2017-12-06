@@ -194,7 +194,7 @@ contains
             !
             ! Compute integral of function
             !
-            fintegral = sum(matmul(elem%basis_s%interpolator('Value'), fmodes)  *  elem%basis_s%weights()  *  elem%jinv)
+            fintegral = sum(matmul(elem%basis_s%interpolator_element('Value'), fmodes)  *  elem%basis_s%weights_element()  *  elem%jinv)
             
         end associate
 
@@ -286,7 +286,7 @@ contains
         !
         ! Compute integral of function
         !
-        fintegral = sum(matmul(elem%basis_s%interpolator('Value'), fmodes)  *  elem%basis_s%weights()  *  elem%jinv)
+        fintegral = sum(matmul(elem%basis_s%interpolator_element('Value'), fmodes)  *  elem%basis_s%weights_element()  *  elem%jinv)
         
         end associate
 
@@ -377,7 +377,7 @@ contains
         !
         ! Compute integral of function
         !
-        fintegral = sum(matmul(elem%basis_s%interpolator('Value'), fmodes)  *  elem%basis_s%weights()  *  elem%jinv)
+        fintegral = sum(matmul(elem%basis_s%interpolator_element('Value'), fmodes)  *  elem%basis_s%weights_element()  *  elem%jinv)
         
         end associate
 
@@ -478,7 +478,7 @@ contains
         !
         ! Compute integral of function
         !
-        fintegral = sum(matmul(elem%basis_s%interpolator('Value'), fmodes)  *  elem%basis_s%weights()  *  elem%jinv)
+        fintegral = sum(matmul(elem%basis_s%interpolator_element('Value'), fmodes)  *  elem%basis_s%weights_element()  *  elem%jinv)
         
         end associate
 

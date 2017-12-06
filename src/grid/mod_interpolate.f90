@@ -164,7 +164,7 @@ contains
         !
         select case (interpolation_type)
             case('value')
-                var_gq = matmul(mesh%domain(idom)%elems(ielem)%basis_s%interpolator('Value'),qdiff)
+                var_gq = matmul(mesh%domain(idom)%elems(ielem)%basis_s%interpolator_element('Value'),qdiff)
 
             case('grad1')
                 var_gq = matmul(mesh%domain(idom)%elems(ielem)%grad1,qdiff)
@@ -259,7 +259,7 @@ contains
         !
         ! Allocate output array
         !
-        nnodes   = mesh%domain(face_info%idomain_l)%elems(face_info%ielement_l)%basis_s%nnodes_if()
+        nnodes   = mesh%domain(face_info%idomain_l)%elems(face_info%ielement_l)%basis_s%nnodes_face()
         nterms_s = mesh%domain(face_info%idomain_l)%elems(face_info%ielement_l)%basis_s%nterms_i()
         allocate(var_gq(nnodes), stat=ierr)
         if (ierr /= 0) call AllocationError
@@ -436,7 +436,7 @@ contains
         !
         select case (interpolation_type)
             case('value')
-                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator('Value'), q%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime))
+                var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_element('Value'), q%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime))
             case('grad1')
                 var_gq = matmul(mesh%domain(idomain_l)%elems(ielement_l)%grad1,      q%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime))
             case('grad2')
@@ -480,7 +480,7 @@ contains
         ! This takes the form of a matrix multiplication of the face quadrature matrix
         ! with the array of modes for the given variable
         !
-        var_gq = matmul(mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%interpolator('Value',iface), q%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime))
+        var_gq = matmul(mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%interpolator_face('Value',iface), q%dom(idomain_l)%vecs(ielement_l)%getvar(ifield,itime))
 
 
     end function interpolate_face_standard
@@ -859,7 +859,7 @@ contains
         if ( interpolation_source == ME ) then
             select case(interpolation_type)
                 case('value')
-                    interpolator = mesh%domain(idom)%faces(ielem,iface)%basis_s%interpolator('Value',iface)
+                    interpolator = mesh%domain(idom)%faces(ielem,iface)%basis_s%interpolator_face('Value',iface)
                 case('grad1')
                     interpolator = mesh%domain(idom)%faces(ielem,iface)%grad1
                 case('grad2')
@@ -888,7 +888,7 @@ contains
                 if (parallel_interpolation) then
                     select case(interpolation_type)
                         case('value')
-                            interpolator = mesh%domain(idom)%faces(ielem,iface)%basis_s%interpolator('Value',donor_face%iface)    ! THIS PROBABLY NEEDS IMPROVED
+                            interpolator = mesh%domain(idom)%faces(ielem,iface)%basis_s%interpolator_face('Value',donor_face%iface)    ! THIS PROBABLY NEEDS IMPROVED
                         case('grad1')
                             interpolator = mesh%domain(idom)%faces(ielem,iface)%neighbor_grad1
                         case('grad2')
@@ -901,7 +901,7 @@ contains
                 else
                     select case(interpolation_type)
                         case('value')
-                            interpolator = mesh%domain(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%basis_s%interpolator('Value',donor_face%iface)
+                            interpolator = mesh%domain(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%basis_s%interpolator_face('Value',donor_face%iface)
                         case('grad1')
                             interpolator = mesh%domain(donor_face%idomain_l)%faces(donor_face%ielement_l,donor_face%iface)%grad1
                         case('grad2')
@@ -989,7 +989,7 @@ contains
         if ( interpolation_source == NEIGHBOR ) then
 
 
-            nnodes = mesh%domain(idom)%faces(ielem,iface)%basis_s%nnodes_if()
+            nnodes = mesh%domain(idom)%faces(ielem,iface)%basis_s%nnodes_face()
             allocate(mask(nnodes), stat=ierr) 
             mask = .false.
             if (ierr /= 0) call AllocationError

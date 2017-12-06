@@ -90,7 +90,7 @@ subroutine test_find_gq_donor_cylinder_abutting()
         chi_eta  = chimera_node(2)
         chi_zeta = chimera_node(3)
 
-        nodes = chidgA%data%mesh%domain(idom_d)%faces(ielem_d,XI_MAX)%basis_s%nodes(XI_MAX)
+        nodes = chidgA%data%mesh%domain(idom_d)%faces(ielem_d,XI_MAX)%basis_s%nodes_face(XI_MAX)
         ref_xi   = nodes(igq,1)
         ref_eta  = nodes(igq,2)
         ref_zeta = nodes(igq,3)

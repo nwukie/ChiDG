@@ -75,7 +75,7 @@ subroutine test_integrate_boundary_constant()
     ! Allocate flux array
     !
     associate ( faces => chidg%data%mesh%domain(1)%faces, sdata => chidg%data%sdata )
-    ngq = faces(1,1)%basis_s%nnodes_if()
+    ngq = faces(1,1)%basis_s%nnodes_face()
     allocate(integrand(ngq))
     
     do igq = 1,size(integrand)

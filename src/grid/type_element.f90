@@ -468,7 +468,7 @@ contains
                         )
             
 
-        nnodes = ref_elems(ref_ID_s)%nnodes_ie()
+        nnodes = ref_elems(ref_ID_s)%nnodes_elem()
         allocate(self%jinv(nnodes),               &
                  self%jinv_def(nnodes),                 &
                  self%grad1(nnodes,nterms_s),           &
@@ -594,12 +594,12 @@ contains
         real(rk),   dimension(:,:),     allocatable :: val, ddxi, ddeta, ddzeta
         real(rk),   dimension(:,:,:),   allocatable :: jacobian
 
-        nnodes  = self%basis_c%nnodes_ie()
-        weights = self%basis_c%weights()
-        val     = self%basis_c%interpolator('Value')
-        ddxi    = self%basis_c%interpolator('ddxi')
-        ddeta   = self%basis_c%interpolator('ddeta')
-        ddzeta  = self%basis_c%interpolator('ddzeta')
+        nnodes  = self%basis_c%nnodes_elem()
+        weights = self%basis_c%weights_element()
+        val     = self%basis_c%interpolator_element('Value')
+        ddxi    = self%basis_c%interpolator_element('ddxi')
+        ddeta   = self%basis_c%interpolator_element('ddeta')
+        ddzeta  = self%basis_c%interpolator_element('ddzeta')
 
         !
         ! Compute coordinate jacobian matrix at interpolation nodes
@@ -705,10 +705,10 @@ contains
         integer(ik)                                 :: nnodes
         real(rk),   allocatable,    dimension(:,:)  :: ddxi, ddeta, ddzeta
 
-        nnodes = self%basis_s%nnodes_ie()
-        ddxi   = self%basis_s%interpolator('ddxi')
-        ddeta  = self%basis_s%interpolator('ddeta')
-        ddzeta = self%basis_s%interpolator('ddzeta')
+        nnodes = self%basis_s%nnodes_elem()
+        ddxi   = self%basis_s%interpolator_element('ddxi')
+        ddeta  = self%basis_s%interpolator_element('ddeta')
+        ddzeta = self%basis_s%interpolator_element('ddzeta')
 
         do iterm = 1,self%nterms_s
             do inode = 1,nnodes
@@ -766,14 +766,14 @@ contains
         real(rk),   dimension(:),   allocatable :: coord1, coord2, coord3
         integer(ik)                             :: inode
 
-        nnodes = self%basis_c%nnodes_ie()
+        nnodes = self%basis_c%nnodes_elem()
 
         !
         ! compute coordinates associated with quadrature points
         !
-        coord1 = matmul(self%basis_c%interpolator('Value'),self%coords%getvar(1,itime = 1))
-        coord2 = matmul(self%basis_c%interpolator('Value'),self%coords%getvar(2,itime = 1))
-        coord3 = matmul(self%basis_c%interpolator('Value'),self%coords%getvar(3,itime = 1))
+        coord1 = matmul(self%basis_c%interpolator_element('Value'),self%coords%getvar(1,itime = 1))
+        coord2 = matmul(self%basis_c%interpolator_element('Value'),self%coords%getvar(2,itime = 1))
+        coord3 = matmul(self%basis_c%interpolator_element('Value'),self%coords%getvar(3,itime = 1))
 
 
         !
@@ -807,14 +807,14 @@ contains
         self%invmass = ZERO
         self%mass    = ZERO
 
-        temp = transpose(self%basis_s%interpolator('Value'))
+        temp = transpose(self%basis_s%interpolator_element('Value'))
 
 
         !
         ! Multiply rows by quadrature weights and cell jacobians
         !
         do iterm = 1,self%nterms_s
-            temp(iterm,:) = temp(iterm,:)*(self%basis_s%weights())*(self%jinv)
+            temp(iterm,:) = temp(iterm,:)*(self%basis_s%weights_element())*(self%jinv)
         end do
 
 
@@ -822,7 +822,7 @@ contains
         ! Perform the matrix multiplication of the transpose val matrix by
         ! the standard matrix. This produces the mass matrix. I think...
         !
-        self%mass = matmul(temp,self%basis_s%interpolator('Value'))
+        self%mass = matmul(temp,self%basis_s%interpolator_element('Value'))
 
 
         !
@@ -971,7 +971,7 @@ contains
         !
         ! Retrieve interpolator
         !
-        val = self%basis_c%interpolator('Value')
+        val = self%basis_c%interpolator_element('Value')
 
         !
         ! compute cartesian coordinates associated with quadrature points
@@ -1035,19 +1035,19 @@ contains
         !
         ! Retrieve interpolators
         !
-        nnodes  = self%basis_c%nnodes_ie()
-        weights = self%basis_c%weights()
-        ddxi    = self%basis_c%interpolator('ddxi')
-        ddeta   = self%basis_c%interpolator('ddeta')
-        ddzeta  = self%basis_c%interpolator('ddzeta')
+        nnodes  = self%basis_c%nnodes_elem()
+        weights = self%basis_c%weights_element()
+        ddxi    = self%basis_c%interpolator_element('ddxi')
+        ddeta   = self%basis_c%interpolator_element('ddeta')
+        ddzeta  = self%basis_c%interpolator_element('ddzeta')
 
-        dxidxi     = self%basis_c%interpolator('dxidxi')
-        detadeta   = self%basis_c%interpolator('detadeta')
-        dzetadzeta = self%basis_c%interpolator('dzetadzeta')
+        dxidxi     = self%basis_c%interpolator_element('dxidxi')
+        detadeta   = self%basis_c%interpolator_element('detadeta')
+        dzetadzeta = self%basis_c%interpolator_element('dzetadzeta')
 
-        dxideta    = self%basis_c%interpolator('dxideta')
-        dxidzeta   = self%basis_c%interpolator('dxidzeta')
-        detadzeta  = self%basis_c%interpolator('detadzeta')
+        dxideta    = self%basis_c%interpolator_element('dxideta')
+        dxidzeta   = self%basis_c%interpolator_element('dxidzeta')
+        detadzeta  = self%basis_c%interpolator_element('detadzeta')
 
 
 
@@ -1140,7 +1140,7 @@ contains
         !
         ! Project ale_g to solution basis
         !
-        val  = self%basis_s%interpolator('Value')
+        val  = self%basis_s%interpolator_element('Value')
         fvals = self%ale_g * weights * self%jinv
         temp = matmul(transpose(val),fvals)
         self%ale_g_modes = matmul(self%invmass,temp)
@@ -1939,11 +1939,11 @@ contains
 
         ! Call function for evaluation at quadrature nodes and multiply by quadrature weights
         time  = 0._rk
-        fvals = fcn%compute(time,point_t(self%interp_coords)) * self%basis_s%weights() * self%jinv
+        fvals = fcn%compute(time,point_t(self%interp_coords)) * self%basis_s%weights_element() * self%jinv
 
 
         ! Project
-        temp = matmul(transpose(self%basis_s%interpolator('Value')),fvals)
+        temp = matmul(transpose(self%basis_s%interpolator_element('Value')),fvals)
         fmodes = matmul(self%invmass,temp)
 
 

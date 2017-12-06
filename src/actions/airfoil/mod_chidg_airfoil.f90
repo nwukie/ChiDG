@@ -271,7 +271,7 @@ contains
                 !
                 ! Integrate
                 !
-                weights = worker%mesh%domain(idomain_g)%faces(ielement_g,iface)%basis_s%weights(iface)
+                weights = worker%mesh%domain(idomain_g)%faces(ielement_g,iface)%basis_s%weights_face(iface)
                 areas   = sqrt(norm_1*norm_1 + norm_2*norm_2 + norm_3*norm_3)
 
                 lift = lift + sum( stress_y * weights * areas)

@@ -64,6 +64,7 @@ module mod_constants
     integer(ik), parameter :: TWO_DIM   = 2
     integer(ik), parameter :: THREE_DIM = 3
     integer(ik), parameter :: NFACES    = 6
+    integer(ik), parameter :: NEDGES    = 12
 
 
 

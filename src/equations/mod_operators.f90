@@ -101,6 +101,10 @@ module mod_operators
     use tm_volume_cylindrical_source,            only: tm_volume_cylindrical_source_t
 
 
+    use graddemo_volume_operator,                only: graddemo_volume_operator_t
+    use graddemo_P_volume_operator,              only: graddemo_P_volume_operator_t
+    use graddemo_P_boundary_operator,            only: graddemo_P_boundary_operator_t
+    use graddemo_P_bc_operator,                  only: graddemo_P_bc_operator_t
     implicit none
 
 
@@ -316,6 +320,10 @@ contains
         type(tm_volume_cylindrical_source_t)             :: tm_volume_cylindrical_source
 
 
+        type(graddemo_volume_operator_t)                 :: graddemo_volume_operator
+        type(graddemo_P_volume_operator_t)               :: graddemo_P_volume_operator
+        type(graddemo_P_boundary_operator_t)             :: graddemo_P_boundary_operator
+        type(graddemo_P_bc_operator_t)                   :: graddemo_P_bc_operator
 
 
 
@@ -423,6 +431,10 @@ contains
             call operator_factory%register(tm_laxfriedrichs_operator)
             call operator_factory%register(tm_volume_cylindrical_source)
 
+            call operator_factory%register(graddemo_volume_operator)
+            call operator_factory%register(graddemo_P_volume_operator)
+            call operator_factory%register(graddemo_P_boundary_operator)
+            call operator_factory%register(graddemo_P_bc_operator)
 
 
 

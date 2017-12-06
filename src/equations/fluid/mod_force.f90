@@ -206,7 +206,7 @@ contains
                     !
                     ! Integrate
                     !
-                    weights = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%weights(iface)
+                    weights = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%weights_face(iface)
 
                     if (present(force)) then
                         force_local(1) = force_local(1) + sum( stress_x(:)%x_ad_ * weights)

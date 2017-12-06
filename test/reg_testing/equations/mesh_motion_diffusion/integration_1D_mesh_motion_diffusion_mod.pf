@@ -1058,7 +1058,7 @@ contains
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%basis_s%weights())
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%basis_s%weights_element())
 
 
                     !
@@ -1086,7 +1086,7 @@ contains
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%basis_s%weights())
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%basis_s%weights_element())
 
 
                     !
@@ -1115,7 +1115,7 @@ contains
                     !
                     ! Integrate error
                     !
-                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%basis_s%weights())
+                    element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%basis_s%weights_element())
 
 
                     !

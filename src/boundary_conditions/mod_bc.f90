@@ -80,6 +80,8 @@ module mod_bc
     ! Radial-Angular equilibrium
     use bc_state_tm_extrapolate,   only: tm_extrapolate_t
     use bc_state_tm_dirichlet,     only: tm_dirichlet_t
+
+    use bc_state_graddemo_extrapolate,  only: graddemo_extrapolate_t
     implicit none
 
 
@@ -166,6 +168,8 @@ contains
         type(tm_extrapolate_t) :: TM_EXTRAPOLATE
         type(tm_dirichlet_t)   :: TM_DIRICHLET
 
+        type(graddemo_extrapolate_t)    :: GRADDEMO_EXTRAPOLATE
+
         if ( .not. initialized ) then
             !
             ! Register in global vector
@@ -224,19 +228,22 @@ contains
             call registered_bcs%push_back(TM_EXTRAPOLATE)
             call registered_bcs%push_back(TM_DIRICHLET)
 
+            call registered_bcs%push_back(GRADDEMO_EXTRAPOLATE)
+
+
+
+
             !
             ! Initialize each boundary condition in set. Doesn't need modified.
             !
             nbcs = registered_bcs%size()
             do ibc = 1,nbcs
-
                 call registered_bcs%data(ibc)%state%init()
-
             end do
 
-            !
+
+
             ! Confirm initialization
-            !
             initialized = .true.
 
         end if

@@ -36,7 +36,8 @@ module type_chidg_worker
     use mod_interpolate,        only: interpolate_element_autodiff
     use mod_integrate,          only: integrate_boundary_scalar_flux, &
                                       integrate_volume_vector_flux,   &
-                                      integrate_volume_scalar_source
+                                      integrate_volume_scalar_source, &
+                                      store_volume_integrals
 
     use type_point,             only: point_t
     use type_mesh,              only: mesh_t
@@ -113,11 +114,6 @@ module type_chidg_worker
 
 
 
-
-
-
-
-
         ! Element/Face data access procedures
         procedure   :: normal
         procedure   :: unit_normal
@@ -137,6 +133,7 @@ module type_chidg_worker
         procedure   :: coordinate_system
         procedure   :: face_type
         procedure   :: time
+        procedure   :: nnodes1d
 
         procedure   :: get_area_ratio
         procedure   :: get_grid_velocity_element
@@ -158,6 +155,10 @@ module type_chidg_worker
 
         procedure   :: integrate_volume_flux
         procedure   :: integrate_volume_source
+        procedure   :: accumulate_residual
+
+        ! Projection
+        procedure   :: project_from_nodes
 
 
 
@@ -636,15 +637,16 @@ contains
     !!  @date   7/10/2017
     !!
     !---------------------------------------------------------------------------------------
-    function get_field(self,field,interp_type,interp_source_user) result(var_gq)
+    function get_field(self,field,interp_type,interp_source_user,iface) result(var_gq)
         class(chidg_worker_t),  intent(in)              :: self
         character(*),           intent(in)              :: field
         character(*),           intent(in)              :: interp_type
         character(*),           intent(in), optional    :: interp_source_user
+        integer(ik),            intent(in), optional    :: iface
 
         type(AD_D),     allocatable :: var_gq(:), tmp_gq(:)
         character(:),   allocatable :: cache_component, cache_type, lift_source, lift_nodes, user_msg, interp_source
-        integer(ik)                 :: lift_face_min, lift_face_max, idirection, iface
+        integer(ik)                 :: lift_face_min, lift_face_max, idirection, iface_loop, iface_use
         real(rk)                    :: stabilization
         logical                     :: no_lift
 
@@ -658,6 +660,15 @@ contains
         end if
 
 
+        !
+        ! Set face interpolation. Default is from worker. 
+        ! User can override with 'iface' optional input
+        !
+        iface_use = self%iface
+        if (present(iface)) iface_use = iface
+
+
+
 
 
         !
@@ -668,15 +679,15 @@ contains
                 cache_component = 'face interior'
                 lift_source     = 'face interior'
                 lift_nodes      = 'lift face'
-                lift_face_min   = self%iface
-                lift_face_max   = self%iface
+                lift_face_min   = iface_use
+                lift_face_max   = iface_use
                 stabilization   = real(NFACES,rk)
             case('face exterior','boundary')
                 cache_component = 'face exterior'
                 lift_source     = 'face exterior'
                 lift_nodes      = 'lift face'
-                lift_face_min   = self%iface
-                lift_face_max   = self%iface
+                lift_face_min   = iface_use
+                lift_face_max   = iface_use
                 stabilization   = real(NFACES,rk)
             case('element')
                 cache_component = 'element'
@@ -733,21 +744,21 @@ contains
         ! Retrieve data from cache
         !
         if ( cache_type == 'value') then
-            var_gq = self%cache%get_data(field,cache_component,'value',idirection,self%function_info%seed,self%iface)
+            var_gq = self%cache%get_data(field,cache_component,'value',idirection,self%function_info%seed,iface_use)
 
         else if (cache_type == 'gradient') then
 
             if (self%cache%lift .and. (.not. no_lift)) then
-                var_gq = self%cache%get_data(field,cache_component,'gradient',idirection,self%function_info%seed,self%iface)
+                var_gq = self%cache%get_data(field,cache_component,'gradient',idirection,self%function_info%seed,iface_use)
 
                 ! Add lift contributions from each face
-                do iface = lift_face_min,lift_face_max
-                    tmp_gq = self%cache%get_data(field,lift_source, lift_nodes, idirection, self%function_info%seed,iface)
+                do iface_loop = lift_face_min,lift_face_max
+                    tmp_gq = self%cache%get_data(field,lift_source, lift_nodes, idirection, self%function_info%seed,iface_loop)
                     var_gq = var_gq + stabilization*tmp_gq
                 end do
 
             else
-                var_gq = self%cache%get_data(field,cache_component,'gradient',idirection,self%function_info%seed,self%iface)
+                var_gq = self%cache%get_data(field,cache_component,'gradient',idirection,self%function_info%seed,iface_use)
             end if
 
         else
@@ -1535,6 +1546,71 @@ contains
 
 
 
+    !>  Accumulate residual. No assumed integration steps such as 
+    !!  in integrate_volume_flux.
+    !!
+    !!  
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/4/2017
+    !!
+    !--------------------------------------------------------------------------------------
+    subroutine accumulate_residual(self,primary_field,residual)
+        class(chidg_worker_t),  intent(in)      :: self
+        character(*),           intent(in)      :: primary_field
+        type(AD_D),             intent(inout)   :: residual(:)
+
+        integer(ik) :: ifield, idomain_l, eqn_ID
+
+        idomain_l = self%element_info%idomain_l
+        eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
+        ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
+
+        call store_volume_integrals(self%mesh, self%solverdata, self%element_info, self%function_info, ifield, self%itime, residual)
+
+    end subroutine accumulate_residual
+    !**************************************************************************************
+
+
+
+
+
+
+    !>  Project function from quadrature nodes to modal basis.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/4/2017
+    !!
+    !--------------------------------------------------------------------------------------
+    function project_from_nodes(self,nodes) result(modes)
+        class(chidg_worker_t),  intent(in)  :: self
+        type(AD_D),             intent(in)  :: nodes(:)
+
+        type(AD_D), allocatable :: temp(:), modes(:)
+
+        associate ( idomain_l  => self%element_info%idomain_l, &
+                    ielement_l => self%element_info%ielement_l )
+            associate( element => self%mesh%domain(idomain_l)%elems(ielement_l) )
+
+            ! Pre-multiply weights and elemental volumes
+            temp = nodes * element%basis_s%weights_element() * element%jinv
+
+            ! Inner product: <psi, f>
+            temp = matmul(transpose(element%basis_s%interpolator_element('Value')),nodes)
+            
+            ! Inner project: <psi, f>/<psi, psi>
+            modes = matmul(element%invmass,temp) 
+
+            end associate
+        end associate
+
+    end function project_from_nodes
+    !**************************************************************************************
+
+
+
+
+
 
 
 
@@ -1978,9 +2054,9 @@ contains
         real(rk),   allocatable,    dimension(:)    :: weights
 
         if (source == 'face') then
-            weights = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%basis_s%weights(self%iface)
+            weights = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%basis_s%weights_face(self%iface)
         else if (source == 'element') then
-            weights = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%basis_s%weights()
+            weights = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l, self%iface)%basis_s%weights_element()
         else
             call chidg_signal(FATAL,"chidg_worker%quadrature_weights(source): Invalid value for 'source'. Options are 'face', 'element'")
         end if
@@ -2133,6 +2209,29 @@ contains
     !**************************************************************************************
 
 
+
+
+
+    !>  Given a 3D quadrature node set, compute the number of nodes in one dimension
+    !!  of the set.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/4/2017
+    !!
+    !-------------------------------------------------------------------------------------
+    function nnodes1d(self,node_set_3d) result(nnodes1d_)
+        class(chidg_worker_t),  intent(in)  :: self
+        class(*),               intent(in)  :: node_set_3d(:)
+
+        integer(ik) :: nnodes1d_
+
+        nnodes1d_ = 0
+        do while ( nnodes1d_*nnodes1d_*nnodes1d_  < size(node_set_3d) )
+            nnodes1d_ = nnodes1d_ + 1
+        end do
+
+    end function nnodes1d
+    !*************************************************************************************
 
 
 

@@ -166,7 +166,7 @@ contains
         itime   = 1
 
 
-        ngq = self%chidg%data%mesh%domain(1)%elems(ielem)%basis_s%nnodes_ie()
+        ngq = self%chidg%data%mesh%domain(1)%elems(ielem)%basis_s%nnodes_elem()
 
 
         allocate(u_gq(ngq), &
@@ -219,7 +219,7 @@ contains
         ieqn    = 1
         itime   = 1
 
-        ngq = self%chidg%data%mesh%domain(1)%faces(ielem,iface)%basis_s%nnodes_if()
+        ngq = self%chidg%data%mesh%domain(1)%faces(ielem,iface)%basis_s%nnodes_face()
 
         allocate(u_gq(ngq))
         allocate(u_ref(ngq))
@@ -297,7 +297,7 @@ contains
 
             tol   = 1.e-13_rk
             ieqn  = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-            ngq   = elems(ielem)%basis_s%nnodes_ie()
+            ngq   = elems(ielem)%basis_s%nnodes_elem()
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
             ! not yet allocated.
@@ -382,7 +382,7 @@ contains
 
             tol    = 1.e-13_rk
             ivar   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-            ngq    = elems(ielem)%basis_s%nnodes_ie()
+            ngq    = elems(ielem)%basis_s%nnodes_elem()
             nderiv = elems(ielem)%neqns  *  elems(ielem)%nterms_s
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
@@ -469,7 +469,7 @@ contains
 
             tol  = 1.e-13_rk
             ivar = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-            ngq  = elems(ielem)%basis_s%nnodes_ie()        ! Number of quadrature nodes
+            ngq  = elems(ielem)%basis_s%nnodes_elem()        ! Number of quadrature nodes
             
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
             ! not yet allocated.
@@ -555,7 +555,7 @@ contains
 
             tol    = 1.e-13_rk
             ivar   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-            ngq    = elems(ielem)%basis_s%nnodes_ie()          ! Number of quadrature nodes
+            ngq    = elems(ielem)%basis_s%nnodes_elem()          ! Number of quadrature nodes
             nderiv = elems(ielem)%neqns  *  elems(ielem)%nterms_s
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
@@ -581,7 +581,7 @@ contains
             
             
             ! Test that the derivatives for each gq variable are zero
-            val = elems(ielem)%basis_s%interpolator('Value')
+            val = elems(ielem)%basis_s%interpolator_element('Value')
             do igq = 1,ngq
                 !deriv_ref = elems(ielem)%gq%vol%val(igq,:)      ! Set expected derivatives. Here it turns out to be the igq row of the quadrature matrix
                 deriv_ref = val(igq,:)                      ! Set expected derivatives. Here it turns out to be the igq row of the quadrature matrix
@@ -666,7 +666,7 @@ contains
 
             tol  = 1.e-13_rk
             ivar = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-            ngq  = faces(ielem,iface)%basis_s%nnodes_if()
+            ngq  = faces(ielem,iface)%basis_s%nnodes_face()
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are not yet allocated
             allocate(u_gq(ngq))
@@ -756,7 +756,7 @@ contains
 
             tol    = 1.e-13_rk
             ivar   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-            ngq    = faces(ielem,iface)%basis_s%nnodes_if()
+            ngq    = faces(ielem,iface)%basis_s%nnodes_face()
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
@@ -846,7 +846,7 @@ contains
 
             tol  = 1.e-13_rk
             ivar = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-            ngq  = faces(ielem,iface)%basis_s%nnodes_if()
+            ngq  = faces(ielem,iface)%basis_s%nnodes_face()
             
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays 
             ! are not yet allocated.
@@ -936,7 +936,7 @@ contains
             
             tol    = 1.e-13_rk
             ivar   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-            ngq    = faces(ielem,iface)%basis_s%nnodes_if()
+            ngq    = faces(ielem,iface)%basis_s%nnodes_face()
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays 
@@ -954,7 +954,7 @@ contains
             
             ! Test that interpolation to quadrature nodes from modes to autodiff variables 
             ! on an element volume is producing expected results
-            val = faces(ielem,iface)%basis_s%interpolator('Value',iface)
+            val = faces(ielem,iface)%basis_s%interpolator_face('Value',iface)
             do igq = 1,ngq
                 ! Set expected derivatives
                 !deriv_ref = faces(ielem,iface)%gq%face%val(igq,:,iface)
@@ -1034,7 +1034,7 @@ contains
 
             tol  = 1.e-13_rk
             ivar = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-            ngq  = faces(ielem,iface)%basis_s%nnodes_if()
+            ngq  = faces(ielem,iface)%basis_s%nnodes_face()
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays 
             ! are not yet allocated.
@@ -1125,7 +1125,7 @@ contains
 
             tol    = 1.e-13_rk
             ivar   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-            ngq    = faces(ielem,iface)%basis_s%nnodes_if()
+            ngq    = faces(ielem,iface)%basis_s%nnodes_face()
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays 
@@ -1214,7 +1214,7 @@ contains
 
             tol  = 1.e-13_rk
             ivar = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-            ngq  = faces(ielem,iface)%basis_s%nnodes_if()
+            ngq  = faces(ielem,iface)%basis_s%nnodes_face()
             
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays 
             ! are not yet allocated.
@@ -1304,7 +1304,7 @@ contains
             
             tol    = 1.e-13_rk
             ivar   = self%chidg%data%eqnset(1)%prop%get_primary_field_index('u')
-            ngq    = faces(ielem,iface)%basis_s%nnodes_if()
+            ngq    = faces(ielem,iface)%basis_s%nnodes_face()
             nderiv = faces(ielem,iface)%neqns  *  faces(ielem,iface)%nterms_s
 
             ! Allocate number of AD variables for data at GQ nodes. Derivative arrays are 
@@ -1326,7 +1326,7 @@ contains
             iface_n = compute_neighbor_face(     self%chidg%data%mesh,idomain,ielem,iface,idonor)
 
 
-            val = faces(ielem_n,iface_n)%basis_s%interpolator('Value',iface_n)
+            val = faces(ielem_n,iface_n)%basis_s%interpolator_face('Value',iface_n)
             do igq = 1,ngq
                 ! Set expected derivatives
                 !deriv_ref = faces(ielem_n,iface_n)%gq%face%val(igq,:,iface_n)

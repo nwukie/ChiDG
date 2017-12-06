@@ -330,7 +330,8 @@ contains
 
 
 
-        nnodes = self%basis_s%nnodes_if()
+        !nnodes = self%basis_s%nnodes_if()
+        nnodes = self%basis_s%nnodes_face()
         allocate(self%jinv(nnodes),               &
                  self%jinv_def(nnodes),                 &
                  self%interp_coords(nnodes,3),               &
@@ -369,8 +370,8 @@ contains
         !
         ! Compute BR2 matrix
         !
-        val_e = self%basis_s%interpolator('Value')
-        val_f = self%basis_s%interpolator('Value',self%iface)
+        val_e = self%basis_s%interpolator_element('Value')
+        val_f = self%basis_s%interpolator_face('Value',self%iface)
 
         tmp = matmul(elem%invmass,transpose(val_f))
         self%br2_face = matmul(val_f,tmp)
@@ -428,18 +429,16 @@ contains
         integer(ik)                 :: inode, nnodes, ierr
         character(:),   allocatable :: coordinate_system, user_msg
 
-        real(rk),   dimension(:),       allocatable :: scaling_row2, weights
+        real(rk),   dimension(:),       allocatable :: scaling_row2
         real(rk),   dimension(:,:),     allocatable :: val, ddxi, ddeta, ddzeta
         real(rk),   dimension(:,:,:),   allocatable :: jacobian
 
 
-        nnodes  = self%basis_c%nnodes_if()
-        weights = self%basis_c%weights()
-
-        val     = self%basis_c%interpolator('Value', self%iface)
-        ddxi    = self%basis_c%interpolator('ddxi',  self%iface)
-        ddeta   = self%basis_c%interpolator('ddeta', self%iface)
-        ddzeta  = self%basis_c%interpolator('ddzeta',self%iface)
+        nnodes  = self%basis_c%nnodes_face()
+        val     = self%basis_c%interpolator_face('Value', self%iface)
+        ddxi    = self%basis_c%interpolator_face('ddxi',  self%iface)
+        ddeta   = self%basis_c%interpolator_face('ddeta', self%iface)
+        ddzeta  = self%basis_c%interpolator_face('ddzeta',self%iface)
 
         !
         ! Compute element jacobian matrix at interpolation nodes
@@ -541,8 +540,8 @@ contains
         real(rk),       allocatable, dimension(:)   :: norm_mag, weights
 
 
-        nnodes  = self%basis_c%nnodes_if()
-        weights = self%basis_c%weights(self%iface)
+        nnodes  = self%basis_c%nnodes_face()
+        weights = self%basis_c%weights_face(self%iface)
 
 
         !
@@ -657,7 +656,7 @@ contains
         real(rk),   dimension(:,:), allocatable ::  norm
 
 
-        nnodes  = self%basis_c%nnodes_if()
+        nnodes  = self%basis_c%nnodes_face()
 
         !
         ! Compute normal vectors for each face
@@ -750,10 +749,10 @@ contains
         real(rk),   allocatable,    dimension(:,:)  :: ddxi, ddeta, ddzeta
 
         iface  = self%iface
-        nnodes = self%basis_s%nnodes_if()
-        ddxi   = self%basis_s%interpolator('ddxi',  iface)
-        ddeta  = self%basis_s%interpolator('ddeta', iface)
-        ddzeta = self%basis_s%interpolator('ddzeta',iface)
+        nnodes = self%basis_s%nnodes_face()
+        ddxi   = self%basis_s%interpolator_face('ddxi',  iface)
+        ddeta  = self%basis_s%interpolator_face('ddeta', iface)
+        ddzeta = self%basis_s%interpolator_face('ddzeta',iface)
 
 
 
@@ -805,7 +804,7 @@ contains
         !
         ! compute real coordinates associated with quadrature points
         !
-        val = self%basis_c%interpolator('Value',iface)
+        val = self%basis_c%interpolator_face('Value',iface)
         c1 = matmul(val,self%coords%getvar(1,itime = 1))
         c2 = matmul(val,self%coords%getvar(2,itime = 1))
         c3 = matmul(val,self%coords%getvar(3,itime = 1))
@@ -814,7 +813,7 @@ contains
         !
         ! For each quadrature node, store real coordinates
         !
-        do inode = 1,self%basis_s%nnodes_if()
+        do inode = 1,self%basis_s%nnodes_face()
             self%interp_coords(inode,1:3) = [c1(inode), c2(inode), c3(inode)]
         end do !inode
 
@@ -866,8 +865,8 @@ contains
         real(rk),   allocatable, dimension(:)   :: x, y, z, vg1, vg2, vg3
         real(rk),   allocatable, dimension(:,:) :: val
 
-        nnodes = self%basis_s%nnodes_if()
-        val    = self%basis_c%interpolator('Value',self%iface)
+        nnodes = self%basis_s%nnodes_face()
+        val    = self%basis_c%interpolator_face('Value',self%iface)
 
         !
         ! compute cartesian coordinates associated with quadrature points
@@ -943,19 +942,19 @@ contains
         !
         ! Retrieve interpolators
         !
-        nnodes     = self%basis_c%nnodes_if()
+        nnodes     = self%basis_c%nnodes_face()
 
-        ddxi       = self%basis_c%interpolator('ddxi',      self%iface)
-        ddeta      = self%basis_c%interpolator('ddeta',     self%iface)
-        ddzeta     = self%basis_c%interpolator('ddzeta',    self%iface)
+        ddxi       = self%basis_c%interpolator_face('ddxi',      self%iface)
+        ddeta      = self%basis_c%interpolator_face('ddeta',     self%iface)
+        ddzeta     = self%basis_c%interpolator_face('ddzeta',    self%iface)
 
-        dxidxi     = self%basis_c%interpolator('dxidxi',    self%iface)
-        detadeta   = self%basis_c%interpolator('detadeta',  self%iface)
-        dzetadzeta = self%basis_c%interpolator('dzetadzeta',self%iface)
+        dxidxi     = self%basis_c%interpolator_face('dxidxi',    self%iface)
+        detadeta   = self%basis_c%interpolator_face('detadeta',  self%iface)
+        dzetadzeta = self%basis_c%interpolator_face('dzetadzeta',self%iface)
 
-        dxideta    = self%basis_c%interpolator('dxideta',   self%iface)
-        dxidzeta   = self%basis_c%interpolator('dxidzeta',  self%iface)
-        detadzeta  = self%basis_c%interpolator('detadzeta', self%iface)
+        dxideta    = self%basis_c%interpolator_face('dxideta',   self%iface)
+        dxidzeta   = self%basis_c%interpolator_face('dxidzeta',  self%iface)
+        detadzeta  = self%basis_c%interpolator_face('detadzeta', self%iface)
 
 
         !

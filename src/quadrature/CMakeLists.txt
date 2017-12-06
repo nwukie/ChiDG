@@ -7,7 +7,4 @@ add_lib_sources(
                 type_volumeQuadrature.f90 
                 type_faceQuadrature.f90 
                 type_quadrature.f90 
-#                type_quadrature_new.f90
-#                type_support.f90
-#                mod_legendre_gauss.f90
                 )

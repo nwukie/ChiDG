@@ -19,14 +19,14 @@ module type_chimera_receiver
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
     !!
-    !------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------
     type, public :: chimera_receiver_t
 
-        integer(ik)                     :: idomain_g    ! ChiDG-global domain index of receiver
-        integer(ik)                     :: idomain_l    ! Proc-local domain index of receiver
-        integer(ik)                     :: ielement_g   ! Domain-global element index of receiver
-        integer(ik)                     :: ielement_l   ! Proc-local element index of receiver
-        integer(ik)                     :: iface        ! Face index of receiver
+        integer(ik)     :: idomain_g    ! ChiDG-global domain index of receiver
+        integer(ik)     :: idomain_l    ! Proc-local domain index of receiver
+        integer(ik)     :: ielement_g   ! Domain-global element index of receiver
+        integer(ik)     :: ielement_l   ! Proc-local element index of receiver
+        integer(ik)     :: iface        ! Face index of receiver
 
         !
         ! Array of donors
@@ -55,7 +55,7 @@ module type_chimera_receiver
         procedure   :: clear
 
     end type chimera_receiver_t
-    !******************************************************************************************
+    !***********************************************************************************
 
 
 

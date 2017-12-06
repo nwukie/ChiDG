@@ -118,13 +118,13 @@ contains
                     !
                     ! Integrate entropy error
                     !
-                    error = sum(entropy_rise * mesh%domain(idom)%elems(ielem)%jinv_def * mesh%domain(idom)%elems(ielem)%basis_s%weights())
+                    error = sum(entropy_rise * mesh%domain(idom)%elems(ielem)%jinv_def * mesh%domain(idom)%elems(ielem)%basis_s%weights_element())
 
 
                     !
                     ! Compute element volume
                     !
-                    vol = abs(sum(mesh%domain(idom)%elems(ielem)%jinv_def * mesh%domain(idom)%elems(ielem)%basis_s%weights()))
+                    vol = abs(sum(mesh%domain(idom)%elems(ielem)%jinv_def * mesh%domain(idom)%elems(ielem)%basis_s%weights_element()))
 
 
                     error_sum = error_sum + error

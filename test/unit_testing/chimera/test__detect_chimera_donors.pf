@@ -91,7 +91,7 @@ subroutine test__detect_chimera_donors()
 
     ielem    = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%ielement_l
     iface    = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%iface
-    ngq      = chiDG%data%mesh%domain(idom)%faces(ielem,iface)%basis_s%nnodes_if()
+    ngq      = chiDG%data%mesh%domain(idom)%faces(ielem,iface)%basis_s%nnodes_face()
 
     @assertEqual(1, ndonors)
     @assertEqual(ddomain,  chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g)
@@ -122,7 +122,7 @@ subroutine test__detect_chimera_donors()
 
     ielem    = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%ielement_l
     iface    = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%iface
-    ngq      = chiDG%data%mesh%domain(idom)%faces(ielem,iface)%basis_s%nnodes_if()
+    ngq      = chiDG%data%mesh%domain(idom)%faces(ielem,iface)%basis_s%nnodes_face()
 
     @assertEqual(1, ndonors)
     @assertEqual(ddomain,  chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g)
@@ -154,7 +154,7 @@ subroutine test__detect_chimera_donors()
 
     ielem    = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%ielement_l
     iface    = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%iface
-    ngq      = chiDG%data%mesh%domain(idom)%faces(ielem,iface)%basis_s%nnodes_if()
+    ngq      = chiDG%data%mesh%domain(idom)%faces(ielem,iface)%basis_s%nnodes_face()
 
     @assertEqual(1, ndonors)
     @assertEqual(ddomain,  chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g)
@@ -186,7 +186,7 @@ subroutine test__detect_chimera_donors()
 
     ielem    = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%ielement_l
     iface    = chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%iface
-    ngq      = chiDG%data%mesh%domain(idom)%faces(ielem,iface)%basis_s%nnodes_if()
+    ngq      = chiDG%data%mesh%domain(idom)%faces(ielem,iface)%basis_s%nnodes_face()
 
     @assertEqual(1, ndonors)
     @assertEqual(ddomain,  chidg%data%mesh%domain(idom)%chimera%recv(ChiID)%donor(idonor)%idomain_g )

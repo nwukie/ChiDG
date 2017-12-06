@@ -41,9 +41,10 @@ contains
         ! Level for quadrature nodes corresponds to the number of nodes
         ! in the 1D tensor construction of the node set.
         real(rk),   allocatable, dimension(:)   :: xi_nodes, eta_nodes, zeta_nodes
-        integer(ik)                             :: ixi, ieta, izeta, inode, nnodes, ierr, nterms1d, nnodes1d
-        integer(ik)                             :: nnodes_xi, nnodes_eta, nnodes_zeta
-        real(rk),   allocatable, dimension(:)   :: nodes_(:,:)
+        real(rk),   allocatable, dimension(:,:) :: nodes_
+        integer(ik)     :: ixi, ieta, izeta, inode, nnodes, &
+                           ierr, nterms1d, nnodes1d,        &
+                           nnodes_xi, nnodes_eta, nnodes_zeta
 
 
         !
@@ -162,8 +163,9 @@ contains
         ! Level for quadrature weights corresponds to the number of weights
         ! in the 1D tensor construction of the node set.
         real(rk),   allocatable, dimension(:)   :: xi_weights, eta_weights, zeta_weights, weights
-        integer(ik)                             :: ixi, ieta, izeta, inode, nweights, ierr, nnodes1d, nterms1d
-        integer(ik)                             :: nweights_xi, nweights_eta, nweights_zeta
+        integer(ik)                             :: ixi, ieta, izeta, inode, nweights,   &
+                                                   ierr, nnodes1d, nterms1d,            &
+                                                   nweights_xi, nweights_eta, nweights_zeta
 
 
         !

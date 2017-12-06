@@ -36,6 +36,7 @@ module mod_equations
     use eqn_mesh_motion_linear_elasticity,  only: mesh_motion_linear_elasticity
     use eqn_test_case_linear_advection,     only: test_case_linear_advection
     use eqn_test_case_poisson_equation,     only: test_case_poisson_equation
+    use eqn_graddemo,                       only: graddemo
     implicit none
 
 
@@ -136,6 +137,7 @@ contains
         type(mesh_motion_linear_elasticity) :: mesh_motion_linear_elasticity_builder
         type(test_case_linear_advection)    :: test_case_linear_advection_builder
         type(test_case_poisson_equation)    :: test_case_poisson_equation_builder
+        type(graddemo)                      :: graddemo_builder
 
 
         !
@@ -163,6 +165,7 @@ contains
             call equation_set_factory%register(mesh_motion_linear_elasticity_builder%build('default'))
             call equation_set_factory%register(test_case_linear_advection_builder%build('default'))
             call equation_set_factory%register(test_case_poisson_equation_builder%build('default'))
+            call equation_set_factory%register(graddemo_builder%build('default'))
 
 
 

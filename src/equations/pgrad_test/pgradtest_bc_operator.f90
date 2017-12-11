@@ -1,6 +1,6 @@
-module graddemo_P_bc_operator
+module pgradtest_bc_operator
     use mod_kinds,          only: ik, rk
-    use mod_constants,      only: ZERO
+    use mod_constants,      only: ZERO, ONE
     use type_operator,      only: operator_t
     use type_chidg_worker,  only: chidg_worker_t
     use type_properties,    only: properties_t
@@ -18,7 +18,7 @@ module graddemo_P_bc_operator
     !!
     !!
     !------------------------------------------------------------------------------------------
-    type, public, extends(operator_t) :: graddemo_P_bc_operator_t
+    type, public, extends(operator_t) :: pgradtest_bc_operator_t
 
 
     contains
@@ -26,7 +26,7 @@ module graddemo_P_bc_operator
         procedure   :: init
         procedure   :: compute
 
-    end type graddemo_P_bc_operator_t
+    end type pgradtest_bc_operator_t
     !*******************************************************************************************
 
 
@@ -46,12 +46,12 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(graddemo_P_bc_operator_t),   intent(inout) :: self
+        class(pgradtest_bc_operator_t),   intent(inout) :: self
         
         !
         ! Set operator name
         !
-        call self%set_name('Graddemo P BC Operator')
+        call self%set_name('pgradtest BC Operator')
 
         !
         ! Set operator type
@@ -83,7 +83,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(graddemo_P_bc_operator_t),    intent(inout)   :: self
+        class(pgradtest_bc_operator_t),    intent(inout)   :: self
         type(chidg_worker_t),               intent(inout)   :: worker
         class(properties_t),                intent(inout)   :: prop
 
@@ -91,15 +91,7 @@ contains
         ! Storage at quadrature nodes
         type(AD_D), allocatable, dimension(:)   ::  &
             grad1_pbc, grad2_pbc, grad3_pbc,        &
-            grad1_p,   grad2_p,   grad3_p,          &
-            flux_1,  flux_2,  flux_3
-
-
-        if ( (worker%iface == 1) .or. &
-             (worker%iface == 2) .or. &
-             (worker%iface == 3) .or. &
-             (worker%iface == 4) ) then
-
+            flux_1,  flux_2,  flux_3, mu
 
 
         !
@@ -109,22 +101,17 @@ contains
         grad2_pbc = worker%get_field('Pressure', 'grad2', 'boundary')
         grad3_pbc = worker%get_field('Pressure', 'grad3', 'boundary')
 
-        grad1_p   = worker%get_field('Pressure Gradient - 1', 'value', 'boundary')
-        grad2_p   = worker%get_field('Pressure Gradient - 2', 'value', 'boundary')
-        grad3_p   = worker%get_field('Pressure Gradient - 3', 'value', 'boundary')
-
+        mu = grad1_pbc
+        mu = ONE
 
         !=================================================
         ! Mass flux
         !=================================================
-        flux_1 = grad1_pbc - grad1_p
-        flux_2 = grad2_pbc - grad2_p
-        flux_3 = grad3_pbc 
-!        flux_3 = ZERO
+        flux_1 = mu*grad1_pbc
+        flux_2 = mu*grad2_pbc
+        flux_3 = mu*grad3_pbc
 
         call worker%integrate_boundary_condition('Pressure','Diffusion',flux_1,flux_2,flux_3)
-
-        end if
 
     end subroutine compute
     !**********************************************************************************************
@@ -138,4 +125,4 @@ contains
 
 
 
-end module graddemo_P_bc_operator
+end module pgradtest_bc_operator

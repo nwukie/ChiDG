@@ -164,6 +164,7 @@ contains
         self%niter = 0
 
 
+
         !res = 1000000000000._rk
         res = huge(1._rk)
         do while (res > self%tol)
@@ -195,7 +196,6 @@ contains
             p(1)   = r0norm
 
 
-
             !
             ! Inner GMRES restart loop
             !
@@ -221,9 +221,6 @@ contains
                 call timer_mv%start()
                 w = chidg_mv(A,z(j))
                 call timer_mv%stop()
-
-
-
 
 
 

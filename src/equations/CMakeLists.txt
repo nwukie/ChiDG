@@ -9,6 +9,7 @@ add_subdirectory(radial_angular_equilibrium)
 add_subdirectory(radial_angular_combined)
 add_subdirectory(tangential_momentum)
 add_subdirectory(gradient_based_demo)
+add_subdirectory(pgrad_test)
 
 
 #add_subdirectory(PrimitiveLinearizedEuler)

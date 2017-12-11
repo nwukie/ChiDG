@@ -101,6 +101,7 @@ contains
         integer(ik) :: idomain_l, ielement_l, iface, eqn_ID, face_min, face_max
         logical     :: compute_gradients, valid_indices, update_interior_faces, update_exterior_faces, update_element
 
+        type(AD_D), allocatable, dimension(:) :: grad1_mom3, grad2_mom3, grad3_mom3
 
         !
         ! Check for valid indices
@@ -189,7 +190,6 @@ contains
         call self%update_primary_fields(  worker,equation_set,bc_state_group,differentiate,compute_gradients,update_element, update_interior_faces, update_exterior_faces, face_min, face_max)
 
 
-
         !
         ! Compute f(Q-) models. Interior, Exterior, BC, Element
         !
@@ -202,14 +202,13 @@ contains
             if (update_interior_faces) call self%update_model_interior(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-)')
             if (update_exterior_faces) call self%update_model_exterior(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-)')
 
-
             if (update_exterior_faces) call self%update_primary_bc(worker,equation_set,bc_state_group,differentiate)
             if (update_exterior_faces) call self%update_model_bc(  worker,equation_set,bc_state_group,differentiate,model_type='f(Q-)')
-
 
             if (update_interior_faces) call self%update_model_interior(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-,Q+)')
             if (update_exterior_faces) call self%update_model_exterior(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-,Q+)')
             if (update_exterior_faces) call self%update_model_bc(      worker,equation_set,bc_state_group,differentiate,model_type='f(Q-,Q+)')
+
 
         end do !iface
 
@@ -253,6 +252,7 @@ contains
 
             end do !iface
 
+
             
             !
             ! Update model 'element' cache entries
@@ -266,7 +266,6 @@ contains
 !            worker%contains_lift = .false.
 
         end if ! compute_gradients
-
 
 
 
@@ -501,6 +500,7 @@ contains
                 grad2_u = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad2')
                 grad3_u = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info,ieqn,worker%itime,'grad3')
 
+
                 !
                 ! Get ALE transformation data
                 !
@@ -528,6 +528,8 @@ contains
                 call worker%cache%set_data(field,'element',grad1_u,'gradient',1,worker%function_info%seed)
                 call worker%cache%set_data(field,'element',grad2_u,'gradient',2,worker%function_info%seed)
                 call worker%cache%set_data(field,'element',grad3_u,'gradient',3,worker%function_info%seed)
+
+
             end if
 
         end do !ieqn
@@ -1836,12 +1838,12 @@ contains
 
 
 
-            associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface),                           &
-                        val_face_trans   => transpose(worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_face('Value',iface)),   &
-                        val_face         => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_face('Value',iface),              &
-                        val_vol          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_element('Value'),                    &
-                        invmass          => worker%mesh%domain(idomain_l)%elems(ielement_l)%invmass,                                        &
-                        br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face,                                 &
+            associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface),                            &
+                        val_face_trans   => transpose(worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_face('Value',iface)),    &
+                        val_face         => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_face('Value',iface),               &
+                        val_vol          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_element('Value'),                  &
+                        invmass          => worker%mesh%domain(idomain_l)%elems(ielement_l)%invmass,                                                &
+                        br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face,                                         &
                         br2_vol          => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_vol)
 
 
@@ -1988,6 +1990,7 @@ contains
                     var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
                     var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
 
+
                     ! Get ALE transformation
                     ale_g_m = worker%get_det_jacobian_grid_face('value', 'face interior')
                     ale_g_p = worker%get_det_jacobian_grid_face('value', 'face exterior')
@@ -2046,7 +2049,6 @@ contains
                     call worker%cache%set_data(field,'face interior', lift_gq_vol_x, 'lift element', 1, worker%function_info%seed, iface)
                     call worker%cache%set_data(field,'face interior', lift_gq_vol_y, 'lift element', 2, worker%function_info%seed, iface)
                     call worker%cache%set_data(field,'face interior', lift_gq_vol_z, 'lift element', 3, worker%function_info%seed, iface)
-
 
 
 
@@ -2588,11 +2590,11 @@ contains
         ! there were a reflected element like the receiver element that was acting as 
         ! the donor.
         !
-        associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface),                           &
-                    val_face_trans   => transpose(worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_face('Value',iface)),   &
-                    val_face         => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_face('Value',iface),              &
-                    val_vol          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_element('Value'),                    &
-                    invmass          => worker%mesh%domain(idomain_l)%elems(ielement_l)%invmass,                                        &
+        associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface),                            &
+                    val_face_trans   => transpose(worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_face('Value',iface)),    &
+                    val_face         => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_face('Value',iface),               &
+                    val_vol          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_element('Value'),                  &
+                    invmass          => worker%mesh%domain(idomain_l)%elems(ielement_l)%invmass,                                                &
                     br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face )
 
 

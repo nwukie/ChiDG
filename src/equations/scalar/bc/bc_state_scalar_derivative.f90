@@ -112,7 +112,7 @@ contains
 
         if ((worker%element_info%ielement_g == 1) .and. (worker%iface == 1)) then
         !if (worker%iface == 1) then
-           u_bc(1) = 100000._rk
+           u_bc(1) = 70000._rk
         end if 
 
 

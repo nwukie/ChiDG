@@ -10,7 +10,6 @@ module type_face
     use type_densevector,       only: densevector_t
     use mod_inv,                only: inv, inv_3x3
     use mod_determinant,        only: det_3x3
-    use ieee_arithmetic,        only: ieee_is_nan
     implicit none
 
 

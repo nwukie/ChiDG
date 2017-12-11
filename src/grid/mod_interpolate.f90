@@ -10,6 +10,7 @@
 !!  ---------------------------------------
 !!      interpolate_element_autodiff
 !!      interpolate_face_autodiff 
+!!      interpolate_edge_autodiff 
 !!
 !!      interpolate_element_standard
 !!      interpolate_face_standard
@@ -40,6 +41,8 @@ module mod_interpolate
     use type_mesh,              only: mesh_t
     use type_element_info,      only: element_info_t
     use type_face_info,         only: face_info_t
+    use type_edge_info,         only: edge_info_t
+    use type_seed,              only: seed_t
     use type_function_info,     only: function_info_t
     use type_recv,              only: recv_t
     use type_chidg_vector,      only: chidg_vector_t
@@ -103,7 +106,7 @@ contains
         !
         ! Get number of derivatives to initialize for automatic differentiation
         !
-        nderiv = get_interpolation_nderiv(mesh,fcn_info)
+        nderiv = get_interpolation_nderiv(mesh,fcn_info%seed)
 
 
         !
@@ -281,7 +284,7 @@ contains
         !
         ! Get number of derivatives to initialize for automatic differentiation
         !
-        nderiv = get_interpolation_nderiv(mesh,fcn_info)
+        nderiv = get_interpolation_nderiv(mesh,fcn_info%seed)
 
 
 
@@ -398,6 +401,148 @@ contains
 
 
 
+
+
+
+
+
+
+    !>  Interpolate variable from polynomial expansion to explicit values at quadrature 
+    !!  nodes. The automatic differentiation process really starts here, when the polynomial 
+    !!  expansion is evaluated.
+    !!
+    !!  The interpolation process occurs through a matrix-vector multiplication. That is an 
+    !!  interpolation matrix multiplied by a vector of modes from the polynomial expansion. 
+    !!  To start the automatic differentiation, the derivative arrays of the values for the 
+    !!  polynomial modes must be initialized before any computation. So, before the 
+    !!  matrix-vector multiplication.
+    !!
+    !!  Some interpolation parameters to note that a user might select:
+    !!      - interpolation_type:   'value', 'grad1', 'grad2', 'grad3'
+    !!      - interpolation_source: ME, NEIGHBOR
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!  @param[in]      mesh                    Array of mesh instances.
+    !!  @param[in]      face                    Face indices for locating the face in mesh.
+    !!  @param[in]      vector                  A chidg_vector containing a modal representation of fields on mesh
+    !!  @param[in]      ifield                  Index of field being interpolated
+    !!  @param[inout]   var_gq                  Autodiff values of field evaluated at gq points
+    !!  @param[in]      interpolation_type      Interpolate 'value', 'grad1', 'grad2', 'grad3'
+    !!  @param[in]      interpolation_source    ME/NEIGHBOR indicating element to interpolate from
+    !!
+    !!  @author Mayank Sharma + Matteo Ugolotti
+    !!  @date   11/5/2016
+    !!
+    !!  @param[in]      itime                   Index for time step in solution
+    !!
+    !------------------------------------------------------------------------------------------
+    function interpolate_edge_autodiff(mesh,vector,edge_info,seed, ifield, itime, interpolation_type) result(var_gq)
+        type(mesh_t),           intent(in)              :: mesh
+        type(chidg_vector_t),   intent(in)              :: vector
+        type(edge_info_t),      intent(in)              :: edge_info
+        type(seed_t),           intent(in)              :: seed
+        integer(ik),            intent(in)              :: ifield
+        integer(ik),            intent(in)              :: itime
+        character(*),           intent(in)              :: interpolation_type
+
+        type(AD_D),         allocatable :: qdiff(:), var_gq(:)
+        real(rk),           allocatable :: qtmp(:)
+        real(rk),           allocatable :: interpolator(:,:)
+
+        integer(ik) :: nderiv, set_deriv, iterm, nterms_s, ierr, nnodes
+        logical     :: differentiate_me
+
+        
+        !
+        ! Allocate output array
+        !
+        nnodes   = mesh%domain(edge_info%idomain_l)%elems(edge_info%ielement_l)%basis_s%nnodes_face()
+        nterms_s = mesh%domain(edge_info%idomain_l)%elems(edge_info%ielement_l)%basis_s%nterms_i()
+        allocate(var_gq(nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        !
+        ! Get number of derivatives to initialize for automatic differentiation
+        !
+        nderiv = get_interpolation_nderiv(mesh,seed)
+
+
+        !
+        ! Get edge interpolation matrix
+        !
+        interpolator = get_edge_interpolation_interpolator(mesh,edge_info,interpolation_type)
+
+
+        !
+        ! Deduce nterms from interpolator matrix
+        !
+        nterms_s = size(interpolator,2)
+
+
+        !
+        ! Allocate solution and derivative arrays for temporary solution variable
+        !
+        if ( allocated(qdiff) ) deallocate(qdiff)
+        allocate(qdiff(nterms_s), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        do iterm = 1,nterms_s
+            qdiff(iterm) = AD_D(nderiv)
+        end do
+
+
+        !
+        ! Retrieve modal coefficients for ifield from vector
+        !
+        qtmp = vector%dom(edge_info%idomain_l)%vecs(edge_info%ielement_l)%getvar(ifield,itime)
+
+
+        !
+        ! Copy correct number of modes. We use this because there is the possibility
+        ! that 'q' could be an auxiliary vector with nterms > nterms_s. For example,
+        ! if wall distance was computed for P1, and we are running Navier Stokes P0.
+        ! So we take only up to the modes that we need.
+        !
+        qdiff(1:nterms_s) = qtmp(1:nterms_s)
+
+
+
+        !
+        ! If the current element is being differentiated (ielem == ielem_seed)
+        ! then copy the solution modes to local AD variable and seed derivatives
+        !
+        differentiate_me = ( (edge_info%idomain_g  == seed%idomain_g ) .and. &
+                             (edge_info%ielement_g == seed%ielement_g) )
+
+        if ( differentiate_me ) then
+            ! Loop through the terms in qdiff, seed appropriate derivatives to ONE
+            do iterm = 1,size(qdiff)
+                ! For the given term, seed its appropriate derivative
+                set_deriv = (ifield - 1)*nterms_s + iterm
+                qdiff(iterm)%xp_ad_(set_deriv) = ONE
+            end do
+
+        else
+            ! Loop through the terms in qdiff. Set all derivatives to ZERO
+            do iterm = 1,size(qdiff)
+                qdiff(iterm)%xp_ad_ = ZERO
+            end do
+
+        end if
+
+
+
+        !
+        ! Interpolate solution to GQ nodes via matrix-vector multiplication
+        !
+        var_gq = matmul(interpolator,  qdiff)
+
+
+    end function interpolate_edge_autodiff
+    !*****************************************************************************************
 
 
 
@@ -1246,6 +1391,85 @@ contains
 
 
 
+
+
+
+
+
+    !>  This returns an interpolation matrix that is used to actually perform the interpolation 
+    !!  from a modal expansion to a set of interpolation nodes.
+    !!
+    !!  The interpolation from a modal expansion to a set of quadrature nodes takes the form 
+    !!  of a matrix-vector multiplication, where the vector entries are modal coefficients of 
+    !!  the polynomial expansion, and the matrix contains entries that evaluate the modes of 
+    !!  the polynomial expansion at the interpolation nodes. This routine returns the 
+    !!  interpolation matrix. Additionally, an interpolation could be computing the actual 
+    !!  value of the expansion at the nodes('value'), or it could be computing derivatives 
+    !!  ('grad1', 'grad2', 'grad3'). The interpolation_type specifies what kind of interpolation 
+    !!  to perform.
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/6/2017
+    !!
+    !!
+    !----------------------------------------------------------------------------------------
+    function get_edge_interpolation_interpolator(mesh,edge_info,interpolation_type) result(interpolator)
+        type(mesh_t),       intent(in)  :: mesh
+        type(edge_info_t),  intent(in)  :: edge_info
+        character(*),       intent(in)  :: interpolation_type
+
+        real(rk), allocatable :: interpolator(:,:)
+
+        associate( idom  => edge_info%idomain_l,  &
+                   ielem => edge_info%ielement_l, &
+                   iedge => edge_info%iedge )
+
+        !
+        ! Compute neighbor access indices
+        !
+        select case(interpolation_type)
+            case('value')
+                interpolator = mesh%domain(idom)%elems(ielem)%basis_s%interpolator_edge('Value',iedge)
+            case('grad1')
+                interpolator = mesh%domain(idom)%elems(ielem)%edge_grad1(:,:,iedge)
+            case('grad2')
+                interpolator = mesh%domain(idom)%elems(ielem)%edge_grad2(:,:,iedge)
+            case('grad3')
+                interpolator = mesh%domain(idom)%elems(ielem)%edge_grad3(:,:,iedge)
+            case default
+                call chidg_signal(FATAL,"get_edge_interpolation_interpolator: Invalid interpolation_type. Options are 'value', 'grad1', 'grad2', 'grad3'.")
+        end select
+
+
+        end associate
+
+
+    end function get_edge_interpolation_interpolator
+    !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     !>  Determine the number of derivatives being computed for the automatic differentiation 
     !!  process.
     !!
@@ -1256,9 +1480,9 @@ contains
     !!  @date   8/17/2016
     !!
     !-----------------------------------------------------------------------------------------
-    function get_interpolation_nderiv(mesh,function_info) result(nderiv)
+    function get_interpolation_nderiv(mesh,seed) result(nderiv)
         type(mesh_t),           intent(in)  :: mesh
-        type(function_info_t),  intent(in)  :: function_info
+        type(seed_t),           intent(in)  :: seed
 
         integer(ik) :: nderiv, neqns_seed, nterms_s_seed
         logical     :: parallel_seed
@@ -1271,7 +1495,7 @@ contains
         !   Actually, allocating with size 0 is okay in fortran. Just need to be
         !   careful not to try and access anything as var%xp_ad_(1)
         !
-        if (function_info%seed%ielement_l == 0) then
+        if (seed%ielement_l == 0) then
             !nderiv = 1
             nderiv = 0
 
@@ -1281,8 +1505,8 @@ contains
             ! Compute number of unknowns in the seed element, which is the number of 
             ! partial derivatives we are tracking.
             !
-            neqns_seed    = function_info%seed%neqns
-            nterms_s_seed = function_info%seed%nterms_s
+            neqns_seed    = seed%neqns
+            nterms_s_seed = seed%nterms_s
 
             nderiv = neqns_seed  *  nterms_s_seed
 

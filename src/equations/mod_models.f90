@@ -9,6 +9,7 @@ module mod_models
     use model_shear_stress,                             only: shear_stress_t
     use model_vorticity,                                only: vorticity_t
     use model_temperature_gradient,                     only: temperature_gradient_t
+    use model_pressure_gradient,                        only: pressure_gradient_t
     use model_sutherlands_law,                          only: sutherlands_law_t
     use model_constant_viscosity,                       only: constant_viscosity_t
     use model_stokes_hypothesis,                        only: stokes_hypothesis_t
@@ -258,6 +259,7 @@ contains
         type(shear_stress_t)                            :: SHEAR_STRESS
         type(vorticity_t)                               :: VORTICITY
         type(temperature_gradient_t)                    :: TEMPERATURE_GRADIENT
+        type(pressure_gradient_t)                       :: PRESSURE_GRADIENT
         type(sutherlands_law_t)                         :: SUTHERLANDS_LAW
         type(constant_viscosity_t)                      :: CONSTANT_VISCOSITY
         type(stokes_hypothesis_t)                       :: STOKES_HYPOTHESIS
@@ -290,6 +292,7 @@ contains
             call model_factory%register(SHEAR_STRESS)
             call model_factory%register(VORTICITY)
             call model_factory%register(TEMPERATURE_GRADIENT)
+            call model_factory%register(PRESSURE_GRADIENT)
             call model_factory%register(SUTHERLANDS_LAW)
             call model_factory%register(CONSTANT_VISCOSITY)
             call model_factory%register(STOKES_HYPOTHESIS)

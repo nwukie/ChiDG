@@ -33,6 +33,7 @@ module type_chidg_worker
                                       ONE, THIRD, TWO, NOT_A_FACE, BOUNDARY,    &
                                       CARTESIAN, CYLINDRICAL, INTERIOR, HALF
 
+    use mod_inv,    only: inv
     use mod_interpolate,        only: interpolate_element_autodiff
     use mod_integrate,          only: integrate_boundary_scalar_flux, &
                                       integrate_volume_vector_flux,   &
@@ -69,13 +70,13 @@ module type_chidg_worker
         !type(properties_t),     pointer :: prop(:)
         type(properties_t), allocatable :: prop(:)
 
-        integer(ik)                 :: iface
-        integer(ik)                 :: itime
         type(element_info_t)        :: element_info
         type(function_info_t)       :: function_info
+        integer(ik)                 :: iface
+        integer(ik)                 :: itime        ! Time index
+        real(rk)                    :: t            ! Physical time
     
         character(:),   allocatable :: interpolation_source
-        real(rk)                    :: t                    ! Physical time
         logical                     :: contains_lift
 
     contains 
@@ -637,18 +638,21 @@ contains
     !!  @date   7/10/2017
     !!
     !---------------------------------------------------------------------------------------
-    function get_field(self,field,interp_type,interp_source_user,iface) result(var_gq)
+    function get_field(self,field,interp_type,interp_source_user,iface,override_lift,use_lift_faces) result(var_gq)
         class(chidg_worker_t),  intent(in)              :: self
         character(*),           intent(in)              :: field
         character(*),           intent(in)              :: interp_type
         character(*),           intent(in), optional    :: interp_source_user
         integer(ik),            intent(in), optional    :: iface
+        logical,                intent(in), optional    :: override_lift
+        integer(ik),            intent(in), optional    :: use_lift_faces(:)
+
 
         type(AD_D),     allocatable :: var_gq(:), tmp_gq(:)
         character(:),   allocatable :: cache_component, cache_type, lift_source, lift_nodes, user_msg, interp_source
-        integer(ik)                 :: lift_face_min, lift_face_max, idirection, iface_loop, iface_use
+        integer(ik)                 :: lift_face_min, lift_face_max, idirection, iface_loop, iface_use, iface_select
         real(rk)                    :: stabilization
-        logical                     :: no_lift
+        logical                     :: lift
 
         !
         ! Get user-specified interpolation source, or get from cache pointer entry
@@ -737,7 +741,13 @@ contains
         ! we don't want to lift because there is no lift for the boundary function to use
         ! If we aren't on a face, face_type returns NOT_A_FACE, so this is still valid for 
         ! returning element data.
-        no_lift = ((self%face_type() == BOUNDARY) .and. (cache_component == 'face interior')) .or. (.not. self%contains_lift)
+        !do_not_lift = ((self%face_type() == BOUNDARY) .and. (cache_component == 'face interior')) .or. (.not. self%contains_lift) 
+        lift = (.not. ((self%face_type() == BOUNDARY) .and. (cache_component == 'face interior'))) .and. &
+               (self%contains_lift) .and. &
+               (self%cache%lift)
+
+        ! Potential to override lift from optional user input 'override_lift'
+        if (present(override_lift)) lift = (.not. override_lift)
 
 
         !
@@ -748,14 +758,24 @@ contains
 
         else if (cache_type == 'gradient') then
 
-            if (self%cache%lift .and. (.not. no_lift)) then
+            !if (self%cache%lift .and. (.not. do_not_lift)) then
+            if (lift) then
                 var_gq = self%cache%get_data(field,cache_component,'gradient',idirection,self%function_info%seed,iface_use)
 
                 ! Add lift contributions from each face
-                do iface_loop = lift_face_min,lift_face_max
-                    tmp_gq = self%cache%get_data(field,lift_source, lift_nodes, idirection, self%function_info%seed,iface_loop)
-                    var_gq = var_gq + stabilization*tmp_gq
-                end do
+                if (present(use_lift_faces)) then
+                    do iface_loop = 1,size(use_lift_faces)
+                        iface_select = use_lift_faces(iface_loop) 
+                        tmp_gq = self%cache%get_data(field,lift_source, lift_nodes, idirection, self%function_info%seed,iface_select)
+                        var_gq = var_gq + stabilization*tmp_gq
+                    end do
+
+                else
+                    do iface_loop = lift_face_min,lift_face_max
+                        tmp_gq = self%cache%get_data(field,lift_source, lift_nodes, idirection, self%function_info%seed,iface_loop)
+                        var_gq = var_gq + stabilization*tmp_gq
+                    end do
+                end if
 
             else
                 var_gq = self%cache%get_data(field,cache_component,'gradient',idirection,self%function_info%seed,iface_use)
@@ -1587,6 +1607,7 @@ contains
         type(AD_D),             intent(in)  :: nodes(:)
 
         type(AD_D), allocatable :: temp(:), modes(:)
+!        real(rk),   allocatable :: interpolator(:,:)
 
         associate ( idomain_l  => self%element_info%idomain_l, &
                     ielement_l => self%element_info%ielement_l )
@@ -1596,10 +1617,15 @@ contains
             temp = nodes * element%basis_s%weights_element() * element%jinv
 
             ! Inner product: <psi, f>
-            temp = matmul(transpose(element%basis_s%interpolator_element('Value')),nodes)
+            !temp = matmul(transpose(element%basis_s%interpolator_element('Value')),nodes)
+            temp = matmul(transpose(element%basis_s%interpolator_element('Value')),temp)
+            modes = temp
             
             ! Inner project: <psi, f>/<psi, psi>
-            modes = matmul(element%invmass,temp) 
+!            modes = matmul(element%invmass,temp) 
+
+!            interpolator = element%basis_s%interpolator_element('Value')
+!            modes = matmul(inv(interpolator(1:size(interpolator,2),:)), nodes)
 
             end associate
         end associate

@@ -126,7 +126,7 @@ contains
 
         ! Initialize derivatives
         k = u
-        k = -1.0
+        k = -1.0_rk
 
         call worker%store_model_field('Scalar Diffusion Coefficient','value',k)
 
@@ -281,7 +281,7 @@ contains
 
                 call scalar_diffusion_eqn%add_model("Default Diffusion Coefficient Model")
 
-                call scalar_diffusion_eqn%add_operator("Pressure Gradient Source")
+!                call scalar_diffusion_eqn%add_operator("Pressure Gradient Source")
 
 
             case default

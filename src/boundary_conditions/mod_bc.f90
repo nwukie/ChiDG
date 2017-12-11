@@ -81,7 +81,10 @@ module mod_bc
     use bc_state_tm_extrapolate,   only: tm_extrapolate_t
     use bc_state_tm_dirichlet,     only: tm_dirichlet_t
 
-    use bc_state_graddemo_extrapolate,  only: graddemo_extrapolate_t
+    use bc_state_graddemo_extrapolate,          only: graddemo_extrapolate_t
+    use bc_state_graddemo_gradp_extrapolate,    only: graddemo_gradp_extrapolate_t
+
+    use bc_state_pgradtest_extrapolate,    only: pgradtest_extrapolate_t
     implicit none
 
 
@@ -168,7 +171,10 @@ contains
         type(tm_extrapolate_t) :: TM_EXTRAPOLATE
         type(tm_dirichlet_t)   :: TM_DIRICHLET
 
-        type(graddemo_extrapolate_t)    :: GRADDEMO_EXTRAPOLATE
+        type(graddemo_extrapolate_t)        :: GRADDEMO_EXTRAPOLATE
+        type(graddemo_gradp_extrapolate_t)  :: GRADDEMO_GRADP_EXTRAPOLATE
+
+        type(pgradtest_extrapolate_t)  :: PGRADTEST_EXTRAPOLATE
 
         if ( .not. initialized ) then
             !
@@ -229,6 +235,9 @@ contains
             call registered_bcs%push_back(TM_DIRICHLET)
 
             call registered_bcs%push_back(GRADDEMO_EXTRAPOLATE)
+            call registered_bcs%push_back(GRADDEMO_GRADP_EXTRAPOLATE)
+
+            call registered_bcs%push_back(PGRADTEST_EXTRAPOLATE)
 
 
 

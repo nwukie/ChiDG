@@ -16,7 +16,7 @@ module type_face_info
         integer(ik)     :: idomain_l
         integer(ik)     :: ielement_g
         integer(ik)     :: ielement_l
-        integer(ik)     :: iface        !< Element-local face index
+        integer(ik)     :: iface        ! Element-local face index
 
     end type face_info_t
     !**********************************************************************************

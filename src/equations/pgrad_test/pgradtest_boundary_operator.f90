@@ -1,4 +1,4 @@
-module graddemo_P_boundary_operator
+module pgradtest_boundary_operator
 #include <messenger.h>
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO,ONE,TWO,HALF
@@ -21,7 +21,7 @@ module graddemo_P_boundary_operator
     !!
     !!
     !--------------------------------------------------------------------------------
-    type, extends(operator_t), public :: graddemo_P_boundary_operator_t
+    type, extends(operator_t), public :: pgradtest_boundary_operator_t
 
 
     contains
@@ -29,7 +29,7 @@ module graddemo_P_boundary_operator
         procedure   :: init
         procedure   :: compute
 
-    end type graddemo_P_boundary_operator_t
+    end type pgradtest_boundary_operator_t
     !********************************************************************************
 
 
@@ -44,12 +44,12 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(graddemo_P_boundary_operator_t),   intent(inout) :: self
+        class(pgradtest_boundary_operator_t),   intent(inout) :: self
         
         !
         ! Set operator name
         !
-        call self%set_name("Graddemo P Boundary Average Operator")
+        call self%set_name("pgradtest Boundary Average Operator")
 
         !
         ! Set operator type
@@ -82,24 +82,16 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine compute(self,worker,prop)
-        class(graddemo_P_boundary_operator_t),  intent(inout)   :: self
+        class(pgradtest_boundary_operator_t),  intent(inout)   :: self
         type(chidg_worker_t),                   intent(inout)   :: worker
         class(properties_t),                    intent(inout)   :: prop
 
         type(AD_D), allocatable, dimension(:)   ::                                              &
             grad1_pbc_m, grad2_pbc_m, grad3_pbc_m,                                              &
             grad1_pbc_p, grad2_pbc_p, grad3_pbc_p,                                              &
-            grad1_p_m,   grad2_p_m,   grad3_p_m,                                                &
-            grad1_p_p,   grad2_p_p,   grad3_p_p,                                                &
             flux_1_m, flux_2_m, flux_3_m,                                                       &
-            flux_1_p, flux_2_p, flux_3_p
+            flux_1_p, flux_2_p, flux_3_p, mu_m, mu_p
 
-
-        if ( (worker%iface == 1) .or. &
-             (worker%iface == 2) .or. &
-             (worker%iface == 3) .or. &
-             (worker%iface == 4) ) then
-    
 
         !
         ! Interpolate solution to quadrature nodes
@@ -113,40 +105,23 @@ contains
         grad2_pbc_p = worker%get_field('Pressure', 'grad2', 'face exterior')
         grad3_pbc_p = worker%get_field('Pressure', 'grad3', 'face exterior')
 
-        ! SIGMA
-        grad1_p_m   = worker%get_field('Pressure Gradient - 1', 'value', 'face interior')
-        grad2_p_m   = worker%get_field('Pressure Gradient - 2', 'value', 'face interior')
-        grad3_p_m   = worker%get_field('Pressure Gradient - 3', 'value', 'face interior')
-
-        grad1_p_p   = worker%get_field('Pressure Gradient - 1', 'value', 'face exterior')
-        grad2_p_p   = worker%get_field('Pressure Gradient - 2', 'value', 'face exterior')
-        grad3_p_p   = worker%get_field('Pressure Gradient - 3', 'value', 'face exterior')
-
+        mu_m = grad1_pbc_m
+        mu_p = grad1_pbc_p
+        mu_m = ONE
+        mu_p = ONE
 
 
         !
         ! Compute flux from each side
         !
-        flux_1_m = grad1_pbc_m - grad1_p_m
-        flux_2_m = grad2_pbc_m - grad2_p_m
-        flux_3_m = grad3_pbc_m
+        flux_1_m = mu_m*grad1_pbc_m 
+        flux_2_m = mu_m*grad2_pbc_m 
+        flux_3_m = mu_m*grad3_pbc_m 
 
-        flux_1_p = grad1_pbc_p - grad1_p_p
-        flux_2_p = grad2_pbc_p - grad2_p_p
-        flux_3_p = grad3_pbc_p
+        flux_1_p = mu_p*grad1_pbc_p 
+        flux_2_p = mu_p*grad2_pbc_p 
+        flux_3_p = mu_p*grad3_pbc_p 
 
-
-!        flux_3_m = ZERO
-!        flux_3_p = ZERO
-
-
-!        flux_1_m = grad1_pbc_m 
-!        flux_2_m = grad2_pbc_m 
-!        flux_3_m = grad3_pbc_m 
-!
-!        flux_1_p = grad1_pbc_p 
-!        flux_2_p = grad2_pbc_p 
-!        flux_3_p = grad3_pbc_p 
 
 
         !
@@ -156,7 +131,6 @@ contains
                                                 flux_1_m, flux_2_m, flux_3_m,   &
                                                 flux_1_p, flux_2_p, flux_3_p)
 
-        end if ! only faces 1-4
 
     end subroutine compute
     !**************************************************************************************************
@@ -164,4 +138,4 @@ contains
 
 
 
-end module graddemo_P_boundary_operator
+end module pgradtest_boundary_operator

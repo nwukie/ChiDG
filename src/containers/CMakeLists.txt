@@ -31,6 +31,7 @@ add_lib_sources(
                 type_solverdata.f90
                 type_element_info.f90
                 type_face_info.f90
+                type_edge_info.f90
                 type_function_info.f90
                 type_function_status.f90
                 type_function_status_data.f90

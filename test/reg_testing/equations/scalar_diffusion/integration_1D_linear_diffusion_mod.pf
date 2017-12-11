@@ -636,7 +636,9 @@ contains
 
             bc_state_groups(2)%name = "Right Boundary"
             call create_bc("Scalar Derivative",  bc_state)
-            call bc_state%set_fcn_option("Derivative","val",TWO*PI-ONE)
+            call bc_state%set_fcn_option("Grad1","val",TWO*PI-ONE)
+            call bc_state%set_fcn_option("Grad2","val",ZERO)
+            call bc_state%set_fcn_option("Grad3","val",ZERO)
             call bc_state_groups(2)%add_bc_state(bc_state)
 
             bc_state_groups(3)%name = "Extrapolation"

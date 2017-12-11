@@ -76,7 +76,7 @@ contains
 
         integer(ik)     :: ierr, ieq, eqn_ID
         type(c_ptr)     :: handle
-        character(100)  :: varstring
+        character(1000) :: varstring
         type(timer_t)   :: timer
 
         call timer%start()

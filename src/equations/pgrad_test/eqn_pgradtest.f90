@@ -1,4 +1,4 @@
-module eqn_graddemo
+module eqn_pgradtest
 #include <messenger.h>
     use type_equation_set,          only: equation_set_t
     use type_equation_builder,      only: equation_builder_t
@@ -12,14 +12,14 @@ module eqn_graddemo
     !!
     !!
     !-------------------------------------------------------------------------------------
-    type, public, extends(equation_builder_t) :: graddemo
+    type, public, extends(equation_builder_t) :: pgradtest
 
     contains
 
         procedure   :: init
         procedure   :: build
 
-    end type graddemo
+    end type pgradtest
     !*************************************************************************************
 
 
@@ -35,9 +35,9 @@ contains
     !!
     !-------------------------------------------------------------------------------------
     subroutine init(self)
-        class(graddemo),   intent(inout)  :: self
+        class(pgradtest),   intent(inout)  :: self
 
-        call self%set_name('graddemo')
+        call self%set_name('pgradtest')
 
     end subroutine init
     !*************************************************************************************
@@ -51,17 +51,17 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------
-    function build(self,blueprint) result(graddemo_eqns)
-        class(graddemo),    intent(in)  :: self
+    function build(self,blueprint) result(pgradtest_eqns)
+        class(pgradtest),    intent(in)  :: self
         character(*),       intent(in)  :: blueprint
 
-        type(equation_set_t)            :: graddemo_eqns
+        type(equation_set_t)            :: pgradtest_eqns
         type(fluid_pseudo_timestep_t)   :: fluid_pseudo_time
 
         !
         ! Set equation set name
         !
-        call graddemo_eqns%set_name('graddemo')
+        call pgradtest_eqns%set_name('pgradtest')
         
 
         !
@@ -72,17 +72,16 @@ contains
 
             case('default')
 
-                call graddemo_eqns%add_operator('Graddemo Volume Flux')
-                call graddemo_eqns%add_operator('Graddemo P BC Operator')
-                call graddemo_eqns%add_operator('Graddemo P Boundary Average Operator')
-                call graddemo_eqns%add_operator('Graddemo P Volume Operator')
+                call pgradtest_eqns%add_operator('pgradtest BC Operator')
+                call pgradtest_eqns%add_operator('pgradtest Boundary Average Operator')
+                call pgradtest_eqns%add_operator('pgradtest Volume Operator')
 
-                !call graddemo_eqns%add_model('Ideal Gas')
-                !call graddemo_eqns%add_pseudo_timestep(fluid_pseudo_time)
+                !call pgradtest_eqns%add_model('Ideal Gas')
+                !call pgradtest_eqns%add_pseudo_timestep(fluid_pseudo_time)
 
 
             case default
-                call chidg_signal_one(FATAL, "build_graddemo: I didn't recognize the construction parameter &
+                call chidg_signal_one(FATAL, "build_pgradtest: I didn't recognize the construction parameter &
                                               that was passed to build the equation set.", blueprint)
 
         end select
@@ -93,4 +92,4 @@ contains
 
 
 
-end module eqn_graddemo
+end module eqn_pgradtest

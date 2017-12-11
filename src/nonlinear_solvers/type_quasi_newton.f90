@@ -5,6 +5,8 @@ module type_quasi_newton
     use mod_hdfio,              only: write_fields_hdf
     use mod_chidg_mpi,          only: ChiDG_COMM, GLOBAL_MASTER, IRANK, NRANK
     use mod_io,                 only: verbosity
+    use mod_tecio_old,          only: write_tecio_old
+    !use mod_tecio,              only: write_tecio
     use mpi_f08,                only: MPI_Barrier
 
     use type_chidg_data,        only: chidg_data_t
@@ -154,6 +156,7 @@ contains
                     residual_ratio = resid/resid_prev
                 end if
 
+
                 call system%assemble( data,             &
                                       timing=timing,    &
                                       differentiate=controller%update_lhs(lhs,niter,residual_ratio) )
@@ -191,6 +194,7 @@ contains
 
                 rnorm = rhs%norm_fields(ChiDG_COMM)
                 rnorm = resid !override
+
 
 
 
@@ -381,6 +385,18 @@ contains
 
 
                 call MPI_Barrier(ChiDG_COMM,ierr)
+
+
+                call data%sdata%q_out%init(data%mesh,data%time_manager%ntime)
+                call data%sdata%q_out%set_ntime(data%time_manager%ntime)
+                call data%sdata%q_out%clear()
+                data%sdata%q_out = data%sdata%q
+
+                write(filename, "(A,F8.6,A4)") 'quasi_newton_', real(niter,rk), '.plt'
+                call write_tecio_old(data,filename, write_domains=.true., write_surfaces=.false.)
+
+
+
             end do ! niter
 
 
@@ -437,6 +453,17 @@ contains
 
     end subroutine compute_pseudo_timestep
     !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
 
 
 

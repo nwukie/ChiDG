@@ -5,6 +5,8 @@ module mod_spatial
     use mod_chidg_mpi,          only: IRANK, NRANK, ChiDG_COMM, GLOBAL_MASTER
     use mod_io,                 only: verbosity
     use mpi_f08,                only: MPI_Barrier
+    use DNAD_D
+
 
 
 
@@ -135,6 +137,7 @@ contains
                                                                                    face          = NO_ID,           &
                                                                                    differentiate = differentiate,   &
                                                                                    lift          = .true.)
+
 
 
                 ! Faces loop. For the current element, compute the 

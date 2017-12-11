@@ -77,10 +77,12 @@ contains
                 call euler_eqns%add_operator('Euler Roe Flux')
                 call euler_eqns%add_operator('Euler BC Flux')
                 call euler_eqns%add_operator('Euler Volume Cylindrical Source')
+                !call euler_eqns%add_operator('Graddemo GradP Volume Flux')
                 !call euler_eqns%add_operator('Euler LaxFriedrichs Flux')
 
+                !call euler_eqns%add_model('Pressure Gradient')
                 call euler_eqns%add_model('Ideal Gas')
-                call euler_eqns%add_pseudo_timestep(fluid_pseudo_time)
+                !call euler_eqns%add_pseudo_timestep(fluid_pseudo_time)
 
 
 

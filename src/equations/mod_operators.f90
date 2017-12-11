@@ -102,9 +102,15 @@ module mod_operators
 
 
     use graddemo_volume_operator,                only: graddemo_volume_operator_t
+    use graddemo_gradp_volume_operator,          only: graddemo_gradp_volume_operator_t
     use graddemo_P_volume_operator,              only: graddemo_P_volume_operator_t
     use graddemo_P_boundary_operator,            only: graddemo_P_boundary_operator_t
     use graddemo_P_bc_operator,                  only: graddemo_P_bc_operator_t
+
+
+    use pgradtest_volume_operator,              only: pgradtest_volume_operator_t
+    use pgradtest_boundary_operator,            only: pgradtest_boundary_operator_t
+    use pgradtest_bc_operator,                  only: pgradtest_bc_operator_t
     implicit none
 
 
@@ -321,10 +327,14 @@ contains
 
 
         type(graddemo_volume_operator_t)                 :: graddemo_volume_operator
+        type(graddemo_gradp_volume_operator_t)           :: graddemo_gradp_volume_operator
         type(graddemo_P_volume_operator_t)               :: graddemo_P_volume_operator
         type(graddemo_P_boundary_operator_t)             :: graddemo_P_boundary_operator
         type(graddemo_P_bc_operator_t)                   :: graddemo_P_bc_operator
 
+        type(pgradtest_volume_operator_t)               :: pgradtest_volume_operator
+        type(pgradtest_boundary_operator_t)             :: pgradtest_boundary_operator
+        type(pgradtest_bc_operator_t)                   :: pgradtest_bc_operator
 
 
         if (.not. operators_initialized) then
@@ -432,10 +442,14 @@ contains
             call operator_factory%register(tm_volume_cylindrical_source)
 
             call operator_factory%register(graddemo_volume_operator)
+            call operator_factory%register(graddemo_gradp_volume_operator)
             call operator_factory%register(graddemo_P_volume_operator)
             call operator_factory%register(graddemo_P_boundary_operator)
             call operator_factory%register(graddemo_P_bc_operator)
 
+            call operator_factory%register(pgradtest_volume_operator)
+            call operator_factory%register(pgradtest_boundary_operator)
+            call operator_factory%register(pgradtest_bc_operator)
 
 
             operators_initialized = .true.

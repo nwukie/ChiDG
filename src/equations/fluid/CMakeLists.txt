@@ -21,6 +21,7 @@ add_lib_sources(
                 model_ideal_gas.f90
                 model_shear_stress.f90
                 model_temperature_gradient.f90
+                model_pressure_gradient.f90
                 model_sutherlands_law.f90
                 model_constant_viscosity.f90
                 model_stokes_hypothesis.f90

@@ -54,8 +54,8 @@ contains
         call self%set_name("Euler Volume Flux")
 
         ! Set operator type
-        call self%set_operator_type("Volume Advective Flux")
-        !call self%set_operator_type("Volume Diffusive Flux")
+        !call self%set_operator_type("Volume Advective Flux")
+        call self%set_operator_type("Volume Diffusive Flux")
 
         ! Set operator equations
         call self%add_primary_field("Density"   )

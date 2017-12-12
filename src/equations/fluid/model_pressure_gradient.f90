@@ -86,7 +86,6 @@ contains
             dp_ddensity, dp_dmom1, dp_dmom2, dp_dmom3, dp_denergy,              &
             grad1_p, grad2_p, grad3_p
 
-        print*, 'p - 1'
         !
         ! Interpolate solution to quadrature nodes
         !
@@ -96,14 +95,12 @@ contains
         mom3    = worker%get_field('Momentum-3', 'value')
         energy  = worker%get_field('Energy',     'value')
 
-        print*, 'p - 2'
         grad1_density = worker%get_field('Density',    'grad1')
         grad1_mom1    = worker%get_field('Momentum-1', 'grad1')
         grad1_mom2    = worker%get_field('Momentum-2', 'grad1')
         grad1_mom3    = worker%get_field('Momentum-3', 'grad1')
         grad1_energy  = worker%get_field('Energy',     'grad1')
 
-        print*, 'p - 2.1'
 
         grad2_density = worker%get_field('Density',    'grad2')
         grad2_mom1    = worker%get_field('Momentum-1', 'grad2')
@@ -111,7 +108,6 @@ contains
         grad2_mom3    = worker%get_field('Momentum-3', 'grad2')
         grad2_energy  = worker%get_field('Energy',     'grad2')
 
-        print*, 'p - 2.2'
 
         grad3_density = worker%get_field('Density',    'grad3')
         grad3_mom1    = worker%get_field('Momentum-1', 'grad3')
@@ -119,8 +115,6 @@ contains
         grad3_mom3    = worker%get_field('Momentum-3', 'grad3')
         grad3_energy  = worker%get_field('Energy',     'grad3')
 
-
-        print*, 'p - 3'
 
 
         dp_ddensity =  (gam-ONE)*HALF*(mom1*mom1 + mom2*mom2 + mom3*mom3)/(density*density)
@@ -131,7 +125,6 @@ contains
         dp_denergy  =  (gam-ONE)
 
 
-        print*, 'p - 4'
         ! Compute pressure gradient using Chain-rule
         grad1_p = dp_ddensity * grad1_density  + &
                   dp_dmom1    * grad1_mom1     + &
@@ -152,13 +145,11 @@ contains
                   dp_denergy  * grad3_energy
 
 
-        print*, 'p - 5'
 
         call worker%store_model_field('Pressure Gradient - 1', 'value', grad1_p)
         call worker%store_model_field('Pressure Gradient - 2', 'value', grad2_p)
         call worker%store_model_field('Pressure Gradient - 3', 'value', grad3_p)
 
-        print*, 'p - 6'
 
     end subroutine compute
     !***************************************************************************************

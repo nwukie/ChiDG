@@ -85,47 +85,50 @@ contains
         !
         ! Interpolate interior solution to face quadrature nodes
         !
-        pressure = worker%get_field('Pressure_TEMP',              'value', 'face interior')
-!        grad1_p  = worker%get_field('Pressure Gradient - 1', 'value', 'face interior')
-!        grad2_p  = worker%get_field('Pressure Gradient - 2', 'value', 'face interior')
-!        grad3_p  = worker%get_field('Pressure Gradient - 3', 'value', 'face interior')
+        pressure = worker%get_field('Pressure_TEMP',         'value', 'face interior')
+        grad1_p  = worker%get_field('Pressure Gradient - 1', 'value', 'face interior')
+        grad2_p  = worker%get_field('Pressure Gradient - 2', 'value', 'face interior')
+        grad3_p  = worker%get_field('Pressure Gradient - 3', 'value', 'face interior')
 
 
-        grad1_pressure = worker%get_field('Pressure_TEMP'             , 'grad1', 'face interior')
-        grad2_pressure = worker%get_field('Pressure_TEMP'             , 'grad2', 'face interior')
-        grad3_pressure = worker%get_field('Pressure_TEMP'             , 'grad3', 'face interior')
+        grad1_pressure = worker%get_field('Pressure_TEMP'        , 'grad1', 'face interior')
+        grad2_pressure = worker%get_field('Pressure_TEMP'        , 'grad2', 'face interior')
+        grad3_pressure = worker%get_field('Pressure_TEMP'        , 'grad3', 'face interior')
 
-!        grad1_grad1_p  = worker%get_field('Pressure Gradient - 1', 'grad1', 'face interior')
-!        grad2_grad1_p  = worker%get_field('Pressure Gradient - 1', 'grad2', 'face interior')
-!        grad3_grad1_p  = worker%get_field('Pressure Gradient - 1', 'grad3', 'face interior')
-!
-!        grad1_grad2_p  = worker%get_field('Pressure Gradient - 2', 'grad1', 'face interior')
-!        grad2_grad2_p  = worker%get_field('Pressure Gradient - 2', 'grad2', 'face interior')
-!        grad3_grad2_p  = worker%get_field('Pressure Gradient - 2', 'grad3', 'face interior')
-!
-!        grad1_grad3_p  = worker%get_field('Pressure Gradient - 3', 'grad1', 'face interior')
-!        grad2_grad3_p  = worker%get_field('Pressure Gradient - 3', 'grad2', 'face interior')
-!        grad3_grad3_p  = worker%get_field('Pressure Gradient - 3', 'grad3', 'face interior')
+        grad1_grad1_p  = worker%get_field('Pressure Gradient - 1', 'grad1', 'face interior')
+        grad2_grad1_p  = worker%get_field('Pressure Gradient - 1', 'grad2', 'face interior')
+        grad3_grad1_p  = worker%get_field('Pressure Gradient - 1', 'grad3', 'face interior')
+
+        grad1_grad2_p  = worker%get_field('Pressure Gradient - 2', 'grad1', 'face interior')
+        grad2_grad2_p  = worker%get_field('Pressure Gradient - 2', 'grad2', 'face interior')
+        grad3_grad2_p  = worker%get_field('Pressure Gradient - 2', 'grad3', 'face interior')
+
+        grad1_grad3_p  = worker%get_field('Pressure Gradient - 3', 'grad1', 'face interior')
+        grad2_grad3_p  = worker%get_field('Pressure Gradient - 3', 'grad2', 'face interior')
+        grad3_grad3_p  = worker%get_field('Pressure Gradient - 3', 'grad3', 'face interior')
 
         
         !
         ! We want the gradient to be equal to the gradient from the interior problem
         !
-!        grad1_pressure = grad1_p
-!        grad2_pressure = grad2_p
+        grad1_pressure = grad1_p
+        grad2_pressure = grad2_p
 !        grad3_pressure = grad3_p
+        grad3_pressure = ZERO
+
+!        grad1_pressure = ZERO
+!        grad2_pressure = ZERO
 !        grad3_pressure = ZERO
 
 
-
-!        !
-!        ! We want to set the value of pressure at a single point
-!        !
-!        !if ( (worker%element_info%idomain_g == 2) .and. (worker%element_info%ielement_g == 1) .and. (worker%iface == 1) ) then
-!        if ( (worker%element_info%idomain_g == 6) .and. (worker%element_info%ielement_g == 1) .and. (worker%iface == 1) ) then
-!            pressure(1) = 105000._rk
-!            !pressure = 98000._rk
-!        end if
+        !
+        ! We want to set the value of pressure at a single point
+        !
+        !if ( (worker%element_info%idomain_g == 2) .and. (worker%element_info%ielement_g == 1) .and. (worker%iface == 1) ) then
+        if ( (worker%element_info%idomain_g == 6) .and. (worker%element_info%ielement_g == 1) .and. (worker%iface == 1) ) then
+            pressure(1) = 100000._rk
+            !pressure = 98000._rk
+        end if
 
 
 
@@ -139,21 +142,21 @@ contains
         call worker%store_bc_state('Pressure_TEMP', grad3_pressure, 'grad3')
 
 
-!        call worker%store_bc_state('Pressure Gradient - 1', grad1_p,        'value')
-!        call worker%store_bc_state('Pressure Gradient - 2', grad2_p,        'value')
-!        call worker%store_bc_state('Pressure Gradient - 3', grad3_p,        'value')
-!
-!        call worker%store_bc_state('Pressure Gradient - 1', grad1_grad1_p,  'grad1')
-!        call worker%store_bc_state('Pressure Gradient - 1', grad2_grad1_p,  'grad2')
-!        call worker%store_bc_state('Pressure Gradient - 1', grad3_grad1_p,  'grad3')
-!
-!        call worker%store_bc_state('Pressure Gradient - 2', grad1_grad2_p,  'grad1')
-!        call worker%store_bc_state('Pressure Gradient - 2', grad2_grad2_p,  'grad2')
-!        call worker%store_bc_state('Pressure Gradient - 2', grad3_grad2_p,  'grad3')
-!
-!        call worker%store_bc_state('Pressure Gradient - 3', grad1_grad3_p,  'grad1')
-!        call worker%store_bc_state('Pressure Gradient - 3', grad2_grad3_p,  'grad2')
-!        call worker%store_bc_state('Pressure Gradient - 3', grad3_grad3_p,  'grad3')
+        call worker%store_bc_state('Pressure Gradient - 1', grad1_p,        'value')
+        call worker%store_bc_state('Pressure Gradient - 2', grad2_p,        'value')
+        call worker%store_bc_state('Pressure Gradient - 3', grad3_p,        'value')
+
+        call worker%store_bc_state('Pressure Gradient - 1', grad1_grad1_p,  'grad1')
+        call worker%store_bc_state('Pressure Gradient - 1', grad2_grad1_p,  'grad2')
+        call worker%store_bc_state('Pressure Gradient - 1', grad3_grad1_p,  'grad3')
+
+        call worker%store_bc_state('Pressure Gradient - 2', grad1_grad2_p,  'grad1')
+        call worker%store_bc_state('Pressure Gradient - 2', grad2_grad2_p,  'grad2')
+        call worker%store_bc_state('Pressure Gradient - 2', grad3_grad2_p,  'grad3')
+
+        call worker%store_bc_state('Pressure Gradient - 3', grad1_grad3_p,  'grad1')
+        call worker%store_bc_state('Pressure Gradient - 3', grad2_grad3_p,  'grad2')
+        call worker%store_bc_state('Pressure Gradient - 3', grad3_grad3_p,  'grad3')
 
 
     end subroutine compute_bc_state

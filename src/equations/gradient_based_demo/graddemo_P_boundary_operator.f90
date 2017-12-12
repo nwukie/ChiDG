@@ -59,7 +59,7 @@ contains
         !
         ! Set operator equations
         !
-        call self%add_primary_field("Pressure")
+        call self%add_primary_field("Pressure_TEMP")
 
     end subroutine init
     !********************************************************************************
@@ -105,13 +105,13 @@ contains
         ! Interpolate solution to quadrature nodes
         !
         ! P_bc
-        grad1_pbc_m = worker%get_field('Pressure', 'grad1', 'face interior')
-        grad2_pbc_m = worker%get_field('Pressure', 'grad2', 'face interior')
-        grad3_pbc_m = worker%get_field('Pressure', 'grad3', 'face interior')
+        grad1_pbc_m = worker%get_field('Pressure_TEMP', 'grad1', 'face interior')
+        grad2_pbc_m = worker%get_field('Pressure_TEMP', 'grad2', 'face interior')
+        grad3_pbc_m = worker%get_field('Pressure_TEMP', 'grad3', 'face interior')
 
-        grad1_pbc_p = worker%get_field('Pressure', 'grad1', 'face exterior')
-        grad2_pbc_p = worker%get_field('Pressure', 'grad2', 'face exterior')
-        grad3_pbc_p = worker%get_field('Pressure', 'grad3', 'face exterior')
+        grad1_pbc_p = worker%get_field('Pressure_TEMP', 'grad1', 'face exterior')
+        grad2_pbc_p = worker%get_field('Pressure_TEMP', 'grad2', 'face exterior')
+        grad3_pbc_p = worker%get_field('Pressure_TEMP', 'grad3', 'face exterior')
 
         ! SIGMA
         grad1_p_m   = worker%get_field('Pressure Gradient - 1', 'value', 'face interior')
@@ -152,7 +152,7 @@ contains
         !
         ! Integrate flux
         !
-        call worker%integrate_boundary_average('Pressure','Diffusion',          &
+        call worker%integrate_boundary_average('Pressure_TEMP','Diffusion',     &
                                                 flux_1_m, flux_2_m, flux_3_m,   &
                                                 flux_1_p, flux_2_p, flux_3_p)
 

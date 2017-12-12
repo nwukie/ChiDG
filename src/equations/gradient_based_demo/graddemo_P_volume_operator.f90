@@ -49,7 +49,7 @@ contains
         call self%set_operator_type('Volume Diffusive Operator')
 
         ! Set operator equations
-        call self%add_primary_field('Pressure')
+        call self%add_primary_field('Pressure_TEMP')
 
     end subroutine init
     !********************************************************************************
@@ -82,9 +82,9 @@ contains
         !
         ! Interpolate solution to quadrature nodes
         !
-        grad1_pbc = worker%get_field('Pressure', 'grad1', 'element', use_lift_faces=[1,2,3,4])
-        grad2_pbc = worker%get_field('Pressure', 'grad2', 'element', use_lift_faces=[1,2,3,4])
-        grad3_pbc = worker%get_field('Pressure', 'grad3', 'element', use_lift_faces=[1,2,3,4])
+        grad1_pbc = worker%get_field('Pressure_TEMP', 'grad1', 'element', use_lift_faces=[1,2,3,4])
+        grad2_pbc = worker%get_field('Pressure_TEMP', 'grad2', 'element', use_lift_faces=[1,2,3,4])
+        grad3_pbc = worker%get_field('Pressure_TEMP', 'grad3', 'element', use_lift_faces=[1,2,3,4])
 
 
         grad1_p = worker%get_field('Pressure Gradient - 1', 'value', 'element')
@@ -107,7 +107,7 @@ contains
         !
         ! Integrate volume flux
         !
-        call worker%integrate_volume_flux('Pressure','Diffusion',flux_1,flux_2,flux_3)
+        call worker%integrate_volume_flux('Pressure_TEMP','Diffusion',flux_1,flux_2,flux_3)
 
 
 

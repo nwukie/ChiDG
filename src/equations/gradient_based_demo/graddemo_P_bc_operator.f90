@@ -61,7 +61,7 @@ contains
         !
         ! Set operator equations
         !
-        call self%add_primary_field('Pressure')
+        call self%add_primary_field('Pressure_TEMP')
 
     end subroutine init
     !********************************************************************************
@@ -105,9 +105,9 @@ contains
         !
         ! Interpolate boundary condition state to face quadrature nodes
         !
-        grad1_pbc = worker%get_field('Pressure', 'grad1', 'boundary')
-        grad2_pbc = worker%get_field('Pressure', 'grad2', 'boundary')
-        grad3_pbc = worker%get_field('Pressure', 'grad3', 'boundary')
+        grad1_pbc = worker%get_field('Pressure_TEMP', 'grad1', 'boundary')
+        grad2_pbc = worker%get_field('Pressure_TEMP', 'grad2', 'boundary')
+        grad3_pbc = worker%get_field('Pressure_TEMP', 'grad3', 'boundary')
 
         grad1_p   = worker%get_field('Pressure Gradient - 1', 'value', 'boundary')
         grad2_p   = worker%get_field('Pressure Gradient - 2', 'value', 'boundary')
@@ -122,7 +122,11 @@ contains
         flux_3 = grad3_pbc 
 !        flux_3 = ZERO
 
-        call worker%integrate_boundary_condition('Pressure','Diffusion',flux_1,flux_2,flux_3)
+!        flux_1 = grad1_pbc
+!        flux_2 = grad2_pbc
+!        flux_3 = grad3_pbc 
+
+        call worker%integrate_boundary_condition('Pressure_TEMP','Diffusion',flux_1,flux_2,flux_3)
 
         end if
 

@@ -77,8 +77,9 @@ contains
                 call graddemo_eqns%add_operator('Graddemo P Boundary Average Operator')
                 call graddemo_eqns%add_operator('Graddemo P Volume Operator')
 
-                !call graddemo_eqns%add_model('Ideal Gas')
-                !call graddemo_eqns%add_pseudo_timestep(fluid_pseudo_time)
+!                call graddemo_eqns%add_model('Pressure Gradient')
+                call graddemo_eqns%add_model('Ideal Gas')
+!                call graddemo_eqns%add_pseudo_timestep(fluid_pseudo_time)
 
 
             case default

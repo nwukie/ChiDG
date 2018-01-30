@@ -1,8 +1,8 @@
 module bc_state_outlet_constant_pressure
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE, HALF
-    use mod_fluid,              only: gam
+    use mod_constants,          only: ZERO, ONE, HALF, TWO
+    use mod_fluid,              only: gam, Rgas
 
     use type_bc_state,          only: bc_state_t
     use type_chidg_worker,      only: chidg_worker_t
@@ -90,26 +90,30 @@ contains
             grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,  &
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,  &
             grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
-            u_bc,   v_bc,    w_bc
+            u_bc,   v_bc,    w_bc,  T_m, T_bc, p_bc
             
 
-        real(rk),       allocatable, dimension(:)   ::  p_bc, r
+        real(rk),   allocatable, dimension(:) :: r
+        real(rk),   allocatable, dimension(:) :: p_input
+
+
 
 
         !
         ! Get back pressure from function.
         !
-        p_bc = self%bcproperties%compute('Static Pressure',worker%time(),worker%coords())
+        p_input = self%bcproperties%compute('Static Pressure',worker%time(),worker%coords())
 
 
         !
         ! Interpolate interior solution to face quadrature nodes
         !
-        density_m = worker%get_field('Density'   , 'value', 'face interior')
-        mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
-        mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
-        mom3_m    = worker%get_field('Momentum-3', 'value', 'face interior')
-        energy_m  = worker%get_field('Energy'    , 'value', 'face interior')
+        density_m = worker%get_field('Density'    , 'value', 'face interior')
+        mom1_m    = worker%get_field('Momentum-1' , 'value', 'face interior')
+        mom2_m    = worker%get_field('Momentum-2' , 'value', 'face interior')
+        mom3_m    = worker%get_field('Momentum-3' , 'value', 'face interior')
+        energy_m  = worker%get_field('Energy'     , 'value', 'face interior')
+        T_m       = worker%get_field('Temperature', 'value', 'face interior')
 
 
 
@@ -147,26 +151,30 @@ contains
 
 
         !
-        ! Extrapolate density and momentum
+        ! Extrapolate temperature and velocity
         !
-        density_bc = density_m
-        mom1_bc    = mom1_m
-        mom2_bc    = mom2_m
-        mom3_bc    = mom3_m
+        T_bc = T_m
+        u_bc = mom1_m/density_m
+        v_bc = mom2_m/density_m
+        w_bc = mom3_m/density_m
 
 
         !
-        ! Compute velocities
+        ! Extrapolate pressure, adjust by dp for a point
         !
-        u_bc = mom1_bc/density_bc
-        v_bc = mom2_bc/density_bc
-        w_bc = mom3_bc/density_bc
+        ! Confirmed, signs are correct
+        p_bc = density_m
+        p_bc = p_input
 
 
         !
-        ! Compute boundary condition energy and enthalpy
+        ! Compute density, momentum, energy
         !
-        energy_bc = p_bc/(gam - ONE) + (density_bc*HALF)*(u_bc*u_bc + v_bc*v_bc + w_bc*w_bc)
+        density_bc = p_bc/(Rgas*T_bc)
+        mom1_bc    = u_bc*density_bc
+        mom2_bc    = v_bc*density_bc
+        mom3_bc    = w_bc*density_bc
+        energy_bc  = p_bc/(gam - ONE) + (density_bc*HALF)*(u_bc*u_bc + v_bc*v_bc + w_bc*w_bc)
 
 
 
@@ -176,6 +184,7 @@ contains
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_bc = mom2_bc * r
         end if
+
 
 
         !

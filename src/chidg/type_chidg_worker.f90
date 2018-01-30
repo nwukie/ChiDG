@@ -638,13 +638,14 @@ contains
     !!  @date   7/10/2017
     !!
     !---------------------------------------------------------------------------------------
-    function get_field(self,field,interp_type,interp_source_user,iface,override_lift,use_lift_faces) result(var_gq)
+    function get_field(self,field,interp_type,interp_source_user,iface,override_lift,use_lift_faces,only_lift) result(var_gq)
         class(chidg_worker_t),  intent(in)              :: self
         character(*),           intent(in)              :: field
         character(*),           intent(in)              :: interp_type
         character(*),           intent(in), optional    :: interp_source_user
         integer(ik),            intent(in), optional    :: iface
         logical,                intent(in), optional    :: override_lift
+        logical,                intent(in), optional    :: only_lift
         integer(ik),            intent(in), optional    :: use_lift_faces(:)
 
 
@@ -761,6 +762,10 @@ contains
             !if (self%cache%lift .and. (.not. do_not_lift)) then
             if (lift) then
                 var_gq = self%cache%get_data(field,cache_component,'gradient',idirection,self%function_info%seed,iface_use)
+                ! If we only want lift, zero out primal gradient
+                if (present(only_lift)) then
+                    if (only_lift) var_gq = ZERO
+                end if
 
                 ! Add lift contributions from each face
                 if (present(use_lift_faces)) then
@@ -1524,7 +1529,6 @@ contains
                 call chidg_signal_one(FATAL,"worker%integrate_volume_flux: Invalid value for incoming flux_type.",trim(flux_type))
         end select
 
-        
         !
         ! Integrate: int[ grad(psi) (dot) F_ale ]
         !

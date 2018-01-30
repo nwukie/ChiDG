@@ -233,7 +233,7 @@ contains
                                            field_index, iproc, nelements_g, ielem, eqn_ID
         integer                         :: ierr, order_s
         logical                         :: file_exists
-        integer(ik)                     :: itime, mapping, connectivity_size
+        integer(ik)                     :: itime, connectivity_size, order_c
         integer(ik),    allocatable     :: elements(:,:)
 
 
@@ -250,10 +250,20 @@ contains
             
 
             !
+            ! Write domain attributes: solution order, equation set
+            !
+            order_c = 0
+            do while ( order_c*order_c*order_c /= data%mesh%domain(idom)%elems(1)%nterms_c )
+               order_c = order_c + 1 
+            end do
+            order_c = order_c - 1 ! to be consistent with the definition of 'Order of the polynomial'
+
+
+
+            !
             ! Write nodes, displacements, velocities, coordinate system
             !
-            mapping = data%mesh%domain(idom)%nterms_s - 1
-            call set_domain_coordinate_order_hdf(        domain_id,mapping                                 )
+            call set_domain_coordinate_order_hdf(        domain_id,order_c )
             call set_domain_coordinates_hdf(             domain_id,data%mesh%domain(idom)%nodes            )
             call set_domain_coordinate_displacements_hdf(domain_id,data%mesh%domain(idom)%dnodes           )
             call set_domain_coordinate_velocities_hdf(   domain_id,data%mesh%domain(idom)%vnodes           )

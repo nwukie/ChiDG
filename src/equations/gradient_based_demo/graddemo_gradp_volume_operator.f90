@@ -114,23 +114,49 @@ contains
         !
         ! Get Primary fields: interior
         !
-        grad1_density  = worker%get_field('Density',    'grad1', 'element', override_lift=.true.)
-        grad1_mom1     = worker%get_field('Momentum-1', 'grad1', 'element', override_lift=.true.)
-        grad1_mom2     = worker%get_field('Momentum-2', 'grad1', 'element', override_lift=.true.)
-        grad1_mom3     = worker%get_field('Momentum-3', 'grad1', 'element', override_lift=.true.)
-        grad1_energy   = worker%get_field('Energy',     'grad1', 'element', override_lift=.true.)
+        grad1_density = worker%get_field('Density',    'grad1', 'element', override_lift=.true.)
+        grad1_mom1    = worker%get_field('Momentum-1', 'grad1', 'element', override_lift=.true.)
+        grad1_mom2    = worker%get_field('Momentum-2', 'grad1', 'element', override_lift=.true.)
+        grad1_mom3    = worker%get_field('Momentum-3', 'grad1', 'element', override_lift=.true.)
+        grad1_energy  = worker%get_field('Energy',     'grad1', 'element', override_lift=.true.)
 
-        grad2_density  = worker%get_field('Density',    'grad2', 'element', override_lift=.true.)
-        grad2_mom1     = worker%get_field('Momentum-1', 'grad2', 'element', override_lift=.true.)
-        grad2_mom2     = worker%get_field('Momentum-2', 'grad2', 'element', override_lift=.true.)
-        grad2_mom3     = worker%get_field('Momentum-3', 'grad2', 'element', override_lift=.true.)
-        grad2_energy   = worker%get_field('Energy',     'grad2', 'element', override_lift=.true.)
+        grad2_density = worker%get_field('Density',    'grad2', 'element', override_lift=.true.)
+        grad2_mom1    = worker%get_field('Momentum-1', 'grad2', 'element', override_lift=.true.)
+        grad2_mom2    = worker%get_field('Momentum-2', 'grad2', 'element', override_lift=.true.)
+        grad2_mom3    = worker%get_field('Momentum-3', 'grad2', 'element', override_lift=.true.)
+        grad2_energy  = worker%get_field('Energy',     'grad2', 'element', override_lift=.true.)
 
-        grad3_density  = worker%get_field('Density',    'grad3', 'element', override_lift=.true.)
-        grad3_mom1     = worker%get_field('Momentum-1', 'grad3', 'element', override_lift=.true.)
-        grad3_mom2     = worker%get_field('Momentum-2', 'grad3', 'element', override_lift=.true.)
-        grad3_mom3     = worker%get_field('Momentum-3', 'grad3', 'element', override_lift=.true.)
-        grad3_energy   = worker%get_field('Energy',     'grad3', 'element', override_lift=.true.)
+        grad3_density = worker%get_field('Density',    'grad3', 'element', override_lift=.true.)
+        grad3_mom1    = worker%get_field('Momentum-1', 'grad3', 'element', override_lift=.true.)
+        grad3_mom2    = worker%get_field('Momentum-2', 'grad3', 'element', override_lift=.true.)
+        grad3_mom3    = worker%get_field('Momentum-3', 'grad3', 'element', override_lift=.true.)
+        grad3_energy  = worker%get_field('Energy',     'grad3', 'element', override_lift=.true.)
+
+
+!        grad1_density = worker%get_field('Density',    'grad1', 'element')
+!        grad1_mom1    = worker%get_field('Momentum-1', 'grad1', 'element')
+!        grad1_mom2    = worker%get_field('Momentum-2', 'grad1', 'element')
+!        grad1_mom3    = worker%get_field('Momentum-3', 'grad1', 'element')
+!        grad1_energy  = worker%get_field('Energy',     'grad1', 'element')
+!
+!        grad2_density = worker%get_field('Density',    'grad2', 'element')
+!        grad2_mom1    = worker%get_field('Momentum-1', 'grad2', 'element')
+!        grad2_mom2    = worker%get_field('Momentum-2', 'grad2', 'element')
+!        grad2_mom3    = worker%get_field('Momentum-3', 'grad2', 'element')
+!        grad2_energy  = worker%get_field('Energy',     'grad2', 'element')
+!
+!        grad3_density = worker%get_field('Density',    'grad3', 'element')
+!        grad3_mom1    = worker%get_field('Momentum-1', 'grad3', 'element')
+!        grad3_mom2    = worker%get_field('Momentum-2', 'grad3', 'element')
+!        grad3_mom3    = worker%get_field('Momentum-3', 'grad3', 'element')
+!        grad3_energy  = worker%get_field('Energy',     'grad3', 'element')
+
+
+
+
+
+
+
 
 
         ! Compute Jacobians of pressure
@@ -144,8 +170,8 @@ contains
 
 
         ! Compute pressure gradient using Chain-rule
-         !pressure_computed = (gam - ONE)*(energy - HALF*(mom1*mom1 + mom2*mom2 + mom3*mom3)/density)
-        pressure_computed = worker%get_field('Pressure', 'value', 'element')
+        pressure_computed = (gam - ONE)*(energy - HALF*(mom1*mom1 + mom2*mom2 + mom3*mom3)/density)
+        !pressure_computed = worker%get_field('Pressure', 'value', 'element')
 
         grad1_p_computed = dp_ddensity * grad1_density  + &
                            dp_dmom1    * grad1_mom1     + &
@@ -174,21 +200,7 @@ contains
         grad1_p_residual  = -(grad1_p  - grad1_p_computed)
         grad2_p_residual  = -(grad2_p  - grad2_p_computed)
         grad3_p_residual  = -(grad3_p  - grad3_p_computed)
-!
-!        if (worker%element_info%ielement_g == 1) then
-!            grad1_p_residual = ZERO
-!            grad1_p_residual = ZERO
-!            grad1_p_residual = ZERO
-!        end if
 
-        
-        !
-        ! Project residual
-        !
-!        pressure_residual_modes = worker%project_from_nodes(pressure_residual)
-!        grad1_p_residual_modes  = worker%project_from_nodes(grad1_p_residual)
-!        grad2_p_residual_modes  = worker%project_from_nodes(grad2_p_residual)
-!        grad3_p_residual_modes  = worker%project_from_nodes(grad3_p_residual)
 
 
 
@@ -199,11 +211,6 @@ contains
         call worker%integrate_volume_source('Pressure Gradient - 1', grad1_p_residual )
         call worker%integrate_volume_source('Pressure Gradient - 2', grad2_p_residual )
         call worker%integrate_volume_source('Pressure Gradient - 3', grad3_p_residual )
-!        call worker%accumulate_residual('Pressure',              pressure_residual_modes)
-!        call worker%accumulate_residual('Pressure Gradient - 1', grad1_p_residual_modes )
-!        call worker%accumulate_residual('Pressure Gradient - 2', grad2_p_residual_modes )
-!        call worker%accumulate_residual('Pressure Gradient - 3', grad3_p_residual_modes )
-
 
 
     end subroutine compute

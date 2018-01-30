@@ -10,7 +10,9 @@ module type_newton
     use type_system_assembler,  only: system_assembler_t
     use type_preconditioner,    only: preconditioner_t
     use type_solver_controller, only: solver_controller_t
+    use mod_tecio_old,          only: write_tecio_old
     use type_chidg_vector
+    use ieee_arithmetic,        only: ieee_is_nan
     implicit none
     private
 
@@ -57,11 +59,14 @@ contains
         class(solver_controller_t),     optional,   intent(inout),  target  :: solver_controller
 
         character(100)              :: filename
-        integer(ik)                 :: niter
-        real(rk)                    :: resid, resid0, resid_prev, timing, entropy_error, residual_ratio
-        real(rk), allocatable       :: vals(:)
-        logical                     :: absolute_convergence, relative_convergence
-        type(chidg_vector_t)        :: b, qn, qold, qnew
+        integer(ik)                 :: niter, step
+        real(rk)                    :: resid, resid0, resid_prev, resid_new, alpha, f0, fn, forcing_term, &
+                                       timing, entropy_error, residual_ratio
+        logical                     :: absolute_convergence, relative_convergence, searching
+        type(chidg_vector_t)        :: b, qn, qold, qnew, q0
+
+
+
 
         type(solver_controller_t),  target  :: default_controller
         class(solver_controller_t), pointer :: controller
@@ -127,7 +132,8 @@ contains
                     residual_ratio = resid/resid_prev
                 end if
 
-                call system%assemble( data, timing=timing, differentiate=controller%update_lhs(lhs,niter,residual_ratio) )
+                call system%assemble(data, timing=timing, differentiate=controller%update_lhs(lhs,niter,residual_ratio) )
+
 
                 !
                 ! Compute residual norms
@@ -172,15 +178,83 @@ contains
 
 
 
+
                 !
-                ! Advance solution with update vector
+                ! Line Search for appropriate step
                 !
-                q = qold + dq
+                q0 = qold
+                f0 = resid
+                step = 0
+                if (self%search) then
+
+                    searching = .true.
+                    do while (searching)
+
+                        !
+                        ! Set line increment via backtracking.
+                        !   Try: 1, 0.5, 0.25... 2^-i
+                        !
+                        alpha = TWO**(-real(step,rk)) 
+                        call write_line("       Testing newton direction with 'alpha' = ", alpha, io_proc=GLOBAL_MASTER, silence=(verbosity<3))
 
 
+                        !
+                        ! Advance solution along newton direction
+                        !
+                        qn = q0 + alpha*dq
 
-                ! Clear working storage
+
+                        !
+                        ! Clear working vector
+                        !
+                        !call rhs%clear()
+
+
+                        !
+                        ! Set working solution. Test residual at (q). Do not differentiate
+                        !
+                        q = qn
+                        call system%assemble(data,timing=timing,differentiate=.false.)
+
+                        !
+                        ! Compute new function value
+                        !
+                        fn = rhs%norm(ChiDG_COMM)
+
+
+                        !
+                        ! Test for |R| increasing too much or NaN. 
+                        !   If residual is reasonably large, still allow some growth.
+                        !   If the residual is small enough, we don't want any growth.
+                        ! 
+                        !
+                        if (ieee_is_nan(fn)) then
+                            searching = .true.
+                        else if ( (fn > 1.e-3_rk) .and. (fn > 2.0_rk*f0) ) then
+                            searching = .true.
+                        else if ( (fn < 1.e-3_rk) .and. (fn > f0) ) then
+                            searching = .true.
+                        else
+                            searching = .false.
+                        end if
+
+                        call write_line("       Rn(Q) = ", fn, io_proc=GLOBAL_MASTER, silence=(verbosity<3))
+
+                        step = step + 1
+
+                    end do
+
+                else
+                    qn = q0 + dq
+                end if
+
+
+                !
+                ! Accept new solution, clear working storage, iterate
+                !
+                q = qn
                 call dq%clear()
+
 
 
                 ! Print iteration information
@@ -195,6 +269,13 @@ contains
                 relative_convergence = ( (log10(resid0) - log10(resid)) < real(self%norders_reduction,rk) )
 
 
+                call data%sdata%q_out%init(data%mesh,data%time_manager%ntime)
+                call data%sdata%q_out%set_ntime(data%time_manager%ntime)
+                call data%sdata%q_out%clear()
+                data%sdata%q_out = data%sdata%q
+
+                write(filename, "(A,F8.6,A4)") 'quasi_newton_', real(niter,rk), '.plt'
+                call write_tecio_old(data,filename, write_domains=.true., write_surfaces=.false.)
 
 
 

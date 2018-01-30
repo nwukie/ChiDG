@@ -50,12 +50,9 @@ module type_equation_set
 
         ! Name
         character(:),               allocatable :: name 
-
-        ! ID
         integer(ik)                             :: eqn_ID
-
-        ! Properties/Fields
         type(properties_t)                      :: prop
+
 
         ! Operators
         type(operator_wrapper_t),   allocatable :: boundary_advective_operator(:)
@@ -66,8 +63,6 @@ module type_equation_set
 
         ! Models
         type(model_wrapper_t),      allocatable :: models(:)
-
-!        ! IO fields
 !        type(model_wrapper_t),      allocatable :: io_models(:)
 
         ! Pseudo time-step calculator

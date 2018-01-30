@@ -70,18 +70,17 @@ contains
         call euler_outlet_eqns%add_operator('Euler BC Flux')
         call euler_outlet_eqns%add_operator('Euler Volume Cylindrical Source')
 
-        ! Add momentum equilibrium equation for 'Pressure'
-        call euler_outlet_eqns%add_operator('RAC Volume Flux')
-        call euler_outlet_eqns%add_operator('RAC Boundary Average Flux')
-        call euler_outlet_eqns%add_operator('RAC BC Flux')
-        call euler_outlet_eqns%add_operator('RAC Volume Cylindrical Source')
-        call euler_outlet_eqns%add_operator('RAC LaxFriedrichs Flux')
+
+        call euler_outlet_eqns%add_operator('Graddemo P BC Operator')
+        call euler_outlet_eqns%add_operator('Graddemo P Boundary Average Operator')
+        call euler_outlet_eqns%add_operator('Graddemo P Volume Operator')
+        call euler_outlet_eqns%add_operator('Graddemo P Volume Source')
 
 
-
-        !call euler_outlet_eqns%add_model('Ideal Gas')
-        !call euler_outlet_eqns%add_pseudo_timestep(fluid_pseudo_time)
-
+        call euler_outlet_eqns%add_model('Pressure Gradient')
+        call euler_outlet_eqns%add_model('Temperature Gradient')
+        call euler_outlet_eqns%add_model('Ideal Gas')
+!        call euler_eqns%add_pseudo_timestep(fluid_pseudo_time)
 
 
 

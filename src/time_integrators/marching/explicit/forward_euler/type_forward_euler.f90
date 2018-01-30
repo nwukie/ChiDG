@@ -51,12 +51,30 @@ module type_forward_euler
 
     contains
 
+        procedure   :: init
         procedure   :: step
 
     end type forward_euler_t
     !----------------------------------------------------------------------------------------
 
 contains
+
+    !>  Initialize the forward_euler_t time integrator
+    !!
+    !!  Create the assembler and atatch it to the time_integrator object so it can 
+    !!  be passed to the nonlinear solver
+    !!
+    !-----------------------------------------------------------------------------------
+    subroutine init(self)
+        class(forward_euler_t),          intent(inout)   :: self
+
+        call self%set_name('Forward Euler')
+
+    end subroutine init
+    !***********************************************************************************
+
+
+
 
 
 
@@ -121,12 +139,16 @@ contains
             !
             q  = q + dq
 
-            data%time_manager%t = data%time_manager%t + dt
+!            data%time_manager%t = data%time_manager%t + dt
 
             !
             ! Clear working vector
             !
             call rhs%clear()
+
+
+            data%time_manager%t = data%time_manager%t + data%time_manager%dt
+
 
         end associate
 

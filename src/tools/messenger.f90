@@ -347,7 +347,7 @@ contains
     !!  @param[in]  io_proc         Integer specifying MPI Rank responsible for outputing a message
     !!
     !------------------------------------------------------------------------------------------
-    subroutine write_line(a,b,c,d,e,f,g,h,delimiter,columns,column_width,width,color,ltrim,bold,silence,io_proc)
+    subroutine write_line(a,b,c,d,e,f,g,h,delimiter,columns,column_width,width,color,ltrim,bold,silence,io_proc,handle)
         class(*),           intent(in), target, optional        :: a
         class(*),           intent(in), target, optional        :: b
         class(*),           intent(in), target, optional        :: c
@@ -365,6 +365,7 @@ contains
         logical,            intent(in),         optional        :: bold
         logical,            intent(in),         optional        :: silence
         integer(ik),        intent(in),         optional        :: io_proc
+        integer(ik),        intent(in),         optional        :: handle
 
         class(*), pointer   :: auxdata => null()
 
@@ -448,7 +449,7 @@ contains
 
 
             ! Send line to output
-            call send_line()
+            call send_line(handle=handle)
 
         end if ! proc_write
 
@@ -702,8 +703,9 @@ contains
     !!  @date   2/3/2016
     !!
     !------------------------------------------------------------------------------------------
-    subroutine send_line(silent)
-        logical,    intent(in), optional  :: silent
+    subroutine send_line(silent,handle)
+        logical,        intent(in), optional    :: silent
+        integer(ik),    intent(in), optional    :: handle
 
         integer :: delimiter_size
         integer :: line_size
@@ -713,6 +715,16 @@ contains
         character(:),   allocatable :: writeline, file_line
         integer                     :: section_length
         logical                     :: send
+        integer(ik) :: write_handle
+
+
+        !
+        ! Handle optional input
+        !
+        write_handle = unit
+        if (present(handle)) write_handle = handle
+
+
 
         !
         ! Detect silent or not
@@ -827,7 +839,7 @@ contains
                 else if ( trim(IO_DESTINATION) == 'file' ) then
                     if (log_initialized) then
                         file_line = remove_formatting(writeline)
-                        write(unit,*) file_line
+                        write(write_handle,*) file_line
                     else
                         stop "Trying to write a line, but log file not inititlized. Call chidg%init('env')"
                     end if
@@ -839,7 +851,7 @@ contains
                         print*, writeline
 
                         file_line = remove_formatting(writeline)
-                        write(unit,*) file_line
+                        write(write_handle,*) file_line
 
                     else
                         stop "Trying to write a line, but log file not inititlized. Call chidg%init('env')"

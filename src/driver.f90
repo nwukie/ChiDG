@@ -30,6 +30,7 @@ program driver
     use mod_chidg_clone,        only: chidg_clone
     use mod_chidg_post_hdf2tec, only: chidg_post_hdf2tec_new
     use mod_tutorials,          only: tutorial_driver
+    use mod_euler_eigenmodes,   only: compute_euler_eigenmodes, compute_euler_eigenmodes_new, compute_euler_eigenmodes_new_new
 
     use mod_oscillating_cylinder_1, only: oscillating_cylinder
     
@@ -198,7 +199,7 @@ program driver
             end do
 
             !call create_function(fcn,'pressure_pulse')
-            !call create_function(fcn,'isentropic_vortex')
+            !!call create_function(fcn,'isentropic_vortex')
             !call fcn%set_option('ivar',1._rk)
             !call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,1)
             !call fcn%set_option('ivar',2._rk)
@@ -209,6 +210,14 @@ program driver
             !call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,4)
             !call fcn%set_option('ivar',5._rk)
             !call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,5)
+            !call fcn%set_option('ivar',6._rk)
+            !call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,6)
+            !call fcn%set_option('ivar',7._rk)
+            !call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,7)
+            !call fcn%set_option('ivar',8._rk)
+            !call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,8)
+            !call fcn%set_option('ivar',9._rk)
+            !call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,9)
 
 
         else
@@ -236,7 +245,7 @@ program driver
     !
     ! Check if executing 'action'
     !
-    else if ( narg > 1 ) then
+    else if ( narg >= 1 ) then
 
         ! Get 'action'
         call get_command_argument(1,chidg_action)
@@ -470,6 +479,17 @@ program driver
                 if (narg /= 2) call chidg_signal(FATAL,"The 'tutorial' action expects to be called as: chidg tutorial selected_tutorial.")
                 call get_command_argument(2,tutorial)
                 call tutorial_driver(trim(tutorial))
+
+            case ('eigen')
+                if (narg /= 2) call chidg_signal(FATAL,"The 'eigen' action expects to be called as: chidg eigen gridfile.h5.")
+                call get_command_argument(2,grid_file)
+                call compute_euler_eigenmodes(trim(grid_file))
+
+            case ('eigen_new')
+                call compute_euler_eigenmodes_new()
+
+            case ('eigen_new_new')
+                call compute_euler_eigenmodes_new_new()
 
             case default
                 call chidg_signal(FATAL,"We didn't understand the way chidg was called. Available chidg 'actions' are: 'edit' 'convert' 'post' 'matplotlib' and 'airfoil'.")

@@ -47,11 +47,9 @@ module type_time_integrator
 
     contains
 
-        procedure   :: init             ! General initialization procedure. Should get 
-                                        ! called automatically.
+        procedure   :: init
         procedure   :: set
         procedure   :: report
-
         procedure   :: set_name
         procedure   :: get_name
 
@@ -64,7 +62,7 @@ module type_time_integrator
         procedure(post_interface),   deferred   :: process_data_for_output   
 
     end type time_integrator_t
-    !*****************************************************************************************
+    !***************************************************************************************
 
 
 

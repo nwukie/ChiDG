@@ -64,6 +64,12 @@ module type_domain_matrix
         ! Processors
         procedure :: restrict
 
+        ! Auxiliary info
+        procedure :: nelements
+        procedure :: ntime
+
+
+
         final :: destructor
 
     end type domain_matrix_t
@@ -849,6 +855,47 @@ contains
 
 
 
+
+    !>  Return number of elements in the domain.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/27/2017
+    !!
+    !--------------------------------------------------------------------------------
+    function nelements(self) result(nelements_)
+        class(domain_matrix_t), intent(in)  :: self
+
+        integer(ik) :: nelements_
+
+        nelements_ = size(self%lblks,1)
+
+    end function nelements
+    !********************************************************************************
+
+
+
+
+
+    !>  Return number of elements in the domain.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/27/2017
+    !!
+    !--------------------------------------------------------------------------------
+    function ntime(self) result(ntime_)
+        class(domain_matrix_t), intent(in)  :: self
+
+        integer(ik) :: ntime_
+
+        ntime_ = size(self%lblks,2)
+
+    end function ntime
+    !********************************************************************************
+
+
+
+
+
     !>
     !!
     !!---------------------------------------------
@@ -857,5 +904,9 @@ contains
 
     end subroutine
     !**********************************************
+
+
+
+
 
 end module type_domain_matrix

@@ -94,6 +94,7 @@ contains
         integral = integral1 + integral2 + integral3
 
         
+
         !
         ! Store integral and derivatives
         !
@@ -130,26 +131,27 @@ contains
     !!  @param[inout]   source  source function to integrate
     !!
     !----------------------------------------------------------------------------------------
-    subroutine integrate_volume_scalar_source(mesh,sdata,elem_info,fcn_info,ieqn,itime,source)
+    subroutine integrate_volume_scalar_source(mesh,sdata,elem_info,fcn_info,ieqn,itime,source_in)
         type(mesh_t),           intent(in)      :: mesh
         type(solverdata_t),     intent(inout)   :: sdata
         type(element_info_t),   intent(in)      :: elem_info
         type(function_info_t),  intent(in)      :: fcn_info
         integer(ik),            intent(in)      :: ieqn
         integer(ik),            intent(in)      :: itime
-        type(AD_D),             intent(inout)   :: source(:)
+        type(AD_D),             intent(inout)   :: source_in(:)
 
         type(AD_D), dimension(mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%nterms_s)    :: integral, integral_x, integral_y, integral_z
+        type(AD_D), allocatable :: source(:)
 
-        associate( idom       => elem_info%idomain_l, ielem => elem_info%ielement_l, idiff => fcn_info%idiff,                     &
+        associate( idom    => elem_info%idomain_l, ielem => elem_info%ielement_l, idiff => fcn_info%idiff,                          &
                    weights => mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%basis_s%weights_element(),               &
-                   val        => mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%basis_s%interpolator_element('Value'),   &
-                   jinv => mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%jinv )
+                   val     => mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%basis_s%interpolator_element('Value'),   &
+                   jinv    => mesh%domain(elem_info%idomain_l)%elems(elem_info%ielement_l)%jinv )
 
         !
         ! Multiply each component by quadrature weights and element jacobians
         !
-        source = source * weights * jinv
+        source = source_in * weights * jinv
 
 
         !

@@ -150,6 +150,10 @@ contains
         logical,                    intent(in)                  :: differentiate
         real(rk),                   intent(inout),  optional    :: timing
 
+        integer(ik) :: eqn_ID, idom, ielem, itime, imat, ifield, irow_start, icol_start, nterms, nfields, ifield_row, ifield_col
+        real(rk),   allocatable     :: elem_field(:), elem_res(:)
+
+
         call data%sdata%rhs%clear()
         if (differentiate) call data%sdata%lhs%clear()
 
@@ -159,6 +163,107 @@ contains
         data%time_manager%itime = 1
         data%time_manager%t     = ZERO
         call update_space(data,differentiate,timing)
+
+
+!        !
+!        ! Filter q, rhs
+!        !
+!        do idom = 1,data%mesh%ndomains()
+!            eqn_ID = data%mesh%domain(idom)%eqn_ID
+!            if (index(trim(data%eqnset(eqn_ID)%name),'Filtered') /= 0) then
+!                do ielem = 1,data%mesh%domain(idom)%nelements()
+!                    do ifield = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
+!                        
+!                        !
+!                        ! Get solution field
+!                        !
+!                        elem_field = data%sdata%q%dom(idom)%vecs(ielem)%getvar(ifield,1)
+!                        elem_res   = data%sdata%rhs%dom(idom)%vecs(ielem)%getvar(ifield,1)
+!
+!                        !
+!                        ! Apply spatial filtering
+!                        !
+!                        if (size(elem_field) > 1) then
+!                            if (     index(trim(data%eqnset(eqn_ID)%name),'FP0') /= 0) then
+!                                elem_field(2:size(elem_field)) = ZERO
+!                                elem_res(  2:size(elem_res))   = ZERO
+!                            else if (index(trim(data%eqnset(eqn_ID)%name),'FP1') /= 0) then
+!                                elem_field(9:size(elem_field)) = ZERO
+!                                elem_res(  9:size(elem_res))   = ZERO
+!                            else if (index(trim(data%eqnset(eqn_ID)%name),'FP2') /= 0) then
+!                                elem_field(28:size(elem_field)) = ZERO
+!                                elem_res(  28:size(elem_res))   = ZERO
+!                            else if (index(trim(data%eqnset(eqn_ID)%name),'FP3') /= 0) then
+!                                elem_field(65:size(elem_field)) = ZERO
+!                                elem_res(  65:size(elem_res))   = ZERO
+!                            else if (index(trim(data%eqnset(eqn_ID)%name),'FP4') /= 0) then
+!                                elem_field(126:size(elem_field)) = ZERO
+!                                elem_res(  126:size(elem_res))   = ZERO
+!                            else
+!
+!                                ! Default, filter to piecewise constant
+!                                !   : ZERO all but the constant mode
+!                                elem_field(2:size(elem_field)) = ZERO
+!                                elem_res(  2:size(elem_res))   = ZERO
+!
+!                            end if
+!
+!                            !
+!                            ! Store filtered data
+!                            !
+!                            call data%sdata%q%dom(idom)%vecs(ielem)%setvar(ifield,1,elem_field)
+!                            call data%sdata%rhs%dom(idom)%vecs(ielem)%setvar(ifield,1,elem_res)
+!
+!                        end if
+!
+!
+!
+!                    end do !ifield
+!                end do !ielem
+!
+!
+!
+!
+!                !
+!                ! Filter lhs: lblks
+!                !
+!                do ielem = 1,size(data%sdata%lhs%dom(idom)%lblks,1)
+!                    do itime = 1,size(data%sdata%lhs%dom(idom)%lblks,2)
+!                        do imat = 1,data%sdata%lhs%dom(idom)%lblks(ielem,itime)%size()
+!
+!                            nterms  = data%sdata%lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%nterms
+!                            nfields = data%sdata%lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%nfields
+!
+!
+!                            if (nterms > 1) then
+!                                do ifield_row = 1,nfields
+!                                    do ifield_col = 1,nfields
+!
+!                                        irow_start = 1 + nterms*(ifield_row-1)
+!                                        icol_start = 1 + nterms*(ifield_col-1)
+!
+!                                        ! Zero trailing row
+!                                        data%sdata%lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(icol_start  ,irow_start+1:irow_start+nterms-1) = ZERO
+!                                        ! Zero lower rows
+!                                        data%sdata%lhs%dom(idom)%lblks(ielem,itime)%data_(imat)%mat(icol_start+1:icol_start+nterms-1,irow_start:irow_start+nterms-1) = ZERO
+!                                    end do !ifield_col
+!                                end do !ifield_row
+!                            end if
+!
+!
+!                        end do !imat
+!                    end do !itime
+!                end do !ielem
+!        
+!
+!            end if ! if Filtered
+!        end do !idom
+
+
+
+
+
+        
 
 
     end subroutine assemble

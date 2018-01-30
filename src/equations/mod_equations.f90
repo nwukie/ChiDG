@@ -37,7 +37,8 @@ module mod_equations
     use eqn_test_case_linear_advection,     only: test_case_linear_advection
     use eqn_test_case_poisson_equation,     only: test_case_poisson_equation
     use eqn_graddemo,                       only: graddemo
-    use eqn_pgradtest,                       only: pgradtest
+    use eqn_pgradtest,                      only: pgradtest
+    use eqn_primitive_linearized_euler,     only: primitive_linearized_euler
     implicit none
 
 
@@ -140,6 +141,7 @@ contains
         type(test_case_poisson_equation)    :: test_case_poisson_equation_builder
         type(graddemo)                      :: graddemo_builder
         type(pgradtest)                     :: pgradtest_builder
+        type(primitive_linearized_euler)    :: primitive_linearized_euler_builder
 
 
         !
@@ -169,6 +171,7 @@ contains
             call equation_set_factory%register(test_case_poisson_equation_builder%build('default'))
             call equation_set_factory%register(graddemo_builder%build('default'))
             call equation_set_factory%register(pgradtest_builder%build('default'))
+            call equation_set_factory%register(primitive_linearized_euler_builder%build('default'))
 
 
 

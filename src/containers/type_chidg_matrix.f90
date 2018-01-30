@@ -1,8 +1,9 @@
 module type_chidg_matrix
 #include <messenger.h>
     use mod_kinds,              only: rk, ik
-    use mod_constants,          only: NO_ID
+    use mod_constants,          only: NO_ID, ZERO
     use mod_chidg_mpi,          only: IRANK
+    use type_densematrix,       only: densematrix_t
     use type_domain_matrix,     only: domain_matrix_t
     use type_mesh,              only: mesh_t
     use type_face_info,         only: face_info_t
@@ -51,6 +52,9 @@ module type_chidg_matrix
         procedure   :: restrict
 
         procedure   :: get_ntime
+        procedure   :: ndomains
+        procedure   :: to_file                          ! Write matrix to file
+        procedure   :: to_real                          ! Return the matrix stored as real
 
         procedure   :: release
         final       :: destructor
@@ -638,6 +642,207 @@ contains
 
 
 
+
+
+
+
+    !>  Return matrix as a single real allocation.
+    !!
+    !!  *** WARNING ***
+    !!  only use this for matrices that are known to be small. Calling this for a large system
+    !!  will results in very large memory usage.
+    !!  *** WARNING ***
+    !!
+    !!  WARNING: 
+    !!      - ASSUMES 1 DOMAIN
+    !!      - ASSUMES ALL ELEMENT HAVE SAME ORDER AND NUMBER OF FIELDS.
+    !!      - ASSUMES 1 TIME INSTANCE
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   1/23/2018
+    !!
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine to_real(self,real_matrix)
+        class(chidg_matrix_t),      intent(in)      :: self
+        real(rk),   allocatable,    intent(inout)   :: real_matrix(:,:)
+
+        type(densematrix_t)     :: dmat
+        integer(ik)             :: idom, itime, ielem, iblk, handle, idomain_g, ielement_g, irow, icol, &
+                                   nelements, row_offset, col_offset, irow_start, icol_start, block_size, nblk, ierr, ndof
+
+
+        if (allocated(self%dom)) then
+
+        !
+        ! Compute total number of dof's
+        !
+        ndof = 0
+        do idom = 1,self%ndomains()
+            do itime = 1,self%dom(idom)%ntime()
+                do ielem = 1,self%dom(idom)%nelements()
+                    dmat = self%dom(idom)%lblks(ielem,itime)%at(1)
+                    ndof = ndof + size(dmat%mat,1)
+                end do
+            end do
+        end do
+
+
+        !
+        ! Allocate storage for LHS matrix
+        !
+        allocate(real_matrix(ndof,ndof), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+
+        !
+        ! Store matrix entries in LHS
+        !
+        real_matrix = ZERO
+        do idom = 1,self%ndomains()
+            do itime = 1,self%dom(idom)%ntime()
+                do ielem = 1,self%dom(idom)%nelements()
+                    do iblk = 1,self%dom(idom)%lblks(ielem,itime)%size()
+
+                        nblk = self%dom(idom)%lblks(ielem,itime)%size()
+                        dmat = self%dom(idom)%lblks(ielem,itime)%at(iblk)
+                        block_size = size(dmat%mat,1)
+
+
+                        ! Coupled element
+                        idomain_g  = dmat%dparent_g()
+                        ielement_g = dmat%eparent_g()
+
+                        
+                        ! Compute global indices for the current block index (1,1)
+                        irow_start = 1  +  block_size*(ielem-1)
+                        icol_start = 1  +  block_size*(ielement_g-1)
+
+                        
+                        ! Compute offset indices
+                        do col_offset = 1,block_size
+                            do row_offset = 1,block_size
+
+                                irow = irow_start + (row_offset-1)
+                                icol = icol_start + (col_offset-1)
+                                real_matrix(irow,icol) = dmat%mat(row_offset,col_offset)
+
+                            end do
+                        end do 
+
+                    end do !iblk
+                end do !ielem
+            end do !itime
+        end do !idom
+
+        end if !allocated
+
+    end subroutine to_real
+    !**************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+    !>  Write matrix to file.
+    !!
+    !!  WARNING: 
+    !!      - ASSUMES 1 DOMAIN
+    !!      - ASSUMES ALL ELEMENT HAVE SAME ORDER AND NUMBER OF FIELDS.
+    !!      - ASSUMES 1 TIME INSTANCE
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/27/2017
+    !!
+    !-----------------------------------------------------------------------------------------
+    subroutine to_file(self,filename)
+        class(chidg_matrix_t),  intent(in)  :: self
+        character(*),           intent(in)  :: filename
+
+        type(densematrix_t)     :: dmat
+        integer(ik)             :: idom, itime, ielem, iblk, handle, idomain_g, ielement_g, irow, icol, &
+                                   nelements, row_offset, col_offset, irow_start, icol_start, block_size, nblk
+
+        ! Open file
+        open(newunit=handle, file=trim(filename))
+
+        ! Write format
+        call write_line('(irow, icol, nblk, value)')
+
+
+        do idom = 1,self%ndomains()
+            do itime = 1,self%dom(idom)%ntime()
+                do ielem = 1,self%dom(idom)%nelements()
+                    do iblk = 1,self%dom(idom)%lblks(ielem,itime)%size()
+
+                        nblk = self%dom(idom)%lblks(ielem,itime)%size()
+                        dmat = self%dom(idom)%lblks(ielem,itime)%at(iblk)
+                        block_size = size(dmat%mat,1)
+
+
+                        ! Coupled element
+                        idomain_g  = dmat%dparent_g()
+                        ielement_g = dmat%eparent_g()
+
+                        
+                        ! Compute global indices for the current block index (1,1)
+                        irow_start = 1  +  block_size*(ielem-1)
+                        icol_start = 1  +  block_size*(ielement_g-1)
+
+                        
+                        ! Compute offset indices
+                        do col_offset = 1,block_size
+                            do row_offset = 1,block_size
+
+                                irow = irow_start + (row_offset-1)
+                                icol = icol_start + (col_offset-1)
+                                call write_line(irow,icol,nblk,dmat%mat(row_offset,col_offset), columns=.true., column_width=25, delimiter=',', ltrim=.true., handle=handle)
+
+                            end do
+                        end do 
+
+                    end do !iblk
+                end do !ielem
+            end do !itime
+        end do !idom
+
+
+
+        ! Close file
+        close(handle)
+
+    end subroutine to_file
+    !**************************************************************************
+
+
+
+
+
+
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   12/27/2017
+    !!
+    !------------------------------------------------------------------------------
+    function ndomains(self) result(ndomains_)
+       class(chidg_matrix_t),   intent(in)  :: self
+       
+       integer(ik)  :: ndomains_
+       
+       ndomains_ = size(self%dom) 
+
+    end function ndomains
+    !******************************************************************************
 
 
 

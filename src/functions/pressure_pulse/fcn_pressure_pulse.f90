@@ -107,7 +107,8 @@ contains
 
 
         !r = x
-        r = sqrt(x*x + y*y)
+        !r = sqrt(x*x + y*y)
+        r = sqrt(x*x + z*z)
         drho = 0.1_rk * exp(-(log(TWO)/b)*r*r)
         dp   = drho/gam
 
@@ -142,6 +143,22 @@ contains
             ! RHO-E
             case (5)
                 val = p/(gam-ONE)  +  HALF*rho*(u*u + v*v + w*w)
+
+            ! Pressure_TEMP
+            case (6)
+                val = p
+
+            ! Grad1 P
+            case (7)
+                val = -13.8629*x*exp(-69.3147_rk*r*r)
+
+            ! Grad2 P
+            case (8)
+                val = ZERO
+
+            ! Grad3 P
+            case (9)
+                val = -13.8629*z*exp(-69.3147_rk*r*r)
 
         end select
 

@@ -1883,6 +1883,19 @@ contains
                     var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
                     var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
 
+
+!                    ! TODO: KLUDGE
+!                    !((worker%iface == 1) .or. (worker%iface == 2)) .and. &
+!                    if ( (worker%element_info%idomain_g == 6)   .and. &
+!                         (worker%iface == 1)                    .and. &
+!                         (trim(field) == 'Pressure_TEMP') ) then
+!                        var_m = 100000._rk
+!                        print*, 'setting once!'
+!                    end if
+
+
+
+
                     ! Get ALE transformation
                     ale_g_m = worker%get_det_jacobian_grid_face('value', 'face interior')
                     ale_g_p = worker%get_det_jacobian_grid_face('value', 'face exterior')
@@ -1989,6 +2002,18 @@ contains
                     ! Get interior/exterior state
                     var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
                     var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
+
+
+!                    ! TODO: KLUDGE
+!                     !((worker%iface == 1) .or. (worker%iface == 2)) .and. &
+!                    if ( (worker%element_info%idomain_g == 6) .and. &
+!                         (worker%iface == 1) .and. &
+!                         (trim(field) == 'Pressure_TEMP') ) then
+!                        var_m = 100000._rk
+!                        print*, 'setting once!'
+!                    end if
+
+
 
 
                     ! Get ALE transformation
@@ -2308,6 +2333,19 @@ contains
             var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
             var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
 
+
+!            ! TODO: KLUDGE
+!            if ( (worker%element_info%idomain_g == 6)  .and. &
+!                 (worker%element_info%ielement_g == 1) .and. &
+!                 (worker%iface == 2) .and.                   &
+!                 (trim(field) == 'Pressure_TEMP') ) then
+!                var_p = 100000._rk
+!                print*, 'setting thrice!'
+!            end if
+!
+
+
+
             ! Get ALE transformation
             ale_g_m = worker%get_det_jacobian_grid_face('value', 'face interior')
             ale_g_p = worker%get_det_jacobian_grid_face('value', 'face exterior')
@@ -2606,6 +2644,19 @@ contains
             ! Get interior/exterior state
             var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
             var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
+
+
+!            ! TODO: KLUDGE
+!            !((worker%iface == 1) .or. (worker%iface == 2)) .and. &
+!            if ( (worker%element_info%idomain_g == 6) .and. &
+!                 (worker%iface == 1)                  .and. &
+!                 (trim(field) == 'Pressure_TEMP') ) then
+!                !var_p(1) = 100000._rk
+!                var_m = 100000._rk
+!                print*, 'setting once!'
+!            end if
+
+
 
             ! Get ALE transformation
             ale_g_m = worker%get_det_jacobian_grid_face('value', 'face interior')

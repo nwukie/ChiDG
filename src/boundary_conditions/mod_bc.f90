@@ -46,6 +46,9 @@ module mod_bc
     use bc_state_moving_wall,                   only: moving_wall_t
     use bc_state_inlet_total,                   only: inlet_total_t
     use bc_state_outlet_constant_pressure,      only: outlet_constant_pressure_t
+    use bc_state_outlet_pressure_equation,      only: outlet_pressure_equation_t
+    use bc_state_outlet_profile_extrapolation,  only: outlet_profile_extrapolation_t
+    use bc_state_outlet_testing,                only: outlet_testing_t
     !use bc_state_outlet_point_pressure,         only: outlet_point_pressure_t
     !use bc_state_outlet_LODI_pressure,          only: outlet_LODI_pressure_t
     !use bc_state_outlet_LODI_z_pressure,        only: outlet_LODI_z_pressure_t
@@ -83,8 +86,14 @@ module mod_bc
 
     use bc_state_graddemo_extrapolate,          only: graddemo_extrapolate_t
     use bc_state_graddemo_gradp_extrapolate,    only: graddemo_gradp_extrapolate_t
+    use bc_state_graddemo_gradp_extrapolate_outer,    only: graddemo_gradp_extrapolate_outer_t
 
     use bc_state_pgradtest_extrapolate,    only: pgradtest_extrapolate_t
+
+
+    ! Linearized Euler Eigen
+    use bc_primlineuler_extrapolate,    only: primlineuler_extrapolate_t
+    use bc_primlineuler_wall,           only: primlineuler_wall_t
     implicit none
 
 
@@ -138,6 +147,9 @@ contains
         type(moving_wall_t)                     :: MOVING_WALL
         type(inlet_total_t)                     :: INLET_TOTAL
         type(outlet_constant_pressure_t)        :: OUTLET_CONSTANT_PRESSURE
+        type(outlet_pressure_equation_t)        :: OUTLET_PRESSURE_EQUATION
+        type(outlet_profile_extrapolation_t)    :: OUTLET_PROFILE_EXTRAPOLATION
+        type(outlet_testing_t)                  :: OUTLET_TESTING
         !type(outlet_point_pressure_t)           :: OUTLET_POINT_PRESSURE
         !type(outlet_LODI_pressure_t)            :: OUTLET_LODI_PRESSURE
         !type(outlet_LODI_z_pressure_t)          :: OUTLET_LODI_Z_PRESSURE
@@ -173,8 +185,13 @@ contains
 
         type(graddemo_extrapolate_t)        :: GRADDEMO_EXTRAPOLATE
         type(graddemo_gradp_extrapolate_t)  :: GRADDEMO_GRADP_EXTRAPOLATE
+        type(graddemo_gradp_extrapolate_outer_t)  :: GRADDEMO_GRADP_EXTRAPOLATE_OUTER
 
         type(pgradtest_extrapolate_t)  :: PGRADTEST_EXTRAPOLATE
+
+        ! Linearized Euler Eign
+        type(primlineuler_extrapolate_t)    :: PRIMLINEULER_EXTRAPOLATE
+        type(primlineuler_wall_t)           :: PRIMLINEULER_WALL
 
         if ( .not. initialized ) then
             !
@@ -204,6 +221,9 @@ contains
             call registered_bcs%push_back(MOVING_WALL)
             call registered_bcs%push_back(INLET_TOTAL)
             call registered_bcs%push_back(OUTLET_CONSTANT_PRESSURE)
+            call registered_bcs%push_back(OUTLET_PRESSURE_EQUATION)
+            call registered_bcs%push_back(OUTLET_PROFILE_EXTRAPOLATION)
+            call registered_bcs%push_back(OUTLET_TESTING)
             call registered_bcs%push_back(OUTLET_AVERAGE_PRESSURE)
             !call registered_bcs%push_back(OUTLET_POINT_PRESSURE)
             !call registered_bcs%push_back(OUTLET_LODI_PRESSURE)
@@ -236,10 +256,12 @@ contains
 
             call registered_bcs%push_back(GRADDEMO_EXTRAPOLATE)
             call registered_bcs%push_back(GRADDEMO_GRADP_EXTRAPOLATE)
+            call registered_bcs%push_back(GRADDEMO_GRADP_EXTRAPOLATE_OUTER)
 
             call registered_bcs%push_back(PGRADTEST_EXTRAPOLATE)
 
-
+            call registered_bcs%push_back(PRIMLINEULER_EXTRAPOLATE)
+            call registered_bcs%push_back(PRIMLINEULER_WALL)
 
 
             !

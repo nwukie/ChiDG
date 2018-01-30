@@ -10,6 +10,7 @@ add_subdirectory(radial_angular_combined)
 add_subdirectory(tangential_momentum)
 add_subdirectory(gradient_based_demo)
 add_subdirectory(pgrad_test)
+add_subdirectory(linearized_euler_eigen)
 
 
 #add_subdirectory(PrimitiveLinearizedEuler)

@@ -73,18 +73,23 @@ contains
 
 
         type(AD_D), allocatable, dimension(:)   ::  &
-            grad1_pbc, grad2_pbc, grad3_pbc,        &
+            p, grad1_pbc, grad2_pbc, grad3_pbc,     &
             grad1_p,   grad2_p,   grad3_p,          &
-            flux_1, flux_2, flux_3
+            flux_1, flux_2, flux_3, source
             
+        type(AD_D)  :: p_avg
 
 
         !
         ! Interpolate solution to quadrature nodes
         !
-        grad1_pbc = worker%get_field('Pressure_TEMP', 'grad1', 'element', use_lift_faces=[1,2,3,4])
-        grad2_pbc = worker%get_field('Pressure_TEMP', 'grad2', 'element', use_lift_faces=[1,2,3,4])
-        grad3_pbc = worker%get_field('Pressure_TEMP', 'grad3', 'element', use_lift_faces=[1,2,3,4])
+        p         = worker%get_field('Pressure_TEMP', 'value', 'element')
+        grad1_pbc = worker%get_field('Pressure_TEMP', 'grad1', 'element')
+        grad2_pbc = worker%get_field('Pressure_TEMP', 'grad2', 'element')
+        grad3_pbc = worker%get_field('Pressure_TEMP', 'grad3', 'element')
+        !grad1_pbc = worker%get_field('Pressure_TEMP', 'grad1', 'element', use_lift_faces=[1,2,3,4])
+        !grad2_pbc = worker%get_field('Pressure_TEMP', 'grad2', 'element', use_lift_faces=[1,2,3,4])
+        !grad3_pbc = worker%get_field('Pressure_TEMP', 'grad3', 'element', use_lift_faces=[1,2,3,4])
 
 
         grad1_p = worker%get_field('Pressure Gradient - 1', 'value', 'element')
@@ -95,20 +100,19 @@ contains
         !
         ! Compute volume flux at quadrature nodes
         !
+        !flux_1 = grad1_pbc - 132000._rk*sin(132._rk * worker%x('volume'))
+        !flux_1 = grad1_pbc - grad1_p
+        !flux_2 = grad2_pbc - grad2_p
+        !flux_3 = grad3_pbc 
         flux_1 = grad1_pbc - grad1_p
         flux_2 = grad2_pbc - grad2_p
-        flux_3 = grad3_pbc 
-!        flux_3 = ZERO
+        flux_3 = grad3_pbc - grad3_p
 
-!        flux_1 = grad1_pbc
-!        flux_2 = grad2_pbc
-!        flux_3 = grad3_pbc
 
         !
         ! Integrate volume flux
         !
         call worker%integrate_volume_flux('Pressure_TEMP','Diffusion',flux_1,flux_2,flux_3)
-
 
 
     end subroutine compute

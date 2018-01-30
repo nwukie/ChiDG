@@ -19,18 +19,6 @@ module mod_time_integrators
 
 
 
-!    ! Instantiate solver types for sourcing
-!    type(steady_t)                      :: STEADY
-!    type(forward_euler_t)               :: FORWARD_EULER
-!    type(backward_euler_t)              :: BACKWARD_EULER
-!    type(harmonic_balance_t)            :: HB 
-!    type(explicit_runge_kutta_t)        :: EXPLICIT_RK
-!    type(DIRK_t)                        :: DIRK
-!    type(DIRK_coupled_oscillator_t)     :: DIRK_coupled_oscillator
-
-
-
-
 
     !>  Factory object for managing creation of time_integrator_t.
     !!

@@ -95,10 +95,10 @@ contains
             flux_1_p, flux_2_p, flux_3_p
 
 
-        if ( (worker%iface == 1) .or. &
-             (worker%iface == 2) .or. &
-             (worker%iface == 3) .or. &
-             (worker%iface == 4) ) then
+!        if ( (worker%iface == 1) .or. &
+!             (worker%iface == 2) .or. &
+!             (worker%iface == 3) .or. &
+!             (worker%iface == 4) ) then
     
 
         !
@@ -127,26 +127,22 @@ contains
         !
         ! Compute flux from each side
         !
+        !flux_1_m = grad1_pbc_m - 132000._rk*sin(132._rk * worker%x('boundary'))
+        !flux_1_m = grad1_pbc_m - grad1_p_m
+        !flux_2_m = grad2_pbc_m - grad2_p_m
+        !flux_3_m = grad3_pbc_m
         flux_1_m = grad1_pbc_m - grad1_p_m
         flux_2_m = grad2_pbc_m - grad2_p_m
-        flux_3_m = grad3_pbc_m
+        flux_3_m = grad3_pbc_m - grad3_p_m
 
+        !flux_1_p = grad1_pbc_p - 132000._rk*sin(132._rk * worker%x('boundary'))
+        !flux_1_p = grad1_pbc_p - grad1_p_p
+        !flux_2_p = grad2_pbc_p - grad2_p_p
+        !flux_3_p = grad3_pbc_p
         flux_1_p = grad1_pbc_p - grad1_p_p
         flux_2_p = grad2_pbc_p - grad2_p_p
-        flux_3_p = grad3_pbc_p
+        flux_3_p = grad3_pbc_p - grad3_p_p
 
-
-!        flux_3_m = ZERO
-!        flux_3_p = ZERO
-
-
-!        flux_1_m = grad1_pbc_m 
-!        flux_2_m = grad2_pbc_m 
-!        flux_3_m = grad3_pbc_m 
-!
-!        flux_1_p = grad1_pbc_p 
-!        flux_2_p = grad2_pbc_p 
-!        flux_3_p = grad3_pbc_p 
 
 
         !
@@ -156,7 +152,8 @@ contains
                                                 flux_1_m, flux_2_m, flux_3_m,   &
                                                 flux_1_p, flux_2_p, flux_3_p)
 
-        end if ! only faces 1-4
+
+!        end if ! only faces 1-4
 
     end subroutine compute
     !**************************************************************************************************

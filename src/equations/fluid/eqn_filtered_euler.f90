@@ -79,7 +79,7 @@ contains
                 call euler_eqns%add_operator('Euler Volume Cylindrical Source')
 
                 call euler_eqns%add_model('Ideal Gas')
-                call euler_eqns%add_pseudo_timestep(fluid_pseudo_time)
+!                call euler_eqns%add_pseudo_timestep(fluid_pseudo_time)
 
             case default
                 call chidg_signal_one(FATAL, "build_euler: I didn't recognize the construction parameter &

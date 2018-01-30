@@ -104,6 +104,7 @@ module mod_operators
     use graddemo_volume_operator,                only: graddemo_volume_operator_t
     use graddemo_gradp_volume_operator,          only: graddemo_gradp_volume_operator_t
     use graddemo_P_volume_operator,              only: graddemo_P_volume_operator_t
+    use graddemo_P_volume_source,                only: graddemo_P_volume_source_t
     use graddemo_P_boundary_operator,            only: graddemo_P_boundary_operator_t
     use graddemo_P_bc_operator,                  only: graddemo_P_bc_operator_t
 
@@ -111,6 +112,20 @@ module mod_operators
     use pgradtest_volume_operator,              only: pgradtest_volume_operator_t
     use pgradtest_boundary_operator,            only: pgradtest_boundary_operator_t
     use pgradtest_bc_operator,                  only: pgradtest_bc_operator_t
+
+
+    ! Primitive Variable Time-Linearized Euler
+    use PRIMLINEULER_LaxFriedrichs,             only: PRIMLINEULER_LaxFriedrichs_t
+    use PRIMLINEULER_boundary_average,          only: PRIMLINEULER_boundary_average_t
+    use PRIMLINEULER_bc,                        only: PRIMLINEULER_bc_t
+    use PRIMLINEULER_volume_advection,          only: PRIMLINEULER_volume_advection_t
+    use PRIMLINEULER_temporal_source,           only: PRIMLINEULER_temporal_source_t
+    use PRIMLINEULER_axial_source,              only: PRIMLINEULER_axial_source_t
+    use PRIMLINEULER_circumferential_source,    only: PRIMLINEULER_circumferential_source_t
+    use PRIMLINEULER_equation_source,           only: PRIMLINEULER_equation_source_t
+    use PRIMLINEULER_divergence_source,         only: PRIMLINEULER_divergence_source_t
+
+
     implicit none
 
 
@@ -329,6 +344,7 @@ contains
         type(graddemo_volume_operator_t)                 :: graddemo_volume_operator
         type(graddemo_gradp_volume_operator_t)           :: graddemo_gradp_volume_operator
         type(graddemo_P_volume_operator_t)               :: graddemo_P_volume_operator
+        type(graddemo_P_volume_source_t)                 :: graddemo_P_volume_source
         type(graddemo_P_boundary_operator_t)             :: graddemo_P_boundary_operator
         type(graddemo_P_bc_operator_t)                   :: graddemo_P_bc_operator
 
@@ -336,6 +352,17 @@ contains
         type(pgradtest_boundary_operator_t)             :: pgradtest_boundary_operator
         type(pgradtest_bc_operator_t)                   :: pgradtest_bc_operator
 
+
+        ! Linearized Euler Eigen
+        type(PRIMLINEULER_boundary_average_t)           :: PRIMLINEULER_boundary_average
+        type(PRIMLINEULER_volume_advection_t)           :: PRIMLINEULER_volume_advection
+        type(PRIMLINEULER_bc_t)                         :: PRIMLINEULER_bc
+        type(PRIMLINEULER_LaxFriedrichs_t)              :: PRIMLINEULER_LaxFriedrichs
+        type(PRIMLINEULER_temporal_source_t)            :: PRIMLINEULER_temporal_source
+        type(PRIMLINEULER_axial_source_t)               :: PRIMLINEULER_axial_source
+        type(PRIMLINEULER_circumferential_source_t)     :: PRIMLINEULER_circumferential_source
+        type(PRIMLINEULER_equation_source_t)            :: PRIMLINEULER_equation_source
+        type(PRIMLINEULER_divergence_source_t)          :: PRIMLINEULER_divergence_source
 
         if (.not. operators_initialized) then
 
@@ -444,6 +471,7 @@ contains
             call operator_factory%register(graddemo_volume_operator)
             call operator_factory%register(graddemo_gradp_volume_operator)
             call operator_factory%register(graddemo_P_volume_operator)
+            call operator_factory%register(graddemo_P_volume_source)
             call operator_factory%register(graddemo_P_boundary_operator)
             call operator_factory%register(graddemo_P_bc_operator)
 
@@ -451,6 +479,16 @@ contains
             call operator_factory%register(pgradtest_boundary_operator)
             call operator_factory%register(pgradtest_bc_operator)
 
+            ! Linearized Euler Eigen
+            call operator_factory%register(PRIMLINEULER_boundary_average)
+            call operator_factory%register(PRIMLINEULER_volume_advection)
+            call operator_factory%register(PRIMLINEULER_bc)
+            call operator_factory%register(PRIMLINEULER_LaxFriedrichs)
+            call operator_factory%register(PRIMLINEULER_temporal_source)
+            call operator_factory%register(PRIMLINEULER_axial_source)
+            call operator_factory%register(PRIMLINEULER_circumferential_source)
+            call operator_factory%register(PRIMLINEULER_equation_source)
+            call operator_factory%register(PRIMLINEULER_divergence_source)
 
             operators_initialized = .true.
 

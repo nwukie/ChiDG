@@ -458,8 +458,10 @@ contains
                 res = (105_rk/TWO)*pos*(THREE*pos*pos - ONE)
             case(7)
                 res = (105_rk/EIGHT)*(33._rk*pos*pos*pos*pos - 18._rk*pos*pos + ONE)
+            case(8)
+                res = (63._rk/EIGHT)*pos*(143._rk*pos*pos*pos*pos - 110._rk*pos*pos + 15._rk)
             case default
-                print*, "Error: ddlegendre_val1d is only defined through order 6"
+                print*, "Error: ddlegendre_val1d is only defined through order 8"
                 stop
         end select
 

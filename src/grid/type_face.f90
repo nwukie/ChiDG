@@ -300,22 +300,22 @@ contains
         !
         ! (Re)Allocate storage for face data structures.
         !
-        if (allocated(self%jinv))             &
-            deallocate(self%jinv,             &
+        if (allocated(self%jinv))                   &
+            deallocate(self%jinv,                   &
                        self%jinv_def,               &
-                       self%interp_coords,               &
+                       self%interp_coords,          &
                        self%metric,                 &
                        self%norm,                   &
                        self%unorm,                  &
                        self%unorm_def,              &
-                       self%interp_coords_def,           &
+                       self%interp_coords_def,      &
                        self%ale_Dinv,               &
                        self%ale_g,                  &
                        self%ale_g_grad1,            &
                        self%ale_g_grad2,            &
                        self%ale_g_grad3,            &
                        self%ale_g_modes,            &
-                       self%interp_coords_vel,           &
+                       self%interp_coords_vel,      &
                        self%neighbor_ale_Dinv,      &
                        self%neighbor_ale_g,         &
                        self%neighbor_ale_g_grad1,   &
@@ -329,23 +329,22 @@ contains
 
 
 
-        !nnodes = self%basis_s%nnodes_if()
         nnodes = self%basis_s%nnodes_face()
-        allocate(self%jinv(nnodes),               &
+        allocate(self%jinv(nnodes),                     &
                  self%jinv_def(nnodes),                 &
-                 self%interp_coords(nnodes,3),               &
+                 self%interp_coords(nnodes,3),          &
                  self%metric(3,3,nnodes),               &
                  self%norm(nnodes,3),                   &
                  self%unorm(nnodes,3),                  &
                  self%unorm_def(nnodes,3),              &
-                 self%interp_coords_def(nnodes,3),           &
+                 self%interp_coords_def(nnodes,3),      &
                  self%ale_Dinv(3,3,nnodes),             &
                  self%ale_g(nnodes),                    &
                  self%ale_g_grad1(nnodes),              &
                  self%ale_g_grad2(nnodes),              &
                  self%ale_g_grad3(nnodes),              &
                  self%ale_g_modes(self%nterms_s),       &
-                 self%interp_coords_vel(nnodes,3),           &
+                 self%interp_coords_vel(nnodes,3),      &
                  self%neighbor_ale_Dinv(3,3,nnodes),    &
                  self%neighbor_ale_g(nnodes),           &
                  self%neighbor_ale_g_grad1(nnodes),     &

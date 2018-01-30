@@ -316,7 +316,6 @@ contains
             !
             do idom = 1,data%mesh%ndomains()
                 eqn_ID = data%mesh%domain(idom)%eqn_ID
-                !if (trim(data%eqnset(eqn_ID)%name) == 'Filtered Euler') then
                 if (index(trim(data%eqnset(eqn_ID)%name),'Filtered Euler') /= 0) then
                     do ielem = 1,data%mesh%domain(idom)%nelements()
                         do ifield = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()

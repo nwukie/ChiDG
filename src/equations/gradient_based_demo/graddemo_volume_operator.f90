@@ -165,73 +165,32 @@ contains
         !
         ! Compute residual
         !
-        density_residual = -(density  - density_element)
-        mom1_residual    = -(mom1     - mom1_element)
-        mom2_residual    = -(mom2     - mom2_element)
-        mom3_residual    = -(mom3     - mom3_element)
-        energy_residual  = -(energy   - ( (pressure/(gam-ONE)) + HALF*(mom1_element*mom1_element + mom2_element*mom2_element + mom3_element*mom3_element)/density_element))
-        !energy_residual = -(energy   - ( (100000._rk/(gam-ONE)) + HALF*(mom1_element*mom1_element + mom2_element*mom2_element + mom3_element*mom3_element)/density_element))
-        grad1_p_residual = -(grad1_p  - grad1_p_element)
-        grad2_p_residual = -(grad2_p  - grad2_p_element)
-        grad3_p_residual = -(grad3_p  - grad3_p_element)
+        density_residual = -(density - density_element)
+        mom1_residual    = -(mom1    - mom1_element)
+        mom2_residual    = -(mom2    - mom2_element)
+        mom3_residual    = -(mom3    - mom3_element)
+        energy_residual  = -(energy  - ( (pressure/(gam-ONE)) + HALF*(mom1_element*mom1_element + mom2_element*mom2_element + mom3_element*mom3_element)/density_element))
+        grad1_p_residual = -(grad1_p - grad1_p_element)
+        grad2_p_residual = -(grad2_p - grad2_p_element)
+        grad3_p_residual = -(grad3_p - grad3_p_element)
+
+!        energy_residual   = -(energy   - ( (100000._rk/(gam-ONE)) + HALF*(mom1_element*mom1_element + mom2_element*mom2_element + mom3_element*mom3_element)/density_element))
 !        pressure_residual = -(pressure - 100000._rk)
         
-        !
-        ! Project residual
-        !
-!        density_residual_modes  = worker%project_from_nodes(density_residual)
-!        mom1_residual_modes     = worker%project_from_nodes(mom1_residual)
-!        mom2_residual_modes     = worker%project_from_nodes(mom2_residual)
-!        mom3_residual_modes     = worker%project_from_nodes(mom3_residual)
-!        energy_residual_modes   = worker%project_from_nodes(energy_residual)
-!        grad1_p_residual_modes  = worker%project_from_nodes(grad1_p_residual)
-!        grad2_p_residual_modes  = worker%project_from_nodes(grad2_p_residual)
-!        grad3_p_residual_modes  = worker%project_from_nodes(grad3_p_residual)
-        !pressure_residual_modes = worker%project_from_nodes(pressure_residual)
-
-
-
-!        if ( (worker%element_info%idomain_g == 2) .and. (worker%element_info%ielement_g == 1) ) then
-!            average_pressure = sum(pressure)/real(size(pressure),rk)
-!            print*, 'average pressure: ', average_pressure%x_ad_
-!
-!            pressure_residual = pressure
-!            pressure_residual(:) = (average_pressure - 100000._rk)
-!            pressure_residual_modes = worker%project_from_nodes(pressure_residual)
-!
-!!            ! We only want to affect the constant mode
-!!            pressure_residual = pressure_modes
-!!            print*, 'first pressure mode: ', pressure_modes(1)%x_ad_
-!!            pressure_residual(1)  = (pressure_modes(1) - 100000._rk)
-!!            pressure_residual(2:) = ZERO
-!        else
-!            pressure_residual_modes = density_residual_modes
-!            pressure_residual_modes = ZERO
-!        end if
 
 
         !=================================================
         !                      Store
         !=================================================
-        call worker%integrate_volume_source('Density',       density_residual )
-        call worker%integrate_volume_source('Momentum-1',    mom1_residual    )
-        call worker%integrate_volume_source('Momentum-2',    mom2_residual    )
-        call worker%integrate_volume_source('Momentum-3',    mom3_residual    )
-        call worker%integrate_volume_source('Energy',        energy_residual  )
+        call worker%integrate_volume_source('Density',               density_residual)
+        call worker%integrate_volume_source('Momentum-1',            mom1_residual   )
+        call worker%integrate_volume_source('Momentum-2',            mom2_residual   )
+        call worker%integrate_volume_source('Momentum-3',            mom3_residual   )
+        call worker%integrate_volume_source('Energy',                energy_residual )
         call worker%integrate_volume_source('Pressure Gradient - 1', grad1_p_residual)
         call worker%integrate_volume_source('Pressure Gradient - 2', grad2_p_residual)
         call worker%integrate_volume_source('Pressure Gradient - 3', grad3_p_residual)
 !        call worker%integrate_volume_source('Pressure_TEMP', pressure_residual)
-!        call worker%accumulate_residual('Density',               density_residual_modes )
-!        call worker%accumulate_residual('Momentum-1',            mom1_residual_modes    )
-!        call worker%accumulate_residual('Momentum-2',            mom2_residual_modes    )
-!        call worker%accumulate_residual('Momentum-3',            mom3_residual_modes    )
-!        call worker%accumulate_residual('Energy',                energy_residual_modes  )
-!        call worker%accumulate_residual('Pressure Gradient - 1', grad1_p_residual_modes )
-!        call worker%accumulate_residual('Pressure Gradient - 2', grad2_p_residual_modes )
-!        call worker%accumulate_residual('Pressure Gradient - 3', grad3_p_residual_modes )
-
-!        call worker%accumulate_residual('Pressure',              pressure_residual_modes)
 
 
     end subroutine compute

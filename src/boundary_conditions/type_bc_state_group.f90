@@ -446,7 +446,7 @@ contains
         class(bc_state_group_t),    intent(inout)   :: self
         type(mesh_t),               intent(inout)   :: mesh
 
-        integer(ik)                 :: iop, group_ID
+        integer(ik) :: iop, group_ID
 
 
         !

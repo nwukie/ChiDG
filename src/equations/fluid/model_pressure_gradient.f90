@@ -52,7 +52,7 @@ contains
         class(pressure_gradient_t), intent(inout)   :: self
 
         call self%set_name('Pressure Gradient')
-        !call self%set_dependency('f(Q-)')
+        !call self%set_dependency('f(Q-,Q+)')
         call self%set_dependency('f(Grad(Q))')
 
         call self%add_model_field('Pressure Gradient - 1')
@@ -86,34 +86,35 @@ contains
             dp_ddensity, dp_dmom1, dp_dmom2, dp_dmom3, dp_denergy,              &
             grad1_p, grad2_p, grad3_p
 
+
         !
         ! Interpolate solution to quadrature nodes
         !
-        density = worker%get_field('Density',    'value')
-        mom1    = worker%get_field('Momentum-1', 'value')
-        mom2    = worker%get_field('Momentum-2', 'value')
-        mom3    = worker%get_field('Momentum-3', 'value')
-        energy  = worker%get_field('Energy',     'value')
+        density       = worker%get_field('Density',    'value')
+        mom1          = worker%get_field('Momentum-1', 'value')
+        mom2          = worker%get_field('Momentum-2', 'value')
+        mom3          = worker%get_field('Momentum-3', 'value')
+        energy        = worker%get_field('Energy',     'value')
 
-        grad1_density = worker%get_field('Density',    'grad1')
-        grad1_mom1    = worker%get_field('Momentum-1', 'grad1')
-        grad1_mom2    = worker%get_field('Momentum-2', 'grad1')
-        grad1_mom3    = worker%get_field('Momentum-3', 'grad1')
-        grad1_energy  = worker%get_field('Energy',     'grad1')
-
-
-        grad2_density = worker%get_field('Density',    'grad2')
-        grad2_mom1    = worker%get_field('Momentum-1', 'grad2')
-        grad2_mom2    = worker%get_field('Momentum-2', 'grad2')
-        grad2_mom3    = worker%get_field('Momentum-3', 'grad2')
-        grad2_energy  = worker%get_field('Energy',     'grad2')
+        grad1_density = worker%get_field('Density',    'grad1', override_lift=.true.)
+        grad1_mom1    = worker%get_field('Momentum-1', 'grad1', override_lift=.true.)
+        grad1_mom2    = worker%get_field('Momentum-2', 'grad1', override_lift=.true.)
+        grad1_mom3    = worker%get_field('Momentum-3', 'grad1', override_lift=.true.)
+        grad1_energy  = worker%get_field('Energy',     'grad1', override_lift=.true.)
 
 
-        grad3_density = worker%get_field('Density',    'grad3')
-        grad3_mom1    = worker%get_field('Momentum-1', 'grad3')
-        grad3_mom2    = worker%get_field('Momentum-2', 'grad3')
-        grad3_mom3    = worker%get_field('Momentum-3', 'grad3')
-        grad3_energy  = worker%get_field('Energy',     'grad3')
+        grad2_density = worker%get_field('Density',    'grad2', override_lift=.true.)
+        grad2_mom1    = worker%get_field('Momentum-1', 'grad2', override_lift=.true.)
+        grad2_mom2    = worker%get_field('Momentum-2', 'grad2', override_lift=.true.)
+        grad2_mom3    = worker%get_field('Momentum-3', 'grad2', override_lift=.true.)
+        grad2_energy  = worker%get_field('Energy',     'grad2', override_lift=.true.)
+
+
+        grad3_density = worker%get_field('Density',    'grad3', override_lift=.true.)
+        grad3_mom1    = worker%get_field('Momentum-1', 'grad3', override_lift=.true.)
+        grad3_mom2    = worker%get_field('Momentum-2', 'grad3', override_lift=.true.)
+        grad3_mom3    = worker%get_field('Momentum-3', 'grad3', override_lift=.true.)
+        grad3_energy  = worker%get_field('Energy',     'grad3', override_lift=.true.)
 
 
 
@@ -145,10 +146,10 @@ contains
                   dp_denergy  * grad3_energy
 
 
-
         call worker%store_model_field('Pressure Gradient - 1', 'value', grad1_p)
         call worker%store_model_field('Pressure Gradient - 2', 'value', grad2_p)
         call worker%store_model_field('Pressure Gradient - 3', 'value', grad3_p)
+
 
 
     end subroutine compute

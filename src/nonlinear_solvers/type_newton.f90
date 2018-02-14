@@ -274,8 +274,8 @@ contains
                 call data%sdata%q_out%clear()
                 data%sdata%q_out = data%sdata%q
 
-                write(filename, "(A,F8.6,A4)") 'quasi_newton_', real(niter,rk), '.plt'
-                call write_tecio_old(data,filename, write_domains=.true., write_surfaces=.false.)
+                !write(filename, "(A,F8.6,A4)") 'quasi_newton_', real(niter,rk), '.plt'
+                !call write_tecio_old(data,filename, write_domains=.true., write_surfaces=.false.)
 
 
 

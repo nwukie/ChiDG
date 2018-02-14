@@ -79,9 +79,11 @@ contains
     !!  @date   11/5/2016
     !!
     !!  @param[in]  itime - Index for the time step in solution
+    !!  @param[in]  interpolator: optionally, pass in another interpolator to interpolate to 
+    !!              a set of nodes other than the default set of nodes.
     !!
     !-----------------------------------------------------------------------------------------
-    function interpolate_element_autodiff(mesh,vector,elem_info,fcn_info,ifield,itime,interpolation_type,mode_min,mode_max) result(var_gq)
+    function interpolate_element_autodiff(mesh,vector,elem_info,fcn_info,ifield,itime,interpolation_type,interpolator,mode_min,mode_max) result(var_gq)
         type(mesh_t),           intent(in)              :: mesh
         type(chidg_vector_t),   intent(in)              :: vector
         type(element_info_t),   intent(in)              :: elem_info
@@ -89,6 +91,7 @@ contains
         integer(ik),            intent(in)              :: ifield
         integer(ik),            intent(in)              :: itime
         character(*),           intent(in)              :: interpolation_type
+        real(rk),               intent(in), optional    :: interpolator(:,:)
         integer(ik),            intent(in), optional    :: mode_min
         integer(ik),            intent(in), optional    :: mode_max
 
@@ -102,6 +105,13 @@ contains
         logical     :: differentiate_me
 
         associate( idom => elem_info%idomain_l, ielem => elem_info%ielement_l )
+
+
+        user_msg = "interpolate_element_autodiff: currently only supports overriding the &
+                    default interpolator for 'value' interpolations."
+        if (present(interpolator) .and. (interpolation_type /= 'value')) call chidg_signal(FATAL,user_msg)
+
+
 
         !
         ! Get number of derivatives to initialize for automatic differentiation
@@ -167,7 +177,11 @@ contains
         !
         select case (interpolation_type)
             case('value')
-                var_gq = matmul(mesh%domain(idom)%elems(ielem)%basis_s%interpolator_element('Value'),qdiff)
+                if (present(interpolator)) then
+                    var_gq = matmul(interpolator,qdiff)
+                else
+                    var_gq = matmul(mesh%domain(idom)%elems(ielem)%basis_s%interpolator_element('Value'),qdiff)
+                end if
 
             case('grad1')
                 var_gq = matmul(mesh%domain(idom)%elems(ielem)%grad1,qdiff)
@@ -639,7 +653,7 @@ contains
 
 
 
-!
+
 !    !> Interpolate variable from polynomial expansion to explicit values at quadrature nodes. The automatic
 !    !! differentiation process really starts here, when the polynomial expansion is evaluated.
 !    !!

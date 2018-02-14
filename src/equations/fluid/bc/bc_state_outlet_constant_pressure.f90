@@ -1,7 +1,7 @@
 module bc_state_outlet_constant_pressure
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE, HALF, TWO
+    use mod_constants,          only: ZERO, ONE, HALF, TWO, FOUR
     use mod_fluid,              only: gam, Rgas
 
     use type_bc_state,          only: bc_state_t
@@ -25,8 +25,8 @@ module bc_state_outlet_constant_pressure
 
     contains
 
-        procedure   :: init                 !< Set-up bc state with options/name etc.
-        procedure   :: compute_bc_state     !< boundary condition function implementation
+        procedure   :: init                 ! Set-up bc state with options/name etc.
+        procedure   :: compute_bc_state     ! boundary condition function implementation
 
     end type outlet_constant_pressure_t
     !****************************************************************************************
@@ -58,6 +58,7 @@ contains
         ! Add functions
         !
         call self%bcproperties%add('Static Pressure','Required')
+        call self%set_fcn_option('Static Pressure', 'val', 100000._rk)
 
 
     end subroutine init
@@ -95,6 +96,9 @@ contains
 
         real(rk),   allocatable, dimension(:) :: r
         real(rk),   allocatable, dimension(:) :: p_input
+
+        real(rk)    :: rho0, K0
+        integer :: i
 
 
 
@@ -147,6 +151,18 @@ contains
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_m = mom2_m / r
         end if
+
+
+
+!        K0   = 100._rk
+!        rho0 = 1.2_rk
+!        p_input = p_input(1)  +  0.5_rk*rho0*K0*K0*(ONE/(FOUR*FOUR)  -  ONE/(r*r))
+!
+!
+!        do i = 1,size(r)
+!            print*, r(i), p_input(i)
+!        end do
+
 
 
 

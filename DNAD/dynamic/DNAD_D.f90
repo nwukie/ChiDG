@@ -2205,6 +2205,64 @@ CONTAINS
 
 
 
+    !>
+    !!
+    !!
+    !!
+    !!
+    !--------------------------------------------------------
+    function norm2_ad(a) result(n2)
+        type(AD_D), intent(in)  :: a(:)
+
+        type(AD_D), allocatable :: a2(:)
+        type(AD_D)              :: n2
+
+        ! Compute a-squared
+        a2 = a*a
+
+        ! Compute sqrt-sum-squares
+        n2 = sqrt(sum(a2))
+
+    end function norm2_ad
+    !********************************************************
+
+
+
+
+    !>
+    !!
+    !!
+    !!
+    !!
+    !--------------------------------------------------------
+    function dot_product_ad(a,b) result(dp)
+        type(AD_D), intent(in)  :: a(:)
+        type(AD_D), intent(in)  :: b(:)
+
+        type(AD_D)  :: dp
+        integer :: i
+
+        dp = a(1)
+        dp = ZERO
+        do i = 1,size(a)
+            dp = dp + a(i)*b(i)
+        end do
+
+    end function dot_product_ad
+    !********************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

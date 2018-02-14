@@ -1,9 +1,13 @@
-module bc_state_outlet_average_pressure
+module bc_state_outlet_3dgiles_innerproduct
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, HALF, ME, CYLINDRICAL
     use mod_fluid,              only: gam
+    use mod_inv,                only: inv
+    use mod_interpolation,      only: interpolate_linear
+    use mod_fgmres_standard,    only: fgmres_autodiff, fgmres_standard
 
+    use type_point,             only: point_t
     use type_mesh,              only: mesh_t
     use type_bc_state,          only: bc_state_t
     use type_bc_patch,          only: bc_patch_t
@@ -13,6 +17,7 @@ module bc_state_outlet_average_pressure
     use mod_chidg_mpi,          only: IRANK
     use mod_interpolate,        only: interpolate_face_autodiff
     use mpi_f08,                only: MPI_REAL8, MPI_SUM, MPI_AllReduce, mpi_comm, MPI_INTEGER, MPI_BCast
+    use ieee_arithmetic,        only: ieee_is_nan
     use DNAD_D
     implicit none
 
@@ -20,9 +25,7 @@ module bc_state_outlet_average_pressure
 
 
 
-    !>  Name: Outlet - LODI Pressure
-    !!      : Update average pressure using LODI with transverse terms
-    !!      : Extrapolate other characteristics
+    !>  Name: Outlet - 3D Giles
     !!
     !!  Options:
     !!      : Average Pressure
@@ -30,26 +33,19 @@ module bc_state_outlet_average_pressure
     !!  Behavior:
     !!      
     !!  References:
-    !!      [1] Koupper et al."Compatibility of Characteristic Boundary Conditions wth 
-    !!                         Radial Equilibrium in Turbomachinery Simulation."
-    !!                         AIAA Journal, Vol. 52, No. 12, December 2014.
-    !!
-    !!      [2] Granet et al. "Comparison of Nonreflecting Outlet Boundary Conditions for 
-    !!                         Compressible Solvers on Unstructured Grids."
-    !!                         AIAA Journal, Vol. 48, No. 10, October 2010.
-    !!
-    !!      [3] Yoo et al. "Characteristic boundary conditions for direct simulations of
-    !!                      turbulent counterflow flames." 
-    !!                      Combustion Theory and Modelling, Vol. 9, No. 4, November 2005, 
-    !!                      pp. 617-646.
     !!              
     !!  
-    !!  @author Nathan A. average_pressure
-    !!  @date   4/20/2017
+    !!  @author Nathan A. Wukie
+    !!  @date   2/8/2018
     !!
     !----------------------------------------------------------------------------------------
-    type, public, extends(bc_state_t) :: outlet_average_pressure_t
+    type, public, extends(bc_state_t) :: outlet_3dgiles_innerproduct_t
 
+        complex(rk),    allocatable :: k(:)
+        complex(rk),    allocatable :: A(:,:)
+        complex(rk),    allocatable :: B(:,:)
+        type(AD_D),     allocatable :: amp_real(:)
+        type(AD_D),     allocatable :: amp_imag(:)
 
     contains
 
@@ -58,8 +54,9 @@ module bc_state_outlet_average_pressure
         procedure   :: compute_bc_state     ! boundary condition function implementation
 
         procedure   :: compute_averages
+        procedure   :: read_eigendecomposition
 
-    end type outlet_average_pressure_t
+    end type outlet_3dgiles_innerproduct_t
     !****************************************************************************************
 
 
@@ -71,17 +68,17 @@ contains
 
     !>
     !!
-    !!  @author Nathan A. average_pressure (AFRL)
-    !!  @date   8/29/2016
+    !!  @author Nathan A. average_pressure 
+    !!  @date   2/8/2017
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(outlet_average_pressure_t),   intent(inout) :: self
+        class(outlet_3dgiles_innerproduct_t),   intent(inout) :: self
         
         !
         ! Set name, family
         !
-        call self%set_name('Outlet - Average Pressure')
+        call self%set_name('Outlet - 3D Giles Innerproduct')
         call self%set_family('Outlet')
 
 
@@ -121,10 +118,10 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init_bc_coupling(self,mesh,group_ID,bc_COMM)
-        class(outlet_average_pressure_t),  intent(inout)   :: self
-        type(mesh_t),                     intent(inout)   :: mesh
-        integer(ik),                      intent(in)      :: group_ID
-        type(mpi_comm),                   intent(in)      :: bc_COMM
+        class(outlet_3dgiles_innerproduct_t),    intent(inout)   :: self
+        type(mesh_t),               intent(inout)   :: mesh
+        integer(ik),                intent(in)      :: group_ID
+        type(mpi_comm),             intent(in)      :: bc_COMM
 
         integer(ik) :: patch_ID, face_ID, elem_ID, patch_ID_coupled, face_ID_coupled,   &
                        idomain_g, idomain_l, ielement_g, ielement_l, iface,             &
@@ -257,9 +254,6 @@ contains
                         call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,1),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
                         call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,2),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
                         call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,3),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        !call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:)%c1_,    ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        !call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:)%c2_,    ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        !call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:)%c3_,    ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
 
                     end do ! face_ID
                 end do ! patch_ID
@@ -377,29 +371,31 @@ contains
     !!
     !!
     !-------------------------------------------------------------------------------------------
-    subroutine compute_averages(self,worker,bc_COMM, u_avg, v_avg, w_avg, density_avg, p_avg)
-        class(outlet_average_pressure_t),  intent(inout)   :: self
-        type(chidg_worker_t),   intent(inout)   :: worker
-        type(mpi_comm),         intent(in)      :: bc_COMM
-        type(AD_D),             intent(inout)   :: u_avg
-        type(AD_D),             intent(inout)   :: v_avg
-        type(AD_D),             intent(inout)   :: w_avg
-        type(AD_D),             intent(inout)   :: density_avg
-        type(AD_D),             intent(inout)   :: p_avg
+    subroutine compute_averages(self,worker,bc_COMM, vel1_avg, vel2_avg, vel3_avg, density_avg, p_avg)
+        class(outlet_3dgiles_innerproduct_t),    intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        type(mpi_comm),             intent(in)      :: bc_COMM
+        type(AD_D),                 intent(inout)   :: vel1_avg
+        type(AD_D),                 intent(inout)   :: vel2_avg
+        type(AD_D),                 intent(inout)   :: vel3_avg
+        type(AD_D),                 intent(inout)   :: density_avg
+        type(AD_D),                 intent(inout)   :: p_avg
 
-        type(AD_D)          :: face_p, face_M, p_integral, u_integral, v_integral, w_integral, density_integral, face_density, face_u, face_v, face_w
         type(face_info_t)   :: face_info
 
         type(AD_D), allocatable,    dimension(:)    ::  &
             density, mom_1, mom_2, mom_3, energy, p,    &
             u, v, w, c, M, vmag
+        type(AD_D)  :: face_p, face_M, p_integral, u_integral, v_integral, w_integral, &
+                       density_integral, face_density, face_u, face_v, face_w
 
-        real(rk),   allocatable,    dimension(:)    :: weights, areas, r
 
         integer(ik) :: ipatch, iface_bc, idomain_l, ielement_l, iface, ierr, itime, &
                        idensity, imom1, imom2, imom3, ienergy, group_ID, patch_ID, face_ID, &
                        icoupled, idomain_g_coupled, idomain_l_coupled, ielement_g_coupled,  &
                        ielement_l_coupled, iface_coupled
+
+        real(rk),   allocatable,    dimension(:)    :: weights, areas, r
         real(rk)    :: face_area, total_area
 
 
@@ -471,28 +467,13 @@ contains
 
             
             !
-            ! Compute velocity
+            ! Compute quantities for averaging
             !
             u = mom_1 / density
             v = mom_2 / density
             w = mom_3 / density
-
-
-            !
-            ! Compute pressure over the face
-            !
             p = (gam - ONE)*(energy - HALF*density*(u*u + v*v + w*w))
-
-
-            !
-            ! Compute speed of sound and Mach
-            !
             c = sqrt(gam * p / density)
-
-            
-            !
-            ! Compute Mach number
-            !
             vmag = sqrt(u*u + v*v + w*w)
             M = vmag/c
 
@@ -555,14 +536,15 @@ contains
 
 
 
-        !
+                                                      
+        !                                             
         ! Compute average pressure:
         !   area-weighted pressure integral over the total area
         !   
         !
-        u_avg       = u_integral       / total_area
-        v_avg       = v_integral       / total_area
-        w_avg       = w_integral       / total_area
+        vel1_avg    = u_integral       / total_area
+        vel2_avg    = v_integral       / total_area
+        vel3_avg    = w_integral       / total_area
         density_avg = density_integral / total_area
         p_avg       = p_integral       / total_area
 
@@ -577,20 +559,177 @@ contains
 
 
 
-    !>  Compute routine for Pressure Outlet boundary condition state function.
+    !>
     !!
-    !!  @author Nathan A. average_pressure
-    !!  @date   2/3/2016
+    !!  @author Nathan A. Wukie
+    !!  @date   2/8/2018
+    !!
+    !-----------------------------------------------------------------------------------
+    subroutine read_eigendecomposition(self,worker,prop,bc_COMM)
+        class(outlet_3dgiles_innerproduct_t),    intent(inout)   :: self
+        type(chidg_worker_t),       intent(inout)   :: worker
+        class(properties_t),        intent(inout)   :: prop
+        type(mpi_comm),             intent(in)      :: bc_COMM
+
+        !integer, parameter :: ni = 4
+        integer, parameter :: ni = 1
+        integer, parameter :: nfields = 5
+
+        integer     :: nr, nvectors, ierr, handle, ivec, ifield, ai_ind, a_s, a_e, inode, ngq, nvec, i
+
+        complex(rk),    allocatable :: k(:)
+        complex(rk),    allocatable :: A(:,:), B(:,:)
+        real(rk),       allocatable :: r(:), r_gq(:), test(:), ref_coords(:,:), midpoint(:)
+        type(point_t),  allocatable :: coords(:)
+
+        type(AD_D), allocatable, dimension(:)   ::  &
+            density, mom1, mom2, mom3, energy,      &
+            vel1, vel2, vel3, p, q, amp,            &
+            ddensity, dvel1, dvel2, dvel3, dp, U_hat 
+
+        type(AD_D)  :: density_avg, vel1_avg, vel2_avg, vel3_avg, p_avg
+
+        namelist /sizes/  nr, nvectors
+        namelist /eigendecomposition/ k, r, A, B
+
+
+
+        ! Read number of vectors
+        open(newunit=handle,form='formatted',file='test.dat')
+        read(handle,nml=sizes)
+
+        ! Allocate storage
+        if (allocated(k)) deallocate(k)
+        if (allocated(r)) deallocate(r)
+        if (allocated(A)) deallocate(A)
+        if (allocated(B)) deallocate(B)
+        allocate(k(nvectors), r(nr), A(nfields*nr,nvectors), B(nfields*nr,nvectors), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        ! Read eigenvalues, eigenvectors
+        read(handle,nml=eigendecomposition)
+        close(handle)
+
+        ! Store to bc object
+        self%k = k
+        self%A = A
+        self%B = B
+
+        ! Get physical coordinates at midpoint of bc face
+        midpoint = worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%physical_point(ZERO,ZERO,ONE)
+
+        ! Get location in reference space for physical radial coordinate locations
+        ! where the eigenvectors are evaluated at so we can interpolate the solution
+        ! to those locations.
+        allocate(ref_coords(size(r),3), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        do i = 1,size(r)
+            ref_coords(i,:) = worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%computational_point([r(i), midpoint(2), midpoint(3)])
+            if (any(ieee_is_nan(ref_coords(i,:)))) call chidg_signal_two(FATAL,"bc_state_outlet_3dgiles_innerproduct: couldn't find discrete point in reference space.",i,ref_coords(i,1))
+        end do
+
+
+        !
+        ! Interpolate solution to radial locations 
+        !
+        density = worker%interpolate_field('Density',    ref_coords)
+        mom1    = worker%interpolate_field('Momentum-1', ref_coords)
+        mom2    = worker%interpolate_field('Momentum-2', ref_coords)
+        mom3    = worker%interpolate_field('Momentum-3', ref_coords)
+        energy  = worker%interpolate_field('Energy',     ref_coords)
+        mom2 = mom2/r
+
+
+        !
+        ! Compute boundary averages
+        !
+        call self%compute_averages(worker,bc_COMM, vel1_avg, vel2_avg, vel3_avg, density_avg, p_avg)
+
+
+        !
+        ! Compute primitive variables
+        !
+        vel1 = mom1/density
+        vel2 = mom2/density
+        vel3 = mom3/density
+        p = (gam-ONE)*(energy - HALF*((mom1*mom1) + (mom2*mom2) + (mom3*mom3))/density)
+
+        
+        !
+        ! Compute primitive variable perturbation about average state
+        !
+        ddensity = density - density_avg
+        dvel1    = vel1    - vel1_avg
+        dvel2    = vel2    - vel2_avg
+        dvel3    = vel3    - vel3_avg
+        dp       = p       - p_avg
+
+        U_hat = [ddensity, dvel1, dvel2, dvel3, dp]
+
+
+        !
+        ! Compute projection of U_hat onto eigenmodes
+        !
+        allocate(self%amp_real(size(B,2)), self%amp_imag(size(B,2)), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        do ivec = 1,size(B,2)
+            call project_to_eigenmodes(self%amp_real(ivec), self%amp_imag(ivec), B(:,ivec), U_hat)
+        end do
+
+
+
+
+
+
+
+
+!        !
+!        ! Construct interpolation matrix for eigenvectors to quadrature nodes
+!        !
+!        coords = worker%coords()
+!        ngq = size(coords)
+!        if (allocated(self%A_gq)) deallocate(self%A_gq)
+!        allocate(self%A_gq(ngq*nfields,ni*nfields), stat=ierr)
+!        if (ierr /= 0) call AllocationError
+!
+!
+!        do ivec = 1,size(self%A_gq,2)
+!            do ifield = 1,nfields
+!                do inode = 1,ngq
+!                    a_s = 1 + nr*(ifield-1)
+!                    a_e = a_s + (nr-1)
+!                    ai_ind = 1 + (inode-1) + ngq*(ifield-1)
+!
+!                    self%A_gq(ai_ind,ivec) = interpolate_linear(r,self%A(a_s:a_e,ivec),coords(inode)%c1_)
+!                end do
+!            end do
+!        end do
+
+
+    end subroutine read_eigendecomposition
+    !***********************************************************************************
+
+
+
+
+
+
+
+    !>  
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/8/2018
     !!
     !!  @param[in]      worker  Interface for geometry, cache, integration, etc.
     !!  @param[inout]   prop    properties_t object containing equations and material_t objects
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_COMM)
-        class(outlet_average_pressure_t),    intent(inout)   :: self
-        type(chidg_worker_t),               intent(inout)   :: worker
-        class(properties_t),                intent(inout)   :: prop
-        type(mpi_comm),                     intent(in)      :: bc_COMM
+        class(outlet_3dgiles_innerproduct_t),   intent(inout)   :: self
+        type(chidg_worker_t),                   intent(inout)   :: worker
+        class(properties_t),                    intent(inout)   :: prop
+        type(mpi_comm),                         intent(in)      :: bc_COMM
 
 
         ! Storage at quadrature nodes
@@ -600,17 +739,28 @@ contains
             grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,  &
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,  &
             grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
-            u_bc, v_bc, w_bc, p_bc,                                                     &
-            u_m,  v_m,  w_m,  p_m,                                                      &
-            ddensity_c,    du_c,    dv_c,    dw_c,    dp_c,                             &
-            c1, c2, c3, c4, ddensity, dp, du, dv, dw
+            vel1_bc, vel2_bc, vel3_bc, p_bc,                                            &
+            vel1_m,  vel2_m,  vel3_m,  p_m,                                             &
+            ddensity,       dvel1,      dvel2,      dvel3,      dp,                     &
+            ddensity_c,     dvel1_c,    dvel2_c,    dvel3_c,    dp_c,                   &
+            ddensity_a,     dvel1_a,    dvel2_a,    dvel3_a,    dp_a,                   &
+            ddensity_ad,    dvel1_ad,   dvel2_ad,   dvel3_ad,   dp_ad,                  &
+            c1, c2, c3, c4, du_a, du_ad
 
 
-        type(AD_D)  :: p_avg, u_avg, v_avg, w_avg, density_avg, M_avg, c_avg, c4_1d, ddensity_mean, du_mean, dv_mean, dw_mean, dp_mean
+        type(AD_D)  :: p_avg, vel1_avg, vel2_avg, vel3_avg, density_avg, M_avg, c_avg, &
+                       c4_1d, ddensity_mean, dvel1_mean, dvel2_mean, dvel3_mean, dp_mean
 
-        real(rk),       allocatable, dimension(:)   ::  p_user, r
-        integer :: i
+        real(rk),   allocatable, dimension(:)   ::  p_user, r
+        integer :: i, ngq
 
+
+
+
+        !
+        !
+        !
+        call self%read_eigendecomposition(worker,prop,bc_COMM)
 
         !
         ! Get back pressure from function.
@@ -697,129 +847,144 @@ contains
         !
         ! Update average pressure
         !
-        call self%compute_averages(worker,bc_COMM,u_avg, v_avg, w_avg, density_avg, p_avg)
+        call self%compute_averages(worker,bc_COMM,vel1_avg, vel2_avg, vel3_avg, density_avg, p_avg)
         c_avg = sqrt(gam*p_avg/density_avg)
-
-
-        !
-        ! Compute velocities
-        !
-        u_m = mom1_m/density_m
-        v_m = mom2_m/density_m
-        w_m = mom3_m/density_m
-
-
-        !
-        ! Compute pressure from extrapolated data
-        !
-        p_m = worker%get_field('Pressure', 'value', 'face interior')
-        !p_m = (gam-ONE)*(energy_m - HALF*( (mom1_m*mom1_m) + (mom2_m*mom2_m) + (mom3_m*mom3_m) )/density_m )
-    
-
-        
-!        !
-!        ! Define boundary primitive quantities
-!        !
-!        density_bc = density_m
-!        u_bc       = u_m
-!        v_bc       = v_m
-!        w_bc       = w_m
-!        p_bc       = p_user  +  (p_m - p_avg)
 
 
         !
         ! Compute update for average quantities
         !
+        ! Initialize derivatives and set to zero
+        dvel1_mean = density_m(1)
+        dvel2_mean = density_m(1)
+        dvel3_mean = density_m(1)
+        dvel1_mean = ZERO
+        dvel2_mean = ZERO
+        dvel3_mean = ZERO
+
+
         !c4_1d         = -TWO*(p_avg - p_user(1))
         !ddensity_mean =  c4_1d/(TWO*c_avg*c_avg)
-        !du_mean       = -c4_1d/(TWO*density_avg*c_avg)
+        !dvel1_mean       = -c4_1d/(TWO*density_avg*c_avg)
         !dp_mean       =  HALF*c4_1d
         c4_1d         = -TWO*(p_avg - p_user(1))
         ddensity_mean =  c4_1d/(TWO*c_avg*c_avg)
-        dw_mean       = -c4_1d/(TWO*density_avg*c_avg)
+        dvel3_mean    = -c4_1d/(TWO*density_avg*c_avg)
         dp_mean       =  HALF*c4_1d
 
 
         !
-        ! Compute perturbation from mean
+        ! Get primitive variables
         !
-        du       = u_m       - u_avg
-        dv       = v_m       - v_avg
-        dw       = w_m       - w_avg
+        vel1_m = mom1_m/density_m
+        vel2_m = mom2_m/density_m
+        vel3_m = mom3_m/density_m
+        p_m = worker%get_field('Pressure', 'value', 'face interior')
+
+
+
+        !
+        ! Compute perturbation from avg
+        !
         ddensity = density_m - density_avg
+        dvel1    = vel1_m    - vel1_avg
+        dvel2    = vel2_m    - vel2_avg
+        dvel3    = vel3_m    - vel3_avg
         dp       = p_m       - p_avg
 
+        
+        !
+        ! Interpolate acoustic part of perturbation onto quadrature nodes
+        !
+!        ngq = size(density_m)
+!        du_a = matmul(self%A_gq, self%amp)
+!        ddensity_a = du_a(0*ngq+1:1*ngq)
+!        dvel1_a    = du_a(1*ngq+1:2*ngq)
+!        dvel2_a    = du_a(2*ngq+1:3*ngq)
+!        dvel3_a    = du_a(3*ngq+1:4*ngq)
+!        dp_a       = du_a(4*ngq+1:5*ngq)
+!
+!
+!        !
+!        ! Compute convected part of the perturbation by subtracting the acoustic perturbation
+!        !
+!        ddensity_c = ddensity - ddensity_a
+!        dvel1_c    = dvel1    - dvel1_a
+!        dvel2_c    = dvel2    - dvel2_a
+!        dvel3_c    = dvel3    - dvel3_a
+!        dp_c       = dp       - dp_a
+!
+!
+!        ! Now zero out amplitude of all upstream-traveling eigenmodes
+!        !do i = 1,size(self%k)
+!        do i = 1,size(self%amp)
+!            if (imagpart(self%k(i)) < 0.) then
+!            !if (imagpart(self%k(i)) > 0.) then
+!                self%amp(i) = ZERO
+!            end if
+!        end do
+    
+
+!        ! Interpolate downstream-traveling acoustic perturbation onto quadrature nodes
+!        du_ad = matmul(self%A_gq, self%amp)
+!        ddensity_ad = du_ad(0*ngq+1:1*ngq)
+!        dvel1_ad    = du_ad(1*ngq+1:2*ngq)
+!        dvel2_ad    = du_ad(2*ngq+1:3*ngq)
+!        dvel3_ad    = du_ad(3*ngq+1:4*ngq)
+!        dp_ad       = du_ad(4*ngq+1:5*ngq)
+
 
         !
-        ! Compute 1D characteristics 
-        !
-        allocate(c1(size(dp)), c2(size(dp)), c3(size(dp)), c4(size(dp)))
-        do i = 1,size(dp)
-            !c1(i) = -c_avg*c_avg*ddensity(i)  +  dp(i)
-            !c2(i) =  density_avg*c_avg*dv(i)
-            !c3(i) =  density_avg*c_avg*du(i)  +  dp(i)
-            !c4(i) = -density_avg*c_avg*du(i)  +  dp(i)
-            c1(i) = -c_avg*c_avg*ddensity(i)  +  dp(i)
-            c2(i) =  density_avg*c_avg*dv(i)
-            c3(i) =  density_avg*c_avg*dw(i)  +  dp(i)
-            c4(i) = -density_avg*c_avg*dw(i)  +  dp(i)
-        end do
-
-
-
-
-        !
-        ! Compute update from characteristics for perturbation quantities: No contribution from c4
-        !
-        allocate(ddensity_c(size(dp)), du_c(size(dp)), dv_c(size(dp)), dw_c(size(dp)), dp_c(size(dp)))
-        do i = 1,size(dp)
-            !ddensity_c(i) = -c1(i)/(c_avg*c_avg)  +  c3(i)/(TWO*c_avg*c_avg) 
-            !du_c(i)       =  c3(i)/(TWO*density_avg*c_avg)
-            !dv_c(i)       =  c2(i)/(density_avg*c_avg)
-            !dp_c(i)       =  c3(i)/TWO
-            ddensity_c(i) = -c1(i)/(c_avg*c_avg)  +  c3(i)/(TWO*c_avg*c_avg) 
-            dw_c(i)       =  c3(i)/(TWO*density_avg*c_avg)
-            dv_c(i)       =  c2(i)/(density_avg*c_avg)
-            dp_c(i)       =  c3(i)/TWO
-        end do
-
-
-
-        !
-        ! Construct boundary state from average and perturbations
+        ! Construct boundary state from:
+        !   average  +  
+        !   average_update(1d characteristics)  +  
+        !   convected 2D perturbation  +  
+        !   downstream-traveling 2D acoustic perturbation
         !
         density_bc = density_m
-        u_bc = density_m
-        v_bc = density_m
-        w_bc = density_m
-        p_bc = density_m
+        vel1_bc    = density_m
+        vel2_bc    = density_m
+        vel3_bc    = density_m
+        p_bc       = density_m
         do i = 1,size(dp)
-            !density_bc(i) = density_avg  +  ddensity_mean  +  ddensity_c(i)
-            !u_bc(i)       = u_avg        +  du_mean        +  du_c(i)
-            !v_bc(i)       = v_avg                          +  dv_c(i)
-            !w_bc(i)       = w_m(i)
-            !p_bc(i)       = p_avg        +  dp_mean        +  dp_c(i)
-            density_bc(i) = density_avg  +  ddensity_mean  +  ddensity_c(i)
-            u_bc(i)       = u_m(i)
-            v_bc(i)       = v_avg                          +  dv_c(i)
-            w_bc(i)       = w_avg        +  dw_mean        +  dw_c(i)
-            p_bc(i)       = p_avg        +  dp_mean        +  dp_c(i)
+
+            density_bc(i) = density_avg  +  ddensity_mean
+            vel1_bc(i)    = vel1_avg     +  dvel1_mean   
+            vel2_bc(i)    = vel2_avg     +  dvel2_mean   
+            vel3_bc(i)    = vel3_avg     +  dvel3_mean   
+            p_bc(i)       = p_avg        +  dp_mean      
+
+
+        
+!            density_bc(i) = density_avg  +  ddensity_mean  +  ddensity_c(i)  +  ddensity_ad(i)
+!            vel1_bc(i)    = vel1_avg     +  dvel1_mean     +  dvel1_c(i)     +  dvel1_ad(i)
+!            vel2_bc(i)    = vel2_avg     +  dvel2_mean     +  dvel2_c(i)     +  dvel2_ad(i)
+!            vel3_bc(i)    = vel3_avg     +  dvel3_mean     +  dvel3_c(i)     +  dvel3_ad(i)
+!            p_bc(i)       = p_avg        +  dp_mean        +  dp_c(i)        +  dp_ad(i)
+        
+!            density_bc(i) = density_avg  +  ddensity_mean  +  ddensity_c(i) 
+!            vel1_bc(i)    = vel1_avg     +  dvel1_mean     +  dvel1_c(i)     
+!            vel2_bc(i)    = vel2_avg     +  dvel2_mean     +  dvel2_c(i)     
+!            vel3_bc(i)    = vel3_avg     +  dvel3_mean     +  dvel3_c(i)     
+!            p_bc(i)       = p_avg        +  dp_mean        +  dp_c(i)        
+!
+!            density_bc(i) = density_avg  +  ddensity_mean  
+!            vel1_bc(i)    = vel1_avg     +  dvel1_mean     
+!            vel2_bc(i)    = vel2_avg     +  dvel2_mean     
+!            vel3_bc(i)    = vel3_avg     +  dvel3_mean     
+!            p_bc(i)       = p_avg        +  dp_mean        
+
         end do
-
-
-
 
 
         !
         ! Form conserved variables
         !
         density_bc = density_bc
-        mom1_bc    = density_bc*u_bc
-        mom2_bc    = density_bc*v_bc
-        mom3_bc    = density_bc*w_bc
-        energy_bc  = p_bc/(gam - ONE)  + (density_bc*HALF)*(u_bc*u_bc + v_bc*v_bc + w_bc*w_bc)
-
-
+        mom1_bc    = density_bc*vel1_bc
+        mom2_bc    = density_bc*vel2_bc
+        mom3_bc    = density_bc*vel3_bc
+        energy_bc  = p_bc/(gam - ONE)  + (density_bc*HALF)*(vel1_bc*vel1_bc + vel2_bc*vel2_bc + vel3_bc*vel3_bc)
 
 
         !
@@ -828,8 +993,6 @@ contains
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_bc = mom2_bc * r
         end if
-
-
 
 
         !
@@ -846,11 +1009,62 @@ contains
 
 
     end subroutine compute_bc_state
-    !**********************************************************************************************
+    !*********************************************************************************
 
 
 
 
 
 
-end module bc_state_outlet_average_pressure
+    !>
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/14/2018
+    !!
+    !---------------------------------------------------------------------------------
+    subroutine project_to_eigenmodes(amp_real, amp_imag, VL, U_hat)
+        type(AD_D),     intent(inout)   :: amp_real
+        type(AD_D),     intent(inout)   :: amp_imag
+        complex(rk),    intent(in)      :: VL(:)
+        type(AD_D),     intent(in)      :: U_hat(:)
+
+        integer :: i
+
+        amp_real = U_hat(1)
+        amp_imag = U_hat(1)
+        amp_real = ZERO
+        amp_imag = ZERO
+        do i = 1,size(VL)
+            amp_real = amp_real + realpart(VL(i)) * U_hat(i)
+            ! Minus here due to conjugate in inner-product definition
+            amp_imag = amp_imag - imagpart(VL(i)) * U_hat(i)
+        end do
+
+
+    end subroutine project_to_eigenmodes
+    !*********************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+end module bc_state_outlet_3dgiles_innerproduct

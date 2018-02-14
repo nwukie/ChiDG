@@ -128,10 +128,10 @@ contains
         call worker%integrate_volume_source('Pressure',source)
 
 
-        !
-        ! Store off matrix contributions
-        !
-        worker%solverdata%E = worker%solverdata%lhs
+!        !
+!        ! Store off matrix contributions
+!        !
+!        worker%solverdata%E = worker%solverdata%lhs
 
     end subroutine compute
     !*********************************************************************************************************

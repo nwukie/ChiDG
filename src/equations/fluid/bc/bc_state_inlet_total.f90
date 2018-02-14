@@ -118,9 +118,8 @@ contains
             PT, TT, DRHO, n1, n2, n3, nmag, alpha, r, unorm_1, unorm_2, unorm_3
 
 !<<<<<<< HEAD
-!            TT, n1, n2, n3, nmag, alpha, r, PT
-!
-!        real(rk)    :: K0, u_x
+
+        real(rk)    :: K0, u_axial
 !=======
 !
 !        real(rk)    :: ntol, rafac
@@ -203,16 +202,6 @@ contains
 
 
 
-!        !
-!        ! Compute normal vector
-!        !
-!        K0 = 10._rk
-!        u_x = 40._rk
-!        alpha = atan2(K0/r,u_x)
-!        
-!        n1 = ZERO
-!        n2 = sin(alpha)
-!        n3 = cos(alpha)
 
 
 
@@ -224,6 +213,21 @@ contains
         u_m = mom1_m/density_m
         v_m = mom2_m/density_m
         w_m = mom3_m/density_m
+
+
+        !
+        ! Compute normal vector
+        !
+        K0      = 100._rk
+        u_axial = 50._rk
+        alpha = atan2(K0/r,u_axial)
+        
+        n1 = ZERO
+        n2 = sin(alpha)
+        n3 = cos(alpha)
+
+
+
 
 
 

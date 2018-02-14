@@ -1,4 +1,5 @@
 add_subdirectory(grid_generators)
+add_subdirectory(duct_acoustics)
 
 add_lib_sources(messenger.f90 
                 mod_test_utilities.f90

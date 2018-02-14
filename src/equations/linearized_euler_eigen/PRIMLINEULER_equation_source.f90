@@ -163,10 +163,10 @@ contains
 
 
 
-        !
-        ! Store off matrix contributions
-        !
-        worker%solverdata%D = worker%solverdata%lhs
+!        !
+!        ! Store off matrix contributions
+!        !
+!        worker%solverdata%D = worker%solverdata%lhs
 
     end subroutine compute
     !******************************************************************************************************

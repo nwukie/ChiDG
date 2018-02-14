@@ -232,14 +232,14 @@ contains
         call worker%integrate_boundary_condition('Pressure','Advection',flux_1,flux_2,flux_3)
 
 
-        !
-        ! Store off matrix contributions
-        !
-        if (worker%iface == 1) then
-            worker%solverdata%A3a = worker%solverdata%lhs
-        else if (worker%iface == 2) then
-            worker%solverdata%A3b = worker%solverdata%lhs
-        end if
+!        !
+!        ! Store off matrix contributions
+!        !
+!        if (worker%iface == 1) then
+!            worker%solverdata%A3a = worker%solverdata%lhs
+!        else if (worker%iface == 2) then
+!            worker%solverdata%A3b = worker%solverdata%lhs
+!        end if
 
 
 

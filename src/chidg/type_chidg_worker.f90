@@ -33,8 +33,9 @@ module type_chidg_worker
                                       ONE, THIRD, TWO, NOT_A_FACE, BOUNDARY,    &
                                       CARTESIAN, CYLINDRICAL, INTERIOR, HALF
 
-    use mod_inv,    only: inv
+    use mod_inv,                only: inv
     use mod_interpolate,        only: interpolate_element_autodiff
+    use mod_polynomial,         only: polynomial_val
     use mod_integrate,          only: integrate_boundary_scalar_flux, &
                                       integrate_volume_vector_flux,   &
                                       integrate_volume_scalar_source, &
@@ -90,6 +91,7 @@ module type_chidg_worker
 
 
         ! Worker get/set data
+        procedure   :: interpolate_field
         procedure   :: get_field
         procedure   :: store_bc_state
         procedure   :: store_model_field
@@ -125,6 +127,7 @@ module type_chidg_worker
         procedure   :: y
         procedure   :: z
         procedure   :: coordinate
+        procedure   :: coordinate_arbitrary
 
         procedure   :: element_size
         procedure   :: solution_order
@@ -579,7 +582,8 @@ contains
                 eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
                 ifield    = self%prop(eqn_ID)%get_primary_field_index(field)
 
-                var_gq = interpolate_element_autodiff(self%mesh, self%solverdata%q, self%element_info, self%function_info, ifield, self%itime, interp_type, Pmin, Pmax)
+                !var_gq = interpolate_element_autodiff(self%mesh, self%solverdata%q, self%element_info, self%function_info, ifield, self%itime, interp_type, Pmin, Pmax)
+                var_gq = interpolate_element_autodiff(self%mesh, self%solverdata%q, self%element_info, self%function_info, ifield, self%itime, interp_type, mode_min=Pmin, mode_max=Pmax)
 
             else if ( (cache_type == 'gradient') .or. &
                       (cache_type == 'gradient + lift') ) then
@@ -620,19 +624,68 @@ contains
 
 
     end function get_primary_field_element
-    !****************************************************************************************
+    !***************************************************************************************
 
 
 
 
-
-
-
-
-
-
-    !>
+    !>  Construct the interpolation of a field from a polynomial expansion to
+    !!  discrete reference coordinates.
     !!
+    !!  Note: this interpolates to REFERENCE coordinates for the particular element 
+    !!  currently being visited. [xi,eta,zeta] in [-1,1]
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/8/2018
+    !!
+    !---------------------------------------------------------------------------------------
+    function interpolate_field(self,field,ref_nodes) result(var_gq)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: field
+        real(rk),               intent(in)  :: ref_nodes(:,:)
+
+        type(AD_D), allocatable :: var_gq(:)
+        real(rk),   allocatable :: interpolator(:,:) 
+        integer(ik)             :: nterms, nnodes, ierr, iterm, eqn_ID, ifield, inode
+
+        !
+        ! Construct interpolation matrix
+        !
+        nterms = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%nterms_s
+        nnodes = size(ref_nodes,1)
+        allocate(interpolator(nnodes,nterms), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        do iterm = 1,nterms
+            do inode = 1,nnodes
+                interpolator(inode,iterm) = polynomial_val(3,nterms,iterm,ref_nodes(inode,1:3))
+            end do
+        end do
+
+        !
+        ! Get access index in solution vector for field being interpolated
+        !
+        eqn_ID = self%mesh%domain(self%element_info%idomain_l)%eqn_ID
+        ifield = self%prop(eqn_ID)%get_primary_field_index(trim(field))
+
+
+        !
+        ! Call interpolation with interpolator overriding default interpolator
+        !
+        var_gq = interpolate_element_autodiff(self%mesh,self%solverdata%q,self%element_info,self%function_info,ifield,self%itime,'value',interpolator=interpolator)
+
+
+
+
+    end function interpolate_field
+    !***************************************************************************************
+
+
+
+
+    !>  Return a field from the chidg_cache.
+    !!
+    !!  Data in the chidg_cache is already interpolated to quadrature nodes.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   7/10/2017
@@ -1906,6 +1959,41 @@ contains
 
     end function coordinate
     !**************************************************************************************
+
+
+
+
+
+    !>  Interface for returning coordinates.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   02/16/2017
+    !!
+    !!
+    !--------------------------------------------------------------------------------------
+    function coordinate_arbitrary(self,ref_coords) result(phys_coords)
+        class(chidg_worker_t),  intent(in)              :: self
+        real(rk),               intent(in)              :: ref_coords(:,:)
+
+        real(rk)    :: phys_coords(size(ref_coords,1),size(ref_coords,2))
+        integer     :: i
+
+        do i = 1,size(ref_coords,1)
+            phys_coords(i,:) = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%physical_point(ref_coords(i,1),ref_coords(i,2),ref_coords(i,3))
+        end do
+
+    end function coordinate_arbitrary
+    !**************************************************************************************
+
+
+
+
+
+
+
+
+
+
 
 
 

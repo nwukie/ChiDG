@@ -32,17 +32,17 @@ module type_solverdata
         type(chidg_vector_t)             :: rhs             ! Residual of the spatial scheme
         type(chidg_matrix_t)             :: lhs             ! Linearization of the spatial scheme
 
-        ! Individual contributions to the Linearized Euler Eigensystem
-        type(chidg_matrix_t)             :: A1              ! Contributions from radial discretization (Volume)
-        type(chidg_matrix_t)             :: A2a             ! Contributions from radial discretization (Boundary Average)
-        type(chidg_matrix_t)             :: A2b             ! Contributions from radial discretization (Boundary Dissipation)
-        type(chidg_matrix_t)             :: A3a             ! Contributions from radial discretization (BC)(face1)
-        type(chidg_matrix_t)             :: A3b             ! Contributions from radial discretization (BC)(face2)
-        type(chidg_matrix_t)             :: B               ! Contributions from circumferential derivative
-        type(chidg_matrix_t)             :: C               ! Contributions from axial derivative
-        type(chidg_matrix_t)             :: D               ! Contributions from coordinate system or choice of equation
-        type(chidg_matrix_t)             :: E               ! Contributions from temporal derivative
-        type(chidg_matrix_t)             :: F               ! Contributions from divergence source term
+!        ! Individual contributions to the Linearized Euler Eigensystem
+!        type(chidg_matrix_t)             :: A1              ! Contributions from radial discretization (Volume)
+!        type(chidg_matrix_t)             :: A2a             ! Contributions from radial discretization (Boundary Average)
+!        type(chidg_matrix_t)             :: A2b             ! Contributions from radial discretization (Boundary Dissipation)
+!        type(chidg_matrix_t)             :: A3a             ! Contributions from radial discretization (BC)(face1)
+!        type(chidg_matrix_t)             :: A3b             ! Contributions from radial discretization (BC)(face2)
+!        type(chidg_matrix_t)             :: B               ! Contributions from circumferential derivative
+!        type(chidg_matrix_t)             :: C               ! Contributions from axial derivative
+!        type(chidg_matrix_t)             :: D               ! Contributions from coordinate system or choice of equation
+!        type(chidg_matrix_t)             :: E               ! Contributions from temporal derivative
+!        type(chidg_matrix_t)             :: F               ! Contributions from divergence source term
 
         !
         ! Container for reading data

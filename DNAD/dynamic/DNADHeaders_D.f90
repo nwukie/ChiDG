@@ -312,3 +312,16 @@
         MODULE PROCEDURE SUM_D_D ! sum a dual array
    END INTERFACE
 
+
+   PUBLIC NORM2
+   INTERFACE NORM2
+        MODULE PROCEDURE norm2_ad ! sum a dual array
+   END INTERFACE
+
+
+   PUBLIC dot_product
+   INTERFACE dot_product
+        MODULE PROCEDURE dot_product_ad ! sum a dual array
+   END INTERFACE
+
+

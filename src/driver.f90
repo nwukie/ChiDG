@@ -30,7 +30,7 @@ program driver
     use mod_chidg_clone,        only: chidg_clone
     use mod_chidg_post_hdf2tec, only: chidg_post_hdf2tec_new
     use mod_tutorials,          only: tutorial_driver
-    use mod_euler_eigenmodes,   only: compute_euler_eigenmodes, compute_euler_eigenmodes_new, compute_euler_eigenmodes_new_new
+    use mod_euler_eigenmodes,   only: compute_euler_eigenmodes
 
     use mod_oscillating_cylinder_1, only: oscillating_cylinder
     
@@ -481,15 +481,7 @@ program driver
                 call tutorial_driver(trim(tutorial))
 
             case ('eigen')
-                if (narg /= 2) call chidg_signal(FATAL,"The 'eigen' action expects to be called as: chidg eigen gridfile.h5.")
-                call get_command_argument(2,grid_file)
-                call compute_euler_eigenmodes(trim(grid_file))
-
-            case ('eigen_new')
-                call compute_euler_eigenmodes_new()
-
-            case ('eigen_new_new')
-                call compute_euler_eigenmodes_new_new()
+                call compute_euler_eigenmodes()
 
             case default
                 call chidg_signal(FATAL,"We didn't understand the way chidg was called. Available chidg 'actions' are: 'edit' 'convert' 'post' 'matplotlib' and 'airfoil'.")

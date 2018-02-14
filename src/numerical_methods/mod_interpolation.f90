@@ -16,16 +16,24 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine interpolate(interpolation_type, xarray, yarray, xnew, ynew)
+    !subroutine interpolate(interpolation_type, xarray, yarray, xnew, ynew)
+    !    character(*),   intent(in)      :: interpolation_type
+    !    real(rk),       intent(in)      :: xarray(:)
+    !    real(rk),       intent(in)      :: yarray(:)
+    !    real(rk),       intent(in)      :: xnew
+    !    real(rk),       intent(inout)   :: ynew
+    function interpolate(interpolation_type, xarray, yarray, xnew) result(ynew)
         character(*),   intent(in)      :: interpolation_type
         real(rk),       intent(in)      :: xarray(:)
         real(rk),       intent(in)      :: yarray(:)
         real(rk),       intent(in)      :: xnew
-        real(rk),       intent(inout)   :: ynew
+
+        real(rk) :: ynew
 
 
         if ( interpolation_type == 'linear' ) then
-            call interpolate_linear(xarray,yarray,xnew,ynew)
+            !call interpolate_linear(xarray,yarray,xnew,ynew)
+            ynew = interpolate_linear(xarray,yarray,xnew)
 
         else
             call chidg_signal_one(FATAL, "interpolate: invalid interpolation_type.", interpolation_type)
@@ -34,7 +42,7 @@ contains
 
 
 
-    end subroutine interpolate
+    end function interpolate
     !***************************************************************************************
 
 
@@ -48,16 +56,19 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   4/2/2016
     !!
-    !!
     !---------------------------------------------------------------------------------------
-    subroutine interpolate_linear(xarray,yarray, xnew,ynew)
-        real(rk),       intent(in)      :: xarray(:)
-        real(rk),       intent(in)      :: yarray(:)
-        real(rk),       intent(in)      :: xnew
-        real(rk),       intent(inout)   :: ynew
+    !subroutine interpolate_linear(xarray,yarray,xnew,ynew)
+    !    real(rk),   intent(in)      :: xarray(:)
+    !    real(rk),   intent(in)      :: yarray(:)
+    !    real(rk),   intent(in)      :: xnew
+    !    real(rk),   intent(inout)   :: ynew
+    function interpolate_linear(xarray,yarray,xnew) result(ynew)
+        real(rk),   intent(in)      :: xarray(:)
+        real(rk),   intent(in)      :: yarray(:)
+        real(rk),   intent(in)      :: xnew
 
         integer     :: ival, lindex, hindex
-        real(rk)    :: xlow_current, xhigh_current
+        real(rk)    :: xlow_current, xhigh_current, ynew
         logical     :: out_of_bounds
 
 
@@ -104,7 +115,7 @@ contains
         !
         ynew = yarray(lindex) + ( yarray(hindex) - yarray(lindex) ) * ( xnew - xarray(lindex) )/( xarray(hindex) - xarray(lindex) )
 
-    end subroutine interpolate_linear
+    end function interpolate_linear
     !***************************************************************************************
 
 

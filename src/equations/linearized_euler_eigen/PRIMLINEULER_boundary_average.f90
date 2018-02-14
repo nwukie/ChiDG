@@ -361,10 +361,10 @@ contains
                                                 flux_1_p,flux_2_p,flux_3_p)
 
 
-        !
-        ! Store off matrix contributions
-        !
-        worker%solverdata%A2a = worker%solverdata%lhs
+!        !
+!        ! Store off matrix contributions
+!        !
+!        worker%solverdata%A2a = worker%solverdata%lhs
 
 
     end subroutine compute

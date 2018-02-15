@@ -43,6 +43,7 @@ module bc_state_outlet_3dgiles_innerproduct
 
         complex(rk),    allocatable :: k(:)
         complex(rk),    allocatable :: A(:,:)
+        complex(rk),    allocatable :: A_gq(:,:)
         complex(rk),    allocatable :: B(:,:)
         type(AD_D),     allocatable :: amp_real(:)
         type(AD_D),     allocatable :: amp_imag(:)
@@ -460,8 +461,9 @@ contains
             mom_3   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom3,    itime, 'value', ME)
             energy  = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, ienergy,  itime, 'value', ME)
 
-            if (worker%mesh%domain(idomain_l_coupled)%elems(ielement_l_coupled)%coordinate_system == CYLINDRICAL) then
-                mom_2 = mom_2 / worker%mesh%domain(idomain_l_coupled)%elems(ielement_l_coupled)%interp_coords_def(:,1)
+            r = worker%coordinate('1','boundary')
+            if (worker%coordinate_system() == 'Cylindrical') then
+                mom_2 = mom_2 / r
             end if
 
 
@@ -472,7 +474,8 @@ contains
             u = mom_1 / density
             v = mom_2 / density
             w = mom_3 / density
-            p = (gam - ONE)*(energy - HALF*density*(u*u + v*v + w*w))
+            !p = (gam - ONE)*(energy - HALF*density*(u*u + v*v + w*w))
+            p = (gam-ONE)*(energy - HALF*((mom_1*mom_1) + (mom_2*mom_2) + (mom_3*mom_3))/density)
             c = sqrt(gam * p / density)
             vmag = sqrt(u*u + v*v + w*w)
             M = vmag/c
@@ -490,10 +493,10 @@ contains
             !
             ! Integrate and contribute to average
             !
+            face_density = sum(density * areas * weights)
             face_u       = sum(u       * areas * weights)
             face_v       = sum(v       * areas * weights)
             face_w       = sum(w       * areas * weights)
-            face_density = sum(density * areas * weights)
             face_p       = sum(p       * areas * weights)
 
 
@@ -579,8 +582,9 @@ contains
 
         complex(rk),    allocatable :: k(:)
         complex(rk),    allocatable :: A(:,:), B(:,:)
-        real(rk),       allocatable :: r(:), r_gq(:), test(:), ref_coords(:,:), midpoint(:)
         type(point_t),  allocatable :: coords(:)
+        real(rk),       allocatable :: r(:), r_gq(:), test(:), ref_coords(:,:), midpoint(:)
+        real(rk)                    :: real_val, imag_val
 
         type(AD_D), allocatable, dimension(:)   ::  &
             density, mom1, mom2, mom3, energy,      &
@@ -671,6 +675,7 @@ contains
         !
         ! Compute projection of U_hat onto eigenmodes
         !
+        if (allocated(self%amp_real)) deallocate(self%amp_real, self%amp_imag)
         allocate(self%amp_real(size(B,2)), self%amp_imag(size(B,2)), stat=ierr)
         if (ierr /= 0) call AllocationError
         do ivec = 1,size(B,2)
@@ -678,33 +683,31 @@ contains
         end do
 
 
+        !
+        ! Construct interpolation matrix for eigenvectors to quadrature nodes
+        !
+        coords = worker%coords()
+        ngq = size(coords)
+        if (allocated(self%A_gq)) deallocate(self%A_gq)
+        allocate(self%A_gq(ngq*nfields,nvectors), stat=ierr)
+        if (ierr /= 0) call AllocationError
 
 
+        do ivec = 1,size(self%A_gq,2)
+            do ifield = 1,nfields
+                do inode = 1,ngq
+                    a_s = 1 + nr*(ifield-1)
+                    a_e = a_s + (nr-1)
+                    ai_ind = 1 + (inode-1) + ngq*(ifield-1)
 
+                    real_val = interpolate_linear(r,realpart(self%A(a_s:a_e,ivec)),coords(inode)%c1_)
+                    imag_val = interpolate_linear(r,imagpart(self%A(a_s:a_e,ivec)),coords(inode)%c1_)
 
+                    self%A_gq(ai_ind,ivec) = cmplx(real_val, imag_val)
+                end do
+            end do
+        end do
 
-
-!        !
-!        ! Construct interpolation matrix for eigenvectors to quadrature nodes
-!        !
-!        coords = worker%coords()
-!        ngq = size(coords)
-!        if (allocated(self%A_gq)) deallocate(self%A_gq)
-!        allocate(self%A_gq(ngq*nfields,ni*nfields), stat=ierr)
-!        if (ierr /= 0) call AllocationError
-!
-!
-!        do ivec = 1,size(self%A_gq,2)
-!            do ifield = 1,nfields
-!                do inode = 1,ngq
-!                    a_s = 1 + nr*(ifield-1)
-!                    a_e = a_s + (nr-1)
-!                    ai_ind = 1 + (inode-1) + ngq*(ifield-1)
-!
-!                    self%A_gq(ai_ind,ivec) = interpolate_linear(r,self%A(a_s:a_e,ivec),coords(inode)%c1_)
-!                end do
-!            end do
-!        end do
 
 
     end subroutine read_eigendecomposition
@@ -752,7 +755,7 @@ contains
                        c4_1d, ddensity_mean, dvel1_mean, dvel2_mean, dvel3_mean, dp_mean
 
         real(rk),   allocatable, dimension(:)   ::  p_user, r
-        integer :: i, ngq
+        integer :: i, ngq, ivec
 
 
 
@@ -851,6 +854,7 @@ contains
         c_avg = sqrt(gam*p_avg/density_avg)
 
 
+
         !
         ! Compute update for average quantities
         !
@@ -892,46 +896,65 @@ contains
         dvel3    = vel3_m    - vel3_avg
         dp       = p_m       - p_avg
 
+
+        ! Now zero out amplitude of all upstream-traveling eigenmodes
+        do i = 1,size(self%amp_real)
+            if (imagpart(self%k(i)) < 0.) then
+            !if (imagpart(self%k(i)) > 0.) then
+                self%amp_real(i) = ZERO
+                self%amp_imag(i) = ZERO
+            end if
+        end do
+
         
         !
-        ! Interpolate acoustic part of perturbation onto quadrature nodes
+        ! Reconstruct acoustic part of perturbation onto quadrature nodes
         !
-!        ngq = size(density_m)
-!        du_a = matmul(self%A_gq, self%amp)
-!        ddensity_a = du_a(0*ngq+1:1*ngq)
-!        dvel1_a    = du_a(1*ngq+1:2*ngq)
-!        dvel2_a    = du_a(2*ngq+1:3*ngq)
-!        dvel3_a    = du_a(3*ngq+1:4*ngq)
-!        dp_a       = du_a(4*ngq+1:5*ngq)
-!
-!
-!        !
-!        ! Compute convected part of the perturbation by subtracting the acoustic perturbation
-!        !
-!        ddensity_c = ddensity - ddensity_a
-!        dvel1_c    = dvel1    - dvel1_a
-!        dvel2_c    = dvel2    - dvel2_a
-!        dvel3_c    = dvel3    - dvel3_a
-!        dp_c       = dp       - dp_a
-!
-!
+        ngq = size(density_m)
+        du_a = [ddensity, dvel1, dvel2, dvel3, dp]
+        du_a(:) = ZERO
+        do ivec = 1,size(self%A_gq,2)
+            du_a = du_a  +  realpart(self%A_gq(:,ivec))*self%amp_real(ivec)  -  imagpart(self%A_gq(:,ivec))*self%amp_imag(ivec)
+        end do
+
+        ddensity_a = du_a(0*ngq+1:1*ngq)
+        dvel1_a    = du_a(1*ngq+1:2*ngq)
+        dvel2_a    = du_a(2*ngq+1:3*ngq)
+        dvel3_a    = du_a(3*ngq+1:4*ngq)
+        dp_a       = du_a(4*ngq+1:5*ngq)
+
+
+        !
+        ! Compute convected part of the perturbation by subtracting the acoustic perturbation
+        !
+        ddensity_c = ddensity - ddensity_a
+        dvel1_c    = dvel1    - dvel1_a
+        dvel2_c    = dvel2    - dvel2_a
+        dvel3_c    = dvel3    - dvel3_a
+        dp_c       = dp       - dp_a
+
+
 !        ! Now zero out amplitude of all upstream-traveling eigenmodes
-!        !do i = 1,size(self%k)
-!        do i = 1,size(self%amp)
+!        do i = 1,size(self%amp_real)
 !            if (imagpart(self%k(i)) < 0.) then
-!            !if (imagpart(self%k(i)) > 0.) then
-!                self%amp(i) = ZERO
+!                self%amp_real(i) = ZERO
+!                self%amp_imag(i) = ZERO
 !            end if
 !        end do
     
 
-!        ! Interpolate downstream-traveling acoustic perturbation onto quadrature nodes
-!        du_ad = matmul(self%A_gq, self%amp)
-!        ddensity_ad = du_ad(0*ngq+1:1*ngq)
-!        dvel1_ad    = du_ad(1*ngq+1:2*ngq)
-!        dvel2_ad    = du_ad(2*ngq+1:3*ngq)
-!        dvel3_ad    = du_ad(3*ngq+1:4*ngq)
-!        dp_ad       = du_ad(4*ngq+1:5*ngq)
+        ! Interpolate downstream-traveling acoustic perturbation onto quadrature nodes
+        du_ad = [ddensity, dvel1, dvel2, dvel3, dp]
+        du_ad(:) = ZERO
+        do ivec = 1,size(self%A_gq,2)
+            du_ad = du_ad  +  realpart(self%A_gq(:,ivec))*self%amp_real(ivec)  -  imagpart(self%A_gq(:,ivec))*self%amp_imag(ivec)
+        end do
+
+        ddensity_ad = du_ad(0*ngq+1:1*ngq)
+        dvel1_ad    = du_ad(1*ngq+1:2*ngq)
+        dvel2_ad    = du_ad(2*ngq+1:3*ngq)
+        dvel3_ad    = du_ad(3*ngq+1:4*ngq)
+        dp_ad       = du_ad(4*ngq+1:5*ngq)
 
 
         !
@@ -948,26 +971,18 @@ contains
         p_bc       = density_m
         do i = 1,size(dp)
 
-            density_bc(i) = density_avg  +  ddensity_mean
-            vel1_bc(i)    = vel1_avg     +  dvel1_mean   
-            vel2_bc(i)    = vel2_avg     +  dvel2_mean   
-            vel3_bc(i)    = vel3_avg     +  dvel3_mean   
-            p_bc(i)       = p_avg        +  dp_mean      
-
-
-        
-!            density_bc(i) = density_avg  +  ddensity_mean  +  ddensity_c(i)  +  ddensity_ad(i)
-!            vel1_bc(i)    = vel1_avg     +  dvel1_mean     +  dvel1_c(i)     +  dvel1_ad(i)
-!            vel2_bc(i)    = vel2_avg     +  dvel2_mean     +  dvel2_c(i)     +  dvel2_ad(i)
-!            vel3_bc(i)    = vel3_avg     +  dvel3_mean     +  dvel3_c(i)     +  dvel3_ad(i)
-!            p_bc(i)       = p_avg        +  dp_mean        +  dp_c(i)        +  dp_ad(i)
+            density_bc(i) = density_avg  +  ddensity_mean  +  ddensity_c(i)  +  ddensity_ad(i)
+            vel1_bc(i)    = vel1_avg     +  dvel1_mean     +  dvel1_c(i)     +  dvel1_ad(i)
+            vel2_bc(i)    = vel2_avg     +  dvel2_mean     +  dvel2_c(i)     +  dvel2_ad(i)
+            vel3_bc(i)    = vel3_avg     +  dvel3_mean     +  dvel3_c(i)     +  dvel3_ad(i)
+            p_bc(i)       = p_avg        +  dp_mean        +  dp_c(i)        +  dp_ad(i)
         
 !            density_bc(i) = density_avg  +  ddensity_mean  +  ddensity_c(i) 
 !            vel1_bc(i)    = vel1_avg     +  dvel1_mean     +  dvel1_c(i)     
 !            vel2_bc(i)    = vel2_avg     +  dvel2_mean     +  dvel2_c(i)     
 !            vel3_bc(i)    = vel3_avg     +  dvel3_mean     +  dvel3_c(i)     
 !            p_bc(i)       = p_avg        +  dp_mean        +  dp_c(i)        
-!
+
 !            density_bc(i) = density_avg  +  ddensity_mean  
 !            vel1_bc(i)    = vel1_avg     +  dvel1_mean     
 !            vel2_bc(i)    = vel2_avg     +  dvel2_mean     

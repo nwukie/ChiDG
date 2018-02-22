@@ -308,6 +308,7 @@ contains
 
                 end do
 
+
                 ! If the current component doesn't have a linearization wrt seed, just take any
                 ! values and zero out autodiff
                 if (.not. seed_found) then

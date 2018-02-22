@@ -708,6 +708,7 @@ contains
         real(rk)                    :: stabilization
         logical                     :: lift
 
+
         !
         ! Get user-specified interpolation source, or get from cache pointer entry
         !

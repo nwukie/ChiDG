@@ -1,8 +1,8 @@
-module bc_state_outlet_average_pressure
+module bc_state_outlet_average_profile_extrapolation
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE, TWO, HALF, ME, CYLINDRICAL
-    use mod_fluid,              only: gam
+    use mod_constants,          only: ZERO, ONE, TWO, HALF, ME, CYLINDRICAL, XI_MAX, ETA_MAX, ZETA_MAX
+    use mod_fluid,              only: gam, Rgas
 
     use type_mesh,              only: mesh_t
     use type_bc_state,          only: bc_state_t
@@ -44,11 +44,11 @@ module bc_state_outlet_average_pressure
     !!                      pp. 617-646.
     !!              
     !!  
-    !!  @author Nathan A. average_pressure
+    !!  @author Nathan A. average_profile_extrapolation
     !!  @date   4/20/2017
     !!
     !----------------------------------------------------------------------------------------
-    type, public, extends(bc_state_t) :: outlet_average_pressure_t
+    type, public, extends(bc_state_t) :: outlet_average_profile_extrapolation_t
 
 
     contains
@@ -59,7 +59,7 @@ module bc_state_outlet_average_pressure
 
         procedure   :: compute_averages
 
-    end type outlet_average_pressure_t
+    end type outlet_average_profile_extrapolation_t
     !****************************************************************************************
 
 
@@ -71,17 +71,17 @@ contains
 
     !>
     !!
-    !!  @author Nathan A. average_pressure (AFRL)
+    !!  @author Nathan A. average_profile_extrapolation (AFRL)
     !!  @date   8/29/2016
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(outlet_average_pressure_t),   intent(inout) :: self
+        class(outlet_average_profile_extrapolation_t),   intent(inout) :: self
         
         !
         ! Set name, family
         !
-        call self%set_name('Outlet - Average Pressure')
+        call self%set_name('Outlet - Average Profile Extrapolation')
         call self%set_family('Outlet')
 
 
@@ -116,12 +116,12 @@ contains
     !!          a: iproc broadcasts information about its coupling to bc_COMM
     !!          b: all other procs receive from iproc and initialize parallel coupling
     !!
-    !!  @author Nathan A. average_pressure
+    !!  @author Nathan A. average_profile_extrapolation
     !!  @date   4/18/2017
     !!
     !--------------------------------------------------------------------------------
     subroutine init_bc_coupling(self,mesh,group_ID,bc_COMM)
-        class(outlet_average_pressure_t),  intent(inout)   :: self
+        class(outlet_average_profile_extrapolation_t),  intent(inout)   :: self
         type(mesh_t),                     intent(inout)   :: mesh
         integer(ik),                      intent(in)      :: group_ID
         type(mpi_comm),                   intent(in)      :: bc_COMM
@@ -372,13 +372,13 @@ contains
 
     !>  Update the area-averaged pressure for the boundary condition.
     !!
-    !!  @author Nathan A. average_pressure
+    !!  @author Nathan A. average_profile_extrapolation
     !!  @date   3/31/2017
     !!
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute_averages(self,worker,bc_COMM, u_avg, v_avg, w_avg, density_avg, p_avg)
-        class(outlet_average_pressure_t),  intent(inout)   :: self
+        class(outlet_average_profile_extrapolation_t),  intent(inout)   :: self
         type(chidg_worker_t),   intent(inout)   :: worker
         type(mpi_comm),         intent(in)      :: bc_COMM
         type(AD_D),             intent(inout)   :: u_avg
@@ -391,7 +391,7 @@ contains
         type(face_info_t)   :: face_info
 
         type(AD_D), allocatable,    dimension(:)    ::  &
-            density, mom1, mom2, mom3, energy, p,    &
+            density, mom1, mom2, mom3, energy, p,       &
             u, v, w
 
         real(rk),   allocatable,    dimension(:)    :: weights, areas, r
@@ -459,17 +459,20 @@ contains
             ! Interpolate coupled element solution on face of coupled element
             !
             density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, idensity, itime, 'value', ME)
-            mom1    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom1,    itime, 'value', ME)
-            mom2    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom2,    itime, 'value', ME)
-            mom3    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom3,    itime, 'value', ME)
+            mom1   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom1,    itime, 'value', ME)
+            mom2   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom2,    itime, 'value', ME)
+            mom3   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom3,    itime, 'value', ME)
             energy  = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, ienergy,  itime, 'value', ME)
 
             if (worker%mesh%domain(idomain_l_coupled)%elems(ielement_l_coupled)%coordinate_system == CYLINDRICAL) then
                 mom2 = mom2 / worker%mesh%domain(idomain_l_coupled)%elems(ielement_l_coupled)%interp_coords_def(:,1)
             end if
+
+            ! We don't want this, because this won't return the correct radius for 
+            ! the current face being interpolated from.
             !r = worker%coordinate('1','boundary')
             !if (worker%coordinate_system() == 'Cylindrical') then
-            !    mom2 = mom2 / r
+            !    mom_2 = mom_2 / r
             !end if
 
 
@@ -486,6 +489,7 @@ contains
             ! Compute pressure over the face
             !
             p = (gam-ONE)*(energy - HALF*( mom1*mom1 + mom2*mom2 + mom3*mom3 )/density )
+
 
 
 
@@ -571,7 +575,7 @@ contains
 
     !>  Compute routine for Pressure Outlet boundary condition state function.
     !!
-    !!  @author Nathan A. average_pressure
+    !!  @author Nathan A. average_profile_extrapolation
     !!  @date   2/3/2016
     !!
     !!  @param[in]      worker  Interface for geometry, cache, integration, etc.
@@ -579,7 +583,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_COMM)
-        class(outlet_average_pressure_t),    intent(inout)   :: self
+        class(outlet_average_profile_extrapolation_t),    intent(inout)   :: self
         type(chidg_worker_t),               intent(inout)   :: worker
         class(properties_t),                intent(inout)   :: prop
         type(mpi_comm),                     intent(in)      :: bc_COMM
@@ -592,15 +596,18 @@ contains
             grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,  &
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,  &
             grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
-            u_bc, v_bc, w_bc, p_bc,                                                     &
-            u_m,  v_m,  w_m,  p_m,                                                      &
-            ddensity_c,    du_c,    dv_c,    dw_c,    dp_c,                             &
-            c1, c2, c3, c4, ddensity, dp, du, dv, dw
+            u_bc, v_bc, w_bc, p_bc, T_bc,                                               &
+            u_m,  v_m,  w_m,  p_m,  T_m,                                                &
+            density_o, mom1_o, mom2_o, mom3_o, energy_o, p_o
+            !density_element, mom1_element, mom2_element, mom3_element, energy_element, p_element
 
 
-        type(AD_D)  :: p_avg, u_avg, v_avg, w_avg, density_avg, M_avg, c_avg, c4_1d, ddensity_mean, du_mean, dv_mean, dw_mean, dp_mean
+        type(AD_D)  :: p_avg, u_avg, v_avg, w_avg, density_avg, p_diff
 
-        real(rk),       allocatable, dimension(:)   ::  p_user, r
+        real(rk),   allocatable, dimension(:)   :: p_user, r
+        real(rk),   allocatable, dimension(:,:) :: coords
+        real(rk)                                :: offset
+
         integer :: i
 
 
@@ -619,6 +626,154 @@ contains
         mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
         mom3_m    = worker%get_field('Momentum-3', 'value', 'face interior')
         energy_m  = worker%get_field('Energy'    , 'value', 'face interior')
+
+        !T_m       = worker%get_field('Temperature', 'value', 'face interior')
+        !p_m       = worker%get_field('Pressure'   , 'value', 'face interior')
+        !p_element = worker%get_field('Pressure'   , 'value', 'element')
+
+        p_m       = worker%get_field('Pressure'   , 'value', 'face interior')
+        T_m       = worker%get_field('Temperature', 'value', 'face interior')
+
+        
+        
+        !
+        ! Get reference coordinates of quadrature node set
+        !
+        associate( idom => worker%element_info%idomain_l, ielem => worker%element_info%ielement_l, iface => worker%iface )
+
+        coords = worker%mesh%domain(idom)%faces(ielem,iface)%basis_s%nodes_face(iface)
+
+        end associate
+
+
+        !
+        ! Get coordinates of quadrature node set
+        !
+        offset = -0.14_rk    ! element center
+        !offset = -0.00000000000001_rk    ! element center
+        !offset = ZERO ! element center
+
+
+        ! Offset axial reference nodes to lie in the element interior
+        if ( (coords(1,1) - ONE) < 1.e-7_rk ) then
+            coords(:,1) = coords(:,1) + offset
+        else if ( (coords(1,2) - ONE) < 1.e-7_rk ) then
+            coords(:,2) = coords(:,2) + offset
+        else if ( (coords(1,3) - ONE) < 1.e-7_rk ) then
+            coords(:,3) = coords(:,3) + offset
+        else
+            call chidg_signal(FATAL,"bc_state_outlet_average_profile_extrapolation: invalid condition.")
+        end if
+
+
+        ! Compute interpolation of solution to offset quadrature node set
+        density_o = worker%interpolate_field('Density',    coords)
+        mom1_o    = worker%interpolate_field('Momentum-1', coords)
+        mom2_o    = worker%interpolate_field('Momentum-2', coords)
+        mom3_o    = worker%interpolate_field('Momentum-3', coords)
+        energy_o  = worker%interpolate_field('Energy',     coords)
+        if (worker%coordinate_system() == 'Cylindrical') then
+            mom2_o = mom2_o / worker%coordinate('1','boundary')
+        end if
+
+        p_o = (gam-ONE)*(energy_o - HALF*( mom1_o*mom1_o + mom2_o*mom2_o + mom3_o*mom3_o )/density_o )
+
+
+
+
+
+!        density_element = worker%get_field('Density'   , 'value', 'element')
+!        mom1_element    = worker%get_field('Momentum-1', 'value', 'element')
+!        mom2_element    = worker%get_field('Momentum-2', 'value', 'element')
+!        mom3_element    = worker%get_field('Momentum-3', 'value', 'element')
+!        energy_element  = worker%get_field('Energy'    , 'value', 'element')
+!
+!
+!        !
+!        ! Account for cylindrical. Get tangential momentum from angular momentum.
+!        !
+!        if (worker%coordinate_system() == 'Cylindrical') then
+!            mom2_element = mom2_element / worker%coordinate('1','element')
+!        end if
+!        p_element = (gam-ONE)*(energy_element - HALF*( mom1_element*mom1_element + mom2_element*mom2_element + mom3_element*mom3_element )/density_element )
+!        ! 'element' fields not getting computed wrt other boundary-coupled elements.
+!        !p_element = worker%get_field('Pressure'   , 'value', 'element')
+!
+!
+!        if (worker%iface == XI_MAX) then
+!            ! xi-aligned
+!            select case(worker%solution_order('interior'))
+!                case(0)
+!                    p_m = p_element(2:size(p_element):2)
+!                case(1)
+!                    p_m = p_element(3:size(p_element):3)
+!                case(2) 
+!                    p_m = p_element(5:size(p_element):5)
+!                case(3)
+!                    p_m = p_element(6:size(p_element):6)
+!                case(4)
+!                    p_m = p_element(7:size(p_element):7)
+!                case(5)
+!                    p_m = p_element(9:size(p_element):9)
+!                case(6)
+!                    p_m = p_element(11:size(p_element):11)
+!                case default
+!                    call chidg_signal(FATAL,"bc_state_outlet_average_profile_extrapolation: order.")
+!            end select 
+!
+!!        else if (worker%iface == ETA_MAX) then
+!!            ! eta-aligned
+!!            select case(worker%solution_order('interior'))
+!!                case(0)
+!!                    p_m(1:size(p_m)-1:2) = p_element(3:size(p_element):2)
+!!                    p_m(2:size(p_m):2)   = p_element(4:size(p_element):2)
+!!                case(1)
+!!                    p_m = p_element(3:size(p_element):3)
+!!                case(2) 
+!!                    p_m = p_element(5:size(p_element):5)
+!!                case(3)
+!!                    p_m = p_element(6:size(p_element):6)
+!!                case(4)
+!!                    p_m = p_element(7:size(p_element):7)
+!!                case(5)
+!!                    p_m = p_element(9:size(p_element):9)
+!!                case(6)
+!!                    p_m = p_element(11:size(p_element):11)
+!!                case default
+!!                    call chidg_signal(FATAL,"bc_state_outlet_average_profile_extrapolation: order.")
+!!            end select 
+!
+!
+!
+!        else if (worker%iface == ZETA_MAX) then
+!            ! zeta-aligned
+!            select case(worker%solution_order('interior'))
+!                case(0)
+!                    p_m = p_element(5:8)
+!                case(1)
+!                    p_m = p_element(19:27)
+!                case(2) 
+!                    p_m = p_element(101:125)
+!                case(3)
+!                    p_m = p_element(181:216)
+!                case(4)
+!                    p_m = p_element(449:512)
+!                case(5)
+!                    p_m = p_element(649:729)
+!                case(6)
+!                    p_m = p_element(1211:1331)
+!                case default
+!                    call chidg_signal(FATAL,"bc_state_outlet_average_profile_extrapolation: order.")
+!            end select 
+!
+!        else
+!            call chidg_signal_one(FATAL,"bc_state_outlet_average_profile_extrapolation: not configured for current face index.",worker%iface)
+!        end if
+
+
+        ! Override interior extrapolation
+        !p_m = worker%get_field('Pressure'   , 'value', 'face interior')
+
 
 
 
@@ -672,17 +827,23 @@ contains
 
 
 
-
         !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
         !
         r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_m = mom2_m / r
-            grad1_mom2_m = (grad1_mom2_m/r) - mom2_m/r
-            grad2_mom2_m = (grad2_mom2_m/r)
-            grad3_mom2_m = (grad3_mom2_m/r)
         end if
+
+
+
+        !
+        ! Extrapolate temperature and velocity
+        !
+        T_bc = T_m
+        u_bc = mom1_m/density_m
+        v_bc = mom2_m/density_m
+        w_bc = mom3_m/density_m
 
 
 
@@ -690,128 +851,25 @@ contains
         ! Update average pressure
         !
         call self%compute_averages(worker,bc_COMM,u_avg, v_avg, w_avg, density_avg, p_avg)
-        c_avg = sqrt(gam*p_avg/density_avg)
 
 
         !
-        ! Compute velocities
+        ! Extrapolate pressure, adjust by dp for a point
         !
-        u_m = mom1_m/density_m
-        v_m = mom2_m/density_m
-        w_m = mom3_m/density_m
-
-
-        !
-        ! Compute pressure from extrapolated data
-        !
-        p_m = worker%get_field('Pressure', 'value', 'face interior')
-        !p_m = (gam-ONE)*(energy_m - HALF*( (mom1_m*mom1_m) + (mom2_m*mom2_m) + (mom3_m*mom3_m) )/density_m )
-    
-
-        
-!        !
-!        ! Define boundary primitive quantities
-!        !
-!        density_bc = density_m
-!        u_bc       = u_m
-!        v_bc       = v_m
-!        w_bc       = w_m
-!        p_bc       = p_user  +  (p_m - p_avg)
+        ! Confirmed, signs are correct
+        p_diff = (p_avg - p_user(1))
+        !p_bc = p_m - p_diff
+        p_bc = p_o - p_diff
 
 
         !
-        ! Compute update for average quantities
+        ! Compute density, momentum, energy
         !
-        !c4_1d         = -TWO*(p_avg - p_user(1))
-        !ddensity_mean =  c4_1d/(TWO*c_avg*c_avg)
-        !du_mean       = -c4_1d/(TWO*density_avg*c_avg)
-        !dp_mean       =  HALF*c4_1d
-        c4_1d         = -TWO*(p_avg - p_user(1))
-        ddensity_mean =  c4_1d/(TWO*c_avg*c_avg)
-        dw_mean       = -c4_1d/(TWO*density_avg*c_avg)
-        dp_mean       =  HALF*c4_1d
-
-
-        !
-        ! Compute perturbation from mean
-        !
-        du       = u_m       - u_avg
-        dv       = v_m       - v_avg
-        dw       = w_m       - w_avg
-        ddensity = density_m - density_avg
-        dp       = p_m       - p_avg
-
-
-        !
-        ! Compute 1D characteristics 
-        !
-        allocate(c1(size(dp)), c2(size(dp)), c3(size(dp)), c4(size(dp)))
-        do i = 1,size(dp)
-            !c1(i) = -c_avg*c_avg*ddensity(i)  +  dp(i)
-            !c2(i) =  density_avg*c_avg*dv(i)
-            !c3(i) =  density_avg*c_avg*du(i)  +  dp(i)
-            !c4(i) = -density_avg*c_avg*du(i)  +  dp(i)
-            c1(i) = -c_avg*c_avg*ddensity(i)  +  dp(i)
-            c2(i) =  density_avg*c_avg*dv(i)
-            c3(i) =  density_avg*c_avg*dw(i)  +  dp(i)
-            c4(i) = -density_avg*c_avg*dw(i)  +  dp(i)
-        end do
-
-
-
-
-        !
-        ! Compute update from characteristics for perturbation quantities: No contribution from c4
-        !
-        allocate(ddensity_c(size(dp)), du_c(size(dp)), dv_c(size(dp)), dw_c(size(dp)), dp_c(size(dp)))
-        do i = 1,size(dp)
-            !ddensity_c(i) = -c1(i)/(c_avg*c_avg)  +  c3(i)/(TWO*c_avg*c_avg) 
-            !du_c(i)       =  c3(i)/(TWO*density_avg*c_avg)
-            !dv_c(i)       =  c2(i)/(density_avg*c_avg)
-            !dp_c(i)       =  c3(i)/TWO
-            ddensity_c(i) = -c1(i)/(c_avg*c_avg)  +  c3(i)/(TWO*c_avg*c_avg) 
-            dw_c(i)       =  c3(i)/(TWO*density_avg*c_avg)
-            dv_c(i)       =  c2(i)/(density_avg*c_avg)
-            dp_c(i)       =  c3(i)/TWO
-        end do
-
-
-
-        !
-        ! Construct boundary state from average and perturbations
-        !
-        density_bc = density_m
-        u_bc = density_m
-        v_bc = density_m
-        w_bc = density_m
-        p_bc = density_m
-        do i = 1,size(dp)
-            !density_bc(i) = density_avg  +  ddensity_mean  +  ddensity_c(i)
-            !u_bc(i)       = u_avg        +  du_mean        +  du_c(i)
-            !v_bc(i)       = v_avg                          +  dv_c(i)
-            !w_bc(i)       = w_m(i)
-            !p_bc(i)       = p_avg        +  dp_mean        +  dp_c(i)
-            density_bc(i) = density_avg  +  ddensity_mean  +  ddensity_c(i)
-            u_bc(i)       = u_m(i)
-            v_bc(i)       = v_avg                          +  dv_c(i)
-            w_bc(i)       = w_avg        +  dw_mean        +  dw_c(i)
-            p_bc(i)       = p_avg        +  dp_mean        +  dp_c(i)
-        end do
-
-
-
-
-
-        !
-        ! Form conserved variables
-        !
-        density_bc = density_bc
-        mom1_bc    = density_bc*u_bc
-        mom2_bc    = density_bc*v_bc
-        mom3_bc    = density_bc*w_bc
-        energy_bc  = p_bc/(gam - ONE)  + (density_bc*HALF)*(u_bc*u_bc + v_bc*v_bc + w_bc*w_bc)
-
-
+        density_bc = p_bc/(Rgas*T_bc)
+        mom1_bc    = u_bc*density_bc
+        mom2_bc    = v_bc*density_bc
+        mom3_bc    = w_bc*density_bc
+        energy_bc  = p_bc/(gam - ONE) + (density_bc*HALF)*(u_bc*u_bc + v_bc*v_bc + w_bc*w_bc)
 
 
         !
@@ -820,7 +878,6 @@ contains
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_bc = mom2_bc * r
         end if
-
 
 
 
@@ -845,4 +902,4 @@ contains
 
 
 
-end module bc_state_outlet_average_pressure
+end module bc_state_outlet_average_profile_extrapolation

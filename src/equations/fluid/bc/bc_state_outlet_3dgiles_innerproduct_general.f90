@@ -1,4 +1,4 @@
-module bc_state_outlet_3dgiles_innerproduct
+module bc_state_outlet_3dgiles_innerproduct_general
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, HALF, ME, CYLINDRICAL
@@ -38,13 +38,13 @@ module bc_state_outlet_3dgiles_innerproduct
     !!  @author Nathan A. Wukie
     !!  @date   2/8/2018
     !!
-    !----------------------------------------------------------------------------------------
-    type, public, extends(bc_state_t) :: outlet_3dgiles_innerproduct_t
+    !---------------------------------------------------------------------------------
+    type, public, extends(bc_state_t) :: outlet_3dgiles_innerproduct_general_t
 
         complex(rk),    allocatable :: k(:)
-        complex(rk),    allocatable :: A(:,:)
-        complex(rk),    allocatable :: A_gq(:,:)
-        complex(rk),    allocatable :: B(:,:)
+        complex(rk),    allocatable :: ur(:,:,:)
+        complex(rk),    allocatable :: vl(:,:,:)
+        complex(rk),    allocatable :: ur_gq(:,:)
         type(AD_D),     allocatable :: amp_real(:)
         type(AD_D),     allocatable :: amp_imag(:)
 
@@ -57,8 +57,8 @@ module bc_state_outlet_3dgiles_innerproduct
         procedure   :: compute_averages
         procedure   :: read_eigendecomposition
 
-    end type outlet_3dgiles_innerproduct_t
-    !****************************************************************************************
+    end type outlet_3dgiles_innerproduct_general_t
+    !*********************************************************************************
 
 
 
@@ -74,12 +74,12 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(outlet_3dgiles_innerproduct_t),   intent(inout) :: self
+        class(outlet_3dgiles_innerproduct_general_t),   intent(inout) :: self
         
         !
         ! Set name, family
         !
-        call self%set_name('Outlet - 3D Giles Innerproduct')
+        call self%set_name('Outlet - 3D Giles Innerproduct General')
         call self%set_family('Outlet')
 
 
@@ -119,7 +119,7 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init_bc_coupling(self,mesh,group_ID,bc_COMM)
-        class(outlet_3dgiles_innerproduct_t),    intent(inout)   :: self
+        class(outlet_3dgiles_innerproduct_general_t),    intent(inout)   :: self
         type(mesh_t),               intent(inout)   :: mesh
         integer(ik),                intent(in)      :: group_ID
         type(mpi_comm),             intent(in)      :: bc_COMM
@@ -358,7 +358,7 @@ contains
 
 
     end subroutine init_bc_coupling
-    !******************************************************************************************
+    !*************************************************************************************
 
 
 
@@ -371,9 +371,9 @@ contains
     !!  @date   3/31/2017
     !!
     !!
-    !-------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------
     subroutine compute_averages(self,worker,bc_COMM, vel1_avg, vel2_avg, vel3_avg, density_avg, p_avg)
-        class(outlet_3dgiles_innerproduct_t),    intent(inout)   :: self
+        class(outlet_3dgiles_innerproduct_general_t),    intent(inout)   :: self
         type(chidg_worker_t),       intent(inout)   :: worker
         type(mpi_comm),             intent(in)      :: bc_COMM
         type(AD_D),                 intent(inout)   :: vel1_avg
@@ -385,10 +385,10 @@ contains
         type(face_info_t)   :: face_info
 
         type(AD_D), allocatable,    dimension(:)    ::  &
-            density, mom_1, mom_2, mom_3, energy, p,    &
-            u, v, w, c, M, vmag
-        type(AD_D)  :: face_p, face_M, p_integral, u_integral, v_integral, w_integral, &
-                       density_integral, face_density, face_u, face_v, face_w
+            density, mom1, mom2, mom3, energy, p, u, v, w
+
+        type(AD_D)  :: p_integral, u_integral, v_integral, w_integral, density_integral,    &
+                       face_density, face_u, face_v, face_w, face_p
 
 
         integer(ik) :: ipatch, iface_bc, idomain_l, ielement_l, iface, ierr, itime, &
@@ -416,6 +416,7 @@ contains
         group_ID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%group_ID
         patch_ID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_ID
         face_ID  = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%face_ID
+
 
 
 
@@ -456,14 +457,17 @@ contains
             ! Interpolate coupled element solution on face of coupled element
             !
             density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, idensity, itime, 'value', ME)
-            mom_1   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom1,    itime, 'value', ME)
-            mom_2   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom2,    itime, 'value', ME)
-            mom_3   = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom3,    itime, 'value', ME)
+            mom1    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom1,    itime, 'value', ME)
+            mom2    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom2,    itime, 'value', ME)
+            mom3    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom3,    itime, 'value', ME)
             energy  = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, ienergy,  itime, 'value', ME)
 
-            r = worker%coordinate('1','boundary')
-            if (worker%coordinate_system() == 'Cylindrical') then
-                mom_2 = mom_2 / r
+            !r = worker%coordinate('1','boundary')
+            !if (worker%coordinate_system() == 'Cylindrical') then
+            !    mom2 = mom2 / r
+            !end if
+            if (worker%mesh%domain(idomain_l_coupled)%elems(ielement_l_coupled)%coordinate_system == CYLINDRICAL) then
+                mom2 = mom2 / worker%mesh%domain(idomain_l_coupled)%elems(ielement_l_coupled)%interp_coords_def(:,1)
             end if
 
 
@@ -471,14 +475,10 @@ contains
             !
             ! Compute quantities for averaging
             !
-            u = mom_1 / density
-            v = mom_2 / density
-            w = mom_3 / density
-            !p = (gam - ONE)*(energy - HALF*density*(u*u + v*v + w*w))
-            p = (gam-ONE)*(energy - HALF*((mom_1*mom_1) + (mom_2*mom_2) + (mom_3*mom_3))/density)
-            c = sqrt(gam * p / density)
-            vmag = sqrt(u*u + v*v + w*w)
-            M = vmag/c
+            u = mom1 / density
+            v = mom2 / density
+            w = mom3 / density
+            p = (gam-ONE)*(energy - HALF*(mom1*mom1 + mom2*mom2 + mom3*mom3)/density)
 
 
             !
@@ -500,36 +500,63 @@ contains
             face_p       = sum(p       * areas * weights)
 
 
-
-            if (allocated(u_integral%xp_ad_)) then
-                u_integral = u_integral + face_u
-            else
-                u_integral = face_u
+            !
+            ! Allocate derivatives and clear integral for first face.
+            !
+            if (icoupled == 1) then
+                density_integral = face_u
+                u_integral       = face_u
+                v_integral       = face_u
+                w_integral       = face_u
+                p_integral       = face_u
+                density_integral = ZERO
+                u_integral       = ZERO
+                v_integral       = ZERO
+                w_integral       = ZERO
+                p_integral       = ZERO
             end if
 
-            if (allocated(v_integral%xp_ad_)) then
-                v_integral = v_integral + face_v
-            else
-                v_integral = face_v
-            end if
 
-            if (allocated(w_integral%xp_ad_)) then
-                w_integral = w_integral + face_w
-            else
-                w_integral = face_w
-            end if
+            !
+            ! Accumulate face contribution.
+            !
+            density_integral = density_integral + face_density
+            u_integral       = u_integral       + face_u
+            v_integral       = v_integral       + face_v
+            w_integral       = w_integral       + face_w
+            p_integral       = p_integral       + face_p
 
-            if (allocated(p_integral%xp_ad_)) then
-                p_integral = p_integral + face_p
-            else
-                p_integral = face_p
-            end if
 
-            if (allocated(density_integral%xp_ad_)) then
-                density_integral = density_integral + face_density
-            else
-                density_integral = face_density
-            end if
+
+!            if (allocated(u_integral%xp_ad_)) then
+!                u_integral = u_integral + face_u
+!            else
+!                u_integral = face_u
+!            end if
+!
+!            if (allocated(v_integral%xp_ad_)) then
+!                v_integral = v_integral + face_v
+!            else
+!                v_integral = face_v
+!            end if
+!
+!            if (allocated(w_integral%xp_ad_)) then
+!                w_integral = w_integral + face_w
+!            else
+!                w_integral = face_w
+!            end if
+!
+!            if (allocated(p_integral%xp_ad_)) then
+!                p_integral = p_integral + face_p
+!            else
+!                p_integral = face_p
+!            end if
+!
+!            if (allocated(density_integral%xp_ad_)) then
+!                density_integral = density_integral + face_density
+!            else
+!                density_integral = face_density
+!            end if
 
 
             total_area = total_area + face_area
@@ -554,7 +581,7 @@ contains
 
 
     end subroutine compute_averages
-    !*******************************************************************************************
+    !************************************************************************************
 
 
 
@@ -569,7 +596,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------
     subroutine read_eigendecomposition(self,worker,prop,bc_COMM, du_c_gq, du_ad_gq)
-        class(outlet_3dgiles_innerproduct_t),   intent(inout)   :: self
+        class(outlet_3dgiles_innerproduct_general_t),   intent(inout)   :: self
         type(chidg_worker_t),                   intent(inout)   :: worker
         class(properties_t),                    intent(inout)   :: prop
         type(mpi_comm),                         intent(in)      :: bc_COMM
@@ -612,18 +639,20 @@ contains
         allocate(k(nvectors), r(nr), A(nfields*nr,nvectors), B(nfields*nr,nvectors), stat=ierr)
         if (ierr /= 0) call AllocationError
 
-
         ! Read eigenvalues, eigenvectors
         read(handle,nml=eigendecomposition)
         close(handle)
 
-        ! Store to bc object
-        self%k = k
-        self%A = A
-        self%B = B
+
+        ! Store to bc object for particular value of 'm'
+        self%k(   :,imode_c) = k(  1:nmodes_r)
+        self%ur(:,:,imode_c) = A(:,1:nmodes_r)
+        self%vl(:,:,imode_c) = B(:,1:nmodes_r)
+
 
         ! Get physical coordinates at midpoint of bc face
         midpoint = worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%physical_point(ZERO,ZERO,ONE)
+
 
         ! Get location in reference space for physical radial coordinate locations
         ! where the eigenvectors are evaluated at so we can interpolate the solution
@@ -632,7 +661,7 @@ contains
         if (ierr /= 0) call AllocationError
         do i = 1,size(r)
             ref_coords(i,:) = worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%computational_point([r(i), midpoint(2), midpoint(3)])
-            if (any(ieee_is_nan(ref_coords(i,:)))) call chidg_signal_two(FATAL,"bc_state_outlet_3dgiles_innerproduct: couldn't find discrete point in reference space.",i,ref_coords(i,1))
+            if (any(ieee_is_nan(ref_coords(i,:)))) call chidg_signal_two(FATAL,"bc_state_outlet_3dgiles_innerproduct_general: couldn't find discrete point in reference space.",i,ref_coords(i,1))
         end do
 
 
@@ -682,10 +711,7 @@ contains
         allocate(self%amp_real(size(B,2)), self%amp_imag(size(B,2)), stat=ierr)
         if (ierr /= 0) call AllocationError
 
-!        do ivec = 1,size(B,2)
-!            call project_to_eigenmodes(self%amp_real(ivec), self%amp_imag(ivec), B(:,ivec), U_hat)
-!        end do
-        call project_to_eigenmodes(self%amp_real, self%amp_imag, A, B, U_hat)
+!        call project_to_eigenmodes(self%amp_real(:,imode_c), self%amp_imag(:,imode_c), self%ur, self%vl, U_hat_real(:,imode_c), U_hat_imag(:,imode_c))
 
         print*, 'amp: ', self%amp_real(:)%x_ad_
 
@@ -695,8 +721,8 @@ contains
 !        !
 !        du_a = [ddensity, dvel1, dvel2, dvel3, dp]
 !        du_a(:) = ZERO
-!        do ivec = 1,size(self%A,2)
-!            du_a = du_a  +  realpart(self%A(:,ivec))*self%amp_real(ivec)  -  imagpart(self%A(:,ivec))*self%amp_imag(ivec)
+!        do ivec = 1,size(self%ur,2)
+!            du_a = du_a  +  realpart(self%ur(:,ivec))*self%amp_real(ivec)  -  imagpart(self%ur(:,ivec))*self%amp_imag(ivec)
 !        end do
 !
 !
@@ -725,8 +751,8 @@ contains
 !        !
 !        du_ad = [ddensity, dvel1, dvel2, dvel3, dp]
 !        du_ad(:) = ZERO
-!        do ivec = 1,size(self%A,2)
-!            du_ad = du_ad  +  realpart(self%A(:,ivec))*self%amp_real(ivec)  -  imagpart(self%A(:,ivec))*self%amp_imag(ivec)
+!        do ivec = 1,size(self%ur,2)
+!            du_ad = du_ad  +  realpart(self%ur(:,ivec))*self%amp_real(ivec)  -  imagpart(self%ur(:,ivec))*self%amp_imag(ivec)
 !        end do
 !        
 !
@@ -760,22 +786,22 @@ contains
         !
         coords = worker%coords()
         ngq = size(coords)
-        if (allocated(self%A_gq)) deallocate(self%A_gq)
-        allocate(self%A_gq(ngq*nfields,nvectors), stat=ierr)
+        if (allocated(self%ur_gq)) deallocate(self%ur_gq)
+        allocate(self%ur_gq(ngq*nfields,nvectors), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
-        do ivec = 1,size(self%A_gq,2)
+        do ivec = 1,size(self%ur_gq,2)
             do ifield = 1,nfields
                 do inode = 1,ngq
                     a_s = 1 + nr*(ifield-1)
                     a_e = a_s + (nr-1)
                     ai_ind = 1 + (inode-1) + ngq*(ifield-1)
 
-                    real_val = interpolate_linear(r,realpart(self%A(a_s:a_e,ivec)),coords(inode)%c1_)
-                    imag_val = interpolate_linear(r,imagpart(self%A(a_s:a_e,ivec)),coords(inode)%c1_)
+                    real_val = interpolate_linear(r,realpart(self%ur(a_s:a_e,ivec)),coords(inode)%c1_)
+                    imag_val = interpolate_linear(r,imagpart(self%ur(a_s:a_e,ivec)),coords(inode)%c1_)
 
-                    self%A_gq(ai_ind,ivec) = cmplx(real_val, imag_val)
+                    self%ur_gq(ai_ind,ivec) = cmplx(real_val, imag_val)
                 end do
             end do
         end do
@@ -801,7 +827,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_COMM)
-        class(outlet_3dgiles_innerproduct_t),   intent(inout)   :: self
+        class(outlet_3dgiles_innerproduct_general_t),   intent(inout)   :: self
         type(chidg_worker_t),                   intent(inout)   :: worker
         class(properties_t),                    intent(inout)   :: prop
         type(mpi_comm),                         intent(in)      :: bc_COMM
@@ -831,12 +857,6 @@ contains
         integer :: i, ngq, ivec
 
 
-
-
-        !
-        !
-        !
-        call self%read_eigendecomposition(worker,prop,bc_COMM,du_c_gq, du_ad_gq)
 
         !
         ! Get back pressure from function.
@@ -928,26 +948,164 @@ contains
 
 
 
+
+        !
+        ! Compute Fourier decomposition at set of radial stations: 
+        !   : U_hat(nr,nmodes)
+        !
+        !call self%compute_fourier_decomposition(worker,bc_COMM,U_hat_real,U_hat_imag)
+
+
+
+        !
+        ! Compute projection of circumferential modes U_hat(r) onto radial eigenmodes.
+        !   U_hat(r) = sum[ a*ur(r) ]
+        !
+        call project_to_eigenmodes(self%ur, self%vl, U_hat_real, U_hat_imag, self%amp_real, self%amp_imag)
+
+
+
+        !
+        ! Compute convected part of U_hat for each circumferential mode
+        !
+        U_hat_real_conv = U_hat_real
+        U_hat_imag_conv = U_hat_imag
+
+        do imode_c = 1,size(self%amp_real,2)
+
+            ! Compute acoustic part of U_hat for current radial mode
+            do imode_r = 1,size(self%amp_real,1)
+                U_hat_real_acc = U_hat_real_acc  +  self%amp_real(imode_r,imode_c)*realpart(self%ur(:,imode_r,imode_c))  -  self%amp_imag(imode_r,imode_c)*imagpart(self%ur(:,imode_r,imode_c))
+                U_hat_imag_acc = U_hat_imag_acc  +  self%amp_imag(imode_r,imode_c)*realpart(self%ur(:,imode_r,imode_c))  +  self%amp_real(imode_r,imode_c)*imagpart(self%ur(:,imode_r,imode_c))
+            end do !imode_r
+
+            ! Compute convected part of solution by subtracting acoustic part from total
+            U_hat_real_conv(:,imode_c) = U_hat_real(:,imode_c)  -  U_hat_real_acc
+            U_hat_imag_conv(:,imode_c) = U_hat_imag(:,imode_c)  -  U_hat_imag_acc
+
+        end do !imode_c
+
+
+        !
+        ! Now zero out amplitude of all upstream-traveling eigenmodes
+        !
+        do imode_c = 1,size(self%amp_real,2)
+            do imode_r = 1,size(self%amp_real,1)
+                if (imagpart(self%k(imode_r,imode_c)) > 0.) then
+                    self%amp_real(imode_r,imode_c) = ZERO
+                    self%amp_imag(imode_r,imode_c) = ZERO
+                end if
+            end do !imode_r
+        end do !imode_c
+
+
+        !
+        ! Reconstruct downstream traveling acoustic waves by zeroing amplitudes of upstream 
+        ! traveling acoustic waves
+        !
+        U_hat_real_acc_d = U_hat_real
+        U_hat_imag_acc_d = U_hat_imag
+        U_hat_real_acc_d = ZERO
+        U_hat_imag_acc_d = ZERO
+
+        do imode_c = 1,size(self%amp_real,2)
+            do imode_r = 1,size(self%amp_real,1)
+                U_hat_real_acc_d(:,imode_c) = U_hat_real_acc_d(:,imode_c)  +  self%amp_real(imode_r,imode_c)*realpart(self%ur(:,imode_r,imode_c))  -  self%amp_imag(imode_r,imode_c)*imagpart(self%ur(:,imode_r,imode_c))
+                U_hat_imag_acc_d(:,imode_c) = U_hat_imag_acc_d(:,imode_c)  +  self%amp_imag(imode_r,imode_c)*realpart(self%ur(:,imode_r,imode_c))  +  self%amp_real(imode_r,imode_c)*imagpart(self%ur(:,imode_r,imode_c))
+            end do !imode_r
+        end do !imode_c
+
+
+
+        !
+        ! Compute U_hat_nrbc
+        !
+        U_hat_real_nrbc = U_hat_real_conv  +  U_hat_real_acc_d
+        U_hat_imag_nrbc = U_hat_imag_conv  +  U_hat_imag_acc_d
+
+
+
+
+        !
+        ! Interpolate U_hat_real_nrbc to radial stations coincident with quadrature nodes
+        !
+        !U_hat_real_nrbc_rgq = some operator
+        !U_hat_imag_nrbc_rgq = some operator
+
+
+        
+        !
+        ! Separate U_hat into primitive parts
+        !
+        density_real_rgq = U_hat_real_nrbc_rgq(1 + 0*nr:1*nr,:)
+        u_real_rgq       = U_hat_real_nrbc_rgq(1 + 1*nr:2*nr,:)
+        v_real_rgq       = U_hat_real_nrbc_rgq(1 + 2*nr:3*nr,:)
+        w_real_rgq       = U_hat_real_nrbc_rgq(1 + 3*nr:4*nr,:)
+        p_real_rgq       = U_hat_real_nrbc_rgq(1 + 4*nr:5*nr,:)
+
+
+        density_imag_rgq = U_hat_imag_nrbc_rgq(1 + 0*nr:1*nr,:)
+        u_imag_rgq       = U_hat_imag_nrbc_rgq(1 + 1*nr:2*nr,:)
+        v_imag_rgq       = U_hat_imag_nrbc_rgq(1 + 2*nr:3*nr,:)
+        w_imag_rgq       = U_hat_imag_nrbc_rgq(1 + 3*nr:4*nr,:)
+        p_imag_rgq       = U_hat_imag_nrbc_rgq(1 + 4*nr:5*nr,:)
+
+
+
+        !
+        ! Inverse Fourier transform to gq nodes of current face
+        !
+        ddensity_3dbc = ZERO
+        dvel1_3dbc    = ZERO
+        dvel2_3dbc    = ZERO
+        dvel3_3dbc    = ZERO
+        dp_3dbc       = ZERO
+        !thetas = worker%coordinate('2','boundary')
+        do imode_c = 1,size(density_real_rgq,2)
+            do irgq = 1,nrgq
+                !istart = something
+                !iend   = something
+                ddensity_3dbc(istart:iend) = ddensity_3dbc(istart:iend)  +  idft(density_real_rgq(irgq,imode_c),density_imag_rgq(irgq,imode_c),thetas,imode_c)
+                du_3dbc(      istart:iend) = du_3dbc(      istart:iend)  +  idft(u_real_rgq(      irgq,imode_c),u_imag_rgq(      irgq,imode_c),thetas,imode_c)
+                dv_3dbc(      istart:iend) = dv_3dbc(      istart:iend)  +  idft(v_real_rgq(      irgq,imode_c),v_imag_rgq(      irgq,imode_c),thetas,imode_c)
+                dw_3dbc(      istart:iend) = dw_3dbc(      istart:iend)  +  idft(w_real_rgq(      irgq,imode_c),w_imag_rgq(      irgq,imode_c),thetas,imode_c)
+                dp_3dbc(      istart:iend) = dp_3dbc(      istart:iend)  +  idft(p_real_rgq(      irgq,imode_c),p_imag_rgq(      irgq,imode_c),thetas,imode_c)
+            end do !irgq
+        end do !imode_c
+
+
+
+
+
+
+
+
+
+
+
+
+
         !
         ! Compute update for average quantities
         !
         ! Initialize derivatives and set to zero
-        dvel1_mean = density_m(1)
-        dvel2_mean = density_m(1)
-        dvel3_mean = density_m(1)
-        dvel1_mean = ZERO
-        dvel2_mean = ZERO
-        dvel3_mean = ZERO
+        dvel1_avg = density_m(1)
+        dvel2_avg = density_m(1)
+        dvel3_avg = density_m(1)
+        dvel1_avg = ZERO
+        dvel2_avg = ZERO
+        dvel3_avg = ZERO
 
 
-        !c4_1d         = -TWO*(p_avg - p_user(1))
-        !ddensity_mean =  c4_1d/(TWO*c_avg*c_avg)
-        !dvel1_mean       = -c4_1d/(TWO*density_avg*c_avg)
-        !dp_mean       =  HALF*c4_1d
-        c4_1d         = -TWO*(p_avg - p_user(1))
-        ddensity_mean =  c4_1d/(TWO*c_avg*c_avg)
-        dvel3_mean    = -c4_1d/(TWO*density_avg*c_avg)
-        dp_mean       =  HALF*c4_1d
+
+        !c4_1d        = -TWO*(p_avg - p_user(1))
+        !ddensity_avg =  c4_1d/(TWO*c_avg*c_avg)
+        !dvel1_avg    = -c4_1d/(TWO*density_avg*c_avg)
+        !dp_avg       =  HALF*c4_1d
+        c4_1d        = -TWO*(p_avg - p_user(1))
+        ddensity_avg =  c4_1d/(TWO*c_avg*c_avg)
+        dvel3_avg    = -c4_1d/(TWO*density_avg*c_avg)
+        dp_avg       =  HALF*c4_1d
 
 
         !
@@ -979,8 +1137,8 @@ contains
         ngq = size(density_m)
         du_a = [ddensity, dvel1, dvel2, dvel3, dp]
         du_a(:) = ZERO
-        do ivec = 1,size(self%A_gq,2)
-            du_a = du_a  +  realpart(self%A_gq(:,ivec))*self%amp_real(ivec)  -  imagpart(self%A_gq(:,ivec))*self%amp_imag(ivec)
+        do ivec = 1,size(self%ur_gq,2)
+            du_a = du_a  +  realpart(self%ur_gq(:,ivec))*self%amp_real(ivec)  -  imagpart(self%ur_gq(:,ivec))*self%amp_imag(ivec)
         end do
 
         ddensity_a = du_a(1+0*ngq:1*ngq)
@@ -1000,31 +1158,31 @@ contains
         dp_c       = dp       - dp_a
 
 
-        ! Now zero out amplitude of all upstream-traveling eigenmodes
-        do i = 1,size(self%amp_real)
-            if (imagpart(self%k(i)) > 0.) then
-                self%amp_real(i) = ZERO
-                self%amp_imag(i) = ZERO
-            end if
-        end do
-    
-
-        ! Interpolate downstream-traveling acoustic perturbation onto quadrature nodes
-        du_ad = [ddensity, dvel1, dvel2, dvel3, dp]
-        du_ad(:) = ZERO
-        do ivec = 1,size(self%A_gq,2)
-            du_ad = du_ad  +  realpart(self%A_gq(:,ivec))*self%amp_real(ivec)  -  imagpart(self%A_gq(:,ivec))*self%amp_imag(ivec)
-        end do
-
-        ddensity_ad = du_ad(1+0*ngq:1*ngq)
-        dvel1_ad    = du_ad(1+1*ngq:2*ngq)
-        dvel2_ad    = du_ad(1+2*ngq:3*ngq)
-        dvel3_ad    = du_ad(1+3*ngq:4*ngq)
-        dp_ad       = du_ad(1+4*ngq:5*ngq)
-
-
-        !-------------------------------------
-
+!        ! Now zero out amplitude of all upstream-traveling eigenmodes
+!        do i = 1,size(self%amp_real)
+!            if (imagpart(self%k(i)) > 0.) then
+!                self%amp_real(i) = ZERO
+!                self%amp_imag(i) = ZERO
+!            end if
+!        end do
+!    
+!
+!        ! Interpolate downstream-traveling acoustic perturbation onto quadrature nodes
+!        du_ad = [ddensity, dvel1, dvel2, dvel3, dp]
+!        du_ad(:) = ZERO
+!        do ivec = 1,size(self%ur_gq,2)
+!            du_ad = du_ad  +  realpart(self%ur_gq(:,ivec))*self%amp_real(ivec)  -  imagpart(self%ur_gq(:,ivec))*self%amp_imag(ivec)
+!        end do
+!
+!        ddensity_ad = du_ad(1+0*ngq:1*ngq)
+!        dvel1_ad    = du_ad(1+1*ngq:2*ngq)
+!        dvel2_ad    = du_ad(1+2*ngq:3*ngq)
+!        dvel3_ad    = du_ad(1+3*ngq:4*ngq)
+!        dp_ad       = du_ad(1+4*ngq:5*ngq)
+!
+!
+!        !-------------------------------------
+!
 !        !
 !        ! Pull out primitive parts of downstream acoustic waves
 !        !
@@ -1064,29 +1222,11 @@ contains
         p_bc       = density_m
         do i = 1,size(ddensity_c)
 
-!            density_bc(i) = density_avg  +  ddensity_mean  +  ddensity(i)
-!            vel1_bc(i)    = vel1_avg     +  dvel1_mean     +  dvel1(i)
-!            vel2_bc(i)    = vel2_avg     +  dvel2_mean     +  dvel2(i)
-!            vel3_bc(i)    = vel3_avg     +  dvel3_mean     +  dvel3(i)
-!            p_bc(i)       = p_avg        +  dp_mean        +  dp(i)
-
-
-!            print*, ddensity_c(i)%x_ad_, dvel1_c(i)%x_ad_, dvel2_c(i)%x_ad_, dvel3_c(i)%x_ad_, dp_c(i)%x_ad_
-!            print*, ddensity_ad(i)%x_ad_, dvel1_ad(i)%x_ad_, dvel2_ad(i)%x_ad_, dvel3_ad(i)%x_ad_, dp_ad(i)%x_ad_
-
-            density_bc(i) = density_avg  +  ddensity_mean  +  ddensity_c(i)  +  ddensity_ad(i)
-            vel1_bc(i)    = vel1_avg     +  dvel1_mean     +  dvel1_c(i)     +  dvel1_ad(i)
-            !vel2_bc(i)    = vel2_avg     +  dvel2_mean     +  dvel2_c(i)     +  dvel2_ad(i)
-            !vel2_bc(i)    = vel2_m(i)
-            vel2_bc(i)    = dvel2_c(i)   +  dvel2_ad(i)
-            vel3_bc(i)    = vel3_avg     +  dvel3_mean     +  dvel3_c(i)     +  dvel3_ad(i)
-            p_bc(i)       = p_avg        +  dp_mean        +  dp_c(i)        +  dp_ad(i)
-        
-!            density_bc(i) = density_avg  +  ddensity_mean  +  ddensity_d(i)  
-!            vel1_bc(i)    = vel1_avg     +  dvel1_mean     +  dvel1_d(i)     
-!            vel2_bc(i)    = vel2_avg     +  dvel2_mean     +  dvel2_d(i)     
-!            vel3_bc(i)    = vel3_avg     +  dvel3_mean     +  dvel3_d(i)     
-!            p_bc(i)       = p_avg        +  dp_mean        +  dp_d(i)
+            density_bc(i) = density_avg  +  ddensity_avg  +  ddensity_1dbc(i)  +  ddensity_3dbc(i)
+            vel1_bc(i)    = vel1_avg     +  dvel1_avg     +  dvel1_1dbc(i)     +  dvel1_3dbc(i)
+            vel2_bc(i)    = vel2_avg     +  dvel2_avg     +  dvel2_1dbc(i)     +  dvel2_3dbc(i)
+            vel3_bc(i)    = vel3_avg     +  dvel3_avg     +  dvel3_1dbc(i)     +  dvel3_3dbc(i)
+            p_bc(i)       = p_avg        +  dp_avg        +  dp_1dbc(i)        +  dp_3dbc(i)
 
         end do
         
@@ -1137,36 +1277,51 @@ contains
     !!  @date   2/14/2018
     !!
     !---------------------------------------------------------------------------------
-    subroutine project_to_eigenmodes(amp_real, amp_imag, VR, VL, U_hat)
-        type(AD_D),     intent(inout)   :: amp_real(:)
-        type(AD_D),     intent(inout)   :: amp_imag(:)
-        complex(rk),    intent(in)      :: VR(:,:)
-        complex(rk),    intent(in)      :: VL(:,:)
-        type(AD_D),     intent(in)      :: U_hat(:)
+    subroutine project_to_eigenmodes(VR, VL, U_hat_real, U_hat_imag, amp_real, amp_imag)
+        complex(rk),    intent(in)                  :: VR(:,:,:)
+        complex(rk),    intent(in)                  :: VL(:,:,:)
+        type(AD_D),     intent(in)                  :: U_hat_real(:,:)
+        type(AD_D),     intent(in)                  :: U_hat_imag(:,:)
+        type(AD_D),     intent(inout), allocatable  :: amp_real(:,:)
+        type(AD_D),     intent(inout), allocatable  :: amp_imag(:,:)
 
-        type(AD_D), allocatable :: U_hat_tmp(:)
-        integer :: ivec, inode
+        integer :: ierr, inode, imode_c, imode_r, nmodes_c, nmodes_r
 
-        ! Copy U_hat for modification
-        U_hat_tmp = U_hat
-
-
-        amp_real(:) = U_hat(1)
-        amp_imag(:) = U_hat(1)
-        amp_real(:) = ZERO
-        amp_imag(:) = ZERO
+        nmodes_c = size(U_hat_real,2)
+        nmodes_r = size(VL,2)
 
 
-        do ivec = 1,size(VL,2)
-            do inode = 1,size(VL,1)
-                amp_real(ivec) = amp_real(ivec) + realpart(VL(inode,ivec)) * U_hat_tmp(inode)
-                ! Minus here due to conjugate in inner-product definition
-                amp_imag(ivec) = amp_imag(ivec) - imagpart(VL(inode,ivec)) * U_hat_tmp(inode)
+        ! Allocate storage for modal amplitudes
+        if (allocated(amp_real)) deallocate(amp_real)
+        if (allocated(amp_imag)) deallocate(amp_imag)
+        allocate(amp_real(nmodes_r,nmodes_c), amp_imag(nmodes_r,nmodes_c), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+
+        ! Initialize + Zero derivatives
+        amp_real(:,:) = U_hat_real(1)
+        amp_imag(:,:) = U_hat_real(1)
+        amp_real(:,:) = ZERO
+        amp_imag(:,:) = ZERO
+
+
+        !   Inner product: <f,g>  =  f1*conj(g1)  +  f2*conj(g2)  +  f3*conj(g3)  +  ...
+        !
+        !   f1       = (f1_real  +  j f1_imag)
+        !   g1       = (g1_real  +  j g1_imag)
+        !   conj(f1) = (f1_real  -  j f1_imag)
+        !   conj(g1) = (g1_real  -  j g1_imag)
+        !
+        !   f1*conj(g1) = (f1_real*g1_real + f1_imag*g1_imag)  +  j(f1_imag*g1_real  -  f1_real*g1_imag)
+        !   conj(f1)*g1 = (f1_real*g1_real + f1_imag*g1_imag)  +  j(f1_real*g1_imag  -  f1_imag*g1_real)
+        !
+        do imode_c = 1,size(U_hat_real,2)
+            do imode_r = 1,size(VL,2)
+                do inode = 1,size(VL,1)
+                    amp_real(imode_r,imode_c) = amp_real(imode_r,imode_c) + ( realpart(VL(inode,imode_r,imode_c))*U_hat_real(inode,imode_c)  +  imagpart(VL(inode,imode_r,imode_c))*U_hat_imag(inode,imode_c) )
+                    amp_imag(imode_r,imode_c) = amp_imag(imode_r,imode_c) + ( realpart(VL(inode,imode_r,imode_c))*U_hat_imag(inode,imode_c)  -  imagpart(VL(inode,imode_r,imode_c))*U_hat_real(inode,imode_c) )
+                end do
             end do
-
-            ! Subtract energy from available in U_hat
-            U_hat_tmp = U_hat_tmp - amp_real(ivec)*realpart(VR(:,ivec))
-
         end do
 
 
@@ -1196,4 +1351,4 @@ contains
 
 
 
-end module bc_state_outlet_3dgiles_innerproduct
+end module bc_state_outlet_3dgiles_innerproduct_general

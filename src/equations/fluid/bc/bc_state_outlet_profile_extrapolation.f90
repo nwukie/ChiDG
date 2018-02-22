@@ -1,7 +1,7 @@
 module bc_state_outlet_profile_extrapolation
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE, HALF, TWO
+    use mod_constants,          only: ZERO, ONE, HALF, TWO, XI_MAX, ETA_MAX, ZETA_MAX 
     use mod_fluid,              only: gam, Rgas
 
     use type_bc_state,          only: bc_state_t
@@ -404,16 +404,25 @@ contains
         p_element = worker%get_field('Pressure'   , 'value', 'element')
         print*, 'nnodes 2d: ', size(p_m)
         print*, 'nnodes 3d: ', size(p_element)
-        ! P2
-        !p_m = p_element(101:125)
-        ! P3
-        !p_m = p_element(181:216)
-        ! P4
-        p_m = p_element(449:512)
-        ! P5
-        !p_m = p_element(649:729)
-        ! P6
-        !p_m = p_element(1211:1331)
+
+        select case(worker%solution_order('interior'))
+            case(0)
+                p_m = p_element(5:8)
+            case(1)
+                p_m = p_element(19:27)
+            case(2) 
+                p_m = p_element(101:125)
+            case(3)
+                p_m = p_element(181:216)
+            case(4)
+                p_m = p_element(449:512)
+            case(5)
+                p_m = p_element(649:729)
+            case(6)
+                p_m = p_element(1211:1331)
+            case default
+                call chidg_signal(FATAL,"bc_state_outlet_profile_extrapolation: order.")
+        end select 
 
 
 

@@ -215,16 +215,16 @@ contains
         w_m = mom3_m/density_m
 
 
-        !
-        ! Compute normal vector
-        !
-        K0      = 100._rk
-        u_axial = 50._rk
-        alpha = atan2(K0/r,u_axial)
-        
-        n1 = ZERO
-        n2 = sin(alpha)
-        n3 = cos(alpha)
+!        !
+!        ! Compute normal vector
+!        !
+!        K0      = 150._rk
+!        u_axial = 125._rk
+!        alpha = atan2(K0/r,u_axial)
+!        
+!        n1 = ZERO
+!        n2 = sin(alpha)
+!        n3 = cos(alpha)
 
 
 

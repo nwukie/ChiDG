@@ -48,6 +48,7 @@ module mod_bc
     use bc_state_outlet_constant_pressure,      only: outlet_constant_pressure_t
     use bc_state_outlet_pressure_equation,      only: outlet_pressure_equation_t
     use bc_state_outlet_profile_extrapolation,  only: outlet_profile_extrapolation_t
+    use bc_state_outlet_average_profile_extrapolation,  only: outlet_average_profile_extrapolation_t
     use bc_state_outlet_testing,                only: outlet_testing_t
     !use bc_state_outlet_point_pressure,         only: outlet_point_pressure_t
     !use bc_state_outlet_LODI_pressure,          only: outlet_LODI_pressure_t
@@ -151,6 +152,7 @@ contains
         type(outlet_constant_pressure_t)        :: OUTLET_CONSTANT_PRESSURE
         type(outlet_pressure_equation_t)        :: OUTLET_PRESSURE_EQUATION
         type(outlet_profile_extrapolation_t)    :: OUTLET_PROFILE_EXTRAPOLATION
+        type(outlet_average_profile_extrapolation_t)    :: OUTLET_AVERAGE_PROFILE_EXTRAPOLATION
         type(outlet_testing_t)                  :: OUTLET_TESTING
         !type(outlet_point_pressure_t)           :: OUTLET_POINT_PRESSURE
         !type(outlet_LODI_pressure_t)            :: OUTLET_LODI_PRESSURE
@@ -227,6 +229,7 @@ contains
             call registered_bcs%push_back(OUTLET_CONSTANT_PRESSURE)
             call registered_bcs%push_back(OUTLET_PRESSURE_EQUATION)
             call registered_bcs%push_back(OUTLET_PROFILE_EXTRAPOLATION)
+            call registered_bcs%push_back(OUTLET_AVERAGE_PROFILE_EXTRAPOLATION)
             call registered_bcs%push_back(OUTLET_TESTING)
             call registered_bcs%push_back(OUTLET_AVERAGE_PRESSURE)
             call registered_bcs%push_back(OUTLET_3DGILES)

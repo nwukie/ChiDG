@@ -2,6 +2,7 @@ module bc_state_graddemo_gradp_extrapolate
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, HALF, TWO
+    use mod_fluid,              only: gam
     use type_bc_state,          only: bc_state_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
@@ -75,212 +76,110 @@ contains
 
 
         ! Storage at quadrature nodes
-        type(AD_D), allocatable, dimension(:)   ::                      &
-            pressure, grad1_pressure, grad2_pressure, grad3_pressure,   &
-            grad1_p, grad2_p, grad3_p,                                  &
-            grad1_grad1_p, grad2_grad1_p, grad3_grad1_p,                &
-            grad1_grad2_p, grad2_grad2_p, grad3_grad2_p,                &
-            grad1_grad3_p, grad2_grad3_p, grad3_grad3_p, pressure_ig
+        type(AD_D), allocatable, dimension(:)   ::  &
+            po, grad1_po, grad2_po, grad3_po,       &
+            p_bc, grad1_p_bc, grad2_p_bc, grad3_p_bc
 
-        type(AD_D)  :: p_avg, dp
-
-        !
-        ! Interpolate interior solution to face quadrature nodes
-        !
-        pressure       = worker%get_field('Pressure_TEMP', 'value', 'face interior')
-        grad1_pressure = worker%get_field('Pressure_TEMP', 'grad1', 'face interior')
-        grad2_pressure = worker%get_field('Pressure_TEMP', 'grad2', 'face interior')
-        grad3_pressure = worker%get_field('Pressure_TEMP', 'grad3', 'face interior')
-
-        pressure_ig = worker%get_field('Pressure', 'value', 'face interior')
+        type(AD_D), dimension(:),   allocatable ::                              &
+            density, mom1, mom2, mom3, energy,                                  &
+            grad1_density, grad1_mom1, grad1_mom2, grad1_mom3, grad1_energy,    &
+            grad2_density, grad2_mom1, grad2_mom2, grad2_mom3, grad2_energy,    &
+            grad3_density, grad3_mom1, grad3_mom2, grad3_mom3, grad3_energy,    &
+            dp_ddensity, dp_dmom1, dp_dmom2, dp_dmom3, dp_denergy
 
 
-
-!        grad1_p  = worker%get_field('Pressure Gradient - 1', 'value', 'face interior')
-!        grad2_p  = worker%get_field('Pressure Gradient - 2', 'value', 'face interior')
-!        grad3_p  = worker%get_field('Pressure Gradient - 3', 'value', 'face interior')
-!
-!        grad1_grad1_p  = worker%get_field('Pressure Gradient - 1', 'grad1', 'face interior')
-!        grad2_grad1_p  = worker%get_field('Pressure Gradient - 1', 'grad2', 'face interior')
-!        grad3_grad1_p  = worker%get_field('Pressure Gradient - 1', 'grad3', 'face interior')
-!
-!        grad1_grad2_p  = worker%get_field('Pressure Gradient - 2', 'grad1', 'face interior')
-!        grad2_grad2_p  = worker%get_field('Pressure Gradient - 2', 'grad2', 'face interior')
-!        grad3_grad2_p  = worker%get_field('Pressure Gradient - 2', 'grad3', 'face interior')
-!
-!        grad1_grad3_p  = worker%get_field('Pressure Gradient - 3', 'grad1', 'face interior')
-!        grad2_grad3_p  = worker%get_field('Pressure Gradient - 3', 'grad2', 'face interior')
-!        grad3_grad3_p  = worker%get_field('Pressure Gradient - 3', 'grad3', 'face interior')
-
-        
-        !
-        ! We want the gradient to be equal to the gradient from the interior problem
-        !
-        !grad1_pressure =  -132000._rk*sin(132._rk * worker%x('boundary'))
-        !grad1_pressure = grad1_p
-        !grad2_pressure = grad2_p
-        !grad3_pressure = ZERO
 
 
 
         !
-        ! We want to set the value of pressure at a single point
+        ! Retrieve values from original problem
         !
-!        if ( (worker%element_info%idomain_g == 6) .and. (worker%element_info%ielement_g == 1) .and. (worker%iface == 1) ) then
-!            pressure(1) = 100000._rk
-!            !pressure = 98000._rk
-!        end if
-
-!        if ( ((worker%element_info%idomain_g == 2) .or. (worker%element_info%idomain_g == 7)) .and. &
-!             (worker%iface == 1) ) then
-!            pressure = 100000._rk
-!            grad1_pressure = ZERO
-!            grad2_pressure = ZERO
-!            grad3_pressure = ZERO
-!        end if
-!
-!        if ( ((worker%element_info%idomain_g == 2) .or. (worker%element_info%idomain_g == 7)) .and. &
-!             (worker%iface == 2) ) then
-!            pressure = 100000._rk
-!            grad1_pressure = ZERO
-!            grad2_pressure = ZERO
-!            grad3_pressure = ZERO
-!        end if
+        po = worker%get_field('Pressure', 'value', 'face interior')
+        !grad1_po = worker%get_field('Pressure Gradient - 1', 'value', 'face interior')
+        !grad2_po = worker%get_field('Pressure Gradient - 2', 'value', 'face interior')
+        !grad3_po = worker%get_field('Pressure Gradient - 3', 'value', 'face interior')
 
 
 
+        !
+        ! Interpolate solution to quadrature nodes
+        !
+        density       = worker%get_field('Density',    'value')
+        mom1          = worker%get_field('Momentum-1', 'value')
+        mom2          = worker%get_field('Momentum-2', 'value')
+        mom3          = worker%get_field('Momentum-3', 'value')
+        energy        = worker%get_field('Energy',     'value')
+
+        grad1_density = worker%get_field('Density',    'grad1', override_lift=.true.)
+        grad1_mom1    = worker%get_field('Momentum-1', 'grad1', override_lift=.true.)
+        grad1_mom2    = worker%get_field('Momentum-2', 'grad1', override_lift=.true.)
+        grad1_mom3    = worker%get_field('Momentum-3', 'grad1', override_lift=.true.)
+        grad1_energy  = worker%get_field('Energy',     'grad1', override_lift=.true.)
+
+
+        grad2_density = worker%get_field('Density',    'grad2', override_lift=.true.)
+        grad2_mom1    = worker%get_field('Momentum-1', 'grad2', override_lift=.true.)
+        grad2_mom2    = worker%get_field('Momentum-2', 'grad2', override_lift=.true.)
+        grad2_mom3    = worker%get_field('Momentum-3', 'grad2', override_lift=.true.)
+        grad2_energy  = worker%get_field('Energy',     'grad2', override_lift=.true.)
+
+
+        grad3_density = worker%get_field('Density',    'grad3', override_lift=.true.)
+        grad3_mom1    = worker%get_field('Momentum-1', 'grad3', override_lift=.true.)
+        grad3_mom2    = worker%get_field('Momentum-2', 'grad3', override_lift=.true.)
+        grad3_mom3    = worker%get_field('Momentum-3', 'grad3', override_lift=.true.)
+        grad3_energy  = worker%get_field('Energy',     'grad3', override_lift=.true.)
 
 
 
-!        pressure = pressure_ig
-!        if ( (worker%element_info%ielement_g == 1) .and. (worker%iface == 5)) then
-!        !if ( (worker%element_info%idomain_g == 5) .and. (worker%element_info%ielement_g == 3) .and. (worker%iface == 2)) then
-!        if ( (worker%element_info%ielement_g == 800) .and. (worker%iface == 6) ) then
-!            pressure(:) = 100000._rk
-!
-!            ! P0
-!            !pressure(1)  = 100000._rk
-!
-!            ! P0
-!            !pressure(1)  = 100000._rk
-!            !pressure(3)  = 100000._rk
-!
-!            ! P1
-!            !pressure(1)  = 100000._rk
-!            !pressure(4)  = 100000._rk
-!            !pressure(7)  = 100000._rk
-!
-!            ! P2
-!            !pressure(1)  = 100000._rk
-!            !pressure(5)  = 100000._rk
-!            !pressure(9)  = 100000._rk
-!            !pressure(13) = 100000._rk
-!
-!            ! P3
-!            !pressure(1)  = 100000._rk
-!            !pressure(6)  = 100000._rk
-!            !pressure(11) = 100000._rk
-!            !pressure(16) = 100000._rk
-!            !pressure(21) = 100000._rk
-!
-!            ! P4
-!            !pressure(1)  = 100000._rk
-!            !pressure(7)  = 100000._rk
-!            !pressure(13) = 100000._rk
-!            !pressure(19) = 100000._rk
-!            !pressure(25) = 100000._rk
-!            !pressure(31) = 100000._rk
-!
-!        end if
+        dp_ddensity =  (gam-ONE)*HALF*(mom1*mom1 + mom2*mom2 + mom3*mom3)/(density*density)
+        dp_dmom1    = -(gam-ONE)*mom1/density
+        dp_dmom2    = -(gam-ONE)*mom2/density
+        dp_dmom3    = -(gam-ONE)*mom3/density
+        dp_denergy  = dp_ddensity ! init storage
+        dp_denergy  =  (gam-ONE)
 
 
-        !if ( (worker%element_info%idomain_g == 5) .and. (worker%element_info%ielement_g == 3) .and. (worker%iface == 2)) then
-        !if ( (worker%element_info%ielement_g == 1) .and. (worker%iface == 5) ) then
-        if ( (worker%element_info%ielement_g == 40) .and. (worker%iface == 6) ) then
-        !if ( (worker%element_info%ielement_g == 160) .and. (worker%iface == 6) ) then
-        !if ( (worker%element_info%ielement_g == 640) .and. (worker%iface == 6) ) then
-        !if ( (worker%element_info%ielement_g == 800) .and. (worker%iface == 6) ) then
-        !if ( (worker%element_info%ielement_g == 1000) .and. (worker%iface == 6) ) then
-        !if ( (worker%element_info%ielement_g == 2560) .and. (worker%iface == 6) ) then
-        !if ( (worker%element_info%ielement_g == 3200) .and. (worker%iface == 6) ) then
-            pressure = pressure
-            !pressure(:) = 100000._rk
+        ! Compute pressure gradient using Chain-rule
+        grad1_po = dp_ddensity * grad1_density  + &
+                   dp_dmom1    * grad1_mom1     + &
+                   dp_dmom2    * grad1_mom2     + &
+                   dp_dmom3    * grad1_mom3     + &
+                   dp_denergy  * grad1_energy
 
-            ! P0
-            !pressure(1)  = 100000._rk
-            !pressure(3)  = 100000._rk
+        grad2_po = dp_ddensity * grad2_density  + &
+                   dp_dmom1    * grad2_mom1     + &
+                   dp_dmom2    * grad2_mom2     + &
+                   dp_dmom3    * grad2_mom3     + &
+                   dp_denergy  * grad2_energy
 
-            ! P1
-            !pressure(1)  = 100000._rk
-            !pressure(4)  = 100000._rk
-            !pressure(7)  = 100000._rk
-
-            ! P2
-            !pressure(1)  = 100000._rk
-            !pressure(6)  = 100000._rk
-            !pressure(11) = 100000._rk
-            !pressure(16) = 100000._rk
-            !pressure(21) = 100000._rk
-
-            ! P3
-            !pressure(1)  = 100000._rk
-            !pressure(7)  = 100000._rk
-            !pressure(13) = 100000._rk
-            !pressure(19) = 100000._rk
-            !pressure(25) = 100000._rk
-            !pressure(31) = 100000._rk
-
-
-            p_avg = sum(pressure)/real(size(pressure),rk)
-            dp = (100000._rk - p_avg)
-            pressure = pressure - dp
-
-        !else if ( (worker%element_info%idomain_g == 5) .and. (worker%element_info%ielement_g /= 3) .and. (worker%iface == 2)) then
-        !else if ( (worker%element_info%ielement_g /= 1) .and. (worker%iface == 5) ) then
-        else if ( (worker%element_info%ielement_g /= 40) .and. (worker%iface == 6) ) then
-        !else if ( (worker%element_info%ielement_g /= 160) .and. (worker%iface == 6) ) then
-        !else if ( (worker%element_info%ielement_g /= 640) .and. (worker%iface == 6) ) then
-        !else if ( (worker%element_info%ielement_g /= 800) .and. (worker%iface == 6) ) then
-        !else if ( (worker%element_info%ielement_g /= 1000) .and. (worker%iface == 6) ) then
-        !else if ( (worker%element_info%ielement_g /= 2560) .and. (worker%iface == 6) ) then
-        !else if ( (worker%element_info%ielement_g /= 3200) .and. (worker%iface == 6) ) then
-            pressure = pressure
-        else
-            pressure = pressure_ig
-        end if
+        grad3_po = dp_ddensity * grad3_density  + &
+                   dp_dmom1    * grad3_mom1     + &
+                   dp_dmom2    * grad3_mom2     + &
+                   dp_dmom3    * grad3_mom3     + &
+                   dp_denergy  * grad3_energy
 
 
 
-
-
-
+        !
+        ! Set boundary condition on auxiliary problem from original problem
+        !
+        p_bc       = po
+        grad1_p_bc = grad1_po
+        grad2_p_bc = grad2_po
+        grad3_p_bc = grad3_po
 
 
 
         !
         ! Store boundary condition state
         !
-        call worker%store_bc_state('Pressure_TEMP', pressure,       'value')
-        call worker%store_bc_state('Pressure_TEMP', grad1_pressure, 'grad1')
-        call worker%store_bc_state('Pressure_TEMP', grad2_pressure, 'grad2')
-        call worker%store_bc_state('Pressure_TEMP', grad3_pressure, 'grad3')
+        call worker%store_bc_state('Pressure_TEMP', p_bc,       'value')
+        call worker%store_bc_state('Pressure_TEMP', grad1_p_bc, 'grad1')
+        call worker%store_bc_state('Pressure_TEMP', grad2_p_bc, 'grad2')
+        call worker%store_bc_state('Pressure_TEMP', grad3_p_bc, 'grad3')
 
 
-!        call worker%store_bc_state('Pressure Gradient - 1', grad1_p,        'value')
-!        call worker%store_bc_state('Pressure Gradient - 2', grad2_p,        'value')
-!        call worker%store_bc_state('Pressure Gradient - 3', grad3_p,        'value')
-!
-!        call worker%store_bc_state('Pressure Gradient - 1', grad1_grad1_p,  'grad1')
-!        call worker%store_bc_state('Pressure Gradient - 1', grad2_grad1_p,  'grad2')
-!        call worker%store_bc_state('Pressure Gradient - 1', grad3_grad1_p,  'grad3')
-!
-!        call worker%store_bc_state('Pressure Gradient - 2', grad1_grad2_p,  'grad1')
-!        call worker%store_bc_state('Pressure Gradient - 2', grad2_grad2_p,  'grad2')
-!        call worker%store_bc_state('Pressure Gradient - 2', grad3_grad2_p,  'grad3')
-!
-!        call worker%store_bc_state('Pressure Gradient - 3', grad1_grad3_p,  'grad1')
-!        call worker%store_bc_state('Pressure Gradient - 3', grad2_grad3_p,  'grad2')
-!        call worker%store_bc_state('Pressure Gradient - 3', grad3_grad3_p,  'grad3')
 
 
     end subroutine compute_bc_state

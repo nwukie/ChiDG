@@ -21,7 +21,6 @@ module mod_chimera
                                       XI_DIR, ETA_DIR, ZETA_DIR, &
                                       ONE, ZERO, TWO, TWO_DIM, THREE_DIM, &
                                       NO_PROC, NO_ID
-    use mod_reference_elements, only: ref_elems
 
     use type_point
     use type_mesh,              only: mesh_t
@@ -226,7 +225,6 @@ contains
                             !
                             offset = get_periodic_offset(mesh%domain(receiver%idomain_l)%faces(receiver%ielement_l,receiver%iface))
 
-                            !gq_node = gq_node + offset
 
 
                             searching = .true.
@@ -249,9 +247,17 @@ contains
                             !
                             ! Call routine to find LOCAL gq donor for current node
                             !
+                            !call find_gq_donor(mesh,                &
+                            !                   point_t(gq_node),    &
+                            !                   point_t(offset),     &
+                            !                   receiver,            &
+                            !                   donor,               &
+                            !                   donor_coord,         &
+                            !                   donor_found,         &
+                            !                   donor_volume=local_vol)
                             call find_gq_donor(mesh,                &
-                                               point_t(gq_node),    &
-                                               point_t(offset),     &
+                                               gq_node,             &
+                                               offset,              &
                                                receiver,            &
                                                donor,               &
                                                donor_coord,         &
@@ -455,7 +461,14 @@ contains
                     !
                     ! Try to find donor
                     !
-                    call find_gq_donor(mesh,point_t(gq_node),point_t(offset),receiver,donor,donor_coord, donor_found, donor_volume=donor_vol)
+                    call find_gq_donor(mesh,                &
+                                       gq_node,             &
+                                       offset,              &
+                                       receiver,            &
+                                       donor,               &
+                                       donor_coord,         &
+                                       donor_found,         &
+                                       donor_volume=donor_vol)
 
                     
                     !
@@ -702,8 +715,8 @@ contains
     !-------------------------------------------------------------------------------------
     subroutine find_gq_donor(mesh,gq_node,offset,receiver_face,donor_element,donor_coordinate,donor_found,donor_volume)
         type(mesh_t),               intent(in)              :: mesh
-        type(point_t),              intent(in)              :: gq_node
-        type(point_t),              intent(in)              :: offset
+        real(rk),                   intent(in)              :: gq_node(3)
+        real(rk),                   intent(in)              :: offset(3)
         type(face_info_t),          intent(in)              :: receiver_face
         type(element_info_t),       intent(inout)           :: donor_element
         real(rk),                   intent(inout)           :: donor_coordinate(3)
@@ -725,20 +738,19 @@ contains
         type(ivector_t)         :: donors
         type(rvector_t)         :: donors_xi, donors_eta, donors_zeta
 
-        logical                 :: contained = .false.
-        logical                 :: receiver  = .false.
+        logical                 :: contained  = .false.
+        logical                 :: receiver   = .false.
         logical                 :: node_found = .false.
-        logical                 :: node_self = .false.
+        logical                 :: node_self  = .false.
 
 
+        xgq = gq_node(1)
+        ygq = gq_node(2)
+        zgq = gq_node(3)
 
-        xgq = gq_node%c1_
-        ygq = gq_node%c2_
-        zgq = gq_node%c3_
-
-        offset1 = offset%c1_
-        offset2 = offset%c2_
-        offset3 = offset%c3_
+        offset1 = offset(1)
+        offset2 = offset(2)
+        offset3 = offset(3)
 
         search1 = xgq + offset1
         search2 = ygq + offset2
@@ -794,16 +806,10 @@ contains
                               (ymin < search2) .and. (search2 < ymax ) .and. &
                               (zmin < search3) .and. (search3 < zmax ) )
 
-                !!
-                !! Make sure that we arent adding the receiver element itself as a potential donor
-                !!
-                !receiver = ( (idomain_g == receiver_face%idomain_g) .and. (ielement_g == receiver_face%ielement_g) )
-
 
                 !
                 ! If the node was within the bounding coordinates, flag the element as a potential donor
                 !
-                !if (contained .and. (.not. receiver)) then
                 if (contained) then
                     call candidate_domains_g%push_back(idomain_g)
                     call candidate_domains_l%push_back(idomain_l)
@@ -816,7 +822,6 @@ contains
             end do ! ielem
 
         end do ! idom
-
 
 
 
@@ -838,8 +843,6 @@ contains
             donor_comp = mesh%domain(idomain_l)%elems(ielement_l)%computational_point([search1,search2,search3])    ! Newton's method routine
 
 
-            !node_found = (any(ieee_is_nan(gq_comp)) .eqv. .false.)
-
             ! Node is not nan
             node_found = (any(ieee_is_nan(donor_comp)) .eqv. .false.) 
 
@@ -850,9 +853,6 @@ contains
             else
                 node_self = .false.
             end if
-
-            !node_self = ((idomain_g == receiver_face%idomain_g) .and. (ielement_g == receiver_face%ielement_g)) .and. &
-            !            (abs(sum(recv_comp - donor_comp)) < 1.e-3_rk)
 
 
 
@@ -895,7 +895,7 @@ contains
             donor_element%ielement_g = candidate_elements_g%at(idonor)
             donor_element%ielement_l = candidate_elements_l%at(idonor)
             donor_element%iproc      = IRANK
-            donor_element%eqn_ID     = mesh%domain(donor_element%idomain_l)%eqn_ID
+            donor_element%eqn_ID     = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%eqn_ID
             donor_element%neqns      = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%neqns
             donor_element%nterms_s   = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_s
             donor_element%nterms_c   = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_c
@@ -932,7 +932,7 @@ contains
             donor_element%ielement_g = candidate_elements_g%at(idonor)
             donor_element%ielement_l = candidate_elements_l%at(idonor)
             donor_element%iproc      = IRANK
-            donor_element%eqn_ID     = mesh%domain(donor_element%idomain_l)%eqn_ID
+            donor_element%eqn_ID     = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%eqn_ID
             donor_element%neqns      = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%neqns
             donor_element%nterms_s   = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_s
             donor_element%nterms_c   = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_c
@@ -957,6 +957,268 @@ contains
 
     end subroutine find_gq_donor
     !******************************************************************************
+
+
+
+
+
+    !>  Try to find an element from the list of mesh%parallel_elements(:) that have 
+    !!  already been identified and initialialized that contains a given quadrature 
+    !!  node and can donate interpolated solution values to the receiver face. 
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/24/2018
+    !!
+    !!  @param[in]      mesh                mesh_t instance.
+    !!  @param[in]      gq_node             (c1,c2,c3) point that needs to find a donor.
+    !!  @param[in]      offset              (dc1, dc2, dc3) offset to the search location.
+    !!  @param[in]      receiver_face       Location of face containing the gq_node
+    !!  @param[inout]   donor_element       Location of the donor element that was found
+    !!  @param[inout]   donor_coordinate    Point defining the location of the GQ point in the donor coordinate system.
+    !!  @param[inout]   donor_found         Logical, indicating if a donor element was found or not.
+    !!  @param[inout]   donor_volume        Volume of the donor element that can be used to select between donors if 
+    !!                                      multiple are available.
+    !!
+    !-------------------------------------------------------------------------------------
+    subroutine find_gq_donor_parallel(mesh,gq_node,offset,receiver_face,donor_element,donor_coordinate,donor_found,donor_volume)
+        type(mesh_t),               intent(in)              :: mesh
+        real(rk),                   intent(in)              :: gq_node(3)
+        real(rk),                   intent(in)              :: offset(3)
+        type(face_info_t),          intent(in)              :: receiver_face
+        type(element_info_t),       intent(inout)           :: donor_element
+        real(rk),                   intent(inout)           :: donor_coordinate(3)
+        logical,                    intent(inout)           :: donor_found
+        real(rk),                   intent(inout), optional :: donor_volume
+
+
+        integer(ik)                 :: idom, ielem, inewton, idomain_g, idomain_l,      &
+                                       ielement_g, ielement_l, icandidate, ncandidates, &
+                                       idonor, donor_index, pelem_ID
+
+        real(rk), allocatable   :: xcenter(:), ycenter(:), zcenter(:), dist(:), donor_vols(:)
+        real(rk)                :: xgq, ygq, zgq, dx, dy, dz, xi, eta, zeta, xn, yn, zn,    &
+                                   xmin, xmax, ymin, ymax, zmin, zmax,                      &
+                                   xcenter_recv, ycenter_recv, zcenter_recv
+
+        real(rk)                :: donor_comp(3), recv_comp(3), search1, search2, search3, offset1, offset2, offset3
+        type(ivector_t)         :: candidate_elements
+        type(ivector_t)         :: donors_pelem_ID
+        type(rvector_t)         :: donors_xi, donors_eta, donors_zeta
+
+        logical                 :: contained  = .false.
+        logical                 :: receiver   = .false.
+        logical                 :: node_found = .false.
+        logical                 :: node_self  = .false.
+
+        xgq = gq_node(1)
+        ygq = gq_node(2)
+        zgq = gq_node(3)
+
+        offset1 = offset(1)
+        offset2 = offset(2)
+        offset3 = offset(3)
+
+        search1 = xgq + offset1
+        search2 = ygq + offset2
+        search3 = zgq + offset3
+
+
+        !
+        ! Loop through PARALLEL elements and search for potential donor candidates.
+        !
+        do pelem_ID = 1,mesh%nparallel_elements()
+
+            !
+            ! Get bounding coordinates for the current element
+            !
+            xmin = minval(mesh%parallel_element(pelem_ID)%node_coords(:,1))
+            xmax = maxval(mesh%parallel_element(pelem_ID)%node_coords(:,1))
+            ymin = minval(mesh%parallel_element(pelem_ID)%node_coords(:,2))
+            ymax = maxval(mesh%parallel_element(pelem_ID)%node_coords(:,2))
+            zmin = minval(mesh%parallel_element(pelem_ID)%node_coords(:,3))
+            zmax = maxval(mesh%parallel_element(pelem_ID)%node_coords(:,3))
+
+            !
+            ! Grow bounding box by 10%. Use delta x,y,z instead of scaling xmin etc. in case xmin is 0
+            !
+            dx = abs(xmax - xmin)  
+            dy = abs(ymax - ymin)
+            dz = abs(zmax - zmin)
+
+            xmin = xmin - 0.1*dx
+            xmax = xmax + 0.1*dx
+            ymin = ymin - 0.1*dy
+            ymax = ymax + 0.1*dy
+            zmin = (zmin-0.001) - 0.1*dz    ! This is to help 2D
+            zmax = (zmax+0.001) + 0.1*dz    ! This is to help 2D
+
+            !
+            ! Test if gq_node is contained within the bounding coordinates
+            !
+            contained = ( (xmin < search1) .and. (search1 < xmax ) .and. &
+                          (ymin < search2) .and. (search2 < ymax ) .and. &
+                          (zmin < search3) .and. (search3 < zmax ) )
+
+
+            !
+            ! If the node was within the bounding coordinates, flag the element as a potential donor
+            !
+            if (contained) then
+                call candidate_elements%push_back(pelem_ID)
+                ncandidates = ncandidates + 1
+            end if
+
+
+        end do ! ielem
+
+
+
+        !
+        ! Test gq_node physical coordinates on candidate element volume to try and map to donor local coordinates
+        !
+        do icandidate = 1,ncandidates
+
+            pelem_ID   = candidate_elements%at(icandidate)
+            idomain_g  = mesh%parallel_element(pelem_ID)%idomain_g
+            ielement_g = mesh%parallel_element(pelem_ID)%ielement_g
+
+            !
+            ! Try to find donor (xi,eta,zeta) coordinates for receiver (xgq,ygq,zgq)
+            !
+            donor_comp = mesh%parallel_element(pelem_ID)%computational_point([search1,search2,search3])    ! Newton's method routine
+
+
+            ! Node is not nan
+            node_found = (any(ieee_is_nan(donor_comp)) .eqv. .false.) 
+
+            ! Node is not self: could be periodic, so same element is okay, but we don't want the same node
+            if ( (idomain_g == receiver_face%idomain_g) .and. (ielement_g == receiver_face%ielement_g) ) then
+                recv_comp  = mesh%parallel_element(pelem_ID)%computational_point([xgq, ygq, zgq])
+                node_self = (abs(sum(recv_comp - donor_comp)) < 1.e-3_rk)
+            else
+                node_self = .false.
+            end if
+
+
+            ! Add donor if donor_comp is valid
+            if ( node_found .and. (.not. node_self)) then
+                call donors_pelem_ID%push_back(pelem_ID)
+                call donors_xi%push_back(  donor_comp(1))
+                call donors_eta%push_back( donor_comp(2))
+                call donors_zeta%push_back(donor_comp(3))
+            end if
+
+        end do ! icandidate
+
+
+
+
+
+        !
+        ! Sanity check on donors and set donor_element location
+        !
+        if (donors_pelem_ID%size() == 0) then
+            donor_element%idomain_g  = 0
+            donor_element%idomain_l  = 0
+            donor_element%ielement_g = 0
+            donor_element%ielement_l = 0
+            donor_element%iproc      = NO_PROC
+            donor_found = .false.
+
+
+        elseif (donors_pelem_ID%size() == 1) then
+            pelem_ID = donors_pelem_ID%at(1)   ! donor index from candidates
+            donor_element%idomain_g  = mesh%parallel_element(pelem_ID)%idomain_g
+            donor_element%idomain_l  = mesh%parallel_element(pelem_ID)%idomain_l
+            donor_element%ielement_g = mesh%parallel_element(pelem_ID)%ielement_g
+            donor_element%ielement_l = mesh%parallel_element(pelem_ID)%ielement_l
+            donor_element%iproc      = mesh%parallel_element(pelem_ID)%iproc
+            donor_element%eqn_ID     = mesh%parallel_element(pelem_ID)%eqn_ID
+            donor_element%neqns      = mesh%parallel_element(pelem_ID)%neqns
+            donor_element%nterms_s   = mesh%parallel_element(pelem_ID)%nterms_s
+            donor_element%nterms_c   = mesh%parallel_element(pelem_ID)%nterms_c
+
+            xi   = donors_xi%at(1)
+            eta  = donors_eta%at(1)
+            zeta = donors_zeta%at(1)
+            donor_coordinate = [xi,eta,zeta]
+            donor_found = .true.
+            if (present(donor_volume)) donor_volume = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%vol
+
+
+
+        elseif (donors_pelem_ID%size() > 1) then
+            !
+            ! Handle multiple potential donors: Choose donor with minimum volume - should be best resolved
+            !
+            if (allocated(donor_vols) ) deallocate(donor_vols)
+            allocate(donor_vols(donors_pelem_ID%size()))
+            
+            do idonor = 1,donors_pelem_ID%size()
+                !donor_vols(idonor) = mesh%domain(candidate_domains_l%at(donors%at(idonor)))%elems(candidate_elements_l%at(donors%at(idonor)))%vol
+                pelem_ID = donors_pelem_ID%at(idonor)
+                donor_vols(idonor) = mesh%parallel_element(pelem_ID)%vol
+            end do 
+    
+
+            !
+            ! Get index of domain with minimum volume
+            !
+            donor_index = minloc(donor_vols,1)
+            pelem_ID = donors_pelem_ID%at(donor_index)   ! donor index from candidates with minimum volume
+
+            donor_element%idomain_g  = mesh%parallel_element(pelem_ID)%idomain_g
+            donor_element%idomain_l  = mesh%parallel_element(pelem_ID)%idomain_l
+            donor_element%ielement_g = mesh%parallel_element(pelem_ID)%ielement_g
+            donor_element%ielement_l = mesh%parallel_element(pelem_ID)%ielement_l
+            donor_element%iproc      = mesh%parallel_element(pelem_ID)%iproc
+            donor_element%pelem_ID   = pelem_ID
+            donor_element%eqn_ID     = mesh%parallel_element(pelem_ID)%eqn_ID
+            donor_element%neqns      = mesh%parallel_element(pelem_ID)%neqns
+            donor_element%nterms_s   = mesh%parallel_element(pelem_ID)%nterms_s
+            donor_element%nterms_c   = mesh%parallel_element(pelem_ID)%nterms_c
+
+            !
+            ! Set donor coordinate and volume if present
+            !
+            xi   = donors_xi%at(donor_index)
+            eta  = donors_eta%at(donor_index)
+            zeta = donors_zeta%at(donor_index)
+            donor_coordinate = [xi,eta,zeta]
+            donor_found = .true.
+            !if (present(donor_volume)) donor_volume = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%vol
+            if (present(donor_volume)) donor_volume = mesh%parallel_element(pelem_ID)%vol
+
+
+        else
+            call chidg_signal(FATAL,"find_gq_donor_parallel: invalid number of donors")
+        end if
+
+
+
+
+    end subroutine find_gq_donor_parallel
+    !******************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

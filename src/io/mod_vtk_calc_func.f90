@@ -260,7 +260,7 @@ contains
         ! For each conservative variable in equation set, compute values pointwise and save in the conservative variable array
         !
         !do ivar = 1,data%eqnset(idom)%prop%nprimary_fields()
-        eqn_ID = data%mesh%domain(idom)%eqn_ID
+        eqn_ID = data%mesh%domain(idom)%elems(1)%eqn_ID !assumes each element has the same eqn_ID
         do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
             !

@@ -597,11 +597,11 @@ contains
     !-----------------------------------------------------------------------------------
     subroutine read_eigendecomposition(self,worker,prop,bc_COMM, du_c_gq, du_ad_gq)
         class(outlet_3dgiles_innerproduct_general_t),   intent(inout)   :: self
-        type(chidg_worker_t),                   intent(inout)   :: worker
-        class(properties_t),                    intent(inout)   :: prop
-        type(mpi_comm),                         intent(in)      :: bc_COMM
-        type(AD_D), allocatable,                intent(inout)   :: du_c_gq(:)
-        type(AD_D), allocatable,                intent(inout)   :: du_ad_gq(:)
+        type(chidg_worker_t),                           intent(inout)   :: worker
+        class(properties_t),                            intent(inout)   :: prop
+        type(mpi_comm),                                 intent(in)      :: bc_COMM
+        type(AD_D), allocatable,                        intent(inout)   :: du_c_gq(:)
+        type(AD_D), allocatable,                        intent(inout)   :: du_ad_gq(:)
 
         !integer, parameter :: ni = 4
         integer, parameter :: ni = 1

@@ -71,13 +71,13 @@ contains
                 do itime = 1,ntime_q
                     do idom = 1,data%mesh%ndomains()
 
-                        eqn_ID = data%mesh%domain(idom)%eqn_ID
 
                         if (allocated(temp)) deallocate(temp)
                         allocate(temp(data%mesh%domain(idom)%nterms_s), stat = ierr)
                         if (ierr /= 0) call AllocationError
 
                         do ielem = 1,data%mesh%domain(idom)%nelem
+                            eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
                             do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
                                 temp = q_in%dom(idom)%vecs(ielem)%getvar(ivar,1)

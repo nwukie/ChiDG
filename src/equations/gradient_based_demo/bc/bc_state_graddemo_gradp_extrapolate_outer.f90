@@ -411,7 +411,7 @@ contains
             !
             ! Get solution
             !
-            eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+            eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
             ipressure = worker%prop(eqn_ID)%get_primary_field_index('Pressure_TEMP')
             itime     = 1
 

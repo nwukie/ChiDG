@@ -72,11 +72,13 @@ contains
         !eqn_ID = mesh%domain(idomain_l)%eqn_ID
         if (present(iface)) then
             if (trim(cache_component) == 'face interior') then
-                eqn_ID = mesh%domain(idomain_l)%eqn_ID
+                !eqn_ID = mesh%domain(idomain_l)%eqn_ID
+                eqn_ID = mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
             else if (trim(cache_component) == 'face exterior') then
                 if ( (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR) .or. &
                      (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY) ) then
-                    eqn_ID = mesh%domain(idomain_l)%eqn_ID
+                    !eqn_ID = mesh%domain(idomain_l)%eqn_ID
+                    eqn_ID = mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
                 else if (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == CHIMERA) then
                     ChiID = mesh%domain(idomain_l)%faces(ielement_l,iface)%ChiID
                     eqn_ID = mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(1)%eqn_ID
@@ -85,7 +87,8 @@ contains
                 end if
             end if
         else
-            eqn_ID = mesh%domain(idomain_l)%eqn_ID
+            !eqn_ID = mesh%domain(idomain_l)%eqn_ID
+            eqn_ID = mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         end if
 
 

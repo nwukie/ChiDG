@@ -92,7 +92,7 @@ contains
         ! TODO: Generalized TECIO for different equation set in each domain.
         !
         ieq = 1
-        eqn_ID = data%mesh%domain(1)%eqn_ID
+        eqn_ID = data%mesh%domain(1)%elems(1)%eqn_ID
         do while (ieq <= data%eqnset(eqn_ID)%prop%nprimary_fields())
             varstring = trim(varstring)//","//trim(data%eqnset(1)%prop%get_primary_field_name(ieq))
             ieq = ieq + 1
@@ -268,7 +268,7 @@ contains
 
 
                 ! For each variable in equation set, compute value pointwise and save
-                eqn_ID = data%mesh%domain(idom)%eqn_ID
+                eqn_ID = data%mesh%domain(idom)%elems(1)%eqn_ID
                 do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
                     ! For each actual element, create a sub-sampling of elements to resolve solution variation
@@ -584,7 +584,7 @@ contains
 
 
                 ! For each variable in equation set, compute value pointwise and save
-                eqn_ID = data%mesh%domain(idom)%eqn_ID
+                eqn_ID = data%mesh%domain(idom)%elems(1)%eqn_ID
                 do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
                     ! For each actual face, create a sub-sampling of faces to resolve solution variation

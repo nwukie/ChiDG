@@ -88,7 +88,7 @@ contains
         !
         ieq = 1
         varstring = "X,Y,Z"
-        eqn_ID = data%mesh%domain(1)%eqn_ID
+        eqn_ID = data%mesh%domain(1)%elems(1)%eqn_ID
         do while (ieq <= data%eqnset(eqn_ID)%prop%nio_fields())
             varstring = trim(varstring)//","//trim(data%eqnset(eqn_ID)%prop%get_io_field_name(ieq))
             ieq = ieq + 1
@@ -183,7 +183,7 @@ contains
         call worker%init(data%mesh, data%eqnset(:)%prop, data%sdata, cache)
 
 
-        eqn_ID = data%mesh%domain(1)%eqn_ID
+        eqn_ID = data%mesh%domain(1)%elems(1)%eqn_ID
         numvars = 3 + data%eqnset(eqn_ID)%prop%nio_fields()
 
 
@@ -232,8 +232,8 @@ contains
 
 
                 ! For each variable in equation set, compute value pointwise and save
-                eqn_ID = data%mesh%domain(idom)%eqn_ID
                 do ielem = 1,nelem
+                    eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
 
                     ! Update location
                     elem_info%idomain_g  = data%mesh%domain(idom)%elems(ielem)%idomain_g
@@ -391,7 +391,7 @@ contains
 
 
 
-        eqn_ID = data%mesh%domain(1)%eqn_ID
+        eqn_ID = data%mesh%domain(1)%elems(1)%eqn_ID
         numvars = 3 + data%eqnset(eqn_ID)%prop%nio_fields()
 
         !
@@ -459,8 +459,6 @@ contains
 
 
 
-                ! For each variable in equation set, compute value pointwise and save
-                eqn_ID = data%mesh%domain(idom)%eqn_ID
 
                 ! For each actual face, create a sub-sampling of faces to resolve solution variation
                 do ipatch = 1,data%mesh%bc_patch_group(isurface)%npatches()
@@ -487,6 +485,9 @@ contains
                                                                                            face          = iface,   &
                                                                                            differentiate = .false.,  &
                                                                                            lift          = .false.)
+
+                        ! For each variable in equation set, compute value pointwise and save
+                        eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
 
                         ! Retrieve name of current field, retrieve interpolation, write interpolation to file
                         do ifield = 1,data%eqnset(eqn_ID)%prop%nio_fields()

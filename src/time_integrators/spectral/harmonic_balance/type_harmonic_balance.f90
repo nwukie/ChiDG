@@ -178,12 +178,10 @@ contains
                 if (allocated(temp_1) .and. allocated(temp_2)) deallocate(temp_1,temp_2)
                 allocate(temp_1(data%mesh%domain(idom)%nterms_s),temp_2(data%mesh%domain(idom)%nterms_s), stat=ierr)
                 if (ierr /= 0) call AllocationError
-                eqn_ID = data%mesh%domain(idom)%eqn_ID
 
                 do ielem = 1,data%mesh%domain(idom)%nelem
-
+                    eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
                     do itime_inner = 1,ntime
-
                         do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
                             !

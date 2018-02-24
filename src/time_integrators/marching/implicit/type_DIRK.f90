@@ -315,9 +315,9 @@ contains
             ! Filter
             !
             do idom = 1,data%mesh%ndomains()
-                eqn_ID = data%mesh%domain(idom)%eqn_ID
-                if (index(trim(data%eqnset(eqn_ID)%name),'Filtered Euler') /= 0) then
-                    do ielem = 1,data%mesh%domain(idom)%nelements()
+                do ielem = 1,data%mesh%domain(idom)%nelements()
+                    eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
+                    if (index(trim(data%eqnset(eqn_ID)%name),'Filtered Euler') /= 0) then
                         do ifield = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
                             
                             !
@@ -354,8 +354,8 @@ contains
 
 
                         end do !ifield
-                    end do !ielem
-                end if
+                    end if
+                end do !ielem
             end do !idom
 
 
@@ -452,8 +452,8 @@ contains
                     allocate(temp_1(data%mesh%domain(idom)%nterms_s), temp_2(data%mesh%domain(idom)%nterms_s), stat=ierr)
                     if (ierr /= 0) call AllocationError
 
-                    eqn_ID = data%mesh%domain(idom)%eqn_ID
                     do ielem = 1,data%mesh%domain(idom)%nelem
+                        eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
                         do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
                             !

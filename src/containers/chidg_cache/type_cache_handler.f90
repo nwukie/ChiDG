@@ -175,7 +175,7 @@ contains
         !
         ! Determine if we want to update gradient terms in the cache
         !
-        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         compute_gradients = (allocated(equation_set(eqn_ID)%volume_diffusive_operator)   .or. &
                              allocated(equation_set(eqn_ID)%boundary_diffusive_operator) )
 !        compute_gradients = .true.
@@ -461,7 +461,7 @@ contains
         ! Compute Value/Gradients
         !
         idepend = 1
-        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         worker%function_info%seed    = element_compute_seed(worker%mesh,idomain_l,ielement_l,idepend,idiff)
         worker%function_info%idepend = idepend
         do ieqn = 1,worker%mesh%domain(idomain_l)%neqns
@@ -598,7 +598,7 @@ contains
         worker%function_info%seed    = face_compute_seed(worker%mesh,idomain_l,ielement_l,iface,idepend,idiff)
         worker%function_info%idepend = idepend
         worker%function_info%idiff   = idiff
-        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         do ieqn = 1,worker%mesh%domain(idomain_l)%neqns
 
             field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
@@ -717,16 +717,14 @@ contains
             
 
 
-            !eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
             if (worker%face_type() == INTERIOR) then
-                eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+                eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
             else if (worker%face_type() == CHIMERA) then
                 ChiID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ChiID
                 eqn_ID = worker%mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(1)%eqn_ID
             end if
 
 
-            !do ieqn = 1,worker%mesh%domain(idomain_l)%neqns
             do ifield = 1,worker%prop(eqn_ID)%nprimary_fields()
                 field = worker%prop(eqn_ID)%get_primary_field_name(ifield)
                 do idepend = 1,ndepend
@@ -867,7 +865,7 @@ contains
                         worker%function_info%seed%iproc      = NO_PROC
                     end if
 
-                    eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+                    eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
 
                     call bc_state_group(bc_ID)%bc_state(istate)%state%compute_bc_state(worker,equation_set(eqn_ID)%prop, bc_state_group(bc_ID)%bc_COMM)
 
@@ -910,7 +908,7 @@ contains
         type(bc_state_group_t),                 intent(inout)   :: bc_state_group(:)
         logical,                    intent(in)      :: differentiate
 
-        integer(ik) :: idomain_l, eqn_ID
+        integer(ik) :: idomain_l, ielement_l, eqn_ID
 
 
 
@@ -918,7 +916,8 @@ contains
         ! Update lifting terms for gradients if diffusive operators are present
         !
         idomain_l  = worker%element_info%idomain_l 
-        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+        ielement_l = worker%element_info%ielement_l
+        eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         if (allocated(equation_set(eqn_ID)%volume_diffusive_operator) .or. &
             allocated(equation_set(eqn_ID)%boundary_diffusive_operator)) then
 
@@ -977,7 +976,7 @@ contains
         end if
 
         idepend = 0 ! no linearization
-        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         do ifield = 1,worker%prop(eqn_ID)%nauxiliary_fields()
 
             !
@@ -1061,7 +1060,7 @@ contains
         !
         ! Face interior state. 
         !
-        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         idepend = 0 ! no linearization
         do iaux = 1,worker%prop(eqn_ID)%nauxiliary_fields()
 
@@ -1152,7 +1151,7 @@ contains
         !
         if ( (worker%face_type() == INTERIOR) .or. (worker%face_type() == CHIMERA) ) then
 
-            eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+            eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
             idepend = 0 ! no linearization
             do iaux = 1,worker%prop(eqn_ID)%nauxiliary_fields()
 
@@ -1246,7 +1245,7 @@ contains
         !
         if ( (worker%face_type() == BOUNDARY) ) then
 
-            eqn_ID  = worker%mesh%domain(idomain_l)%eqn_ID
+            eqn_ID  = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
             idepend = 0 ! no linearization
             do iaux = 1,worker%prop(eqn_ID)%nauxiliary_fields()
 
@@ -1321,7 +1320,7 @@ contains
         !
         ! Compute element model field. Potentially differentiated wrt exterior elements.
         !
-        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         worker%interpolation_source = 'element'
         do imodel = 1,equation_set(eqn_ID)%nmodels()
 
@@ -1453,7 +1452,7 @@ contains
         ! Update models for 'face interior'. Differentiated wrt interior.
         !
         idepend = 1
-        eqn_ID  = worker%mesh%domain(idomain_l)%eqn_ID
+        eqn_ID  = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         worker%interpolation_source = 'face interior'
         do imodel = 1,equation_set(eqn_ID)%nmodels()
 
@@ -1586,7 +1585,7 @@ contains
         !
         !eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
         if (worker%face_type() == INTERIOR) then
-            eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+            eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         else if (worker%face_type() == CHIMERA) then
             ChiID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ChiID
             eqn_ID = worker%mesh%domain(idomain_l)%chimera%recv(ChiID)%donor(1)%eqn_ID
@@ -1711,7 +1710,7 @@ contains
         !
         ! Face exterior state: boundaries
         !
-        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         worker%interpolation_source = 'face exterior'
         if ( (worker%face_type() == BOUNDARY) ) then
 
@@ -1850,7 +1849,7 @@ contains
 
 
 
-            eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+            eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
             do ifield = 1,worker%prop(eqn_ID)%nprimary_fields()
 
                 !
@@ -2297,7 +2296,7 @@ contains
         !
         ! Get field
         !
-        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
 
 
@@ -2472,7 +2471,7 @@ contains
         !
         ! Get field
         !
-        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
 
 
@@ -2619,7 +2618,7 @@ contains
         !
         ! Get field
         !
-        eqn_ID = worker%mesh%domain(idomain_l)%eqn_ID
+        eqn_ID = worker%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
 
         !

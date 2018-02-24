@@ -48,20 +48,18 @@ contains
             do otime = 1,q_in%get_ntime()
                 do idom = 1,data%mesh%ndomains()
                     
-                    eqn_ID = data%mesh%domain(idom)%eqn_ID
-
                     associate ( domain   => data%mesh%domain(idom),          &
                                 nelem    => data%mesh%domain(idom)%nelem,    &
-                                nterms_s => data%mesh%domain(idom)%nterms_s, &
-                                nvars    => data%eqnset(eqn_ID)%prop%nprimary_fields()) 
+                                nterms_s => data%mesh%domain(idom)%nterms_s)
                     
                     if (allocated(temp_1) .and. allocated(temp_2)) deallocate(temp_1,temp_2)
                     allocate(temp_1(nterms_s), temp_2(nterms_s), stat=ierr)
                     if (ierr /= 0) call AllocationError
 
                     do ielem = 1,nelem
+                        eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
                         do itime = 1,q_in%get_ntime()
-                            do ivar = 1,nvars
+                            do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
                             temp_1 = E(otime,itime)*q_in%dom(idom)%vecs(ielem)%getvar(ivar,itime)
                             temp_2 = q_coeff_vector%dom(idom)%vecs(ielem)%getvar(ivar,otime) + temp_1
@@ -119,18 +117,16 @@ contains
 
             do idom = 1,data%mesh%ndomains()
 
-                eqn_ID = data%mesh%domain(idom)%eqn_ID
-
                 associate ( nelem    => data%mesh%domain(idom)%nelem,    &
-                            nterms_s => data%mesh%domain(idom)%nterms_s, &
-                            nvars    => data%eqnset(eqn_ID)%prop%nprimary_fields() )
+                            nterms_s => data%mesh%domain(idom)%nterms_s)
 
                 if (allocated(temp)) deallocate(temp)
                 allocate(temp(nterms_s), stat = ierr)
                 if (ierr /= 0) call AllocationError
             
-                do ielem = 1,nelem
-                    do ivar = 1,nvars
+                do ielem = 1,data%mesh%domain(idom)%nelements()
+                    eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
+                    do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
                         
                         !
                         ! Set the values in q_coeffs(itime) = values in itime component
@@ -240,19 +236,16 @@ contains
         do itime = 1,ntime
             do idom = 1,data%mesh%ndomains()
 
-                eqn_ID = data%mesh%domain(idom)%eqn_ID
-
-                associate ( nelem    => data%mesh%domain(idom)%nelem,    &
-                            nterms_s => data%mesh%domain(idom)%nterms_s, &
-                            nvars    => data%eqnset(eqn_ID)%prop%nprimary_fields() )
+                associate (nterms_s => data%mesh%domain(idom)%nterms_s)
                     
                     ! Allocate temporary arrays
                     if (allocated(temp_1) .and. allocated(temp_2)) deallocate(temp_1,temp_2)
                     allocate(temp_1(nterms_s), temp_2(nterms_s), stat=ierr)
                     if (ierr /= 0) call AllocationError
 
-                    do ielem = 1,nelem
-                        do ivar = 1,nvars
+                    do ielem = 1,data%mesh%domain(idom)%nelements()
+                        eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
+                        do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
                             !
                             ! Compute interpolated solution
@@ -336,18 +329,16 @@ contains
         do itime_interp = 1,ntime_interp
             do idom = 1,data%mesh%ndomains()
 
-                eqn_ID = data%mesh%domain(idom)%eqn_ID
 
-                associate ( nelem    => data%mesh%domain(idom)%nelem,    &
-                            nterms_s => data%mesh%domain(idom)%nterms_s, &
-                            nvars    => data%eqnset(eqn_ID)%prop%nprimary_fields() )
+                associate (nterms_s => data%mesh%domain(idom)%nterms_s)
                 
                     if (allocated(temp)) deallocate(temp)
                     allocate(temp(nterms_s), stat=ierr)
                     if (ierr /= 0) call AllocationError
 
-                    do ielem = 1,nelem
-                        do ivar = 1,nvars
+                    do ielem = 1,data%mesh%domain(idom)%nelements()
+                        eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
+                        do ivar = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
                             
                             temp = q_interp(itime_interp)%dom(idom)%vecs(ielem)%getvar(ivar,1)
                             call data%sdata%q_out%dom(idom)%vecs(ielem)%setvar(ivar,itime_interp,temp)

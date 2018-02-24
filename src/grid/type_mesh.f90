@@ -1056,7 +1056,7 @@ contains
                         send_size_d = size(self%domain(idomain_l)%elems(ielement_l)%node_coords_vel)
                 
                         ! First send location of donor
-                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%element_location,             4, mpi_integer4, iproc, 0, ChiDG_COMM, request(1), ierr)
+                        call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%element_location,             5, mpi_integer4, iproc, 0, ChiDG_COMM, request(1), ierr)
                         call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%element_data,                 8, mpi_integer4, iproc, 0, ChiDG_COMM, request(2), ierr)
                         call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%node_coords,        send_size_b, mpi_real8,    iproc, 0, ChiDG_COMM, request(3), ierr)
                         call mpi_isend(self%domain(idomain_l)%elems(ielement_l)%node_coords_def,    send_size_c, mpi_real8,    iproc, 0, ChiDG_COMM, request(4), ierr)
@@ -1107,7 +1107,7 @@ contains
                                        ntime, pelem_ID, interpolation_level,        &
                                        idomain_g, ielement_g, coordinate_system,    & 
                                        recv_size_a, recv_size_b, recv_size_c,       &
-                                       face_location(5), element_location(4),       &
+                                       face_location(5), element_location(5),       &
                                        element_data(8), spacedim, inode
 
         logical :: parallel_donor
@@ -1159,10 +1159,10 @@ contains
 
 
 
-                ! element_location = [idomain_g, idomain_l, ielement_g, ielement_l]
-                call mpi_recv(element_location, 4, mpi_integer4,  recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
-                idomain_g           = element_location(1)
-                ielement_g          = element_location(3)
+                ! element_location = [idomain_g, idomain_l, ielement_g, ielement_l, iproc]
+                call mpi_recv(element_location, 5, mpi_integer4,  recv_procs(iproc), 0, ChiDG_COMM, mpi_status_ignore, ierr)
+                idomain_g  = element_location(1)
+                ielement_g = element_location(3)
 
 
                 ! element_data = [element_type, spacedim, coordinate_system, nfields, nterms_s, nterms_c, ntime, interpolation_level]

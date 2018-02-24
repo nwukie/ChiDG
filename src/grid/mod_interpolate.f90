@@ -36,11 +36,13 @@ module mod_interpolate
                                   
     use mod_chidg_mpi,          only: IRANK
     use mod_DNAD_tools,         only: compute_neighbor_face
+    use mod_chimera,            only: find_gq_donor, find_gq_donor_parallel
+    use mod_polynomial,         only: polynomial_val
     use DNAD_D
 
     use type_mesh,              only: mesh_t
     use type_element_info,      only: element_info_t
-    use type_face_info,         only: face_info_t
+    use type_face_info,         only: face_info_t, face_info_constructor
     use type_edge_info,         only: edge_info_t
     use type_seed,              only: seed_t
     use type_function_info,     only: function_info_t
@@ -644,6 +646,223 @@ contains
 
     end function interpolate_face_standard
     !*****************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+    !> Interpolate variable from polynomial expansion to explicit values at quadrature nodes. The automatic
+    !! differentiation process really starts here, when the polynomial expansion is evaluated.
+    !!
+    !! The interpolation process occurs through a matrix-vector multiplication. That is an interpolation matrix
+    !! multiplied by a vector of modes from the polynomial expansion. To start the automatic differentiation, 
+    !! the derivative arrays of the values for the polynomial modes must be initialized before any computation. 
+    !! So, before the matrix-vector multiplication.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!  @param[in]      mesh        Array of mesh instances.
+    !!  @param[in]      face        Face info, such as indices for locating the face in the mesh.
+    !!  @param[in]      q           Solution vector
+    !!  @param[in]      ieqn        Index of the equation variable being interpolated
+    !!  @param[inout]   var_gq      Array of auto-diff values of the equation evaluated at gq points that is passed back
+    !!  @param[in]      source      ME/NEIGHBOR indicating which element to interpolate from
+    !!
+    !-----------------------------------------------------------------------------------------------------------
+    function interpolate_general_autodiff(mesh,vector,fcn_info,ifield,itime,interpolation_type,physical_nodes) result(var)
+        type(mesh_t),           intent(in)              :: mesh
+        type(chidg_vector_t),   intent(in)              :: vector
+        type(function_info_t),  intent(in)              :: fcn_info
+        integer(ik),            intent(in)              :: ifield
+        integer(ik),            intent(in)              :: itime
+        character(*),           intent(in)              :: interpolation_type
+        real(rk),               intent(in)              :: physical_nodes(:,:)
+
+        integer(ik)             :: idomain_l, ielement_l, iface
+        type(seed_t)            :: seed
+        type(element_info_t)    :: donor
+        type(recv_t)            :: recv_info
+
+        type(AD_D), allocatable  :: qdiff(:), var(:), tmp(:)
+        real(rk),   allocatable  :: interpolator(:,:)
+
+        real(rk)        :: donor_coord(3), donor_volume
+        integer(ik)     :: nderiv, set_deriv, iterm, ierr, nterms_s, inode, nnodes
+        logical         :: differentiate_me = .false.
+        logical         :: donor_found      = .false.
+        logical         :: parallel_donor   = .false.
+
+        
+        !
+        ! Check incoming node array makes sense
+        !
+        if (size(physical_nodes,2) /= 3) call chidg_signal(FATAL,'interpolate_general_autodiff: size(physical_nodes,2) /= 3.')
+
+
+        !
+        ! Check interpolation_type
+        !
+        if (interpolation_type /= 'value') call chidg_signal(FATAL,"interpolation_general_autodiff: currently only supports interpolation_type == 'value'.")
+
+
+        !
+        ! Get number of derivatives to initialize for automatic differentiation
+        !
+        nderiv = get_interpolation_nderiv(mesh,fcn_info%seed)
+
+
+        !
+        ! Allocate result and derivatives
+        !
+        nnodes = size(physical_nodes,1)
+        allocate(var(nnodes), stat=ierr)
+        if (ierr /= 0) call AllocationError
+
+        do inode = 1,size(var)
+            allocate(var(inode)%xp_ad_(nderiv))
+        end do
+
+
+
+
+        !
+        ! Find donor elements for incoming nodes
+        !
+        do inode = 1,size(physical_nodes)
+
+            !
+            ! Try processor LOCAL elements
+            !
+            call find_gq_donor(mesh,                                &
+                               physical_nodes(inode,1:3),           &
+                               [ZERO,ZERO,ZERO],                    &
+                               face_info_constructor(0,0,0,0,0),    &   ! we don't really have a receiver face
+                               donor,                               &
+                               donor_coord,                         &
+                               donor_found,                         &
+                               donor_volume=donor_volume)
+
+            !
+            ! Try parallel elements if donor not found amongst local elements
+            !
+            if (.not. donor_found) then
+                call find_gq_donor_parallel(mesh,                                &
+                                            physical_nodes(inode,1:3),           &
+                                            [ZERO,ZERO,ZERO],                    &
+                                            face_info_constructor(0,0,0,0,0),    &   ! we don't really have a receiver face
+                                            donor,                               &
+                                            donor_coord,                         &
+                                            donor_found,                         &
+                                            donor_volume=donor_volume)
+            end if
+
+
+            ! Abort if we didn't find a donor
+            if (.not. donor_found) call chidg_signal(FATAL,"interpolate_general_autodiff: no donor element found for interpolation node.")
+
+            ! Check parallel or local donor
+            parallel_donor = (donor%iproc /= IRANK)
+
+
+
+            !
+            ! Get nterms
+            !
+            if (parallel_donor) then
+                nterms_s = mesh%parallel_element(donor%pelem_ID)%nterms_s
+            else
+                nterms_s = mesh%domain(donor%idomain_l)%elems(donor%ielement_l)%nterms_s
+            end if
+
+            
+
+
+            !
+            ! Construct interpolator
+            !
+            if (allocated(interpolator)) deallocate(interpolator)
+            allocate(interpolator(1,nterms_s), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+
+            do iterm = 1,nterms_s
+                interpolator(1,iterm) = polynomial_val(3,nterms_s,iterm,donor_coord)
+            end do ! iterm
+
+
+
+            !
+            ! Allocate solution and derivative arrays for temporary solution variable
+            !
+            if ( allocated(qdiff) ) deallocate(qdiff)
+            allocate(qdiff(nterms_s), stat=ierr)
+            if (ierr /= 0) call AllocationError
+
+            do iterm = 1,nterms_s
+                qdiff(iterm) = AD_D(nderiv)
+            end do
+
+
+
+
+
+            !
+            ! Retrieve modal coefficients for ifield from vector
+            !
+            if (parallel_donor) then
+                recv_info%comm    = mesh%parallel_element(donor%pelem_ID)%recv_comm
+                recv_info%domain  = mesh%parallel_element(donor%pelem_ID)%recv_domain
+                recv_info%element = mesh%parallel_element(donor%pelem_ID)%recv_element
+                qdiff = vector%recv%comm(recv_info%comm)%dom(recv_info%domain)%vecs(recv_info%element)%getvar(ifield,itime)
+            else
+                qdiff = vector%dom(donor%idomain_l)%vecs(donor%ielement_l)%getvar(ifield,itime)
+            end if
+
+
+            !
+            ! If the current element is being differentiated (ielem == ielem_seed)
+            ! then copy the solution modes to local AD variable and seed derivatives
+            !
+            differentiate_me = ( (donor%idomain_g  == fcn_info%seed%idomain_g ) .and. &
+                                 (donor%ielement_g == fcn_info%seed%ielement_g) )
+
+            if ( differentiate_me ) then
+                ! Loop through the terms in qdiff, seed appropriate derivatives to ONE
+                do iterm = 1,size(qdiff)
+                    ! For the given term, seed its appropriate derivative
+                    set_deriv = (ifield - 1)*nterms_s + iterm
+                    qdiff(iterm)%xp_ad_(set_deriv) = ONE
+                end do
+
+            else
+                ! Loop through the terms in qdiff. Set all derivatives to ZERO
+                do iterm = 1,size(qdiff)
+                    qdiff(iterm)%xp_ad_ = ZERO
+                end do
+
+            end if
+
+
+
+            !
+            ! Interpolate solution to GQ nodes via matrix-vector multiplication
+            !
+            tmp = matmul(interpolator,  qdiff)
+            var(inode) = tmp(1)
+
+
+        end do ! inode
+
+
+    end function interpolate_general_autodiff
+    !*************************************************************************************************************
 
 
 
@@ -1468,22 +1687,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     !>  Determine the number of derivatives being computed for the automatic differentiation 
     !!  process.
     !!
@@ -1498,8 +1701,7 @@ contains
         type(mesh_t),           intent(in)  :: mesh
         type(seed_t),           intent(in)  :: seed
 
-        integer(ik) :: nderiv, neqns_seed, nterms_s_seed
-        logical     :: parallel_seed
+        integer(ik) :: nderiv
 
         !
         ! If ielem_seed == 0 then we aren't interested in tracking derivatives. 
@@ -1519,10 +1721,10 @@ contains
             ! Compute number of unknowns in the seed element, which is the number of 
             ! partial derivatives we are tracking.
             !
-            neqns_seed    = seed%neqns
-            nterms_s_seed = seed%nterms_s
-
-            nderiv = neqns_seed  *  nterms_s_seed
+            !neqns_seed    = seed%neqns
+            !nterms_s_seed = seed%nterms_s
+            !nderiv        = neqns_seed  *  nterms_s_seed
+            nderiv = seed%neqns * seed%nterms_s
 
         end if
 

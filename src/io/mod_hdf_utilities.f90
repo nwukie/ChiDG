@@ -414,7 +414,7 @@ contains
 
 
             ! Set additional attributes
-            eqn_ID    = data%mesh%domain(idom)%eqn_ID
+            eqn_ID    = data%mesh%domain(idom)%elems(1)%eqn_ID !assume each element has same eqn_ID
             domain_id = open_domain_hdf(fid,trim(domain_name))
             call set_domain_equation_set_hdf(domain_id,data%eqnset(eqn_ID)%get_name())
             call close_domain_hdf(domain_id)

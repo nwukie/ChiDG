@@ -246,8 +246,8 @@ contains
                 ! Add mass/dt to sub-block diagonal in dR/dQ
                 !
                 do idom = 1,data%mesh%ndomains()
-                    eqn_ID = data%mesh%domain(idom)%eqn_ID
                     do ielem = 1,data%mesh%domain(idom)%nelem
+                        eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
                         do itime = 1,data%mesh%domain(idom)%ntime
                             do ieqn = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
 
@@ -446,7 +446,7 @@ contains
         !
         do idom = 1,data%mesh%ndomains()
 
-            eqn_ID = data%mesh%domain(idom)%eqn_ID
+            eqn_ID = data%mesh%domain(idom)%elems(1)%eqn_ID
             call data%eqnset(eqn_ID)%compute_pseudo_timestep(idom,data%mesh,data%sdata,cfln,itime = 1)
 
         end do !idom

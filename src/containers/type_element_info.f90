@@ -1,5 +1,6 @@
 module type_element_info
-    use mod_kinds,  only: ik
+    use mod_kinds,      only: ik
+    use mod_constants,  only: NO_ID
 
 
 
@@ -12,16 +13,17 @@ module type_element_info
     !---------------------------------------------------------------------
     type, public :: element_info_t
 
-        integer(ik) :: idomain_g
-        integer(ik) :: idomain_l
-        integer(ik) :: ielement_g
-        integer(ik) :: ielement_l
-        integer(ik) :: iproc
+        integer(ik) :: idomain_g  = NO_ID
+        integer(ik) :: idomain_l  = NO_ID
+        integer(ik) :: ielement_g = NO_ID
+        integer(ik) :: ielement_l = NO_ID
+        integer(ik) :: iproc      = NO_ID
+        integer(ik) :: pelem_ID   = NO_ID
 
-        integer(ik) :: eqn_ID
-        integer(ik) :: neqns
-        integer(ik) :: nterms_s
-        integer(ik) :: nterms_c
+        integer(ik) :: eqn_ID     = NO_ID
+        integer(ik) :: neqns      = NO_ID
+        integer(ik) :: nterms_s   = NO_ID
+        integer(ik) :: nterms_c   = NO_ID
 
     end type element_info_t
     !*********************************************************************

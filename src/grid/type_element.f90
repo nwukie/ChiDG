@@ -6,7 +6,7 @@ module type_element
                                       DIR_1, DIR_2, DIR_3, DIR_THETA, XI_DIR,   &
                                       ETA_DIR, ZETA_DIR, TWO_DIM, THREE_DIM,    &
                                       RKTOL, VALID_POINT, INVALID_POINT, NO_PMM_ASSIGNED, &
-                                      ZERO, TWO, CARTESIAN, CYLINDRICAL, DIR_R
+                                      ZERO, TWO, CARTESIAN, CYLINDRICAL, DIR_R, NO_ID
     use mod_grid,               only: get_element_mapping, face_corners
     use mod_reference_elements, only: get_reference_element, ref_elems
     use mod_polynomial,         only: polynomial_val, dpolynomial_val
@@ -53,22 +53,27 @@ module type_element
     type, public :: element_t
 
         ! Element location
-        integer(ik)                 :: element_location(4)  ! [idomain_g, idomain_l, ielement_g, ielement_l], useful for nonblocking send
+        integer(ik)                 :: element_location(5)  ! [idomain_g, idomain_l, ielement_g, ielement_l, iproc], useful for nonblocking send
         integer(ik)                 :: idomain_g            ! Global index of parent domain
         integer(ik)                 :: idomain_l            ! Proc-local index of parent domain
         integer(ik)                 :: ielement_g           ! Domain-global index of element
         integer(ik)                 :: ielement_l           ! Proc-local index of the element
+        integer(ik)                 :: iproc                ! Processor the element is associated with.
 
         ! Element data
         integer(ik)                 :: element_data(8)      ! [element_type, spacedim, coordinate_system, neqns, nterms_s, nterms_c, ntime, interpolation_level]
         integer(ik)                 :: element_type         ! 1=linear, 2=quadratic, 3=cubic, 4=quartic, etc.
-        integer(ik)                 :: spacedim             ! Number of spatial dimensions for the element
-        integer(ik)                 :: coordinate_system    ! CARTESIAN, CYLINDRICAL. parameters from mod_constants
-        integer(ik)                 :: neqns                ! Number of equations being solved
+        integer(ik)                 :: spacedim             ! Number of spatial dimensions for the element.
+        integer(ik)                 :: coordinate_system    ! CARTESIAN, CYLINDRICAL. parameters from mod_constants.
+        integer(ik)                 :: eqn_ID = NO_ID       ! Equation set identifier the element is associated with.
+        integer(ik)                 :: neqns                ! Number of equations being solved.
         integer(ik)                 :: nterms_s             ! Number of terms in solution expansion.  
         integer(ik)                 :: nterms_c             ! Number of terms in coordinate expansion. 
-        integer(ik)                 :: ntime                ! Number of time levels in solution
-        integer(ik)                 :: interpolation_level  ! 1=lowest, 2-> are higher
+        integer(ik)                 :: ntime                ! Number of time levels in solution.
+        integer(ik)                 :: interpolation_level  ! 1=lowest, 2-> are higher.
+        integer(ik)                 :: recv_comm    = NO_ID ! chidg_vector access if element is initialized on another processor
+        integer(ik)                 :: recv_domain  = NO_ID ! chidg_vector access if element is initialized on another processor
+        integer(ik)                 :: recv_element = NO_ID ! chidg_vector access if element is initialized on another processor
 
 
         ! Connectivty and linear transformation martrix for 
@@ -139,7 +144,7 @@ module type_element
 
         ! Logical tests
         logical :: geom_initialized = .false.
-        logical :: numInitialized  = .false.
+        logical :: numInitialized   = .false.
 
 
     contains
@@ -147,6 +152,7 @@ module type_element
         ! Initialization procedures
         procedure, public   :: init_geom
         procedure, public   :: init_sol
+        procedure, public   :: init_eqn
 
 
         ! Undeformed element procedures
@@ -226,7 +232,7 @@ contains
         real(rk),                       intent(in)      :: nodes(:,:)
         integer(ik),                    intent(in)      :: connectivity(:)
         integer(ik),                    intent(in)      :: etype
-        integer(ik),                    intent(in)      :: location(4)
+        integer(ik),                    intent(in)      :: location(5)
         character(*),                   intent(in)      :: coord_system
 
         character(:),   allocatable :: user_msg
@@ -252,6 +258,7 @@ contains
         self%idomain_l        = location(2)
         self%ielement_g       = location(3)
         self%ielement_l       = location(4)
+        self%iproc            = location(5)
         self%element_location = location
         self%connectivity     = connectivity
 
@@ -531,6 +538,29 @@ contains
 
     end subroutine init_sol
     !**********************************************************************************
+
+
+
+
+
+
+    !>  Assign equation_set_t instance association.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/24/2018
+    !!
+    !!  @param[in]  eqn_ID  Equation set index associated with the element.
+    !!                      chidg%data%eqnset(eqn_ID)
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine init_eqn(self,eqn_ID)
+        class(element_t),   intent(inout)   :: self
+        integer(ik),        intent(in)      :: eqn_ID
+
+        self%eqn_ID = eqn_ID
+
+    end subroutine init_eqn
+    !********************************************************************************
 
 
 

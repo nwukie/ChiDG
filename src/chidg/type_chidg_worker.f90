@@ -34,7 +34,7 @@ module type_chidg_worker
                                       CARTESIAN, CYLINDRICAL, INTERIOR, HALF
 
     use mod_inv,                only: inv
-    use mod_interpolate,        only: interpolate_element_autodiff
+    use mod_interpolate,        only: interpolate_element_autodiff, interpolate_general_autodiff
     use mod_polynomial,         only: polynomial_val
     use mod_integrate,          only: integrate_boundary_scalar_flux, &
                                       integrate_volume_vector_flux,   &
@@ -530,7 +530,7 @@ contains
 
         type(face_info_t)               :: face_info
         character(:),   allocatable     :: cache_component, cache_type, user_msg
-        integer(ik)                     :: idirection, igq, iface, ifield, idomain_l, eqn_ID
+        integer(ik)                     :: idirection, igq, iface, ifield, idomain_l, ielement_l, eqn_ID
 
 
         !
@@ -579,7 +579,9 @@ contains
 
             if (cache_type == 'value') then
                 idomain_l = self%element_info%idomain_l
-                eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
+                ielement_l = self%element_info%ielement_l
+                !eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
+                eqn_ID    = self%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
                 ifield    = self%prop(eqn_ID)%get_primary_field_index(field)
 
                 !var_gq = interpolate_element_autodiff(self%mesh, self%solverdata%q, self%element_info, self%function_info, ifield, self%itime, interp_type, Pmin, Pmax)
@@ -665,7 +667,8 @@ contains
         !
         ! Get access index in solution vector for field being interpolated
         !
-        eqn_ID = self%mesh%domain(self%element_info%idomain_l)%eqn_ID
+        !eqn_ID = self%mesh%domain(self%element_info%idomain_l)%eqn_ID
+        eqn_ID = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%eqn_ID
         ifield = self%prop(eqn_ID)%get_primary_field_index(trim(field))
 
 
@@ -674,11 +677,57 @@ contains
         !
         var_gq = interpolate_element_autodiff(self%mesh,self%solverdata%q,self%element_info,self%function_info,ifield,self%itime,'value',interpolator=interpolator)
 
-
-
-
     end function interpolate_field
     !***************************************************************************************
+
+
+
+
+
+
+    !>  Construct the interpolation of a field from a polynomial expansion to
+    !!  discrete physical coordinates.
+    !!
+    !!  Note: this interpolates to PHYSICAL coordinates, possibly from multiple
+    !!  donor elements.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/24/2018
+    !!
+    !!  @param[in]  field           String indicating primary field to be interpolated.
+    !!  @param[in]  physical_nodes  Physical coordinates to be interpolated to.
+    !!
+    !---------------------------------------------------------------------------------------
+    function interpolate_field_global(self,field,physical_nodes) result(var)
+        class(chidg_worker_t),  intent(in)  :: self
+        character(*),           intent(in)  :: field
+        real(rk),               intent(in)  :: physical_nodes(:,:)
+
+        integer(ik)                             :: eqn_ID, ifield
+        type(AD_D), allocatable, dimension(:)   :: var
+
+
+        !
+        ! Get equation_set identifier and locate field index
+        !
+        eqn_ID = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%eqn_ID
+        ifield = self%prop(eqn_ID)%get_primary_field_index(trim(field))
+
+
+        !
+        ! Arbitrary interpolation of primary field onto physical_nodes
+        !
+        var = interpolate_general_autodiff(self%mesh,self%solverdata%q,self%function_info,ifield,self%itime,'value',physical_nodes)
+
+
+    end function interpolate_field_global
+    !**************************************************************************************
+
+
+
+
+
+
 
 
 
@@ -1377,7 +1426,7 @@ contains
         type(AD_D),             intent(inout)   :: flux_2_p(:)
         type(AD_D),             intent(inout)   :: flux_3_p(:)
 
-        integer(ik)                             :: ifield, idomain_l, eqn_ID
+        integer(ik)                             :: ifield, idomain_l, ielement_l, eqn_ID
         type(AD_D), allocatable, dimension(:)   :: q_m, q_p, flux_1, flux_2, flux_3, integrand
         type(AD_D), allocatable, dimension(:,:) :: flux_ref_m, flux_ref_p
         real(rk),   allocatable, dimension(:)   :: norm_1, norm_2, norm_3
@@ -1423,7 +1472,8 @@ contains
         ! Integrate
         !
         idomain_l = self%element_info%idomain_l
-        eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
+        ielement_l = self%element_info%ielement_l
+        eqn_ID    = self%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
         call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ifield,self%itime,integrand)
 
@@ -1446,7 +1496,7 @@ contains
         character(*),           intent(in)      :: primary_field
         type(AD_D),             intent(inout)   :: upwind(:)
 
-        integer(ik)                                 :: ifield, idomain_l, eqn_ID
+        integer(ik)                                 :: ifield, idomain_l, ielement_l, eqn_ID
         real(rk),   allocatable,    dimension(:)    :: norm_1, norm_2, norm_3, darea
 
         !
@@ -1467,9 +1517,10 @@ contains
         !
         ! Integrate
         !
-        idomain_l = self%element_info%idomain_l
-        eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
-        ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
+        idomain_l  = self%element_info%idomain_l
+        ielement_l = self%element_info%ielement_l
+        eqn_ID     = self%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
+        ifield     = self%prop(eqn_ID)%get_primary_field_index(primary_field)
         call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ifield,self%itime,upwind)
 
 
@@ -1493,7 +1544,7 @@ contains
         type(AD_D),             intent(inout)   :: flux_2(:)
         type(AD_D),             intent(inout)   :: flux_3(:)
 
-        integer(ik)                             :: ifield, idomain_l, eqn_ID
+        integer(ik)                             :: ifield, idomain_l, ielement_l, eqn_ID
         real(rk),   allocatable, dimension(:)   :: norm_1, norm_2, norm_3
         type(AD_D), allocatable, dimension(:)   :: integrand, q_bc
         type(AD_D), allocatable, dimension(:,:) :: flux
@@ -1527,7 +1578,8 @@ contains
         ! Integrate
         !
         idomain_l = self%element_info%idomain_l
-        eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
+        ielement_l = self%element_info%ielement_l
+        eqn_ID    = self%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
         call integrate_boundary_scalar_flux(self%mesh,self%solverdata,self%face_info(),self%function_info,ifield,self%itime,integrand)
 
@@ -1561,13 +1613,14 @@ contains
         type(AD_D),             intent(inout)   :: flux_2(:)
         type(AD_D),             intent(inout)   :: flux_3(:)
 
-        integer(ik)             :: ifield, idomain_l, eqn_ID
+        integer(ik)             :: ifield, idomain_l, ielement_l, eqn_ID
         type(AD_D), allocatable :: flux(:,:), q(:)
 
 
-        idomain_l = self%element_info%idomain_l
-        eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
-        ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
+        idomain_l  = self%element_info%idomain_l
+        ielement_l = self%element_info%ielement_l
+        eqn_ID     = self%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
+        ifield     = self%prop(eqn_ID)%get_primary_field_index(primary_field)
 
 
         !
@@ -1610,11 +1663,12 @@ contains
         character(*),           intent(in)      :: primary_field
         type(AD_D),             intent(inout)   :: integrand(:)
 
-        integer(ik) :: ifield, idomain_l, eqn_ID
+        integer(ik) :: ifield, idomain_l, ielement_l, eqn_ID
 
-        idomain_l = self%element_info%idomain_l
-        eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
-        ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
+        idomain_l  = self%element_info%idomain_l
+        ielement_l = self%element_info%ielement_l
+        eqn_ID     = self%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
+        ifield     = self%prop(eqn_ID)%get_primary_field_index(primary_field)
 
         call integrate_volume_scalar_source(self%mesh,self%solverdata,self%element_info,self%function_info,ifield,self%itime,integrand)
 
@@ -1638,10 +1692,11 @@ contains
         character(*),           intent(in)      :: primary_field
         type(AD_D),             intent(inout)   :: residual(:)
 
-        integer(ik) :: ifield, idomain_l, eqn_ID
+        integer(ik) :: ifield, idomain_l, ielement_l, eqn_ID
 
         idomain_l = self%element_info%idomain_l
-        eqn_ID    = self%mesh%domain(idomain_l)%eqn_ID
+        ielement_l = self%element_info%ielement_l
+        eqn_ID    = self%mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         ifield    = self%prop(eqn_ID)%get_primary_field_index(primary_field)
 
         call store_volume_integrals(self%mesh, self%solverdata, self%element_info, self%function_info, ifield, self%itime, residual)

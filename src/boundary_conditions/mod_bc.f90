@@ -87,9 +87,8 @@ module mod_bc
     use bc_state_tm_extrapolate,   only: tm_extrapolate_t
     use bc_state_tm_dirichlet,     only: tm_dirichlet_t
 
-    use bc_state_graddemo_extrapolate,          only: graddemo_extrapolate_t
-    use bc_state_graddemo_gradp_extrapolate,    only: graddemo_gradp_extrapolate_t
-    use bc_state_graddemo_gradp_extrapolate_outer,    only: graddemo_gradp_extrapolate_outer_t
+    use bc_state_graddemo_gradp_extrapolate,        only: graddemo_gradp_extrapolate_t
+    use bc_state_graddemo_gradp_extrapolate_outer,  only: graddemo_gradp_extrapolate_outer_t
 
     use bc_state_pgradtest_extrapolate,    only: pgradtest_extrapolate_t
 
@@ -189,9 +188,8 @@ contains
         type(tm_extrapolate_t) :: TM_EXTRAPOLATE
         type(tm_dirichlet_t)   :: TM_DIRICHLET
 
-        type(graddemo_extrapolate_t)        :: GRADDEMO_EXTRAPOLATE
-        type(graddemo_gradp_extrapolate_t)  :: GRADDEMO_GRADP_EXTRAPOLATE
-        type(graddemo_gradp_extrapolate_outer_t)  :: GRADDEMO_GRADP_EXTRAPOLATE_OUTER
+        type(graddemo_gradp_extrapolate_t)          :: GRADDEMO_GRADP_EXTRAPOLATE
+        type(graddemo_gradp_extrapolate_outer_t)    :: GRADDEMO_GRADP_EXTRAPOLATE_OUTER
 
         type(pgradtest_extrapolate_t)  :: PGRADTEST_EXTRAPOLATE
 
@@ -263,7 +261,6 @@ contains
             call registered_bcs%push_back(TM_EXTRAPOLATE)
             call registered_bcs%push_back(TM_DIRICHLET)
 
-            call registered_bcs%push_back(GRADDEMO_EXTRAPOLATE)
             call registered_bcs%push_back(GRADDEMO_GRADP_EXTRAPOLATE)
             call registered_bcs%push_back(GRADDEMO_GRADP_EXTRAPOLATE_OUTER)
 

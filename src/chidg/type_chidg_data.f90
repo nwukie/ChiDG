@@ -144,7 +144,10 @@ contains
         if ( ierr /= 0 ) call AllocationError
 
         do idom = 1,self%mesh%ndomains()
-            eqn_ID = self%mesh%domain(idom)%eqn_ID
+            !
+            ! Assume that each element has the same eqn_ID
+            !
+            eqn_ID = self%mesh%domain(idom)%elems(1)%eqn_ID
             function_data(idom) = self%eqnset(eqn_ID)%function_data
         end do
 
@@ -743,7 +746,10 @@ contains
         call write_line("Initialize: domain equation space...", io_proc=GLOBAL_MASTER)
 
         do idomain = 1,self%mesh%ndomains()
-            eqn_ID = self%mesh%domain(idomain)%eqn_ID
+            !
+            ! Assume each element has the same eqn_ID
+            !
+            eqn_ID = self%mesh%domain(idomain)%elems(1)%eqn_ID
             nfields = self%eqnset(eqn_ID)%prop%nprimary_fields()
 
             self%mesh%ntime_ = self%time_manager%ntime
@@ -908,7 +914,10 @@ contains
 
 
         do idom = 1,self%mesh%ndomains()
-            eqn_ID = self%mesh%domain(idom)%eqn_ID
+            !
+            ! Assume each element has the same eqn_ID
+            !
+            eqn_ID = self%mesh%domain(idom)%elems(1)%eqn_ID
             do ifield = 1,self%eqnset(eqn_ID)%prop%nauxiliary_fields()
 
                 field_name = self%eqnset(eqn_ID)%prop%get_auxiliary_field_name(ifield)

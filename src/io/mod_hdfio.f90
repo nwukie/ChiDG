@@ -293,7 +293,7 @@ contains
 
 
             ! Write equation set attribute
-            eqn_ID = data%mesh%domain(idom)%eqn_ID
+            eqn_ID = data%mesh%domain(idom)%elems(1)%eqn_ID !assume each element has the same eqn_ID
             call set_domain_equation_set_hdf(domain_id,trim(data%eqnset(eqn_ID)%name))
 
 
@@ -425,7 +425,7 @@ contains
                         ! For each primary field in the domain, get the field name and read from file.
                         domain_id = open_domain_hdf(fid,domain_name)
 
-                        eqn_ID = data%mesh%domain(idom)%eqn_ID
+                        eqn_ID = data%mesh%domain(idom)%elems(1)%eqn_ID !assume each element has the same eqn_ID
                         do ieqn = 1,data%eqnset(eqn_ID)%prop%nprimary_fields()
                             field_name = trim(data%eqnset(eqn_ID)%prop%get_primary_field_name(ieqn))
                             call read_domain_field_hdf(data,domain_id,field_name,itime,'Primary')
@@ -540,7 +540,7 @@ contains
                 do idom = 1,data%mesh%ndomains()
 
                     domain_name = data%mesh%domain(idom)%name
-                    eqn_ID      = data%mesh%domain(idom)%eqn_ID
+                    eqn_ID      = data%mesh%domain(idom)%elems(1)%eqn_ID !assume each element has same eqn_ID
                     domain_id   = open_domain_hdf(fid,trim(domain_name))
                     
 
@@ -741,8 +741,8 @@ contains
         !
         !  Loop through elements and set 'variable' values
         !
-        eqn_ID = data%mesh%domain(idom)%eqn_ID
         do ielem = 1,data%mesh%domain(idom)%nelem
+            eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
 
 
             !
@@ -984,20 +984,20 @@ contains
 
 
         !
-        ! Get field integer index from field character string
-        !
-        eqn_ID = data%mesh%domain(idom)%eqn_ID
-        ivar = data%eqnset(eqn_ID)%prop%get_primary_field_index(field_name)
-
-
-
-        !
         ! Assemble field buffer matrix that gets written to file
         !
         allocate(var(nterms_s,1,1))
 
 
+
         do ielem = 1,data%mesh%domain(idom)%nelem
+
+            !
+            ! Get field integer index from field character string
+            !
+            eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
+            ivar = data%eqnset(eqn_ID)%prop%get_primary_field_index(field_name)
+
 
             !
             ! get domain-global element index

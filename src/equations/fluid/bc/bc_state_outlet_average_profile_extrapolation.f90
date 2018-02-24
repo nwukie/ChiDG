@@ -20,32 +20,20 @@ module bc_state_outlet_average_profile_extrapolation
 
 
 
-    !>  Name: Outlet - LODI Pressure
-    !!      : Update average pressure using LODI with transverse terms
-    !!      : Extrapolate other characteristics
+    !>  Pressure gradient condition via extrapolation of the pressure from some
+    !!  interior location and computing a boundary-global offset parameter to
+    !!  achieve an average pressure.
+    !!
     !!
     !!  Options:
     !!      : Average Pressure
     !!
-    !!  Behavior:
-    !!      
+    !!
     !!  References:
-    !!      [1] Koupper et al."Compatibility of Characteristic Boundary Conditions wth 
-    !!                         Radial Equilibrium in Turbomachinery Simulation."
-    !!                         AIAA Journal, Vol. 52, No. 12, December 2014.
-    !!
-    !!      [2] Granet et al. "Comparison of Nonreflecting Outlet Boundary Conditions for 
-    !!                         Compressible Solvers on Unstructured Grids."
-    !!                         AIAA Journal, Vol. 48, No. 10, October 2010.
-    !!
-    !!      [3] Yoo et al. "Characteristic boundary conditions for direct simulations of
-    !!                      turbulent counterflow flames." 
-    !!                      Combustion Theory and Modelling, Vol. 9, No. 4, November 2005, 
-    !!                      pp. 617-646.
     !!              
     !!  
-    !!  @author Nathan A. average_profile_extrapolation
-    !!  @date   4/20/2017
+    !!  @author Nathan A. Wukie
+    !!  @date   2/23/2018
     !!
     !----------------------------------------------------------------------------------------
     type, public, extends(bc_state_t) :: outlet_average_profile_extrapolation_t
@@ -71,25 +59,19 @@ contains
 
     !>
     !!
-    !!  @author Nathan A. average_profile_extrapolation (AFRL)
-    !!  @date   8/29/2016
+    !!  @author Nathan A. Wukie
+    !!  @date   2/23/2018
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
         class(outlet_average_profile_extrapolation_t),   intent(inout) :: self
         
-        !
         ! Set name, family
-        !
         call self%set_name('Outlet - Average Profile Extrapolation')
         call self%set_family('Outlet')
 
-
-        !
         ! Add functions
-        !
         call self%bcproperties%add('Average Pressure','Required')
-
 
     end subroutine init
     !********************************************************************************
@@ -102,11 +84,10 @@ contains
 
     !>  Initialize boundary group coupling.
     !!
-    !!  For this LODI-based outlet, each patch face is coupled with every other
-    !!  face in the bc_group. This coupling occurs because each face uses an
-    !!  average pressure that is computed over the group. The average pressure
-    !!  calculation couples every element on the group. This coupling is initialized
-    !!  here.
+    !!  Each element is coupled with every other element. This coupling occurs 
+    !!  because each face uses an average pressure that is computed over the group. 
+    !!  The average pressure calculation couples every element on the group. This 
+    !!  coupling is initialized here.
     !!
     !!  Coupling initialization:
     !!      1: each process loops through its local faces, initializes coupling
@@ -116,7 +97,7 @@ contains
     !!          a: iproc broadcasts information about its coupling to bc_COMM
     !!          b: all other procs receive from iproc and initialize parallel coupling
     !!
-    !!  @author Nathan A. average_profile_extrapolation
+    !!  @author Nathan A. Wukie
     !!  @date   4/18/2017
     !!
     !--------------------------------------------------------------------------------
@@ -257,9 +238,6 @@ contains
                         call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,1),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
                         call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,2),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
                         call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,3),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        !call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:)%c1_,    ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        !call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:)%c2_,    ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        !call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:)%c3_,    ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
 
                     end do ! face_ID
                 end do ! patch_ID
@@ -336,31 +314,17 @@ contains
                                                                                                                  areas,                 &
                                                                                                                  interp_coords_def)
 
-
-
-
-
                         end do ! face_ID
                     end do ! patch_ID
 
                 end do !ielem
 
 
-
-
-            end if
-
-
-
+            end if !if (iproc == bc_IRANK) then
 
             call MPI_Barrier(bc_COMM,ierr)
+
         end do
-
-
-
-
-
-
 
     end subroutine init_bc_coupling
     !******************************************************************************************
@@ -370,11 +334,10 @@ contains
 
 
 
-    !>  Update the area-averaged pressure for the boundary condition.
+    !>  Update averages for the boundary condition.
     !!
-    !!  @author Nathan A. average_profile_extrapolation
+    !!  @author Nathan A. Wukie
     !!  @date   3/31/2017
-    !!
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute_averages(self,worker,bc_COMM, u_avg, v_avg, w_avg, density_avg, p_avg)
@@ -387,8 +350,8 @@ contains
         type(AD_D),             intent(inout)   :: density_avg
         type(AD_D),             intent(inout)   :: p_avg
 
-        type(AD_D)          :: face_p, face_M, p_integral, u_integral, v_integral, w_integral, density_integral, face_density, face_u, face_v, face_w
-        type(face_info_t)   :: face_info
+        type(AD_D)  :: face_p, face_density, face_u, face_v, face_w,    &
+                       p_integral, u_integral, v_integral, w_integral, density_integral
 
         type(AD_D), allocatable,    dimension(:)    ::  &
             density, mom1, mom2, mom3, energy, p,       &
@@ -401,7 +364,7 @@ contains
                        icoupled, idomain_g_coupled, idomain_l_coupled, ielement_g_coupled,  &
                        ielement_l_coupled, iface_coupled
         real(rk)    :: face_area, total_area
-
+        type(face_info_t)   :: face_info
 
 
         !
@@ -478,19 +441,12 @@ contains
 
             
             !
-            ! Compute velocity
+            ! Compute velocities and pressure
             !
             u = mom1 / density
             v = mom2 / density
             w = mom3 / density
-
-
-            !
-            ! Compute pressure over the face
-            !
             p = (gam-ONE)*(energy - HALF*( mom1*mom1 + mom2*mom2 + mom3*mom3 )/density )
-
-
 
 
             !
@@ -599,7 +555,6 @@ contains
             u_bc, v_bc, w_bc, p_bc, T_bc,                                               &
             u_m,  v_m,  w_m,  p_m,  T_m,                                                &
             density_o, mom1_o, mom2_o, mom3_o, energy_o, p_o
-            !density_element, mom1_element, mom2_element, mom3_element, energy_element, p_element
 
 
         type(AD_D)  :: p_avg, u_avg, v_avg, w_avg, density_avg, p_diff
@@ -621,16 +576,11 @@ contains
         !
         ! Interpolate interior solution to face quadrature nodes
         !
-        density_m = worker%get_field('Density'   , 'value', 'face interior')
-        mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
-        mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
-        mom3_m    = worker%get_field('Momentum-3', 'value', 'face interior')
-        energy_m  = worker%get_field('Energy'    , 'value', 'face interior')
-
-        !T_m       = worker%get_field('Temperature', 'value', 'face interior')
-        !p_m       = worker%get_field('Pressure'   , 'value', 'face interior')
-        !p_element = worker%get_field('Pressure'   , 'value', 'element')
-
+        density_m = worker%get_field('Density'    , 'value', 'face interior')
+        mom1_m    = worker%get_field('Momentum-1' , 'value', 'face interior')
+        mom2_m    = worker%get_field('Momentum-2' , 'value', 'face interior')
+        mom3_m    = worker%get_field('Momentum-3' , 'value', 'face interior')
+        energy_m  = worker%get_field('Energy'     , 'value', 'face interior')
         p_m       = worker%get_field('Pressure'   , 'value', 'face interior')
         T_m       = worker%get_field('Temperature', 'value', 'face interior')
 
@@ -640,18 +590,14 @@ contains
         ! Get reference coordinates of quadrature node set
         !
         associate( idom => worker%element_info%idomain_l, ielem => worker%element_info%ielement_l, iface => worker%iface )
-
-        coords = worker%mesh%domain(idom)%faces(ielem,iface)%basis_s%nodes_face(iface)
-
+            coords = worker%mesh%domain(idom)%faces(ielem,iface)%basis_s%nodes_face(iface)
         end associate
 
 
         !
         ! Get coordinates of quadrature node set
         !
-        offset = -0.14_rk    ! element center
-        !offset = -0.00000000000001_rk    ! element center
-        !offset = ZERO ! element center
+        offset = 0.5    ! quarter element distance
 
 
         ! Offset axial reference nodes to lie in the element interior
@@ -675,105 +621,7 @@ contains
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_o = mom2_o / worker%coordinate('1','boundary')
         end if
-
         p_o = (gam-ONE)*(energy_o - HALF*( mom1_o*mom1_o + mom2_o*mom2_o + mom3_o*mom3_o )/density_o )
-
-
-
-
-
-!        density_element = worker%get_field('Density'   , 'value', 'element')
-!        mom1_element    = worker%get_field('Momentum-1', 'value', 'element')
-!        mom2_element    = worker%get_field('Momentum-2', 'value', 'element')
-!        mom3_element    = worker%get_field('Momentum-3', 'value', 'element')
-!        energy_element  = worker%get_field('Energy'    , 'value', 'element')
-!
-!
-!        !
-!        ! Account for cylindrical. Get tangential momentum from angular momentum.
-!        !
-!        if (worker%coordinate_system() == 'Cylindrical') then
-!            mom2_element = mom2_element / worker%coordinate('1','element')
-!        end if
-!        p_element = (gam-ONE)*(energy_element - HALF*( mom1_element*mom1_element + mom2_element*mom2_element + mom3_element*mom3_element )/density_element )
-!        ! 'element' fields not getting computed wrt other boundary-coupled elements.
-!        !p_element = worker%get_field('Pressure'   , 'value', 'element')
-!
-!
-!        if (worker%iface == XI_MAX) then
-!            ! xi-aligned
-!            select case(worker%solution_order('interior'))
-!                case(0)
-!                    p_m = p_element(2:size(p_element):2)
-!                case(1)
-!                    p_m = p_element(3:size(p_element):3)
-!                case(2) 
-!                    p_m = p_element(5:size(p_element):5)
-!                case(3)
-!                    p_m = p_element(6:size(p_element):6)
-!                case(4)
-!                    p_m = p_element(7:size(p_element):7)
-!                case(5)
-!                    p_m = p_element(9:size(p_element):9)
-!                case(6)
-!                    p_m = p_element(11:size(p_element):11)
-!                case default
-!                    call chidg_signal(FATAL,"bc_state_outlet_average_profile_extrapolation: order.")
-!            end select 
-!
-!!        else if (worker%iface == ETA_MAX) then
-!!            ! eta-aligned
-!!            select case(worker%solution_order('interior'))
-!!                case(0)
-!!                    p_m(1:size(p_m)-1:2) = p_element(3:size(p_element):2)
-!!                    p_m(2:size(p_m):2)   = p_element(4:size(p_element):2)
-!!                case(1)
-!!                    p_m = p_element(3:size(p_element):3)
-!!                case(2) 
-!!                    p_m = p_element(5:size(p_element):5)
-!!                case(3)
-!!                    p_m = p_element(6:size(p_element):6)
-!!                case(4)
-!!                    p_m = p_element(7:size(p_element):7)
-!!                case(5)
-!!                    p_m = p_element(9:size(p_element):9)
-!!                case(6)
-!!                    p_m = p_element(11:size(p_element):11)
-!!                case default
-!!                    call chidg_signal(FATAL,"bc_state_outlet_average_profile_extrapolation: order.")
-!!            end select 
-!
-!
-!
-!        else if (worker%iface == ZETA_MAX) then
-!            ! zeta-aligned
-!            select case(worker%solution_order('interior'))
-!                case(0)
-!                    p_m = p_element(5:8)
-!                case(1)
-!                    p_m = p_element(19:27)
-!                case(2) 
-!                    p_m = p_element(101:125)
-!                case(3)
-!                    p_m = p_element(181:216)
-!                case(4)
-!                    p_m = p_element(449:512)
-!                case(5)
-!                    p_m = p_element(649:729)
-!                case(6)
-!                    p_m = p_element(1211:1331)
-!                case default
-!                    call chidg_signal(FATAL,"bc_state_outlet_average_profile_extrapolation: order.")
-!            end select 
-!
-!        else
-!            call chidg_signal_one(FATAL,"bc_state_outlet_average_profile_extrapolation: not configured for current face index.",worker%iface)
-!        end if
-
-
-        ! Override interior extrapolation
-        !p_m = worker%get_field('Pressure'   , 'value', 'face interior')
-
 
 
 
@@ -858,7 +706,6 @@ contains
         !
         ! Confirmed, signs are correct
         p_diff = (p_avg - p_user(1))
-        !p_bc = p_m - p_diff
         p_bc = p_o - p_diff
 
 

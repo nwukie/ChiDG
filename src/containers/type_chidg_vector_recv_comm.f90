@@ -62,18 +62,19 @@ contains
         integer(ik),                     intent(in)      :: comm
 
         character(:),   allocatable :: user_msg
-        integer(ik)                 :: idom, idom_recv, ndom_recv, ierr, ielem, iface,  &
-                                       ChiID, donor_domain_g, donor_element_g,          &
-                                       idomain_g, ielement_g, dom_store, idom_loop,     &
-                                       ielem_loop, ielem_recv, nelem_recv,              &
-                                       neighbor_domain_g, neighbor_element_g,           &
-                                       bc_domain_g, bc_element_g,                       &
-                                       recv_element, recv_domain, idonor,               &
-                                       group_ID, patch_ID, face_ID, elem_ID
+        integer(ik)                 :: idom, idom_recv, ndom_recv, ierr, ielem, iface,      &
+                                       ChiID, donor_domain_g, donor_element_g,              &
+                                       idomain_g, ielement_g, dom_store, idom_loop,         &
+                                       ielem_loop, ielem_recv, nelem_recv,                  &
+                                       neighbor_domain_g, neighbor_element_g,               &
+                                       bc_domain_g, bc_element_g,                           &
+                                       recv_element, recv_domain, idonor,                   &
+                                       group_ID, patch_ID, face_ID, elem_ID, pelem_ID,      &
+                                       p_domain_g, p_element_g
         integer(ik),    allocatable :: comm_procs_dom(:)
-        logical                     :: proc_has_domain, domain_found, element_found,    &
-                                       is_interior, is_chimera, is_boundary,            &
-                                       comm_neighbor, comm_donor, comm_elem,            &
+        logical                     :: proc_has_domain, domain_found, element_found,        &
+                                       is_interior, is_chimera, is_boundary,                &
+                                       comm_neighbor, comm_donor, comm_elem, comm_matches,  &
                                        donor_recv_found, bc_recv_found
 
         !
@@ -286,6 +287,51 @@ contains
                 end do ! iface
             end do ! ielem
         end do ! idom
+
+
+
+
+
+        !
+        ! Loop through mesh%parallel_element(:) and initialize recv indices
+        !
+        do pelem_ID = 1,mesh%nparallel_elements()
+
+            ! Check that this is the correct comm container to be matched with
+            comm_matches = ( proc == mesh%parallel_element(pelem_ID)%iproc )
+
+            ! If processor rank matches up, search domains/elements for a match
+            if (comm_matches) then
+                p_domain_g  = mesh%parallel_element(pelem_ID)%idomain_g
+                p_element_g = mesh%parallel_element(pelem_ID)%ielement_g
+
+
+                ! Loop through domains being received to find the right domain
+                do idom_recv = 1,ndom_recv
+                    recv_domain = self%dom(idom_recv)%vecs(1)%dparent_g()
+                    if (recv_domain == p_domain_g) then
+                        ! Loop through the elements in the recv domain to find the right neighbor element
+                        do ielem_recv = 1,size(self%dom(idom_recv)%vecs)
+                            recv_element = self%dom(idom_recv)%vecs(ielem_recv)%eparent_g()
+                            ! Set the location where a face can find its off-processor neighbor 
+                            if (recv_element == p_element_g) then
+
+                                mesh%parallel_element(pelem_ID)%recv_comm    = comm
+                                mesh%parallel_element(pelem_ID)%recv_domain  = idom_recv
+                                mesh%parallel_element(pelem_ID)%recv_element = ielem_recv
+
+                            end if  ! element matches
+                        end do !ielem_recv
+                    end if ! domain matches
+                end do !idom_recv
+
+            end if ! comm_matches
+
+
+
+        end do !pelem_ID
+
+
 
 
 

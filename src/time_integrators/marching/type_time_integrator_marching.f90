@@ -54,7 +54,7 @@ contains
         class(time_integrator_marching_t),  intent(inout)   :: self
         type(chidg_data_t),                 intent(inout)   :: data
 
-        integer(ik)                 :: idom,ielem,ivar,ierr,eqn_ID
+        integer(ik)                 :: idom,ielem,ivar,ierr
         real(rk),   allocatable     :: temp(:)
 
         associate( q          => data%sdata%q,             &
@@ -68,7 +68,6 @@ contains
 
                     do idom = 1,data%mesh%ndomains()
 
-                        eqn_ID = data%mesh%domain(idom)%eqn_ID
 
                         if (allocated(temp)) deallocate(temp)
                         allocate(temp(data%mesh%domain(idom)%nterms_s), stat=ierr)

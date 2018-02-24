@@ -20,9 +20,9 @@ module bc_state_outlet_average_pressure
 
 
 
-    !>  Name: Outlet - LODI Pressure
-    !!      : Update average pressure using LODI with transverse terms
-    !!      : Extrapolate other characteristics
+    !>  Name: Outlet - Average Pressure
+    !!
+    !!  Handle perturbations from average using one-dimensional characteristic analysis.
     !!
     !!  Options:
     !!      : Average Pressure
@@ -30,22 +30,10 @@ module bc_state_outlet_average_pressure
     !!  Behavior:
     !!      
     !!  References:
-    !!      [1] Koupper et al."Compatibility of Characteristic Boundary Conditions wth 
-    !!                         Radial Equilibrium in Turbomachinery Simulation."
-    !!                         AIAA Journal, Vol. 52, No. 12, December 2014.
-    !!
-    !!      [2] Granet et al. "Comparison of Nonreflecting Outlet Boundary Conditions for 
-    !!                         Compressible Solvers on Unstructured Grids."
-    !!                         AIAA Journal, Vol. 48, No. 10, October 2010.
-    !!
-    !!      [3] Yoo et al. "Characteristic boundary conditions for direct simulations of
-    !!                      turbulent counterflow flames." 
-    !!                      Combustion Theory and Modelling, Vol. 9, No. 4, November 2005, 
-    !!                      pp. 617-646.
     !!              
     !!  
-    !!  @author Nathan A. average_pressure
-    !!  @date   4/20/2017
+    !!  @author Nathan A. Wukie
+    !!  @date   2/23/2018
     !!
     !----------------------------------------------------------------------------------------
     type, public, extends(bc_state_t) :: outlet_average_pressure_t
@@ -56,7 +44,6 @@ module bc_state_outlet_average_pressure
         procedure   :: init                 ! Set-up bc state with options/name etc.
         procedure   :: init_bc_coupling     ! Implement specialized initialization procedure
         procedure   :: compute_bc_state     ! boundary condition function implementation
-
         procedure   :: compute_averages
 
     end type outlet_average_pressure_t
@@ -78,18 +65,12 @@ contains
     subroutine init(self)
         class(outlet_average_pressure_t),   intent(inout) :: self
         
-        !
         ! Set name, family
-        !
         call self%set_name('Outlet - Average Pressure')
         call self%set_family('Outlet')
 
-
-        !
         ! Add functions
-        !
         call self%bcproperties%add('Average Pressure','Required')
-
 
     end subroutine init
     !********************************************************************************
@@ -97,13 +78,10 @@ contains
 
 
 
-
-
-
     !>  Initialize boundary group coupling.
     !!
-    !!  For this LODI-based outlet, each patch face is coupled with every other
-    !!  face in the bc_group. This coupling occurs because each face uses an
+    !!  Each element is coupled with every other element that belongs to the boundary
+    !!  condition. This coupling occurs because each face uses an
     !!  average pressure that is computed over the group. The average pressure
     !!  calculation couples every element on the group. This coupling is initialized
     !!  here.
@@ -116,15 +94,15 @@ contains
     !!          a: iproc broadcasts information about its coupling to bc_COMM
     !!          b: all other procs receive from iproc and initialize parallel coupling
     !!
-    !!  @author Nathan A. average_pressure
+    !!  @author Nathan A. Wukie
     !!  @date   4/18/2017
     !!
     !--------------------------------------------------------------------------------
     subroutine init_bc_coupling(self,mesh,group_ID,bc_COMM)
         class(outlet_average_pressure_t),  intent(inout)   :: self
-        type(mesh_t),                     intent(inout)   :: mesh
-        integer(ik),                      intent(in)      :: group_ID
-        type(mpi_comm),                   intent(in)      :: bc_COMM
+        type(mesh_t),                      intent(inout)   :: mesh
+        integer(ik),                       intent(in)      :: group_ID
+        type(mpi_comm),                    intent(in)      :: bc_COMM
 
         integer(ik) :: patch_ID, face_ID, elem_ID, patch_ID_coupled, face_ID_coupled,   &
                        idomain_g, idomain_l, ielement_g, ielement_l, iface,             &
@@ -199,18 +177,11 @@ contains
 
 
 
-
-
-
-
         !
         ! Get bc_NRANK, bc_IRANK from bc_COMM
         !
         call MPI_Comm_Size(bc_COMM, bc_NRANK, ierr)
         call MPI_Comm_Rank(bc_COMM, bc_IRANK, ierr)
-
-
-
 
 
         !
@@ -257,18 +228,10 @@ contains
                         call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,1),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
                         call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,2),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
                         call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,3),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        !call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:)%c1_,    ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        !call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:)%c2_,    ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        !call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:)%c3_,    ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
 
                     end do ! face_ID
                 end do ! patch_ID
             
-
-
-
-
-
 
 
 
@@ -337,28 +300,17 @@ contains
                                                                                                                  interp_coords_def)
 
 
-
-
-
                         end do ! face_ID
                     end do ! patch_ID
 
                 end do !ielem
 
 
-
-
             end if
-
-
 
 
             call MPI_Barrier(bc_COMM,ierr)
         end do
-
-
-
-
 
 
 
@@ -370,28 +322,29 @@ contains
 
 
 
-    !>  Update the area-averaged pressure for the boundary condition.
+    !>  Compute averaged quantities over the face. 
     !!
-    !!  @author Nathan A. average_pressure
+    !!  @author Nathan A. Wukie
     !!  @date   3/31/2017
     !!
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute_averages(self,worker,bc_COMM, u_avg, v_avg, w_avg, density_avg, p_avg)
-        class(outlet_average_pressure_t),  intent(inout)   :: self
-        type(chidg_worker_t),   intent(inout)   :: worker
-        type(mpi_comm),         intent(in)      :: bc_COMM
-        type(AD_D),             intent(inout)   :: u_avg
-        type(AD_D),             intent(inout)   :: v_avg
-        type(AD_D),             intent(inout)   :: w_avg
-        type(AD_D),             intent(inout)   :: density_avg
-        type(AD_D),             intent(inout)   :: p_avg
+        class(outlet_average_pressure_t),   intent(inout)   :: self
+        type(chidg_worker_t),               intent(inout)   :: worker
+        type(mpi_comm),                     intent(in)      :: bc_COMM
+        type(AD_D),                         intent(inout)   :: u_avg
+        type(AD_D),                         intent(inout)   :: v_avg
+        type(AD_D),                         intent(inout)   :: w_avg
+        type(AD_D),                         intent(inout)   :: density_avg
+        type(AD_D),                         intent(inout)   :: p_avg
 
-        type(AD_D)          :: face_p, face_M, p_integral, u_integral, v_integral, w_integral, density_integral, face_density, face_u, face_v, face_w
+        type(AD_D)          :: p_integral, u_integral, v_integral, w_integral, density_integral, &
+                               face_density, face_u, face_v, face_w, face_p
         type(face_info_t)   :: face_info
 
         type(AD_D), allocatable,    dimension(:)    ::  &
-            density, mom1, mom2, mom3, energy, p,    &
+            density, mom1, mom2, mom3, energy, p,       &
             u, v, w
 
         real(rk),   allocatable,    dimension(:)    :: weights, areas, r
@@ -419,8 +372,6 @@ contains
         group_ID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%group_ID
         patch_ID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_ID
         face_ID  = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%face_ID
-
-
 
 
         !
@@ -475,16 +426,11 @@ contains
 
             
             !
-            ! Compute velocity
+            ! Compute velocities and pressure
             !
             u = mom1 / density
             v = mom2 / density
             w = mom3 / density
-
-
-            !
-            ! Compute pressure over the face
-            !
             p = (gam-ONE)*(energy - HALF*( mom1*mom1 + mom2*mom2 + mom3*mom3 )/density )
 
 
@@ -598,7 +544,8 @@ contains
             c1, c2, c3, c4, ddensity, dp, du, dv, dw
 
 
-        type(AD_D)  :: p_avg, u_avg, v_avg, w_avg, density_avg, M_avg, c_avg, c4_1d, ddensity_mean, du_mean, dv_mean, dw_mean, dp_mean
+        type(AD_D)  :: p_avg, u_avg, v_avg, w_avg, density_avg, M_avg, c_avg, c4_1d,    &
+                       ddensity_mean, du_mean, dv_mean, dw_mean, dp_mean
 
         real(rk),       allocatable, dimension(:)   ::  p_user, r
         integer :: i
@@ -705,7 +652,6 @@ contains
         ! Compute pressure from extrapolated data
         !
         p_m = worker%get_field('Pressure', 'value', 'face interior')
-        !p_m = (gam-ONE)*(energy_m - HALF*( (mom1_m*mom1_m) + (mom2_m*mom2_m) + (mom3_m*mom3_m) )/density_m )
     
 
         

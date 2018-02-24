@@ -4,7 +4,7 @@ module type_domain
     use mod_constants,              only: XI_MIN,XI_MAX,ETA_MIN,ETA_MAX,ZETA_MIN,ZETA_MAX, &
                                           ORPHAN, INTERIOR, BOUNDARY, CHIMERA, TWO_DIM, &
                                           THREE_DIM, NO_NEIGHBOR_FOUND, NEIGHBOR_FOUND, &
-                                          NO_PROC, NFACES, NO_EQUATION_SET, ZERO, NO_PMM_ASSIGNED
+                                          NO_PROC, NFACES, ZERO, NO_PMM_ASSIGNED
     use mod_grid,                   only: FACE_CORNERS
     use mod_chidg_mpi,              only: IRANK, NRANK, GLOBAL_MASTER
     use mpi_f08
@@ -62,7 +62,7 @@ module type_domain
         integer(ik)                     :: nelements_g = 0     ! Number of elements in the global domain
         integer(ik)                     :: nelem       = 0     ! Number of total elements
         integer(ik)                     :: ntime       = 0     ! Number of time instances
-        integer(ik)                     :: eqn_ID      = NO_EQUATION_SET
+        !integer(ik)                     :: eqn_ID      = NO_EQUATION_SET
         integer(ik)                     :: pmm_ID      = NO_PMM_ASSIGNED
         character(:),   allocatable     :: coordinate_system   ! 'Cartesian' or 'Cylindrical'
 
@@ -340,11 +340,20 @@ contains
         class(domain_t),  intent(inout)   :: self
         integer(ik),    intent(in)      :: eqn_ID
 
+        integer(ik) :: ielem
+
         !
         ! Store number of equations and number of terms in solution expansion
         !
-        self%eqn_ID = eqn_ID
+        !self%eqn_ID = eqn_ID
 
+        
+        !
+        ! Assign all elements in the domain to the equation set identifier.
+        !
+        do ielem = 1,self%nelements()
+            call self%elems(ielem)%init_eqn(eqn_ID)
+        end do
 
     end subroutine init_eqn
     !*****************************************************************************************
@@ -379,7 +388,7 @@ contains
 
 
         type(element_connectivity_t)    :: element_connectivity
-        integer(ik)                     :: ierr, nelem, location(4), etype,             &
+        integer(ik)                     :: ierr, nelem, location(5), etype,             &
                                            idomain_g, ielement_g, idomain_l, ielement_l
         integer(ik),    allocatable     :: connectivity(:)
 
@@ -408,7 +417,8 @@ contains
             connectivity = element_connectivity%get_element_nodes()
             idomain_g    = element_connectivity%get_domain_index()
             ielement_g   = element_connectivity%get_element_index()
-            location     = [idomain_g, idomain_l, ielement_g, ielement_l]
+            !location     = [idomain_g, idomain_l, ielement_g, ielement_l]
+            location     = [idomain_g, idomain_l, ielement_g, ielement_l, IRANK]
             etype        = element_connectivity%get_element_mapping()
 
             call self%elems(ielement_l)%init_geom(nodes,connectivity,etype,location,coord_system)

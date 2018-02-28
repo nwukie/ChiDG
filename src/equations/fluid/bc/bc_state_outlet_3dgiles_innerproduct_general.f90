@@ -7,6 +7,7 @@ module bc_state_outlet_3dgiles_innerproduct_general
     use mod_interpolation,      only: interpolate_linear, interpolate_linear_ad
     use mod_gridspace,          only: linspace
     use mod_dft,                only: dft, idft_eval
+    use mod_chimera,            only: find_gq_donor, find_gq_donor_parallel
 
     use type_point,             only: point_t
     use type_mesh,              only: mesh_t
@@ -14,7 +15,8 @@ module bc_state_outlet_3dgiles_innerproduct_general
     use type_bc_patch,          only: bc_patch_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
-    use type_face_info,         only: face_info_t
+    use type_face_info,         only: face_info_t, face_info_constructor
+    use type_element_info,      only: element_info_t
     use mod_chidg_mpi,          only: IRANK
     use mod_interpolate,        only: interpolate_face_autodiff
     use mpi_f08,                only: MPI_REAL8, MPI_AllReduce, mpi_comm, MPI_INTEGER, MPI_BCast, MPI_MIN, MPI_MAX
@@ -43,7 +45,12 @@ module bc_state_outlet_3dgiles_innerproduct_general
     type, public, extends(bc_state_t) :: outlet_3dgiles_innerproduct_general_t
 
         real(rk),   allocatable :: r(:)
+        real(rk),   allocatable :: theta(:)
         real(rk)                :: theta_ref
+
+        type(element_info_t),   allocatable :: donor(:,:)
+        real(rk),               allocatable :: donor_coord(:,:,:)
+        
 
     contains
 
@@ -55,6 +62,7 @@ module bc_state_outlet_3dgiles_innerproduct_general
         procedure   :: compute_averages
         procedure   :: compute_fourier_decomposition
         procedure   :: analyze_bc_geometry
+        procedure   :: initialize_fourier_discretization
 
     end type outlet_3dgiles_innerproduct_general_t
     !*********************************************************************************
@@ -376,6 +384,9 @@ contains
 
 
         call self%analyze_bc_geometry(mesh,group_ID,bc_comm)
+
+
+        call self%initialize_fourier_discretization(mesh,group_ID,bc_comm)
 
 
     end subroutine init_bc_postcomm
@@ -1298,7 +1309,6 @@ contains
         nmodes  = 5
         ncoeff  = 1 + (nmodes-1)*2
         nradius = size(self%r)
-        !ntheta  = nmodes*2 + 1
         ntheta  = ncoeff
         
 
@@ -1351,11 +1361,16 @@ contains
             !
             ! Interpolate solution to physical_nodes at current radial station
             !
-            density = worker%interpolate_field_general('Density',    physical_nodes, try_offset=[ZERO,-pitch(1),ZERO])
-            mom1    = worker%interpolate_field_general('Momentum-1', physical_nodes, try_offset=[ZERO,-pitch(1),ZERO])
-            mom2    = worker%interpolate_field_general('Momentum-2', physical_nodes, try_offset=[ZERO,-pitch(1),ZERO])
-            mom3    = worker%interpolate_field_general('Momentum-3', physical_nodes, try_offset=[ZERO,-pitch(1),ZERO])
-            energy  = worker%interpolate_field_general('Energy',     physical_nodes, try_offset=[ZERO,-pitch(1),ZERO])
+            !density = worker%interpolate_field_general('Density',    physical_nodes, try_offset=[ZERO,-pitch(1),ZERO])
+            !mom1    = worker%interpolate_field_general('Momentum-1', physical_nodes, try_offset=[ZERO,-pitch(1),ZERO])
+            !mom2    = worker%interpolate_field_general('Momentum-2', physical_nodes, try_offset=[ZERO,-pitch(1),ZERO])
+            !mom3    = worker%interpolate_field_general('Momentum-3', physical_nodes, try_offset=[ZERO,-pitch(1),ZERO])
+            !energy  = worker%interpolate_field_general('Energy',     physical_nodes, try_offset=[ZERO,-pitch(1),ZERO])
+            density = worker%interpolate_field_general('Density',    physical_nodes, donors=self%donor(iradius,:), donor_coords=self%donor_coord(iradius,:,:))
+            mom1    = worker%interpolate_field_general('Momentum-1', physical_nodes, donors=self%donor(iradius,:), donor_coords=self%donor_coord(iradius,:,:))
+            mom2    = worker%interpolate_field_general('Momentum-2', physical_nodes, donors=self%donor(iradius,:), donor_coords=self%donor_coord(iradius,:,:))
+            mom3    = worker%interpolate_field_general('Momentum-3', physical_nodes, donors=self%donor(iradius,:), donor_coords=self%donor_coord(iradius,:,:))
+            energy  = worker%interpolate_field_general('Energy',     physical_nodes, donors=self%donor(iradius,:), donor_coords=self%donor_coord(iradius,:,:))
 
             if (worker%coordinate_system() == 'Cylindrical') then
                 mom2 = mom2/self%r(iradius)  ! convert to tangential momentum
@@ -1408,14 +1423,6 @@ contains
             c_bar = sqrt(gam*pressure_bar/density_bar)
 
 
-!            print*, 'compare bar to m'
-!            print*, density_bar%x_ad_,  density(1)%x_ad_
-!            print*, vel1_bar%x_ad_,     vel1(1)%x_ad_
-!            print*, vel2_bar%x_ad_,     vel2(1)%x_ad_
-!            print*, vel3_bar%x_ad_,     vel3(1)%x_ad_
-!            print*, pressure_bar%x_ad_, pressure(1)%x_ad_
-
-
             !
             ! Compute perturbation
             !
@@ -1441,14 +1448,6 @@ contains
                 c4(itheta) = (density_bar*c_bar)*dvel3(itheta)  +  (ONE)*dpressure(itheta)
                 c5(itheta) = -(density_bar*c_bar)*dvel3(itheta) +  (ONE)*dpressure(itheta)
             end do
-
-
-!            print*, 'local characteristics:'
-!            print*, 'c1:', c1(:)%x_ad_
-!            print*, 'c2:', c2(:)%x_ad_
-!            print*, 'c3:', c3(:)%x_ad_
-!            print*, 'c4:', c4(:)%x_ad_
-!            print*, 'c5:', c5(:)%x_ad_
 
 
             !
@@ -1624,6 +1623,174 @@ contains
 
     end subroutine analyze_bc_geometry
     !********************************************************************************
+
+
+
+
+
+
+
+    !>
+    !!
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/28/2018
+    !!
+    !----------------------------------------------------------------------------------
+    subroutine initialize_fourier_discretization(self,mesh,group_ID,bc_comm)
+        class(outlet_3dgiles_innerproduct_general_t),   intent(inout)   :: self
+        type(mesh_t),                                   intent(in)      :: mesh
+        integer(ik),                                    intent(in)      :: group_ID
+        type(mpi_comm),                                 intent(in)      :: bc_comm
+
+        integer(ik)                 :: nmodes, ncoeff, nradius, ntheta, idomain_l, ielement_l, iface, iradius, itheta, ierr
+        real(rk)                    :: dtheta, dtheta_n, midpoint(3), try_offset(3), node(3), z
+        real(rk),       allocatable :: pitch(:)
+        character(:),   allocatable :: user_msg
+        logical                     :: donor_found
+
+
+
+        !
+        ! Determine z-location of some face on the boundary and assume 
+        ! entire boundary is constant-z
+        !
+        idomain_l  = mesh%bc_patch_group(group_ID)%patch(1)%idomain_l()
+        ielement_l = mesh%bc_patch_group(group_ID)%patch(1)%ielement_l(1)
+        iface      = mesh%bc_patch_group(group_ID)%patch(1)%iface(1)
+        if (iface == XI_MIN) then
+            midpoint = mesh%domain(idomain_l)%elems(ielement_l)%physical_point([-ONE,ZERO,ZERO],'Deformed')
+        else if (iface == XI_MAX) then
+            midpoint = mesh%domain(idomain_l)%elems(ielement_l)%physical_point([ ONE,ZERO,ZERO],'Deformed')
+        else if (iface == ETA_MIN) then
+            midpoint = mesh%domain(idomain_l)%elems(ielement_l)%physical_point([ZERO,-ONE,ZERO],'Deformed')
+        else if (iface == ETA_MAX) then
+            midpoint = mesh%domain(idomain_l)%elems(ielement_l)%physical_point([ZERO, ONE,ZERO],'Deformed')
+        else if (iface == ZETA_MIN) then
+            midpoint = mesh%domain(idomain_l)%elems(ielement_l)%physical_point([ZERO,ZERO,-ONE],'Deformed')
+        else if (iface == ZETA_MAX) then
+            midpoint = mesh%domain(idomain_l)%elems(ielement_l)%physical_point([ZERO,ZERO, ONE],'Deformed')
+        end if
+        z = midpoint(3)
+
+
+
+
+
+        !
+        ! Define Fourier discretization
+        !
+        nmodes  = 5
+        ncoeff  = 1 + (nmodes-1)*2
+        nradius = size(self%r)
+        ntheta  = ncoeff
+        
+
+
+        !
+        ! Initialize theta discretization parameters
+        !
+        !pitch  = self%bcproperties%compute('Pitch',worker%time(),worker%coords())
+        pitch  = self%bcproperties%compute('Pitch',time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
+        dtheta = pitch(1)
+        dtheta_n = dtheta/ntheta
+
+
+        !
+        ! Construct theta discretization at each radius
+        !
+        allocate(self%theta(ntheta), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        do itheta = 1,ntheta
+            self%theta(itheta) = self%theta_ref + (itheta-1)*dtheta_n
+        end do
+
+
+        !
+        ! Donor search offset, if needed
+        !
+        try_offset = [ZERO, -pitch(1), ZERO]
+
+
+        !
+        ! For each radial station, initialized donor for each node in theta grid
+        !
+        allocate(self%donor(nradius,ntheta), self%donor_coord(nradius,ntheta,3), stat=ierr)
+        if (ierr /= 0) call AllocationError
+        do iradius = 1,size(self%r)
+            do itheta = 1,size(self%theta)
+
+                node = [self%r(iradius), self%theta(itheta), z]
+
+                !
+                ! Try processor-LOCAL elements
+                !
+                call find_gq_donor(mesh,                                    &
+                                   node,                                    &
+                                   [ZERO,ZERO,ZERO],                        &
+                                   face_info_constructor(0,0,0,0,0),        &   ! we don't really have a receiver face
+                                   self%donor(iradius,itheta),              &
+                                   self%donor_coord(iradius,itheta,1:3),    &
+                                   donor_found)
+
+                !
+                ! Try LOCAL elements with try_offset if still not found 
+                !
+                if ( .not. donor_found ) then
+                    call find_gq_donor(mesh,                                    &
+                                       node,                                    &
+                                       try_offset,                              &
+                                       face_info_constructor(0,0,0,0,0),        &   ! we don't really have a receiver face
+                                       self%donor(iradius,itheta),              &
+                                       self%donor_coord(iradius,itheta,1:3),    &
+                                       donor_found)
+
+                end if
+
+
+
+                !
+                ! Try PARALLEL_ELEMENTS if donor not found amongst local elements
+                !
+                if (.not. donor_found) then
+                    call find_gq_donor_parallel(mesh,                                   &
+                                                node,                                   &
+                                                [ZERO,ZERO,ZERO],                       &
+                                                face_info_constructor(0,0,0,0,0),       &   ! we don't really have a receiver face
+                                                self%donor(iradius,itheta),             &
+                                                self%donor_coord(iradius,itheta,1:3),   &
+                                                donor_found)
+                end if
+
+                
+                !
+                ! Try PARALLEL_ELEMENTS with try_offset if still not found 
+                !
+                if ( .not. donor_found ) then
+                    call find_gq_donor_parallel(mesh,                                   &
+                                                node,                                   &
+                                                try_offset,                             &
+                                                face_info_constructor(0,0,0,0,0),       &   ! we don't really have a receiver face
+                                                self%donor(iradius,itheta),             &
+                                                self%donor_coord(iradius,itheta,1:3),   &
+                                                donor_found)
+                end if 
+
+
+                ! Abort if we didn't find a donor
+                user_msg = "bc_state_outlet_3dgiles_innerproduct_general%initialize_fourier_discretization: &
+                            no donor element found for Fourier discretization node."
+                if (.not. donor_found) call chidg_signal(FATAL,user_msg)
+
+
+            end do !itheta
+        end do !iradius
+
+
+
+    end subroutine initialize_fourier_discretization
+    !**************************************************************************************
+
 
 
 

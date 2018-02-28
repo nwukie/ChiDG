@@ -677,7 +677,7 @@ contains
     !!  @param[in]      source      ME/NEIGHBOR indicating which element to interpolate from
     !!
     !-----------------------------------------------------------------------------------------------------------
-    function interpolate_general_autodiff(mesh,vector,fcn_info,ifield,itime,interpolation_type,physical_nodes,try_offset) result(var)
+    function interpolate_general_autodiff(mesh,vector,fcn_info,ifield,itime,interpolation_type,physical_nodes,try_offset,donors,donor_coords) result(var)
         type(mesh_t),           intent(in)              :: mesh
         type(chidg_vector_t),   intent(in)              :: vector
         type(function_info_t),  intent(in)              :: fcn_info
@@ -686,6 +686,8 @@ contains
         character(*),           intent(in)              :: interpolation_type
         real(rk),               intent(in)              :: physical_nodes(:,:)
         real(rk),               intent(in), optional    :: try_offset(3)
+        type(element_info_t),   intent(in), optional    :: donors(:)
+        real(rk),               intent(in), optional    :: donor_coords(:,:)
 
         type(element_info_t)    :: donor
         type(recv_t)            :: recv_info
@@ -733,71 +735,79 @@ contains
         !
         do inode = 1,size(physical_nodes,1)
 
-            !
-            ! Try processor-LOCAL elements
-            !
-            call find_gq_donor(mesh,                                &
-                               physical_nodes(inode,1:3),           &
-                               [ZERO,ZERO,ZERO],                    &
-                               face_info_constructor(0,0,0,0,0),    &   ! we don't really have a receiver face
-                               donor,                               &
-                               donor_coord,                         &
-                               donor_found,                         &
-                               donor_volume=donor_volume)
+            if (present(donors) .and. present(donor_coords)) then
+                donor       = donors(inode)
+                donor_coord = donor_coords(inode,:)
 
-            !
-            ! Try LOCAL elements with try_offset if still not found and try_offset 
-            ! is present
-            !
-            if ( (.not. donor_found) .and. (present(try_offset)) ) then
+            else
+                !
+                ! Try processor-LOCAL elements
+                !
                 call find_gq_donor(mesh,                                &
                                    physical_nodes(inode,1:3),           &
-                                   try_offset,                          &
+                                   [ZERO,ZERO,ZERO],                    &
                                    face_info_constructor(0,0,0,0,0),    &   ! we don't really have a receiver face
                                    donor,                               &
                                    donor_coord,                         &
                                    donor_found,                         &
                                    donor_volume=donor_volume)
 
-            end if
+                !
+                ! Try LOCAL elements with try_offset if still not found and try_offset 
+                ! is present
+                !
+                if ( (.not. donor_found) .and. (present(try_offset)) ) then
+                    call find_gq_donor(mesh,                                &
+                                       physical_nodes(inode,1:3),           &
+                                       try_offset,                          &
+                                       face_info_constructor(0,0,0,0,0),    &   ! we don't really have a receiver face
+                                       donor,                               &
+                                       donor_coord,                         &
+                                       donor_found,                         &
+                                       donor_volume=donor_volume)
+
+                end if
 
 
 
-            !
-            ! Try PARALLEL_ELEMENTS if donor not found amongst local elements
-            !
-            if (.not. donor_found) then
-                call find_gq_donor_parallel(mesh,                                &
-                                            physical_nodes(inode,1:3),           &
-                                            [ZERO,ZERO,ZERO],                    &
-                                            face_info_constructor(0,0,0,0,0),    &   ! we don't really have a receiver face
-                                            donor,                               &
-                                            donor_coord,                         &
-                                            donor_found,                         &
-                                            donor_volume=donor_volume)
-            end if
+                !
+                ! Try PARALLEL_ELEMENTS if donor not found amongst local elements
+                !
+                if (.not. donor_found) then
+                    call find_gq_donor_parallel(mesh,                                &
+                                                physical_nodes(inode,1:3),           &
+                                                [ZERO,ZERO,ZERO],                    &
+                                                face_info_constructor(0,0,0,0,0),    &   ! we don't really have a receiver face
+                                                donor,                               &
+                                                donor_coord,                         &
+                                                donor_found,                         &
+                                                donor_volume=donor_volume)
+                end if
 
-            
-            !
-            ! Try PARALLEL_ELEMENTS with try_offset if still not found and
-            ! try_offset is present
-            !
-            if ( (.not. donor_found) .and. (present(try_offset)) ) then
-                call find_gq_donor_parallel(mesh,                                &
-                                            physical_nodes(inode,1:3),           &
-                                            try_offset,                          &
-                                            face_info_constructor(0,0,0,0,0),    &   ! we don't really have a receiver face
-                                            donor,                               &
-                                            donor_coord,                         &
-                                            donor_found,                         &
-                                            donor_volume=donor_volume)
-            end if 
-
-
+                
+                !
+                ! Try PARALLEL_ELEMENTS with try_offset if still not found and
+                ! try_offset is present
+                !
+                if ( (.not. donor_found) .and. (present(try_offset)) ) then
+                    call find_gq_donor_parallel(mesh,                                &
+                                                physical_nodes(inode,1:3),           &
+                                                try_offset,                          &
+                                                face_info_constructor(0,0,0,0,0),    &   ! we don't really have a receiver face
+                                                donor,                               &
+                                                donor_coord,                         &
+                                                donor_found,                         &
+                                                donor_volume=donor_volume)
+                end if 
 
 
-            ! Abort if we didn't find a donor
-            if (.not. donor_found) call chidg_signal(FATAL,"interpolate_general_autodiff: no donor element found for interpolation node.")
+
+
+                ! Abort if we didn't find a donor
+                if (.not. donor_found) call chidg_signal(FATAL,"interpolate_general_autodiff: no donor element found for interpolation node.")
+
+            end if ! Find Donor
+
 
             ! Check parallel or local donor
             parallel_donor = (donor%iproc /= IRANK)

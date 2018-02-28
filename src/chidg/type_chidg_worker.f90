@@ -699,11 +699,13 @@ contains
     !!  @param[in]  physical_nodes  Physical coordinates to be interpolated to.
     !!
     !---------------------------------------------------------------------------------------
-    function interpolate_field_general(self,field,physical_nodes,try_offset) result(var)
+    function interpolate_field_general(self,field,physical_nodes,try_offset,donors,donor_coords) result(var)
         class(chidg_worker_t),  intent(in)              :: self
         character(*),           intent(in)              :: field
         real(rk),               intent(in)              :: physical_nodes(:,:)
         real(rk),               intent(in), optional    :: try_offset(3)
+        type(element_info_t),   intent(in), optional    :: donors(:)
+        real(rk),               intent(in), optional    :: donor_coords(:,:)
 
         integer(ik)                             :: eqn_ID, ifield
         type(AD_D), allocatable, dimension(:)   :: var
@@ -719,7 +721,16 @@ contains
         !
         ! Arbitrary interpolation of primary field onto physical_nodes
         !
-        var = interpolate_general_autodiff(self%mesh,self%solverdata%q,self%function_info,ifield,self%itime,'value',physical_nodes,try_offset)
+        var = interpolate_general_autodiff(self%mesh,               &
+                                           self%solverdata%q,       &
+                                           self%function_info,      &
+                                           ifield,                  &
+                                           self%itime,              &
+                                           'value',                 &
+                                           physical_nodes,          &
+                                           try_offset=try_offset,   &
+                                           donors=donors,           &
+                                           donor_coords=donor_coords)
 
 
     end function interpolate_field_general

@@ -11,6 +11,7 @@
 !!      interpolate_element_autodiff
 !!      interpolate_face_autodiff 
 !!      interpolate_edge_autodiff 
+!!      interpolate_general_autodiff
 !!
 !!      interpolate_element_standard
 !!      interpolate_face_standard
@@ -676,7 +677,7 @@ contains
     !!  @param[in]      source      ME/NEIGHBOR indicating which element to interpolate from
     !!
     !-----------------------------------------------------------------------------------------------------------
-    function interpolate_general_autodiff(mesh,vector,fcn_info,ifield,itime,interpolation_type,physical_nodes) result(var)
+    function interpolate_general_autodiff(mesh,vector,fcn_info,ifield,itime,interpolation_type,physical_nodes,try_offset) result(var)
         type(mesh_t),           intent(in)              :: mesh
         type(chidg_vector_t),   intent(in)              :: vector
         type(function_info_t),  intent(in)              :: fcn_info
@@ -684,9 +685,8 @@ contains
         integer(ik),            intent(in)              :: itime
         character(*),           intent(in)              :: interpolation_type
         real(rk),               intent(in)              :: physical_nodes(:,:)
+        real(rk),               intent(in), optional    :: try_offset(3)
 
-        integer(ik)             :: idomain_l, ielement_l, iface
-        type(seed_t)            :: seed
         type(element_info_t)    :: donor
         type(recv_t)            :: recv_info
 
@@ -701,14 +701,10 @@ contains
 
         
         !
-        ! Check incoming node array makes sense
+        ! 1: Check incoming node array makes sense
+        ! 2: Check interpolation_type
         !
         if (size(physical_nodes,2) /= 3) call chidg_signal(FATAL,'interpolate_general_autodiff: size(physical_nodes,2) /= 3.')
-
-
-        !
-        ! Check interpolation_type
-        !
         if (interpolation_type /= 'value') call chidg_signal(FATAL,"interpolation_general_autodiff: currently only supports interpolation_type == 'value'.")
 
 
@@ -735,10 +731,10 @@ contains
         !
         ! Find donor elements for incoming nodes
         !
-        do inode = 1,size(physical_nodes)
+        do inode = 1,size(physical_nodes,1)
 
             !
-            ! Try processor LOCAL elements
+            ! Try processor-LOCAL elements
             !
             call find_gq_donor(mesh,                                &
                                physical_nodes(inode,1:3),           &
@@ -750,7 +746,25 @@ contains
                                donor_volume=donor_volume)
 
             !
-            ! Try parallel elements if donor not found amongst local elements
+            ! Try LOCAL elements with try_offset if still not found and try_offset 
+            ! is present
+            !
+            if ( (.not. donor_found) .and. (present(try_offset)) ) then
+                call find_gq_donor(mesh,                                &
+                                   physical_nodes(inode,1:3),           &
+                                   try_offset,                          &
+                                   face_info_constructor(0,0,0,0,0),    &   ! we don't really have a receiver face
+                                   donor,                               &
+                                   donor_coord,                         &
+                                   donor_found,                         &
+                                   donor_volume=donor_volume)
+
+            end if
+
+
+
+            !
+            ! Try PARALLEL_ELEMENTS if donor not found amongst local elements
             !
             if (.not. donor_found) then
                 call find_gq_donor_parallel(mesh,                                &
@@ -762,6 +776,24 @@ contains
                                             donor_found,                         &
                                             donor_volume=donor_volume)
             end if
+
+            
+            !
+            ! Try PARALLEL_ELEMENTS with try_offset if still not found and
+            ! try_offset is present
+            !
+            if ( (.not. donor_found) .and. (present(try_offset)) ) then
+                call find_gq_donor_parallel(mesh,                                &
+                                            physical_nodes(inode,1:3),           &
+                                            try_offset,                          &
+                                            face_info_constructor(0,0,0,0,0),    &   ! we don't really have a receiver face
+                                            donor,                               &
+                                            donor_coord,                         &
+                                            donor_found,                         &
+                                            donor_volume=donor_volume)
+            end if 
+
+
 
 
             ! Abort if we didn't find a donor
@@ -851,11 +883,13 @@ contains
 
 
 
+
             !
             ! Interpolate solution to GQ nodes via matrix-vector multiplication
             !
             tmp = matmul(interpolator,  qdiff)
             var(inode) = tmp(1)
+
 
 
         end do ! inode

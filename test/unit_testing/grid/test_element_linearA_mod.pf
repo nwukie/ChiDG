@@ -9,6 +9,7 @@ module test_element_linearA_mod
     use type_element_connectivity,  only: element_connectivity_t
     use type_point,                 only: point_t
     use mod_io,                     only: gq_rule
+    use mod_chidg_mpi,              only: IRANK
     implicit none
 
     public  :: test_element_linearA
@@ -97,10 +98,10 @@ contains
         neqns    = 2
         nterms_s = 8
         ntime    = 1
-        call this%elem%init_geom(nodes        = nodes,                          &
-                                 connectivity = [1, 2, 3, 4, 5, 6, 7, 8],       &
-                                 etype        = 1,                              &
-                                 location     = [idomain,idomain,ielem,ielem],  &
+        call this%elem%init_geom(nodes        = nodes,                                  &
+                                 connectivity = [1, 2, 3, 4, 5, 6, 7, 8],               &
+                                 etype        = 1,                                      &
+                                 location     = [idomain,idomain,ielem,ielem,IRANK],    &
                                  coord_system = 'Cartesian')
         call this%elem%init_sol('Quadrature',1,nterms_s,neqns,ntime)
         
@@ -728,7 +729,7 @@ contains
 
         icoord = 1 ! Check x-coordinates
         do ipt = 1,5
-            check_coords(ipt) = self%elem%grid_point(icoord, [xi(ipt),eta(ipt),zeta(ipt)], 'Undeformed')
+            check_coords(ipt) = self%elem%physical_coordinate(icoord, [xi(ipt),eta(ipt),zeta(ipt)], 'Undeformed')
         end do
 
         @assertEqual(ref_coords,check_coords)
@@ -761,7 +762,7 @@ contains
 
         icoord = 2 ! Check y-coordinates
         do ipt = 1,5
-            check_coords(ipt) = self%elem%grid_point(icoord, [xi(ipt),eta(ipt),zeta(ipt)], 'Undeformed')
+            check_coords(ipt) = self%elem%physical_coordinate(icoord, [xi(ipt),eta(ipt),zeta(ipt)], 'Undeformed')
         end do
 
         @assertEqual(ref_coords,check_coords)
@@ -794,7 +795,7 @@ contains
 
         icoord = 3 ! Check z-coordinates
         do ipt = 1,5
-            check_coords(ipt) = self%elem%grid_point(icoord, [xi(ipt), eta(ipt), zeta(ipt)],'Undeformed')
+            check_coords(ipt) = self%elem%physical_coordinate(icoord, [xi(ipt), eta(ipt), zeta(ipt)],'Undeformed')
         end do
 
         @assertEqual(ref_coords,check_coords)

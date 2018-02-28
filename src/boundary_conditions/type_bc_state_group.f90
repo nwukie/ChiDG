@@ -33,13 +33,13 @@ module type_bc_state_group
     !----------------------------------------------------------------------------------------
     type, public :: bc_state_group_t
         
-        character(:),               allocatable :: name         ! boundary state group name
-        character(:),               allocatable :: family       ! boundary state group family
+        character(:),               allocatable :: name             ! boundary state group name
+        character(:),               allocatable :: family           ! boundary state group family
 
-        class(bc_state_wrapper_t),  allocatable :: bc_state(:)  ! boundary state functions
+        class(bc_state_wrapper_t),  allocatable :: bc_state(:)      ! boundary state functions
 
-        type(mpi_comm)                          :: bc_COMM      ! MPI communicator for bc procs
-        integer(ik)                             :: bc_ID        ! bc state group identifier
+        type(mpi_comm)                          :: bc_COMM          ! MPI communicator for bc procs
+        integer(ik)                             :: bc_ID = NO_ID    ! bc state group identifier
 
     contains
 
@@ -57,7 +57,8 @@ module type_bc_state_group
 
         procedure   :: init_comm
         procedure   :: init_coupling
-        procedure   :: init_specialized
+        procedure   :: init_precomm
+        procedure   :: init_postcomm
 
 !        procedure   :: init_coupling_data
 
@@ -233,6 +234,7 @@ contains
         state_ID = self%new_bc_state()
         allocate(self%bc_state(state_ID)%state, source=bc_state, stat=ierr)
         if (ierr /= 0) call AllocationError
+        
 
 !        if (add_state) then
 !            call self%set_family(trim(state_family))
@@ -442,7 +444,7 @@ contains
     !!  @date   4/6/2017
     !!
     !---------------------------------------------------------------------------------------
-    subroutine init_specialized(self,mesh)
+    subroutine init_precomm(self,mesh)
         class(bc_state_group_t),    intent(inout)   :: self
         type(mesh_t),               intent(inout)   :: mesh
 
@@ -459,7 +461,7 @@ contains
                 if (mesh%bc_patch_group(group_ID)%npatches() > 0) then
 
                     do iop = 1,size(self%bc_state)
-                        call self%bc_state(iop)%state%init_bc_specialized(mesh, group_ID, self%bc_COMM)
+                        call self%bc_state(iop)%state%init_bc_precomm(mesh, group_ID, self%bc_COMM)
                     end do !iop
 
                 end if !bc_patch
@@ -470,8 +472,56 @@ contains
 
 
 
-    end subroutine init_specialized
+    end subroutine init_precomm
     !****************************************************************************************
+
+
+
+
+
+    !>  Implementation specific routine for bc_state objects.
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/6/2017
+    !!
+    !---------------------------------------------------------------------------------------
+    subroutine init_postcomm(self,mesh)
+        class(bc_state_group_t),    intent(inout)   :: self
+        type(mesh_t),               intent(inout)   :: mesh
+
+        integer(ik) :: iop, group_ID
+
+
+        !
+        ! Have bc_operators initialize the boundary condition coupling
+        !
+        if (allocated(self%bc_state)) then
+
+            group_ID = mesh%get_bc_patch_group_id(self%name)
+            if (group_ID /= NO_ID) then
+                if (mesh%bc_patch_group(group_ID)%npatches() > 0) then
+
+                    do iop = 1,size(self%bc_state)
+                        call self%bc_state(iop)%state%init_bc_postcomm(mesh, group_ID, self%bc_COMM)
+                    end do !iop
+
+                end if !bc_patch
+            end if
+
+        end if !bc_state
+
+
+
+
+    end subroutine init_postcomm
+    !****************************************************************************************
+
+
+
+
+
+
+
 
 
 

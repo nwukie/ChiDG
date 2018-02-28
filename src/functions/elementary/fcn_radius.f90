@@ -59,10 +59,6 @@ contains
 
 
 
-
-
-
-
     !>
     !!
     !!  @author Nathan A. Wukie
@@ -71,11 +67,11 @@ contains
     !!
     !---------------------------------------------------------------------------------
     impure elemental function compute(self,time,coord) result(val)
-        class(radius_f),   intent(inout)  :: self
-        real(rk),       intent(in)  :: time
-        type(point_t),  intent(in)  :: coord
+        class(radius_f),    intent(inout)   :: self
+        real(rk),           intent(in)      :: time
+        type(point_t),      intent(in)      :: coord
 
-        real(rk)                    :: val
+        real(rk) :: val
 
         ! r = sqrt(x*x + y*y + z*z)
         val = sqrt(coord%c1_*coord%c1_ + coord%c2_*coord%c2_  + coord%c3_*coord%c3_)

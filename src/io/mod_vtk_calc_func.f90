@@ -160,9 +160,9 @@ contains
 
                                     ! Get coordinate value at point
                                     if ( data%mesh%domain(idom)%elems(ielem)%coordinate_system == CYLINDRICAL ) then
-                                        r_coord     = real(data%mesh%domain(idom)%elems(ielem)%grid_point(1,[xi,eta,zeta],'Deformed'),rdouble)
-                                        theta_coord = real(data%mesh%domain(idom)%elems(ielem)%grid_point(2,[xi,eta,zeta],'Deformed'),rdouble)
-                                        z_coord     = real(data%mesh%domain(idom)%elems(ielem)%grid_point(3,[xi,eta,zeta],'Deformed'),rdouble)
+                                        r_coord     = real(data%mesh%domain(idom)%elems(ielem)%physical_coordinate(1,[xi,eta,zeta],'Deformed'),rdouble)
+                                        theta_coord = real(data%mesh%domain(idom)%elems(ielem)%physical_coordinate(2,[xi,eta,zeta],'Deformed'),rdouble)
+                                        z_coord     = real(data%mesh%domain(idom)%elems(ielem)%physical_coordinate(3,[xi,eta,zeta],'Deformed'),rdouble)
 
                                         if (icoord == 1) then
                                             val = r_coord*cos(theta_coord)
@@ -174,7 +174,7 @@ contains
 
                                     else
 
-                                        val = real(data%mesh%domain(idom)%elems(ielem)%grid_point(icoord,[xi,eta,zeta],'Deformed'),rdouble)
+                                        val = real(data%mesh%domain(idom)%elems(ielem)%physical_coordinate(icoord,[xi,eta,zeta],'Deformed'),rdouble)
 
                                     end if
 

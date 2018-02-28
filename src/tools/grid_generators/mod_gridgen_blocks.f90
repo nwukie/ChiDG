@@ -68,7 +68,7 @@ contains
     !!
     !!
     !---------------------------------------------------------------------------------------
-    subroutine create_mesh_file__singleblock(filename,equation_sets,group_names,bc_state_groups,nelem_xi,nelem_eta,nelem_zeta,clusterx,x_max_in,x_min_in)
+    subroutine create_mesh_file__singleblock(filename,equation_sets,group_names,bc_state_groups,nelem_xi,nelem_eta,nelem_zeta,clusterx,x_max_in,x_min_in,y_max_in,y_min_in,z_max_in,z_min_in)
         character(*),               intent(in)              :: filename
         type(string_t),             intent(in), optional    :: equation_sets(:)
         type(string_t),             intent(in), optional    :: group_names(:,:)
@@ -79,6 +79,10 @@ contains
         integer(ik),                intent(in), optional    :: clusterx
         real(rk),                   intent(in), optional    :: x_max_in
         real(rk),                   intent(in), optional    :: x_min_in
+        real(rk),                   intent(in), optional    :: y_max_in
+        real(rk),                   intent(in), optional    :: y_min_in
+        real(rk),                   intent(in), optional    :: z_max_in
+        real(rk),                   intent(in), optional    :: z_min_in
 
         character(:),                   allocatable :: user_msg
         class(bc_state_t),              allocatable :: bc_state
@@ -100,7 +104,7 @@ contains
 
 
         ! Generate coordinates for first block
-        call meshgen_NxNxN_linear(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords,clusterx,x_max_in,x_min_in)
+        call meshgen_NxNxN_linear(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords,clusterx,x_max_in,x_min_in,y_max_in,y_min_in,z_max_in,z_min_in)
 
 
 
@@ -725,7 +729,7 @@ contains
     !!                          filled, and returned
     !!
     !--------------------------------------------------------------------------------------
-    subroutine meshgen_NxNxN_linear(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords,clusterx,x_max_in,x_min_in)
+    subroutine meshgen_NxNxN_linear(nelem_xi,nelem_eta,nelem_zeta,xcoords,ycoords,zcoords,clusterx,x_max_in,x_min_in,y_max_in,y_min_in,z_max_in,z_min_in)
         integer(ik),    intent(in)                  :: nelem_xi
         integer(ik),    intent(in)                  :: nelem_eta
         integer(ik),    intent(in)                  :: nelem_zeta
@@ -735,10 +739,14 @@ contains
         integer(ik),    intent(in),     optional    :: clusterx
         real(rk),       intent(in),     optional    :: x_max_in
         real(rk),       intent(in),     optional    :: x_min_in
+        real(rk),       intent(in),     optional    :: y_max_in
+        real(rk),       intent(in),     optional    :: y_min_in
+        real(rk),       intent(in),     optional    :: z_max_in
+        real(rk),       intent(in),     optional    :: z_min_in
 
         integer(ik) :: ipt_xi, ipt_eta, ipt_zeta, ierr, &
                        npts_xi, npts_eta, npts_zeta
-        real(rk)    :: x,y,z, x_max, x_min
+        real(rk)    :: x,y,z, x_max, x_min, y_max, y_min, z_max, z_min
 
 
         npts_xi   = nelem_xi   + 1
@@ -754,19 +762,20 @@ contains
         !
         ! Set max/min X-Coordinate
         !
-        if (present(x_max_in)) then
-            x_max = x_max_in
-        else
-            x_max = ONE
-        end if
+        x_max = ONE
+        x_min = ZERO
+        if (present(x_max_in)) x_max = x_max_in
+        if (present(x_min_in)) x_min = x_min_in
 
-        if (present(x_min_in)) then
-            x_min = x_min_in
-        else
-            x_min = ZERO
-        end if
+        y_max = ONE
+        y_min = ZERO
+        if (present(y_max_in)) y_max = y_max_in
+        if (present(y_min_in)) y_min = y_min_in
 
-
+        z_max = ONE
+        z_min = ZERO
+        if (present(z_max_in)) z_max = z_max_in
+        if (present(z_min_in)) z_min = z_min_in
 
 
         !
@@ -791,12 +800,13 @@ contains
                     end if
 
                     if (ipt_xi == npts_xi) then
-                        !x = ONE
                         x = x_max
                     end if
 
-                    y = real(ipt_eta-1,rk)/real(npts_eta-1,rk)
-                    z = real(ipt_zeta-1,rk)/real(npts_zeta-1,rk)
+                    y = y_min + (y_max - y_min)*real(ipt_eta -1,rk)/real(npts_eta -1,rk)
+                    z = z_min + (z_max - z_min)*real(ipt_zeta-1,rk)/real(npts_zeta-1,rk)
+                    !y = real(ipt_eta-1,rk)/real(npts_eta-1,rk)
+                    !z = real(ipt_zeta-1,rk)/real(npts_zeta-1,rk)
 
                     xcoords(ipt_xi,ipt_eta,ipt_zeta) = x
                     ycoords(ipt_xi,ipt_eta,ipt_zeta) = y

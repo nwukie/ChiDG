@@ -24,7 +24,7 @@ module bc_periodic
     contains
 
         procedure   :: init
-        procedure   :: init_bc_specialized
+        procedure   :: init_bc_precomm
         procedure   :: compute_bc_state
 
     end type periodic_t
@@ -86,7 +86,7 @@ contains
     !!  @date   4/6/2017
     !!
     !---------------------------------------------------------------------------------
-    subroutine init_bc_specialized(self,mesh,group_ID,bc_COMM)
+    subroutine init_bc_precomm(self,mesh,group_ID,bc_COMM)
         class(periodic_t),  intent(inout)   :: self
         type(mesh_t),       intent(inout)   :: mesh
         integer(ik),        intent(in)      :: group_ID
@@ -130,7 +130,7 @@ contains
 
 
 
-    end subroutine init_bc_specialized
+    end subroutine init_bc_precomm
     !**********************************************************************************
 
 

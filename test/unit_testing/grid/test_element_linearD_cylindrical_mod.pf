@@ -1,6 +1,7 @@
 module test_element_linearD_cylindrical_mod
     use pfunit_mod
     use mod_kinds,                  only: rk,ik
+    use mod_chidg_mpi,              only: IRANK
     use mod_constants,              only: PI, ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, EIGHT, NINE, TEN, &
                                           XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX
     use type_chidg,                 only: chidg_t
@@ -100,10 +101,10 @@ contains
         neqns    = 2
         nterms_s = 8
         ntime    = 1
-        call this%elem%init_geom(nodes        = nodes,                          &
-                                 connectivity = [1, 2, 3, 4, 5, 6, 7, 8],       &
-                                 etype        = 1,                              &
-                                 location     = [idomain,idomain,ielem,ielem],  &
+        call this%elem%init_geom(nodes        = nodes,                                  &
+                                 connectivity = [1, 2, 3, 4, 5, 6, 7, 8],               &
+                                 etype        = 1,                                      &
+                                 location     = [idomain,idomain,ielem,ielem,IRANK],    &
                                  coord_system = 'Cylindrical')
         call this%elem%init_sol('Quadrature',1,nterms_s,neqns,ntime)
         

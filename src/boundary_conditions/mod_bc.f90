@@ -57,6 +57,7 @@ module mod_bc
     use bc_state_outlet_average_pressure,       only: outlet_average_pressure_t
     use bc_state_outlet_3dgiles,                only: outlet_3dgiles_t
     use bc_state_outlet_3dgiles_innerproduct,   only: outlet_3dgiles_innerproduct_t
+    use bc_state_outlet_3dgiles_innerproduct_general,   only: outlet_3dgiles_innerproduct_general_t
     use bc_state_fluid_extrapolate,             only: fluid_extrapolate_t
     use bc_state_momentum_inlet,                only: momentum_inlet_t
     use bc_state_symmetry,                      only: symmetry_t
@@ -160,6 +161,7 @@ contains
         type(outlet_average_pressure_t)         :: OUTLET_AVERAGE_PRESSURE
         type(outlet_3dgiles_t)                  :: OUTLET_3DGILES
         type(outlet_3dgiles_innerproduct_t)     :: OUTLET_3DGILES_INNERPRODUCT
+        type(outlet_3dgiles_innerproduct_general_t)     :: OUTLET_3DGILES_INNERPRODUCT_GENERAL
         type(fluid_extrapolate_t)               :: FLUID_EXTRAPOLATE
         type(momentum_inlet_t)                  :: MOMENTUM_INLET
         type(symmetry_t)                        :: SYMMETRY
@@ -232,6 +234,7 @@ contains
             call registered_bcs%push_back(OUTLET_AVERAGE_PRESSURE)
             call registered_bcs%push_back(OUTLET_3DGILES)
             call registered_bcs%push_back(OUTLET_3DGILES_INNERPRODUCT)
+            call registered_bcs%push_back(OUTLET_3DGILES_INNERPRODUCT_GENERAL)
             !call registered_bcs%push_back(OUTLET_POINT_PRESSURE)
             !call registered_bcs%push_back(OUTLET_LODI_PRESSURE)
             !call registered_bcs%push_back(OUTLET_LODI_Z_PRESSURE)

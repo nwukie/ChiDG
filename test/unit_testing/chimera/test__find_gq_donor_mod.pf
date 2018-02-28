@@ -30,7 +30,6 @@ module test__find_gq_donor_mod
 
     use type_chidg,             only: chidg_t
     use type_meshdata,          only: meshdata_t
-    use type_point,             only: point_t
     use type_element_info,      only: element_info_t
     use type_face_info,         only: face_info_t
 
@@ -53,7 +52,7 @@ module test__find_gq_donor_mod
     @TestParameter
     type, extends(AbstractTestParameter) :: node_donor_coord
         integer(ik)                 :: testNumber       ! Test index
-        type(point_t)               :: gqnode           ! input
+        real(rk)                    :: gqnode(3)        ! input
         type(element_info_t)        :: donor            ! expected output
         real(rk)                    :: donor_coord(3)   ! expected output
     contains
@@ -79,7 +78,7 @@ module test__find_gq_donor_mod
     type, extends(ParameterizedTestCase) :: test_find_gq_donor
         type(chidg_t)   :: chidg
 
-        type(point_t)           :: gqnode
+        real(rk)                :: gqnode(3)
         type(element_info_t)    :: donor
         real(rk)                :: donor_coord(3)
     contains
@@ -162,7 +161,7 @@ contains
     !>
     !!
     !!
-    !--------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------
     subroutine tearDown(this)
         class(test_find_gq_donor),  intent(inout)   :: this
 
@@ -172,7 +171,7 @@ contains
         call this%chidg%shut_down('core')
 
     end subroutine tearDown
-    !**************************************************************************************
+    !******************************************************************************
 
 
 
@@ -181,6 +180,7 @@ contains
     !
     ! Parameter constructors
     !
+    !-----------------------------------------------------------------------------
     function newTest(testParameter) result(test)
         type(node_donor_coord), intent(in)  :: testParameter
 
@@ -191,23 +191,25 @@ contains
         test%donor_coord = testParameter%donor_coord
 
     end function newTest
+    !*****************************************************************************
 
 
 
     !
     ! Parameter initialization
     !
+    !-----------------------------------------------------------------------------
     function getParameters() result(params)
         type(node_donor_coord), allocatable :: params(:)
 
         integer(ik), parameter      :: ntests = 5
-        type(point_t)               :: gqnode(ntests)
         type(element_info_t)        :: donor(ntests)
+        real(rk)                    :: gqnode(ntests,3)
         real(rk)                    :: donor_coords(ntests,3)
 
 
         ! Test 1
-        call gqnode(1)%set(0.25_rk,0.25_rk,0.25_rk)
+        gqnode(1,:) = [0.25_rk,0.25_rk,0.25_rk]
         donor(1)%idomain_g  = 1
         donor(1)%idomain_l  = 1
         donor(1)%ielement_g = 1
@@ -215,39 +217,35 @@ contains
         donor_coords(1,:) = [0._rk,0._rk,0._rk]
 
         ! Test 2
-        call gqnode(2)%set(.75_rk,0.25_rk,0.25_rk)
+        gqnode(2,:) = [0.75_rk,0.25_rk,0.25_rk]
         donor(2)%idomain_g  = 1
         donor(2)%idomain_l  = 1
         donor(2)%ielement_g = 2
         donor(2)%ielement_l = 2
-        !call donor_coords(2)%set(0._rk,0._rk,0._rk)
         donor_coords(2,:) = [0._rk,0._rk,0._rk]
 
         ! Test 3
-        call gqnode(3)%set(.75_rk,.75_rk,.75_rk)
+        gqnode(3,:) = [0.75_rk,0.75_rk,0.75_rk]
         donor(3)%idomain_g  = 1
         donor(3)%idomain_l  = 1
         donor(3)%ielement_g = 8
         donor(3)%ielement_l = 8
-        !call donor_coords(3)%set(0._rk,0._rk,0._rk)
         donor_coords(3,:) = [0._rk,0._rk,0._rk]
 
         ! Test 4
-        call gqnode(4)%set(0.25_rk,0.25_rk,.75_rk)
+        gqnode(4,:) = [0.25_rk,0.25_rk,0.75_rk]
         donor(4)%idomain_g  = 1
         donor(4)%idomain_l  = 1
         donor(4)%ielement_g = 5
         donor(4)%ielement_l = 5
-        !call donor_coords(4)%set(0._rk,0._rk,0._rk)
         donor_coords(4,:) = [0._rk,0._rk,0._rk]
 
         ! Test 5
-        call gqnode(5)%set(0.375_rk, 0.375_rk, 0.375_rk)
+        gqnode(5,:) = [0.375_rk, 0.375_rk, 0.375_rk]
         donor(5)%idomain_g  = 1
         donor(5)%idomain_l  = 1
         donor(5)%ielement_g = 1
         donor(5)%ielement_l = 1
-        !call donor_coords(5)%set(0.5_rk,0.5_rk,0.5_rk)
         donor_coords(5,:) = [0.5_rk,0.5_rk,0.5_rk]
 
 
@@ -255,11 +253,11 @@ contains
 
 
         ! node_donor_coord
-        params = [ node_donor_coord(1,gqnode(1),donor(1),donor_coords(1,:)), &
-                   node_donor_coord(2,gqnode(2),donor(2),donor_coords(2,:)), &
-                   node_donor_coord(3,gqnode(3),donor(3),donor_coords(3,:)), &
-                   node_donor_coord(4,gqnode(4),donor(4),donor_coords(4,:)), &
-                   node_donor_coord(5,gqnode(5),donor(5),donor_coords(5,:))  &
+        params = [ node_donor_coord(1,gqnode(1,:),donor(1),donor_coords(1,:)), &
+                   node_donor_coord(2,gqnode(2,:),donor(2),donor_coords(2,:)), &
+                   node_donor_coord(3,gqnode(3,:),donor(3),donor_coords(3,:)), &
+                   node_donor_coord(4,gqnode(4,:),donor(4),donor_coords(4,:)), &
+                   node_donor_coord(5,gqnode(5,:),donor(5),donor_coords(5,:))  &
                    ]
 
 
@@ -305,10 +303,9 @@ contains
     subroutine test__find_gq_donor__point(self)
         class(test_find_gq_donor),  intent(inout)   :: self
 
-        type(point_t)           :: gq_node 
         type(element_info_t)    :: donor
         type(face_info_t)       :: receiver
-        real(rk)                :: donor_coord(3), offset(3)
+        real(rk)                :: donor_coord(3), offset(3), gq_node(3)
         logical                 :: donor_found
 
 
@@ -324,7 +321,13 @@ contains
         !
         ! Given some point, find a donor element in the grid. THIS IS BEING TESTED
         !
-        call find_gq_donor(self%chidg%data%mesh,self%gqnode,point_t(offset),receiver,donor,donor_coord,donor_found)
+        call find_gq_donor(self%chidg%data%mesh,    &
+                           self%gqnode,             &
+                           offset,                  &
+                           receiver,                &
+                           donor,                   &
+                           donor_coord,             &
+                           donor_found)
 
 
         !

@@ -12,7 +12,7 @@ module type_element
     use mod_polynomial,         only: polynomial_val, dpolynomial_val
     use mod_inv,                only: inv, inv_3x3
     use mod_determinant,        only: det_3x3
-    use mod_io,                 only: gq_rule
+    !use mod_io,                 only: gq_rule
 
 
     use type_point,                 only: point_t
@@ -176,7 +176,7 @@ module type_element
         procedure, public   :: x                      
         procedure, public   :: y                      
         procedure, public   :: z                      
-        procedure, public   :: grid_point           
+        procedure, public   :: physical_coordinate
         procedure, public   :: physical_point
         procedure, public   :: computational_point
         procedure, public   :: metric_point 
@@ -1565,48 +1565,48 @@ contains
 
 
 
-    !>  Convert local(xi,eta,zeta) coordinates to global coordinates(x,y,z)
-    !!
-    !!  @author Nathan A. Wukie
-    !!  @date   2/1/2016
-    !!
-    !!  @author Mayank Sharma + Matteo Ugolotti
-    !!  @date   11/5/2016
-    !!
-    !------------------------------------------------------------------------------------------
-    function physical_point(self,xi,eta,zeta) result(phys_point)
-        class(element_t),   intent(in)  :: self
-        real(rk),           intent(in)  :: xi,eta,zeta
-
-        real(rk)    :: val1, val2, val3
-        real(rk)    :: phys_point(3)
-        real(rk)    :: polyvals(self%nterms_c)
-        integer(ik) :: iterm
-
-        !
-        ! Evaluate polynomial modes at node location
-        !
-        do iterm = 1,self%nterms_c
-            polyvals(iterm) = polynomial_val(self%spacedim,self%nterms_c,iterm,[xi,eta,zeta])
-        end do
-
-        
-        !
-        ! Evaluate x from dot product of modes and polynomial values
-        !
-        val1 = dot_product(self%coords%getvar(1, itime=1),polyvals)
-        val2 = dot_product(self%coords%getvar(2, itime=1),polyvals)
-        val3 = dot_product(self%coords%getvar(3, itime=1),polyvals)
-
-
-        !
-        ! Set physical coordinates
-        !
-        phys_point = [val1,val2,val3]
-
-
-    end function physical_point
-    !******************************************************************************************
+!    !>  Convert local(xi,eta,zeta) coordinates to global coordinates(x,y,z)
+!    !!
+!    !!  @author Nathan A. Wukie
+!    !!  @date   2/1/2016
+!    !!
+!    !!  @author Mayank Sharma + Matteo Ugolotti
+!    !!  @date   11/5/2016
+!    !!
+!    !------------------------------------------------------------------------------------------
+!    function physical_point(self,xi,eta,zeta) result(phys_point)
+!        class(element_t),   intent(in)  :: self
+!        real(rk),           intent(in)  :: xi,eta,zeta
+!
+!        real(rk)    :: val1, val2, val3
+!        real(rk)    :: phys_point(3)
+!        real(rk)    :: polyvals(self%nterms_c)
+!        integer(ik) :: iterm
+!
+!        !
+!        ! Evaluate polynomial modes at node location
+!        !
+!        do iterm = 1,self%nterms_c
+!            polyvals(iterm) = polynomial_val(self%spacedim,self%nterms_c,iterm,[xi,eta,zeta])
+!        end do
+!
+!        
+!        !
+!        ! Evaluate x from dot product of modes and polynomial values
+!        !
+!        val1 = dot_product(self%coords%getvar(1, itime=1),polyvals)
+!        val2 = dot_product(self%coords%getvar(2, itime=1),polyvals)
+!        val3 = dot_product(self%coords%getvar(3, itime=1),polyvals)
+!
+!
+!        !
+!        ! Set physical coordinates
+!        !
+!        phys_point = [val1,val2,val3]
+!
+!
+!    end function physical_point
+!    !******************************************************************************************
 
 
 
@@ -1634,17 +1634,18 @@ contains
     !!  TODO: TEST type 'Reference' and 'ALE'
     !!
     !-----------------------------------------------------------------------------------------
-    function grid_point(self,coord_index,location,coordinate_frame) result(val)
+    !function grid_point(self,coord_index,location,coordinate_frame) result(val)
+    function physical_point(self,location,coordinate_frame) result(val)
         class(element_t),   intent(in)  :: self
-        integer(ik),        intent(in)  :: coord_index
+        !integer(ik),        intent(in)  :: coord_index
         real(rk),           intent(in)  :: location(3)
         character(*),       intent(in)  :: coordinate_frame
 
-        real(rk)    :: val, polyvals(self%nterms_c)
+        real(rk)    :: val(3), polyvals(self%nterms_c)
         integer(ik) :: iterm
 
-        if (coord_index > 3)             call chidg_signal(FATAL,"element%grid_point -- coord_index exceeded 3 physical coordinates")
-        if (.not. self%geom_initialized) call chidg_signal(FATAL,"element%grid_point: geometry not initialized")
+        !if (coord_index > 3)             call chidg_signal(FATAL,"element%physical_point -- coord_index exceeded 3 physical coordinates")
+        if (.not. self%geom_initialized) call chidg_signal(FATAL,"element%physical_point: geometry not initialized")
 
 
         ! Evaluate polynomial modes at node location
@@ -1656,16 +1657,86 @@ contains
         ! Evaluate mesh point from dot product of modes and polynomial values
         select case(trim(coordinate_frame))
             case('Undeformed')
-                val = dot_product(self%coords%getvar(coord_index,itime = 1), polyvals)
+                val(1) = dot_product(self%coords%getvar(1,itime=1), polyvals)
+                val(2) = dot_product(self%coords%getvar(2,itime=1), polyvals)
+                val(3) = dot_product(self%coords%getvar(3,itime=1), polyvals)
             case('Deformed')
-                val = dot_product(self%coords_def%getvar(coord_index,itime = 1), polyvals)
+                val(1) = dot_product(self%coords_def%getvar(1,itime=1), polyvals)
+                val(2) = dot_product(self%coords_def%getvar(2,itime=1), polyvals)
+                val(3) = dot_product(self%coords_def%getvar(3,itime=1), polyvals)
             case default
-                call chidg_signal(FATAL,"element%grid_point: Invalid input for coordinate_frame.")
+                call chidg_signal(FATAL,"element%physical_point: Invalid input for coordinate_frame.")
         end select
 
 
-    end function grid_point
+    end function physical_point
     !******************************************************************************************
+
+
+
+
+
+    !>  Compute a coordinate value, based on the location in reference space (xi, eta, zeta)
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/1/2016
+    !!
+    !!  @param[in]  elem    Element containing coordinate expansion
+    !!  @param[in]  type    'Reference' or 'ALE'
+    !!  @param[in]  icoord  Integer corresponding to coordinate index 1(x), 2(y), 3(z)
+    !!  @param[in]  xi      Real value for xi-coordinate
+    !!  @param[in]  eta     Real value for eta-coordinate
+    !!  @param[in]  zeta    Real value for zeta-coordinate
+    !!
+    !!  @author Mayank Sharma + MAtteo Ugolotti
+    !!  @date   11/5/2016
+    !!
+    !!  TODO: TEST type 'Reference' and 'ALE'
+    !!
+    !-----------------------------------------------------------------------------------------
+    !function grid_point(self,coord_index,location,coordinate_frame) result(val)
+    function physical_coordinate(self,coord_index,location,coordinate_frame) result(val)
+        class(element_t),   intent(in)  :: self
+        integer(ik),        intent(in)  :: coord_index
+        real(rk),           intent(in)  :: location(3)
+        character(*),       intent(in)  :: coordinate_frame
+
+        real(rk)    :: val, polyvals(self%nterms_c)
+        integer(ik) :: iterm
+
+        if (coord_index > 3)             call chidg_signal(FATAL,"element%physical_coordinate -- coord_index exceeded 3 physical coordinates")
+        if (.not. self%geom_initialized) call chidg_signal(FATAL,"element%physical_coordinate: geometry not initialized")
+
+
+        ! Evaluate polynomial modes at node location
+        do iterm = 1,self%nterms_c
+            polyvals(iterm) = polynomial_val(self%spacedim,self%nterms_c,iterm,location)
+        end do
+
+
+        ! Evaluate mesh point from dot product of modes and polynomial values
+        select case(trim(coordinate_frame))
+            case('Undeformed')
+                val = dot_product(self%coords%getvar(coord_index,itime=1), polyvals)
+            case('Deformed')
+                val = dot_product(self%coords_def%getvar(coord_index,itime=1), polyvals)
+            case default
+                call chidg_signal(FATAL,"element%physical_coordinate: Invalid input for coordinate_frame.")
+        end select
+
+
+    end function physical_coordinate
+    !******************************************************************************************
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1705,15 +1776,10 @@ contains
 
 
         !
-        ! Set default values for optional inputs
-        !
-        frame_selector = 'Undeformed'
-        scale_metric   = .true.
-
-
-        !
         ! Overwrite optional values if inputs are present
         !
+        scale_metric   = .true.
+        frame_selector = 'Undeformed'
         if (present(coordinate_scaling)) scale_metric   = coordinate_scaling
         if (present(coordinate_frame)  ) frame_selector = coordinate_frame
 
@@ -1763,9 +1829,9 @@ contains
                 case(CYLINDRICAL) 
                     select case(frame_selector)
                         case('Undeformed')
-                            r = self%grid_point(DIR_R,coord,frame_selector)
+                            r = self%physical_coordinate(DIR_R,coord,frame_selector)
                         case('Deformed')
-                            r = self%grid_point(DIR_R,coord,frame_selector)
+                            r = self%physical_coordinate(DIR_R,coord,frame_selector)
                     end select
                     dXdxi(2,:) = dXdxi(2,:) * r
             end select
@@ -1979,14 +2045,16 @@ contains
         !
         ! Newton iteration to find the donor local coordinates
         !
-        tol = 100000._rk*RKTOL
+        !tol = 100000._rk*RKTOL
+        tol = 100._rk*RKTOL
         coord_comp = ZERO
         do inewton = 1,20
 
 
             ! Compute local physical coordinates as a function of xi,eta,zeta
             ! Return inverted jacobian matrix at that location.
-            coord_phys = self%physical_point(coord_comp(1),coord_comp(2),coord_comp(3))
+            !coord_phys = self%physical_point(coord_comp(1),coord_comp(2),coord_comp(3))
+            coord_phys = self%physical_point([coord_comp(1),coord_comp(2),coord_comp(3)],'Undeformed')
             minv       = self%metric_point(coord_comp, coordinate_frame='Undeformed', coordinate_scaling=.false.)
 
             ! Assemble residual vector

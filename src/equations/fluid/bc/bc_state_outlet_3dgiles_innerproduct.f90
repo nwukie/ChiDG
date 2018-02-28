@@ -623,7 +623,7 @@ contains
         self%B = B
 
         ! Get physical coordinates at midpoint of bc face
-        midpoint = worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%physical_point(ZERO,ZERO,ONE)
+        midpoint = worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%physical_point([ZERO,ZERO,ONE],'Deformed')
 
         ! Get location in reference space for physical radial coordinate locations
         ! where the eigenvectors are evaluated at so we can interpolate the solution

@@ -92,6 +92,7 @@ module type_chidg_worker
 
         ! Worker get/set data
         procedure   :: interpolate_field
+        procedure   :: interpolate_field_general
         procedure   :: get_field
         procedure   :: store_bc_state
         procedure   :: store_model_field
@@ -698,10 +699,11 @@ contains
     !!  @param[in]  physical_nodes  Physical coordinates to be interpolated to.
     !!
     !---------------------------------------------------------------------------------------
-    function interpolate_field_global(self,field,physical_nodes) result(var)
-        class(chidg_worker_t),  intent(in)  :: self
-        character(*),           intent(in)  :: field
-        real(rk),               intent(in)  :: physical_nodes(:,:)
+    function interpolate_field_general(self,field,physical_nodes,try_offset) result(var)
+        class(chidg_worker_t),  intent(in)              :: self
+        character(*),           intent(in)              :: field
+        real(rk),               intent(in)              :: physical_nodes(:,:)
+        real(rk),               intent(in), optional    :: try_offset(3)
 
         integer(ik)                             :: eqn_ID, ifield
         type(AD_D), allocatable, dimension(:)   :: var
@@ -717,10 +719,10 @@ contains
         !
         ! Arbitrary interpolation of primary field onto physical_nodes
         !
-        var = interpolate_general_autodiff(self%mesh,self%solverdata%q,self%function_info,ifield,self%itime,'value',physical_nodes)
+        var = interpolate_general_autodiff(self%mesh,self%solverdata%q,self%function_info,ifield,self%itime,'value',physical_nodes,try_offset)
 
 
-    end function interpolate_field_global
+    end function interpolate_field_general
     !**************************************************************************************
 
 
@@ -2035,7 +2037,7 @@ contains
         integer     :: i
 
         do i = 1,size(ref_coords,1)
-            phys_coords(i,:) = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%physical_point(ref_coords(i,1),ref_coords(i,2),ref_coords(i,3))
+            phys_coords(i,:) = self%mesh%domain(self%element_info%idomain_l)%elems(self%element_info%ielement_l)%physical_point([ref_coords(i,1),ref_coords(i,2),ref_coords(i,3)],'Deformed')
         end do
 
     end function coordinate_arbitrary

@@ -1,0 +1,187 @@
+!>  Test Discrete Fourier Transform
+!!
+!!  For impulse centered at zero, the Fourier transformed spectrum
+!!  is a constant.
+!!
+!!  x = [ONE, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO]
+!!  X_real = [1/9,1/9,1/9,1/9,1/9,1/9,1/9,1/9,1/9]
+!!  X_imag = [ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,ZERO,ZERO]
+!!
+!!  @author Nathan A. Wukie
+!!  @date   2/26/2018
+!!
+!!------------------------------------------------------------------
+@Test
+subroutine test_dft_impulse()
+    use pfunit_mod
+    use mod_kinds,          only: rk, ik
+    use mod_constants,      only: ONE, ZERO, NINE
+    use mod_dft,            only: dft
+    use DNAD_D
+    implicit none
+    
+    real(rk),   allocatable     :: expect_real(:), expect_imag(:)
+    type(AD_D), allocatable     :: signal(:), Xr(:), Xi(:)
+
+
+    ! Construct signal
+    signal = [AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1)]
+    signal(1) = ONE
+    signal(2) = ZERO
+    signal(3) = ZERO
+    signal(4) = ZERO
+    signal(5) = ZERO
+    signal(6) = ZERO
+    signal(7) = ZERO
+    signal(8) = ZERO
+    signal(9) = ZERO
+
+
+    ! Test dft
+    call dft(signal,Xr,Xi)
+
+
+    ! For impulse at zero, expect constant in frequency space
+    expect_real = [ONE/NINE, ONE/NINE, ONE/NINE, ONE/NINE, ONE/NINE, ONE/NINE, ONE/NINE, ONE/NINE, ONE/NINE]
+    expect_imag = [ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO]
+
+    ! Test results
+    @assertEqual(expect_real, Xr(:)%x_ad_)
+    @assertEqual(expect_imag, Xi(:)%x_ad_)
+
+end subroutine test_dft_impulse
+!*******************************************************************
+
+
+
+
+!>  Generate a signal composed of multiple frequencies. Compute
+!!  the dft of the signal and then idft the result. Compare the 
+!!  original signal to the result of the inverse transform. They
+!!  should be the same.
+!!
+!!  @author Nathan A. Wukie
+!!  @date   2/26/2018
+!!
+!!------------------------------------------------------------------
+@Test
+subroutine test_dft_idft_signal_reproduction()
+    use pfunit_mod
+    use mod_kinds,          only: rk, ik
+    use mod_constants,      only: ONE, ZERO, TWO, THREE, PI
+    use mod_dft,            only: dft, idft
+    use mod_gridspace,      only: linspace
+    use DNAD_D
+    implicit none
+    
+
+    integer(ik)                 :: res
+    type(AD_D), allocatable     :: signal(:), Xr(:), Xi(:), new_signal(:)
+    real(rk)                    :: A0, A1, A2, tol
+    real(rk),   allocatable     :: theta(:)
+
+    res = 9
+    theta = linspace(0._rk,8._rk*(2._rk/9._rk),res)
+
+    ! Construct signal
+    A0 = 1.0_rk
+    A1 = 2.0_rk
+    A2 = 5.0_rk
+    signal = [AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1)]
+    signal = A0  +  A1*sin(TWO*PI*theta)  +  A2*cos(THREE*PI*theta)
+
+
+    ! Compute dft
+    call dft(signal,Xr,Xi)
+
+    ! Compute inverse transform 
+    new_signal = idft(Xr,Xi)
+
+
+    ! Test original signal against signal after DFT+IDFT
+    tol = 1.e-12_rk
+    @assertEqual(signal(:)%x_ad_,new_signal(:)%x_ad_,tol)
+
+end subroutine test_dft_idft_signal_reproduction
+!*******************************************************************
+
+
+
+
+
+!>  Generate a signal composed of multiple frequencies. Compute
+!!  the dft of the signal and then idft the result. Compare the 
+!!  original signal to the result of the inverse transform. They
+!!  should be the same.
+!!
+!!  @author Nathan A. Wukie
+!!  @date   2/26/2018
+!!
+!!------------------------------------------------------------------
+@Test
+subroutine test_dft_idft_eval_signal_reproduction()
+    use pfunit_mod
+    use mod_kinds,          only: rk, ik
+    use mod_constants,      only: ONE, ZERO, TWO, THREE, PI
+    use mod_dft,            only: dft, idft, idft_eval
+    use mod_gridspace,      only: linspace
+    use DNAD_D
+    implicit none
+    
+
+    integer(ik)                 :: res
+    type(AD_D), allocatable     :: signal(:), Xr(:), Xi(:), new_signal(:)
+    real(rk)                    :: A0, A1, A2, tol, period
+    real(rk),   allocatable     :: theta(:)
+
+    res = 9
+    period = TWO
+    theta = linspace(0._rk,8._rk*(period/9._rk),res)
+
+    ! Construct signal
+    A0 = 1.0_rk
+    A1 = 2.0_rk
+    A2 = 5.0_rk
+    signal = [AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1)]
+    signal = A0  +  A1*sin(TWO*PI*theta)  +  A2*cos(THREE*PI*theta)
+
+
+    ! Compute dft
+    call dft(signal,Xr,Xi)
+
+    ! Compute inverse transform 
+    new_signal = idft_eval(Xr,Xi,theta,period)
+
+
+    ! Test original signal against signal after DFT+IDFT
+    tol = 1.e-12_rk
+    @assertEqual(signal(:)%x_ad_,new_signal(:)%x_ad_,tol)
+
+end subroutine test_dft_idft_eval_signal_reproduction
+!*******************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

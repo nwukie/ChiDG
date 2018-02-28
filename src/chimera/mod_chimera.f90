@@ -992,8 +992,8 @@ contains
 
 
         integer(ik)                 :: idom, ielem, inewton, idomain_g, idomain_l,      &
-                                       ielement_g, ielement_l, icandidate, ncandidates, &
-                                       idonor, donor_index, pelem_ID
+                                       ielement_g, ielement_l, icandidate, idonor,      &
+                                       donor_index, pelem_ID
 
         real(rk), allocatable   :: xcenter(:), ycenter(:), zcenter(:), dist(:), donor_vols(:)
         real(rk)                :: xgq, ygq, zgq, dx, dy, dz, xi, eta, zeta, xn, yn, zn,    &
@@ -1065,7 +1065,6 @@ contains
             !
             if (contained) then
                 call candidate_elements%push_back(pelem_ID)
-                ncandidates = ncandidates + 1
             end if
 
 
@@ -1076,7 +1075,7 @@ contains
         !
         ! Test gq_node physical coordinates on candidate element volume to try and map to donor local coordinates
         !
-        do icandidate = 1,ncandidates
+        do icandidate = 1,candidate_elements%size()
 
             pelem_ID   = candidate_elements%at(icandidate)
             idomain_g  = mesh%parallel_element(pelem_ID)%idomain_g

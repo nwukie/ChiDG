@@ -654,16 +654,6 @@ contains
         p_m = worker%get_field('Pressure', 'value', 'face interior')
     
 
-        
-!        !
-!        ! Define boundary primitive quantities
-!        !
-!        density_bc = density_m
-!        u_bc       = u_m
-!        v_bc       = v_m
-!        w_bc       = w_m
-!        p_bc       = p_user  +  (p_m - p_avg)
-
 
         !
         ! Compute update for average quantities
@@ -676,6 +666,7 @@ contains
         ddensity_mean =  c4_1d/(TWO*c_avg*c_avg)
         dw_mean       = -c4_1d/(TWO*density_avg*c_avg)
         dp_mean       =  HALF*c4_1d
+
 
 
         !
@@ -716,8 +707,8 @@ contains
             !dv_c(i)       =  c2(i)/(density_avg*c_avg)
             !dp_c(i)       =  c3(i)/TWO
             ddensity_c(i) = -c1(i)/(c_avg*c_avg)  +  c3(i)/(TWO*c_avg*c_avg) 
-            dw_c(i)       =  c3(i)/(TWO*density_avg*c_avg)
             dv_c(i)       =  c2(i)/(density_avg*c_avg)
+            dw_c(i)       =  c3(i)/(TWO*density_avg*c_avg)
             dp_c(i)       =  c3(i)/TWO
         end do
 

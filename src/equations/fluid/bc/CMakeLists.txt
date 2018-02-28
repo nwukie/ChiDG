@@ -14,10 +14,10 @@ add_lib_sources(
                 bc_state_outlet_average_pressure.f90
                 bc_state_outlet_3dgiles.f90
                 bc_state_outlet_3dgiles_innerproduct.f90
-                #bc_state_outlet_3dgiles_innerproduct_general.f90
+                bc_state_outlet_3dgiles_innerproduct_general.f90
                 #bc_state_outlet_point_pressure.f90
                 #bc_state_outlet_LODI_pressure.f90
                 #bc_state_outlet_LODI_z_pressure.f90
                 #bc_state_outlet_wukie.f90
-                mod_dft.f90
+                #mod_dft.f90
                 )

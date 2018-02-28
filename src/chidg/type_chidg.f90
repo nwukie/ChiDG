@@ -337,11 +337,14 @@ contains
             case ('all')
                 ! geometry
                 call self%init('domains',interpolation,level)
-                call self%init('bc')
 
                 ! communication
+                call self%init('comm - bc')
                 call self%init('comm - interior')
                 call self%init('comm - chimera')
+
+                ! specialized bc routines, might depend on coupling info previously setup
+                call self%init('bc - postcomm')
 
                 ! matrix/vector
                 call self%init('storage')
@@ -379,9 +382,14 @@ contains
             !
             ! Initialize boundary condition space
             !
-            case ('bc')
+            case ('comm - bc')
                 call self%data%initialize_solution_bc()
 
+            !
+            ! Execute boundary custom routins
+            !
+            case ('bc - postcomm')
+                call self%data%initialize_postcomm_bc()
 
             !
             ! Initialize communication. Local face communication. Global parallel communication.

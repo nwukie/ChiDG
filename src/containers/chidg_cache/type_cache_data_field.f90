@@ -477,7 +477,7 @@ contains
 
         else
             user_msg = "cache_data_field%get_ndepend_face_exterior: Invalid face type detected."
-            call chidg_signal(FATAL,user_msg)
+            call chidg_signal_one(FATAL,user_msg,mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype)
 
         end if
 

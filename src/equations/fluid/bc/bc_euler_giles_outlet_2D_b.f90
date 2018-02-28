@@ -539,6 +539,8 @@ contains
                     call idft_mode_points(-0._rk,periodicity, c3_real(imode), c3_imag(imode), imode, gq_points_y, c3_gq)
                     call idft_mode_points(-0._rk,periodicity, c4_real(imode), c4_imag(imode), imode, gq_points_y, c4_gq)
 
+
+
                     !
                     ! Add contribution of current mode characteristics to primitive variable perturbation
                     !

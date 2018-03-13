@@ -1,4 +1,4 @@
-module bc_state_outlet_testing
+module bc_state_outlet_auxiliary_equations
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, HALF, TWO
@@ -21,14 +21,14 @@ module bc_state_outlet_testing
     !!  @date   1/31/2016
     !!
     !----------------------------------------------------------------------------------------
-    type, public, extends(bc_state_t) :: outlet_testing_t
+    type, public, extends(bc_state_t) :: outlet_auxiliary_equations_t
 
     contains
 
         procedure   :: init                 !< Set-up bc state with options/name etc.
         procedure   :: compute_bc_state     !< boundary condition function implementation
 
-    end type outlet_testing_t
+    end type outlet_auxiliary_equations_t
     !****************************************************************************************
 
 
@@ -45,19 +45,13 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(outlet_testing_t),   intent(inout) :: self
+        class(outlet_auxiliary_equations_t),   intent(inout) :: self
         
         !
         ! Set name, family
         !
-        call self%set_name("Outlet - Testing")
+        call self%set_name("Outlet - Auxiliary Equations")
         call self%set_family("Outlet")
-
-
-        !
-        ! Add functions
-        !
-        call self%bcproperties%add('Static Pressure','Required')
 
 
     end subroutine init
@@ -77,10 +71,10 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_COMM)
-        class(outlet_testing_t),  intent(inout)   :: self
-        type(chidg_worker_t),               intent(inout)   :: worker
-        class(properties_t),                intent(inout)   :: prop
-        type(mpi_comm),                     intent(in)      :: bc_COMM
+        class(outlet_auxiliary_equations_t),  intent(inout)   :: self
+        type(chidg_worker_t),                 intent(inout)   :: worker
+        class(properties_t),                  intent(inout)   :: prop
+        type(mpi_comm),                       intent(in)      :: bc_COMM
 
 
         ! Storage at quadrature nodes
@@ -90,19 +84,18 @@ contains
             grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,  &
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,  &
             grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
-            u_bc,   v_bc,    w_bc,  T_bc, T_m, p_m, p_bc
+            vel1_bc,   vel2_bc,    vel3_bc,  p_bc
             
-
         real(rk),   allocatable, dimension(:) :: r
-        real(rk),   allocatable, dimension(:) :: p_input
-        !type(AD_D), allocatable, dimension(:) :: p_bc
 
 
         !
         ! Get back pressure from function.
         !
-        p_input = self%bcproperties%compute('Static Pressure',worker%time(),worker%coords())
-        !p_bc = worker%get_field('Pressure_TEMP', 'value', 'face interior')
+        density_bc = worker%get_field('Density_TEMP',    'value', 'face interior')
+        vel1_bc    = worker%get_field('Velocity-1_TEMP', 'value', 'face interior')
+        p_bc       = worker%get_field('Pressure_TEMP',   'value', 'face interior')
+
 
 
         !
@@ -113,8 +106,6 @@ contains
         mom2_m    = worker%get_field('Momentum-2' , 'value', 'face interior')
         mom3_m    = worker%get_field('Momentum-3' , 'value', 'face interior')
         energy_m  = worker%get_field('Energy'     , 'value', 'face interior')
-        p_m       = worker%get_field('Pressure'   , 'value', 'face interior')
-        T_m       = worker%get_field('Temperature', 'value', 'face interior')
 
 
         grad1_density_m = worker%get_field('Density'   , 'grad1', 'face interior')
@@ -149,64 +140,21 @@ contains
         end if
 
 
+        !
+        ! Extrapolate transverse velocities
+        !
+        vel2_bc = mom2_m/density_m
+        vel3_bc = mom3_m/density_m
+
 
         !
-        ! Extrapolate temperature and velocity
+        ! Compute density, momentum, energy
         !
-        T_bc = T_m
-        u_bc = mom1_m/density_m
-        v_bc = mom2_m/density_m
-        w_bc = mom3_m/density_m
-        p_bc = p_m
-        p_bc = p_input
-
-
-
-
-        
-        !
-        ! Compute density
-        !
-        density_bc = p_bc/(Rgas*T_bc)
-
-
-        
-        !
-        ! Compute momentum
-        !
-        mom1_bc = u_bc*density_bc
-        mom2_bc = v_bc*density_bc
-        mom3_bc = w_bc*density_bc
-
-
-        
-        
-        !
-        ! Compute energy
-        !
-        energy_bc = p_bc/(gam - ONE) + (density_bc*HALF)*(u_bc*u_bc + v_bc*v_bc + w_bc*w_bc)
-
-
-
-
-!        !
-!        ! Extrapolate momentum and energy
-!        !
-!        mom1_bc   = mom1_m
-!        mom2_bc   = mom2_m
-!        mom3_bc   = mom3_m
-!        energy_bc = energy_m
-!
-!        !
-!        ! Compute boundary density
-!        !
-!        !density_bc = (mom1_bc*mom1_bc + mom2_bc*mom2_bc + mom3_bc*mom3_bc)/(TWO*(energy_bc - p_bc/(gam-ONE)))
-!        T_bc = worker%get_field('Temperature', 'value', 'face interior')
-!        density_bc = p_bc/(Rgas*T_bc)
-
-
-
-        
+        density_bc = density_bc
+        mom1_bc    = vel1_bc*density_bc
+        mom2_bc    = vel2_bc*density_bc
+        mom3_bc    = vel3_bc*density_bc
+        energy_bc  = p_bc/(gam - ONE) + (density_bc*HALF)*(vel1_bc*vel1_bc + vel2_bc*vel2_bc + vel3_bc*vel3_bc)
 
 
 
@@ -266,4 +214,4 @@ contains
 
 
 
-end module bc_state_outlet_testing
+end module bc_state_outlet_auxiliary_equations

@@ -7,7 +7,7 @@ module type_bc_state
     use type_properties,        only: properties_t
     use type_mesh,              only: mesh_t
     use type_bc_patch,          only: bc_patch_t
-    use mpi_f08,                only: mpi_comm
+    use mpi_f08,                only: mpi_comm, mpi_integer, mpi_real8
     implicit none
 
 
@@ -62,6 +62,11 @@ module type_bc_state
         procedure   :: get_noptions          ! Return the number of available options for a given property, specified by a property index.
         procedure   :: get_option_key        ! Return the key for an option, given a property index and subsequent option index.
         procedure   :: get_option_value      ! Return the value of a given key, inside of a specified property.
+
+        ! Some predefined coupling strategies
+        procedure   :: init_bc_coupling_global  ! All bc elements coupled with all other bc elements
+        procedure   :: init_bc_coupling_local   ! Each bc element is coupled only with itself through the boundary
+
 
     end type bc_state_t
     !*********************************************************************************************
@@ -157,15 +162,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
     !>  Default boundary coupling initialization routine. 
     !!
     !!  Default initializes coupling for a given element to just itself and no coupling with 
@@ -185,41 +181,44 @@ contains
         integer(ik),        intent(in)      :: group_ID
         type(mpi_comm),     intent(in)      :: bc_COMM
 
-        integer(ik) :: patch_ID, face_ID, idomain_g, idomain_l, ielement_g, ielement_l, iface, neqns, nterms_s
+
+        ! Default, initialize only local coupling.
+        call self%init_bc_coupling_local(mesh,group_ID,bc_COMM)
 
 
-
-        !
-        ! For each patch, loop through faces and set default element coupling.
-        ! Default is that each face is coupled only with its owner element.
-        ! So, strictly local coupling.
-        !
-        do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
-            do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
-
-
-                !
-                ! Get block-element index of current iface_bc
-                !
-                idomain_g  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g()
-                idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l()
-                ielement_g = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID)
-                ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
-                iface      = mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
-
-                
-                !
-                ! Add the element index as the only dependency.
-                !
-                call mesh%bc_patch_group(group_ID)%patch(patch_ID)%add_coupled_element(face_ID, idomain_g,  &
-                                                                                                idomain_l,  &
-                                                                                                ielement_g, &
-                                                                                                ielement_l, &
-                                                                                                iface,      &
-                                                                                                IRANK)
-
-            end do ! face_ID
-        end do ! patch_ID
+!        integer(ik) :: patch_ID, face_ID, idomain_g, idomain_l, ielement_g, ielement_l, iface, neqns, nterms_s
+!
+!        !
+!        ! For each patch, loop through faces and set default element coupling.
+!        ! Default is that each face is coupled only with its owner element.
+!        ! So, strictly local coupling.
+!        !
+!        do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
+!            do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
+!
+!
+!                !
+!                ! Get block-element index of current iface_bc
+!                !
+!                idomain_g  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g()
+!                idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l()
+!                ielement_g = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID)
+!                ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
+!                iface      = mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
+!
+!                
+!                !
+!                ! Add the element index as the only dependency.
+!                !
+!                call mesh%bc_patch_group(group_ID)%patch(patch_ID)%add_coupled_element(face_ID, idomain_g,  &
+!                                                                                                idomain_l,  &
+!                                                                                                ielement_g, &
+!                                                                                                ielement_l, &
+!                                                                                                iface,      &
+!                                                                                                IRANK)
+!
+!            end do ! face_ID
+!        end do ! patch_ID
 
 
     end subroutine init_bc_coupling
@@ -551,9 +550,6 @@ contains
 
 
 
-
-
-
     !>  Return the boundary condition family.
     !!
     !!  @author Nathan A. Wukie
@@ -576,6 +572,321 @@ contains
 
     end function get_family
     !***************************************************************************************************
+
+
+
+
+
+    !>  Initialize boundary group coupling.
+    !!
+    !!  Each element is coupled with every other element that belongs to the boundary
+    !!  condition. This coupling occurs because each face uses an
+    !!  average pressure that is computed over the group. The average pressure
+    !!  calculation couples every element on the group. This coupling is initialized
+    !!  here.
+    !!
+    !!  Coupling initialization:
+    !!      1: each process loops through its local faces, initializes coupling
+    !!         of all local faces with all other local faces.
+    !!
+    !!      2: loop through ranks in bc_COMM
+    !!          a: iproc broadcasts information about its coupling to bc_COMM
+    !!          b: all other procs receive from iproc and initialize parallel coupling
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   4/18/2017
+    !!
+    !--------------------------------------------------------------------------------
+    subroutine init_bc_coupling_global(self,mesh,group_ID,bc_COMM)
+        class(bc_state_t),  intent(inout)   :: self
+        type(mesh_t),       intent(inout)   :: mesh
+        integer(ik),        intent(in)      :: group_ID
+        type(mpi_comm),     intent(in)      :: bc_COMM
+
+        integer(ik) :: patch_ID, face_ID, elem_ID, patch_ID_coupled, face_ID_coupled,   &
+                       idomain_g, idomain_l, ielement_g, ielement_l, iface,             &
+                       bc_IRANK, bc_NRANK, ierr, iproc, nbc_elements,     &
+                       ielem, neqns, nterms_s, ngq, ibc
+
+        integer(ik) :: idomain_g_coupled, idomain_l_coupled, ielement_g_coupled, ielement_l_coupled, &
+                       iface_coupled, proc_coupled
+
+        real(rk),       allocatable :: interp_coords_def(:,:)
+        real(rk),       allocatable :: areas(:)
+        real(rk)                    :: total_area
+
+
+
+        !
+        ! For each face, initialize coupling with all faces on the current processor.
+        !
+        do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
+            do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
+
+                
+                !
+                ! Loop through, initialize coupling
+                !
+                do patch_ID_coupled = 1,mesh%bc_patch_group(group_ID)%npatches()
+                    do face_ID_coupled = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
+
+
+                        !
+                        ! Get block-element index of current face_ID_coupled
+                        !
+                        idomain_g  = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%idomain_g()
+                        idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%idomain_l()
+                        ielement_g = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%ielement_g(face_ID_coupled)
+                        ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%ielement_l(face_ID_coupled)
+                        iface      = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%iface(     face_ID_coupled)
+
+
+                        neqns             = mesh%domain(idomain_l)%faces(ielement_l,iface)%neqns
+                        nterms_s          = mesh%domain(idomain_l)%faces(ielement_l,iface)%nterms_s
+                        total_area        = mesh%domain(idomain_l)%faces(ielement_l,iface)%total_area
+                        areas             = mesh%domain(idomain_l)%faces(ielement_l,iface)%differential_areas
+                        interp_coords_def = mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def
+
+
+
+                        !
+                        ! For the face (patch_ID,face_ID) add the element on (patch_ID_coupled,face_ID_coupled)
+                        !
+                        call mesh%bc_patch_group(group_ID)%patch(patch_ID)%add_coupled_element(face_ID, idomain_g,  &
+                                                                                                        idomain_l,  &
+                                                                                                        ielement_g, &
+                                                                                                        ielement_l, &
+                                                                                                        iface,      &
+                                                                                                        IRANK)
+
+                        call mesh%bc_patch_group(group_ID)%patch(patch_ID)%set_coupled_element_data(face_ID, idomain_g,     &
+                                                                                                             ielement_g,    &
+                                                                                                             neqns,         &
+                                                                                                             nterms_s,      &
+                                                                                                             total_area,    &
+                                                                                                             areas,         &
+                                                                                                             interp_coords_def)
+
+
+                    end do ! face_ID_couple
+                end do ! patch_ID_couple
+
+            end do ! face_ID
+        end do ! patch_ID
+
+
+
+        !
+        ! Get bc_NRANK, bc_IRANK from bc_COMM
+        !
+        call MPI_Comm_Size(bc_COMM, bc_NRANK, ierr)
+        call MPI_Comm_Rank(bc_COMM, bc_IRANK, ierr)
+
+
+        !
+        ! Initialize coupling with faces on other processors
+        !
+        do iproc = 0,bc_NRANK-1
+
+
+
+            !
+            ! Send local elements out
+            !
+            if (iproc == bc_IRANK) then
+
+
+                nbc_elements = mesh%bc_patch_group(group_ID)%nfaces()
+                call MPI_Bcast(IRANK,        1, MPI_INTEGER, iproc, bc_COMM, ierr)
+                call MPI_Bcast(nbc_elements, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
+
+
+                do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
+                    do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
+
+                        idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l()
+                        ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
+                        iface      = mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
+                        
+                        ! Broadcast element for coupling
+                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g(),         1, MPI_INTEGER, iproc, bc_COMM, ierr)
+                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l(),         1, MPI_INTEGER, iproc, bc_COMM, ierr)
+                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID), 1, MPI_INTEGER, iproc, bc_COMM, ierr)
+                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID), 1, MPI_INTEGER, iproc, bc_COMM, ierr)
+                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID),      1, MPI_INTEGER, iproc, bc_COMM, ierr)
+
+
+                        ! Broadcast auxiliary data
+                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%neqns,      1, MPI_INTEGER, iproc, bc_COMM, ierr)
+                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%nterms_s,   1, MPI_INTEGER, iproc, bc_COMM, ierr)
+                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%total_area, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
+
+                        ngq = size(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def,1)
+                        call MPI_Bcast(ngq,                                                                          1, MPI_INTEGER, iproc, bc_COMM, ierr)
+                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%differential_areas,          ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
+                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,1),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
+                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,2),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
+                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,3),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
+
+                    end do ! face_ID
+                end do ! patch_ID
+            
+
+
+
+            !
+            ! All other processors recieve
+            !
+            else
+
+
+                call MPI_Bcast(proc_coupled, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
+                call MPI_Bcast(nbc_elements, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
+
+
+
+                !
+                ! For the face (patch_ID,face_ID) add each element from the sending proc
+                !
+                do ielem = 1,nbc_elements
+
+                    ! Receive coupled element
+                    call MPI_BCast(idomain_g_coupled,  1, MPI_INTEGER, iproc, bc_COMM, ierr)
+                    call MPI_BCast(idomain_l_coupled,  1, MPI_INTEGER, iproc, bc_COMM, ierr)
+                    call MPI_BCast(ielement_g_coupled, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
+                    call MPI_BCast(ielement_l_coupled, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
+                    call MPI_BCast(iface_coupled,      1, MPI_INTEGER, iproc, bc_COMM, ierr)
+
+
+                    ! Receive auxiliary data
+                    call MPI_BCast(neqns,     1, MPI_INTEGER, iproc, bc_COMM, ierr)
+                    call MPI_BCast(nterms_s,  1, MPI_INTEGER, iproc, bc_COMM, ierr)
+                    call MPI_BCast(total_area,1, MPI_INTEGER, iproc, bc_COMM, ierr)
+
+
+                    call MPI_BCast(ngq, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
+                    if (allocated(areas) ) deallocate(areas, interp_coords_def)
+                    allocate(areas(ngq), interp_coords_def(ngq,3), stat=ierr)
+                    if (ierr /= 0) call AllocationError
+
+
+                    call MPI_BCast(areas,           ngq, MPI_REAL8, iproc, bc_COMM, ierr)
+                    call MPI_BCast(interp_coords_def(:,1), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
+                    call MPI_BCast(interp_coords_def(:,2), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
+                    call MPI_BCast(interp_coords_def(:,3), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
+
+
+                    !
+                    ! Each face on the current proc adds the off-processor element to their list 
+                    ! of coupled elems
+                    !
+                    do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
+                        do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
+
+                            call mesh%bc_patch_group(group_ID)%patch(patch_ID)%add_coupled_element(face_ID, idomain_g_coupled,     &
+                                                                                                            idomain_l_coupled,     &
+                                                                                                            ielement_g_coupled,    &
+                                                                                                            ielement_l_coupled,    &
+                                                                                                            iface_coupled,         &
+                                                                                                            proc_coupled)
+
+                            call mesh%bc_patch_group(group_ID)%patch(patch_ID)%set_coupled_element_data(face_ID, idomain_g_coupled,     &
+                                                                                                                 ielement_g_coupled,    &
+                                                                                                                 neqns,                 &
+                                                                                                                 nterms_s,              &
+                                                                                                                 total_area,            &
+                                                                                                                 areas,                 &
+                                                                                                                 interp_coords_def)
+
+
+                        end do ! face_ID
+                    end do ! patch_ID
+
+                end do !ielem
+
+
+            end if
+
+
+            call MPI_Barrier(bc_COMM,ierr)
+        end do
+
+
+
+    end subroutine init_bc_coupling_global
+    !******************************************************************************************
+
+
+
+    !>  Default boundary coupling initialization routine. 
+    !!
+    !!  Default initializes coupling for a given element to just itself and no coupling with 
+    !!  other elements on the boundary. For a boundary condition that is coupled across the face
+    !!  this routine can be overwritten to set the coupling information specific to the boundary 
+    !!  condition.
+    !!  
+    !!
+    !!  @author Nathan A. Wukie
+    !!  @date   2/27/2017
+    !!
+    !----------------------------------------------------------------------------------------------
+    subroutine init_bc_coupling_local(self,mesh,group_ID,bc_COMM)
+        class(bc_state_t),  intent(inout)   :: self
+        type(mesh_t),       intent(inout)   :: mesh
+        integer(ik),        intent(in)      :: group_ID
+        type(mpi_comm),     intent(in)      :: bc_COMM
+
+        integer(ik) :: patch_ID, face_ID, idomain_g, idomain_l, ielement_g, ielement_l, iface, neqns, nterms_s
+
+
+
+        !
+        ! For each patch, loop through faces and set default element coupling.
+        ! Default is that each face is coupled only with its owner element.
+        ! So, strictly local coupling.
+        !
+        do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
+            do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
+
+
+                !
+                ! Get block-element index of current iface_bc
+                !
+                idomain_g  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g()
+                idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l()
+                ielement_g = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID)
+                ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
+                iface      = mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
+
+                
+                !
+                ! Add the element index as the only dependency.
+                !
+                call mesh%bc_patch_group(group_ID)%patch(patch_ID)%add_coupled_element(face_ID, idomain_g,  &
+                                                                                                idomain_l,  &
+                                                                                                ielement_g, &
+                                                                                                ielement_l, &
+                                                                                                iface,      &
+                                                                                                IRANK)
+
+            end do ! face_ID
+        end do ! patch_ID
+
+
+    end subroutine init_bc_coupling_local
+    !**********************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

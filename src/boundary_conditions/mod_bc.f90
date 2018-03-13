@@ -47,17 +47,17 @@ module mod_bc
     use bc_state_inlet_total,                   only: inlet_total_t
     use bc_state_outlet_constant_pressure,      only: outlet_constant_pressure_t
     use bc_state_outlet_pressure_equation,      only: outlet_pressure_equation_t
+    use bc_state_outlet_local_pressure_equation,      only: outlet_local_pressure_equation_t
+    use bc_state_outlet_auxiliary_equations,    only: outlet_auxiliary_equations_t
     use bc_state_outlet_profile_extrapolation,  only: outlet_profile_extrapolation_t
-    use bc_state_outlet_average_profile_extrapolation,  only: outlet_average_profile_extrapolation_t
-    use bc_state_outlet_testing,                only: outlet_testing_t
     !use bc_state_outlet_point_pressure,         only: outlet_point_pressure_t
     !use bc_state_outlet_LODI_pressure,          only: outlet_LODI_pressure_t
     !use bc_state_outlet_LODI_z_pressure,        only: outlet_LODI_z_pressure_t
     !use bc_state_outlet_wukie,                  only: outlet_wukie_t
-    use bc_state_outlet_average_pressure,       only: outlet_average_pressure_t
+    use bc_state_outlet_steady_1dchar,          only: outlet_steady_1dchar_t
     use bc_state_outlet_3dgiles,                only: outlet_3dgiles_t
     use bc_state_outlet_3dgiles_innerproduct,   only: outlet_3dgiles_innerproduct_t
-    use bc_state_outlet_3dgiles_innerproduct_general,   only: outlet_3dgiles_innerproduct_general_t
+    use bc_state_outlet_giles_quasi3d_steady,   only: outlet_giles_quasi3d_steady_t
     use bc_state_fluid_extrapolate,             only: fluid_extrapolate_t
     use bc_state_momentum_inlet,                only: momentum_inlet_t
     use bc_state_symmetry,                      only: symmetry_t
@@ -90,6 +90,9 @@ module mod_bc
 
     use bc_state_graddemo_gradp_extrapolate,        only: graddemo_gradp_extrapolate_t
     use bc_state_graddemo_gradp_extrapolate_outer,  only: graddemo_gradp_extrapolate_outer_t
+
+    use bc_state_auxiliary_boundary,        only: auxiliary_boundary_t
+    use bc_state_auxiliary_interior,        only: auxiliary_interior_t
 
     use bc_state_pgradtest_extrapolate,    only: pgradtest_extrapolate_t
 
@@ -151,17 +154,17 @@ contains
         type(inlet_total_t)                     :: INLET_TOTAL
         type(outlet_constant_pressure_t)        :: OUTLET_CONSTANT_PRESSURE
         type(outlet_pressure_equation_t)        :: OUTLET_PRESSURE_EQUATION
+        type(outlet_local_pressure_equation_t)        :: OUTLET_LOCAL_PRESSURE_EQUATION
+        type(outlet_auxiliary_equations_t)      :: OUTLET_AUXILIARY_EQUATIONS
         type(outlet_profile_extrapolation_t)    :: OUTLET_PROFILE_EXTRAPOLATION
-        type(outlet_average_profile_extrapolation_t)    :: OUTLET_AVERAGE_PROFILE_EXTRAPOLATION
-        type(outlet_testing_t)                  :: OUTLET_TESTING
         !type(outlet_point_pressure_t)           :: OUTLET_POINT_PRESSURE
         !type(outlet_LODI_pressure_t)            :: OUTLET_LODI_PRESSURE
         !type(outlet_LODI_z_pressure_t)          :: OUTLET_LODI_Z_PRESSURE
         !type(outlet_wukie_t)                    :: OUTLET_WUKIE
-        type(outlet_average_pressure_t)         :: OUTLET_AVERAGE_PRESSURE
+        type(outlet_steady_1dchar_t)            :: OUTLET_STEADY_1DCHAR
         type(outlet_3dgiles_t)                  :: OUTLET_3DGILES
         type(outlet_3dgiles_innerproduct_t)     :: OUTLET_3DGILES_INNERPRODUCT
-        type(outlet_3dgiles_innerproduct_general_t)     :: OUTLET_3DGILES_INNERPRODUCT_GENERAL
+        type(outlet_giles_quasi3d_steady_t)     :: OUTLET_GILES_QUASI3D_STEADY
         type(fluid_extrapolate_t)               :: FLUID_EXTRAPOLATE
         type(momentum_inlet_t)                  :: MOMENTUM_INLET
         type(symmetry_t)                        :: SYMMETRY
@@ -192,6 +195,9 @@ contains
 
         type(graddemo_gradp_extrapolate_t)          :: GRADDEMO_GRADP_EXTRAPOLATE
         type(graddemo_gradp_extrapolate_outer_t)    :: GRADDEMO_GRADP_EXTRAPOLATE_OUTER
+
+        type(auxiliary_boundary_t)      :: AUXILIARY_BOUNDARY
+        type(auxiliary_interior_t)      :: AUXILIARY_INTERIOR
 
         type(pgradtest_extrapolate_t)  :: PGRADTEST_EXTRAPOLATE
 
@@ -228,13 +234,13 @@ contains
             call registered_bcs%push_back(INLET_TOTAL)
             call registered_bcs%push_back(OUTLET_CONSTANT_PRESSURE)
             call registered_bcs%push_back(OUTLET_PRESSURE_EQUATION)
+            call registered_bcs%push_back(OUTLET_LOCAL_PRESSURE_EQUATION)
+            call registered_bcs%push_back(OUTLET_AUXILIARY_EQUATIONS)
             call registered_bcs%push_back(OUTLET_PROFILE_EXTRAPOLATION)
-            call registered_bcs%push_back(OUTLET_AVERAGE_PROFILE_EXTRAPOLATION)
-            call registered_bcs%push_back(OUTLET_TESTING)
-            call registered_bcs%push_back(OUTLET_AVERAGE_PRESSURE)
+            call registered_bcs%push_back(OUTLET_STEADY_1DCHAR)
             call registered_bcs%push_back(OUTLET_3DGILES)
             call registered_bcs%push_back(OUTLET_3DGILES_INNERPRODUCT)
-            call registered_bcs%push_back(OUTLET_3DGILES_INNERPRODUCT_GENERAL)
+            call registered_bcs%push_back(OUTLET_GILES_QUASI3D_STEADY)
             !call registered_bcs%push_back(OUTLET_POINT_PRESSURE)
             !call registered_bcs%push_back(OUTLET_LODI_PRESSURE)
             !call registered_bcs%push_back(OUTLET_LODI_Z_PRESSURE)
@@ -266,6 +272,9 @@ contains
 
             call registered_bcs%push_back(GRADDEMO_GRADP_EXTRAPOLATE)
             call registered_bcs%push_back(GRADDEMO_GRADP_EXTRAPOLATE_OUTER)
+
+            call registered_bcs%push_back(AUXILIARY_BOUNDARY)
+            call registered_bcs%push_back(AUXILIARY_INTERIOR)
 
             call registered_bcs%push_back(PGRADTEST_EXTRAPOLATE)
 

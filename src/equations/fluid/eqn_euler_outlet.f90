@@ -74,7 +74,7 @@ contains
         call euler_outlet_eqns%add_operator('Graddemo P BC Operator')
         call euler_outlet_eqns%add_operator('Graddemo P Boundary Average Operator')
         call euler_outlet_eqns%add_operator('Graddemo P Volume Operator')
-        call euler_outlet_eqns%add_operator('Graddemo P Volume Source')
+!        call euler_outlet_eqns%add_operator('Graddemo P Volume Source')
 
 
         call euler_outlet_eqns%add_model('Pressure Gradient')

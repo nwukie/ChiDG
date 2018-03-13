@@ -8,6 +8,7 @@ add_subdirectory(geometric_conservation)
 add_lib_sources(
                 eqn_euler.f90
                 eqn_euler_outlet.f90
+                eqn_euler_aux.f90
                 eqn_filtered_euler.f90
                 eqn_filtered_euler_FP0.f90
                 eqn_filtered_euler_FP1.f90
@@ -29,5 +30,6 @@ add_lib_sources(
                 model_zero_turbulent_model_fields.f90
                 model_vorticity.f90
                 model_fluid_wave_speed.f90
+                model_velocity_gradients.f90
                 )
 

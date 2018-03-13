@@ -2,22 +2,21 @@ add_lib_sources(
                 bc_state_inlet_total.f90
                 bc_state_outlet_constant_pressure.f90
                 bc_state_outlet_pressure_equation.f90
+                bc_state_outlet_local_pressure_equation.f90
+                bc_state_outlet_auxiliary_equations.f90
                 bc_state_outlet_profile_extrapolation.f90
-                bc_state_outlet_average_profile_extrapolation.f90
-                bc_state_outlet_testing.f90
                 bc_state_wall.f90
                 bc_state_moving_wall.f90
                 bc_state_fluid_extrapolate.f90
                 bc_state_momentum_inlet.f90
                 bc_state_symmetry.f90
                 bc_state_farfield.f90
-                bc_state_outlet_average_pressure.f90
+                bc_state_outlet_steady_1dchar.f90
                 bc_state_outlet_3dgiles.f90
                 bc_state_outlet_3dgiles_innerproduct.f90
-                bc_state_outlet_3dgiles_innerproduct_general.f90
-                #bc_state_outlet_point_pressure.f90
+                bc_state_outlet_giles_quasi3d_steady.f90
+                bc_state_outlet_giles_quasi3d_steady_extrapolate_average.f90
                 #bc_state_outlet_LODI_pressure.f90
                 #bc_state_outlet_LODI_z_pressure.f90
                 #bc_state_outlet_wukie.f90
-                #mod_dft.f90
                 )

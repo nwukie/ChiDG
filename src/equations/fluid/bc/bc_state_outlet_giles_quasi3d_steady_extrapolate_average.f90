@@ -1,4 +1,4 @@
-module bc_state_outlet_3dgiles_innerproduct_general
+module bc_state_outlet_giles_quasi3d_steady_extrapolate_average
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, HALF, ME, CYLINDRICAL,    &
@@ -42,7 +42,7 @@ module bc_state_outlet_3dgiles_innerproduct_general
     !!  @date   2/8/2018
     !!
     !---------------------------------------------------------------------------------
-    type, public, extends(bc_state_t) :: outlet_3dgiles_innerproduct_general_t
+    type, public, extends(bc_state_t) :: outlet_giles_quasi3d_steady_extrapolate_average_t
 
         real(rk),   allocatable :: r(:)
         real(rk),   allocatable :: theta(:)
@@ -64,7 +64,7 @@ module bc_state_outlet_3dgiles_innerproduct_general
         procedure   :: analyze_bc_geometry
         procedure   :: initialize_fourier_discretization
 
-    end type outlet_3dgiles_innerproduct_general_t
+    end type outlet_giles_quasi3d_steady_extrapolate_average_t
     !*********************************************************************************
 
 
@@ -81,12 +81,13 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(outlet_3dgiles_innerproduct_general_t),   intent(inout) :: self
+        class(outlet_giles_quasi3d_steady_extrapolate_average_t),   intent(inout) :: self
+        
         
         !
         ! Set name, family
         !
-        call self%set_name('Outlet - 3D Giles Innerproduct General')
+        call self%set_name('Outlet - Giles Quasi3D Steady Extrapolate Average')
         call self%set_family('Outlet')
 
 
@@ -108,248 +109,21 @@ contains
 
     !>  Initialize boundary group coupling.
     !!
-    !!  For this LODI-based outlet, each patch face is coupled with every other
-    !!  face in the bc_group. This coupling occurs because each face uses an
-    !!  average pressure that is computed over the group. The average pressure
-    !!  calculation couples every element on the group. This coupling is initialized
-    !!  here.
+    !!  Call global coupling routine to initialize implicit coupling between each
+    !!  element with every other element on the boundary, a result of averaging
+    !!  and Fourier transform operations.
     !!
-    !!  Coupling initialization:
-    !!      1: each process loops through its local faces, initializes coupling
-    !!         of all local faces with all other local faces.
-    !!
-    !!      2: loop through ranks in bc_COMM
-    !!          a: iproc broadcasts information about its coupling to bc_COMM
-    !!          b: all other procs receive from iproc and initialize parallel coupling
-    !!
-    !!  @author Nathan A. average_pressure
-    !!  @date   4/18/2017
+    !!  @author Nathan A. Wukie
+    !!  @date   2/18/2018
     !!
     !--------------------------------------------------------------------------------
-    subroutine init_bc_coupling(self,mesh,group_ID,bc_COMM)
-        class(outlet_3dgiles_innerproduct_general_t),    intent(inout)   :: self
-        type(mesh_t),               intent(inout)   :: mesh
-        integer(ik),                intent(in)      :: group_ID
-        type(mpi_comm),             intent(in)      :: bc_COMM
-
-        integer(ik) :: patch_ID, face_ID, elem_ID, patch_ID_coupled, face_ID_coupled,   &
-                       idomain_g, idomain_l, ielement_g, ielement_l, iface,             &
-                       bc_IRANK, bc_NRANK, ierr, iproc, nbc_elements,     &
-                       ielem, neqns, nterms_s, ngq, ibc
-
-        integer(ik) :: idomain_g_coupled, idomain_l_coupled, ielement_g_coupled, ielement_l_coupled, &
-                       iface_coupled, proc_coupled
-
-        real(rk),       allocatable :: interp_coords_def(:,:)
-        real(rk),       allocatable :: areas(:)
-        real(rk)                    :: total_area
-
-
-
-        !
-        ! For each face, initialize coupling with all faces on the current processor.
-        !
-        do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
-            do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
-
-                
-                !
-                ! Loop through, initialize coupling
-                !
-                do patch_ID_coupled = 1,mesh%bc_patch_group(group_ID)%npatches()
-                    do face_ID_coupled = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
-
-
-                        !
-                        ! Get block-element index of current face_ID_coupled
-                        !
-                        idomain_g  = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%idomain_g()
-                        idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%idomain_l()
-                        ielement_g = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%ielement_g(face_ID_coupled)
-                        ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%ielement_l(face_ID_coupled)
-                        iface      = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%iface(     face_ID_coupled)
-
-
-                        neqns      = mesh%domain(idomain_l)%faces(ielement_l,iface)%neqns
-                        nterms_s   = mesh%domain(idomain_l)%faces(ielement_l,iface)%nterms_s
-                        total_area = mesh%domain(idomain_l)%faces(ielement_l,iface)%total_area
-                        areas      = mesh%domain(idomain_l)%faces(ielement_l,iface)%differential_areas
-                        interp_coords_def = mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def
-
-
-
-                        !
-                        ! For the face (patch_ID,face_ID) add the element on (patch_ID_coupled,face_ID_coupled)
-                        !
-                        call mesh%bc_patch_group(group_ID)%patch(patch_ID)%add_coupled_element(face_ID, idomain_g,  &
-                                                                                                        idomain_l,  &
-                                                                                                        ielement_g, &
-                                                                                                        ielement_l, &
-                                                                                                        iface,      &
-                                                                                                        IRANK)
-
-                        call mesh%bc_patch_group(group_ID)%patch(patch_ID)%set_coupled_element_data(face_ID, idomain_g,     &
-                                                                                                             ielement_g,    &
-                                                                                                             neqns,         &
-                                                                                                             nterms_s,      &
-                                                                                                             total_area,    &
-                                                                                                             areas,         &
-                                                                                                             interp_coords_def)
-
-
-                    end do ! face_ID_couple
-                end do ! patch_ID_couple
-
-            end do ! face_ID
-        end do ! patch_ID
-
-
-
-
-
-
-
-        !
-        ! Get bc_NRANK, bc_IRANK from bc_COMM
-        !
-        call MPI_Comm_Size(bc_COMM, bc_NRANK, ierr)
-        call MPI_Comm_Rank(bc_COMM, bc_IRANK, ierr)
-
-
-
-
-
-        !
-        ! Initialize coupling with faces on other processors
-        !
-        do iproc = 0,bc_NRANK-1
-
-
-
-            !
-            ! Send local elements out
-            !
-            if (iproc == bc_IRANK) then
-
-
-                nbc_elements = mesh%bc_patch_group(group_ID)%nfaces()
-                call MPI_Bcast(IRANK,        1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                call MPI_Bcast(nbc_elements, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-
-
-                do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
-                    do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
-
-                        idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l()
-                        ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
-                        iface      = mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
-                        
-                        ! Broadcast element for coupling
-                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g(),         1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l(),         1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID), 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID), 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID),      1, MPI_INTEGER, iproc, bc_COMM, ierr)
-
-
-                        ! Broadcast auxiliary data
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%neqns,      1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%nterms_s,   1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%total_area, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-
-                        ngq = size(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def,1)
-                        call MPI_Bcast(ngq,                                                                          1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%differential_areas,          ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,1),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,2),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,3),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-
-                    end do ! face_ID
-                end do ! patch_ID
-            
-
-
-
-
-
-
-
-
-            !
-            ! All other processors recieve
-            !
-            else
-
-
-                call MPI_Bcast(proc_coupled, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                call MPI_Bcast(nbc_elements, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-
-
-
-                !
-                ! For the face (patch_ID,face_ID) add each element from the sending proc
-                !
-                do ielem = 1,nbc_elements
-
-                    ! Receive coupled element
-                    call MPI_BCast(idomain_g_coupled,  1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                    call MPI_BCast(idomain_l_coupled,  1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                    call MPI_BCast(ielement_g_coupled, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                    call MPI_BCast(ielement_l_coupled, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                    call MPI_BCast(iface_coupled,      1, MPI_INTEGER, iproc, bc_COMM, ierr)
-
-
-                    ! Receive auxiliary data
-                    call MPI_BCast(neqns,     1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                    call MPI_BCast(nterms_s,  1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                    call MPI_BCast(total_area,1, MPI_INTEGER, iproc, bc_COMM, ierr)
-
-
-                    call MPI_BCast(ngq, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                    if (allocated(areas) ) deallocate(areas, interp_coords_def)
-                    allocate(areas(ngq), interp_coords_def(ngq,3), stat=ierr)
-                    if (ierr /= 0) call AllocationError
-
-
-                    call MPI_BCast(areas,                  ngq, MPI_REAL8, iproc, bc_COMM, ierr)
-                    call MPI_BCast(interp_coords_def(:,1), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
-                    call MPI_BCast(interp_coords_def(:,2), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
-                    call MPI_BCast(interp_coords_def(:,3), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
-
-
-                    !
-                    ! Each face on the current proc adds the off-processor element to their list 
-                    ! of coupled elems
-                    !
-                    do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
-                        do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
-
-                            call mesh%bc_patch_group(group_ID)%patch(patch_ID)%add_coupled_element(face_ID, idomain_g_coupled,     &
-                                                                                                            idomain_l_coupled,     &
-                                                                                                            ielement_g_coupled,    &
-                                                                                                            ielement_l_coupled,    &
-                                                                                                            iface_coupled,         &
-                                                                                                            proc_coupled)
-
-                            call mesh%bc_patch_group(group_ID)%patch(patch_ID)%set_coupled_element_data(face_ID, idomain_g_coupled,     &
-                                                                                                                 ielement_g_coupled,    &
-                                                                                                                 neqns,                 &
-                                                                                                                 nterms_s,              &
-                                                                                                                 total_area,            &
-                                                                                                                 areas,                 &
-                                                                                                                 interp_coords_def)
-
-
-                        end do ! face_ID
-                    end do ! patch_ID
-
-                end do !ielem
-
-            end if
-
-            call MPI_Barrier(bc_COMM,ierr)
-        end do
-
+    subroutine init_bc_coupling(self,mesh,group_ID,bc_comm)
+        class(outlet_giles_quasi3d_steady_extrapolate_average_t),   intent(inout)   :: self
+        type(mesh_t),                                               intent(inout)   :: mesh
+        integer(ik),                                                intent(in)      :: group_ID
+        type(mpi_comm),                                             intent(in)      :: bc_comm
+
+        call self%init_bc_coupling_global(mesh,group_ID,bc_comm)
 
     end subroutine init_bc_coupling
     !*************************************************************************************
@@ -377,7 +151,7 @@ contains
     !!
     !----------------------------------------------------------------------------------------------
     subroutine init_bc_postcomm(self,mesh,group_ID,bc_comm)
-        class(outlet_3dgiles_innerproduct_general_t),   intent(inout)   :: self
+        class(outlet_giles_quasi3d_steady_extrapolate_average_t),   intent(inout)   :: self
         type(mesh_t),                                   intent(inout)   :: mesh
         integer(ik),                                    intent(in)      :: group_ID
         type(mpi_comm),                                 intent(in)      :: bc_comm
@@ -409,7 +183,7 @@ contains
 !    !!
 !    !-------------------------------------------------------------------------------------
 !    subroutine compute_averages(self,worker,bc_COMM, vel1_avg, vel2_avg, vel3_avg, density_avg, p_avg)
-!        class(outlet_3dgiles_innerproduct_general_t),    intent(inout)   :: self
+!        class(outlet_giles_quasi3d_steady_extrapolate_average_t),    intent(inout)   :: self
 !        type(chidg_worker_t),       intent(inout)   :: worker
 !        type(mpi_comm),             intent(in)      :: bc_COMM
 !        type(AD_D),                 intent(inout)   :: vel1_avg
@@ -598,7 +372,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute_averages(self,worker,bc_COMM, u_avg, v_avg, w_avg, density_avg, p_avg)
-        class(outlet_3dgiles_innerproduct_general_t),   intent(inout)   :: self
+        class(outlet_giles_quasi3d_steady_extrapolate_average_t),   intent(inout)   :: self
         type(chidg_worker_t),                           intent(inout)   :: worker
         type(mpi_comm),                                 intent(in)      :: bc_COMM
         type(AD_D),                                     intent(inout)   :: u_avg
@@ -793,7 +567,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_COMM)
-        class(outlet_3dgiles_innerproduct_general_t),   intent(inout)   :: self
+        class(outlet_giles_quasi3d_steady_extrapolate_average_t),   intent(inout)   :: self
         type(chidg_worker_t),                           intent(inout)   :: worker
         class(properties_t),                            intent(inout)   :: prop
         type(mpi_comm),                                 intent(in)      :: bc_COMM
@@ -1243,7 +1017,7 @@ contains
                                              c3_hat_real,       c3_hat_imag,        &
                                              c4_hat_real,       c4_hat_imag,        &
                                              c5_hat_real,       c5_hat_imag)
-        class(outlet_3dgiles_innerproduct_general_t),   intent(inout)   :: self
+        class(outlet_giles_quasi3d_steady_extrapolate_average_t),   intent(inout)   :: self
         type(chidg_worker_t),                           intent(inout)   :: worker
         type(mpi_comm),                                 intent(in)      :: bc_comm
         type(AD_D),     allocatable,                    intent(inout)   :: density_hat_real(:,:)
@@ -1279,28 +1053,7 @@ contains
         type(AD_D)  :: density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar
 
         integer(ik)             :: nmodes, nradius, ntheta, iradius, itheta, ncoeff, ierr
-        real(rk)                :: dtheta, dtheta_n, theta, z, midpoint(3)
-        real(rk),   allocatable :: pitch(:), physical_nodes(:,:)
-
-
-
-        !
-        ! Determine z-location of current face and assume entire boundary is constant-z
-        !
-        if (worker%iface == XI_MIN) then
-            midpoint = worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%physical_point([-ONE,ZERO,ZERO],'Deformed')
-        else if (worker%iface == XI_MAX) then
-            midpoint = worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%physical_point([ ONE,ZERO,ZERO],'Deformed')
-        else if (worker%iface == ETA_MIN) then
-            midpoint = worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%physical_point([ZERO,-ONE,ZERO],'Deformed')
-        else if (worker%iface == ETA_MAX) then
-            midpoint = worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%physical_point([ZERO, ONE,ZERO],'Deformed')
-        else if (worker%iface == ZETA_MIN) then
-            midpoint = worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%physical_point([ZERO,ZERO,-ONE],'Deformed')
-        else if (worker%iface == ZETA_MAX) then
-            midpoint = worker%mesh%domain(worker%element_info%idomain_l)%elems(worker%element_info%ielement_l)%physical_point([ZERO,ZERO, ONE],'Deformed')
-        end if
-        z = midpoint(3)
+        real(rk),   allocatable :: physical_nodes(:,:)
 
 
         !
@@ -1335,14 +1088,6 @@ contains
         if (ierr /= 0) call AllocationError
 
 
-        !
-        ! Initialize theta discretization parameters
-        !
-        pitch  = self%bcproperties%compute('Pitch',worker%time(),worker%coords())
-        dtheta = pitch(1)
-        dtheta_n = dtheta/ntheta
-
-
 
         !
         ! Perform Fourier decomposition at each radial station.
@@ -1353,19 +1098,15 @@ contains
             ! Construct theta discretization
             !
             do itheta = 1,ntheta
-                theta = self%theta_ref + (itheta-1)*dtheta_n
-                physical_nodes(itheta,:) = [self%r(iradius),theta,z]
+                ! this doesn't really matter anymore, since donors and coords are passed in. But the procedure requires it.
+                !physical_nodes(itheta,:) = [self%r(iradius),self%theta(itheta),z]   
+                physical_nodes(itheta,:) = [self%r(iradius),self%theta(itheta),ZERO] 
             end do
 
 
             !
             ! Interpolate solution to physical_nodes at current radial station
             !
-            !density = worker%interpolate_field_general('Density',    physical_nodes, try_offset=[ZERO,-pitch(1),ZERO])
-            !mom1    = worker%interpolate_field_general('Momentum-1', physical_nodes, try_offset=[ZERO,-pitch(1),ZERO])
-            !mom2    = worker%interpolate_field_general('Momentum-2', physical_nodes, try_offset=[ZERO,-pitch(1),ZERO])
-            !mom3    = worker%interpolate_field_general('Momentum-3', physical_nodes, try_offset=[ZERO,-pitch(1),ZERO])
-            !energy  = worker%interpolate_field_general('Energy',     physical_nodes, try_offset=[ZERO,-pitch(1),ZERO])
             density = worker%interpolate_field_general('Density',    physical_nodes, donors=self%donor(iradius,:), donor_coords=self%donor_coord(iradius,:,:))
             mom1    = worker%interpolate_field_general('Momentum-1', physical_nodes, donors=self%donor(iradius,:), donor_coords=self%donor_coord(iradius,:,:))
             mom2    = worker%interpolate_field_general('Momentum-2', physical_nodes, donors=self%donor(iradius,:), donor_coords=self%donor_coord(iradius,:,:))
@@ -1495,7 +1236,7 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine analyze_bc_geometry(self,mesh,group_ID,bc_comm)
-        class(outlet_3dgiles_innerproduct_general_t),   intent(inout)   :: self
+        class(outlet_giles_quasi3d_steady_extrapolate_average_t),   intent(inout)   :: self
         type(mesh_t),                                   intent(in)      :: mesh
         integer(ik),                                    intent(in)      :: group_ID
         type(mpi_comm),                                 intent(in)      :: bc_comm
@@ -1580,7 +1321,7 @@ contains
                     ref_nodes(8,:) = [ ZERO, -ONE, ONE]
 
                 else
-                    call chidg_signal(FATAL,"outlet_3dgiles_innerproduct_general: analyze_bc_geometry, invalid face indec.")
+                    call chidg_signal(FATAL,"outlet_giles_quasi3d_steady_extrapolate_average: analyze_bc_geometry, invalid face indec.")
                 end if
 
 
@@ -1630,15 +1371,29 @@ contains
 
 
 
-    !>
+    !>  For each radial station, a theta-discretization exists upon which the 
+    !!  discrete Fourier transform operation is computed. Since the theta-discretization
+    !!  spans the entire boundary, a general interpolation procedure is used to fill
+    !!  solution values that could come from many different elements on the boundary.
     !!
+    !!  This procedure finds donor elements for each node in the theta-discretization
+    !!  at each radial station. Additionally, the location of the physical coordinate
+    !!  within the donor element's reference coordinate system is also found.
+    !!
+    !!  This procedure
+    !!
+    !!  Initializes:
+    !!  ------------------------------
+    !!  self%theta(:)
+    !!  self%donor(:,:)
+    !!  self%donor_coord(:,:,:)
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/28/2018
     !!
     !----------------------------------------------------------------------------------
     subroutine initialize_fourier_discretization(self,mesh,group_ID,bc_comm)
-        class(outlet_3dgiles_innerproduct_general_t),   intent(inout)   :: self
+        class(outlet_giles_quasi3d_steady_extrapolate_average_t),   intent(inout)   :: self
         type(mesh_t),                                   intent(in)      :: mesh
         integer(ik),                                    intent(in)      :: group_ID
         type(mpi_comm),                                 intent(in)      :: bc_comm
@@ -1778,7 +1533,7 @@ contains
 
 
                 ! Abort if we didn't find a donor
-                user_msg = "bc_state_outlet_3dgiles_innerproduct_general%initialize_fourier_discretization: &
+                user_msg = "bc_state_outlet_giles_quasi3d_steady_extrapolate_average%initialize_fourier_discretization: &
                             no donor element found for Fourier discretization node."
                 if (.not. donor_found) call chidg_signal(FATAL,user_msg)
 
@@ -1802,4 +1557,4 @@ contains
 
 
 
-end module bc_state_outlet_3dgiles_innerproduct_general
+end module bc_state_outlet_giles_quasi3d_steady_extrapolate_average

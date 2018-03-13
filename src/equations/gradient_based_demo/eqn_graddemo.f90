@@ -72,7 +72,7 @@ contains
 
             case('default')
 
-                call graddemo_eqns%add_operator('Graddemo Volume Flux')
+!                call graddemo_eqns%add_operator('Graddemo Volume Flux')
                 call graddemo_eqns%add_operator('Graddemo P BC Operator')
                 call graddemo_eqns%add_operator('Graddemo P Boundary Average Operator')
                 call graddemo_eqns%add_operator('Graddemo P Volume Operator')

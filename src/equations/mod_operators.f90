@@ -101,13 +101,13 @@ module mod_operators
     use tm_volume_cylindrical_source,            only: tm_volume_cylindrical_source_t
 
 
-    use graddemo_volume_operator,                only: graddemo_volume_operator_t
-    use graddemo_gradp_volume_operator,          only: graddemo_gradp_volume_operator_t
     use graddemo_P_volume_operator,              only: graddemo_P_volume_operator_t
-    use graddemo_P_volume_source,                only: graddemo_P_volume_source_t
     use graddemo_P_boundary_operator,            only: graddemo_P_boundary_operator_t
     use graddemo_P_bc_operator,                  only: graddemo_P_bc_operator_t
 
+    use auxiliary_gradient_volume_operator,      only: auxiliary_gradient_volume_operator_t
+    use auxiliary_gradient_boundary_operator,    only: auxiliary_gradient_boundary_operator_t
+    use auxiliary_gradient_bc_operator,          only: auxiliary_gradient_bc_operator_t
 
     use pgradtest_volume_operator,              only: pgradtest_volume_operator_t
     use pgradtest_boundary_operator,            only: pgradtest_boundary_operator_t
@@ -334,19 +334,20 @@ contains
         type(rac_laxfriedrichs_operator_t)                :: rac_laxfriedrichs_operator
 
         ! Tangential momentum operators
-        type(tm_volume_operator_t)                       :: tm_volume_operator
-        type(tm_boundary_average_operator_t)             :: tm_average_operator
-        type(tm_bc_operator_t)                           :: tm_bc_operator
-        type(tm_laxfriedrichs_operator_t)                :: tm_laxfriedrichs_operator
-        type(tm_volume_cylindrical_source_t)             :: tm_volume_cylindrical_source
+        type(tm_volume_operator_t)                      :: tm_volume_operator
+        type(tm_boundary_average_operator_t)            :: tm_average_operator
+        type(tm_bc_operator_t)                          :: tm_bc_operator
+        type(tm_laxfriedrichs_operator_t)               :: tm_laxfriedrichs_operator
+        type(tm_volume_cylindrical_source_t)            :: tm_volume_cylindrical_source
 
 
-        type(graddemo_volume_operator_t)                 :: graddemo_volume_operator
-        type(graddemo_gradp_volume_operator_t)           :: graddemo_gradp_volume_operator
-        type(graddemo_P_volume_operator_t)               :: graddemo_P_volume_operator
-        type(graddemo_P_volume_source_t)                 :: graddemo_P_volume_source
-        type(graddemo_P_boundary_operator_t)             :: graddemo_P_boundary_operator
-        type(graddemo_P_bc_operator_t)                   :: graddemo_P_bc_operator
+        type(graddemo_P_volume_operator_t)              :: graddemo_P_volume_operator
+        type(graddemo_P_boundary_operator_t)            :: graddemo_P_boundary_operator
+        type(graddemo_P_bc_operator_t)                  :: graddemo_P_bc_operator
+
+        type(auxiliary_gradient_volume_operator_t)      :: auxiliary_gradient_volume_operator
+        type(auxiliary_gradient_boundary_operator_t)    :: auxiliary_gradient_boundary_operator
+        type(auxiliary_gradient_bc_operator_t)          :: auxiliary_gradient_bc_operator
 
         type(pgradtest_volume_operator_t)               :: pgradtest_volume_operator
         type(pgradtest_boundary_operator_t)             :: pgradtest_boundary_operator
@@ -468,12 +469,13 @@ contains
             call operator_factory%register(tm_laxfriedrichs_operator)
             call operator_factory%register(tm_volume_cylindrical_source)
 
-            call operator_factory%register(graddemo_volume_operator)
-            call operator_factory%register(graddemo_gradp_volume_operator)
             call operator_factory%register(graddemo_P_volume_operator)
-            call operator_factory%register(graddemo_P_volume_source)
             call operator_factory%register(graddemo_P_boundary_operator)
             call operator_factory%register(graddemo_P_bc_operator)
+
+            call operator_factory%register(auxiliary_gradient_volume_operator)
+            call operator_factory%register(auxiliary_gradient_boundary_operator)
+            call operator_factory%register(auxiliary_gradient_bc_operator)
 
             call operator_factory%register(pgradtest_volume_operator)
             call operator_factory%register(pgradtest_boundary_operator)

@@ -875,7 +875,6 @@ contains
 
         else if (cache_type == 'gradient') then
 
-            !if (self%cache%lift .and. (.not. do_not_lift)) then
             if (lift) then
                 var_gq = self%cache%get_data(field,cache_component,'gradient',idirection,self%function_info%seed,iface_use)
                 ! If we only want lift, zero out primal gradient

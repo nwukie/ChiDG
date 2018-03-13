@@ -1,4 +1,4 @@
-module bc_state_outlet_average_pressure
+module bc_state_outlet_steady_1dchar
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, HALF, ME, CYLINDRICAL
@@ -36,7 +36,7 @@ module bc_state_outlet_average_pressure
     !!  @date   2/23/2018
     !!
     !----------------------------------------------------------------------------------------
-    type, public, extends(bc_state_t) :: outlet_average_pressure_t
+    type, public, extends(bc_state_t) :: outlet_steady_1dchar_t
 
 
     contains
@@ -46,7 +46,7 @@ module bc_state_outlet_average_pressure
         procedure   :: compute_bc_state     ! boundary condition function implementation
         procedure   :: compute_averages
 
-    end type outlet_average_pressure_t
+    end type outlet_steady_1dchar_t
     !****************************************************************************************
 
 
@@ -58,15 +58,15 @@ contains
 
     !>
     !!
-    !!  @author Nathan A. average_pressure (AFRL)
-    !!  @date   8/29/2016
+    !!  @author Nathan A. Wukie
+    !!  @date   2/20/2018
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(outlet_average_pressure_t),   intent(inout) :: self
+        class(outlet_steady_1dchar_t),   intent(inout) :: self
         
         ! Set name, family
-        call self%set_name('Outlet - Average Pressure')
+        call self%set_name('Outlet - Steady 1D Characteristics')
         call self%set_family('Outlet')
 
         ! Add functions
@@ -80,239 +80,21 @@ contains
 
     !>  Initialize boundary group coupling.
     !!
-    !!  Each element is coupled with every other element that belongs to the boundary
-    !!  condition. This coupling occurs because each face uses an
-    !!  average pressure that is computed over the group. The average pressure
-    !!  calculation couples every element on the group. This coupling is initialized
-    !!  here.
-    !!
-    !!  Coupling initialization:
-    !!      1: each process loops through its local faces, initializes coupling
-    !!         of all local faces with all other local faces.
-    !!
-    !!      2: loop through ranks in bc_COMM
-    !!          a: iproc broadcasts information about its coupling to bc_COMM
-    !!          b: all other procs receive from iproc and initialize parallel coupling
+    !!  Call global coupling routine to initialize implicit coupling between each
+    !!  element with every other element on the boundary, a result of averaging
+    !!  and Fourier transform operations.
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   4/18/2017
+    !!  @date   2/18/2018
     !!
     !--------------------------------------------------------------------------------
-    subroutine init_bc_coupling(self,mesh,group_ID,bc_COMM)
-        class(outlet_average_pressure_t),  intent(inout)   :: self
-        type(mesh_t),                      intent(inout)   :: mesh
-        integer(ik),                       intent(in)      :: group_ID
-        type(mpi_comm),                    intent(in)      :: bc_COMM
+    subroutine init_bc_coupling(self,mesh,group_ID,bc_comm)
+        class(outlet_steady_1dchar_t),  intent(inout)   :: self
+        type(mesh_t),                   intent(inout)   :: mesh
+        integer(ik),                    intent(in)      :: group_ID
+        type(mpi_comm),                 intent(in)      :: bc_comm
 
-        integer(ik) :: patch_ID, face_ID, elem_ID, patch_ID_coupled, face_ID_coupled,   &
-                       idomain_g, idomain_l, ielement_g, ielement_l, iface,             &
-                       bc_IRANK, bc_NRANK, ierr, iproc, nbc_elements,     &
-                       ielem, neqns, nterms_s, ngq, ibc
-
-        integer(ik) :: idomain_g_coupled, idomain_l_coupled, ielement_g_coupled, ielement_l_coupled, &
-                       iface_coupled, proc_coupled
-
-        real(rk),       allocatable :: interp_coords_def(:,:)
-        real(rk),       allocatable :: areas(:)
-        real(rk)                    :: total_area
-
-
-
-        !
-        ! For each face, initialize coupling with all faces on the current processor.
-        !
-        do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
-            do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
-
-                
-                !
-                ! Loop through, initialize coupling
-                !
-                do patch_ID_coupled = 1,mesh%bc_patch_group(group_ID)%npatches()
-                    do face_ID_coupled = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
-
-
-                        !
-                        ! Get block-element index of current face_ID_coupled
-                        !
-                        idomain_g  = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%idomain_g()
-                        idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%idomain_l()
-                        ielement_g = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%ielement_g(face_ID_coupled)
-                        ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%ielement_l(face_ID_coupled)
-                        iface      = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%iface(     face_ID_coupled)
-
-
-                        neqns      = mesh%domain(idomain_l)%faces(ielement_l,iface)%neqns
-                        nterms_s   = mesh%domain(idomain_l)%faces(ielement_l,iface)%nterms_s
-                        total_area = mesh%domain(idomain_l)%faces(ielement_l,iface)%total_area
-                        areas      = mesh%domain(idomain_l)%faces(ielement_l,iface)%differential_areas
-                        interp_coords_def   = mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def
-
-
-
-                        !
-                        ! For the face (patch_ID,face_ID) add the element on (patch_ID_coupled,face_ID_coupled)
-                        !
-                        call mesh%bc_patch_group(group_ID)%patch(patch_ID)%add_coupled_element(face_ID, idomain_g,  &
-                                                                                                        idomain_l,  &
-                                                                                                        ielement_g, &
-                                                                                                        ielement_l, &
-                                                                                                        iface,      &
-                                                                                                        IRANK)
-
-                        call mesh%bc_patch_group(group_ID)%patch(patch_ID)%set_coupled_element_data(face_ID, idomain_g,     &
-                                                                                                             ielement_g,    &
-                                                                                                             neqns,         &
-                                                                                                             nterms_s,      &
-                                                                                                             total_area,    &
-                                                                                                             areas,         &
-                                                                                                             interp_coords_def)
-
-
-                    end do ! face_ID_couple
-                end do ! patch_ID_couple
-
-            end do ! face_ID
-        end do ! patch_ID
-
-
-
-        !
-        ! Get bc_NRANK, bc_IRANK from bc_COMM
-        !
-        call MPI_Comm_Size(bc_COMM, bc_NRANK, ierr)
-        call MPI_Comm_Rank(bc_COMM, bc_IRANK, ierr)
-
-
-        !
-        ! Initialize coupling with faces on other processors
-        !
-        do iproc = 0,bc_NRANK-1
-
-
-
-            !
-            ! Send local elements out
-            !
-            if (iproc == bc_IRANK) then
-
-
-                nbc_elements = mesh%bc_patch_group(group_ID)%nfaces()
-                call MPI_Bcast(IRANK,        1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                call MPI_Bcast(nbc_elements, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-
-
-                do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
-                    do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
-
-                        idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l()
-                        ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
-                        iface      = mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
-                        
-                        ! Broadcast element for coupling
-                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g(),         1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l(),         1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID), 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID), 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID),      1, MPI_INTEGER, iproc, bc_COMM, ierr)
-
-
-                        ! Broadcast auxiliary data
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%neqns,      1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%nterms_s,   1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%total_area, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-
-                        ngq = size(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def,1)
-                        call MPI_Bcast(ngq,                                                                          1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%differential_areas,          ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,1),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,2),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,3),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-
-                    end do ! face_ID
-                end do ! patch_ID
-            
-
-
-
-            !
-            ! All other processors recieve
-            !
-            else
-
-
-                call MPI_Bcast(proc_coupled, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                call MPI_Bcast(nbc_elements, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-
-
-
-                !
-                ! For the face (patch_ID,face_ID) add each element from the sending proc
-                !
-                do ielem = 1,nbc_elements
-
-                    ! Receive coupled element
-                    call MPI_BCast(idomain_g_coupled,  1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                    call MPI_BCast(idomain_l_coupled,  1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                    call MPI_BCast(ielement_g_coupled, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                    call MPI_BCast(ielement_l_coupled, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                    call MPI_BCast(iface_coupled,      1, MPI_INTEGER, iproc, bc_COMM, ierr)
-
-
-                    ! Receive auxiliary data
-                    call MPI_BCast(neqns,     1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                    call MPI_BCast(nterms_s,  1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                    call MPI_BCast(total_area,1, MPI_INTEGER, iproc, bc_COMM, ierr)
-
-
-                    call MPI_BCast(ngq, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                    if (allocated(areas) ) deallocate(areas, interp_coords_def)
-                    allocate(areas(ngq), interp_coords_def(ngq,3), stat=ierr)
-                    if (ierr /= 0) call AllocationError
-
-
-                    call MPI_BCast(areas,           ngq, MPI_REAL8, iproc, bc_COMM, ierr)
-                    call MPI_BCast(interp_coords_def(:,1), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
-                    call MPI_BCast(interp_coords_def(:,2), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
-                    call MPI_BCast(interp_coords_def(:,3), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
-
-
-                    !
-                    ! Each face on the current proc adds the off-processor element to their list 
-                    ! of coupled elems
-                    !
-                    do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
-                        do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
-
-                            call mesh%bc_patch_group(group_ID)%patch(patch_ID)%add_coupled_element(face_ID, idomain_g_coupled,     &
-                                                                                                            idomain_l_coupled,     &
-                                                                                                            ielement_g_coupled,    &
-                                                                                                            ielement_l_coupled,    &
-                                                                                                            iface_coupled,         &
-                                                                                                            proc_coupled)
-
-                            call mesh%bc_patch_group(group_ID)%patch(patch_ID)%set_coupled_element_data(face_ID, idomain_g_coupled,     &
-                                                                                                                 ielement_g_coupled,    &
-                                                                                                                 neqns,                 &
-                                                                                                                 nterms_s,              &
-                                                                                                                 total_area,            &
-                                                                                                                 areas,                 &
-                                                                                                                 interp_coords_def)
-
-
-                        end do ! face_ID
-                    end do ! patch_ID
-
-                end do !ielem
-
-
-            end if
-
-
-            call MPI_Barrier(bc_COMM,ierr)
-        end do
-
-
+        call self%init_bc_coupling_global(mesh,group_ID,bc_comm)
 
     end subroutine init_bc_coupling
     !******************************************************************************************
@@ -330,7 +112,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute_averages(self,worker,bc_COMM, u_avg, v_avg, w_avg, density_avg, p_avg)
-        class(outlet_average_pressure_t),   intent(inout)   :: self
+        class(outlet_steady_1dchar_t),   intent(inout)   :: self
         type(chidg_worker_t),               intent(inout)   :: worker
         type(mpi_comm),                     intent(in)      :: bc_COMM
         type(AD_D),                         intent(inout)   :: u_avg
@@ -517,7 +299,7 @@ contains
 
     !>  Compute routine for Pressure Outlet boundary condition state function.
     !!
-    !!  @author Nathan A. average_pressure
+    !!  @author Nathan A. steady_1dchar
     !!  @date   2/3/2016
     !!
     !!  @param[in]      worker  Interface for geometry, cache, integration, etc.
@@ -525,7 +307,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_COMM)
-        class(outlet_average_pressure_t),    intent(inout)   :: self
+        class(outlet_steady_1dchar_t),    intent(inout)   :: self
         type(chidg_worker_t),               intent(inout)   :: worker
         class(properties_t),                intent(inout)   :: prop
         type(mpi_comm),                     intent(in)      :: bc_COMM
@@ -782,4 +564,4 @@ contains
 
 
 
-end module bc_state_outlet_average_pressure
+end module bc_state_outlet_steady_1dchar

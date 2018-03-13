@@ -189,6 +189,9 @@ contains
         call self%update_auxiliary_fields(worker,equation_set,bc_state_group,differentiate)
         call self%update_primary_fields(  worker,equation_set,bc_state_group,differentiate,compute_gradients,update_element, update_interior_faces, update_exterior_faces, face_min, face_max)
 
+        if (update_element) call self%update_model_element(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-)')
+
+
 
         !
         ! Compute f(Q-) models. Interior, Exterior, BC, Element
@@ -202,6 +205,18 @@ contains
             if (update_interior_faces) call self%update_model_interior(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-)')
             if (update_exterior_faces) call self%update_model_exterior(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-)')
 
+        end do !iface
+
+
+
+        !
+        ! Compute f(Q-) models. Interior, Exterior, BC, Element
+        !
+        do iface = face_min,face_max
+
+            ! Update worker face index
+            call worker%set_face(iface)
+
             if (update_exterior_faces) call self%update_primary_bc(worker,equation_set,bc_state_group,differentiate)
             if (update_exterior_faces) call self%update_model_bc(  worker,equation_set,bc_state_group,differentiate,model_type='f(Q-)')
 
@@ -212,7 +227,16 @@ contains
 
         end do !iface
 
-        if (update_element) call self%update_model_element(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-)')
+
+
+
+
+
+
+
+
+
+
         if (update_element) call self%update_model_element(worker,equation_set,bc_state_group,differentiate,model_type='f(Q-,Q+)')
 
 
@@ -1883,18 +1907,6 @@ contains
                     var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
 
 
-!                    ! TODO: KLUDGE
-!                    !((worker%iface == 1) .or. (worker%iface == 2)) .and. &
-!                    if ( (worker%element_info%idomain_g == 6)   .and. &
-!                         (worker%iface == 1)                    .and. &
-!                         (trim(field) == 'Pressure_TEMP') ) then
-!                        var_m = 100000._rk
-!                        print*, 'setting once!'
-!                    end if
-
-
-
-
                     ! Get ALE transformation
                     ale_g_m = worker%get_det_jacobian_grid_face('value', 'face interior')
                     ale_g_p = worker%get_det_jacobian_grid_face('value', 'face exterior')
@@ -1922,22 +1934,6 @@ contains
                     !   2: Local solve for lift modes in element basis
                     !   3: Interpolate lift modes to face/volume quadrature nodes
                     !
-                    ! Project onto basis
-!                    rhs_x = matmul(val_face_trans,var_diff_x)
-!                    rhs_y = matmul(val_face_trans,var_diff_y)
-!                    rhs_z = matmul(val_face_trans,var_diff_z)
-! 
-!                    ! Local solve for lift modes in element basis
-!                    lift_modes_x = matmul(invmass,rhs_x)
-!                    lift_modes_y = matmul(invmass,rhs_y)
-!                    lift_modes_z = matmul(invmass,rhs_z)
-! 
-!                    ! Evaluate lift modes at face quadrature nodes
-!                    lift_gq_face_x = matmul(val_face,lift_modes_x)
-!                    lift_gq_face_y = matmul(val_face,lift_modes_y)
-!                    lift_gq_face_z = matmul(val_face,lift_modes_z)
-
-                    !
                     ! Improved approach creates a single matrix that performs the
                     ! three steps in one MV multiply:
                     !
@@ -1955,11 +1951,8 @@ contains
                     call worker%cache%set_data(field,'face interior', lift_gq_face_z, 'lift face', 3, worker%function_info%seed, iface)
 
 
-!                    ! Evaluate lift modes at volume quadrature nodes
-!                    lift_gq_vol_x = matmul(val_vol,lift_modes_x)
-!                    lift_gq_vol_y = matmul(val_vol,lift_modes_y)
-!                    lift_gq_vol_z = matmul(val_vol,lift_modes_z)
-
+                    ! 1: Project onto element basis
+                    ! 2: Interpolate lift modes to volume quadrature nodes
                     lift_gq_vol_x = matmul(br2_vol,var_diff_x)
                     lift_gq_vol_y = matmul(br2_vol,var_diff_y)
                     lift_gq_vol_z = matmul(br2_vol,var_diff_z)
@@ -2003,18 +1996,6 @@ contains
                     var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
 
 
-!                    ! TODO: KLUDGE
-!                     !((worker%iface == 1) .or. (worker%iface == 2)) .and. &
-!                    if ( (worker%element_info%idomain_g == 6) .and. &
-!                         (worker%iface == 1) .and. &
-!                         (trim(field) == 'Pressure_TEMP') ) then
-!                        var_m = 100000._rk
-!                        print*, 'setting once!'
-!                    end if
-
-
-
-
                     ! Get ALE transformation
                     ale_g_m = worker%get_det_jacobian_grid_face('value', 'face interior')
                     ale_g_p = worker%get_det_jacobian_grid_face('value', 'face exterior')
@@ -2024,9 +2005,9 @@ contains
                     var_p = var_p*ale_g_p
 
 
-
                     ! Difference
                     var_diff = HALF*(var_p - var_m) 
+
 
                     ! Multiply by weights
                     var_diff_weighted = var_diff * weights
@@ -2036,21 +2017,7 @@ contains
                     var_diff_y = var_diff_weighted * worker%normal(2)
                     var_diff_z = var_diff_weighted * worker%normal(3)
 
-!                    ! Project onto basis
-!                    rhs_x = matmul(val_face_trans,var_diff_x)
-!                    rhs_y = matmul(val_face_trans,var_diff_y)
-!                    rhs_z = matmul(val_face_trans,var_diff_z)
-!
-!                    ! Local solve for lift modes in element basis
-!                    lift_modes_x = matmul(invmass,rhs_x)
-!                    lift_modes_y = matmul(invmass,rhs_y)
-!                    lift_modes_z = matmul(invmass,rhs_z)
-
-
-                    ! Evaluate lift modes at face quadrature nodes
-!                    lift_gq_face_x = matmul(val_face,lift_modes_x)
-!                    lift_gq_face_y = matmul(val_face,lift_modes_y)
-!                    lift_gq_face_z = matmul(val_face,lift_modes_z)
+                    ! Project onto element basis, evaluate at face quadrature nodes
                     lift_gq_face_x = matmul(br2_face,var_diff_x)
                     lift_gq_face_y = matmul(br2_face,var_diff_y)
                     lift_gq_face_z = matmul(br2_face,var_diff_z)
@@ -2061,10 +2028,7 @@ contains
                     call worker%cache%set_data(field,'face interior', lift_gq_face_z, 'lift face', 3, worker%function_info%seed, iface)
 
 
-                    ! Evaluate lift modes at volume quadrature nodes
-!                    lift_gq_vol_x = matmul(val_vol,lift_modes_x)
-!                    lift_gq_vol_y = matmul(val_vol,lift_modes_y)
-!                    lift_gq_vol_z = matmul(val_vol,lift_modes_z)
+                    ! Project onto element basis, evaluate at element quadrature nodes
                     lift_gq_vol_x = matmul(br2_vol,var_diff_x)
                     lift_gq_vol_y = matmul(br2_vol,var_diff_y)
                     lift_gq_vol_z = matmul(br2_vol,var_diff_z)
@@ -2333,18 +2297,6 @@ contains
             var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
 
 
-!            ! TODO: KLUDGE
-!            if ( (worker%element_info%idomain_g == 6)  .and. &
-!                 (worker%element_info%ielement_g == 1) .and. &
-!                 (worker%iface == 2) .and.                   &
-!                 (trim(field) == 'Pressure_TEMP') ) then
-!                var_p = 100000._rk
-!                print*, 'setting thrice!'
-!            end if
-!
-
-
-
             ! Get ALE transformation
             ale_g_m = worker%get_det_jacobian_grid_face('value', 'face interior')
             ale_g_p = worker%get_det_jacobian_grid_face('value', 'face exterior')
@@ -2356,6 +2308,8 @@ contains
 
 
             ! Difference. Relative to exterior element, so reversed
+            ! Relative to the exterior element, var_m is the exterior state
+            ! and var_p is the interior state.
             var_diff = HALF*(var_m - var_p) 
 
             ! Multiply by weights
@@ -2366,30 +2320,11 @@ contains
             var_diff_y = var_diff_weighted * normy
             var_diff_z = var_diff_weighted * normz
 
-            !
-            ! Project onto basis
-            !
-!            ! Approach 1: start
-!            rhs_x = matmul(val_face_trans,var_diff_x)
-!            rhs_y = matmul(val_face_trans,var_diff_y)
-!            rhs_z = matmul(val_face_trans,var_diff_z)
-!
-!            ! Local solve for lift modes in element basis
-!            lift_modes_x = matmul(invmass,rhs_x)
-!            lift_modes_y = matmul(invmass,rhs_y)
-!            lift_modes_z = matmul(invmass,rhs_z)
-!
-!            ! Evaluate lift modes at quadrature nodes
-!            lift_gq_face_x = matmul(val_face,lift_modes_x)
-!            lift_gq_face_y = matmul(val_face,lift_modes_y)
-!            lift_gq_face_z = matmul(val_face,lift_modes_z)
-!            ! stop
-
-            ! Approach 2: start
+            ! 1: Lift boundary difference. Project into element basis.
+            ! 2: Evaluate lift modes at face quadrature nodes
             lift_gq_face_x = matmul(br2_face,var_diff_x)
             lift_gq_face_y = matmul(br2_face,var_diff_y)
             lift_gq_face_z = matmul(br2_face,var_diff_z)
-            ! stop
             
             ! Store lift
             call worker%cache%set_data(field,'face exterior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, iface)
@@ -2416,8 +2351,12 @@ contains
     !>  Handle computing lift for an external element, when the face is a boundary face.
     !!
     !!  In this case, the external element does NOT exist, so we use the interior element. 
-    !!  This is kind of like assuming that a boundary element exists of equal size to 
-    !!  the interior element.
+    !!  !This is kind of like assuming that a boundary element exists of equal size to 
+    !!  !the interior element.
+    !!
+    !!  Actually, on the boundary, we basically just need the interior lift because we aren't
+    !!  computing an average flux. Rather we are just computing a boundary flux, so here we
+    !!  essentially compute the interior lift and use it for the boundary.
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/14/2016
@@ -2488,11 +2427,15 @@ contains
                     val_face         => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_face('Value',iface_n),            &
                     invmass          => worker%mesh%domain(idomain_l)%elems(ielement_l)%invmass,                                        &
                     br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face)
+                    !br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface_n)%br2_face)
 
             ! Get normal vector. Use reverse of the normal vector from the interior element since no exterior element exists.
-            normx = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,1)
-            normy = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,2)
-            normz = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,3)
+            !normx = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,1)
+            !normy = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,2)
+            !normz = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,3)
+            normx = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,1)
+            normy = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,2)
+            normz = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,3)
 
             ! Get interior/exterior state
             var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
@@ -2507,7 +2450,8 @@ contains
             var_p = var_p*ale_g_p
 
             ! Difference. Relative to exterior element, so reversed
-            var_diff = HALF*(var_m - var_p) 
+            !var_diff = HALF*(var_m - var_p) 
+            var_diff = HALF*(var_p - var_m) 
 
 
             ! Multiply by weights
@@ -2520,32 +2464,11 @@ contains
             var_diff_z = var_diff_weighted * normz
 
 
-            !
-            ! Project onto basis
-            !
-             ! Approach 1: start
-!            rhs_x = matmul(val_face_trans,var_diff_x)
-!            rhs_y = matmul(val_face_trans,var_diff_y)
-!            rhs_z = matmul(val_face_trans,var_diff_z)
-!
-!
-!            ! Local solve for lift modes in element basis
-!            lift_modes_x = matmul(invmass,rhs_x)
-!            lift_modes_y = matmul(invmass,rhs_y)
-!            lift_modes_z = matmul(invmass,rhs_z)
-!
-!
-!            ! Evaluate lift modes at quadrature nodes
-!            lift_gq_x = matmul(val_face,lift_modes_x)
-!            lift_gq_y = matmul(val_face,lift_modes_y)
-!            lift_gq_z = matmul(val_face,lift_modes_z)
-!            ! stop
-
-            ! Approach 2: start
+            ! 1: Lift boundary difference. Project into element basis.
+            ! 2: Evaluate lift modes at face quadrature nodes
             lift_gq_x = matmul(br2_face,var_diff_x)
             lift_gq_y = matmul(br2_face,var_diff_y)
             lift_gq_z = matmul(br2_face,var_diff_z)
-            ! stop
             
 
             ! Store lift
@@ -2627,12 +2550,12 @@ contains
         ! there were a reflected element like the receiver element that was acting as 
         ! the donor.
         !
-        associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface),                            &
-                    val_face_trans   => transpose(worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_face('Value',iface)),    &
-                    val_face         => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_face('Value',iface),               &
-                    val_vol          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_element('Value'),                  &
-                    invmass          => worker%mesh%domain(idomain_l)%elems(ielement_l)%invmass,                                                &
-                    br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face )
+        associate ( weights        => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface),                            &
+                    val_face_trans => transpose(worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_face('Value',iface)),    &
+                    val_face       => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_face('Value',iface),               &
+                    val_vol        => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_element('Value'),                  &
+                    invmass        => worker%mesh%domain(idomain_l)%elems(ielement_l)%invmass,                                                &
+                    br2_face       => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face )
 
 
             ! Use reversed normal vectors of receiver element
@@ -2643,17 +2566,6 @@ contains
             ! Get interior/exterior state
             var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
             var_p = worker%cache%get_data(field,'face exterior', 'value', 0, worker%function_info%seed, iface)
-
-
-!            ! TODO: KLUDGE
-!            !((worker%iface == 1) .or. (worker%iface == 2)) .and. &
-!            if ( (worker%element_info%idomain_g == 6) .and. &
-!                 (worker%iface == 1)                  .and. &
-!                 (trim(field) == 'Pressure_TEMP') ) then
-!                !var_p(1) = 100000._rk
-!                var_m = 100000._rk
-!                print*, 'setting once!'
-!            end if
 
 
 
@@ -2678,32 +2590,11 @@ contains
             var_diff_y = var_diff_weighted * normy
             var_diff_z = var_diff_weighted * normz
 
-            !
-            ! Project onto basis
-            !
-
-!            ! Approach 1: start
-!            rhs_x = matmul(val_face_trans,var_diff_x)
-!            rhs_y = matmul(val_face_trans,var_diff_y)
-!            rhs_z = matmul(val_face_trans,var_diff_z)
-!
-!            ! Local solve for lift modes in element basis
-!            lift_modes_x = matmul(invmass,rhs_x)
-!            lift_modes_y = matmul(invmass,rhs_y)
-!            lift_modes_z = matmul(invmass,rhs_z)
-!
-!            ! Evaluate lift modes at quadrature nodes
-!            lift_gq_face_x = matmul(val_face,lift_modes_x)
-!            lift_gq_face_y = matmul(val_face,lift_modes_y)
-!            lift_gq_face_z = matmul(val_face,lift_modes_z)
-!            ! stop
-
-
-            ! Approach 2: start
+            ! 1: Lift boundary difference. Project into element basis.
+            ! 2: Evaluate lift modes at face quadrature nodes
             lift_gq_face_x = matmul(br2_face,var_diff_x)
             lift_gq_face_y = matmul(br2_face,var_diff_y)
             lift_gq_face_z = matmul(br2_face,var_diff_z)
-            ! stop 
             
             ! Store lift
             call worker%cache%set_data(field,'face exterior', lift_gq_face_x, 'lift face', 1, worker%function_info%seed, iface)

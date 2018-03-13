@@ -367,6 +367,7 @@ contains
 
         !
         ! Compute BR2 matrix
+        !   val * invmass * val_trans
         !
         val_e = self%basis_s%interpolator_element('Value')
         val_f = self%basis_s%interpolator_face('Value',self%iface)

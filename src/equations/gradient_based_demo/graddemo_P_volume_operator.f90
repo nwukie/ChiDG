@@ -87,9 +87,6 @@ contains
         grad1_pbc = worker%get_field('Pressure_TEMP', 'grad1', 'element')
         grad2_pbc = worker%get_field('Pressure_TEMP', 'grad2', 'element')
         grad3_pbc = worker%get_field('Pressure_TEMP', 'grad3', 'element')
-        !grad1_pbc = worker%get_field('Pressure_TEMP', 'grad1', 'element', use_lift_faces=[1,2,3,4])
-        !grad2_pbc = worker%get_field('Pressure_TEMP', 'grad2', 'element', use_lift_faces=[1,2,3,4])
-        !grad3_pbc = worker%get_field('Pressure_TEMP', 'grad3', 'element', use_lift_faces=[1,2,3,4])
 
 
         grad1_p = worker%get_field('Pressure Gradient - 1', 'value', 'element')
@@ -100,10 +97,6 @@ contains
         !
         ! Compute volume flux at quadrature nodes
         !
-        !flux_1 = grad1_pbc - 132000._rk*sin(132._rk * worker%x('volume'))
-        !flux_1 = grad1_pbc - grad1_p
-        !flux_2 = grad2_pbc - grad2_p
-        !flux_3 = grad3_pbc 
         flux_1 = grad1_pbc - grad1_p
         flux_2 = grad2_pbc - grad2_p
         flux_3 = grad3_pbc - grad3_p

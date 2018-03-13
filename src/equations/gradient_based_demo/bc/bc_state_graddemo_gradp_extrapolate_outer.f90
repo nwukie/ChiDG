@@ -3,6 +3,7 @@ module bc_state_graddemo_gradp_extrapolate_outer
     use mod_kinds,              only: rk,ik
     use mod_constants,          only: ZERO, ONE, TWO, HALF, ME, CYLINDRICAL
     use mod_interpolate,        only: interpolate_face_autodiff
+    use mod_fluid,              only: gam
     use type_mesh,              only: mesh_t
     use type_face_info,         only: face_info_t
     use type_bc_state,          only: bc_state_t
@@ -70,24 +71,14 @@ contains
 
 
 
-
     !>  Initialize boundary group coupling.
     !!
-    !!  This coupling occurs because each face uses an
-    !!  average pressure that is computed over the group. The average pressure
-    !!  calculation couples every element on the group. This coupling is initialized
-    !!  here.
+    !!  Call global coupling routine to initialize implicit coupling between each
+    !!  element with every other element on the boundary, a result of averaging
+    !!  and Fourier transform operations.
     !!
-    !!  Coupling initialization:
-    !!      1: each process loops through its local faces, initializes coupling
-    !!         of all local faces with all other local faces.
-    !!
-    !!      2: loop through ranks in bc_COMM
-    !!          a: iproc broadcasts information about its coupling to bc_COMM
-    !!          b: all other procs receive from iproc and initialize parallel coupling
-    !!
-    !!  @author Nathan A. Wukie average_pressure
-    !!  @date   4/18/2017
+    !!  @author Nathan A. Wukie
+    !!  @date   2/18/2018
     !!
     !--------------------------------------------------------------------------------
     subroutine init_bc_coupling(self,mesh,group_ID,bc_COMM)
@@ -96,241 +87,7 @@ contains
         integer(ik),                                intent(in)      :: group_ID
         type(mpi_comm),                             intent(in)      :: bc_COMM
 
-        integer(ik) :: patch_ID, face_ID, elem_ID, patch_ID_coupled, face_ID_coupled,   &
-                       idomain_g, idomain_l, ielement_g, ielement_l, iface,             &
-                       bc_IRANK, bc_NRANK, ierr, iproc, nbc_elements,     &
-                       ielem, neqns, nterms_s, ngq, ibc
-
-        integer(ik) :: idomain_g_coupled, idomain_l_coupled, ielement_g_coupled, ielement_l_coupled, &
-                       iface_coupled, proc_coupled
-
-        real(rk),       allocatable :: interp_coords_def(:,:)
-        real(rk),       allocatable :: areas(:)
-        real(rk)                    :: total_area
-
-
-
-        !
-        ! For each face, initialize coupling with all faces on the current processor.
-        !
-        do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
-            do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
-
-                
-                !
-                ! Loop through, initialize coupling
-                !
-                do patch_ID_coupled = 1,mesh%bc_patch_group(group_ID)%npatches()
-                    do face_ID_coupled = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
-
-
-                        !
-                        ! Get block-element index of current face_ID_coupled
-                        !
-                        idomain_g  = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%idomain_g()
-                        idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%idomain_l()
-                        ielement_g = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%ielement_g(face_ID_coupled)
-                        ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%ielement_l(face_ID_coupled)
-                        iface      = mesh%bc_patch_group(group_ID)%patch(patch_ID_coupled)%iface(     face_ID_coupled)
-
-
-                        neqns      = mesh%domain(idomain_l)%faces(ielement_l,iface)%neqns
-                        nterms_s   = mesh%domain(idomain_l)%faces(ielement_l,iface)%nterms_s
-                        total_area = mesh%domain(idomain_l)%faces(ielement_l,iface)%total_area
-                        areas      = mesh%domain(idomain_l)%faces(ielement_l,iface)%differential_areas
-                        interp_coords_def   = mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def
-
-
-
-                        !
-                        ! For the face (patch_ID,face_ID) add the element on (patch_ID_coupled,face_ID_coupled)
-                        !
-                        call mesh%bc_patch_group(group_ID)%patch(patch_ID)%add_coupled_element(face_ID, idomain_g,  &
-                                                                                                        idomain_l,  &
-                                                                                                        ielement_g, &
-                                                                                                        ielement_l, &
-                                                                                                        iface,      &
-                                                                                                        IRANK)
-
-                        call mesh%bc_patch_group(group_ID)%patch(patch_ID)%set_coupled_element_data(face_ID, idomain_g,     &
-                                                                                                             ielement_g,    &
-                                                                                                             neqns,         &
-                                                                                                             nterms_s,      &
-                                                                                                             total_area,    &
-                                                                                                             areas,         &
-                                                                                                             interp_coords_def)
-
-
-                    end do ! face_ID_couple
-                end do ! patch_ID_couple
-
-            end do ! face_ID
-        end do ! patch_ID
-
-
-
-
-
-
-
-        !
-        ! Get bc_NRANK, bc_IRANK from bc_COMM
-        !
-        call MPI_Comm_Size(bc_COMM, bc_NRANK, ierr)
-        call MPI_Comm_Rank(bc_COMM, bc_IRANK, ierr)
-
-
-
-
-
-        !
-        ! Initialize coupling with faces on other processors
-        !
-        do iproc = 0,bc_NRANK-1
-
-
-
-            !
-            ! Send local elements out
-            !
-            if (iproc == bc_IRANK) then
-
-
-                nbc_elements = mesh%bc_patch_group(group_ID)%nfaces()
-                call MPI_Bcast(IRANK,        1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                call MPI_Bcast(nbc_elements, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-
-
-                do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
-                    do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
-
-                        idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l()
-                        ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
-                        iface      = mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
-                        
-                        ! Broadcast element for coupling
-                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g(),         1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l(),         1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID), 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID), 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID),      1, MPI_INTEGER, iproc, bc_COMM, ierr)
-
-
-                        ! Broadcast auxiliary data
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%neqns,      1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%nterms_s,   1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%total_area, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-
-                        ngq = size(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def,1)
-                        call MPI_Bcast(ngq,                                                                          1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%differential_areas,          ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,1),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,2),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:,3),      ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        !call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:)%c1_,    ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        !call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:)%c2_,    ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-                        !call MPI_Bcast(mesh%domain(idomain_l)%faces(ielement_l,iface)%interp_coords_def(:)%c3_,    ngq, MPI_INTEGER, iproc, bc_COMM, ierr)
-
-                    end do ! face_ID
-                end do ! patch_ID
-            
-
-
-
-
-
-
-
-
-            !
-            ! All other processors recieve
-            !
-            else
-
-
-                call MPI_Bcast(proc_coupled, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                call MPI_Bcast(nbc_elements, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-
-
-
-                !
-                ! For the face (patch_ID,face_ID) add each element from the sending proc
-                !
-                do ielem = 1,nbc_elements
-
-                    ! Receive coupled element
-                    call MPI_BCast(idomain_g_coupled,  1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                    call MPI_BCast(idomain_l_coupled,  1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                    call MPI_BCast(ielement_g_coupled, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                    call MPI_BCast(ielement_l_coupled, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                    call MPI_BCast(iface_coupled,      1, MPI_INTEGER, iproc, bc_COMM, ierr)
-
-
-                    ! Receive auxiliary data
-                    call MPI_BCast(neqns,     1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                    call MPI_BCast(nterms_s,  1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                    call MPI_BCast(total_area,1, MPI_INTEGER, iproc, bc_COMM, ierr)
-
-
-                    call MPI_BCast(ngq, 1, MPI_INTEGER, iproc, bc_COMM, ierr)
-                    if (allocated(areas) ) deallocate(areas, interp_coords_def)
-                    allocate(areas(ngq), interp_coords_def(ngq,3), stat=ierr)
-                    if (ierr /= 0) call AllocationError
-
-
-                    call MPI_BCast(areas,           ngq, MPI_REAL8, iproc, bc_COMM, ierr)
-                    call MPI_BCast(interp_coords_def(:,1), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
-                    call MPI_BCast(interp_coords_def(:,2), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
-                    call MPI_BCast(interp_coords_def(:,3), ngq, MPI_REAL8, iproc, bc_COMM, ierr)
-
-
-                    !
-                    ! Each face on the current proc adds the off-processor element to their list 
-                    ! of coupled elems
-                    !
-                    do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
-                        do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
-
-                            call mesh%bc_patch_group(group_ID)%patch(patch_ID)%add_coupled_element(face_ID, idomain_g_coupled,     &
-                                                                                                            idomain_l_coupled,     &
-                                                                                                            ielement_g_coupled,    &
-                                                                                                            ielement_l_coupled,    &
-                                                                                                            iface_coupled,         &
-                                                                                                            proc_coupled)
-
-                            call mesh%bc_patch_group(group_ID)%patch(patch_ID)%set_coupled_element_data(face_ID, idomain_g_coupled,     &
-                                                                                                                 ielement_g_coupled,    &
-                                                                                                                 neqns,                 &
-                                                                                                                 nterms_s,              &
-                                                                                                                 total_area,            &
-                                                                                                                 areas,                 &
-                                                                                                                 interp_coords_def)
-
-
-
-
-
-                        end do ! face_ID
-                    end do ! patch_ID
-
-                end do !ielem
-
-
-
-
-            end if
-
-
-
-
-            call MPI_Barrier(bc_COMM,ierr)
-        end do
-
-
-
-
-
-
+        call self%init_bc_coupling_global(mesh,group_ID,bc_comm)
 
     end subroutine init_bc_coupling
     !******************************************************************************************
@@ -487,6 +244,25 @@ contains
         type(AD_D), allocatable, dimension(:)   ::  &
             pressure, grad1_pressure, grad2_pressure, grad3_pressure
 
+! 1D Char
+!        type(AD_D), allocatable, dimension(:)   ::  &
+!            density, invdensity, dvel1_dmom1, dvel1_ddensity, grad1_density, grad1_mom1, mom1, grad1_pressure_m, grad2_pressure_m, grad3_pressure_m, c, pressure_m, grad1_vel1
+
+! Axial Momentum
+!        type(AD_D), allocatable, dimension(:)   ::  &
+!            density, mom1, mom2, mom3, invdensity, vel1, vel2, vel3, &
+!            grad1_density, grad2_density, grad3_density, grad1_vel1, grad2_vel2, grad3_vel3,    &
+!            dvel1_ddensity, dvel2_ddensity, dvel3_ddensity, dvel1_dmom1, dvel2_dmom2, dvel3_dmom3,  &
+!            grad3_mom3, grad2_mom2, grad1_mom1, grad2_mom1, grad3_mom1
+
+! Axial Momentum + 1D Char
+        type(AD_D), allocatable, dimension(:)   ::  &
+            density, mom1, mom2, mom3, invdensity, vel1, vel2, vel3, &
+            grad1_density, grad2_density, grad3_density, grad1_vel1, grad2_vel2, grad3_vel3,    &
+            dvel1_ddensity, dvel2_ddensity, dvel3_ddensity, dvel1_dmom1, dvel2_dmom2, dvel3_dmom3,  &
+            grad3_mom3, grad2_mom2, grad1_mom1, grad2_mom1, grad3_mom1, pressure_m, grad1_pressure_m,   &
+            grad2_pressure_m, grad3_pressure_m, c
+
         type(AD_D)  :: p_avg, delta_p
 
         real(rk),   allocatable :: p_avg_user(:), grad1_p_user(:), grad2_p_user(:), grad3_p_user(:)
@@ -533,6 +309,158 @@ contains
         grad2_pressure = grad2_p_user
         grad3_pressure = grad3_p_user
 
+
+
+!        !-----------------------------------------------------
+!        !
+!        !   Try computing normal gradient from characteristics
+!        !
+!        !-----------------------------------------------------
+!        density          = worker%get_field('Density',    'value', 'face interior')
+!        mom1             = worker%get_field('Momentum-1', 'value', 'face interior')
+!        invdensity       = ONE/density
+!        dvel1_dmom1      = invdensity
+!        dvel1_ddensity   = -invdensity*invdensity*mom1
+!        grad1_density    = worker%get_field('Density'   , 'grad1', 'face interior')
+!        grad1_mom1       = worker%get_field('Momentum-1', 'grad1', 'face interior')
+!        grad1_vel1       = dvel1_ddensity*grad1_density  +  dvel1_dmom1*grad1_mom1
+!        grad1_pressure_m = worker%get_field('Pressure_TEMP', 'grad1', 'face interior')
+!        grad2_pressure_m = worker%get_field('Pressure_TEMP', 'grad2', 'face interior')
+!        grad3_pressure_m = worker%get_field('Pressure_TEMP', 'grad3', 'face interior')
+!        pressure_m       = worker%get_field('Pressure_TEMP', 'value', 'face interior')
+!        c = sqrt(gam*pressure_m/density)
+!        ! 1D Char seems to work here
+!        grad1_pressure = -HALF*(grad1_pressure_m  +  density*c*grad1_vel1)
+
+
+!        !--------------------------------------------------------------
+!        !
+!        !   Try computing normal gradient from normal momentum equation
+!        !
+!        !--------------------------------------------------------------
+!        density          = worker%get_field('Density',    'value', 'face interior')
+!        mom1             = worker%get_field('Momentum-1', 'value', 'face interior')
+!        mom2             = worker%get_field('Momentum-2', 'value', 'face interior')
+!        mom3             = worker%get_field('Momentum-3', 'value', 'face interior')
+!        invdensity       = ONE/density
+!
+!        grad1_density = worker%get_field('Density', 'grad1', 'face interior')
+!        grad2_density = worker%get_field('Density', 'grad2', 'face interior')
+!        grad3_density = worker%get_field('Density', 'grad3', 'face interior')
+!
+!        grad1_mom1 = worker%get_field('Momentum-1', 'grad1', 'face interior')
+!        grad2_mom1 = worker%get_field('Momentum-1', 'grad2', 'face interior')
+!        grad3_mom1 = worker%get_field('Momentum-1', 'grad3', 'face interior')
+!
+!        grad2_mom2 = worker%get_field('Momentum-2', 'grad2', 'face interior')
+!        grad3_mom3 = worker%get_field('Momentum-3', 'grad3', 'face interior')
+!
+!
+!        !
+!        ! Compute velocities
+!        !
+!        vel1 = mom1/density
+!        vel2 = mom2/density
+!        vel3 = mom3/density
+!
+!        !
+!        ! compute velocity jacobians
+!        !
+!        dvel1_ddensity  = -invdensity*invdensity*mom1
+!        dvel2_ddensity  = -invdensity*invdensity*mom2
+!        dvel3_ddensity  = -invdensity*invdensity*mom3
+!
+!        dvel1_dmom1 = invdensity
+!        dvel2_dmom2 = invdensity
+!        dvel3_dmom3 = invdensity
+!
+!        !
+!        ! compute velocity gradients via chain rule:
+!        !
+!        !   u = f(rho,rhou)
+!        !
+!        !   grad(u) = dudrho * grad(rho)  +  dudrhou * grad(rhou)
+!        !
+!        grad1_vel1 = dvel1_ddensity*grad1_density  +  dvel1_dmom1*grad1_mom1
+!        grad2_vel2 = dvel2_ddensity*grad2_density  +  dvel2_dmom2*grad2_mom2
+!        grad3_vel3 = dvel3_ddensity*grad3_density  +  dvel3_dmom3*grad3_mom3
+!
+!        
+!        grad1_pressure = -( (vel1*grad1_mom1  +  mom1*grad1_vel1)  +  &
+!                            (vel2*grad2_mom1  +  mom1*grad2_vel2)  +  &
+!                            (vel3*grad3_mom1  +  mom1*grad3_vel3) )
+
+
+        !---------------------------------------------------------------
+        !
+        ! Combination of 1D char and axial momentum
+        !
+        !---------------------------------------------------------------
+        density          = worker%get_field('Density',    'value', 'face interior')
+        mom1             = worker%get_field('Momentum-1', 'value', 'face interior')
+        mom2             = worker%get_field('Momentum-2', 'value', 'face interior')
+        mom3             = worker%get_field('Momentum-3', 'value', 'face interior')
+        invdensity       = ONE/density
+
+        grad1_density = worker%get_field('Density', 'grad1', 'face interior')
+        grad2_density = worker%get_field('Density', 'grad2', 'face interior')
+        grad3_density = worker%get_field('Density', 'grad3', 'face interior')
+
+        grad1_mom1 = worker%get_field('Momentum-1', 'grad1', 'face interior')
+        grad2_mom1 = worker%get_field('Momentum-1', 'grad2', 'face interior')
+        grad3_mom1 = worker%get_field('Momentum-1', 'grad3', 'face interior')
+
+        grad2_mom2 = worker%get_field('Momentum-2', 'grad2', 'face interior')
+        grad3_mom3 = worker%get_field('Momentum-3', 'grad3', 'face interior')
+
+
+        grad1_pressure_m = worker%get_field('Pressure_TEMP', 'grad1', 'face interior')
+        grad2_pressure_m = worker%get_field('Pressure_TEMP', 'grad2', 'face interior')
+        grad3_pressure_m = worker%get_field('Pressure_TEMP', 'grad3', 'face interior')
+        pressure_m       = worker%get_field('Pressure_TEMP', 'value', 'face interior')
+        c = sqrt(gam*pressure_m/density)
+
+
+        !
+        ! Compute velocities
+        !
+        vel1 = mom1/density
+        vel2 = mom2/density
+        vel3 = mom3/density
+
+        !
+        ! compute velocity jacobians
+        !
+        dvel1_ddensity  = -invdensity*invdensity*mom1
+        dvel2_ddensity  = -invdensity*invdensity*mom2
+        dvel3_ddensity  = -invdensity*invdensity*mom3
+
+        dvel1_dmom1 = invdensity
+        dvel2_dmom2 = invdensity
+        dvel3_dmom3 = invdensity
+
+        !
+        ! compute velocity gradients via chain rule:
+        !
+        !   u = f(rho,rhou)
+        !
+        !   grad(u) = dudrho * grad(rho)  +  dudrhou * grad(rhou)
+        !
+        grad1_vel1 = dvel1_ddensity*grad1_density  +  dvel1_dmom1*grad1_mom1
+        grad2_vel2 = dvel2_ddensity*grad2_density  +  dvel2_dmom2*grad2_mom2
+        grad3_vel3 = dvel3_ddensity*grad3_density  +  dvel3_dmom3*grad3_mom3
+
+        
+        !grad1_pressure = -( (vel1*grad1_mom1  +  mom1*grad1_vel1)  +  &
+        !                    (vel2*grad2_mom1  +  mom1*grad2_vel2)  +  &
+        !                    (vel3*grad3_mom1  +  mom1*grad3_vel3) )
+
+        ! Contribution from 1D characteristics
+        grad1_pressure = -HALF*(grad1_pressure_m  +  density*c*grad1_vel1)
+
+        ! Contribution from axial momentum equation
+        grad1_pressure = grad1_pressure - ( (vel2*grad2_mom1  +  mom1*grad2_vel2)  +  &
+                                            (vel3*grad3_mom1  +  mom1*grad3_vel3) )
 
         !
         ! Store boundary condition state

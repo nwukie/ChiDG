@@ -858,12 +858,6 @@ contains
 
 
 
-
-
-
-
-
-
     !> Given a character string corresponding to the name of a given domain,
     !! find and return the index of that domain in the ChiDG_data instance.
     !!

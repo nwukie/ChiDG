@@ -69,15 +69,12 @@ contains
         !
         ! Get equation set index
         !
-        !eqn_ID = mesh%domain(idomain_l)%eqn_ID
         if (present(iface)) then
             if (trim(cache_component) == 'face interior') then
-                !eqn_ID = mesh%domain(idomain_l)%eqn_ID
                 eqn_ID = mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
             else if (trim(cache_component) == 'face exterior') then
                 if ( (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == INTERIOR) .or. &
                      (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == BOUNDARY) ) then
-                    !eqn_ID = mesh%domain(idomain_l)%eqn_ID
                     eqn_ID = mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
                 else if (mesh%domain(idomain_l)%faces(ielement_l,iface)%ftype == CHIMERA) then
                     ChiID = mesh%domain(idomain_l)%faces(ielement_l,iface)%ChiID
@@ -87,7 +84,6 @@ contains
                 end if
             end if
         else
-            !eqn_ID = mesh%domain(idomain_l)%eqn_ID
             eqn_ID = mesh%domain(idomain_l)%elems(ielement_l)%eqn_ID
         end if
 
@@ -342,6 +338,7 @@ contains
                     end if
 
                 end do
+
 
                 ! If the current component doesn't have a linearization wrt seed, just take any
                 ! gradient and zero out autodiff

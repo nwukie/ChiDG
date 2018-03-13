@@ -146,6 +146,8 @@ module type_element
         logical :: geom_initialized = .false.
         logical :: numInitialized   = .false.
 
+        real(rk),   allocatable :: bc(:,:)
+        logical                 :: bc_initialized = .false.
 
     contains
 

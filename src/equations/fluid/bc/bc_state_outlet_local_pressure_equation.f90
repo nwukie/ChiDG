@@ -252,9 +252,7 @@ contains
             face_info%iface      = iface_coupled
 
 
-            !
             ! Get solution
-            !
             idensity = 1
             imom1    = 2
             imom2    = 3
@@ -262,9 +260,7 @@ contains
             ienergy  = 5
             itime    = 1
 
-            !
             ! Interpolate coupled element solution on face of coupled element
-            !
             density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, idensity, itime, 'value', ME)
             mom1    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom1,    itime, 'value', ME)
             mom2    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom2,    itime, 'value', ME)
@@ -276,26 +272,18 @@ contains
             end if
             
 
-            !
             ! Compute quantities for averaging
-            !
             pressure = (gam-ONE)*(energy - HALF*(mom1*mom1 + mom2*mom2 + mom3*mom3)/density)
 
 
-            !
             ! Get weights + areas
-            !
             weights   = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%weights_face(iface_coupled)
             areas     = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%data(icoupled)%areas
             face_area = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%data(icoupled)%total_area
 
 
-
-            !
             ! Integrate and contribute to average
-            !
             face_p = sum(pressure*areas*weights)
-
 
             if (allocated(p_integral%xp_ad_)) then
                 p_integral = p_integral + face_p
@@ -303,22 +291,14 @@ contains
                 p_integral = face_p
             end if
 
-
             total_area = total_area + face_area
 
 
         end do !icoupled
 
-
-
-        !
         ! Compute average pressure:
         !   area-weighted pressure integral over the total area
-        !   
-        !
         p_avg = p_integral / total_area
-
-
 
     end subroutine compute_averages
     !*******************************************************************************************
@@ -674,7 +654,8 @@ contains
         grad2_p_user = self%bcproperties%compute('Pressure Gradient - 2',worker%time(),worker%coords())
         grad3_p_user = self%bcproperties%compute('Pressure Gradient - 3',worker%time(),worker%coords())
 
-        delta_p = p_avg - p_avg_user(1)
+!        delta_p = p_avg - p_avg_user(1)
+        delta_p = p_avg_user(1) - p_avg
 
 
 
@@ -720,13 +701,10 @@ contains
             call compute_pressure_gradient(worker,grad1_sigma,grad2_sigma,grad3_sigma)
 
 
-            associate ( weights  => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface),                &
-                        grad1    => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%grad1,                                &
-                        grad2    => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%grad2,                                &
-                        grad3    => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%grad3,                                &
-                        br2_face => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face,                             &
-                        br2_vol  => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_vol,                              &
-                        val      => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%interpolator_face('Value',iface),    &
+            associate ( weights  => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface),                        &
+                        br2_face => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face,                                     &
+                        br2_vol  => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_vol,                                      &
+                        val      => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%interpolator_face('Value',iface),     &
                         valtrans => transpose(worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%interpolator_face('Value',iface)) )
 
 
@@ -739,6 +717,9 @@ contains
                 grad1_p = grad1_sigma
                 grad2_p = grad2_sigma
                 grad3_p = grad3_sigma
+
+                ! Compute lift
+                diff = HALF*(p_sigma - p)
 
             ! BOUNDARY FACE
             else
@@ -755,12 +736,14 @@ contains
                 grad2_p = grad2_p_user
                 grad3_p = grad3_p_user
 
+                ! Compute lift
+                diff = HALF*(p_sigma - p)
+                diff = HALF*(delta_p)
+
             end if
 
 
 
-            ! Compute lift
-            diff = HALF*(p_sigma - p)
 
             ! Multiply by normal. Note: normal is scaled by face jacobian.
             diff_1 = diff * weights * worker%normal(1)
@@ -793,7 +776,6 @@ contains
             integral = matmul(valtrans,integrand)
 
             ! Accumulate residual from face
-            !R_modes = R_modes  +  matmul(valtrans,weights*integrand)
             R_modes = R_modes  +  integral
 
 
@@ -807,7 +789,6 @@ contains
         associate ( weights     => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_element(),               &
                     jinv        => worker%mesh%domain(idomain_l)%elems(ielement_l)%jinv,                                    & 
                     val         => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_element('Value'),   &
-                    valtrans    => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_element('Value'),   &
                     grad1       => worker%mesh%domain(idomain_l)%elems(ielement_l)%grad1,                                   &
                     grad2       => worker%mesh%domain(idomain_l)%elems(ielement_l)%grad2,                                   &
                     grad3       => worker%mesh%domain(idomain_l)%elems(ielement_l)%grad3,                                   &
@@ -900,7 +881,8 @@ contains
 
 
         resid = huge(1._rk)
-        tol = 1.e-1_rk
+        !tol = 1.e-1_rk
+        tol = 1.e-3_rk
         R_modes = self%compute_local_residual(worker,bc_comm,p_modes,p_avg)
         do while (resid > tol)
 

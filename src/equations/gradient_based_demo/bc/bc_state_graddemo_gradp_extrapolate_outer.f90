@@ -389,78 +389,78 @@ contains
 !        grad1_pressure = -( (vel1*grad1_mom1  +  mom1*grad1_vel1)  +  &
 !                            (vel2*grad2_mom1  +  mom1*grad2_vel2)  +  &
 !                            (vel3*grad3_mom1  +  mom1*grad3_vel3) )
-
-
-        !---------------------------------------------------------------
-        !
-        ! Combination of 1D char and axial momentum
-        !
-        !---------------------------------------------------------------
-        density          = worker%get_field('Density',    'value', 'face interior')
-        mom1             = worker%get_field('Momentum-1', 'value', 'face interior')
-        mom2             = worker%get_field('Momentum-2', 'value', 'face interior')
-        mom3             = worker%get_field('Momentum-3', 'value', 'face interior')
-        invdensity       = ONE/density
-
-        grad1_density = worker%get_field('Density', 'grad1', 'face interior')
-        grad2_density = worker%get_field('Density', 'grad2', 'face interior')
-        grad3_density = worker%get_field('Density', 'grad3', 'face interior')
-
-        grad1_mom1 = worker%get_field('Momentum-1', 'grad1', 'face interior')
-        grad2_mom1 = worker%get_field('Momentum-1', 'grad2', 'face interior')
-        grad3_mom1 = worker%get_field('Momentum-1', 'grad3', 'face interior')
-
-        grad2_mom2 = worker%get_field('Momentum-2', 'grad2', 'face interior')
-        grad3_mom3 = worker%get_field('Momentum-3', 'grad3', 'face interior')
-
-
-        grad1_pressure_m = worker%get_field('Pressure_TEMP', 'grad1', 'face interior')
-        grad2_pressure_m = worker%get_field('Pressure_TEMP', 'grad2', 'face interior')
-        grad3_pressure_m = worker%get_field('Pressure_TEMP', 'grad3', 'face interior')
-        pressure_m       = worker%get_field('Pressure_TEMP', 'value', 'face interior')
-        c = sqrt(gam*pressure_m/density)
-
-
-        !
-        ! Compute velocities
-        !
-        vel1 = mom1/density
-        vel2 = mom2/density
-        vel3 = mom3/density
-
-        !
-        ! compute velocity jacobians
-        !
-        dvel1_ddensity  = -invdensity*invdensity*mom1
-        dvel2_ddensity  = -invdensity*invdensity*mom2
-        dvel3_ddensity  = -invdensity*invdensity*mom3
-
-        dvel1_dmom1 = invdensity
-        dvel2_dmom2 = invdensity
-        dvel3_dmom3 = invdensity
-
-        !
-        ! compute velocity gradients via chain rule:
-        !
-        !   u = f(rho,rhou)
-        !
-        !   grad(u) = dudrho * grad(rho)  +  dudrhou * grad(rhou)
-        !
-        grad1_vel1 = dvel1_ddensity*grad1_density  +  dvel1_dmom1*grad1_mom1
-        grad2_vel2 = dvel2_ddensity*grad2_density  +  dvel2_dmom2*grad2_mom2
-        grad3_vel3 = dvel3_ddensity*grad3_density  +  dvel3_dmom3*grad3_mom3
-
-        
-        !grad1_pressure = -( (vel1*grad1_mom1  +  mom1*grad1_vel1)  +  &
-        !                    (vel2*grad2_mom1  +  mom1*grad2_vel2)  +  &
-        !                    (vel3*grad3_mom1  +  mom1*grad3_vel3) )
-
-        ! Contribution from 1D characteristics
-        grad1_pressure = -HALF*(grad1_pressure_m  +  density*c*grad1_vel1)
-
-        ! Contribution from axial momentum equation
-        grad1_pressure = grad1_pressure - ( (vel2*grad2_mom1  +  mom1*grad2_vel2)  +  &
-                                            (vel3*grad3_mom1  +  mom1*grad3_vel3) )
+!
+!
+!        !---------------------------------------------------------------
+!        !
+!        ! Combination of 1D char and axial momentum
+!        !
+!        !---------------------------------------------------------------
+!        density          = worker%get_field('Density',    'value', 'face interior')
+!        mom1             = worker%get_field('Momentum-1', 'value', 'face interior')
+!        mom2             = worker%get_field('Momentum-2', 'value', 'face interior')
+!        mom3             = worker%get_field('Momentum-3', 'value', 'face interior')
+!        invdensity       = ONE/density
+!
+!        grad1_density = worker%get_field('Density', 'grad1', 'face interior')
+!        grad2_density = worker%get_field('Density', 'grad2', 'face interior')
+!        grad3_density = worker%get_field('Density', 'grad3', 'face interior')
+!
+!        grad1_mom1 = worker%get_field('Momentum-1', 'grad1', 'face interior')
+!        grad2_mom1 = worker%get_field('Momentum-1', 'grad2', 'face interior')
+!        grad3_mom1 = worker%get_field('Momentum-1', 'grad3', 'face interior')
+!
+!        grad2_mom2 = worker%get_field('Momentum-2', 'grad2', 'face interior')
+!        grad3_mom3 = worker%get_field('Momentum-3', 'grad3', 'face interior')
+!
+!
+!        grad1_pressure_m = worker%get_field('Pressure_TEMP', 'grad1', 'face interior')
+!        grad2_pressure_m = worker%get_field('Pressure_TEMP', 'grad2', 'face interior')
+!        grad3_pressure_m = worker%get_field('Pressure_TEMP', 'grad3', 'face interior')
+!        pressure_m       = worker%get_field('Pressure_TEMP', 'value', 'face interior')
+!        c = sqrt(gam*pressure_m/density)
+!
+!
+!        !
+!        ! Compute velocities
+!        !
+!        vel1 = mom1/density
+!        vel2 = mom2/density
+!        vel3 = mom3/density
+!
+!        !
+!        ! compute velocity jacobians
+!        !
+!        dvel1_ddensity  = -invdensity*invdensity*mom1
+!        dvel2_ddensity  = -invdensity*invdensity*mom2
+!        dvel3_ddensity  = -invdensity*invdensity*mom3
+!
+!        dvel1_dmom1 = invdensity
+!        dvel2_dmom2 = invdensity
+!        dvel3_dmom3 = invdensity
+!
+!        !
+!        ! compute velocity gradients via chain rule:
+!        !
+!        !   u = f(rho,rhou)
+!        !
+!        !   grad(u) = dudrho * grad(rho)  +  dudrhou * grad(rhou)
+!        !
+!        grad1_vel1 = dvel1_ddensity*grad1_density  +  dvel1_dmom1*grad1_mom1
+!        grad2_vel2 = dvel2_ddensity*grad2_density  +  dvel2_dmom2*grad2_mom2
+!        grad3_vel3 = dvel3_ddensity*grad3_density  +  dvel3_dmom3*grad3_mom3
+!
+!        
+!        !grad1_pressure = -( (vel1*grad1_mom1  +  mom1*grad1_vel1)  +  &
+!        !                    (vel2*grad2_mom1  +  mom1*grad2_vel2)  +  &
+!        !                    (vel3*grad3_mom1  +  mom1*grad3_vel3) )
+!
+!        ! Contribution from 1D characteristics
+!        grad1_pressure = -HALF*(grad1_pressure_m  +  density*c*grad1_vel1)
+!
+!        ! Contribution from axial momentum equation
+!        grad1_pressure = grad1_pressure - ( (vel2*grad2_mom1  +  mom1*grad2_vel2)  +  &
+!                                            (vel3*grad3_mom1  +  mom1*grad3_vel3) )
 
         !
         ! Store boundary condition state

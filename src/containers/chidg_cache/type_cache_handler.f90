@@ -2370,7 +2370,7 @@ contains
         type(bc_state_group_t),     intent(inout)   :: bc_state_group(:)
         integer(ik),                intent(in)      :: ieqn
 
-        integer(ik) :: idomain_l, ielement_l, iface, idomain_l_n, ielement_l_n, iface_n, eqn_ID
+        integer(ik) :: idomain_l, ielement_l, iface, iface_n, eqn_ID
         logical     :: boundary_face, interior_face
 
         type(AD_D), allocatable, dimension(:)   ::          &
@@ -2414,28 +2414,20 @@ contains
         field = worker%prop(eqn_ID)%get_primary_field_name(ieqn)
 
 
-
-        !
-        ! Neighbor element
-        !
-        idomain_l_n  = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_domain_l
-        ielement_l_n = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%ineighbor_element_l
-
-
         associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface_n),                         &
                     val_face_trans   => transpose(worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_face('Value',iface_n)), &
                     val_face         => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_face('Value',iface_n),            &
                     invmass          => worker%mesh%domain(idomain_l)%elems(ielement_l)%invmass,                                        &
-                    br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face)
-                    !br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface_n)%br2_face)
+                    !br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face)
+                    br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface_n)%br2_face)
 
             ! Get normal vector. Use reverse of the normal vector from the interior element since no exterior element exists.
-            !normx = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,1)
-            !normy = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,2)
-            !normz = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,3)
-            normx = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,1)
-            normy = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,2)
-            normz = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,3)
+            normx = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,1)
+            normy = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,2)
+            normz = -worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,3)
+            !normx = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,1)
+            !normy = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,2)
+            !normz = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%norm(:,3)
 
             ! Get interior/exterior state
             var_m = worker%cache%get_data(field,'face interior', 'value', 0, worker%function_info%seed, iface)
@@ -2450,8 +2442,8 @@ contains
             var_p = var_p*ale_g_p
 
             ! Difference. Relative to exterior element, so reversed
-            !var_diff = HALF*(var_m - var_p) 
-            var_diff = HALF*(var_p - var_m) 
+            var_diff = HALF*(var_m - var_p) 
+            !var_diff = HALF*(var_p - var_m) 
 
 
             ! Multiply by weights

@@ -35,9 +35,10 @@ module bc_state_outlet_local_pressure_equation
         procedure   :: init                 ! Set-up bc state with options/name etc.
         procedure   :: compute_bc_state     ! boundary condition function implementation
         procedure   :: init_bc_coupling     ! Implement specialized initialization procedure
-        procedure   :: init_bc_local_problem
         procedure   :: compute_averages
 
+
+        procedure   :: compute_local_linearization
         procedure   :: compute_local_residual
         procedure   :: converge_local_problem
 
@@ -106,7 +107,7 @@ contains
     !!  @date   3/13/2018
     !!
     !--------------------------------------------------------------------------------
-    subroutine init_bc_local_problem(self,worker,bc_comm,p_avg)
+    subroutine compute_local_linearization(self,worker,bc_comm,p_avg)
         class(outlet_local_pressure_equation_t),    intent(inout)   :: self
         type(chidg_worker_t),                       intent(inout)   :: worker
         type(mpi_comm),                             intent(in)      :: bc_comm
@@ -178,7 +179,7 @@ contains
         end if ! .not. initialized
 
 
-    end subroutine init_bc_local_problem
+    end subroutine compute_local_linearization
     !**********************************************************************************************
 
 
@@ -341,8 +342,8 @@ contains
         ! Compute average pressure: p_avg
         call self%compute_averages(worker,bc_comm,p_avg)
 
-        ! Make sure local problem matrices are initialized
-        call self%init_bc_local_problem(worker,bc_comm,p_avg)
+        ! Make sure local problem linearization is initialized
+        call self%compute_local_linearization(worker,bc_comm,p_avg)
 
         ! Converge element-local problem: p_modes
         call self%converge_local_problem(worker,bc_comm,p_modes,p_avg)

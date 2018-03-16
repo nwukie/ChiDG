@@ -1517,6 +1517,7 @@ contains
         norm_1  = self%normal(1)
         norm_2  = self%normal(2)
         norm_3  = self%normal(3)
+        darea = norm_1 ! allocate to avoid DEBUG error
         darea = sqrt(norm_1**TWO+norm_2**TWO+norm_3**TWO)
 
 

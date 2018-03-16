@@ -582,6 +582,7 @@ contains
         !
         ! Compute unit normals
         !
+        norm_mag = self%norm(:,1) ! Allocate to avoid DEBUG error
         norm_mag = sqrt(self%norm(:,XI_DIR)**TWO + self%norm(:,ETA_DIR)**TWO + self%norm(:,ZETA_DIR)**TWO)
         self%unorm(:,XI_DIR)   = self%norm(:,XI_DIR  )/norm_mag
         self%unorm(:,ETA_DIR)  = self%norm(:,ETA_DIR )/norm_mag
@@ -710,6 +711,7 @@ contains
         !
         ! Compute vector magnitude, which is the differential area
         !
+        norm_mag = self%norm(:,1) ! Allocate to avoid DEBUG error
         norm_mag = sqrt(norm(:,XI_DIR)**TWO + norm(:,ETA_DIR)**TWO + norm(:,ZETA_DIR)**TWO)
         self%unorm_def(:,XI_DIR)   = norm(:,XI_DIR  )/norm_mag
         self%unorm_def(:,ETA_DIR)  = norm(:,ETA_DIR )/norm_mag

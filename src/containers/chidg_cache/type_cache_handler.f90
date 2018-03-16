@@ -1862,10 +1862,6 @@ contains
 
 
             associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface),                            &
-                        val_face_trans   => transpose(worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_face('Value',iface)),    &
-                        val_face         => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_face('Value',iface),               &
-                        val_vol          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_element('Value'),                  &
-                        invmass          => worker%mesh%domain(idomain_l)%elems(ielement_l)%invmass,                                                &
                         br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face,                                         &
                         br2_vol          => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_vol)
 
@@ -2233,8 +2229,7 @@ contains
 
         character(:),   allocatable                 :: field
         real(rk),       allocatable, dimension(:)   :: normx, normy, normz, weights, ale_g_m, ale_g_p
-        real(rk),       allocatable, dimension(:,:) :: val_face_trans, val_face, val_vol, &
-                                                       invmass, br2_face
+        real(rk),       allocatable, dimension(:,:) :: br2_face
 
 
         !
@@ -2266,20 +2261,12 @@ contains
 
         if ( local_neighbor ) then
             weights          = worker%mesh%domain(idomain_l_n)%elems(ielement_l_n)%basis_s%weights_face(iface_n)
-            val_face_trans   = transpose(worker%mesh%domain(idomain_l_n)%elems(ielement_l_n)%basis_s%interpolator_face('Value',iface_n))
-            val_face         = worker%mesh%domain(idomain_l_n)%elems(ielement_l_n)%basis_s%interpolator_face('Value',iface_n)
-            val_vol          = worker%mesh%domain(idomain_l_n)%elems(ielement_l_n)%basis_s%interpolator_element('Value')
-            invmass          = worker%mesh%domain(idomain_l_n)%elems(ielement_l_n)%invmass
             br2_face         = worker%mesh%domain(idomain_l_n)%faces(ielement_l_n,iface_n)%br2_face
 
 
         else if ( remote_neighbor ) then
             ! User local element gq instance. Assumes same order of accuracy.
             weights          = worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface_n)
-            val_face_trans   = transpose(worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_face('Value',iface_n))
-            val_face         = worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_face('Value',iface_n)
-            val_vol          = worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_element('Value')
-            invmass          = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%neighbor_invmass
             br2_face         = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%neighbor_br2_face
 
 
@@ -2415,9 +2402,6 @@ contains
 
 
         associate ( weights          => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface_n),                         &
-                    val_face_trans   => transpose(worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_face('Value',iface_n)), &
-                    val_face         => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_face('Value',iface_n),            &
-                    invmass          => worker%mesh%domain(idomain_l)%elems(ielement_l)%invmass,                                        &
                     !br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face)
                     br2_face         => worker%mesh%domain(idomain_l)%faces(ielement_l,iface_n)%br2_face)
 
@@ -2543,10 +2527,6 @@ contains
         ! the donor.
         !
         associate ( weights        => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface),                            &
-                    val_face_trans => transpose(worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_face('Value',iface)),    &
-                    val_face       => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_face('Value',iface),               &
-                    val_vol        => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_element('Value'),                  &
-                    invmass        => worker%mesh%domain(idomain_l)%elems(ielement_l)%invmass,                                                &
                     br2_face       => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face )
 
 

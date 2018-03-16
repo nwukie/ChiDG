@@ -192,7 +192,7 @@ contains
         
         associate ( q => self%chidg%data%sdata%q )
 
-            tol     = 1.e-13_rk
+            tol     = 1.e-9_rk
             idomain = 1
             ielem   = 14
             itime   = 1
@@ -241,8 +241,6 @@ contains
             u_ref(3) = sqrt(physical_nodes(3,1)*physical_nodes(3,1) + physical_nodes(3,2)*physical_nodes(3,2) + physical_nodes(3,3)*physical_nodes(3,3))
             u_ref(4) = sqrt(physical_nodes(4,1)*physical_nodes(4,1) + physical_nodes(4,2)*physical_nodes(4,2) + physical_nodes(4,3)*physical_nodes(4,3))
 
-            print*, 'u_ref:', u_ref/1000._rk
-            print*, 'u:', u(:)%x_ad_/1000._rk
 
             u_ref = u_ref/1000._rk
             u     = u/1000._rk

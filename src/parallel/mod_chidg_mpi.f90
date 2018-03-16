@@ -103,12 +103,22 @@ contains
         ! Check if MPI_Finalize has been called already or by someone else
         !
         call MPI_Finalized(mpi_is_finalized,ierr)
+        if (ierr /= 0) then
+            print*, '********************* WARNING *******************'
+            print*, 'chidg_mpi_finalize: MPI_Finalized returned error.'
+            print*, '*************************************************'
+        end if
 
 
         !
         ! Initialize MPI
         !
         if ( .not. mpi_is_finalized ) call MPI_Finalize(ierr)
+        if (ierr /= 0) then
+            print*, '********************* WARNING ******************'
+            print*, 'chidg_mpi_finalize: MPI_Finalize returned error.'
+            print*, '************************************************'
+        end if
 
 
     end subroutine chidg_mpi_finalize

@@ -647,6 +647,7 @@ contains
         !
         ! Initialize ChiDG environment
         !
+        IO_DESTINATION   = 'file'
         call this%chidg%start_up('mpi',this%ChiDG_COMM)
         call this%chidg%start_up('core')
 
@@ -692,7 +693,6 @@ contains
         nonlinear_solver = 'quasi_newton'
         linear_solver    = 'fgmres_cgs'
         preconditioner   = 'RASILU0'
-        IO_DESTINATION   = 'file'
         !------------------------------------------------------------------------------
 
 

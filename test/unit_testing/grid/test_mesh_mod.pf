@@ -1,6 +1,7 @@
 module test_mesh_mod
     use pfunit_mod
     use mod_kinds,              only: rk,ik
+    use mod_constants,          only: IO_DESTINATION
     use mod_test_utilities,     only: create_mesh
 
     use type_chidg,             only: chidg_t
@@ -51,6 +52,7 @@ contains
         !
         ! Initialize ChiDG environment
         !
+        IO_DESTINATION='file'
         call this%chidg%start_up('core')
         
 

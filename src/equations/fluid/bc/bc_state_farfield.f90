@@ -128,6 +128,7 @@ contains
         v_input   = self%bcproperties%compute('Velocity-2', worker%time(), worker%coords())
         w_input   = self%bcproperties%compute('Velocity-3', worker%time(), worker%coords())
         T_input   = p_input/(rho_input*Rgas)
+        c_input   = T_input ! allocate to silence error on DEBUG build
         c_input   = sqrt(gam*Rgas*T_input)
 
 

@@ -4,7 +4,7 @@ module test_element_linearB_mod
     use mod_kinds,      only: rk,ik
     use mod_chidg_mpi,  only: IRANK
     use mod_constants,  only: ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, EIGHT, NINE, TEN, &
-                              XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX 
+                              XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, IO_DESTINATION
     use type_face,      only: face_t
     use type_element,   only: element_t
     use type_element_connectivity,  only: element_connectivity_t
@@ -57,6 +57,7 @@ contains
                                            ineighbor_neqns, ineighbor_nterms_s
         
         
+        IO_DESTINATION='file'
         call this%chidg%start_up('core')
         allocate(this%faces(6))
         

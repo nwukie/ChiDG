@@ -2,7 +2,8 @@ module test_domain_linear_mod
     use pfunit_mod
     use mod_kinds,          only: rk,ik
     use mod_constants,      only: ZERO, ONE, TWO, THREE, FIVE, SIX, EIGHT, NINE, TEN, &
-                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NFACES
+                                  XI_MIN, XI_MAX, ETA_MIN, ETA_MAX, ZETA_MIN, ZETA_MAX, NFACES, &
+                                  IO_DESTINATION
     use mod_test_utilities, only: create_mesh
 
     use type_chidg,                 only: chidg_t
@@ -58,6 +59,7 @@ contains
         !
         ! Initialize ChiDG environment
         !
+        IO_DESTINATION='file'
         call this%chidg%start_up('core')
         
 

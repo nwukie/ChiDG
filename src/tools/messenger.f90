@@ -11,7 +11,7 @@ module messenger
     character(2), parameter     :: default_delimiter = '  '     ! Delimiter of line parameters
     character(:), allocatable   :: current_delimiter            ! Delimiter of line parameters
     integer                     :: default_column_width = 20    ! Default column width
-    integer                     :: unit                         ! Unit of log file
+    integer                     :: log_unit                         ! Unit of log file
     integer, parameter          :: max_msg_length = 300         ! Maximum width of message line
     integer                     :: msg_length = max_msg_length  ! Default msg_length
     logical                     :: log_initialized = .false.    ! Status of log file
@@ -23,7 +23,7 @@ contains
 
     !> Log initialization
     !!
-    !!  Gets new available file unit and opens log file. 'unit' is a module 
+    !!  Gets new available file unit and opens log file. 'log_unit' is a module 
     !!  variable that can be used throughout the module to access the log file.
     !!
     !!  @author Nathan A. Wukie
@@ -35,20 +35,21 @@ contains
         logical         :: file_opened = .false.
         character(8)    :: date
         character(10)   :: time
+        integer         :: ierr
 
-        !
         ! Open file
-        !
         inquire(file='chidg.log', opened=file_opened)
-
-        if ( .not. file_opened ) then
-            open(newunit=unit, file='chidg.log')
+        if (.not. file_opened ) then
+            open(newunit=log_unit, file='chidg.log', form='formatted', access='sequential', iostat=ierr)
+            if (ierr /= 0) then
+                print*, '************** WARNING ****************'
+                print*, 'log_init: error opening log file.', ' iostat = ', ierr
+                print*, '***************************************'
+            end if
         end if
 
 
-        !
         ! Confirm log initialized
-        !
         log_initialized = .true.
 
 
@@ -84,15 +85,20 @@ contains
     subroutine log_finalize()
 
         logical :: file_opened = .false.
+        logical :: file_exists = .false.
+        integer :: ierr
 
         !
         ! Close file
         !
-        inquire(file='chidg.log', opened=file_opened)
+        inquire(log_unit, exist=file_exists, opened=file_opened, iostat=ierr)
+        !if (ierr /= 0) then
+        !    print*, "************** WARNING ****************"
+        !    print*, "Error inquiring about log 'chidg.log'. ", " ierr: ", ierr, " File exists: ", file_exists, " File opened: ", file_opened
+        !    print*, "***************************************"
+        !end if
 
-        if ( file_opened ) then
-            close(unit)
-        end if
+        if (file_opened) close(log_unit)
 
     end subroutine log_finalize
     !******************************************************************************************
@@ -721,7 +727,7 @@ contains
         !
         ! Handle optional input
         !
-        write_handle = unit
+        write_handle = log_unit
         if (present(handle)) write_handle = handle
 
 

@@ -115,18 +115,11 @@ contains
         class(linear_solver_t),     optional,   intent(inout)   :: linear_solver
         class(preconditioner_t),    optional,   intent(inout)   :: preconditioner
 
-
-        !
         ! Simply solve the nonlinear system. No iteration in time.
-        !
         call nonlinear_solver%solve(data,self%system,linear_solver,preconditioner)
 
-
-        !
         ! Store end residual from nonlinear solver.
-        !
         call self%residual_norm%push_back(nonlinear_solver%residual_norm%at(nonlinear_solver%residual_norm%size()))
-
 
     end subroutine step
     !******************************************************************************************
@@ -157,9 +150,7 @@ contains
         call data%sdata%rhs%clear()
         if (differentiate) call data%sdata%lhs%clear()
 
-        !
         ! Steady equation, so we only need the spatial operators computed.
-        !
         data%time_manager%itime = 1
         data%time_manager%t     = ZERO
         call update_space(data,differentiate,timing)

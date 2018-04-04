@@ -1,10 +1,13 @@
 add_lib_sources(
                 bc_state_inlet_total.f90
                 bc_state_outlet_constant_pressure.f90
-                bc_state_outlet_pressure_equation.f90
-                bc_state_outlet_local_pressure_equation.f90
                 bc_state_outlet_auxiliary_equations.f90
-                bc_state_outlet_profile_extrapolation.f90
+                bc_state_outlet_neumann_pressure_fd.f90
+                bc_state_outlet_neumann_pressure_fd_test.f90
+                bc_state_outlet_neumann_pressure_localdg.f90
+                bc_state_outlet_neumann_pressure_localdg_test.f90
+                bc_state_outlet_neumann_pressure_globaldg.f90
+                bc_state_outlet_neumann_LODI_localdg.f90
                 bc_state_wall.f90
                 bc_state_moving_wall.f90
                 bc_state_fluid_extrapolate.f90

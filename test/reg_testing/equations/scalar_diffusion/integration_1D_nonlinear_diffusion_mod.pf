@@ -189,15 +189,7 @@ module integration_1D_nonlinear_diffusion_mod
     !*******************************************************************************
 
 
-
-
-
-
-
 contains
-
-
-
 
 
     !----------------------------------------------------------------------------------------
@@ -251,16 +243,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
     !-------------------------------------------------------------------------------
     !                           Builder Methods for new equation set
     !-------------------------------------------------------------------------------
@@ -296,22 +278,15 @@ contains
 
         type(equation_set_t)    :: nonlinear_diffusion_eqn
         
-        !
         ! Set equationset name.
-        !
         call nonlinear_diffusion_eqn%set_name("Test 1D Nonlinear Diffusion")
 
-
-        !
         ! Add spatial operators
-        !
         call nonlinear_diffusion_eqn%add_operator("Scalar Diffusion Boundary Average Operator")
         call nonlinear_diffusion_eqn%add_operator("Scalar Diffusion Volume Operator")
         call nonlinear_diffusion_eqn%add_operator("Scalar Diffusion BC Operator")
 
-        !
         ! Add nonlinear coefficient model
-        !
         call nonlinear_diffusion_eqn%add_model('Testing 1D Nonlinear Diffusion :: Coefficient Model')
 
     end function build
@@ -330,7 +305,6 @@ contains
     !> Parameter constructors
     !!
     !!
-    !!
     !----------------------------------------------------------------------------------------
     function newTest(test_parameter) result(test)
         type(case_grid_order),  intent(in)          :: test_parameter
@@ -346,7 +320,6 @@ contains
 
 
     !> Parameter initialization
-    !!
     !!
     !!
     !----------------------------------------------------------------------------------------
@@ -434,8 +407,6 @@ contains
 
 
 
-
-
     !>  Set up test routine.
     !!
     !!  This routine reads the grid file, sets up boundary conditions, initializes storage
@@ -445,7 +416,6 @@ contains
     !!
     !!  @author Nathan A. Wukie
     !!  @author Nathan A. Wukie (AFRL)
-    !!
     !!
     !----------------------------------------------------------------------------------------
     subroutine setUp(this)
@@ -472,6 +442,7 @@ contains
         !
         ! Initialize ChiDG environment
         !
+        IO_DESTINATION   = 'file'
         call this%chidg%start_up('mpi',this%ChiDG_COMM)
         call this%chidg%start_up('core')
 
@@ -505,7 +476,6 @@ contains
         nonlinear_solver = 'newton'
         linear_solver    = 'fgmres'
         preconditioner   = 'RASILU0'
-        IO_DESTINATION   = 'file'
         !------------------------------------------------------------------------------
 
 
@@ -604,29 +574,19 @@ contains
         call MPI_Barrier(this%ChiDG_COMM,ierr)
 
 
-        !
         ! Set ChiDG components
-        !
         call this%chidg%set('Solution Order',   integer_input=this%order)
         call this%chidg%set('Time Integrator',  algorithm=time_integrator)
         call this%chidg%set('Nonlinear Solver', algorithm=nonlinear_solver, options=noptions)
         call this%chidg%set('Linear Solver',    algorithm=linear_solver,    options=loptions)
         call this%chidg%set('Preconditioner',   algorithm=preconditioner)
 
-
-        !
         ! Read grid
-        !
         call this%chidg%read_mesh(this%gridfile)
 
-
-
-
-        !
         ! Need to enforce reorthogonalization in FGMRES because the vector 
         ! norms get very small and easily become linearly dependent, particularlly
         ! when running in parallel when the linear system becomes more difficult to solve
-        !
         associate ( fgmres => this%chidg%linear_solver )
             select type (fgmres)
                 type is (fgmres_t)
@@ -635,16 +595,12 @@ contains
         end associate
             
 
-
-        !
         ! Initialize solution. 
         !
         ! This problem depends strongly on having a good initial solution, or else
         ! the cfl0 needs to be reduced a lot. Setting a linear initial solution here
         ! from 0 to 3.5 on x=[0,1]
-        !
         call create_function(fcn,'polynomial')
-
         call fcn%set_option('f',3.5_rk)
         call this%chidg%data%sdata%q_in%project(this%chidg%data%mesh,fcn,1)
 
@@ -677,11 +633,6 @@ contains
 
 
 
-
-
-
-
-
     !>  Run the simulation.
     !!
     !!      - compute the entropy error, test against the reference values.
@@ -706,21 +657,13 @@ contains
         order_index = get_order_index(self%order)
 
 
-        !
         ! Run ChiDG simulation
-        !
         call self%chidg%run(write_initial=.false., write_final=.false.)
 
-
-        !
         ! Compute error
-        !
         computed_error = compute_1D_nonlinear_diffusion_error(self%chidg%data,self%ChiDG_COMM)
 
-
-        !
         ! Store the computed error for the current case
-        !
         if (self%gridtype == 'singleblock') then
             error(        npes_index,grid_index,order_index) = computed_error
         else if (self%gridtype == 'chimera') then
@@ -729,8 +672,6 @@ contains
 
     end subroutine run_calculations
     !****************************************************************************************
-
-
 
 
 
@@ -764,13 +705,8 @@ contains
                     mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
                     mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
 
-                    
-                    !
                     ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
-                    !
                     convergence_rate = (log10(error_previous)-log10(error_current))/(log10(mesh_parameter_previous)-log10(mesh_parameter_current))
-
-                
                     @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
 
                 end do
@@ -780,9 +716,6 @@ contains
 
     end subroutine test_err_conform
     !****************************************************************************************
-
-
-
 
 
 
@@ -805,9 +738,6 @@ contains
 
         tol = 0.1_rk
 
-
-
-
         do inpes = 1,5
             do igrid = 2,2  ! Start at the second grid because we need the previous grid in order to compute a rate 
                 do iorder = 1,3
@@ -818,13 +748,8 @@ contains
                     mesh_parameter_previous = mesh_parameter(igrid-1,iorder)
                     mesh_parameter_current  = mesh_parameter(igrid  ,iorder)
 
-                    
-                    !
                     ! Compute convergence rate of spatial operators. log10(error)/log10(mesh spacing)
-                    !
                     convergence_rate = (log10(error_previous)-log10(error_current))/(log10(mesh_parameter_previous)-log10(mesh_parameter_current))
-
-                
                     @assertGreaterThan(convergence_rate, real(iorder+1,rk)-tol)
 
                 end do
@@ -834,9 +759,6 @@ contains
 
     end subroutine test_err_chimera
     !****************************************************************************************
-
-
-
 
 
 
@@ -869,66 +791,39 @@ contains
         associate (mesh => data%mesh, sdata => data%sdata, &
                    eqnset => data%eqnset, prop => data%eqnset(1)%prop)
 
-
-            !
             ! Get equation indices
-            !
             iu = prop%get_primary_field_index("u")
 
-
-            !
             ! Zero error accumulator
-            !
             error_squared_sum = ZERO
 
-
-
-            !
             ! Loop over elements and accumulate error
-            !
             itime = 1
             do idom = 1,data%mesh%ndomains()
                 do ielem = 1,data%mesh%domain(idom)%nelem
 
-
-                    !
                     ! Compute the analytical solution at the quadrature nodes
                     !      U(x) = (1/lambda)ln((A+Bx)/D)  for x in [0,1]
-                    !
                     x_gq = mesh%domain(idom)%elems(ielem)%interp_coords(:,1)
                     u_analytical = log(ONE + 50._rk*x_gq)
 
-                    !
                     ! Interpolate DG numerical solution
-                    !
                     u_dg = interpolate_element_standard(mesh,sdata%q,idom,ielem,iu,itime,'value')
 
-                    !
                     ! Compute error at GQ nodes
-                    !                    
                     gq_error_squared = (u_analytical - u_dg)**TWO
 
-
-                    !
                     ! Integrate error
-                    !
                     element_error_squared = sum(gq_error_squared * mesh%domain(idom)%elems(ielem)%jinv * mesh%domain(idom)%elems(ielem)%basis_s%weights_element())
 
-
-                    !
                     ! Accumulate error from each element
-                    !
                     error_squared_sum = error_squared_sum + element_error_squared
 
-
                 end do ! ielem
-
             end do ! idom
 
 
         end associate
-
-
 
         ! Reduce the total error across processors
         call MPI_AllReduce(error_squared_sum,error_squared_sum_reduced,1,MPI_REAL8,MPI_SUM,ChiDG_COMM,ierr)
@@ -943,22 +838,10 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-
-
     !>
     !!
     !!  @author Nathan A. Wukie (AFRL)
     !!  @date   9/16/2016
-    !!
-    !!
     !!
     !---------------------------------------------------------------------------------------
     function mesh_parameter(igrid,iorder) result(param)
@@ -994,13 +877,6 @@ contains
 
     end function mesh_parameter
     !****************************************************************************************
-
-
-
-
-
-
-
 
 
 

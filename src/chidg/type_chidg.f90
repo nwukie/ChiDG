@@ -1438,46 +1438,30 @@ contains
         call write_line("---------------------------------------------------", io_proc=GLOBAL_MASTER)
 
 
-        !
         ! Prerun processing
         !   : Getting/computing auxiliary fields etc.
-        !
         call self%process()
 
 
-
-        !
         ! Initialize algorithms
-        !
         call self%init('algorithms')
 
 
-        !
         ! Check optional incoming parameters
-        !
         option_write_initial = .false.
         option_write_final   = .true.
         if (present(write_initial)) option_write_initial = write_initial
         if (present(write_final))   option_write_final   = write_final
 
 
-
-
-        !
         ! Write initial solution
-        !
         if (option_write_initial) then
             call self%write_mesh('initial.h5')
             call self%write_fields('initial.h5')
         end if
 
 
-
-
-        
-        !
         ! Initialize time integrator state
-        !
         call self%time_integrator%initialize_state(self%data)
 
         do iread = 0,NRANK-1
@@ -1488,38 +1472,23 @@ contains
         end do
 
 
-
-        
-        !
         ! Get the prefix in the file name in case of multiple output files
-        !
         prefix = get_file_prefix(solutionfile_out,'.h5')       
 
 
-
-
-        !
         ! Execute time_integrator, nsteps times 
-        !
         wcount = 1
         nsteps = self%data%time_manager%nsteps
         call write_line("Step","System residual", columns=.true., column_width=30, io_proc=GLOBAL_MASTER)
         do istep = 1,nsteps
             
-
-            !
             ! Call time integrator to take a step. 
-            !
             call self%time_integrator%step(self%data,               &
                                            self%nonlinear_solver,   &
                                            self%linear_solver,      &
                                            self%preconditioner)
            
-           
-
-            !
             ! Write solution every nwrite steps
-            !
             if (wcount == self%data%time_manager%nwrite) then
                 if (self%data%time_manager%t < 1.) then
                     write(filename, "(A,F8.6,A3)") trim(prefix)//'_', self%data%time_manager%t, '.h5'
@@ -1531,28 +1500,18 @@ contains
                 wcount = 0
             end if
 
-
-
-            !
             ! Print diagnostics
-            !
             call write_line("TIME INTEGRATOR", istep, self%time_integrator%residual_norm%at(istep), io_proc=GLOBAL_MASTER)
-
 
             wcount = wcount + 1
 
-
         end do !istep
 
-                
-        !
         ! Write the final solution to hdf file
-        !        
         if (option_write_final) then
             call self%write_mesh(solutionfile_out)
             call self%write_fields(solutionfile_out)
         end if
-
 
     end subroutine run
     !*****************************************************************************************

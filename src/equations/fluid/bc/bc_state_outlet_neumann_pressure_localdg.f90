@@ -1,7 +1,7 @@
-module bc_state_outlet_local_pressure_equation
+module bc_state_outlet_neumann_pressure_localdg
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE, HALF, TWO, NFACES, ME
+    use mod_constants,          only: ZERO, ONE, HALF, TWO, FOUR, NFACES, ME
     use mod_fluid,              only: gam, Rgas
 
     use type_mesh,              only: mesh_t
@@ -26,7 +26,7 @@ module bc_state_outlet_local_pressure_equation
     !!  @date   1/31/2016
     !!
     !----------------------------------------------------------------------------------------
-    type, public, extends(bc_state_t) :: outlet_local_pressure_equation_t
+    type, public, extends(bc_state_t) :: outlet_neumann_pressure_localdg_t
 
         real(rk),   allocatable :: dRdp(:,:,:)
 
@@ -42,7 +42,7 @@ module bc_state_outlet_local_pressure_equation
         procedure   :: compute_local_residual
         procedure   :: converge_local_problem
 
-    end type outlet_local_pressure_equation_t
+    end type outlet_neumann_pressure_localdg_t
     !****************************************************************************************
 
 
@@ -59,18 +59,16 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(outlet_local_pressure_equation_t),   intent(inout) :: self
+        class(outlet_neumann_pressure_localdg_t),   intent(inout) :: self
         
         !
         ! Set name, family
         !
-        call self%set_name("Outlet - Local Pressure Equation")
+        call self%set_name("Outlet - Neumann Pressure Local DG")
         call self%set_family("Outlet")
 
-        call self%bcproperties%add('Average Pressure',      'Required')
-        call self%bcproperties%add('Pressure Gradient - 1', 'Required')
-        call self%bcproperties%add('Pressure Gradient - 2', 'Required')
-        call self%bcproperties%add('Pressure Gradient - 3', 'Required')
+        call self%bcproperties%add('Average Pressure',         'Required')
+        call self%bcproperties%add('Normal Pressure Gradient', 'Required')
 
     end subroutine init
     !********************************************************************************
@@ -89,7 +87,7 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine init_bc_coupling(self,mesh,group_ID,bc_comm)
-        class(outlet_local_pressure_equation_t),    intent(inout)   :: self
+        class(outlet_neumann_pressure_localdg_t),   intent(inout)   :: self
         type(mesh_t),                               intent(inout)   :: mesh
         integer(ik),                                intent(in)      :: group_ID
         type(mpi_comm),                             intent(in)      :: bc_comm
@@ -108,7 +106,7 @@ contains
     !!
     !--------------------------------------------------------------------------------
     subroutine compute_local_linearization(self,worker,bc_comm,p_avg)
-        class(outlet_local_pressure_equation_t),    intent(inout)   :: self
+        class(outlet_neumann_pressure_localdg_t),    intent(inout)   :: self
         type(chidg_worker_t),                       intent(inout)   :: worker
         type(mpi_comm),                             intent(in)      :: bc_comm
         type(AD_D),                                 intent(in)      :: p_avg
@@ -148,7 +146,7 @@ contains
             allocate(p_modes(nterms_s), stat=ierr)
             if (ierr /= 0) call AllocationError
             p_modes(:) = zero_face(1)
-            if (size(p_modes) /= nterms_s) call chidg_signal(FATAL,'outlet_local_pressure_equation: converge_p Error 1.')
+            if (size(p_modes) /= nterms_s) call chidg_signal(FATAL,'outlet_neumann_pressure_localdg: converge_p Error 1.')
 
 
             ! Allocate jacobian matrix
@@ -193,7 +191,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute_averages(self,worker,bc_COMM, p_avg)
-        class(outlet_local_pressure_equation_t),    intent(inout)   :: self
+        class(outlet_neumann_pressure_localdg_t),    intent(inout)   :: self
         type(chidg_worker_t),                       intent(inout)   :: worker
         type(mpi_comm),                             intent(in)      :: bc_COMM
         type(AD_D),                                 intent(inout)   :: p_avg
@@ -202,7 +200,6 @@ contains
         type(face_info_t)   :: face_info
 
         type(AD_D), allocatable,    dimension(:)    :: pressure, density, mom1, mom2, mom3, energy
-
         real(rk),   allocatable,    dimension(:)    :: weights, areas, r
 
         integer(ik) :: ipatch, iface_bc, idomain_l, ielement_l, iface, ierr, itime, &
@@ -235,11 +232,7 @@ contains
         !
         do icoupled = 1,worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ncoupled_elements(face_ID)
 
-
-
-            !
             ! Get face info from coupled element we want to interpolate from
-            !
             idomain_g_coupled  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g( icoupled)
             idomain_l_coupled  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l( icoupled)
             ielement_g_coupled = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(icoupled)
@@ -272,16 +265,13 @@ contains
                 mom2 = mom2 / worker%mesh%domain(idomain_l_coupled)%elems(ielement_l_coupled)%interp_coords_def(:,1)
             end if
             
-
             ! Compute quantities for averaging
             pressure = (gam-ONE)*(energy - HALF*(mom1*mom1 + mom2*mom2 + mom3*mom3)/density)
-
 
             ! Get weights + areas
             weights   = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%weights_face(iface_coupled)
             areas     = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%data(icoupled)%areas
             face_area = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%data(icoupled)%total_area
-
 
             ! Integrate and contribute to average
             face_p = sum(pressure*areas*weights)
@@ -293,7 +283,6 @@ contains
             end if
 
             total_area = total_area + face_area
-
 
         end do !icoupled
 
@@ -319,7 +308,7 @@ contains
     !!
     !-----------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_COMM)
-        class(outlet_local_pressure_equation_t),  intent(inout)   :: self
+        class(outlet_neumann_pressure_localdg_t),  intent(inout)   :: self
         type(chidg_worker_t),               intent(inout)   :: worker
         class(properties_t),                intent(inout)   :: prop
         type(mpi_comm),                     intent(in)      :: bc_COMM
@@ -387,50 +376,31 @@ contains
         grad3_energy_m  = worker%get_field('Energy'    , 'grad3', 'face interior')
 
 
-
-
-        !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
-        !
         r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_m = mom2_m / r
         end if
 
-
-
-        !
         ! Extrapolate temperature and velocity
-        !
         T_bc = T_m
         u_bc = mom1_m/density_m
         v_bc = mom2_m/density_m
         w_bc = mom3_m/density_m
 
-
-        !
         ! Compute density, momentum, energy
-        !
         density_bc = p_bc/(Rgas*T_bc)
         mom1_bc    = u_bc*density_bc
         mom2_bc    = v_bc*density_bc
         mom3_bc    = w_bc*density_bc
         energy_bc  = p_bc/(gam - ONE) + (density_bc*HALF)*(u_bc*u_bc + v_bc*v_bc + w_bc*w_bc)
 
-
-
-        !
         ! Account for cylindrical. Convert tangential momentum back to angular momentum.
-        !
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_bc = mom2_bc * r
         end if
 
-
-
-        !
         ! Store boundary condition state
-        !
         call worker%store_bc_state('Density'   , density_bc, 'value')
         call worker%store_bc_state('Momentum-1', mom1_bc,    'value')
         call worker%store_bc_state('Momentum-2', mom2_bc,    'value')
@@ -438,9 +408,7 @@ contains
         call worker%store_bc_state('Energy'    , energy_bc,  'value')
 
 
-
-
-
+        ! Store boundary condition gradient
         call worker%store_bc_state('Density'   , grad1_density_m, 'grad1')
         call worker%store_bc_state('Density'   , grad2_density_m, 'grad2')
         call worker%store_bc_state('Density'   , grad3_density_m, 'grad3')
@@ -460,11 +428,6 @@ contains
         call worker%store_bc_state('Energy'    , grad1_energy_m,  'grad1')
         call worker%store_bc_state('Energy'    , grad2_energy_m,  'grad2')
         call worker%store_bc_state('Energy'    , grad3_energy_m,  'grad3')
-
-
-
-
-
 
 
     end subroutine compute_bc_state
@@ -513,14 +476,11 @@ contains
             grad1_mom3    = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, 4, worker%itime, 'grad1')
             grad1_energy  = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, 5, worker%itime, 'grad1')
 
-
-
             grad2_density = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, 1, worker%itime, 'grad2')
             grad2_mom1    = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, 2, worker%itime, 'grad2')
             grad2_mom2    = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, 3, worker%itime, 'grad2')
             grad2_mom3    = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, 4, worker%itime, 'grad2')
             grad2_energy  = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, 5, worker%itime, 'grad2')
-
 
             grad3_density = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, 1, worker%itime, 'grad3')
             grad3_mom1    = interpolate_element_autodiff(worker%mesh,worker%solverdata%q,worker%element_info,worker%function_info, 2, worker%itime, 'grad3')
@@ -537,14 +497,11 @@ contains
             grad1_mom3    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 4, worker%itime, 'grad1', ME)
             grad1_energy  = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 5, worker%itime, 'grad1', ME)
 
-
-
             grad2_density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 1, worker%itime, 'grad2', ME)
             grad2_mom1    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 2, worker%itime, 'grad2', ME)
             grad2_mom2    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 3, worker%itime, 'grad2', ME)
             grad2_mom3    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 4, worker%itime, 'grad2', ME)
             grad2_energy  = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 5, worker%itime, 'grad2', ME)
-
 
             grad3_density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 1, worker%itime, 'grad3', ME)
             grad3_mom1    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 2, worker%itime, 'grad3', ME)
@@ -577,11 +534,7 @@ contains
             grad3_mom2 = (grad3_mom2/r)
         end if
 
-
-
-        !
         ! Compute pressure jacobians
-        !
         dp_ddensity =  (gam-ONE)*HALF*(mom1*mom1 + mom2*mom2 + mom3*mom3)/(density*density)
         dp_dmom1    = -(gam-ONE)*mom1/density
         dp_dmom2    = -(gam-ONE)*mom2/density
@@ -589,10 +542,7 @@ contains
         dp_denergy  = dp_ddensity ! init storage
         dp_denergy  =  (gam-ONE)
 
-
-        !
         ! Compute pressure gradient
-        !
         grad1_p = dp_ddensity * grad1_density  + &
                   dp_dmom1    * grad1_mom1     + &
                   dp_dmom2    * grad1_mom2     + &
@@ -626,7 +576,7 @@ contains
     !!
     !------------------------------------------------------------------------------
     function compute_local_residual(self,worker,bc_comm,p_modes,p_avg) result(R_modes)
-        class(outlet_local_pressure_equation_t),    intent(inout)               :: self
+        class(outlet_neumann_pressure_localdg_t),    intent(inout)               :: self
         type(chidg_worker_t),                       intent(inout)               :: worker
         type(mpi_comm),                             intent(in)                  :: bc_comm
         type(AD_D),                                 intent(inout), allocatable  :: p_modes(:)
@@ -642,7 +592,7 @@ contains
 
         integer(ik) :: iface, iface_bc, idomain_l, ielement_l
 
-        real(rk),   allocatable, dimension(:) :: p_avg_user, grad1_p_user, grad2_p_user, grad3_p_user
+        real(rk),   allocatable, dimension(:) :: p_avg_user, gradn_p_user, grad1_p_user, grad2_p_user, grad3_p_user
 
         type(AD_D)  :: delta_p
 
@@ -650,12 +600,12 @@ contains
         !
         ! Get user parameter settings
         !
-        p_avg_user   = self%bcproperties%compute('Average Pressure',     worker%time(),worker%coords())
-        grad1_p_user = self%bcproperties%compute('Pressure Gradient - 1',worker%time(),worker%coords())
-        grad2_p_user = self%bcproperties%compute('Pressure Gradient - 2',worker%time(),worker%coords())
-        grad3_p_user = self%bcproperties%compute('Pressure Gradient - 3',worker%time(),worker%coords())
+        p_avg_user   = self%bcproperties%compute('Average Pressure',         worker%time(),worker%coords())
+        gradn_p_user = self%bcproperties%compute('Normal Pressure Gradient', worker%time(),worker%coords())
+        grad1_p_user = gradn_p_user*worker%unit_normal(1)
+        grad2_p_user = gradn_p_user*worker%unit_normal(2)
+        grad3_p_user = gradn_p_user*worker%unit_normal(3)
 
-!        delta_p = p_avg - p_avg_user(1)
         delta_p = p_avg_user(1) - p_avg
 
 
@@ -672,17 +622,14 @@ contains
         face_array    = ZERO
         element_array = ZERO
 
-
         ! Initialize R_modes storage
         R_modes = p_modes
         R_modes = ZERO
-
 
         ! Initialize p at quadrature nodes to zero
         lift_elem_1 = element_array
         lift_elem_2 = element_array
         lift_elem_3 = element_array
-
 
         ! Accumulate FACE residuals
         do iface = 1,NFACES
@@ -694,9 +641,6 @@ contains
             worker%iface = iface
             worker%interpolation_source = 'face interior'
 
-
-
-
             ! Get sigma
             p_sigma = worker%get_field('Pressure','value','face interior')
             call compute_pressure_gradient(worker,grad1_sigma,grad2_sigma,grad3_sigma)
@@ -706,8 +650,10 @@ contains
                         br2_face => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face,                                     &
                         br2_vol  => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_vol,                                      &
                         val      => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%interpolator_face('Value',iface),     &
+                        grad1    => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%grad1,                                        &
+                        grad2    => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%grad2,                                        &
+                        grad3    => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%grad3,                                        &
                         valtrans => transpose(worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%interpolator_face('Value',iface)) )
-
 
 
             ! INTERIOR FACE
@@ -715,12 +661,11 @@ contains
 
                 ! Take boundary state from interior original problem
                 p       = matmul(val, p_modes)
-                grad1_p = grad1_sigma
-                grad2_p = grad2_sigma
-                grad3_p = grad3_sigma
+                grad1_p = matmul(grad1,p_modes)
+                grad2_p = matmul(grad2,p_modes)
+                grad3_p = matmul(grad3,p_modes)
 
-                ! Compute lift
-                diff = HALF*(p_sigma - p)
+                diff = (p_sigma - p)
 
             ! BOUNDARY FACE
             else
@@ -737,13 +682,10 @@ contains
                 grad2_p = grad2_p_user
                 grad3_p = grad3_p_user
 
-                ! Compute lift
-                diff = HALF*(p_sigma - p)
-                diff = HALF*(delta_p)
+                diff = (p_sigma - p)
+                diff = delta_p
 
             end if
-
-
 
 
             ! Multiply by normal. Note: normal is scaled by face jacobian.
@@ -765,31 +707,24 @@ contains
 
 
             ! Penalize gradient with lift
-            grad1_p = grad1_p  +  real(NFACES,rk)*lift_face_1
-            grad2_p = grad2_p  +  real(NFACES,rk)*lift_face_2
-            grad3_p = grad3_p  +  real(NFACES,rk)*lift_face_3
+            grad1_p = grad1_p  +  lift_face_1
+            grad2_p = grad2_p  +  lift_face_2
+            grad3_p = grad3_p  +  lift_face_3
 
             integrand = weights*( (grad1_p-grad1_sigma)*worker%normal(1) +  &
                                   (grad2_p-grad2_sigma)*worker%normal(2) +  &
                                   (grad3_p-grad3_sigma)*worker%normal(3) )
-
 
             integral = matmul(valtrans,integrand)
 
             ! Accumulate residual from face
             R_modes = R_modes  +  integral
 
-
             end associate
-
-
         end do
-
-
 
         associate ( weights     => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_element(),               &
                     jinv        => worker%mesh%domain(idomain_l)%elems(ielement_l)%jinv,                                    & 
-                    val         => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%interpolator_element('Value'),   &
                     grad1       => worker%mesh%domain(idomain_l)%elems(ielement_l)%grad1,                                   &
                     grad2       => worker%mesh%domain(idomain_l)%elems(ielement_l)%grad2,                                   &
                     grad3       => worker%mesh%domain(idomain_l)%elems(ielement_l)%grad3,                                   &
@@ -801,10 +736,8 @@ contains
         worker%iface = 1
         worker%interpolation_source = 'element'
 
-
         ! Get sigma
         call compute_pressure_gradient(worker,grad1_sigma,grad2_sigma,grad3_sigma)
-
 
         ! Get grad_p
         grad1_p = matmul(grad1, p_modes)
@@ -847,7 +780,7 @@ contains
     !!
     !------------------------------------------------------------------------------
     subroutine converge_local_problem(self,worker,bc_comm,p_modes,p_avg)
-        class(outlet_local_pressure_equation_t),    intent(inout)               :: self
+        class(outlet_neumann_pressure_localdg_t),    intent(inout)               :: self
         type(chidg_worker_t),                       intent(inout)               :: worker
         type(mpi_comm),                             intent(in)                  :: bc_comm
         type(AD_D),                                 intent(inout), allocatable  :: p_modes(:)
@@ -878,11 +811,10 @@ contains
         allocate(p_modes(nterms_s), stat=ierr)
         if (ierr /= 0) call AllocationError
         p_modes(:) = zero_face(1)
-        if (size(p_modes) /= nterms_s) call chidg_signal(FATAL,'outlet_local_pressure_equation: converge_p Error 1.')
+        if (size(p_modes) /= nterms_s) call chidg_signal(FATAL,'outlet_neumann_pressure_localdg: converge_p Error 1.')
 
 
         resid = huge(1._rk)
-        !tol = 1.e-1_rk
         tol = 1.e-3_rk
         R_modes = self%compute_local_residual(worker,bc_comm,p_modes,p_avg)
         do while (resid > tol)
@@ -894,13 +826,13 @@ contains
             dp = matmul(worker%mesh%domain(idomain_l)%elems(ielement_l)%bc,R_modes)
 
             ! Apply update
-            p_modes = p_modes + dp  ! minus because R was not negated in solve
+            p_modes = p_modes + dp
 
             ! Test residual
             R_modes = self%compute_local_residual(worker,bc_comm,p_modes,p_avg)
             resid = norm2(R_modes(:)%x_ad_)
 
-            if (resid > 1.e10_rk) call chidg_signal(FATAL,"outlet_local_pressure_equation: element-local problem diverged.")
+            if (resid > 1.e10_rk) call chidg_signal(FATAL,"outlet_neumann_pressure_localdg: element-local problem diverged.")
 
         end do
 
@@ -922,7 +854,7 @@ contains
 !    !!
 !    !------------------------------------------------------------------------------
 !    subroutine converge_local_problem(self,worker,bc_comm,p_modes)
-!        class(outlet_local_pressure_equation_t),    intent(inout)               :: self
+!        class(outlet_neumann_pressure_localdg_t),    intent(inout)               :: self
 !        type(chidg_worker_t),                       intent(inout)               :: worker
 !        type(mpi_comm),                             intent(in)                  :: bc_comm
 !        type(AD_D),                                 intent(inout), allocatable  :: p_modes(:)
@@ -959,7 +891,7 @@ contains
 !        allocate(p_modes(nterms_s), stat=ierr)
 !        if (ierr /= 0) call AllocationError
 !        p_modes(:) = zero_face(1)
-!        if (size(p_modes) /= nterms_s) call chidg_signal(FATAL,'outlet_local_pressure_equation: converge_p Error 1.')
+!        if (size(p_modes) /= nterms_s) call chidg_signal(FATAL,'outlet_neumann_pressure_localdg: converge_p Error 1.')
 !
 !
 !        
@@ -979,7 +911,7 @@ contains
 !            resid = norm2(R_modes(:)%x_ad_)
 !
 !
-!            if (resid > 1.e10_rk) call chidg_signal(FATAL,"outlet_local_pressure_equation: element-local problem diverged.")
+!            if (resid > 1.e10_rk) call chidg_signal(FATAL,"outlet_neumann_pressure_localdg: element-local problem diverged.")
 !            print*, 'mode1: ', p_modes(1)%x_ad_
 !            print*, 'Residual: ', resid
 !
@@ -1009,4 +941,4 @@ contains
 
 
 
-end module bc_state_outlet_local_pressure_equation
+end module bc_state_outlet_neumann_pressure_localdg

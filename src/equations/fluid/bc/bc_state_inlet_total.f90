@@ -117,34 +117,22 @@ contains
         real(rk),       allocatable, dimension(:)   ::  &
             PT, TT, DRHO, n1, n2, n3, nmag, alpha, r, unorm_1, unorm_2, unorm_3
 
-!<<<<<<< HEAD
 
         real(rk)    :: K0, u_axial
-!=======
-!
-!        real(rk)    :: ntol, rafac
-!>>>>>>> sulu/dev
             
         integer(ik) :: ierr, igq, inewton, nmax
 
         logical :: converged
 
 
-        !
         ! Get boundary condition Total Temperature, Total Pressure, and normal vector
-        !
         PT   = self%bcproperties%compute('Total Pressure',        worker%time(), worker%coords())
         TT   = self%bcproperties%compute('Total Temperature',     worker%time(), worker%coords())
-        !DRHO = self%bcproperties%compute('Density Perturbation',  worker%time(), worker%coords())
 
-
-        !
         ! Get user-input normal vector and normalize
-        !
         n1 = self%bcproperties%compute('Normal-1', worker%time(), worker%coords())
         n2 = self%bcproperties%compute('Normal-2', worker%time(), worker%coords())
         n3 = self%bcproperties%compute('Normal-3', worker%time(), worker%coords())
-
 
         !   Explicit allocation to handle GCC bug:
         !       GCC/GFortran Bugzilla Bug 52162 
@@ -157,11 +145,7 @@ contains
         n3 = n3/nmag
 
 
-
-
-        !
         ! Interpolate interior solution to quadrature nodes
-        !
         density_m = worker%get_field('Density'   , 'value', 'face interior')
         mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
         mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
@@ -191,33 +175,20 @@ contains
         grad3_energy_m  = worker%get_field('Energy'    ,'grad3', 'face interior')
 
 
-
-        !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
-        !
         r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_m = mom2_m / r
         end if
 
-
-
-
-
-
-
-
-        !
         ! Compute velocity components
-        !
         u_m = mom1_m/density_m
         v_m = mom2_m/density_m
         w_m = mom3_m/density_m
 
 
-!        !
+!        ! Radial equilibrium START
 !        ! Compute normal vector
-!        !
 !        K0      = 150._rk
 !        u_axial = 125._rk
 !        alpha = atan2(K0/r,u_axial)
@@ -225,123 +196,53 @@ contains
 !        n1 = ZERO
 !        n2 = sin(alpha)
 !        n3 = cos(alpha)
+!        ! Radial equilibrium END
 
-
-
-
-
-
-        !
         ! Compute velocity magnitude squared from interior state
-        !
         vmag2_m = (u_m*u_m) + (v_m*v_m) + (w_m*w_m)
         vmag = sqrt(vmag2_m)
 
-
-        !
         ! Compute boundary condition velocity components from imposed direction
-        !
         u_bc = vmag*n1
         v_bc = vmag*n2
         w_bc = vmag*n3
 
 
-
-
-        !
         ! Compute boundary condition temperature and pressure
-        !
         T_bc = TT - (vmag2_m)/(TWO*cp)
         p_bc = PT*((T_bc/TT)**(gam/(gam-ONE)))
 
-!        print*, 'initial: ', T_bc(1)%x_ad_
-!
-!        ! Reversed to be inward facing for formulation
-!        unorm_1 = -worker%unit_normal(1)
-!        unorm_2 = -worker%unit_normal(2)
-!        unorm_3 = -worker%unit_normal(3)
-!
-!
-!        veln = u_m*unorm_1 + v_m*unorm_2 + w_m*unorm_3
-!        T = worker%get_field('Temperature', 'value', 'face interior')
-!        asp_int = sqrt(gam*Rgas*T)
-!        rminus = veln - TWO*asp_int/(gam-ONE)
-!        rafac = ONE
-!
-!        converged = .false.
-!        nmax = 20
-!        ntol = 1.e-6_rk
-!        inewton = 1
-!        do while((inewton < nmax) .and. (.not. converged))
-!            asp_ext = sqrt(gam*Rgas*T_bc)
-!            vel = rafac * (rminus + TWO*asp_ext/(gam-ONE))
-!
-!            f  = TT - T_bc - HALF*(gam-ONE)*vel*vel/(gam*Rgas)
-!            df = -(ONE + vel*rafac/asp_ext)
-!            dT = -f/df
-!            T_bc = T_bc + dT
-!            converged = sqrt(sum(dT*dT)) < ntol
-!            inewton = inewton + 1
-!        end do
-!
-!        if (.not. converged) print*, 'Total Inlet boundary condition newton iteration did not converge.'
-!
-!        print*, 'final: ', T_bc(1)%x_ad_, inewton
-!
-!
-!        !p_bc = PT*((T_bc/TT)**(gam/(gam-ONE)))
-!
-!        M = vmag / sqrt(gam*Rgas*T_bc)
-!        p_bc = PT*(ONE + ((gam-ONE)/TWO)*M*M)**(-gam/(gam-ONE))
 
-
-        !
         ! Compute boundary condition density from ideal gas law
-        !
         density_bc = p_bc/(T_bc*Rgas)
 
-        !
+
         ! Compute perturbation quantities
-        !
         !density_bc = density_bc + drho
 
 
-
-        !
         ! Compute bc momentum
-        !
         mom1_bc = density_bc * u_bc
         mom2_bc = density_bc * v_bc
         mom3_bc = density_bc * w_bc
 
 
-
-        !
         ! Compute bc energy
-        !
         energy_bc = p_bc/(gam - ONE) + HALF*((mom1_bc*mom1_bc) + (mom2_bc*mom2_bc) + (mom3_bc*mom3_bc))/density_bc
 
 
-        !
         ! Account for cylindrical. Convert tangential momentum back to angular momentum.
-        !
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_bc = mom2_bc * r
         end if
 
 
-
-
-        !
         ! Store computed boundary state
-        !
         call worker%store_bc_state('Density'   , density_bc, 'value')
         call worker%store_bc_state('Momentum-1', mom1_bc,    'value')
         call worker%store_bc_state('Momentum-2', mom2_bc,    'value')
         call worker%store_bc_state('Momentum-3', mom3_bc,    'value')
         call worker%store_bc_state('Energy'    , energy_bc,  'value')
-
-
 
 
         call worker%store_bc_state('Density'   , grad1_density_m, 'grad1')

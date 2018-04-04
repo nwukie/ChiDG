@@ -5142,6 +5142,7 @@ contains
 
 
         ! Set out-going array using buffer
+        allocate(times(size(read_times)), stat=ierr)
         times = real(read_times,kind=rk)
 
 

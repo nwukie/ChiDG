@@ -31,35 +31,20 @@ module type_quasi_newton
     !------------------------------------------------------------------------------------------
     type, extends(nonlinear_solver_t), public :: quasi_newton_t
 
-
     contains
-    
         procedure   :: solve
         final       :: destructor
-
     end type quasi_newton_t
     !******************************************************************************************
 
 
-
-
-
-
-
-
-
-
 contains
-
-
-
 
 
     !>  Solve for update 'dq'
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/8/2016
-    !!
     !!
     !------------------------------------------------------------------------------------------
     subroutine solve(self,data,system,linear_solver,preconditioner,solver_controller)
@@ -70,6 +55,7 @@ contains
         class(preconditioner_t),    optional,   intent(inout)           :: preconditioner
         class(solver_controller_t), optional,   intent(inout),  target  :: solver_controller
 
+        character(:),   allocatable :: user_msg
         character(100)          :: filename
         integer(ik)             :: itime, nsteps, ielem, iblk, iindex,  &
                                    niter, ieqn, idom, ierr,                     &
@@ -156,7 +142,6 @@ contains
                     residual_ratio = resid/resid_prev
                 end if
 
-
                 call system%assemble( data,             &
                                       timing=timing,    &
                                       differentiate=controller%update_lhs(lhs,niter,residual_ratio) )
@@ -164,12 +149,7 @@ contains
                 resid      = rhs%norm(ChiDG_COMM)
 
 
-
-
-
-                !
                 ! Compute and store residual norm for each field
-                !
                 if (niter == 1) then
                     resid0 = rhs%norm(ChiDG_COMM)
                     rnorm0 = rhs%norm_fields(ChiDG_COMM)
@@ -181,14 +161,10 @@ contains
 
 
 
-
-
-                !
                 ! During the first few iterations, allow the initial residual norm to update
                 ! if it has increased. Otherwise, if a solution converged to an error floor
                 ! and the residual raised a little bit, then the CFL would essentially reset
                 ! from infinity to CFL0, which we do not want.
-                !
                 if (niter < 5) then
                     where (rnorm > rnorm0)
                         rnorm0 = rnorm0 + 0.3_rk*(rnorm - rnorm0)
@@ -196,10 +172,7 @@ contains
                 end if
 
 
-
-                !
                 ! Compute new cfl for each field
-                !
                 if (allocated(cfln)) deallocate(cfln)
                 allocate(cfln(size(rnorm)), stat=ierr)
                 if (ierr /= 0) call AllocationError
@@ -219,42 +192,27 @@ contains
                 !end if
 
 
-                !
                 ! Print diagnostics, check tolerance.
-                !
-                call self%residual_norm%push_back(resid)
                 call write_line('|R| = ', resid, io_proc=GLOBAL_MASTER, silence=(verbosity<4))
                 if ( resid < self%tol ) then
+                    call self%residual_norm%push_back(resid)
+                    call self%residual_time%push_back(timing)
+                    call self%matrix_iterations%push_back(0)
+                    call self%matrix_time%push_back(0._rk)
                     call write_line(niter, resid, cfln(1), 0, delimiter='', columns=.True., column_width=30, io_proc=GLOBAL_MASTER, silence=(verbosity<2))
                     exit
                 end if
 
-
+                user_msg = "quasi_newton%solve: NaN residual norm. Check initial solution and operator objects."
                 if ( ieee_is_nan(resid) ) then
-                    call chidg_signal(FATAL,"quasi_newton%solve: NaN residual calculation. Check initial solution and operator objects.")
+                    call chidg_signal(FATAL,user_msg)
                 end if
 
-                call self%residual_time%push_back(timing)
 
-
-
-
-
-
-
-
-
-
-
-                !
                 ! Compute element-local pseudo-timestep
-                !
                 call compute_pseudo_timestep(data,cfln)
 
-
-                !
                 ! Add mass/dt to sub-block diagonal in dR/dQ
-                !
                 do idom = 1,data%mesh%ndomains()
                     do ielem = 1,data%mesh%domain(idom)%nelem
                         eqn_ID = data%mesh%domain(idom)%elems(ielem)%eqn_ID
@@ -282,19 +240,12 @@ contains
                 end do !idom
 
 
-
-                !
                 ! Assign rhs to b, which should allocate storage
-                !
                 !b = (rhs)  ! BEWARE: this causes an error. Parentheses operator not defined
                 b = (-ONE)*rhs
 
 
-
-
-                !
                 ! We need to solve the matrix system Ax=b for the update vector x (dq)
-                !
 
                 ! Set forcing term. Converge 4 orders, or 1.e-8
                 !forcing_term = resid/10000._rk
@@ -306,57 +257,33 @@ contains
                 call self%matrix_time%push_back(linear_solver%timer%elapsed())
 
 
-
-
-                !
                 ! Line Search for appropriate step
-                !
                 q0 = qold
                 f0 = resid
                 step = 0
                 if (self%search) then
 
+                    ! Set line increment via backtracking.
+                    !   Try: 1, 0.5, 0.25... 2^-i
                     searching = .true.
                     do while (searching)
 
-                        !
-                        ! Set line increment via backtracking.
-                        !   Try: 1, 0.5, 0.25... 2^-i
-                        !
                         alpha = TWO**(-real(step,rk)) 
                         call write_line("       Testing newton direction with 'alpha' = ", alpha, io_proc=GLOBAL_MASTER, silence=(verbosity<3))
 
-
-                        !
                         ! Advance solution along newton direction
-                        !
                         qn = q0 + alpha*dq
 
-
-                        !
-                        ! Clear working vector
-                        !
-                        !call rhs%clear()
-
-
-                        !
                         ! Set working solution. Test residual at (q). Do not differentiate
-                        !
                         q = qn
-                        call system%assemble(data,timing=timing,differentiate=.false.)
 
-                        !
-                        ! Compute new function value
-                        !
+                        ! Compute new function value and norm
+                        call system%assemble(data,differentiate=.false.)
                         fn = rhs%norm(ChiDG_COMM)
 
-
-                        !
                         ! Test for |R| increasing too much or NaN. 
                         !   If residual is reasonably large, still allow some growth.
                         !   If the residual is small enough, we don't want any growth.
-                        ! 
-                        !
                         if (ieee_is_nan(fn)) then
                             searching = .true.
                         else if ( (fn > 1.e-3_rk) .and. (fn > 2.0_rk*f0) ) then
@@ -370,28 +297,25 @@ contains
                         call write_line("       Rn(Q) = ", fn, io_proc=GLOBAL_MASTER, silence=(verbosity<3))
 
                         step = step + 1
-
                     end do
-
                 else
                     qn = q0 + dq
                 end if
 
 
-                !
                 ! Accept new solution, clear working storage, iterate
-                !
                 q = qn
                 call dq%clear()
 
 
-                absolute_convergence = (resid > self%tol)
-                relative_convergence = ( (log10(resid0) - log10(resid)) < real(self%norders_reduction,rk) )
-
+                call self%residual_norm%push_back(fn)
+                call self%residual_time%push_back(timing)
+                absolute_convergence = (fn > self%tol)
+                relative_convergence = ( (log10(resid0) - log10(fn)) < real(self%norders_reduction,rk) )
 
 
                 ! Print iteration information
-                call write_line(niter, resid, cfln(1), linear_solver%niter, controller%lhs_updated, controller%preconditioner_updated, delimiter='', columns=.True., column_width=30, io_proc=GLOBAL_MASTER, silence=(verbosity<2))
+                call write_line(niter, fn, cfln(1), linear_solver%niter, controller%lhs_updated, controller%preconditioner_updated, delimiter='', columns=.True., column_width=30, io_proc=GLOBAL_MASTER, silence=(verbosity<2))
 
 
                 call MPI_Barrier(ChiDG_COMM,ierr)
@@ -405,26 +329,17 @@ contains
 !                write(filename, "(A,F8.6,A4)") 'quasi_newton_', real(niter,rk), '.plt'
 !                call write_tecio_old(data,filename, write_domains=.true., write_surfaces=.false.)
 
-
-
             end do ! niter
 
 
-            !
             ! stop timer
-            !
             call self%timer%stop()
             call self%total_time%push_back(self%timer%elapsed())
             call write_line('Nonlinear Solver elapsed time: ', self%timer%elapsed(), delimiter='', io_proc=GLOBAL_MASTER, silence=(verbosity<3))
 
-
-
         end associate
 
-
-
         call self%newton_iterations%push_back(niter)
-
 
     end subroutine solve
     !*****************************************************************************************

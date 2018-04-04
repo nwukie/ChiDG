@@ -174,7 +174,7 @@ contains
         !
         ! Energy subtract change in kinetic energy
         !
-        energy_bc = energy_m - (density_m*HALF)*(u_m*u_m  +  v_m*v_m  +  w_m*w_m)
+        energy_bc = energy_m - HALF*density_m*(u_m*u_m  +  v_m*v_m  +  w_m*w_m)
 
 
 

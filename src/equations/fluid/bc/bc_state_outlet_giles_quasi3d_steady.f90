@@ -153,12 +153,9 @@ contains
         integer(ik),                                    intent(in)      :: group_ID
         type(mpi_comm),                                 intent(in)      :: bc_comm
 
-
         call self%analyze_bc_geometry(mesh,group_ID,bc_comm)
 
-
         call self%initialize_fourier_discretization(mesh,group_ID,bc_comm)
-
 
     end subroutine init_bc_postcomm
     !**********************************************************************************************
@@ -192,10 +189,10 @@ contains
         type(face_info_t)   :: face_info
 
         type(AD_D), allocatable,    dimension(:)    ::  &
-            density, mom1, mom2, mom3, energy, p, u, v, w
+            density, mom1, mom2, mom3, energy, p, v1, v2, v3
 
-        type(AD_D)  :: p_integral, u_integral, v_integral, w_integral, density_integral,    &
-                       face_density, face_u, face_v, face_w, face_p
+        type(AD_D)  :: p_integral, v1_integral, v2_integral, v3_integral, density_integral,    &
+                       face_density, face_v1, face_v2, face_v3, face_p
 
 
         integer(ik) :: ipatch, iface_bc, idomain_l, ielement_l, iface, ierr, itime, &
@@ -206,13 +203,8 @@ contains
         real(rk),   allocatable,    dimension(:)    :: weights, areas, r
         real(rk)    :: face_area, total_area
 
-
-
-        !
         ! Zero integrated quantities
-        !
         total_area = ZERO
-
 
         ! Get location on domain
         idomain_l  = worker%element_info%idomain_l
@@ -224,18 +216,10 @@ contains
         patch_ID = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%patch_ID
         face_ID  = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%face_ID
 
-
-
-
-
-        !
         ! Loop through coupled faces and compute their contribution to the average pressure
-        !
         do icoupled = 1,worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%ncoupled_elements(face_ID)
 
-            !
             ! Get solution
-            !
             idensity = 1
             imom1    = 2
             imom2    = 3
@@ -243,21 +227,24 @@ contains
             ienergy  = 5
             itime    = 1
 
-
-            !
             ! Get face info from coupled element we want to interpolate from
-            !
             idomain_g_coupled  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g( icoupled)
             idomain_l_coupled  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l( icoupled)
             ielement_g_coupled = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(icoupled)
             ielement_l_coupled = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(icoupled)
             iface_coupled      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%iface(     icoupled)
 
-            face_info%idomain_g  = idomain_g_coupled
-            face_info%idomain_l  = idomain_l_coupled
-            face_info%ielement_g = ielement_g_coupled
-            face_info%ielement_l = ielement_l_coupled
-            face_info%iface      = iface_coupled
+            !face_info%idomain_g  = idomain_g_coupled
+            !face_info%idomain_l  = idomain_l_coupled
+            !face_info%ielement_g = ielement_g_coupled
+            !face_info%ielement_l = ielement_l_coupled
+            !face_info%iface      = iface_coupled
+
+            face_info = face_info_constructor(idomain_g_coupled,  &
+                                              idomain_l_coupled,  &
+                                              ielement_g_coupled, &
+                                              ielement_l_coupled, &
+                                              iface_coupled)
 
             
             !
@@ -277,84 +264,57 @@ contains
                 mom2 = mom2 / worker%mesh%domain(idomain_l_coupled)%elems(ielement_l_coupled)%interp_coords_def(:,1)
             end if
 
-
-            
-            !
             ! Compute quantities for averaging
-            !
-            u = mom1 / density
-            v = mom2 / density
-            w = mom3 / density
+            v1 = mom1/density
+            v2 = mom2/density
+            v3 = mom3/density
             p = (gam-ONE)*(energy - HALF*(mom1*mom1 + mom2*mom2 + mom3*mom3)/density)
 
-
-            !
             ! Get weights + areas
-            !
             weights   = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%weights_face(iface_coupled)
             areas     = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%data(icoupled)%areas
             face_area = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%data(icoupled)%total_area
 
-
-
-            !
             ! Integrate and contribute to average
-            !
             face_density = sum(density * areas * weights)
-            face_u       = sum(u       * areas * weights)
-            face_v       = sum(v       * areas * weights)
-            face_w       = sum(w       * areas * weights)
+            face_v1      = sum(v1      * areas * weights)
+            face_v2      = sum(v2      * areas * weights)
+            face_v3      = sum(v3      * areas * weights)
             face_p       = sum(p       * areas * weights)
 
-
-            !
             ! Allocate derivatives and clear integral for first face.
-            !
             if (icoupled == 1) then
-                density_integral = face_u
-                u_integral       = face_u
-                v_integral       = face_u
-                w_integral       = face_u
-                p_integral       = face_u
+                density_integral = face_v1
+                v1_integral      = face_v1
+                v2_integral      = face_v1
+                v3_integral      = face_v1
+                p_integral       = face_v1
                 density_integral = ZERO
-                u_integral       = ZERO
-                v_integral       = ZERO
-                w_integral       = ZERO
+                v1_integral      = ZERO
+                v2_integral      = ZERO
+                v3_integral      = ZERO
                 p_integral       = ZERO
             end if
 
-
-            !
             ! Accumulate face contribution.
-            !
             density_integral = density_integral + face_density
-            u_integral       = u_integral       + face_u
-            v_integral       = v_integral       + face_v
-            w_integral       = w_integral       + face_w
+            v1_integral      = v1_integral      + face_v1
+            v2_integral      = v2_integral      + face_v2
+            v3_integral      = v3_integral      + face_v3
             p_integral       = p_integral       + face_p
 
-            
             ! Accumulate surface area
             total_area = total_area + face_area
 
-
         end do !icoupled
 
-
-
-                                                      
-        !                                             
         ! Compute average pressure:
         !   area-weighted pressure integral over the total area
-        !   
-        !
-        vel1_avg    = u_integral       / total_area
-        vel2_avg    = v_integral       / total_area
-        vel3_avg    = w_integral       / total_area
+        vel1_avg    = v1_integral      / total_area
+        vel2_avg    = v2_integral      / total_area
+        vel3_avg    = v3_integral      / total_area
         density_avg = density_integral / total_area
         p_avg       = p_integral       / total_area
-
-
 
     end subroutine compute_averages
     !************************************************************************************
@@ -412,24 +372,17 @@ contains
         integer                                     :: i, ngq, ivec, imode, iradius, nmodes, ierr, igq
 
 
-
-        !
         ! Get back pressure from function.
-        !
         p_user = self%bcproperties%compute('Average Pressure',worker%time(),worker%coords())
         pitch  = self%bcproperties%compute('Pitch',           worker%time(),worker%coords())
 
 
-
-        !
         ! Interpolate interior solution to face quadrature nodes
-        !
         density_m = worker%get_field('Density'   , 'value', 'face interior')
         mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
         mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
         mom3_m    = worker%get_field('Momentum-3', 'value', 'face interior')
         energy_m  = worker%get_field('Energy'    , 'value', 'face interior')
-
 
 
         grad1_density_m = worker%get_field('Density'   , 'grad1', 'face interior')
@@ -454,12 +407,8 @@ contains
 
 
 
-
-
-        !
         ! Store boundary gradient state. Grad(Q_bc). Do this here, before we
         ! compute any transformations for cylindrical.
-        !
         call worker%store_bc_state('Density'   , grad1_density_m, 'grad1')
         call worker%store_bc_state('Density'   , grad2_density_m, 'grad2')
         call worker%store_bc_state('Density'   , grad3_density_m, 'grad3')
@@ -482,10 +431,7 @@ contains
 
 
 
-
-        !
         ! Account for cylindrical. Get tangential momentum from angular momentum.
-        !
         r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_m = mom2_m / r
@@ -494,28 +440,19 @@ contains
             grad3_mom2_m = (grad3_mom2_m/r)
         end if
 
-        !
         ! Compute velocity and pressure
-        !
         vel1_m = mom1_m/density_m
         vel2_m = mom2_m/density_m
         vel3_m = mom3_m/density_m
         pressure_m = worker%get_field('Pressure', 'value', 'face interior')
 
-
-        !
         ! Update average pressure
-        !
         call self%compute_averages(worker,bc_COMM,vel1_avg, vel2_avg, vel3_avg, density_avg, pressure_avg)
         c_avg = sqrt(gam*pressure_avg/density_avg)
 
 
-
-
-        !
         ! Compute Fourier decomposition at set of radial stations: 
         !   : U_hat(nmodes,nradius)
-        !
         call self%compute_fourier_decomposition(worker,bc_COMM,                        &
                                                 density_hat_real,  density_hat_imag,   &
                                                 vel1_hat_real,     vel1_hat_imag,      &
@@ -529,17 +466,10 @@ contains
                                                 c5_hat_real,       c5_hat_imag)
 
 
-
-
-        !
         ! Solve for c5 using nonreflecting condition
-        !
         nmodes = size(density_hat_real,1)
         do iradius = 1,size(self%r)
-
-            !
             ! Get average parts
-            !
             density_bar_r  = density_hat_real( 1,iradius)
             vel1_bar_r     = vel1_hat_real(    1,iradius)
             vel2_bar_r     = vel2_hat_real(    1,iradius)
@@ -547,11 +477,8 @@ contains
             pressure_bar_r = pressure_hat_real(1,iradius)
             c_bar_r        = sqrt(gam*pressure_bar_r/density_bar_r)
 
-
-            !
             ! The imaginary part of beta has already been accounted for in
             ! the expressions for A2 and A3
-            !
             beta = sqrt(c_bar_r*c_bar_r  -  (vel3_bar_r*vel3_bar_r + vel2_bar_r*vel2_bar_r))
             A3_real = -TWO*vel3_bar_r*vel2_bar_r/(vel2_bar_r*vel2_bar_r + beta*beta)
             A3_imag = -TWO*beta*vel3_bar_r/(vel2_bar_r*vel2_bar_r + beta*beta)
@@ -560,8 +487,6 @@ contains
             A4_imag = -TWO*beta*vel2_bar_r/(beta*beta + vel2_bar_r*vel2_bar_r)
 
 
-
-            !
             ! Compute c5 according to nonreflecting condition
             !
             !   hat{c5} = A3*hat{c3}  -  A4*hat{c4}
@@ -575,14 +500,10 @@ contains
                                            - (A4_imag*c4_hat_real(imode,iradius) + A4_real*c4_hat_imag(imode,iradius))      ! A4*c4 (imag)
 
             end do !imode
-
-
         end do !iradius
 
 
-        !
         ! Interpolate c5 to the correct radial stations for quadrature nodes
-        !
         coords = worker%coords()
         allocate(c5_hat_real_gq(size(c5_hat_real,1),size(coords)), &
                  c5_hat_imag_gq(size(c5_hat_imag,1),size(coords)), stat=ierr)
@@ -599,10 +520,7 @@ contains
         end do
 
 
-
-        !
         ! Evaluate c5 at radius to correct theta
-        !
         c5_3d = c5_hat_real_gq(1,:)
         c5_3d = ZERO
         do igq = 1,size(coords)
@@ -613,13 +531,7 @@ contains
         end do
 
 
-
-
-
-
-        !
         ! Handle perturbation from local radial mean (m /= 0)
-        !
         c1_3d = c5_3d
         c2_3d = c5_3d
         c3_3d = c5_3d
@@ -648,33 +560,21 @@ contains
         c_bar = sqrt(gam*pressure_bar/density_bar)
 
 
-
-
-
-        !
         ! Compute perturbation from radius-local mean
-        !
         ddensity  = density_m  - density_bar
         dvel1     = vel1_m     - vel1_bar
         dvel2     = vel2_m     - vel2_bar
         dvel3     = vel3_m     - vel3_bar
         dpressure = pressure_m - pressure_bar
 
-
-
-        !
         ! Compute characteristics 1-4 associated with local perturbation. 
         ! 5 was already handled from nonreflecting condition on Fourier modes.
-        !
         c1_3d = (-c_bar*c_bar)*ddensity    +  (ONE)*dpressure
         c2_3d = (density_bar*c_bar)*dvel1
         c3_3d = (density_bar*c_bar)*dvel2
         c4_3d = (density_bar*c_bar)*dvel3  +  (ONE)*dpressure
 
-
-        !
         ! Handle m=0 perturbation
-        !
         c1_1d = density_m
         c2_1d = density_m
         c3_1d = density_m
@@ -686,11 +586,7 @@ contains
         c4_1d = ZERO
         c5_1d = ZERO
 
-
-
-        !
         ! Compute 1-4 characteristics from extrapolation
-        !
         ddensity  = density_bar  - density_avg 
         dvel1     = vel1_bar     - vel1_avg
         dvel2     = vel2_bar     - vel2_avg
@@ -703,10 +599,7 @@ contains
             c4_1d(igq) = density_avg*c_avg*dvel3(igq)  +  dpressure(igq)
         end do
 
-
-        !
         ! Compute characteristic 5 to achieve average pressure
-        !
         c5_1d          = -TWO*(pressure_avg - p_user(1))
         ddensity_mean  =  c5_1d(1)/(TWO*c_avg*c_avg)
         dvel3_mean     = -c5_1d(1)/(TWO*density_avg*c_avg)
@@ -718,30 +611,23 @@ contains
         dvel2_mean = ZERO
 
 
-
-        !
         ! Contribute average part to boundary state
-        !
         density_bc  = density_m
         vel1_bc     = density_m
         vel2_bc     = density_m
         vel3_bc     = density_m
         pressure_bc = density_m
 
-        
-        !
+
         ! Compose boundary state beginning with average
-        !
         density_bc  = density_avg
         vel1_bc     = vel1_avg
         vel2_bc     = vel2_avg
         vel3_bc     = vel3_avg
         pressure_bc = pressure_avg
 
-        
-        !
+
         ! Contribute perturbation from boundary-global 1D characteristic update
-        !
         do igq = 1,size(c1_1d)
             density_bc(igq)  = density_bc(igq)   +  (-ONE/(c_avg*c_avg))*c1_1d(igq)  +  (ONE/(TWO*c_avg*c_avg))*c4_1d(igq)  +  (ONE/(TWO*c_avg*c_avg))*c5_1d(igq)
             vel1_bc(igq)     = vel1_bc(igq)      +  (ONE/(density_avg*c_avg))*c2_1d(igq)
@@ -751,10 +637,8 @@ contains
         end do
 
 
-        !
         ! Contribute perturbation from perturbation about radius-local mean from 
         ! quasi-3d nrbc.
-        !
         density_bc  = density_bc   +  (-ONE/(c_bar*c_bar))*c1_3d  +  (ONE/(TWO*c_bar*c_bar))*c4_3d  +  (ONE/(TWO*c_bar*c_bar))*c5_3d
         vel1_bc     = vel1_bc      +  (ONE/(density_bar*c_bar))*c2_3d
         vel2_bc     = vel2_bc      +  (ONE/(density_bar*c_bar))*c3_3d
@@ -790,17 +674,8 @@ contains
         call worker%store_bc_state('Energy'    , energy_bc,  'value')
 
 
-
-
     end subroutine compute_bc_state
     !*********************************************************************************
-
-
-
-
-
-
-
 
 
 
@@ -861,25 +736,19 @@ contains
         real(rk),   allocatable :: physical_nodes(:,:)
 
 
-        !
         ! Define Fourier discretization
-        !
-        nmodes  = 5
+        nmodes  = 8
         ncoeff  = 1 + (nmodes-1)*2
         nradius = size(self%r)
         ntheta  = ncoeff
         
 
-        !
         ! Allocate interpolation nodes
-        !
         allocate(physical_nodes(ntheta,3), stat=ierr)
         if (ierr /= 0) call AllocationError
 
 
-        !
         ! Allocate storage in result
-        !
         allocate(density_hat_real( ncoeff,nradius), density_hat_imag( ncoeff,nradius),  &
                  vel1_hat_real(    ncoeff,nradius), vel1_hat_imag(    ncoeff,nradius),  &
                  vel2_hat_real(    ncoeff,nradius), vel2_hat_imag(    ncoeff,nradius),  &
@@ -893,15 +762,10 @@ contains
         if (ierr /= 0) call AllocationError
 
 
-
-        !
         ! Perform Fourier decomposition at each radial station.
-        !
         do iradius = 1,nradius
 
-            !
             ! Construct theta discretization
-            !
             do itheta = 1,ntheta
                 ! this doesn't really matter anymore, since donors and coords are passed in. But the procedure requires it.
                 !physical_nodes(itheta,:) = [self%r(iradius),self%theta(itheta),z]   
@@ -909,9 +773,7 @@ contains
             end do
 
 
-            !
             ! Interpolate solution to physical_nodes at current radial station
-            !
             density = worker%interpolate_field_general('Density',    physical_nodes, donors=self%donor(iradius,:), donor_coords=self%donor_coord(iradius,:,:))
             mom1    = worker%interpolate_field_general('Momentum-1', physical_nodes, donors=self%donor(iradius,:), donor_coords=self%donor_coord(iradius,:,:))
             mom2    = worker%interpolate_field_general('Momentum-2', physical_nodes, donors=self%donor(iradius,:), donor_coords=self%donor_coord(iradius,:,:))
@@ -922,28 +784,19 @@ contains
                 mom2 = mom2/self%r(iradius)  ! convert to tangential momentum
             end if
 
-
-
-            !
             ! Compute velocities and pressure
-            !
             vel1 = mom1/density
             vel2 = mom2/density
             vel3 = mom3/density
             pressure = (gam-ONE)*(energy - HALF*( mom1*mom1 + mom2*mom2 + mom3*mom3 )/density )
 
 
-
-            !
             ! Compute Fourier transform
-            !
             call dft(density,  density_real_tmp,  density_imag_tmp )
             call dft(vel1,     vel1_real_tmp,     vel1_imag_tmp    )
             call dft(vel2,     vel2_real_tmp,     vel2_imag_tmp    )
             call dft(vel3,     vel3_real_tmp,     vel3_imag_tmp    )
             call dft(pressure, pressure_real_tmp, pressure_imag_tmp)
-
-
 
 
             density_hat_real( :,iradius) = density_real_tmp
@@ -958,9 +811,7 @@ contains
             pressure_hat_imag(:,iradius) = pressure_imag_tmp
 
             
-            !
             ! Get average term
-            !
             density_bar  = density_hat_real( 1,iradius)
             vel1_bar     = vel1_hat_real(    1,iradius)
             vel2_bar     = vel2_hat_real(    1,iradius)
@@ -969,9 +820,7 @@ contains
             c_bar = sqrt(gam*pressure_bar/density_bar)
 
 
-            !
             ! Compute perturbation
-            !
             ddensity  = density  - density_bar
             dvel1     = vel1     - vel1_bar
             dvel2     = vel2     - vel2_bar
@@ -979,9 +828,7 @@ contains
             dpressure = pressure - pressure_bar
 
 
-            !
             ! Convert perturbation to 1D characteristics
-            !
             c1 = ddensity
             c2 = ddensity
             c3 = ddensity
@@ -996,9 +843,7 @@ contains
             end do
 
 
-            !
             ! Compute Fourier transform of characteristic variables
-            !
             call dft(c1, c1_real_tmp, c1_imag_tmp)
             call dft(c2, c2_real_tmp, c2_imag_tmp)
             call dft(c3, c3_real_tmp, c3_imag_tmp)
@@ -1051,10 +896,7 @@ contains
                        face_thetamin, face_thetamax, local_thetamin, local_thetamax, global_thetamin, global_thetamax
         real(rk)    :: ref_nodes(8,3), physical_nodes(8,3)
 
-
-        !
         ! Search for min/max radius on local processor
-        !
         local_rmin     =  HUGE(1._rk) ! any radius will be smaller than this, so it is guarunteed to be reset.
         local_rmax     = -HUGE(1._rk) ! any radius will be larger than this, so it is guarunteed to be reset.
         local_thetamin =  HUGE(1._rk) ! any theta will be smaller than this, so it is guarunteed to be reset.
@@ -1128,7 +970,6 @@ contains
                 else
                     call chidg_signal(FATAL,"outlet_giles_quasi3d_steady: analyze_bc_geometry, invalid face indec.")
                 end if
-
 
 
                 ! Evaluate physical coordinates on face edges
@@ -1210,11 +1051,8 @@ contains
         logical                     :: donor_found
 
 
-
-        !
         ! Determine z-location of some face on the boundary and assume 
         ! entire boundary is constant-z
-        !
         idomain_l  = mesh%bc_patch_group(group_ID)%patch(1)%idomain_l()
         ielement_l = mesh%bc_patch_group(group_ID)%patch(1)%ielement_l(1)
         iface      = mesh%bc_patch_group(group_ID)%patch(1)%iface(1)
@@ -1234,31 +1072,19 @@ contains
         z = midpoint(3)
 
 
-
-
-
-        !
         ! Define Fourier discretization
-        !
-        nmodes  = 5
+        nmodes  = 8
         ncoeff  = 1 + (nmodes-1)*2
         nradius = size(self%r)
         ntheta  = ncoeff
         
-
-
-        !
         ! Initialize theta discretization parameters
-        !
         !pitch  = self%bcproperties%compute('Pitch',worker%time(),worker%coords())
         pitch  = self%bcproperties%compute('Pitch',time=ZERO,coord=[point_t(ZERO,ZERO,ZERO)])
         dtheta = pitch(1)
         dtheta_n = dtheta/ntheta
 
-
-        !
         ! Construct theta discretization at each radius
-        !
         allocate(self%theta(ntheta), stat=ierr)
         if (ierr /= 0) call AllocationError
         do itheta = 1,ntheta
@@ -1266,15 +1092,11 @@ contains
         end do
 
 
-        !
         ! Donor search offset, if needed
-        !
         try_offset = [ZERO, -pitch(1), ZERO]
 
 
-        !
         ! For each radial station, initialized donor for each node in theta grid
-        !
         allocate(self%donor(nradius,ntheta), self%donor_coord(nradius,ntheta,3), stat=ierr)
         if (ierr /= 0) call AllocationError
         do iradius = 1,size(self%r)
@@ -1282,9 +1104,7 @@ contains
 
                 node = [self%r(iradius), self%theta(itheta), z]
 
-                !
                 ! Try processor-LOCAL elements
-                !
                 call find_gq_donor(mesh,                                    &
                                    node,                                    &
                                    [ZERO,ZERO,ZERO],                        &
@@ -1293,9 +1113,7 @@ contains
                                    self%donor_coord(iradius,itheta,1:3),    &
                                    donor_found)
 
-                !
                 ! Try LOCAL elements with try_offset if still not found 
-                !
                 if ( .not. donor_found ) then
                     call find_gq_donor(mesh,                                    &
                                        node,                                    &
@@ -1307,11 +1125,7 @@ contains
 
                 end if
 
-
-
-                !
                 ! Try PARALLEL_ELEMENTS if donor not found amongst local elements
-                !
                 if (.not. donor_found) then
                     call find_gq_donor_parallel(mesh,                                   &
                                                 node,                                   &
@@ -1323,9 +1137,7 @@ contains
                 end if
 
                 
-                !
                 ! Try PARALLEL_ELEMENTS with try_offset if still not found 
-                !
                 if ( .not. donor_found ) then
                     call find_gq_donor_parallel(mesh,                                   &
                                                 node,                                   &
@@ -1346,20 +1158,7 @@ contains
             end do !itheta
         end do !iradius
 
-
-
     end subroutine initialize_fourier_discretization
     !**************************************************************************************
-
-
-
-
-
-
-
-
-
-
-
 
 end module bc_state_outlet_giles_quasi3d_steady

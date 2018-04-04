@@ -803,7 +803,21 @@ contains
                 lift_face_min   = iface_use
                 lift_face_max   = iface_use
                 stabilization   = real(NFACES,rk)
-            case('face exterior','boundary')
+            !case('face exterior','boundary')
+            !    cache_component = 'face exterior'
+            !    lift_source     = 'face exterior'
+            !    lift_nodes      = 'lift face'
+            !    lift_face_min   = iface_use
+            !    lift_face_max   = iface_use
+            !    stabilization   = real(NFACES,rk)
+            case('boundary')
+                cache_component = 'face exterior'
+                lift_source     = 'face interior'
+                lift_nodes      = 'lift face'
+                lift_face_min   = iface_use
+                lift_face_max   = iface_use
+                stabilization   = real(NFACES,rk)
+            case('face exterior')
                 cache_component = 'face exterior'
                 lift_source     = 'face exterior'
                 lift_nodes      = 'lift face'

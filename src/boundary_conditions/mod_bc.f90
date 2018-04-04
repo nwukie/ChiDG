@@ -42,14 +42,17 @@ module mod_bc
 
 
     ! Fluid boundary conditions
-    use bc_state_wall,                          only: wall_t
-    use bc_state_moving_wall,                   only: moving_wall_t
-    use bc_state_inlet_total,                   only: inlet_total_t
-    use bc_state_outlet_constant_pressure,      only: outlet_constant_pressure_t
-    use bc_state_outlet_pressure_equation,      only: outlet_pressure_equation_t
-    use bc_state_outlet_local_pressure_equation,      only: outlet_local_pressure_equation_t
-    use bc_state_outlet_auxiliary_equations,    only: outlet_auxiliary_equations_t
-    use bc_state_outlet_profile_extrapolation,  only: outlet_profile_extrapolation_t
+    use bc_state_wall,                              only: wall_t
+    use bc_state_moving_wall,                       only: moving_wall_t
+    use bc_state_inlet_total,                       only: inlet_total_t
+    use bc_state_outlet_constant_pressure,          only: outlet_constant_pressure_t
+    use bc_state_outlet_auxiliary_equations,        only: outlet_auxiliary_equations_t
+    use bc_state_outlet_neumann_pressure_fd,        only: outlet_neumann_pressure_fd_t
+    use bc_state_outlet_neumann_pressure_fd_test,   only: outlet_neumann_pressure_fd_test_t
+    use bc_state_outlet_neumann_pressure_localdg,   only: outlet_neumann_pressure_localdg_t
+    use bc_state_outlet_neumann_pressure_localdg_test,   only: outlet_neumann_pressure_localdg_test_t
+    use bc_state_outlet_neumann_pressure_globaldg,  only: outlet_neumann_pressure_globaldg_t
+    use bc_state_outlet_neumann_LODI_localdg,       only: outlet_neumann_LODI_localdg_t
     !use bc_state_outlet_point_pressure,         only: outlet_point_pressure_t
     !use bc_state_outlet_LODI_pressure,          only: outlet_LODI_pressure_t
     !use bc_state_outlet_LODI_z_pressure,        only: outlet_LODI_z_pressure_t
@@ -153,10 +156,13 @@ contains
         type(moving_wall_t)                     :: MOVING_WALL
         type(inlet_total_t)                     :: INLET_TOTAL
         type(outlet_constant_pressure_t)        :: OUTLET_CONSTANT_PRESSURE
-        type(outlet_pressure_equation_t)        :: OUTLET_PRESSURE_EQUATION
-        type(outlet_local_pressure_equation_t)        :: OUTLET_LOCAL_PRESSURE_EQUATION
         type(outlet_auxiliary_equations_t)      :: OUTLET_AUXILIARY_EQUATIONS
-        type(outlet_profile_extrapolation_t)    :: OUTLET_PROFILE_EXTRAPOLATION
+        type(outlet_neumann_pressure_fd_t)      :: OUTLET_NEUMANN_PRESSURE_FD
+        type(outlet_neumann_pressure_fd_test_t) :: OUTLET_NEUMANN_PRESSURE_FD_TEST
+        type(outlet_neumann_pressure_localdg_t) :: OUTLET_NEUMANN_PRESSURE_LOCALDG
+        type(outlet_neumann_pressure_localdg_test_t) :: OUTLET_NEUMANN_PRESSURE_LOCALDG_TEST
+        type(outlet_neumann_pressure_globaldg_t):: OUTLET_NEUMANN_PRESSURE_GLOBALDG
+        type(outlet_neumann_LODI_localdg_t)     :: OUTLET_NEUMANN_LODI_LOCALDG
         !type(outlet_point_pressure_t)           :: OUTLET_POINT_PRESSURE
         !type(outlet_LODI_pressure_t)            :: OUTLET_LODI_PRESSURE
         !type(outlet_LODI_z_pressure_t)          :: OUTLET_LODI_Z_PRESSURE
@@ -233,10 +239,13 @@ contains
             call registered_bcs%push_back(MOVING_WALL)
             call registered_bcs%push_back(INLET_TOTAL)
             call registered_bcs%push_back(OUTLET_CONSTANT_PRESSURE)
-            call registered_bcs%push_back(OUTLET_PRESSURE_EQUATION)
-            call registered_bcs%push_back(OUTLET_LOCAL_PRESSURE_EQUATION)
             call registered_bcs%push_back(OUTLET_AUXILIARY_EQUATIONS)
-            call registered_bcs%push_back(OUTLET_PROFILE_EXTRAPOLATION)
+            call registered_bcs%push_back(OUTLET_NEUMANN_PRESSURE_FD)
+            call registered_bcs%push_back(OUTLET_NEUMANN_PRESSURE_FD_TEST)
+            call registered_bcs%push_back(OUTLET_NEUMANN_PRESSURE_LOCALDG)
+            call registered_bcs%push_back(OUTLET_NEUMANN_PRESSURE_LOCALDG_TEST)
+            call registered_bcs%push_back(OUTLET_NEUMANN_PRESSURE_GLOBALDG)
+            call registered_bcs%push_back(OUTLET_NEUMANN_LODI_LOCALDG)
             call registered_bcs%push_back(OUTLET_STEADY_1DCHAR)
             call registered_bcs%push_back(OUTLET_3DGILES)
             call registered_bcs%push_back(OUTLET_3DGILES_INNERPRODUCT)

@@ -217,6 +217,8 @@ contains
                             if (icoord == 3) val = z
 
                         else
+                            if (allocated(val)) deallocate(val)
+                            allocate(val(size(data%mesh%domain(idom)%elems(ielem)%interp_coords_def,1)))
                             val = real(data%mesh%domain(idom)%elems(ielem)%interp_coords_def(:,icoord),rdouble)
                         end if
 
@@ -445,6 +447,8 @@ contains
                                 if (icoord == 3) val = z
 
                             else
+                                if (allocated(val)) deallocate(val)
+                                allocate(val(size(data%mesh%domain(idom)%faces(ielem,iface)%interp_coords_def,1)))
                                 val = real(data%mesh%domain(idom)%faces(ielem,iface)%interp_coords_def(:,icoord),rdouble)
                             end if
 

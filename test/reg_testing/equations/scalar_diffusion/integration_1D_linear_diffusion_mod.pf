@@ -762,8 +762,7 @@ contains
     !!
     !!
     !-----------------------------------------------------------------------------------------
-    !@Test(npes=[1,2,3])
-    @Test(npes=[1])
+    @Test(npes=[1,2,3])
     subroutine run_calculations(self)
         class(linear_diffusion_1D),  intent(inout)   :: self
 

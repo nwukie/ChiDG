@@ -1,14 +1,16 @@
-module bc_state_outlet_steady_1dchar
+module bc_state_outlet_neumann_pressure_fd_test
 #include <messenger.h>
     use mod_kinds,              only: rk,ik
-    use mod_constants,          only: ZERO, ONE, TWO, HALF, ME, CYLINDRICAL
-    use mod_fluid,              only: gam
+    use mod_constants,          only: ZERO, ONE, TWO, HALF, ME, CYLINDRICAL, &
+                                      XI_MAX, ETA_MAX, ZETA_MAX
+    use mod_fluid,              only: gam, Rgas
+
     use type_mesh,              only: mesh_t
     use type_bc_state,          only: bc_state_t
     use type_bc_patch,          only: bc_patch_t
     use type_chidg_worker,      only: chidg_worker_t
     use type_properties,        only: properties_t
-    use type_face_info,         only: face_info_t, face_info_constructor
+    use type_face_info,         only: face_info_t
     use mod_chidg_mpi,          only: IRANK
     use mod_interpolate,        only: interpolate_face_autodiff
     use mpi_f08,                only: MPI_REAL8, MPI_SUM, MPI_AllReduce, mpi_comm, &
@@ -20,15 +22,15 @@ module bc_state_outlet_steady_1dchar
 
 
 
-    !>  Name: Outlet - Average Pressure
+    !>  Pressure gradient condition via extrapolation of the pressure from some
+    !!  interior location and computing a boundary-global offset parameter to
+    !!  achieve an average pressure.
     !!
-    !!  Handle perturbations from average using one-dimensional characteristic analysis.
     !!
     !!  Options:
     !!      : Average Pressure
     !!
-    !!  Behavior:
-    !!      
+    !!
     !!  References:
     !!              
     !!  
@@ -36,7 +38,7 @@ module bc_state_outlet_steady_1dchar
     !!  @date   2/23/2018
     !!
     !----------------------------------------------------------------------------------------
-    type, public, extends(bc_state_t) :: outlet_steady_1dchar_t
+    type, public, extends(bc_state_t) :: outlet_neumann_pressure_fd_test_t
 
 
     contains
@@ -44,9 +46,10 @@ module bc_state_outlet_steady_1dchar
         procedure   :: init                 ! Set-up bc state with options/name etc.
         procedure   :: init_bc_coupling     ! Implement specialized initialization procedure
         procedure   :: compute_bc_state     ! boundary condition function implementation
+
         procedure   :: compute_averages
 
-    end type outlet_steady_1dchar_t
+    end type outlet_neumann_pressure_fd_test_t
     !****************************************************************************************
 
 
@@ -59,21 +62,25 @@ contains
     !>
     !!
     !!  @author Nathan A. Wukie
-    !!  @date   2/20/2018
+    !!  @date   2/23/2018
     !!
     !--------------------------------------------------------------------------------
     subroutine init(self)
-        class(outlet_steady_1dchar_t),   intent(inout) :: self
+        class(outlet_neumann_pressure_fd_test_t),   intent(inout) :: self
         
         ! Set name, family
-        call self%set_name('Outlet - Steady 1D Characteristics')
+        call self%set_name('Outlet - Neumann Pressure Finite Difference Test')
         call self%set_family('Outlet')
 
         ! Add functions
-        call self%bcproperties%add('Average Pressure','Required')
+        call self%bcproperties%add('Average Pressure',  'Required')
+        call self%bcproperties%add('Normal Derivative', 'Required')
 
     end subroutine init
     !********************************************************************************
+
+
+
 
 
 
@@ -88,11 +95,11 @@ contains
     !!  @date   2/18/2018
     !!
     !--------------------------------------------------------------------------------
-    subroutine init_bc_coupling(self,mesh,group_ID,bc_comm)
-        class(outlet_steady_1dchar_t),  intent(inout)   :: self
-        type(mesh_t),                   intent(inout)   :: mesh
-        integer(ik),                    intent(in)      :: group_ID
-        type(mpi_comm),                 intent(in)      :: bc_comm
+    subroutine init_bc_coupling(self,mesh,group_ID,bc_COMM)
+        class(outlet_neumann_pressure_fd_test_t),    intent(inout)   :: self
+        type(mesh_t),                           intent(inout)   :: mesh
+        integer(ik),                            intent(in)      :: group_ID
+        type(mpi_comm),                         intent(in)      :: bc_COMM
 
         call self%init_bc_coupling_global(mesh,group_ID,bc_comm)
 
@@ -104,32 +111,24 @@ contains
 
 
 
-    !>  Compute averaged quantities over the face. 
+    !>  Update averages for the boundary condition.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   3/31/2017
     !!
-    !!
-    !--------------------------------------------------------------------------------
-    subroutine compute_averages(self,worker,bc_COMM, v1_avg, v2_avg, v3_avg, vn_avg, density_avg, p_avg)
-        class(outlet_steady_1dchar_t),   intent(inout)   :: self
-        type(chidg_worker_t),               intent(inout)   :: worker
-        type(mpi_comm),                     intent(in)      :: bc_COMM
-        type(AD_D),                         intent(inout)   :: v1_avg
-        type(AD_D),                         intent(inout)   :: v2_avg
-        type(AD_D),                         intent(inout)   :: v3_avg
-        type(AD_D),                         intent(inout)   :: vn_avg
-        type(AD_D),                         intent(inout)   :: density_avg
-        type(AD_D),                         intent(inout)   :: p_avg
+    !---------------------------------------------------------------------------------
+    subroutine compute_averages(self,worker,bc_COMM,p_avg,c_avg,density_avg)
+        class(outlet_neumann_pressure_fd_test_t),  intent(inout)   :: self
+        type(chidg_worker_t),   intent(inout)   :: worker
+        type(mpi_comm),         intent(in)      :: bc_COMM
+        type(AD_D),             intent(inout)   :: p_avg
+        type(AD_D),             intent(inout)   :: c_avg
+        type(AD_D),             intent(inout)   :: density_avg
 
-        type(AD_D)          :: p_integral, v1_integral, v2_integral, v3_integral, &
-                               vn_integral, density_integral, &
-                               face_density, face_v1, face_v2, face_v3, face_vn, face_p
-        type(face_info_t)   :: face_info
+        type(AD_D)  :: face_p, face_c, face_density, p_integral, c_integral, density_integral
 
         type(AD_D), allocatable,    dimension(:)    ::  &
-            density, mom1, mom2, mom3, energy, p,       &
-            v1, v2, v3, vn
+            density, mom1, mom2, mom3, energy, p, c
 
         real(rk),   allocatable,    dimension(:)    :: weights, areas, r
 
@@ -138,9 +137,14 @@ contains
                        icoupled, idomain_g_coupled, idomain_l_coupled, ielement_g_coupled,  &
                        ielement_l_coupled, iface_coupled
         real(rk)    :: face_area, total_area
+        type(face_info_t)   :: face_info
 
+
+        !
         ! Zero integrated quantities
+        !
         total_area = ZERO
+
 
         ! Get location on domain
         idomain_l  = worker%element_info%idomain_l
@@ -164,91 +168,70 @@ contains
             itime    = 1
 
 
+            !
             ! Get face info from coupled element we want to interpolate from
+            !
             idomain_g_coupled  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_g( icoupled)
             idomain_l_coupled  = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%idomain_l( icoupled)
             ielement_g_coupled = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_g(icoupled)
             ielement_l_coupled = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%ielement_l(icoupled)
             iface_coupled      = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%iface(     icoupled)
 
-            face_info = face_info_constructor(idomain_g_coupled,  &
-                                              idomain_l_coupled,  &
-                                              ielement_g_coupled, &
-                                              ielement_l_coupled, &
-                                              iface_coupled)
+            face_info%idomain_g  = idomain_g_coupled
+            face_info%idomain_l  = idomain_l_coupled
+            face_info%ielement_g = ielement_g_coupled
+            face_info%ielement_l = ielement_l_coupled
+            face_info%iface      = iface_coupled
 
             
+            !
             ! Interpolate coupled element solution on face of coupled element
+            !
             density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, idensity, itime, 'value', ME)
             mom1    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom1,    itime, 'value', ME)
             mom2    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom2,    itime, 'value', ME)
             mom3    = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, imom3,    itime, 'value', ME)
             energy  = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,face_info,worker%function_info, ienergy,  itime, 'value', ME)
 
-            ! TODO: fix for parallel!
             if (worker%mesh%domain(idomain_l_coupled)%elems(ielement_l_coupled)%coordinate_system == CYLINDRICAL) then
                 mom2 = mom2 / worker%mesh%domain(idomain_l_coupled)%elems(ielement_l_coupled)%interp_coords_def(:,1)
             end if
+
+            ! We don't want this, because this won't return the correct radius for 
+            ! the current face being interpolated from.
             !r = worker%coordinate('1','boundary')
             !if (worker%coordinate_system() == 'Cylindrical') then
-            !    mom2 = mom2 / r
+            !    mom_2 = mom_2 / r
             !end if
 
+
+            
             ! Compute velocities and pressure
-            v1 = mom1/density
-            v2 = mom2/density
-            v3 = mom3/density
-            p = (gam-ONE)*(energy - HALF*(mom1*mom1 + mom2*mom2 + mom3*mom3)/density )
-
-            ! TODO: fix for parallel!
-            vn = v1*worker%mesh%domain(idomain_l_coupled)%faces(ielement_l_coupled,iface_coupled)%unorm_def(:,1) + &
-                 v2*worker%mesh%domain(idomain_l_coupled)%faces(ielement_l_coupled,iface_coupled)%unorm_def(:,2) + &
-                 v3*worker%mesh%domain(idomain_l_coupled)%faces(ielement_l_coupled,iface_coupled)%unorm_def(:,3)
+            p = (gam-ONE)*(energy - HALF*( mom1*mom1 + mom2*mom2 + mom3*mom3 )/density )
+            c = sqrt(gam*p/density)
 
 
-            ! TODO: fix for parallel!
             ! Get weights + areas
             weights   = worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%weights_face(iface_coupled)
             areas     = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%data(icoupled)%areas
             face_area = worker%mesh%bc_patch_group(group_ID)%patch(patch_ID)%coupling(face_ID)%data(icoupled)%total_area
 
+
             ! Integrate and contribute to average
-            face_v1      = sum(v1      * areas * weights)
-            face_v2      = sum(v2      * areas * weights)
-            face_v3      = sum(v3      * areas * weights)
-            face_vn      = sum(vn      * areas * weights)
-            face_density = sum(density * areas * weights)
-            face_p       = sum(p       * areas * weights)
-
-
-            if (allocated(v1_integral%xp_ad_)) then
-                v1_integral = v1_integral + face_v1
-            else
-                v1_integral = face_v1
-            end if
-
-            if (allocated(v2_integral%xp_ad_)) then
-                v2_integral = v2_integral + face_v2
-            else
-                v2_integral = face_v2
-            end if
-
-            if (allocated(v3_integral%xp_ad_)) then
-                v3_integral = v3_integral + face_v3
-            else
-                v3_integral = face_v3
-            end if
-
-            if (allocated(vn_integral%xp_ad_)) then
-                vn_integral = vn_integral + face_vn
-            else
-                vn_integral = face_vn
-            end if
+            face_p = sum(p*areas*weights)
+            face_c = sum(c*areas*weights)
+            face_density = sum(density*areas*weights)
 
             if (allocated(p_integral%xp_ad_)) then
                 p_integral = p_integral + face_p
             else
                 p_integral = face_p
+            end if
+
+            if (allocated(c_integral%xp_ad_)) then
+                c_integral = c_integral + face_c
+            else
+                c_integral = face_c
             end if
 
             if (allocated(density_integral%xp_ad_)) then
@@ -257,6 +240,7 @@ contains
                 density_integral = face_density
             end if
 
+
             total_area = total_area + face_area
 
         end do !icoupled
@@ -264,12 +248,10 @@ contains
 
         ! Compute average pressure:
         !   area-weighted pressure integral over the total area
-        v1_avg      = v1_integral      / total_area
-        v2_avg      = v2_integral      / total_area
-        v3_avg      = v3_integral      / total_area
-        vn_avg      = vn_integral      / total_area
+        p_avg = p_integral / total_area
+        c_avg = c_integral / total_area
         density_avg = density_integral / total_area
-        p_avg       = p_integral       / total_area
+
 
     end subroutine compute_averages
     !*******************************************************************************************
@@ -282,7 +264,7 @@ contains
 
     !>  Compute routine for Pressure Outlet boundary condition state function.
     !!
-    !!  @author Nathan A. steady_1dchar
+    !!  @author Nathan A. neumann_pressure_fd_test
     !!  @date   2/3/2016
     !!
     !!  @param[in]      worker  Interface for geometry, cache, integration, etc.
@@ -290,7 +272,7 @@ contains
     !!
     !-------------------------------------------------------------------------------------------
     subroutine compute_bc_state(self,worker,prop,bc_COMM)
-        class(outlet_steady_1dchar_t),    intent(inout)   :: self
+        class(outlet_neumann_pressure_fd_test_t),    intent(inout)   :: self
         type(chidg_worker_t),               intent(inout)   :: worker
         class(properties_t),                intent(inout)   :: prop
         type(mpi_comm),                     intent(in)      :: bc_COMM
@@ -303,29 +285,81 @@ contains
             grad1_density_m, grad1_mom1_m, grad1_mom2_m, grad1_mom3_m, grad1_energy_m,  &
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,  &
             grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
-            v1_bc, v2_bc, v3_bc, p_bc,                                                  &
-            v1_m,  v2_m,  v3_m,  vn_m, p_m,                                             &
-            v1_t,  v2_t,  v3_t,                                                         &
-            ddensity_c, dv1_c, dv2_c, dv3_c, dvn_c, dp_c,                               &
-            c1, c2, c3, c4, c5, ddensity, dp, dv1, dv2, dv3, dvn,                       &
-            dv1_avg, dv2_avg, dv3_avg, vn_avg_1, vn_avg_2, vn_avg_3
+            v1_bc, v2_bc, v3_bc, p_bc, T_bc,                                            &
+            v1_m,  v2_m,  v3_m,  p_m,  T_m,                                             &
+            density_o, mom1_o, mom2_o, mom3_o, energy_o, p_o, v1_o,                     &
+            dp_ddensity, dp_dmom1, dp_dmom2, dp_dmom3, dp_denergy,                      &
+            grad1_v1, grad1_p, gradn_p, gradn_v1, gradn_density, grad1_phi1, grad1_phi4
 
 
-        type(AD_D)  :: p_avg, v1_avg, v2_avg, v3_avg, vn_avg, density_avg, M_avg, c_avg, c4_1d,    &
-                       ddensity_avg, dvn_avg, dp_avg
+        type(AD_D)  :: p_avg, c_avg, density_avg, delta_p_avg
 
-        real(rk),       allocatable, dimension(:)   ::  p_user, r
+        real(rk),   allocatable, dimension(:)   :: p_user, r, delta_n
+        real(rk),   allocatable, dimension(:,:) :: ref_coords, phys_coords, phys_coords_offset
+        real(rk)                                :: offset
+
         integer :: i
 
-        ! Get back pressure from function.
-        p_user = self%bcproperties%compute('Average Pressure',worker%time(),worker%coords())
 
         ! Interpolate interior solution to face quadrature nodes
-        density_m = worker%get_field('Density'   , 'value', 'face interior')
-        mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
-        mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
-        mom3_m    = worker%get_field('Momentum-3', 'value', 'face interior')
-        energy_m  = worker%get_field('Energy'    , 'value', 'face interior')
+        density_m = worker%get_field('Density'    , 'value', 'face interior')
+        mom1_m    = worker%get_field('Momentum-1' , 'value', 'face interior')
+        mom2_m    = worker%get_field('Momentum-2' , 'value', 'face interior')
+        mom3_m    = worker%get_field('Momentum-3' , 'value', 'face interior')
+        energy_m  = worker%get_field('Energy'     , 'value', 'face interior')
+        p_m       = worker%get_field('Pressure'   , 'value', 'face interior')
+        T_m       = worker%get_field('Temperature', 'value', 'face interior')
+
+        ! Get back pressure from function.
+        gradn_p = p_m ! allocate
+        p_user = self%bcproperties%compute('Average Pressure',worker%time(),worker%coords())
+        gradn_p = self%bcproperties%compute('Normal Derivative',worker%time(),worker%coords())
+        
+        associate( idom => worker%element_info%idomain_l, ielem => worker%element_info%ielement_l, iface => worker%iface )
+
+            ! Retrieve reference and physical coordinates
+            ref_coords = worker%mesh%domain(idom)%faces(ielem,iface)%basis_s%nodes_face(iface)
+            phys_coords = worker%mesh%domain(idom)%faces(ielem,iface)%interp_coords_def(:,:)
+
+            ! Offset axial reference nodes to lie in the element interior
+            offset = 0.5    ! quarter-element distance
+            !offset = 0.25    ! eight-element distance
+            if ( (ref_coords(1,1) - ONE) < 1.e-7_rk ) then
+                ref_coords(:,1) = ref_coords(:,1) + offset
+            else if ( (ref_coords(1,2) - ONE) < 1.e-7_rk ) then
+                ref_coords(:,2) = ref_coords(:,2) + offset
+            else if ( (ref_coords(1,3) - ONE) < 1.e-7_rk ) then
+                ref_coords(:,3) = ref_coords(:,3) + offset
+            else
+                call chidg_signal(FATAL,"bc_state_outlet_neumann_pressure_fd_test: invalid condition.")
+            end if
+
+            ! Allocate offset physical coords and compute from element
+            phys_coords_offset = phys_coords
+            do i = 1,size(phys_coords,1)
+                phys_coords_offset(i,:) = worker%mesh%domain(idom)%elems(ielem)%physical_point(ref_coords(i,:),'Deformed')
+            end do
+
+        end associate
+
+        ! Compute offset in physical space
+        allocate(delta_n(size(phys_coords,1))) ! Silence debug error
+        delta_n = sqrt((phys_coords(:,1) - phys_coords_offset(:,1))**TWO + &
+                       (phys_coords(:,2) - phys_coords_offset(:,2))**TWO + &
+                       (phys_coords(:,3) - phys_coords_offset(:,3))**TWO)
+
+
+        ! Compute interpolation of solution at offset quadrature node set
+        density_o = worker%interpolate_field('Density',    ref_coords)
+        mom1_o    = worker%interpolate_field('Momentum-1', ref_coords)
+        mom2_o    = worker%interpolate_field('Momentum-2', ref_coords)
+        mom3_o    = worker%interpolate_field('Momentum-3', ref_coords)
+        energy_o  = worker%interpolate_field('Energy',     ref_coords)
+        if (worker%coordinate_system() == 'Cylindrical') then
+            mom2_o = mom2_o / worker%coordinate('1','boundary')
+        end if
+        p_o = (gam-ONE)*(energy_o - HALF*( mom1_o*mom1_o + mom2_o*mom2_o + mom3_o*mom3_o )/density_o )
+
 
 
         grad1_density_m = worker%get_field('Density'   , 'grad1', 'face interior')
@@ -377,106 +411,69 @@ contains
         r = worker%coordinate('1','boundary')
         if (worker%coordinate_system() == 'Cylindrical') then
             mom2_m = mom2_m / r
-            grad1_mom2_m = (grad1_mom2_m/r) - mom2_m/r
-            grad2_mom2_m = (grad2_mom2_m/r)
-            grad3_mom2_m = (grad3_mom2_m/r)
         end if
 
 
+        ! Extrapolate temperature and velocity
+        T_bc = T_m
+        v1_bc = mom1_m/density_m
+        v2_bc = mom2_m/density_m
+        v3_bc = mom3_m/density_m
+
+
         ! Update average pressure
-        call self%compute_averages(worker,bc_COMM,v1_avg, v2_avg, v3_avg, vn_avg, density_avg, p_avg)
-        c_avg = sqrt(gam*p_avg/density_avg)
+        call self%compute_averages(worker,bc_COMM,p_avg,c_avg,density_avg)
+
+        ! interior velocity gradient
+        grad1_v1 = -(v1_bc/density_m)*grad1_density_m  +  (ONE/density_m)*grad1_mom1_m
+
+        ! interior pressure gradient
+        dp_ddensity =  (gam-ONE)*HALF*(mom1_m*mom1_m + mom2_m*mom2_m + mom3_m*mom3_m)/(density_m*density_m)
+        dp_dmom1    = -(gam-ONE)*mom1_m/density_m
+        dp_dmom2    = -(gam-ONE)*mom2_m/density_m
+        dp_dmom3    = -(gam-ONE)*mom3_m/density_m
+        dp_denergy  = dp_ddensity ! init storage
+        dp_denergy  =  (gam-ONE)
+
+        grad1_p = dp_ddensity * grad1_density_m  + &
+                  dp_dmom1    * grad1_mom1_m     + &
+                  dp_dmom2    * grad1_mom2_m     + &
+                  dp_dmom3    * grad1_mom3_m     + &
+                  dp_denergy  * grad1_energy_m
 
 
-        ! Compute velocities
-        v1_m = mom1_m/density_m
-        v2_m = mom2_m/density_m
-        v3_m = mom3_m/density_m
-        vn_m = v1_m*worker%unit_normal(1) + &
-               v2_m*worker%unit_normal(2) + &
-               v3_m*worker%unit_normal(3)
+        grad1_phi1 = density_m
+        grad1_phi4 = density_m
+        do i = 1,size(grad1_p)
+            grad1_phi1(i) = -c_avg*c_avg*grad1_density_m(i)  +  grad1_p(i)
+            grad1_phi4(i) = density_avg*c_avg*grad1_v1(i)    +  grad1_p(i)
+        end do
 
-        ! Compute tangential velocity part
-        v1_t = v1_m - vn_m*worker%unit_normal(1)
-        v2_t = v2_m - vn_m*worker%unit_normal(2)
-        v3_t = v3_m - vn_m*worker%unit_normal(3)
-
-        ! Compute pressure from extrapolated data
-        p_m = worker%get_field('Pressure', 'value', 'face interior')
-    
-
-        ! Compute update for average quantities
-        c4_1d        = TWO*(p_user(1) - p_avg)
-        ddensity_avg =  c4_1d/(TWO*c_avg*c_avg)
-        dvn_avg      = -c4_1d/(TWO*density_avg*c_avg)
-        dp_avg       =  HALF*c4_1d
-
-        ! Compute the average update along physical coordinates
-        dv1_avg = dvn_avg*worker%unit_normal(1)
-        dv2_avg = dvn_avg*worker%unit_normal(2)
-        dv3_avg = dvn_avg*worker%unit_normal(3)
-
-        ! Compute perturbation from avg
-        dv1      = v1_m      - v1_avg
-        dv2      = v2_m      - v2_avg
-        dv3      = v3_m      - v3_avg
-        dvn      = vn_m      - vn_avg
-        ddensity = density_m - density_avg
-        dp       = p_m       - p_avg
-
-
-        ! Compute 1D characteristics 
-        allocate(c1(size(dp)), c2(size(dp)), c3(size(dp)), c4(size(dp)), c5(size(dp)))
-        do i = 1,size(dp)
-            c1(i) = -c_avg*c_avg*ddensity(i)   +  dp(i)
-            c4(i) =  density_avg*c_avg*dvn(i)  +  dp(i)
-            c5(i) = -density_avg*c_avg*dvn(i)  +  dp(i)
+        ! BC gradients
+        gradn_p = density_m
+        gradn_v1 = density_m
+        gradn_density = density_m
+        do i = 1,size(grad1_p)
+            gradn_p(i)       = HALF*grad1_phi4(i)
+            gradn_v1(i)      = (ONE/(TWO*density_avg*c_avg))*grad1_phi4(i)
+            gradn_density(i) = -(ONE/(c_avg*c_avg))*grad1_phi1(i)  +  (ONE/(TWO*c_avg*c_avg))*grad1_phi4(i)
         end do
 
 
-        ! Compute update from characteristics for perturbation quantities: No contrib from c5
-        allocate(ddensity_c(size(dp)), dv1_c(size(dp)), dv2_c(size(dp)), dv3_c(size(dp)), dvn_c(size(dp)), dp_c(size(dp)))
-        do i = 1,size(dp)
-            ddensity_c(i) = -c1(i)/(c_avg*c_avg)  +  c4(i)/(TWO*c_avg*c_avg) 
-            dvn_c(i)      =  c4(i)/(TWO*density_avg*c_avg)
-            dp_c(i)       =  c4(i)/TWO
-        end do
+        ! Extrapolate density
+        v1_o = mom1_o/density_o
+        delta_p_avg = (p_user(1) - p_avg)
+        density_bc = density_o - delta_n*gradn_density
+        v1_bc      = v1_o      - delta_n*gradn_v1
+        p_bc       = p_o       - delta_n*gradn_p        +  delta_p_avg
 
+        ! Compute density, momentum, energy
+        density_bc = p_bc/(Rgas*T_bc)
+        mom1_bc    = v1_bc*density_bc
+        mom2_bc    = v2_bc*density_bc
+        mom3_bc    = v3_bc*density_bc
+        energy_bc  = p_bc/(gam - ONE) + (density_bc*HALF)*(v1_bc*v1_bc + v2_bc*v2_bc + v3_bc*v3_bc)
 
-        ! Compute velocity perturbation along physical coordinates
-        dv1_c = dvn_c*worker%unit_normal(1)
-        dv2_c = dvn_c*worker%unit_normal(2)
-        dv3_c = dvn_c*worker%unit_normal(3)
-
-
-        ! Compute contribution to each direction from average normal velocity
-        vn_avg_1 = vn_avg*worker%unit_normal(1)
-        vn_avg_2 = vn_avg*worker%unit_normal(2)
-        vn_avg_3 = vn_avg*worker%unit_normal(3)
-
-
-        ! Construct boundary state from average and perturbations
-        density_bc = density_m
-        v1_bc = density_m
-        v2_bc = density_m
-        v3_bc = density_m
-        p_bc = density_m
-        do i = 1,size(dp)
-            density_bc(i) = density_avg  +  ddensity_avg  +  ddensity_c(i)
-            v1_bc(i)      = vn_avg_1(i)  +  dv1_avg(i)    +  dv1_c(i)      +   v1_t(i)
-            v2_bc(i)      = vn_avg_2(i)  +  dv2_avg(i)    +  dv2_c(i)      +   v2_t(i)
-            v3_bc(i)      = vn_avg_3(i)  +  dv3_avg(i)    +  dv3_c(i)      +   v3_t(i)
-            p_bc(i)       = p_avg        +  dp_avg        +  dp_c(i)
-        end do
-
-        ! Form conserved variables
-        density_bc = density_bc
-        mom1_bc    = density_bc*v1_bc
-        mom2_bc    = density_bc*v2_bc
-        mom3_bc    = density_bc*v3_bc
-        energy_bc  = p_bc/(gam - ONE) + (density_bc*HALF)*(v1_bc*v1_bc + &
-                                                           v2_bc*v2_bc + &
-                                                           v3_bc*v3_bc)
 
         ! Account for cylindrical. Convert tangential momentum back to angular momentum.
         if (worker%coordinate_system() == 'Cylindrical') then
@@ -493,11 +490,7 @@ contains
 
 
     end subroutine compute_bc_state
-    !****************************************************************************************
+    !*****************************************************************************************
 
 
-
-
-
-
-end module bc_state_outlet_steady_1dchar
+end module bc_state_outlet_neumann_pressure_fd_test

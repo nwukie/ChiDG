@@ -230,15 +230,10 @@ contains
         integer(ik) :: matrix_iterations
 
 
-        !
         ! Report if solver took at least one step
-        !
         if (self%newton_iterations%size() > 0) then
 
-
-            !
             ! Nonliner solver header
-            !
             call write_line(' ')
             call write_line('---------------------------------   Nonlinear Solver Report  ----------------------------------')
             call write_line('Newton iterations: ', self%newton_iterations%at(1), columns=.True., column_width=20)
@@ -247,16 +242,11 @@ contains
             call write_line('------------------------------------------------------------------------------------------')
 
 
-
-            !
             ! Print per-iteration report
-            !
             call write_line('Residual time', 'Norm[R]', 'Matrix time', 'Matrix iterations', columns=.True., column_width=20)
 
 
-            !
             ! Loop through stored data and print for each newton iteration
-            !
             do i = 1,self%residual_time%size()
                 residual_time     = self%residual_time%at(i)
                 residual_norm     = self%residual_norm%at(i)

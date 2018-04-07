@@ -772,39 +772,39 @@ contains
         delta_p = p_avg_user(1) - p_avg
 
 
-        worker%interpolation_source = 'face interior'
-        call compute_velocity_gradient(worker,grad1_v1_m,grad2_v1_m,grad3_v1_m, &
-                                              grad1_v2_m,grad2_v2_m,grad3_v2_m, &
-                                              grad1_v3_m,grad2_v3_m,grad3_v3_m)
-        call compute_pressure_gradient(worker,grad1_p_m,grad2_p_m,grad3_p_m)
-
-        
-        ! Compute normal pressure gradients
-        gradn_p = grad1_p_m*worker%unit_normal(1) + grad2_p_m*worker%unit_normal(2) + grad3_p_m*worker%unit_normal(3)
-
-        ! Compute gradient of normal velocity in the normal direction
-        gradn_vn = (grad1_v1_m*worker%unit_normal(1) + grad2_v1_m*worker%unit_normal(2) + grad3_v1_m*worker%unit_normal(3))*worker%unit_normal(1) + &
-                   (grad1_v2_m*worker%unit_normal(1) + grad2_v2_m*worker%unit_normal(2) + grad3_v1_m*worker%unit_normal(3))*worker%unit_normal(2) + &
-                   (grad1_v3_m*worker%unit_normal(1) + grad2_v3_m*worker%unit_normal(2) + grad3_v1_m*worker%unit_normal(3))*worker%unit_normal(3)
-
-
-        c_m = sqrt(gam*p_m/density_m)
-        grad1_phi4 = density_m
-        do i = 1,size(grad1_p_m)
-            !grad1_phi4(i) = density_avg*c_avg*grad1_v1_m(i)  +  grad1_p_m(i)
-            !grad1_phi4(i) = density_avg*c_avg*gradn_vn(i)  +  gradn_p(i)
-            grad1_phi4(i) = density_m(i)*c_m(i)*gradn_vn(i)  +  gradn_p(i)
-        end do
-
-        T1 = HALF*( (v2_m*grad2_p_m + v3_m*grad3_p_m)    &
-                    + gam*p_m*(grad2_v2_m + grad3_v3_m)  &
-                    - density_m*c_m*(v2_m*grad2_v1_m + v3_m*grad3_v1_m) )
-
-        do i = 1,size(grad1_phi4)
-            !gradn_p_user(i) = -HALF*grad1_phi4(i) + (M1_avg-ONE)*T1(i)/sqrt(v2_m(i)*v2_m(i) + v3_m(i)*v3_m(i))
-            gradn_p_user(i) = -HALF*grad1_phi4(i) 
-        end do
-
+!        worker%interpolation_source = 'face interior'
+!        call compute_velocity_gradient(worker,grad1_v1_m,grad2_v1_m,grad3_v1_m, &
+!                                              grad1_v2_m,grad2_v2_m,grad3_v2_m, &
+!                                              grad1_v3_m,grad2_v3_m,grad3_v3_m)
+!        call compute_pressure_gradient(worker,grad1_p_m,grad2_p_m,grad3_p_m)
+!
+!        
+!        ! Compute normal pressure gradients
+!        !gradn_p = grad1_p_m*worker%unit_normal(1) + grad2_p_m*worker%unit_normal(2) + grad3_p_m*worker%unit_normal(3)
+!        gradn_p = grad1_p_m
+!
+!        ! Compute gradient of normal velocity in the normal direction
+!        gradn_vn = (grad1_v1_m*worker%unit_normal(1) + grad2_v1_m*worker%unit_normal(2) + grad3_v1_m*worker%unit_normal(3))*worker%unit_normal(1) + &
+!                   (grad1_v2_m*worker%unit_normal(1) + grad2_v2_m*worker%unit_normal(2) + grad3_v1_m*worker%unit_normal(3))*worker%unit_normal(2) + &
+!                   (grad1_v3_m*worker%unit_normal(1) + grad2_v3_m*worker%unit_normal(2) + grad3_v1_m*worker%unit_normal(3))*worker%unit_normal(3)
+!        !gradn_vn = grad1_v1_m
+!
+!
+!        c_m = sqrt(gam*p_m/density_m)
+!        grad1_phi4 = density_m
+!        do i = 1,size(grad1_p_m)
+!            grad1_phi4(i) = density_avg*c_avg*gradn_vn(i)  +  gradn_p(i)
+!        end do
+!
+!        T1 = HALF*( (v2_m*grad2_p_m + v3_m*grad3_p_m)    &
+!                    + gam*p_m*(grad2_v2_m + grad3_v3_m)  &
+!                    - density_m*c_m*(v2_m*grad2_v1_m + v3_m*grad3_v1_m) )
+!
+!        do i = 1,size(grad1_phi4)
+!            !gradn_p_user(i) = -HALF*grad1_phi4(i) + (M1_avg-ONE)*T1(i)/sqrt(v2_m(i)*v2_m(i) + v3_m(i)*v3_m(i))
+!            gradn_p_user(i) = HALF*grad1_phi4(i) - 1000._rk*(p_avg - p_avg_user(1))
+!        end do
+!
 !        grad1_phi4 = density_m
 !        do i = 1,size(grad3_p_m)
 !            grad1_phi4(i) = density_avg*c_avg*grad3_v3_m(i)    +  grad3_p_m(i)
@@ -826,6 +826,9 @@ contains
         grad1_p_user = gradn_p_user*worker%unit_normal(1)
         grad2_p_user = gradn_p_user*worker%unit_normal(2)
         grad3_p_user = gradn_p_user*worker%unit_normal(3)
+        !grad1_p_user = gradn_p_user
+        !grad2_p_user = ZERO
+        !grad3_p_user = ZERO
 
         idomain_l  = worker%element_info%idomain_l 
         ielement_l = worker%element_info%ielement_l 
@@ -886,7 +889,6 @@ contains
                 ! boundary pressure: extrapolating interior and adding average update.
                 ! boundary pressure gradient: set to user-specified values
                 p_sigma = matmul(val, p_modes)
-                p_sigma = p_sigma + delta_p
                 
                 grad1_p_sigma = grad1_p_user
                 grad2_p_sigma = grad2_p_user

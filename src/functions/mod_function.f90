@@ -21,6 +21,7 @@ module mod_function
     use fcn_convecting_vortex,              only: convecting_vortex_f
     use fcn_scalar_adv_diff_bl_solution,    only: scalar_adv_diff_bl_solution_f
     use fcn_pressure_pulse,                 only: pressure_pulse_f
+    use fcn_euler_gradients,                only: euler_gradients_f
     use fcn_isentropic_vortex,              only: isentropic_vortex_f
 !    use fcn_cylindricalduct_eigenfunction,  only: cylindricalduct_eigenfunction_f
     use fcn_monopole,                       only: monopole_f
@@ -66,6 +67,7 @@ contains
         type(polynomial_f)                      :: polynomial
         type(scalar_adv_diff_bl_solution_f)     :: scalar_adv_diff_bl_solution
         type(pressure_pulse_f)                  :: pressure_pulse
+        type(euler_gradients_f)                 :: euler_gradients
         type(isentropic_vortex_f)               :: isentropic_vortex
 
         !
@@ -95,6 +97,7 @@ contains
             call registered_fcns%push_back(convecting_vortex)
             call registered_fcns%push_back(scalar_adv_diff_bl_solution)
             call registered_fcns%push_back(pressure_pulse)
+            call registered_fcns%push_back(euler_gradients)
             call registered_fcns%push_back(isentropic_vortex)
 
 

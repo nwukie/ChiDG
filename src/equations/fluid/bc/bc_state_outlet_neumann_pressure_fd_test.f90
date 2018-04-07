@@ -462,10 +462,11 @@ contains
 
         ! Extrapolate density
         v1_o = mom1_o/density_o
-        delta_p_avg = (p_user(1) - p_avg)
-        density_bc = density_o - delta_n*gradn_density
-        v1_bc      = v1_o      - delta_n*gradn_v1
-        p_bc       = p_o       - delta_n*gradn_p        +  delta_p_avg
+        !delta_p_avg = (p_user(1) - p_avg)
+        delta_p_avg = 1000._rk*(p_avg - p_user(1))
+        !density_bc = density_o - delta_n*gradn_density
+        !v1_bc      = v1_o      - delta_n*gradn_v1
+        p_bc       = p_o       + delta_n*(gradn_p - delta_p_avg)
 
         ! Compute density, momentum, energy
         density_bc = p_bc/(Rgas*T_bc)

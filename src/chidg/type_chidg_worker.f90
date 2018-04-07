@@ -1816,13 +1816,18 @@ contains
     !!  @date   8/22/2016
     !!
     !---------------------------------------------------------------------------------------
-    function unit_normal(self,direction) result(unorm_gq)
-        class(chidg_worker_t),  intent(in)  :: self
-        integer(ik),            intent(in)  :: direction
+    function unit_normal(self,direction,iface_override) result(unorm_gq)
+        class(chidg_worker_t),  intent(in)              :: self
+        integer(ik),            intent(in)              :: direction
+        integer(ik),            intent(in), optional    :: iface_override
 
         real(rk), dimension(:), allocatable :: unorm_gq
 
-        unorm_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%unorm(:,direction)
+        if (present(iface_override)) then
+            unorm_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,iface_override)%unorm(:,direction)
+        else
+            unorm_gq = self%mesh%domain(self%element_info%idomain_l)%faces(self%element_info%ielement_l,self%iface)%unorm(:,direction)
+        end if
 
     end function unit_normal
     !***************************************************************************************

@@ -28,8 +28,6 @@ module bc_state_outlet_neumann_LODI_localdg
     !----------------------------------------------------------------------------------------
     type, public, extends(bc_state_t) :: outlet_neumann_LODI_localdg_t
 
-        !real(rk),   allocatable :: dRdp(:,:,:)
-
     contains
 
         procedure   :: init                 ! Set-up bc state with options/name etc.
@@ -378,7 +376,7 @@ contains
             grad2_density_m, grad2_mom1_m, grad2_mom2_m, grad2_mom3_m, grad2_energy_m,  &
             grad3_density_m, grad3_mom1_m, grad3_mom2_m, grad3_mom3_m, grad3_energy_m,  &
             v1_bc, v2_bc, v3_bc, T_m, T_bc, p_bc, p_modes, vn_modes, density_modes, vn_bc, v1_m, v2_m, v3_m, &
-            vn_m, vn_m_1, vn_m_2, vn_m_3, vt_m_1, vt_m_2, vt_m_3
+            vn_m, vn_m_1, vn_m_2, vn_m_3, vt_m_1, vt_m_2, vt_m_3, p_m
 
         type(AD_D)  :: p_avg, c_avg, density_avg, M1_avg, M2_avg, M3_avg
 
@@ -394,14 +392,18 @@ contains
         ! Converge element-local problem: p_modes
         call self%converge_local_problem_pressure(worker,bc_comm,p_modes,      p_avg,c_avg,density_avg,M1_avg,M2_avg,M3_avg)
         call self%converge_local_problem_vn(      worker,bc_comm,vn_modes,     p_avg,c_avg,density_avg,M1_avg,M2_avg,M3_avg)
-        call self%converge_local_problem_density( worker,bc_comm,density_modes,p_avg,c_avg,density_avg,M1_avg,M2_avg,M3_avg)
+        !call self%converge_local_problem_density( worker,bc_comm,density_modes,p_avg,c_avg,density_avg,M1_avg,M2_avg,M3_avg)
 
         ! Compute boundary state with that from element-local problem just solved
         associate( val => worker%mesh%domain(worker%element_info%idomain_l)%faces(worker%element_info%ielement_l,worker%iface)%basis_s%interpolator_face('Value',worker%iface) )
             p_bc       = matmul(val,p_modes)
             vn_bc      = matmul(val,vn_modes)
-            density_bc = matmul(val,density_modes)
+            !density_bc = matmul(val,density_modes)
         end associate
+
+        print*, 'pressure: ', p_bc(:)%x_ad_
+        print*, 'vn_bc: ', vn_bc(:)%x_ad_
+        !print*, 'density: ', density_bc(:)%x_ad_
 
         ! Interpolate interior solution to face quadrature nodes
         density_m = worker%get_field('Density'    , 'value', 'face interior')
@@ -410,6 +412,8 @@ contains
         mom3_m    = worker%get_field('Momentum-3' , 'value', 'face interior')
         energy_m  = worker%get_field('Energy'     , 'value', 'face interior')
         T_m       = worker%get_field('Temperature', 'value', 'face interior')
+        p_m       = worker%get_field('Pressure',    'value', 'face interior')
+
 
 
         grad1_density_m = worker%get_field('Density'   , 'grad1', 'face interior')
@@ -461,10 +465,17 @@ contains
         v1_bc = vt_m_1 + vn_bc*worker%unit_normal(1)
         v2_bc = vt_m_2 + vn_bc*worker%unit_normal(2)
         v3_bc = vt_m_3 + vn_bc*worker%unit_normal(3)
+        !v1_bc = vt_m_1 + vn_m*worker%unit_normal(1)
+        !v2_bc = vt_m_2 + vn_m*worker%unit_normal(2)
+        !v3_bc = vt_m_3 + vn_m*worker%unit_normal(3)
 
 
         ! Compute density, momentum, energy
-        !density_bc = p_bc/(Rgas*T_bc)
+        !v1_bc = v1_m
+        !v2_bc = v2_m
+        !v3_bc = v3_m
+        p_bc = p_m
+        density_bc = p_bc/(Rgas*T_bc)
         mom1_bc    = v1_bc*density_bc
         mom2_bc    = v2_bc*density_bc
         mom3_bc    = v3_bc*density_bc
@@ -629,7 +640,6 @@ contains
                   dp_dmom3    * grad3_mom3     + &
                   dp_denergy  * grad3_energy
 
-
     end subroutine compute_pressure_gradient
     !******************************************************************************
 
@@ -743,6 +753,7 @@ contains
         grad2_v3 = -(v3/density)*grad2_density  +  (ONE/density)*grad2_mom3
         grad3_v3 = -(v3/density)*grad3_density  +  (ONE/density)*grad3_mom3
 
+
     end subroutine compute_velocity_gradient
     !******************************************************************************
 
@@ -770,273 +781,9 @@ contains
             grad3_density = interpolate_face_autodiff(worker%mesh,worker%solverdata%q,worker%face_info(),worker%function_info, 1, worker%itime, 'grad3', ME)
         end if
 
+
     end subroutine compute_density_gradient
     !******************************************************************************
-
-
-
-
-
-
-!    !>
-!    !!
-!    !!  @author Nathan A. Wukie
-!    !!  @date   3/13/2018
-!    !!
-!    !------------------------------------------------------------------------------
-!    function compute_local_residual_v2(self,worker,bc_comm,v2_modes,p_avg,c_avg,density_avg, M1_avg, M2_avg, M3_avg) result(R_modes)
-!        class(outlet_neumann_LODI_localdg_t),           intent(inout)               :: self
-!        type(chidg_worker_t),                           intent(inout)               :: worker
-!        type(mpi_comm),                                 intent(in)                  :: bc_comm
-!        type(AD_D),                                     intent(inout), allocatable  :: v2_modes(:)
-!        type(AD_D),                                     intent(in)                  :: p_avg
-!        type(AD_D),                                     intent(in)                  :: c_avg
-!        type(AD_D),                                     intent(in)                  :: density_avg
-!        type(AD_D),                                     intent(in)                  :: M1_avg
-!        type(AD_D),                                     intent(in)                  :: M2_avg
-!        type(AD_D),                                     intent(in)                  :: M3_avg
-!
-!        type(AD_D), allocatable, dimension(:)   ::                          &
-!            v2_sigma,  grad1_v2_sigma,  grad2_v2_sigma,  grad3_v2_sigma,  &
-!            grad1_p_m,   grad2_p_m,      grad3_p_m,                         &
-!            lift_face_1,    lift_face_2,    lift_face_3,                    &
-!            lift_elem_1,    lift_elem_2,    lift_elem_3,                    &
-!            diff_1,         diff_2,         diff_3,     diff,               &
-!            face_array, element_array, R_modes, integral, integrand, flux1, flux2, flux3,   &
-!            density_m, mom1_m, mom2_m, mom3_m, energy_m,                                    &
-!            grad1_v2_LODI, grad2_v2_LODI, grad3_v2_LODI, gradn_v2_LODI, &
-!            grad1_v1_m, grad2_v1_m, grad3_v1_m,                 &
-!            grad1_v2_m, grad2_v2_m, grad3_v2_m,                 &
-!            grad1_v3_m, grad2_v3_m, grad3_v3_m,                 &
-!            grad1_density_m, grad2_density_m, grad3_density_m,  &
-!            gradn_vn, gradn_p, gradn_density,                   &
-!            v1_m, v2_m, v3_m, c_m, vn, L1, L2, L5, lambda1, lambda2, lambda5, T1, p_m
-!
-!        integer(ik) :: iface, iface_bc, idomain_l, ielement_l, i
-!
-!        real(rk),   allocatable, dimension(:) :: p_avg_user, r
-!
-!        density_m = worker%get_field('Density',    'value', 'face interior')
-!        mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
-!        mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
-!        mom3_m    = worker%get_field('Momentum-3', 'value', 'face interior')
-!        energy_m  = worker%get_field('Energy',     'value', 'face interior')
-!        p_m       = worker%get_field('Pressure',   'value', 'face interior')
-!
-!        v1_m = mom1_m/density_m
-!        v2_m = mom2_m/density_m
-!        v3_m = mom3_m/density_m
-!
-!        ! Get user parameter settings
-!        p_avg_user = self%bcproperties%compute('Average Pressure',         worker%time(),worker%coords())
-!
-!
-!        worker%interpolation_source = 'face interior'
-!        call compute_density_gradient(worker,grad1_density_m,grad2_density_m,grad3_density_m)
-!        call compute_velocity_gradient(worker,grad1_v1_m,grad2_v1_m,grad3_v1_m, &
-!                                              grad1_v2_m,grad2_v2_m,grad3_v2_m, &
-!                                              grad1_v3_m,grad2_v3_m,grad3_v3_m)
-!        call compute_pressure_gradient(worker,grad1_p_m,grad2_p_m,grad3_p_m)
-!
-!        
-!        ! Compute normal pressure gradients
-!        gradn_p = grad1_p_m*worker%unit_normal(1) + grad2_p_m*worker%unit_normal(2) + grad3_p_m*worker%unit_normal(3)
-!
-!        ! Compute gradient of normal velocity in the normal direction
-!        !gradn_vn = (grad1_v1_m*worker%unit_normal(1) + grad2_v1_m*worker%unit_normal(2) + grad3_v1_m*worker%unit_normal(3))*worker%unit_normal(1) + &
-!        !           (grad1_v2_m*worker%unit_normal(1) + grad2_v2_m*worker%unit_normal(2) + grad3_v2_m*worker%unit_normal(3))*worker%unit_normal(2) + &
-!        !           (grad1_v3_m*worker%unit_normal(1) + grad2_v3_m*worker%unit_normal(2) + grad3_v3_m*worker%unit_normal(3))*worker%unit_normal(3)
-!        gradn_vn = grad1_v1_m
-!
-!        ! Compute gradient of density in normal direction
-!        gradn_density = grad1_density_m*worker%unit_normal(1) + grad2_density_m*worker%unit_normal(2) + grad3_density_m*worker%unit_normal(3)
-!
-!
-!        ! Compute wave amplitudes
-!        !vn = v1_m*worker%unit_normal(1) + v2_m*worker%unit_normal(2) + v3_m*worker%unit_normal(3)
-!        vn = v1_m
-!        c_m = sqrt(gam*p_m/density_m)
-!        lambda1 = vn-c_m
-!        lambda2 = vn
-!        lambda5 = vn+c_m
-!        L1 = lambda1*(gradn_p - density_m*c_m*gradn_vn)
-!        L2 = lambda2*(c_m*c_m*gradn_density - gradn_p)
-!        L5 = lambda5*(gradn_p + density_m*c_m*gradn_vn)
-!        ! Recompute L1
-!        L1(:) = p_avg - p_avg_user(1)
-!
-!        T1 = ( (v2_m*grad2_p_m + v3_m*grad3_p_m)    &
-!               + gam*p_m*(grad2_v2_m + grad3_v3_m)  &
-!               - density_m*c_m*(v2_m*grad2_v1_m + v3_m*grad3_v1_m) )
-!
-!        do i = 1,size(T1)
-!            T1(i) = -(ONE-M1_avg)*T1(i)
-!        end do
-!
-!        gradn_density_LODI = (ONE/(c_m*c_m))*(L2/vn  +  HALF*((L5+T1)/(vn+c_m)))
-!        grad1_density_LODI = gradn_density_LODI*worker%unit_normal(1)
-!        grad2_density_LODI = gradn_density_LODI*worker%unit_normal(2)
-!        grad3_density_LODI = gradn_density_LODI*worker%unit_normal(3)
-!
-!        idomain_l  = worker%element_info%idomain_l 
-!        ielement_l = worker%element_info%ielement_l 
-!
-!        ! Store index of bc face
-!        iface_bc = worker%iface
-!
-!        ! Initialize face/element array sizes
-!        face_array    = worker%get_field('Pressure','value','face interior')
-!        element_array = worker%get_field('Pressure','value','element')
-!        face_array    = ZERO
-!        element_array = ZERO
-!
-!        ! Initialize R_modes storage
-!        R_modes = v2_modes
-!        R_modes = ZERO
-!
-!        ! Initialize p at quadrature nodes to zero
-!        lift_elem_1 = element_array
-!        lift_elem_2 = element_array
-!        lift_elem_3 = element_array
-!
-!        ! Accumulate FACE residuals
-!        do iface = 1,NFACES
-!
-!            lift_face_1 = face_array
-!            lift_face_2 = face_array
-!            lift_face_3 = face_array
-!
-!            worker%iface = iface
-!            worker%interpolation_source = 'face interior'
-!
-!            ! Get sigma
-!            density_m = worker%get_field('Density','value','face interior')
-!            mom1_m = worker%get_field('Momentum-1','value','face interior')
-!            mom2_m = worker%get_field('Momentum-2','value','face interior')
-!            mom3_m = worker%get_field('Momentum-3','value','face interior')
-!            v1_m = mom1_m/density_m
-!            v2_m = mom2_m/density_m
-!            v3_m = mom3_m/density_m
-!            !vn = v1_m*worker%unit_normal(1) + v2_m*worker%unit_normal(2) + v3_m*worker%unit_normal(3)
-!            vn = v1_m
-!            p_m = worker%get_field('Pressure','value','face interior')
-!            c_m = sqrt(gam*p_m/density_m)
-!            call compute_pressure_gradient(worker,grad1_p_m,grad2_p_m,grad3_p_m)
-!            call compute_density_gradient(worker,grad1_density_m,grad2_density_m,grad3_density_m)
-!
-!            associate ( weights  => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_face(iface),                        &
-!                        br2_face => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_face,                                     &
-!                        br2_vol  => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%br2_vol,                                      &
-!                        val      => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%interpolator_face('Value',iface),     &
-!                        grad1    => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%grad1,                                        &
-!                        grad2    => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%grad2,                                        &
-!                        grad3    => worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%grad3,                                        &
-!                        valtrans => transpose(worker%mesh%domain(idomain_l)%faces(ielement_l,iface)%basis_s%interpolator_face('Value',iface)) )
-!
-!            ! INTERIOR FACE
-!            if (iface /= iface_bc) then
-!                ! Take boundary state from interior original problem
-!                density_sigma       = matmul(val,  v2_modes)
-!                grad1_density_sigma = matmul(grad1,v2_modes)
-!                grad2_density_sigma = matmul(grad2,v2_modes)
-!                grad3_density_sigma = matmul(grad3,v2_modes)
-!
-!                diff = (density_m - density_sigma)
-!
-!            ! BOUNDARY FACE
-!            else
-!                ! boundary pressure: extrapolating interior and adding average update.
-!                ! boundary pressure gradient: set to user-specified values
-!                density_sigma = matmul(val, v2_modes)
-!                
-!                grad1_density_sigma = grad1_density_LODI
-!                grad2_density_sigma = grad2_density_LODI
-!                grad3_density_sigma = grad3_density_LODI
-!
-!                diff(:) = ZERO
-!
-!            end if
-!
-!            ! Multiply by normal. Note: normal is scaled by face jacobian.
-!            diff_1 = diff * weights * worker%normal(1)
-!            diff_2 = diff * weights * worker%normal(2)
-!            diff_3 = diff * weights * worker%normal(3)
-!
-!            ! Compute lift at face gq nodes
-!            lift_face_1 = matmul(br2_face,diff_1)
-!            lift_face_2 = matmul(br2_face,diff_2)
-!            lift_face_3 = matmul(br2_face,diff_3)
-!        
-!            ! Accumulate face lift to element gq nodes
-!            lift_elem_1 = lift_elem_1 + matmul(br2_vol,diff_1)
-!            lift_elem_2 = lift_elem_2 + matmul(br2_vol,diff_2)
-!            lift_elem_3 = lift_elem_3 + matmul(br2_vol,diff_3)
-!
-!            ! Penalize gradient with lift
-!            grad1_density_sigma = grad1_density_sigma  +  lift_face_1
-!            grad2_density_sigma = grad2_density_sigma  +  lift_face_2
-!            grad3_density_sigma = grad3_density_sigma  +  lift_face_3
-!
-!            integrand = weights*( (grad1_density_sigma-grad1_density_m)*worker%normal(1) +  &
-!                                  (grad2_density_sigma-grad2_density_m)*worker%normal(2) +  &
-!                                  (grad3_density_sigma-grad3_density_m)*worker%normal(3) )
-!
-!            integral = matmul(valtrans,integrand)
-!
-!            ! Accumulate residual from face
-!            R_modes = R_modes  +  integral
-!
-!            end associate
-!        end do
-!
-!        associate ( weights     => worker%mesh%domain(idomain_l)%elems(ielement_l)%basis_s%weights_element(),               &
-!                    jinv        => worker%mesh%domain(idomain_l)%elems(ielement_l)%jinv,                                    & 
-!                    grad1       => worker%mesh%domain(idomain_l)%elems(ielement_l)%grad1,                                   &
-!                    grad2       => worker%mesh%domain(idomain_l)%elems(ielement_l)%grad2,                                   &
-!                    grad3       => worker%mesh%domain(idomain_l)%elems(ielement_l)%grad3,                                   &
-!                    grad1_trans => worker%mesh%domain(idomain_l)%elems(ielement_l)%grad1_trans,                             &
-!                    grad2_trans => worker%mesh%domain(idomain_l)%elems(ielement_l)%grad2_trans,                             &
-!                    grad3_trans => worker%mesh%domain(idomain_l)%elems(ielement_l)%grad3_trans )
-!
-!        ! Accumulate ELEMENT residuals
-!        worker%iface = 1
-!        worker%interpolation_source = 'element'
-!
-!
-!        ! Get sigma
-!        call compute_pressure_gradient(worker,grad1_p_m,grad2_p_m,grad3_p_m)
-!        call compute_density_gradient(worker,grad1_density_m,grad2_density_m,grad3_density_m)
-!
-!        ! Get grad_p
-!        grad1_density_sigma = matmul(grad1, v2_modes)
-!        grad2_density_sigma = matmul(grad2, v2_modes)
-!        grad3_density_sigma = matmul(grad3, v2_modes)
-!
-!        ! Penalize grad_p with boundary lift
-!        grad1_density_sigma = grad1_density_sigma + lift_elem_1
-!        grad2_density_sigma = grad2_density_sigma + lift_elem_2
-!        grad3_density_sigma = grad3_density_sigma + lift_elem_3
-!
-!        flux1 = (grad1_density_sigma - grad1_density_m)*weights*jinv
-!        flux2 = (grad2_density_sigma - grad2_density_m)*weights*jinv
-!        flux3 = (grad3_density_sigma - grad3_density_m)*weights*jinv
-!
-!        integral = matmul(grad1_trans, flux1) + &
-!                   matmul(grad2_trans, flux2) + &
-!                   matmul(grad3_trans, flux3) 
-!
-!        R_modes = R_modes - integral
-!
-!        end associate
-!
-!        ! Reset iface_bc
-!        call worker%set_face(iface_bc)
-!
-!    end function compute_local_residual_v2
-!    !******************************************************************************
-
-
-
 
 
 
@@ -1081,6 +828,9 @@ contains
 
         real(rk),   allocatable, dimension(:) :: p_avg_user, r
 
+        ! Store index of bc face
+        iface_bc = worker%iface
+
         density_m = worker%get_field('Density',    'value', 'face interior')
         mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
         mom2_m    = worker%get_field('Momentum-2', 'value', 'face interior')
@@ -1095,7 +845,6 @@ contains
         ! Get user parameter settings
         p_avg_user = self%bcproperties%compute('Average Pressure',         worker%time(),worker%coords())
 
-
         worker%interpolation_source = 'face interior'
         call compute_density_gradient(worker,grad1_density_m,grad2_density_m,grad3_density_m)
         call compute_velocity_gradient(worker,grad1_v1_m,grad2_v1_m,grad3_v1_m, &
@@ -1108,17 +857,16 @@ contains
         gradn_p = grad1_p_m*worker%unit_normal(1) + grad2_p_m*worker%unit_normal(2) + grad3_p_m*worker%unit_normal(3)
 
         ! Compute gradient of normal velocity in the normal direction
-        !gradn_vn = (grad1_v1_m*worker%unit_normal(1) + grad2_v1_m*worker%unit_normal(2) + grad3_v1_m*worker%unit_normal(3))*worker%unit_normal(1) + &
-        !           (grad1_v2_m*worker%unit_normal(1) + grad2_v2_m*worker%unit_normal(2) + grad3_v2_m*worker%unit_normal(3))*worker%unit_normal(2) + &
-        !           (grad1_v3_m*worker%unit_normal(1) + grad2_v3_m*worker%unit_normal(2) + grad3_v3_m*worker%unit_normal(3))*worker%unit_normal(3)
+        gradn_vn = (grad1_v1_m*worker%unit_normal(1) + grad1_v2_m*worker%unit_normal(2) + grad1_v3_m*worker%unit_normal(3))*worker%unit_normal(1) + &
+                   (grad2_v1_m*worker%unit_normal(1) + grad2_v2_m*worker%unit_normal(2) + grad2_v3_m*worker%unit_normal(3))*worker%unit_normal(2) + &
+                   (grad3_v1_m*worker%unit_normal(1) + grad3_v2_m*worker%unit_normal(2) + grad3_v3_m*worker%unit_normal(3))*worker%unit_normal(3)
         gradn_vn = grad1_v1_m
 
         ! Compute gradient of density in normal direction
         gradn_density = grad1_density_m*worker%unit_normal(1) + grad2_density_m*worker%unit_normal(2) + grad3_density_m*worker%unit_normal(3)
 
-
         ! Compute wave amplitudes
-        !vn = v1_m*worker%unit_normal(1) + v2_m*worker%unit_normal(2) + v3_m*worker%unit_normal(3)
+        vn = v1_m*worker%unit_normal(1) + v2_m*worker%unit_normal(2) + v3_m*worker%unit_normal(3)
         vn = v1_m
         c_m = sqrt(gam*p_m/density_m)
         lambda1 = vn-c_m
@@ -1128,26 +876,27 @@ contains
         L2 = lambda2*(c_m*c_m*gradn_density - gradn_p)
         L5 = lambda5*(gradn_p + density_m*c_m*gradn_vn)
         ! Recompute L1
-        L1(:) = p_avg - p_avg_user(1)
+        L1(:) = 50000._rk*(p_avg - p_avg_user(1))
 
         T1 = ( (v2_m*grad2_p_m + v3_m*grad3_p_m)    &
                + gam*p_m*(grad2_v2_m + grad3_v3_m)  &
                - density_m*c_m*(v2_m*grad2_v1_m + v3_m*grad3_v1_m) )
 
         do i = 1,size(T1)
-            T1(i) = 4.0*(M1_avg-ONE)*T1(i)
+            T1(i) = 0.0*(M1_avg-ONE)*T1(i)
         end do
+        L5 = -L5
+        L1 = -L1
+        T1 = -T1
+        L2 = -L2
 
-        gradn_density_LODI = (ONE/(c_m*c_m))*(L2/vn  +  HALF*((L5+T1)/(vn+c_m)))
+        gradn_density_LODI = (ONE/(c_m*c_m))*(L2/vn  +  HALF*(L5/(vn+c_m) + (L1+T1)/(vn-c_m)))
         grad1_density_LODI = gradn_density_LODI*worker%unit_normal(1)
         grad2_density_LODI = gradn_density_LODI*worker%unit_normal(2)
         grad3_density_LODI = gradn_density_LODI*worker%unit_normal(3)
 
         idomain_l  = worker%element_info%idomain_l 
         ielement_l = worker%element_info%ielement_l 
-
-        ! Store index of bc face
-        iface_bc = worker%iface
 
         ! Initialize face/element array sizes
         face_array    = worker%get_field('Pressure','value','face interior')
@@ -1182,8 +931,7 @@ contains
             v1_m = mom1_m/density_m
             v2_m = mom2_m/density_m
             v3_m = mom3_m/density_m
-            !vn = v1_m*worker%unit_normal(1) + v2_m*worker%unit_normal(2) + v3_m*worker%unit_normal(3)
-            vn = v1_m
+            vn = v1_m*worker%unit_normal(1) + v2_m*worker%unit_normal(2) + v3_m*worker%unit_normal(3)
             p_m = worker%get_field('Pressure','value','face interior')
             c_m = sqrt(gam*p_m/density_m)
             call compute_pressure_gradient(worker,grad1_p_m,grad2_p_m,grad3_p_m)
@@ -1219,6 +967,7 @@ contains
                 grad3_density_sigma = grad3_density_LODI
 
                 diff = (HALF/(c_m*c_m))*L1/(vn-c_m)
+                diff = ZERO
 
             end if
 
@@ -1303,14 +1052,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
     !>
     !!
     !!  @author Nathan A. Wukie
@@ -1349,8 +1090,9 @@ contains
 
         real(rk),   allocatable, dimension(:) :: p_avg_user, r
 
-        type(AD_D)  :: delta_p
 
+        ! Store index of bc face
+        iface_bc = worker%iface
 
         density_m = worker%get_field('Density',    'value', 'face interior')
         mom1_m    = worker%get_field('Momentum-1', 'value', 'face interior')
@@ -1359,15 +1101,14 @@ contains
         energy_m  = worker%get_field('Energy',     'value', 'face interior')
         p_m       = worker%get_field('Pressure',   'value', 'face interior')
 
-
         v1_m = mom1_m/density_m
         v2_m = mom2_m/density_m
         v3_m = mom3_m/density_m
 
         ! Get user parameter settings
         p_avg_user = self%bcproperties%compute('Average Pressure',         worker%time(),worker%coords())
-        delta_p = p_avg_user(1) - p_avg
 
+        !print*, 'Average Pressure: ', p_avg%x_ad_
 
         worker%interpolation_source = 'face interior'
         call compute_density_gradient(worker,grad1_density_m,grad2_density_m,grad3_density_m)
@@ -1381,17 +1122,16 @@ contains
         gradn_p = grad1_p_m*worker%unit_normal(1) + grad2_p_m*worker%unit_normal(2) + grad3_p_m*worker%unit_normal(3)
 
         ! Compute gradient of normal velocity in the normal direction
-        !gradn_vn = (grad1_v1_m*worker%unit_normal(1) + grad2_v1_m*worker%unit_normal(2) + grad3_v1_m*worker%unit_normal(3))*worker%unit_normal(1) + &
-        !           (grad1_v2_m*worker%unit_normal(1) + grad2_v2_m*worker%unit_normal(2) + grad3_v2_m*worker%unit_normal(3))*worker%unit_normal(2) + &
-        !           (grad1_v3_m*worker%unit_normal(1) + grad2_v3_m*worker%unit_normal(2) + grad3_v3_m*worker%unit_normal(3))*worker%unit_normal(3)
+        gradn_vn = (grad1_v1_m*worker%unit_normal(1) + grad1_v2_m*worker%unit_normal(2) + grad1_v3_m*worker%unit_normal(3))*worker%unit_normal(1) + &
+                   (grad2_v1_m*worker%unit_normal(1) + grad2_v2_m*worker%unit_normal(2) + grad2_v3_m*worker%unit_normal(3))*worker%unit_normal(2) + &
+                   (grad3_v1_m*worker%unit_normal(1) + grad3_v2_m*worker%unit_normal(2) + grad3_v3_m*worker%unit_normal(3))*worker%unit_normal(3)
         gradn_vn = grad1_v1_m
 
         ! Compute gradient of density in normal direction
         gradn_density = grad1_density_m*worker%unit_normal(1) + grad2_density_m*worker%unit_normal(2) + grad3_density_m*worker%unit_normal(3)
 
-
         ! Compute wave amplitudes
-        !vn = v1_m*worker%unit_normal(1) + v2_m*worker%unit_normal(2) + v3_m*worker%unit_normal(3)
+        vn = v1_m*worker%unit_normal(1) + v2_m*worker%unit_normal(2) + v3_m*worker%unit_normal(3)
         vn = v1_m
         c_m = sqrt(gam*p_m/density_m)
         lambda1 = vn-c_m
@@ -1401,26 +1141,27 @@ contains
         L2 = lambda2*(c_m*c_m*gradn_density - gradn_p)
         L5 = lambda5*(gradn_p + density_m*c_m*gradn_vn)
         ! Recompute L1
-        L1(:) = p_avg - p_avg_user(1) 
+        L1(:) = 50000._rk*(p_avg - p_avg_user(1))
 
         T1 = ( (v2_m*grad2_p_m + v3_m*grad3_p_m)    &
                + gam*p_m*(grad2_v2_m + grad3_v3_m)  &
                - density_m*c_m*(v2_m*grad2_v1_m + v3_m*grad3_v1_m) )
 
         do i = 1,size(T1)
-            T1(i) = 4.0*(M1_avg-ONE)*T1(i)
+            T1(i) = 0.0*(M1_avg-ONE)*T1(i)
         end do
+        L5 = -L5
+        L1 = -L1
+        T1 = -T1
+        L2 = -L2
 
-        gradn_p_LODI = HALF*((L5+T1)/(vn+c_m))
+        gradn_p_LODI = HALF*(L5/(vn+c_m)  +  (L1+T1)/(vn-c_m))
         grad1_p_LODI = gradn_p_LODI*worker%unit_normal(1)
         grad2_p_LODI = gradn_p_LODI*worker%unit_normal(2)
         grad3_p_LODI = gradn_p_LODI*worker%unit_normal(3)
 
         idomain_l  = worker%element_info%idomain_l 
         ielement_l = worker%element_info%ielement_l 
-
-        ! Store index of bc face
-        iface_bc = worker%iface
 
         ! Initialize face/element array sizes
         face_array    = worker%get_field('Pressure','value','face interior')
@@ -1455,7 +1196,7 @@ contains
             v1_m = mom1_m/density_m
             v2_m = mom2_m/density_m
             v3_m = mom3_m/density_m
-            !vn = v1_m*worker%unit_normal(1) + v2_m*worker%unit_normal(2) + v3_m*worker%unit_normal(3)
+            vn = v1_m*worker%unit_normal(1,iface_bc) + v2_m*worker%unit_normal(2,iface_bc) + v3_m*worker%unit_normal(3,iface_bc)
             vn = v1_m
             p_m = worker%get_field('Pressure','value','face interior')
             c_m = sqrt(gam*p_m/density_m)
@@ -1490,7 +1231,8 @@ contains
                 grad2_p_sigma = grad2_p_LODI
                 grad3_p_sigma = grad3_p_LODI
 
-                diff = HALF*L1/(vn-c_m)
+                diff = HALF*(L1)/(vn-c_m)
+                diff = ZERO
 
             end if
 
@@ -1538,7 +1280,6 @@ contains
         ! Accumulate ELEMENT residuals
         worker%iface = 1
         worker%interpolation_source = 'element'
-
 
         ! Get sigma
         call compute_pressure_gradient(worker,grad1_p_m,grad2_p_m,grad3_p_m)
@@ -1616,6 +1357,8 @@ contains
 
         real(rk),   allocatable, dimension(:) :: p_avg_user, r, n1, n2, n3
 
+        ! Store index of bc face
+        iface_bc = worker%iface
 
         p_avg_user   = self%bcproperties%compute('Average Pressure',         worker%time(),worker%coords())
 
@@ -1632,9 +1375,11 @@ contains
 
         worker%interpolation_source = 'face interior'
         call compute_density_gradient(worker,grad1_density_m,grad2_density_m,grad3_density_m)
+
         call compute_velocity_gradient(worker,grad1_v1_m,grad2_v1_m,grad3_v1_m, &
                                               grad1_v2_m,grad2_v2_m,grad3_v2_m, &
                                               grad1_v3_m,grad2_v3_m,grad3_v3_m)
+
         call compute_pressure_gradient(worker,grad1_p_m,grad2_p_m,grad3_p_m)
 
         
@@ -1642,17 +1387,16 @@ contains
         gradn_p = grad1_p_m*worker%unit_normal(1) + grad2_p_m*worker%unit_normal(2) + grad3_p_m*worker%unit_normal(3)
 
         ! Compute gradient of normal velocity in the normal direction
-        !gradn_vn = (grad1_v1_m*worker%unit_normal(1) + grad2_v1_m*worker%unit_normal(2) + grad3_v1_m*worker%unit_normal(3))*worker%unit_normal(1) + &
-        !           (grad1_v2_m*worker%unit_normal(1) + grad2_v2_m*worker%unit_normal(2) + grad3_v1_m*worker%unit_normal(3))*worker%unit_normal(2) + &
-        !           (grad1_v3_m*worker%unit_normal(1) + grad2_v3_m*worker%unit_normal(2) + grad3_v1_m*worker%unit_normal(3))*worker%unit_normal(3)
+        gradn_vn = (grad1_v1_m*worker%unit_normal(1) + grad1_v2_m*worker%unit_normal(2) + grad1_v3_m*worker%unit_normal(3))*worker%unit_normal(1) + &
+                   (grad2_v1_m*worker%unit_normal(1) + grad2_v2_m*worker%unit_normal(2) + grad2_v3_m*worker%unit_normal(3))*worker%unit_normal(2) + &
+                   (grad3_v1_m*worker%unit_normal(1) + grad3_v2_m*worker%unit_normal(2) + grad3_v3_m*worker%unit_normal(3))*worker%unit_normal(3)
         gradn_vn = grad1_v1_m
 
         ! Compute gradient of density in normal direction
         gradn_density = grad1_density_m*worker%unit_normal(1) + grad2_density_m*worker%unit_normal(2) + grad3_density_m*worker%unit_normal(3)
 
-
         ! Compute wave amplitudes
-        !vn = v1_m*worker%unit_normal(1) + v2_m*worker%unit_normal(2) + v3_m*worker%unit_normal(3)
+        vn = v1_m*worker%unit_normal(1) + v2_m*worker%unit_normal(2) + v3_m*worker%unit_normal(3)
         vn = v1_m
         c_m = sqrt(gam*p_m/density_m)
         lambda1 = vn-c_m
@@ -1662,26 +1406,27 @@ contains
         L2 = lambda2*(c_m*c_m*gradn_density - gradn_p)
         L5 = lambda5*(gradn_p + density_m*c_m*gradn_vn)
         ! Recompute L1
-        L1(:) = p_avg - p_avg_user(1)
+        L1(:) = 50000._rk*(p_avg - p_avg_user(1))
 
         T1 = ( (v2_m*grad2_p_m + v3_m*grad3_p_m)    &
                + gam*p_m*(grad2_v2_m + grad3_v3_m)  &
                - density_m*c_m*(v2_m*grad2_v1_m + v3_m*grad3_v1_m) )
 
         do i = 1,size(T1)
-            T1(i) = 4.0*(M1_avg-ONE)*T1(i)
+            T1(i) = 1.0*(M1_avg-ONE)*T1(i)
         end do
+        !L5 = -L5
+        !L1 = -L1
+        !T1 = -T1
+        !L2 = -L2
 
-        gradn_vn_LODI = (HALF/(density_m*c_m))*((L5-T1)/(vn+c_m))
-        grad1_vn_LODI = gradn_vn_LODI
-        grad2_vn_LODI = gradn_vn_LODI*ZERO
-        grad3_vn_LODI = gradn_vn_LODI*ZERO
+        gradn_vn_LODI = (HALF/(density_m*c_m))*((L5)/(vn+c_m) - (L1+T1)/(vn-c_m))
+        grad1_vn_LODI = gradn_vn_LODI*worker%unit_normal(1)
+        grad2_vn_LODI = gradn_vn_LODI*worker%unit_normal(2)
+        grad3_vn_LODI = gradn_vn_LODI*worker%unit_normal(3)
 
         idomain_l  = worker%element_info%idomain_l 
         ielement_l = worker%element_info%ielement_l 
-
-        ! Store index of bc face
-        iface_bc = worker%iface
 
         ! Initialize face/element array sizes
         face_array    = worker%get_field('Pressure','value','face interior')
@@ -1718,21 +1463,23 @@ contains
             v1_m = mom1_m/density_m
             v2_m = mom2_m/density_m
             v3_m = mom3_m/density_m
-            !vn = v1_m*worker%unit_normal(1) + v2_m*worker%unit_normal(2) + v3_m*worker%unit_normal(3)
+
+            n1 = worker%unit_normal(1,iface_bc)
+            n2 = worker%unit_normal(2,iface_bc)
+            n3 = worker%unit_normal(3,iface_bc)
+            vn = v1_m*n1(1) + v2_m*n2(1) + v3_m*n3(1)
             vn = v1_m
 
-
             call compute_pressure_gradient(worker,grad1_p_m,grad2_p_m,grad3_p_m)
-            ! Compute gradient of normal velocity in the normal direction
             call compute_velocity_gradient(worker,grad1_v1_m,grad2_v1_m,grad3_v1_m, &
                                                   grad1_v2_m,grad2_v2_m,grad3_v2_m, &
                                                   grad1_v3_m,grad2_v3_m,grad3_v3_m)
-            !gradn_vn = (grad1_v1_m*worker%unit_normal(1) + grad2_v1_m*worker%unit_normal(2) + grad3_v1_m*worker%unit_normal(3))*worker%unit_normal(1) + &
-            !           (grad1_v2_m*worker%unit_normal(1) + grad2_v2_m*worker%unit_normal(2) + grad3_v2_m*worker%unit_normal(3))*worker%unit_normal(2) + &
-            !           (grad1_v3_m*worker%unit_normal(1) + grad2_v3_m*worker%unit_normal(2) + grad3_v3_m*worker%unit_normal(3))*worker%unit_normal(3)
-            !grad1_vn_m = gradn_vn*worker%unit_normal(1)
-            !grad2_vn_m = gradn_vn*worker%unit_normal(2)
-            !grad3_vn_m = gradn_vn*worker%unit_normal(3)
+            gradn_vn = (grad1_v1_m*n1(1) + grad1_v2_m*n2(1) + grad1_v3_m*n3(1))*n1(1) + &
+                       (grad2_v1_m*n1(1) + grad2_v2_m*n2(1) + grad2_v3_m*n3(1))*n2(1) + &
+                       (grad3_v1_m*n1(1) + grad3_v2_m*n2(1) + grad3_v3_m*n3(1))*n3(1)
+            grad1_vn_m = gradn_vn*n1(1)
+            grad2_vn_m = gradn_vn*n2(1)
+            grad3_vn_m = gradn_vn*n3(1)
             grad1_vn_m = grad1_v1_m
             grad2_vn_m = grad2_v1_m
             grad3_vn_m = grad3_v1_m
@@ -1768,6 +1515,7 @@ contains
                 grad3_vn_sigma = grad3_vn_LODI
 
                 diff = -(HALF/(density_m*c_m))*L1/(vn-c_m)
+                diff = ZERO
 
             end if
 
@@ -1821,18 +1569,16 @@ contains
         call compute_velocity_gradient(worker,grad1_v1_m,grad2_v1_m,grad3_v1_m, &
                                               grad1_v2_m,grad2_v2_m,grad3_v2_m, &
                                               grad1_v3_m,grad2_v3_m,grad3_v3_m)
-        !n1 = worker%unit_normal(1)
-        !n2 = worker%unit_normal(2)
-        !n3 = worker%unit_normal(3)
-        !gradn_vn = (grad1_v1_m*n1(1) + grad2_v1_m*n2(1) + grad3_v1_m*n3(1))*n1(1) + &
-        !           (grad1_v2_m*n1(1) + grad2_v2_m*n2(1) + grad3_v2_m*n3(1))*n2(1) + &
-        !           (grad1_v3_m*n1(1) + grad2_v3_m*n2(1) + grad3_v3_m*n3(1))*n3(1)
-        !!grad1_vn_m = gradn_vn*worker%unit_normal(1)
-        !!grad2_vn_m = gradn_vn*worker%unit_normal(2)
-        !!grad3_vn_m = gradn_vn*worker%unit_normal(3)
-        !grad1_vn_m = gradn_vn*n1(1)
-        !grad2_vn_m = gradn_vn*n2(1)
-        !grad3_vn_m = gradn_vn*n3(1)
+        n1 = worker%unit_normal(1,iface_bc)
+        n2 = worker%unit_normal(2,iface_bc)
+        n3 = worker%unit_normal(3,iface_bc)
+        gradn_vn = (grad1_v1_m*n1(1) + grad1_v2_m*n2(1) + grad1_v3_m*n3(1))*n1(1) + &
+                   (grad2_v1_m*n1(1) + grad2_v2_m*n2(1) + grad2_v3_m*n3(1))*n2(1) + &
+                   (grad3_v1_m*n1(1) + grad3_v2_m*n2(1) + grad3_v3_m*n3(1))*n3(1)
+        
+        grad1_vn_m = gradn_vn*n1(1)
+        grad2_vn_m = gradn_vn*n2(1)
+        grad3_vn_m = gradn_vn*n3(1)
         grad1_vn_m = grad1_v1_m
         grad2_vn_m = grad2_v1_m
         grad3_vn_m = grad3_v1_m
@@ -1978,7 +1724,7 @@ contains
         if (size(vn_modes) /= nterms_s) call chidg_signal(FATAL,'outlet_neumann_LODI_localdg: converge_p Error 1.')
 
         resid = huge(1._rk)
-        tol = 1.e-3_rk
+        tol = 1.e-5_rk
         R_modes = self%compute_local_residual_vn(worker,bc_comm,vn_modes,p_avg,c_avg,density_avg,M1_avg,M2_avg,M3_avg)
         do while (resid > tol)
 
@@ -2044,7 +1790,7 @@ contains
         if (size(density_modes) /= nterms_s) call chidg_signal(FATAL,'outlet_neumann_LODI_localdg: converge_p Error 1.')
 
         resid = huge(1._rk)
-        tol = 1.e-3_rk
+        tol = 1.e-8_rk
         R_modes = self%compute_local_residual_density(worker,bc_comm,density_modes,p_avg,c_avg,density_avg,M1_avg,M2_avg,M3_avg)
         do while (resid > tol)
 

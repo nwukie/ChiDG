@@ -1,1 +1,1 @@
-add_lib_sources(fcn_pressure_pulse.f90)
+add_lib_sources(fcn_pressure_pulse.f90 fcn_euler_gradients.f90)

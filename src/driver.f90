@@ -199,7 +199,8 @@ program driver
             end do
 
             !call create_function(fcn,'pressure_pulse')
-            !!call create_function(fcn,'isentropic_vortex')
+            !call create_function(fcn,'isentropic_vortex')
+            !call create_function(fcn,'euler_gradients')
             !call fcn%set_option('ivar',1._rk)
             !call chidg%data%sdata%q_in%project(chidg%data%mesh,fcn,1)
             !call fcn%set_option('ivar',2._rk)

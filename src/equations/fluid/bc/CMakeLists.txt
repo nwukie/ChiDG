@@ -19,6 +19,7 @@ add_lib_sources(
                 bc_state_outlet_3dgiles_innerproduct.f90
                 bc_state_outlet_giles_quasi3d_steady.f90
                 bc_state_outlet_giles_quasi3d_steady_extrapolate_average.f90
+                bc_state_outlet_giles_quasi3d_unsteady_HB.f90
                 #bc_state_outlet_LODI_pressure.f90
                 #bc_state_outlet_LODI_z_pressure.f90
                 #bc_state_outlet_wukie.f90

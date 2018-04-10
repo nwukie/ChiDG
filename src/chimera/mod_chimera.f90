@@ -247,14 +247,6 @@ contains
                             !
                             ! Call routine to find LOCAL gq donor for current node
                             !
-                            !call find_gq_donor(mesh,                &
-                            !                   point_t(gq_node),    &
-                            !                   point_t(offset),     &
-                            !                   receiver,            &
-                            !                   donor,               &
-                            !                   donor_coord,         &
-                            !                   donor_found,         &
-                            !                   donor_volume=local_vol)
                             call find_gq_donor(mesh,                &
                                                gq_node,             &
                                                offset,              &
@@ -723,7 +715,6 @@ contains
         logical,                    intent(inout)           :: donor_found
         real(rk),                   intent(inout), optional :: donor_volume
 
-
         integer(ik)                 :: idom, ielem, inewton, idomain_g, idomain_l,      &
                                        ielement_g, ielement_l, icandidate, ncandidates, &
                                        idonor, ndonors, donor_index
@@ -807,9 +798,7 @@ contains
                               (zmin < search3) .and. (search3 < zmax ) )
 
 
-                !
                 ! If the node was within the bounding coordinates, flag the element as a potential donor
-                !
                 if (contained) then
                     call candidate_domains_g%push_back(idomain_g)
                     call candidate_domains_l%push_back(idomain_l)
@@ -817,7 +806,6 @@ contains
                     call candidate_elements_l%push_back(ielement_l)
                     ncandidates = ncandidates + 1
                 end if
-
 
             end do ! ielem
 
@@ -836,12 +824,8 @@ contains
             ielement_g = candidate_elements_g%at(icandidate)
             ielement_l = candidate_elements_l%at(icandidate)
 
-            
-            !
             ! Try to find donor (xi,eta,zeta) coordinates for receiver (xgq,ygq,zgq)
-            !
             donor_comp = mesh%domain(idomain_l)%elems(ielement_l)%computational_point([search1,search2,search3])    ! Newton's method routine
-
 
             ! Node is not nan
             node_found = (any(ieee_is_nan(donor_comp)) .eqv. .false.) 
@@ -853,8 +837,6 @@ contains
             else
                 node_self = .false.
             end if
-
-
 
             ! Add donor if donor_comp is valid
             if ( node_found .and. (.not. node_self)) then
@@ -871,12 +853,7 @@ contains
 
         
 
-
-
-
-        !
         ! Sanity check on donors and set donor_element location
-        !
         if (ndonors == 0) then
             donor_element%idomain_g  = 0
             donor_element%idomain_l  = 0
@@ -885,8 +862,6 @@ contains
             donor_element%iproc      = NO_PROC
 
             donor_found = .false.
-
-
 
         elseif (ndonors == 1) then
             idonor = donors%at(1)   ! donor index from candidates
@@ -907,12 +882,8 @@ contains
             donor_found = .true.
             if (present(donor_volume)) donor_volume = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%vol
 
-
-
         elseif (ndonors > 1) then
-            !
             ! Handle multiple potential donors: Choose donor with minimum volume - should be best resolved
-            !
             if (allocated(donor_vols) ) deallocate(donor_vols)
             allocate(donor_vols(donors%size()))
             
@@ -921,9 +892,7 @@ contains
             end do 
     
 
-            !
             ! Get index of domain with minimum volume
-            !
             donor_index = minloc(donor_vols,1)
             idonor = donors%at(donor_index)
 
@@ -937,9 +906,7 @@ contains
             donor_element%nterms_s   = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_s
             donor_element%nterms_c   = mesh%domain(donor_element%idomain_l)%elems(donor_element%ielement_l)%nterms_c
 
-            !
             ! Set donor coordinate and volume if present
-            !
             xi   = donors_xi%at(donor_index)
             eta  = donors_eta%at(donor_index)
             zeta = donors_zeta%at(donor_index)
@@ -951,8 +918,6 @@ contains
         else
             call chidg_signal(FATAL,"find_gq_donor: invalid number of donors")
         end if
-
-
 
 
     end subroutine find_gq_donor
@@ -1198,33 +1163,6 @@ contains
 
     end subroutine find_gq_donor_parallel
     !******************************************************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 end module mod_chimera

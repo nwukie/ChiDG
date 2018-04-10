@@ -53,19 +53,14 @@ contains
         ! Check odd-count input
         if (mod(size(input),2) == 0) call chidg_signal(FATAL,"dft: expecting odd-count of input values.")
 
-        !
         ! Initialize derivative arrays
-        !
         outreal = input
         outimag = input
 
         outreal = ZERO
         outimag = ZERO
 
-
-        !
         ! Loop over output modes
-        !
         n = size(input)
         do imode = 1,n
             do itheta = 1,n
@@ -82,11 +77,6 @@ contains
 
     end subroutine dft
     !******************************************************************
-
-
-
-
-
 
 
 
@@ -120,9 +110,7 @@ contains
         ! Theta at equispaced nodes
         theta = linspace(0._rk, real((size(inreal)-1),rk)/real(size(inreal)),size(inreal))
 
-        !
         ! Loop over output points
-        !
         do itheta = 1,size(theta)
             do imode = 1,(size(inreal)-1)/2
                 freq = TWO*PI*real(imode-1,rk)
@@ -134,12 +122,8 @@ contains
             end do !imode
         end do !itheta
 
-
     end function idft
     !******************************************************************
-
-
-
 
 
 
@@ -182,9 +166,7 @@ contains
         ! Theta at equispaced nodes
         theta_eval = theta/period
 
-        !
         ! Loop over output points
-        !
         do itheta = 1,size(theta)
             do imode = 1,(size(inreal)-1)/2
                 freq = TWO*PI*real(imode-1,rk)
@@ -196,13 +178,8 @@ contains
             end do !imode
         end do !itheta
 
-
     end function idft_eval
     !******************************************************************
-
-
-
-
 
 
 

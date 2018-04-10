@@ -61,6 +61,7 @@ module mod_bc
     use bc_state_outlet_3dgiles,                only: outlet_3dgiles_t
     use bc_state_outlet_3dgiles_innerproduct,   only: outlet_3dgiles_innerproduct_t
     use bc_state_outlet_giles_quasi3d_steady,   only: outlet_giles_quasi3d_steady_t
+    use bc_state_outlet_giles_quasi3d_unsteady_HB,   only: outlet_giles_quasi3d_unsteady_HB_t
     use bc_state_fluid_extrapolate,             only: fluid_extrapolate_t
     use bc_state_momentum_inlet,                only: momentum_inlet_t
     use bc_state_symmetry,                      only: symmetry_t
@@ -171,6 +172,7 @@ contains
         type(outlet_3dgiles_t)                  :: OUTLET_3DGILES
         type(outlet_3dgiles_innerproduct_t)     :: OUTLET_3DGILES_INNERPRODUCT
         type(outlet_giles_quasi3d_steady_t)     :: OUTLET_GILES_QUASI3D_STEADY
+        type(outlet_giles_quasi3d_unsteady_HB_t):: OUTLET_GILES_QUASI3D_UNSTEADY_HB
         type(fluid_extrapolate_t)               :: FLUID_EXTRAPOLATE
         type(momentum_inlet_t)                  :: MOMENTUM_INLET
         type(symmetry_t)                        :: SYMMETRY
@@ -250,6 +252,7 @@ contains
             call registered_bcs%push_back(OUTLET_3DGILES)
             call registered_bcs%push_back(OUTLET_3DGILES_INNERPRODUCT)
             call registered_bcs%push_back(OUTLET_GILES_QUASI3D_STEADY)
+            call registered_bcs%push_back(OUTLET_GILES_QUASI3D_UNSTEADY_HB)
             !call registered_bcs%push_back(OUTLET_POINT_PRESSURE)
             !call registered_bcs%push_back(OUTLET_LODI_PRESSURE)
             !call registered_bcs%push_back(OUTLET_LODI_Z_PRESSURE)

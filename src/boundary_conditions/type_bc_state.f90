@@ -31,7 +31,7 @@ module type_bc_state
     !!  @date   9/9/2016
     !!  @note   Changed boundary condition to compute a bc state
     !!
-    !--------------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------------
     type, public, abstract :: bc_state_t
 
         character(:),   allocatable :: name
@@ -69,7 +69,7 @@ module type_bc_state
 
 
     end type bc_state_t
-    !*********************************************************************************************
+    !*******************************************************************************************
 
 
 
@@ -155,7 +155,7 @@ contains
 
 
     end subroutine init_bc_postcomm
-    !**********************************************************************************************
+    !************************************************************************************
 
 
 
@@ -174,64 +174,18 @@ contains
     !!  @date   2/16/2016
     !!  @date   2/27/2017   updated for multiple patches
     !!
-    !----------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------
     subroutine init_bc_coupling(self,mesh,group_ID,bc_COMM)
         class(bc_state_t),  intent(inout)   :: self
         type(mesh_t),       intent(inout)   :: mesh
         integer(ik),        intent(in)      :: group_ID
         type(mpi_comm),     intent(in)      :: bc_COMM
 
-
         ! Default, initialize only local coupling.
         call self%init_bc_coupling_local(mesh,group_ID,bc_COMM)
 
-
-!        integer(ik) :: patch_ID, face_ID, idomain_g, idomain_l, ielement_g, ielement_l, iface, neqns, nterms_s
-!
-!        !
-!        ! For each patch, loop through faces and set default element coupling.
-!        ! Default is that each face is coupled only with its owner element.
-!        ! So, strictly local coupling.
-!        !
-!        do patch_ID = 1,mesh%bc_patch_group(group_ID)%npatches()
-!            do face_ID = 1,mesh%bc_patch_group(group_ID)%patch(patch_ID)%nfaces()
-!
-!
-!                !
-!                ! Get block-element index of current iface_bc
-!                !
-!                idomain_g  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_g()
-!                idomain_l  = mesh%bc_patch_group(group_ID)%patch(patch_ID)%idomain_l()
-!                ielement_g = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_g(face_ID)
-!                ielement_l = mesh%bc_patch_group(group_ID)%patch(patch_ID)%ielement_l(face_ID)
-!                iface      = mesh%bc_patch_group(group_ID)%patch(patch_ID)%iface(face_ID)
-!
-!                
-!                !
-!                ! Add the element index as the only dependency.
-!                !
-!                call mesh%bc_patch_group(group_ID)%patch(patch_ID)%add_coupled_element(face_ID, idomain_g,  &
-!                                                                                                idomain_l,  &
-!                                                                                                ielement_g, &
-!                                                                                                ielement_l, &
-!                                                                                                iface,      &
-!                                                                                                IRANK)
-!
-!            end do ! face_ID
-!        end do ! patch_ID
-
-
     end subroutine init_bc_coupling
-    !**********************************************************************************************
-
-
-
-
-
-
-
-
-
+    !************************************************************************************
 
 
 
@@ -244,22 +198,16 @@ contains
     !!  @param[in]  bcprop  String specifying a bcproperty_t to edit.
     !!  @param[in]  fcn     String specifying the concrete function_t to set.
     !!
-    !--------------------------------------------------------------------------------------------
+    !-----------------------------------------------------------------------------------
     subroutine set_fcn(self,bcprop,fcn)
         class(bc_state_t),      intent(inout)   :: self
         character(*),           intent(in)      :: bcprop
         character(*),           intent(in)      :: fcn
 
-
         call self%bcproperties%set_fcn(bcprop,fcn)
 
-
     end subroutine set_fcn
-    !*********************************************************************************************
-
-
-
-
+    !***********************************************************************************
 
 
 
@@ -274,7 +222,7 @@ contains
     !!  @param[in]  option  String specifying a particular option within bcproperty_f%fcn to edit
     !!  @param[in]  val     Real value to be set for the option.
     !!
-    !-----------------------------------------------------------------------------------------------
+    !------------------------------------------------------------------------------------
     subroutine set_fcn_option(self,bcprop,option,val)
         class(bc_state_t),      intent(inout)   :: self
         character(*),           intent(in)      :: bcprop
@@ -284,10 +232,7 @@ contains
         call self%bcproperties%set_fcn_option(bcprop,option,val)
 
     end subroutine set_fcn_option
-    !************************************************************************************************
-
-
-
+    !************************************************************************************
 
 
 
@@ -300,7 +245,7 @@ contains
     !!
     !!
     !!
-    !---------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------
     function get_nproperties(self) result(nprop)
         class(bc_state_t),    intent(in)  :: self
 
@@ -309,7 +254,7 @@ contains
         nprop = self%bcproperties%get_nproperties()
 
     end function get_nproperties
-    !***************************************************************************************************
+    !********************************************************************************
 
 
 
@@ -318,10 +263,11 @@ contains
 
 
 
-    !>  Return a property name string, given the index of the property in the boundary condition.
+    !>  Return a property name string, given the index of the property in the boundary 
+    !!  condition.
     !!
-    !!  This probably works best by first calling get_nproperties, and then iterating through the 
-    !!  number of available properties to get their names.
+    !!  This probably works best by first calling get_nproperties, and then iterating 
+    !!  through the number of available properties to get their names.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/4/2016
@@ -329,7 +275,7 @@ contains
     !!  @param[in]  iprop   Integer specifying the index of the property to be queried.
     !!  @result     pname   String of the property name associated with the index.
     !!
-    !---------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------
     function get_property_name(self,iprop) result(pname)
         class(bc_state_t),  intent(in)  :: self
         integer(ik),        intent(in)  :: iprop
@@ -339,34 +285,26 @@ contains
         pname = self%bcproperties%get_property_name(iprop) 
 
     end function get_property_name
-    !***************************************************************************************************
-
-
-
-
-
-
-
-
+    !********************************************************************************
 
 
 
 
     !>  Return an option key, given a property index and option index. 
     !!
-    !!  One probably calls get_noptions(iprop)
-    !!  first, to get the number of available options for the function currently set for the property 'iprop'.
-    !!  Then one can loop over the number of available options and return their availble names dynamically.
+    !!  One probably calls get_noptions(iprop) first, to get the number of available 
+    !!  options for the function currently set for the property 'iprop'. Then one can 
+    !!  loop over the number of available options and return their availble names 
+    !!  dynamically.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/4/2016
-    !!
     !!
     !!  @param[in]  iprop       Integer index of a property to modify.
     !!  @param[in]  ioption     Integer index of an option inside bcproperty%fcn
     !!  @result     key         String(key) corresponding to the option index (ioption)
     !!
-    !----------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------
     function get_option_key(self,iprop,ioption) result(key)
         class(bc_state_t),  intent(in)  :: self
         integer(ik),        intent(in)  :: iprop
@@ -377,13 +315,7 @@ contains
         key = self%bcproperties%bcprop(iprop)%get_option_key(ioption)
 
     end function get_option_key
-    !****************************************************************************************************
-
-
-
-
-
-
+    !********************************************************************************
 
 
 
@@ -397,8 +329,7 @@ contains
     !!  @param[in]  key         String(key) specifying the option to be queried.
     !!  @result     val         Returned value of the selected key.
     !!
-    !!
-    !----------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------
     function get_option_value(self,iprop,key) result(val)
         class(bc_state_t),  intent(in)  :: self
         integer(ik),        intent(in)  :: iprop
@@ -409,12 +340,7 @@ contains
         val = self%bcproperties%bcprop(iprop)%get_option_value(key)
 
     end function get_option_value
-    !****************************************************************************************************
-
-
-
-
-
+    !*********************************************************************************
 
 
 
@@ -425,10 +351,10 @@ contains
     !!  @date   2/4/2016
     !!
     !!  @param[in]  iprop       Integer index of a property to query.
-    !!  @result     noption     Returned number of options available for the property. Dependends on 
-    !!                          the function that is set for the property.
+    !!  @result     noption     Returned number of options available for the property. 
+    !!                          Dependends on the function that is set for the property.
     !!
-    !---------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------
     function get_noptions(self,iprop) result(noptions)
         class(bc_state_t),  intent(in)  :: self
         integer(ik),        intent(in)  :: iprop
@@ -438,7 +364,7 @@ contains
         noptions = self%bcproperties%bcprop(iprop)%get_noptions()
 
     end function get_noptions
-    !***************************************************************************************************
+    !*********************************************************************************
 
 
 
@@ -449,8 +375,7 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   2/8/2016
     !!
-    !!
-    !---------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------
     subroutine set_name(self,bcname)
         class(bc_state_t),  intent(inout)   :: self
         character(*),       intent(in)      :: bcname
@@ -458,11 +383,7 @@ contains
         self%name = trim(bcname)
 
     end subroutine set_name
-    !***************************************************************************************************
-
-
-
-
+    !*********************************************************************************
 
 
 
@@ -473,7 +394,7 @@ contains
     !!  @date   2/8/2016
     !!
     !!
-    !--------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------
     function get_name(self) result(bcname)
         class(bc_state_t),    intent(in)  :: self
 
@@ -482,11 +403,7 @@ contains
         bcname = self%name
 
     end function get_name
-    !***************************************************************************************************
-
-
-
-
+    !**********************************************************************************
 
 
 
@@ -507,17 +424,14 @@ contains
     !!  @date   11/21/2016
     !!
     !!
-    !---------------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------
     subroutine set_family(self,bc_family)
         class(bc_state_t),  intent(inout)   :: self
         character(*),       intent(in)      :: bc_family
 
         character(:),   allocatable :: user_msg
 
-
-        !
         ! Check incoming bc_state family
-        !
         if ( (trim(bc_family) == 'Inlet')           .or. &
              (trim(bc_family) == 'Outlet')          .or. &
              (trim(bc_family) == 'Wall')            .or. &
@@ -528,7 +442,6 @@ contains
              (trim(bc_family) == 'Mesh Motion')          .or. &
              (trim(bc_family) == 'Extrapolation')   .or. &
              (trim(bc_family) == 'Empty') ) then
-
 
             self%family = trim(bc_family)
 
@@ -541,10 +454,8 @@ contains
 
         end if
 
-
-
     end subroutine set_family
-    !***************************************************************************************************
+    !*********************************************************************************
 
 
 
@@ -555,23 +466,21 @@ contains
     !!  @author Nathan A. Wukie
     !!  @date   11/21/2016
     !!
-    !!
-    !--------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------
     function get_family(self) result(bc_family)
         class(bc_state_t),    intent(in)  :: self
 
         character(:),   allocatable :: bc_family, user_msg
 
-
-        user_msg = "bc_state%get_family: It looks like the Family component for the bc_state was &
-                    not set. Make sure self%set_family('my_family') is being called in the bc_state &
-                    initialization procedure."
+        user_msg = "bc_state%get_family: It looks like the Family component for the &
+                    bc_state was not set. Make sure self%set_family('my_family') is &
+                    being called in the bc_state initialization procedure."
         if (.not. allocated(self%family)) call chidg_signal(FATAL,user_msg)
 
         bc_family = self%family
 
     end function get_family
-    !***************************************************************************************************
+    !**********************************************************************************
 
 
 

@@ -77,26 +77,25 @@ subroutine test_dft_idft_signal_reproduction()
 
     integer(ik)                 :: res
     type(AD_D), allocatable     :: signal(:), Xr(:), Xi(:), new_signal(:)
-    real(rk)                    :: A0, A1, A2, tol
+    real(rk)                    :: A0, A1, A2, tol, period
     real(rk),   allocatable     :: theta(:)
 
-    res = 9
-    theta = linspace(0._rk,8._rk*(2._rk/9._rk),res)
+    res = 5
+    period = TWO
+    theta = linspace(0._rk,period - period/res,res)
 
     ! Construct signal
     A0 = 1.0_rk
     A1 = 2.0_rk
     A2 = 5.0_rk
-    signal = [AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1)]
+    signal = [AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1)]
     signal = A0  +  A1*sin(TWO*PI*theta)  +  A2*cos(THREE*PI*theta)
-
 
     ! Compute dft
     call dft(signal,Xr,Xi)
 
     ! Compute inverse transform 
     new_signal = idft(Xr,Xi)
-
 
     ! Test original signal against signal after DFT+IDFT
     tol = 1.e-12_rk
@@ -130,32 +129,31 @@ subroutine test_dft_idft_eval_signal_reproduction()
     
 
     integer(ik)                 :: res
-    type(AD_D), allocatable     :: signal(:), Xr(:), Xi(:), new_signal(:)
+    type(AD_D), allocatable     :: signal(:), Xr(:), Xi(:), sig_real(:), sig_imag(:)
     real(rk)                    :: A0, A1, A2, tol, period
     real(rk),   allocatable     :: theta(:)
 
-    res = 9
+    res = 5
     period = TWO
-    theta = linspace(0._rk,8._rk*(period/9._rk),res)
+    theta = linspace(0._rk,period - period/res,res)
 
     ! Construct signal
     A0 = 1.0_rk
     A1 = 2.0_rk
     A2 = 5.0_rk
-    signal = [AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1)]
+    signal = [AD_D(1),AD_D(1),AD_D(1),AD_D(1),AD_D(1)]
     signal = A0  +  A1*sin(TWO*PI*theta)  +  A2*cos(THREE*PI*theta)
-
 
     ! Compute dft
     call dft(signal,Xr,Xi)
 
     ! Compute inverse transform 
-    new_signal = idft_eval(Xr,Xi,theta,period)
-
+    allocate(sig_real(size(theta)), sig_imag(size(theta)))
+    call idft_eval(Xr,Xi,theta/period, sig_real, sig_imag)
 
     ! Test original signal against signal after DFT+IDFT
     tol = 1.e-12_rk
-    @assertEqual(signal(:)%x_ad_,new_signal(:)%x_ad_,tol)
+    @assertEqual(signal(:)%x_ad_,sig_real(:)%x_ad_,tol)
 
 end subroutine test_dft_idft_eval_signal_reproduction
 !*******************************************************************

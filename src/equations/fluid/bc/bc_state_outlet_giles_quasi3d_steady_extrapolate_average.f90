@@ -586,7 +586,7 @@ contains
             c1_3d, c2_3d, c3_3d, c4_3d, c5_3d,                                          &
             c1_1d, c2_1d, c3_1d, c4_1d, c5_1d,                                          &
             density_bar, vel1_bar, vel2_bar, vel3_bar, pressure_bar, c_bar,             &
-            ddensity, dvel1, dvel2, dvel3, dpressure
+            ddensity, dvel1, dvel2, dvel3, dpressure, expect_zero
 
         type(AD_D), allocatable, dimension(:,:) ::                                              &
             density_hat_real, vel1_hat_real, vel2_hat_real, vel3_hat_real, pressure_hat_real,   &
@@ -798,13 +798,20 @@ contains
         !
         ! Evaluate c5 at radius to correct theta
         !
+        expect_zero = [AD_D(1)]
         c5_3d = c5_hat_real_gq(1,:)
         c5_3d = ZERO
         do igq = 1,size(coords)
             theta_offset = coords(igq)%c2_ - self%theta_ref
             ! We include all modes here for generality, but we already set mode1 to zero
             ! so we are only getting the perturbation part.
-            c5_3d(igq:igq) = idft_eval(c5_hat_real_gq(:,igq),c5_hat_imag_gq(:,igq),[theta_offset],pitch(1))
+            !c5_3d(igq:igq) = idft_eval(c5_hat_real_gq(:,igq),c5_hat_imag_gq(:,igq),[theta_offset]/pitch(1))
+            call idft_eval(c5_hat_real_gq(:,igq),   &
+                           c5_hat_imag_gq(:,igq),   &
+                           [theta_offset]/pitch(1), &
+                           c5_3d(igq:igq),          &
+                           expect_zero)
+
         end do
 
 

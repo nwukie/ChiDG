@@ -690,8 +690,8 @@ contains
 
 
 
-    !>  Find the domain and element indices for an element that contains a given quadrature node and can donate
-    !!  interpolated solution values to the receiver face.
+    !>  Find the domain and element indices for an element that contains a given 
+    !!  quadrature node and can donate interpolated solution values to the receiver face.
     !!
     !!  @author Nathan A. Wukie
     !!  @date   2/1/2016
@@ -724,8 +724,10 @@ contains
                                    xmin, xmax, ymin, ymax, zmin, zmax,                      &
                                    xcenter_recv, ycenter_recv, zcenter_recv
 
-        real(rk)                :: donor_comp(3), recv_comp(3), search1, search2, search3, offset1, offset2, offset3
-        type(ivector_t)         :: candidate_domains_g, candidate_domains_l, candidate_elements_g, candidate_elements_l
+        real(rk)                :: donor_comp(3), recv_comp(3), search1, search2, search3, &
+                                   offset1, offset2, offset3
+        type(ivector_t)         :: candidate_domains_g, candidate_domains_l, &
+                                   candidate_elements_g, candidate_elements_l
         type(ivector_t)         :: donors
         type(rvector_t)         :: donors_xi, donors_eta, donors_zeta
 

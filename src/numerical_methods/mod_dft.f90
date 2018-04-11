@@ -33,13 +33,20 @@ contains
     !!
     !!  Computes X[i] = (1/N)sum[ x(i)e^(-j*2pi*n*k*/N) ]
     !!
+    !!  NOTE: The normalization convention used here, (1/N), defines
+    !!  the DC part of the transform X[0] to be the average.
+    !!
+    !!  The transform result is in 'standard' order:
+    !!  [ DC, omega_1, omega_2,..., omega_n, -omega_n, ... -omega_2, -omega_1]
+    !!
+    !!  [DC|     positive frequencies      |       negative frequencies      ]
+    !!
     !!  @author Nathan A. Wukie
     !!  @date   2/26/2018
     !!
     !!  @param[in]      input       periodic signal
     !!  @param[inout]   outreal     real part of DFT
     !!  @param[inout]   outimag     imag part of DFT
-    !!
     !!
     !-----------------------------------------------------------------
     subroutine dft(input,outreal,outimag)
@@ -112,19 +119,14 @@ contains
 
         ! Loop over output points
         do itheta = 1,size(theta)
-            do imode = 1,(size(inreal)-1)/2
+            do imode = 1,size(inreal)
                 freq = TWO*PI*real(imode-1,rk)
-                if ( imode > 1 ) then
-                    output(itheta) = output(itheta) + TWO * (inreal(imode)*cos(freq*theta(itheta)) - inimag(imode)*sin(freq*theta(itheta)))
-                else
-                    output(itheta) = output(itheta) + inreal(imode)*cos(freq*theta(itheta)) - inimag(imode)*sin(freq*theta(itheta))
-                end if
+                output(itheta) = output(itheta) + inreal(imode)*cos(freq*theta(itheta)) - inimag(imode)*sin(freq*theta(itheta))
             end do !imode
         end do !itheta
 
     end function idft
     !******************************************************************
-
 
 
 
@@ -138,19 +140,29 @@ contains
     !!
     !!  @param[in]  inreal  Real part of DFT. (could be directly from 'dft')
     !!  @param[in]  inimag  Imag part of DFT. (could be directly from 'dft')
-    !!  @param[in]  theta   Array of locations where the idft will be evaluated.
+    !!  @param[in]  theta   Array of locations where the idft will be evaluated 
+    !!                      normalized by the period.
     !!  @param[in]  period  Period, which will be used to normalize the 'theta' 
     !!                      inputs with respect to the Fourier transform.
     !!
+    !!  For example, if the original dft was computed over a period 2.5, then
+    !!  say we want to evaluate the transform at a location 0.7. The incoming
+    !!  value for theta would be 0.7/2.5
+    !!
+    !!  Incoming transform should be in 'standard' order:
+    !!  [ DC, omega_1, omega_2,..., omega_n, -omega_n, ... -omega_2, -omega_1]
+    !!
+    !!  [DC|     positive frequencies      |       negative frequencies      ]
+    !!
     !---------------------------------------------------------------------------
-    function idft_eval(inreal,inimag,theta,period) result(output)
-        type(AD_D),     intent(in)  :: inreal(:)
-        type(AD_D),     intent(in)  :: inimag(:)
-        real(rk),       intent(in)  :: theta(:)
-        real(rk),       intent(in)  :: period
+    subroutine idft_eval(inreal,inimag,theta,outreal,outimag) 
+        type(AD_D),     intent(in)      :: inreal(:)
+        type(AD_D),     intent(in)      :: inimag(:)
+        real(rk),       intent(in)      :: theta(:)
+        type(AD_D),     intent(inout)   :: outreal(:)
+        type(AD_D),     intent(inout)   :: outimag(:)
 
-        type(AD_D), allocatable :: output(:)
-        real(rk),   allocatable :: theta_eval(:)
+        !type(AD_D), allocatable :: output(:)
         real(rk)                :: freq
         integer                 :: itheta, imode, ierr
 
@@ -158,27 +170,22 @@ contains
         if (mod(size(inreal),2) == 0) call chidg_signal(FATAL,"idft_eval: expecting odd-count of input values.")
 
         ! Allocate and initialize derivatives
-        allocate(output(size(theta)), stat=ierr)
-        if (ierr /= 0) call AllocationError
-        output(:) = inreal(1)
-        output = ZERO
+        !allocate(outreal(size(theta)),outimag(size(theta)), stat=ierr)
+        !if (ierr /= 0) call AllocationError
+        outreal(:) = inreal(1)
+        outimag(:) = inreal(1)
+        outreal = ZERO
+        outimag = ZERO
 
-        ! Theta at equispaced nodes
-        theta_eval = theta/period
-
-        ! Loop over output points
         do itheta = 1,size(theta)
-            do imode = 1,(size(inreal)-1)/2
+            do imode = 1,size(inreal)
                 freq = TWO*PI*real(imode-1,rk)
-                if ( imode > 1 ) then
-                    output(itheta) = output(itheta) + TWO * (inreal(imode)*cos(freq*theta_eval(itheta)) - inimag(imode)*sin(freq*theta_eval(itheta)))
-                else
-                    output(itheta) = output(itheta) + inreal(imode)*cos(freq*theta_eval(itheta)) - inimag(imode)*sin(freq*theta_eval(itheta))
-                end if
-            end do !imode
-        end do !itheta
+                outreal(itheta) = outreal(itheta) + inreal(imode)*cos(freq*theta(itheta)) - inimag(imode)*sin(freq*theta(itheta))
+                outimag(itheta) = outimag(itheta) + inreal(imode)*sin(freq*theta(itheta)) + inimag(imode)*cos(freq*theta(itheta))
+            end do
+        end do 
 
-    end function idft_eval
+    end subroutine idft_eval
     !******************************************************************
 
 
